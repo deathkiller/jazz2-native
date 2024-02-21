@@ -1,7 +1,4 @@
 include(CMakeDependentOption)
-if(POLICY CMP0127)
-	cmake_policy(SET CMP0127 NEW)
-endif()
 
 # nCine options
 cmake_dependent_option(NCINE_BUILD_ANDROID "Build Android version of the game" OFF "NOT EMSCRIPTEN;NOT NINTENDO_SWITCH" OFF)
@@ -46,7 +43,7 @@ else()
 			set(_NCINE_WITH_ANGLE_DEFAULT OFF)
 		endif()
 		option(NCINE_WITH_ANGLE "Enable Google ANGLE libraries support" ${_NCINE_WITH_ANGLE_DEFAULT})
-	elseif(UNIX AND NOT APPLE AND NOT ANDROID)
+	elseif(UNIX AND NOT APPLE AND NOT ANDROID AND NOT NINTENDO_SWITCH)
 		set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (or \"native\" for current CPU)") 
 		option(NCINE_BUILD_FLATPAK "Build Flatpak version of the game" OFF)
 		cmake_dependent_option(NCINE_ASSEMBLE_DEB "Assemble DEB package of the game" OFF "NOT NCINE_BUILD_FLATPAK" OFF)

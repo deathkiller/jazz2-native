@@ -52,7 +52,7 @@ mark_as_advanced(GLFW_LIBRARY)
 
 # handle the QUIETLY and REQUIRED arguments and set WEBFOUND_FOUND to TRUE if
 # all listed variables are TRUE
-include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
+include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GLFW DEFAULT_MSG GLFW_LIBRARY GLFW_INCLUDE_DIR)
 
 # On Mac OS X GLFW depends on the Cocoa framework

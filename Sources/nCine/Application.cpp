@@ -83,6 +83,11 @@ extern "C"
 #	include "Graphics/RenderDocCapture.h"
 #endif
 
+#if defined(WITH_BACKWARD)
+#	include <backward.h>
+backward::SignalHandling sh;
+#endif
+
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
@@ -449,6 +454,12 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
+
+#if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS))
+		if (__hasVirtualTerminal) {
+			sh.color_mode() = backward::ColorMode::always;
+		}
+#endif
 
 		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
 #if defined(WITH_TRACY)

@@ -97,3 +97,12 @@ if(WIN32)
 
 	list(APPEND GENERATED_SOURCES "${NCINE_SOURCE_DIR}/App.manifest")
 endif()
+
+if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
+	get_filename_component(PARENT_GENERATED_INCLUDE_DIR ${GENERATED_INCLUDE_DIR} DIRECTORY)
+	target_include_directories(${NCINE_APP}
+		INTERFACE $<BUILD_INTERFACE:${PARENT_GENERATED_INCLUDE_DIR}>
+		# Internal sources can access a generated header with or without the parent directory
+		PRIVATE $<BUILD_INTERFACE:${PARENT_GENERATED_INCLUDE_DIR}>
+		PRIVATE $<BUILD_INTERFACE:${GENERATED_INCLUDE_DIR}>)
+endif()
