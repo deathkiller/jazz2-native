@@ -3,6 +3,8 @@ include(CheckStructHasMember)
 
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
+ncine_normalize_optimizations()
+
 target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_VERSION=\"${NCINE_VERSION}\"")
 
 string(TIMESTAMP NCINE_BUILD_YEAR "%Y") 
@@ -109,7 +111,7 @@ if(WIN32)
 	endif()
 endif()
 
-ncine_add_compiler_options(${NCINE_APP})
+ncine_apply_compiler_options(${NCINE_APP})
 
 if(EMSCRIPTEN)
 	set(EMSCRIPTEN_LINKER_OPTIONS

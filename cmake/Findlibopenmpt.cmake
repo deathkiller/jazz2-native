@@ -62,14 +62,16 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		)
 		FetchContent_MakeAvailable(LibopenmptGit)
 		
-		ncine_add_dependency(Libopenmpt STATIC)
+		ncine_add_dependency(Libopenmpt STATIC ALLOW_EXCEPTIONS)
 
 		set(LIBOPENMPT_INCLUDE_DIR "${libopenmptgit_SOURCE_DIR}/libopenmpt/")
 		set_target_properties(Libopenmpt PROPERTIES
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
 
+		target_compile_definitions(Libopenmpt PRIVATE "LIBOPENMPT_BUILD" "MPT_CHECK_CXX_IGNORE_WARNING_FINITEMATH")
+
 		if(EMSCRIPTEN)
-			target_compile_definitions(Libopenmpt PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB" "MPT_WITH_MPG123" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFILE" "MPT_BUILD_WASM")
+			target_compile_definitions(Libopenmpt PRIVATE "MPT_WITH_ZLIB" "MPT_WITH_MPG123" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFILE" "MPT_BUILD_WASM")
 		
 			target_compile_options(Libopenmpt PUBLIC "SHELL:-s USE_ZLIB=1 -s USE_MPG123=1 -s USE_OGG=1 -s USE_VORBIS=1")
 			target_link_options(Libopenmpt PUBLIC "SHELL:-s USE_ZLIB=1 -s USE_MPG123=1 -s USE_OGG=1 -s USE_VORBIS=1")
@@ -77,7 +79,7 @@ if(NOT TARGET libopenmpt::libopenmpt)
 			find_package(ZLIB)
 
 			# TODO: Add MPT_WITH_MPG123 and MPT_WITH_VORBIS support
-			target_compile_definitions(Libopenmpt PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB")
+			target_compile_definitions(Libopenmpt PRIVATE "MPT_WITH_ZLIB")
 		endif()
 		
 		set(LIBOPENMPT_SOURCES)
