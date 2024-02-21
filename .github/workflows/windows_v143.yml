@@ -64,7 +64,7 @@ jobs:
         mkdir Libs
         cd Libs
         
-        Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL5/releases/download/v5.0.6-Beta3/VC-LTL-5.0.6-Beta3-Binary.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
+        Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL5/releases/download/v5.0.9/VC-LTL-5.0.9-Binary.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
         7z x ".\VC-LTL-Binary.7z" -o"VC-LTL"
         
     - name: 'Configure CMake'
