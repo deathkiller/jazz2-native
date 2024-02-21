@@ -3556,20 +3556,21 @@ namespace backward {
 
 			DWORD offset = 0;
 #if defined(DEATH_TARGET_32BIT)
-			IMAGEHLP_LINEW lineW = { sizeof(IMAGEHLP_LINEW) };
+			// 32-bit library doesn't have SymGetLineFromAddrW() function
+			IMAGEHLP_LINE line = { sizeof(IMAGEHLP_LINE) };
+			if (::SymGetLineFromAddr(process, (ULONG64)t.addr, &offset, &line)) {
+				t.source.filename = line.FileName;
+				t.source.line = line.LineNumber;
+				t.source.col = offset;
+			}
 #else
 			IMAGEHLP_LINEW64 lineW = { sizeof(IMAGEHLP_LINEW64) };
-#endif
 			if (::SymGetLineFromAddrW(process, (ULONG64)t.addr, &offset, &lineW)) {
-#if defined(DEATH_TARGET_32BIT)
-				// IMAGEHLP_LINEW structure has incorrect type
-				t.source.filename = Death::Utf8::FromUtf16((PWSTR)lineW.FileName);
-#else
 				t.source.filename = Death::Utf8::FromUtf16(lineW.FileName);
-#endif
 				t.source.line = lineW.LineNumber;
 				t.source.col = offset;
 			}
+#endif
 
 			t.source.function = name;
 			t.object_function = name;
