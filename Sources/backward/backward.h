@@ -3561,7 +3561,12 @@ namespace backward {
 			IMAGEHLP_LINEW64 lineW = { sizeof(IMAGEHLP_LINEW64) };
 #endif
 			if (::SymGetLineFromAddrW(process, (ULONG64)t.addr, &offset, &lineW)) {
+#if defined(DEATH_TARGET_32BIT)
+				// IMAGEHLP_LINEW structure has incorrect type
+				t.source.filename = Death::Utf8::FromUtf16((PWSTR)lineW.FileName);
+#else
 				t.source.filename = Death::Utf8::FromUtf16(lineW.FileName);
+#endif
 				t.source.line = lineW.LineNumber;
 				t.source.col = offset;
 			}
