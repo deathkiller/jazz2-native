@@ -4244,8 +4244,8 @@ namespace backward {
 			::SetUnhandledExceptionFilter(crash_handler);
 
 			signal(SIGABRT, signal_handler);
-#if !defined(_Build_By_LTL) || !defined(DEATH_TARGET_32BIT)
-			// This function is not supported on 32-bit VC-LTL
+#if !defined(_Build_By_LTL)
+			// This function is not supported on VC-LTL 4.1.3
 			_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
 
