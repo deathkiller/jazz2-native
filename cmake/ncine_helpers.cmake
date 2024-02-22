@@ -279,7 +279,7 @@ function(ncine_apply_compiler_options target)
 	if(DEATH_DEBUG)
 		target_compile_definitions(${target} PUBLIC "DEATH_DEBUG")
 	else()
-		target_compile_definitions(${target} PUBLIC "$<$<CONFIG:Debug>:DEATH_DEBUG>")
+		target_compile_definitions(${target} PUBLIC $<$<CONFIG:Debug>:DEATH_DEBUG>)
 	endif()
 	if(DEATH_TRACE)
 		if(target_is_executable)
@@ -336,17 +336,17 @@ function(ncine_apply_compiler_options target)
 		endif()
 
 		# Extra optimizations in Release
-		target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>")
+		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
 		# Include PDB debug information in Release and enable hot reloading in Debug
 		if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25.0")
-			set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<CONFIG:Debug>,EditAndContinue,ProgramDatabase>")
+			set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT $<IF:$<CONFIG:Debug>,EditAndContinue,ProgramDatabase>)
 		else()
-			target_compile_options(${target} PRIVATE "$<IF:$<CONFIG:Debug>,/ZI,/Zi>")
+			target_compile_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/ZI,/Zi>)
 		endif()
-		target_link_options(${target} PRIVATE "$<$<CONFIG:Release>:/DEBUG:FULL>")
+		target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/DEBUG:FULL>)
 		# Turn off SAFESEH because of OpenAL on x86 and also UAC
 		target_link_options(${target} PRIVATE "/SAFESEH:NO" "/MANIFESTUAC:NO")
-		target_link_options(${target} PRIVATE "$<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>")
+		target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>)
 		# Specifies the architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)
 		if(NCINE_ARCH_EXTENSIONS)
 			if(target_is_executable)
@@ -357,12 +357,12 @@ function(ncine_apply_compiler_options target)
 
 		# Enable Whole Program Optimization
 		if(NCINE_LINKTIME_OPTIMIZATION)
-			target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:/GL>")
-			target_link_options(${target} PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/GL>)
+			target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/LTCG>)
 		endif()
 
 		if(NCINE_AUTOVECTORIZATION_REPORT)
-			target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:/Qvec-report:2 /Qpar-report:2>")
+			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/Qvec-report:2 /Qpar-report:2>)
 		endif()
 
 		# Suppress linker warning about templates
@@ -383,7 +383,7 @@ function(ncine_apply_compiler_options target)
 		else()
 			target_compile_options(${target} PRIVATE "-fno-exceptions")
 		endif()
-		target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-ffast-math>")
+		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
 
 		#if(NCINE_DYNAMIC_LIBRARY)
 		#	target_compile_options(${target} PRIVATE "-fvisibility=hidden" "-fvisibility-inlines-hidden")
@@ -402,19 +402,19 @@ function(ncine_apply_compiler_options target)
 	
 		# Only in Debug - preserve debug information, it's probably added automatically on other platforms
 		if(EMSCRIPTEN)
-			target_compile_options(${target} PUBLIC "$<$<CONFIG:Debug>:-g>")
-			target_link_options(${target} PUBLIC "$<$<CONFIG:Debug>:-g>")
+			target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-g>)
+			target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-g>)
 		endif()
 
 		# Only in Debug
 		if(NCINE_ADDRESS_SANITIZER)
 			# Add ASan options as public so that targets linking the library will also use them
 			if(EMSCRIPTEN)
-				target_compile_options(${target} PUBLIC "$<$<CONFIG:Debug>:-O1 -g -fsanitize=address>") # Needs "ALLOW_MEMORY_GROWTH" which is already passed to the linker
-				target_link_options(${target} PUBLIC "$<$<CONFIG:Debug>:-fsanitize=address>")
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=address>) # Needs "ALLOW_MEMORY_GROWTH" which is already passed to the linker
+				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=address>)
 			elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-				target_compile_options(${target} PUBLIC "$<$<CONFIG:Debug>:-O1 -g -fsanitize=address -fsanitize-address-use-after-scope -fno-optimize-sibling-calls -fno-common -fno-omit-frame-pointer -rdynamic>")
-				target_link_options(${target} PUBLIC "$<$<CONFIG:Debug>:-fsanitize=address>")
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=address -fsanitize-address-use-after-scope -fno-optimize-sibling-calls -fno-common -fno-omit-frame-pointer -rdynamic>)
+				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=address>)
 			endif()
 		endif()
 
@@ -422,19 +422,19 @@ function(ncine_apply_compiler_options target)
 		if(NCINE_UNDEFINED_SANITIZER)
 			# Add UBSan options as public so that targets linking the library will also use them
 			if(EMSCRIPTEN)
-				target_compile_options(${target} PUBLIC "$<$<CONFIG:Debug>:-O1 -g -fsanitize=undefined>")
-				target_link_options(${target} PUBLIC "$<$<CONFIG:Debug>:-fsanitize=undefined>")
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=undefined>)
+				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=undefined>)
 			elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-				target_compile_options(${target} PUBLIC "$<$<CONFIG:Debug>:-O1 -g -fsanitize=undefined -fno-omit-frame-pointer>")
-				target_link_options(${target} PUBLIC "$<$<CONFIG:Debug>:-fsanitize=undefined>")
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=undefined -fno-omit-frame-pointer>)
+				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=undefined>)
 			endif()
 		endif()
 
 		# Only in Debug
 		if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang") AND NCINE_CODE_COVERAGE)
 			# Add code coverage options as public so that targets linking the library will also use them
-			target_compile_options(${target} PUBLIC "$<$<CONFIG:Debug>:--coverage>")
-			target_link_options(${target} PUBLIC "$<$<CONFIG:Debug>:--coverage>")
+			target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:--coverage>)
+			target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:--coverage>)
 		endif()
 
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -447,31 +447,31 @@ function(ncine_apply_compiler_options target)
 			#	target_link_options(${target} PRIVATE -Wl,--no-undefined)
 			#endif()
 
-			target_compile_options(${target} PRIVATE "$<$<CONFIG:Debug>:-fvar-tracking-assignments>")
+			target_compile_options(${target} PRIVATE $<$<CONFIG:Debug>:-fvar-tracking-assignments>)
 
 			# Extra optimizations in Release
 			if(NINTENDO_SWITCH)
 				# -Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
-				target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-O2>")
+				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
 			else()
-				target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-Ofast>")
+				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)
 			endif()
-			target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-funsafe-loop-optimizations -ftree-loop-if-convert-stores>")
+			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
 
 			if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID))
-				target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-flto=auto>")
-				target_link_options(${target} PRIVATE "$<$<CONFIG:Release>:-flto=auto>")
+				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
+				target_link_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
 			endif()
 
 			if(NCINE_AUTOVECTORIZATION_REPORT)
-				target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-fopt-info-vec-optimized>")
+				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-fopt-info-vec-optimized>)
 			endif()
 
 			# Enabling strong stack protector of GCC 4.9
 			if(NCINE_GCC_HARDENING AND NOT (MINGW OR MSYS))
-				target_compile_options(${target} PUBLIC "$<$<CONFIG:Release>:-Wformat -Wformat-security -fstack-protector-strong -fPIE -fPIC>")
-				target_compile_definitions(${target} PUBLIC "$<$<CONFIG:Release>:_FORTIFY_SOURCE=2>")
-				target_link_options(${target} PUBLIC "$<$<CONFIG:Release>:-Wl,-z,relro -Wl,-z,now -pie>")
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Release>:-Wformat -Wformat-security -fstack-protector-strong -fPIE -fPIC>)
+				target_compile_definitions(${target} PUBLIC $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>)
+				target_link_options(${target} PUBLIC $<$<CONFIG:Release>:-Wl,-z,relro -Wl,-z,now -pie>)
 			endif()
 		elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 			target_compile_options(${target} PRIVATE "-fcolor-diagnostics")
@@ -485,22 +485,22 @@ function(ncine_apply_compiler_options target)
 
 			if(NOT EMSCRIPTEN)
 				# Extra optimizations in Release
-				target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-Ofast>")
+				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)
 			endif()
 
 			# Enable ThinLTO of Clang 4
 			if(NCINE_LINKTIME_OPTIMIZATION)
 				if(EMSCRIPTEN)
-					target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-flto>")
-					target_link_options(${target} PRIVATE "$<$<CONFIG:Release>:-flto>")
+					target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto>)
+					target_link_options(${target} PRIVATE $<$<CONFIG:Release>:-flto>)
 				elseif(NOT (MINGW OR MSYS OR ANDROID))
-					target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-flto=thin>")
-					target_link_options(${target} PRIVATE "$<$<CONFIG:Release>:-flto=thin>")
+					target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=thin>)
+					target_link_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=thin>)
 				endif()
 			endif()
 
 			if(NCINE_AUTOVECTORIZATION_REPORT)
-				target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-Rpass=loop-vectorize -Rpass-analysis=loop-vectorize>")
+				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Rpass=loop-vectorize -Rpass-analysis=loop-vectorize>)
 			endif()
 		endif()
 	endif()
