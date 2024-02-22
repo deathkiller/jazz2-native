@@ -3717,10 +3717,20 @@ namespace backward {
 
 		static std::vector<std::string> get_paths_from_env_variable_impl() {
 			std::vector<std::string> paths;
+#if defined(DEATH_TARGET_WINDOWS)
+			char* prefixes_str; size_t length;
+			if (_dupenv_s(&prefixes_str, &length, "BACKWARD_CXX_SOURCE_PREFIXES") == 0 && prefixes_str != nullptr) {
+				if (prefixes_str[0] != '\0') {
+					paths = details::split_source_prefixes(prefixes_str);
+				}
+				std::free(prefixes_str);
+			}
+#else
 			const char* prefixes_str = std::getenv("BACKWARD_CXX_SOURCE_PREFIXES");
-			if (prefixes_str != nullptr && prefixes_str[0]) {
+			if (prefixes_str[0] != '\0') {
 				paths = details::split_source_prefixes(prefixes_str);
 			}
+#endif
 			return paths;
 		}
 
@@ -4234,7 +4244,10 @@ namespace backward {
 			::SetUnhandledExceptionFilter(crash_handler);
 
 			signal(SIGABRT, signal_handler);
+#if !defined(_Build_By_LTL) || !defined(DEATH_TARGET_32BIT)
+			// This function is not supported on 32-bit VC-LTL
 			_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
 
 			std::set_terminate(&terminator);
 #	if !defined(BACKWARD_ATLEAST_CXX17)

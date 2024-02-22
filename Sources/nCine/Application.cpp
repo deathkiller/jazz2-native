@@ -84,7 +84,11 @@ extern "C"
 #endif
 
 #if defined(WITH_BACKWARD)
-#	include <backward.h>
+#	if !defined(CMAKE_BUILD)
+#		include "../backward/backward.h"
+#	else
+#		include <backward.h>
+#	endif
 backward::SignalHandling sh;
 #endif
 
