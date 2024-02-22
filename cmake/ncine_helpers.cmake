@@ -311,7 +311,6 @@ function(ncine_apply_compiler_options target)
 			target_compile_options(${target} PRIVATE "/permissive-")
 		endif()
 		# Always use the non-debug version of the runtime library
-		#target_compile_options(${target} PRIVATE $<IF:$<BOOL:${VC_LTL_FOUND}>,/MT,/MD>)
 		if(VC_LTL_FOUND)
 			set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 		else()
@@ -319,16 +318,15 @@ function(ncine_apply_compiler_options target)
 		endif()
 
 		# Exceptions
-		target_compile_options(${target} PRIVATE "/EHsc") # TODO
 		if(ARGS_ALLOW_EXCEPTIONS)
-			#target_compile_options(${target} PRIVATE "/EHsc")
+			target_compile_options(${target} PRIVATE "/EHsc")
 			#if((MSVC_VERSION GREATER_EQUAL 1929) AND NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
 			#	# Use the undocumented compiler flag to make our binary smaller on x64
 			#	# https://devblogs.microsoft.com/cppblog/making-cpp-exception-handling-smaller-x64/
 			#	target_compile_options(${target} PRIVATE "/d2FH4")
 			#endif()
 		else()
-			#target_compile_options(${target} PRIVATE "/EHs-c-" "/wd4530" "/wd4577")
+			target_compile_options(${target} PRIVATE "/EHs-c-" "/wd4530" "/wd4577")
 			target_compile_definitions(${target} PRIVATE "_HAS_EXCEPTIONS=0")
 		endif()
 
