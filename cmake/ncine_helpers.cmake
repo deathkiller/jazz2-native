@@ -297,19 +297,19 @@ function(ncine_apply_compiler_options target)
 			target_compile_definitions(${target} PUBLIC "DEATH_TARGET_WINDOWS_RT")
 
 			# Workaround for "error C1189: The <experimental/coroutine> and <experimental/resumable> headers are only supported with /await"
-			target_compile_options(${target} PRIVATE /await)
+			target_compile_options(${target} PRIVATE "/await")
 			# Workaround for "error C2039: 'wait_for': is not a member of 'winrt::impl'"
-			target_compile_options(${target} PRIVATE /Zc:twoPhase-)
+			target_compile_options(${target} PRIVATE "/Zc:twoPhase-")
 		endif()
 	endif()
 
 	if(MSVC)
 		# Enable parallel compilation and force UTF-8
-		target_compile_options(${target} PRIVATE /MP /utf-8)
+		target_compile_options(${target} PRIVATE "/MP" "/utf-8")
 		# Enable standards-conforming compiler behavior
-		#if(MSVC_VERSION GREATER_EQUAL 1913)
-		#	target_compile_options(${target} PRIVATE "/permissive-")
-		#endif()
+		if(MSVC_VERSION GREATER_EQUAL 1913)
+			target_compile_options(${target} PRIVATE "/permissive-")
+		endif()
 		# Always use the non-debug version of the runtime library
 		#target_compile_options(${target} PRIVATE $<IF:$<BOOL:${VC_LTL_FOUND}>,/MT,/MD>)
 		if(VC_LTL_FOUND)
@@ -342,7 +342,7 @@ function(ncine_apply_compiler_options target)
 		endif()
 		target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/DEBUG:FULL>)
 		# Turn off SAFESEH because of OpenAL on x86 and also UAC
-		target_link_options(${target} PRIVATE /SAFESEH:NO /MANIFESTUAC:NO)
+		target_link_options(${target} PRIVATE "/SAFESEH:NO" "/MANIFESTUAC:NO")
 		target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>)
 		# Specifies the architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)
 		if(NCINE_ARCH_EXTENSIONS)
@@ -372,7 +372,7 @@ function(ncine_apply_compiler_options target)
 		#target_link_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/INCREMENTAL,/INCREMENTAL:NO>)
 
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-			target_compile_options(${target} PRIVATE -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
+			target_compile_options(${target} PRIVATE "-Wno-switch" "-Wno-unknown-pragmas" "-Wno-reorder-ctor" "-Wno-braced-scalar-init" "-Wno-deprecated-builtins")
 		endif()
 	else() # GCC and LLVM
 		if(ARGS_ALLOW_EXCEPTIONS)
@@ -387,14 +387,14 @@ function(ncine_apply_compiler_options target)
 		#endif()
 
 		if(MINGW OR MSYS)
-			target_link_options(${target} PUBLIC -municode)
+			target_link_options(${target} PUBLIC "-municode")
 		endif()
 
 		if(NCINE_ARCH_EXTENSIONS AND UNIX AND NOT APPLE AND NOT ANDROID AND NOT NINTENDO_SWITCH)
 			if(target_is_executable)
 				message(STATUS "Specified architecture extensions for code generation: ${NCINE_ARCH_EXTENSIONS}")
 			endif()
-			target_compile_options(${target} PRIVATE -march=${NCINE_ARCH_EXTENSIONS})
+			target_compile_options(${target} PRIVATE "-march=${NCINE_ARCH_EXTENSIONS}")
 		endif()
 	
 		# Only in Debug - preserve debug information, it's probably added automatically on other platforms
@@ -438,7 +438,7 @@ function(ncine_apply_compiler_options target)
 			target_compile_options(${target} PRIVATE -fdiagnostics-color=auto)
 			target_compile_options(${target} PRIVATE -Wall -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder)
 
-			target_link_options(${target} PRIVATE -Wno-free-nonheap-object)
+			target_link_options(${target} PRIVATE "-Wno-free-nonheap-object")
 			#if(NCINE_DYNAMIC_LIBRARY)
 			#	target_link_options(${target} PRIVATE -Wl,--no-undefined)
 			#endif()
