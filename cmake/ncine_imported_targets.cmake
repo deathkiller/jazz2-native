@@ -186,9 +186,9 @@ if(MSVC OR MINGW OR MSYS)
 				set(VC_LTL_FOUND 1)
 			endif()
 		endif()
+		
+		find_package(OpenGL REQUIRED)
 	endif()
-	
-	find_package(OpenGL REQUIRED)
 elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(APPLE)
 		set(CMAKE_FRAMEWORK_PATH ${NCINE_LIBS})

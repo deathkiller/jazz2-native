@@ -201,7 +201,7 @@ namespace nCine
 		return false;
 #else
 		return (_sharedBlock != nullptr && ::TerminateThread(_sharedBlock->_handle, 1));
-#endif;
+#endif
 	}
 
 	ThreadAffinityMask Thread::GetAffinityMask() const
