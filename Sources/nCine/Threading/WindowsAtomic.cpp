@@ -8,8 +8,8 @@ namespace nCine
 	int32_t Atomic32::load(MemoryModel memModel)
 	{
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		FATAL_MSG("Incompatible memory model");
-		return 0;
+		// ReadNoFence/ReadAcquire/ReadRelease is not supported on Windows RT
+		return value_;
 #else
 		switch (memModel) {
 			case MemoryModel::RELAXED:
@@ -29,7 +29,8 @@ namespace nCine
 	void Atomic32::store(int32_t value, MemoryModel memModel)
 	{
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		FATAL_MSG("Incompatible memory model");
+		// WriteNoFence/WriteAcquire/WriteRelease is not supported on Windows RT
+		value_ = value;
 #else
 		switch (memModel) {
 			case MemoryModel::RELAXED:
@@ -97,8 +98,8 @@ namespace nCine
 	int64_t Atomic64::load(MemoryModel memModel)
 	{
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		FATAL_MSG("Incompatible memory model");
-		return 0;
+		// ReadNoFence/ReadAcquire/ReadRelease is not supported on Windows RT
+		return value_;
 #else
 		switch (memModel) {
 			case MemoryModel::RELAXED:
@@ -118,7 +119,8 @@ namespace nCine
 	void Atomic64::store(int64_t value, MemoryModel memModel)
 	{
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		FATAL_MSG("Incompatible memory model");
+		// WriteNoFence/WriteAcquire/WriteRelease is not supported on Windows RT
+		value_ = value;
 #else
 		switch (memModel) {
 			case MemoryModel::RELAXED:
