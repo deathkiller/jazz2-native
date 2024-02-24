@@ -599,7 +599,10 @@ namespace backward {
 			size_t next = 0;
 			size_t delimiter_size = sizeof(kBackwardPathDelimiter) - 1;
 			while ((next = s.find(kBackwardPathDelimiter, last)) != std::string::npos) {
-				out.push_back(s.substr(last, next - last));
+				size_t length = next - last;
+				if (length > 0) {
+					out.push_back(s.substr(last, length));
+				}
 				last = next + delimiter_size;
 			}
 			if (last <= s.length()) {
@@ -3596,18 +3599,58 @@ namespace backward {
 			//    a colon-separated list of path prefixes.  Try prepending each
 			//    to the given path until a valid file is found.
 			const std::vector<std::string>& prefixes = get_paths_from_env_variable();
-			for (size_t i = 0; i < prefixes.size(); ++i) {
-				// Double slashes (//) should not be a problem.
-				std::string new_path = prefixes[i] + '/' + path;
-				_file.reset(new std::ifstream(new_path.c_str()));
-				if (is_open()) {
-					break;
+			if (!prefixes.empty()) {
+				size_t lastOffset = std::string::npos;
+				while (true) {
+					size_t offset = path.find_last_of("/\\", lastOffset);
+					if (offset == std::string::npos) {
+						break;
+					}
+
+					for (size_t i = 0; i < prefixes.size(); i++) {
+						const std::string& prefix = prefixes[i];
+						std::string new_path = prefix;
+						if (prefix[prefix.size() - 1] != '/' && prefix[prefix.size() - 1] != '\\') {
+#if defined(BACKWARD_SYSTEM_WINDOWS)
+							new_path += '\\';
+#else
+							new_path += '/';
+#endif
+						}
+						new_path.append(path, offset + 1);
+
+						_file.reset(new std::ifstream(new_path.c_str()));
+						if (is_open()) {
+							return;
+						}
+					}
+
+					if (offset == 0) {
+						break;
+					}
+
+					lastOffset = offset - 1;
+				}
+
+				for (size_t i = 0; i < prefixes.size(); ++i) {
+					// Double slashes (//) should not be a problem.
+					std::string new_path = prefixes[i];
+#if defined(BACKWARD_SYSTEM_WINDOWS)
+					new_path += '\\';
+#else
+					new_path += '/';
+#endif
+					new_path += path;
+
+					_file.reset(new std::ifstream(new_path.c_str()));
+					if (is_open()) {
+						return;
+					}
 				}
 			}
+			
 			// 2. If no valid file found then fallback to opening the path as-is.
-			if (!_file || !is_open()) {
-				_file.reset(new std::ifstream(path.c_str()));
-			}
+			_file.reset(new std::ifstream(path.c_str()));
 		}
 		bool is_open() const {
 			return _file->is_open();
