@@ -180,9 +180,11 @@
 #if !defined(_GNU_SOURCE)
 #	define _GNU_SOURCE
 #	include <dlfcn.h>
+#	include <string.h>
 #	undef _GNU_SOURCE
 #else
 #	include <dlfcn.h>
+#	include <string.h>
 #endif
 
 #if BACKWARD_HAS_BFD == 1
@@ -297,11 +299,8 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #include <CommonWindows.h>
-
-#if !defined(DEATH_TARGET_32BIT)
-#	include <Containers/StringStl.h>
-#	include <Utf8.h>
-#endif
+#include <Containers/StringStl.h>
+#include <Utf8.h>
 
 #include <psapi.h>
 #include <signal.h>
@@ -316,6 +315,7 @@ typedef SSIZE_T ssize_t;
 // Some versions of imagehlp.dll lack the proper packing directives themselves
 // so we need to do it.
 #pragma pack(push, before_imagehlp, 8)
+#define _IMAGEHLP64
 #include <imagehlp.h>
 #pragma pack(pop, before_imagehlp)
 
@@ -703,6 +703,11 @@ namespace backward {
 		}
 
 	protected:
+		size_t _thread_id;
+		size_t _skip;
+		void* _context;
+		void* _error_addr;
+
 		void load_thread_info() {
 #if defined(BACKWARD_SYSTEM_LINUX)
 #	if !defined(DEATH_TARGET_ANDROID)
@@ -741,12 +746,6 @@ namespace backward {
 		size_t skip_n_firsts() const {
 			return _skip;
 		}
-
-	private:
-		size_t _thread_id;
-		size_t _skip;
-		void* _context;
-		void* _error_addr;
 	};
 
 	class StackTraceImplHolder : public StackTraceImplBase {
@@ -1111,6 +1110,8 @@ namespace backward {
 			if (thd_ == NULL) {
 				thd_ = ::GetCurrentThread();
 			}
+
+			_thread_id = (size_t)::GetThreadId(thd_);
 
 			HANDLE process = ::GetCurrentProcess();
 
@@ -3558,22 +3559,12 @@ namespace backward {
 			}
 
 			DWORD offset = 0;
-#if defined(DEATH_TARGET_32BIT)
-			// 32-bit library doesn't have SymGetLineFromAddrW() function
-			IMAGEHLP_LINE line = { sizeof(IMAGEHLP_LINE) };
-			if (::SymGetLineFromAddr(process, (ULONG64)t.addr, &offset, &line)) {
-				t.source.filename = line.FileName;
-				t.source.line = line.LineNumber;
-				t.source.col = offset;
-			}
-#else
 			IMAGEHLP_LINEW64 lineW = { sizeof(IMAGEHLP_LINEW64) };
-			if (::SymGetLineFromAddrW(process, (ULONG64)t.addr, &offset, &lineW)) {
+			if (::SymGetLineFromAddrW64(process, (ULONG64)t.addr, &offset, &lineW)) {
 				t.source.filename = Death::Utf8::FromUtf16(lineW.FileName);
 				t.source.line = lineW.LineNumber;
 				t.source.col = offset;
 			}
-#endif
 
 			t.source.function = name;
 			t.object_function = name;
@@ -3597,7 +3588,7 @@ namespace backward {
 
 	class SourceFile {
 	public:
-		typedef std::vector<std::pair<unsigned, std::string> > lines_t;
+		typedef std::vector<std::pair<unsigned, std::string>> lines_t;
 
 		SourceFile() {}
 		SourceFile(const std::string& path) {
@@ -3712,8 +3703,7 @@ namespace backward {
 		}
 
 	private:
-		details::handle<std::ifstream*, details::default_delete<std::ifstream*>>
-			_file;
+		details::handle<std::ifstream*, details::default_delete<std::ifstream*>> _file;
 
 		static std::vector<std::string> get_paths_from_env_variable_impl() {
 			std::vector<std::string> paths;
@@ -3828,7 +3818,6 @@ namespace backward {
 		cfile_streambuf& operator=(const cfile_streambuf&) = delete;
 
 		FILE* sink;
-		std::vector<char> buffer;
 	};
 
 #	if defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_WINDOWS)
@@ -3901,38 +3890,38 @@ namespace backward {
 				inliner_context_size(5), trace_context_size(7) {}
 
 		template<typename ST>
-		FILE* print(ST& st, FILE* fp = stderr) {
+		FILE* print(ST& st, FILE* fp = stderr, int signal = 0) {
 			cfile_streambuf obuf(fp);
 			std::ostream os(&obuf);
 			Colorize colorize(os);
 			colorize.activate(color_mode);
-			print_stacktrace(st, os, colorize);
+			print_stacktrace(st, os, signal, colorize);
 			return fp;
 		}
 
 		template<typename ST>
-		std::ostream& print(ST& st, std::ostream& os) {
+		std::ostream& print(ST& st, std::ostream& os, int signal = 0) {
 			Colorize colorize(os);
 			colorize.activate(color_mode);
-			print_stacktrace(st, os, colorize);
+			print_stacktrace(st, os, signal, colorize);
 			return os;
 		}
 
 		template<typename IT>
-		FILE* print(IT begin, IT end, FILE* fp = stderr, size_t thread_id = 0) {
+		FILE* print(IT begin, IT end, FILE* fp = stderr, size_t thread_id = 0, int signal = 0) {
 			cfile_streambuf obuf(fp);
 			std::ostream os(&obuf);
 			Colorize colorize(os);
 			colorize.activate(color_mode);
-			print_stacktrace(begin, end, os, thread_id, colorize);
+			print_stacktrace(begin, end, os, thread_id, signal, colorize);
 			return fp;
 		}
 
 		template<typename IT>
-		std::ostream& print(IT begin, IT end, std::ostream& os, size_t thread_id = 0) {
+		std::ostream& print(IT begin, IT end, std::ostream& os, size_t thread_id = 0, int signal = 0) {
 			Colorize colorize(os);
 			colorize.activate(color_mode);
-			print_stacktrace(begin, end, os, thread_id, colorize);
+			print_stacktrace(begin, end, os, thread_id, signal, colorize);
 			return os;
 		}
 
@@ -3945,8 +3934,8 @@ namespace backward {
 		SnippetFactory _snippets;
 
 		template<typename ST>
-		void print_stacktrace(ST& st, std::ostream& os, Colorize& colorize) {
-			print_header(os, st.thread_id(), colorize);
+		void print_stacktrace(ST& st, std::ostream& os, int signal, Colorize& colorize) {
+			print_header(os, st.thread_id(), signal, colorize);
 			_resolver.load_stacktrace(st);
 			bool failed = false;
 			for (size_t trace_idx = 0; trace_idx < st.size(); ++trace_idx) {
@@ -3967,17 +3956,26 @@ namespace backward {
 		}
 
 		template<typename IT>
-		void print_stacktrace(IT begin, IT end, std::ostream& os, size_t thread_id, Colorize& colorize) {
-			print_header(os, thread_id, colorize);
+		void print_stacktrace(IT begin, IT end, std::ostream& os, size_t thread_id, int signal, Colorize& colorize) {
+			print_header(os, thread_id, signal, colorize);
 			for (; begin != end; ++begin) {
 				print_trace(os, *begin, colorize);
 			}
 		}
 
-		void print_header(std::ostream& os, size_t thread_id, Colorize& colorize) {
+		void print_header(std::ostream& os, size_t thread_id, int signal, Colorize& colorize) {
 			colorize.set_color(Color::bold);
 			os << "The application exited unexpectedly";
 			colorize.set_color(Color::reset);
+			if (signal != 0) {
+				os << " due to signal " << signal;
+#	if defined(BACKWARD_SYSTEM_LINUX)
+				const char* signalName = sigabbrev_np(signal);
+				if (signalName != nullptr) {
+					os << " (SIG" << signalName << ")";
+				}
+#	endif
+			}
 			os << " with following stack trace";
 			if (thread_id != 0) {
 				os << " in thread " << thread_id;
@@ -4088,7 +4086,7 @@ namespace backward {
 				SIGEMT, // emulation instruction executed
 #	endif
 			};
-			return std::vector<int>(posix_signals, posix_signals + sizeof posix_signals / sizeof posix_signals[0]);
+			return std::vector<int>(posix_signals, posix_signals + sizeof(posix_signals) / sizeof(posix_signals[0]));
 		}
 
 		SignalHandling(const std::vector<int>& posix_signals = make_default_signals())
@@ -4142,14 +4140,19 @@ namespace backward {
 			return data;
 		}
 
-		static void handleSignal(int, siginfo_t* info, void* _ctx) {
+		static FILE*& destination() {
+			static FILE* data = nullptr;
+			return data;
+		}
+
+		static void handleSignal(int signo, siginfo_t* info, void* _ctx) {
 			ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
 
 			StackTrace st;
 			void* error_addr = nullptr;
-#	if defined(REG_RIP) // x86_64
+#	if defined(REG_RIP)		// 64-bit x86
 			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
-#	elif defined(REG_EIP) // x86_32
+#	elif defined(REG_EIP)	// 32-bit x86
 			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
 #	elif defined(__arm__)
 			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.arm_pc);
@@ -4184,14 +4187,16 @@ namespace backward {
 			Printer printer;
 			printer.color_mode = color_mode();
 			printer.address = true;
-			printer.print(st, stderr);
 
-#	if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) || \
-	   (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
-			psiginfo(info, nullptr);
-#	else
-			(void)info;
-#	endif
+			FILE* dest = destination();
+			printer.print(st, dest != nullptr ? dest : stderr, info->si_signo);
+
+//#	if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) || \
+//	   (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
+//			psiginfo(info, nullptr);
+//#	else
+//			(void)info;
+//#	endif
 		}
 
 	private:
@@ -4230,7 +4235,7 @@ namespace backward {
 
 				{
 					std::unique_lock<std::mutex> lk(mtx());
-					cv().wait(lk, [] { return crashed() != crash_status::running; });
+					cv().wait(lk, []() { return crashed() != crash_status::running; });
 				}
 				if (crashed() == crash_status::crashed) {
 					handle_stacktrace(skip_recs());
@@ -4244,10 +4249,10 @@ namespace backward {
 			::SetUnhandledExceptionFilter(crash_handler);
 
 			signal(SIGABRT, signal_handler);
-#if !defined(_Build_By_LTL)
-			// This function is not supported on VC-LTL 4.1.3
-			_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
-#endif
+//#if !defined(_Build_By_LTL)
+//			// This function is not supported on VC-LTL 4.1.3
+//			_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+//#endif
 
 			std::set_terminate(&terminator);
 #	if !defined(BACKWARD_ATLEAST_CXX17)
@@ -4256,6 +4261,7 @@ namespace backward {
 			_set_purecall_handler(&terminator);
 			_set_invalid_parameter_handler(&invalid_parameter_handler);
 		}
+
 		bool loaded() const {
 			return true;
 		}
@@ -4273,6 +4279,11 @@ namespace backward {
 
 		static ColorMode::type& color_mode() {
 			static ColorMode::type data = ColorMode::type::never;
+			return data;
+		}
+
+		static FILE*& destination() {
+			static FILE* data = nullptr;
 			return data;
 		}
 
@@ -4369,7 +4380,7 @@ namespace backward {
 
 			{
 				std::unique_lock<std::mutex> lk(mtx());
-				cv().wait(lk, [] { return crashed() != crash_status::crashed; });
+				cv().wait(lk, []() { return crashed() != crash_status::crashed; });
 			}
 		}
 
@@ -4389,7 +4400,13 @@ namespace backward {
 			st.skip_n_firsts(skip_frames);
 
 			printer.address = true;
-			printer.print(st, std::cerr);
+
+			FILE* dest = destination();
+			if (dest != nullptr) {
+				printer.print(st, dest);
+			} else {
+				printer.print(st, std::cerr);
+			}
 		}
 	};
 

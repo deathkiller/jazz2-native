@@ -230,6 +230,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Stream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Unaligned.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\TypeInfo.h" />
+    <ClInclude Include="backward\backward.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />

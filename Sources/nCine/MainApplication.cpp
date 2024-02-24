@@ -307,8 +307,6 @@ namespace nCine
 #	endif
 #endif
 
-		appEventHandler_ = createAppEventHandler();
-
 		// Only `OnPreInit()` can modify the application configuration
 		if (argc > 1) {
 #if defined(DEATH_TARGET_WINDOWS)
@@ -324,8 +322,7 @@ namespace nCine
 #endif
 		}
 
-		appEventHandler_->OnPreInit(appCfg_);
-		LOGI("IAppEventHandler::OnPreInit() invoked");
+		preInitCommon(createAppEventHandler());
 
 		// Graphics device should always be created before the input manager!
 		IGfxDevice::GLContextInfo glContextInfo(appCfg_);

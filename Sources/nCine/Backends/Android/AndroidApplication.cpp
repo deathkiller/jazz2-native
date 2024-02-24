@@ -247,10 +247,7 @@ namespace nCine
 		LOGI("Running on %s %s (%s)", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
 #endif
 
-		appEventHandler_ = createAppEventHandler_();
-		// Only `OnPreInit()` can modify the application configuration
-		appEventHandler_->OnPreInit(appCfg_);
-		LOGI("IAppEventHandler::OnPreInit() invoked");
+		preInitCommon(createAppEventHandler());
 	}
 
 	void AndroidApplication::init()
