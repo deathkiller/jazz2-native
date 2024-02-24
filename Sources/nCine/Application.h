@@ -196,6 +196,7 @@ namespace nCine
 		Application();
 		~Application();
 
+		void preInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler);
 		/// Must be called before giving control to the application
 		void initCommon();
 		/// A single step of the game loop made to render a frame

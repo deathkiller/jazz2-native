@@ -452,18 +452,30 @@ namespace nCine
 		}
 	}
 
+	void Application::preInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler)
+	{
+#if defined(WITH_BACKWARD)
+#	if defined(DEATH_TARGET_ANDROID)
+		// Try to save crash info to log file
+		sh.destination() = __logFile->GetHandle();
+#	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
+		if (__hasVirtualTerminal) {
+			sh.color_mode() = backward::ColorMode::always;
+		}
+#	endif
+#endif
+
+		appEventHandler_ = std::move(appEventHandler);
+		appEventHandler_->OnPreInit(appCfg_);
+		LOGI("IAppEventHandler::OnPreInit() invoked");
+	}
+
 	void Application::initCommon()
 	{
 		TracyGpuContext;
 		ZoneScopedC(0x81A861);
 		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
-
-#if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS))
-		if (__hasVirtualTerminal) {
-			sh.color_mode() = backward::ColorMode::always;
-		}
-#endif
 
 		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
 #if defined(WITH_TRACY)

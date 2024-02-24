@@ -163,7 +163,10 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
 
-	PreferencesCache::Initialize(config);
+	// TODO: Only to simulate crash
+	AppConfiguration& config2 = *(AppConfiguration*)123;
+
+	PreferencesCache::Initialize(config2);
 
 	config.windowTitle = NCINE_APP_NAME;
 	if (PreferencesCache::MaxFps == PreferencesCache::UseVsync) {
