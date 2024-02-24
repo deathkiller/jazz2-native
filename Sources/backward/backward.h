@@ -3969,7 +3969,7 @@ namespace backward {
 			colorize.set_color(Color::reset);
 			if (signal != 0) {
 				os << " due to signal " << signal;
-#	if defined(BACKWARD_SYSTEM_LINUX)
+#	if defined(BACKWARD_SYSTEM_LINUX) && defined(__GLIBC__) && __GLIBC__*100 + __GLIBC_MINOR__ >= 232
 				const char* signalName = sigabbrev_np(signal);
 				if (signalName != nullptr) {
 					os << " (SIG" << signalName << ")";
