@@ -872,21 +872,17 @@ namespace Jazz2::UI
 
 		GenericGraphicResource* base = res->Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * clipX, base->FrameDimensions.Y * clipY);
-		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x - (1.0f - clipX) * 0.5f * base->FrameDimensions.X,
-			y - (1.0f - clipY) * 0.5f * base->FrameDimensions.Y), size);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), base->FrameDimensions.As<float>());
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int32_t col = frame % base->FrameConfiguration.X;
 		int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(
-			float(base->FrameDimensions.X) / float(texSize.X),
+			std::floor(float(base->FrameDimensions.X) * clipX) / float(texSize.X),
 			float(base->FrameDimensions.X * col) / float(texSize.X),
-			float(base->FrameDimensions.Y) / float(texSize.Y),
+			std::floor(float(base->FrameDimensions.Y) * clipY) / float(texSize.Y),
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
-
-		texCoords.X *= clipX;
-		texCoords.Z *= clipY;
 
 		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color);
 	}
