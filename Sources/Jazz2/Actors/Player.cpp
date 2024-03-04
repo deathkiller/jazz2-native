@@ -39,6 +39,18 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2::Actors
 {
+	// Player-specific animations
+	static constexpr AnimState Shield = (AnimState)536870928;
+	static constexpr AnimState ShieldFire = (AnimState)536870929;
+	static constexpr AnimState ShieldLightning = (AnimState)536870931;
+	static constexpr AnimState ShieldWater = (AnimState)536870930;
+	static constexpr AnimState SugarRush = (AnimState)536870913;
+	static constexpr AnimState WeaponFlare = (AnimState)536870950;
+	static constexpr AnimState CompositeAnimMask = (AnimState)0xFFF83F60;
+	static constexpr AnimState TransformFrogFromJazz = (AnimState)0x60000000;
+	static constexpr AnimState TransformFrogFromSpaz = (AnimState)0x60000001;
+	static constexpr AnimState TransformFrogFromLori = (AnimState)0x60000002;
+
 	Player::Player()
 		:
 		_playerIndex(0),
@@ -297,7 +309,7 @@ namespace Jazz2::Actors
 
 					auto* tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
-						auto* res = _metadata->FindAnimation((AnimState)536870928); // Shield
+						auto* res = _metadata->FindAnimation(Shield);
 						if (res != nullptr) {
 							Vector2i texSize = res->Base->TextureDiffuse->size();
 							Vector2i size = res->Base->FrameDimensions;
@@ -452,7 +464,7 @@ namespace Jazz2::Actors
 
 					auto* tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
-						auto* res = _metadata->FindAnimation((AnimState)536870913); // SugarRush
+						auto* res = _metadata->FindAnimation(SugarRush);
 						if (res != nullptr) {
 							Vector2i texSize = res->Base->TextureDiffuse->size();
 							Vector2i size = res->Base->FrameDimensions;
@@ -1000,7 +1012,7 @@ namespace Jazz2::Actors
 	bool Player::OnDraw(RenderQueue& renderQueue)
 	{
 		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr) {
-			auto* res = _metadata->FindAnimation((AnimState)536870950); // WeaponFlare
+			auto* res = _metadata->FindAnimation(WeaponFlare);
 			if (res != nullptr) {
 				auto& command = _weaponFlareCommand;
 				if (command == nullptr) {
@@ -1031,9 +1043,9 @@ namespace Jazz2::Actors
 
 				float scaleY = std::max(_weaponFlareTime / 8.0f, 0.4f);
 				switch (_playerType) {
-					case  PlayerType::Jazz: scaleY *= 1.1f; break;
-					case  PlayerType::Spaz: scaleY *= 1.6f; break;
-					case  PlayerType::Lori: scaleY *= 1.3f; break;
+					case PlayerType::Jazz: scaleY *= 1.1f; break;
+					case PlayerType::Spaz: scaleY *= 1.6f; break;
+					case PlayerType::Lori: scaleY *= 1.3f; break;
 				}
 
 				bool facingLeft = IsFacingLeft();
@@ -1079,7 +1091,7 @@ namespace Jazz2::Actors
 
 		switch (_activeShield) {
 			case ShieldType::Fire: {
-				auto* res = _metadata->FindAnimation((AnimState)536870929); // ShieldFire
+				auto* res = _metadata->FindAnimation(ShieldFire);
 				if (res != nullptr) {
 					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
@@ -1156,7 +1168,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case ShieldType::Water: {
-				auto* res = _metadata->FindAnimation((AnimState)536870930); // ShieldWater
+				auto* res = _metadata->FindAnimation(ShieldWater);
 				if (res != nullptr) {
 					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
@@ -1210,7 +1222,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case ShieldType::Lightning: {
-				auto* res = _metadata->FindAnimation((AnimState)536870931); // ShieldLightning
+				auto* res = _metadata->FindAnimation(ShieldLightning);
 				if (res != nullptr) {
 					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
@@ -1694,7 +1706,7 @@ namespace Jazz2::Actors
 			}
 		} else {
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
-			AnimState composite = (_currentAnimation->State & (AnimState)0xFFF83F60);
+			AnimState composite = (_currentAnimation->State & CompositeAnimMask);
 
 			if (_isActivelyPushing == _wasActivelyPushing) {
 				float absSpeedX = std::abs(_speed.X);
@@ -2906,7 +2918,7 @@ namespace Jazz2::Actors
 				} else {
 					// Refresh animation state, because UpdateAnimation() is not called when _controllable is false
 					AnimState oldState = _currentAnimation->State;
-					AnimState newState = (oldState & (AnimState)0xFFF83F60);
+					AnimState newState = (oldState & CompositeAnimMask);
 					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 						newState |= AnimState::Walk;
 					}
@@ -2946,7 +2958,7 @@ namespace Jazz2::Actors
 				} else {
 					// Refresh animation state, because UpdateAnimation() is not called when _controllable is false
 					AnimState oldState = _currentAnimation->State;
-					AnimState newState = (oldState & (AnimState)0xFFF83F60);
+					AnimState newState = (oldState & CompositeAnimMask);
 					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 						newState |= AnimState::Walk;
 					}
@@ -3452,12 +3464,8 @@ namespace Jazz2::Actors
 				_controllable = true;
 			});
 
-			if (_levelHandler->Difficulty() == GameDifficulty::Multiplayer) {
-				SetInvulnerability(80.0f, false);
-			} else {
-				SetInvulnerability(180.0f, false);
-			}
-
+			float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
+			SetInvulnerability(invulnerableTime, false);
 			PlaySfx("Hurt"_s);
 		} else {
 			_externalForce.X = 0.0f;
@@ -3481,16 +3489,20 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		SetState(ActorState::IsInvulnerable, true);
-		_invulnerableTime = time;
-
 		if (withCircleEffect) {
+			if (_invulnerableTime > 0.0f) {
+				// If the players is already blinking, show it now
+				_renderer.setDrawEnabled(true);
+			}
 			if (_shieldSpawnTime <= ShieldDisabled) {
 				_shieldSpawnTime = 1.0f;
 			}
 		} else {
 			_shieldSpawnTime = ShieldDisabled;
 		}
+
+		SetState(ActorState::IsInvulnerable, true);
+		_invulnerableTime = time;
 	}
 
 	void Player::EndDamagingMove()
@@ -3575,11 +3587,7 @@ namespace Jazz2::Actors
 
 	void Player::ConsumeFood(bool isDrinkable)
 	{
-		if (isDrinkable) {
-			PlaySfx("PickupDrink"_s);
-		} else {
-			PlaySfx("PickupFood"_s);
-		}
+		PlaySfx(isDrinkable ? "PickupDrink"_s : "PickupFood"_s);
 
 		_foodEaten++;
 		if (_foodEaten >= 100) {
@@ -3709,19 +3717,19 @@ namespace Jazz2::Actors
 
 			switch (playerTypePrevious) {
 				case PlayerType::Jazz:
-					SetTransition((AnimState)0x60000000, false, [this]() {
+					SetTransition(TransformFrogFromJazz, false, [this]() {
 						_controllable = true;
 						_controllableTimeout = 0.0f;
 					});
 					break;
 				case PlayerType::Spaz:
-					SetTransition((AnimState)0x60000001, false, [this]() {
+					SetTransition(TransformFrogFromSpaz, false, [this]() {
 						_controllable = true;
 						_controllableTimeout = 0.0f;
 					});
 					break;
 				case PlayerType::Lori:
-					SetTransition((AnimState)0x60000002, false, [this]() {
+					SetTransition(TransformFrogFromLori, false, [this]() {
 						_controllable = true;
 						_controllableTimeout = 0.0f;
 					});
