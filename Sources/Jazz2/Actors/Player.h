@@ -207,7 +207,7 @@ namespace Jazz2::Actors
 		float _controllableTimeout;
 		ExitType _lastExitType;
 
-		bool _wasUpPressed, _wasDownPressed, _wasJumpPressed, _wasFirePressed;
+		bool _wasUpPressed, _wasDownPressed, _wasJumpPressed, _wasFirePressed, _isRunPressed;
 
 		PlayerType _playerType, _playerTypeOriginal;
 		SpecialMoveType _currentSpecialMove;

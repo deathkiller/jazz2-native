@@ -8,6 +8,7 @@ namespace Jazz2::UI::Menu
 		RemapControls,
 		TouchControls,
 		InputDiagnostics,
+		ToggleRunAction,
 #if defined(DEATH_TARGET_ANDROID)
 		UseNativeBackButton
 #endif

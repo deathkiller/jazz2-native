@@ -255,8 +255,10 @@ namespace Jazz2::UI
 						}
 					}
 
+					Colorf color = (button.Action == PlayerActions::Run && player->_isRunPressed ? Colorf(0.6f, 0.6f, 0.6f) : Colorf::White);
+
 					DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(std::round(x - button.Width * 0.5f), std::round(y - button.Height * 0.5f)),
-						TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White);
+						TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
 				}
 			}
 		}

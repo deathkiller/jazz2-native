@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-01-24 13:44+0100\n"
+"POT-Creation-Date: 2024-03-07 00:58+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Eduardo Karasinski <edukara@gmail.com>\n"
 "Language-Team: Traduzido para Português Brasileiro por: edukara\n"
@@ -1409,37 +1409,37 @@ msgstr ""
 "%s"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:57
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:74
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:58
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:75
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:133
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:135
 msgid "Play Story"
 msgstr "Jogar Modo História"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:60
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:61
 msgid "Play Shareware Demo"
 msgstr "Jogar a Versão DEMO"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:65
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:66
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:66
 msgid "Import Episodes"
 msgstr "Importar Episódios"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:70
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:71
 msgid "Continue"
 msgstr ""
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:77
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:78
 msgid "Play Custom Game"
 msgstr ""
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:80
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:81
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:123
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
@@ -1448,7 +1448,7 @@ msgstr "Jogar Fases Personalizadas"
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:85
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:37
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
@@ -1456,20 +1456,20 @@ msgid "Options"
 msgstr "Opções"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:87
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:88
 msgid "About"
 msgstr "Sobre"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:91
 msgid "Quit"
 msgstr "Sair"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:188
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:189
 msgid "Access to external storage has been granted!"
 msgstr "Acesso ao dispositivo de armazenamento externo permitido com sucesso!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:190
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:191
 msgid ""
 "\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x337233] files correctly."
@@ -1477,7 +1477,7 @@ msgstr ""
 "\f[c:0x337233]Reinicie o jogo para ler os arquivos de \f[c:0x9e7056]Jazz "
 "Jackrabbit 2\f[c:0x337233] corretamente."
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:195
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:196
 msgid ""
 "\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x704a4a] files!"
@@ -1485,14 +1485,14 @@ msgstr ""
 "\f[c:0x704a4a]Esse jogo requer os arquivos originais de \f[c:0x9e7056]Jazz "
 "Jackrabbit 2\f[c:0x704a4a] !"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:197
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:198
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
 "Tenha certeza de que os arquivos de Jazz Jackrabbit 2 estão no seguinte "
 "caminho:"
 
 #. TRANSLATORS: Menu item in main menu (Android 11+ only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:205
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:206
 msgid "Allow access to external storage"
 msgstr "Permitir acesso ao dispositivo de armazenamento externo"
 
@@ -1514,18 +1514,22 @@ msgstr "Controles de Toque"
 msgid "Input Diagnostics"
 msgstr "Diagnósticos"
 
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
+msgid "Toggle Run"
+msgstr ""
+
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:25
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
 msgid "Native Back Button"
 msgstr "Botão de Retorno Nativo"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:23
 msgid "Controls"
 msgstr "Controles"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:98
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:100
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:125
@@ -1535,7 +1539,7 @@ msgstr "Controles"
 msgid "Enabled"
 msgstr "Habilitado"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:98
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:100
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
@@ -1675,7 +1679,7 @@ msgstr "Habilitado com a Contagem de Munição"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:25
-#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:51
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:53
 msgid "Language"
 msgstr "Idioma"
 
@@ -2002,16 +2006,16 @@ msgstr "Difícil"
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Você pode ajustar a posição dos controles tocando e arrastando-os."
 
-#: Sources/Main.cpp:297 Sources/Main.cpp:357
+#: Sources/Main.cpp:302 Sources/Main.cpp:362
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr ""
 
-#: Sources/Main.cpp:344
+#: Sources/Main.cpp:349
 msgid "Creating server..."
 msgstr ""
 
-#: Sources/Main.cpp:540 Sources/Main.cpp:576
+#: Sources/Main.cpp:547 Sources/Main.cpp:583
 msgid ""
 "\f[c:0x704a4a]Cannot load specified level!\f[c]\n"
 "\n"
@@ -2025,7 +2029,7 @@ msgstr ""
 "Tenha certeza de que todos os arquivos necessários\n"
 "estão acessíveis e tente novamente."
 
-#: Sources/Main.cpp:624
+#: Sources/Main.cpp:631
 msgid ""
 "\f[c:0x704a4a]Cannot resume saved state!\f[c]\n"
 "\n"
@@ -2034,7 +2038,7 @@ msgid ""
 "are accessible and try it again."
 msgstr ""
 
-#: Sources/Main.cpp:737
+#: Sources/Main.cpp:744
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2042,7 +2046,7 @@ msgid ""
 "Your client version is not compatible with the server."
 msgstr ""
 
-#: Sources/Main.cpp:738
+#: Sources/Main.cpp:745
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2051,7 +2055,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:739
+#: Sources/Main.cpp:746
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2060,7 +2064,7 @@ msgid ""
 "Please try again in a few seconds."
 msgstr ""
 
-#: Sources/Main.cpp:740
+#: Sources/Main.cpp:747
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"
@@ -2069,7 +2073,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:741
+#: Sources/Main.cpp:748
 msgid ""
 "\f[c:0x704a4a]Connection has been lost!\f[c]\n"
 "\n"
@@ -2078,7 +2082,7 @@ msgid ""
 "check your network connection."
 msgstr ""
 
-#: Sources/Main.cpp:742
+#: Sources/Main.cpp:749
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2086,7 +2090,7 @@ msgid ""
 "The server is not responding for connection request."
 msgstr ""
 
-#: Sources/Main.cpp:743
+#: Sources/Main.cpp:750
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"
@@ -2095,7 +2099,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:744
+#: Sources/Main.cpp:751
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"

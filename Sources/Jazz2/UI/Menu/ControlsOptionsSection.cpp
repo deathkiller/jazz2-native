@@ -20,6 +20,7 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });
 		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::InputDiagnostics, _("Input Diagnostics") });
+		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::ToggleRunAction, _("Toggle Run"), true });
 #if defined(DEATH_TARGET_ANDROID)
 		// TRANSLATORS: Menu item in Options > Controls section (Android only)
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::UseNativeBackButton, _("Native Back Button"), true });
@@ -89,6 +90,7 @@ namespace Jazz2::UI::Menu
 		if (item.Item.HasBooleanValue) {
 			bool enabled;
 			switch (item.Item.Type) {
+				case ControlsOptionsItemType::ToggleRunAction: enabled = PreferencesCache::ToggleRunAction; break;
 #if defined(DEATH_TARGET_ANDROID)
 				case ControlsOptionsItemType::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
 #endif
@@ -108,6 +110,11 @@ namespace Jazz2::UI::Menu
 			case ControlsOptionsItemType::RemapControls: _root->SwitchToSection<RemapControlsSection>(); break;
 			case ControlsOptionsItemType::TouchControls: _root->SwitchToSection<TouchControlsOptionsSection>(); break;
 			case ControlsOptionsItemType::InputDiagnostics: _root->SwitchToSection<InputDiagnosticsSection>(); break;
+			case ControlsOptionsItemType::ToggleRunAction:
+				PreferencesCache::ToggleRunAction = !PreferencesCache::ToggleRunAction;
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
 #if defined(DEATH_TARGET_ANDROID)
 			case ControlsOptionsItemType::UseNativeBackButton:
 				PreferencesCache::UseNativeBackButton = !PreferencesCache::UseNativeBackButton;
