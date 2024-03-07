@@ -61,7 +61,7 @@ namespace Jazz2::Actors
 		_controllableExternal(true),
 		_controllableTimeout(0.0f),
 		_lastExitType(ExitType::None),
-		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false),
+		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false), _isRunPressed(false),
 		_currentSpecialMove(SpecialMoveType::None),
 		_isAttachedToPole(false),
 		_copterFramesLeft(0.0f), _fireFramesLeft(0.0f), _pushFramesLeft(0.0f), _waterCooldownLeft(0.0f),
@@ -548,7 +548,7 @@ namespace Jazz2::Actors
 				}
 			}
 
-			if ((_keepRunningTime > 0.0f || _speed.SqrLength() > (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 36.0f : 100.0f)) && _inTubeTime <= 0.0f) {
+			if ((_keepRunningTime > 0.0f || _speed.SqrLength() > (_isRunPressed ? 36.0f : 100.0f)) && _inTubeTime <= 0.0f) {
 				constexpr float TrailDivision = 10.0f;
 				Vector2f trailDelta = (_pos - _trailLastPos);
 				int trailDistance = (int)(trailDelta.Length() / TrailDivision);
@@ -604,6 +604,14 @@ namespace Jazz2::Actors
 
 		// Controls
 		// Move
+		if (PreferencesCache::ToggleRunAction) {
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Run)) {
+				_isRunPressed = !_isRunPressed;
+			}
+		} else {
+			_isRunPressed = _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run);
+		}
+
 		if (_keepRunningTime <= 0.0f) {
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
 				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Fire)));
@@ -612,7 +620,7 @@ namespace Jazz2::Actors
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
 				_speed.X = 0.2f * playerMovement;
-				if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run)) {
+				if (_isRunPressed) {
 					_speed.X *= 2.6f;
 				}
 			} else if (canWalk && playerMovementVelocity > 0.5f) {
@@ -634,14 +642,14 @@ namespace Jazz2::Actors
 					// Also, exclude Lori, because she can't ledge climb or double jump (rescue/01_colon1)
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
 				} else {
-					if (_suspendType == SuspendType::None && !_inWater && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run)) {
+					if (_suspendType == SuspendType::None && !_inWater && _isRunPressed) {
 						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxDashingSpeed * playerMovementVelocity, MaxDashingSpeed * playerMovementVelocity);
 					} else if (_suspendType == SuspendType::Vine) {
 						if (_wasFirePressed) {
 							_speed.X = 0.0f;
 						} else {
 							// If Run is pressed, player moves faster on vines
-							if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run)) {
+							if (_isRunPressed) {
 								playerMovementVelocity *= 1.6f;
 							}
 							_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxVineSpeed * playerMovementVelocity, MaxVineSpeed * playerMovementVelocity);

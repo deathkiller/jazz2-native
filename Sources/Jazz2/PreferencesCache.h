@@ -103,6 +103,7 @@ namespace Jazz2
 		static WeaponWheelStyle WeaponWheel;
 		static bool EnableRgbLights;
 		static bool AllowUnsignedScripts;
+		static bool ToggleRunAction;
 		static bool UseNativeBackButton;
 		static bool EnableDiscordIntegration;
 		static bool TutorialCompleted;
@@ -153,7 +154,8 @@ namespace Jazz2
 			ResumeOnStart = 0x40000,
 
 			EnableReforgedHUD = 0x100000,
-			EnableReforgedMainMenu = 0x200000
+			EnableReforgedMainMenu = 0x200000,
+			ToggleRunAction = 0x400000
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);

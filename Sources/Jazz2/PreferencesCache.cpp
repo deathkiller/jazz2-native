@@ -38,6 +38,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableRgbLights = false;
 #endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
+	bool PreferencesCache::ToggleRunAction = false;
 #if defined(DEATH_TARGET_ANDROID)
 	bool PreferencesCache::UseNativeBackButton = true;
 #else
@@ -161,6 +162,7 @@ namespace Jazz2
 					WeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel ? WeaponWheelStyle::Enabled : WeaponWheelStyle::Disabled);
 					EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
 					AllowUnsignedScripts = ((boolOptions & BoolOptions::AllowUnsignedScripts) == BoolOptions::AllowUnsignedScripts);
+					ToggleRunAction = ((boolOptions & BoolOptions::ToggleRunAction) == BoolOptions::ToggleRunAction);
 					UseNativeBackButton = ((boolOptions & BoolOptions::UseNativeBackButton) == BoolOptions::UseNativeBackButton);
 					EnableDiscordIntegration = ((boolOptions & BoolOptions::EnableDiscordIntegration) == BoolOptions::EnableDiscordIntegration);
 					TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
@@ -369,6 +371,7 @@ namespace Jazz2
 		if (WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) boolOptions |= BoolOptions::ShowWeaponWheelAmmoCount;
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
 		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
+		if (ToggleRunAction) boolOptions |= BoolOptions::ToggleRunAction;
 		if (UseNativeBackButton) boolOptions |= BoolOptions::UseNativeBackButton;
 		if (EnableDiscordIntegration) boolOptions |= BoolOptions::EnableDiscordIntegration;
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
