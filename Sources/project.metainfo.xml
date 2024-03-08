@@ -29,6 +29,11 @@
 			Also, it partially supports some features of the JJ2+ extension and MLLE.
 		</p>
 	</description>
+	
+	<branding>
+		<color type="primary" scheme_preference="light">#67A3D8</color>
+		<color type="primary" scheme_preference="dark">#276398</color>
+	</branding>
 
 	<categories>
 		<category>Game</category>
@@ -64,6 +69,7 @@
 	</provides>
 
 	<releases>
+		<release version="2.6.0" date="2024-03-08"/>
 		<release version="2.5.0" date="2024-01-26"/>
 		<release version="2.4.1" date="2023-12-28"/>
 		<release version="2.4.0" date="2023-12-19"/>
