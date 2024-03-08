@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-03-07 00:58+0100\n"
 "PO-Revision-Date: \n"
-"Last-Translator: Hexaae <hexaae@gmail.com>\n"
+"Last-Translator: Hexaae\n"
 "Language-Team: Traduzione Italiana: Hexaae\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
@@ -1517,7 +1517,7 @@ msgstr "Diagnostica immissione"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
 msgid "Toggle Run"
-msgstr ""
+msgstr "Cambia corsa continua"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
