@@ -1522,7 +1522,7 @@ msgstr "Diagnostyka sterowania"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
 msgid "Toggle Run"
-msgstr ""
+msgstr "Przełączanie biegu"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
