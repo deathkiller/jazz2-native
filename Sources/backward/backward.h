@@ -1,25 +1,23 @@
-/*
- * backward.hpp
- * Copyright 2013-2024 Google Inc. All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+// Copyright © 2013-2024 Google Inc. All Rights Reserved.
+// Copyright © 2024 Dan R.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
 
 #ifndef H_6B9572DA_A64B_49E6_B234_051480991C89
 #define H_6B9572DA_A64B_49E6_B234_051480991C89
@@ -645,6 +643,8 @@ namespace backward {
 
 		// In which binary object this trace is located.
 		std::string object_filename;
+		// Base address of the binary object
+		void* object_base_address;
 
 		// The function in the object that contain the trace. This is not the same
 		// as source.function which can be an function inlined in object_function.
@@ -662,8 +662,8 @@ namespace backward {
 		typedef std::vector<SourceLoc> source_locs_t;
 		source_locs_t inliners;
 
-		ResolvedTrace() : Trace() {}
-		ResolvedTrace(const Trace& mini_trace) : Trace(mini_trace) {}
+		ResolvedTrace() : Trace(), object_base_address(nullptr) {}
+		ResolvedTrace(const Trace& mini_trace) : Trace(mini_trace), object_base_address(nullptr) {}
 	};
 
 	/*************** STACK TRACE ***************/
@@ -908,22 +908,19 @@ namespace backward {
 				if (uctx->uc_mcontext.gregs[REG_RIP] == reinterpret_cast<greg_t>(error_addr())) {
 					uctx->uc_mcontext.gregs[REG_RIP] = *reinterpret_cast<size_t*>(uctx->uc_mcontext.gregs[REG_RSP]);
 				}
-				_stacktrace[index] =
-					reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
+				_stacktrace[index] = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
 				++index;
 				ctx = *reinterpret_cast<unw_context_t*>(uctx);
 #	elif defined(REG_EIP) // x86_32
 				if (uctx->uc_mcontext.gregs[REG_EIP] == reinterpret_cast<greg_t>(error_addr())) {
 					uctx->uc_mcontext.gregs[REG_EIP] = *reinterpret_cast<size_t*>(uctx->uc_mcontext.gregs[REG_ESP]);
 				}
-				_stacktrace[index] =
-					reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
+				_stacktrace[index] = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
 				++index;
 				ctx = *reinterpret_cast<unw_context_t*>(uctx);
 #	elif defined(__arm__)
 				// libunwind uses its own context type for ARM unwinding.
-				// Copy the registers from the signal handler's context so we can
-				// unwind
+				// Copy the registers from the signal handler's context so we can unwind
 				unw_getcontext(&ctx);
 				ctx.regs[UNW_ARM_R0] = uctx->uc_mcontext.arm_r0;
 				ctx.regs[UNW_ARM_R1] = uctx->uc_mcontext.arm_r1;
@@ -942,8 +939,7 @@ namespace backward {
 				ctx.regs[UNW_ARM_R14] = uctx->uc_mcontext.arm_lr;
 				ctx.regs[UNW_ARM_R15] = uctx->uc_mcontext.arm_pc;
 
-				// If we have crashed in the PC use the LR instead, as this was
-				// a bad function dereference
+				// If we have crashed in the PC use the LR instead, as this was a bad function dereference
 				if (reinterpret_cast<unsigned long>(error_addr()) == uctx->uc_mcontext.arm_pc) {
 					ctx.regs[UNW_ARM_R15] = uctx->uc_mcontext.arm_lr - sizeof(unsigned long);
 				}
@@ -951,10 +947,8 @@ namespace backward {
 				++index;
 #	elif defined(DEATH_TARGET_APPLE) && defined(__x86_64__)
 				unw_getcontext(&ctx);
-				// OS X's implementation of libunwind uses its own context object
-				// so we need to convert the passed context to libunwind's format
-				// (information about the data layout taken from unw_getcontext.s
-				// in Apple's libunwind source
+				// OS X's implementation of libunwind uses its own context object so we need to convert the passed context
+				// to libunwind's format (information about the data layout taken from unw_getcontext.s in Apple's libunwind source
 				ctx.data[0] = uctx->uc_mcontext->__ss.__rax;
 				ctx.data[1] = uctx->uc_mcontext->__ss.__rbx;
 				ctx.data[2] = uctx->uc_mcontext->__ss.__rcx;
@@ -973,9 +967,8 @@ namespace backward {
 				ctx.data[15] = uctx->uc_mcontext->__ss.__r15;
 				ctx.data[16] = uctx->uc_mcontext->__ss.__rip;
 
-				// If the IP is the same as the crash address we have a bad function
-				// dereference The caller's address is pointed to by %rsp, so we
-				// dereference that value and set it to be the next frame's IP.
+				// If the IP is the same as the crash address we have a bad function dereference The caller's address
+				// is pointed to by %rsp, so we dereference that value and set it to be the next frame's IP.
 				if (uctx->uc_mcontext->__ss.__rip ==
 					reinterpret_cast<__uint64_t>(error_addr())) {
 					ctx.data[16] =
@@ -985,8 +978,7 @@ namespace backward {
 				++index;
 #	elif defined(DEATH_TARGET_APPLE)
 				unw_getcontext(&ctx);
-				// TODO: Convert the ucontext_t to libunwind's unw_context_t like
-				// we do in 64 bits
+				// TODO: Convert the ucontext_t to libunwind's unw_context_t like we do in 64 bits
 				if (ctx.uc_mcontext->__ss.__eip == reinterpret_cast<greg_t>(error_addr())) {
 					ctx.uc_mcontext->__ss.__eip = ctx.uc_mcontext->__ss.__esp;
 				}
@@ -1107,7 +1099,20 @@ namespace backward {
 
 			if (ctx_ == nullptr) {
 				ctx_ = &localCtx;
+#	if (defined(_M_IX86) || defined(__i386__)) && defined(DEATH_TARGET_MSVC)
+				// RtlCaptureContext() doesn't work on i386
+				std::memset(&localCtx, 0, sizeof(CONTEXT));
+				localCtx.ContextFlags = CONTEXT_CONTROL;
+				__asm {
+				label:
+					mov[localCtx.Ebp], ebp;
+					mov[localCtx.Esp], esp;
+					mov eax, [label];
+					mov[localCtx.Eip], eax;
+				}
+#	else
 				::RtlCaptureContext(ctx_);
+#	endif
 			}
 
 			if (thd_ == NULL) {
@@ -1125,28 +1130,37 @@ namespace backward {
 			s.AddrStack.Mode = AddrModeFlat;
 			s.AddrFrame.Mode = AddrModeFlat;
 			s.AddrPC.Mode = AddrModeFlat;
-#	if defined(_M_X64)
+#	if defined(_M_X64) || defined(__x86_64__)
 			s.AddrPC.Offset = ctx_->Rip;
 			s.AddrStack.Offset = ctx_->Rsp;
 			s.AddrFrame.Offset = ctx_->Rbp;
+#	elif defined(_M_IA64) || defined(__aarch64__)
+			s.AddrBStore.Mode = AddrModeFlat;
+			s.AddrPC.Offset = ctx_->StIIP;
+			s.AddrFrame.Offset = ctx_->IntSp;
+			s.AddrBStore.Offset = ctx_->RsBSP;
+			s.AddrStack.Offset = ctx_->IntSp;
 #	else
 			s.AddrPC.Offset = ctx_->Eip;
 			s.AddrStack.Offset = ctx_->Esp;
 			s.AddrFrame.Offset = ctx_->Ebp;
 #	endif
 
-			if (!machine_type_) {
-#	if defined(_M_X64)
+			if (machine_type_ == 0) {
+#	if defined(_M_X64) || defined(__x86_64__)
 				machine_type_ = IMAGE_FILE_MACHINE_AMD64;
+#	elif defined(_M_IA64) || defined(__aarch64__)
+				machine_type_ = IMAGE_FILE_MACHINE_IA64;
 #	else
 				machine_type_ = IMAGE_FILE_MACHINE_I386;
 #	endif
 			}
 
-			for (;;) {
+			while (true) {
 				// NOTE: this only works if PDBs are already loaded!
 				::SetLastError(0);
-				if (!::StackWalk64(machine_type_, process, thd_, &s, ctx_, NULL,
+				if (!::StackWalk64(machine_type_, process, thd_, &s,
+					machine_type_ == IMAGE_FILE_MACHINE_I386 ? NULL : ctx_, NULL,
 					::SymFunctionTableAccess64, ::SymGetModuleBase64, NULL)) {
 					break;
 				}
@@ -1155,7 +1169,7 @@ namespace backward {
 					break;
 				}
 
-				_stacktrace.push_back(reinterpret_cast<void*>(s.AddrPC.Offset));
+				_stacktrace.push_back(reinterpret_cast<void*>(s.AddrPC.Offset - 1));
 
 				if (size() >= depth) {
 					break;
@@ -1287,8 +1301,7 @@ namespace backward {
 #if BACKWARD_HAS_BACKTRACE_SYMBOL == 1
 
 	template<>
-	class TraceResolverLinuxImpl<trace_resolver_tag::backtrace_symbol>
-		: public TraceResolverLinuxBase {
+	class TraceResolverLinuxImpl<trace_resolver_tag::backtrace_symbol> : public TraceResolverLinuxBase {
 	public:
 		void load_addresses(void* const* addresses, int address_count) override {
 			if (address_count == 0) {
@@ -1300,17 +1313,17 @@ namespace backward {
 		ResolvedTrace resolve(ResolvedTrace trace) override {
 			char* filename = _symbols[trace.idx];
 			char* funcname = filename;
-			while (*funcname && *funcname != '(') {
-				funcname += 1;
+			while (funcname[0] != '\0' && funcname[0] != '(') {
+				funcname++;
 			}
 			trace.object_filename.assign(filename, funcname); // ok even if funcname is the ending
 			// \0 (then we assign entire string)
 
-			if (*funcname) { // if it's not end of string (e.g. from last frame ip==0)
-				funcname += 1;
+			if (funcname[0] != '\0') { // if it's not end of string (e.g. from last frame ip==0)
+				funcname++;
 				char* funcname_end = funcname;
 				while (*funcname_end && *funcname_end != ')' && *funcname_end != '+') {
-					funcname_end += 1;
+					funcname_end++;
 				}
 				*funcname_end = '\0';
 				trace.object_function = this->demangle(funcname);
@@ -1422,8 +1435,7 @@ namespace backward {
 			// can reschedule the return address with inline functions and
 			// tail-call optimization (among other things that I don't even know
 			// or cannot even dream about with my tiny limited brain).
-			find_sym_result details_adjusted_call_site = find_symbol_details(
-				fobj, (void*)(uintptr_t(trace.addr) - 1), symbol_info.dli_fbase);
+			find_sym_result details_adjusted_call_site = find_symbol_details(fobj, (void*)(uintptr_t(trace.addr) - 1), symbol_info.dli_fbase);
 
 			// In debug mode, we should always get the right thing(TM).
 			if (details_call_site.found && details_adjusted_call_site.found) {
@@ -1468,7 +1480,7 @@ namespace backward {
 				trace.inliners = backtrace_inliners(fobj, *details_selected);
 
 #	if 0
-				if (trace.inliners.size() == 0) {
+				if (trace.inliners.empty()) {
 					// Maybe the trace was not inlined... or maybe it was and we
 					// are lacking the debug information. Let's try to make the
 					// world better and see if we can get the line number of the
@@ -1515,10 +1527,7 @@ namespace backward {
 	private:
 		bool _bfd_loaded;
 
-		typedef details::handle<bfd*,
-			details::deleter<bfd_boolean, bfd*, &bfd_close> >
-			bfd_handle_t;
-
+		typedef details::handle<bfd*, details::deleter<bfd_boolean, bfd*, &bfd_close>> bfd_handle_t;
 		typedef details::handle<asymbol**> bfd_symtab_t;
 
 		struct bfd_fileobject {
@@ -1566,9 +1575,7 @@ namespace backward {
 			}
 
 			ssize_t symtab_storage_size = bfd_get_symtab_upper_bound(bfd_handle.get());
-
-			ssize_t dyn_symtab_storage_size =
-				bfd_get_dynamic_symtab_upper_bound(bfd_handle.get());
+			ssize_t dyn_symtab_storage_size = bfd_get_dynamic_symtab_upper_bound(bfd_handle.get());
 
 			if (symtab_storage_size <= 0 && dyn_symtab_storage_size <= 0) {
 				return r; // weird, is the file is corrupted?
@@ -1578,14 +1585,12 @@ namespace backward {
 			ssize_t symcount = 0, dyn_symcount = 0;
 
 			if (symtab_storage_size > 0) {
-				symtab.reset(static_cast<bfd_symbol**>(
-					std::malloc(static_cast<size_t>(symtab_storage_size))));
+				symtab.reset(static_cast<bfd_symbol**>(std::malloc(static_cast<size_t>(symtab_storage_size))));
 				symcount = bfd_canonicalize_symtab(bfd_handle.get(), symtab.get());
 			}
 
 			if (dyn_symtab_storage_size > 0) {
-				dynamic_symtab.reset(static_cast<bfd_symbol**>(
-					std::malloc(static_cast<size_t>(dyn_symtab_storage_size))));
+				dynamic_symtab.reset(static_cast<bfd_symbol**>(std::malloc(static_cast<size_t>(dyn_symtab_storage_size))));
 				dyn_symcount = bfd_canonicalize_dynamic_symtab(bfd_handle.get(), dynamic_symtab.get());
 			}
 
@@ -1621,8 +1626,7 @@ namespace backward {
 			context.addr = addr;
 			context.base_addr = base_addr;
 			context.result.found = false;
-			bfd_map_over_sections(fobj->handle.get(), &find_in_section_trampoline,
-								  static_cast<void*>(&context));
+			bfd_map_over_sections(fobj->handle.get(), &find_in_section_trampoline, static_cast<void*>(&context));
 			return context.result;
 		}
 
@@ -1644,7 +1648,7 @@ namespace backward {
 #	else
 			if ((bfd_section_flags(section) & SEC_ALLOC) == 0)
 #	endif
-				return; // a debug section is never loaded automatically.
+				return; // Debug section is never loaded automatically.
 			
 #	if defined(bfd_get_section_vma)
 			bfd_vma sec_addr = bfd_get_section_vma(fobj->handle.get(), section);
@@ -1657,9 +1661,9 @@ namespace backward {
 			bfd_size_type size = bfd_section_size(section);
 #	endif
 
-			// are we in the boundaries of the section?
+			// Are we in the boundaries of the section?
 			if (addr < sec_addr || addr >= sec_addr + size) {
-				addr -= base_addr; // oops, a relocated object, lets try again...
+				addr -= base_addr; // Oops, a relocated object, lets try again...
 				if (addr < sec_addr || addr >= sec_addr + size) {
 					return;
 				}
@@ -1721,8 +1725,7 @@ namespace backward {
 #if BACKWARD_HAS_DW == 1
 
 	template<>
-	class TraceResolverLinuxImpl<trace_resolver_tag::libdw>
-		: public TraceResolverLinuxBase {
+	class TraceResolverLinuxImpl<trace_resolver_tag::libdw> : public TraceResolverLinuxBase {
 	public:
 		TraceResolverLinuxImpl() : _dwfl_handle_initialized(false) {}
 
@@ -1758,22 +1761,19 @@ namespace backward {
 				return trace;
 			}
 
-			// find the module (binary object) that contains the trace's address.
-			// This is not using any debug information, but the addresses ranges of
-			// all the currently loaded binary object.
+			// find the module (binary object) that contains the trace's address. This is not using any debug information,
+			// but the addresses ranges of all the currently loaded binary object.
 			Dwfl_Module* mod = dwfl_addrmodule(_dwfl_handle.get(), trace_addr);
 			if (mod != nullptr) {
-				// now that we found it, lets get the name of it, this will be the
-				// full path to the running binary or one of the loaded library.
+				// now that we found it, lets get the name of it, this will be the full path to the running binary
+				// or one of the loaded library.
 				const char* module_name = dwfl_module_info(mod, 0, 0, 0, 0, 0, 0, 0);
 				if (module_name != nullptr) {
 					trace.object_filename = module_name;
 				}
-				// We also look after the name of the symbol, equal or before this
-				// address. This is found by walking the symtab. We should get the
-				// symbol corresponding to the function (mangled) containing the
-				// address. If the code corresponding to the address was inlined,
-				// this is the name of the out-most inliner function.
+				// We also look after the name of the symbol, equal or before this address. This is found by walking
+				// the symtab. We should get the symbol corresponding to the function (mangled) containing the address.
+				// If the code corresponding to the address was inlined, this is the name of the out-most inliner function.
 				const char* sym_name = dwfl_module_addrname(mod, trace_addr);
 				if (sym_name != nullptr) {
 					trace.object_function = demangle(sym_name);
@@ -1783,24 +1783,22 @@ namespace backward {
 			// now let's get serious, and find out the source location (file and
 			// line number) of the address.
 
-			// This function will look in .debug_aranges for the address and map it
-			// to the location of the compilation unit DIE in .debug_info and
-			// return it.
+			// This function will look in .debug_aranges for the address and map it to the location of the compilation
+			// unit DIE in .debug_info and return it.
 			Dwarf_Addr mod_bias = 0;
 			Dwarf_Die* cudie = dwfl_module_addrdie(mod, trace_addr, &mod_bias);
+			trace.object_base_address = (void*)mod_bias;
 
 #	if 1
 			if (cudie == nullptr) {
-				// Sadly clang does not generate the section .debug_aranges, thus
-				// dwfl_module_addrdie will fail early. Clang doesn't either set
-				// the lowpc/highpc/range info for every compilation unit.
+				// Sadly clang does not generate the section .debug_aranges, thus dwfl_module_addrdie will fail early.
+				// Clang doesn't either set the lowpc/highpc/range info for every compilation unit.
 				//
 				// So in order to save the world:
-				// for every compilation unit, we will iterate over every single
-				// DIEs. Normally functions should have a lowpc/highpc/range, which
-				// we will use to infer the compilation unit.
+				// for every compilation unit, we will iterate over every single DIEs. Normally functions should have
+				// a lowpc/highpc/range, which we will use to infer the compilation unit.
 
-				// note that this is probably badly inefficient.
+				// Note that this is probably badly inefficient.
 				while ((cudie = dwfl_module_nextcu(mod, cudie, &mod_bias))) {
 					Dwarf_Die die_mem;
 					Dwarf_Die* fundie = find_fundie_by_pc(cudie, trace_addr - mod_bias, &die_mem);
@@ -1814,10 +1812,8 @@ namespace backward {
 			//#define BACKWARD_I_DO_NOT_RECOMMEND_TO_ENABLE_THIS_HORRIBLE_PIECE_OF_CODE
 #	if defined(BACKWARD_I_DO_NOT_RECOMMEND_TO_ENABLE_THIS_HORRIBLE_PIECE_OF_CODE)
 			if (!cudie) {
-				// If it's still not enough, lets dive deeper in the shit, and try
-				// to save the world again: for every compilation unit, we will
-				// load the corresponding .debug_line section, and see if we can
-				// find our address in it.
+				// If it's still not enough, lets dive deeper in the shit, and try to save the world again: for every
+				// compilation unit, we will load the corresponding .debug_line section, and see if we can find our address in it.
 
 				Dwarf_Addr cfi_bias;
 				Dwarf_CFI* cfi_cache = dwfl_module_eh_cfi(mod, &cfi_bias);
@@ -1826,11 +1822,9 @@ namespace backward {
 				while ((cudie = dwfl_module_nextcu(mod, cudie, &bias))) {
 					if (dwarf_getsrc_die(cudie, trace_addr - bias)) {
 
-						// ...but if we get a match, it might be a false positive
-						// because our (address - bias) might as well be valid in a
-						// different compilation unit. So we throw our last card on
-						// the table and lookup for the address into the .eh_frame
-						// section.
+						// ...but if we get a match, it might be a false positive because our (address - bias) might
+						// as well be valid in a different compilation unit. So we throw our last card on the table
+						// and lookup for the address into the .eh_frame section.
 
 						handle<Dwarf_Frame*> frame;
 						dwarf_cfi_addrframe(cfi_cache, trace_addr - cfi_bias, &frame);
@@ -1843,13 +1837,11 @@ namespace backward {
 #	endif
 
 			if (!cudie) {
-				return trace; // this time we lost the game :/
+				return trace; // This time we lost the game :/
 			}
 
-			// Now that we have a compilation unit DIE, this function will be able
-			// to load the corresponding section in .debug_line (if not already
-			// loaded) and hopefully find the source location mapped to our
-			// address.
+			// Now that we have a compilation unit DIE, this function will be able to load the corresponding section
+			// in .debug_line (if not already loaded) and hopefully find the source location mapped to our address.
 			Dwarf_Line* srcloc = dwarf_getsrc_die(cudie, trace_addr - mod_bias);
 
 			if (srcloc) {
@@ -1865,8 +1857,8 @@ namespace backward {
 			}
 
 			deep_first_search_by_pc(cudie, trace_addr - mod_bias, inliners_search_cb(trace));
-			if (trace.source.function.size() == 0) {
-				// fallback.
+			if (trace.source.function.empty()) {
+				// Fallback
 				trace.source.function = trace.object_function;
 			}
 
@@ -2040,8 +2032,7 @@ namespace backward {
 #if BACKWARD_HAS_DWARF == 1
 
 	template<>
-	class TraceResolverLinuxImpl<trace_resolver_tag::libdwarf>
-		: public TraceResolverLinuxBase {
+	class TraceResolverLinuxImpl<trace_resolver_tag::libdwarf> : public TraceResolverLinuxBase {
 	public:
 		TraceResolverLinuxImpl() : _dwarf_loaded(false) {}
 
@@ -2097,10 +2088,9 @@ namespace backward {
 			}
 
 #	if defined(__GLIBC__)
-			// Convert the address to a module relative one by looking at
-			// the module's loading address in the link map
-			Dwarf_Addr address = reinterpret_cast<uintptr_t>(trace.addr) -
-				reinterpret_cast<uintptr_t>(link_map->l_addr);
+			// Convert the address to a module relative one by looking at the module's loading address in the link map
+			Dwarf_Addr address = reinterpret_cast<uintptr_t>(trace.addr) - reinterpret_cast<uintptr_t>(link_map->l_addr);
+			trace.object_base_address = (void*)link_map->l_addr;
 #	else
 			Dwarf_Addr address = reinterpret_cast<uintptr_t>(trace.addr);
 #	endif
@@ -2387,8 +2377,7 @@ namespace backward {
 				Dwarf_Error error = DW_DLE_NE;
 				dwarf_handle_t dwarf_handle;
 
-				int dwarf_result = dwarf_elf_init(elf_handle.get(), DW_DLC_READ, NULL, NULL,
-												  &dwarf_debug, &error);
+				int dwarf_result = dwarf_elf_init(elf_handle.get(), DW_DLC_READ, NULL, NULL, &dwarf_debug, &error);
 
 				// We don't do any special handling for DW_DLV_NO_ENTRY specially.
 				// If we get an error, or the file doesn't have debug information
@@ -2442,18 +2431,12 @@ namespace backward {
 			// by using insert instead of the map's [ operator.
 
 			// Get the line context for the DIE
-			if (dwarf_srclines_b(die, 0, &table_count, &de.line_context, &error) ==
-				DW_DLV_OK) {
-				// Get the source lines for this line context, to be deallocated
-				// later
-				if (dwarf_srclines_from_linecontext(de.line_context, &de.line_buffer,
-					&de.line_count,
-					&error) == DW_DLV_OK) {
-
+			if (dwarf_srclines_b(die, 0, &table_count, &de.line_context, &error) == DW_DLV_OK) {
+				// Get the source lines for this line context, to be deallocated later
+				if (dwarf_srclines_from_linecontext(de.line_context, &de.line_buffer, &de.line_count, &error) == DW_DLV_OK) {
 					// Add all the addresses to our map
 					for (int i = 0; i < de.line_count; i++) {
-						if (dwarf_lineaddr(de.line_buffer[i], &line_addr, &error) !=
-							DW_DLV_OK) {
+						if (dwarf_lineaddr(de.line_buffer[i], &line_addr, &error) != DW_DLV_OK) {
 							line_addr = 0;
 						}
 						de.line_section.insert(std::pair<Dwarf_Addr, int>(line_addr, i));
@@ -2473,7 +2456,7 @@ namespace backward {
 			Dwarf_Debug dwarf = fobj.dwarf_handle.get();
 			Dwarf_Die current_die = 0;
 			if (dwarf_child(die, &current_die, &error) == DW_DLV_OK) {
-				for (;;) {
+				while (true) {
 					Dwarf_Die sibling_die = 0;
 
 					Dwarf_Half tag_value;
@@ -2483,18 +2466,14 @@ namespace backward {
 						tag_value == DW_TAG_inlined_subroutine) {
 
 						Dwarf_Bool has_attr = 0;
-						if (dwarf_hasattr(current_die, DW_AT_specification, &has_attr,
-							&error) == DW_DLV_OK) {
+						if (dwarf_hasattr(current_die, DW_AT_specification, &has_attr, &error) == DW_DLV_OK) {
 							if (has_attr) {
 								Dwarf_Attribute attr_mem;
-								if (dwarf_attr(current_die, DW_AT_specification, &attr_mem,
-									&error) == DW_DLV_OK) {
+								if (dwarf_attr(current_die, DW_AT_specification, &attr_mem, &error) == DW_DLV_OK) {
 									Dwarf_Off spec_offset = 0;
-									if (dwarf_formref(attr_mem, &spec_offset, &error) ==
-										DW_DLV_OK) {
+									if (dwarf_formref(attr_mem, &spec_offset, &error) == DW_DLV_OK) {
 										Dwarf_Off spec_die_offset;
-										if (dwarf_dieoffset(current_die, &spec_die_offset, &error) ==
-											DW_DLV_OK) {
+										if (dwarf_dieoffset(current_die, &spec_die_offset, &error) == DW_DLV_OK) {
 											de.spec_section[spec_offset] = spec_die_offset;
 										}
 									}
@@ -2551,7 +2530,6 @@ namespace backward {
 			std::string value;
 
 			Dwarf_Die found_die = get_referenced_die(dwarf, die, attr, global);
-
 			if (found_die) {
 				char* name;
 				if (dwarf_diename(found_die, &name, &error) == DW_DLV_OK) {
@@ -2722,9 +2700,7 @@ namespace backward {
 			std::string result;
 			bool found = false;
 
-			while (dwarf_next_cu_header_d(dwarf, 0, 0, 0, 0, 0, 0, 0, &tu_signature, 0,
-				&next_cu_header, 0, &error) == DW_DLV_OK) {
-
+			while (dwarf_next_cu_header_d(dwarf, 0, 0, 0, 0, 0, 0, 0, &tu_signature, 0, &next_cu_header, 0, &error) == DW_DLV_OK) {
 				if (strncmp(signature.signature, tu_signature.signature, 8) == 0) {
 					Dwarf_Die type_cu_die = 0;
 					if (dwarf_siblingof_b(dwarf, 0, 0, &type_cu_die, &error) == DW_DLV_OK) {
@@ -3008,11 +2984,9 @@ namespace backward {
 							// We don't have a function name in this DIE.
 							// Check if there is a referenced non-defining
 							// declaration.
-							trace.source.function =
-								get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
+							trace.source.function = get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
 							if (trace.source.function.empty()) {
-								trace.source.function =
-									get_referenced_die_name(dwarf, die, DW_AT_specification, true);
+								trace.source.function = get_referenced_die_name(dwarf, die, DW_AT_specification, true);
 							}
 						}
 
@@ -3053,12 +3027,9 @@ namespace backward {
 							sloc.function = std::string(name);
 							dwarf_dealloc(dwarf, name, DW_DLA_STRING);
 						} else {
-							// We don't have a name for this inlined DIE, it could
-							// be that there is an abstract origin instead.
-							// Get the DW_AT_abstract_origin value, which is a
-							// reference to the source DIE and try to get its name
-							sloc.function =
-								get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
+							// We don't have a name for this inlined DIE, it could be that there is an abstract origin instead.
+							// Get the DW_AT_abstract_origin value, which is a reference to the source DIE and try to get its name.
+							sloc.function = get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
 						}
 
 						set_function_parameters(sloc.function, ns, fobj, die);
@@ -3388,8 +3359,7 @@ namespace backward {
 #endif // BACKWARD_HAS_DWARF == 1
 
 	template<>
-	class TraceResolverImpl<system_tag::linux_tag>
-		: public TraceResolverLinuxImpl<trace_resolver_tag::current> {};
+	class TraceResolverImpl<system_tag::linux_tag> : public TraceResolverLinuxImpl<trace_resolver_tag::current> {};
 
 #endif // BACKWARD_SYSTEM_LINUX
 
@@ -3398,8 +3368,7 @@ namespace backward {
 	template<typename STACKTRACE_TAG> class TraceResolverDarwinImpl;
 
 	template<>
-	class TraceResolverDarwinImpl<trace_resolver_tag::backtrace_symbol>
-		: public TraceResolverImplBase {
+	class TraceResolverDarwinImpl<trace_resolver_tag::backtrace_symbol> : public TraceResolverImplBase {
 	public:
 		void load_addresses(void* const* addresses, int address_count) override {
 			if (address_count == 0) {
@@ -3521,10 +3490,9 @@ namespace backward {
 		TraceResolverImpl() {
 			HANDLE process = ::GetCurrentProcess();
 
-			std::vector<module_data> modules;
 			DWORD cbNeeded;
 			std::vector<HMODULE> module_handles(1);
-			::SymInitialize(process, NULL, false);
+			::SymInitialize(process, NULL, FALSE);
 			DWORD symOptions = ::SymGetOptions();
 			symOptions |= SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
 			::SymSetOptions(symOptions);
@@ -3549,12 +3517,11 @@ namespace backward {
 		ResolvedTrace resolve(ResolvedTrace t) override {
 			HANDLE process = ::GetCurrentProcess();
 
-			char name[256];
-
 			std::memset(&sym, 0, sizeof(sym));
 			sym.sym.SizeOfStruct = sizeof(SYMBOL_INFO);
 			sym.sym.MaxNameLen = max_sym_len;
 
+			char name[256];
 			if (::SymFromAddr(process, (ULONG64)t.addr, &displacement, &sym.sym)) {
 				::UnDecorateSymbolName(sym.sym.Name, (PSTR)name, 256, UNDNAME_COMPLETE);
 			} else {
@@ -3572,6 +3539,14 @@ namespace backward {
 			t.source.function = name;
 			t.object_function = name;
 
+			for (auto& m : modules) {
+				if ((std::uintptr_t)m.base_address <= (std::uintptr_t)t.addr && (std::uintptr_t)t.addr < (std::uintptr_t)m.base_address + m.load_size) {
+					t.object_filename = m.module_name;
+					t.object_base_address = m.base_address;
+					break;
+				}
+			}
+
 			return t;
 		}
 
@@ -3581,6 +3556,7 @@ namespace backward {
 
 	private:
 		DWORD image_type;
+		std::vector<module_data> modules;
 	};
 
 #endif
@@ -3867,7 +3843,7 @@ namespace backward {
 
 	namespace Color {
 		enum type {
-			yellow = 33, purple = 35, reset = 0, bold = 1, dark = 2
+			BrightGreen = 92, Yellow = 33, BrightYellow = 93, Purple = 35, Reset = 0, Bold = 1, Dark = 2
 		};
 	} // namespace Color
 
@@ -3887,12 +3863,12 @@ namespace backward {
 			// I assume that the terminal can handle basic colors. Seriously I
 			// don't want to deal with all the termcap shit.
 			_os << "\033[" << static_cast<int>(ccode) << "m";
-			_reset = (ccode != Color::reset);
+			_reset = (ccode != Color::Reset);
 		}
 
 		~Colorize() {
 			if (_reset) {
-				set_color(Color::reset);
+				set_color(Color::Reset);
 			}
 		}
 
@@ -3906,7 +3882,7 @@ namespace backward {
 
 	namespace Color {
 		enum type {
-			yellow = 0, purple = 0, reset = 0, bold = 0, dark = 0
+			BrightGreen = 0, Yellow = 0, BrightYellow = 0, Purple = 0, Reset = 0, Bold = 0, Dark = 0
 		};
 	} // namespace Color
 
@@ -3991,9 +3967,9 @@ namespace backward {
 
 #	if defined(DEATH_TARGET_WINDOWS)
 			if (failed) {
-				colorize.set_color(Color::yellow);
+				colorize.set_color(Color::BrightYellow);
 				os << "Make sure corresponding .pdb files are accessible to show full stack trace.\n";
-				colorize.set_color(Color::reset);
+				colorize.set_color(Color::Reset);
 			}
 #	endif
 		}
@@ -4007,9 +3983,12 @@ namespace backward {
 		}
 
 		void print_header(std::ostream& os, size_t thread_id, int signal, Colorize& colorize) {
-			colorize.set_color(Color::bold);
+			colorize.set_color(Color::Bold);
 			os << "The application exited unexpectedly";
-			colorize.set_color(Color::reset);
+			colorize.set_color(Color::Reset);
+			if (thread_id != 0) {
+				os << " in thread " << thread_id;
+			}
 			if (signal != 0) {
 				os << " due to signal " << signal;
 #	if defined(BACKWARD_SYSTEM_LINUX) && defined(__GLIBC__) && __GLIBC__*100 + __GLIBC_MINOR__ >= 232
@@ -4019,11 +3998,7 @@ namespace backward {
 				}
 #	endif
 			}
-			os << " with following stack trace";
-			if (thread_id != 0) {
-				os << " in thread " << thread_id;
-			}
-			os << ":\n";
+			os << " with following stack trace:\n";
 		}
 
 		void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
@@ -4036,15 +4011,29 @@ namespace backward {
 			bool already_indented = true;
 
 			if (!trace.source.filename.size() || object) {
-				os << "   Object \"" << (!trace.object_filename.empty() ? trace.object_filename : "<unknown>") << "\"";
+				if (!trace.object_filename.empty()) {
+					os << "   Library ";
+					colorize.set_color(Color::BrightGreen);
+					os << "\"" << trace.object_filename;
+					if (trace.object_base_address != nullptr) {
+						os << "!0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+							<< ((char*)trace.addr - (char*)trace.object_base_address) << std::dec << std::setfill(' ');
+					}
+					os << "\"";
+				} else {
+					os << "   Source ";
+					colorize.set_color(Color::BrightGreen);
+					os << "\"<unknown>\"";
+				}
+
+				colorize.set_color(Color::Reset);
 				if (!trace.object_function.empty()) {
 					os << ", in ";
-					colorize.set_color(Color::bold);
+					colorize.set_color(Color::Bold);
 					os << trace.object_function << "()";
-					colorize.set_color(Color::reset);
+					colorize.set_color(Color::Reset);
 				}
-				os << " [0x" << trace.addr << "]";
-				os << "\n";
+				os << " [0x" << trace.addr << "]\n";
 				already_indented = false;
 			}
 
@@ -4055,7 +4044,7 @@ namespace backward {
 				const ResolvedTrace::SourceLoc& inliner_loc = trace.inliners[inliner_idx - 1];
 				print_source_loc(os, colorize, " | ", inliner_loc);
 				if (snippet) {
-					print_snippet(os, "    | ", inliner_loc, colorize, Color::purple, inliner_context_size);
+					print_snippet(os, "    | ", inliner_loc, colorize, Color::Purple, inliner_context_size);
 				}
 				already_indented = false;
 			}
@@ -4066,7 +4055,7 @@ namespace backward {
 				}
 				print_source_loc(os, colorize, "   ", trace.source, trace.addr);
 				if (snippet) {
-					print_snippet(os, "      ", trace.source, colorize, Color::yellow, trace_context_size);
+					print_snippet(os, "      ", trace.source, colorize, Color::Yellow, trace_context_size);
 				}
 			}
 		}
@@ -4082,21 +4071,24 @@ namespace backward {
 					colorize.set_color(color_code);
 					os << indent << ">";
 				} else {
-					colorize.set_color(Color::dark);
+					colorize.set_color(Color::Dark);
 					os << indent << " ";
 				}
 				os << std::setw(6) << it->first << ": " << it->second << "\n";
-				colorize.set_color(Color::reset);
+				colorize.set_color(Color::Reset);
 			}
 		}
 
 		void print_source_loc(std::ostream& os, Colorize& colorize, const char* indent, const ResolvedTrace::SourceLoc& source_loc, void* addr = nullptr) {
-			os << indent << "Source \"" << source_loc.filename << ":" << source_loc.line << "\"";
+			os << indent << "Source ";
+			colorize.set_color(Color::BrightGreen);
+			os << "\"" << source_loc.filename << ":" << std::setw(0) << source_loc.line << "\"";
+			colorize.set_color(Color::Reset);
 			if (!source_loc.function.empty()) {
 				os << ", in ";
-				colorize.set_color(Color::bold);
+				colorize.set_color(Color::Bold);
 				os << source_loc.function << "()";
-				colorize.set_color(Color::reset);
+				colorize.set_color(Color::Reset);
 			}
 			if (address && addr != nullptr) {
 				os << " [0x" << addr << "]";
@@ -4404,7 +4396,22 @@ namespace backward {
 
 		DEATH_NEVER_INLINE static void crash_handler(int skip, CONTEXT* ct = nullptr) {
 			if (ct == nullptr) {
+#	if (defined(_M_IX86) || defined(__i386__)) && defined(DEATH_TARGET_MSVC)
+				// RtlCaptureContext() doesn't work on i386
+				CONTEXT localCtx;
+				std::memset(&localCtx, 0, sizeof(CONTEXT));
+				localCtx.ContextFlags = CONTEXT_CONTROL;
+				__asm {
+				label:
+					mov[localCtx.Ebp], ebp;
+					mov[localCtx.Esp], esp;
+					mov eax, [label];
+					mov[localCtx.Eip], eax;
+				}
+				std::memcpy(ctx(), &localCtx, sizeof(CONTEXT));
+#	else
 				::RtlCaptureContext(ctx());
+#	endif
 			} else {
 				std::memcpy(ctx(), ct, sizeof(CONTEXT));
 			}
