@@ -1518,7 +1518,7 @@ msgstr "Diagnosticarea intrărilor"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
 msgid "Toggle Run"
-msgstr ""
+msgstr "Comutați Alergarea"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
@@ -1917,21 +1917,21 @@ msgstr "Înapoi"
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 #, c-format
 msgid "Weapon %i"
-msgstr ""
+msgstr "Armă %i"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:159
 msgid "Press any key or button to assign"
-msgstr ""
+msgstr "Apăsați orice tastă sau buton pentru a atribui"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:165
 msgid "or"
-msgstr ""
+msgstr "sau"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
 msgid "to remove assignment"
-msgstr ""
+msgstr "pentru a elimina atribuirea"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
