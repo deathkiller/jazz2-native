@@ -1880,6 +1880,7 @@ namespace backward {
 					case DW_TAG_subprogram:
 						if ((name = dwarf_diename(die))) {
 							trace.source.function = name;
+							trace.source.function += "()";
 						}
 						break;
 
@@ -1889,6 +1890,7 @@ namespace backward {
 
 						if ((name = dwarf_diename(die))) {
 							sloc.function = name;
+							sloc.function += "()";
 						}
 						if ((name = die_call_file(die))) {
 							sloc.filename = name;
@@ -3524,6 +3526,7 @@ namespace backward {
 			char name[256];
 			if (::SymFromAddr(process, (ULONG64)t.addr, &displacement, &sym.sym)) {
 				::UnDecorateSymbolName(sym.sym.Name, (PSTR)name, 256, UNDNAME_COMPLETE);
+				strcat_s(name, "()");
 			} else {
 				name[0] = '\0';
 			}
@@ -3736,7 +3739,7 @@ namespace backward {
 			}
 #else
 			const char* prefixes_str = std::getenv("BACKWARD_CXX_SOURCE_PREFIXES");
-			if (prefixes_str[0] != '\0') {
+			if (prefixes_str != nullptr && prefixes_str[0] != '\0') {
 				paths = details::split_source_prefixes(prefixes_str);
 			}
 #endif
@@ -4030,7 +4033,7 @@ namespace backward {
 				if (!trace.object_function.empty()) {
 					os << ", in ";
 					colorize.set_color(Color::Bold);
-					os << trace.object_function << "()";
+					os << trace.object_function;
 					colorize.set_color(Color::Reset);
 				}
 				os << " [0x" << trace.addr << "]\n";
@@ -4087,7 +4090,7 @@ namespace backward {
 			if (!source_loc.function.empty()) {
 				os << ", in ";
 				colorize.set_color(Color::Bold);
-				os << source_loc.function << "()";
+				os << source_loc.function;
 				colorize.set_color(Color::Reset);
 			}
 			if (address && addr != nullptr) {
