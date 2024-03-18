@@ -95,8 +95,8 @@ if(WIN32)
 		# Override output executable name
 		set_target_properties(${NCINE_APP} PROPERTIES OUTPUT_NAME "Jazz2")
 		
-		# Link to Windows Sockets 2 library for HTTP requests
-		target_link_libraries(${NCINE_APP} PRIVATE ws2_32)
+		# Link to WinMM for high-precision timers and Windows Sockets 2 library for HTTP requests
+		target_link_libraries(${NCINE_APP} PRIVATE winmm ws2_32)
 		
 		# Try to use VC-LTL library (if not disabled)
 		if(VC_LTL_FOUND AND MSVC)

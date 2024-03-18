@@ -42,18 +42,10 @@ namespace Death { namespace IO {
 	{
 		std::int32_t seekValue;
 		switch (origin) {
-			case SeekOrigin::Begin:
-				seekValue = offset;
-				break;
-			case SeekOrigin::Current:
-				seekValue = _seekOffset + offset;
-				break;
-			case SeekOrigin::End:
-				seekValue = _size + offset;
-				break;
-			default:
-				seekValue = -1;
-				break;
+			case SeekOrigin::Begin: seekValue = offset; break;
+			case SeekOrigin::Current: seekValue = _seekOffset + offset; break;
+			case SeekOrigin::End: seekValue = _size + offset; break;
+			default: seekValue = -1; break;
 		}
 
 		if (seekValue < 0 || seekValue > _size) {

@@ -74,7 +74,7 @@
 	#ifndef ENET_NO_PRAGMA_LINK
 	#ifndef  __GNUC__
 	#pragma comment(lib, "ws2_32.lib")
-	#pragma comment(lib, "winmm.lib")
+	//#pragma comment(lib, "winmm.lib")
 	#endif
 	#endif
 
@@ -5744,12 +5744,12 @@ extern "C" {
 			return -1;
 		}
 
-		timeBeginPeriod(1);
+		//timeBeginPeriod(1);
 		return 0;
 	}
 
 	void enet_deinitialize(void) {
-		timeEndPeriod(1);
+		//timeEndPeriod(1);
 		WSACleanup();
 	}
 

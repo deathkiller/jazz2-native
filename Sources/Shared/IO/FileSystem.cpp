@@ -601,6 +601,20 @@ namespace Death { namespace IO {
 		}
 #endif
 	}
+	
+	bool FileSystem::Directory::IsValid() const
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		return (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE);
+#else
+#	if defined(DEATH_TARGET_ANDROID)
+		if (_assetDir != nullptr) {
+			return true;
+		}
+#	endif
+		return (_dirStream != nullptr);
+#endif
+	}
 
 #if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH)
 	String FileSystem::FindPathCaseInsensitive(const StringView path)
@@ -1007,6 +1021,11 @@ namespace Death { namespace IO {
 #endif
 	}
 
+	bool FileSystem::IsAbsolutePath(const StringView path)
+	{
+		return GetPathRootLength(path) > 0;
+	}
+
 	String FileSystem::GetExecutablePath()
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -1113,23 +1132,23 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_ANDROID)
 	String FileSystem::GetExternalStorage()
 	{
-		const char* extStorage = ::getenv("EXTERNAL_STORAGE");
-		if (extStorage == nullptr || extStorage[0] == '\0') {
-			return "/sdcard"_s;
+		StringView extStorage = ::getenv("EXTERNAL_STORAGE");
+		if (!extStorage.empty()) {
+			return extStorage;
 		}
-		return extStorage;
+		return "/sdcard"_s;
 	}
 #elif defined(DEATH_TARGET_UNIX)
 	String FileSystem::GetLocalStorage()
 	{
-		const char* localStorage = ::getenv("XDG_DATA_HOME");
-		if (localStorage != nullptr && localStorage[0] != '\0') {
+		StringView localStorage = ::getenv("XDG_DATA_HOME");
+		if (IsAbsolutePath(localStorage)) {
 			return localStorage;
 		}
 
 		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
-		const char* home = ::getenv("HOME");
-		if (home != nullptr && home[0] != '\0') {
+		StringView home = ::getenv("HOME");
+		if (!home.empty()) {
 			return CombinePath(home, ".local/share/"_s);
 		}
 
@@ -1382,6 +1401,10 @@ namespace Death { namespace IO {
 #elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN);
+#elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
+		struct stat sb;
+		return (::stat(nullTerminatedPath.data(), &st) == 0 && (sb.st_flags & UF_HIDDEN) == UF_HIDDEN);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
@@ -1406,17 +1429,15 @@ namespace Death { namespace IO {
 		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
 		if (!::GetFileAttributesExFromAppW(nullTerminatedPath, GetFileExInfoStandard, &lpFileInfo)) {
-			return true;
+			return false;
 		}
 
-		if (hidden && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != FILE_ATTRIBUTE_HIDDEN) {
-			// Adding the hidden flag
-			lpFileInfo.dwFileAttributes |= FILE_ATTRIBUTE_HIDDEN;
-			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes);
-		} else if (!hidden && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
-			// Removing the hidden flag
-			lpFileInfo.dwFileAttributes &= ~FILE_ATTRIBUTE_HIDDEN;
-			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes);
+		if (hidden == ((lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN)) {
+			return true;
+		} else if (hidden) {
+			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes | FILE_ATTRIBUTE_HIDDEN);
+		} else {
+			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes & ~FILE_ATTRIBUTE_HIDDEN);
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
 		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
@@ -1425,14 +1446,26 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-		if (hidden && (attrs & FILE_ATTRIBUTE_HIDDEN) != FILE_ATTRIBUTE_HIDDEN) {
-			// Adding the hidden flag
-			attrs |= FILE_ATTRIBUTE_HIDDEN;
-			return ::SetFileAttributesW(nullTerminatedPath, attrs);
-		} else if (!hidden && (attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
-			// Removing the hidden flag
-			attrs &= ~FILE_ATTRIBUTE_HIDDEN;
-			return ::SetFileAttributesW(nullTerminatedPath, attrs);
+		if (hidden == ((attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN)) {
+			return true;
+		} else if (hidden) {
+			return ::SetFileAttributesW(nullTerminatedPath, attrs | FILE_ATTRIBUTE_HIDDEN);
+		} else {
+			return ::SetFileAttributesW(nullTerminatedPath, attrs & ~FILE_ATTRIBUTE_HIDDEN);
+		}
+#elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
+		struct stat sb;
+		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
+			return false;
+		}
+
+		if (hidden == ((sb.st_flags & UF_HIDDEN) == UF_HIDDEN)) {
+			return true;
+		} else if (hidden) {
+			return ::chflags(nullTerminatedPath.data(), sb.st_flags | UF_HIDDEN) == 0;
+		} else {
+			return ::chflags(nullTerminatedPath.data(), sb.st_flags & ~UF_HIDDEN) == 0;
 		}
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1456,6 +1489,75 @@ namespace Death { namespace IO {
 			}
 			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), &buffer[numDots]);
 			return (::rename(nullTerminatedPath.data(), newPath.data()) == 0);
+		}
+#endif
+		return false;
+	}
+
+	bool FileSystem::IsReadOnly(const StringView path)
+	{
+		if (path.empty()) return false;
+
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY);
+#elif defined(DEATH_TARGET_WINDOWS)
+		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY);
+#elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
+		struct stat sb;
+		return (::stat(nullTerminatedPath.data(), &st) == 0 && (sb.st_flags & UF_IMMUTABLE) == UF_IMMUTABLE);
+#else
+		return false;
+#endif
+	}
+
+	bool FileSystem::SetReadOnly(const StringView path, bool readonly)
+	{
+		if (path.empty()) return false;
+
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		if (!::GetFileAttributesExFromAppW(nullTerminatedPath, GetFileExInfoStandard, &lpFileInfo)) {
+			return false;
+		}
+
+		if (readonly == ((lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY)) {
+			return true;
+		} else if (readonly) {
+			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes | FILE_ATTRIBUTE_READONLY);
+		} else {
+			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY);
+		}
+#elif defined(DEATH_TARGET_WINDOWS)
+		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
+		DWORD attrs = ::GetFileAttributesW(nullTerminatedPath);
+		if (attrs == INVALID_FILE_ATTRIBUTES) {
+			return false;
+		}
+
+		if (readonly == ((attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY)) {
+			return true;
+		} else if (readonly) {
+			return ::SetFileAttributesW(nullTerminatedPath, attrs | FILE_ATTRIBUTE_READONLY);
+		} else {
+			return ::SetFileAttributesW(nullTerminatedPath, attrs & ~FILE_ATTRIBUTE_READONLY);
+		}
+#elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
+		struct stat sb;
+		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
+			return false;
+		}
+
+		if (readonly == ((sb.st_flags & UF_IMMUTABLE) == UF_IMMUTABLE)) {
+			return true;
+		} else if (readonly) {
+			return ::chflags(nullTerminatedPath.data(), sb.st_flags | UF_IMMUTABLE) == 0;
+		} else {
+			return ::chflags(nullTerminatedPath.data(), sb.st_flags & ~UF_IMMUTABLE) == 0;
 		}
 #endif
 		return false;
@@ -2252,22 +2354,22 @@ namespace Death { namespace IO {
 		}
 #elif defined(DEATH_TARGET_APPLE)
 		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
-		const char* home = ::getenv("HOME");
-		if (home == nullptr) {
+		StringView home = ::getenv("HOME");
+		if (home.empty()) {
 			return;
 		}
 
 		_savePath = CombinePath({ home, "Library/Application Support"_s, applicationName });
 #elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)
-		const char* config = ::getenv("XDG_CONFIG_HOME");
-		if (config != nullptr && config[0] != '\0') {
+		StringView config = ::getenv("XDG_CONFIG_HOME");
+		if (IsAbsolutePath(config.empty())) {
 			_savePath = CombinePath(config, applicationName);
 			return;
 		}
 
 		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
-		const char* home = ::getenv("HOME");
-		if (home == nullptr) {
+		StringView home = ::getenv("HOME");
+		if (home.empty()) {
 			return;
 		}
 

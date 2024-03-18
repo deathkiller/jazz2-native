@@ -10,6 +10,7 @@ extern "C"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	pragma comment(lib, "opengl32.lib")
+#	pragma comment(lib, "winmm.lib")
 #	if defined(_M_X64)
 #		if defined(WITH_GLEW)
 #			pragma comment(lib, "../Libs/Windows/x64/glew32.lib")

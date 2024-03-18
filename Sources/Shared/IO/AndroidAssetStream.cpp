@@ -231,13 +231,14 @@ namespace Death { namespace IO {
 
 	void AndroidAssetStream::Open(FileAccessMode mode)
 	{
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		// An asset file can only be read
-		if (mode != FileAccessMode::Read) {
+		FileAccessMode maskedMode = mode & ~FileAccessMode::Exclusive;
+		if (maskedMode != FileAccessMode::Read) {
 			LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 			return;
 		}
 
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
+		// An asset file can only be read
 		AAsset* asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_UNKNOWN);
 		if (asset == nullptr) {
 			LOGE("Cannot open file \"%s\"", _path.data());
@@ -262,11 +263,6 @@ namespace Death { namespace IO {
 		LOGI("File \"%s\" opened", _path.data());
 #else
 		// An asset file can only be read
-		if (mode != FileAccessMode::Read) {
-			LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
-			return;
-		}
-
 		_asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_UNKNOWN);
 		if (_asset == nullptr) {
 			LOGE("Cannot open file \"%s\"", _path.data());
