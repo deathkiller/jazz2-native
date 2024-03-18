@@ -93,10 +93,11 @@ namespace Death { namespace IO {
 			void Close();
 			/** @brief Returns the name of the next file inside the directory or `nullptr` */
 			const char* GetNext();
+			/** @brief Returns true if the directory has been sucessfully opened */
+			bool IsValid() const;
 
 		private:
 			EnumerationOptions _options;
-
 			char _path[MaxPathLength];
 			char* _fileNamePart;
 #if defined(DEATH_TARGET_WINDOWS)
@@ -143,6 +144,8 @@ namespace Death { namespace IO {
 
 		/** @brief Returns an absolute path from a relative one */
 		static Containers::String GetAbsolutePath(const Containers::StringView path);
+		/** @brief Returns true if the specified path is not empty and is absolute */
+		static bool IsAbsolutePath(const Containers::StringView path);
 
 		/** @brief Returns the path of executable */
 		static Containers::String GetExecutablePath();
@@ -187,6 +190,10 @@ namespace Death { namespace IO {
 		static bool IsHidden(const Containers::StringView path);
 		/** @brief Makes a file or directory hidden or not */
 		static bool SetHidden(const Containers::StringView path, bool hidden);
+		/** @brief Returns true if the file or directory is read-only */
+		static bool IsReadOnly(const Containers::StringView path);
+		/** @brief Makes a file or directory read-only or not */
+		static bool SetReadOnly(const Containers::StringView path, bool readonly);
 
 		/** @brief Creates a new directory */
 		static bool CreateDirectories(const Containers::StringView path);

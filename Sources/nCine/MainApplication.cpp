@@ -20,6 +20,7 @@
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
 #elif defined(DEATH_TARGET_WINDOWS)
+#	include <timeapi.h>
 #	include <Utf8.h>
 #endif
 
@@ -48,7 +49,18 @@ bool __showLogConsole;
 bool __hasVirtualTerminal;
 Array<wchar_t> __consolePrompt;
 
-static bool CreateLogConsole(const StringView& title)
+static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
+{
+	if (consoleHandleOut == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+
+	DWORD dwMode = 0;
+	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
+			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
+}
+
+static bool CreateLogConsole(const StringView& title, bool& hasVirtualTerminal)
 {
 	FILE* fDummy = nullptr;
 
@@ -70,6 +82,8 @@ static bool CreateLogConsole(const StringView& title)
 			::freopen_s(&fDummy, "CONIN$", "r", stdin);
 			::setvbuf(stdin, NULL, _IONBF, 0);
 		}
+
+		hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
 
 		// Try to get command prompt to be able to reprint it when the game exits
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -122,11 +136,13 @@ static bool CreateLogConsole(const StringView& title)
 		::freopen_s(&fDummy, "CONOUT$", "w", stderr);
 		::freopen_s(&fDummy, "CONIN$", "r", stdin);
 
-		HANDLE hConOut = ::CreateFile(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		HANDLE hConIn = ::CreateFile(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		::SetStdHandle(STD_OUTPUT_HANDLE, hConOut);
-		::SetStdHandle(STD_ERROR_HANDLE, hConOut);
-		::SetStdHandle(STD_INPUT_HANDLE, hConIn);
+		HANDLE consoleHandleOut = ::CreateFile(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE consoleHandleIn = ::CreateFile(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		::SetStdHandle(STD_OUTPUT_HANDLE, consoleHandleOut);
+		::SetStdHandle(STD_ERROR_HANDLE, consoleHandleOut);
+		::SetStdHandle(STD_INPUT_HANDLE, consoleHandleIn);
+
+		hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
 
 		::SetConsoleTitle(Death::Utf8::ToUtf16(title));
 		HWND hWnd = ::GetConsoleWindow();
@@ -139,6 +155,8 @@ static bool CreateLogConsole(const StringView& title)
 		}
 
 		return true;
+	} else {
+		hasVirtualTerminal = false;
 	}
 
 	return false;
@@ -163,18 +181,6 @@ static void DestroyLogConsole()
 	}
 
 	::FreeConsole();
-}
-
-static bool EnableVirtualTerminalProcessing()
-{
-	HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-	if (consoleHandleOut == INVALID_HANDLE_VALUE) {
-		return false;
-	}
-
-	DWORD dwMode = 0;
-	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
-			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
 }
 
 #elif defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
@@ -234,40 +240,11 @@ namespace nCine
 				::SetCurrentDirectory(pBuf);
 			}
 		}
-#endif
 
-		MainApplication& app = static_cast<MainApplication&>(theApplication());
-		app.init(createAppEventHandler, argc, argv);
-
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-		while (!app.shouldQuit_) {
-			app.run();
-		}
-#else
-		emscripten_set_main_loop(MainApplication::emscriptenStep, 0, 1);
-		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
+#	if !defined(DEATH_TARGET_WINDOWS_RT)
+		timeBeginPeriod(1);
+#	endif
 #endif
-		app.shutdownCommon();
-
-#if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		if (__showLogConsole) {
-			DestroyLogConsole();
-		}
-#endif
-#if defined(DEATH_TARGET_SWITCH)
-		romfsExit();
-		socketExit();
-#endif
-		return EXIT_SUCCESS;
-	}
-
-	void MainApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
-	{
-		ZoneScopedC(0x81A861);
-#if defined(NCINE_PROFILING)
-		profileStartTime_ = TimeStamp::now();
-#endif
-		wasSuspended_ = shouldSuspend();
 
 #if defined(DEATH_TRACE)
 #	if defined(DEATH_TARGET_APPLE)
@@ -295,8 +272,7 @@ namespace nCine
 			}
 		}
 		if (__showLogConsole) {
-			CreateLogConsole(NCINE_APP_NAME " [Console]");
-			__hasVirtualTerminal = EnableVirtualTerminalProcessing();
+			CreateLogConsole(NCINE_APP_NAME " [Console]", __hasVirtualTerminal);
 		} else {
 			__hasVirtualTerminal = false;
 		}
@@ -306,6 +282,43 @@ namespace nCine
 		__hasVirtualTerminal = isatty(1);
 #	endif
 #endif
+
+		MainApplication& app = static_cast<MainApplication&>(theApplication());
+		app.init(createAppEventHandler, argc, argv);
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		while (!app.shouldQuit_) {
+			app.run();
+		}
+#else
+		emscripten_set_main_loop(MainApplication::emscriptenStep, 0, 1);
+		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
+#endif
+
+		app.shutdownCommon();
+
+#if defined(DEATH_TARGET_SWITCH)
+		romfsExit();
+		socketExit();
+#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		timeEndPeriod(1);
+
+#	if defined(DEATH_TRACE)
+		if (__showLogConsole) {
+			DestroyLogConsole();
+		}
+#	endif
+#endif
+		return EXIT_SUCCESS;
+	}
+
+	void MainApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
+	{
+		ZoneScopedC(0x81A861);
+#if defined(NCINE_PROFILING)
+		profileStartTime_ = TimeStamp::now();
+#endif
+		wasSuspended_ = shouldSuspend();
 
 		// Only `OnPreInit()` can modify the application configuration
 		if (argc > 1) {

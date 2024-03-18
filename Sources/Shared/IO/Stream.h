@@ -13,7 +13,8 @@ namespace Death { namespace IO {
 	enum struct FileAccessMode {
 		None = 0,
 		Read = 0x01,
-		Write = 0x02
+		Write = 0x02,
+		Exclusive = 0x08
 	};
 
 	DEFINE_ENUM_OPERATORS(FileAccessMode);

@@ -141,7 +141,7 @@ namespace Death { namespace IO {
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t openFlag;
-		switch (mode) {
+		switch (mode & ~FileAccessMode::Exclusive) {
 			case FileAccessMode::Read:
 				openFlag = O_RDONLY;
 				break;
@@ -162,7 +162,7 @@ namespace Death { namespace IO {
 			return;
 		}
 
-		switch (mode) {
+		switch (mode & ~FileAccessMode::Exclusive) {
 			default: LOGI("File \"%s\" opened", _path.data()); break;
 			case FileAccessMode::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
 			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
@@ -176,31 +176,35 @@ namespace Death { namespace IO {
 		DWORD desireAccess, creationDisposition;
 		std::int32_t openFlag;
 		const char* modeInternal;
-		switch (mode) {
+		DWORD shareMode;
+		switch (mode & ~FileAccessMode::Exclusive) {
 			case FileAccessMode::Read:
 				desireAccess = GENERIC_READ;
 				creationDisposition = OPEN_EXISTING;
 				openFlag = _O_RDONLY | _O_BINARY;
 				modeInternal = "rb";
+				shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE);
 				break;
 			case FileAccessMode::Write:
 				desireAccess = GENERIC_WRITE;
 				creationDisposition = CREATE_ALWAYS;
 				openFlag = _O_WRONLY | _O_BINARY;
 				modeInternal = "wb";
+				shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? 0 : FILE_SHARE_READ);
 				break;
 			case FileAccessMode::Read | FileAccessMode::Write:
 				desireAccess = GENERIC_READ | GENERIC_WRITE;
 				creationDisposition = OPEN_ALWAYS;
 				openFlag = _O_RDWR | _O_BINARY;
 				modeInternal = "r+b";
+				shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? 0 : FILE_SHARE_READ);
 				break;
 			default:
 				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
-		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, FILE_SHARE_READ, creationDisposition, nullptr);
+		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, nullptr);
 		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
 			LOGE("Cannot open file \"%s\" - failed with error 0x%08X", _path.data(), error);
@@ -216,10 +220,10 @@ namespace Death { namespace IO {
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
 		std::int32_t shareMode;
-		switch (mode) {
-			case FileAccessMode::Read: modeInternal = L"rb"; shareMode = _SH_DENYNO; break;
-			case FileAccessMode::Write: modeInternal = L"wb"; shareMode = _SH_DENYWR; break;
-			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = L"r+b"; shareMode = _SH_DENYWR; break;
+		switch (mode & ~FileAccessMode::Exclusive) {
+			case FileAccessMode::Read: modeInternal = L"rb"; shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? _SH_DENYRW : _SH_DENYNO); break;
+			case FileAccessMode::Write: modeInternal = L"wb"; shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
+			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = L"r+b"; shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
 			default:
 				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
@@ -233,7 +237,7 @@ namespace Death { namespace IO {
 		}
 #	else
 		const char* modeInternal;
-		switch (mode) {
+		switch (mode & ~FileAccessMode::Exclusive) {
 			case FileAccessMode::Read: modeInternal = "rb"; break;
 			case FileAccessMode::Write: modeInternal = "wb"; break;
 			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = "r+b"; break;
@@ -249,7 +253,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 
-		switch (mode) {
+		switch (mode & ~FileAccessMode::Exclusive) {
 			default: LOGI("File \"%s\" opened", _path.data()); break;
 			case FileAccessMode::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
 			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
