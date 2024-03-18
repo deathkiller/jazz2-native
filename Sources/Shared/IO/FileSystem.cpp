@@ -1404,7 +1404,7 @@ namespace Death { namespace IO {
 #elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 		struct stat sb;
-		return (::stat(nullTerminatedPath.data(), &st) == 0 && (sb.st_flags & UF_HIDDEN) == UF_HIDDEN);
+		return (::stat(nullTerminatedPath.data(), &sb) == 0 && (sb.st_flags & UF_HIDDEN) == UF_HIDDEN);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
@@ -1507,7 +1507,7 @@ namespace Death { namespace IO {
 #elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 		struct stat sb;
-		return (::stat(nullTerminatedPath.data(), &st) == 0 && (sb.st_flags & UF_IMMUTABLE) == UF_IMMUTABLE);
+		return (::stat(nullTerminatedPath.data(), &sb) == 0 && (sb.st_flags & UF_IMMUTABLE) == UF_IMMUTABLE);
 #else
 		return false;
 #endif
@@ -2362,7 +2362,7 @@ namespace Death { namespace IO {
 		_savePath = CombinePath({ home, "Library/Application Support"_s, applicationName });
 #elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)
 		StringView config = ::getenv("XDG_CONFIG_HOME");
-		if (IsAbsolutePath(config.empty())) {
+		if (IsAbsolutePath(config)) {
 			_savePath = CombinePath(config, applicationName);
 			return;
 		}
