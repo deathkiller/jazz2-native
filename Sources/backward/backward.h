@@ -302,6 +302,7 @@ typedef SSIZE_T ssize_t;
 
 #include <psapi.h>
 #include <signal.h>
+#include <winioctl.h>
 
 #if defined(DEATH_TARGET_MSVC)
 #	pragma comment(lib, "psapi")
@@ -1073,6 +1074,11 @@ namespace backward {
 
 #elif defined(BACKWARD_SYSTEM_WINDOWS)
 
+	struct ExceptionContext {
+		CONTEXT Context;
+		EXCEPTION_RECORD ExceptionRecord;
+	};
+
 	template<>
 	class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
 	public:
@@ -1089,7 +1095,7 @@ namespace backward {
 		}
 
 		DEATH_NEVER_INLINE std::size_t load_here(std::size_t depth = 32, void* context = nullptr, void* error_addr = nullptr) {
-			set_context(static_cast<CONTEXT*>(context));
+			set_context(&(static_cast<ExceptionContext*>(context)->Context));
 			set_error_addr(error_addr);
 			CONTEXT localCtx; // Used when no context is provided
 
@@ -3983,9 +3989,16 @@ namespace backward {
 #	if defined(DEATH_TARGET_WINDOWS)
 			if (failed) {
 				colorize.set_color(Color::BrightYellow);
-				os << "Make sure corresponding .pdb files are accessible to show full stack trace.\n";
+				os << "Make sure corresponding .pdb files are accessible to show full stack trace. ";
 				colorize.set_color(Color::Reset);
 			}
+			colorize.set_color(Color::Yellow);
+			os << "Crash dump file has been saved to ";
+			colorize.set_color(Color::BrightGreen);
+			os << "\"CrashDumps\"";
+			colorize.set_color(Color::Yellow);
+			os << " directory.\n";
+			colorize.set_color(Color::Reset);
 #	endif
 		}
 
@@ -4139,9 +4152,10 @@ namespace backward {
 			return std::vector<int>(posix_signals, posix_signals + sizeof(posix_signals) / sizeof(posix_signals[0]));
 		}
 
-		SignalHandling(const std::vector<int>& posix_signals = make_default_signals())
-			: _loaded(false) {
+		SignalHandling() : _loaded(false) {
 			bool success = true;
+
+			const std::vector<int> posix_signals = make_default_signals();
 
 			const std::size_t stack_size = 1024 * 1024 * 8;
 			_stack_content.reset(static_cast<char*>(std::malloc(stack_size)));
@@ -4273,29 +4287,18 @@ namespace backward {
 
 	class SignalHandling {
 	public:
-		SignalHandling(const std::vector<int> & = std::vector<int>())
-			: reporter_thread_([]() {
-				// We handle crashes in a utility thread: backward structures and some Windows functions called here
-				// need stack space, which we do not have when we encounter a stack overflow.
-				// To support reporting stack traces during a stack overflow, we create a utility thread at startup,
-				// which waits until a crash happens or the program exits normally.
+		SignalHandling() {
+			constexpr std::int32_t ExceptionHandlerThreadStackSize = 64 * 1024;
+			reporter_thread_ = ::CreateThread(NULL, ExceptionHandlerThreadStackSize, OnExceptionHandlerThread, this, 0, nullptr);
+			if (reporter_thread_ == NULL) {
+				return;
+			}
 
-				{
-					std::unique_lock<std::mutex> lk(mtx());
-					cv().wait(lk, []() { return crashed() != crash_status::running; });
-				}
-				if (crashed() == crash_status::crashed) {
-					handle_stacktrace(skip_recs());
-				}
-				{
-					std::unique_lock<std::mutex> lk(mtx());
-					crashed() = crash_status::ending;
-				}
-				cv().notify_one();
-		}) {
+			enable_crashing_on_crashes();
+
 			::SetUnhandledExceptionFilter(crash_handler);
 
-			signal(SIGABRT, signal_handler);
+			::signal(SIGABRT, signal_handler);
 //#if !defined(_Build_By_LTL)
 //			// This function is not supported on VC-LTL 4.1.3
 //			_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
@@ -4306,7 +4309,9 @@ namespace backward {
 			std::set_unexpected(&terminator);
 #	endif
 			_set_purecall_handler(&terminator);
+#	if _MSC_VER >= 1400
 			_set_invalid_parameter_handler(&invalid_parameter_handler);
+#	endif
 		}
 
 		bool loaded() const {
@@ -4321,7 +4326,13 @@ namespace backward {
 
 			cv().notify_one();
 
-			reporter_thread_.join();
+			if (reporter_thread_ != NULL) {
+				if (::WaitForSingleObject(reporter_thread_, 5000) != WAIT_OBJECT_0) {
+					::TerminateThread(reporter_thread_, 1);
+				}
+				::CloseHandle(reporter_thread_);
+				reporter_thread_ = NULL;
+			}
 		}
 
 		static ColorMode::type& color_mode() {
@@ -4335,8 +4346,45 @@ namespace backward {
 		}
 
 	private:
-		static CONTEXT* ctx() {
-			static CONTEXT data;
+		struct AppMemory {
+			ULONG64 Ptr;
+			ULONG Length;
+
+			bool operator==(const struct AppMemory& other) const {
+				return (Ptr == other.Ptr);
+			}
+
+			bool operator==(const void* other) const {
+				return (Ptr == reinterpret_cast<ULONG64>(other));
+			}
+		};
+
+		//typedef Containers::SmallVector<AppMemory> AppMemoryList;
+
+		typedef struct {
+			const AppMemory* Begin;
+			const AppMemory* End;
+		} MinidumpCallbackContext;
+
+		enum class MinidumpRawInfoValidity : std::uint32_t {
+			None = 0,
+			ValidDumpThreadId = 0x01,
+			ValidRequestingThreadId = 0x02
+		};
+
+		DEFINE_PRIVATE_ENUM_OPERATORS(MinidumpRawInfoValidity);
+
+		struct MinidumpRawInfo {
+			MinidumpRawInfoValidity Validity;
+			std::uint32_t DumpThreadId;
+			std::uint32_t RequestingThreadId;
+		};
+
+		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
+		static constexpr std::uint32_t MinidumpRawInfoStream = 0x47670001;
+
+		static ExceptionContext* ctx() {
+			static ExceptionContext data;
 			return &data;
 		}
 
@@ -4364,9 +4412,8 @@ namespace backward {
 			return handle;
 		}
 
-		std::thread reporter_thread_;
+		HANDLE reporter_thread_;
 
-		// TODO: how not to hardcode these?
 		static const constexpr std::int32_t signal_skip_recs =
 #	if defined(DEATH_TARGET_CLANG)
 			// With clang, RtlCaptureContext also captures the stack frame of the current function Below that,
@@ -4384,29 +4431,61 @@ namespace backward {
 			return data;
 		}
 
+		static DWORD WINAPI OnExceptionHandlerThread(void* lpParameter) {
+			// We handle crashes in a utility thread: backward structures and some Windows functions called here
+			// need stack space, which we do not have when we encounter a stack overflow.
+			// To support reporting stack traces during a stack overflow, we create a utility thread at startup,
+			// which waits until a crash happens or the program exits normally.
+
+			{
+				std::unique_lock<std::mutex> lk(mtx());
+				cv().wait(lk, []() { return crashed() != crash_status::running; });
+			}
+			if (crashed() == crash_status::crashed) {
+				// For some reason this must be called first, otherwise the dump is not linked to sources correctly
+				write_minidump_with_exception(::GetThreadId(thread_handle()), ctx());
+
+				handle_stacktrace(skip_recs());
+			}
+			{
+				std::unique_lock<std::mutex> lk(mtx());
+				crashed() = crash_status::ending;
+			}
+			cv().notify_one();
+			return 0;
+		}
+
 		static inline void terminator() {
 			crash_handler(signal_skip_recs);
-			abort();
+			::exit(ExceptionExitCode);
 		}
 
 		static inline void signal_handler(int) {
 			crash_handler(signal_skip_recs);
-			abort();
+			::exit(ExceptionExitCode);
 		}
 
-		static inline void __cdecl invalid_parameter_handler(const wchar_t*, const wchar_t*, const wchar_t*, unsigned int, uintptr_t) {
+#	if _MSC_VER >= 1400
+		static inline void __cdecl invalid_parameter_handler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, unsigned int line, std::uintptr_t reserved) {
 			crash_handler(signal_skip_recs);
-			abort();
+			::exit(ExceptionExitCode);
 		}
+#	endif
 
 		DEATH_NEVER_INLINE static LONG WINAPI crash_handler(EXCEPTION_POINTERS* info) {
 			// The exception info supplies a trace from exactly where the issue was, no need to skip records
-			crash_handler(0, info->ContextRecord);
+			DWORD code = info->ExceptionRecord->ExceptionCode;
+			bool isDebugException = (code == EXCEPTION_BREAKPOINT || code == EXCEPTION_SINGLE_STEP ||
+									 code == DBG_PRINTEXCEPTION_C || code == DBG_PRINTEXCEPTION_WIDE_C);
+			if (!isDebugException) {
+				crash_handler(0, info);
+			}
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
-		DEATH_NEVER_INLINE static void crash_handler(int skip, CONTEXT* ct = nullptr) {
-			if (ct == nullptr) {
+		DEATH_NEVER_INLINE static void crash_handler(int skip, EXCEPTION_POINTERS* info = nullptr) {
+			ExceptionContext* context = ctx();
+			if (info == nullptr) {
 #	if (defined(_M_IX86) || defined(__i386__)) && defined(DEATH_TARGET_MSVC)
 				// RtlCaptureContext() doesn't work on i386
 				CONTEXT localCtx;
@@ -4419,12 +4498,14 @@ namespace backward {
 					mov eax, [label];
 					mov[localCtx.Eip], eax;
 				}
-				std::memcpy(ctx(), &localCtx, sizeof(CONTEXT));
+				std::memcpy(&(context->Context), &localCtx, sizeof(CONTEXT));
 #	else
-				::RtlCaptureContext(ctx());
+				::RtlCaptureContext(&(context->Context));
 #	endif
+				std::memset(&(context->ExceptionRecord), 0, sizeof(EXCEPTION_RECORD));
 			} else {
-				std::memcpy(ctx(), ct, sizeof(CONTEXT));
+				std::memcpy(&(context->Context), info->ContextRecord, sizeof(CONTEXT));
+				std::memcpy(&(context->ExceptionRecord), info->ExceptionRecord, sizeof(EXCEPTION_RECORD));
 			}
 			::DuplicateHandle(::GetCurrentProcess(), ::GetCurrentThread(),
 								::GetCurrentProcess(), &thread_handle(),
@@ -4466,6 +4547,203 @@ namespace backward {
 			} else {
 				printer.print(st, std::cerr);
 			}
+		}
+
+		static void enable_crashing_on_crashes() {
+			using _GetPolicy = BOOL(WINAPI*)(LPDWORD lpFlags);
+			using _SetPolicy = BOOL(WINAPI*)(DWORD dwFlags);
+			constexpr DWORD EXCEPTION_SWALLOWING = 0x1;
+
+			HMODULE kernel32 = ::GetModuleHandle(L"kernel32.dll");
+			_GetPolicy pGetPolicy = (_GetPolicy)::GetProcAddress(kernel32, "GetProcessUserModeExceptionPolicy");
+			_SetPolicy pSetPolicy = (_SetPolicy)::GetProcAddress(kernel32, "SetProcessUserModeExceptionPolicy");
+			if (pGetPolicy != nullptr && pSetPolicy != nullptr) {
+				DWORD dwFlags;
+				if (pGetPolicy(&dwFlags)) {
+					pSetPolicy(dwFlags & ~EXCEPTION_SWALLOWING);
+				}
+			}
+		}
+
+		static bool write_minidump_with_exception(std::size_t requestingThreadId, ExceptionContext* ctx) {
+			wchar_t processPath[MAX_PATH];
+			if (!::GetModuleFileNameW(NULL, processPath, static_cast<DWORD>(Containers::arraySize(processPath)))) {
+				return false;
+			}
+
+			bool success = false;
+			std::size_t processPathLength = wcslen(processPath) - 1;
+			bool dotFound = false;
+			while (processPathLength >= 0) {
+				wchar_t c = processPath[processPathLength];
+				if (c == '/' || c == '\\') {
+					processPath[processPathLength] = L'\0';
+					processPathLength++;
+					break;
+				}
+				if (c == '.' && !dotFound) {
+					dotFound = true;
+					processPath[processPathLength] = L'\0';
+				}
+				processPathLength--;
+			}
+
+			SYSTEMTIME lt;
+			::GetLocalTime(&lt);
+
+			wchar_t minidumpPath[MAX_PATH];
+			std::int32_t pathPrefixLength;
+			if (processPathLength > 0) {
+				pathPrefixLength = swprintf_s(minidumpPath, L"%s\\CrashDumps\\", processPath);
+			} else {
+				pathPrefixLength = swprintf_s(minidumpPath, L"CrashDumps\\");
+			}
+			::CreateDirectory(minidumpPath, NULL);
+			try_enable_file_compression(minidumpPath);
+			swprintf_s(minidumpPath + pathPrefixLength, countof(minidumpPath) - pathPrefixLength, L"%s (%04i-%02i-%02i %02i%02i%02i).dmp", &processPath[processPathLength], lt.wYear, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
+
+			HANDLE dumpFile = ::CreateFile(minidumpPath, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (dumpFile != INVALID_HANDLE_VALUE) {
+				HANDLE process = ::GetCurrentProcess();
+
+				EXCEPTION_POINTERS exceptionPointers;
+				exceptionPointers.ContextRecord = &ctx->Context;
+				exceptionPointers.ExceptionRecord = &ctx->ExceptionRecord;
+
+				MINIDUMP_EXCEPTION_INFORMATION exceptInfo;
+				exceptInfo.ThreadId = (DWORD)requestingThreadId;
+				exceptInfo.ExceptionPointers = &exceptionPointers;
+				exceptInfo.ClientPointers = FALSE;
+
+				MINIDUMP_USER_STREAM userStreamArray[2];
+				MINIDUMP_USER_STREAM_INFORMATION userStreams;
+				userStreams.UserStreamCount = 0;
+				userStreams.UserStreamArray = userStreamArray;
+
+				// Add an MDRawBreakpadInfo stream to the minidump, to provide additional information about the exception handler.
+				// The information will help to determine which threads are relevant.
+				MinidumpRawInfo rawInfo;
+				rawInfo.Validity = MinidumpRawInfoValidity::ValidDumpThreadId | MinidumpRawInfoValidity::ValidRequestingThreadId;
+				rawInfo.DumpThreadId = ::GetCurrentThreadId();
+				rawInfo.RequestingThreadId = (DWORD)requestingThreadId;
+
+				std::int32_t index = userStreams.UserStreamCount;
+				userStreamArray[index].Type = MinidumpRawInfoStream;
+				userStreamArray[index].BufferSize = sizeof(rawInfo);
+				userStreamArray[index].Buffer = &rawInfo;
+				userStreams.UserStreamCount++;
+
+				/*if (assertion != nullptr) {
+					std::int32_t index = userStreams.UserStreamCount;
+					userStreamArray[index].Type = MinidumpAssertionInfoStream;
+					userStreamArray[index].BufferSize = sizeof(MinidumpRawAssertionInfo);
+					userStreamArray[index].Buffer = assertion;
+					userStreams.UserStreamCount++;
+				}*/
+
+				// Older versions of DbgHelp.dll don't correctly put the memory around the faulting instruction pointer into the minidump.
+				// This callback will ensure that it gets included.
+				AppMemory exceptionThreadMemory = {};
+				if (ctx != nullptr) {
+					// Find a memory region of 256 bytes centered on the faulting instruction pointer
+					const ULONG64 instructionPointer =
+#if defined(_M_X64) || defined(__x86_64__)
+						ctx->Context.Rip;
+#elif defined(_M_ARM) || (_M_ARM64) || defined(_M_ARM64EC)
+						ctx->Context.Pc;
+#elif defined(_M_IA64)
+						ctx->Context.StIIP;
+#else
+						ctx->Context.Eip;
+#endif
+
+						MEMORY_BASIC_INFORMATION info;
+					if (::VirtualQueryEx(process, reinterpret_cast<LPCVOID>(instructionPointer), &info, sizeof(MEMORY_BASIC_INFORMATION)) != 0 && info.State == MEM_COMMIT) {
+						// Attempt to get 128 bytes before and after the instruction pointer, but settle for whatever's available up to the boundaries of the memory region
+						constexpr ULONG64 IPMemorySize = 256;
+						ULONG64 base = std::max(reinterpret_cast<ULONG64>(info.BaseAddress), instructionPointer - (IPMemorySize / 2));
+						ULONG64 endOfRange = std::min(instructionPointer + (IPMemorySize / 2), reinterpret_cast<ULONG64>(info.BaseAddress) + info.RegionSize);
+						ULONG size = static_cast<ULONG>(endOfRange - base);
+
+						exceptionThreadMemory.Ptr = base;
+						exceptionThreadMemory.Length = size;
+					}
+				}
+
+				MinidumpCallbackContext context;
+				//context.iter = _appMemoryInfo.begin();
+				//context.end = _appMemoryInfo.end();
+				context.Begin = &exceptionThreadMemory;
+				context.End = (context.Begin + 1);	// Only one item for now
+
+				// Skip the reserved element if there was no instruction memory
+				if (context.Begin->Ptr == NULL) {
+					context.Begin++;
+				}
+
+				MINIDUMP_CALLBACK_INFORMATION callback;
+				callback.CallbackRoutine = minidump_write_dump_callback;
+				callback.CallbackParam = reinterpret_cast<void*>(&context);
+
+				constexpr MINIDUMP_TYPE MinidumpType = (MINIDUMP_TYPE)(MiniDumpScanMemory | MiniDumpWithHandleData | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory);
+				success = ::MiniDumpWriteDump(process, ::GetProcessId(process), dumpFile, MinidumpType, ctx != nullptr ? &exceptInfo : NULL, &userStreams, &callback);
+
+				::CloseHandle(dumpFile);
+			}
+
+			return success;
+		}
+
+		static BOOL CALLBACK minidump_write_dump_callback(PVOID context, const PMINIDUMP_CALLBACK_INPUT callbackInput, PMINIDUMP_CALLBACK_OUTPUT callbackOutput) {
+			switch (callbackInput->CallbackType) {
+				case MemoryCallback: {
+					MinidumpCallbackContext* callbackContext = reinterpret_cast<MinidumpCallbackContext*>(context);
+					if (callbackContext->Begin == callbackContext->End) {
+						return FALSE;
+					}
+
+					// Include the specified memory region
+					callbackOutput->MemoryBase = callbackContext->Begin->Ptr;
+					callbackOutput->MemorySize = callbackContext->Begin->Length;
+					callbackContext->Begin++;
+					return TRUE;
+				}
+
+				// Include all modules
+				case IncludeModuleCallback:
+				case ModuleCallback:
+					return TRUE;
+
+				// Include all threads
+				case IncludeThreadCallback:
+				case ThreadCallback:
+				case ThreadExCallback:
+					return TRUE;
+
+				// Stop receiving cancel callbacks
+				case CancelCallback:
+					callbackOutput->CheckCancel = FALSE;
+					callbackOutput->Cancel = FALSE;
+					return TRUE;
+
+				default:
+					return FALSE;
+			}
+		}
+
+		static bool try_enable_file_compression(const wchar_t* path) {
+			HANDLE hFile = CreateFileW(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+							NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+			if (hFile == INVALID_HANDLE_VALUE) {
+				return false;
+			}
+
+			DWORD dwBytesReturned;
+			USHORT compressionState = COMPRESSION_FORMAT_DEFAULT;
+			BOOL success = ::DeviceIoControl(hFile, FSCTL_SET_COMPRESSION, &compressionState, sizeof(compressionState),
+								NULL, 0, &dwBytesReturned, NULL);
+			::CloseHandle(hFile);
+			return success;
 		}
 	};
 

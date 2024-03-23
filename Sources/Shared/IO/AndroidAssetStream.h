@@ -21,7 +21,7 @@ namespace Death { namespace IO {
 	class AndroidAssetStream : public Stream
 	{
 	public:
-		static constexpr Containers::StringView Prefix = "asset::"_s;
+		static constexpr Containers::StringView Prefix = "asset:/"_s;
 
 		explicit AndroidAssetStream(const Containers::String& path, FileAccessMode mode);
 		~AndroidAssetStream() override;
