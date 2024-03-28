@@ -105,10 +105,10 @@
 #endif // __clang__
 #endif // _MSC_VER
 
-#if defined(__x86_64__) || defined(_M_AMD64)
-#define SIMDJSON_IS_X86_64 1
-#elif defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
 #define SIMDJSON_IS_ARM64 1
+#elif defined(__x86_64__) || defined(_M_AMD64)
+#define SIMDJSON_IS_X86_64 1
 #elif defined(__PPC64__) || defined(_M_PPC64)
 #if defined(__ALTIVEC__)
 #define SIMDJSON_IS_PPC64_VMX 1

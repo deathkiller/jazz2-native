@@ -4254,16 +4254,11 @@ namespace backward {
 
 			FILE* dest = destination();
 			printer.print(st, dest != nullptr ? dest : stderr, info->si_signo);
-
-//#	if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) || \
-//	   (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
-//			psiginfo(info, nullptr);
-//#	else
-//			(void)info;
-//#	endif
 		}
 
 	private:
+		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
+
 		details::handle<char*> _stack_content;
 		bool _loaded;
 
@@ -4273,11 +4268,11 @@ namespace backward {
 		static void sig_handler(int signo, siginfo_t* info, void* _ctx) {
 			handleSignal(signo, info, _ctx);
 
-			// try to forward the signal.
+			// Try to forward the signal
 			raise(info->si_signo);
 
-			// terminate the process immediately.
-			_exit(EXIT_FAILURE);
+			// Terminate the process immediately
+			_exit(ExceptionExitCode);
 		}
 	};
 
@@ -4671,8 +4666,6 @@ namespace backward {
 				}
 
 				MinidumpCallbackContext context;
-				//context.iter = _appMemoryInfo.begin();
-				//context.end = _appMemoryInfo.end();
 				context.Begin = &exceptionThreadMemory;
 				context.End = (context.Begin + 1);	// Only one item for now
 
