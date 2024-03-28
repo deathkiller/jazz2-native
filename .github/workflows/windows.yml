@@ -47,6 +47,14 @@ jobs:
           Platform: x64
           ArchExts: AVX2
           Backend: SDL2
+          
+        - BuildType: Release
+          Platform: ARM64
+          Backend: GLFW
+
+        - BuildType: Release
+          Platform: ARM64
+          Backend: SDL2
 
     runs-on: 'windows-latest'
 
@@ -78,7 +86,8 @@ jobs:
             if(($archexts -eq 'SSE') -or ($archexts -eq 'SSE2')) {
               $archexts = ''
             }
-          } 
+          }
+          'ARM64' { $arch = 'ARM64EC' } 
         }
         
         rm -force ".\Content\Translations\*.po"
@@ -89,7 +98,8 @@ jobs:
       run: |
         switch('${{ matrix.Platform }}') {
           'x86' { $arch = 'Win32' } 
-          'x64' { $arch = 'x64' } 
+          'x64' { $arch = 'x64' }
+          'ARM64' { $arch = 'ARM64EC' }
         }
         
         cd .\_build\
