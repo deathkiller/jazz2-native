@@ -92,7 +92,7 @@ jobs:
         
         rm -force ".\Content\Translations\*.po"
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_STRIP_BINARIES=ON -D NCINE_COPY_DEPENDENCIES=ON -D CMAKE_GENERATOR_TOOLSET=v143
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D CMAKE_SYSTEM_VERSION=10 -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_STRIP_BINARIES=ON -D NCINE_COPY_DEPENDENCIES=ON -D CMAKE_GENERATOR_TOOLSET=v143
 
     - name: 'Build'
       run: |
