@@ -209,7 +209,7 @@ namespace Jazz2::UI::Menu
 		int32_t charOffset = 0;
 		int32_t charOffsetShadow = 0;
 
-		float titleY = _owner->_contentBounds.Y - 30;
+		float titleY = _owner->_contentBounds.Y - 30.0f;
 		float logoScale = 1.0f + (1.0f - _owner->_logoTransition) * 7.0f;
 		float logoTextScale = 1.0f + (1.0f - _owner->_logoTransition) * 2.0f;
 		float logoTranslateX = 1.0f + (1.0f - _owner->_logoTransition) * 1.2f;
@@ -981,7 +981,8 @@ namespace Jazz2::UI::Menu
 			renderQueue.addCommand(command);
 		}
 
-		DrawElement(MenuGlow, 0, center.X, 70.0f, 130, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.14f), 16.0f, 10.0f, true);
+		float titleY = _contentBounds.Y - 30;
+		DrawElement(MenuGlow, 0, center.X, titleY, 130, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.14f), 16.0f, 10.0f, true, true);
 
 		return true;
 	}
