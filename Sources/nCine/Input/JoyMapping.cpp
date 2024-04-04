@@ -451,7 +451,7 @@ namespace nCine
 
 			for (int i = 0; i < countof(AndroidAxisNameMapping); i++) {
 				mapping.desc.axes[i].name = AndroidAxisNameMapping[i];
-				if (axis.name == AxisName::LTRIGGER || axis.name == AxisName::RTRIGGER) {
+				if (mapping.desc.axes[i].name == AxisName::LTRIGGER || mapping.desc.axes[i].name == AxisName::RTRIGGER) {
 					mapping.desc.axes[i].min = 0.0f;
 				} else {
 					mapping.desc.axes[i].min = -1.0f;
