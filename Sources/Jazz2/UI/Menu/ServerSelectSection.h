@@ -13,7 +13,7 @@ namespace Jazz2::UI::Menu
 		ServerSelectSection();
 		~ServerSelectSection();
 
-		Recti GetClipRectangle(const Vector2i& viewSize) override;
+		Recti GetClipRectangle(const Recti& contentBounds) override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -31,9 +31,9 @@ namespace Jazz2::UI::Menu
 			ItemData(Multiplayer::ServerDesc&& desc);
 		};
 
-		static constexpr float ItemHeight = 20.0f;
-		static constexpr float TopLine = 131.0f;
-		static constexpr float BottomLine = 42.0f;
+		static constexpr std::int32_t ItemHeight = 20;
+		static constexpr std::int32_t TopLine = 31;
+		static constexpr std::int32_t BottomLine = 42;
 
 		SmallVector<ItemData> _items;
 		int32_t _selectedIndex;

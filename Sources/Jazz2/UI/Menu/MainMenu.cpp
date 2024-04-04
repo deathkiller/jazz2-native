@@ -80,8 +80,8 @@ namespace Jazz2::UI::Menu
 					auto& lastSection = _sections.back();
 					lastSection->OnShow(this);
 
-					if (_canvasBackground->ViewSize != Vector2i::Zero) {
-						Recti clipRectangle = lastSection->GetClipRectangle(_canvasBackground->ViewSize);
+					if (_contentBounds != Recti::Empty) {
+						Recti clipRectangle = lastSection->GetClipRectangle(_contentBounds);
 						_upscalePass.SetClipRectangle(clipRectangle);
 					}
 				}
@@ -155,10 +155,11 @@ namespace Jazz2::UI::Menu
 		}
 
 		_upscalePass.Initialize(w, h, width, height);
+		UpdateContentBounds(Vector2i(w, h));
 
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
-			Recti clipRectangle = lastSection->GetClipRectangle(Vector2i(w, h));
+			Recti clipRectangle = lastSection->GetClipRectangle(_contentBounds);
 			_upscalePass.SetClipRectangle(clipRectangle);
 		}
 
@@ -208,6 +209,7 @@ namespace Jazz2::UI::Menu
 		int32_t charOffset = 0;
 		int32_t charOffsetShadow = 0;
 
+		float titleY = _owner->_contentBounds.Y - 30;
 		float logoScale = 1.0f + (1.0f - _owner->_logoTransition) * 7.0f;
 		float logoTextScale = 1.0f + (1.0f - _owner->_logoTransition) * 2.0f;
 		float logoTranslateX = 1.0f + (1.0f - _owner->_logoTransition) * 1.2f;
@@ -215,25 +217,25 @@ namespace Jazz2::UI::Menu
 		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
-			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), 40.0f, ShadowLayer, Alignment::Center, Colorf::White);
+			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - 30.0f, ShadowLayer, Alignment::Center, Colorf::White);
 		}
 
 		// Title
-		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, 64.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
-		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, 64.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
+		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
+		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
 
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f, 70.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f, 70.0f - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f, 70.0f + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, 70.0f + logoTranslateY, FontLayer + 200,
+		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.54f, 0.44f, 0.34f, 0.5f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffset, center.X - 19.0f * logoTranslateX + logoTextTranslate, 70.0f - 8.0f + logoTranslateY, FontLayer + 200,
+		_owner->_mediumFont->DrawString(this, "2"_s, charOffset, center.X - 19.0f * logoTranslateX + logoTextTranslate, titleY - 8.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.54f, 0.44f, 0.34f, 0.5f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, 70.0f + 4.0f + logoTranslateY, FontLayer + 200,
+		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		// Version
@@ -327,8 +329,8 @@ namespace Jazz2::UI::Menu
 		auto& currentSection = _sections.emplace_back(std::move(section));
 		currentSection->OnShow(this);
 
-		if (_canvasBackground->ViewSize != Vector2i::Zero) {
-			Recti clipRectangle = currentSection->GetClipRectangle(_canvasBackground->ViewSize);
+		if (_contentBounds != Recti::Empty) {
+			Recti clipRectangle = currentSection->GetClipRectangle(_contentBounds);
 			_upscalePass.SetClipRectangle(clipRectangle);
 		}
 
@@ -347,8 +349,8 @@ namespace Jazz2::UI::Menu
 			auto& lastSection = _sections.back();
 			lastSection->OnShow(this);
 
-			if (_canvasBackground->ViewSize != Vector2i::Zero) {
-				Recti clipRectangle = lastSection->GetClipRectangle(_canvasBackground->ViewSize);
+			if (_contentBounds != Recti::Empty) {
+				Recti clipRectangle = lastSection->GetClipRectangle(_contentBounds);
 				_upscalePass.SetClipRectangle(clipRectangle);
 			}
 		}
@@ -417,7 +419,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void MainMenu::DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
+	void MainMenu::DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
 	{
 		auto* res = _metadata->FindAnimation(state);
 		if (res == nullptr) {
@@ -432,6 +434,10 @@ namespace Jazz2::UI::Menu
 		GenericGraphicResource* base = res->Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
+		if (!unaligned) {
+			adjustedPos.X = std::round(adjustedPos.X);
+			adjustedPos.Y = std::round(adjustedPos.Y);
+		}
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int32_t col = frame % base->FrameConfiguration.X;
@@ -446,7 +452,7 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
 
-	void MainMenu::DrawElement(AnimState state, float x, float y, uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords)
+	void MainMenu::DrawElement(AnimState state, float x, float y, uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords, bool unaligned)
 	{
 		auto* res = _metadata->FindAnimation(state);
 		if (res == nullptr) {
@@ -456,6 +462,10 @@ namespace Jazz2::UI::Menu
 		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = res->Base;
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
+		if (!unaligned) {
+			adjustedPos.X = std::round(adjustedPos.X);
+			adjustedPos.Y = std::round(adjustedPos.Y);
+		}
 
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
@@ -464,14 +474,20 @@ namespace Jazz2::UI::Menu
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
+		adjustedPos.X = std::round(adjustedPos.X);
+		adjustedPos.Y = std::round(adjustedPos.Y);
 
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
 
-	void MainMenu::DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color)
+	void MainMenu::DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
+		if (!unaligned) {
+			adjustedPos.X = std::round(adjustedPos.X);
+			adjustedPos.Y = std::round(adjustedPos.Y);
+		}
 
 		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
 	}
@@ -548,6 +564,12 @@ namespace Jazz2::UI::Menu
 			_music->play();
 		}
 #endif
+	}
+
+	void MainMenu::UpdateContentBounds(Vector2i viewSize)
+	{
+		float titleY = std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f);
+		_contentBounds = Recti(0, titleY + 30, viewSize.X, viewSize.Y - (titleY + 30));
 	}
 
 	void MainMenu::UpdatePressedActions()

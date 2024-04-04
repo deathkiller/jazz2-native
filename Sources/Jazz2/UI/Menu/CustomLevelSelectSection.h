@@ -14,7 +14,7 @@ namespace Jazz2::UI::Menu
 		CustomLevelSelectSection(bool multiplayer = false);
 		~CustomLevelSelectSection();
 
-		Recti GetClipRectangle(const Vector2i& viewSize) override;
+		Recti GetClipRectangle(const Recti& contentBounds) override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -29,9 +29,9 @@ namespace Jazz2::UI::Menu
 			float Y;
 		};
 
-		static constexpr float ItemHeight = 20.0f;
-		static constexpr float TopLine = 131.0f;
-		static constexpr float BottomLine = 42.0f;
+		static constexpr std::int32_t ItemHeight = 20;
+		static constexpr std::int32_t TopLine = 31;
+		static constexpr std::int32_t BottomLine = 42;
 
 		SmallVector<ItemData> _items;
 		bool _multiplayer;
@@ -51,6 +51,6 @@ namespace Jazz2::UI::Menu
 		void ExecuteSelected();
 		void EnsureVisibleSelected();
 		void AddCustomLevels();
-		void AddLevel(const StringView& levelFile);
+		void AddLevel(const StringView levelFile);
 	};
 }

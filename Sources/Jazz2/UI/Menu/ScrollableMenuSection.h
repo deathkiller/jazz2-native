@@ -15,7 +15,7 @@ namespace Jazz2::UI::Menu
 	public:
 		ScrollableMenuSection();
 
-		Recti GetClipRectangle(const Vector2i& viewSize) override;
+		Recti GetClipRectangle(const Recti& contentBounds) override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -33,7 +33,7 @@ namespace Jazz2::UI::Menu
 		};
 
 		static constexpr std::int32_t ItemHeight = 40;
-		static constexpr std::int32_t TopLine = 131;
+		static constexpr std::int32_t TopLine = 31;
 		static constexpr std::int32_t BottomLine = 42;
 
 		SmallVector<ListViewItem> _items;
@@ -65,9 +65,9 @@ namespace Jazz2::UI::Menu
 	}
 
 	template<class TItem>
-	Recti ScrollableMenuSection<TItem>::GetClipRectangle(const Vector2i& viewSize)
+	Recti ScrollableMenuSection<TItem>::GetClipRectangle(const Recti& contentBounds)
 	{
-		return Recti(0, TopLine - 1, viewSize.X, viewSize.Y - TopLine - BottomLine + 2);
+		return Recti(contentBounds.X, contentBounds.Y + TopLine - 1, contentBounds.W, contentBounds.H - TopLine - BottomLine + 2);
 	}
 
 	template<class TItem>
@@ -143,6 +143,8 @@ namespace Jazz2::UI::Menu
 	void ScrollableMenuSection<TItem>::OnDrawClipped(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
+		Recti contentBounds = _root->GetContentBounds();
+		Recti clipRect = GetClipRectangle(contentBounds);
 		std::int32_t charOffset = 0;
 
 		if (_items.empty()) {
@@ -151,7 +153,6 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		Recti clipRect = GetClipRectangle(viewSize);
 		std::int32_t topLine = clipRect.Y + 1;
 		std::int32_t bottomLine = clipRect.Y + clipRect.H - 1;
 		std::int32_t availableHeight = (bottomLine - topLine);
@@ -278,8 +279,8 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		Vector2i viewSize = _root->GetViewSize();
-		Recti clipRect = GetClipRectangle(viewSize);
+		Recti contentBounds = _root->GetContentBounds();
+		Recti clipRect = GetClipRectangle(contentBounds);
 		std::int32_t topLine = clipRect.Y + 1;
 		std::int32_t bottomLine = clipRect.Y + clipRect.H - 1;
 

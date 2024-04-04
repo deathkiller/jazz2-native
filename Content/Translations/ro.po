@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-03-07 00:58+0100\n"
+"POT-Creation-Date: 2024-04-04 21:46+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Traducere în limba română: 1NSH4N3 & Akfiz\n"
@@ -1414,8 +1414,8 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:58
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:75
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:133
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:135
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:137
 msgid "Play Story"
 msgstr "Joacă Povestea"
 
@@ -1443,7 +1443,7 @@ msgstr "Joacă un joc personalizat"
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:81
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:123
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:125
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
 msgstr "Joacă Niveluri Customizate"
@@ -1452,8 +1452,8 @@ msgstr "Joacă Niveluri Customizate"
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:39
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
 msgid "Options"
 msgstr "Opțiuni"
@@ -1506,47 +1506,51 @@ msgstr "Reconficurează Controlul"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:46
 msgid "Touch Controls"
 msgstr "Comenzi Tactile"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:71
-msgid "Input Diagnostics"
-msgstr "Diagnosticarea intrărilor"
-
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
 msgid "Toggle Run"
 msgstr "Comutați Alergarea"
+
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
+msgid "Gamepad Button Labels"
+msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
 msgid "Native Back Button"
 msgstr "Butonul Nativ de Întoarcere"
 
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:28
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
+msgid "Input Diagnostics"
+msgstr "Diagnosticarea intrărilor"
+
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:58
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:23
 msgid "Controls"
 msgstr "Controluri"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:100
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:125
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:127
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
 msgid "Enabled"
 msgstr "Activat"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:100
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
 msgid "Disabled"
 msgstr "Dezactivat"
 
@@ -1566,34 +1570,34 @@ msgstr "Modul de joc"
 msgid "Create Server"
 msgstr "Creați un server"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:133
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:138
 msgid "No custom level found!"
 msgstr "Nu s-a găsit niciun nivel customizat!"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:133
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:135
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:21
 msgid "Play Story in Cooperation"
 msgstr "Joacă povestea în cooperare"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:145
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:147
 msgid "No episode found!"
 msgstr "Nu s-a găsit niciun episod!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:191
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:192
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
 msgid "Restart episode"
 msgstr "Repornește episodul"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:214
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:216
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "Trebuie să finalizezi mai întâi \"%s\"!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:218
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:220
 msgid "Episode is locked!"
 msgstr "Episodul este blocat!"
 
@@ -1616,26 +1620,26 @@ msgid "I want to play the game with something new."
 msgstr "Vreau să joc jocul cu ceva nou."
 
 #. TRANSLATORS: Header in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:53
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:54
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
 msgstr "Bine ați venit la \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementare!"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:78
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Gameplay"
 msgstr "Gameplay"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:70
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
 msgid "Enhancements"
 msgstr "Îmbunătățiri"
 
 #. TRANSLATORS: Subheader in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
 #, c-format
 msgid ""
 "You can choose your preferred play style.\n"
@@ -1674,18 +1678,18 @@ msgid "Weapon Wheel"
 msgstr "Roata Pentru Arme"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:73
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
 msgid "You can enable enhancements that were added to this remake."
 msgstr "Poți activa îmbunătățirile care au fost adăugate la acestă refacere."
 
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:123
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
 msgid "Enabled With Ammo Count"
 msgstr "Activat cu Număr Gloanțe"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:25
-#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:53
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:55
 msgid "Language"
 msgstr "Limbă"
 
@@ -1756,20 +1760,20 @@ msgid "Performance Metrics"
 msgstr "Indicatori de Performanță"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:72
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:74
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
 msgid "Graphics"
 msgstr "Grafică"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 msgid "Low"
 msgstr "Scăzută"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 msgid "High"
 msgstr "Înaltă"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
 msgid "Enabled \f[c:0xd0705d](Experimental)\f[c]"
 msgstr "Activat \f[c:0xd0705d](Experimental)\f[c]"
 
@@ -1795,7 +1799,7 @@ msgstr "Nu a fost selectat nici un fișier!"
 msgid "No new episodes were imported!"
 msgstr "Niciun episod nou nu a fost importat!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:86
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:87
 msgid "No gamepads are detected!"
 msgstr "Nu sunt detectate gamepad-uri!"
 
@@ -1829,7 +1833,7 @@ msgstr "Vânătoare de Comori"
 msgid "Cooperation"
 msgstr "Cooperare"
 
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:42
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:44
 msgid "Select Game Mode"
 msgstr "Selectați Modul de Joc"
 
@@ -1958,15 +1962,15 @@ msgstr "Grilă de Deschidere CRT"
 msgid "Monochrome"
 msgstr "Monocrom"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:51
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:53
 msgid "Select Rescale Mode"
 msgstr "Alege Modul de Redimensionare"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:106
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:108
 msgid "Connect to Server"
 msgstr "Conectare la server"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:121
 msgid "No servers found, but still searchin'!"
 msgstr "Nu s-au găsit servere, dar încă mai caut!"
 
@@ -2008,7 +2012,7 @@ msgid "Hard"
 msgstr "Greu"
 
 #. TRANSLATORS: Header in Options > Controls > Touch Controls section
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:48
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:50
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Poți ajusta poziția zonelor tactile prin a le trage și fixa."
 

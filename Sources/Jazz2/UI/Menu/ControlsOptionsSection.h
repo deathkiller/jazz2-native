@@ -7,11 +7,12 @@ namespace Jazz2::UI::Menu
 	enum class ControlsOptionsItemType {
 		RemapControls,
 		TouchControls,
-		InputDiagnostics,
 		ToggleRunAction,
+		EnableAltGamepad,
 #if defined(DEATH_TARGET_ANDROID)
-		UseNativeBackButton
+		UseNativeBackButton,
 #endif
+		InputDiagnostics
 	};
 
 	struct ControlsOptionsItem {

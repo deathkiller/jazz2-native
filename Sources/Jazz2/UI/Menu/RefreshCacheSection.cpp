@@ -61,11 +61,11 @@ namespace Jazz2::UI::Menu
 
 	void RefreshCacheSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+		Recti contentBounds = _root->GetContentBounds();
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.5f);
+		float topLine = contentBounds.Y + 31.0f;
+		float bottomLine = contentBounds.Y + contentBounds.H - 42.0f;
 
-		constexpr float topLine = 131.0f;
-		float bottomLine = viewSize.Y - 42.0f;
 		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
 		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);

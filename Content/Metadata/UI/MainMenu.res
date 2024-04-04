@@ -86,7 +86,7 @@
 			"Path": "UI/gamepad_down.aura",
 			"States": [ 47 ]
 		},
-		"GamepadBigButton": {
+		"GamepadGuide": {
 			"Path": "UI/gamepad_guide.aura",
 			"States": [ 48 ]
 		},
@@ -121,6 +121,54 @@
 		"GamepadRightTrigger": {
 			"Path": "UI/gamepad_rt.aura",
 			"States": [ 56 ]
+		},
+		"GamepadAltA": {
+			"Path": "UI/gamepad_alt_a.aura",
+			"States": [ 58 ]
+		},
+		"GamepadAltB": {
+			"Path": "UI/gamepad_alt_b.aura",
+			"States": [ 59 ]
+		},
+		"GamepadAltX": {
+			"Path": "UI/gamepad_alt_x.aura",
+			"States": [ 60 ]
+		},
+		"GamepadAltY": {
+			"Path": "UI/gamepad_alt_y.aura",
+			"States": [ 61 ]
+		},
+		"GamepadAltDPadLeft": {
+			"Path": "UI/gamepad_alt_left.aura",
+			"States": [ 62 ]
+		},
+		"GamepadAltDPadRight": {
+			"Path": "UI/gamepad_alt_right.aura",
+			"States": [ 63 ]
+		},
+		"GamepadAltDPadUp": {
+			"Path": "UI/gamepad_alt_up.aura",
+			"States": [ 64 ]
+		},
+		"GamepadAltDPadDown": {
+			"Path": "UI/gamepad_alt_down.aura",
+			"States": [ 65 ]
+		},
+		"GamepadAltGuide": {
+			"Path": "UI/gamepad_alt_guide.aura",
+			"States": [ 66 ]
+		},
+		"GamepadAltBack": {
+			"Path": "UI/gamepad_alt_back.aura",
+			"States": [ 67 ]
+		},
+		"GamepadAltStart": {
+			"Path": "UI/gamepad_alt_start.aura",
+			"States": [ 68 ]
+		},
+		"GamepadAltMisc1": {
+			"Path": "UI/gamepad_alt_misc1.aura",
+			"States": [ 69 ]
 		},
 		
 		"Menu16": {

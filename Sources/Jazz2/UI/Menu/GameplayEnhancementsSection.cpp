@@ -32,17 +32,17 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	Recti GameplayEnhancementsSection::GetClipRectangle(const Vector2i& viewSize)
+	Recti GameplayEnhancementsSection::GetClipRectangle(const Recti& contentBounds)
 	{
 		float topLine = TopLine + 28.0f;
-		return Recti(0, topLine - 1, viewSize.X, viewSize.Y - topLine - BottomLine + 2);
+		return Recti(contentBounds.X, contentBounds.Y + topLine - 1, contentBounds.W, contentBounds.H - topLine - BottomLine + 2);
 	}
 
 	void GameplayEnhancementsSection::OnShow(IMenuContainer* root)
 	{
 		ScrollableMenuSection::OnShow(root);
 
-		_isInGame = (dynamic_cast<InGameMenu*>(_root) != nullptr);
+		_isInGame = dynamic_cast<InGameMenu*>(_root);
 	}
 
 	void GameplayEnhancementsSection::OnUpdate(float timeMult)
@@ -56,17 +56,18 @@ namespace Jazz2::UI::Menu
 
 	void GameplayEnhancementsSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		float centerX = viewSize.X * 0.5f;
-		float topLine = TopLine + 28.0f * IMenuContainer::EaseOutCubic(_transition);
-		float bottomLine = viewSize.Y - BottomLine;
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine + 28.0f * IMenuContainer::EaseOutCubic(_transition);
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
+
 		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Enhancements"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Enhancements"), charOffset, centerX, contentBounds.Y + TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		// TRANSLATORS: Header in Options > Gameplay > Enhancements section

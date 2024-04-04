@@ -36,6 +36,7 @@ namespace Jazz2::UI::Menu
 		GameplayOptionsSection();
 		~GameplayOptionsSection();
 
+		void OnShow(IMenuContainer* root) override;
 		void OnDraw(Canvas* canvas) override;
 
 	private:

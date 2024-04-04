@@ -22,9 +22,9 @@ namespace Jazz2::UI::Menu
 	{
 	}
 
-	Recti ServerSelectSection::GetClipRectangle(const Vector2i& viewSize)
+	Recti ServerSelectSection::GetClipRectangle(const Recti& contentBounds)
 	{
-		return Recti(0, TopLine - 1.0f, viewSize.X, viewSize.Y - TopLine - BottomLine + 2.0f);
+		return Recti(contentBounds.X, contentBounds.Y + TopLine - 1, contentBounds.W, contentBounds.H - TopLine - BottomLine + 2);
 	}
 
 	void ServerSelectSection::OnShow(IMenuContainer* root)
@@ -94,45 +94,49 @@ namespace Jazz2::UI::Menu
 
 	void ServerSelectSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		float centerX = viewSize.X * 0.5f;
-		float bottomLine = viewSize.Y - BottomLine;
-		_root->DrawElement(MenuDim, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
+
+		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Connect to Server"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Connect to Server"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
 	void ServerSelectSection::OnDrawClipped(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 		int32_t charOffset = 0;
 
 		if (_items.empty()) {
-			_root->DrawStringShadow(_("No servers found, but still searchin'!"), charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("No servers found, but still searchin'!"), charOffset, centerX, contentBounds.Y + contentBounds.H * 0.33f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 			return;
 		}
 
-		float bottomLine = viewSize.Y - BottomLine;
-		float availableHeight = (bottomLine - TopLine);
+		float availableHeight = (bottomLine - topLine);
 		constexpr float spacing = 20.0f;
 
 		_y = (availableHeight - _height < 0.0f ? std::clamp(_y, availableHeight - _height, 0.0f) : 0.0f);
 
-		Vector2f center = Vector2f(viewSize.X * 0.5f, TopLine + 12.0f + _y);
-		float column1 = viewSize.X * 0.25f;
-		float column2 = viewSize.X * 0.52f;
+		Vector2f center = Vector2f(centerX, topLine + 12.0f + _y);
+		float column1 = contentBounds.X + contentBounds.W * 0.25f;
+		float column2 = contentBounds.X + contentBounds.W * 0.52f;
 
 		std::size_t itemsCount = _items.size();
 		for (int32_t i = 0; i < itemsCount; i++) {
 			_items[i].Y = center.Y;
 
-			if (center.Y > TopLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
+			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				if (_selectedIndex == i) {
 					float xMultiplier = _items[i].Desc.EndpointString.size() * 0.5f;
 					float easing = IMenuContainer::EaseOutElastic(_animation);
@@ -153,10 +157,10 @@ namespace Jazz2::UI::Menu
 			center.Y += spacing;
 		}
 
-		_height = center.Y - (TopLine + _y);
+		_height = center.Y - (topLine + _y);
 
 		if (_items[0].Y < TopLine + ItemHeight / 2) {
-			_root->DrawElement(MenuGlow, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+			_root->DrawElement(MenuGlow, 0, center.X, topLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 		if (_items[itemsCount - 1].Y > bottomLine - ItemHeight / 2) {
 			_root->DrawElement(MenuGlow, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
@@ -246,9 +250,12 @@ namespace Jazz2::UI::Menu
 
 	void ServerSelectSection::EnsureVisibleSelected()
 	{
-		float bottomLine = _root->GetViewSize().Y - BottomLine;
-		if (_items[_selectedIndex].Y < TopLine + ItemHeight * 0.5f) {
-			_y += (TopLine + ItemHeight * 0.5f - _items[_selectedIndex].Y);
+		Recti contentBounds = _root->GetContentBounds();
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
+
+		if (_items[_selectedIndex].Y < topLine + ItemHeight * 0.5f) {
+			_y += (topLine + ItemHeight * 0.5f - _items[_selectedIndex].Y);
 		} else if (_items[_selectedIndex].Y > bottomLine - ItemHeight * 0.5f) {
 			_y += (bottomLine - ItemHeight * 0.5f - _items[_selectedIndex].Y);
 		}

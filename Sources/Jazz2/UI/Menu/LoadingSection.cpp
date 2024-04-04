@@ -19,10 +19,10 @@ namespace Jazz2::UI::Menu
 
 	void LoadingSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+		Recti contentBounds = _root->GetContentBounds();
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.5f);
+		float topLine = contentBounds.Y + 31.0f;
 
-		constexpr float topLine = 131.0f;
 		std::int32_t charOffset = 0;
 
 		_root->DrawStringShadow(_message, charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,

@@ -94,6 +94,9 @@ namespace nCine
 		/// Eqality operator
 		bool operator==(const Rect& rect) const;
 		bool operator!=(const Rect& rect) const;
+
+		/// Empty rectangle
+		static const Rect Empty;
 	};
 
 	using Rectf = Rect<float>;
@@ -309,4 +312,7 @@ namespace nCine
 		return (X != rect.X || Y != rect.Y ||
 				W != rect.W || H != rect.H);
 	}
+
+	template<class T>
+	const Rect<T> Rect<T>::Empty(0, 0, 0, 0);
 }

@@ -55,13 +55,14 @@ namespace Jazz2::UI::Menu
 		virtual bool ActionPressed(PlayerActions action) = 0;
 		virtual bool ActionHit(PlayerActions action) = 0;
 
-		virtual Vector2i GetViewSize() = 0;
+		virtual Vector2i GetViewSize() const = 0;
+		virtual Recti GetContentBounds() const = 0;
 		virtual void DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align,
-			const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) = 0;
+			const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false) = 0;
 		virtual void DrawElement(AnimState state, float x, float y, uint16_t z, Alignment align,
-			const Colorf& color, const Vector2f& size, const Vector4f& texCoords) = 0;
+			const Colorf& color, const Vector2f& size, const Vector4f& texCoords, bool unaligned = false) = 0;
 		virtual void DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending = false) = 0;
-		virtual void DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color) = 0;
+		virtual void DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned = false) = 0;
 		virtual Vector2f MeasureString(const StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;
 		virtual void DrawStringShadow(const StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align,
 			const Colorf& color, float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
