@@ -64,16 +64,20 @@ namespace Jazz2::UI::Menu
 		bool ActionPressed(PlayerActions action) override;
 		bool ActionHit(PlayerActions action) override;
 
-		Vector2i GetViewSize() override {
+		Vector2i GetViewSize() const override {
 			return _canvasBackground->ViewSize;
 		}
 
+		Recti GetContentBounds() const override {
+			return _contentBounds;
+		}
+
 		void DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
-			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) override;
+			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false) override;
 		void DrawElement(AnimState state, float x, float y, uint16_t z, Alignment align, const Colorf& color,
-			const Vector2f& size, const Vector4f& texCoords) override;
+			const Vector2f& size, const Vector4f& texCoords, bool unaligned = false) override;
 		void DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending = false) override;
-		void DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color) override;
+		void DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned = false) override;
 		Vector2f MeasureString(const StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
 		void DrawStringShadow(const StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
@@ -163,6 +167,7 @@ namespace Jazz2::UI::Menu
 		float _texturedBackgroundPhase;
 		Preset _preset;
 
+		Recti _contentBounds;
 		std::unique_ptr<MenuBackgroundCanvas> _canvasBackground;
 		std::unique_ptr<MenuClippedCanvas> _canvasClipped;
 		std::unique_ptr<MenuOverlayCanvas> _canvasOverlay;
@@ -183,6 +188,7 @@ namespace Jazz2::UI::Menu
 		float _touchButtonsTimer;
 
 		void PlayMenuMusic();
+		void UpdateContentBounds(Vector2i viewSize);
 		void UpdatePressedActions();
 		void UpdateRichPresence();
 		void UpdateDebris(float timeMult);

@@ -18,10 +18,10 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(FirstRunItem { FirstRunItemType::ReforgedPreset, _("Reforged"), _("I want to play the game with something new.") });
 	}
 
-	Recti FirstRunSection::GetClipRectangle(const Vector2i& viewSize)
+	Recti FirstRunSection::GetClipRectangle(const Recti& contentBounds)
 	{
 		float topLine = TopLine + 66.0f;
-		return Recti(0, topLine - 1, viewSize.X, viewSize.Y - topLine - BottomLine + 2);
+		return Recti(contentBounds.X, contentBounds.Y + topLine - 1, contentBounds.W, contentBounds.H - topLine - BottomLine + 2);
 	}
 
 	void FirstRunSection::OnShow(IMenuContainer* root)
@@ -39,10 +39,11 @@ namespace Jazz2::UI::Menu
 
 	void FirstRunSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		float centerX = viewSize.X * 0.5f;
-		float topLine = TopLine + 66.0f;
-		float bottomLine = viewSize.Y - BottomLine;
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine + 66.0f;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
+
 		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
@@ -50,7 +51,7 @@ namespace Jazz2::UI::Menu
 
 		int32_t charOffset = 0;
 		// TRANSLATORS: Header in First Run section
-		_root->DrawStringShadow(_("Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"), charOffset, centerX, topLine - 66.0f - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		// TRANSLATORS: Subheader in First Run section
@@ -71,7 +72,7 @@ namespace Jazz2::UI::Menu
 		if (isSelected) {
 			float size = 0.7f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-			_root->DrawElement(MenuGlow, 0, centerX, item.Y + 10.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), 22.0f, 12.0f, true);
+			_root->DrawElement(MenuGlow, 0, centerX, item.Y + 10.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), 22.0f, 12.0f, true, true);
 
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-03-07 00:58+0100\n"
+"POT-Creation-Date: 2024-04-04 21:46+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: ПЕРЕВОД НА РУССКИЙ ЯЗЫК: MAN-biker (manbiker@mail.ru) "
@@ -1411,8 +1411,8 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:58
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:75
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:133
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:135
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:137
 msgid "Play Story"
 msgstr "ИГРАТЬ [ОСНОВНАЯ ИГРА]"
 
@@ -1440,7 +1440,7 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:81
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:123
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:125
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
 msgstr "ИГРАТЬ [ДОП. УРОВНИ]"
@@ -1449,8 +1449,8 @@ msgstr "ИГРАТЬ [ДОП. УРОВНИ]"
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:39
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
 msgid "Options"
 msgstr "НАСТРОЙКИ"
@@ -1504,18 +1504,17 @@ msgstr "НАСТРОЙКИ УПРАВЛЕНИЯ"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:46
 msgid "Touch Controls"
 msgstr "СЕНСОРНОЕ УПРАВЛЕНИЕ"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:71
-msgid "Input Diagnostics"
+msgid "Toggle Run"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
-msgid "Toggle Run"
+msgid "Gamepad Button Labels"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
@@ -1523,28 +1522,33 @@ msgstr ""
 msgid "Native Back Button"
 msgstr "ОРИГИНАЛЬНАЯ КНОПКА «НАЗАД»"
 
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:28
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
+msgid "Input Diagnostics"
+msgstr ""
+
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:58
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:23
 msgid "Controls"
 msgstr "УПРАВЛЕНИЕ"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:100
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:125
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:127
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
 msgid "Enabled"
 msgstr "ВКЛЮЧЕНО"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:100
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
 msgid "Disabled"
 msgstr "ВЫКЛЮЧЕНО"
 
@@ -1564,34 +1568,34 @@ msgstr ""
 msgid "Create Server"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:133
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:138
 msgid "No custom level found!"
 msgstr "ДОП. УРОВНИ НЕ НАЙДЕНЫ!"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:133
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:135
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:21
 msgid "Play Story in Cooperation"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:145
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:147
 msgid "No episode found!"
 msgstr "НЕ НАЙДЕНО НИ ОДНОГО ЭПИЗОДА!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:191
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:192
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
 msgid "Restart episode"
 msgstr "ПЕРЕЗАПУСК ЭПИЗОДА"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:214
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:216
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "СНАЧАЛА ПРОЙДИТЕ \"%s\"!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:218
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:220
 msgid "Episode is locked!"
 msgstr "ЭПИЗОД ЗАБЛОКИРОВАН!"
 
@@ -1614,26 +1618,26 @@ msgid "I want to play the game with something new."
 msgstr ""
 
 #. TRANSLATORS: Header in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:53
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:54
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:78
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Gameplay"
 msgstr "ОСНОВНЫЕ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:70
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
 msgid "Enhancements"
 msgstr "УЛУЧШЕНИЯ"
 
 #. TRANSLATORS: Subheader in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
 #, c-format
 msgid ""
 "You can choose your preferred play style.\n"
@@ -1668,18 +1672,18 @@ msgid "Weapon Wheel"
 msgstr "КОЛЕСО ВЫБОРА ОРУЖИЯ"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:73
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
 msgid "You can enable enhancements that were added to this remake."
 msgstr "ВЫ МОЖЕТЕ ВКЛЮЧИТЬ УЛУЧШЕНИЯ, КОТОРЫЕ МЫ ДОБАВИЛИ В ЭТО ПЕРЕИЗДАНИЕ."
 
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:123
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
 msgid "Enabled With Ammo Count"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:25
-#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:53
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:55
 msgid "Language"
 msgstr "ЯЗЫК"
 
@@ -1750,20 +1754,20 @@ msgid "Performance Metrics"
 msgstr "ОТОБРАЖЕНИЕ СЧЁТЧИКА КАДРОВ"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:72
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:74
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
 msgid "Graphics"
 msgstr "ГРАФИКА"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 msgid "Low"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 msgid "High"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
 msgid "Enabled \f[c:0xd0705d](Experimental)\f[c]"
 msgstr ""
 
@@ -1788,7 +1792,7 @@ msgstr "ФАЙЛЫ НЕ БЫЛИ ВЫБРАНЫ!"
 msgid "No new episodes were imported!"
 msgstr "НЕ БЫЛО ДОБАВЛЕНО НОВЫХ ЭПИЗОДОВ!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:86
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:87
 msgid "No gamepads are detected!"
 msgstr ""
 
@@ -1822,7 +1826,7 @@ msgstr ""
 msgid "Cooperation"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:42
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:44
 msgid "Select Game Mode"
 msgstr ""
 
@@ -1951,15 +1955,15 @@ msgstr ""
 msgid "Monochrome"
 msgstr "МОНОХРОМНОЕ"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:51
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:53
 msgid "Select Rescale Mode"
 msgstr "ВЫБОР ШЕЙДЕРНОГО ЭФФЕКТА"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:106
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:108
 msgid "Connect to Server"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:121
 msgid "No servers found, but still searchin'!"
 msgstr ""
 
@@ -2001,7 +2005,7 @@ msgid "Hard"
 msgstr "СЛОЖНО"
 
 #. TRANSLATORS: Header in Options > Controls > Touch Controls section
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:48
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:50
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "ПЕРЕТАСКИВАЯ ЗОНЫ КАСАНИЯ, ВЫ МОЖЕТЕ НАСТРОИТЬ ИХ ПОЛОЖЕНИЕ."
 

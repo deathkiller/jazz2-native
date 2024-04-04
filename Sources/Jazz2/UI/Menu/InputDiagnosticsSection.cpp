@@ -1,6 +1,7 @@
 ﻿#include "InputDiagnosticsSection.h"
 #include "MenuResources.h"
 #include "../ControlScheme.h"
+#include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
 
@@ -59,16 +60,16 @@ namespace Jazz2::UI::Menu
 
 	void InputDiagnosticsSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+		Recti contentBounds = _root->GetContentBounds();
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, (contentBounds.Y + contentBounds.H) * 0.5f);
+		float topLine = contentBounds.Y + 31.0f;
 
-		constexpr float TopLine = 131.0f;
-		_root->DrawElement(MenuDim, center.X, TopLine - 2.0f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, center.X, topLine - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
-		_root->DrawElement(MenuLine, 0, center.X, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Input Diagnostics"), charOffset, center.X, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Input Diagnostics"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		// Show gamepad info
@@ -83,7 +84,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_itemCount == 0) {
-			_root->DrawStringShadow(_("No gamepads are detected!"), charOffset, center.X, TopLine + 40.0f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("No gamepads are detected!"), charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,
 				Alignment::Top, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 			return;
 		}
@@ -113,9 +114,9 @@ namespace Jazz2::UI::Menu
 		float x = center.X * 0.4f + xMultiplier - easing * xMultiplier;
 		float size = 0.85f + easing * 0.12f;
 
-		_root->DrawElement(MenuGlow, 0, center.X * 0.4f + (joyNameStringLength + 3) * 3.2f, TopLine + 20.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.36f * size), 0.6f * (joyNameStringLength + 3), 6.0f, true);
+		_root->DrawElement(MenuGlow, 0, center.X * 0.4f + (joyNameStringLength + 3) * 3.2f, topLine + 20.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.36f * size), 0.6f * (joyNameStringLength + 3), 6.0f, true, true);
 
-		_root->DrawStringShadow(buffer, charOffset, x, TopLine + 20.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(buffer, charOffset, x, topLine + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::RandomColor, size, 0.4f, 0.6f, 0.6f, 0.6f, 0.88f);
 
 		JoystickGuid joyGuid = input.joyGuid(_selectedIndex);
@@ -132,18 +133,18 @@ namespace Jazz2::UI::Menu
 				input.hasMappingByGuid(joyGuid) ? "" : (input.hasMappingByName(joyName) ? " (similar mapping)" : " (no mapping)"));
 		}
 
-		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, TopLine + 40.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, topLine + 40.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		_root->DrawStringShadow("Mapped State", charOffset, center.X * 0.4f, TopLine + 60.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Mapped State", charOffset, center.X * 0.4f, topLine + 60.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		PrintAxisValue("LX", mappedState.axisValue(AxisName::LX), center.X * 0.4f, TopLine + 75.0f);
-		PrintAxisValue("LY", mappedState.axisValue(AxisName::LY), center.X * 0.4f + 110.0f, TopLine + 75.0f);
-		PrintAxisValue("RX", mappedState.axisValue(AxisName::RX), center.X * 0.4f + 220.0f, TopLine + 75.0f);
-		PrintAxisValue("RY", mappedState.axisValue(AxisName::RY), center.X * 0.4f + 330.0f, TopLine + 75.0f);
-		PrintAxisValue("LT", mappedState.axisValue(AxisName::LTRIGGER), center.X * 0.4f, TopLine + 90.0f);
-		PrintAxisValue("RT", mappedState.axisValue(AxisName::RTRIGGER), center.X * 0.4f + 110.0f, TopLine + 90.0f);
+		PrintAxisValue("LX", mappedState.axisValue(AxisName::LX), center.X * 0.4f, topLine + 75.0f);
+		PrintAxisValue("LY", mappedState.axisValue(AxisName::LY), center.X * 0.4f + 110.0f, topLine + 75.0f);
+		PrintAxisValue("RX", mappedState.axisValue(AxisName::RX), center.X * 0.4f + 220.0f, topLine + 75.0f);
+		PrintAxisValue("RY", mappedState.axisValue(AxisName::RY), center.X * 0.4f + 330.0f, topLine + 75.0f);
+		PrintAxisValue("LT", mappedState.axisValue(AxisName::LTRIGGER), center.X * 0.4f, topLine + 90.0f);
+		PrintAxisValue("RT", mappedState.axisValue(AxisName::RTRIGGER), center.X * 0.4f + 110.0f, topLine + 90.0f);
 
 		int32_t buttonsLength = 0;
 		buffer[0] = '\0';
@@ -163,17 +164,17 @@ namespace Jazz2::UI::Menu
 		if (mappedState.isButtonPressed(ButtonName::DPAD_LEFT)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Left ");
 		if (mappedState.isButtonPressed(ButtonName::DPAD_RIGHT)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Right ");
 
-		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, TopLine + 105.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, topLine + 105.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
 		charOffset = 0;
-		_root->DrawStringShadow("Raw State", charOffset, center.X * 0.4f, TopLine + 125.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Raw State", charOffset, center.X * 0.4f, topLine + 125.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
 		float sx = 0, sy = 0;
 		for (int32_t i = 0; i < numAxes; i++) {
 			formatString(buffer, sizeof(buffer), "a%i", i);
-			PrintAxisValue(buffer, rawState.axisValue(i), center.X * 0.4f + sx, TopLine + 140.0f + sy);
+			PrintAxisValue(buffer, rawState.axisValue(i), center.X * 0.4f + sx, topLine + 140.0f + sy);
 			sx += 110.0f;
 			if (sx >= 340.0f) {
 				sx = 0.0f;
@@ -188,7 +189,7 @@ namespace Jazz2::UI::Menu
 
 		for (int32_t i = 0; i < numButtons; i++) {
 			formatString(buffer, sizeof(buffer), "b%i: %i", i, rawState.isButtonPressed(i) ? 1 : 0);
-			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, TopLine + 140.0f + sy, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
 			if (sx >= 340.0f) {
@@ -204,7 +205,7 @@ namespace Jazz2::UI::Menu
 
 		for (int32_t i = 0; i < numHats; i++) {
 			formatString(buffer, sizeof(buffer), "h%i: %i", i, rawState.hatState(i));
-			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, TopLine + 140.0f + sy, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
 			if (sx >= 340.0f) {
@@ -213,12 +214,12 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		_root->DrawElement(GamepadBack, 0, center.X - 37.0f, viewSize.Y - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
-		_root->DrawStringShadow("+"_s, charOffset, center.X - 28.0f, viewSize.Y - 18.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Font::DefaultColor, 0.6f, 0.4f, 0.0f, 1.0f, 0.6f, 0.88f);
-		_root->DrawElement(GamepadStart, 0, center.X - 11.0f, viewSize.Y - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
-		_root->DrawStringShadow("to exit"_s, charOffset, center.X, viewSize.Y - 17.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		_root->DrawElement(GetResourceForButtonName(ButtonName::BACK), 0, center.X - 37.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		_root->DrawStringShadow("+"_s, charOffset, center.X - 28.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+			Alignment::Left, Font::DefaultColor, 0.6f, 0.4f, 0.0f, 0.0f, 0.46f, 0.88f);
+		_root->DrawElement(GetResourceForButtonName(ButtonName::START), 0, center.X - 11.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		_root->DrawStringShadow("to exit"_s, charOffset, center.X, contentBounds.Y + contentBounds.H - 17.0f, IMenuContainer::FontLayer,
+			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 0.0f, 0.0f, 0.46f, 0.8f);
 	}
 
 	void InputDiagnosticsSection::OnHandleInput()

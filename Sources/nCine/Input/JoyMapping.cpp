@@ -129,14 +129,13 @@ namespace nCine
 		unsigned int numStrings = 0;
 
 		// Add mappings from the database, without searching for duplicates
-		// TODO: This declaration cannot be in inner loop, because it breaks Android input for some reason
-		MappedJoystick mapping;
 		const char** mappingStrings = ControllerMappings;
 		while (*mappingStrings) {
 			numStrings++;
+			MappedJoystick mapping;
 			const bool parsed = parseMappingFromString(*mappingStrings, mapping);
 			if (parsed) {
-				mappings_.push_back(mapping);
+				mappings_.emplace_back(std::move(mapping));
 			}
 			mappingStrings++;
 		}
@@ -156,9 +155,10 @@ namespace nCine
 			int index = findMappingByGuid(newMapping.guid);
 			// if GUID is not found then mapping has to be added, not replaced
 			if (index < 0) {
-				index = mappings_.size();
+				mappings_.emplace_back(std::move(newMapping));
+			} else {
+				mappings_[index] = std::move(newMapping);
 			}
-			mappings_[index] = newMapping;
 		}
 		checkConnectedJoystics();
 
@@ -176,9 +176,10 @@ namespace nCine
 				int index = findMappingByGuid(newMapping.guid);
 				// if GUID is not found then mapping has to be added, not replaced
 				if (index < 0) {
-					index = mappings_.size();
+					mappings_.emplace_back(std::move(newMapping));
+				} else {
+					mappings_[index] = std::move(newMapping);
 				}
-				mappings_[index] = newMapping;
 			}
 			mappingStrings++;
 		}
@@ -212,9 +213,9 @@ namespace nCine
 				int index = findMappingByGuid(newMapping.guid);
 				// if GUID is not found then mapping has to be added, not replaced
 				if (index < 0) {
-					mappings_.push_back(newMapping);
+					mappings_.emplace_back(std::move(newMapping));
 				} else {
-					mappings_[index] = newMapping;
+					mappings_[index] = std::move(newMapping);
 				}
 			}
 
@@ -582,6 +583,10 @@ namespace nCine
 
 	void JoyMapping::checkConnectedJoystics()
 	{
+		if (inputManager_ == nullptr) {
+			return;
+		}
+
 		for (int i = 0; i < MaxNumJoysticks; i++) {
 			if (inputManager_->isJoyPresent(i)) {
 				JoyConnectionEvent event;

@@ -41,7 +41,7 @@ namespace Jazz2::UI::Menu
 		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
 
 		void RefreshPreviousState();
-		bool HasCollision(MappingTarget target);
+		bool HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment);
 		static StringView KeyToName(KeySym key);
 	};
 }

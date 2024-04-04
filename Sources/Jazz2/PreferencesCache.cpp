@@ -39,6 +39,7 @@ namespace Jazz2
 #endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
 	bool PreferencesCache::ToggleRunAction = false;
+	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
 #if defined(DEATH_TARGET_ANDROID)
 	bool PreferencesCache::UseNativeBackButton = true;
 #else
@@ -197,6 +198,10 @@ namespace Jazz2
 					TouchLeftPadding.Y = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
 					TouchRightPadding.X = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
 					TouchRightPadding.Y = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+
+					if (version >= 5) {
+						GamepadButtonLabels = (GamepadType)uc.ReadValue<uint8_t>();
+					}
 
 					// Controls
 					if (version >= 4) {
@@ -398,6 +403,8 @@ namespace Jazz2
 		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.Y * INT8_MAX * TouchPaddingMultiplier));
 		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.X * INT8_MAX * TouchPaddingMultiplier));
 		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.Y * INT8_MAX * TouchPaddingMultiplier));
+
+		co.WriteValue<uint8_t>((uint8_t)GamepadButtonLabels);
 
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();

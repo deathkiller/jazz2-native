@@ -83,8 +83,14 @@ namespace Jazz2::UI::Menu
 						bool isPressed = currentState.isButtonPressed((ButtonName)j);
 						if (isPressed != wasPressed && isPressed) {
 							newTarget = ControlScheme::CreateTarget(i, (ButtonName)j);
-							if (!HasCollision(newTarget)) {
+							std::int32_t collidingAction, collidingAssignment;
+							if (!HasCollision(newTarget, collidingAction, collidingAssignment)) {
 								waitingForInput = false;
+							} else if (collidingAction == (std::int32_t)_items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
+								// Button has collision, but it's the same as it's already assigned
+								_root->PlaySfx("MenuSelect"_s, 0.5f);
+								_waitForInput = false;
+								return;
 							}
 						}
 					}
@@ -96,8 +102,14 @@ namespace Jazz2::UI::Menu
 						bool isPressed = std::abs(currentValue) > 0.5f;
 						if (isPressed != wasPressed && isPressed) {
 							newTarget = ControlScheme::CreateTarget(i, (AxisName)j, currentValue < 0.0f);
-							if (!HasCollision(newTarget)) {
+							std::int32_t collidingAction, collidingAssignment;
+							if (!HasCollision(newTarget, collidingAction, collidingAssignment)) {
 								waitingForInput = false;
+							} else if (collidingAction == (std::int32_t)_items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
+								// Axis has collision, but it's the same as it's already assigned
+								_root->PlaySfx("MenuSelect"_s, 0.5f);
+								_waitForInput = false;
+								return;
 							}
 						}
 					}
@@ -113,8 +125,14 @@ namespace Jazz2::UI::Menu
 					_keysPressedLast.Set(key, isPressed);
 					if (isPressed) {
 						newTarget = ControlScheme::CreateTarget((KeySym)key);
-						if (!HasCollision(newTarget)) {
+						std::int32_t collidingAction, collidingAssignment;
+						if (!HasCollision(newTarget, collidingAction, collidingAssignment)) {
 							waitingForInput = false;
+						} else if (collidingAction == (std::int32_t)_items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
+							// Key has collision, but it's the same as it's already assigned
+							_root->PlaySfx("MenuSelect"_s, 0.5f);
+							_waitForInput = false;
+							return;
 						}
 					}
 				}
@@ -138,25 +156,25 @@ namespace Jazz2::UI::Menu
 
 	void RemapControlsSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		float centerX = viewSize.X * 0.5f;
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
-		constexpr float topLine = 131.0f;
-		float bottomLine = viewSize.Y - 42.0f;
 		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		if (_waitForInput) {
 			Colorf textColor = Font::DefaultColor;
 			textColor.SetAlpha(_hintAnimation);
 			// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset, centerX, viewSize.Y - 18.0f * IMenuContainer::EaseOutCubic(_hintAnimation), IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset, centerX, contentBounds.Y + contentBounds.H - 18.0f * IMenuContainer::EaseOutCubic(_hintAnimation), IMenuContainer::FontLayer,
 				Alignment::Center, textColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else {
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
@@ -164,11 +182,11 @@ namespace Jazz2::UI::Menu
 				char stringBuffer[64];
 				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:0xd0705d]%s\f[c] %s ", _("Change Weapon").data(), _("or").data());
 
-				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 10.0f, viewSize.Y - 18.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 10.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
-				_root->DrawElement(GamepadY, 0, centerX - 2.0f, viewSize.Y - 19.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 19.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
 				// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-				_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, viewSize.Y - 18.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
 		}
@@ -202,17 +220,8 @@ namespace Jazz2::UI::Menu
 				}
 
 				if (data & ControlScheme::GamepadAnalogMask) {
-					AnimState axisAnim; StringView axisName;
-					switch ((AxisName)(data & ControlScheme::ButtonMask)) {
-						case AxisName::LX: axisAnim = GamepadLeftStick; axisName = "X"_s; break;
-						case AxisName::LY: axisAnim = GamepadLeftStick; axisName = "Y"_s; break;
-						case AxisName::RX: axisAnim = GamepadLeftStick; axisName = "X"_s; break;
-						case AxisName::RY: axisAnim = GamepadRightStick; axisName = "Y"_s; break;
-						case AxisName::LTRIGGER: axisAnim = GamepadLeftTrigger; break;
-						case AxisName::RTRIGGER: axisAnim = GamepadRightTrigger; break;
-						default: axisAnim = AnimState::Default; break;
-					}
-
+					StringView axisName;
+					AnimState axisAnim = GetResourceForAxisName((AxisName)(data & ControlScheme::ButtonMask), axisName);
 					if (axisAnim != AnimState::Default) {
 						_root->DrawElement(axisAnim, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
@@ -236,26 +245,7 @@ namespace Jazz2::UI::Menu
 							Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.9f);
 					}
 				} else {
-					AnimState buttonName;
-					switch ((ButtonName)(data & ControlScheme::ButtonMask)) {
-						case ButtonName::A: buttonName = GamepadA; break;
-						case ButtonName::B: buttonName = GamepadB; break;
-						case ButtonName::X: buttonName = GamepadX; break;
-						case ButtonName::Y: buttonName = GamepadY; break;
-						case ButtonName::BACK: buttonName = GamepadBack; break;
-						case ButtonName::GUIDE: buttonName = GamepadBigButton; break;
-						case ButtonName::START: buttonName = GamepadStart; break;
-						case ButtonName::LSTICK: buttonName = GamepadLeftStick; break;
-						case ButtonName::RSTICK: buttonName = GamepadRightStick; break;
-						case ButtonName::LBUMPER: buttonName = GamepadLeftShoulder; break;
-						case ButtonName::RBUMPER: buttonName = GamepadRightShoulder; break;
-						case ButtonName::DPAD_UP: buttonName = GamepadDPadUp; break;
-						case ButtonName::DPAD_DOWN: buttonName = GamepadDPadDown; break;
-						case ButtonName::DPAD_LEFT: buttonName = GamepadDPadLeft; break;
-						case ButtonName::DPAD_RIGHT: buttonName = GamepadDPadRight; break;
-						default: buttonName = AnimState::Default; break;
-					}
-
+					AnimState buttonName = GetResourceForButtonName((ButtonName)(data & ControlScheme::ButtonMask));
 					if (buttonName != AnimState::Default) {
 						_root->DrawElement(buttonName, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
@@ -453,13 +443,15 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	bool RemapControlsSection::HasCollision(MappingTarget target)
+	bool RemapControlsSection::HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment)
 	{
 		for (std::int32_t i = 0; i < (std::int32_t)PlayerActions::Count; i++) {
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + i];
 			std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
 			for (std::int32_t j = 0; j < targetCount; j++) {
 				if (mapping.Targets[j].Data == target.Data) {
+					collidingAction = i;
+					collidingAssignment = j;
 					return true;
 				}
 			}

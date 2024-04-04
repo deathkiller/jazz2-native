@@ -15,9 +15,9 @@ namespace Jazz2::UI::Menu
 		MenuSection() : _root(nullptr) { }
 		virtual ~MenuSection() { }
 
-		virtual Recti GetClipRectangle(const Vector2i& viewSize)
+		virtual Recti GetClipRectangle(const Recti& contentBounds)
 		{
-			return Recti();
+			return {};
 		}
 
 		virtual void OnShow(IMenuContainer* root)
@@ -36,8 +36,7 @@ namespace Jazz2::UI::Menu
 		virtual void OnDrawOverlay(Canvas* canvas) { }
 		virtual void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) = 0;
 
-		virtual bool IsGamepadNavigationEnabled() const
-		{
+		virtual bool IsGamepadNavigationEnabled() const {
 			return true;
 		}
 

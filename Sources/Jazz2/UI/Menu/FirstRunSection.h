@@ -20,7 +20,7 @@ namespace Jazz2::UI::Menu
 	public:
 		FirstRunSection();
 
-		Recti GetClipRectangle(const Vector2i& viewSize) override;
+		Recti GetClipRectangle(const Recti& contentBounds) override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
