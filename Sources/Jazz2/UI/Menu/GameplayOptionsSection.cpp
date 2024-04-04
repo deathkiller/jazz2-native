@@ -36,6 +36,8 @@ namespace Jazz2::UI::Menu
 
 		bool isInGame = dynamic_cast<InGameMenu*>(_root);
 
+		_items.clear();
+
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Enhancements, _("Enhancements") });
 		// TRANSLATORS: Menu item in Options > Gameplay section
