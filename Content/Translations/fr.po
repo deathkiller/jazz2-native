@@ -1,0 +1,2002 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: jazz2-resurrection\n"
+"POT-Creation-Date: 2023-11-05 14:58+0100\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 3.4.2\n"
+"X-Poedit-Basepath: ../..\n"
+"X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
+"X-Poedit-SearchPath-0: Sources/Jazz2\n"
+"X-Poedit-SearchPath-1: .fake/Translations\n"
+"X-Poedit-SearchPath-2: Sources/Main.cpp\n"
+
+#: .fake/Translations/flash/01_diam1.j2l.h:1
+msgctxt "flash/01_diam1"
+msgid ""
+"\n"
+"Spaz ate the dopefish."
+msgstr ""
+"\n"
+"Spaz a gobé le Dopefish."
+
+#: .fake/Translations/flash/01_diam1.j2l.h:2
+msgctxt "flash/01_diam1"
+msgid ""
+"\n"
+"Find the gopher."
+msgstr ""
+"\n"
+"Trouve le Trionyx."
+
+#: .fake/Translations/flash/01_diam1.j2l.h:3
+msgctxt "flash/01_diam1"
+msgid ""
+"\n"
+"Dragons live in burbank."
+msgstr ""
+"\n"
+"Des dragons habitent à Burbank."
+
+#: .fake/Translations/flash/01_diam1.j2l.h:4
+msgctxt "flash/01_diam1"
+msgid ""
+"\n"
+"Mark wears briefs. \n"
+"Hoo Hah!"
+msgstr ""
+"\n"
+"Mark porte un slip. \n"
+"Ouah !"
+
+#: .fake/Translations/flash/01_diam1.j2l.h:5
+msgctxt "flash/01_diam1"
+msgid ""
+"\n"
+"Nick loves shiny. \n"
+"Always has!"
+msgstr ""
+"\n"
+"Nick aime tout ce qui brille. \n"
+"Il a toujours été comme ça !"
+
+#: .fake/Translations/flash/02_diam3.j2l.h:1
+msgctxt "flash/02_diam3"
+msgid ""
+"\n"
+"Send Tim new socks."
+msgstr ""
+"\n"
+"Envoie des chaussettes neuves à Tim."
+
+#: .fake/Translations/flash/02_diam3.j2l.h:2
+msgctxt "flash/02_diam3"
+msgid ""
+"\n"
+"Send Nigel a green card."
+msgstr ""
+"\n"
+"Envoie un visa à Nigel."
+
+#: .fake/Translations/flash/02_diam3.j2l.h:3
+msgctxt "flash/02_diam3"
+msgid ""
+"\n"
+"Beware of chainsaw schmalz."
+msgstr ""
+"\n"
+"Méfie-toi du Schmalz à la tronçonneuse."
+
+#: .fake/Translations/flash/02_diam3.j2l.h:4
+msgctxt "flash/02_diam3"
+msgid ""
+"\n"
+"Dont give mark a burrito."
+msgstr ""
+"\n"
+"Pas de burrito pour Mark."
+
+#: .fake/Translations/flash/05_medivo1.j2l.h:1
+msgctxt "flash/05_medivo1"
+msgid ""
+"\n"
+"Beware of falling enemies."
+msgstr ""
+"\n"
+"Méfie-toi des ennemis qui tombent."
+
+#: .fake/Translations/flash/05_medivo1.j2l.h:2
+msgctxt "flash/05_medivo1"
+msgid ""
+"\n"
+"Craig is still a doofus!"
+msgstr ""
+"\n"
+"Craig est toujours un imbécile !"
+
+#: .fake/Translations/flash/05_medivo1.j2l.h:3
+msgctxt "flash/05_medivo1"
+msgid ""
+"\n"
+"Secret Level Time!!!"
+msgstr ""
+"\n"
+"C'est l'heure du niveau secret !!!"
+
+#: .fake/Translations/flash/bonus_garglair.j2l.h:1
+msgctxt "flash/bonus_garglair"
+msgid ""
+"\n"
+"Buttstomp A Silver Crate\n"
+"To Clear Your Path"
+msgstr ""
+"\n"
+"Piétine ton butin pour sortir."
+
+#: .fake/Translations/flash/bonus_garglair.j2l.h:2
+msgctxt "flash/bonus_garglair"
+msgid ""
+"\n"
+"Crates can also make platforms appear..."
+msgstr ""
+"\n"
+"Les caisses peuvent aussi faire apparaître\n"
+"des plateformes..."
+
+#: .fake/Translations/flash/bonus_garglair.j2l.h:3
+msgctxt "flash/bonus_garglair"
+msgid ""
+"\n"
+"Melt the Spring..."
+msgstr ""
+"\n"
+"Fais fondre le ressort..."
+
+#: .fake/Translations/flash/bonus_garglair.j2l.h:4
+msgctxt "flash/bonus_garglair"
+msgid ""
+"\n"
+"Leh is a Camper"
+msgstr ""
+"\n"
+"Leh est un campeur"
+
+#: .fake/Translations/monk/01_jung1.j2l.h:1
+msgctxt "monk/01_jung1"
+msgid ""
+"\n"
+"Falling boulders can \n"
+"give you a headache."
+msgstr ""
+"\n"
+"En tombant, les boulders peuvent \n"
+"te donner mal à la tête..."
+
+#: .fake/Translations/monk/01_jung1.j2l.h:2
+msgctxt "monk/01_jung1"
+msgid ""
+"\n"
+"A Flamethrower works\n"
+"well against bugs."
+msgstr ""
+"\n"
+"Les lanceflammes sont super \n"
+"pour faire la guerre aux moustiques."
+
+#: .fake/Translations/monk/03_hell.j2l.h:1
+msgctxt "monk/03_hell"
+msgid ""
+"\n"
+"Long live the ice level."
+msgstr ""
+"\n"
+"Vive l'ère des glaces !"
+
+#: .fake/Translations/monk/03_hell.j2l.h:2
+msgctxt "monk/03_hell"
+msgid ""
+"\n"
+"Goodnight, bubba!"
+msgstr ""
+"\n"
+"Bonne nuit Bubba !"
+
+#: .fake/Translations/monk/06_damn2.j2l.h:2
+msgctxt "monk/06_damn2"
+msgid ""
+"\n"
+"What the heck? Aaaah! No!  \n"
+"This is NOT over!"
+msgstr ""
+"\n"
+"Comment ? Aaaah ! Non !\n"
+"Ce n'est PAS terminé !"
+
+#: .fake/Translations/prince/01_castle1.j2l.h:1
+msgctxt "prince/01_castle1"
+msgid ""
+"\n"
+"Poles spin you around so\n"
+" you can go even faster."
+msgstr ""
+"\n"
+"Une perche te fait tournoyer\n"
+"pour que tu puisses aller encore plus vite."
+
+#: .fake/Translations/prince/01_castle1.j2l.h:2
+msgctxt "prince/01_castle1"
+msgid ""
+"\n"
+"You found a secret area."
+msgstr ""
+"\n"
+"Tu as trouvé une chambre secrète."
+
+#: .fake/Translations/prince/01_castle1.j2l.h:3
+msgctxt "prince/01_castle1"
+msgid ""
+"\n"
+"Secret Treasure Room."
+msgstr ""
+"\n"
+"Chambre au trésor."
+
+#: .fake/Translations/prince/01_castle1.j2l.h:4
+msgctxt "prince/01_castle1"
+msgid ""
+"\n"
+"Nothing to see here."
+msgstr ""
+"\n"
+"Rien à voir ici."
+
+#: .fake/Translations/prince/01_castle1.j2l.h:5
+msgctxt "prince/01_castle1"
+msgid ""
+"\n"
+"Collect coins to activate \n"
+"bonus warp devices."
+msgstr ""
+"\n"
+"Ramasse les pièces pour activer\n"
+"les tunnels téléporteurs."
+
+#: .fake/Translations/prince/02_castle1n.j2l.h:1
+msgctxt "prince/02_castle1n"
+msgid ""
+"\n"
+"Cheese is green on tuesday."
+msgstr ""
+"\n"
+"Le fromage est vert le mardi."
+
+#: .fake/Translations/prince/02_castle1n.j2l.h:2
+msgctxt "prince/02_castle1n"
+msgid ""
+"\n"
+"Craig is king doofus."
+msgstr ""
+"\n"
+"Craig est le roi des imbéciles."
+
+#: .fake/Translations/prince/02_castle1n.j2l.h:3
+msgctxt "prince/02_castle1n"
+msgid ""
+"\n"
+"To beat the queen \n"
+"shoot her off her ledge."
+msgstr ""
+"\n"
+"Pour vaincre la reine \n"
+"tire pour la faire tomber de sa corniche."
+
+#: .fake/Translations/prince/02_castle1n.j2l.h:4
+msgctxt "prince/02_castle1n"
+msgid ""
+"\n"
+"Good job! \n"
+"Now go get Devan Shell!"
+msgstr ""
+"\n"
+"Félicitations ! \n"
+"Maintenant, tu peux sortir du chateau !"
+
+#: .fake/Translations/prince/02_castle1n.j2l.h:5
+msgctxt "prince/02_castle1n"
+msgid ""
+"\n"
+"To kick through these\n"
+"blocks, press down and jump!"
+msgstr ""
+"\n"
+"Pour renverser ces \n"
+"dalles, appuie sur Bas et saute !"
+
+#: .fake/Translations/prince/02_castle1n.j2l.h:6
+msgctxt "prince/02_castle1n"
+msgid ""
+"\n"
+"Press down and jump beneath \n"
+"these blocks to break them!"
+msgstr ""
+"\n"
+"Appuie sur Bas et saute sous \n"
+"ces dalles pour les casser !"
+
+#: .fake/Translations/prince/02_castle1n.j2l.h:7
+msgctxt "prince/02_castle1n"
+msgid ""
+"\n"
+"Buttstomp the metal box \n"
+"to open key blocks!"
+msgstr ""
+"\n"
+"Tape ton derrière sur la malle \n"
+"pour ouvrir les dalles à clé !"
+
+#: .fake/Translations/prince/03_carrot1.j2l.h:1
+msgctxt "prince/03_carrot1"
+msgid ""
+"\n"
+"Stomp your booty to exit."
+msgstr ""
+"\n"
+"Tape ton derrière pour sortir."
+
+#: .fake/Translations/prince/03_carrot1.j2l.h:2
+msgctxt "prince/03_carrot1"
+msgid ""
+"\n"
+"This spring is frozen."
+msgstr ""
+"\n"
+"Ce ressort est gelé."
+
+#: .fake/Translations/prince/04_carrot1n.j2l.h:1
+msgctxt "prince/04_carrot1n"
+msgid ""
+"\n"
+"Super dooper secret."
+msgstr ""
+"\n"
+"Secret super-extra."
+
+#: .fake/Translations/prince/04_carrot1n.j2l.h:2
+msgctxt "prince/04_carrot1n"
+msgid ""
+"\n"
+"Shields will give you unlimited \n"
+"special ammo for a short time."
+msgstr ""
+"\n"
+"Pendant quelques instants, un bouclier\n"
+"te donnera des munitions à gogo."
+
+#: .fake/Translations/prince/04_carrot1n.j2l.h:4
+msgctxt "prince/04_carrot1n"
+msgid ""
+"\n"
+"Stopwatches will add time to\n"
+"the life of a shield."
+msgstr ""
+"\n"
+"Un chrono prolonge\n"
+"la durée de vie d'un bouclier."
+
+#: .fake/Translations/prince/04_carrot1n.j2l.h:5
+msgctxt "prince/04_carrot1n"
+msgid ""
+"\n"
+"This schwartzenguard is toast!"
+msgstr ""
+"\n"
+"Ce garde-chiourme est en civet !"
+
+#: .fake/Translations/prince/06_labrat2.j2l.h:1
+msgctxt "prince/06_labrat2"
+msgid ""
+"\n"
+"\n"
+"You cannot defeat me, Jazz!\n"
+"Prepare to face my superbot!"
+msgstr ""
+"\n"
+"Tu n'as aucune chance !\n"
+"Prépare-toi à faire face à mon Super-Robot !"
+
+#: .fake/Translations/prince/06_labrat2.j2l.h:2
+msgctxt "prince/06_labrat2"
+msgid ""
+"\n"
+"\n"
+"Ack! I'm outta here!"
+msgstr ""
+"\n"
+"\n"
+"Ouille, Ouille ! Moi, je me casse !"
+
+#: .fake/Translations/prince/06_labrat2.j2l.h:3
+msgctxt "prince/06_labrat2"
+msgid ""
+"\n"
+"These blocks are speed blocks.\n"
+"Run into them at full speed!"
+msgstr ""
+"\n"
+"Ces blocs sont des blocs de vitesse.\n"
+"Cours dessus à pleine vitesse !"
+
+#: .fake/Translations/prince/trainer.j2l.h:1
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Welcome to Jazz Jackrabbit 2. \n"
+" This is a training level."
+msgstr ""
+"\n"
+"Jazz Jackrabbit 2 est content de te voir. \n"
+"Ce niveau est juste pour t'entraîner."
+
+#: .fake/Translations/prince/trainer.j2l.h:2
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Collect goodies for\n"
+"points and surprises."
+msgstr ""
+"\n"
+"Ramasse les goodies pour \n"
+"gagner des points et des surprises."
+
+#: .fake/Translations/prince/trainer.j2l.h:3
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"After jumping, press jump\n"
+"again to do a special move."
+msgstr ""
+"\n"
+"Après avoir sauté, saute une deuxième fois\n"
+"pour faire un mouvement spécial."
+
+#: .fake/Translations/prince/trainer.j2l.h:4
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Some walls can be shot."
+msgstr ""
+"\n"
+"Tu peux tirer sur certains murs."
+
+#: .fake/Translations/prince/trainer.j2l.h:5
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"When in the air, press down\n"
+"to stomp with your butt."
+msgstr ""
+"\n"
+"Une fois en l'air, appuie sur Bas\n"
+"pour taper avec ton derrière."
+
+#: .fake/Translations/prince/trainer.j2l.h:6
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Secrets abound in Jazz 2. \n"
+" Check the walls."
+msgstr ""
+"\n"
+"Jazz 2 est truffé de secrets. \n"
+" Vérifie bien les murs."
+
+#: .fake/Translations/prince/trainer.j2l.h:7
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Good job. Remember to\n"
+"look for secrets."
+msgstr ""
+"\n"
+"Bien joué ! N'oublie pas de\n"
+"chercher les secrets."
+
+#: .fake/Translations/prince/trainer.j2l.h:8
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Collect gems for \n"
+"an extra life."
+msgstr ""
+"\n"
+"Ramasse les diamants pour gagner\n"
+"des vies supplémentaires."
+
+#: .fake/Translations/prince/trainer.j2l.h:9
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Red Gems count\n"
+"as one gem."
+msgstr ""
+"\n"
+"Les diamants rouges comptent\n"
+"pour un."
+
+#: .fake/Translations/prince/trainer.j2l.h:10
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Green gems count\n"
+"as five gems."
+msgstr ""
+"\n"
+"Les diamants verts comptent\n"
+"pour cinq."
+
+#: .fake/Translations/prince/trainer.j2l.h:11
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Blue gems count\n"
+"as ten gems."
+msgstr ""
+"\n"
+"Les diamants bleus comptent\n"
+"pour dix."
+
+#: .fake/Translations/prince/trainer.j2l.h:12
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Carrots give you health."
+msgstr ""
+"\n"
+"Les carrottes te gardent en bonne santé."
+
+#: .fake/Translations/prince/trainer.j2l.h:13
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Checkpoints save your\n"
+"spot if you lose a life."
+msgstr ""
+"\n"
+"Les postes de contrôle sauvent ta \n"
+"peau si tu perds une vie."
+
+#: .fake/Translations/prince/trainer.j2l.h:14
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Collect coins to\n"
+"unlock bonus rooms."
+msgstr ""
+"\n"
+"Ramasse les pièces pour\n"
+"ouvrir les salles de bonus."
+
+#: .fake/Translations/prince/trainer.j2l.h:15
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Beware of sharp stuff.\n"
+"It hurts."
+msgstr ""
+"\n"
+"Méfie-toi des objets pointus.\n"
+"Ils font mal."
+
+#: .fake/Translations/prince/trainer.j2l.h:16
+msgctxt "prince/trainer"
+msgid ""
+"\n"
+"Now youre ready to play.\n"
+" Good luck and have fun."
+msgstr ""
+"\n"
+"Ca y est ! Tu es prêt à jouer.\n"
+" Bonne chance et amuse-toi bien !"
+
+#: .fake/Translations/rescue/01_colon1.j2l.h:1
+msgctxt "rescue/01_colon1"
+msgid ""
+"\n"
+"Buttstomp the manhole cover!"
+msgstr ""
+"\n"
+"Tape ton derrière sur la bouche d'égout !"
+
+#: .fake/Translations/rescue/03_psych1.j2l.h:1
+msgctxt "rescue/03_psych1"
+msgid ""
+"\n"
+"Smoke rings will \n"
+"make you dizzy."
+msgstr ""
+"\n"
+"Les ronds de fumée te donneront \n"
+"le vertige."
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:1
+msgctxt "secretf/01_easter1"
+msgid ""
+"\n"
+"You can't buttstomp\n"
+"so go up and around!"
+msgstr ""
+"\n"
+"Vous n'avez pas la possibilité de ruer\n"
+"Alors levez-vous et mettez-vous en route !"
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:2
+msgctxt "secretf/01_easter1"
+msgid ""
+"\n"
+"No rewards to those\n"
+"with itchy trigger fingers."
+msgstr ""
+"\n"
+"Pas de récompense pour ceux\n"
+"qui n'ont pas la main sûre"
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:3
+msgctxt "secretf/01_easter1"
+msgid ""
+"\n"
+"Todays Forcast: Strong Winds!"
+msgstr ""
+"\n"
+"Météo pour aujourd'hui : Vent violent"
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:4
+msgctxt "secretf/01_easter1"
+msgid ""
+"\n"
+"Find the crate\n"
+"to clear your path."
+msgstr ""
+"\n"
+"Trouvez le coffre\n"
+"et dégagez votre chemin"
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:5
+msgctxt "secretf/01_easter1"
+msgid ""
+"\n"
+"Welcome to\n"
+"Jazz Jackrabbit 2:\n"
+"The Secret Files!"
+msgstr ""
+"\n"
+"Bienvenue sur\n"
+"Jackrabbit 2:\n"
+"The Secret Files"
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:6
+msgctxt "secretf/01_easter1"
+msgid ""
+"\n"
+"Only Spaz can get to\n"
+"the room up on the left.\n"
+"He may need something\n"
+"to stand on."
+msgstr ""
+"\n"
+"Seul Spaz peut accèder à\n"
+"la pièce en haut à gauche.\n"
+"Il aura peut-être besoin de quelque chose\n"
+"sur quoi monter"
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:7
+msgctxt "secretf/01_easter1"
+msgid ""
+"\n"
+"Don't beat Nigel at pool.\n"
+"You've veen warned. :)"
+msgstr ""
+"\n"
+"Ne battez pas Nigel au billard\n"
+" Vous êtes prévenu !"
+
+#: .fake/Translations/secretf/01_easter1.j2l.h:16
+msgctxt "secretf/01_easter1"
+msgid ""
+"Eating too many chocolate\n"
+"eggs can make you sick :p"
+msgstr ""
+"Manger trop d'oeufs en chocolat\n"
+" peut vous rendre malade"
+
+#: .fake/Translations/secretf/02_easter2.j2l.h:1
+msgctxt "secretf/02_easter2"
+msgid ""
+"\n"
+"Sloping Tunnel Entrance"
+msgstr ""
+"\n"
+"Entrée de biais du tunnel"
+
+#: .fake/Translations/secretf/02_easter2.j2l.h:2
+msgctxt "secretf/02_easter2"
+msgid ""
+"\n"
+"To access the tunnels above\n"
+"find the access warp."
+msgstr ""
+"\n"
+"Pour accéder aux tunnels au-dessus\n"
+"trouvez le tunnel téléporteur"
+
+#: .fake/Translations/secretf/02_easter2.j2l.h:3
+msgctxt "secretf/02_easter2"
+msgid ""
+"\n"
+"One route leads to riches.\n"
+"One route leads to battle."
+msgstr ""
+"\n"
+"Un chemin mène aux richesses\n"
+"un chemin mène à la lutte"
+
+#: .fake/Translations/secretf/03_easter3.j2l.h:1
+msgctxt "secretf/03_easter3"
+msgid ""
+"\n"
+"Only those who can double-jump\n"
+"can get to the goodies!"
+msgstr ""
+"\n"
+"Seuls ceux qui peuvent faire un double saut\n"
+"pourront arriver aux gadgets"
+
+#: .fake/Translations/secretf/03_easter3.j2l.h:2
+msgctxt "secretf/03_easter3"
+msgid ""
+"\n"
+"Find the crate to make\n"
+"your climbing blocks appear"
+msgstr ""
+"\n"
+"Trouvez le coffre afin de faire\n"
+"apparaître vos blocs de grimpée"
+
+#: .fake/Translations/secretf/03_easter3.j2l.h:3
+msgctxt "secretf/03_easter3"
+msgid ""
+"\n"
+"Stomping this crate also\n"
+"free's some enemies :)"
+msgstr ""
+"\n"
+"Heurter ce coffre peut aussi\n"
+"libérer quelques ennemis"
+
+#: .fake/Translations/secretf/04_haunted1.j2l.h:1
+msgctxt "secretf/04_haunted1"
+msgid ""
+"\n"
+"Enter the house with caution....."
+msgstr ""
+"\n"
+"Entrez dans la maison avec précaution..."
+
+#: .fake/Translations/secretf/04_haunted1.j2l.h:3
+msgctxt "secretf/04_haunted1"
+msgid ""
+"\n"
+"Silver Crates can't be broken underwater..."
+msgstr ""
+"\n"
+"Les coffres en argent ne peuvent\n"
+"pas être brisés sous l'eau"
+
+#: .fake/Translations/secretf/04_haunted1.j2l.h:4
+msgctxt "secretf/04_haunted1"
+msgid ""
+"\n"
+"Water Level control crate above."
+msgstr ""
+"\n"
+"Coffre pour le contrôle du niveau\n"
+"d'eau au dessus"
+
+#: .fake/Translations/secretf/04_haunted1.j2l.h:5
+msgctxt "secretf/04_haunted1"
+msgid ""
+"\n"
+"Stomping crates can be good and bad..."
+msgstr ""
+"\n"
+"Heurter les coffres peut être\n"
+"bien ou mal..."
+
+#: .fake/Translations/secretf/04_haunted1.j2l.h:7
+msgctxt "secretf/04_haunted1"
+msgid ""
+"\n"
+"But you need a way to get up there..."
+msgstr ""
+"\n"
+"Mais vous devez trouver le\n"
+"moyen d'aller là-bas"
+
+#: .fake/Translations/secretf/06_haunted3.j2l.h:16
+msgctxt "secretf/06_haunted3"
+msgid ""
+"\n"
+"Michelle,\n"
+"I will love you always and forever :)"
+msgstr ""
+"\n"
+"Michelle,\n"
+"Je t'aimerai toujours et pour toujours :)"
+
+#: .fake/Translations/secretf/07_town1.j2l.h:1
+msgctxt "secretf/07_town1"
+msgid ""
+"\n"
+"Take to the roof tops!"
+msgstr ""
+"\n"
+"Sauvez-vous sur les toits !"
+
+#: .fake/Translations/secretf/07_town1.j2l.h:2
+msgctxt "secretf/07_town1"
+msgid ""
+"\n"
+"The skies above will reward\n"
+"those who stomp..."
+msgstr ""
+"\n"
+"Les cieux récompenseront\n"
+"ceux qui frappent"
+
+#: .fake/Translations/secretf/07_town1.j2l.h:3
+msgctxt "secretf/07_town1"
+msgid ""
+"\n"
+"Jump as far over to the\n"
+"right as you possibly can..."
+msgstr ""
+"\n"
+"Sautez sur la droite le plus loin\n"
+"que vous pouvez"
+
+#: .fake/Translations/secretf/07_town1.j2l.h:4
+msgctxt "secretf/07_town1"
+msgid ""
+"\n"
+"Didn't make the jump huh? :)"
+msgstr ""
+"\n"
+"Vous avez loupé votre saut, hein ?"
+
+#: .fake/Translations/secretf/07_town1.j2l.h:5
+msgctxt "secretf/07_town1"
+msgid ""
+"\n"
+"Well Done!"
+msgstr ""
+"\n"
+"Bien joué !"
+
+#: .fake/Translations/secretf/07_town1.j2l.h:6
+msgctxt "secretf/07_town1"
+msgid ""
+"\n"
+"Use your Special Moves to get up the air cons!\n"
+"For Jazz, press Crouch and Jump.\n"
+"For Spaz, Press Jump Twice!"
+msgstr ""
+"\n"
+"Utilisez vos Mouvements Spéciaux\n"
+"pour soulever les conduites d'air\n"
+"Pour Jazz appuyez sur\n"
+"Accroupissement et Saut\n"
+"pour Spaz, appuyez deux fois sur Saut!"
+
+#: .fake/Translations/secretf/08_town2.j2l.h:1
+msgctxt "secretf/08_town2"
+msgid ""
+"\n"
+"Find the crate and the gems are yours!"
+msgstr ""
+"\n"
+"Trouvez le coffre et les joyaux seront à vous !"
+
+#: .fake/Translations/secretf/08_town2.j2l.h:2
+msgctxt "secretf/08_town2"
+msgid ""
+"\n"
+"Springs Don't Work When Frozen..."
+msgstr ""
+"\n"
+"Les trampolines ne marchent pas\n"
+"quand ils sont gelés"
+
+#: .fake/Translations/secretf/08_town2.j2l.h:3
+msgctxt "secretf/08_town2"
+msgid ""
+"\n"
+"Collecting 20 coins is more rewarding..."
+msgstr ""
+"\n"
+"Il est plus rémunérateur de réunir 20 pièces"
+
+#: .fake/Translations/secretf/09_town3.j2l.h:1
+msgctxt "secretf/09_town3"
+msgid ""
+"\n"
+"Find the crate to clear the blocks...."
+msgstr ""
+"\n"
+"Trouvez le coffre pour éliminer les blocs"
+
+#: .fake/Translations/secretf/09_town3.j2l.h:2
+msgctxt "secretf/09_town3"
+msgid ""
+"\n"
+"BEWARE! Flocks of Ravens can\n"
+"be very dangerous."
+msgstr ""
+"\n"
+"ATTENTION!\n"
+"les nuées de corbeaux peuvent\n"
+"être très dangereuses"
+
+#: .fake/Translations/secretf/09_town3.j2l.h:3
+msgctxt "secretf/09_town3"
+msgid ""
+"\n"
+"The remove the blocks\n"
+"look to the tallest building."
+msgstr ""
+"\n"
+"Pour déplacer les blocs\n"
+"regardez le building le plus haut"
+
+#: .fake/Translations/secretf/09_town3.j2l.h:4
+msgctxt "secretf/09_town3"
+msgid ""
+"\n"
+"Choose a cover and stomp away!"
+msgstr ""
+"\n"
+"Choisissez un bouclier et\n"
+"donnez une bonne ruade"
+
+#: .fake/Translations/secretf/09_town3.j2l.h:5
+msgctxt "secretf/09_town3"
+msgid ""
+"\n"
+"Hi GeoBunny :)"
+msgstr ""
+"\n"
+"Hi GeoBunny :)"
+
+#: .fake/Translations/secretf/09_town3.j2l.h:6
+msgctxt "secretf/09_town3"
+msgid ""
+"\n"
+"Goto www.project2.com\n"
+"use\n"
+"password: BUNNYLOVER\n"
+msgstr ""
+"\n"
+"Goto www.project2.com\n"
+"use\n"
+"password: BUNNYLOVER\n"
+
+#: .fake/Translations/share/01_share1.j2l.h:1
+msgctxt "share/01_share1"
+msgid ""
+"\n"
+"Shoot these blocks!"
+msgstr ""
+"\n"
+"Tire sur ces dalles !"
+
+#: .fake/Translations/share/01_share1.j2l.h:2
+msgctxt "share/01_share1"
+msgid ""
+"\n"
+"When in the air, press down\n"
+"to stomp with your butt."
+msgstr ""
+"\n"
+"Quand tu es en l'air, appuie sur Bas\n"
+"pour taper avec ton derrière."
+
+#: .fake/Translations/share/01_share1.j2l.h:3
+msgctxt "share/01_share1"
+msgid ""
+"\n"
+"To pass this area, stomp\n"
+"the secret metal crate."
+msgstr ""
+"\n"
+"Pour traverser cette zone, piétine\n"
+"la malle secrète."
+
+#: .fake/Translations/share/01_share1.j2l.h:4
+msgctxt "share/01_share1"
+msgid ""
+"\n"
+"You need twenty coins to pass \n"
+"through this secret warp!"
+msgstr ""
+"\n"
+"Il te faut vingt pièces pour traverser \n"
+"ce tunnel téléporteur !"
+
+#: .fake/Translations/share/01_share1.j2l.h:5
+msgctxt "share/01_share1"
+msgid ""
+"\n"
+"Coins give you access to \n"
+"warps that appear later."
+msgstr ""
+"\n"
+"Les pièces permettent de traverser \n"
+"des tunnels téléporteurs que tu verras plus tard."
+
+#: .fake/Translations/share/01_share1.j2l.h:6
+msgctxt "share/01_share1"
+msgid ""
+"\n"
+"Stomp in the right place and\n"
+"you might find a surprise!"
+msgstr ""
+"\n"
+"Piétine là où il faut et\n"
+"tu pourrais bien avoir une surprise !"
+
+#: .fake/Translations/share/01_share1.j2l.h:7
+msgctxt "share/01_share1"
+msgid ""
+"\n"
+"Some crates contain\n"
+"bombs or baddies!"
+msgstr ""
+"\n"
+"Certaines caisses peuvent contenir\n"
+"des bombes ou des sbires !"
+
+#: .fake/Translations/share/02_share2.j2l.h:1
+msgctxt "share/02_share2"
+msgid ""
+"\n"
+"You need twenty coins to pass \n"
+"through this secret warp!"
+msgstr ""
+"\n"
+"Il te faut vingt pièces pour traverser \n"
+"ce tunnel téléporteur !"
+
+#: .fake/Translations/share/02_share2.j2l.h:2
+msgctxt "share/02_share2"
+msgid ""
+"\n"
+"A flamethrower works well \n"
+"against nasty bugs."
+msgstr ""
+"\n"
+"Les lanceflammes sont super \n"
+"pour faire la guerre aux moustiques."
+
+#: .fake/Translations/share/02_share2.j2l.h:3
+msgctxt "share/02_share2"
+msgid ""
+"\n"
+"Smoke rings will make\n"
+"you very dizzy!"
+msgstr ""
+"\n"
+"Les ronds de fumée te donneront\n"
+"un sacré vertige !"
+
+#: .fake/Translations/share/03_share3.j2l.h:1
+msgctxt "share/03_share3"
+msgid ""
+"\n"
+"Beware the witch! She can\n"
+"turn you into a frog."
+msgstr ""
+"\n"
+"Méfie-toi de la sorcière ! Elle peut\n"
+"te changer en grenouille."
+
+#: .fake/Translations/share/03_share3.j2l.h:2
+msgctxt "share/03_share3"
+msgid ""
+"\n"
+"If you are turned into a frog\n"
+"Eva Earlong can help!"
+msgstr ""
+"\n"
+"Si tu es transformé en grenouille\n"
+"Eva Earlong peut te sauver !"
+
+#: .fake/Translations/share/03_share3.j2l.h:3
+msgctxt "share/03_share3"
+msgid ""
+"\n"
+"You made it! This is the end\n"
+" of the shareware version.\n"
+"Now check out the order info\n"
+"for M O R E!"
+msgstr ""
+"\n"
+"Vous l'avez fait ! Ceci est\n"
+"la fin de la version démo.\n"
+"Consultez le bon de commande\n"
+"pour en avoir P L U S !"
+
+#: .fake/Translations/xmas99/01_xmas1.j2l.h:1
+msgctxt "xmas99/01_xmas1"
+msgid ""
+"\n"
+"Watch out for the spikes below!"
+msgstr ""
+"\n"
+"Fais attention aux pointes en bas !"
+
+#: .fake/Translations/xmas99/01_xmas1.j2l.h:2
+msgctxt "xmas99/01_xmas1"
+msgid ""
+"\n"
+"You can buttstomp through\n"
+"some of the weakspots\n"
+"in the pathways!"
+msgstr ""
+"\n"
+"Tu peux taper ton derrière\n"
+"sur les parties fragiles\n"
+"du chemin !"
+
+#: .fake/Translations/xmas99/01_xmas1.j2l.h:3
+msgctxt "xmas99/01_xmas1"
+msgid ""
+"\n"
+"Some blocks can only\n"
+"be broken with a\n"
+"certain weapon."
+msgstr ""
+"\n"
+"Certains blocs ne peuvent\n"
+"être détruits qu'avec\n"
+"une arme précise."
+
+#: .fake/Translations/xmas99/01_xmas1.j2l.h:4
+msgctxt "xmas99/01_xmas1"
+msgid ""
+"\n"
+"Welcome to Christmas Chronicles!"
+msgstr ""
+"\n"
+"Bienvenue à Christmas Chronicles!"
+
+#: .fake/Translations/xmas99/01_xmas1.j2l.h:5
+msgctxt "xmas99/01_xmas1"
+msgid ""
+"\n"
+"Seasons Greetings from\n"
+"Epic MegaGames\n"
+"Orange Games and\n"
+"Project 2 Interactive!"
+msgstr ""
+"\n"
+"Meilleurs voeux de la part de\n"
+"Epic MegaGames\n"
+"Orange Games et\n"
+"Project 2 Interactive !"
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:1
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"You can stand on top\n"
+"of some of the trees!"
+msgstr ""
+"\n"
+"Tu peux marcher au dessus\n"
+"de certains arbres !"
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:2
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"You can buttstomp through\n"
+"some of the weakspots\n"
+"in the pathways!"
+msgstr ""
+"\n"
+"Tu peux taper ton derrière\n"
+"sur les parties fragiles\n"
+"du chemin !"
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:3
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"Punching the blocks above you\n"
+"can be rewarding."
+msgstr ""
+"\n"
+"Frappe les blocs au dessus de toi\n"
+"pour recevoir une récompense."
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:6
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"Gem Trail Entry Crate."
+msgstr ""
+"\n"
+"Caisse d'entrée de la Gem Trail"
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:7
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"Gem Trail Entrance.\n"
+"Climb the treetops to find\n"
+"and stomp the Entry Crate."
+msgstr ""
+"\n"
+"Entrée de la Gem Trail.\n"
+"Grimpez sur les arbres pour trouver\n"
+"et frapper la caisse d'entrée."
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:14
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"\n"
+"Hi There, Piggy!\n"
+"\n"
+"- Poopy"
+msgstr ""
+"\n"
+"\n"
+"Salut, Piggy !\n"
+"\n"
+"- Poopy"
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:15
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"\n"
+"Michelle:\n"
+"You've changed my life in so many ways\n"
+"I dedicate this project to you.\n"
+"I love you so much."
+msgstr ""
+"\n"
+"\n"
+"Michelle :\n"
+"Tu as tellement changé ma vie\n"
+"Je te dédie ce projet.\n"
+"Je t'aime tellement."
+
+#: .fake/Translations/xmas99/02_xmas2.j2l.h:16
+msgctxt "xmas99/02_xmas2"
+msgid ""
+"\n"
+"\n"
+"Kassi Nicole:\n"
+"A million things I long to say to you\n"
+"But my words always lead to the same ending\n"
+"I love you, I love you."
+msgstr ""
+"\n"
+"\n"
+"Kassi Nicole:\n"
+"J'ai tant de choses à te dire, mais mes mots\n"
+"se concluent toujours de la même manière :\n"
+"Je t'aime, je t'aime."
+
+#: .fake/Translations/xmas99/03_xmas3.j2l.h:1
+msgctxt "xmas99/03_xmas3"
+msgid ""
+"\n"
+"Please use your TNT wisely."
+msgstr ""
+"\n"
+"Utilise les explosifs intelligemment."
+
+#: .fake/Translations/xmas99/03_xmas3.j2l.h:2
+msgctxt "xmas99/03_xmas3"
+msgid ""
+"\n"
+"Don't lose your grip!"
+msgstr ""
+"\n"
+"Ne lâche pas prise !"
+
+#: .fake/Translations/xmas99/03_xmas3.j2l.h:3
+msgctxt "xmas99/03_xmas3"
+msgid ""
+"\n"
+"Welcome to Burrowsville\n"
+"Please drive carefully."
+msgstr ""
+"\n"
+"Bienvenue à Burrowsville\n"
+"Conduisez prudemment."
+
+#: .fake/Translations/xmas99/03_xmas3.j2l.h:4
+msgctxt "xmas99/03_xmas3"
+msgid ""
+"\n"
+"That bridge doesnt\n"
+"look too safe..."
+msgstr ""
+"\n"
+"Ce pont n'a pas\n"
+"l'air solide..."
+
+#: .fake/Translations/xmas99/03_xmas3.j2l.h:5
+msgctxt "xmas99/03_xmas3"
+msgid ""
+"\n"
+"Robert and Craig:\n"
+"Springs RULE! :)"
+msgstr ""
+"\n"
+"Robert et Craig:\n"
+"Vive le printemps ! :)"
+
+#: .fake/Translations/xmas99/03_xmas3.j2l.h:6
+msgctxt "xmas99/03_xmas3"
+msgid ""
+"\n"
+"Now leaving Burrowsville\n"
+"Please visit again."
+msgstr ""
+"\n"
+"Vous quittez Burrowsville.\n"
+"A bientôt !"
+
+#: .fake/Translations/xmas99/03_xmas3.j2l.h:7
+msgctxt "xmas99/03_xmas3"
+msgid ""
+"\n"
+"Password: xmasbunny\n"
+"Please visit\n"
+"www.project2.com"
+msgstr ""
+"\n"
+"Password: xmasbunny\n"
+"Please visit\n"
+"www.project2.com"
+
+#. TRANSLATORS: Main information in About section
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:123
+#, c-format
+msgid ""
+"Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released "
+"in 1998. Supports various\n"
+"versions of the game (Shareware Demo, Holiday Hare '98, The Secret Files "
+"and\n"
+"Christmas Chronicles). Also, it partially supports some features of JJ2+ "
+"extension.\n"
+"For more information, visit the official website: %s"
+msgstr ""
+"Réimplementation du jeu \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] sorti en "
+"1998. Gère différentes\n"
+"versions du jeu (démo Shareware, Holiday Hare '98, The Secret Files et\n"
+"Christmas Chronicles). Support partiel de certaines fonctionnalités de "
+"l'extension JJ2+.\n"
+"Pour plus d'information, visitez le site officiel : %s"
+
+#. TRANSLATORS: Header in About section
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:128
+msgid "Created By"
+msgstr "Créé par"
+
+#. TRANSLATORS: Bottom information in About section
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:141
+#, c-format
+msgid ""
+"This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and "
+"following libraries:\n"
+"%s"
+msgstr ""
+"Ce projet utilise le moteur de jeu \f[c:0x9e7056]nCine\f[c] modifié et les "
+"librairies suivantes :\n"
+"%s"
+
+#. TRANSLATORS: Menu item in main menu (Emscripten only)
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:36
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:66
+msgid "Import Episodes"
+msgstr "Importer des épisodes"
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:40
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:69
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:128
+msgid "Play Story"
+msgstr "Mode histoire"
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:42
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:129
+msgid "Play Custom Levels"
+msgstr "Niveaux personnalisés"
+
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:47
+msgid "Connect To Server"
+msgstr "Connexion au serveur"
+
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:48
+msgid "Create Server"
+msgstr "Créer un serveur"
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:52
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
+msgid "Options"
+msgstr "Options"
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:54
+msgid "About"
+msgstr "À propos"
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:57
+msgid "Quit"
+msgstr "Quitter"
+
+#. TRANSLATORS: Menu item in main menu (Emscripten only)
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:72
+msgid "Play Shareware Demo"
+msgstr "Jouer à la version Démo"
+
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:167
+msgid "Access to external storage has been granted!"
+msgstr "L'accès au stockage externe a été autorisé !"
+
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:169
+msgid ""
+"\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit "
+"2\f[c:0x337233] files correctly."
+msgstr ""
+"\f[c:0x337233]Relancer le jeu pour lire les fichiers \f[c:0x9e7056]Jazz "
+"Jackrabbit 2\f[c:0x337233] correctement."
+
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:174
+msgid ""
+"\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit "
+"2\f[c:0x704a4a] files!"
+msgstr ""
+"\f[c:0x704a4a]Ce jeu requiert les fichiers d'origine du jeu "
+"\f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x704a4a] !"
+
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:176
+msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
+msgstr ""
+"Assurez-vous que les fichiers de Jazz Jackrabbit 2 sont présents dans ce "
+"dossier :"
+
+#. TRANSLATORS: Menu item in main menu (Android 11+ only)
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:184
+msgid "Allow access to external storage"
+msgstr "Autoriser l'accès au stockage externe"
+
+#. TRANSLATORS: Menu item in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:18
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:207
+msgid "Remap Controls"
+msgstr "Changer les contrôles"
+
+#. TRANSLATORS: Menu item in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
+msgid "Touch Controls"
+msgstr "Contrôles tactiles"
+
+#. TRANSLATORS: Menu item in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
+msgid "Input Diagnostics"
+msgstr "Diagnostic des entrées"
+
+#. TRANSLATORS: Menu item in Options > Controls section (Android only)
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:25
+msgid "Native Back Button"
+msgstr "Touche retour native"
+
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:23
+msgid "Controls"
+msgstr "Contrôles"
+
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:98
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
+msgid "Enabled"
+msgstr "Activé"
+
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:98
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
+msgid "Disabled"
+msgstr "Désactivé"
+
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:139
+msgid "No custom level found!"
+msgstr "Aucun niveau personnalisé trouvé !"
+
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:136
+msgid "No episode found!"
+msgstr "Aucun épisode trouvé !"
+
+#. TRANSLATORS: Menu subitem in Play Story section
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:175
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:176
+msgid "Restart episode"
+msgstr "Recommencer l'épisode"
+
+#. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:198
+#, c-format
+msgid "You must complete \"%s\" first!"
+msgstr "Terminez l'épisode \"%s\" d'abord !"
+
+#. TRANSLATORS: Information in Play Story section that episode is locked
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:202
+msgid "Episode is locked!"
+msgstr "L'épisode est verrouillé !"
+
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
+msgid "Reforged Mode"
+msgstr "Mode reforgé"
+
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:18
+msgid "Ledge Climbing"
+msgstr "Escalader les rebords"
+
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:20
+msgid "Weapon Wheel"
+msgstr "Roue d'armes"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:89
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
+msgid "Enhancements"
+msgstr "Améliorations"
+
+#. TRANSLATORS: Header in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:93
+msgid "You can enable enhancements that were added to this remake."
+msgstr ""
+"Vous pouvez activer les améliorations qui ont été ajoutées à ce remake."
+
+#. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+msgid "Enabled With Ammo Count"
+msgstr "Activé avec compteur de munitions"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:25
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:51
+msgid "Language"
+msgstr "Langue"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:28
+msgid "Discord Integration"
+msgstr "Intégration Discord"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:32
+msgid "Razer Chroma™"
+msgstr "Razer Chroma™"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:36
+msgid "Scripting"
+msgstr "Scripting"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:40
+msgid "Browse \"Source\" Directory"
+msgstr "Consulter dossier \"Source\""
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:44
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:77
+msgid "Refresh Cache"
+msgstr "Rafraîchir le cache"
+
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:76
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
+msgid "Gameplay"
+msgstr "Mode de jeu"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19
+msgid "Rescale Mode"
+msgstr "Mode de rendu"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
+msgid "Fullscreen"
+msgstr "Plein écran"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:31
+msgid "Antialiasing"
+msgstr "Antialiasing"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:33
+msgid "Graphics Quality"
+msgstr "Qualité graphique"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
+msgid "Show Player Trails"
+msgstr "Afficher traînées joueur"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
+msgid "Keep Aspect Ratio In Cinematics"
+msgstr "Conserver ratio des cinématiques"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
+msgid "Performance Metrics"
+msgstr "Indicateurs de performance"
+
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:70
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
+msgid "Graphics"
+msgstr "Graphismes"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:113
+msgid "Low"
+msgstr "Bas"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:113
+msgid "High"
+msgstr "Haut"
+
+#. TRANSLATORS: Header in Import Episodes section
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
+msgid "Select files of your original game to unlock additional episodes"
+msgstr ""
+"Sélectionner les fichiers du jeu d'origine pour débloquer des épisodes "
+"supplémentaires"
+
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:76
+msgid "Processing of selected files..."
+msgstr "Traitement des fichiers sélectionnés…"
+
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:79
+msgid "Waiting for files..."
+msgstr "En attente des fichiers..."
+
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:85
+msgid "No files were selected!"
+msgstr "Aucun fichier sélectionné !"
+
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:90
+msgid "No new episodes were imported!"
+msgstr "Aucun nouvel épisode importé !"
+
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
+msgid "No gamepads are detected!"
+msgstr "Aucune manette trouvée !"
+
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:21
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:97
+msgid "Sounds"
+msgstr "Sons"
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
+msgid "Resume"
+msgstr "Reprendre"
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:17
+msgid "Save & Exit"
+msgstr "Sauver & Quitter"
+
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:80
+msgid "Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."
+msgstr ""
+"Traitement des fichiers dans le dossier \f[c:0x9e7056]\"Source\"\f[c]..."
+
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:83
+msgid "Newly added levels and episodes will be available soon."
+msgstr "De nouveaux niveaux et épisodes seront bientôt disponibles."
+
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:210
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:212
+#, c-format
+msgid "Key %i"
+msgstr "Touche %i"
+
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:214
+msgid "Gamepad"
+msgstr "Manette"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:230
+msgid "Up"
+msgstr "Haut"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:232
+msgid "Down"
+msgstr "Bas"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
+msgid "Left"
+msgstr "Gauche"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:236
+msgid "Right"
+msgstr "Droite"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:238
+msgid "Fire"
+msgstr "Tirer"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:240
+msgid "Jump"
+msgstr "Sauter"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:242
+msgid "Run"
+msgstr "Courir"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:244
+msgid "Change Weapon"
+msgstr "Changer d'arme"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:246
+msgid "Back"
+msgstr "Retour"
+
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
+msgid "None / Pixel-perfect"
+msgstr "Aucun / Pixel-perfect"
+
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:29
+msgid "CRT Scanlines"
+msgstr "Lignes d'écran cathodique"
+
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:31
+msgid "CRT Shadow Mask"
+msgstr "Masque d'écran cathodique"
+
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:33
+msgid "CRT Aperture Grille"
+msgstr "Grille d'écran cathodique"
+
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:35
+msgid "Monochrome"
+msgstr "Monochrome"
+
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:51
+msgid "Select Rescale Mode"
+msgstr "Sélectionner le mode de rendu"
+
+#. TRANSLATORS: Menu item in Options > Sounds section
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
+msgid "Master Volume"
+msgstr "Volume global"
+
+#. TRANSLATORS: Menu item in Options > Sounds section
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:17
+msgid "SFX Volume"
+msgstr "Sons"
+
+#. TRANSLATORS: Menu item in Options > Sounds section
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:19
+msgid "Music Volume"
+msgstr "Musique"
+
+#. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
+msgid "Character"
+msgstr "Personnage"
+
+#. TRANSLATORS: Menu item to select difficulty
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:20
+msgid "Difficulty"
+msgstr "Difficulté"
+
+#. TRANSLATORS: Menu item to start selected episode/level
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:22
+msgid "Start"
+msgstr "Commencer"
+
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:200
+msgid "Easy"
+msgstr "Facile"
+
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:200
+msgid "Medium"
+msgstr "Moyen"
+
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:200
+msgid "Hard"
+msgstr "Difficile"
+
+#. TRANSLATORS: Header in Options > Controls > Touch Controls section
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:48
+msgid "You can adjust position of the touch zones by drag and drop."
+msgstr ""
+"Vous pouvez ajuster la position des zones tactiles en les faisant glisser."
+
+#: Sources/Main.cpp:260 Sources/Main.cpp:322
+msgid "Creating server..."
+msgstr "Création du serveur..."
+
+#: Sources/Main.cpp:275 Sources/Main.cpp:335
+#, c-format
+msgid "Connecting to %s:%u..."
+msgstr "Connexion à %s:%u..."
+
+#: Sources/Main.cpp:503 Sources/Main.cpp:541
+msgid ""
+"\f[c:0x704a4a]Cannot load specified level!\f[c]\n"
+"\n"
+"\n"
+"Make sure all necessary files\n"
+"are accessible and try it again."
+msgstr ""
+"\f[c:0x704a4a]Impossible de charger le niveau!\f[c]\n"
+"\n"
+"\n"
+"Assurez-vous que tous les fichiers nécessaires\n"
+"sont accessibles et essayez à nouveau."
+
+#: Sources/Main.cpp:633
+msgid ""
+"\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
+"\n"
+"\n"
+"Your client version is not compatible with the server."
+msgstr ""
+"\f[c:0x704a4a]Impossible de se connecter au serveur !\f[c]\n"
+"\n"
+"\n"
+"La version de votre client n'est pas compatible avec ce serveur."
+
+#: Sources/Main.cpp:634
+msgid ""
+"\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
+"\n"
+"\n"
+"Server capacity is full.\n"
+"Please try it later."
+msgstr ""
+"\f[c:0x704a4a]Impossible de se connecter au serveur !\f[c]\n"
+"\n"
+"\n"
+"Le serveur est plein.\n"
+"Essayez à nouveau plus tard."
+
+#: Sources/Main.cpp:635
+msgid ""
+"\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
+"\n"
+"\n"
+"Server is not in a state where it can process your request.\n"
+"Please try again in a few seconds."
+msgstr ""
+"\f[c:0x704a4a]Impossible de se connecter au serveur !\f[c]\n"
+"\n"
+"\n"
+"Le serveur n'est pas dans l'état de traiter votre demande.\n"
+"Réessayer à nouveau dans quelques secondes."
+
+#: Sources/Main.cpp:636
+msgid ""
+"\f[c:0x704a4a]Connection has been closed!\f[c]\n"
+"\n"
+"\n"
+"Server is shutting down.\n"
+"Please try it later."
+msgstr ""
+"\f[c:0x704a4a]La connexion a été interrompue !\f[c]\n"
+"\n"
+"\n"
+"Le serveur s'arrête.\n"
+"Essayez à nouveau plus tard."
+
+#: Sources/Main.cpp:637
+msgid ""
+"\f[c:0x704a4a]Connection has been lost!\f[c]\n"
+"\n"
+"\n"
+"Please try it again and if the problem persists,\n"
+"check your network connection."
+msgstr ""
+"\f[c:0x704a4a]La connexion a été perdue!\f[c]\n"
+"\n"
+"\n"
+"Réessayez à nouveau et si le problème persiste,\n"
+"vérifiez votre connexion à Internet."
+
+#: Sources/Main.cpp:638
+msgid ""
+"\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
+"\n"
+"\n"
+"The server is not responding for connection request."
+msgstr ""
+"\f[c:0x704a4a]Impossible de se connecter au serveur !\f[c]\n"
+"\n"
+"\n"
+"Le serveur ne répond pas aux demandes de connexion."
+
+#: Sources/Main.cpp:639
+msgid ""
+"\f[c:0x704a4a]Connection has been closed!\f[c]\n"
+"\n"
+"\n"
+"You have been \f[c:0x907050]kicked\f[c] off the server.\n"
+"Contact server administrators for more information."
+msgstr ""
+"\f[c:0x704a4a]La connexion a été interrompue !\f[c]\n"
+"\n"
+"\n"
+"Vous avez été \f[c:0x907050]éjecté\f[c] du serveur.\n"
+"Contactez un administrateur du serveur pour plus d'information."
+
+#: Sources/Main.cpp:640
+msgid ""
+"\f[c:0x704a4a]Connection has been closed!\f[c]\n"
+"\n"
+"\n"
+"You have been \f[c:0x725040]banned\f[c] off the server.\n"
+"Contact server administrators for more information."
+msgstr ""
+"\f[c:0x704a4a]La connexion a été interrompue !\f[c]\n"
+"\n"
+"\n"
+"Vous avez été \f[c:0x725040]banni\f[c] du serveur.\n"
+"Contactez un administrateur du serveur pour plus d'information."
