@@ -80,47 +80,77 @@ namespace Death { namespace IO {
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(EnumerationOptions);
 
-		/** @brief The class that handles directory traversal */
+//		/** @brief The class that handles directory traversal, should be used as iterator */
 		class Directory
 		{
 		public:
+			class Proxy
+			{
+				friend class Directory;
+
+			public:
+				const Containers::StringView& operator*() const & noexcept;
+
+			private:
+				explicit Proxy(const Containers::StringView path);
+
+				Containers::String _path;
+			};
+
+			// Iterator defines
+			using iterator_category = std::input_iterator_tag;
+			using difference_type = std::ptrdiff_t;
+			using reference = const Containers::StringView&;
+			using value_type = Containers::StringView;
+
+			Directory() noexcept;
 			Directory(const Containers::StringView path, EnumerationOptions options = EnumerationOptions::None);
 			~Directory();
 
-			/** @brief Opens a directory for traversal */
-			bool Open(const Containers::StringView path, EnumerationOptions options = EnumerationOptions::None);
-			/** @brief Closes an opened directory */
-			void Close();
-			/** @brief Returns the name of the next file inside the directory or `nullptr` */
-			const char* GetNext();
-			/** @brief Returns true if the directory has been sucessfully opened */
-			bool IsValid() const;
+			Directory(const Directory& rhs);
+			Directory& operator=(const Directory& rhs);
+			Directory(Directory&& rhs) noexcept;
+			Directory& operator=(Directory&& rhs) noexcept;
+
+			const Containers::StringView& operator*() const & noexcept;
+			Directory& operator++();
+
+			Proxy operator++(int) {
+				Proxy p{**this};
+				++*this;
+				return p;
+			}
+
+			bool operator==(const Directory& rhs) const;
+			bool operator!=(const Directory& rhs) const;
+
+			FileSystem::Directory begin() noexcept {
+				return *this;
+			}
+
+			FileSystem::Directory end() noexcept {
+				return FileSystem::Directory();
+			}
 
 		private:
-			EnumerationOptions _options;
-			char _path[MaxPathLength];
-			char* _fileNamePart;
-#if defined(DEATH_TARGET_WINDOWS)
-			bool _firstFile;
-			void* _hFindFile;
-#else
-#	if defined(DEATH_TARGET_ANDROID)
-			AAssetDir* _assetDir;
-#	endif
-			DIR* _dirStream;
-#endif
+			class Impl;
+			std::shared_ptr<Impl> _impl;
 		};
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
-		// Windows is already case in-sensitive
+		// Windows is already case in-sensitive by default
 		DEATH_ALWAYS_INLINE static const Containers::StringView FindPathCaseInsensitive(const Containers::StringView path) {
+			return path;
+		}
+
+		DEATH_ALWAYS_INLINE static Containers::String FindPathCaseInsensitive(Containers::String&& path) {
 			return path;
 		}
 #else
 		static Containers::String FindPathCaseInsensitive(const Containers::StringView path);
 #endif
 
-		/** @brief Combines together two path components */
+		/** @brief Combines together specified path components */
 		static Containers::String CombinePath(const Containers::StringView first, const Containers::StringView second);
 		static Containers::String CombinePath(const Containers::ArrayView<const Containers::StringView> paths);
 		static Containers::String CombinePath(const std::initializer_list<Containers::StringView> paths);
@@ -203,6 +233,8 @@ namespace Death { namespace IO {
 		static bool RemoveFile(const Containers::StringView path);
 		/** @brief Renames or moves a file or a directory */
 		static bool Move(const Containers::StringView oldPath, const Containers::StringView newPath);
+		/** @brief Moves a file or a directory to trash */
+		static bool MoveToTrash(const Containers::StringView path);
 		/** @brief Copies a file */
 		static bool Copy(const Containers::StringView oldPath, const Containers::StringView newPath, bool overwrite = true);
 

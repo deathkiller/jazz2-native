@@ -11,10 +11,10 @@ namespace nCine
 	{
 	}
 
-	AudioStreamPlayer::AudioStreamPlayer(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*AudioStreamPlayer::AudioStreamPlayer(const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: IAudioPlayer(ObjectType::AudioStreamPlayer), audioStream_(bufferPtr, bufferSize)
 	{
-	}
+	}*/
 
 	AudioStreamPlayer::AudioStreamPlayer(const StringView& filename)
 		: IAudioPlayer(ObjectType::AudioStreamPlayer), audioStream_(filename)
@@ -26,14 +26,14 @@ namespace nCine
 		stop();
 	}
 
-	bool AudioStreamPlayer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*bool AudioStreamPlayer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		if (state_ != PlayerState::Stopped) {
 			audioStream_.stop(sourceId_);
 		}
 
 		return audioStream_.loadFromMemory(bufferPtr, bufferSize);
-	}
+	}*/
 
 	bool AudioStreamPlayer::loadFromFile(const char* filename)
 	{

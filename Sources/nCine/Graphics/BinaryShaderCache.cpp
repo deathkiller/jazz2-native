@@ -170,8 +170,7 @@ namespace nCine
 		auto platformHashString = fs::GetFileName(path_);
 
 		std::uint32_t filesRemoved = 0;
-		fs::Directory dir(fs::GetDirectoryName(path_));
-		while (const StringView shaderPath = dir.GetNext()) {
+		for (auto shaderPath : fs::Directory(fs::GetDirectoryName(path_))) {
 			if (fs::DirectoryExists(shaderPath)) {
 				StringView filename = fs::GetFileName(shaderPath);
 				if (filename != platformHashString) {

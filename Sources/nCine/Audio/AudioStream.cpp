@@ -16,19 +16,19 @@ namespace nCine
 		alGetError();
 		alGenBuffers(NumBuffers, buffersIds_.data());
 		const ALenum error = alGetError();
-		ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
+		ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers() failed with error 0x%x", error);
 		memBuffer_ = std::make_unique<char[]>(BufferSize);
 	}
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
-	AudioStream::AudioStream(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*AudioStream::AudioStream(const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: AudioStream()
 	{
 		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
 		if (!hasLoaded) {
 			LOGE("Audio buffer cannot be loaded");
 		}
-	}
+	}*/
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
 	AudioStream::AudioStream(const StringView& filename)
@@ -157,7 +157,7 @@ namespace nCine
 		}
 	}
 
-	bool AudioStream::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*bool AudioStream::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferPtr, bufferSize);
 		if (!audioLoader->hasLoaded()) {
@@ -165,7 +165,7 @@ namespace nCine
 		}
 		createReader(*audioLoader);
 		return true;
-	}
+	}*/
 
 	bool AudioStream::loadFromFile(const StringView& filename)
 	{

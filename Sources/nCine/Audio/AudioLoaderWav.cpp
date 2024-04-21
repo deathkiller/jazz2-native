@@ -11,15 +11,14 @@ namespace nCine
 	AudioLoaderWav::AudioLoaderWav(std::unique_ptr<Stream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		LOGD("Loading \"%s\"", fileHandle_->GetPath().data());
-		RETURN_ASSERT_MSG(fileHandle_->IsValid(), "File \"%s\" cannot be opened", fileHandle_->GetPath().data());
+		RETURN_ASSERT(fileHandle_->IsValid());
 
 		WavHeader header;
 		fileHandle_->Read(&header, sizeof(WavHeader));
 
-		RETURN_ASSERT_MSG(strncmp(header.chunkId, "RIFF", 4) == 0 && strncmp(header.format, "WAVE", 4) == 0, "\"%s\" is not a WAV file", fileHandle_->GetPath().data());
-		RETURN_ASSERT_MSG(strncmp(header.subchunk1Id, "fmt ", 4) == 0, "\"%s\" is an invalid WAV file", fileHandle_->GetPath().data());
-		RETURN_ASSERT_MSG(Stream::Uint16FromLE(header.audioFormat) == 1, "Data in \"%s\" is not in PCM format", fileHandle_->GetPath().data());
+		RETURN_ASSERT_MSG(strncmp(header.chunkId, "RIFF", 4) == 0 && strncmp(header.format, "WAVE", 4) == 0, "Invalid a WAV file");
+		RETURN_ASSERT_MSG(strncmp(header.subchunk1Id, "fmt ", 4) == 0, "Invalid WAV file");
+		RETURN_ASSERT_MSG(Stream::Uint16FromLE(header.audioFormat) == 1, "Data is not in PCM format");
 
 		bytesPerSample_ = Stream::Uint16FromLE(header.bitsPerSample) / 8;
 		numChannels_ = Stream::Uint16FromLE(header.numChannels);

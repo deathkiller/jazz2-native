@@ -9,7 +9,6 @@ namespace Death { namespace IO {
 	MemoryStream::MemoryStream(std::int32_t initialCapacity)
 		: _seekOffset(0), _mode(AccessMode::Growable)
 	{
-		_type = Type::Memory;
 		_size = 0;
 
 		if (initialCapacity > 0) {
@@ -18,16 +17,14 @@ namespace Death { namespace IO {
 	}
 
 	MemoryStream::MemoryStream(std::uint8_t* bufferPtr, std::int32_t bufferSize)
-		: _buffer(bufferPtr, bufferSize, [](std::uint8_t* data, std::size_t size) { }), _seekOffset(0), _mode(AccessMode::Writable)
+		: _buffer(bufferPtr, bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::Writable)
 	{
-		_type = Type::Memory;
 		_size = bufferSize;
 	}
 
 	MemoryStream::MemoryStream(const std::uint8_t* bufferPtr, std::int32_t bufferSize)
-		: _buffer(const_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) { }), _seekOffset(0), _mode(AccessMode::ReadOnly)
+		: _buffer(const_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::ReadOnly)
 	{
-		_type = Type::Memory;
 		_size = bufferSize;
 	}
 
@@ -129,4 +126,5 @@ namespace Death { namespace IO {
 
 		return bytesFetched;
 	}
+
 }}

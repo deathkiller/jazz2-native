@@ -14,6 +14,7 @@
 
 #include "nCine/IAppEventHandler.h"
 #include "nCine/tracy.h"
+#include "nCine/Base/Timer.h"
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
@@ -63,6 +64,7 @@ using namespace Jazz2::Multiplayer;
 #include <Environment.h>
 #include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
+#include <IO/PakFile.h>
 
 #if !defined(DEATH_DEBUG)
 #	include <IO/HttpRequest.h>
@@ -153,6 +155,9 @@ private:
 #endif
 	bool SetLevelHandler(const LevelInitialization& levelInit);
 	void RemoveResumableStateIfAny();
+#if defined(DEATH_TARGET_ANDROID)
+	void ApplyActivityIcon();
+#endif
 	static void WriteCacheDescriptor(const StringView path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
@@ -268,6 +273,8 @@ void GameEventHandler::OnInit()
 		Thread::SetCurrentName("Parallel initialization");
 
 		auto handler = static_cast<GameEventHandler*>(arg);
+		ASSERT(handler != nullptr);
+
 		handler->InitializeBase();
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		// All required files are already included in Emscripten version, so nothing is verified
@@ -418,6 +425,10 @@ void GameEventHandler::OnShutdown()
 {
 	ZoneScopedC(0x888888);
 
+#if defined(DEATH_TARGET_ANDROID)
+	ApplyActivityIcon();
+#endif
+
 	_currentHandler = nullptr;
 #if defined(WITH_MULTIPLAYER)
 	_networkManager = nullptr;
@@ -433,6 +444,10 @@ void GameEventHandler::OnSuspend()
 		PreferencesCache::ResumeOnStart = true;
 		PreferencesCache::Save();
 	}
+#endif
+
+#if defined(DEATH_TARGET_ANDROID)
+	ApplyActivityIcon();
 #endif
 }
 
@@ -665,6 +680,26 @@ void GameEventHandler::RemoveResumableStateIfAny()
 	}
 }
 
+#if defined(DEATH_TARGET_ANDROID)
+void GameEventHandler::ApplyActivityIcon()
+{
+	if (PreferencesCache::EnableReforgedMainMenuInitial == PreferencesCache::EnableReforgedMainMenu) {
+		return;
+	}
+
+	PreferencesCache::EnableReforgedMainMenuInitial = PreferencesCache::EnableReforgedMainMenu;
+
+	// These calls will kill the app in a second, so it should be called only on exit
+	if (PreferencesCache::EnableReforgedMainMenu) {
+		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, true);
+		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, false);
+	} else {
+		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, true);
+		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, false);
+	}
+}
+#endif
+
 #if defined(WITH_MULTIPLAYER)
 bool GameEventHandler::ConnectToServer(const StringView address, std::uint16_t port)
 {
@@ -869,7 +904,7 @@ void GameEventHandler::RefreshCache()
 	constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, countof(NCINE_VERSION) - 1 });
 
 	auto& resolver = ContentResolver::Get();
-	auto cachePath = fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s });
+	auto cachePath = fs::CombinePath(resolver.GetCachePath(), "Source.idx"_s);
 
 	// Check cache state
 	{
@@ -946,18 +981,37 @@ RecreateCache:
 		}
 	}
 
+	// Delete cache from previous versions
 	String animationsPath = fs::CombinePath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
-	Compatibility::JJ2Version version = Compatibility::JJ2Anims::Convert(animsPath, animationsPath);
-	if (version == Compatibility::JJ2Version::Unknown) {
-		LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
-		_flags |= Flags::IsVerified;
-		return;
-	}
 
-	Compatibility::JJ2Data data;
-	if (data.Open(fs::CombinePath(resolver.GetSourcePath(), "Data.j2d"_s), false)) {
-		data.Convert(resolver.GetCachePath(), version);
+	// Create .pak file
+	{
+		std::int32_t t = 1;
+		std::unique_ptr<PakWriter> pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s));
+		while (!pakWriter->IsValid()) {
+			if (t > 5) {
+				LOGE("Cannot open \"…%sCache%sSource.pak\" file for writing! Please check if this file is accessible and try again.", fs::PathSeparator, fs::PathSeparator);
+				_flags |= Flags::IsVerified;
+				return;
+			}
+
+			pakWriter = nullptr;
+			Timer::sleep(t * 100);
+			pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s));
+		}
+
+		Compatibility::JJ2Version version = Compatibility::JJ2Anims::Convert(animsPath, *pakWriter);
+		if (version == Compatibility::JJ2Version::Unknown) {
+			LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
+			_flags |= Flags::IsVerified;
+			return;
+		}
+
+		Compatibility::JJ2Data data;
+		if (data.Open(fs::CombinePath(resolver.GetSourcePath(), "Data.j2d"_s), false)) {
+			data.Convert(*pakWriter, version);
+		}
 	}
 
 	RefreshCacheLevels();
@@ -968,6 +1022,8 @@ RecreateCache:
 
 	std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();
 	LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
+
+	resolver.RemountPaks();
 
 	_flags |= Flags::IsVerified | Flags::IsPlayable;
 }
@@ -1128,13 +1184,7 @@ void GameEventHandler::RefreshCacheLevels()
 
 	HashMap<String, bool> usedTilesets;
 
-	fs::Directory dir(fs::FindPathCaseInsensitive(resolver.GetSourcePath()), fs::EnumerationOptions::SkipDirectories);
-	while (true) {
-		StringView item = dir.GetNext();
-		if (item == nullptr) {
-			break;
-		}
-
+	for (auto item : fs::Directory(fs::FindPathCaseInsensitive(resolver.GetSourcePath()), fs::EnumerationOptions::SkipDirectories)) {
 		auto extension = fs::GetExtension(item);
 		if (extension == "j2e"_s || extension == "j2pe"_s) {
 			// Episode

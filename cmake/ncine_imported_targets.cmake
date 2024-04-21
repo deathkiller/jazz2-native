@@ -145,6 +145,7 @@ if(MSVC OR MINGW OR MSYS)
 		message(STATUS "MSVC libraries directory: ${EXTERNAL_MSVC_DIR}")
 	endif()
 
+    # TODO: Detect ARM64EC libraries
 	set(MSVC_ARCH_SUFFIX "x86")
 	if(MINGW OR MSYS)
 		if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64")

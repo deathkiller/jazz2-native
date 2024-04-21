@@ -3,6 +3,7 @@
 #include "../Base/Object.h"
 
 #include <Containers/StringView.h>
+#include <IO/Stream.h>
 
 using namespace Death::Containers;
 
@@ -16,20 +17,20 @@ namespace nCine
 	class AudioBuffer : public Object
 	{
 	public:
-		enum class Format
-		{
-			MONO8,
-			STEREO8,
-			MONO16,
-			STEREO16
+		enum class Format {
+			Mono8,
+			Stereo8,
+			Mono16,
+			Stereo16
 		};
 
 		/// Creates an OpenAL buffer name
 		AudioBuffer();
 		/// A constructor creating a buffer from memory
-		AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a buffer from a file
-		explicit AudioBuffer(const StringView& filename);
+		explicit AudioBuffer(const StringView filename);
+		AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename);
 		~AudioBuffer() override;
 
 		/// Move constructor
@@ -40,8 +41,9 @@ namespace nCine
 		/// Initializes an empty buffer with the specified format and frequency
 		void init(Format format, int frequency);
 
-		bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
-		bool loadFromFile(const StringView& filename);
+		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		bool loadFromFile(const StringView filename);
+		bool loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename);
 		/// Loads samples in raw PCM format from a memory buffer
 		bool loadFromSamples(const unsigned char* bufferPtr, unsigned long int bufferSize);
 

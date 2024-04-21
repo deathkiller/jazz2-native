@@ -105,6 +105,10 @@ namespace Jazz2
 		static bool EnableReforgedGameplay;
 		static bool EnableReforgedHUD;
 		static bool EnableReforgedMainMenu;
+#if defined(DEATH_TARGET_ANDROID)
+		// Used to swap Android activity icons on exit/suspend
+		static bool EnableReforgedMainMenuInitial;
+#endif
 		static bool EnableLedgeClimb;
 		static WeaponWheelStyle WeaponWheel;
 		static bool EnableRgbLights;

@@ -1,6 +1,7 @@
 package @NCINE_REVERSE_DNS@;
 
 import android.app.NativeActivity;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
@@ -127,6 +128,14 @@ public class LoadLibraries extends NativeActivity implements DisplayManager.Disp
 			} catch (Exception ignored2) {
 			}
 		}
+	}
+	
+	@Keep
+	public void setActivityEnabled(String activityName, boolean enable) {
+		 getPackageManager().setComponentEnabledSetting(
+			new ComponentName(this, BuildConfig.APPLICATION_ID + activityName), 
+			(enable ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED),
+			PackageManager.DONT_KILL_APP);
 	}
 
 	void setImmersiveSticky() {

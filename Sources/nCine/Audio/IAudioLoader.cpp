@@ -18,25 +18,28 @@ namespace nCine
 	IAudioLoader::IAudioLoader(std::unique_ptr<Stream> fileHandle)
 		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0L), duration_(0.0f)
 	{
-		// Warning: Cannot call a virtual `init()` here, in the base constructor
 	}
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*std::unique_ptr<IAudioLoader> IAudioLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		LOGI("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
+		// TODO: path cannot be null, otherwise InvalidAudioLoader will be created
+		//LOGI("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
 		return createLoader(fs::CreateFromMemory(bufferPtr, bufferSize), { });
+	}*/
+
+	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView path)
+	{
+		return createLoader(fs::Open(path, FileAccessMode::Read), path);
 	}
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView& filename)
+	std::unique_ptr<IAudioLoader> IAudioLoader::createFromStream(std::unique_ptr<Stream> fileHandle, const StringView path)
 	{
-		LOGD("Loading from file \"%s\"", filename.data());
-		// Creating a handle from IFile static method to detect assets file
-		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
+		return createLoader(std::move(fileHandle), path);
 	}
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView& filename)
+	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView path)
 	{
-		auto extension = fs::GetExtension(filename);
+		auto extension = fs::GetExtension(path);
 		if (extension == "wav"_s) {
 			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
 		}

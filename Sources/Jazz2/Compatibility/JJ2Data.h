@@ -7,8 +7,10 @@
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
+#include <IO/PakFile.h>
 
 using namespace Death::Containers;
+using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
@@ -29,10 +31,10 @@ namespace Jazz2::Compatibility
 		bool Open(const StringView path, bool strictParser);
 
 		void Extract(const StringView targetPath);
-		void Convert(const StringView targetPath, JJ2Version version);
+		void Convert(PakWriter& pakWriter, JJ2Version version);
 
 	private:
-		void ConvertSfxList(const Item& item, const StringView targetPath, AnimSetMapping& animMapping);
-		void ConvertMenuImage(const Item& item, const StringView targetPath, std::int32_t width, std::int32_t height);
+		void ConvertSfxList(const Item& item, PakWriter& pakWriter, const StringView targetPath, AnimSetMapping& animMapping);
+		void ConvertMenuImage(const Item& item, PakWriter& pakWriter, const StringView targetPath, std::int32_t width, std::int32_t height);
 	};
 }

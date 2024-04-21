@@ -68,6 +68,8 @@ option(NCINE_WITH_IMGUI "Enable integration with Dear ImGui" OFF)
 option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
 option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
 
+cmake_dependent_option(NCINE_COMPILE_OPENMPT "Compile libopenmpt from sources instead of using library" OFF "NCINE_WITH_OPENMPT" OFF)
+
 set(NCINE_DATA_DIR "${CMAKE_SOURCE_DIR}/Content" CACHE PATH "Set path to the game data directory")
 
 if(NCINE_WITH_RENDERDOC)

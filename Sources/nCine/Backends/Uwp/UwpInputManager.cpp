@@ -481,7 +481,7 @@ namespace nCine
 
 	unsigned char UwpJoystickState::hatState(int hatId) const
 	{
-		return (hatId >= 0 && hatId < MaxNumHats ? hatsState_[hatId] : HatState::CENTERED);
+		return (hatId >= 0 && hatId < MaxNumHats ? hatsState_[hatId] : HatState::Centered);
 	}
 
 	float UwpJoystickState::axisValue(int axisId) const

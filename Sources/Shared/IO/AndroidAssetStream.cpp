@@ -20,7 +20,6 @@ namespace Death { namespace IO {
 			_asset(nullptr)
 #endif
 	{
-		_type = Type::AndroidAsset;
 		_path = path;
 		Open(mode);
 	}
@@ -275,6 +274,7 @@ namespace Death { namespace IO {
 		_size = AAsset_getLength(_asset);
 #endif
 	}
+
 }}
 
 #endif

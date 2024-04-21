@@ -30,6 +30,10 @@ namespace Jazz2
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;
+#if defined(DEATH_TARGET_ANDROID)
+	// Used to swap Android activity icons on exit/suspend
+	bool PreferencesCache::EnableReforgedMainMenuInitial = true;
+#endif
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -173,6 +177,9 @@ namespace Jazz2
 						// These 2 new options needs to be enabled by default
 						EnableReforgedHUD = ((boolOptions & BoolOptions::EnableReforgedHUD) == BoolOptions::EnableReforgedHUD);
 						EnableReforgedMainMenu = ((boolOptions & BoolOptions::EnableReforgedMainMenu) == BoolOptions::EnableReforgedMainMenu);
+#if defined(DEATH_TARGET_ANDROID)
+						EnableReforgedMainMenuInitial = EnableReforgedMainMenu;
+#endif
 					}
 
 					if (WeaponWheel != WeaponWheelStyle::Disabled && (boolOptions & BoolOptions::ShowWeaponWheelAmmoCount) == BoolOptions::ShowWeaponWheelAmmoCount) {

@@ -36,6 +36,8 @@ namespace nCine
 	JoyAxisEvent AndroidInputManager::joyAxisEvent_;
 	JoyConnectionEvent AndroidInputManager::joyConnectionEvent_;
 	Timer AndroidInputManager::joyCheckTimer_;
+
+	// TODO: Implement new axis order - https://github.com/libsdl-org/SDL/commit/de3909a190f6e1a3f11776ce42927f99b0381675
 	const int AndroidJoystickState::AxesToMap[AndroidJoystickState::NumAxesToMap] = {
 		AMOTION_EVENT_AXIS_X, AMOTION_EVENT_AXIS_Y, AMOTION_EVENT_AXIS_Z,
 		AMOTION_EVENT_AXIS_RX, AMOTION_EVENT_AXIS_RY, AMOTION_EVENT_AXIS_RZ,
@@ -136,7 +138,7 @@ namespace nCine
 
 	unsigned char AndroidJoystickState::hatState(int hatId) const
 	{
-		return (hatId >= 0 && hatId < numHats_ ? hatState_ : HatState::CENTERED);
+		return (hatId >= 0 && hatId < numHats_ ? hatState_ : HatState::Centered);
 	}
 
 	float AndroidJoystickState::axisValue(int axisId) const
@@ -331,10 +333,10 @@ namespace nCine
 						unsigned char hatValue = 0;
 
 						switch (keyCode) {
-							case AKEYCODE_DPAD_UP: hatValue = HatState::UP; break;
-							case AKEYCODE_DPAD_DOWN: hatValue = HatState::DOWN; break;
-							case AKEYCODE_DPAD_LEFT: hatValue = HatState::LEFT; break;
-							case AKEYCODE_DPAD_RIGHT: hatValue = HatState::RIGHT; break;
+							case AKEYCODE_DPAD_UP: hatValue = HatState::Up; break;
+							case AKEYCODE_DPAD_DOWN: hatValue = HatState::Down; break;
+							case AKEYCODE_DPAD_LEFT: hatValue = HatState::Left; break;
+							case AKEYCODE_DPAD_RIGHT: hatValue = HatState::Right; break;
 						}
 						if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
 							hatState |= hatValue;
@@ -369,15 +371,15 @@ namespace nCine
 							constexpr float HatThresholdValue = 0.99f;
 							if (axis == AMOTION_EVENT_AXIS_HAT_X) {
 								if (axisValue > HatThresholdValue) {
-									hatState |= HatState::RIGHT;
+									hatState |= HatState::Right;
 								} else if (axisValue < -HatThresholdValue) {
-									hatState |= HatState::LEFT;
+									hatState |= HatState::Left;
 								}
 							} else {
 								if (axisValue > HatThresholdValue) {
-									hatState |= HatState::DOWN;
+									hatState |= HatState::Down;
 								} else if (axisValue < -HatThresholdValue) {
-									hatState |= HatState::UP;
+									hatState |= HatState::Up;
 								}
 							}
 						} else {
@@ -731,9 +733,9 @@ namespace nCine
 			}
 
 			constexpr ButtonName ButtonNames[maxButtons] = {
-				ButtonName::A, ButtonName::B, ButtonName::UNKNOWN, ButtonName::X, ButtonName::Y, ButtonName::UNKNOWN,
-				ButtonName::LBUMPER, ButtonName::RBUMPER, ButtonName::UNKNOWN, ButtonName::UNKNOWN, ButtonName::LSTICK,
-				ButtonName::RSTICK, ButtonName::START, ButtonName::BACK, ButtonName::GUIDE, ButtonName::BACK
+				ButtonName::A, ButtonName::B, ButtonName::Unknown, ButtonName::X, ButtonName::Y, ButtonName::Unknown,
+				ButtonName::LeftBumper, ButtonName::RightBumper, ButtonName::Unknown, ButtonName::Unknown, ButtonName::LeftStick,
+				ButtonName::RightStick, ButtonName::Start, ButtonName::Back, ButtonName::Guide, ButtonName::Back
 			};
 			constexpr int ButtonMasks[maxButtons] = {
 				(1 << 0), (1 << 1), (1 << 17), (1 << 2), (1 << 3), (1 << 18), (1 << 9), (1 << 10), (1 << 15),

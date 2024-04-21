@@ -89,14 +89,14 @@ namespace nCine
 	}
 
 	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
-	Texture::Texture(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*Texture::Texture(const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: Texture()
 	{
 		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
 		if (!hasLoaded) {
 			LOGE("Texture cannot be loaded");
 		}
-	}
+	}*/
 
 	Texture::Texture(const StringView& filename)
 		: Texture()
@@ -162,7 +162,7 @@ namespace nCine
 	}
 
 	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
-	bool Texture::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*bool Texture::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		ZoneScopedC(0x81A861);
 
@@ -184,7 +184,7 @@ namespace nCine
 		RenderStatistics::addTexture(dataSize_);
 #endif
 		return true;
-	}
+	}*/
 
 	bool Texture::loadFromFile(const StringView& filename)
 	{

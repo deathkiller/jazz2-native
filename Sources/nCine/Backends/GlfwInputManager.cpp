@@ -85,7 +85,7 @@ namespace nCine
 
 	unsigned char GlfwJoystickState::hatState(int hatId) const
 	{
-		return (hatId >= 0 && hatId < numHats_ ? hats_[hatId] : HatState::CENTERED);
+		return (hatId >= 0 && hatId < numHats_ ? hats_[hatId] : HatState::Centered);
 	}
 
 	float GlfwJoystickState::axisValue(int axisId) const

@@ -40,8 +40,6 @@ namespace nCine
 	AudioLoaderOgg::AudioLoaderOgg(std::unique_ptr<Stream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		LOGD("Loading \"%s\"", fileHandle_->GetPath().data());
-
 #if defined(WITH_VORBIS_DYNAMIC)
 		if (!AudioReaderOgg::TryLoadLibrary()) {
 			fileHandle_->Close();
@@ -53,7 +51,7 @@ namespace nCine
 		int result = ov_open_callbacks(fileHandle_.get(), &oggFile_, nullptr, 0, fileCallbacks);
 #endif
 		if (result != 0) {
-			LOGE("Cannot open \"%s\" with ov_open_callbacks()", fileHandle_->GetPath().data());
+			LOGE("ov_open_callbacks() failed with error %i", result);
 			fileHandle_->Close();
 			return;
 		}

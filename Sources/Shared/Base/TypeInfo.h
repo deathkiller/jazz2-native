@@ -259,7 +259,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}																									\
 	_DEATH_WARNING_POP
 
-/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by @ref DEATH_RTTI_OBJECT() */
+/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by @ref DEATH_RUNTIME_OBJECT() */
 template<typename T, typename U>
 DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
 	typedef typename std::remove_pointer<T>::type Derived;
@@ -292,7 +292,7 @@ DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
 /** @brief Class annotation to enable optimized @ref runtime_cast() functionality */
 #define DEATH_RUNTIME_OBJECT(...)
 
-/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by @ref DEATH_RTTI_OBJECT() */
+/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by @ref DEATH_RUNTIME_OBJECT() */
 template<typename T, typename U>
 DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
 	return dynamic_cast<T>(u);

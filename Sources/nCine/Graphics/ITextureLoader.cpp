@@ -59,22 +59,22 @@ namespace nCine
 		return pixels;
 	}
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*std::unique_ptr<ITextureLoader> ITextureLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		LOGI("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
+		// TODO: path cannot be null, otherwise InvalidAudioLoader will be created
+		//LOGI("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
 		return createLoader(fs::CreateFromMemory(bufferPtr, bufferSize), { });
+	}*/
+
+	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView path)
+	{
+		//LOGD("Loading from file \"%s\"", path.data());
+		return createLoader(fs::Open(path, FileAccessMode::Read), path);
 	}
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView& filename)
+	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView path)
 	{
-		LOGD("Loading from file \"%s\"", filename.data());
-		// Creating a handle from IFile static method to detect assets file
-		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
-	}
-
-	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView& filename)
-	{
-		auto extension = fs::GetExtension(filename);
+		auto extension = fs::GetExtension(path);
 		if (extension == "dds"_s) {
 			return std::make_unique<TextureLoaderDds>(std::move(fileHandle));
 		}
@@ -115,7 +115,6 @@ namespace nCine
 
 	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
 	{
-		LOGD("Loading \"%s\"", fileHandle_->GetPath().data());
 		if (type) { // overriding pixel type
 			texFormat_ = TextureFormat(internalFormat, type);
 		} else {

@@ -3,9 +3,31 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	Containers::StringView Stream::GetPath() const
+	std::int32_t Stream::CopyTo(Stream& targetStream)
 	{
-		return _path;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		constexpr std::int32_t BufferSize = 8192;
+#else
+		constexpr std::int32_t BufferSize = 16384;
+#endif
+
+		char buffer[BufferSize];
+		std::int32_t bytesWrittenTotal = 0;
+
+		while (true) {
+			std::int32_t bytesRead = Read(buffer, BufferSize);
+			if (bytesRead <= 0) {
+				break;
+			}
+
+			std::int32_t bytesWritten = targetStream.Write(buffer, bytesRead);
+			bytesWrittenTotal += bytesWritten;
+			if (bytesWritten < bytesRead) {
+				break;
+			}
+		}
+
+		return bytesWrittenTotal;
 	}
 
 	std::int32_t Stream::ReadVariableInt32()
@@ -22,34 +44,38 @@ namespace Death { namespace IO {
 
 	std::uint32_t Stream::ReadVariableUint32()
 	{
-		std::int32_t pos = GetPosition();
 		std::uint32_t result = 0;
 		std::uint32_t shift = 0;
-		while (pos < _size) {
-			std::uint8_t byte = ReadValue<std::uint8_t>();
-			result |= (byte & 0x7f) << shift;
+		while (true) {
+			std::uint8_t byte;
+			if (Read(&byte, 1) == 0) {
+				break;
+			}
+
+			result |= (std::uint32_t)(byte & 0x7f) << shift;
 			shift += 7;
 			if ((byte & 0x80) == 0) {
 				break;
 			}
-			pos++;
 		}
 		return result;
 	}
 
 	std::uint64_t Stream::ReadVariableUint64()
 	{
-		std::int32_t pos = GetPosition();
 		std::uint64_t result = 0;
 		std::uint64_t shift = 0;
-		while (pos < _size) {
-			std::uint8_t byte = ReadValue<std::uint8_t>();
-			result |= (byte & 0x7f) << shift;
+		while (true) {
+			std::uint8_t byte;
+			if (Read(&byte, 1) == 0) {
+				break;
+			}
+
+			result |= (std::uint64_t)(byte & 0x7f) << shift;
 			shift += 7;
 			if ((byte & 0x80) == 0) {
 				break;
 			}
-			pos++;
 		}
 		return result;
 	}
@@ -91,4 +117,5 @@ namespace Death { namespace IO {
 		WriteValue((std::uint8_t)valueLeft);
 		return bytesWritten;
 	}
+
 }}

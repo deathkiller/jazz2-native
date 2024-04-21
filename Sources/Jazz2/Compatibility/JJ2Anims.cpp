@@ -5,12 +5,14 @@
 
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
+#include <IO/FileStream.h>
+#include <IO/MemoryStream.h>
 
 using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	JJ2Version JJ2Anims::Convert(const StringView path, const StringView targetPath, bool isPlus)
+	JJ2Version JJ2Anims::Convert(const StringView path, PakWriter& pakWriter, bool isPlus)
 	{
 		JJ2Version version;
 		SmallVector<AnimSection, 0> anims;
@@ -283,13 +285,13 @@ namespace Jazz2::Compatibility
 			LOGE("Could not determine the version, header size: %u bytes", headerLen);
 		}
 
-		ImportAnimations(targetPath, version, anims);
-		ImportAudioSamples(targetPath, version, samples);
+		ImportAnimations(pakWriter, version, anims);
+		ImportAudioSamples(pakWriter, version, samples);
 
 		return version;
 	}
 
-	void JJ2Anims::ImportAnimations(const StringView targetPath, JJ2Version version, SmallVectorImpl<AnimSection>& anims)
+	void JJ2Anims::ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims)
 	{
 		if (anims.empty()) {
 			return;
@@ -356,15 +358,10 @@ namespace Jazz2::Compatibility
 
 			String filename;
 			if (entry->Name.empty()) {
-				/*filename = "s" + sample.Set + "_s" + sample.IdInSet + ".jri";
-				if (version == JJ2Version::PlusExtension) {
-					filename = "plus_" + filename;
-				}*/
 				ASSERT(!entry->Name.empty());
 				continue;
 			} else {
-				fs::CreateDirectories(fs::CombinePath(targetPath, entry->Category));
-				filename = fs::CombinePath(entry->Category, String(entry->Name + ".aura"_s));
+				filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".aura"_s) });
 			}
 
 			int32_t stride = sizeX * anim.FrameConfigurationX;
@@ -443,8 +440,11 @@ namespace Jazz2::Compatibility
 			}
 
 			// TODO: Use single channel instead
-			String fullPath = fs::CombinePath(targetPath, filename);
-			WriteImageToFile(fullPath, pixels.get(), sizeX, sizeY, 4, anim, entry);
+			MemoryStream so(16384);
+			WriteImageToStream(so, pixels.get(), sizeX, sizeY, 4, anim, entry);
+			so.Seek(0, SeekOrigin::Begin);
+			bool success = pakWriter.AddFile(so, filename);
+			ASSERT_MSG(success, "Cannot add file to .pak container");
 
 			/*if (!string.IsNullOrEmpty(data.Name) && !data.SkipNormalMap) {
 				PngWriter normalMap = NormalMapGenerator.FromSprite(img,
@@ -456,7 +456,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Anims::ImportAudioSamples(const StringView targetPath, JJ2Version version, SmallVectorImpl<SampleSection>& samples)
+	void JJ2Anims::ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples)
 	{
 		if (samples.empty()) {
 			return;
@@ -474,20 +474,13 @@ namespace Jazz2::Compatibility
 
 			String filename;
 			if (entry->Name.empty()) {
-				/*filename = "s" + sample.Set + "_s" + sample.IdInSet + ".wav";
-				if (version == JJ2Version::PlusExtension) {
-					filename = "plus_" + filename;
-				}*/
 				ASSERT(!entry->Name.empty());
 				continue;
 			} else {
-				fs::CreateDirectories(fs::CombinePath(targetPath, entry->Category));
-
-				filename = fs::CombinePath(entry->Category, String(entry->Name + ".wav"_s));
+				filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".wav"_s) });
 			}
 
-			auto so = fs::Open(fs::CombinePath(targetPath, filename), FileAccessMode::Write);
-			ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
+			MemoryStream so(16384);
 
 			// TODO: The modulo here essentially clips the sample to 8- or 16-bit.
 			// There are some samples (at least the Rapier random noise) that at least get reported as 24-bit
@@ -505,33 +498,41 @@ namespace Jazz2::Compatibility
 
 			// Create PCM wave file
 			// Main header
-			so->Write("RIFF", 4);
-			so->WriteValue<uint32_t>(36 + sample.DataSize - dataOffset); // File size
-			so->Write("WAVE", 4);
+			so.Write("RIFF", 4);
+			so.WriteValue<uint32_t>(36 + sample.DataSize - dataOffset); // File size
+			so.Write("WAVE", 4);
 
 			// Format header
-			so->Write("fmt ", 4);
-			so->WriteValue<uint32_t>(16); // Header remainder length
-			so->WriteValue<uint16_t>(1); // Format = PCM
-			so->WriteValue<uint16_t>(1); // Channels
-			so->WriteValue<uint32_t>(sample.SampleRate); // Sample rate
-			so->WriteValue<uint32_t>(sample.SampleRate * bytesPerSample); // Bytes per second
-			so->WriteValue<uint32_t>(bytesPerSample * 0x00080001);
+			so.Write("fmt ", 4);
+			so.WriteValue<uint32_t>(16); // Header remainder length
+			so.WriteValue<uint16_t>(1); // Format = PCM
+			so.WriteValue<uint16_t>(1); // Channels
+			so.WriteValue<uint32_t>(sample.SampleRate); // Sample rate
+			so.WriteValue<uint32_t>(sample.SampleRate * bytesPerSample); // Bytes per second
+			so.WriteValue<uint32_t>(bytesPerSample * 0x00080001);
 
 			// Payload
-			so->Write("data", 4);
-			so->WriteValue<uint32_t>(sample.DataSize - dataOffset); // Payload size
+			so.Write("data", 4);
+			so.WriteValue<uint32_t>(sample.DataSize - dataOffset); // Payload size
 			for (uint32_t k = dataOffset; k < sample.DataSize; k++) {
-				so->WriteValue<uint8_t>((bytesPerSample << 7) ^ sample.Data[k]);
+				so.WriteValue<uint8_t>((bytesPerSample << 7) ^ sample.Data[k]);
 			}
+
+			so.Seek(0, SeekOrigin::Begin);
+			bool success = pakWriter.AddFile(so, filename, true);
+			ASSERT_MSG(success, "Cannot add file to .pak container");
 		}
 	}
 
 	void JJ2Anims::WriteImageToFile(const StringView targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
-		auto so = fs::Open(targetPath, FileAccessMode::Write);
-		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
+		FileStream so(targetPath, FileAccessMode::Write);
+		ASSERT_MSG(so.IsValid(), "Cannot open file for writing");
+		WriteImageToStream(so, data, width, height, channelCount, anim, entry);
+	}
 
+	void JJ2Anims::WriteImageToStream(Stream& targetStream, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
+	{
 		uint8_t flags = 0x00;
 		if (entry != nullptr) {
 			flags |= 0x80;
@@ -550,50 +551,50 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		so->WriteValue<uint64_t>(0xB8EF8498E2BFBBEF);
-		so->WriteValue<uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+		targetStream.WriteValue<uint64_t>(0xB8EF8498E2BFBBEF);
+		targetStream.WriteValue<uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
 
-		so->WriteValue<uint8_t>(channelCount);
-		so->WriteValue<uint32_t>(width);
-		so->WriteValue<uint32_t>(height);
+		targetStream.WriteValue<uint8_t>(channelCount);
+		targetStream.WriteValue<uint32_t>(width);
+		targetStream.WriteValue<uint32_t>(height);
 
 		// Include Sprite extension
 		if (entry != nullptr) {
-			so->WriteValue<uint8_t>(anim.FrameConfigurationX);
-			so->WriteValue<uint8_t>(anim.FrameConfigurationY);
-			so->WriteValue<uint16_t>(anim.FrameCount);
-			so->WriteValue<uint16_t>((uint16_t)(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate));
+			targetStream.WriteValue<uint8_t>(anim.FrameConfigurationX);
+			targetStream.WriteValue<uint8_t>(anim.FrameConfigurationY);
+			targetStream.WriteValue<uint16_t>(anim.FrameCount);
+			targetStream.WriteValue<uint16_t>((uint16_t)(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate));
 
 			if (anim.NormalizedHotspotX != 0 || anim.NormalizedHotspotY != 0) {
-				so->WriteValue<uint16_t>(anim.NormalizedHotspotX + AddBorder);
-				so->WriteValue<uint16_t>(anim.NormalizedHotspotY + AddBorder);
+				targetStream.WriteValue<uint16_t>(anim.NormalizedHotspotX + AddBorder);
+				targetStream.WriteValue<uint16_t>(anim.NormalizedHotspotY + AddBorder);
 			} else {
-				so->WriteValue<uint16_t>(UINT16_MAX);
-				so->WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<uint16_t>(UINT16_MAX);
 			}
 			if (anim.Frames[0].ColdspotX != 0 || anim.Frames[0].ColdspotY != 0) {
-				so->WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder);
-				so->WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder);
+				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder);
+				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder);
 			} else {
-				so->WriteValue<uint16_t>(UINT16_MAX);
-				so->WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<uint16_t>(UINT16_MAX);
 			}
 			if (anim.Frames[0].GunspotX != 0 || anim.Frames[0].GunspotY != 0) {
-				so->WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder);
-				so->WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder);
+				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder);
+				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder);
 			} else {
-				so->WriteValue<uint16_t>(UINT16_MAX);
-				so->WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<uint16_t>(UINT16_MAX);
 			}
 
 			width *= anim.FrameConfigurationX;
 			height *= anim.FrameConfigurationY;
 		}
 
-		WriteImageToFileInternal(so, data, width, height, channelCount);
+		WriteImageContent(targetStream, data, width, height, channelCount);
 	}
 
-	void JJ2Anims::WriteImageToFileInternal(std::unique_ptr<Stream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
+	void JJ2Anims::WriteImageContent(Stream& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
 	{
 		typedef union {
 			struct {
@@ -640,21 +641,21 @@ namespace Jazz2::Compatibility
 			if (px.v == px_prev.v) {
 				run++;
 				if (run == 62 || px_pos == px_end) {
-					so->WriteValue<uint8_t>(QOI_OP_RUN | (run - 1));
+					so.WriteValue<uint8_t>(QOI_OP_RUN | (run - 1));
 					run = 0;
 				}
 			} else {
 				int index_pos;
 
 				if (run > 0) {
-					so->WriteValue<uint8_t>(QOI_OP_RUN | (run - 1));
+					so.WriteValue<uint8_t>(QOI_OP_RUN | (run - 1));
 					run = 0;
 				}
 
 				index_pos = QOI_COLOR_HASH(px) % 64;
 
 				if (index[index_pos].v == px.v) {
-					so->WriteValue<uint8_t>(QOI_OP_INDEX | index_pos);
+					so.WriteValue<uint8_t>(QOI_OP_INDEX | index_pos);
 				} else {
 					index[index_pos] = px;
 
@@ -671,26 +672,26 @@ namespace Jazz2::Compatibility
 							vg > -3 && vg < 2 &&
 							vb > -3 && vb < 2
 						) {
-							so->WriteValue<uint8_t>(QOI_OP_DIFF | (vr + 2) << 4 | (vg + 2) << 2 | (vb + 2));
+							so.WriteValue<uint8_t>(QOI_OP_DIFF | (vr + 2) << 4 | (vg + 2) << 2 | (vb + 2));
 						} else if (
 							vg_r >  -9 && vg_r < 8 &&
 							vg   > -33 && vg   < 32 &&
 							vg_b >  -9 && vg_b < 8
 						) {
-							so->WriteValue<uint8_t>(QOI_OP_LUMA | (vg + 32));
-							so->WriteValue<uint8_t>((vg_r + 8) << 4 | (vg_b + 8));
+							so.WriteValue<uint8_t>(QOI_OP_LUMA | (vg + 32));
+							so.WriteValue<uint8_t>((vg_r + 8) << 4 | (vg_b + 8));
 						} else {
-							so->WriteValue<uint8_t>(QOI_OP_RGB);
-							so->WriteValue<uint8_t>(px.rgba.r);
-							so->WriteValue<uint8_t>(px.rgba.g);
-							so->WriteValue<uint8_t>(px.rgba.b);
+							so.WriteValue<uint8_t>(QOI_OP_RGB);
+							so.WriteValue<uint8_t>(px.rgba.r);
+							so.WriteValue<uint8_t>(px.rgba.g);
+							so.WriteValue<uint8_t>(px.rgba.b);
 						}
 					} else {
-						so->WriteValue<uint8_t>(QOI_OP_RGBA);
-						so->WriteValue<uint8_t>(px.rgba.r);
-						so->WriteValue<uint8_t>(px.rgba.g);
-						so->WriteValue<uint8_t>(px.rgba.b);
-						so->WriteValue<uint8_t>(px.rgba.a);
+						so.WriteValue<uint8_t>(QOI_OP_RGBA);
+						so.WriteValue<uint8_t>(px.rgba.r);
+						so.WriteValue<uint8_t>(px.rgba.g);
+						so.WriteValue<uint8_t>(px.rgba.b);
+						so.WriteValue<uint8_t>(px.rgba.a);
 					}
 				}
 			}

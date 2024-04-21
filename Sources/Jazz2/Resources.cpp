@@ -16,8 +16,8 @@ namespace Jazz2
 		return State < p.State;
 	}
 
-	GenericSoundResource::GenericSoundResource(const StringView& path) noexcept
-		: Buffer(path), Flags(GenericSoundResourceFlags::None)
+	GenericSoundResource::GenericSoundResource(std::unique_ptr<Stream> stream, const StringView filename) noexcept
+		: Buffer(std::move(stream), filename), Flags(GenericSoundResourceFlags::None)
 	{
 	}
 

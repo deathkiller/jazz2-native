@@ -12,8 +12,10 @@
 
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
+#include <IO/Stream.h>
 
 using namespace Death::Containers;
+using namespace Death::IO;
 using namespace nCine;
 
 namespace Jazz2
@@ -72,7 +74,7 @@ namespace Jazz2
 		AudioBuffer Buffer;
 		GenericSoundResourceFlags Flags;
 
-		GenericSoundResource(const StringView& path) noexcept;
+		GenericSoundResource(std::unique_ptr<Stream> stream, const StringView filename) noexcept;
 	};
 
 	struct SoundResource

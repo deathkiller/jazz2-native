@@ -58,7 +58,7 @@ namespace nCine
 				for (uint32_t i = 0, j = 0; i < sizeof(data); i++) {
 					component[0] = string[j++];
 					component[1] = string[j++];
-					data[i] = std::strtoul(component, nullptr, 16);
+					data[i] = (std::uint8_t)std::strtoul(component, nullptr, 16);
 				}
 			}
 		}

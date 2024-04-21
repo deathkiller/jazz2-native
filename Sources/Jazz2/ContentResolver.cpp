@@ -273,6 +273,76 @@ namespace Jazz2
 		}
 		_contentPath = "Content\\"_s;
 #endif
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		RemountPaks();
+#endif
+	}
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+	void ContentResolver::RemountPaks()
+	{
+		// Unload all already loaded .paks
+		_mountedPaks.clear();
+
+		// Load all .paks from `Content` and `Cache` directory
+		for (auto item : fs::Directory(GetContentPath(), fs::EnumerationOptions::SkipDirectories)) {
+			auto extension = fs::GetExtension(item);
+			if (extension != "pak"_s) {
+				continue;
+			}
+
+			auto& pak = _mountedPaks.emplace_back(std::make_unique<PakFile>(item));
+			if (pak->IsValid()) {
+				LOGI("File \"%s\" mounted successfully", item.data());
+			} else {
+				LOGE("Failed to mount file \"%s\"", item.data());
+				_mountedPaks.pop_back();
+			}
+		}
+
+		for (auto item : fs::Directory(GetCachePath(), fs::EnumerationOptions::SkipDirectories)) {
+			auto extension = fs::GetExtension(item);
+			if (extension != "pak"_s) {
+				continue;
+			}
+
+			auto& pak = _mountedPaks.emplace_back(std::make_unique<PakFile>(item));
+			if (pak->IsValid()) {
+				LOGI("File \"%s\" mounted successfully", item.data());
+			} else {
+				LOGE("Failed to mount file \"%s\"", item.data());
+				_mountedPaks.pop_back();
+			}
+		}
+	}
+#endif
+
+	std::unique_ptr<Stream> ContentResolver::OpenContentFile(StringView path)
+	{
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// Search .paks first, then Content directory and Cache directory
+		for (std::size_t i = 0; i < _mountedPaks.size(); i++) {
+			auto mountPoint = _mountedPaks[i]->GetMountPoint();
+			if (path.hasPrefix(mountPoint)) {
+				auto packedFile = _mountedPaks[i]->OpenFile(path.exceptPrefix(mountPoint.size()));
+				if (packedFile != nullptr && packedFile->IsValid()) {
+					return packedFile;
+				}
+			}
+		}
+#endif
+
+		String fullPath = fs::CombinePath(GetContentPath(), path);
+		if (fs::IsReadableFile(fullPath)) {
+			auto realFile = fs::Open(fullPath, FileAccessMode::Read);
+			if (realFile->IsValid()) {
+				return realFile;
+			}
+		}
+
+		fullPath = fs::CombinePath(GetCachePath(), path);
+		return fs::Open(fullPath, FileAccessMode::Read);
 	}
 
 	void ContentResolver::BeginLoading()
@@ -542,14 +612,8 @@ namespace Jazz2
 									it->second->Flags |= GenericSoundResourceFlags::Referenced;
 									sound.Buffers.emplace_back(it->second.get());
 								} else {
-									String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, assetPathNormalized });
-									if (!fs::IsReadableFile(fullPath)) {
-										fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, assetPathNormalized });
-										if (!fs::IsReadableFile(fullPath)) {
-											continue;
-										}
-									}
-									auto res = _cachedSounds.emplace(assetPathNormalized, std::make_unique<GenericSoundResource>(fullPath));
+									auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPathNormalized));
+									auto res = _cachedSounds.emplace(assetPathNormalized, std::make_unique<GenericSoundResource>(std::move(s), assetPathNormalized));
 									res.first->second->Flags |= GenericSoundResourceFlags::Referenced;
 									sound.Buffers.emplace_back(res.first->second.get());
 								}
@@ -690,13 +754,8 @@ namespace Jazz2
 
 	GenericGraphicResource* ContentResolver::RequestGraphicsAura(const StringView path, uint16_t paletteOffset)
 	{
-		// Try "Content" directory first, then "Cache" directory
-		String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path });
-		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, path });
-		}
+		auto s = OpenContentFile(fs::CombinePath("Animations"_s, path));
 
-		auto s = fs::Open(fullPath, FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 16 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -771,7 +830,7 @@ namespace Jazz2
 
 		if (!_isHeadless) {
 			// Don't load textures in headless mode, only collision masks
-			graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
+			graphics->TextureDiffuse = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, width, height);
 			graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
 			graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 			graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
@@ -1700,7 +1759,7 @@ namespace Jazz2
 					so->WriteValue<std::uint16_t>(UINT16_MAX);
 				}
 
-				Compatibility::JJ2Anims::WriteImageToFileInternal(so, texLoader->pixels(), w, h, 4);
+				Compatibility::JJ2Anims::WriteImageContent(*so, texLoader->pixels(), w, h, 4);
 			}
 		}
 	}

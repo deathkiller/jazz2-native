@@ -214,6 +214,7 @@ namespace nCine
 		static String getPreferredLanguage();
 		static bool hasExternalStoragePermission();
 		static void requestExternalStoragePermission();
+		static void setActivityEnabled(StringView activity, bool enable);
 
 	private:
 		static jobject activityObject_;
@@ -221,6 +222,7 @@ namespace nCine
 		static jmethodID midGetPreferredLanguage_;
 		static jmethodID midHasExternalStoragePermission_;
 		static jmethodID midRequestExternalStoragePermission_;
+		static jmethodID midSetActivityEnabled_;
 	};
 
 	/// A class to handle JNI requests to `android.view.inputmethod.InputMethodManager`

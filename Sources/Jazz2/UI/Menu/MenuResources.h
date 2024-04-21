@@ -59,12 +59,12 @@ namespace Jazz2::UI::Menu::Resources
 	inline AnimState GetResourceForAxisName(AxisName axis, Containers::StringView& axisName)
 	{
 		switch (axis) {
-			case AxisName::LX: axisName = "X"_s; return GamepadLeftStick; break;
-			case AxisName::LY: axisName = "Y"_s; return GamepadLeftStick; break;
-			case AxisName::RX: axisName = "X"_s; return GamepadRightStick; break;
-			case AxisName::RY: axisName = "Y"_s; return GamepadRightStick; break;
-			case AxisName::LTRIGGER: return GamepadLeftTrigger; break;
-			case AxisName::RTRIGGER: return GamepadRightTrigger; break;
+			case AxisName::LeftX: axisName = "X"_s; return GamepadLeftStick; break;
+			case AxisName::LeftY: axisName = "Y"_s; return GamepadLeftStick; break;
+			case AxisName::RightX: axisName = "X"_s; return GamepadRightStick; break;
+			case AxisName::RightY: axisName = "Y"_s; return GamepadRightStick; break;
+			case AxisName::LeftTrigger: return GamepadLeftTrigger; break;
+			case AxisName::RightTrigger: return GamepadRightTrigger; break;
 			default: return AnimState::Default; break;
 		}
 	}
@@ -77,18 +77,18 @@ namespace Jazz2::UI::Menu::Resources
 			case ButtonName::B: return alt ? GamepadAltB : GamepadB; break;
 			case ButtonName::X: return alt ? GamepadAltX : GamepadX; break;
 			case ButtonName::Y: return alt ? GamepadAltY : GamepadY; break;
-			case ButtonName::BACK: return alt ? GamepadAltBack : GamepadBack; break;
-			case ButtonName::GUIDE: return alt ? GamepadAltGuide : GamepadGuide; break;
-			case ButtonName::START: return alt ? GamepadAltStart : GamepadStart; break;
-			case ButtonName::LSTICK: return GamepadLeftStick; break;
-			case ButtonName::RSTICK: return GamepadRightStick; break;
-			case ButtonName::LBUMPER: return GamepadLeftShoulder; break;
-			case ButtonName::RBUMPER: return GamepadRightShoulder; break;
-			case ButtonName::DPAD_UP: return alt ? GamepadAltDPadUp : GamepadDPadUp; break;
-			case ButtonName::DPAD_DOWN: return alt ? GamepadAltDPadDown : GamepadDPadDown; break;
-			case ButtonName::DPAD_LEFT: return alt ? GamepadAltDPadLeft : GamepadDPadLeft; break;
-			case ButtonName::DPAD_RIGHT: return alt ? GamepadAltDPadRight : GamepadDPadRight; break;
-			case ButtonName::MISC1: return GamepadAltMisc1; break;
+			case ButtonName::Back: return alt ? GamepadAltBack : GamepadBack; break;
+			case ButtonName::Guide: return alt ? GamepadAltGuide : GamepadGuide; break;
+			case ButtonName::Start: return alt ? GamepadAltStart : GamepadStart; break;
+			case ButtonName::LeftStick: return GamepadLeftStick; break;
+			case ButtonName::RightStick: return GamepadRightStick; break;
+			case ButtonName::LeftBumper: return GamepadLeftShoulder; break;
+			case ButtonName::RightBumper: return GamepadRightShoulder; break;
+			case ButtonName::Up: return alt ? GamepadAltDPadUp : GamepadDPadUp; break;
+			case ButtonName::Down: return alt ? GamepadAltDPadDown : GamepadDPadDown; break;
+			case ButtonName::Left: return alt ? GamepadAltDPadLeft : GamepadDPadLeft; break;
+			case ButtonName::Right: return alt ? GamepadAltDPadRight : GamepadDPadRight; break;
+			case ButtonName::Misc1: return GamepadAltMisc1; break;
 			default: return AnimState::Default; break;
 		}
 	}

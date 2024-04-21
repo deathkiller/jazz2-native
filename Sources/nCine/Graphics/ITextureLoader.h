@@ -3,6 +3,7 @@
 #include "TextureFormat.h"
 #include "../Primitives/Vector2.h"
 
+#include <Containers/StringView.h>
 #include <IO/Stream.h>
 
 namespace nCine
@@ -52,9 +53,9 @@ namespace nCine
 		const GLubyte* pixels(unsigned int mipMapLevel) const;
 
 		/// Returns the proper texture loader according to the memory buffer name extension
-		static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper texture loader according to the file extension
-		static std::unique_ptr<ITextureLoader> createFromFile(const Death::Containers::StringView& filename);
+		static std::unique_ptr<ITextureLoader> createFromFile(const Death::Containers::StringView filename);
 
 	protected:
 		/// A flag indicating if the loading process has been successful
@@ -76,7 +77,7 @@ namespace nCine
 		ITextureLoader();
 		explicit ITextureLoader(std::unique_ptr<Death::IO::Stream> fileHandle);
 
-		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView& filename);
+		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
 		/// Loads pixel data from a texture file holding either compressed or uncompressed data
 		void loadPixels(GLenum internalFormat);
 		/// Loads pixel data from a texture file holding either compressed or uncompressed data, overriding pixel type

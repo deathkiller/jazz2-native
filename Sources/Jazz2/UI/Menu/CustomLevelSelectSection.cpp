@@ -277,32 +277,18 @@ namespace Jazz2::UI::Menu
 		auto& resolver = ContentResolver::Get();
 
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
-		fs::Directory dir(fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
-		while (_selectedIndex >= 0) {
-			StringView item = dir.GetNext();
-			if (item == nullptr) {
-				break;
+		for (auto item : fs::Directory(fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories)) {
+			if (_selectedIndex < 0) {
+				return;
 			}
-
 			AddLevel(item);
 		}
 
-		if (_selectedIndex < 0) {
-			return;
-		}
-
-		fs::Directory dirCache(fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
-		while (_selectedIndex >= 0) {
-			StringView item = dirCache.GetNext();
-			if (item == nullptr) {
-				break;
+		for (auto item : fs::Directory(fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories)) {
+			if (_selectedIndex < 0) {
+				return;
 			}
-
 			AddLevel(item);
-		}
-
-		if (_selectedIndex < 0) {
-			return;
 		}
 
 		sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {

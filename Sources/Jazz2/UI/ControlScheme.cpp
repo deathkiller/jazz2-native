@@ -8,40 +8,40 @@ namespace Jazz2::UI
 	void ControlScheme::Reset()
 	{
 		// Set default mappings
-		_mappings[(std::int32_t)PlayerActions::Left].Targets.push_back(CreateTarget(KeySym::LEFT));
-		_mappings[(std::int32_t)PlayerActions::Left].Targets.push_back(CreateTarget(0, ButtonName::DPAD_LEFT));
-		_mappings[(std::int32_t)PlayerActions::Left].Targets.push_back(CreateTarget(0, AxisName::LX, true));
-		_mappings[(std::int32_t)PlayerActions::Right].Targets.push_back(CreateTarget(KeySym::RIGHT));
-		_mappings[(std::int32_t)PlayerActions::Right].Targets.push_back(CreateTarget(0, ButtonName::DPAD_RIGHT));
-		_mappings[(std::int32_t)PlayerActions::Right].Targets.push_back(CreateTarget(0, AxisName::LX));
-		_mappings[(std::int32_t)PlayerActions::Up].Targets.push_back(CreateTarget(KeySym::UP));
-		_mappings[(std::int32_t)PlayerActions::Up].Targets.push_back(CreateTarget(0, ButtonName::DPAD_UP));
-		_mappings[(std::int32_t)PlayerActions::Up].Targets.push_back(CreateTarget(0, AxisName::LY, true));
-		_mappings[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(KeySym::DOWN));
-		_mappings[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(0, ButtonName::DPAD_DOWN));
-		_mappings[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(0, AxisName::LY));
+		_mappings[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(KeySym::LEFT));
+		_mappings[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(0, ButtonName::Left));
+		_mappings[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(0, AxisName::LeftX, true));
+		_mappings[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(KeySym::RIGHT));
+		_mappings[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(0, ButtonName::Right));
+		_mappings[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(0, AxisName::LeftX));
+		_mappings[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(KeySym::UP));
+		_mappings[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(0, ButtonName::Up));
+		_mappings[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(0, AxisName::LeftY, true));
+		_mappings[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(KeySym::DOWN));
+		_mappings[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(0, ButtonName::Down));
+		_mappings[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(0, AxisName::LeftY));
 
-		_mappings[(std::int32_t)PlayerActions::Fire].Targets.push_back(CreateTarget(KeySym::SPACE));
-		_mappings[(std::int32_t)PlayerActions::Fire].Targets.push_back(CreateTarget(0, ButtonName::X));
-		_mappings[(std::int32_t)PlayerActions::Jump].Targets.push_back(CreateTarget(KeySym::V));
-		_mappings[(std::int32_t)PlayerActions::Jump].Targets.push_back(CreateTarget(0, ButtonName::A));
-		_mappings[(std::int32_t)PlayerActions::Run].Targets.push_back(CreateTarget(KeySym::C));
-		_mappings[(std::int32_t)PlayerActions::Run].Targets.push_back(CreateTarget(0, ButtonName::B));
-		_mappings[(std::int32_t)PlayerActions::ChangeWeapon].Targets.push_back(CreateTarget(KeySym::X));
-		_mappings[(std::int32_t)PlayerActions::ChangeWeapon].Targets.push_back(CreateTarget(0, ButtonName::Y));
-		_mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(CreateTarget(KeySym::ESCAPE));
-		_mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(CreateTarget(0, ButtonName::START));
+		_mappings[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(KeySym::SPACE));
+		_mappings[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(0, ButtonName::X));
+		_mappings[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::V));
+		_mappings[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(0, ButtonName::A));
+		_mappings[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(KeySym::C));
+		_mappings[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(0, ButtonName::B));
+		_mappings[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::X));
+		_mappings[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(0, ButtonName::Y));
+		_mappings[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(KeySym::ESCAPE));
+		_mappings[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(0, ButtonName::Start));
 
-		_mappings[(std::int32_t)PlayerActions::SwitchToBlaster].Targets.push_back(CreateTarget(KeySym::N1));
-		_mappings[(std::int32_t)PlayerActions::SwitchToBouncer].Targets.push_back(CreateTarget(KeySym::N2));
-		_mappings[(std::int32_t)PlayerActions::SwitchToFreezer].Targets.push_back(CreateTarget(KeySym::N3));
-		_mappings[(std::int32_t)PlayerActions::SwitchToSeeker].Targets.push_back(CreateTarget(KeySym::N4));
-		_mappings[(std::int32_t)PlayerActions::SwitchToRF].Targets.push_back(CreateTarget(KeySym::N5));
-		_mappings[(std::int32_t)PlayerActions::SwitchToToaster].Targets.push_back(CreateTarget(KeySym::N6));
-		_mappings[(std::int32_t)PlayerActions::SwitchToTNT].Targets.push_back(CreateTarget(KeySym::N7));
-		_mappings[(std::int32_t)PlayerActions::SwitchToPepper].Targets.push_back(CreateTarget(KeySym::N8));
-		_mappings[(std::int32_t)PlayerActions::SwitchToElectro].Targets.push_back(CreateTarget(KeySym::N9));
-		_mappings[(std::int32_t)PlayerActions::SwitchToThunderbolt].Targets.push_back(CreateTarget(KeySym::N0));
+		_mappings[(std::int32_t)PlayerActions::SwitchToBlaster].Targets.emplace_back(CreateTarget(KeySym::N1));
+		_mappings[(std::int32_t)PlayerActions::SwitchToBouncer].Targets.emplace_back(CreateTarget(KeySym::N2));
+		_mappings[(std::int32_t)PlayerActions::SwitchToFreezer].Targets.emplace_back(CreateTarget(KeySym::N3));
+		_mappings[(std::int32_t)PlayerActions::SwitchToSeeker].Targets.emplace_back(CreateTarget(KeySym::N4));
+		_mappings[(std::int32_t)PlayerActions::SwitchToRF].Targets.emplace_back(CreateTarget(KeySym::N5));
+		_mappings[(std::int32_t)PlayerActions::SwitchToToaster].Targets.emplace_back(CreateTarget(KeySym::N6));
+		_mappings[(std::int32_t)PlayerActions::SwitchToTNT].Targets.emplace_back(CreateTarget(KeySym::N7));
+		_mappings[(std::int32_t)PlayerActions::SwitchToPepper].Targets.emplace_back(CreateTarget(KeySym::N8));
+		_mappings[(std::int32_t)PlayerActions::SwitchToElectro].Targets.emplace_back(CreateTarget(KeySym::N9));
+		_mappings[(std::int32_t)PlayerActions::SwitchToThunderbolt].Targets.emplace_back(CreateTarget(KeySym::N0));
 	}
 
 	ProcessedInput ControlScheme::FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons)
@@ -184,7 +184,7 @@ namespace Jazz2::UI
 									isPressed = (joyStates[joyIdx]->isButtonPressed(ButtonName::A) || joyStates[joyIdx]->isButtonPressed(ButtonName::X));
 									break;
 								case PlayerActions::Menu:
-									isPressed = (joyStates[joyIdx]->isButtonPressed(ButtonName::B) || joyStates[joyIdx]->isButtonPressed(ButtonName::START));
+									isPressed = (joyStates[joyIdx]->isButtonPressed(ButtonName::B) || joyStates[joyIdx]->isButtonPressed(ButtonName::Start));
 									break;
 								case PlayerActions::ChangeWeapon:
 									isPressed = (joyStates[joyIdx]->isButtonPressed(ButtonName::Y));
