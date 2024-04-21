@@ -80,7 +80,7 @@ namespace Death { namespace IO {
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(EnumerationOptions);
 
-//		/** @brief The class that handles directory traversal, should be used as iterator */
+		/** @brief The class that handles directory traversal, should be used as iterator */
 		class Directory
 		{
 		public:

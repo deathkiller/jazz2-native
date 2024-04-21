@@ -22,19 +22,19 @@ namespace nCine
 
 #if defined(DEATH_TARGET_ANDROID)
 		constexpr AxisName AndroidAxisNameMapping[] = {
-			AxisName::LX,
-			AxisName::LY,
-			AxisName::RX,
-			AxisName::RY,
-			AxisName::LTRIGGER,
-			AxisName::RTRIGGER
+			AxisName::LeftX,
+			AxisName::LeftY,
+			AxisName::RightX,
+			AxisName::RightY,
+			AxisName::LeftTrigger,
+			AxisName::RightTrigger
 		};
 
 		constexpr ButtonName AndroidDpadButtonNameMapping[] = {
-			ButtonName::DPAD_UP,
-			ButtonName::DPAD_RIGHT,
-			ButtonName::DPAD_DOWN,
-			ButtonName::DPAD_LEFT
+			ButtonName::Up,
+			ButtonName::Right,
+			ButtonName::Down,
+			ButtonName::Left
 		};
 #endif
 
@@ -460,12 +460,12 @@ namespace nCine
 				mapping.desc.axes[i].max = 1.0f;
 			}
 
-			constexpr int AndroidButtonCount = (int)ButtonName::MISC1;
+			constexpr int AndroidButtonCount = (int)ButtonName::Misc1;
 			for (int i = 0; i < AndroidButtonCount; i++) {
 				mapping.desc.buttons[i] = (ButtonName)i;
 			}
 			for (int i = AndroidButtonCount; i < countof(mapping.desc.buttons); i++) {
-				mapping.desc.buttons[i] = ButtonName::UNKNOWN;
+				mapping.desc.buttons[i] = ButtonName::Unknown;
 			}
 
 			for (int i = 0; i < countof(AndroidDpadButtonNameMapping); i++) {
