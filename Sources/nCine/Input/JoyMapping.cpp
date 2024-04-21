@@ -439,7 +439,7 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 		// Never search by name on Android, it can lead to wrong mapping
 		if (!mapping.isValid) {
-			auto joyNameLower = StringUtils::lowercase(joyName);
+			auto joyNameLower = StringUtils::lowercase(StringView(joyName));
 			// Don't assign Android default mapping to internal NVIDIA Shield devices, WSA devices and mice (detected as gamepads)
 			if (joyNameLower == "virtual-search"_s || joyNameLower == "shield-ask-remote"_s || joyNameLower == "virtual_keyboard"_s || joyNameLower.contains("mouse"_s)) {
 				return false;
@@ -488,7 +488,7 @@ namespace nCine
 #	if defined(DEATH_TARGET_UNIX)
 			// Keyboards, mice and touchpads (SynPS/2 Synaptics TouchPad), and also VMware virtual devices on Linux/BSD
 			// are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
-			auto joyNameLower = StringUtils::lowercase(joyName);
+			auto joyNameLower = StringUtils::lowercase(StringView(joyName));
 			if (joyNameLower.contains("keyboard"_s) || joyNameLower.contains("mouse"_s) ||
 				(joyNameLower.contains("razer "_s) && joyNameLower.contains("deathadder"_s)) ||
 				(joyNameLower == "synps/2 synaptics touchpad"_s) ||
