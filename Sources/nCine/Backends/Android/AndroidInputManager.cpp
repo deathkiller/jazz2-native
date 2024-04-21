@@ -48,7 +48,7 @@ namespace nCine
 
 	AndroidJoystickState::AndroidJoystickState()
 		: deviceId_(-1), numButtons_(0), numAxes_(0), numAxesMapped_(0),
-			hasDPad_(false), hasHatAxes_(false), hatState_(HatState::CENTERED)
+			hasDPad_(false), hasHatAxes_(false), hatState_(HatState::Centered)
 	{
 		name_[0] = '\0';
 		for (int i = 0; i < MaxButtons; i++) {
