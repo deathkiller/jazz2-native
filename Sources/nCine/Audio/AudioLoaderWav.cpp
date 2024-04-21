@@ -16,8 +16,8 @@ namespace nCine
 		WavHeader header;
 		fileHandle_->Read(&header, sizeof(WavHeader));
 
-		RETURN_ASSERT_MSG(strncmp(header.chunkId, "RIFF", 4) == 0 && strncmp(header.format, "WAVE", 4) == 0, "Invalid a WAV file");
-		RETURN_ASSERT_MSG(strncmp(header.subchunk1Id, "fmt ", 4) == 0, "Invalid WAV file");
+		RETURN_ASSERT_MSG(strncmp(header.chunkId, "RIFF", 4) == 0 && strncmp(header.format, "WAVE", 4) == 0, "Invalid WAV signature");
+		RETURN_ASSERT_MSG(strncmp(header.subchunk1Id, "fmt ", 4) == 0, "Invalid WAV signature");
 		RETURN_ASSERT_MSG(Stream::Uint16FromLE(header.audioFormat) == 1, "Data is not in PCM format");
 
 		bytesPerSample_ = Stream::Uint16FromLE(header.bitsPerSample) / 8;
