@@ -132,10 +132,12 @@ public class LoadLibraries extends NativeActivity implements DisplayManager.Disp
 	
 	@Keep
 	public void setActivityEnabled(String activityName, boolean enable) {
-		 getPackageManager().setComponentEnabledSetting(
+		Log.i("jazz2", "JAVA - setActivityEnabled(" + BuildConfig.APPLICATION_ID + activityName + ") called");
+		getPackageManager().setComponentEnabledSetting(
 			new ComponentName(this, BuildConfig.APPLICATION_ID + activityName), 
 			(enable ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED),
 			PackageManager.DONT_KILL_APP);
+		Log.i("jazz2", "JAVA - setActivityEnabled(" + BuildConfig.APPLICATION_ID + activityName + ") called - END");
 	}
 
 	void setImmersiveSticky() {

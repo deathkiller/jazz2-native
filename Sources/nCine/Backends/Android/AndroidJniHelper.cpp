@@ -603,9 +603,13 @@ namespace nCine
 			return;
 		}
 		
+		LOGI("Called setActivityEnabled() - BEGIN");
+		
 		jboolean boolEnable = enable;
 		AndroidJniHelper::jniEnv->CallVoidMethod(activityObject_, midSetActivityEnabled_, strName, boolEnable);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strName);
+		
+		LOGI("Called setActivityEnabled() - END");
 	}
 	
 	// ------------------- AndroidJniWrap_InputMethodManager -------------------

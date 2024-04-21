@@ -618,6 +618,8 @@ void GameEventHandler::ResumeSavedState()
 	InvokeAsync([this]() {
 		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
 
+		LOGI("Resuming saved state...");
+
 		auto configDir = PreferencesCache::GetDirectory();
 		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccessMode::Read);
 		if (s->IsValid()) {
@@ -691,9 +693,11 @@ void GameEventHandler::ApplyActivityIcon()
 
 	// These calls will kill the app in a second, so it should be called only on exit
 	if (PreferencesCache::EnableReforgedMainMenu) {
+		LOGI("Changed activity icon to Reforged");
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, true);
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, false);
 	} else {
+		LOGI("Changed activity icon to Legacy");
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, true);
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, false);
 	}
