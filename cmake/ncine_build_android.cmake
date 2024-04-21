@@ -218,11 +218,13 @@ file(COPY android/app/src/main/cpp/CMakeLists.txt DESTINATION android/app/src/ma
 #file(COPY android/app/src/main/res/values/strings.xml DESTINATION android/app/src/main/res/values)
 
 file(COPY android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml DESTINATION android/app/src/main/res/mipmap-anydpi-v26)
+file(COPY android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_alt.xml DESTINATION android/app/src/main/res/mipmap-anydpi-v26)
 file(COPY android/app/src/main/res/mipmap-hdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-hdpi)
 file(COPY android/app/src/main/res/mipmap-mdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-mdpi)
 file(COPY android/app/src/main/res/mipmap-xhdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-xhdpi)
 file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
 file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_background.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
+file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_background_alt.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
 file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_foreground.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
 
 #if(EXISTS ${NCINE_ICONS_DIR}/icon48.png)
