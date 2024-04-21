@@ -693,11 +693,11 @@ void GameEventHandler::ApplyActivityIcon()
 
 	// These calls will kill the app in a second, so it should be called only on exit
 	if (PreferencesCache::EnableReforgedMainMenu) {
-		LOGI("Changed activity icon to Reforged");
+		LOGI("Changed activity icon to \"Reforged\"");
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, true);
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, false);
 	} else {
-		LOGI("Changed activity icon to Legacy");
+		LOGI("Changed activity icon to \"Legacy\"");
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, true);
 		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, false);
 	}
