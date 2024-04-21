@@ -273,14 +273,13 @@ namespace nCine
 #endif
 
 		Application::initCommon();
-
 		isInitialized_ = true;
 	}
 
 	void AndroidApplication::shutdown()
 	{
-		AndroidJniHelper::DetachJVM();
 		Application::shutdownCommon();
+		AndroidJniHelper::DetachJVM();
 		isInitialized_ = false;
 	}
 }
