@@ -7,7 +7,7 @@
 	<uses-feature android:name="android.software.leanback" android:required="false" />
 	<application android:label="@string/app_name" android:isGame="true" android:appCategory="game"
 		android:hasCode="true" android:allowBackup="false" android:description="@string/app_desc"
-		android:icon="@mipmap/ic_launcher" android:banner="@mipmap/ic_launcher">
+		android:icon="@mipmap/ic_launcher" android:banner="@mipmap/ic_foreground">
 		<activity android:name=".LoadLibraries" android:label="@string/app_name"
 			android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
 			android:exported="true" android:screenOrientation="userLandscape"
