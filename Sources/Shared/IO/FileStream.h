@@ -24,7 +24,7 @@ namespace Death { namespace IO {
 
 		bool IsValid() const override;
 
-		/** @brief Returns file path if any */
+		/** @brief Returns file path */
 		Containers::StringView GetPath() const;
 
 		void SetCloseOnDestruction(bool shouldCloseOnDestruction) override {

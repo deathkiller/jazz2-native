@@ -5,6 +5,7 @@
 #if defined(DEATH_TARGET_ANDROID)
 
 #include "Stream.h"
+#include "../Containers/String.h"
 #include "../Containers/StringView.h"
 
 #include <android_native_app_glue.h>	// For android_app
@@ -33,6 +34,9 @@ namespace Death { namespace IO {
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 
 		bool IsValid() const override;
+		
+		/** @brief Returns file path */
+		Containers::StringView GetPath() const;
 
 		void SetCloseOnDestruction(bool shouldCloseOnDestruction) override {
 			_shouldCloseOnDestruction = shouldCloseOnDestruction;
@@ -74,6 +78,7 @@ namespace Death { namespace IO {
 		static AAssetManager* _assetManager;
 		static const char* _internalDataPath;
 
+		Containers::String _path;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t _fileDescriptor;
 		unsigned long int _startOffset;

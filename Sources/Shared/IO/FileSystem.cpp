@@ -1844,10 +1844,10 @@ namespace Death { namespace IO {
 			id pathString = ((id(*)(Class, SEL, const char*))objc_msgSend)(nsStringClass, sel_getUid("stringWithUTF8String:"), String::nullTerminatedView(path).data());
 			id pathUrl = ((id(*)(Class, SEL, id))objc_msgSend)(nsUrlClass, sel_getUid("fileURLWithPath:"), pathString);
 			id fileManagerInstance = ((id(*)(Class, SEL))objc_msgSend)(nsFileManager, sel_getUid("defaultManager"));
-			return ((bool(*)(id, SEL, id, SEL, id, SEL, id))objc_msgSend)(fileManagerInstance, sel_getUid("trashItemAtURL:"), pathUrl, nullptr, nullptr);
+			return ((bool(*)(id, SEL, id, SEL, id, SEL, id))objc_msgSend)(fileManagerInstance, sel_getUid("trashItemAtURL:"), pathUrl, sel_getUid("resultingItemURL:"), nullptr, sel_getUid("error:"), nullptr);
 		}
 		return false;
-#elif defined(DEATH_TARGET_WINDOWS)
+#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		auto pathW = Utf8::ToUtf16(path);
 
 		SHFILEOPSTRUCTW sf;
@@ -1898,6 +1898,7 @@ namespace Death { namespace IO {
 			return false;
 		}
 
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(dest, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
@@ -1910,6 +1911,7 @@ namespace Death { namespace IO {
 				return false;
 			}
 		}
+#endif
 
 #	if defined(DEATH_TARGET_APPLE)
 		// fcopyfile works on FreeBSD and OS X 10.5+ 

@@ -126,6 +126,11 @@ namespace Death { namespace IO {
 #endif
 	}
 
+	Containers::StringView AndroidAssetStream::GetPath() const
+	{
+		return _path;
+	}
+
 	void AndroidAssetStream::InitializeAssetManager(struct android_app* state)
 	{
 		_assetManager = state->activity->assetManager;

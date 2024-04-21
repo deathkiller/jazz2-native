@@ -1476,7 +1476,7 @@
     <ClInclude Include="backward\backward.h">
       <Filter>Header Files\backward</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Sdílené soubory Death™ Common\Native\IO\PakFile.h">
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\PakFile.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2444,7 +2444,7 @@
     <ClCompile Include="Jazz2\UI\Menu\FirstRunSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Sdílené soubory Death™ Common\Native\IO\PakFile.cpp">
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\PakFile.cpp">
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
   </ItemGroup>
