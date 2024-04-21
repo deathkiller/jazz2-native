@@ -942,7 +942,8 @@ namespace Death { namespace Cpu {
 				return Tags<~value>{Init};
 			}
 			constexpr explicit operator bool() const {
-				return value;
+				// An explicit cast to avoid "C4305: 'return': truncation from 'unsigned int' to 'bool'" on MSVC
+				return bool(value);
 			}
 			constexpr operator unsigned int() const {
 				return value;

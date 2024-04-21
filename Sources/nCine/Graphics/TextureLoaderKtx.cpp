@@ -13,7 +13,7 @@ namespace nCine
 	{
 		KtxHeader header;
 
-		RETURN_ASSERT_MSG(fileHandle_->IsValid(), "File \"%s\" cannot be opened", fileHandle_->GetPath().data());
+		RETURN_ASSERT(fileHandle_->IsValid());
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "KTX header cannot be read");
 		const bool formatParsed = parseFormat(header);
@@ -35,7 +35,7 @@ namespace nCine
 			}
 		}
 
-		RETURNF_ASSERT_MSG(checkPassed, "Not a KTX file");
+		RETURNF_ASSERT_MSG(checkPassed, "Invalid KTX signature");
 		// Checking for the header identifier
 		RETURNF_ASSERT_MSG(header.endianess != 0x01020304, "File endianess doesn't match machine one");
 

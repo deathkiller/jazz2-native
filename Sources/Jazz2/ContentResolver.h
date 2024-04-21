@@ -21,6 +21,7 @@
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
+#include <IO/PakFile.h>
 #include <IO/Stream.h>
 
 using namespace Death::Containers;
@@ -61,6 +62,11 @@ namespace Jazz2
 
 		bool IsHeadless() const;
 		void SetHeadless(bool value);
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		void RemountPaks();
+#endif
+		std::unique_ptr<Stream> OpenContentFile(StringView path);
 
 		void BeginLoading();
 		void EndLoading();
@@ -120,6 +126,9 @@ namespace Jazz2
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
 		std::unique_ptr<UI::Font> _fonts[(int32_t)FontType::Count];
 		std::unique_ptr<Shader> _precompiledShaders[(int32_t)PrecompiledShader::Count];
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		SmallVector<std::unique_ptr<PakFile>> _mountedPaks;
+#endif
 
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;

@@ -65,7 +65,6 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 			do {													\
 				if(!(condition)) {									\
 					LOGF(message, ##__VA_ARGS__);					\
-					std::abort();									\
 					return returnValue;								\
 				}													\
 			} while(false)

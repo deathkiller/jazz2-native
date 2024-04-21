@@ -36,7 +36,7 @@ namespace Jazz2::UI::Menu
 		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc] = &input.joyMappedState(i);
-				if (joyStates[jc]->isButtonPressed(ButtonName::START) && joyStates[jc]->isButtonPressed(ButtonName::BACK)) {
+				if (joyStates[jc]->isButtonPressed(ButtonName::Start) && joyStates[jc]->isButtonPressed(ButtonName::Back)) {
 					shouldExit = true;
 				}
 
@@ -139,12 +139,12 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow("Mapped State", charOffset, center.X * 0.4f, topLine + 60.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		PrintAxisValue("LX", mappedState.axisValue(AxisName::LX), center.X * 0.4f, topLine + 75.0f);
-		PrintAxisValue("LY", mappedState.axisValue(AxisName::LY), center.X * 0.4f + 110.0f, topLine + 75.0f);
-		PrintAxisValue("RX", mappedState.axisValue(AxisName::RX), center.X * 0.4f + 220.0f, topLine + 75.0f);
-		PrintAxisValue("RY", mappedState.axisValue(AxisName::RY), center.X * 0.4f + 330.0f, topLine + 75.0f);
-		PrintAxisValue("LT", mappedState.axisValue(AxisName::LTRIGGER), center.X * 0.4f, topLine + 90.0f);
-		PrintAxisValue("RT", mappedState.axisValue(AxisName::RTRIGGER), center.X * 0.4f + 110.0f, topLine + 90.0f);
+		PrintAxisValue("LX", mappedState.axisValue(AxisName::LeftX), center.X * 0.4f, topLine + 75.0f);
+		PrintAxisValue("LY", mappedState.axisValue(AxisName::LeftY), center.X * 0.4f + 110.0f, topLine + 75.0f);
+		PrintAxisValue("RX", mappedState.axisValue(AxisName::RightX), center.X * 0.4f + 220.0f, topLine + 75.0f);
+		PrintAxisValue("RY", mappedState.axisValue(AxisName::RightY), center.X * 0.4f + 330.0f, topLine + 75.0f);
+		PrintAxisValue("LT", mappedState.axisValue(AxisName::LeftTrigger), center.X * 0.4f, topLine + 90.0f);
+		PrintAxisValue("RT", mappedState.axisValue(AxisName::RightTrigger), center.X * 0.4f + 110.0f, topLine + 90.0f);
 
 		int32_t buttonsLength = 0;
 		buffer[0] = '\0';
@@ -152,17 +152,22 @@ namespace Jazz2::UI::Menu
 		if (mappedState.isButtonPressed(ButtonName::B)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "B ");
 		if (mappedState.isButtonPressed(ButtonName::X)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "X ");
 		if (mappedState.isButtonPressed(ButtonName::Y)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Y ");
-		if (mappedState.isButtonPressed(ButtonName::LBUMPER)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "LB ");
-		if (mappedState.isButtonPressed(ButtonName::RBUMPER)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "RB ");
-		if (mappedState.isButtonPressed(ButtonName::LSTICK)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "LS ");
-		if (mappedState.isButtonPressed(ButtonName::RSTICK)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "RS ");
-		if (mappedState.isButtonPressed(ButtonName::BACK)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Back ");
-		if (mappedState.isButtonPressed(ButtonName::GUIDE)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Guide ");
-		if (mappedState.isButtonPressed(ButtonName::START)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Start ");
-		if (mappedState.isButtonPressed(ButtonName::DPAD_UP)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Up ");
-		if (mappedState.isButtonPressed(ButtonName::DPAD_DOWN)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Down ");
-		if (mappedState.isButtonPressed(ButtonName::DPAD_LEFT)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Left ");
-		if (mappedState.isButtonPressed(ButtonName::DPAD_RIGHT)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Right ");
+		if (mappedState.isButtonPressed(ButtonName::LeftBumper)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "LB ");
+		if (mappedState.isButtonPressed(ButtonName::RightBumper)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "RB ");
+		if (mappedState.isButtonPressed(ButtonName::LeftStick)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "LS ");
+		if (mappedState.isButtonPressed(ButtonName::RightStick)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "RS ");
+		if (mappedState.isButtonPressed(ButtonName::Back)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Back ");
+		if (mappedState.isButtonPressed(ButtonName::Guide)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Guide ");
+		if (mappedState.isButtonPressed(ButtonName::Start)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Start ");
+		if (mappedState.isButtonPressed(ButtonName::Up)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Up ");
+		if (mappedState.isButtonPressed(ButtonName::Down)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Down ");
+		if (mappedState.isButtonPressed(ButtonName::Left)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Left ");
+		if (mappedState.isButtonPressed(ButtonName::Right)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Right ");
+		if (mappedState.isButtonPressed(ButtonName::Misc1)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Misc1 ");
+		if (mappedState.isButtonPressed(ButtonName::Paddle1)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle1 ");
+		if (mappedState.isButtonPressed(ButtonName::Paddle2)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle2 ");
+		if (mappedState.isButtonPressed(ButtonName::Paddle3)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle3 ");
+		if (mappedState.isButtonPressed(ButtonName::Paddle4)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle4 ");
 
 		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, topLine + 105.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
@@ -214,10 +219,10 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		_root->DrawElement(GetResourceForButtonName(ButtonName::BACK), 0, center.X - 37.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		_root->DrawElement(GetResourceForButtonName(ButtonName::Back), 0, center.X - 37.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
 		_root->DrawStringShadow("+"_s, charOffset, center.X - 28.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.6f, 0.4f, 0.0f, 0.0f, 0.46f, 0.88f);
-		_root->DrawElement(GetResourceForButtonName(ButtonName::START), 0, center.X - 11.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		_root->DrawElement(GetResourceForButtonName(ButtonName::Start), 0, center.X - 11.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
 		_root->DrawStringShadow("to exit"_s, charOffset, center.X, contentBounds.Y + contentBounds.H - 17.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 0.0f, 0.0f, 0.46f, 0.8f);
 	}

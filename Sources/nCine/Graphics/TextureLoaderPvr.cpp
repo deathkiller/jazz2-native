@@ -10,7 +10,7 @@ namespace nCine
 	{
 		Pvr3Header header;
 
-		RETURN_ASSERT_MSG(fileHandle_->IsValid(), "File \"%s\" cannot be opened", fileHandle_->GetPath().data());
+		RETURN_ASSERT(fileHandle_->IsValid());
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "PVR header cannot be read");
 		const bool formatParsed = parseFormat(header);
@@ -25,7 +25,7 @@ namespace nCine
 		fileHandle_->Read(&header, 52);
 
 		// Checking for the header presence ("PVR"03)
-		RETURNF_ASSERT_MSG(Stream::Uint32FromLE(header.version) == 0x03525650, "Not a PVR3 file");
+		RETURNF_ASSERT_MSG(Stream::Uint32FromLE(header.version) == 0x03525650, "Invalid PVR3 signature");
 
 		headerSize_ = 52 + Stream::Uint32FromLE(header.metaDataSize);
 		width_ = Stream::Uint32FromLE(header.width);

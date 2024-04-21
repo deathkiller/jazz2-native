@@ -199,7 +199,7 @@ namespace Jazz2::Compatibility
 			titlePixels[i * 4 + 3] = src.A;
 		}
 
-		JJ2Anims::WriteImageToFileInternal(so, titlePixels.get(), TitleWidth, TitleHeight, 4);
+		JJ2Anims::WriteImageContent(*so, titlePixels.get(), TitleWidth, TitleHeight, 4);
 
 		// Write episode background image
 		so->WriteValue<uint16_t>((uint16_t)ImageWidth);
@@ -217,6 +217,6 @@ namespace Jazz2::Compatibility
 			imagePixels[i * 4 + 3] = src.A;
 		}
 
-		JJ2Anims::WriteImageToFileInternal(so, imagePixels.get(), ImageWidth, ImageHeight, 4);
+		JJ2Anims::WriteImageContent(*so, imagePixels.get(), ImageWidth, ImageHeight, 4);
 	}
 }

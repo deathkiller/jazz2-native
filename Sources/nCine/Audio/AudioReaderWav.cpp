@@ -35,13 +35,13 @@ namespace nCine
 
 	void AudioReaderWav::rewind() const
 	{
-		if (fileHandle_->GetType() == Stream::Type::File) {
-			auto s = static_cast<FileStream*>(fileHandle_.get());
-			auto handle = s->GetHandle();
+		// TODO
+		/*if (FileStream* fileStream = dynamic_cast<FileStream*>(fileHandle_.get())) {
+			auto handle = fileStream->GetHandle();
 			if (handle != nullptr) {
 				::clearerr(handle);
 			}
-		}
+		}*/
 
 		fileHandle_->Seek(AudioLoaderWav::HeaderSize, SeekOrigin::Begin);
 	}

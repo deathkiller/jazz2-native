@@ -7,40 +7,40 @@ namespace nCine
 {
 	enum class ButtonName : int16_t
 	{
-		UNKNOWN = -1,
+		Unknown = -1,
 		A = 0,
 		B,
 		X,
 		Y,
-		BACK,
-		GUIDE,
-		START,
-		LSTICK,
-		RSTICK,
-		LBUMPER,
-		RBUMPER,
-		DPAD_UP,
-		DPAD_DOWN,
-		DPAD_LEFT,
-		DPAD_RIGHT,
-		MISC1,
-		PADDLE1,
-		PADDLE2,
-		PADDLE3,
-		PADDLE4,
+		Back,
+		Guide,
+		Start,
+		LeftStick,
+		RightStick,
+		LeftBumper,
+		RightBumper,
+		Up,
+		Down,
+		Left,
+		Right,
+		Misc1,
+		Paddle1,
+		Paddle2,
+		Paddle3,
+		Paddle4,
 
-		COUNT
+		Count
 	};
 
 	enum class AxisName : int16_t
 	{
-		UNKNOWN = -1,
-		LX = 0,
-		LY,
-		RX,
-		RY,
-		LTRIGGER,
-		RTRIGGER
+		Unknown = -1,
+		LeftX = 0,
+		LeftY,
+		RightX,
+		RightY,
+		LeftTrigger,
+		RightTrigger
 	};
 
 	/// A structure containing joystick hat values
@@ -48,15 +48,15 @@ namespace nCine
 	{
 		enum
 		{
-			CENTERED = 0,
-			UP = 1,
-			RIGHT = 2,
-			DOWN = 4,
-			LEFT = 8,
-			RIGHT_UP = RIGHT | UP,
-			RIGHT_DOWN = RIGHT | DOWN,
-			LEFT_UP = LEFT | UP,
-			LEFT_DOWN = LEFT | DOWN
+			Centered = 0,
+			Up = 1,
+			Right = 2,
+			Down = 4,
+			Left = 8,
+			RightUp = Right | Up,
+			RightDown = Right | Down,
+			LeftUp = Left | Up,
+			LeftDown = Left | Down
 		};
 	};
 
@@ -261,7 +261,7 @@ namespace nCine
 
 	public:
 		/// The number of joystick buttons with a mapping name
-		static constexpr unsigned int NumButtons = (int)ButtonName::COUNT;
+		static constexpr unsigned int NumButtons = (int)ButtonName::Count;
 		/// The number of joystick axes with a mapping name
 		static constexpr unsigned int NumAxes = 6;
 
@@ -271,13 +271,13 @@ namespace nCine
 				buttons_[i] = false;
 			for (unsigned int i = 0; i < NumAxes; i++)
 				axesValues_[i] = 0.0f;
-			lastHatState_ = HatState::CENTERED;
+			lastHatState_ = HatState::Centered;
 		}
 
 		bool isButtonPressed(ButtonName name) const
 		{
 			bool pressed = false;
-			if (name != ButtonName::UNKNOWN)
+			if (name != ButtonName::Unknown)
 				pressed = buttons_[static_cast<int>(name)];
 			return pressed;
 		}
@@ -285,7 +285,7 @@ namespace nCine
 		float axisValue(AxisName name) const
 		{
 			float value = 0.0f;
-			if (name != AxisName::UNKNOWN)
+			if (name != AxisName::Unknown)
 				value = axesValues_[static_cast<int>(name)];
 			return value;
 		}

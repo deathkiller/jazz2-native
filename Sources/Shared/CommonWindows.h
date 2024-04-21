@@ -234,6 +234,13 @@ DEATH_ALWAYS_INLINE ATOM WINAPI RegisterClassEx(CONST WNDCLASSEXW* lpWndClass) {
 }
 #endif
 
+#if defined(RegisterWindowMessage)
+#	undef RegisterWindowMessage
+DEATH_ALWAYS_INLINE UINT WINAPI RegisterWindowMessage(LPCWSTR lpString) {
+	return ::RegisterWindowMessageW(lpString);
+}
+#endif
+
 #if defined(RemoveDirectory)
 #	undef RemoveDirectory
 DEATH_ALWAYS_INLINE BOOL WINAPI RemoveDirectory(LPCWSTR lpPathName) {

@@ -49,6 +49,7 @@ namespace nCine
 	jmethodID AndroidJniWrap_Activity::midGetPreferredLanguage_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midHasExternalStoragePermission_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midRequestExternalStoragePermission_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midSetActivityEnabled_ = nullptr;
 
 	jobject AndroidJniWrap_InputMethodManager::inputMethodManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midToggleSoftInput_ = nullptr;
@@ -546,6 +547,7 @@ namespace nCine
 		midGetPreferredLanguage_ = AndroidJniClass::getMethodID(nativeActivityClass, "getPreferredLanguage", "()Ljava/lang/String;");
 		midHasExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "hasExternalStoragePermission", "()Z");
 		midRequestExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "requestExternalStoragePermission", "()V");
+		midSetActivityEnabled_ = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
 	}
 
 	void AndroidJniWrap_Activity::finishAndRemoveTask()
@@ -587,6 +589,23 @@ namespace nCine
 		if (AndroidJniHelper::SdkVersion() >= 30) {
 			AndroidJniHelper::jniEnv->CallVoidMethod(activityObject_, midRequestExternalStoragePermission_);
 		}
+	}
+	
+	void AndroidJniWrap_Activity::setActivityEnabled(StringView activity, bool enable)
+	{
+		if (midSetActivityEnabled_ == nullptr || activity.empty()) {
+			return;
+		}
+		
+		auto nullTerminatedName = String::nullTerminatedView(activity);
+		jstring strName = AndroidJniHelper::jniEnv->NewStringUTF(nullTerminatedName.data());
+		if (strName == nullptr) {
+			return;
+		}
+		
+		jboolean boolEnable = enable;
+		AndroidJniHelper::jniEnv->CallVoidMethod(activityObject_, midSetActivityEnabled_, strName, boolEnable);
+		AndroidJniHelper::jniEnv->DeleteLocalRef(strName);
 	}
 	
 	// ------------------- AndroidJniWrap_InputMethodManager -------------------

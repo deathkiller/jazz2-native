@@ -12,7 +12,7 @@ namespace nCine
 		/// Default constructor
 		AudioStreamPlayer();
 		/// A constructor creating a player from a named memory buffer
-		AudioStreamPlayer(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//AudioStreamPlayer(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a player from a file
 		explicit AudioStreamPlayer(const StringView& filename);
 		~AudioStreamPlayer() override;
@@ -22,7 +22,7 @@ namespace nCine
 		/// Default move assignment operator
 		AudioStreamPlayer& operator=(AudioStreamPlayer&&) = default;
 
-		bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(const char* filename);
 
 		inline unsigned int bufferId() const override {

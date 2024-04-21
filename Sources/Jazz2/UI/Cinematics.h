@@ -63,7 +63,7 @@ namespace Jazz2::UI
 			std::unique_ptr<AudioBuffer> Buffer;
 
 			SfxItem();
-			SfxItem(const StringView path);
+			SfxItem(std::unique_ptr<Stream> stream, const StringView path);
 		};
 
 		struct SfxPlaylistItem {

@@ -4,7 +4,7 @@ msgstr ""
 "POT-Creation-Date: 2024-04-09 13:43+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
-"Language-Team: \n"
+"Language-Team: Traduction française: Mwyann\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1396,7 +1396,7 @@ msgstr ""
 "versions du jeu (démo Shareware, Holiday Hare '98, The Secret Files et\n"
 "Christmas Chronicles). Support partiel de certaines fonctionnalités de "
 "l'extension JJ2+.\n"
-"Pour plus d'information, visitez le site officiel : %s"
+"Pour plus d'information, visitez le site officiel: %s"
 
 #. TRANSLATORS: Header in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:146
@@ -1412,7 +1412,7 @@ msgid ""
 "%s"
 msgstr ""
 "Ce projet utilise le moteur de jeu \f[c:0x9e7056]nCine\f[c] modifié et les "
-"librairies suivantes :\n"
+"librairies suivantes:\n"
 "%s"
 
 #. TRANSLATORS: Menu item in main menu
@@ -1474,7 +1474,7 @@ msgstr "Quitter"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:189
 msgid "Access to external storage has been granted!"
-msgstr "L'accès au stockage externe a été autorisé !"
+msgstr "L'accès au stockage externe a été autorisé!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:191
 msgid ""
@@ -1490,13 +1490,13 @@ msgid ""
 "2\f[c:0x704a4a] files!"
 msgstr ""
 "\f[c:0x704a4a]Ce jeu requiert les fichiers d'origine du jeu "
-"\f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x704a4a] !"
+"\f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x704a4a]!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:198
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
 "Assurez-vous que les fichiers de Jazz Jackrabbit 2 sont présents dans ce "
-"dossier :"
+"dossier:"
 
 #. TRANSLATORS: Menu item in main menu (Android 11+ only)
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:206
@@ -1577,7 +1577,7 @@ msgstr "Créer un serveur"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:138
 msgid "No custom level found!"
-msgstr "Aucun niveau personnalisé trouvé !"
+msgstr "Aucun niveau personnalisé trouvé!"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:135
@@ -1587,7 +1587,7 @@ msgstr "Mode histoire en coopération"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:147
 msgid "No episode found!"
-msgstr "Aucun épisode trouvé !"
+msgstr "Aucun épisode trouvé!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
@@ -1599,12 +1599,12 @@ msgstr "Recommencer l'épisode"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:216
 #, c-format
 msgid "You must complete \"%s\" first!"
-msgstr "Terminez l'épisode \"%s\" d'abord !"
+msgstr "Terminez l'épisode \"%s\" d'abord!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:220
 msgid "Episode is locked!"
-msgstr "L'épisode est verrouillé !"
+msgstr "L'épisode est verrouillé!"
 
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
@@ -1628,7 +1628,7 @@ msgstr "Je veux jouer au jeu avec quelques nouveautés."
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:54
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
 msgstr ""
-"Bienvenue à la réimplémentation de \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] !"
+"Bienvenue à la réimplémentation de \f[c:0x9e7056]Jazz Jackrabbit 2\f[c]!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
@@ -1656,7 +1656,7 @@ msgstr ""
 "Vous pouvez choisir votre mode de jeu préféré.\n"
 "Cette option peut être changée à tout moment dans \f[c:0x707070]%s\f[c] > "
 "\f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
-"Pour plus d'information, visiter %s et  Discord !"
+"Pour plus d'information, visiter %s et  Discord!"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16

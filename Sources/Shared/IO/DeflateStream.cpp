@@ -1,4 +1,5 @@
 #include "DeflateStream.h"
+#include "../Asserts.h"
 
 #if !defined(WITH_ZLIB)
 #	pragma message("Death::IO::DeflateStream requires `zlib` library")
@@ -41,12 +42,13 @@ namespace Death { namespace IO {
 			case SeekOrigin::Current: {
 				DEATH_ASSERT(offset >= 0, -1, "Cannot seek to negative values");
 
-				char buf[4096];
+				char buffer[4096];
 				while (offset > 0) {
-					std::int32_t size = (offset > sizeof(buf) ? sizeof(buf) : offset);
-					Read(buf, size);
+					std::int32_t size = (offset > sizeof(buffer) ? sizeof(buffer) : offset);
+					Read(buffer, size);
 					offset -= size;
 				}
+
 				return static_cast<std::int32_t>(_strm.total_out);
 			}
 		}
@@ -287,6 +289,7 @@ namespace Death { namespace IO {
 		std::int32_t max_blocks = std::max((uncompressedSize + MinBlockSize - 1) / MinBlockSize, 1);
 		return uncompressedSize + (5 * max_blocks) + 1 + 8;
 	}
+
 }}
 
 #endif

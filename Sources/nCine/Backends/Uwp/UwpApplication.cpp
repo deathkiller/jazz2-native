@@ -148,12 +148,12 @@ namespace nCine
 
 		winrtWAC::CoreApplication::GetCurrentView().TitleBar().ExtendViewIntoTitleBar(true);
 		auto titleBar = winrtWUV::ApplicationView::GetForCurrentView().TitleBar();
-		titleBar.ButtonBackgroundColor(winrtWU::Color { 0, 0, 0, 0 });
-		titleBar.ButtonForegroundColor(winrtWU::Color { 255, 255, 255, 255 });
-		titleBar.ButtonHoverBackgroundColor(winrtWU::Color { 80, 0, 0, 0 });
-		titleBar.ButtonHoverForegroundColor(winrtWU::Color { 255, 255, 255, 255 });
-		titleBar.ButtonInactiveBackgroundColor(winrtWU::Color { 0, 0, 0, 0 });
-		titleBar.ButtonInactiveForegroundColor(winrtWU::Color { 160, 255, 255, 255 });
+		titleBar.ButtonBackgroundColor(winrtWU::Color{0, 0, 0, 0});
+		titleBar.ButtonForegroundColor(winrtWU::Color{255, 255, 255, 255});
+		titleBar.ButtonHoverBackgroundColor(winrtWU::Color{80, 0, 0, 0});
+		titleBar.ButtonHoverForegroundColor(winrtWU::Color{255, 255, 255, 255});
+		titleBar.ButtonInactiveBackgroundColor(winrtWU::Color{0, 0, 0, 0});
+		titleBar.ButtonInactiveForegroundColor(winrtWU::Color{160, 255, 255, 255});
 
 		auto displayInfo = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView();
 
@@ -187,12 +187,13 @@ namespace nCine
 		});
 
 		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
-		if (!appCfg_.windowIconFilename.empty()) {
-			String windowIconFilePath = fs::CombinePath(GetDataPath(), appCfg_.windowIconFilename);
-			if (fs::IsReadableFile(windowIconFilePath)) {
-				gfxDevice_->setWindowIcon(windowIconFilePath);
-			}
-		}
+		// TODO: Not supported
+		//if (!appCfg_.windowIconFilename.empty()) {
+		//	String windowIconFilePath = fs::CombinePath(GetDataPath(), appCfg_.windowIconFilename);
+		//	if (fs::IsReadableFile(windowIconFilePath)) {
+		//		gfxDevice_->setWindowIcon(windowIconFilePath);
+		//	}
+		//}
 
 #if defined(NCINE_PROFILING)
 		timings_[(int)Timings::PreInit] = profileStartTime_.secondsSince();

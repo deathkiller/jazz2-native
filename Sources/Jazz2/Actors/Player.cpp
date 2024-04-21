@@ -789,7 +789,7 @@ namespace Jazz2::Actors
 						if (_isLifting && GetState(ActorState::CanJump) && _currentSpecialMove == SpecialMoveType::None) {
 							SetState(ActorState::CanJump, false);
 							SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
-							PlaySfx("Jump"_s);
+							PlayPlayerSfx("Jump"_s);
 							_carryingObject = nullptr;
 
 							SetState(ActorState::IsSolidObject | ActorState::CollideWithSolidObjects, false);
@@ -858,7 +858,7 @@ namespace Jazz2::Actors
 											_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 											_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f);
 
-											PlaySfx("DoubleJump"_s);
+											PlayPlayerSfx("DoubleJump"_s);
 
 											SetTransition(AnimState::Spring, false);
 										}
@@ -917,7 +917,7 @@ namespace Jazz2::Actors
 						_isFreefall = false;
 						SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
 						if (_jumpTime <= 0.0f) {
-							PlaySfx("Jump"_s);
+							PlayPlayerSfx("Jump"_s);
 						}
 						_jumpTime = 12.0f;
 						_carryingObject = nullptr;
@@ -956,7 +956,7 @@ namespace Jazz2::Actors
 			if (!_isLifting && _suspendType != SuspendType::SwingingVine && (_currentAnimation->State & AnimState::Push) != AnimState::Push && _pushFramesLeft <= 0.0f) {
 				if (_playerType == PlayerType::Frog) {
 					if (_currentTransition == nullptr && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {
-						PlaySfx("Tongue"_s, 0.8f);
+						PlayPlayerSfx("Tongue"_s, 0.8f);
 
 						_controllable = false;
 						_controllableTimeout = 120.0f;
@@ -1784,7 +1784,7 @@ namespace Jazz2::Actors
 					if (maxIdx > 0) {
 						std::int32_t selectedIdx = Random().Fast(0, maxIdx);
 						if (SetTransition((AnimState)(536870944 + selectedIdx), true)) {
-							PlaySfx(IdleBored[selectedIdx]);
+							PlayPlayerSfx(IdleBored[selectedIdx]);
 						}
 					}
 				}
@@ -1853,7 +1853,7 @@ namespace Jazz2::Actors
 								SetTransition(AnimState::TransitionLedge, true);
 							}
 
-							PlaySfx("Ledge"_s);
+							PlayPlayerSfx("Ledge"_s);
 						}
 					}
 					break;
@@ -2045,7 +2045,7 @@ namespace Jazz2::Actors
 				SetState(ActorState::ApplyGravitation, false);
 
 				if (_speed.Y > 0.0f && newSuspendState == SuspendType::Vine) {
-					PlaySfx("HookAttach"_s, 0.8f, 1.2f);
+					PlayPlayerSfx("HookAttach"_s, 0.8f, 1.2f);
 				}
 
 				_speed.Y = 0.0f;
@@ -2557,7 +2557,7 @@ namespace Jazz2::Actors
 	void Player::SwitchToWeaponByIndex(std::uint32_t weaponIndex)
 	{
 		if (weaponIndex >= (uint32_t)WeaponType::Count || _weaponAmmo[weaponIndex] == 0) {
-			PlaySfx("ChangeWeapon"_s);
+			PlayPlayerSfx("ChangeWeapon"_s);
 			return;
 		}
 
@@ -2773,7 +2773,7 @@ namespace Jazz2::Actors
 					}
 					default: {
 						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.7f, true);
-						PlaySfx("WeaponBlaster"_s);
+						PlayPlayerSfx("WeaponBlaster"_s);
 						break;
 					}
 				}
@@ -2831,7 +2831,7 @@ namespace Jazz2::Actors
 			_weaponUpgrades[(std::int32_t)weaponType] &= ~0x01;
 
 			SwitchToNextWeapon();
-			PlaySfx("ChangeWeapon"_s);
+			PlayPlayerSfx("ChangeWeapon"_s);
 			_weaponCooldown = 20.0f;
 		}
 
@@ -3292,7 +3292,7 @@ namespace Jazz2::Actors
 
 		_controllableTimeout = 80.0f;
 
-		PlaySfx("Pole"_s, 0.8f, 0.6f);
+		PlayPlayerSfx("Pole"_s, 0.8f, 0.6f);
 	}
 
 	void Player::NextPoleStage(bool horizontal, bool positive, int stagesLeft, float lastSpeed)
@@ -3310,7 +3310,7 @@ namespace Jazz2::Actors
 
 			_controllableTimeout = 80.0f;
 
-			PlaySfx("Pole"_s, 1.0f, 0.6f);
+			PlayPlayerSfx("Pole"_s, 1.0f, 0.6f);
 		} else {
 			std::int32_t sign = (positive ? 1 : -1);
 			if (horizontal) {
@@ -3342,7 +3342,7 @@ namespace Jazz2::Actors
 			_controllableTimeout = 4.0f;
 			_lastPoleTime = 10.0f;
 
-			PlaySfx("HookAttach"_s, 0.8f, 1.2f);
+			PlayPlayerSfx("HookAttach"_s, 0.8f, 1.2f);
 		}
 	}
 
@@ -3474,7 +3474,7 @@ namespace Jazz2::Actors
 
 			float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
 			SetInvulnerability(invulnerableTime, false);
-			PlaySfx("Hurt"_s);
+			PlayPlayerSfx("Hurt"_s);
 		} else {
 			_externalForce.X = 0.0f;
 			_speed.Y = 0.0f;
@@ -3551,13 +3551,13 @@ namespace Jazz2::Actors
 
 		if (amount < 0) {
 			_health = std::max(_maxHealth, HealthLimit);
-			PlaySfx("PickupMaxCarrot"_s);
+			PlayPlayerSfx("PickupMaxCarrot"_s);
 		} else {
 			_health = std::min(_health + amount, HealthLimit);
 			if (_maxHealth < _health) {
 				_maxHealth = _health;
 			}
-			PlaySfx("PickupFood"_s);
+			PlayPlayerSfx("PickupFood"_s);
 		}
 
 		return true;
@@ -3572,7 +3572,7 @@ namespace Jazz2::Actors
 		}
 
 		_lives = std::min(_lives + count, LivesLimit);
-		PlaySfx("PickupOneUp"_s);
+		PlayPlayerSfx("PickupOneUp"_s);
 		return true;
 	}
 
@@ -3580,14 +3580,14 @@ namespace Jazz2::Actors
 	{
 		_coins += count;
 		_levelHandler->ShowCoins(this, _coins);
-		PlaySfx("PickupCoin"_s);
+		PlayPlayerSfx("PickupCoin"_s);
 	}
 
 	void Player::AddGems(int count)
 	{
 		_gems += count;
 		_levelHandler->ShowGems(this, _gems);
-		PlaySfx("PickupGem"_s, 1.0f, std::min(0.7f + _gemsPitch * 0.05f, 1.3f));
+		PlayPlayerSfx("PickupGem"_s, 1.0f, std::min(0.7f + _gemsPitch * 0.05f, 1.3f));
 
 		_gemsTimer = 120.0f;
 		_gemsPitch++;
@@ -3595,7 +3595,7 @@ namespace Jazz2::Actors
 
 	void Player::ConsumeFood(bool isDrinkable)
 	{
-		PlaySfx(isDrinkable ? "PickupDrink"_s : "PickupFood"_s);
+		PlayPlayerSfx(isDrinkable ? "PickupDrink"_s : "PickupFood"_s);
 
 		_foodEaten++;
 		if (_foodEaten >= 100) {
@@ -3649,7 +3649,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		PlaySfx("PickupAmmo"_s);
+		PlayPlayerSfx("PickupAmmo"_s);
 		return true;
 	}
 
@@ -3671,7 +3671,7 @@ namespace Jazz2::Actors
 
 		_weaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_weaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (current << 1));
 
-		PlaySfx("PickupAmmo"_s);
+		PlayPlayerSfx("PickupAmmo"_s);
 
 		return true;
 	}
@@ -3718,7 +3718,7 @@ namespace Jazz2::Actors
 
 		// Set transition
 		if (type == PlayerType::Frog) {
-			PlaySfx("Transform");
+			PlayPlayerSfx("Transform");
 
 			_controllable = false;
 			_controllableTimeout = 120.0f;
@@ -3786,7 +3786,7 @@ namespace Jazz2::Actors
 		}
 
 		_activeShieldTime += time;
-		PlaySfx("PickupGem"_s);
+		PlayPlayerSfx("PickupGem"_s);
 		return true;
 	}
 

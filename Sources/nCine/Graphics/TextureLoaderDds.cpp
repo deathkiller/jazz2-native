@@ -9,7 +9,7 @@ namespace nCine
 	{
 		DdsHeader header;
 
-		RETURN_ASSERT_MSG(fileHandle_->IsValid(), "File \"%s\" cannot be opened", fileHandle_->GetPath().data());
+		RETURN_ASSERT(fileHandle_->IsValid());
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "DDS header cannot be read");
 		const bool formatParsed = parseFormat(header);
@@ -24,9 +24,7 @@ namespace nCine
 		fileHandle_->Read(&header, 128);
 
 		// Checking for the header presence
-		if (Stream::Uint32FromLE(header.dwMagic) == 0x20534444) { // "DDS "
-			RETURNF_MSG("Not a DDS file");
-		}
+		RETURNF_ASSERT_MSG(Stream::Uint32FromLE(header.dwMagic) == 0x20534444 /* "DDS " */, "Invalid DDS signature");
 
 		headerSize_ = 128;
 		width_ = Stream::Uint32FromLE(header.dwWidth);

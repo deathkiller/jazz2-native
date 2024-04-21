@@ -33,6 +33,7 @@ namespace nCine
 	/** @brief List of all supported languages */
 	static constexpr LanguageInfo SupportedLanguages[] = {
 		{ "af", "Afrikaans"_s },
+		{ "ar", "Arabic"_s },
 		{ "be", "БЕЛАРУСКАЯ"_s },
 		{ "bg", "БЪЛГАРСКИ"_s },
 		{ "cs", "Čeština"_s },
@@ -43,6 +44,7 @@ namespace nCine
 		{ "et", "Eesti"_s },
 		{ "fi", "Suomi"_s },
 		{ "fr", "Français"_s },
+		{ "gr", "Greek"_s },
 		{ "hr", "Hrvatski"_s },
 		{ "hu", "Magyar"_s },
 		{ "it", "Italiano"_s },
@@ -529,7 +531,7 @@ namespace nCine
 		std::uint32_t fileSize = fileHandle->GetSize();
 		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {
 			if (fileSize > 0) {
-				LOGE("Translation \"%s\" is corrupted", fileHandle->GetPath().data());
+				LOGE("Translation is corrupted");
 			}
 			return false;
 		}
@@ -545,7 +547,7 @@ namespace nCine
 		if (!(data->Signature == SignatureLE || data->Signature == SignatureBE) || data->StringCount <= 0 ||
 			data->OrigTableOffset + data->StringCount > fileSize || data->TransTableOffset + data->StringCount > fileSize ||
 			data->HashTableOffset + data->HashTableSize > fileSize) {
-			LOGE("Translation \"%s\" is corrupted", fileHandle->GetPath().data());
+			LOGE("Translation is corrupted");
 			Unload();
 			return false;
 		}

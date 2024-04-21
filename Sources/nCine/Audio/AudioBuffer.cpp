@@ -29,22 +29,31 @@ namespace nCine
 		alGetError();
 		alGenBuffers(1, &bufferId_);
 		const ALenum error = alGetError();
-		FATAL_ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
+		FATAL_ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers() failed with error 0x%x", error);
 	}
 
-	AudioBuffer::AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*AudioBuffer::AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: AudioBuffer()
 	{
 		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
 		if (!hasLoaded) {
 			LOGE("Audio buffer cannot be loaded");
 		}
-	}
+	}*/
 
-	AudioBuffer::AudioBuffer(const StringView& filename)
+	AudioBuffer::AudioBuffer(const StringView filename)
 		: AudioBuffer()
 	{
 		const bool hasLoaded = loadFromFile(filename);
+		if (!hasLoaded) {
+			LOGE("Audio file \"%s\" cannot be loaded", filename.data());
+		}
+	}
+
+	AudioBuffer::AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename)
+		: AudioBuffer()
+	{
+		const bool hasLoaded = loadFromStream(std::move(fileHandle), filename);
 		if (!hasLoaded) {
 			LOGE("Audio file \"%s\" cannot be loaded", filename.data());
 		}
@@ -81,19 +90,19 @@ namespace nCine
 	void AudioBuffer::init(Format format, int frequency)
 	{
 		switch (format) {
-			case Format::MONO8:
+			case Format::Mono8:
 				bytesPerSample_ = 1;
 				numChannels_ = 1;
 				break;
-			case Format::STEREO8:
+			case Format::Stereo8:
 				bytesPerSample_ = 1;
 				numChannels_ = 2;
 				break;
-			case Format::MONO16:
+			case Format::Mono16:
 				bytesPerSample_ = 2;
 				numChannels_ = 1;
 				break;
-			case Format::STEREO16:
+			case Format::Stereo16:
 				bytesPerSample_ = 2;
 				numChannels_ = 2;
 				break;
@@ -103,7 +112,7 @@ namespace nCine
 		loadFromSamples(nullptr, 0);
 	}
 
-	bool AudioBuffer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	/*bool AudioBuffer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferPtr, bufferSize);
 		if (!audioLoader->hasLoaded()) {
@@ -112,16 +121,27 @@ namespace nCine
 
 		const bool samplesHaveLoaded = load(*audioLoader.get());
 		return samplesHaveLoaded;
-	}
+	}*/
 
-	bool AudioBuffer::loadFromFile(const StringView& filename)
+	bool AudioBuffer::loadFromFile(const StringView filename)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
 		if (!audioLoader->hasLoaded()) {
 			return false;
 		}
 
-		const bool samplesHaveLoaded = load(*audioLoader.get());
+		const bool samplesHaveLoaded = load(*audioLoader);
+		return samplesHaveLoaded;
+	}
+
+	bool AudioBuffer::loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename)
+	{
+		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromStream(std::move(fileHandle), filename);
+		if (!audioLoader->hasLoaded()) {
+			return false;
+		}
+
+		const bool samplesHaveLoaded = load(*audioLoader);
 		return samplesHaveLoaded;
 	}
 
@@ -141,7 +161,7 @@ namespace nCine
 		// On iOS `alBufferDataStatic()` could be used instead
 		alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
 		const ALenum error = alGetError();
-		//RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData failed: 0x%x", error);
+		RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData() failed with error 0x%x", error);
 
 		numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
 		duration_ = float(numSamples_) / frequency_;
@@ -151,10 +171,10 @@ namespace nCine
 
 	bool AudioBuffer::load(IAudioLoader& audioLoader)
 	{
-		//RETURNF_ASSERT_MSG(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
-		//                     "Unsupported number of bytes per sample: %d", audioLoader.bytesPerSample());
-		//RETURNF_ASSERT_MSG(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
-		//                     "Unsupported number of channels: %d", audioLoader.numChannels());
+		RETURNF_ASSERT_MSG(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
+		                     "Unsupported number of bytes per sample: %d", audioLoader.bytesPerSample());
+		RETURNF_ASSERT_MSG(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
+		                     "Unsupported number of channels: %d", audioLoader.numChannels());
 
 		bytesPerSample_ = audioLoader.bytesPerSample();
 		numChannels_ = audioLoader.numChannels();

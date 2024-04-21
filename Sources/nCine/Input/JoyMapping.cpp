@@ -6,6 +6,7 @@
 #include <cstring>	// for memcpy()
 
 #include <Containers/SmallVector.h>
+#include <Containers/StringUtils.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
 
@@ -95,16 +96,16 @@ namespace nCine
 	JoyMapping::MappingDescription::MappingDescription()
 	{
 		for (unsigned int i = 0; i < MaxNumAxes; i++) {
-			axes[i].name = AxisName::UNKNOWN;
+			axes[i].name = AxisName::Unknown;
 		}
 		for (unsigned int i = 0; i < MaxNumAxes; i++) {
-			buttonAxes[i] = AxisName::UNKNOWN;
+			buttonAxes[i] = AxisName::Unknown;
 		}
 		for (unsigned int i = 0; i < MaxNumButtons; i++) {
-			buttons[i] = ButtonName::UNKNOWN;
+			buttons[i] = ButtonName::Unknown;
 		}
 		for (unsigned int i = 0; i < MaxHatButtons; i++) {
-			hats[i] = ButtonName::UNKNOWN;
+			hats[i] = ButtonName::Unknown;
 		}
 	}
 
@@ -243,7 +244,7 @@ namespace nCine
 		if (mappingIsValid) {
 			mappedButtonEvent_.joyId = event.joyId;
 			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
-			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
+			if (mappedButtonEvent_.buttonName != ButtonName::Unknown) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 #if defined(NCINE_INPUT_DEBUGGING)
 				LOGI("Button press mapped as button %d", buttonId);
@@ -253,7 +254,7 @@ namespace nCine
 			} else {
 				// Check if the button is mapped as an axis
 				const AxisName axisName = mapping.desc.buttonAxes[event.buttonId];
-				if (axisName != AxisName::UNKNOWN) {
+				if (axisName != AxisName::Unknown) {
 					mappedAxisEvent_.joyId = event.joyId;
 					mappedAxisEvent_.axisName = axisName;
 					mappedAxisEvent_.value = 1.0f;
@@ -290,7 +291,7 @@ namespace nCine
 		if (mappingIsValid) {
 			mappedButtonEvent_.joyId = event.joyId;
 			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
-			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
+			if (mappedButtonEvent_.buttonName != ButtonName::Unknown) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 #if defined(NCINE_INPUT_DEBUGGING)
 				LOGI("Button release mapped as button %d", buttonId);
@@ -300,7 +301,7 @@ namespace nCine
 			} else {
 				// Check if the button is mapped as an axis
 				const AxisName axisName = mapping.desc.buttonAxes[event.buttonId];
-				if (axisName != AxisName::UNKNOWN) {
+				if (axisName != AxisName::Unknown) {
 					mappedAxisEvent_.joyId = event.joyId;
 					mappedAxisEvent_.axisName = axisName;
 					mappedAxisEvent_.value = 0.0f;
@@ -341,13 +342,13 @@ namespace nCine
 			const unsigned char oldHatState = mappedJoyStates_[event.joyId].lastHatState_;
 			const unsigned char newHatState = event.hatState;
 
-			constexpr unsigned char FirstHatValue = HatState::UP;
-			constexpr unsigned char LastHatValue = HatState::LEFT;
+			constexpr unsigned char FirstHatValue = HatState::Up;
+			constexpr unsigned char LastHatValue = HatState::Left;
 			for (unsigned char hatValue = FirstHatValue; hatValue <= LastHatValue; hatValue *= 2) {
 				if ((oldHatState & hatValue) != (newHatState & hatValue)) {
 					int hatIndex = hatStateToIndex(hatValue);
 					mappedButtonEvent_.buttonName = mapping.desc.hats[hatIndex];
-					if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
+					if (mappedButtonEvent_.buttonName != ButtonName::Unknown) {
 						const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 						if (newHatState & hatValue) {
 #if defined(NCINE_INPUT_DEBUGGING)
@@ -392,7 +393,7 @@ namespace nCine
 
 			mappedAxisEvent_.joyId = event.joyId;
 			mappedAxisEvent_.axisName = axis.name;
-			if (mappedAxisEvent_.axisName != AxisName::UNKNOWN) {
+			if (mappedAxisEvent_.axisName != AxisName::Unknown) {
 				const float value = (event.value + 1.0f) * 0.5f;
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 #if defined(NCINE_INPUT_DEBUGGING)
@@ -438,9 +439,9 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 		// Never search by name on Android, it can lead to wrong mapping
 		if (!mapping.isValid) {
-			const StringView joyNameView = joyName;
+			auto joyNameLower = StringUtils::lowercase(joyName);
 			// Don't assign Android default mapping to internal NVIDIA Shield devices, WSA devices and mice (detected as gamepads)
-			if (joyNameView == "virtual-search"_s || joyNameView == "shield-ask-remote"_s || joyNameView == "virtual_keyboard"_s || joyNameView.contains("Mouse"_s)) {
+			if (joyNameLower == "virtual-search"_s || joyNameLower == "shield-ask-remote"_s || joyNameLower == "virtual_keyboard"_s || joyNameLower.contains("mouse"_s)) {
 				return false;
 			}
 
@@ -451,7 +452,7 @@ namespace nCine
 
 			for (int i = 0; i < countof(AndroidAxisNameMapping); i++) {
 				mapping.desc.axes[i].name = AndroidAxisNameMapping[i];
-				if (mapping.desc.axes[i].name == AxisName::LTRIGGER || mapping.desc.axes[i].name == AxisName::RTRIGGER) {
+				if (mapping.desc.axes[i].name == AxisName::LeftTrigger || mapping.desc.axes[i].name == AxisName::RightTrigger) {
 					mapping.desc.axes[i].min = 0.0f;
 				} else {
 					mapping.desc.axes[i].min = -1.0f;
@@ -485,11 +486,13 @@ namespace nCine
 
 		if (!mapping.isValid) {
 #	if defined(DEATH_TARGET_UNIX)
-			// Razer keyboards and mice, and VMware virtual devices on Linux/BSD are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
-			const StringView joyNameView = joyName;
-			if ((joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s))) ||
-				(joyNameView == "SynPS/2 Synaptics TouchPad"_s) ||
-				(joyNameView == "VMware Virtual USB Mouse"_s)) {
+			// Keyboards, mice and touchpads (SynPS/2 Synaptics TouchPad), and also VMware virtual devices on Linux/BSD
+			// are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
+			auto joyNameLower = StringUtils::lowercase(joyName);
+			if (joyNameLower.contains("keyboard"_s) || joyNameLower.contains("mouse"_s) ||
+				(joyNameLower.contains("razer "_s) && joyNameLower.contains("deathadder"_s)) ||
+				(joyNameLower == "synps/2 synaptics touchpad"_s) ||
+				(joyNameLower == "vmware virtual usb mouse"_s)) {
 				return false;
 			}
 #	endif
@@ -788,7 +791,7 @@ namespace nCine
 		if (end - start <= 5 && (start[0] == 'a' || start[1] == 'a')) {
 			const char* digits = &start[1];
 
-			if (axis.name == AxisName::LTRIGGER || axis.name == AxisName::RTRIGGER) {
+			if (axis.name == AxisName::LeftTrigger || axis.name == AxisName::RightTrigger) {
 				axis.min = 0.0f;
 				axis.max = 1.0f;
 			}

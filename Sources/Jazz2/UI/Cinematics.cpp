@@ -143,21 +143,16 @@ namespace Jazz2::UI
 		if (!fs::IsReadableFile(fullPath)) {
 			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v")));
 		}
-		if (!fs::IsReadableFile(fullPath)) {
-			return false;
-		}
 
 		std::unique_ptr<Stream> s = fs::Open(fullPath, FileAccessMode::Read);
-		if (s->GetSize() < 32 || s->GetSize() > 64 * 1024 * 1024) {
-			return false;
-		}
+		RETURNF_ASSERT_MSG(s->GetSize() > 32 && s->GetSize() < 64 * 1024 * 1024,
+			"Cannot load \"%s.j2v\" - unexpected file size", path.data());
 
 		// "CineFeed" + file size (uint32_t) + CRC of lowercase filename (uint32_t)
 		std::uint8_t internalBuffer[16];
 		s->Read(internalBuffer, 16);
-		if (strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) != 0) {
-			return false;
-		}
+		RETURNF_ASSERT_MSG(strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0,
+			"Cannot load \"%s.j2v\" - invalid signature", path.data());
 
 		_width = s->ReadValue<uint32_t>();
 		_height = s->ReadValue<uint32_t>();
@@ -196,49 +191,39 @@ namespace Jazz2::UI
 	bool Cinematics::LoadSfxList(const StringView path)
 	{
 		auto& resolver = ContentResolver::Get();
-		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, String(path + ".j2sfx"_s) });
-		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ resolver.GetCachePath(), "Cinematics"_s, String(path + ".j2sfx"_s) });
-		}
-
-		auto s = fs::Open(fullPath, FileAccessMode::Read);
-		RETURNF_ASSERT_MSG(s->GetSize() > 16, "Cannot load SFX list for \"%s.j2v\"", path);
+		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2sfx"_s)));
+		RETURNF_ASSERT_MSG(s->GetSize() > 16 && s->GetSize() < 64 * 1024 * 1024,
+			"Cannot load SFX playlist for \"%s.j2v\" - unexpected file size", path.data());
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValue<std::uint16_t>();
-		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::SfxListFile || version > SfxListVersion) {
-			return false;
-		}
+		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::SfxListFile && version <= SfxListVersion,
+			"Cannot load SFX playlist for \"%s.j2v\" - invalid signature", path.data());
 
-		DeflateStream uc(*s);
-
-		std::uint32_t sampleCount = uc.ReadValue<std::uint16_t>();
+		std::uint32_t sampleCount = s->ReadValue<std::uint16_t>();
 		for (std::uint32_t i = 0; i < sampleCount; i++) {
-			std::uint8_t stringSize = uc.ReadValue<std::uint8_t>();
+			std::uint8_t stringSize = s->ReadValue<std::uint8_t>();
 			String samplePath = String(NoInit, stringSize);
-			uc.Read(samplePath.data(), stringSize);
+			s->Read(samplePath.data(), stringSize);
 
 			String samplePathNormalized = fs::ToNativeSeparators(samplePath);
-			String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Animations"_s, samplePathNormalized });
-			if (!fs::IsReadableFile(fullPath)) {
-				fullPath = fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, samplePathNormalized });
-				if (!fs::IsReadableFile(fullPath)) {
-					_sfxSamples.emplace_back(); // Sample not found
-					continue;
-				}
+			String fullPath = fs::CombinePath("Animations"_s, samplePathNormalized);
+			auto sample = resolver.OpenContentFile(fullPath);
+			if (sample->IsValid()) {
+				_sfxSamples.emplace_back(std::move(sample), fullPath);
+			} else {
+				_sfxSamples.emplace_back(); // Sample not found
 			}
-
-			_sfxSamples.emplace_back(fullPath);
 		}
 
-		std::uint32_t itemCount = uc.ReadValue<std::uint16_t>();
+		std::uint32_t itemCount = s->ReadValue<std::uint16_t>();
 		for (std::uint32_t i = 0; i < itemCount; i++) {
 			auto& item = _sfxPlaylist.emplace_back();
-			item.Frame = uc.ReadVariableUint32();
-			item.Sample = uc.ReadValue<std::uint16_t>();
-			item.Gain = uc.ReadValue<std::uint8_t>() / 255.0f;
-			item.Panning = uc.ReadValue<std::int8_t>() / 127.0f;
+			item.Frame = s->ReadVariableUint32();
+			item.Sample = s->ReadValue<std::uint16_t>();
+			item.Gain = s->ReadValue<std::uint8_t>() / 255.0f;
+			item.Panning = s->ReadValue<std::int8_t>() / 127.0f;
 		}
 
 		return true;
@@ -401,8 +386,8 @@ namespace Jazz2::UI
 	{
 	}
 
-	Cinematics::SfxItem::SfxItem(const StringView path)
+	Cinematics::SfxItem::SfxItem(std::unique_ptr<Stream> stream, const StringView path)
+		: Buffer(std::make_unique<AudioBuffer>(std::move(stream), path))
 	{
-		Buffer = std::make_unique<AudioBuffer>(path);
 	}
 }

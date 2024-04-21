@@ -39,7 +39,7 @@ namespace Death { namespace Containers {
 			// Here we additionally deal with types that have a NoInit constructor
 			template<class U = T, typename std::enable_if<!std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT) {}
 			template<class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT) : StaticArrayData{NoInit, typename GenerateSequence<size_>::Type{}} {}
-			template<std::size_t ...sequence, class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT noInit, Sequence<sequence...>) : _data{(&noInit)[0 * sequence]...} {}
+			template<std::size_t ...sequence, class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT noInit, Sequence<sequence...>) : _data{T{(&noInit)[0 * sequence]}...} {}
 
 			// Compared to StaticArrayData<size_, T, false> it does the right thing by default. MSVC 2015, 2019 and 2022
 			// (but not 2017, _MSC_VER=191x) complains that the constexpr constructor doesn't initialize all members

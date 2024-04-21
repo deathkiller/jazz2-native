@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../Common.h"
-#include "../Containers/String.h"
 
 #include <cstdio>		// For FILE
 #include <memory>
@@ -32,22 +31,11 @@ namespace Death { namespace IO {
 	class Stream
 	{
 	public:
-		enum class Type {
-			None,
-			File,
-			Memory,
-			AndroidAsset
-		};
-
 		/** @brief Returned if seek operation is not supported by @ref Stream */
 		static constexpr std::int32_t NotSeekable = -1;
 
-		explicit Stream() : _type(Type::None), _size(0) { }
+		Stream() : _size(0) { }
 		virtual ~Stream() { }
-
-		Type GetType() const {
-			return _type;
-		}
 
 		/** @brief Closes the stream */
 		virtual void Close() = 0;
@@ -62,15 +50,15 @@ namespace Death { namespace IO {
 		/** @brief Returns true if the stream has been sucessfully opened */
 		virtual bool IsValid() const = 0;
 
-		/** @brief Returns file path if any */
-		Containers::StringView GetPath() const;
-
 		/** @brief Returns stream size in bytes */
 		DEATH_ALWAYS_INLINE std::int32_t GetSize() const {
 			return _size;
 		}
 
 		virtual void SetCloseOnDestruction(bool shouldCloseOnDestruction) { }
+
+		/** @brief Reads the bytes from the current stream and writes them to the target stream */
+		std::int32_t CopyTo(Stream& targetStream);
 
 		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
 		DEATH_ALWAYS_INLINE T ReadValue()
@@ -153,8 +141,6 @@ namespace Death { namespace IO {
 		}
 
 	protected:
-		Type _type;
-		Containers::String _path;
 		std::int32_t _size;
 	};
 }}

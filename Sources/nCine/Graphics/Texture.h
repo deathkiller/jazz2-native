@@ -67,7 +67,7 @@ namespace nCine
 		Texture(const char* name, Format format, Vector2i size);
 
 		/// Creates a texture from a named memory buffer
-		Texture(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//Texture(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Creates a texture from an image file
 		explicit Texture(const StringView& filename);
 
@@ -87,7 +87,7 @@ namespace nCine
 		/// Initializes an empty texture with the specified format and size using a vector
 		void init(const char* name, Format format, Vector2i size);
 
-		bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(const StringView& filename);
 
 		/// Loads all texture texels in raw format from a memory buffer in the first mip level

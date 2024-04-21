@@ -19,16 +19,19 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	FileStream::FileStream(const Containers::String& path, FileAccessMode mode)
-		: _shouldCloseOnDestruction(true),
+	FileStream::FileStream(const Containers::StringView path, FileAccessMode mode)
+		: FileStream(Containers::String{path}, mode)
+	{
+	}
+
+	FileStream::FileStream(Containers::String&& path, FileAccessMode mode)
+		: _shouldCloseOnDestruction(true), _path(std::move(path)),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
-			_fileDescriptor(-1)
+		_fileDescriptor(-1)
 #else
-			_handle(nullptr)
+		_handle(nullptr)
 #endif
 	{
-		_type = Type::File;
-		_path = path;
 		Open(mode);
 	}
 
@@ -66,14 +69,17 @@ namespace Death { namespace IO {
 
 	std::int32_t FileStream::Seek(std::int32_t offset, SeekOrigin origin)
 	{
-		std::int32_t seekValue = -1;
+		std::int32_t seekValue = NotSeekable;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			seekValue = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
 		}
 #else
 		if (_handle != nullptr) {
-			seekValue = ::fseek(_handle, offset, static_cast<std::int32_t>(origin));
+			// ::fseek return 0 on success
+			if (::fseek(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
+				seekValue = ::ftell(_handle);
+			}
 		}
 #endif
 		return seekValue;
@@ -135,6 +141,11 @@ namespace Death { namespace IO {
 #else
 		return (_handle != nullptr);
 #endif
+	}
+
+	Containers::StringView FileStream::GetPath() const
+	{
+		return _path;
 	}
 
 	void FileStream::Open(FileAccessMode mode)
@@ -265,4 +276,5 @@ namespace Death { namespace IO {
 		::fseek(_handle, 0L, SEEK_SET);
 #endif
 	}
+
 }}

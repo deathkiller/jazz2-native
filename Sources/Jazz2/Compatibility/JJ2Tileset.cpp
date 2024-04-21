@@ -237,6 +237,6 @@ namespace Jazz2::Compatibility
 		}
 
 		// TODO: Use single channel instead
-		JJ2Anims::WriteImageToFileInternal(so, pixels.get(), width, height, 4);
+		JJ2Anims::WriteImageContent(*so, pixels.get(), width, height, 4);
 	}
 }

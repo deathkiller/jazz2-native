@@ -107,7 +107,7 @@ namespace nCine
 		/// Default constructor
 		AudioStream();
 		/// Constructor creating an audio stream from a named memory buffer
-		AudioStream(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//AudioStream(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Constructor creating an audio stream from an audio file
 		explicit AudioStream(const StringView& filename);
 
@@ -116,7 +116,7 @@ namespace nCine
 		/// Default move assignment operator
 		AudioStream& operator=(AudioStream&&);
 
-		bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(const StringView& filename);
 
 		void createReader(IAudioLoader& audioLoader);

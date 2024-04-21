@@ -78,7 +78,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  
   <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   <Import Project="$(SolutionDir)\VC-LTL helper for Visual Studio.props" />
   <Import Project="$(SolutionDir)\Sign.props" Condition="Exists('$(SolutionDir)\Sign.props')" />
@@ -104,7 +103,6 @@
       </PropertyGroup>
     </Otherwise>
   </Choose>
-  
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -187,7 +185,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;__WITH_GLFW;WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -305,6 +303,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Stream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Unaligned.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\TypeInfo.h" />
+    <ClInclude Include="..\..\Sdílené soubory Death™ Common\Native\IO\PakFile.h" />
     <ClInclude Include="backward\backward.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
@@ -707,6 +706,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\FileSystem.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\MemoryStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Stream.cpp" />
+    <ClCompile Include="..\..\Sdílené soubory Death™ Common\Native\IO\PakFile.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />
