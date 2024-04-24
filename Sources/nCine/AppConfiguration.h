@@ -13,6 +13,8 @@ namespace nCine
 	class AppConfiguration
 	{
 	public:
+		static constexpr std::int32_t WindowPositionIgnore = 2147483647; // `INT_MAX`
+
 		/// Default constructor setting the defaults
 		AppConfiguration();
 
@@ -23,6 +25,12 @@ namespace nCine
 		/// The screen resolution
 		/*! \note If either `x` or `y` are zero then the screen resolution will not be changed. */
 		Vector2i resolution;
+
+		/// The window position coordinates in the virtual screen made of all the connected monitors
+		/*! \note It can also be used to go full screen on a monitor that is not the primary one of the system. */
+		/*! \note The `WindowPositionIgnore` value can be used in either or both dimensions when a specific position is not needed. */
+		//Vector2i windowPosition;
+
 		/// The flag is `true` if the screen is going to be in fullscreen mode
 		bool fullscreen;
 		/// The flag is `true` if the window is going to be resizable

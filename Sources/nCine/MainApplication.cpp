@@ -397,7 +397,20 @@ namespace nCine
 #if defined(WITH_SDL)
 	void MainApplication::processEvents()
 	{
+		ZoneScoped;
+
 		SDL_Event event;
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (shouldSuspend()) {
+			SDL_WaitEvent(&event);
+			SDL_PushEvent(&event);
+			// Don't lose any events when resuming
+			while (SDL_PollEvent(&event)) {
+				SDL_PushEvent(&event);
+			}
+		}
+#	endif
+		
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 				case SDL_QUIT:
@@ -428,17 +441,6 @@ namespace nCine
 					SdlInputManager::parseEvent(event);
 					break;
 			}
-
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
-			if (shouldSuspend()) {
-				SDL_WaitEvent(&event);
-				SDL_PushEvent(&event);
-				// Don't lose any events when resuming
-				while (SDL_PollEvent(&event)) {
-					SDL_PushEvent(&event);
-				}
-			}
-#	endif
 		}
 	}
 #elif defined(WITH_GLFW)

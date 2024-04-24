@@ -39,8 +39,9 @@ namespace Death { namespace IO {
 		struct Item {
 			Containers::String Name;
 			ItemFlags Flags;
-			std::uint32_t Size;
 			std::uint64_t Offset;
+			std::uint32_t UncompressedSize;
+			std::uint32_t Size;
 
 			Containers::Array<Item> ChildItems;
 		};

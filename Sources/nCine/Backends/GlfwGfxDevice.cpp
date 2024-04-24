@@ -4,6 +4,8 @@
 #include "GlfwInputManager.h"
 #include "../Graphics/ITextureLoader.h"
 
+#define GLFW_VERSION_COMBINED (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)
+
 namespace nCine
 {
 	GLFWwindow* GlfwGfxDevice::windowHandle_ = nullptr;
@@ -156,7 +158,7 @@ namespace nCine
 
 	void GlfwGfxDevice::flashWindow() const
 	{
-#if (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if GLFW_VERSION_COMBINED >= 3300
 		glfwRequestWindowAttention(windowHandle_);
 #endif
 	}
@@ -241,7 +243,7 @@ namespace nCine
 
 	void GlfwGfxDevice::initGraphics()
 	{
-#if (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if GLFW_VERSION_COMBINED >= 3300 && !defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
 #endif
 		glfwSetErrorCallback(errorCallback);
@@ -293,6 +295,14 @@ namespace nCine
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, glContextInfo_.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, glContextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
+#if GLFW_VERSION_COMBINED >= 3400
+		//const int windowPosX = (windowMode.windowPositionX != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
+		//						? windowMode.windowPositionX : GLFW_ANY_POSITION);
+		//const int windowPosY = (windowMode.windowPositionY != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
+		//						? windowMode.windowPositionY : GLFW_ANY_POSITION);
+		//glfwWindowHint(GLFW_POSITION_X, windowPosX);
+		//glfwWindowHint(GLFW_POSITION_Y, windowPosY);
+#endif
 #if defined(GLFW_SCALE_TO_MONITOR) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Scaling is handled automatically by GLFW
 		if (enableWindowScaling) {
@@ -302,6 +312,21 @@ namespace nCine
 
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
+		
+#if GLFW_VERSION_COMBINED < 3400
+		//const bool ignoreBothWindowPosition = (windowMode.windowPositionX == AppConfiguration::WindowPositionIgnore &&
+		//										windowMode.windowPositionY == AppConfiguration::WindowPositionIgnore);
+		//if (!isFullscreen_ && windowPositionIsValid && !ignoreBothWindowPosition) {
+		//	Vector2i windowPos;
+		//	glfwGetWindowPos(windowHandle_, &windowPos.x, &windowPos.y);
+		//	if (windowMode.windowPositionX != AppConfiguration::WindowPositionIgnore)
+		//		windowPos.x = windowMode.windowPositionX;
+		//	if (windowMode.windowPositionY != AppConfiguration::WindowPositionIgnore)
+		//		windowPos.y = windowMode.windowPositionY;
+		//	glfwSetWindowPos(windowHandle_, windowPos.x, windowPos.y);
+		//}
+#endif
+
 		glfwGetFramebufferSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 		initGLViewport();
 
@@ -336,7 +361,7 @@ namespace nCine
 			monitors_[i].name = glfwGetMonitorName(monitor);
 			ASSERT(monitors_[i].name != nullptr);
 			glfwGetMonitorPos(monitor, &monitors_[i].position.X, &monitors_[i].position.Y);
-#if (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300)
+#if GLFW_VERSION_COMBINED >= 3300
 			glfwGetMonitorContentScale(monitor, &monitors_[i].scale.X, &monitors_[i].scale.Y);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 			monitors_[i].scale.X = emscripten_get_device_pixel_ratio();
@@ -373,7 +398,7 @@ namespace nCine
 		if (monitorIndex < monitorCount) {
 			IGfxDevice::Monitor& monitor = monitors_[monitorIndex];
 
-#if (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300)
+#if GLFW_VERSION_COMBINED >= 3300
 			glfwGetMonitorContentScale(monitors[monitorIndex], &monitor.scale.X, &monitor.scale.Y);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 			monitor.scale.X = emscripten_get_device_pixel_ratio();

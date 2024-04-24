@@ -208,6 +208,12 @@ namespace nCine
 			flags |= SDL_WINDOW_FULLSCREEN;
 		}
 
+		//const bool windowPositionIsValid = (containingMonitorIndex(windowMode) != -1);
+		//const int windowPosX = (windowMode.windowPositionX != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
+		//							? windowMode.windowPositionX : SDL_WINDOWPOS_CENTERED);
+		//const int windowPosY = (windowMode.windowPositionY != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
+		//							? windowMode.windowPositionY : SDL_WINDOWPOS_CENTERED);
+
 		// Creating a window with SDL2
 		windowHandle_ = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width_, height_, flags);
 		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());

@@ -12,6 +12,8 @@
 #	include "ImGuiGlfwInput.h"
 #endif
 
+#define GLFW_VERSION_COMBINED (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)
+
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1;
@@ -45,7 +47,7 @@ namespace nCine
 
 		glfwSetMonitorCallback(monitorCallback);
 		glfwSetWindowCloseCallback(GlfwGfxDevice::windowHandle(), windowCloseCallback);
-#if (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300)
+#if GLFW_VERSION_COKMBINED >= 3300
 		glfwSetWindowContentScaleCallback(GlfwGfxDevice::windowHandle(), windowContentScaleCallback);
 #endif
 		glfwSetWindowSizeCallback(GlfwGfxDevice::windowHandle(), windowSizeCallback);
@@ -110,7 +112,7 @@ namespace nCine
 		for (unsigned int joyId = 0; joyId < MaxNumJoysticks; joyId++) {
 			if (glfwJoystickPresent(GLFW_JOYSTICK_1 + joyId)) {
 				joystickStates_[joyId].buttons_ = glfwGetJoystickButtons(joyId, &joystickStates_[joyId].numButtons_);
-#if GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
+#if GLFW_VERSION_COKMBINED >= 3300
 				joystickStates_[joyId].hats_ = glfwGetJoystickHats(joyId, &joystickStates_[joyId].numHats_);
 #else
 				joystickStates_[joyId].hats_ = 0;
@@ -141,7 +143,7 @@ namespace nCine
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		return JoystickGuidType::Default;
-#elif GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
+#elif GLFW_VERSION_COKMBINED >= 3300
 		if (isJoyPresent(joyId)) {
 			static const char XinputPrefix[] = "78696e707574";
 			const char* guid = glfwGetJoystickGUID(joyId);
@@ -172,7 +174,7 @@ namespace nCine
 	{
 		int numHats = -1;
 		if (isJoyPresent(joyId)) {
-#if GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
+#if GLFW_VERSION_COKMBINED >= 3300
 			glfwGetJoystickHats(GLFW_JOYSTICK_1 + joyId, &numHats);
 #else
 			numHats = 0;
@@ -216,7 +218,7 @@ namespace nCine
 				case Cursor::HiddenLocked: glfwSetInputMode(GlfwGfxDevice::windowHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED); break;
 			}
 
-#if GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
+#if GLFW_VERSION_COKMBINED >= 3300
 			// Enable raw mouse motion (if supported) when disabling the cursor
 			const bool enableRawMouseMotion = (cursor == Cursor::HiddenLocked && glfwRawMouseMotionSupported() == GLFW_TRUE);
 			glfwSetInputMode(GlfwGfxDevice::windowHandle(), GLFW_RAW_MOUSE_MOTION, enableRawMouseMotion ? GLFW_TRUE : GLFW_FALSE);
@@ -374,7 +376,7 @@ namespace nCine
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			numHats = 0;
 			const char* guid = "default";
-#	elif GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
+#	elif GLFW_VERSION_COKMBINED >= 3300
 			glfwGetJoystickHats(joy, &numHats);
 			const char* guid = glfwGetJoystickGUID(joy);
 #	else
