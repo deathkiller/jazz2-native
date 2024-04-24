@@ -15,6 +15,7 @@ namespace nCine
 		frameTimerLogInterval(5.0f),
 		resolution(0, 0),
 		fullscreen(false),
+		//windowPosition(WindowPositionIgnore, WindowPositionIgnore),
 		resizable(true),
 		windowScaling(true),
 		frameLimit(0),

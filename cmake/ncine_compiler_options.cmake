@@ -190,7 +190,12 @@ else() # GCC and LLVM
 	endif()
 
 	if(NCINE_WITH_TRACY)
-		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-g -fno-omit-frame-pointer -rdynamic>)
+		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-g -fno-omit-frame-pointer>)
+		# Don't add `-rdynamic` on GCC/MinGW
+		if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND (MINGW OR MSYS)))
+			target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-rdynamic>)
+		endif()
+		
 		if(MINGW OR MSYS)
 			target_link_libraries(${NCINE_APP} PRIVATE dbghelp)
 		elseif(NOT ANDROID AND NOT APPLE)

@@ -98,7 +98,7 @@ namespace Death { namespace IO {
 	class ZlibCompressedBoundedStream : public Stream
 	{
 	public:
-		ZlibCompressedBoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t size);
+		ZlibCompressedBoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
 
 		void Close() override;
 		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
@@ -116,11 +116,12 @@ namespace Death { namespace IO {
 		DeflateStream _deflateStream;
 	};
 
-	ZlibCompressedBoundedStream::ZlibCompressedBoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t size)
-		: _underlyingStream(path, offset, size)
+	ZlibCompressedBoundedStream::ZlibCompressedBoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
+		: _underlyingStream(path, offset, compressedSize)
 	{
 		_underlyingStream.Seek(offset, SeekOrigin::Begin);
-		_deflateStream = DeflateStream(_underlyingStream, size);
+		_deflateStream = DeflateStream(_underlyingStream, compressedSize);
+		_size = uncompressedSize;
 	}
 
 	void ZlibCompressedBoundedStream::Close()
@@ -227,11 +228,15 @@ namespace Death { namespace IO {
 			item.Name = String(NoInit, nameLength);
 			s->Read(item.Name.data(), nameLength);
 
-			if ((item.Flags & ItemFlags::Directory) != ItemFlags::Directory) {
-				item.Size = s->ReadVariableUint32();
-			}
-
 			item.Offset = s->ReadVariableUint64();
+
+			if ((item.Flags & ItemFlags::Directory) != ItemFlags::Directory) {
+				item.UncompressedSize = s->ReadVariableUint32();
+
+				if ((item.Flags & PakFile::ItemFlags::ZlibCompressed) == PakFile::ItemFlags::ZlibCompressed) {
+					item.Size = s->ReadVariableUint32();
+				}
+			}
 		}
 
 		for (std::uint32_t i = 0; i < itemCount; i++) {
@@ -256,11 +261,11 @@ namespace Death { namespace IO {
 
 #if defined(WITH_ZLIB)
 		if ((foundItem->Flags & ItemFlags::ZlibCompressed) == ItemFlags::ZlibCompressed) {
-			return std::make_unique<ZlibCompressedBoundedStream>(_path, foundItem->Offset, foundItem->Size);
+			return std::make_unique<ZlibCompressedBoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 		}
 #endif
 
-		return std::make_unique<BoundedStream>(_path, foundItem->Offset, foundItem->Size);
+		return std::make_unique<BoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize);
 	}
 
 	PakFile::Item* PakFile::FindItem(Containers::StringView path)
@@ -335,25 +340,29 @@ namespace Death { namespace IO {
 
 		PakFile::ItemFlags flags = PakFile::ItemFlags::None;
 		std::int32_t offset = _outputStream->GetPosition();
-		std::int32_t size;
+		std::int32_t uncompressedSize, size;
 
 #if defined(WITH_ZLIB)
 		if (compress) {
 			DeflateWriter dw(*_outputStream);
-			size = stream.CopyTo(dw);
+			uncompressedSize = stream.CopyTo(dw);
+			dw.Close();
+			size = _outputStream->GetPosition() - offset;
 			flags |= PakFile::ItemFlags::ZlibCompressed;
 		} else
 #endif
 		{
-			size = stream.CopyTo(*_outputStream);
+			uncompressedSize = stream.CopyTo(*_outputStream);
+			size = 0;
 		}
 
-		DEATH_ASSERT(size > 0, false, "Failed to copy stream to .pak file");
+		DEATH_ASSERT(uncompressedSize > 0, false, "Failed to copy stream to .pak file");
 
 		PakFile::Item* newItem = &arrayAppend(*items, PakFile::Item());
 		newItem->Name = path;
 		newItem->Flags = flags;
 		newItem->Offset = offset;
+		newItem->UncompressedSize = uncompressedSize;
 		newItem->Size = size;
 
 		return true;
@@ -471,11 +480,15 @@ namespace Death { namespace IO {
 		_outputStream->WriteVariableInt32(item.Name.size());
 		_outputStream->Write(item.Name.data(), item.Name.size());
 
-		if ((item.Flags & PakFile::ItemFlags::Directory) != PakFile::ItemFlags::Directory) {
-			_outputStream->WriteVariableUint32(item.Size);
-		}
-
 		_outputStream->WriteVariableUint64(item.Offset);
+
+		if ((item.Flags & PakFile::ItemFlags::Directory) != PakFile::ItemFlags::Directory) {
+			_outputStream->WriteVariableUint32(item.UncompressedSize);
+
+			if ((item.Flags & PakFile::ItemFlags::ZlibCompressed) == PakFile::ItemFlags::ZlibCompressed) {
+				_outputStream->WriteVariableUint32(item.Size);
+			}
+		}
 	}
 
 }}

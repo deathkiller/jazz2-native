@@ -206,7 +206,7 @@ namespace nCine
 		if (vaoPool_ == nullptr) {
 			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 		}
-		renderCommandPool_ = std::make_unique<RenderCommandPool>(appCfg.vaoPoolSize);
+		renderCommandPool_ = std::make_unique<RenderCommandPool>(appCfg.renderCommandPoolSize);
 		renderBatcher_ = std::make_unique<RenderBatcher>();
 		defaultCamera_ = std::make_unique<Camera>();
 		currentCamera_ = defaultCamera_.get();

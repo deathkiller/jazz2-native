@@ -7,6 +7,7 @@
 struct SDL_Window;
 union SDL_Event;
 struct SDL_Cursor;
+typedef struct _SDL_GameController SDL_GameController;
 
 namespace nCine
 {

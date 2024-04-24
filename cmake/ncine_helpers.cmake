@@ -424,8 +424,13 @@ function(ncine_apply_compiler_options target)
 				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=address>) # Needs "ALLOW_MEMORY_GROWTH" which is already passed to the linker
 				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=address>)
 			elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=address -fsanitize-address-use-after-scope -fno-optimize-sibling-calls -fno-common -fno-omit-frame-pointer -rdynamic>)
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=address -fsanitize-address-use-after-scope -fno-optimize-sibling-calls -fno-common -fno-omit-frame-pointer>)
 				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=address>)
+				
+				# Don't add `-rdynamic` on GCC/MinGW
+				if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND (MINGW OR MSYS)))
+					target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-rdynamic>)
+				endif()
 			endif()
 		endif()
 
