@@ -16,6 +16,11 @@
 #	include <unistd.h>		// For close()
 #endif
 
+// `_nolock` functions are not supported by VC-LTL, `_unlocked` functions are not supported on Android and Apple
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(_Build_By_LTL)) || (!defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE))
+#	define DEATH_USE_NOLOCK_IN_FILE
+#endif
+
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -78,14 +83,13 @@ namespace Death { namespace IO {
 		if (_handle != nullptr) {
 			// ::fseek return 0 on success
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_Build_By_LTL)
-			// VC-LTL doesn't support _nolock functions
-			if (::_fseeki64(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
-				newPos = ::_ftelli64(_handle);
-			}
-#		else
+#		if defined(DEATH_USE_NOLOCK_IN_FILE)
 			if (::_fseeki64_nolock(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
 				newPos = ::_ftelli64_nolock(_handle);
+			}
+#		else
+			if (::_fseeki64(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
+				newPos = ::_ftelli64(_handle);
 			}
 #		endif
 #	else
@@ -111,11 +115,10 @@ namespace Death { namespace IO {
 #else
 		if (_handle != nullptr) {
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_Build_By_LTL)
-			// VC-LTL doesn't support _nolock functions
-			pos = ::_ftelli64(_handle);
-#		else
+#		if defined(DEATH_USE_NOLOCK_IN_FILE)
 			pos = ::_ftelli64_nolock(_handle);
+#		else
+			pos = ::_ftelli64(_handle);
 #		endif
 #	else
 			pos = ::ftello(_handle);
@@ -137,13 +140,12 @@ namespace Death { namespace IO {
 #else
 		if (_handle != nullptr) {
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_Build_By_LTL)
-			// VC-LTL doesn't support _nolock functions
-			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
-#		else
+#		if defined(DEATH_USE_NOLOCK_IN_FILE)
 			bytesRead = static_cast<std::int32_t>(::_fread_nolock(buffer, 1, bytes, _handle));
+#		else
+			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
 #		endif
-#	elif !defined(DEATH_TARGET_ANDROID)
+#	elif defined(DEATH_USE_NOLOCK_IN_FILE)
 			bytesRead = static_cast<std::int32_t>(::fread_unlocked(buffer, 1, bytes, _handle));
 #	else
 			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
@@ -165,13 +167,12 @@ namespace Death { namespace IO {
 #else
 		if (_handle != nullptr) {
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_Build_By_LTL)
-			// VC-LTL doesn't support _nolock functions
-			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
-#		else
+#		if defined(DEATH_USE_NOLOCK_IN_FILE)
 			bytesWritten = static_cast<std::int32_t>(::_fwrite_nolock(buffer, 1, bytes, _handle));
+#		else
+			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
 #		endif
-#	elif !defined(DEATH_TARGET_ANDROID)
+#	elif defined(DEATH_USE_NOLOCK_IN_FILE)
 			bytesWritten = static_cast<std::int32_t>(::fwrite_unlocked(buffer, 1, bytes, _handle));
 #	else
 			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
@@ -319,15 +320,14 @@ namespace Death { namespace IO {
 
 		// Try to get file size
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_Build_By_LTL)
-		// VC-LTL doesn't support _nolock functions
-		::_fseeki64(_handle, 0, SEEK_END);
-		_size = ::_ftelli64(_handle);
-		::_fseeki64(_handle, 0, SEEK_SET);
-#		else
+#		if defined(DEATH_USE_NOLOCK_IN_FILE)
 		::_fseeki64_nolock(_handle, 0, SEEK_END);
 		_size = ::_ftelli64_nolock(_handle);
 		::_fseeki64_nolock(_handle, 0, SEEK_SET);
+#		else
+		::_fseeki64(_handle, 0, SEEK_END);
+		_size = ::_ftelli64(_handle);
+		::_fseeki64(_handle, 0, SEEK_SET);
 #		endif
 #	else
 		::fseeko(_handle, 0, SEEK_END);
