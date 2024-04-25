@@ -305,7 +305,7 @@ namespace Death { namespace IO {
 	std::int64_t DeflateWriter::GetMaxDeflatedSize(std::int64_t uncompressedSize)
 	{
 		constexpr std::int64_t MinBlockSize = 5000;
-		std::int64_t maxBlocks = std::max((uncompressedSize + MinBlockSize - 1) / MinBlockSize, 1LL);
+		std::int64_t maxBlocks = std::max((uncompressedSize + MinBlockSize - 1) / MinBlockSize, std::int64_t(1));
 		return uncompressedSize + (5 * maxBlocks) + 1 + 8;
 	}
 
