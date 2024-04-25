@@ -32,13 +32,13 @@ namespace Death { namespace IO {
 		_handle(nullptr)
 #endif
 	{
-		Open(mode);
+		OpenInternal(mode);
 	}
 
 	FileStream::~FileStream()
 	{
 		if (_shouldCloseOnDestruction) {
-			Close();
+			FileStream::Close();
 		}
 	}
 
@@ -78,12 +78,19 @@ namespace Death { namespace IO {
 		if (_handle != nullptr) {
 			// ::fseek return 0 on success
 #	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+			// VC-LTL doesn't support _nolock functions
 			if (::_fseeki64(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
 				newPos = ::_ftelli64(_handle);
 			}
+#		else
+			if (::_fseeki64_nolock(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
+				newPos = ::_ftelli64_nolock(_handle);
+			}
+#		endif
 #	else
-			if (::fseek(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
-				newPos = ::ftell(_handle);
+			if (::fseeko(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
+				newPos = ::ftello(_handle);
 			}
 #	endif
 			else {
@@ -104,9 +111,14 @@ namespace Death { namespace IO {
 #else
 		if (_handle != nullptr) {
 #	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+			// VC-LTL doesn't support _nolock functions
 			pos = ::_ftelli64(_handle);
+#		else
+			pos = ::_ftelli64_nolock(_handle);
+#		endif
 #	else
-			pos = ::ftell(_handle);
+			pos = ::ftello(_handle);
 #	endif
 		}
 #endif
@@ -124,7 +136,16 @@ namespace Death { namespace IO {
 		}
 #else
 		if (_handle != nullptr) {
+#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+			// VC-LTL doesn't support _nolock functions
 			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
+#		else
+			bytesRead = static_cast<std::int32_t>(::_fread_nolock(buffer, 1, bytes, _handle));
+#		endif
+#	else
+			bytesRead = static_cast<std::int32_t>(::fread_unlocked(buffer, 1, bytes, _handle));
+#	endif
 		}
 #endif
 		return bytesRead;
@@ -141,7 +162,16 @@ namespace Death { namespace IO {
 		}
 #else
 		if (_handle != nullptr) {
+#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+			// VC-LTL doesn't support _nolock functions
 			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
+#		else
+			bytesWritten = static_cast<std::int32_t>(::_fwrite_nolock(buffer, 1, bytes, _handle));
+#		endif
+#	else
+			bytesWritten = static_cast<std::int32_t>(::fwrite_unlocked(buffer, 1, bytes, _handle));
+#	endif
 		}
 #endif
 		return bytesWritten;
@@ -161,7 +191,7 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-	void FileStream::Open(FileAccessMode mode)
+	void FileStream::OpenInternal(FileAccessMode mode)
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t openFlag;
@@ -193,8 +223,8 @@ namespace Death { namespace IO {
 		}
 
 		// Try to get file size
-		_size = ::lseek(_fileDescriptor, 0L, SEEK_END);
-		::lseek(_fileDescriptor, 0L, SEEK_SET);
+		_size = ::lseek(_fileDescriptor, 0, SEEK_END);
+		::lseek(_fileDescriptor, 0, SEEK_SET);
 #else
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		DWORD desireAccess, creationDisposition;
@@ -285,13 +315,20 @@ namespace Death { namespace IO {
 
 		// Try to get file size
 #	if defined(DEATH_TARGET_WINDOWS)
-		::_fseeki64(_handle, 0L, SEEK_END);
+#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+		// VC-LTL doesn't support _nolock functions
+		::_fseeki64(_handle, 0, SEEK_END);
 		_size = ::_ftelli64(_handle);
-		::_fseeki64(_handle, 0L, SEEK_SET);
+		::_fseeki64(_handle, 0, SEEK_SET);
+#		else
+		::_fseeki64_nolock(_handle, 0, SEEK_END);
+		_size = ::_ftelli64_nolock(_handle);
+		::_fseeki64_nolock(_handle, 0, SEEK_SET);
+#		endif
 #	else
-		::fseek(_handle, 0L, SEEK_END);
-		_size = ::ftell(_handle);
-		::fseek(_handle, 0L, SEEK_SET);
+		::fseeko(_handle, 0, SEEK_END);
+		_size = ::ftello(_handle);
+		::fseeko(_handle, 0, SEEK_SET);
 #	endif
 #endif
 	}

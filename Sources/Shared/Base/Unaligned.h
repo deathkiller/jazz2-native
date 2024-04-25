@@ -13,6 +13,8 @@ namespace Death {
 	class Unaligned
 	{
 	public:
+		Unaligned() = delete;
+
 		static std::uint16_t Load16(const void* p);
 		static std::uint32_t Load32(const void* p);
 		static std::uint64_t Load64(const void* p);
@@ -20,9 +22,6 @@ namespace Death {
 		static void Store16(void* p, std::uint16_t v);
 		static void Store32(void* p, std::uint32_t v);
 		static void Store64(void* p, std::uint64_t v);
-
-	private:
-		Unaligned() = delete;
 	};
 
 	DEATH_ALWAYS_INLINE std::uint16_t Unaligned::Load16(const void* p)

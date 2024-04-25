@@ -16,6 +16,9 @@ namespace Death { namespace IO {
 		MemoryStream(std::uint8_t* bufferPtr, std::int64_t bufferSize);
 		MemoryStream(const std::uint8_t* bufferPtr, std::int64_t bufferSize);
 
+		MemoryStream(const MemoryStream&) = delete;
+		MemoryStream& operator=(const MemoryStream&) = delete;
+
 		void Close() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
@@ -39,11 +42,9 @@ namespace Death { namespace IO {
 			Growable
 		};
 
-		MemoryStream(const MemoryStream&) = delete;
-		MemoryStream& operator=(const MemoryStream&) = delete;
-
 		Containers::Array<std::uint8_t> _buffer;
 		mutable std::int64_t _seekOffset;
 		AccessMode _mode;
 	};
+
 }}

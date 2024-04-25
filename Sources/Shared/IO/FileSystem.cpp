@@ -311,7 +311,7 @@ namespace Death { namespace IO {
 #	if defined(DEATH_TARGET_UNIX)
 		static bool RedirectFileDescriptorToNull(std::int32_t fd)
 		{
-			if (fd == -1) {
+			if (fd < 0) {
 				return false;
 			}
 
@@ -410,6 +410,9 @@ namespace Death { namespace IO {
 		{
 			Close();
 		}
+
+		Impl(const Impl&) = delete;
+		Impl& operator=(const Impl&) = delete;
 
 		bool Open(const StringView path, EnumerationOptions options)
 		{
@@ -605,8 +608,6 @@ namespace Death { namespace IO {
 		}
 
 	private:
-		Impl(const Impl&) = delete;
-		Impl& operator=(const Impl&) = delete;
 
 		EnumerationOptions _options;
 		char _path[MaxPathLength];
@@ -1891,7 +1892,9 @@ namespace Death { namespace IO {
 		}
 
 		struct stat sb;
-		::fstat(sourceFd, &sb);
+		if (::fstat(sourceFd, &sb) != 0) {
+			return false;
+		}
 
 		mode_t sourceMode = sb.st_mode;
 		mode_t destMode = sourceMode;
@@ -1934,7 +1937,7 @@ namespace Death { namespace IO {
 			if (bytesLeft < static_cast<std::uint64_t>(MaxSendSize)) {
 				bytesToCopy = static_cast<std::size_t>(bytesLeft);
 			}
-			ssize_t sz = ::sendfile(destFd, sourceFd, NULL, bytesToCopy);
+			ssize_t sz = ::sendfile(destFd, sourceFd, nullptr, bytesToCopy);
 			if DEATH_UNLIKELY(sz < 0) {
 				std::int32_t err = errno;
 				if (errno == EINTR) {
@@ -2413,7 +2416,7 @@ namespace Death { namespace IO {
 				return { };
 		}
 
-		const int fd = ::open(String::nullTerminatedView(path).data(), flags);
+		const std::int32_t fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
 			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
 			return { };

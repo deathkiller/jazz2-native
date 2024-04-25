@@ -16,6 +16,9 @@ namespace Death { namespace IO {
 		FileStream(Containers::String&& path, FileAccessMode mode);
 		~FileStream() override;
 
+		FileStream(const FileStream&) = delete;
+		FileStream& operator=(const FileStream&) = delete;
+
 		void Close() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
@@ -44,9 +47,6 @@ namespace Death { namespace IO {
 #endif
 
 	private:
-		FileStream(const FileStream&) = delete;
-		FileStream& operator=(const FileStream&) = delete;
-
 		Containers::String _path;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t _fileDescriptor;
@@ -55,6 +55,6 @@ namespace Death { namespace IO {
 #endif
 		bool _shouldCloseOnDestruction;
 
-		void Open(FileAccessMode mode);
+		void OpenInternal(FileAccessMode mode);
 	};
 }}
