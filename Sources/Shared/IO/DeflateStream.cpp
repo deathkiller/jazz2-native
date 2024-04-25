@@ -34,7 +34,41 @@ namespace Death { namespace IO {
 
 	DeflateStream::~DeflateStream()
 	{
+		DeflateStream::Close();
+	}
+
+	DeflateStream::DeflateStream(DeflateStream&& other) noexcept
+	{
+		_inputStream = other._inputStream;
+		_strm = other._strm;
+		_inputSize = other._inputSize;
+		_state = other._state;
+		_rawInflate = other._rawInflate;
+		std::memcpy(_buffer, other._buffer, sizeof(_buffer));
+
+		// Original instance will be disabled
+		if (other._state == State::Created || other._state == State::Initialized) {
+			other._state = State::Failed;
+		}
+	}
+
+	DeflateStream& DeflateStream::operator=(DeflateStream&& other) noexcept
+	{
 		Close();
+
+		_inputStream = other._inputStream;
+		_strm = other._strm;
+		_inputSize = other._inputSize;
+		_state = other._state;
+		_rawInflate = other._rawInflate;
+		std::memcpy(_buffer, other._buffer, sizeof(_buffer));
+
+		// Original instance will be disabled
+		if (other._state == State::Created || other._state == State::Initialized) {
+			other._state = State::Failed;
+		}
+
+		return *this;
 	}
 
 	std::int64_t DeflateStream::Seek(std::int64_t offset, SeekOrigin origin)
@@ -67,7 +101,7 @@ namespace Death { namespace IO {
 
 	std::int32_t DeflateStream::Read(void* buffer, std::int32_t bytes)
 	{
-		std::uint8_t* typedBuffer = (std::uint8_t*)buffer;
+		std::uint8_t* typedBuffer = static_cast<std::uint8_t*>(buffer);
 		std::int32_t bytesRead = ReadInternal(typedBuffer, bytes);
 		std::int32_t bytesReadTotal = bytesRead;
 		while (bytesRead > 0 && bytesRead < bytes) {
@@ -163,7 +197,7 @@ namespace Death { namespace IO {
 			_strm.avail_in = static_cast<std::uint32_t>(bytesRead);
 		}
 
-		_strm.next_out = (unsigned char*)ptr;
+		_strm.next_out = static_cast<unsigned char*>(ptr);
 		_strm.avail_out = size;
 
 		std::int32_t res = inflate(&_strm, Z_SYNC_FLUSH);
@@ -188,7 +222,7 @@ namespace Death { namespace IO {
 			return true;
 		}
 
-		_inputStream->Seek(_inputSize >= 0 ? _inputSize : -std::int32_t(_strm.avail_in), SeekOrigin::Current);
+		_inputStream->Seek(_inputSize >= 0 ? _inputSize : -static_cast<std::int32_t>(_strm.avail_in), SeekOrigin::Current);
 
 		std::int32_t error = inflateEnd((z_stream*)&_strm);
 		if (error != Z_OK) {
@@ -220,7 +254,7 @@ namespace Death { namespace IO {
 
 	DeflateWriter::~DeflateWriter()
 	{
-		Close();
+		DeflateWriter::Close();
 	}
 
 	void DeflateWriter::Close()
@@ -280,11 +314,11 @@ namespace Death { namespace IO {
 		while (_strm.avail_in > 0 || finish) {
 			std::int32_t error;
 			do {
-				_strm.next_out = (unsigned char*)_buffer;
+				_strm.next_out = static_cast<unsigned char*>(_buffer);
 				_strm.avail_out = sizeof(_buffer);
 				error = deflate(&_strm, finish ? Z_FINISH : Z_NO_FLUSH);
 
-				std::int32_t bytesWritten = sizeof(_buffer) - (std::int32_t)_strm.avail_out;
+				std::int32_t bytesWritten = sizeof(_buffer) - static_cast<std::int32_t>(_strm.avail_out);
 				if (bytesWritten > 0) {
 					_outputStream->Write(_buffer, bytesWritten);
 				}

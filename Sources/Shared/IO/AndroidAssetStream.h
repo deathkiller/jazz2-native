@@ -27,6 +27,9 @@ namespace Death { namespace IO {
 		AndroidAssetStream(const Containers::String& path, FileAccessMode mode);
 		~AndroidAssetStream() override;
 
+		AndroidAssetStream(const AndroidAssetStream&) = delete;
+		AndroidAssetStream& operator=(const AndroidAssetStream&) = delete;
+
 		void Close() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
@@ -87,7 +90,7 @@ namespace Death { namespace IO {
 #endif
 		bool _shouldCloseOnDestruction;
 
-		void Open(FileAccessMode mode);
+		void OpenInternal(FileAccessMode mode);
 	};
 }}
 

@@ -15,6 +15,8 @@ namespace Death {
 	class Interlocked
 	{
 	public:
+		Interlocked() = delete;
+
 		/**
 		 * @brief Increments the value of the specified 32-bit variable as an atomic operation
 		 * @param addend    Variable to be incremented
@@ -123,8 +125,6 @@ namespace Death {
 		static T CompareExchangePointer(T volatile* destination, T exchange, std::nullptr_t comparand);
 
 	private:
-		Interlocked() = delete;
-
 #if !defined(DEATH_TARGET_MSVC)
 		static void InterlockedOperationBarrier();
 #endif

@@ -18,6 +18,9 @@ namespace Death { namespace IO {
 	public:
 		explicit PakFile(const Containers::StringView path);
 
+		PakFile(const PakFile&) = delete;
+		PakFile& operator=(const PakFile&) = delete;
+
 		Containers::StringView GetMountPoint() const;
 		Containers::StringView GetPath() const;
 		bool IsValid() const;
@@ -25,9 +28,6 @@ namespace Death { namespace IO {
 		std::unique_ptr<Stream> OpenFile(const Containers::StringView path);
 
 	protected:
-		PakFile(const PakFile&) = delete;
-		PakFile& operator=(const PakFile&) = delete;
-
 		enum class ItemFlags : std::uint32_t {
 			None = 0,
 			Directory = 0x01,
@@ -63,8 +63,11 @@ namespace Death { namespace IO {
 	public:
 		Containers::String MountPoint;
 
-		PakWriter(const Containers::StringView path);
+		explicit PakWriter(const Containers::StringView path);
 		~PakWriter();
+
+		PakWriter(const PakWriter&) = delete;
+		PakWriter& operator=(const PakWriter&) = delete;
 
 		bool IsValid() const;
 
@@ -72,9 +75,6 @@ namespace Death { namespace IO {
 		void Finalize();
 
 	private:
-		PakWriter(const PakWriter&) = delete;
-		PakWriter& operator=(const PakWriter&) = delete;
-
 		std::unique_ptr<FileStream> _outputStream;
 		Containers::Array<PakFile::Item> _rootItems;
 		bool _finalized;

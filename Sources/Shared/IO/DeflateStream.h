@@ -27,8 +27,12 @@ namespace Death { namespace IO {
 	public:
 		DeflateStream();
 		DeflateStream(Stream& inputStream, std::int32_t inputSize = -1, bool rawInflate = true);
-
 		~DeflateStream();
+
+		DeflateStream(const DeflateStream&) = delete;
+		DeflateStream(DeflateStream&& other) noexcept;
+		DeflateStream& operator=(const DeflateStream&) = delete;
+		DeflateStream& operator=(DeflateStream&& other) noexcept;
 
 		void Open(Stream& inputStream, std::int32_t inputSize = -1, bool rawInflate = true);
 
@@ -71,6 +75,9 @@ namespace Death { namespace IO {
 	public:
 		DeflateWriter(Stream& outputStream, std::int32_t compressionLevel = 9, bool rawInflate = true);
 		~DeflateWriter();
+
+		DeflateWriter(const DeflateWriter&) = delete;
+		DeflateWriter& operator=(const DeflateWriter&) = delete;
 
 		void Close() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
