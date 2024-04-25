@@ -1891,7 +1891,7 @@ namespace Death { namespace IO {
 		}
 
 		struct stat sb;
-		::fstat(source, &sb);
+		::fstat(sourceFd, &sb);
 
 		mode_t sourceMode = sb.st_mode;
 		mode_t destMode = sourceMode;
@@ -1950,7 +1950,7 @@ namespace Death { namespace IO {
 #	else
 #		if defined(POSIX_FADV_SEQUENTIAL) && (!defined(__ANDROID__) || __ANDROID_API__ >= 21) && !defined(DEATH_TARGET_SWITCH)
 		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
-		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
+		::posix_fadvise(sourceFd, 0, 0, POSIX_FADV_SEQUENTIAL);
 #		endif
 
 #		if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -2000,8 +2000,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 
-		::close(source);
-		::close(dest);
+		::close(sourceFd);
+		::close(destFd);
 
 		return success;
 #endif
