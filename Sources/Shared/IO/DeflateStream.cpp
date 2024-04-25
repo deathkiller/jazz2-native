@@ -16,6 +16,7 @@
 #endif
 
 #include <algorithm>
+#include <cstring>
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -

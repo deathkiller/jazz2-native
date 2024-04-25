@@ -78,7 +78,7 @@ namespace Death { namespace IO {
 		if (_handle != nullptr) {
 			// ::fseek return 0 on success
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+#		if defined(_Build_By_LTL)
 			// VC-LTL doesn't support _nolock functions
 			if (::_fseeki64(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
 				newPos = ::_ftelli64(_handle);
@@ -111,7 +111,7 @@ namespace Death { namespace IO {
 #else
 		if (_handle != nullptr) {
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+#		if defined(_Build_By_LTL)
 			// VC-LTL doesn't support _nolock functions
 			pos = ::_ftelli64(_handle);
 #		else
@@ -137,14 +137,16 @@ namespace Death { namespace IO {
 #else
 		if (_handle != nullptr) {
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+#		if defined(_Build_By_LTL)
 			// VC-LTL doesn't support _nolock functions
 			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
 #		else
 			bytesRead = static_cast<std::int32_t>(::_fread_nolock(buffer, 1, bytes, _handle));
 #		endif
-#	else
+#	elif !defined(DEATH_TARGET_ANDROID)
 			bytesRead = static_cast<std::int32_t>(::fread_unlocked(buffer, 1, bytes, _handle));
+#	else
+			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
 #	endif
 		}
 #endif
@@ -163,14 +165,16 @@ namespace Death { namespace IO {
 #else
 		if (_handle != nullptr) {
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+#		if defined(_Build_By_LTL)
 			// VC-LTL doesn't support _nolock functions
 			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
 #		else
 			bytesWritten = static_cast<std::int32_t>(::_fwrite_nolock(buffer, 1, bytes, _handle));
 #		endif
-#	else
+#	elif !defined(DEATH_TARGET_ANDROID)
 			bytesWritten = static_cast<std::int32_t>(::fwrite_unlocked(buffer, 1, bytes, _handle));
+#	else
+			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
 #	endif
 		}
 #endif
@@ -315,7 +319,7 @@ namespace Death { namespace IO {
 
 		// Try to get file size
 #	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(_LTL_Core_Version) && _LTL_Core_Version <= 4
+#		if defined(_Build_By_LTL)
 		// VC-LTL doesn't support _nolock functions
 		::_fseeki64(_handle, 0, SEEK_END);
 		_size = ::_ftelli64(_handle);
