@@ -1996,7 +1996,7 @@ namespace Death { namespace IO {
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
 		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
-			success = false
+			success = false;
 		}
 #	endif
 
