@@ -630,6 +630,10 @@ namespace Death { namespace IO {
 	{
 	}
 
+	FileSystem::Directory::~Directory()
+	{
+	}
+
 	FileSystem::Directory::Directory(const Directory& other)
 		: _impl(other._impl)
 	{
@@ -637,10 +641,6 @@ namespace Death { namespace IO {
 
 	FileSystem::Directory::Directory(Directory&& other) noexcept
 		: _impl(std::move(other._impl))
-	{
-	}
-
-	FileSystem::Directory::~Directory()
 	{
 	}
 
@@ -656,7 +656,7 @@ namespace Death { namespace IO {
 		return *this;
 	}
 
-	const StringView& FileSystem::Directory::operator*() const & noexcept
+	StringView FileSystem::Directory::operator*() const & noexcept
 	{
 		return _impl->_path;
 	}
@@ -687,7 +687,7 @@ namespace Death { namespace IO {
 	{
 	}
 
-	const StringView& FileSystem::Directory::Proxy::operator*() const & noexcept
+	StringView FileSystem::Directory::Proxy::operator*() const & noexcept
 	{
 		return _path;
 	}
@@ -1885,22 +1885,28 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-		std::int32_t source, dest;
-		if ((source = ::open(nullTerminatedOldPath.data(), O_RDONLY | O_CLOEXEC)) == -1) {
+		std::int32_t sourceFd, destFd;
+		if ((sourceFd = ::open(nullTerminatedOldPath.data(), O_RDONLY | O_CLOEXEC)) == -1) {
 			return false;
 		}
 
 		struct stat sb;
 		::fstat(source, &sb);
 
-		if ((dest = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CLOEXEC | O_CREAT | O_TRUNC, sb.st_mode)) == -1) {
-			::close(source);
+		mode_t sourceMode = sb.st_mode;
+		mode_t destMode = sourceMode;
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// Enable writing for the newly created files, needed for some file systems
+		destMode |= S_IWUSR;
+#endif
+		if ((destFd = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CLOEXEC | O_CREAT | O_TRUNC, destMode)) == -1) {
+			::close(sourceFd);
 			return false;
 		}
 
 #if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(__FreeBSD__)
 		while (true) {
-			if (::fallocate(dest, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
+			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
 			}
 			std::int32_t error = errno;
@@ -1915,10 +1921,32 @@ namespace Death { namespace IO {
 
 #	if defined(DEATH_TARGET_APPLE)
 		// fcopyfile works on FreeBSD and OS X 10.5+ 
-		bool success = (::fcopyfile(source, dest, 0, COPYFILE_ALL) == 0);
+		bool success = (::fcopyfile(sourceFd, destFd, 0, COPYFILE_ALL) == 0);
 #	elif defined(__linux__)
-		off_t offset = 0;
-		bool success = (::sendfile(dest, source, &offset, sb.st_size) == sb.st_size);
+		constexpr std::size_t MaxSendSize = 0x7FFFF000u;
+
+		std::uint64_t size = sb.st_size;
+		std::uint64_t offset = 0;
+		bool success = true;
+		while (offset < size) {
+			std::uint64_t bytesLeft = size - offset;
+			std::size_t bytesToCopy = MaxSendSize;
+			if (bytesLeft < static_cast<std::uint64_t>(MaxSendSize)) {
+				bytesToCopy = static_cast<std::size_t>(bytesLeft);
+			}
+			ssize_t sz = ::sendfile(destFd, sourceFd, NULL, bytesToCopy);
+			if DEATH_UNLIKELY(sz < 0) {
+				std::int32_t err = errno;
+				if (errno == EINTR) {
+					continue;
+				}
+
+				success = false;
+				break;
+			}
+
+			offset += sz;
+		}
 #	else
 #		if defined(POSIX_FADV_SEQUENTIAL) && (!defined(__ANDROID__) || __ANDROID_API__ >= 21) && !defined(DEATH_TARGET_SWITCH)
 		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
@@ -1933,7 +1961,7 @@ namespace Death { namespace IO {
 		char buffer[BufferSize];
 		bool success = true;
 		while (true) {
-			ssize_t bytesRead = ::read(source, buffer, BufferSize);
+			ssize_t bytesRead = ::read(sourceFd, buffer, BufferSize);
 			if (bytesRead == 0) {
 				break;
 			}
@@ -1948,7 +1976,7 @@ namespace Death { namespace IO {
 
 			ssize_t bytesWritten = 0;
 			do {
-				ssize_t sz = ::write(dest, buffer + bytesWritten, bytesRead);
+				ssize_t sz = ::write(destFd, buffer + bytesWritten, bytesRead);
 				if DEATH_UNLIKELY(sz < 0) {
 					if (errno == EINTR) {
 						continue;	// Retry
@@ -1963,6 +1991,13 @@ namespace Death { namespace IO {
 			} while (bytesRead > 0);
 		}
 	End:
+#	endif
+
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
+		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
+			success = false
+		}
 #	endif
 
 		::close(source);
@@ -1991,7 +2026,7 @@ namespace Death { namespace IO {
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
 		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return static_cast<std::int64_t>(AndroidAssetStream::GetLength(nullTerminatedPath.data()));
+			return AndroidAssetStream::GetFileSize(nullTerminatedPath.data());
 		}
 #	endif
 		struct stat sb;

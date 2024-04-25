@@ -67,34 +67,47 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	std::int32_t FileStream::Seek(std::int32_t offset, SeekOrigin origin)
+	std::int64_t FileStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		std::int32_t seekValue = NotSeekable;
+		std::int64_t newPos = ErrorInvalidStream;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-			seekValue = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
+			newPos = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
 		}
 #else
 		if (_handle != nullptr) {
 			// ::fseek return 0 on success
+#	if defined(DEATH_TARGET_WINDOWS)
+			if (::_fseeki64(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
+				newPos = ::_ftelli64(_handle);
+			}
+#	else
 			if (::fseek(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
-				seekValue = ::ftell(_handle);
+				newPos = ::ftell(_handle);
+			}
+#	endif
+			else {
+				newPos = ErrorInvalidParameter;
 			}
 		}
 #endif
-		return seekValue;
+		return newPos;
 	}
 
-	std::int32_t FileStream::GetPosition() const
+	std::int64_t FileStream::GetPosition() const
 	{
-		std::int32_t pos = -1;
+		std::int64_t pos = ErrorInvalidStream;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
 		}
 #else
 		if (_handle != nullptr) {
+#	if defined(DEATH_TARGET_WINDOWS)
+			pos = ::_ftelli64(_handle);
+#	else
 			pos = ::ftell(_handle);
+#	endif
 		}
 #endif
 		return pos;
@@ -134,7 +147,7 @@ namespace Death { namespace IO {
 		return bytesWritten;
 	}
 
-	bool FileStream::IsValid() const
+	bool FileStream::IsValid()
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		return (_fileDescriptor >= 0);
@@ -179,7 +192,7 @@ namespace Death { namespace IO {
 			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
 		}
 
-		// Calculating file size
+		// Try to get file size
 		_size = ::lseek(_fileDescriptor, 0L, SEEK_END);
 		::lseek(_fileDescriptor, 0L, SEEK_SET);
 #else
@@ -270,10 +283,16 @@ namespace Death { namespace IO {
 			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
 		}
 
-		// Calculating file size
+		// Try to get file size
+#	if defined(DEATH_TARGET_WINDOWS)
+		::_fseeki64(_handle, 0L, SEEK_END);
+		_size = ::_ftelli64(_handle);
+		::_fseeki64(_handle, 0L, SEEK_SET);
+#	else
 		::fseek(_handle, 0L, SEEK_END);
-		_size = static_cast<std::int32_t>(::ftell(_handle));
+		_size = ::ftell(_handle);
 		::fseek(_handle, 0L, SEEK_SET);
+#	endif
 #endif
 	}
 

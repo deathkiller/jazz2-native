@@ -53,39 +53,47 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	std::int32_t AndroidAssetStream::Seek(std::int32_t offset, SeekOrigin origin)
+	std::int64_t AndroidAssetStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		std::int32_t seekValue = -1;
+		std::int64_t newPos = ErrorInvalidStream;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			switch (origin) {
-				case SeekOrigin::Begin: seekValue = ::lseek(_fileDescriptor, _startOffset + offset, SEEK_SET); break;
-				case SeekOrigin::Current: seekValue = ::lseek(_fileDescriptor, offset, SEEK_CUR); break;
-				case SeekOrigin::End: seekValue = ::lseek(_fileDescriptor, _startOffset + _size + offset, SEEK_END); break;
+				case SeekOrigin::Begin: newPos = ::lseek(_fileDescriptor, _startOffset + offset, SEEK_SET); break;
+				case SeekOrigin::Current: newPos = ::lseek(_fileDescriptor, offset, SEEK_CUR); break;
+				case SeekOrigin::End: newPos = ::lseek(_fileDescriptor, _startOffset + _size + offset, SEEK_END); break;
+				default: return ErrorInvalidParameter;
 			}
-			seekValue -= _startOffset;
+			if (newPos >= _startOffset) {
+				newPos -= _startOffset;
+			} else if (newPos < 0) {
+				newPos = ErrorInvalidParameter;
+			}
 		}
 #else
 		if (_asset != nullptr) {
-			seekValue = AAsset_seek(_asset, offset, (std::int32_t)origin);
+			newPos = AAsset_seek64(_asset, offset, static_cast<std::int32_t>(origin));
+			if (newPos < 0) {
+				newPos = ErrorInvalidParameter;
+			}
 		}
 #endif
-		return seekValue;
+		return newPos;
 	}
 
-	std::int32_t AndroidAssetStream::GetPosition() const
+	std::int64_t AndroidAssetStream::GetPosition() const
 	{
-		std::int32_t tellValue = -1;
+		std::int64_t pos = ErrorInvalidStream;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-			tellValue = ::lseek(_fileDescriptor, 0L, SEEK_CUR) - _startOffset;
+			pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR) - _startOffset;
 		}
 #else
 		if (_asset != nullptr) {
-			tellValue = AAsset_seek(_asset, 0L, SEEK_CUR);
+			pos = AAsset_seek64(_asset, 0L, SEEK_CUR);
 		}
 #endif
-		return tellValue;
+		return pos;
 	}
 
 	std::int32_t AndroidAssetStream::Read(void* buffer, std::int32_t bytes)
@@ -96,11 +104,11 @@ namespace Death { namespace IO {
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			std::int32_t bytesToRead = bytes;
-			const std::int32_t seekValue = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
-			if (seekValue >= _startOffset + _size) {
+			const std::int64_t pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
+			if (pos >= _startOffset + _size) {
 				bytesToRead = 0; // Simulating EOF
-			} else if (seekValue + static_cast<std::int32_t>(bytes) > _startOffset + _size) {
-				bytesToRead = (_startOffset + _size) - seekValue;
+			} else if (pos + bytes > _startOffset + _size) {
+				bytesToRead = (_startOffset + _size) - pos;
 			}
 			bytesRead = ::read(_fileDescriptor, buffer, bytesToRead);
 		}
@@ -114,10 +122,11 @@ namespace Death { namespace IO {
 
 	std::int32_t AndroidAssetStream::Write(const void* buffer, std::int32_t bytes)
 	{
-		return 0;
+		// Not supported
+		return ErrorInvalidStream;
 	}
 
-	bool AndroidAssetStream::IsValid() const
+	bool AndroidAssetStream::IsValid()
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		return (_fileDescriptor >= 0);
@@ -142,7 +151,7 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(path != nullptr, nullptr, "path is nullptr");
 		if (strncmp(path, Prefix.data(), Prefix.size()) == 0) {
 			// Skip leading path separator character
-			return (path[7] == '/' ? path + 8 : path + 7);
+			return (path[7] == '/' || path[7] == '\\' ? path + 8 : path + 7);
 		}
 		return nullptr;
 	}
@@ -193,11 +202,11 @@ namespace Death { namespace IO {
 		return false;
 	}
 
-	off_t AndroidAssetStream::GetLength(const char* path)
+	std::int64_t AndroidAssetStream::GetFileSize(const char* path)
 	{
 		DEATH_ASSERT(path != nullptr, 0, "path is nullptr");
 
-		off_t assetLength = 0;
+		off64_t assetLength = 0;
 		const char* strippedPath = TryGetAssetPath(path);
 		if (strippedPath == nullptr) {
 			return assetLength;
@@ -205,7 +214,7 @@ namespace Death { namespace IO {
 
 		AAsset* asset = AAssetManager_open(_assetManager, strippedPath, AASSET_MODE_UNKNOWN);
 		if (asset != nullptr) {
-			assetLength = AAsset_getLength(asset);
+			assetLength = AAsset_getLength64(asset);
 			AAsset_close(asset);
 		}
 
@@ -243,15 +252,15 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		// An asset file can only be read
-		AAsset* asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_UNKNOWN);
+		AAsset* asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (asset == nullptr) {
 			LOGE("Cannot open file \"%s\"", _path.data());
 			return;
 		}
 
-		off_t outStart = 0;
-		off_t outLength = 0;
-		_fileDescriptor = AAsset_openFileDescriptor(asset, &outStart, &outLength);
+		off64_t outStart = 0;
+		off64_t outLength = 0;
+		_fileDescriptor = AAsset_openFileDescriptor64(asset, &outStart, &outLength);
 		_startOffset = outStart;
 		_size = outLength;
 
@@ -267,7 +276,7 @@ namespace Death { namespace IO {
 		LOGI("File \"%s\" opened", _path.data());
 #else
 		// An asset file can only be read
-		_asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_UNKNOWN);
+		_asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (_asset == nullptr) {
 			LOGE("Cannot open file \"%s\"", _path.data());
 			return;
@@ -276,7 +285,7 @@ namespace Death { namespace IO {
 		LOGI("File \"%s\" opened", _path.data());
 
 		// Calculating file size
-		_size = AAsset_getLength(_asset);
+		_size = AAsset_getLength64(_asset);
 #endif
 	}
 

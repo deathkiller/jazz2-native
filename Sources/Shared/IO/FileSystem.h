@@ -89,7 +89,7 @@ namespace Death { namespace IO {
 				friend class Directory;
 
 			public:
-				const Containers::StringView& operator*() const & noexcept;
+				Containers::StringView operator*() const & noexcept;
 
 			private:
 				explicit Proxy(const Containers::StringView path);
@@ -100,19 +100,19 @@ namespace Death { namespace IO {
 			// Iterator defines
 			using iterator_category = std::input_iterator_tag;
 			using difference_type = std::ptrdiff_t;
-			using reference = const Containers::StringView&;
+			//using reference = const Containers::StringView&;
 			using value_type = Containers::StringView;
 
 			Directory() noexcept;
 			Directory(const Containers::StringView path, EnumerationOptions options = EnumerationOptions::None);
 			~Directory();
 
-			Directory(const Directory& rhs);
-			Directory& operator=(const Directory& rhs);
-			Directory(Directory&& rhs) noexcept;
-			Directory& operator=(Directory&& rhs) noexcept;
+			Directory(const Directory& other);
+			Directory& operator=(const Directory& other);
+			Directory(Directory&& other) noexcept;
+			Directory& operator=(Directory&& other) noexcept;
 
-			const Containers::StringView& operator*() const & noexcept;
+			Containers::StringView operator*() const & noexcept;
 			Directory& operator++();
 
 			Proxy operator++(int) {

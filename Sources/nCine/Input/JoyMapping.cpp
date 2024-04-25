@@ -191,8 +191,8 @@ namespace nCine
 	void JoyMapping::addMappingsFromFile(const StringView& path)
 	{
 		std::unique_ptr<Stream> fileHandle = fs::Open(path, FileAccessMode::Read);
-		const long int fileSize = fileHandle->GetSize();
-		if (fileSize == 0) {
+		std::int64_t fileSize = fileHandle->GetSize();
+		if (fileSize == 0 || fileSize > 32 * 1024 * 1024) {
 			return;
 		}
 

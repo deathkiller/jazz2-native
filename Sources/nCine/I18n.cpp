@@ -528,7 +528,7 @@ namespace nCine
 
 	bool I18n::LoadFromFile(const std::unique_ptr<Stream>& fileHandle)
 	{
-		std::uint32_t fileSize = fileHandle->GetSize();
+		std::int64_t fileSize = fileHandle->GetSize();
 		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {
 			if (fileSize > 0) {
 				LOGE("Translation is corrupted");
