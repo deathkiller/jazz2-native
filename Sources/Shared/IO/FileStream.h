@@ -17,12 +17,12 @@ namespace Death { namespace IO {
 		~FileStream() override;
 
 		void Close() override;
-		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
-		std::int32_t GetPosition() const override;
+		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
+		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 
-		bool IsValid() const override;
+		bool IsValid() override;
 
 		/** @brief Returns file path */
 		Containers::StringView GetPath() const;

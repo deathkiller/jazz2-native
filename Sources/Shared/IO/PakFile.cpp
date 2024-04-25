@@ -17,12 +17,12 @@ namespace Death { namespace IO {
 		BoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t size);
 
 		void Close() override;
-		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
-		std::int32_t GetPosition() const override;
+		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
+		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 
-		bool IsValid() const override;
+		bool IsValid() override;
 
 	private:
 		BoundedStream(const BoundedStream&) = delete;
@@ -30,7 +30,7 @@ namespace Death { namespace IO {
 
 		FileStream _underlyingStream;
 		std::uint64_t _offset;
-		std::uint32_t _pos;
+		std::int64_t _pos;
 	};
 
 	BoundedStream::BoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t size)
@@ -45,27 +45,29 @@ namespace Death { namespace IO {
 		_underlyingStream.Close();
 	}
 
-	std::int32_t BoundedStream::Seek(std::int32_t offset, SeekOrigin origin)
+	std::int64_t BoundedStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		std::int32_t seekValue;
+		std::uint64_t newPos;
 		switch (origin) {
-			case SeekOrigin::Begin: seekValue = _offset + offset; break;
-			case SeekOrigin::Current: seekValue = _pos + offset; break;
-			case SeekOrigin::End: seekValue = _offset + _size + offset; break;
-			default: seekValue = -1; break;
+			case SeekOrigin::Begin: newPos = _offset + offset; break;
+			case SeekOrigin::Current: newPos = _pos + offset; break;
+			case SeekOrigin::End: newPos = _offset + _size + offset; break;
+			default: return ErrorInvalidParameter;
 		}
 
-		if (seekValue < _offset || seekValue > _offset + _size) {
-			seekValue = -1;
+		if (newPos < _offset || newPos > _offset + _size) {
+			newPos = ErrorInvalidParameter;
 		} else {
-			_underlyingStream.Seek(seekValue, SeekOrigin::Begin);
-			seekValue -= _offset;
-			_pos = seekValue;
+			newPos = _underlyingStream.Seek(newPos, SeekOrigin::Begin);
+			if (newPos >= _offset) {
+				newPos -= _offset;
+				_pos = newPos;
+			}
 		}
-		return seekValue;
+		return static_cast<std::int64_t>(newPos);
 	}
 
-	std::int32_t BoundedStream::GetPosition() const
+	std::int64_t BoundedStream::GetPosition() const
 	{
 		return _pos;
 	}
@@ -75,7 +77,7 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
 		if (bytes > _size - _pos) {
-			bytes = _size - _pos;
+			bytes = static_cast<std::int32_t>(_size - _pos);
 		}
 
 		std::int32_t bytesRead = _underlyingStream.Read(buffer, bytes);
@@ -85,10 +87,11 @@ namespace Death { namespace IO {
 
 	std::int32_t BoundedStream::Write(const void* buffer, std::int32_t bytes)
 	{
-		return 0;
+		// Not supported
+		return ErrorInvalidStream;
 	}
 
-	bool BoundedStream::IsValid() const
+	bool BoundedStream::IsValid()
 	{
 		return _underlyingStream.IsValid();
 	}
@@ -101,12 +104,12 @@ namespace Death { namespace IO {
 		ZlibCompressedBoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
 
 		void Close() override;
-		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
-		std::int32_t GetPosition() const override;
+		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
+		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 
-		bool IsValid() const override;
+		bool IsValid() override;
 
 	private:
 		ZlibCompressedBoundedStream(const ZlibCompressedBoundedStream&) = delete;
@@ -119,9 +122,9 @@ namespace Death { namespace IO {
 	ZlibCompressedBoundedStream::ZlibCompressedBoundedStream(const Containers::String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
 		: _underlyingStream(path, offset, compressedSize)
 	{
+		_size = uncompressedSize;
 		_underlyingStream.Seek(offset, SeekOrigin::Begin);
 		_deflateStream = DeflateStream(_underlyingStream, compressedSize);
-		_size = uncompressedSize;
 	}
 
 	void ZlibCompressedBoundedStream::Close()
@@ -130,12 +133,12 @@ namespace Death { namespace IO {
 		_underlyingStream.Close();
 	}
 
-	std::int32_t ZlibCompressedBoundedStream::Seek(std::int32_t offset, SeekOrigin origin)
+	std::int64_t ZlibCompressedBoundedStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
 		return _deflateStream.Seek(offset, origin);
 	}
 
-	std::int32_t ZlibCompressedBoundedStream::GetPosition() const
+	std::int64_t ZlibCompressedBoundedStream::GetPosition() const
 	{
 		return _deflateStream.GetPosition();
 	}
@@ -147,12 +150,13 @@ namespace Death { namespace IO {
 
 	std::int32_t ZlibCompressedBoundedStream::Write(const void* buffer, std::int32_t bytes)
 	{
-		return 0;
+		// Not supported
+		return ErrorInvalidStream;
 	}
 
-	bool ZlibCompressedBoundedStream::IsValid() const
+	bool ZlibCompressedBoundedStream::IsValid()
 	{
-		return _underlyingStream.IsValid() /*&& _deflateStream.IsValid()*/;
+		return _underlyingStream.IsValid() && _deflateStream.IsValid();
 	}
 
 #endif
@@ -174,9 +178,10 @@ namespace Death { namespace IO {
 
 		s->Seek(rootIndexOffset, SeekOrigin::Begin);
 
-		std::int32_t mountPointLength = s->ReadVariableInt32();
+		std::uint32_t mountPointLength = s->ReadVariableUint32();
+		DEATH_ASSERT(mountPointLength < INT32_MAX, , "Malformed .pak file");
 		String relativeMountPoint(NoInit, mountPointLength);
-		s->Read(relativeMountPoint.data(), mountPointLength);
+		s->Read(relativeMountPoint.data(), static_cast<std::int32_t>(mountPointLength));
 
 		//auto parentPath = FileSystem::GetDirectoryName(path);
 		//_mountPoint = FileSystem::CombinePath(parentPath, relativeMountPoint)
@@ -224,9 +229,10 @@ namespace Death { namespace IO {
 
 			item.Flags = (ItemFlags)s->ReadVariableUint32();
 
-			std::int32_t nameLength = s->ReadVariableInt32();
+			std::uint32_t nameLength = s->ReadVariableUint32();
+			DEATH_ASSERT(nameLength == 0 || nameLength < INT32_MAX, , "Malformed .pak file");
 			item.Name = String(NoInit, nameLength);
-			s->Read(item.Name.data(), nameLength);
+			s->Read(item.Name.data(), static_cast<std::int32_t>(nameLength));
 
 			item.Offset = s->ReadVariableUint64();
 
@@ -339,8 +345,8 @@ namespace Death { namespace IO {
 		}
 
 		PakFile::ItemFlags flags = PakFile::ItemFlags::None;
-		std::int32_t offset = _outputStream->GetPosition();
-		std::int32_t uncompressedSize, size;
+		std::int64_t offset = _outputStream->GetPosition();
+		std::int64_t uncompressedSize, size;
 
 #if defined(WITH_ZLIB)
 		if (compress) {
@@ -357,13 +363,15 @@ namespace Death { namespace IO {
 		}
 
 		DEATH_ASSERT(uncompressedSize > 0, false, "Failed to copy stream to .pak file");
+		// NOTE: Files inside .pak are limited to 4GBs only for now
+		DEATH_ASSERT(uncompressedSize < UINT32_MAX && size < UINT32_MAX, false, "File size in .pak file exceeded the allowed range");
 
 		PakFile::Item* newItem = &arrayAppend(*items, PakFile::Item());
 		newItem->Name = path;
 		newItem->Flags = flags;
 		newItem->Offset = offset;
-		newItem->UncompressedSize = uncompressedSize;
-		newItem->Size = size;
+		newItem->UncompressedSize = static_cast<std::uint32_t>(uncompressedSize);
+		newItem->Size = static_cast<std::uint32_t>(size);
 
 		return true;
 	}
@@ -401,7 +409,8 @@ namespace Death { namespace IO {
 			}
 		}
 
-		for (std::int32_t i = queuedDirectories.size() - 1; i >= 0; i--) {
+		std::size_t i = queuedDirectories.size() - 1;
+		while (true) {
 			PakFile::Item& item = *queuedDirectories[i];
 			item.Offset = _outputStream->GetPosition();
 
@@ -410,29 +419,34 @@ namespace Death { namespace IO {
 				return a.Name < b.Name;
 			});
 
-			_outputStream->WriteVariableUint32(item.ChildItems.size());
+			_outputStream->WriteVariableUint32(static_cast<std::uint32_t>(item.ChildItems.size()));
 			for (PakFile::Item& childItem : item.ChildItems) {
 				WriteItemDescription(childItem);
 			}
+
+			if DEATH_UNLIKELY(i == 0) {
+				break;
+			}
+			i--;
 		}
 
-		std::int32_t rootIndexOffset = _outputStream->GetPosition();
+		std::int64_t rootIndexOffset = _outputStream->GetPosition();
 
-		_outputStream->WriteVariableInt32(MountPoint.size());
-		_outputStream->Write(MountPoint.data(), MountPoint.size());
+		_outputStream->WriteVariableUint32(static_cast<std::uint32_t>(MountPoint.size()));
+		_outputStream->Write(MountPoint.data(), static_cast<std::int32_t>(MountPoint.size()));
 
 		// Names need to be sorted, because binary search is used to find files
 		std::sort(_rootItems.begin(), _rootItems.end(), [](const PakFile::Item& a, const PakFile::Item& b) {
 			return a.Name < b.Name;
 		});
 
-		_outputStream->WriteVariableUint32(_rootItems.size());
+		_outputStream->WriteVariableUint32(static_cast<std::uint32_t>(_rootItems.size()));
 		for (PakFile::Item& item : _rootItems) {
 			WriteItemDescription(item);
 		}
 
 		_outputStream->WriteValue<std::uint64_t>(PakFile::Signature);
-		_outputStream->WriteValue<std::uint16_t>(1);
+		_outputStream->WriteValue<std::uint16_t>(PakFile::Version);
 		_outputStream->WriteValue<std::uint64_t>(rootIndexOffset);
 
 		// Close the stream
@@ -477,8 +491,8 @@ namespace Death { namespace IO {
 	{
 		_outputStream->WriteVariableUint32((std::uint32_t)item.Flags);
 
-		_outputStream->WriteVariableInt32(item.Name.size());
-		_outputStream->Write(item.Name.data(), item.Name.size());
+		_outputStream->WriteVariableUint32(static_cast<std::uint32_t>(item.Name.size()));
+		_outputStream->Write(item.Name.data(), static_cast<std::int32_t>(item.Name.size()));
 
 		_outputStream->WriteVariableUint64(item.Offset);
 

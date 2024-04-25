@@ -22,18 +22,18 @@ namespace Death { namespace IO {
 	class AndroidAssetStream : public Stream
 	{
 	public:
-		static constexpr Containers::StringView Prefix = "asset:/"_s;
+		static constexpr Containers::StringView Prefix = "asset:"_s;
 
 		AndroidAssetStream(const Containers::String& path, FileAccessMode mode);
 		~AndroidAssetStream() override;
 
 		void Close() override;
-		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
-		std::int32_t GetPosition() const override;
+		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
+		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 
-		bool IsValid() const override;
+		bool IsValid() override;
 		
 		/** @brief Returns file path */
 		Containers::StringView GetPath() const;
@@ -67,7 +67,7 @@ namespace Death { namespace IO {
 		/** @brief Checks if an asset path exists and can be opened as a directory */
 		static bool TryOpenDirectory(const char* path);
 		/** @brief Returns the total size of the asset data */
-		static off_t GetLength(const char* path);
+		static std::int64_t GetFileSize(const char* path);
 
 		static AAssetDir* OpenDirectory(const char* dirName);
 		static void CloseDirectory(AAssetDir* assetDir);

@@ -3,7 +3,7 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	std::int32_t Stream::CopyTo(Stream& targetStream)
+	std::int64_t Stream::CopyTo(Stream& targetStream)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		constexpr std::int32_t BufferSize = 8192;
@@ -12,7 +12,7 @@ namespace Death { namespace IO {
 #endif
 
 		char buffer[BufferSize];
-		std::int32_t bytesWrittenTotal = 0;
+		std::int64_t bytesWrittenTotal = 0;
 
 		while (true) {
 			std::int32_t bytesRead = Read(buffer, BufferSize);

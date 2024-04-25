@@ -1,5 +1,16 @@
 #pragma once
 
+#if defined(__ANDROID__) && defined(__ANDROID_API__) && __ANDROID_API__ < 24
+//	Android fully supports 64-bit file offsets only for API 24 and above.
+#else
+#	define _FILE_OFFSET_BITS 64
+#endif
+
+// Enable newer ABI on Mac OS 10.5 and later, which is needed for struct stat to have birthtime members
+#if defined(__APPLE__) || defined(__MACH__)
+#	define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
 #include "../Common.h"
 
 #include <cstdio>		// For FILE
@@ -31,34 +42,38 @@ namespace Death { namespace IO {
 	class Stream
 	{
 	public:
-		/** @brief Returned if seek operation is not supported by @ref Stream */
-		static constexpr std::int32_t NotSeekable = -1;
+		/** @brief Returned if @ref Stream doesn't point to valid source */
+		static constexpr std::int32_t ErrorInvalidStream = -1;
+		/** @brief Returned if one of the parameters provided to a method is not valid */
+		static constexpr std::int32_t ErrorInvalidParameter = -2;
+		/** @brief Returned if seek operation is not supported by @ref Stream or the stream length is unknown */
+		static constexpr std::int32_t ErrorNotSeekable = -3;
 
-		Stream() : _size(0) { }
+		Stream() : _size(ErrorInvalidStream) { }
 		virtual ~Stream() { }
 
 		/** @brief Closes the stream */
 		virtual void Close() = 0;
 		/** @brief Seeks in an opened stream */
-		virtual std::int32_t Seek(std::int32_t offset, SeekOrigin origin) = 0;
+		virtual std::int64_t Seek(std::int64_t offset, SeekOrigin origin) = 0;
 		/** @brief Tells the seek position of an opened stream */
-		virtual std::int32_t GetPosition() const = 0;
+		virtual std::int64_t GetPosition() const = 0;
 		/** @brief Reads a certain amount of bytes from the stream to a buffer */
 		virtual std::int32_t Read(void* buffer, std::int32_t bytes) = 0;
 		/** @brief Writes a certain amount of bytes from a buffer to the stream */
 		virtual std::int32_t Write(const void* buffer, std::int32_t bytes) = 0;
 		/** @brief Returns true if the stream has been sucessfully opened */
-		virtual bool IsValid() const = 0;
+		virtual bool IsValid() = 0;
 
 		/** @brief Returns stream size in bytes */
-		DEATH_ALWAYS_INLINE std::int32_t GetSize() const {
+		DEATH_ALWAYS_INLINE std::int64_t GetSize() const {
 			return _size;
 		}
 
 		virtual void SetCloseOnDestruction(bool shouldCloseOnDestruction) { }
 
 		/** @brief Reads the bytes from the current stream and writes them to the target stream */
-		std::int32_t CopyTo(Stream& targetStream);
+		std::int64_t CopyTo(Stream& targetStream);
 
 		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
 		DEATH_ALWAYS_INLINE T ReadValue()
@@ -141,6 +156,6 @@ namespace Death { namespace IO {
 		}
 
 	protected:
-		std::int32_t _size;
+		std::int64_t _size;
 	};
 }}

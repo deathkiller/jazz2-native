@@ -364,7 +364,7 @@ namespace nCine
 		// Calculating a default projection matrix for all shader programs
 		const int width = theApplication().width();
 		const int height = theApplication().height();
-		defaultCamera_->setOrthoProjection(0.0f, width, 0.0f, height);
+		defaultCamera_->setOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
 	}
 
 	void RenderResources::dispose()

@@ -12,19 +12,19 @@ namespace Death { namespace IO {
 	class MemoryStream : public Stream
 	{
 	public:
-		explicit MemoryStream(std::int32_t initialCapacity = 0);
-		MemoryStream(std::uint8_t* bufferPtr, std::int32_t bufferSize);
-		MemoryStream(const std::uint8_t* bufferPtr, std::int32_t bufferSize);
+		explicit MemoryStream(std::int64_t initialCapacity = 0);
+		MemoryStream(std::uint8_t* bufferPtr, std::int64_t bufferSize);
+		MemoryStream(const std::uint8_t* bufferPtr, std::int64_t bufferSize);
 
 		void Close() override;
-		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
-		std::int32_t GetPosition() const override;
+		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
+		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 
-		bool IsValid() const override;
+		bool IsValid() override;
 
-		void ReserveCapacity(std::int32_t bytes);
+		void ReserveCapacity(std::int64_t bytes);
 		std::int32_t FetchFromStream(Stream& s, std::int32_t bytes);
 
 		DEATH_ALWAYS_INLINE const std::uint8_t* GetBuffer() const {
@@ -43,7 +43,7 @@ namespace Death { namespace IO {
 		MemoryStream& operator=(const MemoryStream&) = delete;
 
 		Containers::Array<std::uint8_t> _buffer;
-		mutable std::int32_t _seekOffset;
+		mutable std::int64_t _seekOffset;
 		AccessMode _mode;
 	};
 }}

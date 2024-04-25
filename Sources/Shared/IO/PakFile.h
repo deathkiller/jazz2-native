@@ -47,6 +47,7 @@ namespace Death { namespace IO {
 		};
 
 		static constexpr std::uint64_t Signature = 0x208FA69FF0BFBBEF;
+		static constexpr std::uint16_t Version = 1;
 
 		Containers::String _path;
 		Containers::String _mountPoint;
