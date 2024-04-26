@@ -55,6 +55,6 @@ namespace Death { namespace IO {
 #endif
 		bool _shouldCloseOnDestruction;
 
-		void OpenInternal(FileAccessMode mode);
+		void Open(FileAccessMode mode);
 	};
 }}

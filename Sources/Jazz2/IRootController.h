@@ -13,8 +13,9 @@ namespace Jazz2
 		enum class Flags {
 			None = 0x00,
 
-			IsVerified = 0x01,
-			IsPlayable = 0x02,
+			IsInitialized = 0x01,
+			IsVerified = 0x02,
+			IsPlayable = 0x04,
 
 #if defined(DEATH_TARGET_ANDROID)
 			HasExternalStoragePermission = 0x10,

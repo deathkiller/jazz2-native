@@ -337,6 +337,11 @@ namespace nCine
 
 		preInitCommon(createAppEventHandler());
 
+		if (shouldQuit_) {
+			// If the app was quit from OnPreInit(), skip further initialization
+			return;
+		}
+
 		// Graphics device should always be created before the input manager!
 		IGfxDevice::GLContextInfo glContextInfo(appCfg_);
 		const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
@@ -414,7 +419,9 @@ namespace nCine
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 				case SDL_QUIT:
-					shouldQuit_ = SdlInputManager::shouldQuitOnRequest();
+					if (SdlInputManager::shouldQuitOnRequest()) {
+						shouldQuit_ = true;
+					}
 					break;
 				case SDL_DISPLAYEVENT:
 					gfxDevice_->updateMonitors();

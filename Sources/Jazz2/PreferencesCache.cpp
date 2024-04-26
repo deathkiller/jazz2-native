@@ -86,7 +86,7 @@ namespace Jazz2
 		bool overrideConfigPath = false;
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-		for (int32_t i = 0; i < config.argc(); i++) {
+		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/config"_s) {
 				if (i + 1 < config.argc()) {
@@ -308,7 +308,7 @@ namespace Jazz2
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 		// Override some settings by command-line arguments
-		for (int32_t i = 0; i < config.argc(); i++) {
+		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/bypass-cache"_s) {
 				BypassCache = true;

@@ -255,6 +255,18 @@ namespace Death { namespace IO {
 		}
 	}
 
+	bool PakFile::FileExists(const Containers::StringView path)
+	{
+		Item* foundItem = FindItem(path);
+		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) != ItemFlags::Directory);
+	}
+
+	bool PakFile::DirectoryExists(const Containers::StringView path)
+	{
+		Item* foundItem = FindItem(path);
+		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) == ItemFlags::Directory);
+	}
+
 	std::unique_ptr<Stream> PakFile::OpenFile(const StringView path)
 	{
 		if (path.empty() || path[path.size() - 1] == '/' || path[path.size() - 1] == '\\') {
@@ -307,6 +319,182 @@ namespace Death { namespace IO {
 			path = path.suffix(separator.end());
 			items = &foundItem->ChildItems;
 		}
+	}
+
+	class PakFile::Directory::Impl
+	{
+		friend class Directory;
+
+	public:
+		Impl(PakFile& pakFile, const StringView path, FileSystem::EnumerationOptions options)
+			: _fileNamePart(nullptr)
+		{
+			Open(pakFile, path, options);
+		}
+
+		Impl(const Impl&) = delete;
+		Impl& operator=(const Impl&) = delete;
+
+		bool Open(PakFile& pakFile, const StringView path, FileSystem::EnumerationOptions options)
+		{
+			_options = options;
+			if (path.empty()) {
+				_childItems = pakFile._rootItems;
+			} else {
+				Item* parentItem = pakFile.FindItem(path);
+				if (parentItem == nullptr) {
+					_path[0] = '\0';
+					return false;
+				}
+
+				_childItems = parentItem->ChildItems;
+			}
+
+			_index = 0;
+
+			if (!_childItems.empty()) {
+				std::size_t pathLength = path.size();
+				if (pathLength > 0) {
+					std::memcpy(_path, path.data(), pathLength);
+					if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {
+#if defined(DEATH_TARGET_WINDOWS)
+						_path[pathLength - 1] = '\\';
+#else
+						_path[pathLength - 1] = '/';
+#endif
+						_path[pathLength] = '\0';
+						_fileNamePart = _path + pathLength;
+					} else {
+#if defined(DEATH_TARGET_WINDOWS)
+						_path[pathLength] = '\\';
+#else
+						_path[pathLength] = '/';
+#endif
+						_path[pathLength + 1] = '\0';
+						_fileNamePart = _path + pathLength + 1;
+					}
+				} else {
+					_path[0] = '\0';
+					_fileNamePart = _path;
+				}
+
+				Increment();
+				return true;
+			} else {
+				_path[0] = '\0';
+				return false;
+			}
+		}
+
+		void Increment()
+		{
+			while (true) {
+				if (_index >= _childItems.size()) {
+					_path[0] = '\0';
+					return;
+				}
+
+				Item& item = _childItems[_index];
+				if (((_options & FileSystem::EnumerationOptions::SkipDirectories) == FileSystem::EnumerationOptions::SkipDirectories && (item.Flags & ItemFlags::Directory) == ItemFlags::Directory) ||
+					((_options & FileSystem::EnumerationOptions::SkipFiles) == FileSystem::EnumerationOptions::SkipFiles && (item.Flags & ItemFlags::Directory) != ItemFlags::Directory)) {
+					// Skip this file
+					_index++;
+					continue;
+				}
+			
+				break;
+			}
+
+			auto& fileName = _childItems[_index].Name;
+#if defined(DEATH_TARGET_WINDOWS)
+			strncpy_s(_fileNamePart, sizeof(_path) - (_fileNamePart - _path), fileName.data(), fileName.size());
+#else
+			strncpy(_fileNamePart, fileName.data(), std::min(sizeof(_path) - (_fileNamePart - _path), fileName.size()) - 1);
+			_path[sizeof(_path) - 1] = '\0';
+#endif
+
+
+			_index++;
+		}
+
+	private:
+
+		FileSystem::EnumerationOptions _options;
+		char _path[FileSystem::MaxPathLength];
+		char* _fileNamePart;
+		Containers::ArrayView<Item> _childItems;
+		std::size_t _index;
+	};
+
+	PakFile::Directory::Directory() noexcept
+	{
+	}
+
+	PakFile::Directory::Directory(PakFile& pakFile, const StringView path, FileSystem::EnumerationOptions options)
+		: _impl(std::make_shared<Impl>(pakFile, path, options))
+	{
+	}
+
+	PakFile::Directory::~Directory()
+	{
+	}
+
+	PakFile::Directory::Directory(const Directory& other)
+		: _impl(other._impl)
+	{
+	}
+
+	PakFile::Directory::Directory(Directory&& other) noexcept
+		: _impl(std::move(other._impl))
+	{
+	}
+
+	PakFile::Directory& PakFile::Directory::operator=(const Directory& other)
+	{
+		_impl = other._impl;
+		return *this;
+	}
+
+	PakFile::Directory& PakFile::Directory::operator=(Directory&& other) noexcept
+	{
+		_impl = std::move(other._impl);
+		return *this;
+	}
+
+	StringView PakFile::Directory::operator*() const& noexcept
+	{
+		return _impl->_path;
+	}
+
+	PakFile::Directory& PakFile::Directory::operator++()
+	{
+		_impl->Increment();
+		return *this;
+	}
+
+	bool PakFile::Directory::operator==(const Directory& other) const
+	{
+		bool isEnd1 = (_impl == nullptr || _impl->_path[0] == '\0');
+		bool isEnd2 = (other._impl == nullptr || other._impl->_path[0] == '\0');
+		if (isEnd1 || isEnd2) {
+			return (isEnd1 && isEnd2);
+		}
+		return (_impl == other._impl);
+	}
+
+	bool PakFile::Directory::operator!=(const Directory& other) const
+	{
+		return !(*this == other);
+	}
+
+	PakFile::Directory::Proxy::Proxy(const Containers::StringView path)
+		: _path(path)
+	{
+	}
+
+	StringView PakFile::Directory::Proxy::operator*() const& noexcept
+	{
+		return _path;
 	}
 
 	PakWriter::PakWriter(const StringView path)

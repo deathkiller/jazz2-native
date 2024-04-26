@@ -4,6 +4,7 @@
 #include "../Containers/Array.h"
 #include "../Containers/String.h"
 #include "FileStream.h"
+#include "FileSystem.h"
 
 #include <cstdio>		// For FILE
 #include <memory>
@@ -25,7 +26,67 @@ namespace Death { namespace IO {
 		Containers::StringView GetPath() const;
 		bool IsValid() const;
 
+		bool FileExists(const Containers::StringView path);
+		bool DirectoryExists(const Containers::StringView path);
+
 		std::unique_ptr<Stream> OpenFile(const Containers::StringView path);
+
+		/** @brief The class that handles directory traversal, should be used as iterator */
+		class Directory
+		{
+		public:
+			class Proxy
+			{
+				friend class Directory;
+
+			public:
+				Containers::StringView operator*() const& noexcept;
+
+			private:
+				explicit Proxy(const Containers::StringView path);
+
+				Containers::String _path;
+			};
+
+			// Iterator defines
+			using iterator_category = std::input_iterator_tag;
+			using difference_type = std::ptrdiff_t;
+			//using reference = const Containers::StringView&;
+			using value_type = Containers::StringView;
+
+			Directory() noexcept;
+			Directory(PakFile& pakFile, const Containers::StringView path, FileSystem::EnumerationOptions options = FileSystem::EnumerationOptions::None);
+			~Directory();
+
+			Directory(const Directory& other);
+			Directory& operator=(const Directory& other);
+			Directory(Directory&& other) noexcept;
+			Directory& operator=(Directory&& other) noexcept;
+
+			Containers::StringView operator*() const& noexcept;
+			Directory& operator++();
+
+			Proxy operator++(int) {
+				Proxy p{**this};
+				++*this;
+				return p;
+			}
+
+			bool operator==(const Directory& rhs) const;
+			bool operator!=(const Directory& rhs) const;
+
+			Directory begin() noexcept {
+				return *this;
+			}
+
+			Directory end() noexcept {
+				return Directory();
+			}
+
+		private:
+			class Impl;
+			std::shared_ptr<Impl> _impl;
+		};
 
 	protected:
 		enum class ItemFlags : std::uint32_t {
