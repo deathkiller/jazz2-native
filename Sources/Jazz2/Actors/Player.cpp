@@ -87,7 +87,7 @@ namespace Jazz2::Actors
 		_invulnerableBlinkTime(0.0f),
 		_jumpTime(0.0f),
 		_idleTime(0.0f),
-		_hitFloorTime(0.0f),
+		_hitFloorTime(5.0f),
 		_keepRunningTime(0.0f),
 		_lastPoleTime(0.0f),
 		_inTubeTime(0.0f),
@@ -156,7 +156,16 @@ namespace Jazz2::Actors
 
 	bool Player::CanBreakSolidObjects() const
 	{
-		return (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f);
+		if (_sugarRushLeft > 0.0f) {
+			return true;
+		}
+
+		if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr) {
+			// Buttstomp is probably in starting transition, do nothing yet
+			return false;
+		}
+
+		return (_currentSpecialMove != SpecialMoveType::None);
 	}
 
 	bool Player::CanMoveVertically() const
@@ -763,7 +772,6 @@ namespace Jazz2::Actors
 						_internalForceY = 0.0f;
 						_externalForce.Y = 0.0f;
 						SetState(ActorState::ApplyGravitation, false);
-						_currentSpecialMove = SpecialMoveType::Buttstomp;
 						SetAnimation(AnimState::Buttstomp);
 						SetPlayerTransition(AnimState::TransitionButtstompStart, true, false, SpecialMoveType::Buttstomp, [this]() {
 							_speed.Y = 9.0f;
@@ -1389,7 +1397,9 @@ namespace Jazz2::Actors
 		bool handled = false;
 		bool removeSpecialMove = false;
 		if (auto* turtleShell = runtime_cast<Enemies::TurtleShell*>(other)) {
-			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
+			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
+				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush is active
+			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 				other->DecreaseHealth(INT32_MAX, this);
 
 				if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
@@ -1400,7 +1410,9 @@ namespace Jazz2::Actors
 				return true;
 			}
 		} else if (auto* enemy = runtime_cast<Enemies::EnemyBase*>(other)) {
-			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || _activeShieldTime > 0.0f) {
+			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f && _activeShieldTime <= 0.0f) {
+				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush or shield is active
+			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || _activeShieldTime > 0.0f) {
 				if (!enemy->IsInvulnerable()) {
 					enemy->DecreaseHealth(4, this);
 					handled = true;

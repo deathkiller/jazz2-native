@@ -121,15 +121,15 @@ namespace Death { namespace IO {
 				return p;
 			}
 
-			bool operator==(const Directory& rhs) const;
-			bool operator!=(const Directory& rhs) const;
+			bool operator==(const Directory& other) const;
+			bool operator!=(const Directory& other) const;
 
-			FileSystem::Directory begin() noexcept {
+			Directory begin() noexcept {
 				return *this;
 			}
 
-			FileSystem::Directory end() noexcept {
-				return FileSystem::Directory();
+			Directory end() noexcept {
+				return Directory();
 			}
 
 		private:

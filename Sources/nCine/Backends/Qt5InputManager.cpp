@@ -222,11 +222,7 @@ namespace nCine
 
 	bool Qt5InputManager::shouldQuitOnRequest()
 	{
-		bool shouldQuit = true;
-		if (inputEventHandler_ != nullptr) {
-			shouldQuit = inputEventHandler_->OnQuitRequest();
-		}
-		return shouldQuit;
+		return (inputEventHandler_ != nullptr && inputEventHandler_->OnQuitRequest());
 	}
 
 	bool Qt5InputManager::event(QEvent* event)

@@ -139,7 +139,7 @@ public:
 #endif
 
 private:
-	Flags _flags;
+	Flags _flags = Flags::None;
 	std::unique_ptr<IStateHandler> _currentHandler;
 	SmallVector<std::function<void()>> _pendingCallbacks;
 	char _newestVersion[20];
@@ -162,11 +162,32 @@ private:
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
 	static bool TryParseAddressAndPort(const StringView input, String& address, std::uint16_t& port);
+	static void ExtractPakFile(const StringView pakFile, const StringView targetPath);
 };
 
 void GameEventHandler::OnPreInit(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
+
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+	// Allow `/extract-pak` only on PC platforms
+	if (config.argc() >= 3) {
+		for (std::int32_t i = 0; i < config.argc() - 2; i++) {
+			auto arg = config.argv(i);
+			if (arg == "/extract-pak"_s) {
+				auto pakFile = config.argv(i + 1);
+				if (fs::FileExists(pakFile)) {
+					ExtractPakFile(pakFile, config.argv(i + 2));
+				} else {
+					LOGE("\"%s\" not found", pakFile.data());
+				}
+
+				theApplication().quit();
+				return;
+			}
+		}
+	}
+#endif
 
 	PreferencesCache::Initialize(config);
 
@@ -199,7 +220,7 @@ void GameEventHandler::OnInit()
 	//theApplication().debugOverlaySettings().showInterface = true;
 #endif
 
-	_flags = Flags::None;
+	_flags |= Flags::IsInitialized;
 
 	std::memset(_newestVersion, 0, sizeof(_newestVersion));
 
@@ -434,7 +455,9 @@ void GameEventHandler::OnShutdown()
 	_networkManager = nullptr;
 #endif
 
-	ContentResolver::Get().Release();
+	if ((_flags & Flags::IsInitialized) == Flags::IsInitialized) {
+		ContentResolver::Get().Release();
+	}
 }
 
 void GameEventHandler::OnSuspend()
@@ -1593,6 +1616,44 @@ bool GameEventHandler::TryParseAddressAndPort(const StringView input, String& ad
 	auto portString = input.suffix(portSep.begin() + 1);
 	port = (std::uint16_t)stou32(portString.data(), portString.size());
 	return true;
+}
+
+void GameEventHandler::ExtractPakFile(const StringView pakFile, const StringView targetPath)
+{
+	PakFile pak(pakFile);
+	if (!pak.IsValid()) {
+		LOGE("Invalid .pak file specified");
+		return;
+	}
+
+	LOGI("Extracting files from \"%s\" to \"%s\"...", pakFile.data(), targetPath.data());
+
+	SmallVector<String> queue;
+	queue.emplace_back();	// Root
+
+	std::int32_t successCount = 0, errorCount = 0;
+	for (std::size_t i = 0; i < queue.size(); i++) {
+		for (auto childItem : PakFile::Directory(pak, queue[i])) {
+			auto sourceFile = pak.OpenFile(childItem);
+			if (sourceFile != nullptr) {
+				auto targetFilePath = fs::CombinePath(targetPath, childItem);
+				fs::CreateDirectories(fs::GetDirectoryName(targetFilePath));
+				auto targetFile = fs::Open(targetFilePath, FileAccessMode::Write);
+				if (targetFile->IsValid()) {
+					sourceFile->CopyTo(*targetFile);
+					successCount++;
+				} else {
+					LOGE("Failed to create target file \"%s\"", targetFilePath.data());
+					errorCount++;
+				}
+			} else {
+				// Probably directory
+				queue.emplace_back(childItem);
+			}
+		}
+	}
+
+	LOGI("%i files extracted successfully, %i files failed with error", successCount, errorCount);
 }
 
 #if defined(DEATH_TARGET_ANDROID)

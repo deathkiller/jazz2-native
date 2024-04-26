@@ -37,7 +37,7 @@ namespace Death { namespace IO {
 		_handle(nullptr)
 #endif
 	{
-		OpenInternal(mode);
+		Open(mode);
 	}
 
 	FileStream::~FileStream()
@@ -196,7 +196,7 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-	void FileStream::OpenInternal(FileAccessMode mode)
+	void FileStream::Open(FileAccessMode mode)
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t openFlag;

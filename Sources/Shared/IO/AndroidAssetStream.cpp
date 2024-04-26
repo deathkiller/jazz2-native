@@ -21,7 +21,7 @@ namespace Death { namespace IO {
 #endif
 	{
 		_path = path;
-		OpenInternal(mode);
+		Open(mode);
 	}
 
 	AndroidAssetStream::~AndroidAssetStream()
@@ -242,7 +242,7 @@ namespace Death { namespace IO {
 		return AAssetDir_getNextFileName(assetDir);
 	}
 
-	void AndroidAssetStream::OpenInternal(FileAccessMode mode)
+	void AndroidAssetStream::Open(FileAccessMode mode)
 	{
 		FileAccessMode maskedMode = mode & ~FileAccessMode::Exclusive;
 		if (maskedMode != FileAccessMode::Read) {
