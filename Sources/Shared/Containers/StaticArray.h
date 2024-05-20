@@ -189,8 +189,16 @@ namespace Death { namespace Containers {
 		/**
 		 * @brief Construct an in-place-initialized array
 		 *
-		 * The arguments are forwarded to the array constructor. Same as
-		 * @ref StaticArray(Args&&... args).
+		 * The arguments are forwarded to the array constructor. Note that the
+		 * variadic template means you can't use @cpp {} @ce for nested type
+		 * initializers --- see @ref StaticArray(InPlaceInitT, const T(&)[size])
+		 * or @ref StaticArray(InPlaceInitT, T(&&)[size]) for an
+		 * alternative. Same as @ref StaticArray(Args&&... args).
+		 *
+		 * To prevent accidents, compared to regular C array initialization the
+		 * constructor expects the number of arguments to match the size
+		 * *exactly*. I.e., it's not possible to omit a suffix of the array to
+		 * implicitly value-initialize it.
 		 */
 		template<class ...Args> constexpr explicit StaticArray(InPlaceInitT, Args&&... args) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<Args>(args)...} {
 			static_assert(sizeof...(args) == size_, "Containers::StaticArray: Wrong number of initializers");
@@ -203,24 +211,47 @@ namespace Death { namespace Containers {
 		 * require the elements to have explicitly specified type. The array
 		 * elements are copied to the array constructor, if you have a
 		 * non-copyable type or want to move the elements, use
-		 * @ref StaticArray(InPlaceInitT, T(&&)[size_]) instead. Same as
-		 * @ref StaticArray(const T(&)[size_]).
+		 * @ref StaticArray(InPlaceInitT, T(&&)[size]) instead. Same as
+		 * @ref StaticArray(const T(&)[size]).
+		 *
+		 * To prevent accidents, compared to regular C array initialization the
+		 * constructor expects the number of arguments to match the size
+		 * *exactly*. I.e., it's not possible to omit a suffix of the array to
+		 * implicitly value-initialize it.
 		 */
+#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+		template<std::size_t size> constexpr explicit StaticArray(InPlaceInitT, const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
+			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
+		}
+#else
+		/* GCC 4.8 isn't able to figure out the size on its own. Which means
+		   there we use the type-provided size and lose the check for element
+		   count, but at least it compiles. */
 		constexpr explicit StaticArray(InPlaceInitT, const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
+#endif
 
 #if !defined(DEATH_MSVC2017_COMPATIBILITY)
 		/**
 		* @brief In-place construct an array by moving the elements from a fixed-size array
 		*
 		* Compared to @ref StaticArray(InPlaceInitT, Args&&... args) doesn't
-		* require the elements to have explicitly specified type. Same as
-		* @ref StaticArray(T(&&)[size_]).
+		* require the elements to have an explicitly specified type. Same as
+		* @ref StaticArray(T(&&)[size]).
 		* @partialsupport Not available on
 		*      @ref DEATH_MSVC2015_COMPATIBILITY "MSVC 2015" and
 		*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
 		*      compilers don't support moving arrays.
 		*/
+#	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+		template<std::size_t size> constexpr explicit StaticArray(InPlaceInitT, T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
+			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
+		}
+#	else
+		/* GCC 4.8 isn't able to figure out the size on its own. Which means
+		   there we use the type-provided size and lose the check for element
+		   count, but at least it compiles. */
 		constexpr explicit StaticArray(InPlaceInitT, T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+#	endif
 #endif
 
 		/**
@@ -235,26 +266,46 @@ namespace Death { namespace Containers {
 		 *
 		 * Alias to @ref StaticArray(InPlaceInitT, Args&&... args).
 		 */
-		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<First>(first), std::forward<Next>(next)...} {}
+		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<First>(first), std::forward<Next>(next)...} {
+			static_assert(sizeof...(next) + 1 == size_, "Containers::StaticArray: Wrong number of initializers");
+		}
 
 		/**
 		 * @brief In-place construct an array by copying the elements from a fixed-size array
 		 *
-		 * Alias to @ref StaticArray(InPlaceInitT, const T(&)[size_]).
+		 * Alias to @ref StaticArray(InPlaceInitT, const T(&)[size]).
 		 */
-		constexpr explicit StaticArray(const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, data} {}
+#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+		template<std::size_t size> constexpr explicit StaticArray(const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
+			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
+		}
+#else
+		/* GCC 4.8 isn't able to figure out the size on its own. Which means
+		   there we use the type-provided size and lose the check for element
+		   count, but at least it compiles. */
+		constexpr explicit StaticArray(const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
+#endif
 
 #if !defined(DEATH_MSVC2017_COMPATIBILITY)
 		/**
 		* @brief In-place construct an array by moving the elements from a fixed-size array
 		*
-		* Alias to @ref StaticArray(InPlaceInitT, T(&&)[size_]).
+		* Alias to @ref StaticArray(InPlaceInitT, T(&&)[size]).
 		* @partialsupport Not available on
 		*      @ref DEATH_MSVC2015_COMPATIBILITY "MSVC 2015" and
 		*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
 		*      compilers don't support moving arrays.
 		*/
-		constexpr explicit StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::move(data)} {}
+#	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+		template<std::size_t size> constexpr explicit StaticArray(T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
+			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
+		}
+#	else
+		/* GCC 4.8 isn't able to figure out the size on its own. Which means
+		   there we use the type-provided size and lose the check for element
+		   count, but at least it compiles. */
+		constexpr explicit StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+#	endif
 #endif
 
 		/** @brief Convert to external view representation */

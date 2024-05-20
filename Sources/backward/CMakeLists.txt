@@ -223,7 +223,7 @@ endforeach()
 
 ncine_add_dependency(Backward INTERFACE)
 
-target_sources(Backward PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/backward.h")
+target_sources(Backward INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/backward.h")
 target_compile_definitions(Backward INTERFACE ${BACKWARD_DEFINITIONS})
 target_include_directories(Backward INTERFACE ${BACKWARD_INCLUDE_DIRS})
 if(BACKWARD_LIBRARIES)
