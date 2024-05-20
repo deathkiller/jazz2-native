@@ -1008,6 +1008,8 @@ RecreateCache:
 		}
 	}
 
+	fs::CreateDirectories(resolver.GetCachePath());
+
 	// Delete cache from previous versions
 	String animationsPath = fs::CombinePath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
