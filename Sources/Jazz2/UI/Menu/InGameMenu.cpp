@@ -109,7 +109,7 @@ namespace Jazz2::UI::Menu
 		int32_t charOffset = 0;
 		int32_t charOffsetShadow = 0;
 
-		float titleY = _owner->_contentBounds.Y - 30;
+		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
 		constexpr float logoScale = 1.0f;
 		constexpr float logoTextScale = 1.0f;
 		constexpr float logoTranslateX = 1.0f;
@@ -148,7 +148,7 @@ namespace Jazz2::UI::Menu
 		// Version
 		Vector2f bottomRight = Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
 		bottomRight.X = ViewSize.X - 24.0f;
-		bottomRight.Y -= 10.0f;
+		bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
 		_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
 			Alignment::BottomRight, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
@@ -429,8 +429,9 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::UpdateContentBounds(Vector2i viewSize)
 	{
-		float titleY = std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f);
-		_contentBounds = Recti(0, titleY + 30, viewSize.X, viewSize.Y - (titleY + 30));
+		float headerY = (viewSize.Y >= 300 ? std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f) : 8.0f);
+		float footerY = (viewSize.Y >= 300 ? 30.0f : 14.0f);
+		_contentBounds = Recti(0, headerY + 30, viewSize.X, viewSize.Y - (headerY + footerY));
 	}
 
 	void InGameMenu::UpdatePressedActions()

@@ -209,7 +209,7 @@ namespace Jazz2::UI::Menu
 		int32_t charOffset = 0;
 		int32_t charOffsetShadow = 0;
 
-		float titleY = _owner->_contentBounds.Y - 30.0f;
+		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
 		float logoScale = 1.0f + (1.0f - _owner->_logoTransition) * 7.0f;
 		float logoTextScale = 1.0f + (1.0f - _owner->_logoTransition) * 2.0f;
 		float logoTranslateX = 1.0f + (1.0f - _owner->_logoTransition) * 1.2f;
@@ -241,7 +241,7 @@ namespace Jazz2::UI::Menu
 		// Version
 		Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
 		bottomRight.X = ViewSize.X - 24.0f;
-		bottomRight.Y -= 10.0f;
+		bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
 
 		auto newestVersion = _owner->_root->GetNewestVersion();
 		if (!newestVersion.empty() && newestVersion != NCINE_VERSION) {
@@ -568,8 +568,9 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::UpdateContentBounds(Vector2i viewSize)
 	{
-		float titleY = std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f);
-		_contentBounds = Recti(0, titleY + 30, viewSize.X, viewSize.Y - (titleY + 30));
+		float headerY = (viewSize.Y >= 300 ? std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f) : 8.0f);
+		float footerY = (viewSize.Y >= 300 ? 30.0f : 14.0f);
+		_contentBounds = Recti(0, headerY + 30, viewSize.X, viewSize.Y - (headerY + footerY));
 	}
 
 	void MainMenu::UpdatePressedActions()

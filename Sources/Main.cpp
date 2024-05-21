@@ -83,9 +83,6 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 #endif
 {
 public:
-	static constexpr std::int32_t DefaultWidth = 720;
-	static constexpr std::int32_t DefaultHeight = 405;
-
 	static constexpr std::uint16_t StateVersion = 2;
 	static constexpr char StateFileName[] = "Jazz2.resume";
 
