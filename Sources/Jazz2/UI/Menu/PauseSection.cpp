@@ -76,7 +76,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int32_t)Item::Count);
+			center.Y += (contentBounds.H >= 250 ? 34.0f : 26.0f) + 32.0f * (1.0f - 0.15f * (int32_t)Item::Count);
 		}
 	}
 

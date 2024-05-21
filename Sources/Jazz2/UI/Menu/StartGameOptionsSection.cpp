@@ -126,9 +126,9 @@ namespace Jazz2::UI::Menu
 			case 2: selectedDifficultyImage = MenuDifficultyLori; break;
 		}
 
-		_root->DrawElement(MenuDim, 0, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f, 36.0f);
-
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f, 0.88f);
+		float imageScale = (contentBounds.W >= 400 ? 1.0f : 0.5f);
+		_root->DrawElement(MenuDim, 0, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f * imageScale, 36.0f * imageScale);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 
 		if (_imageTransition < 1.0f) {
 			AnimState lastDifficultyImage;
@@ -138,10 +138,10 @@ namespace Jazz2::UI::Menu
 				case 1: lastDifficultyImage = MenuDifficultySpaz; break;
 				case 2: lastDifficultyImage = MenuDifficultyLori; break;
 			}
-			_root->DrawElement(lastDifficultyImage, _lastDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f, 0.88f);
+			_root->DrawElement(lastDifficultyImage, _lastDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 		}
 
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f, 0.88f);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 
 		int32_t charOffset = 0;
 		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
@@ -177,6 +177,11 @@ namespace Jazz2::UI::Menu
 		            spacing = 300.0f / _availableCharacters;
 		        }
 
+				if (contentBounds.W < 480) {
+					offset *= 0.7f;
+					spacing *= 0.7f;
+				}
+
 		        for (int32_t j = 0; j < _availableCharacters; j++) {
 		            float x = center.X - offset + j * spacing;
 		            if (_selectedPlayerType == j) {
@@ -198,15 +203,16 @@ namespace Jazz2::UI::Menu
 				_items[i].TouchY = center.Y + 28.0f;
 		    } else if (i == 1) {
 				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
+				float spacing = (contentBounds.W >= 400 ? 100.0f : 70.0f);
 
 		        for (int32_t j = 0; j < countof(difficultyTypes); j++) {
 		            if (_selectedDifficulty == j) {
-		                _root->DrawElement(MenuGlow, 0, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(difficultyTypes[j]) + 3) * 0.4f, 2.2f, true, true);
+		                _root->DrawElement(MenuGlow, 0, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(difficultyTypes[j]) + 3) * 0.4f, 2.2f, true, true);
 
-		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::FontLayer,
+		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::FontLayer,
 							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 		            } else {
-		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::FontLayer,
+		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::FontLayer,
 							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
 		            }
 		        }
@@ -221,7 +227,7 @@ namespace Jazz2::UI::Menu
 				_items[i].TouchY = center.Y;
 			}
 
-		    center.Y += 70.0f;
+		    center.Y += (contentBounds.H >= 250 ? 70.0f : 60.0f);
 		}
 	}
 
