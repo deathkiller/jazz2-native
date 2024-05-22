@@ -110,11 +110,12 @@ namespace Jazz2::UI::Menu
 		int32_t charOffsetShadow = 0;
 
 		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
-		constexpr float logoScale = 1.0f;
-		constexpr float logoTextScale = 1.0f;
-		constexpr float logoTranslateX = 1.0f;
-		constexpr float logoTranslateY = 0.0f;
-		constexpr float logoTextTranslate = 0.0f;
+		float logoBaseScale = (ViewSize.Y >= 300 ? 1.0f : 0.85f);
+		float logoScale = logoBaseScale;
+		float logoTextScale = logoBaseScale;
+		float logoTranslateX = logoBaseScale;
+		float logoTranslateY = 0.0f;
+		float logoTextTranslate = 0.0f;
 
 		// Show blurred viewport behind
 		DrawTexture(*_owner->_root->_blurPass4.GetTarget(), Vector2f::Zero, 500, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));

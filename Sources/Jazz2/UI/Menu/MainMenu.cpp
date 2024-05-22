@@ -210,9 +210,10 @@ namespace Jazz2::UI::Menu
 		int32_t charOffsetShadow = 0;
 
 		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
-		float logoScale = 1.0f + (1.0f - _owner->_logoTransition) * 7.0f;
-		float logoTextScale = 1.0f + (1.0f - _owner->_logoTransition) * 2.0f;
-		float logoTranslateX = 1.0f + (1.0f - _owner->_logoTransition) * 1.2f;
+		float logoBaseScale = (ViewSize.Y >= 300 ? 1.0f : 0.85f);
+		float logoScale = logoBaseScale + (1.0f - _owner->_logoTransition) * 7.0f;
+		float logoTextScale = logoBaseScale + (1.0f - _owner->_logoTransition) * 2.0f;
+		float logoTranslateX = logoBaseScale + (1.0f - _owner->_logoTransition) * 1.2f;
 		float logoTranslateY = (1.0f - _owner->_logoTransition) * 120.0f;
 		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
 
@@ -224,11 +225,11 @@ namespace Jazz2::UI::Menu
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
 
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f * logoTranslateX + logoTextTranslate, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY, FontLayer + 200,

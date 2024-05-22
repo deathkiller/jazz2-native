@@ -726,12 +726,14 @@ namespace Jazz2::UI
 			offset = 0;
 		}
 
+		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f);
+
 		int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, FontShadowLayer,
-			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
+			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
 
 		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, FontLayer,
-			Alignment::Top, Font::DefaultColor, 1.0f, 0.72f, 0.8f, 0.8f);
+			Alignment::Top, Font::DefaultColor, textScale, 0.72f, 0.8f, 0.8f);
 
 		if (_levelTextTime > TotalTime) {
 			_levelTextTime = -1.0f;

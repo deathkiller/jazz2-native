@@ -128,7 +128,7 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = canvas->ViewSize;
 		
 		Vector2f pos = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
-		pos.Y = std::round(std::max(150.0f, pos.Y * 0.86f));
+		pos.Y = (viewSize.Y >= 300 ? std::round(std::max(150.0f, pos.Y * 0.86f)) : 30.0f);
 
 		_root->DrawElement(MenuDim, pos.X, pos.Y + 24.0f - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
@@ -137,10 +137,12 @@ namespace Jazz2::UI::Menu
 
 		int32_t charOffset = 0;
 
-		// TRANSLATORS: Main information in About section
-		_root->DrawStringShadow(_f("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension.\nFor more information, visit the official website: %s", "\f[c:0x707070]https://deat.tk/jazz2/\f[c]"),
-			charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f, 1.2f);
+		if (viewSize.Y >= 300) {
+			// TRANSLATORS: Main information in About section
+			_root->DrawStringShadow(_f("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension.\nFor more information, visit the official website: %s", "\f[c:0x707070]https://deat.tk/jazz2/\f[c]"),
+				charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
+				Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f, 1.2f);
+		}
 
 		// TRANSLATORS: Header in About section
 		_root->DrawStringShadow(_("Created By"), charOffset, pos.X, pos.Y + 42.0f, IMenuContainer::FontLayer,
@@ -156,12 +158,12 @@ namespace Jazz2::UI::Menu
 			Alignment::Left, Font::DefaultColor, 0.74f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
 		// TRANSLATORS: Bottom information in About section
-		_root->DrawStringShadow(_f("This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and following libraries:\n%s", ADDITIONAL_INFO), charOffset, viewSize.X * 0.5f, pos.Y + 54.0f + pos.Y * 0.4f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_f("This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and following libraries:\n%s", ADDITIONAL_INFO), charOffset, viewSize.X * 0.5f, pos.Y + 54.0f + std::max(60.0f, pos.Y * 0.4f), IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.76f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
 		_root->DrawElement(MenuLine, 0, viewSize.X * 0.5f, pos.Y + 24.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		pos.Y = viewSize.Y - 100.0f;
+		//pos.Y = viewSize.Y - 100.0f;
 	}
 
 	void AboutSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
