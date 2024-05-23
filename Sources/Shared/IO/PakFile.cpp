@@ -19,12 +19,12 @@ namespace Death { namespace IO {
 		BoundedStream(const BoundedStream&) = delete;
 		BoundedStream& operator=(const BoundedStream&) = delete;
 
-		void Close() override;
+		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
-
+		bool Flush() override;
 		bool IsValid() override;
 
 	private:
@@ -40,9 +40,9 @@ namespace Death { namespace IO {
 		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
 	}
 
-	void BoundedStream::Close()
+	void BoundedStream::Dispose()
 	{
-		_underlyingStream.Close();
+		_underlyingStream.Dispose();
 	}
 
 	std::int64_t BoundedStream::Seek(std::int64_t offset, SeekOrigin origin)
@@ -76,6 +76,10 @@ namespace Death { namespace IO {
 	{
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
+		if (bytes <= 0) {
+			return 0;
+		}
+
 		if (bytes > _size - _pos) {
 			bytes = static_cast<std::int32_t>(_size - _pos);
 		}
@@ -89,6 +93,12 @@ namespace Death { namespace IO {
 	{
 		// Not supported
 		return ErrorInvalidStream;
+	}
+
+	bool BoundedStream::Flush()
+	{
+		// Not supported
+		return true;
 	}
 
 	bool BoundedStream::IsValid()
@@ -106,12 +116,12 @@ namespace Death { namespace IO {
 		ZlibCompressedBoundedStream(const ZlibCompressedBoundedStream&) = delete;
 		ZlibCompressedBoundedStream& operator=(const ZlibCompressedBoundedStream&) = delete;
 
-		void Close() override;
+		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
-
+		bool Flush() override;
 		bool IsValid() override;
 
 	private:
@@ -127,10 +137,10 @@ namespace Death { namespace IO {
 		_deflateStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
 	}
 
-	void ZlibCompressedBoundedStream::Close()
+	void ZlibCompressedBoundedStream::Dispose()
 	{
-		_deflateStream.Close();
-		_underlyingStream.Close();
+		_deflateStream.Dispose();
+		_underlyingStream.Dispose();
 	}
 
 	std::int64_t ZlibCompressedBoundedStream::Seek(std::int64_t offset, SeekOrigin origin)
@@ -152,6 +162,12 @@ namespace Death { namespace IO {
 	{
 		// Not supported
 		return ErrorInvalidStream;
+	}
+
+	bool ZlibCompressedBoundedStream::Flush()
+	{
+		// Not supported
+		return true;
 	}
 
 	bool ZlibCompressedBoundedStream::IsValid()
@@ -197,12 +213,12 @@ namespace Death { namespace IO {
 		_path = path;
 	}
 
-	Containers::StringView PakFile::GetMountPoint() const
+	StringView PakFile::GetMountPoint() const
 	{
 		return _mountPoint;
 	}
 
-	Containers::StringView PakFile::GetPath() const
+	StringView PakFile::GetPath() const
 	{
 		return _path;
 	}
@@ -255,13 +271,13 @@ namespace Death { namespace IO {
 		}
 	}
 
-	bool PakFile::FileExists(const Containers::StringView path)
+	bool PakFile::FileExists(const StringView path)
 	{
 		Item* foundItem = FindItem(path);
 		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) != ItemFlags::Directory);
 	}
 
-	bool PakFile::DirectoryExists(const Containers::StringView path)
+	bool PakFile::DirectoryExists(const StringView path)
 	{
 		Item* foundItem = FindItem(path);
 		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) == ItemFlags::Directory);
@@ -278,11 +294,14 @@ namespace Death { namespace IO {
 			return nullptr;
 		}
 
-#if defined(WITH_ZLIB)
 		if ((foundItem->Flags & ItemFlags::ZlibCompressed) == ItemFlags::ZlibCompressed) {
+#if defined(WITH_ZLIB)
 			return std::make_unique<ZlibCompressedBoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
-		}
+#else
+			LOGE("File \"%s\" was compressed using an unsupported compression method", String::nullTerminatedView(path).data());
+			return nullptr;
 #endif
+		}
 
 		return std::make_unique<BoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize);
 	}
@@ -412,8 +431,6 @@ namespace Death { namespace IO {
 			strncpy(_fileNamePart, fileName.data(), std::min(sizeof(_path) - (_fileNamePart - _path), fileName.size()) - 1);
 			_path[sizeof(_path) - 1] = '\0';
 #endif
-
-
 			_index++;
 		}
 
@@ -422,7 +439,7 @@ namespace Death { namespace IO {
 		FileSystem::EnumerationOptions _options;
 		char _path[FileSystem::MaxPathLength];
 		char* _fileNamePart;
-		Containers::ArrayView<Item> _childItems;
+		ArrayView<Item> _childItems;
 		std::size_t _index;
 	};
 
@@ -487,7 +504,7 @@ namespace Death { namespace IO {
 		return !(*this == other);
 	}
 
-	PakFile::Directory::Proxy::Proxy(const Containers::StringView path)
+	PakFile::Directory::Proxy::Proxy(const StringView path)
 		: _path(path)
 	{
 	}
@@ -516,7 +533,7 @@ namespace Death { namespace IO {
 	bool PakWriter::AddFile(Stream& stream, StringView path, bool compress)
 	{
 		DEATH_ASSERT(_outputStream->IsValid(), false, "Invalid output stream specified");
-		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\', false, "Invalid file path to add");
+		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\', false, "\"%s\" is not valid file path", String::nullTerminatedView(path).data());
 
 		PakFile::Item* parentItem = FindOrCreateParentItem(path);
 		Array<PakFile::Item>* items;
@@ -541,7 +558,7 @@ namespace Death { namespace IO {
 		if (compress) {
 			DeflateWriter dw(*_outputStream);
 			uncompressedSize = stream.CopyTo(dw);
-			dw.Close();
+			dw.Dispose();
 			size = _outputStream->GetPosition() - offset;
 			flags |= PakFile::ItemFlags::ZlibCompressed;
 		} else

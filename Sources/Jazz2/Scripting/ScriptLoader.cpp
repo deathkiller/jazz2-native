@@ -81,7 +81,7 @@ namespace Jazz2::Scripting
 
 		String scriptContent(NoInit, s->GetSize());
 		s->Read(scriptContent.data(), s->GetSize());
-		s->Close();
+		s->Dispose();
 
 		ScriptContextType contextType = ScriptContextType::Legacy;
 		SmallVector<String, 4> metadata;

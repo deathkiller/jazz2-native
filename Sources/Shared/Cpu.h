@@ -1606,10 +1606,6 @@ namespace Death { namespace Cpu {
 	*/
 	#define DEATH_CPU_SELECT(tag) tag, Death::Cpu::Implementation::priority(tag)
 
-	// Called from _DEATH_CPU_DISPATCHER() and _DEATH_ENABLE_CONCATENATE() to pick a macro implementation based
-	// on how many arguments were passed. Source: https://stackoverflow.com/a/11763277
-	#define _DEATH_HELPER_PICK(_0, _1, _2, _3, _4, _5, _6, _7, macroName, ...) macroName
-
 	/**
 		@brief Create a function for a runtime dispatch on a base CPU instruction set
 
@@ -1732,7 +1728,7 @@ namespace Death { namespace Cpu {
 		}																		\
 		template<unsigned int value, class First, class ...Next> DEATH_ALWAYS_INLINE decltype(function(DEATH_CPU_SELECT(Death::Cpu::Scalar))) function ## Internal(Death::Cpu::Features features, Death::Cpu::Implementation::Tags<value> extra, First first, Next... next) { \
 			static_assert(!(static_cast<unsigned int>(Death::Cpu::Implementation::tags(First{Death::Cpu::Implementation::Init})) & Death::Cpu::Implementation::BaseTagMask),	\
-				"only extra instruction set tags should be explicitly listed");	\
+				"Only extra instruction set tags should be explicitly listed");	\
 			if(features & first)												\
 				return function ## Internal(features, extra|first, next...);	\
 			else																\
@@ -1760,16 +1756,8 @@ namespace Death { namespace Cpu {
 		For a dispatch using just the base instruction set use
 		@ref DEATH_CPU_DISPATCHER_BASE() instead.
 	*/
-#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL)
-	#define _DEATH_CPU_DISPATCHER(...)										\
-		_DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHER0, )(__VA_ARGS__)
-#else
-	// Workaround for MSVC not being able to expand __VA_ARGS__ correctly. Would work with /Zc:preprocessor or /experimental:preprocessor,
-	// but I'm not enabling that globally yet. Source: https://stackoverflow.com/a/5134656
-	#define _DEATH_CPU_DISPATCHER_FFS_MSVC_EXPAND_THIS(x) x
-	#define _DEATH_CPU_DISPATCHER(...)										\
-		_DEATH_CPU_DISPATCHER_FFS_MSVC_EXPAND_THIS(_DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHER0, )(__VA_ARGS__))
-#endif
+	#define _DEATH_CPU_DISPATCHER(...)											\
+		DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHER0, )(__VA_ARGS__))
 
 	/**
 		@brief Create a runtime-dispatched function pointer
@@ -2695,7 +2683,7 @@ namespace Death { namespace Cpu {
 #define _DEATH_ENABLE_CONCATENATE7(v0, v1, v2, v3, v4, v5, v6, unused)		\
 	__attribute__((__target__(v0 "," v1 "," v2 "," v3 "," v4 "," v5 "," v6)))
 #define _DEATH_ENABLE_CONCATENATE(...)										\
-	_DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_ENABLE_CONCATENATE7, _DEATH_ENABLE_CONCATENATE6, _DEATH_ENABLE_CONCATENATE5, _DEATH_ENABLE_CONCATENATE4, _DEATH_ENABLE_CONCATENATE3, _DEATH_ENABLE_CONCATENATE2, _DEATH_ENABLE_CONCATENATE1, _DEATH_ENABLE_CONCATENATE0, )(__VA_ARGS__)
+	DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_ENABLE_CONCATENATE7, _DEATH_ENABLE_CONCATENATE6, _DEATH_ENABLE_CONCATENATE5, _DEATH_ENABLE_CONCATENATE4, _DEATH_ENABLE_CONCATENATE3, _DEATH_ENABLE_CONCATENATE2, _DEATH_ENABLE_CONCATENATE1, _DEATH_ENABLE_CONCATENATE0, )(__VA_ARGS__)
 // No _DEATH_HELPER_PASTE() needed here, as there's enough other indirections to make that work
 #define _DEATH_ENABLE1(v0)													\
 	_DEATH_ENABLE_CONCATENATE(												\
@@ -2824,7 +2812,7 @@ namespace Death { namespace Cpu {
 			@cpp #ifdef @ce guard.
 	*/
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL)
-#	define DEATH_ENABLE(...) _DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_ENABLE8, _DEATH_ENABLE7, _DEATH_ENABLE6, _DEATH_ENABLE5, _DEATH_ENABLE4, _DEATH_ENABLE3, _DEATH_ENABLE2, _DEATH_ENABLE1, )(__VA_ARGS__)
+#	define DEATH_ENABLE(...) DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_ENABLE8, _DEATH_ENABLE7, _DEATH_ENABLE6, _DEATH_ENABLE5, _DEATH_ENABLE4, _DEATH_ENABLE3, _DEATH_ENABLE2, _DEATH_ENABLE1, )(__VA_ARGS__)
 #else
 #	define DEATH_ENABLE(...)
 #endif

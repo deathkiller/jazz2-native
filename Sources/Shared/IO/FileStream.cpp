@@ -30,11 +30,11 @@ namespace Death { namespace IO {
 	}
 
 	FileStream::FileStream(Containers::String&& path, FileAccessMode mode)
-		: _shouldCloseOnDestruction(true), _path(std::move(path)),
+		: _path(std::move(path)),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
-		_fileDescriptor(-1)
+			_fileDescriptor(-1)
 #else
-		_handle(nullptr)
+			_handle(nullptr)
 #endif
 	{
 		Open(mode);
@@ -42,12 +42,10 @@ namespace Death { namespace IO {
 
 	FileStream::~FileStream()
 	{
-		if (_shouldCloseOnDestruction) {
-			FileStream::Close();
-		}
+		FileStream::Dispose();
 	}
 
-	void FileStream::Close()
+	void FileStream::Dispose()
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
@@ -132,6 +130,10 @@ namespace Death { namespace IO {
 	{
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
+		if (bytes <= 0) {
+			return 0;
+		}
+
 		std::int32_t bytesRead = 0;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
@@ -159,6 +161,10 @@ namespace Death { namespace IO {
 	{
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
+		if (bytes <= 0) {
+			return 0;
+		}
+
 		std::int32_t bytesWritten = 0;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
@@ -180,6 +186,15 @@ namespace Death { namespace IO {
 		}
 #endif
 		return bytesWritten;
+	}
+
+	bool FileStream::Flush()
+	{
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
+		return fdatasync(_fileDescriptor) == 0;
+#else
+		return fflush(_handle) == 0;
+#endif
 	}
 
 	bool FileStream::IsValid()

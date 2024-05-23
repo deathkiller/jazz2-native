@@ -99,7 +99,7 @@ namespace Death { namespace Containers {
 			std::is_trivially_constructible<T>::value
 		>::type* = nullptr) {
 			// Needs to be < because sometimes begin > end
-			for (; begin < end; ++begin) new(begin) T {};
+			for (; begin < end; ++begin) new(begin) T{};
 		}
 
 		template<class T> struct AllocatorTraits {

@@ -1479,6 +1479,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\PakFile.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\FileAccessMode.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

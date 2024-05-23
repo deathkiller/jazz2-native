@@ -36,11 +36,12 @@ namespace Death { namespace IO {
 
 		void Open(Stream& inputStream, std::int32_t inputSize = -1, bool rawInflate = true);
 
-		void Close() override;
+		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
+		bool Flush() override;
 		bool IsValid() override;
 
 		bool CeaseReading();
@@ -79,11 +80,12 @@ namespace Death { namespace IO {
 		DeflateWriter(const DeflateWriter&) = delete;
 		DeflateWriter& operator=(const DeflateWriter&) = delete;
 
-		void Close() override;
+		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
+		bool Flush() override;
 		bool IsValid() override;
 
 		static std::int64_t GetMaxDeflatedSize(std::int64_t uncompressedSize);

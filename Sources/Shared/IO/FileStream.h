@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Stream.h"
+#include "FileAccessMode.h"
 #include "../Containers/String.h"
 
 namespace Death { namespace IO {
@@ -19,20 +20,16 @@ namespace Death { namespace IO {
 		FileStream(const FileStream&) = delete;
 		FileStream& operator=(const FileStream&) = delete;
 
-		void Close() override;
+		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
-
+		bool Flush() override;
 		bool IsValid() override;
 
 		/** @brief Returns file path */
 		Containers::StringView GetPath() const;
-
-		void SetCloseOnDestruction(bool shouldCloseOnDestruction) override {
-			_shouldCloseOnDestruction = shouldCloseOnDestruction;
-		}
 
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		/** @brief Returns file descriptor */
@@ -53,7 +50,6 @@ namespace Death { namespace IO {
 #else
 		FILE* _handle;
 #endif
-		bool _shouldCloseOnDestruction;
 
 		void Open(FileAccessMode mode);
 	};

@@ -545,17 +545,17 @@ namespace Death { namespace Containers {
 	}
 
 	/** @brief Array view size */
-	template<class T> constexpr std::size_t arraySize(ArrayView<T> view) {
-		return view.size();
+	template<class S = std::size_t, class T> constexpr S arraySize(ArrayView<T> view) {
+		return static_cast<S>(view.size());
 	}
 
 	/** @overload */
-	template<std::size_t size_, class T> constexpr std::size_t arraySize(StaticArrayView<size_, T>) {
+	template<class S = std::size_t, S size_, class T> constexpr S arraySize(StaticArrayView<size_, T>) {
 		return size_;
 	}
 
 	/** @overload */
-	template<std::size_t size_, class T> constexpr std::size_t arraySize(T(&)[size_]) {
+	template<class S = std::size_t, S size_, class T> constexpr S arraySize(T(&)[size_]) {
 		return size_;
 	}
 

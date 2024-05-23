@@ -50,6 +50,37 @@ namespace Death { namespace Implementation {
 #	define DEFINE_PRIVATE_ENUM_OPERATORS(type)
 #endif
 
+/** @brief Workaround for MSVC not being able to expand __VA_ARGS__ correctly. Would work with /Zc:preprocessor. Source: https://stackoverflow.com/a/5134656 */
+#define DEATH_HELPER_EXPAND(...) __VA_ARGS__
+/** @brief Pick a macro implementation based on how many arguments were passed. Source: https://stackoverflow.com/a/11763277 */
+#define DEATH_HELPER_PICK(_0, _1, _2, _3, _4, _5, _6, _7, macroName, ...) macroName
+/** @brief Get number of arguments in a variadic macro */
+#define DEATH_HELPER_ARGS_COUNT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+
+//namespace Death { namespace Implementation {
+//	template<typename T/*, typename = std::enable_if_t<std::is_invocable_v<T>>*/>
+//	class ScopeExit
+//	{
+//	public:
+//		constexpr explicit ScopeExit(T deferredCallback) noexcept : _deferredCallback(std::move(deferredCallback)) {}
+//		ScopeExit& operator=(const ScopeExit&) = delete;
+//		~ScopeExit() noexcept { _deferredCallback(); }
+//
+//	private:
+//		T _deferredCallback;
+//	};
+//
+//	struct ScopeExitHelper {};
+//
+//	template<typename T>
+//	ScopeExit<T> operator%(const ScopeExitHelper&, T deferredCallback) {
+//		return ScopeExit<T>{std::move(deferredCallback)};
+//	}
+//}}
+//
+///** @brief Defer execution of following block to the end of current scope */
+//#define DEATH_DEFER DEATH_UNUSED auto const& DEATH_PASTE(_deferred_, __LINE__) = Death::Implementation::ScopeExitHelper{} % [&]()
+
 // Compile-time and runtime CPU instruction set dispatch
 namespace Death { namespace Cpu {
 	class Features;
