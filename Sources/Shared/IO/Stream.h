@@ -12,7 +12,7 @@
 #endif
 
 #include "../Common.h"
-#include "../IDisposable.h"
+#include "../Base/IDisposable.h"
 
 #include <cstdio>		// For FILE
 #include <memory>
