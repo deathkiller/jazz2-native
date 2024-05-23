@@ -126,7 +126,7 @@ namespace Jazz2
 			if (_configPath != localConfigPath) {
 				auto configFileWritable = fs::Open(localConfigPath, FileAccessMode::Read | FileAccessMode::Write);
 				if (configFileWritable->IsValid()) {
-					configFileWritable->Close();
+					configFileWritable->Dispose();
 					_configPath = localConfigPath;
 				}
 			}
