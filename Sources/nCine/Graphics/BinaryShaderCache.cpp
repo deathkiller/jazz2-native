@@ -101,7 +101,7 @@ namespace nCine
 		}
 
 		fileHandle->Read(bufferPtr.get(), fileSize);
-		fileHandle->Close();
+		fileHandle->Dispose();
 
 		std::uint64_t signature = *(std::uint64_t*)&bufferPtr[0];
 		std::uint64_t cachedShaderVersion = *(std::uint64_t*)&bufferPtr[8];

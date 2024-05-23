@@ -69,7 +69,10 @@ namespace Death { namespace Environment {
 	{
 		FILE* fp = ::fopen("/etc/os-release", "r");
 		if (fp == nullptr) {
-			return { };
+			fp = ::fopen("/usr/lib/os-release", "r");
+			if (fp == nullptr) {
+				return { };
+			}
 		}
 
 		Containers::String result;

@@ -452,8 +452,8 @@ namespace Jazz2
 			co.Write(&pair.second.State, sizeof(EpisodeContinuationState));
 		}
 
-		co.Close();
-		so->Close();
+		co.Dispose();
+		so->Dispose();
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		fs::SyncToPersistent();

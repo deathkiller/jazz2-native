@@ -24,7 +24,7 @@ namespace nCine
 		int fileClose(void* datasource)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
-			file->Close();
+			file->Dispose();
 			return 0;
 		}
 
@@ -42,7 +42,7 @@ namespace nCine
 	{
 #if defined(WITH_VORBIS_DYNAMIC)
 		if (!AudioReaderOgg::TryLoadLibrary()) {
-			fileHandle_->Close();
+			fileHandle_->Dispose();
 			return;
 		}
 
@@ -52,7 +52,7 @@ namespace nCine
 #endif
 		if (result != 0) {
 			LOGE("ov_open_callbacks() failed with error %i", result);
-			fileHandle_->Close();
+			fileHandle_->Dispose();
 			return;
 		}
 

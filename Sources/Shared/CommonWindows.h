@@ -262,4 +262,8 @@ DEATH_ALWAYS_INLINE BOOL WINAPI UnregisterClass(LPCWSTR lpClassName, HINSTANCE h
 }
 #endif
 
+#if defined(Yield)
+#	undef Yield
+#endif
+
 #endif

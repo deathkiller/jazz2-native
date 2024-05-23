@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Stream.h"
+#include "FileAccessMode.h"
 #include "../Common.h"
 #include "../Containers/DateTime.h"
 #include "../Containers/String.h"

@@ -59,4 +59,5 @@ namespace Death {
 	{
 		std::memcpy(p, &v, sizeof(v));
 	}
+
 }

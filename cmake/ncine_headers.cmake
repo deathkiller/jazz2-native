@@ -31,6 +31,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/Tags.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/FileAccessMode.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.h
 	${NCINE_SOURCE_DIR}/Shared/IO/HttpRequest.h

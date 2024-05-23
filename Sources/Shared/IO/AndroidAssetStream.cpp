@@ -13,11 +13,10 @@ namespace Death { namespace IO {
 	const char* AndroidAssetStream::_internalDataPath = nullptr;
 
 	AndroidAssetStream::AndroidAssetStream(const Containers::String& path, FileAccessMode mode)
-		: _shouldCloseOnDestruction(true),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
-			_fileDescriptor(-1), _startOffset(0L)
+		: _fileDescriptor(-1), _startOffset(0L)
 #else
-			_asset(nullptr)
+		: _asset(nullptr)
 #endif
 	{
 		_path = path;
@@ -26,13 +25,11 @@ namespace Death { namespace IO {
 
 	AndroidAssetStream::~AndroidAssetStream()
 	{
-		if (_shouldCloseOnDestruction) {
-			Close();
-		}
+		AndroidAssetStream::Dispose();
 	}
 
 	/*! This method will close a file both normally opened or fopened */
-	void AndroidAssetStream::Close()
+	void AndroidAssetStream::Dispose()
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
@@ -100,6 +97,10 @@ namespace Death { namespace IO {
 	{
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
+		if (bytes <= 0) {
+			return 0;
+		}
+
 		std::int32_t bytesRead = 0;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
@@ -124,6 +125,12 @@ namespace Death { namespace IO {
 	{
 		// Not supported
 		return ErrorInvalidStream;
+	}
+
+	bool AndroidAssetStream::Flush()
+	{
+		// Not supported
+		return true;
 	}
 
 	bool AndroidAssetStream::IsValid()

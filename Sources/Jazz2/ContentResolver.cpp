@@ -657,7 +657,7 @@ namespace Jazz2
 
 		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
-		s->Close();
+		s->Dispose();
 		buffer[fileSize] = '\0';
 
 		ondemand::parser parser;
@@ -1664,7 +1664,7 @@ namespace Jazz2
 
 		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
-		s->Close();
+		s->Dispose();
 		buffer[fileSize] = '\0';
 
 		ondemand::parser parser;

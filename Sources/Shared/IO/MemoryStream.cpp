@@ -28,7 +28,7 @@ namespace Death { namespace IO {
 		_size = bufferSize;
 	}
 
-	void MemoryStream::Close()
+	void MemoryStream::Dispose()
 	{
 		_size = ErrorInvalidStream;
 		_seekOffset = 0;
@@ -64,7 +64,7 @@ namespace Death { namespace IO {
 
 		std::int32_t bytesRead = 0;
 
-		if (_mode != AccessMode::None) {
+		if (bytes > 0 && _mode != AccessMode::None) {
 			bytesRead = (_seekOffset + bytes > _size ? static_cast<std::int32_t>(_size - _seekOffset) : bytes);
 			std::memcpy(buffer, _buffer.data() + _seekOffset, bytesRead);
 			_seekOffset += bytesRead;
@@ -79,7 +79,7 @@ namespace Death { namespace IO {
 
 		std::int32_t bytesWritten = 0;
 
-		if (_mode == AccessMode::Writable || _mode == AccessMode::Growable) {
+		if (bytes > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
 			if (_mode == AccessMode::Growable && _size < _seekOffset + bytes) {
 				_size = _seekOffset + bytes;
 				Containers::arrayResize(_buffer, Containers::NoInit, _size);
@@ -93,9 +93,15 @@ namespace Death { namespace IO {
 		return bytesWritten;
 	}
 
+	bool MemoryStream::Flush()
+	{
+		// Not supported
+		return true;
+	}
+
 	bool MemoryStream::IsValid()
 	{
-		return true;
+		return (_mode != AccessMode::None);
 	}
 
 	void MemoryStream::ReserveCapacity(std::int64_t bytes)

@@ -19,12 +19,12 @@ namespace Death { namespace IO {
 		MemoryStream(const MemoryStream&) = delete;
 		MemoryStream& operator=(const MemoryStream&) = delete;
 
-		void Close() override;
+		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
-
+		bool Flush() override;
 		bool IsValid() override;
 
 		void ReserveCapacity(std::int64_t bytes);
@@ -43,7 +43,7 @@ namespace Death { namespace IO {
 		};
 
 		Containers::Array<std::uint8_t> _buffer;
-		mutable std::int64_t _seekOffset;
+		std::int64_t _seekOffset;
 		AccessMode _mode;
 	};
 

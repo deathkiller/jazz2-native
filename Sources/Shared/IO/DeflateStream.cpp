@@ -35,7 +35,7 @@ namespace Death { namespace IO {
 
 	DeflateStream::~DeflateStream()
 	{
-		DeflateStream::Close();
+		DeflateStream::Dispose();
 	}
 
 	DeflateStream::DeflateStream(DeflateStream&& other) noexcept
@@ -55,7 +55,7 @@ namespace Death { namespace IO {
 
 	DeflateStream& DeflateStream::operator=(DeflateStream&& other) noexcept
 	{
-		Close();
+		Dispose();
 
 		_inputStream = other._inputStream;
 		_strm = other._strm;
@@ -122,6 +122,12 @@ namespace Death { namespace IO {
 		return ErrorInvalidStream;
 	}
 
+	bool DeflateStream::Flush()
+	{
+		// Not supported
+		return true;
+	}
+
 	bool DeflateStream::IsValid()
 	{
 		if (_state == State::Created) {
@@ -132,7 +138,7 @@ namespace Death { namespace IO {
 
 	void DeflateStream::Open(Stream& inputStream, std::int32_t inputSize, bool rawInflate)
 	{
-		Close();
+		Dispose();
 
 		_inputStream = &inputStream;
 		_inputSize = inputSize;
@@ -148,7 +154,7 @@ namespace Death { namespace IO {
 		_strm.total_out = 0;
 	}
 
-	void DeflateStream::Close()
+	void DeflateStream::Dispose()
 	{
 		CeaseReading();
 		_inputStream = nullptr;
@@ -170,7 +176,7 @@ namespace Death { namespace IO {
 
 	std::int32_t DeflateStream::ReadInternal(void* ptr, std::int32_t size)
 	{
-		if (size == 0) {
+		if (size <= 0) {
 			return 0;
 		}
 
@@ -255,10 +261,10 @@ namespace Death { namespace IO {
 
 	DeflateWriter::~DeflateWriter()
 	{
-		DeflateWriter::Close();
+		DeflateWriter::Dispose();
 	}
 
-	void DeflateWriter::Close()
+	void DeflateWriter::Dispose()
 	{
 		if (_state != State::Created && _state != State::Initialized) {
 			return;
@@ -294,12 +300,20 @@ namespace Death { namespace IO {
 
 	std::int32_t DeflateWriter::Write(const void* buffer, std::int32_t bytes)
 	{
+		if (bytes <= 0) {
+			return 0;
+		}
 		if (_state != State::Created && _state != State::Initialized) {
 			return ErrorInvalidStream;
 		}
 
 		_state = State::Initialized;
 		return WriteInternal(buffer, bytes, false);
+	}
+
+	bool DeflateWriter::Flush()
+	{
+		return (WriteInternal(nullptr, 0, false) >= 0);
 	}
 
 	bool DeflateWriter::IsValid()
@@ -317,7 +331,9 @@ namespace Death { namespace IO {
 			do {
 				_strm.next_out = static_cast<unsigned char*>(_buffer);
 				_strm.avail_out = sizeof(_buffer);
-				error = deflate(&_strm, finish ? Z_FINISH : Z_NO_FLUSH);
+				error = deflate(&_strm, finish
+					? Z_FINISH
+					: (buffer != nullptr ? Z_NO_FLUSH : Z_FULL_FLUSH));
 
 				std::int32_t bytesWritten = sizeof(_buffer) - static_cast<std::int32_t>(_strm.avail_out);
 				if (bytesWritten > 0) {
@@ -330,7 +346,7 @@ namespace Death { namespace IO {
 			}
 			if (error != Z_OK) {
 				LOGE("Failed to deflate uncompressed buffer with error: %i", error);
-				break;
+				return ErrorInvalidStream;
 			}
 		}
 
