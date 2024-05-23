@@ -695,6 +695,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringConcatenable.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStl.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\FileAccessMode.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\IDisposable.h" />
     <ClInclude Include="simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>
