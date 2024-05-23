@@ -202,8 +202,4 @@ else() # GCC and LLVM
 			target_link_libraries(${NCINE_APP} PRIVATE dl)
 		endif()
 	endif()
-	
-	if(NOT ANDROID AND NOT APPLE)
-		target_link_libraries(${NCINE_APP} PUBLIC ${OpenGL_LIBRARY})
-	endif()
 endif()
