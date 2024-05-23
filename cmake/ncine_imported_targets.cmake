@@ -145,7 +145,7 @@ if(MSVC OR MINGW OR MSYS)
 		message(STATUS "MSVC libraries directory: ${EXTERNAL_MSVC_DIR}")
 	endif()
 
-    # TODO: Detect ARM64EC libraries
+	# TODO: Detect ARM64EC libraries
 	set(MSVC_ARCH_SUFFIX "x86")
 	if(MINGW OR MSYS)
 		if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
@@ -207,15 +207,7 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(GLEW)
 	endif()
 	if(NOT NINTENDO_SWITCH)
-		find_package(OpenGL QUIET)
-		if(OpenGL_FOUND)
-			message(STATUS "Using legacy GLX OpenGL implementation")
-		else(OpenGL_FOUND)
-			# If we couldn't find old GLX package, try to use modern libglvnd libOpenGL.so instead.
-			message(STATUS "Using modern GLVND OpenGL implementation")
-			FIND_LIBRARY(OpenGL_LIBRARY OpenGL)
-			SET(EXTRA_LIBS ${OpenGL_LIBRARY})
-		endif(OpenGL_FOUND)
+		find_package(OpenGL REQUIRED)
 	endif()
 	if(NCINE_ARM_PROCESSOR)
 		include(check_atomic)
