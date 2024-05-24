@@ -294,7 +294,7 @@ namespace Jazz2::Multiplayer
 					Vector2f pos;
 					auto it = _playerStates.find(player->_playerIndex);
 					if (it != _playerStates.end()) {
-						for (std::size_t i = 0; i < countof(it->second.StateBuffer); i++) {
+						for (std::size_t i = 0; i < arraySize(it->second.StateBuffer); i++) {
 							auto posFrom = WorldPosToScreenSpace(it->second.StateBuffer[i].Pos);
 							auto posTo = WorldPosToScreenSpace(it->second.StateBuffer[i].Pos + it->second.StateBuffer[i].Speed);
 
@@ -303,16 +303,16 @@ namespace Jazz2::Multiplayer
 
 						std::int32_t prevIdx = it->second.StateBufferPos - 1;
 						while (prevIdx < 0) {
-							prevIdx += countof(it->second.StateBuffer);
+							prevIdx += arraySize<std::int32_t>(it->second.StateBuffer);
 						}
 
 						auto posPrev = WorldPosToScreenSpace(it->second.StateBuffer[prevIdx].Pos);
 						auto posLocal = WorldPosToScreenSpace(player->_pos);
 						drawList->AddLine(posPrev, posLocal, ImColor(255, 60, 60, 220), 2.0f);
 
-						formatString(actorIdString, countof(actorIdString), "%i [%0.1f] %04x", player->_playerIndex, it->second.DeviationTime, it->second.Flags);
+						formatString(actorIdString, arraySize(actorIdString), "%i [%0.1f] %04x", player->_playerIndex, it->second.DeviationTime, it->second.Flags);
 					} else {
-						formatString(actorIdString, countof(actorIdString), "%i", player->_playerIndex);
+						formatString(actorIdString, arraySize(actorIdString), "%i", player->_playerIndex);
 					}
 
 					auto aabbMin = WorldPosToScreenSpace({ player->AABB.L, player->AABB.T });
@@ -323,7 +323,7 @@ namespace Jazz2::Multiplayer
 
 				for (const auto& [actor, actorId] : _remotingActors) {
 					char actorIdString[16];
-					formatString(actorIdString, countof(actorIdString), "%u", actorId);
+					formatString(actorIdString, arraySize(actorIdString), "%u", actorId);
 
 					auto aabbMin = WorldPosToScreenSpace({ actor->AABB.L, actor->AABB.T });
 					aabbMin.x += 4.0f;
@@ -333,7 +333,7 @@ namespace Jazz2::Multiplayer
 			} else {
 				for (Actors::Player* player : _players) {
 					char actorIdString[16];
-					formatString(actorIdString, countof(actorIdString), "%i", player->_playerIndex);
+					formatString(actorIdString, arraySize(actorIdString), "%i", player->_playerIndex);
 
 					auto aabbMin = WorldPosToScreenSpace({ player->AABB.L, player->AABB.T });
 					aabbMin.x += 4.0f;
@@ -343,7 +343,7 @@ namespace Jazz2::Multiplayer
 
 				for (const auto& [actorId, actor] : _remoteActors) {
 					char actorIdString[16];
-					formatString(actorIdString, countof(actorIdString), "%u", actorId);
+					formatString(actorIdString, arraySize(actorIdString), "%u", actorId);
 
 					auto aabbMin = WorldPosToScreenSpace({ actor->AABBInner.L, actor->AABBInner.T });
 					aabbMin.x += 4.0f;
@@ -907,7 +907,7 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		for (std::int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
+		for (std::int32_t i = 0; i < arraySize<std::int32_t>(levelInit.PlayerCarryOvers); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
 			}
@@ -1532,7 +1532,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::PrepareNextLevelInitialization(levelInit);
 
 		// Initialize only local players
-		for (std::int32_t i = 1; i < countof(levelInit.PlayerCarryOvers); i++) {
+		for (std::int32_t i = 1; i < arraySize<std::int32_t>(levelInit.PlayerCarryOvers); i++) {
 			levelInit.PlayerCarryOvers[i].Type = PlayerType::None;
 		}
 	}
@@ -1752,7 +1752,7 @@ namespace Jazz2::Multiplayer
 
 		std::int32_t nextIdx = playerState.StateBufferPos - 1;
 		if (nextIdx < 0) {
-			nextIdx += countof(playerState.StateBuffer);
+			nextIdx += arraySize(playerState.StateBuffer);
 		}
 
 		if (renderTime <= playerState.StateBuffer[nextIdx].Time) {
@@ -1760,7 +1760,7 @@ namespace Jazz2::Multiplayer
 			while (true) {
 				prevIdx = nextIdx - 1;
 				if (prevIdx < 0) {
-					prevIdx += countof(playerState.StateBuffer);
+					prevIdx += arraySize(playerState.StateBuffer);
 				}
 
 				if (prevIdx == playerState.StateBufferPos || playerState.StateBuffer[prevIdx].Time <= renderTime) {
@@ -1823,7 +1823,7 @@ namespace Jazz2::Multiplayer
 			// Player just warped, reset state buffer to disable interpolation
 			std::int32_t stateBufferPrevPos = playerState.StateBufferPos - 1;
 			if (stateBufferPrevPos < 0) {
-				stateBufferPrevPos += countof(playerState.StateBuffer);
+				stateBufferPrevPos += arraySize(playerState.StateBuffer);
 			}
 
 			std::int64_t renderTime = now - ServerDelay;
@@ -1837,7 +1837,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		playerState.StateBufferPos++;
-		if (playerState.StateBufferPos >= countof(playerState.StateBuffer)) {
+		if (playerState.StateBufferPos >= arraySize<std::int32_t>(playerState.StateBuffer)) {
 			playerState.StateBufferPos = 0;
 		}
 

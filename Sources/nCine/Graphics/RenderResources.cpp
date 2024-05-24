@@ -256,7 +256,7 @@ namespace nCine
 		char sourceString[64];
 		const char *vertexStrings[3] = { nullptr, nullptr, nullptr };
 
-		for (unsigned int i = 0; i < countof(shadersToLoad); i++) {
+		for (unsigned int i = 0; i < arraySize<unsigned int>(shadersToLoad); i++) {
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
 
 #if defined(WITH_EMBEDDED_SHADERS)

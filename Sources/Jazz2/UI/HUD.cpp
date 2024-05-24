@@ -618,13 +618,13 @@ namespace Jazz2::UI
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
-			snprintf(stringBuffer, countof(stringBuffer), "%08i", player->_score);
+			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->_score);
 			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 		} else {
-			snprintf(stringBuffer, countof(stringBuffer), "%08i", player->_score);
+			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->_score);
 			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
@@ -772,7 +772,7 @@ namespace Jazz2::UI
 			Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
-		snprintf(stringBuffer, countof(stringBuffer), "x%i", _coins);
+		snprintf(stringBuffer, arraySize(stringBuffer), "x%i", _coins);
 
 		int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
@@ -819,7 +819,7 @@ namespace Jazz2::UI
 			Colorf(1.0f, 1.0f, 1.0f, 0.8f * alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
-		snprintf(stringBuffer, countof(stringBuffer), "x%i", _gems);
+		snprintf(stringBuffer, arraySize(stringBuffer), "x%i", _gems);
 
 		int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
@@ -1021,7 +1021,7 @@ namespace Jazz2::UI
 		}
 
 		float angle = -fPiOver2;
-		for (int32_t i = 0, j = 0; i < countof(player->_weaponAmmo); i++) {
+		for (int32_t i = 0, j = 0; i < arraySize<int32_t>(player->_weaponAmmo); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				float x = cosf(angle) * distance;
 				float y = sinf(angle) * distance;
@@ -1118,7 +1118,7 @@ namespace Jazz2::UI
 	{
 		int32_t weaponCount = 0;
 
-		for (int32_t i = 0; i < countof(player->_weaponAmmo); i++) {
+		for (int32_t i = 0; i < arraySize<int32_t>(player->_weaponAmmo); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				weaponCount++;
 			}
@@ -1291,7 +1291,7 @@ namespace Jazz2::UI
 
 		Color* captionTile = _levelHandler->_tileMap->GetCaptionTile();
 		if (captionTile != nullptr) {
-			for (int32_t i = 0; i < countof(KeyLayout); i++) {
+			for (int32_t i = 0; i < arraySize<int32_t>(KeyLayout); i++) {
 				int32_t x = KeyLayout[i] % AURA_KEYBOARD_WIDTH;
 				int32_t y = KeyLayout[i] / AURA_KEYBOARD_WIDTH;
 				Color tileColor = captionTile[y * 32 + x];

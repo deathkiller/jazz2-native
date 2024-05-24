@@ -69,13 +69,13 @@ namespace nCine
 		/// Creates a texture from a named memory buffer
 		//Texture(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Creates a texture from an image file
-		explicit Texture(const StringView& filename);
+		explicit Texture(StringView filename);
 
 		~Texture() override;
 
-		/// Default move constructor
+		Texture(const Texture&) = delete;
+		Texture& operator=(const Texture&) = delete;
 		Texture(Texture&&);
-		/// Default move assignment operator
 		Texture& operator=(Texture&&);
 
 		/// Initializes an empty texture with the specified format, MIP levels, and size
@@ -88,7 +88,7 @@ namespace nCine
 		void init(const char* name, Format format, Vector2i size);
 
 		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
-		bool loadFromFile(const StringView& filename);
+		bool loadFromFile(StringView filename);
 
 		/// Loads all texture texels in raw format from a memory buffer in the first mip level
 		bool loadFromTexels(const unsigned char* bufferPtr);
@@ -179,11 +179,6 @@ namespace nCine
 		SamplerFilter minFiltering_;
 		SamplerFilter magFiltering_;
 		SamplerWrapping wrapMode_;
-
-		/// Deleted copy constructor
-		Texture(const Texture&) = delete;
-		/// Deleted assignment operator
-		Texture& operator=(const Texture&) = delete;
 
 		/// Initialize an empty texture by creating storage for it
 		void initialize(const ITextureLoader& texLoader);

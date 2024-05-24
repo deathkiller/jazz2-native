@@ -225,7 +225,7 @@ namespace Jazz2::Scripting
 	static String& AssignDoubleToString(double f, String& dest)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		dest = String(tmpBuffer);
 		return dest;
 	}
@@ -233,7 +233,7 @@ namespace Jazz2::Scripting
 	static String& AddAssignDoubleToString(double f, String& dest)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		dest += StringView(tmpBuffer);
 		return dest;
 	}
@@ -241,7 +241,7 @@ namespace Jazz2::Scripting
 	static String& AssignFloatToString(float f, String& dest)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		dest = String(tmpBuffer);
 		return dest;
 	}
@@ -249,7 +249,7 @@ namespace Jazz2::Scripting
 	static String& AddAssignFloatToString(float f, String& dest)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		dest += StringView(tmpBuffer);
 		return dest;
 	}
@@ -269,28 +269,28 @@ namespace Jazz2::Scripting
 	static String AddStringDouble(const String& str, double f)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		return str + StringView(tmpBuffer);
 	}
 
 	static String AddDoubleString(double f, const String& str)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		return StringView(tmpBuffer) + str;
 	}
 
 	static String AddStringFloat(const String& str, float f)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		return str + StringView(tmpBuffer);
 	}
 
 	static String AddFloatString(float f, const String& str)
 	{
 		char tmpBuffer[32];
-		ftos(f, tmpBuffer, countof(tmpBuffer));
+		ftos(f, tmpBuffer, arraySize(tmpBuffer));
 		return StringView(tmpBuffer) + str;
 	}
 

@@ -5,6 +5,8 @@
 #include "IAudioLoader.h"
 #include "../../Common.h"
 
+#include <Containers/String.h>
+
 namespace nCine
 {
 	namespace
@@ -41,21 +43,21 @@ namespace nCine
 		}
 	}*/
 
-	AudioBuffer::AudioBuffer(const StringView filename)
+	AudioBuffer::AudioBuffer(StringView filename)
 		: AudioBuffer()
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE("Audio file \"%s\" cannot be loaded", filename.data());
+			LOGE("Audio file \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
 		}
 	}
 
-	AudioBuffer::AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename)
+	AudioBuffer::AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename)
 		: AudioBuffer()
 	{
 		const bool hasLoaded = loadFromStream(std::move(fileHandle), filename);
 		if (!hasLoaded) {
-			LOGE("Audio file \"%s\" cannot be loaded", filename.data());
+			LOGE("Audio file \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
 		}
 	}
 
@@ -123,7 +125,7 @@ namespace nCine
 		return samplesHaveLoaded;
 	}*/
 
-	bool AudioBuffer::loadFromFile(const StringView filename)
+	bool AudioBuffer::loadFromFile(StringView filename)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
 		if (!audioLoader->hasLoaded()) {
@@ -134,7 +136,7 @@ namespace nCine
 		return samplesHaveLoaded;
 	}
 
-	bool AudioBuffer::loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename)
+	bool AudioBuffer::loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromStream(std::move(fileHandle), filename);
 		if (!audioLoader->hasLoaded()) {

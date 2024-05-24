@@ -450,7 +450,7 @@ namespace nCine
 
 			mapping.isValid = true;
 
-			for (int i = 0; i < countof(AndroidAxisNameMapping); i++) {
+			for (int i = 0; i < arraySize<int>(AndroidAxisNameMapping); i++) {
 				mapping.desc.axes[i].name = AndroidAxisNameMapping[i];
 				if (mapping.desc.axes[i].name == AxisName::LeftTrigger || mapping.desc.axes[i].name == AxisName::RightTrigger) {
 					mapping.desc.axes[i].min = 0.0f;
@@ -464,11 +464,11 @@ namespace nCine
 			for (int i = 0; i < AndroidButtonCount; i++) {
 				mapping.desc.buttons[i] = (ButtonName)i;
 			}
-			for (int i = AndroidButtonCount; i < countof(mapping.desc.buttons); i++) {
+			for (int i = AndroidButtonCount; i < arraySize<int>(mapping.desc.buttons); i++) {
 				mapping.desc.buttons[i] = ButtonName::Unknown;
 			}
 
-			for (int i = 0; i < countof(AndroidDpadButtonNameMapping); i++) {
+			for (int i = 0; i < arraySize<int>(AndroidDpadButtonNameMapping); i++) {
 				mapping.desc.hats[i] = AndroidDpadButtonNameMapping[i];
 			}
 		}
@@ -757,7 +757,7 @@ namespace nCine
 	{
 		int axisIndex = -1;
 
-		for (unsigned int i = 0; i < countof(AxesStrings); i++) {
+		for (unsigned int i = 0; i < arraySize<unsigned int>(AxesStrings); i++) {
 			if (strncmp(start, AxesStrings[i], end - start) == 0) {
 				axisIndex = i;
 				break;
@@ -771,7 +771,7 @@ namespace nCine
 	{
 		int buttonIndex = -1;
 
-		for (unsigned int i = 0; i < countof(ButtonsStrings); i++) {
+		for (unsigned int i = 0; i < arraySize<unsigned int>(ButtonsStrings); i++) {
 			if (strncmp(start, ButtonsStrings[i], end - start) == 0) {
 				buttonIndex = i;
 				break;

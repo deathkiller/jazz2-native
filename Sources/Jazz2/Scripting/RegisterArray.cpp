@@ -1169,13 +1169,13 @@ namespace Jazz2::Scripting
 
 					if (cache && cache->eqFuncReturnCode == asMULTIPLE_FUNCTIONS) {
 #if defined(DEATH_TARGET_MSVC)
-						sprintf_s(tmp, countof(tmp), "Type '%s' has multiple matching opEquals or opCmp methods", subType->GetName());
+						sprintf_s(tmp, arraySize(tmp), "Type '%s' has multiple matching opEquals or opCmp methods", subType->GetName());
 #else
 						sprintf(tmp, "Type '%s' has multiple matching opEquals or opCmp methods", subType->GetName());
 #endif
 					} else {
 #if defined(DEATH_TARGET_MSVC)
-						sprintf_s(tmp, countof(tmp), "Type '%s' does not have a matching opEquals or opCmp method", subType->GetName());
+						sprintf_s(tmp, arraySize(tmp), "Type '%s' does not have a matching opEquals or opCmp method", subType->GetName());
 #else
 						sprintf(tmp, "Type '%s' does not have a matching opEquals or opCmp method", subType->GetName());
 #endif
@@ -1319,13 +1319,13 @@ namespace Jazz2::Scripting
 
 					if (cache && cache->cmpFuncReturnCode == asMULTIPLE_FUNCTIONS) {
 #if defined(DEATH_TARGET_MSVC)
-						sprintf_s(tmp, countof(tmp), "Type '%s' has multiple matching opCmp methods", subType->GetName());
+						sprintf_s(tmp, arraySize(tmp), "Type '%s' has multiple matching opCmp methods", subType->GetName());
 #else
 						sprintf(tmp, "Type '%s' has multiple matching opCmp methods", subType->GetName());
 #endif
 					} else {
 #if defined(DEATH_TARGET_MSVC)
-						sprintf_s(tmp, countof(tmp), "Type '%s' does not have a matching opCmp method", subType->GetName());
+						sprintf_s(tmp, arraySize(tmp), "Type '%s' does not have a matching opCmp method", subType->GetName());
 #else
 						sprintf(tmp, "Type '%s' does not have a matching opCmp method", subType->GetName());
 #endif

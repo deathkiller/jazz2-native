@@ -170,14 +170,14 @@ namespace Jazz2::UI
 		std::uint32_t totalOffset = s->GetPosition();
 
 		while (totalOffset < s->GetSize()) {
-			for (std::int32_t i = 0; i < countof(_decompressedStreams); i++) {
+			for (std::int32_t i = 0; i < arraySize<std::int32_t>(_decompressedStreams); i++) {
 				std::int32_t bytesLeft = s->ReadValue<int32_t>();
 				totalOffset += 4 + bytesLeft;
 				_compressedStreams[i].FetchFromStream(*s, bytesLeft);
 			}
 		}
 
-		for (std::int32_t i = 0; i < countof(_decompressedStreams); i++) {
+		for (std::int32_t i = 0; i < arraySize<std::int32_t>(_decompressedStreams); i++) {
 			// Skip first two bytes (0x78 0xDA)
 			_compressedStreams[i].Seek(2, SeekOrigin::Begin);
 			_decompressedStreams[i].Open(_compressedStreams[i]);
@@ -315,7 +315,7 @@ namespace Jazz2::UI
 
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
-		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < countof(joyStates); i++) {
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < arraySize<std::int32_t>(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[joyStatesCount++] = &input.joyMappedState(i);
 			}

@@ -187,18 +187,18 @@ namespace Jazz2::Compatibility
 			DeflateWriter co(ms);
 
 			// Palette
-			std::uint32_t palette[countof(_palette)];
+			std::uint32_t palette[PaletteSize];
 			std::memcpy(palette, _palette, sizeof(_palette));
 
 			bool hasAlphaChannel = false;
-			for (std::int32_t i = 1; i < countof(palette); i++) {
+			for (std::int32_t i = 1; i < arraySize<std::int32_t>(palette); i++) {
 				if ((palette[i] & 0xff000000) != 0) {
 					hasAlphaChannel = true;
 					break;
 				}
 			}
 			if (!hasAlphaChannel) {
-				for (std::int32_t i = 1; i < countof(palette); i++) {
+				for (std::int32_t i = 1; i < arraySize<std::int32_t>(palette); i++) {
 					palette[i] |= 0xff000000;
 				}
 			}

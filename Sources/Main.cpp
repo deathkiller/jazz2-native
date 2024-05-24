@@ -925,7 +925,7 @@ void GameEventHandler::RefreshCache()
 		return;
 	}
 
-	constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, countof(NCINE_VERSION) - 1 });
+	constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
 
 	auto& resolver = ContentResolver::Get();
 	auto cachePath = fs::CombinePath(resolver.GetCachePath(), "Source.idx"_s);
@@ -1474,7 +1474,7 @@ void GameEventHandler::CheckUpdates()
 	Http::Request req(url, Http::InternetProtocol::V4);
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
 	if (resp.Status.Code == Http::HttpStatus::Ok && !resp.Body.empty() && resp.Body.size() < sizeof(_newestVersion) - 1) {
-		constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, countof(NCINE_VERSION) - 1 });
+		constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
 		std::uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.Body.data()), resp.Body.size()));
 		if (currentVersion < latestVersion) {
 			std::memcpy(_newestVersion, resp.Body.data(), resp.Body.size());
