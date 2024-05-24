@@ -6,6 +6,8 @@
 #include "IAudioReader.h"
 #include "../ServiceLocator.h"
 
+#include <Containers/String.h>
+
 namespace nCine
 {
 	/*! Private constructor called only by `AudioStreamPlayer`. */
@@ -31,12 +33,12 @@ namespace nCine
 	}*/
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
-	AudioStream::AudioStream(const StringView& filename)
+	AudioStream::AudioStream(StringView filename)
 		: AudioStream()
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE("Audio file \"%s\" cannot be loaded", filename.data());
+			LOGE("Audio file \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
 		}
 	}
 
@@ -49,7 +51,6 @@ namespace nCine
 	}
 
 	AudioStream::AudioStream(AudioStream&&) = default;
-
 	AudioStream& AudioStream::operator=(AudioStream&&) = default;
 
 	unsigned long int AudioStream::numStreamSamples() const
@@ -167,7 +168,7 @@ namespace nCine
 		return true;
 	}*/
 
-	bool AudioStream::loadFromFile(const StringView& filename)
+	bool AudioStream::loadFromFile(StringView filename)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
 		if (!audioLoader->hasLoaded()) {

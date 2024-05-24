@@ -173,7 +173,7 @@ static void DestroyLogConsole()
 				DWORD yEnd = csbi.dwCursorPosition.Y;
 				if (xEnd != 0 || yEnd != 0) {
 					DWORD dwNumberOfCharsWritten;
-					::WriteConsole(consoleHandleOut, L"\r\n", countof(L"\r\n") - 1, &dwNumberOfCharsWritten, NULL);
+					::WriteConsole(consoleHandleOut, L"\r\n", (DWORD)arraySize(L"\r\n") - 1, &dwNumberOfCharsWritten, NULL);
 					::WriteConsole(consoleHandleOut, __consolePrompt.data(), (DWORD)__consolePrompt.size(), &dwNumberOfCharsWritten, NULL);
 				}
 			}
@@ -228,7 +228,7 @@ namespace nCine
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t pBuf[MAX_PATH];
-		DWORD pBufLength = ::GetModuleFileName(NULL, pBuf, countof(pBuf));
+		DWORD pBufLength = ::GetModuleFileName(NULL, pBuf, (DWORD)arraySize(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
 			if (lastSlash == nullptr) {

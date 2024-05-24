@@ -51,10 +51,13 @@ namespace nCine
 
 		GLShaderProgram();
 		explicit GLShaderProgram(QueryPhase queryPhase);
-		GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection, QueryPhase queryPhase);
-		GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection);
-		GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile);
+		GLShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection, QueryPhase queryPhase);
+		GLShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection);
+		GLShaderProgram(StringView vertexFile, StringView fragmentFile);
 		~GLShaderProgram();
+
+		GLShaderProgram(const GLShaderProgram&) = delete;
+		GLShaderProgram& operator=(const GLShaderProgram&) = delete;
 
 		inline GLuint glHandle() const {
 			return glHandle_;
@@ -91,10 +94,10 @@ namespace nCine
 			return uniformBlocksSize_;
 		}
 
-		bool attachShaderFromFile(GLenum type, const StringView& filename);
+		bool attachShaderFromFile(GLenum type, StringView filename);
 		bool attachShaderFromString(GLenum type, const char* string);
 		bool attachShaderFromStrings(GLenum type, const char** strings);
-		bool attachShaderFromStringsAndFile(GLenum type, const char** strings, const StringView& filename);
+		bool attachShaderFromStringsAndFile(GLenum type, const char** strings, StringView filename);
 		bool link(Introspection introspection);
 		void use();
 		bool validate();
@@ -177,11 +180,6 @@ namespace nCine
 		void discoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover);
 		void discoverAttributes();
 		void initVertexFormat();
-
-		/// Deleted copy constructor
-		GLShaderProgram(const GLShaderProgram&) = delete;
-		/// Deleted assignment operator
-		GLShaderProgram& operator=(const GLShaderProgram&) = delete;
 
 		friend class GLShaderUniforms;
 		friend class GLShaderUniformBlocks;

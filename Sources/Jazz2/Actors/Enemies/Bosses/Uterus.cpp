@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Bosses
 
 	Uterus::~Uterus()
 	{
-		for (int i = 0; i < countof(_shields); i++) {
+		for (int i = 0; i < arraySize<int>(_shields); i++) {
 			if (_shields[i] != nullptr) {
 				_shields[i]->SetState(ActorState::IsDestroyed, true);
 			}
@@ -68,9 +68,9 @@ namespace Jazz2::Actors::Bosses
 
 		_hasShield = true;
 
-		for (int i = 0; i < countof(_shields); i++) {
+		for (int i = 0; i < arraySize<int>(_shields); i++) {
 			_shields[i] = std::make_shared<ShieldPart>();
-			_shields[i]->Phase = (fTwoPi * i / countof(_shields));
+			_shields[i]->Phase = (fTwoPi * i / arraySize<int>(_shields));
 			_shields[i]->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2)
@@ -149,7 +149,7 @@ namespace Jazz2::Actors::Bosses
 
 			if (_hasShield) {
 				int shieldCount = 0;
-				for (int i = 0; i < countof(_shields); i++) {
+				for (int i = 0; i < arraySize<int>(_shields); i++) {
 					if (_shields[i] != nullptr) {
 						if (_shields[i]->GetHealth() > 0) {
 							if (_shields[i]->FallTime <= 0.0f) {

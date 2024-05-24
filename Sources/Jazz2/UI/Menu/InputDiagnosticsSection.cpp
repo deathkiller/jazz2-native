@@ -33,7 +33,7 @@ namespace Jazz2::UI::Menu
 		bool shouldExit = false;
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int32_t jc = 0;
-		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
+		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < arraySize<std::int32_t>(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc] = &input.joyMappedState(i);
 				if (joyStates[jc]->isButtonPressed(ButtonName::Start) && joyStates[jc]->isButtonPressed(ButtonName::Back)) {
@@ -77,7 +77,7 @@ namespace Jazz2::UI::Menu
 
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int32_t jc = 0;
-		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
+		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < arraySize<std::int32_t>(joyStates); i++) {
 			if (input.isJoyPresent(i)) {
 				jc++;
 			}

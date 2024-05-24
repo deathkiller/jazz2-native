@@ -347,7 +347,7 @@ namespace nCine
 		for (std::size_t i = 0; i < versionLength; i++) {
 			if (version[i] == '.') {
 				dotIndices[foundCount++] = i;
-				if (foundCount >= countof(dotIndices) - 1) {
+				if (foundCount >= Containers::arraySize(dotIndices) - 1) {
 					// Save only indices of the first 2 dots and keep the last index for string length
 					break;
 				}

@@ -150,12 +150,12 @@ namespace Jazz2::UI::Menu
 		static const StringView TheSecretFilesLevels[] = { "Easter Bunny"_s, "Spring Chickens"_s, "Scrambled Eggs"_s, "Ghostly Antics"_s, "Skeletons Turf"_s, "Graveyard Shift"_s, "Turtle Town"_s, "Suburbia Commando"_s, "Urban Brawl"_s };
 
 		UnlockableEpisodes unlockedEpisodes = PreferencesCache::UnlockedEpisodes;
-		if (HasAllLevels(FormerlyAPrinceLevels, countof(FormerlyAPrinceLevels))) unlockedEpisodes |= UnlockableEpisodes::FormerlyAPrince;
-		if (HasAllLevels(JazzInTimeLevels, countof(JazzInTimeLevels))) unlockedEpisodes |= UnlockableEpisodes::JazzInTime;
-		if (HasAllLevels(FlashbackLevels, countof(FlashbackLevels))) unlockedEpisodes |= UnlockableEpisodes::Flashback;
-		if (HasAllLevels(FunkyMonkeysLevels, countof(FunkyMonkeysLevels))) unlockedEpisodes |= UnlockableEpisodes::FunkyMonkeys;
-		if (HasAllLevels(ChristmasChroniclesLevels, countof(ChristmasChroniclesLevels))) unlockedEpisodes |= UnlockableEpisodes::ChristmasChronicles;
-		if (HasAllLevels(TheSecretFilesLevels, countof(TheSecretFilesLevels))) unlockedEpisodes |= UnlockableEpisodes::TheSecretFiles;
+		if (HasAllLevels(FormerlyAPrinceLevels, arraySize<std::int32_t>(FormerlyAPrinceLevels))) unlockedEpisodes |= UnlockableEpisodes::FormerlyAPrince;
+		if (HasAllLevels(JazzInTimeLevels, arraySize<std::int32_t>(JazzInTimeLevels))) unlockedEpisodes |= UnlockableEpisodes::JazzInTime;
+		if (HasAllLevels(FlashbackLevels, arraySize<std::int32_t>(FlashbackLevels))) unlockedEpisodes |= UnlockableEpisodes::Flashback;
+		if (HasAllLevels(FunkyMonkeysLevels, arraySize<std::int32_t>(FunkyMonkeysLevels))) unlockedEpisodes |= UnlockableEpisodes::FunkyMonkeys;
+		if (HasAllLevels(ChristmasChroniclesLevels, arraySize<std::int32_t>(ChristmasChroniclesLevels))) unlockedEpisodes |= UnlockableEpisodes::ChristmasChronicles;
+		if (HasAllLevels(TheSecretFilesLevels, arraySize<std::int32_t>(TheSecretFilesLevels))) unlockedEpisodes |= UnlockableEpisodes::TheSecretFiles;
 
 		if (PreferencesCache::UnlockedEpisodes != unlockedEpisodes) {
 			PreferencesCache::UnlockedEpisodes = unlockedEpisodes;

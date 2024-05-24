@@ -40,9 +40,11 @@ namespace Jazz2::Compatibility
             uint8_t Mask[BlockSize * BlockSize / 8];
         };
 
+		static constexpr std::int32_t PaletteSize = 256;
+
         String _name;
         JJ2Version _version;
-        uint32_t _palette[256];
+        uint32_t _palette[PaletteSize];
         std::unique_ptr<TilesetTileSection[]> _tiles;
         int _tileCount;
 

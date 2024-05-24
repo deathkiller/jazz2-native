@@ -274,19 +274,19 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	std::int32_t length2 = 0;
 	if (logMsgFuncLength > 0) {
 		if (hasVirtualTerminal) {
-			length2 += nCine::copyStringFirst(logEntryWithColors, MaxEntryLength - 1, Faint, countof(Faint) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors, MaxEntryLength - 1, Faint, arraySize<std::int32_t>(Faint) - 1);
 
 			switch (level) {
 				case TraceLevel::Error:
 				case TraceLevel::Fatal:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, countof(BrightRed) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, arraySize<std::int32_t>(BrightRed) - 1);
 					break;
 				case TraceLevel::Warning:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, arraySize<std::int32_t>(BrightYellow) - 1);
 					break;
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 				case TraceLevel::Debug:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, countof(DarkGray) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, arraySize<std::int32_t>(DarkGray) - 1);
 					break;
 #	endif
 			}
@@ -300,28 +300,28 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		if (level != TraceLevel::Warning && level != TraceLevel::Debug)
 #	endif
 		{
-			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, arraySize<std::int32_t>(Reset) - 1);
 		}
 
 		switch (level) {
 			case TraceLevel::Error:
 			case TraceLevel::Fatal:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, countof(BrightRed) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, arraySize<std::int32_t>(BrightRed) - 1);
 				if (level == TraceLevel::Fatal) {
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, arraySize<std::int32_t>(Bold) - 1);
 				}
 				break;
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			case TraceLevel::Info:
 			case TraceLevel::Warning:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, arraySize<std::int32_t>(Bold) - 1);
 				break;
 #	else
 			case TraceLevel::Warning:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, arraySize<std::int32_t>(BrightYellow) - 1);
 				break;
 			case TraceLevel::Debug:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, countof(DarkGray) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, arraySize<std::int32_t>(DarkGray) - 1);
 				break;
 #	endif
 		}
@@ -331,7 +331,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 
 	if (hasVirtualTerminal) {
 		if (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Fatal) {
-			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, arraySize<std::int32_t>(Reset) - 1);
 		}
 	}
 

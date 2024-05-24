@@ -38,7 +38,7 @@ namespace nCine
 		}
 	}
 
-	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection, QueryPhase queryPhase)
+	GLShaderProgram::GLShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection, QueryPhase queryPhase)
 		: GLShaderProgram(queryPhase)
 	{
 		const bool hasCompiledVS = attachShaderFromFile(GL_VERTEX_SHADER, vertexFile);
@@ -49,12 +49,12 @@ namespace nCine
 		}
 	}
 
-	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection)
+	GLShaderProgram::GLShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection)
 		: GLShaderProgram(vertexFile, fragmentFile, introspection, QueryPhase::Immediate)
 	{
 	}
 
-	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile)
+	GLShaderProgram::GLShaderProgram(StringView vertexFile, StringView fragmentFile)
 		: GLShaderProgram(vertexFile, fragmentFile, Introspection::Enabled, QueryPhase::Immediate)
 	{
 	}
@@ -96,7 +96,7 @@ namespace nCine
 		}
 	}
 
-	bool GLShaderProgram::attachShaderFromFile(GLenum type, const StringView& filename)
+	bool GLShaderProgram::attachShaderFromFile(GLenum type, StringView filename)
 	{
 		return attachShaderFromStringsAndFile(type, nullptr, filename);
 	}
@@ -112,7 +112,7 @@ namespace nCine
 		return attachShaderFromStringsAndFile(type, strings, { });
 	}
 	
-	bool GLShaderProgram::attachShaderFromStringsAndFile(GLenum type, const char** strings, const StringView& filename)
+	bool GLShaderProgram::attachShaderFromStringsAndFile(GLenum type, const char** strings, StringView filename)
 	{
 		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type);
 		shader->loadFromStringsAndFile(strings, filename);

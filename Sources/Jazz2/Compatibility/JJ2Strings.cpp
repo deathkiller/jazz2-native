@@ -256,7 +256,7 @@ namespace Jazz2::Compatibility
 					} else {
 						buffer[j++] = '\f';
 					}
-					int colorIndex2 = colorIndex % (countof(DefaultFontColors) + 1);
+					int colorIndex2 = colorIndex % (arraySize<int>(DefaultFontColors) + 1);
 					if (colorIndex2 == 0) {
 						buffer[j++] = '[';
 						buffer[j++] = 'c';

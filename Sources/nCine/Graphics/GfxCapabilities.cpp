@@ -7,18 +7,22 @@
 #include <cstdio> // for sscanf()
 #include <cstring> // for checkGLExtension()
 
+#include <Containers/ArrayView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	GfxCapabilities::GfxCapabilities()
 		: glMajorVersion_(0), glMinorVersion_(0), glReleaseVersion_(0)
 	{
-		for (unsigned int i = 0; i < (int)GLIntValues::Count; i++) {
+		for (int i = 0; i < (int)GLIntValues::Count; i++) {
 			glIntValues_[i] = 0;
 		}
-		for (unsigned int i = 0; i < (int)GLExtensions::Count; i++) {
+		for (int i = 0; i < (int)GLExtensions::Count; i++) {
 			glExtensions_[i] = false;
 		}
-		for (unsigned int i = 0; i < MaxProgramBinaryFormats; i++) {
+		for (int i = 0; i < MaxProgramBinaryFormats; i++) {
 			programBinaryFormats_[i] = -1;
 		}
 		init();
@@ -122,7 +126,7 @@ namespace nCine
 			, "GL_OES_compressed_ETC1_RGB8_texture",
 #endif
 		};
-		static_assert(countof(ExtensionNames) == (int)GLExtensions::Count, "GLExtensions count mismatch");
+		static_assert(arraySize<int>(ExtensionNames) == (int)GLExtensions::Count, "GLExtensions count mismatch");
 
 		checkGLExtensions(ExtensionNames, glExtensions_, (int)GLExtensions::Count);
 

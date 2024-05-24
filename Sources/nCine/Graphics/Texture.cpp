@@ -8,6 +8,8 @@
 #include "../ServiceLocator.h"
 #include "../tracy.h"
 
+#include <Containers/String.h>
+
 namespace nCine
 {
 	GLenum ncFormatToInternal(Texture::Format format)
@@ -98,12 +100,12 @@ namespace nCine
 		}
 	}*/
 
-	Texture::Texture(const StringView& filename)
+	Texture::Texture(StringView filename)
 		: Texture()
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE("Texture \"%s\" cannot be loaded", filename);
+			LOGE("Texture \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
 		}
 	}
 
@@ -186,7 +188,7 @@ namespace nCine
 		return true;
 	}*/
 
-	bool Texture::loadFromFile(const StringView& filename)
+	bool Texture::loadFromFile(StringView filename)
 	{
 		ZoneScopedC(0x81A861);
 

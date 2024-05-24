@@ -129,7 +129,7 @@ namespace Jazz2::Actors::Enemies
 		};
 
 		// TODO: This cannot be constexpr because of Android
-		int combinedChance = std::accumulate(DropChanges, DropChanges + countof(DropChanges), 0, [](const int& sum, const auto& item) {
+		int combinedChance = std::accumulate(std::begin(DropChanges), std::end(DropChanges), 0, [](const int& sum, const auto& item) {
 			return sum + item.Chance;
 		});
 

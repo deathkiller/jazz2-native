@@ -30,7 +30,7 @@ namespace Jazz2::Actors::Bosses
 		/*if (_turret != nullptr) {
 			_turret->SetState(ActorState::IsDestroyed, true);
 		}*/
-		for (int32_t i = 0; i < countof(_chain); i++) {
+		for (int32_t i = 0; i < arraySize<int32_t>(_chain); i++) {
 			if (_chain[i] != nullptr) {
 				_chain[i]->SetState(ActorState::IsDestroyed, true);
 			}
@@ -166,7 +166,7 @@ namespace Jazz2::Actors::Bosses
 		}*/
 
 		float distance = 30.0f;
-		for (int i = 0; i < countof(_chain); i++) {
+		for (int i = 0; i < arraySize<int>(_chain); i++) {
 			if (_chain[i] != nullptr) {
 				float angle = sinf(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
 

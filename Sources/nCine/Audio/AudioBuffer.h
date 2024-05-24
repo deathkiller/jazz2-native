@@ -29,21 +29,21 @@ namespace nCine
 		/// A constructor creating a buffer from memory
 		//AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a buffer from a file
-		explicit AudioBuffer(const StringView filename);
-		AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename);
+		explicit AudioBuffer(StringView filename);
+		AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
 		~AudioBuffer() override;
 
-		/// Move constructor
+		AudioBuffer(const AudioBuffer&) = delete;
+		AudioBuffer& operator=(const AudioBuffer&) = delete;
 		AudioBuffer(AudioBuffer&& other) noexcept;
-		/// Move assignment operator
 		AudioBuffer& operator=(AudioBuffer&& other) noexcept;
 
 		/// Initializes an empty buffer with the specified format and frequency
 		void init(Format format, int frequency);
 
 		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
-		bool loadFromFile(const StringView filename);
-		bool loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, const StringView filename);
+		bool loadFromFile(StringView filename);
+		bool loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
 		/// Loads samples in raw PCM format from a memory buffer
 		bool loadFromSamples(const unsigned char* bufferPtr, unsigned long int bufferSize);
 
@@ -101,10 +101,5 @@ namespace nCine
 
 		/// Loads audio samples based on information from the audio loader and reader
 		bool load(IAudioLoader& audioLoader);
-
-		/// Deleted copy constructor
-		AudioBuffer(const AudioBuffer&) = delete;
-		/// Deleted assignment operator
-		AudioBuffer& operator=(const AudioBuffer&) = delete;
 	};
 }

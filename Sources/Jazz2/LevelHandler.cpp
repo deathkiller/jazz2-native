@@ -295,7 +295,7 @@ namespace Jazz2
 
 	void LevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
 	{
-		for (std::int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
+		for (std::int32_t i = 0; i < arraySize<std::int32_t>(levelInit.PlayerCarryOvers); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
 			}
@@ -654,7 +654,7 @@ namespace Jazz2
 				if (event.sym == KeySym::J && _cheatsBufferLength >= 2) {
 					_cheatsBufferLength = 0;
 					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
-				} else if (_cheatsBufferLength < countof(_cheatsBuffer)) {
+				} else if (_cheatsBufferLength < arraySize<std::uint32_t>(_cheatsBuffer)) {
 					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
 
 					if (_cheatsBufferLength >= 3 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
@@ -1733,7 +1733,7 @@ namespace Jazz2
 
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
-		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < countof(joyStates); i++) {
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < arraySize<std::int32_t>(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[joyStatesCount++] = &input.joyMappedState(i);
 			}
