@@ -10,7 +10,10 @@ namespace nCine
 	{
 		Pvr3Header header;
 
-		RETURN_ASSERT(fileHandle_->IsValid());
+		if (!fileHandle_->IsValid()) {
+			return;
+		}
+
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "PVR header cannot be read");
 		const bool formatParsed = parseFormat(header);

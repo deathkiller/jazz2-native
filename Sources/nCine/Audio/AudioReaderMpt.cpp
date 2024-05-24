@@ -35,7 +35,9 @@ namespace nCine
 	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<Stream> fileHandle, int frequency)
 		: _fileHandle(std::move(fileHandle)), _frequency(frequency), _module(nullptr)
 	{
-		ASSERT(_fileHandle->IsValid());
+		if (!_fileHandle->IsValid()) {
+			return;
+		}
 
 #if defined(WITH_OPENMPT_DYNAMIC)
 		if (TryLoadLibrary()) {
