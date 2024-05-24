@@ -207,6 +207,7 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(GLEW)
 	endif()
 	if(NOT NINTENDO_SWITCH)
+		set(OPENGL_USE_OPENGL ON)
 		find_package(OpenGL REQUIRED)
 	endif()
 	if(NCINE_ARM_PROCESSOR)
