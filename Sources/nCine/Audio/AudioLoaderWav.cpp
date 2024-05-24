@@ -11,7 +11,9 @@ namespace nCine
 	AudioLoaderWav::AudioLoaderWav(std::unique_ptr<Stream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		RETURN_ASSERT(fileHandle_->IsValid());
+		if (!fileHandle_->IsValid()) {
+			return;
+		}
 
 		WavHeader header;
 		fileHandle_->Read(&header, sizeof(WavHeader));

@@ -11,7 +11,9 @@ namespace nCine
 	TextureLoaderPkm::TextureLoaderPkm(std::unique_ptr<Stream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
-		RETURN_ASSERT(fileHandle_->IsValid());
+		if (!fileHandle_->IsValid()) {
+			return;
+		}
 
 		PkmHeader header;
 		fileHandle_->Read(&header, 16); // PKM header is 16 bytes long

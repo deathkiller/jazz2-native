@@ -14,7 +14,9 @@ namespace nCine
 	TextureLoaderQoi::TextureLoaderQoi(std::unique_ptr<Stream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
-		RETURN_ASSERT(fileHandle_->IsValid());
+		if (!fileHandle_->IsValid()) {
+			return;
+		}
 
 		auto fileSize = fileHandle_->GetSize();
 		if (fileSize < QOI_HEADER_SIZE || fileSize > 64 * 1024 * 1024) {

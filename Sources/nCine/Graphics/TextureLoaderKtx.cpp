@@ -13,7 +13,10 @@ namespace nCine
 	{
 		KtxHeader header;
 
-		RETURN_ASSERT(fileHandle_->IsValid());
+		if (!fileHandle_->IsValid()) {
+			return;
+		}
+
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "KTX header cannot be read");
 		const bool formatParsed = parseFormat(header);

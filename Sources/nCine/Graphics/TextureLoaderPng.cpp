@@ -16,7 +16,9 @@ namespace nCine
 		constexpr uint8_t PngTypeIndexed = 1;
 		constexpr uint8_t PngTypeColor = 2;
 
-		RETURN_ASSERT(fileHandle_->IsValid());
+		if (!fileHandle_->IsValid()) {
+			return;
+		}
 
 		// Check header signature
 		uint8_t internalBuffer[sizeof(PngSignature)];
