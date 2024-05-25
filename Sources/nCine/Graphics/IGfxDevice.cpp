@@ -58,9 +58,9 @@ namespace nCine
 	EM_BOOL IGfxDevice::emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData)
 	{
 		if (eventType == EMSCRIPTEN_EVENT_FOCUS) {
-			theApplication().setFocus(true);
+			theApplication().SetFocus(true);
 		} else if (eventType == EMSCRIPTEN_EVENT_BLUR) {
-			theApplication().setFocus(false);
+			theApplication().SetFocus(false);
 		}
 		return 1;
 	}
