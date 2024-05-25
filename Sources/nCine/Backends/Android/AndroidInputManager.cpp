@@ -458,7 +458,7 @@ namespace nCine
 	{
 		const int action = AMotionEvent_getAction(event);
 		
-		Vector2i res = theApplication().resolution();
+		Vector2i res = theApplication().GetResolution();
 		float w = static_cast<float>(res.X);
 		float h = static_cast<float>(res.Y);
 
@@ -500,7 +500,7 @@ namespace nCine
 		int buttonState = 0;
 
 		mouseEvent_.x = static_cast<int>(AMotionEvent_getX(event, 0));
-		mouseEvent_.y = static_cast<int>(theApplication().height() - AMotionEvent_getY(event, 0));
+		mouseEvent_.y = static_cast<int>(theApplication().GetHeight() - AMotionEvent_getY(event, 0));
 		mouseState_.x = mouseEvent_.x;
 		mouseState_.y = mouseEvent_.y;
 
