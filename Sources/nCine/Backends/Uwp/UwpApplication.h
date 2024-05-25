@@ -35,12 +35,13 @@ namespace nCine
 		//	return _dispatcher;
 		//}
 
-		void Initialize(const winrtWAC::CoreApplicationView& applicationView) override;
-		void SetWindow(const winrtWUC::CoreWindow& window) override;
-		void Load(const winrt::hstring& entryPoint) override;
-		void Run() override;
-		void Uninitialize() override;
-
+	protected:
+		void Initialize(const winrtWAC::CoreApplicationView& applicationView);
+		void SetWindow(const winrtWUC::CoreWindow& window);
+		void Load(const winrt::hstring& entryPoint);
+		void Run();
+		void Uninitialize();
+	
 	private:
 		void OnActivated(const winrtWAC::CoreApplicationView& applicationView, const winrtWAA::IActivatedEventArgs& args);
 		void OnSuspending(const winrtWF::IInspectable& sender, const winrtWA::SuspendingEventArgs& args);

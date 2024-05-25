@@ -186,7 +186,7 @@ namespace Jazz2
 			}
 		} else {
 			auto& app = static_cast<AndroidApplication&>(theApplication());
-			StringView dataPath = app.externalDataPath();
+			StringView dataPath = app.GetExternalDataPath();
 			_sourcePath = fs::CombinePath(dataPath, "Source/"_s);
 			_cachePath = fs::CombinePath(dataPath, "Cache/"_s);
 		}

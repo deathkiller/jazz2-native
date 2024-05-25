@@ -436,7 +436,7 @@ namespace nCine
 		SetFocus(GlfwInputManager::hasFocus());
 #	endif
 
-		if (shouldSuspend()) {
+		if (ShouldSuspend()) {
 			glfwWaitEvents();
 		} else {
 			glfwPollEvents();

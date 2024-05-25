@@ -172,7 +172,7 @@ namespace nCine
 					height_ = panelHeight;
 					drawableWidth_ = width_;
 					drawableHeight_ = height_;
-					theApplication().resizeScreenViewport(drawableWidth_, drawableHeight_);
+					theApplication().ResizeScreenViewport(drawableWidth_, drawableHeight_);
 				}
 			}
 		}
