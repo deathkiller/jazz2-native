@@ -97,7 +97,7 @@ namespace nCine
 		while (!shouldQuit_) {
 			_dispatcher.ProcessEvents(winrtWUC::CoreProcessEventsOption::ProcessAllIfPresent);
 
-			if (!shouldSuspend()) {
+			if (!ShouldSuspend()) {
 				UwpInputManager::updateJoystickStates();
 				Step();
 			}

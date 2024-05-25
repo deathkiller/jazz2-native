@@ -41,7 +41,7 @@ namespace nCine
 
 	GlfwInputManager::GlfwInputManager()
 	{
-		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().GetGfxDevice());
 		preScalingWidth_ = gfxDevice.width_;
 		preScalingHeight_ = gfxDevice.height_;
 
@@ -233,7 +233,7 @@ namespace nCine
 
 	void GlfwInputManager::monitorCallback(GLFWmonitor* monitor, int event)
 	{
-		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().GetGfxDevice());
 		gfxDevice.updateMonitors();
 	}
 
@@ -245,7 +245,7 @@ namespace nCine
 		}
 
 		if (shouldQuit) {
-			theApplication().quit();
+			theApplication().Quit();
 		} else {
 			glfwSetWindowShouldClose(window, GLFW_FALSE);
 		}
@@ -253,10 +253,10 @@ namespace nCine
 
 	void GlfwInputManager::windowContentScaleCallback(GLFWwindow* window, float xscale, float yscale)
 	{
-		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().GetGfxDevice());
 
 		// Revert the window size change if it happened the same frame its scale also changed
-		if (lastFrameWindowSizeChanged_ == theApplication().numFrames()) {
+		if (lastFrameWindowSizeChanged_ == theApplication().GetFrameCount()) {
 			gfxDevice.width_ = preScalingWidth_;
 			gfxDevice.height_ = preScalingHeight_;
 		}
@@ -266,12 +266,12 @@ namespace nCine
 
 	void GlfwInputManager::windowSizeCallback(GLFWwindow* window, int width, int height)
 	{
-		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().GetGfxDevice());
 
 		// Save previous resolution for if a content scale event is coming just after a resize
 		preScalingWidth_ = gfxDevice.width_;
 		preScalingHeight_ = gfxDevice.height_;
-		lastFrameWindowSizeChanged_ = theApplication().numFrames();
+		lastFrameWindowSizeChanged_ = theApplication().GetFrameCount();
 
 		gfxDevice.width_ = width;
 		gfxDevice.height_ = height;
@@ -285,11 +285,11 @@ namespace nCine
 
 	void GlfwInputManager::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 	{
-		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().GetGfxDevice());
 		gfxDevice.drawableWidth_ = width;
 		gfxDevice.drawableHeight_ = height;
 
-		theApplication().resizeScreenViewport(width, height);
+		theApplication().ResizeScreenViewport(width, height);
 	}
 
 	void GlfwInputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -328,7 +328,7 @@ namespace nCine
 		}
 
 		mouseState_.x = static_cast<int>(x);
-		mouseState_.y = theApplication().height() - static_cast<int>(y);
+		mouseState_.y = theApplication().GetHeight() - static_cast<int>(y);
 		inputEventHandler_->OnMouseMove(mouseState_);
 	}
 
@@ -341,7 +341,7 @@ namespace nCine
 		double xCursor, yCursor;
 		glfwGetCursorPos(window, &xCursor, &yCursor);
 		mouseEvent_.x = static_cast<int>(xCursor);
-		mouseEvent_.y = theApplication().height() - static_cast<int>(yCursor);
+		mouseEvent_.y = theApplication().GetHeight() - static_cast<int>(yCursor);
 		mouseEvent_.button_ = button;
 
 		if (action == GLFW_PRESS) {
