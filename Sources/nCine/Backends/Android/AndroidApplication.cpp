@@ -9,13 +9,8 @@
 #include "../../tracy.h"
 
 #include <IO/AndroidAssetStream.h>
-#include <IO/FileSystem.h>
 
 using namespace Death::IO;
-
-#if defined(DEATH_TRACE)
-std::unique_ptr<Death::IO::Stream> __logFile;
-#endif
 
 /// Processes the next application command
 void androidHandleCommand(struct android_app* state, int32_t cmd)
