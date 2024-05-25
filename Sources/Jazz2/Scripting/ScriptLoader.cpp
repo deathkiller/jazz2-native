@@ -74,7 +74,7 @@ namespace Jazz2::Scripting
 		}
 		_includedFiles.emplace(absolutePath, true);
 
-		auto s = fs::Open(absolutePath, FileAccessMode::Read);
+		auto s = fs::Open(absolutePath, FileAccess::Read);
 		if (s->GetSize() <= 0) {
 			return ScriptContextType::Unknown;
 		}

@@ -37,7 +37,7 @@ namespace Jazz2::UI
 
 	void Cinematics::OnBeginFrame()
 	{
-		float timeMult = theApplication().timeMult();
+		float timeMult = theApplication().GetTimeMult();
 
 		if (_framesLeft <= 0) {
 			if (_callback != nullptr && _callback(_root, _frameDelay != 0.0f)) {
@@ -111,7 +111,7 @@ namespace Jazz2::UI
 
 	void Cinematics::Initialize(const StringView path)
 	{
-		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
 		_canvas = std::make_unique<CinematicsCanvas>(this);
 
@@ -144,7 +144,7 @@ namespace Jazz2::UI
 			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v")));
 		}
 
-		std::unique_ptr<Stream> s = fs::Open(fullPath, FileAccessMode::Read);
+		std::unique_ptr<Stream> s = fs::Open(fullPath, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->GetSize() > 32 && s->GetSize() < 64 * 1024 * 1024,
 			"Cannot load \"%s.j2v\" - unexpected file size", path.data());
 
@@ -310,7 +310,7 @@ namespace Jazz2::UI
 
 	void Cinematics::UpdatePressedActions()
 	{
-		auto& input = theApplication().inputManager();
+		auto& input = theApplication().GetInputManager();
 		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
 
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];

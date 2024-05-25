@@ -2373,7 +2373,7 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	std::unique_ptr<Stream> FileSystem::Open(const String& path, FileAccessMode mode)
+	std::unique_ptr<Stream> FileSystem::Open(const String& path, FileAccess mode)
 	{
 #if defined(DEATH_TARGET_ANDROID)
 		const char* assetName = AndroidAssetStream::TryGetAssetPath(String::nullTerminatedView(path).data());
@@ -2398,16 +2398,16 @@ namespace Death { namespace IO {
 #	endif
 	}
 
-	std::optional<Array<char, FileSystem::MapDeleter>> FileSystem::OpenAsMemoryMapped(const StringView path, FileAccessMode mode)
+	std::optional<Array<char, FileSystem::MapDeleter>> FileSystem::OpenAsMemoryMapped(const StringView path, FileAccess mode)
 	{
 #	if defined(DEATH_TARGET_UNIX)
 		int flags, prot;
 		switch (mode) {
-			case FileAccessMode::Read:
+			case FileAccess::Read:
 				flags = O_RDONLY;
 				prot = PROT_READ;
 				break;
-			case FileAccessMode::Read | FileAccessMode::Write:
+			case FileAccess::ReadWrite:
 				flags = O_RDWR;
 				prot = PROT_READ | PROT_WRITE;
 				break;
@@ -2448,13 +2448,13 @@ namespace Death { namespace IO {
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		DWORD fileDesiredAccess, shareMode, protect, mapDesiredAccess;
 		switch (mode) {
-			case FileAccessMode::Read:
+			case FileAccess::Read:
 				fileDesiredAccess = GENERIC_READ;
 				shareMode = FILE_SHARE_READ;
 				protect = PAGE_READONLY;
 				mapDesiredAccess = FILE_MAP_READ;
 				break;
-			case FileAccessMode::Read | FileAccessMode::Write:
+			case FileAccess::ReadWrite:
 				fileDesiredAccess = GENERIC_READ | GENERIC_WRITE;
 				shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
 				protect = PAGE_READWRITE;

@@ -66,7 +66,7 @@ namespace nCine
 
 	void AudioBufferPlayer::play()
 	{
-		IAudioDevice& device = theServiceLocator().audioDevice();
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
 		switch (state_) {
 			case PlayerState::Initial:
@@ -143,7 +143,7 @@ namespace nCine
 			}
 		}
 
-		IAudioDevice& device = theServiceLocator().audioDevice();
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		device.unregisterPlayer(this);
 	}
 
@@ -163,7 +163,7 @@ namespace nCine
 #endif
 				state_ = PlayerState::Stopped;
 
-				IAudioDevice& device = theServiceLocator().audioDevice();
+				IAudioDevice& device = theServiceLocator().GetAudioDevice();
 				device.unregisterPlayer(this);
 			} else {
 				alSourcei(sourceId_, AL_LOOPING, GetFlags(PlayerFlags::Looping));

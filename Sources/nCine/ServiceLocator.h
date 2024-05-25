@@ -12,34 +12,34 @@ namespace nCine
 	{
 	public:
 		/// Returns a reference to the current audio device instance
-		IAudioDevice& audioDevice() {
+		IAudioDevice& GetAudioDevice() {
 			return *audioDevice_;
 		}
 		/// Registers an audio device provider
-		void registerAudioDevice(std::unique_ptr<IAudioDevice> service);
+		void RegisterAudioDevice(std::unique_ptr<IAudioDevice> service);
 		/// Unregisters the audio device provider and reinstates the null one
-		void unregisterAudioDevice();
+		void UnregisterAudioDevice();
 
 		/// Returns a reference to the current thread pool instance
-		IThreadPool& threadPool() {
+		IThreadPool& GetThreadPool() {
 			return *threadPool_;
 		}
 		/// Registers a thread pool provider
-		void registerThreadPool(std::unique_ptr<IThreadPool> service);
+		void RegisterThreadPool(std::unique_ptr<IThreadPool> service);
 		/// Unregisters the thread pool provider and reinstates the null one
-		void unregisterThreadPool();
+		void UnregisterThreadPool();
 
 		/// Returns a reference to the current graphics capabilities instance
-		const IGfxCapabilities& gfxCapabilities() {
+		const IGfxCapabilities& GetGfxCapabilities() {
 			return *gfxCapabilities_;
 		}
 		/// Registers a graphics capabilities provider
-		void registerGfxCapabilities(std::unique_ptr<IGfxCapabilities> service);
+		void RegisterGfxCapabilities(std::unique_ptr<IGfxCapabilities> service);
 		/// Unregisters the graphics capabilitiesprovider and reinstates the null one
-		void unregisterGfxCapabilities();
+		void UnregisterGfxCapabilities();
 
 		/// Unregisters every registered service and reinstates null ones
-		void unregisterAll();
+		void UnregisterAll();
 
 	private:
 		IAudioDevice* audioDevice_;
@@ -55,9 +55,8 @@ namespace nCine
 		NullGfxCapabilities nullGfxCapabilities_;
 
 		ServiceLocator();
-		/// Deleted copy constructor
+
 		ServiceLocator(const ServiceLocator&) = delete;
-		/// Deleted assignment operator
 		ServiceLocator& operator=(const ServiceLocator&) = delete;
 
 		friend ServiceLocator& theServiceLocator();

@@ -172,6 +172,10 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 		for (std::int32_t i = 0; i < config.argc() - 2; i++) {
 			auto arg = config.argv(i);
 			if (arg == "/extract-pak"_s) {
+#	if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
+				// Always attach to console in this case
+				theApplication().AttachTraceTarget(MainApplication::ConsoleTarget);
+#	endif
 				auto pakFile = config.argv(i + 1);
 				if (fs::FileExists(pakFile)) {
 					ExtractPakFile(pakFile, config.argv(i + 2));
@@ -179,7 +183,7 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 					LOGE("\"%s\" not found", pakFile.data());
 				}
 
-				theApplication().quit();
+				theApplication().Quit();
 				return;
 			}
 		}
@@ -214,7 +218,7 @@ void GameEventHandler::OnInit()
 	ZoneScopedC(0x888888);
 
 #if defined(WITH_IMGUI)
-	//theApplication().debugOverlaySettings().showInterface = true;
+	//theApplication().GetDebugOverlaySettings().showInterface = true;
 #endif
 
 	_flags |= Flags::IsInitialized;
@@ -224,7 +228,7 @@ void GameEventHandler::OnInit()
 	auto& resolver = ContentResolver::Get();
 
 #if defined(DEATH_TARGET_ANDROID)
-	theApplication().setAutoSuspension(true);
+	theApplication().SetAutoSuspension(true);
 
 	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
 		_flags |= Flags::HasExternalStoragePermission;
@@ -233,7 +237,7 @@ void GameEventHandler::OnInit()
 	// Try to load gamepad mappings from parent directory of `Source` on Android
 	String mappingsPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
-		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
+		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
 	}
 #elif !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
@@ -242,15 +246,15 @@ void GameEventHandler::OnInit()
 #	else
 	if (PreferencesCache::EnableFullscreen) {
 #	endif
-		theApplication().gfxDevice().setResolution(true);
-		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
+		theApplication().GetGfxDevice().setResolution(true);
+		theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 	// Try to load gamepad mappings from `Content` directory
 	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
-		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
+		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
 	}
 #	endif
 #endif
@@ -261,7 +265,7 @@ void GameEventHandler::OnInit()
 	if (!configDir.empty()) {
 		String mappingsPath2 = fs::CombinePath(configDir, "gamecontrollerdb.txt"_s);
 		if (fs::IsReadableFile(mappingsPath2)) {
-			theApplication().inputManager().addJoyMappingsFromFile(mappingsPath2);
+			theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath2);
 		}
 	}
 #endif
@@ -401,7 +405,7 @@ void GameEventHandler::OnInit()
 	}));
 #endif
 
-	Vector2i res = theApplication().resolution();
+	Vector2i res = theApplication().GetResolution();
 	LOGI("Rendering resolution: %ix%i", res.X, res.Y);
 }
 
@@ -435,7 +439,7 @@ void GameEventHandler::OnResizeWindow(int width, int height)
 	}
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-	PreferencesCache::EnableFullscreen = theApplication().gfxDevice().isFullscreen();
+	PreferencesCache::EnableFullscreen = theApplication().GetGfxDevice().isFullscreen();
 #endif
 
 	LOGI("Rendering resolution: %ix%i", width, height);
@@ -502,11 +506,11 @@ void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 #	endif
 		PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
 		if (PreferencesCache::EnableFullscreen) {
-			theApplication().gfxDevice().setResolution(true);
-			theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
+			theApplication().GetGfxDevice().setResolution(true);
+			theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
 		} else {
-			theApplication().gfxDevice().setResolution(false);
-			theApplication().inputManager().setCursor(IInputManager::Cursor::Arrow);
+			theApplication().GetGfxDevice().setResolution(false);
+			theApplication().GetInputManager().setCursor(IInputManager::Cursor::Arrow);
 		}
 		return;
 	}
@@ -643,7 +647,7 @@ void GameEventHandler::ResumeSavedState()
 		LOGI("Resuming saved state...");
 
 		auto configDir = PreferencesCache::GetDirectory();
-		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read);
 		if (s->IsValid()) {
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
@@ -679,7 +683,7 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
 		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
 			auto configDir = PreferencesCache::GetDirectory();
-			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccessMode::Write);
+			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
 			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 			s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
 			s->WriteValue<std::uint16_t>(StateVersion);
@@ -912,7 +916,7 @@ void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)
 	_currentHandler = std::move(handler);
 
 	Viewport::chain().clear();
-	Vector2i res = theApplication().resolution();
+	Vector2i res = theApplication().GetResolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
 }
 
@@ -934,7 +938,7 @@ void GameEventHandler::RefreshCache()
 
 	// Check cache state
 	{
-		auto s = fs::Open(cachePath, FileAccessMode::Read);
+		auto s = fs::Open(cachePath, FileAccess::Read);
 		if (s->GetSize() < 16) {
 			goto RecreateCache;
 		}
@@ -1517,7 +1521,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 
 void GameEventHandler::WriteCacheDescriptor(const StringView path, std::uint64_t currentVersion, std::int64_t animsModified)
 {
-	auto so = fs::Open(path, FileAccessMode::Write);
+	auto so = fs::Open(path, FileAccess::Write);
 	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 	so->WriteValue<std::uint8_t>(ContentResolver::CacheIndexFile);
 	so->WriteValue<std::uint16_t>(Compatibility::JJ2Anims::CacheVersion);
@@ -1639,7 +1643,7 @@ void GameEventHandler::ExtractPakFile(const StringView pakFile, const StringView
 			if (sourceFile != nullptr) {
 				auto targetFilePath = fs::CombinePath(targetPath, childItem);
 				fs::CreateDirectories(fs::GetDirectoryName(targetFilePath));
-				auto targetFile = fs::Open(targetFilePath, FileAccessMode::Write);
+				auto targetFile = fs::Open(targetFilePath, FileAccess::Write);
 				if (targetFile->IsValid()) {
 					sourceFile->CopyTo(*targetFile);
 					successCount++;
@@ -1665,14 +1669,14 @@ std::unique_ptr<IAppEventHandler> CreateAppEventHandler()
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-	return UwpApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
+	return UwpApplication::Run([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	});
 }
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-	return MainApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
+	return MainApplication::Run([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	}, __argc, __wargv);
 }
@@ -1716,14 +1720,15 @@ int main(int argc, char** argv)
 	bool hasVirtualTerminal = isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");
-		if (term != nullptr && strcmp(term, "xterm-256color") == 0) {
+		if (term != nullptr && (strstr(term, "truecolor") || strstr(term, "24bit") ||
+			strstr(term, "256color") || strstr(term, "rxvt-xpm"))) {
 			fwrite(TermLogo, sizeof(unsigned char), arraySize(TermLogo), stdout);
 			logoVisible = true;
 		}
 	}
 #endif
 #if defined(DEATH_TARGET_UNIX)
-	for (int i = 1; i < argc; i++) {
+	for (std::size_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--version") == 0) {
 			// Just print current version below the logo and quit
 			return PrintVersion(logoVisible);
@@ -1731,7 +1736,7 @@ int main(int argc, char** argv)
 	}
 #endif
 
-	return MainApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
+	return MainApplication::Run([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	}, argc, argv);
 }

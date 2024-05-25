@@ -28,7 +28,7 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
-		auto& input = theApplication().inputManager();
+		auto& input = theApplication().GetInputManager();
 
 		bool shouldExit = false;
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
@@ -73,7 +73,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		// Show gamepad info
-		auto& input = theApplication().inputManager();
+		auto& input = theApplication().GetInputManager();
 
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int32_t jc = 0;

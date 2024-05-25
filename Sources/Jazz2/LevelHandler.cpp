@@ -234,9 +234,9 @@ namespace Jazz2
 		ZoneScopedC(0x4876AF);
 
 		if (!descriptor.DisplayName.empty()) {
-			theApplication().gfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + descriptor.DisplayName));
+			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + descriptor.DisplayName));
 		} else {
-			theApplication().gfxDevice().setWindowTitle(NCINE_APP_NAME);
+			theApplication().GetGfxDevice().setWindowTitle(NCINE_APP_NAME);
 		}
 
 		_defaultNextLevel = std::move(descriptor.NextLevel);
@@ -328,7 +328,7 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		float timeMult = theApplication().timeMult();
+		float timeMult = theApplication().GetTimeMult();
 
 		if (_pauseMenu == nullptr) {
 			UpdatePressedActions();
@@ -487,7 +487,7 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		float timeMult = theApplication().timeMult();
+		float timeMult = theApplication().GetTimeMult();
 
 		if (!IsPausable() || _pauseMenu == nullptr) {
 			ResolveCollisions(timeMult);
@@ -1621,7 +1621,7 @@ namespace Jazz2
 		_camera->setView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);
 
 		// Update audio listener position
-		IAudioDevice& device = theServiceLocator().audioDevice();
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		device.updateListener(Vector3f(_cameraPos, 0.0f), Vector3f(focusSpeed, 0.0f));
 	}
 
@@ -1728,7 +1728,7 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		auto& input = theApplication().inputManager();
+		auto& input = theApplication().GetInputManager();
 		_pressedActionsLast = _pressedActions;
 
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];

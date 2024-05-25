@@ -69,7 +69,7 @@ namespace nCine
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView path)
 	{
 		//LOGD("Loading from file \"%s\"", path.data());
-		return createLoader(fs::Open(path, FileAccessMode::Read), path);
+		return createLoader(fs::Open(path, FileAccess::Read), path);
 	}
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView path)

@@ -27,7 +27,7 @@ namespace nCine
 			return;
 		}
 
-		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		const bool isSupported = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY) ||
 								 gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY);
@@ -89,7 +89,7 @@ namespace nCine
 			return false;
 		}
 
-		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccessMode::Read);
+		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccess::Read);
 		const std::int32_t fileSize = fileHandle->GetSize();
 		if (fileSize <= 28 || fileSize > 8 * 1024 * 1024) {
 			return false;
@@ -150,7 +150,7 @@ namespace nCine
 			return false;
 		}
 
-		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccessMode::Write);
+		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccess::Write);
 		if (!fileHandle->IsValid()) {
 			return false;
 		}

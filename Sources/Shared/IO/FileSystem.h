@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Stream.h"
-#include "FileAccessMode.h"
+#include "FileAccess.h"
 #include "../Common.h"
 #include "../Containers/DateTime.h"
 #include "../Containers/String.h"
@@ -269,7 +269,7 @@ namespace Death { namespace IO {
 #endif
 
 		/** @brief Opens file stream with specified access mode */
-		static std::unique_ptr<Stream> Open(const Containers::String& path, FileAccessMode mode);
+		static std::unique_ptr<Stream> Open(const Containers::String& path, FileAccess mode);
 
 #if defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 		/**
@@ -297,7 +297,7 @@ namespace Death { namespace IO {
 #	endif
 		};
 
-		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(const Containers::StringView path, FileAccessMode mode);
+		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(const Containers::StringView path, FileAccess mode);
 #endif
 
 		static std::unique_ptr<Stream> CreateFromMemory(std::uint8_t* bufferPtr, std::int32_t bufferSize);

@@ -14,43 +14,43 @@ namespace nCine
 	{
 	}
 
-	void ServiceLocator::registerAudioDevice(std::unique_ptr<IAudioDevice> service)
+	void ServiceLocator::RegisterAudioDevice(std::unique_ptr<IAudioDevice> service)
 	{
 		registeredAudioDevice_ = std::move(service);
 		audioDevice_ = registeredAudioDevice_.get();
 	}
 
-	void ServiceLocator::unregisterAudioDevice()
+	void ServiceLocator::UnregisterAudioDevice()
 	{
 		registeredAudioDevice_.reset(nullptr);
 		audioDevice_ = &nullAudioDevice_;
 	}
 
-	void ServiceLocator::registerThreadPool(std::unique_ptr<IThreadPool> service)
+	void ServiceLocator::RegisterThreadPool(std::unique_ptr<IThreadPool> service)
 	{
 		registeredThreadPool_ = std::move(service);
 		threadPool_ = registeredThreadPool_.get();
 	}
 
-	void ServiceLocator::unregisterThreadPool()
+	void ServiceLocator::UnregisterThreadPool()
 	{
 		registeredThreadPool_.reset(nullptr);
 		threadPool_ = &nullThreadPool_;
 	}
 
-	void ServiceLocator::registerGfxCapabilities(std::unique_ptr<nCine::IGfxCapabilities> service)
+	void ServiceLocator::RegisterGfxCapabilities(std::unique_ptr<nCine::IGfxCapabilities> service)
 	{
 		registeredGfxCapabilities_ = std::move(service);
 		gfxCapabilities_ = registeredGfxCapabilities_.get();
 	}
 
-	void ServiceLocator::unregisterGfxCapabilities()
+	void ServiceLocator::UnregisterGfxCapabilities()
 	{
 		registeredGfxCapabilities_.reset(nullptr);
 		gfxCapabilities_ = &nullGfxCapabilities_;
 	}
 
-	void ServiceLocator::unregisterAll()
+	void ServiceLocator::UnregisterAll()
 	{
 		LOGI("Unregistering all services");
 

@@ -134,7 +134,7 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::OnEndFrame();
 
-		float timeMult = theApplication().timeMult();
+		float timeMult = theApplication().GetTimeMult();
 
 		for (auto& [playerIndex, playerState] : _playerStates) {
 			playerState.PressedKeys |= ((playerState.PressedKeys & 0xffffffffu) << 32);

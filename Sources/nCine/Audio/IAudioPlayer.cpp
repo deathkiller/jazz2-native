@@ -81,7 +81,7 @@ namespace nCine
 	{
 		position_ = position;
 		if (state_ == PlayerState::Playing) {
-			IAudioDevice& device = theServiceLocator().audioDevice();
+			IAudioDevice& device = theServiceLocator().GetAudioDevice();
 			Vector3f adjustedPos = getAdjustedPosition(device, position_, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D));
 			alSource3f(sourceId_, AL_POSITION, adjustedPos.X, adjustedPos.Y, adjustedPos.Z);
 		}

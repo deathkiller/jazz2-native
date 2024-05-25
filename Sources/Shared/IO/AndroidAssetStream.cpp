@@ -12,7 +12,7 @@ namespace Death { namespace IO {
 	AAssetManager* AndroidAssetStream::_assetManager = nullptr;
 	const char* AndroidAssetStream::_internalDataPath = nullptr;
 
-	AndroidAssetStream::AndroidAssetStream(const Containers::String& path, FileAccessMode mode)
+	AndroidAssetStream::AndroidAssetStream(const Containers::String& path, FileAccess mode)
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		: _fileDescriptor(-1), _startOffset(0L)
 #else
@@ -249,10 +249,10 @@ namespace Death { namespace IO {
 		return AAssetDir_getNextFileName(assetDir);
 	}
 
-	void AndroidAssetStream::Open(FileAccessMode mode)
+	void AndroidAssetStream::Open(FileAccess mode)
 	{
-		FileAccessMode maskedMode = mode & ~FileAccessMode::Exclusive;
-		if (maskedMode != FileAccessMode::Read) {
+		FileAccess maskedMode = mode & ~FileAccess::Exclusive;
+		if (maskedMode != FileAccess::Read) {
 			LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 			return;
 		}

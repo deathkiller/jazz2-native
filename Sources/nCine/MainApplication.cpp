@@ -30,18 +30,17 @@ using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
-#if defined(DEATH_TRACE) && defined(DEATH_TARGET_SWITCH)
-
-#	include <IO/FileStream.h>
-std::unique_ptr<Death::IO::Stream> __logFile;
-
-#elif defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-
-#if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
-#	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#if defined(DEATH_TARGET_WINDOWS_RT)
+#	error "For DEATH_TARGET_WINDOWS_RT, UwpApplication should be used instead of MainApplication"
 #endif
 
-#include <Utf8.h>
+#if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
+
+#	if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+#		define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#	endif
+
+#	include <Utf8.h>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -199,7 +198,7 @@ namespace nCine
 		return instance;
 	}
 
-	int MainApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
+	int MainApplication::Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		if (createAppEventHandler == nullptr) {
 			return EXIT_FAILURE;
@@ -215,20 +214,10 @@ namespace nCine
 		PadState pad;
 		padInitializeDefault(&pad);
 		hidInitializeTouchScreen();
-
-#	if defined(DEATH_TRACE)
-		// Try to open log file as early as possible
-		// TODO: Hardcoded path
-		fs::CreateDirectories("sdmc:/Games/Jazz2/"_s);
-		__logFile = fs::Open("sdmc:/Games/Jazz2/Jazz2.log"_s, FileAccessMode::Write);
-		if (!__logFile->IsValid()) {
-			__logFile = nullptr;
-		}
-#	endif
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t pBuf[MAX_PATH];
-		DWORD pBufLength = ::GetModuleFileName(NULL, pBuf, (DWORD)arraySize(pBuf));
+		DWORD pBufLength = ::GetModuleFileNameW(NULL, pBuf, (DWORD)arraySize(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
 			if (lastSlash == nullptr) {
@@ -237,13 +226,11 @@ namespace nCine
 			if (lastSlash != nullptr) {
 				lastSlash++;
 				*lastSlash = '\0';
-				::SetCurrentDirectory(pBuf);
+				::SetCurrentDirectoryW(pBuf);
 			}
 		}
 
-#	if !defined(DEATH_TARGET_WINDOWS_RT)
 		timeBeginPeriod(1);
-#	endif
 #endif
 
 #if defined(DEATH_TRACE)
@@ -263,19 +250,10 @@ namespace nCine
 		} else {
 			__hasVirtualTerminal = false;
 		}
-#	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	elif defined(DEATH_TARGET_WINDOWS)
+		// This can be initialized later from AttachTraceTarget()
 		__showLogConsole = false;
-		for (std::int32_t i = 0; i < argc; i++) {
-			if (wcscmp(argv[i], L"/log") == 0) {
-				__showLogConsole = true;
-				break;
-			}
-		}
-		if (__showLogConsole) {
-			CreateLogConsole(NCINE_APP_NAME " [Console]", __hasVirtualTerminal);
-		} else {
-			__hasVirtualTerminal = false;
-		}
+		__hasVirtualTerminal = false;
 #	elif defined(DEATH_TARGET_UNIX)
 		::setvbuf(stdout, nullptr, _IONBF, 0);
 		::setvbuf(stderr, nullptr, _IONBF, 0);
@@ -284,23 +262,23 @@ namespace nCine
 #endif
 
 		MainApplication& app = static_cast<MainApplication&>(theApplication());
-		app.init(createAppEventHandler, argc, argv);
+		app.Init(createAppEventHandler, argc, argv);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		while (!app.shouldQuit_) {
-			app.run();
+			app.ProcessStep();
 		}
 #else
-		emscripten_set_main_loop(MainApplication::emscriptenStep, 0, 1);
+		emscripten_set_main_loop(MainApplication::EmscriptenStep, 0, 1);
 		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
 #endif
 
-		app.shutdownCommon();
+		app.ShutdownCommon();
 
 #if defined(DEATH_TARGET_SWITCH)
 		romfsExit();
 		socketExit();
-#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#elif defined(DEATH_TARGET_WINDOWS)
 		timeEndPeriod(1);
 
 #	if defined(DEATH_TRACE)
@@ -312,13 +290,13 @@ namespace nCine
 		return EXIT_SUCCESS;
 	}
 
-	void MainApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
+	void MainApplication::Init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		ZoneScopedC(0x81A861);
 #if defined(NCINE_PROFILING)
 		profileStartTime_ = TimeStamp::now();
 #endif
-		wasSuspended_ = shouldSuspend();
+		wasSuspended_ = ShouldSuspend();
 
 		// Only `OnPreInit()` can modify the application configuration
 		if (argc > 1) {
@@ -335,7 +313,7 @@ namespace nCine
 #endif
 		}
 
-		preInitCommon(createAppEventHandler());
+		PreInitCommon(createAppEventHandler());
 
 		if (shouldQuit_) {
 			// If the app was quit from OnPreInit(), skip further initialization
@@ -372,41 +350,41 @@ namespace nCine
 #endif
 #if !defined(WITH_QT5)
 		// Common initialization on Qt5 is performed later, when OpenGL can be used
-		initCommon();
+		InitCommon();
 #endif
 	}
 
-	void MainApplication::run()
+	void MainApplication::ProcessStep()
 	{
 #if !defined(WITH_QT5)
-		processEvents();
+		ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
 		static_cast<Qt5InputManager&>(*inputManager_).updateJoystickStates();
 #endif
 
-		const bool suspended = shouldSuspend();
+		const bool suspended = ShouldSuspend();
 		if (wasSuspended_ != suspended) {
 			if (suspended) {
-				suspend();
+				Suspend();
 			} else {
-				resume();
+				Resume();
 			}
 			wasSuspended_ = suspended;
 		}
 
 		if (!suspended) {
-			step();
+			Step();
 		}
 	}
 
 #if defined(WITH_SDL)
-	void MainApplication::processEvents()
+	void MainApplication::ProcessEvents()
 	{
 		ZoneScoped;
 
 		SDL_Event event;
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (shouldSuspend()) {
+		if (ShouldSuspend()) {
 			SDL_WaitEvent(&event);
 			SDL_PushEvent(&event);
 			// Don't lose any events when resuming
@@ -429,10 +407,10 @@ namespace nCine
 				case SDL_WINDOWEVENT:
 					switch (event.window.event) {
 						case SDL_WINDOWEVENT_FOCUS_GAINED:
-							setFocus(true);
+							SetFocus(true);
 							break;
 						case SDL_WINDOWEVENT_FOCUS_LOST:
-							setFocus(false);
+							SetFocus(false);
 							break;
 						case SDL_WINDOWEVENT_SIZE_CHANGED:
 							gfxDevice_->width_ = event.window.data1;
@@ -440,7 +418,7 @@ namespace nCine
 							SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
 							gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
 							SDL_GL_GetDrawableSize(windowHandle, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
-							resizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+							ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 							break;
 					}
 					break;
@@ -451,11 +429,11 @@ namespace nCine
 		}
 	}
 #elif defined(WITH_GLFW)
-	void MainApplication::processEvents()
+	void MainApplication::ProcessEvents()
 	{
 		// GLFW does not seem to correctly handle Emscripten focus and blur events
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		setFocus(GlfwInputManager::hasFocus());
+		SetFocus(GlfwInputManager::hasFocus());
 #	endif
 
 		if (shouldSuspend()) {
@@ -468,9 +446,23 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-	void MainApplication::emscriptenStep()
+	void MainApplication::EmscriptenStep()
 	{
-		static_cast<MainApplication&>(theApplication()).run();
+		static_cast<MainApplication&>(theApplication()).ProcessStep();
 	}
 #endif
+
+	void MainApplication::AttachTraceTarget(Containers::StringView targetPath)
+	{
+#if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
+		if (targetPath == ConsoleTarget) {
+			if (!__showLogConsole) {
+				__showLogConsole = true;
+				CreateLogConsole(NCINE_APP_NAME " [Console]", __hasVirtualTerminal);
+			}
+			return;
+		}
+#endif
+		Application::AttachTraceTarget(targetPath);
+	}
 }

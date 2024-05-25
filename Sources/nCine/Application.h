@@ -7,9 +7,13 @@
 
 #include <memory>
 
+#include <Containers/StringView.h>
+
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <CommonWindows.h>
 #endif
+
+using namespace Death;
 
 namespace nCine
 {
@@ -76,86 +80,89 @@ namespace nCine
 			Count
 		};
 
+		/// Can be used in AttachTraceTarget() to attach to a console (if exists)
+		static constexpr char const* ConsoleTarget = "\n";
+
 		/// Returns the configuration used to initialize the application
-		inline const AppConfiguration& appConfiguration() const {
+		inline const AppConfiguration& GetAppConfiguration() const {
 			return appCfg_;
 		}
 		/// Returns the run-time rendering settings
-		inline RenderingSettings& renderingSettings() {
+		inline RenderingSettings& GetRenderingSettings() {
 			return renderingSettings_;
 		}
 #if defined(WITH_IMGUI)
 		/// Returns the run-time GUI settings
-		inline GuiSettings& guiSettings() {
+		inline GuiSettings& GetGuiSettings() {
 			return guiSettings_;
 		}
 		/// Returns the debug overlay object, if any
-		inline IDebugOverlay::DisplaySettings& debugOverlaySettings() {
+		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() {
 			return (debugOverlay_ != nullptr ? debugOverlay_->settings() : debugOverlayNullSettings_);
 		}
 #endif
 #if defined(NCINE_PROFILING)
 		/// Returns all timings
-		inline const float* timings() const {
+		inline const float* GetTimings() const {
 			return timings_;
 		}
 #endif
 
 		/// Returns the graphics device instance
-		inline IGfxDevice& gfxDevice() {
+		inline IGfxDevice& GetGfxDevice() {
 			return *gfxDevice_;
 		}
 		/// Returns the root of the transformation graph
-		inline SceneNode& rootNode() {
+		inline SceneNode& GetRootNode() {
 			return *rootNode_;
 		}
 		/// Returns the screen viewport
-		Viewport& screenViewport();
+		Viewport& GetScreenViewport();
 		/// Returns the input manager instance
-		inline IInputManager& inputManager() {
+		inline IInputManager& GetInputManager() {
 			return *inputManager_;
 		}
 
 		/// Returns the total number of frames already rendered
-		unsigned long int numFrames() const;
+		unsigned long int GetFrameCount() const;
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
-		float timeMult() const;
+		float GetTimeMult() const;
 		/// Returns the frame timer interface
-		const FrameTimer& frameTimer() const;
+		const FrameTimer& GetFrameTimer() const;
 
 		/// Returns the drawable screen width as an integer number
-		inline int width() const { return gfxDevice_->drawableWidth(); }
+		inline std::int32_t GetWidth() const { return gfxDevice_->drawableWidth(); }
 		/// Returns the drawable screen height as an integer number
-		inline int height() const { return gfxDevice_->drawableHeight(); }
+		inline std::int32_t GetHeight() const { return gfxDevice_->drawableHeight(); }
 		/// Returns the drawable screen resolution as a `Vector2i` object
-		inline Vector2i resolution() const { return gfxDevice_->drawableResolution(); }
+		inline Vector2i GetResolution() const { return gfxDevice_->drawableResolution(); }
 
 		/// Resizes the screen viewport, if exists
-		void resizeScreenViewport(int width, int height);
+		void ResizeScreenViewport(std::int32_t width, std::int32_t height);
 
-		bool shouldSuspend();
+		bool ShouldSuspend();
 
 		/// Returns the value of the auto-suspension flag
 		/*! If `true` the application will be suspended when it loses focus */
-		inline bool autoSuspension() const {
+		inline bool GetAutoSuspension() const {
 			return autoSuspension_;
 		}
 		/// Sets the auto-suspension flag value
-		inline void setAutoSuspension(bool autoSuspension) {
+		inline void SetAutoSuspension(bool autoSuspension) {
 			autoSuspension_ = autoSuspension;
 		}
 
 		/// Raises the quit flag
-		inline void quit() {
+		inline void Quit() {
 			shouldQuit_ = true;
 		}
 		/// Returns the quit flag value
-		inline bool shouldQuit() const {
+		inline bool ShouldQuit() const {
 			return shouldQuit_;
 		}
 
 		/// Returns the focus flag value
-		inline bool hasFocus() const {
+		inline bool HasFocus() const {
 			return hasFocus_;
 		}
 
@@ -163,19 +170,21 @@ namespace nCine
 			return appCfg_.dataPath();
 		}
 
+		virtual void AttachTraceTarget(Containers::StringView targetPath);
+
 	protected:
+		AppConfiguration appCfg_;
+		RenderingSettings renderingSettings_;
 		bool isSuspended_;
 		bool autoSuspension_;
 		bool hasFocus_;
 		bool shouldQuit_;
-		AppConfiguration appCfg_;
-		RenderingSettings renderingSettings_;
 #if defined(WITH_IMGUI)
 		GuiSettings guiSettings_;
 		IDebugOverlay::DisplaySettings debugOverlayNullSettings_;
 #endif
 #if defined(NCINE_PROFILING)
-		float timings_[(int)Timings::Count];
+		float timings_[(std::int32_t)Timings::Count];
 #endif
 #if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _waitableTimer;
@@ -196,26 +205,24 @@ namespace nCine
 		Application();
 		~Application();
 
-		void preInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler);
+		void PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler);
 		/// Must be called before giving control to the application
-		void initCommon();
+		void InitCommon();
 		/// A single step of the game loop made to render a frame
-		void step();
+		void Step();
 		/// Must be called before exiting to shut down the application
-		void shutdownCommon();
+		void ShutdownCommon();
 
 		/// Called when the application gets suspended
-		void suspend();
+		void Suspend();
 		/// Called when the application resumes execution
-		void resume();
+		void Resume();
 
 		/// Sets the focus flag
-		virtual void setFocus(bool hasFocus);
+		virtual void SetFocus(bool hasFocus);
 
 	private:
-		/// Deleted copy constructor
 		Application(const Application&) = delete;
-		/// Deleted assignment operator
 		Application& operator=(const Application&) = delete;
 
 		friend class MainApplication;

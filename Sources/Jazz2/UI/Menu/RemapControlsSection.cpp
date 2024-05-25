@@ -58,7 +58,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (waitingForInput) {
-			auto& input = theApplication().inputManager();
+			auto& input = theApplication().GetInputManager();
 			auto& keyState = input.keyboardState();
 
 			if (keyState.isKeyDown(KeySym::ESCAPE) || _timeout <= 0.0f) {
@@ -423,7 +423,7 @@ namespace Jazz2::UI::Menu
 
 	void RemapControlsSection::RefreshPreviousState()
 	{
-		auto& input = theApplication().inputManager();
+		auto& input = theApplication().GetInputManager();
 		auto& keyState = input.keyboardState();
 
 		_keysPressedLast.ClearAll();

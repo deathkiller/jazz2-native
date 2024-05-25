@@ -12,30 +12,30 @@ namespace nCine
 	{
 	public:
 		/// Entry point method to be called in the `android_main()` function
-		static void start(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
+		static void Run(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
 		/// Processes an Android application command
-		static void processCommand(struct android_app* state, int32_t cmd);
+		static void ProcessCommand(struct android_app* state, int32_t cmd);
 
 		/// Returns true if the application has already called `init()`
-		inline bool isInitialized() const {
+		inline bool IsInitialized() const {
 			return isInitialized_;
 		}
 
 		/// Returns the package name for the Android application
-		inline const char* packageName() const {
+		inline const char* GetPackageName() const {
 			return packageName_.data();
 		}
 
 		/// Returns the path to the internal data directory from the native activity
-		const char* internalDataPath() const;
+		const char* GetInternalDataPath() const;
 		/// Returns the path to the external data directory from the native activity
-		const char* externalDataPath() const;
+		const char* GetExternalDataPath() const;
 		/// Returns the path to the OBB directory from the native activity
-		const char* obbPath() const;
+		const char* GetObbPath() const;
 
 		/// Toggles the software keyboard
-		void toggleSoftInput();
+		void ToggleSoftInput();
 
 	private:
 		bool isInitialized_;
@@ -43,20 +43,18 @@ namespace nCine
 
 		struct android_app* state_;
 		std::unique_ptr<IAppEventHandler>(*createAppEventHandler_)();
-		void preInit();
+		
+		void PreInit();
 		/// Must be called at the beginning to initialize the application
-		void init();
+		void Init();
 		/// Must be called before exiting to shut down the application
-		void shutdown();
+		void Shutdown();
 
-		/// Private constructor
 		AndroidApplication()
 			: Application(), isInitialized_(false), state_(nullptr), createAppEventHandler_(nullptr) {}
-		/// Private destructor
 		~AndroidApplication() {}
-		/// Deleted copy constructor
+
 		AndroidApplication(const AndroidApplication&) = delete;
-		/// Deleted assignment operator
 		AndroidApplication& operator=(const AndroidApplication&) = delete;
 
 		/// Returns the singleton reference to the Android application

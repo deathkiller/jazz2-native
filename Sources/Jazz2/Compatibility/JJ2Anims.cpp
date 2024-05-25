@@ -18,7 +18,7 @@ namespace Jazz2::Compatibility
 		SmallVector<AnimSection, 0> anims;
 		SmallVector<SampleSection, 0> samples;
 
-		auto s = fs::Open(path, FileAccessMode::Read);
+		auto s = fs::Open(path, FileAccess::Read);
 		ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		bool seemsLikeCC = false;
@@ -526,7 +526,7 @@ namespace Jazz2::Compatibility
 
 	void JJ2Anims::WriteImageToFile(const StringView targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
-		FileStream so(targetPath, FileAccessMode::Write);
+		FileStream so(targetPath, FileAccess::Write);
 		ASSERT_MSG(so.IsValid(), "Cannot open file for writing");
 		WriteImageToStream(so, data, width, height, channelCount, anim, entry);
 	}

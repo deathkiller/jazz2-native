@@ -58,7 +58,7 @@ namespace nCine
 	{
 #if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		debugAvailable_ = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG) &&
-			theApplication().gfxDevice().glContextInfo().debugContext;
+			theApplication().GetGfxDevice().glContextInfo().debugContext;
 
 		glGetIntegerv(GL_MAX_LABEL_LENGTH, &maxLabelLength_);
 

@@ -279,7 +279,7 @@ namespace nCine
 				dirtyBits_.reset(DirtyBitPositions::ColorBit);
 			}
 
-			lastFrameUpdated_ = theApplication().numFrames();
+			lastFrameUpdated_ = theApplication().GetFrameCount();
 		}
 	}
 

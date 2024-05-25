@@ -3,6 +3,11 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	Stream::Stream()
+		: _size(ErrorInvalidStream)
+	{
+	}
+
 	std::int64_t Stream::CopyTo(Stream& targetStream)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)

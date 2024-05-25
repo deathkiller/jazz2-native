@@ -96,10 +96,10 @@ namespace nCine
 		if (width_ == 0.0f || height_ == 0.0f)
 			return false;
 
-		const bool cullingEnabled = theApplication().renderingSettings().cullingEnabled;
+		const bool cullingEnabled = theApplication().GetRenderingSettings().cullingEnabled;
 
 		bool overlaps = false;
-		if (cullingEnabled && lastFrameRendered_ == theApplication().numFrames()) {
+		if (cullingEnabled && lastFrameRendered_ == theApplication().GetFrameCount()) {
 			// This frame one of the viewports in the chain might overlap this node
 			const Viewport* viewport = RenderResources::currentViewport();
 			overlaps = aabb_.Overlaps(viewport->cullingRect());
@@ -193,7 +193,7 @@ namespace nCine
 
 	void DrawableNode::updateCulling()
 	{
-		const bool cullingEnabled = theApplication().renderingSettings().cullingEnabled;
+		const bool cullingEnabled = theApplication().GetRenderingSettings().cullingEnabled;
 		if (drawEnabled_ && cullingEnabled && width_ > 0 && height_ > 0) {
 			if (dirtyBits_.test(DirtyBitPositions::AabbBit)) {
 				updateAabb();
@@ -201,11 +201,11 @@ namespace nCine
 			}
 
 			// Check if at least one viewport in the chain overlaps with this node
-			if (lastFrameRendered_ < theApplication().numFrames()) {
+			if (lastFrameRendered_ < theApplication().GetFrameCount()) {
 				const Viewport* viewport = RenderResources::currentViewport();
 				const bool overlaps = aabb_.Overlaps(viewport->cullingRect());
 				if (overlaps)
-					lastFrameRendered_ = theApplication().numFrames();
+					lastFrameRendered_ = theApplication().GetFrameCount();
 			}
 		}
 	}

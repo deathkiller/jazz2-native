@@ -20,7 +20,9 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	/** @brief Specifies the position in a stream to use for seeking */
+	/**
+		@brief Specifies the position in a stream to use for seeking
+	*/
 	enum class SeekOrigin {
 		Begin = SEEK_SET,
 		Current = SEEK_CUR,
@@ -40,7 +42,7 @@ namespace Death { namespace IO {
 		/** @brief Returned if seek operation is not supported by @ref Stream or the stream length is unknown */
 		static constexpr std::int32_t ErrorNotSeekable = -3;
 
-		Stream() : _size(ErrorInvalidStream) { }
+		Stream();
 
 		/** @brief Closes the stream and releases all assigned resources */
 		virtual void Dispose() = 0;

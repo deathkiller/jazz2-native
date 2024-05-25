@@ -12,5 +12,5 @@ std::unique_ptr<nCine::IAppEventHandler> CreateAppEventHandler();
 
 void android_main(struct android_app* state)
 {
-	nCine::AndroidApplication::start(state, CreateAppEventHandler);
+	nCine::AndroidApplication::Run(state, CreateAppEventHandler);
 }

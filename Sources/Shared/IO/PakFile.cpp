@@ -34,7 +34,7 @@ namespace Death { namespace IO {
 	};
 
 	BoundedStream::BoundedStream(const String& path, std::uint64_t offset, std::uint32_t size)
-		: _underlyingStream(path, FileAccessMode::Read), _offset(offset), _pos(0)
+		: _underlyingStream(path, FileAccess::Read), _offset(offset), _pos(0)
 	{
 		_size = size;
 		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
@@ -55,11 +55,11 @@ namespace Death { namespace IO {
 			default: return ErrorInvalidParameter;
 		}
 
-		if (newPos < _offset || newPos > _offset + _size) {
+		if (newPos < static_cast<std::int64_t>(_offset) || newPos > static_cast<std::int64_t>(_offset) + _size) {
 			newPos = ErrorInvalidParameter;
 		} else {
 			newPos = _underlyingStream.Seek(newPos, SeekOrigin::Begin);
-			if (newPos >= _offset) {
+			if (newPos >= static_cast<std::int64_t>(_offset)) {
 				newPos -= _offset;
 				_pos = newPos;
 			}
@@ -179,7 +179,7 @@ namespace Death { namespace IO {
 
 	PakFile::PakFile(const StringView path)
 	{
-		std::unique_ptr<Stream> s = std::make_unique<FileStream>(path, FileAccessMode::Read);
+		std::unique_ptr<Stream> s = std::make_unique<FileStream>(path, FileAccess::Read);
 		DEATH_ASSERT(s->GetSize() > 24, , "Invalid .pak file");
 
 		// Header size is 18 bytes
@@ -517,7 +517,7 @@ namespace Death { namespace IO {
 	PakWriter::PakWriter(const StringView path)
 		: _finalized(false)
 	{
-		_outputStream = std::make_unique<FileStream>(path, FileAccessMode::Write);
+		_outputStream = std::make_unique<FileStream>(path, FileAccess::Write);
 	}
 
 	PakWriter::~PakWriter()

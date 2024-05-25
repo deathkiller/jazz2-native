@@ -19,7 +19,7 @@ namespace Jazz2::Compatibility
 {
 	bool JJ2Data::Open(const StringView path, bool strictParser)
 	{
-		auto s = fs::Open(path, FileAccessMode::Read);
+		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		uint32_t magic = s->ReadValue<uint32_t>();
@@ -69,7 +69,7 @@ namespace Jazz2::Compatibility
 		fs::CreateDirectories(targetPath);
 
 		for (auto& item : Items) {
-			auto so = fs::Open(fs::CombinePath(targetPath, item.Filename), FileAccessMode::Write);
+			auto so = fs::Open(fs::CombinePath(targetPath, item.Filename), FileAccess::Write);
 			ASSERT_MSG(so->IsValid(), "Cannot open file \"%s\" for writing", item.Filename.data());
 
 			so->Write(item.Blob.get(), item.Size);

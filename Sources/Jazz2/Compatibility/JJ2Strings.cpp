@@ -43,7 +43,7 @@ namespace Jazz2::Compatibility
 {
 	bool JJ2Strings::Open(const StringView path)
 	{
-		auto s = fs::Open(path, FileAccessMode::Read);
+		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
@@ -110,7 +110,7 @@ namespace Jazz2::Compatibility
 
 	void JJ2Strings::Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion)
 	{
-		auto so = fs::Open(targetPath, FileAccessMode::Write);
+		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		so->Write("\xEF\xBB\xBF// Common\n", sizeof("\xEF\xBB\xBF// Common\n") - 1);

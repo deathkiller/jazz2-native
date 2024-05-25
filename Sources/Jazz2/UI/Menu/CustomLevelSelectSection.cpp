@@ -302,7 +302,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		auto s = fs::Open(levelFile, FileAccessMode::Read);
+		auto s = fs::Open(levelFile, FileAccess::Read);
 		RETURN_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		uint64_t signature = s->ReadValue<uint64_t>();
