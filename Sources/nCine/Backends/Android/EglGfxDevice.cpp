@@ -20,7 +20,7 @@ extern "C"
 	void nativeUpdateMonitors(JNIEnv* env, jclass clazz)
 	{
 		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
-		if (androidApp.isInitialized()) {
+		if (androidApp.IsInitialized()) {
 			JNIEnv* oldEnv = nc::AndroidJniHelper::jniEnv;
 			nc::AndroidJniHelper::jniEnv = env;
 
@@ -163,8 +163,9 @@ namespace nCine
 
 		const bool modeIsSupported = (surface != EGL_NO_SURFACE);
 
-		if (surface != EGL_NO_SURFACE)
+		if (surface != EGL_NO_SURFACE) {
 			eglDestroySurface(display, surface);
+		}
 
 		eglTerminate(display);
 
@@ -174,7 +175,7 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 	void EglGfxDevice::updateMonitorsFromJni()
 	{
-		EglGfxDevice& gfxDevice = static_cast<EglGfxDevice&>(theApplication().gfxDevice());
+		EglGfxDevice& gfxDevice = static_cast<EglGfxDevice&>(theApplication().GetGfxDevice());
 		gfxDevice.updateMonitors();
 	}
 #endif
