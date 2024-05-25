@@ -21,7 +21,7 @@ namespace nCine
 	class UwpApplication : public Application, public winrt::implements<UwpApplication, winrtWAC::IFrameworkViewSource, winrtWAC::IFrameworkView>
 	{
 	public:
-		/// Entry point method to be called in the `main()` function
+		/** @brief Entry point method to be called in the `main()` function */
 		static int Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
 		UwpApplication() : Application(), _isSuspended(false) { }
@@ -35,7 +35,7 @@ namespace nCine
 		//	return _dispatcher;
 		//}
 
-	protected:
+		// IFrameworkViewSource and IFrameworkView methods
 		void Initialize(const winrtWAC::CoreApplicationView& applicationView);
 		void SetWindow(const winrtWUC::CoreWindow& window);
 		void Load(const winrt::hstring& entryPoint);

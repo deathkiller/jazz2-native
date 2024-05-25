@@ -20,7 +20,7 @@ std::unique_ptr<Death::IO::Stream> __logFile;
 /// Processes the next application command
 void androidHandleCommand(struct android_app* state, int32_t cmd)
 {
-	nCine::AndroidApplication::processCommand(state, cmd);
+	nCine::AndroidApplication::ProcessCommand(state, cmd);
 }
 
 /// Parses the next input event
@@ -218,23 +218,13 @@ namespace nCine
 
 	void AndroidApplication::PreInit()
 	{
-#if defined(DEATH_TRACE)
-		// Try to open log file as early as possible
-		StringView externalPath = GetExternalDataPath();
-		if (!externalPath.empty()) {
-			// TODO: Hardcoded path
-			__logFile = fs::Open(fs::CombinePath(externalPath, "Jazz2.log"_s), FileAccessMode::Write);
-			if (!__logFile->IsValid()) {
-				__logFile = nullptr;
-				LOGW("Cannot create log file, using Android log instead");
-			}
-		}
-#endif
 		profileStartTime_ = TimeStamp::now();
 
 		AndroidJniHelper::AttachJVM(state_);
 		AndroidAssetStream::InitializeAssetManager(state_);
 		
+		PreInitCommon(createAppEventHandler_());
+
 #if defined(DEATH_TARGET_ARM)
 #	if defined(DEATH_TARGET_32BIT)
 		LOGI("Running on %s %s (%s) as armeabi-v7a application", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
@@ -246,8 +236,6 @@ namespace nCine
 #else
 		LOGI("Running on %s %s (%s)", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
 #endif
-
-		PreInitCommon(createAppEventHandler_());
 	}
 
 	void AndroidApplication::Init()
@@ -266,6 +254,7 @@ namespace nCine
 			LOGF("Cannot find a suitable EGL configuration, graphics device not created");
 			exit(EXIT_FAILURE);
 		}
+		
 		inputManager_ = std::make_unique<AndroidInputManager>(state_);
 
 #if defined(NCINE_PROFILING)
@@ -278,7 +267,7 @@ namespace nCine
 
 	void AndroidApplication::Shutdown()
 	{
-		Application::shutdownCommon();
+		Application::ShutdownCommon();
 		AndroidJniHelper::DetachJVM();
 		isInitialized_ = false;
 	}
