@@ -28,7 +28,7 @@ namespace nCine
 		iboSpecs.maxSize = iboMaxSize;
 		iboSpecs.alignment = sizeof(GLushort);
 
-		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		const int offsetAlignment = gfxCaps.value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		const int uboMaxSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 

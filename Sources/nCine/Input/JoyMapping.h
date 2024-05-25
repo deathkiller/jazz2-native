@@ -20,6 +20,8 @@ namespace nCine
 	class JoyMapping
 	{
 	public:
+		static constexpr float DefaultDeadzone = 0.4f;
+
 		JoyMapping();
 		~JoyMapping() {}
 
@@ -44,20 +46,22 @@ namespace nCine
 
 		bool isJoyMapped(int joyId) const;
 		const JoyMappedState& joyMappedState(int joyId) const;
-		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
+		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue = DefaultDeadzone) const;
 		static JoystickGuid createJoystickGuid(uint16_t bus, uint16_t vendor, uint16_t product, uint16_t version, const StringView& name, uint8_t driverSignature, uint8_t driverData);
 		
 		int findMappingByGuid(const JoystickGuid& guid) const;
 		int findMappingByName(const char* name) const;
 
 	private:
-		static const unsigned int MaxNameLength = 64;
+		static constexpr std::uint32_t MaxNameLength = 64;
 
 		struct MappingDescription
 		{
 			struct Axis
 			{
 				AxisName name;
+				ButtonName buttonNamePositive;
+				ButtonName buttonNameNegative;
 				float min;
 				float max;
 			};

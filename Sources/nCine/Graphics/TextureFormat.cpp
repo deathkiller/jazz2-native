@@ -461,7 +461,7 @@ namespace nCine
 
 	void TextureFormat::checkFormatSupport() const
 	{
-		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 
 		switch (internalFormat_) {
 			case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:

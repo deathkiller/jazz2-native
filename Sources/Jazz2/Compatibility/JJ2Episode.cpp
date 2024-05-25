@@ -24,7 +24,7 @@ namespace Jazz2::Compatibility
 
 	bool JJ2Episode::Open(const StringView path)
 	{
-		auto s = fs::Open(path, FileAccessMode::Read);
+		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
@@ -119,7 +119,7 @@ namespace Jazz2::Compatibility
 
 	void JJ2Episode::Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion, const std::function<String(JJ2Episode*)>& episodeNameConversion, const std::function<Pair<String, String>(JJ2Episode*)>& episodePrevNext)
 	{
-		auto so = fs::Open(targetPath, FileAccessMode::Write);
+		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);

@@ -15,7 +15,7 @@ namespace nCine
 
 	RenderBatcher::RenderBatcher()
 	{
-		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		UboMaxSize = static_cast<unsigned int>(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
 
 		// Create the first buffer right away
@@ -25,12 +25,12 @@ namespace nCine
 	void RenderBatcher::createBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
 	{
 		unsigned int minBatchSize, maxBatchSize;
-		unsigned int fixedBatchSize = theApplication().appConfiguration().fixedBatchSize;
+		unsigned int fixedBatchSize = theApplication().GetAppConfiguration().fixedBatchSize;
 		if (fixedBatchSize > 0) {
 			minBatchSize = fixedBatchSize;
 			maxBatchSize = fixedBatchSize;
 		} else {
-			auto& renderingSettings = theApplication().renderingSettings();
+			auto& renderingSettings = theApplication().GetRenderingSettings();
 			minBatchSize = renderingSettings.minBatchSize;
 			maxBatchSize = renderingSettings.maxBatchSize;
 		}
@@ -162,7 +162,7 @@ namespace nCine
 		}
 
 		// Set to true if at least one command in the batch has indices or forced by a rendering settings
-		bool batchingWithIndices = theApplication().renderingSettings().batchingWithIndices;
+		bool batchingWithIndices = theApplication().GetRenderingSettings().batchingWithIndices;
 		// Sum the amount of UBO memory required by the batch and determine if indices are needed
 		SmallVectorImpl<RenderCommand*>::const_iterator it = start;
 		while (it != end) {

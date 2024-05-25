@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Stream.h"
-#include "FileAccessMode.h"
+#include "FileAccess.h"
 #include "../Containers/String.h"
 
 namespace Death { namespace IO {
@@ -13,8 +13,8 @@ namespace Death { namespace IO {
 	class FileStream : public Stream
 	{
 	public:
-		FileStream(const Containers::StringView path, FileAccessMode mode);
-		FileStream(Containers::String&& path, FileAccessMode mode);
+		FileStream(const Containers::StringView path, FileAccess mode);
+		FileStream(Containers::String&& path, FileAccess mode);
 		~FileStream() override;
 
 		FileStream(const FileStream&) = delete;
@@ -51,6 +51,6 @@ namespace Death { namespace IO {
 		FILE* _handle;
 #endif
 
-		void Open(FileAccessMode mode);
+		void Open(FileAccess mode);
 	};
 }}

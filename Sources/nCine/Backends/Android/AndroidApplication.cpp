@@ -37,7 +37,7 @@ namespace nCine
 		return instance;
 	}
 
-	void AndroidApplication::start(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
+	void AndroidApplication::Run(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
 	{
 		ASSERT(state != nullptr);
 		ASSERT(createAppEventHandler != nullptr);
@@ -48,11 +48,11 @@ namespace nCine
 		state->onAppCmd = androidHandleCommand;
 		state->onInputEvent = androidHandleInput;
 
-		while (!app.shouldQuit()) {
+		while (!app.ShouldQuit()) {
 			int ident, events;
 			struct android_poll_source* source;
 
-			while ((ident = ALooper_pollAll(app.shouldSuspend() ? -1 : 0, nullptr, &events, reinterpret_cast<void**>(&source))) >= 0) {
+			while ((ident = ALooper_pollAll(app.ShouldSuspend() ? -1 : 0, nullptr, &events, reinterpret_cast<void**>(&source))) >= 0) {
 				if (source != nullptr) {
 					source->process(state, source);
 				}
@@ -61,22 +61,22 @@ namespace nCine
 				}
 				if (state->destroyRequested) {
 					LOGI("android_app->destroyRequested not equal to zero");
-					app.quit();
+					app.Quit();
 				}
 			}
 
-			if (app.isInitialized() && !app.shouldSuspend()) {
+			if (app.IsInitialized() && !app.ShouldSuspend()) {
 				AndroidInputManager::updateJoystickConnections();
-				app.step();
+				app.Step();
 			}
 		}
 
 		AndroidJniWrap_Activity::finishAndRemoveTask();
-		app.shutdown();
+		app.Shutdown();
 		exit(0);
 	}
 
-	void AndroidApplication::processCommand(struct android_app* state, int32_t cmd)
+	void AndroidApplication::ProcessCommand(struct android_app* state, int32_t cmd)
 	{
 		static EglGfxDevice* eglGfxDevice = nullptr;
 		// A flag to avoid resuming if the application has not been suspended first
@@ -91,10 +91,10 @@ namespace nCine
 				LOGI("APP_CMD_INIT_WINDOW event received");
 				if (state->window != nullptr) {
 					AndroidApplication& app = theAndroidApplication();
-					if (!app.isInitialized()) {
-						app.init();
-						eglGfxDevice = &static_cast<EglGfxDevice&>(app.gfxDevice());
-						app.step();
+					if (!app.IsInitialized()) {
+						app.Init();
+						eglGfxDevice = &static_cast<EglGfxDevice&>(app.GetGfxDevice());
+						app.Step();
 					} else {
 						eglGfxDevice->createSurface();
 						eglGfxDevice->bindContext();
@@ -114,17 +114,17 @@ namespace nCine
 			}
 			case APP_CMD_WINDOW_REDRAW_NEEDED: {
 				LOGI("APP_CMD_WINDOW_REDRAW_NEEDED event received");
-				theAndroidApplication().step();
+				theAndroidApplication().Step();
 				break;
 			}
 			case APP_CMD_GAINED_FOCUS: {
 				LOGI("APP_CMD_GAINED_FOCUS event received");
 				AndroidInputManager::enableAccelerometerSensor();
 				AndroidApplication& app = theAndroidApplication();
-				app.setFocus(true);
-				if (isSuspended && !app.shouldSuspend()) {
+				app.SetFocus(true);
+				if (isSuspended && !app.ShouldSuspend()) {
 					isSuspended = false;
-					app.resume();
+					app.Resume();
 				}
 				break;
 			}
@@ -132,11 +132,11 @@ namespace nCine
 				LOGI("APP_CMD_LOST_FOCUS event received");
 				AndroidInputManager::disableAccelerometerSensor();
 				AndroidApplication& app = theAndroidApplication();
-				app.setFocus(false);
-				if (!isSuspended && app.shouldSuspend()) {
+				app.SetFocus(false);
+				if (!isSuspended && app.ShouldSuspend()) {
 					isSuspended = true;
-					app.step();
-					app.suspend();
+					app.Step();
+					app.Suspend();
 				}
 				break;
 			}
@@ -150,8 +150,8 @@ namespace nCine
 			}
 			case APP_CMD_START: {
 				AndroidApplication& app = theAndroidApplication();
-				if (!app.isInitialized()) {
-					app.preInit();
+				if (!app.IsInitialized()) {
+					app.PreInit();
 					LOGI("APP_CMD_START event received (first run)");
 				} else {
 					LOGI("APP_CMD_START event received");
@@ -162,9 +162,9 @@ namespace nCine
 				LOGW("APP_CMD_RESUME event received");
 				AndroidApplication& app = theAndroidApplication();
 				app.isSuspended_ = false;
-				if (isSuspended && !app.shouldSuspend()) {
+				if (isSuspended && !app.ShouldSuspend()) {
 					isSuspended = false;
-					app.resume();
+					app.Resume();
 				}
 				break;
 			}
@@ -176,9 +176,9 @@ namespace nCine
 				LOGW("APP_CMD_PAUSE event received");
 				AndroidApplication& app = theAndroidApplication();
 				app.isSuspended_ = true;
-				if (!isSuspended && app.shouldSuspend()) {
+				if (!isSuspended && app.ShouldSuspend()) {
 					isSuspended = true;
-					app.suspend();
+					app.Suspend();
 				}
 				break;
 			}
@@ -188,39 +188,39 @@ namespace nCine
 			}
 			case APP_CMD_DESTROY: {
 				LOGI("APP_CMD_DESTROY event received");
-				theAndroidApplication().quit();
+				theAndroidApplication().Quit();
 				break;
 			}
 		}
 	}
 
-	const char* AndroidApplication::internalDataPath() const
+	const char* AndroidApplication::GetInternalDataPath() const
 	{
 		return state_->activity->internalDataPath;
 	}
 
-	const char* AndroidApplication::externalDataPath() const
+	const char* AndroidApplication::GetExternalDataPath() const
 	{
 		return state_->activity->externalDataPath;
 	}
 
-	const char* AndroidApplication::obbPath() const
+	const char* AndroidApplication::GetObbPath() const
 	{
 		return state_->activity->obbPath;
 	}
 
-	void AndroidApplication::toggleSoftInput()
+	void AndroidApplication::ToggleSoftInput()
 	{
 		if (isInitialized_) {
 			AndroidJniWrap_InputMethodManager::toggleSoftInput();
 		}
 	}
 
-	void AndroidApplication::preInit()
+	void AndroidApplication::PreInit()
 	{
 #if defined(DEATH_TRACE)
 		// Try to open log file as early as possible
-		StringView externalPath = externalDataPath();
+		StringView externalPath = GetExternalDataPath();
 		if (!externalPath.empty()) {
 			// TODO: Hardcoded path
 			__logFile = fs::Open(fs::CombinePath(externalPath, "Jazz2.log"_s), FileAccessMode::Write);
@@ -247,10 +247,10 @@ namespace nCine
 		LOGI("Running on %s %s (%s)", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
 #endif
 
-		preInitCommon(createAppEventHandler_());
+		PreInitCommon(createAppEventHandler_());
 	}
 
-	void AndroidApplication::init()
+	void AndroidApplication::Init()
 	{
 		ZoneScoped;
 		// Graphics device should always be created before the input manager!
@@ -272,11 +272,11 @@ namespace nCine
 		timings_[(int)Timings::PreInit] = profileStartTime_.secondsSince();
 #endif
 
-		Application::initCommon();
+		Application::InitCommon();
 		isInitialized_ = true;
 	}
 
-	void AndroidApplication::shutdown()
+	void AndroidApplication::Shutdown()
 	{
 		Application::shutdownCommon();
 		AndroidJniHelper::DetachJVM();

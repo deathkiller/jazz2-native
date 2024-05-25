@@ -97,6 +97,8 @@ namespace nCine
 	{
 		for (unsigned int i = 0; i < MaxNumAxes; i++) {
 			axes[i].name = AxisName::Unknown;
+			axes[i].buttonNamePositive = ButtonName::Unknown;
+			axes[i].buttonNameNegative = ButtonName::Unknown;
 		}
 		for (unsigned int i = 0; i < MaxNumAxes; i++) {
 			buttonAxes[i] = AxisName::Unknown;
@@ -190,7 +192,7 @@ namespace nCine
 
 	void JoyMapping::addMappingsFromFile(const StringView& path)
 	{
-		std::unique_ptr<Stream> fileHandle = fs::Open(path, FileAccessMode::Read);
+		std::unique_ptr<Stream> fileHandle = fs::Open(path, FileAccess::Read);
 		std::int64_t fileSize = fileHandle->GetSize();
 		if (fileSize == 0 || fileSize > 32 * 1024 * 1024) {
 			return;
@@ -242,9 +244,9 @@ namespace nCine
 		const auto& mapping = assignedMappings_[event.joyId];
 		const bool mappingIsValid = (mapping.isValid && event.buttonId >= 0 && event.buttonId < static_cast<int>(MappingDescription::MaxNumButtons));
 		if (mappingIsValid) {
-			mappedButtonEvent_.joyId = event.joyId;
-			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
-			if (mappedButtonEvent_.buttonName != ButtonName::Unknown) {
+			if (mapping.desc.buttons[event.buttonId] != ButtonName::Unknown) {
+				mappedButtonEvent_.joyId = event.joyId;
+				mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 #if defined(NCINE_INPUT_DEBUGGING)
 				LOGI("Button press mapped as button %d", buttonId);
@@ -289,9 +291,10 @@ namespace nCine
 		const auto& mapping = assignedMappings_[event.joyId];
 		const bool mappingIsValid = (mapping.isValid && event.buttonId >= 0 && event.buttonId < static_cast<int>(MappingDescription::MaxNumButtons));
 		if (mappingIsValid) {
-			mappedButtonEvent_.joyId = event.joyId;
-			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
-			if (mappedButtonEvent_.buttonName != ButtonName::Unknown) {
+			// Standard button
+			if (mapping.desc.buttons[event.buttonId] != ButtonName::Unknown) {
+				mappedButtonEvent_.joyId = event.joyId;
+				mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 #if defined(NCINE_INPUT_DEBUGGING)
 				LOGI("Button release mapped as button %d", buttonId);
@@ -299,7 +302,7 @@ namespace nCine
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
 				inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 			} else {
-				// Check if the button is mapped as an axis
+				// Button mapped as axis
 				const AxisName axisName = mapping.desc.buttonAxes[event.buttonId];
 				if (axisName != AxisName::Unknown) {
 					mappedAxisEvent_.joyId = event.joyId;
@@ -391,9 +394,10 @@ namespace nCine
 		if (mappingIsValid) {
 			const auto& axis = mapping.desc.axes[event.axisId];
 
-			mappedAxisEvent_.joyId = event.joyId;
-			mappedAxisEvent_.axisName = axis.name;
-			if (mappedAxisEvent_.axisName != AxisName::Unknown) {
+			// Standard axis
+			if (axis.name != AxisName::Unknown) {
+				mappedAxisEvent_.joyId = event.joyId;
+				mappedAxisEvent_.axisName = axis.name;
 				const float value = (event.value + 1.0f) * 0.5f;
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 #if defined(NCINE_INPUT_DEBUGGING)
@@ -401,11 +405,57 @@ namespace nCine
 #endif
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
 				inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
-			} else {
-#if defined(NCINE_INPUT_DEBUGGING)
-				LOGW("Axis move has incorrect mapping");
-#endif
 			}
+
+			// Axis mapped as button
+			if (axis.buttonNamePositive != ButtonName::Unknown) {
+				mappedButtonEvent_.joyId = event.joyId;
+				mappedButtonEvent_.buttonName = axis.buttonNamePositive;
+				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
+				bool newState = (event.value >= DefaultDeadzone);
+				bool prevState = mappedJoyStates_[event.joyId].buttons_[buttonId];
+				if (newState != prevState) {
+					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;
+					if (newState) {
+#if defined(NCINE_INPUT_DEBUGGING)
+						LOGI("Axis positive move mapped as button press %d", buttonId);
+#endif
+						inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
+					} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+						LOGI("Axis positive move mapped as button release %d", buttonId);
+#endif
+						inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
+					}
+				}
+			}
+			if (axis.buttonNameNegative != ButtonName::Unknown) {
+				mappedButtonEvent_.joyId = event.joyId;
+				mappedButtonEvent_.buttonName = axis.buttonNameNegative;
+				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
+				bool newState = (event.value <= -DefaultDeadzone);
+				bool prevState = mappedJoyStates_[event.joyId].buttons_[buttonId];
+				if (newState != prevState) {
+					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;
+					if (newState) {
+#if defined(NCINE_INPUT_DEBUGGING)
+						LOGI("Axis negative move mapped as button press %d", buttonId);
+#endif
+						inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
+					} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+						LOGI("Axis negative move mapped as button release %d", buttonId);
+#endif
+						inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
+					}
+				}
+			}
+
+#if defined(NCINE_INPUT_DEBUGGING)
+			if (mappedAxisEvent_.axisName == AxisName::Unknown && axis.buttonNamePositive == ButtonName::Unknown) {
+				LOGW("Axis move has incorrect mapping");
+			}
+#endif
 		} else {
 #if defined(NCINE_INPUT_DEBUGGING)
 			LOGW("Axis move has no mapping");
@@ -683,10 +733,12 @@ namespace nCine
 			}
 
 			if (parsePlatformKeyword(subStart, subMid)) {
+				// Platform name
 				if (!parsePlatformName(subMid + 1, subEnd)) {
 					return false;
 				}
 			} else {
+				// Axis
 				const int axisIndex = parseAxisName(subStart, subMid);
 				if (axisIndex != -1) {
 					MappingDescription::Axis axis;
@@ -699,18 +751,38 @@ namespace nCine
 						const int buttonAxisMapping = parseButtonMapping(subMid + 1, subEnd);
 						if (buttonAxisMapping != -1 && buttonAxisMapping < MappingDescription::MaxNumAxes) {
 							map.desc.buttonAxes[buttonAxisMapping] = static_cast<AxisName>(axisIndex);
+						} else if (subMid + 1 < subEnd) {
+							// It's empty sometimes
+							LOGI("Unsupported mapping source \"%s\" in \"%s\"", String(subMid + 1, subEnd - (subMid + 1)).data(), map.name);
 						}
 					}
 				} else {
+					// Button
 					const int buttonIndex = parseButtonName(subStart, subMid);
 					if (buttonIndex != -1) {
 						const int buttonMapping = parseButtonMapping(subMid + 1, subEnd);
-						if (buttonMapping != -1 && buttonMapping < MappingDescription::MaxNumButtons)
+						if (buttonMapping != -1 && buttonMapping < MappingDescription::MaxNumButtons) {
 							map.desc.buttons[buttonMapping] = static_cast<ButtonName>(buttonIndex);
-						else {
+						} else {
 							const int hatMapping = parseHatMapping(subMid + 1, subEnd);
-							if (hatMapping != -1 && hatMapping < MappingDescription::MaxHatButtons)
+							if (hatMapping != -1 && hatMapping < MappingDescription::MaxHatButtons) {
 								map.desc.hats[hatMapping] = static_cast<ButtonName>(buttonIndex);
+							} else {
+								MappingDescription::Axis axis;
+								const int axisMapping = parseAxisMapping(subMid + 1, subEnd, axis);
+								if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes) {
+									if (axis.max > 0.0f) {
+										map.desc.axes[axisMapping].buttonNamePositive = static_cast<ButtonName>(buttonIndex);
+									} else if (axis.max < 0.0f) {
+										map.desc.axes[axisMapping].buttonNameNegative = static_cast<ButtonName>(buttonIndex);
+									} else {
+										LOGI("Unsupported axis value \"%s\" for button mapping in \"%s\"", String(subMid + 1, subEnd - (subMid + 1)).data(), map.name);
+									}
+								} else if (subMid + 1 < subEnd) {
+									// It's empty sometimes
+									LOGI("Unsupported mapping source \"%s\" in \"%s\"", String(subMid + 1, subEnd - (subMid + 1)).data(), map.name);
+								}
+							}
 						}
 					}
 				}

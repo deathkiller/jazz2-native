@@ -74,7 +74,7 @@ namespace Jazz2::UI
 			_antialiasing._view->setCamera(_antialiasing._camera.get());
 			//_antialiasing._view->setClearMode(Viewport::ClearMode::Never);
 
-			SceneNode& rootNode = theApplication().rootNode();
+			SceneNode& rootNode = theApplication().GetRootNode();
 			_antialiasing.setParent(&rootNode);
 			setParent(nullptr);
 
@@ -93,7 +93,7 @@ namespace Jazz2::UI
 			_antialiasing._camera = nullptr;
 			_antialiasing._view = nullptr;
 
-			SceneNode& rootNode = theApplication().rootNode();
+			SceneNode& rootNode = theApplication().GetRootNode();
 			_antialiasing.setParent(nullptr);
 			setParent(&rootNode);
 		}

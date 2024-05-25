@@ -140,11 +140,11 @@ namespace Jazz2::UI::Menu
 #	endif
 				PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
 				if (PreferencesCache::EnableFullscreen) {
-					theApplication().gfxDevice().setResolution(true);
-					theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
+					theApplication().GetGfxDevice().setResolution(true);
+					theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
 				} else {
-					theApplication().gfxDevice().setResolution(false);
-					theApplication().inputManager().setCursor(IInputManager::Cursor::Arrow);
+					theApplication().GetGfxDevice().setResolution(false);
+					theApplication().GetInputManager().setCursor(IInputManager::Cursor::Arrow);
 				}
 				_isDirty = true;
 				_animation = 0.0f;

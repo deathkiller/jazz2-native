@@ -12,7 +12,7 @@ namespace nCine
 	AudioLoaderMpt::AudioLoaderMpt(std::unique_ptr<Stream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		IAudioDevice& device = theServiceLocator().audioDevice();
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
 		bytesPerSample_ = 2;
 		numChannels_ = 2;

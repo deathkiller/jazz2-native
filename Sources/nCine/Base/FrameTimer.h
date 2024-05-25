@@ -15,37 +15,37 @@ namespace nCine
 		FrameTimer(float logInterval, float avgInterval);
 
 		/// Adds a frame to the counter and calculates the interval since the previous one
-		void addFrame();
+		void AddFrame();
 
 		/// Starts counting the suspension time
-		void suspend();
+		void Suspend();
 		/// Drifts timers by the duration of last suspension
 		/*! \return A timestamp with last suspension duration */
-		TimeStamp resume();
+		TimeStamp Resume();
 
 		/// Returns the total number of frames counted
-		inline unsigned long int totalNumberFrames() const {
+		inline unsigned long int GetTotalNumberFrames() const {
 			return totNumFrames_;
 		}
 		/// Returns the last frame duration in seconds between the last two subsequent calls to `addFrame()`
-		inline float lastFrameDuration() const {
+		inline float GetLastFrameDuration() const {
 			return frameDuration_;
 		}
 		/// Returns current frame duration in seconds since the last call to `addFrame()`
-		inline float frameDuration() const {
+		inline float GetFrameDuration() const {
 			return frameStart_.secondsSince();
 		}
 		/// Returns current frame duration in ticks since the last call to `addFrame()`
-		inline uint64_t frameDurationAsTicks() const {
+		inline uint64_t GetFrameDurationAsTicks() const {
 			return frameStart_.timeSince().ticks();
 		}
 		/// Returns the average FPS during the update interval
-		inline float averageFps() const {
+		inline float GetAverageFps() const {
 			return avgFps_;
 		}
 
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
-		inline float timeMult() const {
+		inline float GetTimeMult() const {
 			return timeMults_[0];
 		}
 

@@ -30,7 +30,7 @@ namespace nCine
 		return *_instance;
 	}
 
-	int UwpApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
+	int UwpApplication::Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
 	{
 		if (createAppEventHandler == nullptr) {
 			return EXIT_FAILURE;
@@ -92,21 +92,21 @@ namespace nCine
 		auto gfxDevice = dynamic_cast<UwpGfxDevice*>(gfxDevice_.get());
 		gfxDevice->MakeCurrent();
 
-		initCommon();
+		InitCommon();
 
 		while (!shouldQuit_) {
 			_dispatcher.ProcessEvents(winrtWUC::CoreProcessEventsOption::ProcessAllIfPresent);
 
 			if (!shouldSuspend()) {
 				UwpInputManager::updateJoystickStates();
-				step();
+				Step();
 			}
 		}
 	}
 
 	void UwpApplication::Uninitialize()
 	{
-		shutdownCommon();
+		ShutdownCommon();
 	}
 
 	void UwpApplication::OnActivated(const winrtWAC::CoreApplicationView& applicationView, const winrtWAA::IActivatedEventArgs& args)
@@ -204,7 +204,7 @@ namespace nCine
 	{
 		if (!_isSuspended) {
 			_isSuspended = true;
-			suspend();
+			Suspend();
 		}
 	}
 
@@ -212,7 +212,7 @@ namespace nCine
 	{
 		if (_isSuspended) {
 			_isSuspended = false;
-			resume();
+			Resume();
 		}
 	}
 
@@ -220,7 +220,7 @@ namespace nCine
 	{
 		if (!_isSuspended) {
 			_isSuspended = true;
-			suspend();
+			Suspend();
 		}
 	}
 
@@ -228,7 +228,7 @@ namespace nCine
 	{
 		if (_isSuspended) {
 			_isSuspended = false;
-			resume();
+			Resume();
 		}
 	}
 

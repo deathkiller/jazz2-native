@@ -22,7 +22,7 @@ namespace nCine
 	{
 	public:
 		/// Entry point method to be called in the `main()` function
-		static int start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
+		static int Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
 		UwpApplication() : Application(), _isSuspended(false) { }
 		~UwpApplication() = default;
@@ -35,11 +35,11 @@ namespace nCine
 		//	return _dispatcher;
 		//}
 
-		void Initialize(const winrtWAC::CoreApplicationView& applicationView);
-		void SetWindow(const winrtWUC::CoreWindow& window);
-		void Load(const winrt::hstring& entryPoint);
-		void Run();
-		void Uninitialize();
+		void Initialize(const winrtWAC::CoreApplicationView& applicationView) override;
+		void SetWindow(const winrtWUC::CoreWindow& window) override;
+		void Load(const winrt::hstring& entryPoint) override;
+		void Run() override;
+		void Uninitialize() override;
 
 	private:
 		void OnActivated(const winrtWAC::CoreApplicationView& applicationView, const winrtWAA::IActivatedEventArgs& args);
@@ -54,9 +54,7 @@ namespace nCine
 
 		bool _isSuspended;
 
-		/// Deleted copy constructor
 		UwpApplication(const UwpApplication&) = delete;
-		/// Deleted assignment operator
 		UwpApplication& operator=(const UwpApplication&) = delete;
 
 		friend Application& theApplication();

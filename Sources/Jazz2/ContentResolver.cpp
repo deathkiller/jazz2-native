@@ -335,14 +335,14 @@ namespace Jazz2
 
 		String fullPath = fs::CombinePath(GetContentPath(), path);
 		if (fs::IsReadableFile(fullPath)) {
-			auto realFile = fs::Open(fullPath, FileAccessMode::Read);
+			auto realFile = fs::Open(fullPath, FileAccess::Read);
 			if (realFile->IsValid()) {
 				return realFile;
 			}
 		}
 
 		fullPath = fs::CombinePath(GetCachePath(), path);
-		return fs::Open(fullPath, FileAccessMode::Read);
+		return fs::Open(fullPath, FileAccess::Read);
 	}
 
 	void ContentResolver::BeginLoading()
@@ -459,7 +459,7 @@ namespace Jazz2
 		}
 
 		// Try to load it
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Metadata"_s, String(pathNormalized + ".res"_s) }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Metadata"_s, String(pathNormalized + ".res"_s) }), FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit
@@ -648,7 +648,7 @@ namespace Jazz2
 			return RequestGraphicsAura(pathNormalized, paletteOffset);
 		}
 
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(pathNormalized + ".res"_s) }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(pathNormalized + ".res"_s) }), FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -939,7 +939,7 @@ namespace Jazz2
 			fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
 		}
 
-		auto s = fs::Open(fullPath, FileAccessMode::Read);
+		auto s = fs::Open(fullPath, FileAccess::Read);
 		if (!s->IsValid()) {
 			return nullptr;
 		}
@@ -1139,7 +1139,7 @@ namespace Jazz2
 			descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
 		}
 
-		auto s = fs::Open(descriptor.FullPath, FileAccessMode::Read);
+		auto s = fs::Open(descriptor.FullPath, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
@@ -1305,7 +1305,7 @@ namespace Jazz2
 
 	std::optional<Episode> ContentResolver::GetEpisodeByPath(const StringView path, bool withImages)
 	{
-		auto s = fs::Open(path, FileAccessMode::Read);
+		auto s = fs::Open(path, FileAccess::Read);
 		if (s->GetSize() < 16) {
 			return std::nullopt;
 		}
@@ -1482,8 +1482,8 @@ namespace Jazz2
 			return shader;
 		}
 
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
-		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
 		const std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
@@ -1540,8 +1540,8 @@ namespace Jazz2
 			return shader;
 		}
 
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
-		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
 		const std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
@@ -1654,7 +1654,7 @@ namespace Jazz2
 			return;
 		}
 
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(path + ".res"_s) }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(path + ".res"_s) }), FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -1713,7 +1713,7 @@ namespace Jazz2
 				Vector2i gunspot = GetVector2iFromJson(doc["Gunspot"], Vector2i(InvalidValue, InvalidValue));
 
 				// Write to .aura file
-				auto so = fs::Open(auraPath, FileAccessMode::Write);
+				auto so = fs::Open(auraPath, FileAccess::Write);
 				ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 				std::uint8_t flags = 0x80;

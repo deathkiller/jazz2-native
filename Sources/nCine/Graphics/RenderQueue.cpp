@@ -82,7 +82,7 @@ namespace nCine
 
 	void RenderQueue::sortAndCommit()
 	{
-		const bool batchingEnabled = theApplication().renderingSettings().batchingEnabled;
+		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
 
 		// Sorting the queues with the relevant orders
 		sort(opaqueQueue_.begin(), opaqueQueue_.end(), descendingOrder);
@@ -124,7 +124,7 @@ namespace nCine
 
 	void RenderQueue::draw()
 	{
-		const bool batchingEnabled = theApplication().renderingSettings().batchingEnabled;
+		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
 		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
 

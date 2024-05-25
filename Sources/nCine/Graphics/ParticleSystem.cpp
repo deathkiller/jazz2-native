@@ -223,7 +223,7 @@ namespace nCine
 			}
 		}
 
-		lastFrameUpdated_ = theApplication().numFrames();
+		lastFrameUpdated_ = theApplication().GetFrameCount();
 
 #if defined(WITH_TRACY)
 		// TODO: Tracy

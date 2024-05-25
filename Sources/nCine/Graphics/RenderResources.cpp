@@ -186,7 +186,7 @@ namespace nCine
 		ASSERT(buffersManager_ == nullptr);
 		ASSERT(vaoPool_ == nullptr);
 	
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
 		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
@@ -196,7 +196,7 @@ namespace nCine
 	{
 		// `create()` can be called after `createMinimal()`
 
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		if (binaryShaderCache_ == nullptr) {
 			binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		}
@@ -250,7 +250,7 @@ namespace nCine
 #endif
 		};
 
-		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		const int maxUniformBlockSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		char sourceString[64];
@@ -362,9 +362,8 @@ namespace nCine
 		registerDefaultBatchedShaders();
 
 		// Calculating a default projection matrix for all shader programs
-		const int width = theApplication().width();
-		const int height = theApplication().height();
-		defaultCamera_->setOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
+		auto res = theApplication().GetResolution();
+		defaultCamera_->setOrthoProjection(0.0f, static_cast<float>(res.X), 0.0f, static_cast<float>(res.Y));
 	}
 
 	void RenderResources::dispose()

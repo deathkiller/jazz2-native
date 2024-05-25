@@ -18,8 +18,10 @@ namespace nCine
 	class MainApplication : public Application
 	{
 	public:
-		/// Entry point method to be called in the `main()` function
-		static int start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
+		/**  @brief Entry point method to be called in the `main()` function */ 
+		static int Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
+
+		void AttachTraceTarget(Containers::StringView targetPath) override;
 
 	private:
 		/// Suspension state from last frame
@@ -31,13 +33,13 @@ namespace nCine
 #endif
 
 		/// Must be called at the beginning to initialize the application
-		void init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
+		void Init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
 		/// Must be called continuously to keep the application running
-		void run();
+		void ProcessStep();
 		/// Processes events inside the game loop
-		void processEvents();
+		void ProcessEvents();
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-		static void emscriptenStep();
+		static void EmscriptenStep();
 #endif
 
 		/// Private constructor
@@ -51,11 +53,9 @@ namespace nCine
 		{
 		}
 
-		/// Private destructor
 		~MainApplication() = default;
-		/// Deleted copy constructor
+
 		MainApplication(const MainApplication&) = delete;
-		/// Deleted assignment operator
 		MainApplication& operator=(const MainApplication&) = delete;
 
 		friend Application& theApplication();

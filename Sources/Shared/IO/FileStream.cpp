@@ -24,12 +24,12 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	FileStream::FileStream(const Containers::StringView path, FileAccessMode mode)
+	FileStream::FileStream(const Containers::StringView path, FileAccess mode)
 		: FileStream(Containers::String{path}, mode)
 	{
 	}
 
-	FileStream::FileStream(Containers::String&& path, FileAccessMode mode)
+	FileStream::FileStream(Containers::String&& path, FileAccess mode)
 		: _path(std::move(path)),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 			_fileDescriptor(-1)
@@ -211,18 +211,18 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-	void FileStream::Open(FileAccessMode mode)
+	void FileStream::Open(FileAccess mode)
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t openFlag;
-		switch (mode & ~FileAccessMode::Exclusive) {
-			case FileAccessMode::Read:
+		switch (mode & ~FileAccess::Exclusive) {
+			case FileAccess::Read:
 				openFlag = O_RDONLY;
 				break;
-			case FileAccessMode::Write:
+			case FileAccess::Write:
 				openFlag = O_WRONLY;
 				break;
-			case FileAccessMode::Read | FileAccessMode::Write:
+			case FileAccess::ReadWrite:
 				openFlag = O_RDWR;
 				break;
 			default:
@@ -236,10 +236,10 @@ namespace Death { namespace IO {
 			return;
 		}
 
-		switch (mode & ~FileAccessMode::Exclusive) {
+		switch (mode & ~FileAccess::Exclusive) {
 			default: LOGI("File \"%s\" opened", _path.data()); break;
-			case FileAccessMode::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
-			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
+			case FileAccess::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
+			case FileAccess::ReadWrite: LOGI("File \"%s\" opened for read+write", _path.data()); break;
 		}
 
 		// Try to get file size
@@ -251,27 +251,27 @@ namespace Death { namespace IO {
 		std::int32_t openFlag;
 		const char* modeInternal;
 		DWORD shareMode;
-		switch (mode & ~FileAccessMode::Exclusive) {
-			case FileAccessMode::Read:
+		switch (mode & ~FileAccess::Exclusive) {
+			case FileAccess::Read:
 				desireAccess = GENERIC_READ;
 				creationDisposition = OPEN_EXISTING;
 				openFlag = _O_RDONLY | _O_BINARY;
 				modeInternal = "rb";
-				shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE);
+				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE);
 				break;
-			case FileAccessMode::Write:
+			case FileAccess::Write:
 				desireAccess = GENERIC_WRITE;
 				creationDisposition = CREATE_ALWAYS;
 				openFlag = _O_WRONLY | _O_BINARY;
 				modeInternal = "wb";
-				shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? 0 : FILE_SHARE_READ);
+				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
 				break;
-			case FileAccessMode::Read | FileAccessMode::Write:
+			case FileAccess::ReadWrite:
 				desireAccess = GENERIC_READ | GENERIC_WRITE;
 				creationDisposition = OPEN_ALWAYS;
 				openFlag = _O_RDWR | _O_BINARY;
 				modeInternal = "r+b";
-				shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? 0 : FILE_SHARE_READ);
+				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
 				break;
 			default:
 				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
@@ -294,10 +294,10 @@ namespace Death { namespace IO {
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
 		std::int32_t shareMode;
-		switch (mode & ~FileAccessMode::Exclusive) {
-			case FileAccessMode::Read: modeInternal = L"rb"; shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? _SH_DENYRW : _SH_DENYNO); break;
-			case FileAccessMode::Write: modeInternal = L"wb"; shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
-			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = L"r+b"; shareMode = ((mode & FileAccessMode::Exclusive) == FileAccessMode::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
+		switch (mode & ~FileAccess::Exclusive) {
+			case FileAccess::Read: modeInternal = L"rb"; shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? _SH_DENYRW : _SH_DENYNO); break;
+			case FileAccess::Write: modeInternal = L"wb"; shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
+			case FileAccess::ReadWrite: modeInternal = L"r+b"; shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
 			default:
 				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
@@ -311,10 +311,10 @@ namespace Death { namespace IO {
 		}
 #	else
 		const char* modeInternal;
-		switch (mode & ~FileAccessMode::Exclusive) {
-			case FileAccessMode::Read: modeInternal = "rb"; break;
-			case FileAccessMode::Write: modeInternal = "wb"; break;
-			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = "r+b"; break;
+		switch (mode & ~FileAccess::Exclusive) {
+			case FileAccess::Read: modeInternal = "rb"; break;
+			case FileAccess::Write: modeInternal = "wb"; break;
+			case FileAccess::ReadWrite: modeInternal = "r+b"; break;
 			default:
 				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
@@ -327,10 +327,10 @@ namespace Death { namespace IO {
 		}
 #	endif
 
-		switch (mode & ~FileAccessMode::Exclusive) {
+		switch (mode & ~FileAccess::Exclusive) {
 			default: LOGI("File \"%s\" opened", _path.data()); break;
-			case FileAccessMode::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
-			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
+			case FileAccess::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
+			case FileAccess::ReadWrite: LOGI("File \"%s\" opened for read+write", _path.data()); break;
 		}
 
 		// Try to get file size

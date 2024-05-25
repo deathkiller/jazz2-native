@@ -5,7 +5,7 @@
 #if defined(DEATH_TARGET_ANDROID)
 
 #include "Stream.h"
-#include "FileAccessMode.h"
+#include "FileAccess.h"
 #include "../Containers/String.h"
 #include "../Containers/StringView.h"
 
@@ -25,7 +25,7 @@ namespace Death { namespace IO {
 	public:
 		static constexpr Containers::StringView Prefix = "asset:"_s;
 
-		AndroidAssetStream(const Containers::String& path, FileAccessMode mode);
+		AndroidAssetStream(const Containers::String& path, FileAccess mode);
 		~AndroidAssetStream() override;
 
 		AndroidAssetStream(const AndroidAssetStream&) = delete;
@@ -86,7 +86,7 @@ namespace Death { namespace IO {
 		AAsset* _asset;
 #endif
 
-		void Open(FileAccessMode mode);
+		void Open(FileAccess mode);
 	};
 }}
 

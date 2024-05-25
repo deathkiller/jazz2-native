@@ -405,7 +405,9 @@ namespace Jazz2::UI::Menu
 				_root->SwitchToSection<AboutSection>();
 				break;
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-			case Item::Quit: theApplication().quit(); break;
+			case Item::Quit:
+				theApplication().Quit();
+				break;
 #endif
 		}
 	}

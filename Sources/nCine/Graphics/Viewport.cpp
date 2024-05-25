@@ -110,7 +110,7 @@ namespace nCine
 		}
 
 		if (type_ != Type::NoTexture) {
-			static const int MaxColorAttachments = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
+			static const int MaxColorAttachments = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
 			const bool indexOutOfRange = (index >= static_cast<unsigned int>(MaxColorAttachments) || index >= MaxNumTextures);
 			const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->width() != width_);
 			const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->height() != height_);
@@ -320,8 +320,8 @@ namespace nCine
 		calculateCullingRect();
 		if (rootNode_ != nullptr) {
 			ZoneScopedC(0x81A861);
-			if (rootNode_->lastFrameUpdated() < theApplication().numFrames()) {
-				rootNode_->OnUpdate(theApplication().timeMult());
+			if (rootNode_->lastFrameUpdated() < theApplication().GetFrameCount()) {
+				rootNode_->OnUpdate(theApplication().GetTimeMult());
 			}
 			// AABBs should update after nodes have been transformed
 			updateCulling(rootNode_);
@@ -389,7 +389,7 @@ namespace nCine
 		}
 
 		if (type_ == Type::Screen || type_ == Type::WithTexture) {
-			const unsigned long int numFrames = theApplication().numFrames();
+			const unsigned long int numFrames = theApplication().GetFrameCount();
 			if ((lastFrameCleared_ < numFrames && (clearMode_ == ClearMode::EveryFrame || clearMode_ == ClearMode::ThisFrameOnly)) ||
 				clearMode_ == ClearMode::EveryDraw) {
 				const GLClearColor::State clearColorState = GLClearColor::state();
@@ -440,7 +440,7 @@ namespace nCine
 
 #if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		if (type_ == Type::WithTexture && depthStencilFormat_ != DepthStencilFormat::None &&
-			!theApplication().appConfiguration().withGlDebugContext) {
+			!theApplication().GetAppConfiguration().withGlDebugContext) {
 			const GLenum invalidAttachment = depthStencilFormatToGLAttachment(depthStencilFormat_);
 			fbo_->invalidate(1, &invalidAttachment);
 		}

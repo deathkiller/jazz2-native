@@ -2,6 +2,7 @@
 #include "ContentResolver.h"
 #include "LevelHandler.h"
 #include "UI/ControlScheme.h"
+#include "../nCine/Application.h"
 
 #include <Containers/StringConcatenable.h>
 #include <Environment.h>
@@ -11,6 +12,7 @@
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+using namespace nCine;
 
 namespace Jazz2
 {
@@ -72,7 +74,8 @@ namespace Jazz2
 		bool resetConfig = false;
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-		fs::MountAsPersistent("/Persistent"_s);
+		auto configDir = "/Persistent"_s;
+		fs::MountAsPersistent(configDir);
 		_configPath = "/Persistent/Jazz2.config"_s;
 
 		for (int32_t i = 0; i < config.argc(); i++) {
@@ -132,13 +135,35 @@ namespace Jazz2
 			}
 #	endif
 		}
+
+		auto configDir = fs::GetDirectoryName(_configPath);
+
+#	if defined(DEATH_TRACE)
+#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH)
+		fs::CreateDirectories(configDir);
+		theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+#		elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+		for (std::int32_t i = 0; i < config.argc(); i++) {
+			auto arg = config.argv(i);
+			if (arg == "/log:file"_s) {
+				fs::CreateDirectories(configDir);
+				theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+			}
+#			if defined(DEATH_TARGET_WINDOWS)
+			else if (arg == "/log"_s) {
+				theApplication().AttachTraceTarget(Application::ConsoleTarget);
+			}
+#			endif
+		}
+#		endif
+#	endif
 #endif
 
 		UI::ControlScheme::Reset();
 
 		// Try to read config file
 		if (!resetConfig) {
-			auto s = fs::Open(_configPath, FileAccessMode::Read);
+			auto s = fs::Open(_configPath, FileAccess::Read);
 			if (s->GetSize() > 18) {
 				uint64_t signature = s->ReadValue<uint64_t>();
 				uint8_t fileType = s->ReadValue<uint8_t>();
@@ -293,10 +318,7 @@ namespace Jazz2
 				FirstRun = true;
 				TryLoadPreferredLanguage();
 
-				auto configDir = fs::GetDirectoryName(_configPath);
-				if (!configDir.empty()) {
-					fs::CreateDirectories(configDir);
-				}
+				fs::CreateDirectories(configDir);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 				// Create "Source" directory on the first launch
@@ -359,7 +381,7 @@ namespace Jazz2
 
 		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
 
-		auto so = fs::Open(_configPath, FileAccessMode::Write);
+		auto so = fs::Open(_configPath, FileAccess::Write);
 		if (!so->IsValid()) {
 			return;
 		}

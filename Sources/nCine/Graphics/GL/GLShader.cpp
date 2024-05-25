@@ -90,7 +90,7 @@ namespace nCine
 
 		String fileSource;
 		if (!filename.empty()) {
-			std::unique_ptr<Stream> fileHandle = fs::Open(filename, FileAccessMode::Read);
+			std::unique_ptr<Stream> fileHandle = fs::Open(filename, FileAccess::Read);
 			if (!fileHandle->IsValid()) {
 				return false;
 			}

@@ -73,7 +73,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
-		static const int offsetAlignment = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const int offsetAlignment = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
 		size_ += alignAmount_;
 	}

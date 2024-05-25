@@ -25,7 +25,7 @@ namespace Jazz2::UI::Menu
 			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _touchButtonsTimer(0.0f)
 	{
-		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
 		_texturedBackgroundLayer.Visible = false;
 		_canvasBackground = std::make_unique<MenuBackgroundCanvas>(this);
@@ -97,7 +97,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::OnBeginFrame()
 	{
-		float timeMult = theApplication().timeMult();
+		float timeMult = theApplication().GetTimeMult();
 
 		UpdatePressedActions();
 		UpdateDebris(timeMult);
@@ -394,7 +394,7 @@ namespace Jazz2::UI::Menu
 	{
 		if ((type & ChangedPreferencesType::Graphics) == ChangedPreferencesType::Graphics) {
 			Viewport::chain().clear();
-			Vector2i res = theApplication().resolution();
+			Vector2i res = theApplication().GetResolution();
 			OnInitializeViewport(res.X, res.Y);
 		}
 
@@ -576,7 +576,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::UpdatePressedActions()
 	{
-		auto& input = theApplication().inputManager();
+		auto& input = theApplication().GetInputManager();
 		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
 
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];

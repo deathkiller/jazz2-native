@@ -21,16 +21,15 @@ namespace nCine
 	class I18n
 	{
 	public:
-		static constexpr char ContextSeparator = 0x04;
+		struct ExpressionToken;
 
-		struct ExpressionToken
-		{
-			virtual ~ExpressionToken() { };
-			virtual std::int32_t operator()(std::int32_t n) const = 0;
-		};
+		static constexpr char ContextSeparator = 0x04;
 
 		I18n();
 		~I18n();
+
+		I18n(const I18n&) = delete;
+		I18n& operator=(const I18n&) = delete;
 
 		/** @brief Load a catalog from file in gettext MO format, previously loaded catalog will be unloaded */
 		bool LoadFromFile(const StringView path);
@@ -57,49 +56,8 @@ namespace nCine
 		static StringView TryRemoveLanguageSpecifiers(const StringView langId);
 
 	private:
-		I18n(const I18n&) = delete;
-		I18n& operator=(const I18n&) = delete;
-
-		struct MoFileHeader
-		{
-			std::uint32_t Signature;
-			/** @brief The revision number of the file format */
-			std::uint32_t Revision;
-
-			/** @brief The number of strings pairs */
-			std::uint32_t StringCount;
-			/** @brief Offset of table with start offsets of original strings */
-			std::uint32_t OrigTableOffset;
-			/** @brief Offset of table with start offsets of translated strings */
-			std::uint32_t TransTableOffset;
-			/** @brief Size of hash table */
-			std::uint32_t HashTableSize;
-			/** @brief Offset of first hash table entry */
-			std::uint32_t HashTableOffset;
-		};
-
-		struct StringDesc
-		{
-			/** @brief Length of addressed string, not including the trailing NULL */
-			std::uint32_t Length;
-			/** @brief Offset of string in file */
-			std::uint32_t Offset;
-		};
-
-		class Evaluator
-		{
-		public:
-			static const ExpressionToken* Parse(const char* s);
-
-		private:
-			static ExpressionToken* ParseNumber(const char*& s, bool negative);
-			static ExpressionToken* ParseAtom(const char*& s);
-			static ExpressionToken* ParseFactors(const char*& s);
-			static ExpressionToken* ParseSummands(const char*& s);
-			static ExpressionToken* ParseComparison(const char*& s);
-			static ExpressionToken* ParseCondition(const char*& s);
-			static ExpressionToken* ParseTernary(const char*& s);
-		};
+		struct StringDesc;
+		class Evaluator;
 
 		std::unique_ptr<char[]> _file;
 		std::uint32_t _fileSize;
@@ -122,7 +80,7 @@ namespace nCine
 	}
 	
 	/** @brief Translates text in singular form using primary translation catalog and specified @p context */
-	inline StringView _x(const StringView& context, const char* text)
+	inline StringView _x(StringView context, const char* text)
 	{
 		std::uint32_t resultLength;
 		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(text) }).data(), &resultLength);
@@ -141,7 +99,7 @@ namespace nCine
 	}
 
 	/** @brief Translates text in singular or plural form using primary translation catalog and specified @p context */
-	inline StringView _nx(const StringView& context, const char* singular, const char* plural, std::int32_t n)
+	inline StringView _nx(StringView context, const char* singular, const char* plural, std::int32_t n)
 	{
 		std::uint32_t resultLength;
 		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(singular) }).data(), &resultLength);

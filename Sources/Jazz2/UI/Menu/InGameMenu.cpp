@@ -275,7 +275,7 @@ namespace Jazz2::UI::Menu
 	{
 		if ((type & ChangedPreferencesType::Graphics) == ChangedPreferencesType::Graphics) {
 			Viewport::chain().clear();
-			Vector2i res = theApplication().resolution();
+			Vector2i res = theApplication().GetResolution();
 			_root->OnInitializeViewport(res.X, res.Y);
 		}
 
@@ -437,7 +437,7 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::UpdatePressedActions()
 	{
-		auto& input = theApplication().inputManager();
+		auto& input = theApplication().GetInputManager();
 		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
 
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];

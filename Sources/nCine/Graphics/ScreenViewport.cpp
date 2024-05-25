@@ -15,17 +15,17 @@ namespace nCine
 	ScreenViewport::ScreenViewport()
 		: Viewport()
 	{
-		width_ = theApplication().width();
-		height_ = theApplication().height();
+		width_ = theApplication().GetWidth();
+		height_ = theApplication().GetHeight();
 		viewportRect_.Set(0, 0, width_, height_);
 
-		const DisplayMode displayMode = theApplication().gfxDevice().displayMode();
+		const DisplayMode displayMode = theApplication().GetGfxDevice().displayMode();
 		if (displayMode.depthBits() == 16) {
 			depthStencilFormat_ = DepthStencilFormat::Depth16;
 		} else if (displayMode.depthBits() == 24) {
 			depthStencilFormat_ = (displayMode.stencilBits() == 8 ? DepthStencilFormat::Depth24_Stencil8 : DepthStencilFormat::Depth24);
 		}
-		rootNode_ = &theApplication().rootNode();
+		rootNode_ = &theApplication().GetRootNode();
 		type_ = Type::Screen;
 	}
 

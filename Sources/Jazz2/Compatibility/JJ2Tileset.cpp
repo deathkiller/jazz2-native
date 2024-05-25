@@ -12,7 +12,7 @@ namespace Jazz2::Compatibility
 {
 	bool JJ2Tileset::Open(const StringView path, bool strictParser)
 	{
-		auto s = fs::Open(path, FileAccessMode::Read);
+		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		// Skip copyright notice
@@ -168,7 +168,7 @@ namespace Jazz2::Compatibility
 		std::int32_t width = TilesPerRow * BlockSize;
 		std::int32_t height = ((_tileCount - 1) / TilesPerRow + 1) * BlockSize;
 
-		auto so = fs::Open(targetPath, FileAccessMode::Write);
+		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		constexpr std::uint8_t flags = 0x20 | 0x40; // Mask and palette included

@@ -29,7 +29,7 @@ namespace nCine
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView path)
 	{
-		return createLoader(fs::Open(path, FileAccessMode::Read), path);
+		return createLoader(fs::Open(path, FileAccess::Read), path);
 	}
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromStream(std::unique_ptr<Stream> fileHandle, const StringView path)

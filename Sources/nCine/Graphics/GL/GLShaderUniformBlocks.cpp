@@ -27,7 +27,7 @@ namespace nCine
 	void GLShaderUniformBlocks::bind()
 	{
 #if defined(DEATH_DEBUG)
-		static const int offsetAlignment = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const int offsetAlignment = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
 		if (uboParams_.object) {
 			uboParams_.object->bind();

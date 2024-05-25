@@ -11,7 +11,7 @@ namespace nCine
 	{
 	}
 
-	void FrameTimer::addFrame()
+	void FrameTimer::AddFrame()
 	{
 		frameDuration_ = frameStart_.secondsSince();
 
@@ -56,12 +56,12 @@ namespace nCine
 		}
 	}
 
-	void FrameTimer::suspend()
+	void FrameTimer::Suspend()
 	{
 		suspensionStart_ = TimeStamp::now();
 	}
 
-	TimeStamp FrameTimer::resume()
+	TimeStamp FrameTimer::Resume()
 	{
 		const TimeStamp suspensionDuration = suspensionStart_.timeSince();
 		frameStart_ += suspensionDuration;
