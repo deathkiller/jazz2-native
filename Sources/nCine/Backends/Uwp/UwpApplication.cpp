@@ -182,7 +182,7 @@ namespace nCine
 		inputManager_ = std::make_unique<UwpInputManager>(window);
 
 		displayInfo.DpiChanged([](const auto&, const auto& args) {
-			auto& gfxDevice = dynamic_cast<UwpGfxDevice&>(_instance->gfxDevice());
+			auto& gfxDevice = static_cast<UwpGfxDevice&>(_instance->GetGfxDevice());
 			gfxDevice.updateMonitors();
 		});
 
