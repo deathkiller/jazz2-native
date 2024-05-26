@@ -66,6 +66,7 @@ namespace nCine
 	{
 		javaVM_ = state->activity->vm;
 
+        // This is called before PreInitCommon(), so trace targets are usually not attached yet, only logcat
 		if (javaVM_ == nullptr) {
 			LOGE("JavaVM pointer is null");
 		} else {
@@ -74,12 +75,12 @@ namespace nCine
 				if (javaVM_->AttachCurrentThread(&jniEnv, nullptr) != 0) {
 					LOGW("AttachCurrentThread() cannot attach the JVM");
 				} else {
-					LOGI("AttachCurrentThread() successful");
+					LOGI("AttachCurrentThread() was successful");
 				}
 			} else if (getEnvStatus == JNI_EVERSION) {
 				LOGW("GetEnv() with unsupported version");
 			} else if (getEnvStatus == JNI_OK) {
-				LOGI("GetEnv() successful");
+				LOGI("GetEnv() was successful");
 			}
 			
 			if (jniEnv == nullptr) {

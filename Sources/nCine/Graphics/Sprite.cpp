@@ -55,7 +55,7 @@ namespace nCine
 			ZoneText(texture_->name(), nctl::strnlen(texture_->name(), Object::MaxNameLength));
 		}*/
 
-		type_ = ObjectType::Sprite;
+		_type = ObjectType::Sprite;
 		renderCommand_.setType(RenderCommand::CommandTypes::Sprite);
 
 		Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_NO_TEXTURE);

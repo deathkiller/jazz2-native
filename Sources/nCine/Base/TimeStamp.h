@@ -37,8 +37,8 @@ namespace nCine
 		/// Returns the time elapsed since the timestamp, as seconds in a `nanoseconds` number
 		float nanosecondsSince() const;
 
-		inline uint64_t ticks() const {
-			return counter_;
+		inline std::uint64_t ticks() const {
+			return _counter;
 		}
 
 		/// Returns the timestamp counter value as seconds in a `float` number
@@ -54,8 +54,8 @@ namespace nCine
 		float nanoseconds() const;
 
 	private:
-		uint64_t counter_;
+		uint64_t _counter;
 
-		explicit TimeStamp(uint64_t counter) : counter_(counter) { }
+		explicit TimeStamp(uint64_t counter);
 	};
 }

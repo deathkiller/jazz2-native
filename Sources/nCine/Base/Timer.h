@@ -16,11 +16,11 @@ namespace nCine
 		void stop();
 		/// Resets the accumulated time
 		inline void reset() {
-			accumulatedTime_ = 0ULL;
+			_accumulatedTime = 0ULL;
 		}
 		/// Returns `true` if the timer is running
 		inline bool isRunning() const {
-			return isRunning_;
+			return _isRunning;
 		}
 
 		/// Returns elapsed time in seconds since last starting the timer
@@ -32,10 +32,10 @@ namespace nCine
 		static void sleep(std::uint32_t milliseconds);
 
 	private:
-		bool isRunning_;
+		bool _isRunning;
 		/// Start time mark
-		uint64_t startTime_;
+		uint64_t _startTime;
 		/// Accumulated time ticks over multiple start and stop
-		uint64_t accumulatedTime_;
+		uint64_t _accumulatedTime;
 	};
 }

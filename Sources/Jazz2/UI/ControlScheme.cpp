@@ -1,5 +1,8 @@
 #include "ControlScheme.h"
 #include "../PreferencesCache.h"
+#include "../../nCine/Input/IInputManager.h"
+
+using namespace nCine;
 
 namespace Jazz2::UI
 {
@@ -62,33 +65,33 @@ namespace Jazz2::UI
 							if (target.Data & GamepadNegativeMask) {
 								axisValue = -axisValue;
 							}
-							if (analogAsButtons && axisValue > 0.5f) {
+							if (analogAsButtons && axisValue >= IInputManager::AnalogButtonDeadZone) {
 								result.PressedActions |= (1ull << (std::uint32_t)i) | (1ull << (32 + (std::uint32_t)i));
 							}
-							if (i < 4 && axisValue > GamepadDeadzone * 0.4f) {
+							if (i < 4 && axisValue > IInputManager::AnalogButtonDeadZone) {
 								switch ((PlayerActions)i) {
 									case PlayerActions::Left: {
 										float axisValueAdjusted = -axisValue;
-										if (result.Movement.X < 0.1f && axisValueAdjusted < result.Movement.X) {
+										if (result.Movement.X < IInputManager::LeftStickDeadZone && axisValueAdjusted < result.Movement.X) {
 											result.Movement.X = axisValueAdjusted;
 										}
 										break;
 									}
 									case PlayerActions::Right: {
-										if (result.Movement.X > -0.1f && axisValue > result.Movement.X) {
+										if (result.Movement.X > -IInputManager::LeftStickDeadZone && axisValue > result.Movement.X) {
 											result.Movement.X = axisValue;
 										}
 										break;
 									}
 									case PlayerActions::Up: {
 										float axisValueAdjusted = -axisValue;
-										if (result.Movement.Y < 0.1f && axisValueAdjusted < result.Movement.Y) {
+										if (result.Movement.Y < IInputManager::LeftStickDeadZone && axisValueAdjusted < result.Movement.Y) {
 											result.Movement.Y = axisValueAdjusted;
 										}
 										break;
 									}
 									case PlayerActions::Down: {
-										if (result.Movement.Y > -0.1f && axisValue > result.Movement.Y) {
+										if (result.Movement.Y > -IInputManager::LeftStickDeadZone && axisValue > result.Movement.Y) {
 											result.Movement.Y = axisValue;
 										}
 										break;
@@ -131,12 +134,12 @@ namespace Jazz2::UI
 
 		// Normalize both axes
 		float movementLengthX = std::abs(result.Movement.X);
-		float normalizedLength = (movementLengthX - GamepadDeadzone) / (1.0f - GamepadDeadzone * 2.0f);
+		float normalizedLength = (movementLengthX - IInputManager::LeftStickDeadZone) / (1.0f - IInputManager::LeftStickDeadZone * 2.0f);
 		normalizedLength = std::clamp(normalizedLength, 0.0f, 1.0f);
 		result.Movement.X = std::copysign(normalizedLength, result.Movement.X);
 
 		float movementLengthY = std::abs(result.Movement.Y);
-		normalizedLength = (movementLengthY - GamepadDeadzone) / (1.0f - GamepadDeadzone * 2.0f);
+		normalizedLength = (movementLengthY - IInputManager::LeftStickDeadZone) / (1.0f - IInputManager::LeftStickDeadZone * 2.0f);
 		normalizedLength = std::clamp(normalizedLength, 0.0f, 1.0f);
 		result.Movement.Y = std::copysign(normalizedLength, result.Movement.Y);
 
@@ -167,7 +170,7 @@ namespace Jazz2::UI
 							if (target.Data & GamepadNegativeMask) {
 								axisValue = -axisValue;
 							}
-							if (axisValue > 0.5f) {
+							if (axisValue >= IInputManager::AnalogButtonDeadZone) {
 								pressedActions |= (1 << (std::uint32_t)i);
 							}
 						} else {

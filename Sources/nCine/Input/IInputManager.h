@@ -61,6 +61,7 @@ namespace nCine
 		static constexpr float LeftStickDeadZone = 7849 / 32767.0f;
 		static constexpr float RightStickDeadZone = 8689 / 32767.0f;
 		static constexpr float TriggerDeadZone = 30 / 32767.0f;
+		static constexpr float AnalogButtonDeadZone = 0.4f;
 
 		IInputManager() {}
 		virtual ~IInputManager() {}

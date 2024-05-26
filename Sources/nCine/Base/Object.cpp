@@ -1,31 +1,30 @@
 #include "Object.h"
-#include "../ServiceLocator.h"
 #include "../../Common.h"
 
 namespace nCine
 {
-	unsigned int Object::lastId_ = 0;
+	std::uint32_t Object::_lastId = 0;
 
 	Object::Object(ObjectType type)
-		: type_(type)
+		: _type(type)
 	{
-		id_ = ++lastId_;
+		_id = ++_lastId;
 	}
 
 	Object::Object(Object&& other) noexcept
-		: type_(other.type_), id_(other.id_)
+		: _type(other._type), _id(other._id)
 	{
 	}
 
 	Object& Object::operator=(Object&& other) noexcept
 	{
-		id_ = other.id_;
+		_id = other._id;
 		return *this;
 	}
 
 	Object::Object(const Object& other)
-		: type_(other.type_)
+		: _type(other._type)
 	{
-		id_ = ++lastId_;
+		_id = ++_lastId;
 	}
 }

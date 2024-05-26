@@ -44,6 +44,8 @@ using namespace Death::IO;
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
+HANDLE __consoleHandleOut;
+SHORT __consoleCursorY;
 bool __showLogConsole;
 bool __hasVirtualTerminal;
 Array<wchar_t> __consolePrompt;
@@ -172,8 +174,8 @@ static void DestroyLogConsole()
 				DWORD yEnd = csbi.dwCursorPosition.Y;
 				if (xEnd != 0 || yEnd != 0) {
 					DWORD dwNumberOfCharsWritten;
-					::WriteConsole(consoleHandleOut, L"\r\n", (DWORD)arraySize(L"\r\n") - 1, &dwNumberOfCharsWritten, NULL);
-					::WriteConsole(consoleHandleOut, __consolePrompt.data(), (DWORD)__consolePrompt.size(), &dwNumberOfCharsWritten, NULL);
+					::WriteConsoleW(consoleHandleOut, L"\r\n", (DWORD)arraySize(L"\r\n") - 1, &dwNumberOfCharsWritten, NULL);
+					::WriteConsoleW(consoleHandleOut, __consolePrompt.data(), (DWORD)__consolePrompt.size(), &dwNumberOfCharsWritten, NULL);
 				}
 			}
 		}
@@ -459,6 +461,14 @@ namespace nCine
 			if (!__showLogConsole) {
 				__showLogConsole = true;
 				CreateLogConsole(NCINE_APP_NAME " [Console]", __hasVirtualTerminal);
+
+				CONSOLE_SCREEN_BUFFER_INFO csbi;
+				__consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+					__consoleCursorY = csbi.dwCursorPosition.Y;
+				} else {
+					__consoleHandleOut = NULL;
+				}
 			}
 			return;
 		}

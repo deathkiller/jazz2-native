@@ -117,6 +117,8 @@ using namespace Death::IO;
 std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+extern HANDLE __consoleHandleOut;
+extern SHORT __consoleCursorY;
 extern bool __showLogConsole;
 #endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
@@ -341,11 +343,33 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	logEntryWithColors[length2++] = '\n';
 	logEntryWithColors[length2] = '\0';
 
+#	if defined(DEATH_TARGET_WINDOWS)
+	// Try to restore previous cursor position (this doesn't work correctly in Windows Terminal v1.19)
+	if (__consoleHandleOut != NULL) {
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+			if (__consoleCursorY <= csbi.dwCursorPosition.Y) {
+				::SetConsoleCursorPosition(__consoleHandleOut, { 0, __consoleCursorY });
+			}
+		}
+	}
+#	endif
+
 	if (level == TraceLevel::Error || level == TraceLevel::Fatal) {
 		fputs(logEntryWithColors, stderr);
 	} else {
 		fputs(logEntryWithColors, stdout);
 	}
+
+#	if defined(DEATH_TARGET_WINDOWS)
+	// Save the last cursor position for later
+	if (__consoleHandleOut != NULL) {
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+			__consoleCursorY = csbi.dwCursorPosition.Y;
+		}
+	}
+#	endif
 
 #	if defined(DEATH_TARGET_WINDOWS)
 	} else {

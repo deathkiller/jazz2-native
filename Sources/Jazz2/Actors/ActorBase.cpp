@@ -1180,7 +1180,7 @@ namespace Jazz2::Actors
 			FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), _owner(owner),
 			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
 	{
-		type_ = ObjectType::Sprite;
+		_type = ObjectType::Sprite;
 		renderCommand_.setType(RenderCommand::CommandTypes::Sprite);
 		Initialize(ActorRendererType::Default);
 	}

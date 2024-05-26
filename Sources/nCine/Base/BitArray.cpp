@@ -5,7 +5,7 @@
 #include <cstring>
 
 #if !defined(CHAR_BIT)
-#	warning CHAR_BIT not defined, assuming 8 bits
+#	warning "CHAR_BIT not defined, assuming 8 bits"
 #	define CHAR_BIT 8
 #endif
 
@@ -32,103 +32,157 @@
 namespace nCine
 {
 	BitArray::BitArray()
-		: _size(0), _storage(nullptr)
+		: _size(0), _data(nullptr)
 	{
-
 	}
 
-	BitArray::BitArray(std::uint32_t numBits)
-		: BitArray()
+	BitArray::BitArray(ValueInitT, std::size_t sizeInBits)
 	{
-		SetSize(numBits);
+		_size = sizeInBits;
+		_data = _size ? new char[BITS_TO_CHARS(sizeInBits)]{} : nullptr;
+	}
+
+	BitArray::BitArray(NoInitT, std::size_t sizeInBits)
+	{
+		_size = sizeInBits;
+		_data = _size ? new char[BITS_TO_CHARS(sizeInBits)] : nullptr;
 	}
 
 	BitArray::~BitArray()
 	{
-		if (_storage != nullptr) {
-			delete[] _storage;
-			_storage = nullptr;
+		if (_data != nullptr) {
+			delete[] _data;
+			_data = nullptr;
 		}
 	}
 
-	std::int32_t BitArray::SizeInBytes() const
+	BitArray::BitArray(BitArray&& other) noexcept
+		: _data(other._data), _size(other._size)
+	{
+		other._data = nullptr;
+		other._size = 0;
+	}
+
+	BitArray& BitArray::operator=(BitArray&& other) noexcept
+	{
+		using std::swap;
+		swap(_data, other._data);
+		swap(_size, other._size);
+		return *this;
+	}
+
+	std::size_t BitArray::sizeInBytes() const
 	{
 		return BITS_TO_CHARS(_size);
 	}
 
-	void BitArray::SetSize(uint32_t numBits)
+	void BitArray::resize(ValueInitT, std::size_t sizeInBits)
 	{
-		if (_size == numBits) {
+		if (_size == sizeInBits) {
+			return;
+		}
+		if (sizeInBits == 0) {
+			delete[] _data;
+			_data = nullptr;
+			_size = 0;
 			return;
 		}
 
-		if (_storage != nullptr) {
-			delete[] _storage;
-		}
+		char* prevData = _data;
+		std::size_t prevSize = _size;
+		std::size_t prevSizeInBytes = BITS_TO_CHARS(prevSize);
 
-		_size = numBits;
-		std::int32_t numBytes = BITS_TO_CHARS(numBits);
-		_storage = new std::uint8_t[numBytes]{};
+		_size = sizeInBits;
+		std::size_t sizeInBytes = BITS_TO_CHARS(sizeInBits);
+		_data = new char[sizeInBytes]{};
+
+		if (prevData != nullptr) {
+			std::memcpy(_data, prevData, std::min(prevSizeInBytes, sizeInBytes));
+			delete[] prevData;
+		}
 	}
 
-	void BitArray::SetAll()
+	void BitArray::resize(NoInitT, std::size_t sizeInBits)
 	{
-		std::int32_t bits;
-		std::uint8_t mask;
+		if (_size == sizeInBits) {
+			return;
+		}
+		if (sizeInBits == 0) {
+			delete[] _data;
+			_data = nullptr;
+			_size = 0;
+			return;
+		}
 
-		std::int32_t size = BITS_TO_CHARS(_size);
-		std::fill_n(_storage, size, UCHAR_MAX);
+		char* prevData = _data;
+		std::size_t prevSize = _size;
+		std::size_t prevSizeInBytes = BITS_TO_CHARS(prevSize);
 
-		bits = _size % CHAR_BIT;
+		_size = sizeInBits;
+		std::size_t sizeInBytes = BITS_TO_CHARS(sizeInBits);
+		_data = new char[sizeInBytes];
+
+		if (prevData != nullptr) {
+			std::memcpy(_data, prevData, std::min(prevSizeInBytes, sizeInBytes));
+			delete[] prevData;
+		}
+	}
+
+	void BitArray::setAll()
+	{
+		std::size_t size = BITS_TO_CHARS(_size);
+		std::fill_n(_data, size, UINT8_MAX);
+
+		std::size_t bits = (_size % CHAR_BIT);
 		if (bits != 0) {
-			mask = UCHAR_MAX << (CHAR_BIT - bits);
-			_storage[BIT_CHAR(_size - 1)] = mask;
+			std::uint8_t mask = UCHAR_MAX << (CHAR_BIT - bits);
+			_data[BIT_CHAR(_size - 1)] = mask;
 		}
 	}
 
-	void BitArray::ClearAll()
+	void BitArray::resetAll()
 	{
-		std::int32_t size = BITS_TO_CHARS(_size);
-		std::fill_n(_storage, size, 0);
+		std::size_t size = BITS_TO_CHARS(_size);
+		std::fill_n(_data, size, 0);
 	}
 
-	void BitArray::Set(std::uint32_t bit)
-	{
-		if (bit >= _size) {
-			return;
-		}
-
-		_storage[BIT_CHAR(bit)] |= BIT_IN_CHAR(bit);
-	}
-
-	void BitArray::Set(std::uint32_t bit, bool value)
+	void BitArray::set(std::size_t bit)
 	{
 		if (bit >= _size) {
 			return;
 		}
 
-		std::uint8_t& byte = _storage[BIT_CHAR(bit)];
+		_data[BIT_CHAR(bit)] |= BIT_IN_CHAR(bit);
+	}
+
+	void BitArray::set(std::size_t bit, bool value)
+	{
+		if (bit >= _size) {
+			return;
+		}
+
+		char& byte = _data[BIT_CHAR(bit)];
 		byte ^= (-(std::uint8_t)value ^ byte) & BIT_IN_CHAR(bit);
 	}
 
-	void BitArray::Reset(std::uint32_t bit)
+	void BitArray::reset(std::size_t bit)
 	{
 		if (bit >= _size) {
 			return;
 		}
 
 		std::uint8_t mask = BIT_IN_CHAR(bit);
-		_storage[BIT_CHAR(bit)] &= ~mask;
+		_data[BIT_CHAR(bit)] &= ~mask;
 	}
 
-	BitArrayIndex BitArray::operator()(std::uint32_t bit)
+	BitArrayIndex BitArray::operator()(std::size_t bit)
 	{
 		return BitArrayIndex(this, bit);
 	}
 
-	bool BitArray::operator[](std::uint32_t bit) const
+	bool BitArray::operator[](std::size_t bit) const
 	{
-		return (bit < _size ? ((_storage[BIT_CHAR(bit)] & BIT_IN_CHAR(bit)) != 0) : false);
+		return (bit < _size ? ((_data[BIT_CHAR(bit)] & BIT_IN_CHAR(bit)) != 0) : false);
 	}
 
 	bool BitArray::operator==(const BitArray& other) const
@@ -137,23 +191,23 @@ namespace nCine
 			return false;
 		}
 
-		std::int32_t size = BITS_TO_CHARS(_size);
-		return (std::memcmp(this->_storage, other._storage, size) == 0);
+		std::size_t size = BITS_TO_CHARS(_size);
+		return (std::memcmp(this->_data, other._data, size) == 0);
 	}
 
 	BitArray BitArray::operator~() const
 	{
-		BitArray result(this->_size);
-		result = *this;
-		result.Not();
+		BitArray result(NoInit, _size);
+		std::memcpy(result._data, _data, BITS_TO_CHARS(_size));
+		result.notAll();
 
 		return result;
 	}
 
 	BitArray BitArray::operator&(const BitArray& other) const
 	{
-		BitArray result(this->_size);
-		result = *this;
+		BitArray result(NoInit, _size);
+		std::memcpy(result._data, _data, BITS_TO_CHARS(_size));
 		result &= other;
 
 		return result;
@@ -161,8 +215,8 @@ namespace nCine
 
 	BitArray BitArray::operator^(const BitArray& other) const
 	{
-		BitArray result(this->_size);
-		result = *this;
+		BitArray result(NoInit, _size);
+		std::memcpy(result._data, _data, BITS_TO_CHARS(_size));
 		result ^= other;
 
 		return result;
@@ -170,26 +224,26 @@ namespace nCine
 
 	BitArray BitArray::operator|(const BitArray& other) const
 	{
-		BitArray result(this->_size);
-		result = *this;
+		BitArray result(NoInit, _size);
+		std::memcpy(result._data, _data, BITS_TO_CHARS(_size));
 		result |= other;
 
 		return result;
 	}
 
-	BitArray BitArray::operator<<(const uint32_t count) const
+	BitArray BitArray::operator<<(const std::size_t count) const
 	{
-		BitArray result(this->_size);
-		result = *this;
+		BitArray result(NoInit, _size);
+		std::memcpy(result._data, _data, BITS_TO_CHARS(_size));
 		result <<= count;
 
 		return result;
 	}
 
-	BitArray BitArray::operator>>(const uint32_t count) const
+	BitArray BitArray::operator>>(const std::size_t count) const
 	{
-		BitArray result(this->_size);
-		result = *this;
+		BitArray result(NoInit, _size);
+		std::memcpy(result._data, _data, BITS_TO_CHARS(_size));
 		result >>= count;
 
 		return result;
@@ -202,23 +256,23 @@ namespace nCine
 		}
 
 		std::uint8_t maxValue, one;
-		std::int32_t i = (_size % CHAR_BIT);
+		std::size_t i = (_size % CHAR_BIT);
 		if (i != 0) {
-			maxValue = UCHAR_MAX << (CHAR_BIT - i);
+			maxValue = UINT8_MAX << (CHAR_BIT - i);
 			one = 1 << (CHAR_BIT - i);
 		} else {
-			maxValue = UCHAR_MAX;
+			maxValue = UINT8_MAX;
 			one = 1;
 		}
 
 		for (i = BIT_CHAR(_size - 1); i >= 0; i--) {
-			if (_storage[i] != maxValue) {
-				_storage[i] = _storage[i] + one;
+			if (_data[i] != maxValue) {
+				_data[i] = _data[i] + one;
 				return *this;
 			} else {
-				_storage[i] = 0;
+				_data[i] = 0;
 
-				maxValue = UCHAR_MAX;
+				maxValue = UINT8_MAX;
 				one = 1;
 			}
 		}
@@ -226,7 +280,7 @@ namespace nCine
 		return *this;
 	}
 
-	BitArray& BitArray::operator++(std::int32_t)
+	BitArray& BitArray::operator++(int)
 	{
 		++(*this);
 		return *this;
@@ -239,23 +293,23 @@ namespace nCine
 		}
 
 		std::uint8_t maxValue, one;
-		std::int32_t i = (_size % CHAR_BIT);
+		std::size_t i = (_size % CHAR_BIT);
 		if (i != 0) {
-			maxValue = UCHAR_MAX << (CHAR_BIT - i);
+			maxValue = UINT8_MAX << (CHAR_BIT - i);
 			one = 1 << (CHAR_BIT - i);
 		} else {
-			maxValue = UCHAR_MAX;
+			maxValue = UINT8_MAX;
 			one = 1;
 		}
 
 		for (i = BIT_CHAR(_size - 1); i >= 0; i--) {
-			if (_storage[i] >= one) {
-				_storage[i] = _storage[i] - one;
+			if (_data[i] >= one) {
+				_data[i] = _data[i] - one;
 				return *this;
 			} else {
-				_storage[i] = maxValue;
+				_data[i] = maxValue;
 
-				maxValue = UCHAR_MAX;
+				maxValue = UINT8_MAX;
 				one = 1;
 			}
 		}
@@ -263,29 +317,9 @@ namespace nCine
 		return *this;
 	}
 
-
-	BitArray& BitArray::operator--(std::int32_t)
+	BitArray& BitArray::operator--(int)
 	{
 		--(*this);
-		return *this;
-	}
-
-	BitArray& BitArray::operator=(const BitArray& src)
-	{
-		if (*this == src) {
-			return *this;
-		}
-
-		if (_size != src._size) {
-			return *this;
-		}
-
-		if (_size == 0 || src._size == 0) {
-			return *this;
-		}
-
-		std::int32_t size = BITS_TO_CHARS(_size);
-		std::copy(src._storage, &src._storage[size], this->_storage);
 		return *this;
 	}
 
@@ -295,9 +329,9 @@ namespace nCine
 			return *this;
 		}
 
-		std::int32_t size = BITS_TO_CHARS(_size);
-		for (std::int32_t i = 0; i < size; i++) {
-			_storage[i] = _storage[i] & src._storage[i];
+		std::size_t size = BITS_TO_CHARS(_size);
+		for (std::size_t i = 0; i < size; i++) {
+			_data[i] = (_data[i] & src._data[i]);
 		}
 
 		return *this;
@@ -309,9 +343,9 @@ namespace nCine
 			return *this;
 		}
 
-		std::int32_t size = BITS_TO_CHARS(_size);
-		for (std::int32_t i = 0; i < size; i++) {
-			_storage[i] = _storage[i] ^ src._storage[i];
+		std::size_t size = BITS_TO_CHARS(_size);
+		for (std::size_t i = 0; i < size; i++) {
+			_data[i] = (_data[i] ^ src._data[i]);
 		}
 
 		return *this;
@@ -323,120 +357,118 @@ namespace nCine
 			return *this;
 		}
 
-		std::int32_t size = BITS_TO_CHARS(_size);
-		for (std::int32_t i = 0; i < size; i++) {
-			_storage[i] = _storage[i] | src._storage[i];
+		std::size_t size = BITS_TO_CHARS(_size);
+		for (std::size_t i = 0; i < size; i++) {
+			_data[i] = (_data[i] | src._data[i]);
 		}
 
 		return *this;
 	}
 
-	BitArray& BitArray::Not()
+	BitArray& BitArray::notAll()
 	{
 		if (_size == 0) {
 			return *this;
 		}
 
-		std::int32_t size = BITS_TO_CHARS(_size);
-		for (std::uint32_t i = 0; i < size; i++) {
-			_storage[i] = ~_storage[i];
+		std::size_t size = BITS_TO_CHARS(_size);
+		for (std::size_t i = 0; i < size; i++) {
+			_data[i] = ~_data[i];
 		}
 
-		std::int32_t bits = _size % CHAR_BIT;
+		std::size_t bits = (_size % CHAR_BIT);
 		if (bits != 0) {
-			std::uint8_t mask = UCHAR_MAX << (CHAR_BIT - bits);
-			_storage[BIT_CHAR(_size - 1)] &= mask;
+			std::uint8_t mask = UINT8_MAX << (CHAR_BIT - bits);
+			_data[BIT_CHAR(_size - 1)] &= mask;
 		}
 
 		return *this;
 	}
 
-	BitArray& BitArray::operator<<=(const uint32_t shifts)
+	BitArray& BitArray::operator<<=(const std::size_t shifts)
 	{
 		if (shifts >= _size) {
-			this->ClearAll();
+			this->resetAll();
 			return *this;
 		}
 
-		std::uint32_t i;
-		std::uint32_t chars = shifts / CHAR_BIT;
+		std::size_t i;
+		std::size_t chars = (shifts / CHAR_BIT);
 		if (chars > 0) {
-			std::uint32_t size = BITS_TO_CHARS(_size);
+			std::size_t size = BITS_TO_CHARS(_size);
 
 			for (i = 0; (i + chars) < size; i++) {
-				_storage[i] = _storage[i + chars];
+				_data[i] = _data[i + chars];
 			}
 
 			for (i = size; chars > 0; chars--) {
-				_storage[i - chars] = 0;
+				_data[i - chars] = 0;
 			}
 		}
 
 		for (i = 0; i < (shifts % CHAR_BIT); i++) {
-			for (std::uint32_t j = 0; j < BIT_CHAR(_size - 1); j++) {
-				_storage[j] <<= 1;
+			for (std::size_t j = 0; j < BIT_CHAR(_size - 1); j++) {
+				_data[j] <<= 1;
 
-				if (_storage[j + 1] & MS_BIT) {
-					_storage[j] |= 0x01;
+				if (_data[j + 1] & MS_BIT) {
+					_data[j] |= 0x01;
 				}
 			}
 
-			_storage[BIT_CHAR(_size - 1)] <<= 1;
+			_data[BIT_CHAR(_size - 1)] <<= 1;
 		}
 
 		return *this;
 	}
 
-	BitArray& BitArray::operator>>=(std::uint32_t shifts)
+	BitArray& BitArray::operator>>=(std::size_t shifts)
 	{
 		if (shifts >= _size) {
-			this->ClearAll();
+			this->resetAll();
 			return *this;
 		}
 
-		std::int32_t i;
-		std::int32_t chars = shifts / CHAR_BIT;
+		std::size_t i;
+		std::size_t chars = shifts / CHAR_BIT;
 		if (chars > 0) {
 			for (i = BIT_CHAR(_size - 1); (i - chars) >= 0; i--) {
-				_storage[i] = _storage[i - chars];
+				_data[i] = _data[i - chars];
 			}
 
 			for (; chars > 0; chars--) {
-				_storage[chars - 1] = 0;
+				_data[chars - 1] = 0;
 			}
 		}
 
-		for (i = 0; i < (std::int32_t)(shifts % CHAR_BIT); i++) {
-			for (std::uint32_t j = BIT_CHAR(_size - 1); j > 0; j--) {
-				_storage[j] >>= 1;
+		for (i = 0; i < (shifts % CHAR_BIT); i++) {
+			for (std::size_t j = BIT_CHAR(_size - 1); j > 0; j--) {
+				_data[j] >>= 1;
 
-				if (_storage[j - 1] & 0x01) {
-					_storage[j] |= MS_BIT;
+				if (_data[j - 1] & 0x01) {
+					_data[j] |= MS_BIT;
 				}
 			}
 
-			_storage[0] >>= 1;
+			_data[0] >>= 1;
 		}
 
 		i = _size % CHAR_BIT;
 		if (i != 0) {
-			std::uint8_t mask = UCHAR_MAX << (CHAR_BIT - i);
-			_storage[BIT_CHAR(_size - 1)] &= mask;
+			std::uint8_t mask = UINT8_MAX << (CHAR_BIT - i);
+			_data[BIT_CHAR(_size - 1)] &= mask;
 		}
 
 		return *this;
 	}
 
-	BitArrayIndex::BitArrayIndex(BitArray* array, std::uint32_t index)
+	BitArrayIndex::BitArrayIndex(BitArray* array, std::size_t bit)
 	{
 		_bitArray = array;
-		_index = index;
+		_bit = bit;
 	}
 
 	void BitArrayIndex::operator=(bool value)
 	{
-		if (_bitArray != nullptr) {
-			_bitArray->Set(_index, value);
-		}
+		_bitArray->set(_bit, value);
 	}
 }

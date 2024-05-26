@@ -39,6 +39,9 @@ namespace Jazz2::UI
 		friend class Menu::RemapControlsSection;
 
 	public:
+		ControlScheme() = delete;
+		~ControlScheme() = delete;
+
 		static constexpr std::int32_t MaxSupportedPlayers = 1;
 #if defined(DEATH_TARGET_SWITCH)
 		// TODO: Game is crashing on Switch if more than 1 gamepad is used
@@ -59,15 +62,11 @@ namespace Jazz2::UI
 		static MappingTarget CreateTarget(std::uint32_t gamepadIndex, AxisName axis, bool negative = false);
 
 	private:
-		ControlScheme(const ControlScheme&) = delete;
-		ControlScheme& operator=(const ControlScheme&) = delete;
-
 		static constexpr std::uint32_t GamepadMask = 0x80000000u;
 		static constexpr std::uint32_t GamepadAnalogMask = 0x40000000u;
 		static constexpr std::uint32_t GamepadNegativeMask = 0x20000000u;
 		static constexpr std::uint32_t GamepadIndexMask = 0x0FFF0000u;
 		static constexpr std::uint32_t ButtonMask = 0x0000FFFFu;
-		static constexpr float GamepadDeadzone = 0.1f;
 
 		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (std::int32_t)PlayerActions::Count];
 	};

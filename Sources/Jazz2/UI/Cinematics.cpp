@@ -18,14 +18,14 @@ namespace Jazz2::UI
 {
 	Cinematics::Cinematics(IRootController* root, const StringView path, const std::function<bool(IRootController*, bool)>& callback)
 		: _root(root), _callback(callback), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
-			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
+			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0)
 	{
 		Initialize(path);
 	}
 
 	Cinematics::Cinematics(IRootController* root, const StringView path, std::function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
-			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
+			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0)
 	{
 		Initialize(path);
 	}
@@ -91,12 +91,12 @@ namespace Jazz2::UI
 
 	void Cinematics::OnKeyPressed(const KeyboardEvent& event)
 	{
-		_pressedKeys.Set((uint32_t)event.sym);
+		_pressedKeys.set((std::size_t)event.sym);
 	}
 
 	void Cinematics::OnKeyReleased(const KeyboardEvent& event)
 	{
-		_pressedKeys.Reset((uint32_t)event.sym);
+		_pressedKeys.reset((std::size_t)event.sym);
 	}
 
 	void Cinematics::OnTouchEvent(const TouchEvent& event)
@@ -145,6 +145,10 @@ namespace Jazz2::UI
 		}
 
 		std::unique_ptr<Stream> s = fs::Open(fullPath, FileAccess::Read);
+		if (!s->IsValid()) {
+			return false;
+		}
+
 		RETURNF_ASSERT_MSG(s->GetSize() > 32 && s->GetSize() < 64 * 1024 * 1024,
 			"Cannot load \"%s.j2v\" - unexpected file size", path.data());
 
@@ -192,6 +196,10 @@ namespace Jazz2::UI
 	{
 		auto& resolver = ContentResolver::Get();
 		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2sfx"_s)));
+		if (!s->IsValid()) {
+			return false;
+		}
+
 		RETURNF_ASSERT_MSG(s->GetSize() > 16 && s->GetSize() < 64 * 1024 * 1024,
 			"Cannot load SFX playlist for \"%s.j2v\" - unexpected file size", path.data());
 

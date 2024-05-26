@@ -24,7 +24,17 @@ namespace nCine
 	/// The class that creates and handles application common OpenGL rendering resources
 	class RenderResources
 	{
+		/// The `Application` class needs to create and dispose the resources
+		friend class Application;
+		/// The `Viewport` class needs to set the current camera
+		friend class Viewport;
+		/// The `ScreenViewport` class needs to change the projection of the default camera
+		friend class ScreenViewport;
+
 	public:
+		RenderResources() = delete;
+		~RenderResources() = delete;
+
 		/// A vertex format structure for vertices with positions only
 		struct VertexFormatPos2
 		{
@@ -134,19 +144,5 @@ namespace nCine
 		static void dispose();
 
 		static void registerDefaultBatchedShaders();
-
-		/// Static class, deleted constructor
-		RenderResources() = delete;
-		/// Static class, deleted copy constructor
-		RenderResources(const RenderResources& other) = delete;
-		/// Static class, deleted assignement operator
-		RenderResources& operator=(const RenderResources& other) = delete;
-
-		/// The `Application` class needs to create and dispose the resources
-		friend class Application;
-		/// The `Viewport` class needs to set the current camera
-		friend class Viewport;
-		/// The `ScreenViewport` class needs to change the projection of the default camera
-		friend class ScreenViewport;
 	};
 }

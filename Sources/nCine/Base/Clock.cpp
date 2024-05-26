@@ -24,31 +24,33 @@ namespace nCine
 	}
 
 	Clock::Clock()
-		: frequency_(0UL)
+		: _frequency(0UL)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		LARGE_INTEGER li;
 		if (::QueryPerformanceFrequency(&li)) {
-			frequency_ = li.LowPart;
-			hasPerfCounter_ = true;
+			_frequency = li.LowPart;
+			_hasPerfCounter = true;
 		} else {
-			frequency_ = 1000L;
+			_frequency = 1000L;
+			_hasPerfCounter = false;
 		}
 #elif defined(DEATH_TARGET_APPLE)
 #	if __MAC_10_12
-		frequency_ = 1.0e9L;
+		_frequency = 1.0e9L;
 #	else
 		mach_timebase_info_data_t info;
 		mach_timebase_info(&info);
-		frequency_ = (info.denom * 1.0e9L) / info.numer;
+		_frequency = (info.denom * 1.0e9L) / info.numer;
 #	endif
 #else
 		struct timespec resolution;
 		if (clock_getres(CLOCK_MONOTONIC, &resolution) == 0) {
-			frequency_ = 1.0e9L;
-			hasMonotonicClock_ = true;
+			_frequency = 1.0e9L;
+			_hasMonotonicClock = true;
 		} else {
-			frequency_ = 1.0e6L;
+			_frequency = 1.0e6L;
+			_hasMonotonicClock = false;
 		}
 #endif
 	}
@@ -56,12 +58,12 @@ namespace nCine
 	uint64_t Clock::counter() const
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		if (hasPerfCounter_) {
+		if (_hasPerfCounter) {
 			LARGE_INTEGER li;
 			::QueryPerformanceCounter(&li);
 			return li.QuadPart;
 		} else {
-			return ::GetTickCount();
+			return ::GetTickCount64();
 		}
 #elif defined(DEATH_TARGET_APPLE)
 #	if __MAC_10_12
@@ -70,14 +72,14 @@ namespace nCine
 		return mach_absolute_time();
 #	endif
 #else
-		if (hasMonotonicClock_) {
+		if (_hasMonotonicClock) {
 			struct timespec now;
 			clock_gettime(CLOCK_MONOTONIC, &now);
-			return static_cast<uint64_t>(now.tv_sec) * frequency_ + static_cast<uint64_t>(now.tv_nsec);
+			return static_cast<std::uint64_t>(now.tv_sec) * _frequency + static_cast<std::uint64_t>(now.tv_nsec);
 		} else {
 			struct timeval now;
 			gettimeofday(&now, nullptr);
-			return static_cast<uint64_t>(now.tv_sec) * frequency_ + static_cast<uint64_t>(now.tv_usec);
+			return static_cast<std::uint64_t>(now.tv_sec) * _frequency + static_cast<std::uint64_t>(now.tv_usec);
 		}
 #endif
 	}

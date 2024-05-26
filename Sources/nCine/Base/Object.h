@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace nCine
 {
 	/// Static RRTI and identification index
@@ -34,12 +36,12 @@ namespace nCine
 
 		/// Returns the object identification number
 		inline unsigned int id() const {
-			return id_;
+			return _id;
 		}
 
 		/// Returns the object type (RTTI)
 		inline ObjectType type() const {
-			return type_;
+			return _type;
 		}
 		/// Static method to return class type
 		inline static ObjectType sType() {
@@ -48,16 +50,16 @@ namespace nCine
 
 	protected:
 		/// Object type
-		ObjectType type_;
+		ObjectType _type;
 
 		/// Protected copy constructor used to clone objects
 		Object(const Object& other);
 
 	private:
-		static unsigned int lastId_;
+		static std::uint32_t _lastId;
 
 		/// Object identification in the indexer
-		unsigned int id_;
+		std::uint32_t _id;
 
 		 /// Deleted assignment operator
 		Object& operator=(const Object&) = delete;

@@ -9,6 +9,9 @@ namespace nCine
 	class GLCullFace
 	{
 	public:
+		GLCullFace() = delete;
+		~GLCullFace() = delete;
+
 		struct State
 		{
 			bool enabled = false;
@@ -29,16 +32,6 @@ namespace nCine
 
 	private:
 		static State state_;
-
-		/// Deleted default constructor
-		GLCullFace() = delete;
-		/// Deleted destructor
-		~GLCullFace() = delete;
-
-		/// Deleted copy constructor
-		GLCullFace(const GLCullFace&) = delete;
-		/// Deleted assignment operator
-		GLCullFace& operator=(const GLCullFace&) = delete;
 	};
 
 }
