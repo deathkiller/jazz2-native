@@ -274,7 +274,7 @@ namespace nCine
 			ZoneText(texture_->name(), nctl::strnlen(texture_->name(), Object::MaxNameLength));
 		}*/
 
-		type_ = ObjectType::MeshSprite;
+		_type = ObjectType::MeshSprite;
 		renderCommand_.setType(RenderCommand::CommandTypes::MeshSprite);
 
 		const Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE);
@@ -309,10 +309,10 @@ namespace nCine
 
 		if (texture_ != nullptr && newTexture != nullptr && texture_ != newTexture) {
 			Recti texRect = texRect_;
-			texRect.X = (texRect.X / float(texture_->width())) * float(newTexture->width());
-			texRect.Y = (texRect.Y / float(texture_->height())) * float(newTexture->width());
-			texRect.W = (texRect.W / float(texture_->width())) * float(newTexture->width());
-			texRect.H = (texRect.H / float(texture_->height())) * float(newTexture->width());
+			texRect.X = (texRect.X * newTexture->width() / texture_->width());
+			texRect.Y = (texRect.Y * newTexture->height() / texture_->height());
+			texRect.W = (texRect.W * newTexture->width() / texture_->width());
+			texRect.H = (texRect.H * newTexture->height() / texture_->height());
 			setTexRect(texRect); // it also sets width_ and height_
 		} else if (texture_ == nullptr && newTexture != nullptr) {
 			// Assigning a texture when there wasn't any

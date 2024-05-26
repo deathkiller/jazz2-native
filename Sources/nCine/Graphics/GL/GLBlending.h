@@ -9,6 +9,9 @@ namespace nCine
 	class GLBlending
 	{
 	public:
+		GLBlending() = delete;
+		~GLBlending() = delete;
+
 		struct State
 		{
 			bool enabled = false;
@@ -33,16 +36,6 @@ namespace nCine
 
 	private:
 		static State state_;
-
-		/// Deleted default constructor
-		GLBlending() = delete;
-		/// Deleted destructor
-		~GLBlending() = delete;
-
-		/// Deleted copy constructor
-		GLBlending(const GLBlending&) = delete;
-		/// Deleted assignment operator
-		GLBlending& operator=(const GLBlending&) = delete;
 	};
 
 }

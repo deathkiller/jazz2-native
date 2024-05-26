@@ -17,18 +17,18 @@ namespace nCine
 
 		/// Returns the counter frequency in counts per second
 		inline uint32_t frequency() const {
-			return frequency_;
+			return _frequency;
 		}
 
 	private:
 #if defined(DEATH_TARGET_WINDOWS)
-		bool hasPerfCounter_ = false;
+		bool _hasPerfCounter;
 #elif !defined(DEATH_TARGET_APPLE)
-		bool hasMonotonicClock_ = false;
+		bool _hasMonotonicClock;
 #endif
 
 		/// Counter frequency in counts per second
-		uint32_t frequency_;
+		uint32_t _frequency;
 
 		/// Private constructor
 		Clock();

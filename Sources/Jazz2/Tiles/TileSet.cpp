@@ -15,9 +15,9 @@ namespace Jazz2::Tiles
 		}
 
 		TileCount = tileCount;
-		_isMaskEmpty.SetSize(TileCount);
-		_isMaskFilled.SetSize(TileCount);
-		_isTileFilled.SetSize(TileCount);
+		_isMaskEmpty.resize(ValueInit, TileCount);
+		_isMaskFilled.resize(ValueInit, TileCount);
+		_isTileFilled.resize(ValueInit, TileCount);
 
 		std::uint32_t maskMaxTiles = maskSize / (DefaultTileSize * DefaultTileSize);
 
@@ -35,13 +35,13 @@ namespace Jazz2::Tiles
 			}
 
 			if (maskEmpty) {
-				_isMaskEmpty.Set(i);
+				_isMaskEmpty.set(i);
 			}
 			if (maskFilled) {
-				_isMaskFilled.Set(i);
+				_isMaskFilled.set(i);
 			}
 			if (/*tileFilled ||*/ !maskEmpty) {
-				_isTileFilled.Set(i);
+				_isTileFilled.set(i);
 			}
 		}
 	}

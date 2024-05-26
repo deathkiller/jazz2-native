@@ -9,6 +9,9 @@ namespace nCine
 	class GLDepthTest
 	{
 	public:
+		GLDepthTest() = delete;
+		~GLDepthTest() = delete;
+
 		struct State
 		{
 			bool enabled = false;
@@ -34,16 +37,6 @@ namespace nCine
 
 	private:
 		static State state_;
-
-		/// Deleted default constructor
-		GLDepthTest() = delete;
-		/// Deleted destructor
-		~GLDepthTest() = delete;
-
-		/// Deleted copy constructor
-		GLDepthTest(const GLDepthTest&) = delete;
-		/// Deleted assignment operator
-		GLDepthTest& operator=(const GLDepthTest&) = delete;
 	};
 
 }

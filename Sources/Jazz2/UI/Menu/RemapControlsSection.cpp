@@ -11,7 +11,7 @@ namespace Jazz2::UI::Menu
 {
 	RemapControlsSection::RemapControlsSection()
 		: _selectedColumn(0), _currentPlayerIndex(0), _isDirty(false), _waitForInput(false), _timeout(0.0f),
-			_hintAnimation(0.0f), _keysPressedLast((uint32_t)KeySym::COUNT)
+			_hintAnimation(0.0f), _keysPressedLast(ValueInit, (std::size_t)KeySym::COUNT)
 	{
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 		_items.emplace_back(RemapControlsItem { PlayerActions::Left, _("Left") });
@@ -119,10 +119,10 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			for (std::int32_t key = 0; key < (std::int32_t)KeySym::COUNT && waitingForInput; key++) {
+			for (std::size_t key = 0; key < (std::int32_t)KeySym::COUNT && waitingForInput; key++) {
 				bool isPressed = keyState.isKeyDown((KeySym)key);
 				if (isPressed != _keysPressedLast[key]) {
-					_keysPressedLast.Set(key, isPressed);
+					_keysPressedLast.set(key, isPressed);
 					if (isPressed) {
 						newTarget = ControlScheme::CreateTarget((KeySym)key);
 						std::int32_t collidingAction, collidingAssignment;
@@ -426,11 +426,11 @@ namespace Jazz2::UI::Menu
 		auto& input = theApplication().GetInputManager();
 		auto& keyState = input.keyboardState();
 
-		_keysPressedLast.ClearAll();
+		_keysPressedLast.resetAll();
 
 		for (int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
 			if (keyState.isKeyDown((KeySym)key)) {
-				_keysPressedLast.Set(key);
+				_keysPressedLast.set(key);
 			}
 		}
 

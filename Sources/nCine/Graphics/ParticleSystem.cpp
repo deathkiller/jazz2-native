@@ -23,7 +23,7 @@ namespace nCine
 			ZoneText(texture->name(), strnlen(texture->name(), Object::MaxNameLength));
 		}*/
 
-		type_ = ObjectType::ParticleSystem;
+		_type = ObjectType::ParticleSystem;
 
 		children_.reserve(poolSize_);
 		for (unsigned int i = 0; i < poolSize_; i++) {
@@ -239,7 +239,7 @@ namespace nCine
 		affectors_(4), inLocalSpace_(other.inLocalSpace_)
 	{
 
-		type_ = ObjectType::ParticleSystem;
+		_type = ObjectType::ParticleSystem;
 
 		for (unsigned int i = 0; i < other.affectors_.size(); i++) {
 			const ParticleAffector& affector = *other.affectors_[i];

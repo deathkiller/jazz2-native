@@ -53,7 +53,7 @@ namespace Jazz2
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
 			_cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _pressedActionsLast(0), _overrideActions(0),
+			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0), _pressedActionsLast(0), _overrideActions(0),
 			_playerFrozenEnabled(false)
 	{
 	}
@@ -646,7 +646,7 @@ namespace Jazz2
 
 	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)
 	{
-		_pressedKeys.Set((uint32_t)event.sym);
+		_pressedKeys.set((std::size_t)event.sym);
 
 		// Cheats
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
@@ -729,7 +729,7 @@ namespace Jazz2
 
 	void LevelHandler::OnKeyReleased(const KeyboardEvent& event)
 	{
-		_pressedKeys.Reset((uint32_t)event.sym);
+		_pressedKeys.reset((std::size_t)event.sym);
 	}
 
 	void LevelHandler::OnTouchEvent(const  TouchEvent& event)

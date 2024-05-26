@@ -4,86 +4,91 @@
 namespace nCine
 {
 	TimeStamp::TimeStamp()
-		: counter_(0)
+		: _counter(0)
+	{
+	}
+
+	TimeStamp::TimeStamp(std::uint64_t counter)
+		:_counter(counter)
 	{
 	}
 
 	bool TimeStamp::operator>(const TimeStamp& other) const
 	{
-		return counter_ > other.counter_;
+		return _counter > other._counter;
 	}
 
 	bool TimeStamp::operator<(const TimeStamp& other) const
 	{
-		return counter_ < other.counter_;
+		return _counter < other._counter;
 	}
 
 	TimeStamp& TimeStamp::operator+=(const TimeStamp& other)
 	{
-		counter_ += other.counter_;
+		_counter += other._counter;
 		return *this;
 	}
 
 	TimeStamp& TimeStamp::operator-=(const TimeStamp& other)
 	{
-		ASSERT(counter_ >= other.counter_);
-		counter_ -= other.counter_;
+		ASSERT(_counter >= other._counter);
+		_counter -= other._counter;
 		return *this;
 	}
 
 	TimeStamp TimeStamp::operator+(const TimeStamp& other) const
 	{
-		return TimeStamp(counter_ + other.counter_);
+		return TimeStamp(_counter + other._counter);
 	}
 
 	TimeStamp TimeStamp::operator-(const TimeStamp& other) const
 	{
-		ASSERT(counter_ >= other.counter_);
-		return TimeStamp(counter_ - other.counter_);
+		ASSERT(_counter >= other._counter);
+		return TimeStamp(_counter - other._counter);
 	}
 
 	TimeStamp TimeStamp::timeSince() const
 	{
-		return TimeStamp(clock().now() - counter_);
+		return TimeStamp(clock().now() - _counter);
 	}
 
 	float TimeStamp::secondsSince() const
 	{
-		return TimeStamp(clock().now() - counter_).seconds();
+		return TimeStamp(clock().now() - _counter).seconds();
 	}
 
 	float TimeStamp::millisecondsSince() const
 	{
-		return TimeStamp(clock().now() - counter_).milliseconds();
+		return TimeStamp(clock().now() - _counter).milliseconds();
 	}
 
 	float TimeStamp::microsecondsSince() const
 	{
-		return TimeStamp(clock().now() - counter_).microseconds();
+		return TimeStamp(clock().now() - _counter).microseconds();
 	}
 
 	float TimeStamp::nanosecondsSince() const
 	{
-		return TimeStamp(clock().now() - counter_).nanoseconds();
+		return TimeStamp(clock().now() - _counter).nanoseconds();
 	}
 
 	float TimeStamp::seconds() const
 	{
-		return static_cast<float>(counter_) / clock().frequency();
+		return static_cast<float>(_counter) / clock().frequency();
 	}
 
 	float TimeStamp::milliseconds() const
 	{
-		return (static_cast<float>(counter_) / clock().frequency()) * 1000.0f;
+		return (static_cast<float>(_counter) / clock().frequency()) * 1000.0f;
 	}
 
 	float TimeStamp::microseconds() const
 	{
-		return (static_cast<float>(counter_) / clock().frequency()) * 1000000.0f;
+		return (static_cast<float>(_counter) / clock().frequency()) * 1000000.0f;
 	}
 
 	float TimeStamp::nanoseconds() const
 	{
-		return (static_cast<float>(counter_) / clock().frequency()) * 1000000000.0f;
+		return (static_cast<float>(_counter) / clock().frequency()) * 1000000000.0f;
 	}
 }

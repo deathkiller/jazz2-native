@@ -21,7 +21,7 @@ namespace nCine
 	AnimatedSprite::AnimatedSprite(SceneNode* parent, Texture* texture, float xx, float yy)
 		: Sprite(parent, texture, xx, yy), anims_(4), currentAnimIndex_(0)
 	{
-		type_ = ObjectType::AnimatedSprite;
+		_type = ObjectType::AnimatedSprite;
 	}
 
 	AnimatedSprite::AnimatedSprite(SceneNode* parent, Texture* texture, const Vector2f& position)
@@ -136,7 +136,7 @@ namespace nCine
 	AnimatedSprite::AnimatedSprite(const AnimatedSprite& other)
 		: Sprite(other), anims_(other.anims_), currentAnimIndex_(other.currentAnimIndex_)
 	{
-		type_ = ObjectType::AnimatedSprite;
+		_type = ObjectType::AnimatedSprite;
 		setFrame(other.frame());
 	}
 }

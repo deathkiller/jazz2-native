@@ -6,67 +6,67 @@
 namespace nCine
 {
 	FrameTimer::FrameTimer(float logInterval, float avgInterval)
-		: averageInterval_(avgInterval), loggingInterval_(logInterval), frameDuration_(0.0f), lastAvgUpdate_(TimeStamp::now()),
-			totNumFrames_(0L), avgNumFrames_(0L), logNumFrames_(0L), avgFps_(0.0f), timeMults_{1.0f, 1.0f, 1.0f}
+		: _averageInterval(avgInterval), _loggingInterval(logInterval), _frameDuration(0.0f), _lastAvgUpdate(TimeStamp::now()),
+			_totNumFrames(0L), _avgNumFrames(0L), _logNumFrames(0L), _avgFps(0.0f), _timeMults{1.0f, 1.0f, 1.0f}
 	{
 	}
 
 	void FrameTimer::AddFrame()
 	{
-		frameDuration_ = frameStart_.secondsSince();
+		_frameDuration = _frameStart.secondsSince();
 
 		// Start counting for the next frame interval
-		frameStart_ = TimeStamp::now();
+		_frameStart = TimeStamp::now();
 
-		totNumFrames_++;
-		avgNumFrames_++;
-		logNumFrames_++;
+		_totNumFrames++;
+		_avgNumFrames++;
+		_logNumFrames++;
 
 		// Smooth out time multiplier using last 3 frames to prevent microstuttering
-		float timeMultLast = timeMults_[0];
-		timeMults_[0] = (timeMults_[2] + timeMults_[1] + timeMultLast + (std::min(frameDuration_, SecondsPerFrame * 2) / SecondsPerFrame)) * 0.25f;
-		timeMults_[2] = timeMults_[1];
-		timeMults_[1] = timeMultLast;
+		const float timeMultLast = _timeMults[0];
+		_timeMults[0] = (_timeMults[2] + _timeMults[1] + timeMultLast + (std::min(_frameDuration, SecondsPerFrame * 2) / SecondsPerFrame)) * 0.25f;
+		_timeMults[2] = _timeMults[1];
+		_timeMults[1] = timeMultLast;
 
 		// Update the FPS average calculation every `avgInterval_` seconds
-		if (frameStart_ < lastAvgUpdate_ || frameStart_ < lastLogUpdate_) {
+		if (_frameStart < _lastAvgUpdate || _frameStart < _lastLogUpdate) {
 			LOGW("Detected time discontinuity, resetting counters");
-			lastAvgUpdate_ = frameStart_;
-			lastLogUpdate_ = frameStart_;
+			_lastAvgUpdate = _frameStart;
+			_lastLogUpdate = _frameStart;
 		}
 
-		const float secsSinceLastAvgUpdate = (frameStart_ - lastAvgUpdate_).seconds();
-		if (averageInterval_ > 0.0f && secsSinceLastAvgUpdate > averageInterval_) {
-			avgFps_ = static_cast<float>(avgNumFrames_) / secsSinceLastAvgUpdate;
+		const float secsSinceLastAvgUpdate = (_frameStart - _lastAvgUpdate).seconds();
+		if (_averageInterval > 0.0f && secsSinceLastAvgUpdate > _averageInterval) {
+			_avgFps = static_cast<float>(_avgNumFrames) / secsSinceLastAvgUpdate;
 
-			avgNumFrames_ = 0L;
-			lastAvgUpdate_ = frameStart_;
+			_avgNumFrames = 0L;
+			_lastAvgUpdate = _frameStart;
 		}
 
-		const float secsSinceLastLogUpdate = (frameStart_ - lastLogUpdate_).seconds();
+		const float secsSinceLastLogUpdate = (_frameStart - _lastLogUpdate).seconds();
 		// Log number of frames and FPS every `logInterval_` seconds
-		if (loggingInterval_ > 0.0f && avgNumFrames_ != 0 && secsSinceLastLogUpdate > loggingInterval_) {
-			avgFps_ = static_cast<float>(logNumFrames_) / loggingInterval_;
+		if (_loggingInterval > 0.0f && _avgNumFrames != 0 && secsSinceLastLogUpdate > _loggingInterval) {
+			_avgFps = static_cast<float>(_logNumFrames) / _loggingInterval;
 #if defined(DEATH_TRACE) && defined(DEATH_DEBUG)
-			const float msPerFrame = (loggingInterval_ * 1000.0f) / static_cast<float>(logNumFrames_);
-			LOGD("%lu frames in %.0f seconds = %.1f FPS (%.2fms per frame)", logNumFrames_, loggingInterval_, avgFps_, msPerFrame);
+			const float msPerFrame = (_loggingInterval * 1000.0f) / static_cast<float>(_logNumFrames);
+			LOGD("%lu frames in %.0f seconds = %.1f FPS (%.2fms per frame)", _logNumFrames, _loggingInterval, _avgFps, msPerFrame);
 #endif
-			logNumFrames_ = 0L;
-			lastLogUpdate_ = frameStart_;
+			_logNumFrames = 0L;
+			_lastLogUpdate = _frameStart;
 		}
 	}
 
 	void FrameTimer::Suspend()
 	{
-		suspensionStart_ = TimeStamp::now();
+		_suspensionStart = TimeStamp::now();
 	}
 
 	TimeStamp FrameTimer::Resume()
 	{
-		const TimeStamp suspensionDuration = suspensionStart_.timeSince();
-		frameStart_ += suspensionDuration;
-		lastAvgUpdate_ += suspensionDuration;
-		lastLogUpdate_ += suspensionDuration;
+		const TimeStamp suspensionDuration = _suspensionStart.timeSince();
+		_frameStart += suspensionDuration;
+		_lastAvgUpdate += suspensionDuration;
+		_lastLogUpdate += suspensionDuration;
 
 		return suspensionDuration;
 	}

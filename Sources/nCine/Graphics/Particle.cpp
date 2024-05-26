@@ -6,7 +6,7 @@ namespace nCine
 	Particle::Particle(SceneNode* parent, Texture* texture)
 		: Sprite(parent, texture), life_(0.0f), startingLife(0.0f), startingRotation(0.0f), inLocalSpace_(false)
 	{
-		type_ = ObjectType::Particle;
+		_type = ObjectType::Particle;
 		renderCommand_.setType(RenderCommand::CommandTypes::Particle);
 		setEnabled(false);
 	}
@@ -14,7 +14,7 @@ namespace nCine
 	Particle::Particle(const Particle& other)
 		: Sprite(other), life_(other.life_), startingLife(other.startingLife), startingRotation(other.startingRotation), inLocalSpace_(other.inLocalSpace_)
 	{
-		type_ = ObjectType::Particle;
+		_type = ObjectType::Particle;
 		renderCommand_.setType(RenderCommand::CommandTypes::Particle);
 	}
 

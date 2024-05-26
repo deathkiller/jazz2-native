@@ -2,72 +2,82 @@
 
 #include "../../Common.h"
 
+#include <Containers/Tags.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	class BitArray;
 
 	class BitArrayIndex
 	{
-		public:
-			BitArrayIndex(BitArray* array, std::uint32_t index);
+	public:
+		BitArrayIndex(BitArray* array, std::size_t bit);
 
-			void operator=(bool value);
+		void operator=(bool value);
 
-		private:
-			BitArray* _bitArray;
-			std::uint32_t _index;
+	private:
+		BitArray* _bitArray;
+		std::size_t _bit;
 	};
 
 	class BitArray
 	{
-		public:
-			BitArray();
-			BitArray(std::uint32_t numBits);
-			~BitArray();
+	public:
+		BitArray();
+		BitArray(ValueInitT, std::size_t sizeInBits);
+		BitArray(NoInitT, std::size_t sizeInBits);
+		~BitArray();
 
-			std::uint8_t* RawData() { return _storage; }
+		BitArray(const BitArray&) = delete;
+		BitArray& operator=(const BitArray&) = delete;
+		BitArray(BitArray&& other) noexcept;
+		BitArray& operator=(BitArray&& other) noexcept;
 
-			std::int32_t Size() const { return _size; };
-			std::int32_t SizeInBytes() const;
+		char* data() { return _data; }
 
-			void SetSize(std::uint32_t numBits);
+		bool empty() const { return !_size; }
+		std::size_t size() const { return _size; };
+		std::size_t sizeInBytes() const;
 
-			void SetAll();
-			void ClearAll();
-			void Set(std::uint32_t bit);
-			void Set(std::uint32_t bit, bool value);
-			void Reset(std::uint32_t bit);
+		void resize(ValueInitT, std::size_t sizeInBits);
+		void resize(NoInitT, std::size_t sizeInBits);
 
-			BitArrayIndex operator()(const uint32_t bit);
+		void setAll();
+		void resetAll();
+		void set(std::size_t bit);
+		void set(std::size_t bit, bool value);
+		void reset(std::size_t bit);
 
-			bool operator[](std::uint32_t bit) const;
-			bool operator==(const BitArray &other) const;
+		BitArrayIndex operator()(const std::size_t bit);
 
-			BitArray operator&(const BitArray &other) const;
-			BitArray operator^(const BitArray &other) const;
-			BitArray operator|(const BitArray &other) const;
-			BitArray operator~() const;
+		bool operator[](std::size_t bit) const;
+		bool operator==(const BitArray& other) const;
 
-			BitArray operator<<(std::uint32_t count) const;
-			BitArray operator>>(std::uint32_t count) const;
+		BitArray operator&(const BitArray& other) const;
+		BitArray operator^(const BitArray& other) const;
+		BitArray operator|(const BitArray& other) const;
+		BitArray operator~() const;
 
-			BitArray& operator++();
-			BitArray& operator++(std::int32_t);
-			BitArray& operator--();
-			BitArray& operator--(std::int32_t);
+		BitArray operator<<(std::size_t count) const;
+		BitArray operator>>(std::size_t count) const;
 
-			BitArray& operator=(const BitArray &src);
+		BitArray& operator++();
+		BitArray& operator++(int);
+		BitArray& operator--();
+		BitArray& operator--(int);
 
-			BitArray& operator&=(const BitArray &src);
-			BitArray& operator^=(const BitArray &src);
-			BitArray& operator|=(const BitArray &src);
-			BitArray& Not();
+		BitArray& operator&=(const BitArray& src);
+		BitArray& operator^=(const BitArray& src);
+		BitArray& operator|=(const BitArray& src);
+		BitArray& notAll();
 
-			BitArray& operator<<=(std::uint32_t shifts);
-			BitArray& operator>>=(std::uint32_t shifts);
+		BitArray& operator<<=(std::size_t shifts);
+		BitArray& operator>>=(std::size_t shifts);
 
-		protected:
-			std::int32_t _size;
-			std::uint8_t* _storage;
+	protected:
+		char* _data;
+		std::size_t _size;
 	};
 }

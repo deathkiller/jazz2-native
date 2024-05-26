@@ -17,32 +17,32 @@
 namespace nCine
 {
 	Timer::Timer()
-		: isRunning_(false), startTime_(clock().now()), accumulatedTime_(0ULL)
+		: _isRunning(false), _startTime(clock().now()), _accumulatedTime(0ULL)
 	{
 	}
 
 	void Timer::start()
 	{
-		isRunning_ = true;
-		startTime_ = clock().counter();
+		_isRunning = true;
+		_startTime = clock().counter();
 	}
 
 	void Timer::stop()
 	{
-		accumulatedTime_ += clock().counter() - startTime_;
-		isRunning_ = false;
+		_accumulatedTime += clock().counter() - _startTime;
+		_isRunning = false;
 	}
 
 	float Timer::interval() const
 	{
-		return static_cast<float>(clock().counter() - startTime_) / clock().frequency();
+		return static_cast<float>(clock().counter() - _startTime) / clock().frequency();
 	}
 
 	float Timer::total() const
 	{
-		return isRunning_
-			? static_cast<float>(accumulatedTime_ + clock().counter() - startTime_) / clock().frequency()
-			: static_cast<float>(accumulatedTime_) / clock().frequency();
+		return _isRunning
+			? static_cast<float>(_accumulatedTime + clock().counter() - _startTime) / clock().frequency()
+			: static_cast<float>(_accumulatedTime) / clock().frequency();
 	}
 
 	void Timer::sleep(std::uint32_t milliseconds)

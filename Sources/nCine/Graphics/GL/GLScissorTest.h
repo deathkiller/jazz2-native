@@ -11,6 +11,9 @@ namespace nCine
 	class GLScissorTest
 	{
 	public:
+		GLScissorTest() = delete;
+		~GLScissorTest() = delete;
+
 		struct State
 		{
 			bool enabled = false;
@@ -35,16 +38,6 @@ namespace nCine
 
 	private:
 		static State state_;
-
-		/// Deleted default constructor
-		GLScissorTest() = delete;
-		/// Deleted destructor
-		~GLScissorTest() = delete;
-
-		/// Deleted copy constructor
-		GLScissorTest(const GLScissorTest&) = delete;
-		/// Deleted assignment operator
-		GLScissorTest& operator=(const GLScissorTest&) = delete;
 	};
 
 }

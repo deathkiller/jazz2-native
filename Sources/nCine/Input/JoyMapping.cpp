@@ -95,18 +95,18 @@ namespace nCine
 
 	JoyMapping::MappingDescription::MappingDescription()
 	{
-		for (unsigned int i = 0; i < MaxNumAxes; i++) {
+		for (int i = 0; i < MaxNumAxes; i++) {
 			axes[i].name = AxisName::Unknown;
 			axes[i].buttonNamePositive = ButtonName::Unknown;
 			axes[i].buttonNameNegative = ButtonName::Unknown;
 		}
-		for (unsigned int i = 0; i < MaxNumAxes; i++) {
+		for (int i = 0; i < MaxNumAxes; i++) {
 			buttonAxes[i] = AxisName::Unknown;
 		}
-		for (unsigned int i = 0; i < MaxNumButtons; i++) {
+		for (int i = 0; i < MaxNumButtons; i++) {
 			buttons[i] = ButtonName::Unknown;
 		}
-		for (unsigned int i = 0; i < MaxHatButtons; i++) {
+		for (int i = 0; i < MaxHatButtons; i++) {
 			hats[i] = ButtonName::Unknown;
 		}
 	}
@@ -119,7 +119,7 @@ namespace nCine
 	JoyMapping::JoyMapping()
 		: inputManager_(nullptr), inputEventHandler_(nullptr)
 	{
-		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
+		for (int i = 0; i < MaxNumJoysticks; i++) {
 			assignedMappings_[i].isValid = false;
 		}
 	}
@@ -412,7 +412,7 @@ namespace nCine
 				mappedButtonEvent_.joyId = event.joyId;
 				mappedButtonEvent_.buttonName = axis.buttonNamePositive;
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
-				bool newState = (event.value >= DefaultDeadzone);
+				bool newState = (event.value >= IInputManager::AnalogButtonDeadZone);
 				bool prevState = mappedJoyStates_[event.joyId].buttons_[buttonId];
 				if (newState != prevState) {
 					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;
@@ -433,7 +433,7 @@ namespace nCine
 				mappedButtonEvent_.joyId = event.joyId;
 				mappedButtonEvent_.buttonName = axis.buttonNameNegative;
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
-				bool newState = (event.value <= -DefaultDeadzone);
+				bool newState = (event.value <= -IInputManager::AnalogButtonDeadZone);
 				bool prevState = mappedJoyStates_[event.joyId].buttons_[buttonId];
 				if (newState != prevState) {
 					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;
@@ -745,7 +745,9 @@ namespace nCine
 					axis.name = static_cast<AxisName>(axisIndex);
 					const int axisMapping = parseAxisMapping(subMid + 1, subEnd, axis);
 					if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes) {
-						map.desc.axes[axisMapping] = axis;
+						map.desc.axes[axisMapping].name = axis.name;
+						map.desc.axes[axisMapping].min = axis.min;
+						map.desc.axes[axisMapping].max = axis.max;
 					} else {
 						// The same parsing method for buttons will be used for button axes
 						const int buttonAxisMapping = parseButtonMapping(subMid + 1, subEnd);
@@ -843,7 +845,7 @@ namespace nCine
 	{
 		int buttonIndex = -1;
 
-		for (unsigned int i = 0; i < arraySize<unsigned int>(ButtonsStrings); i++) {
+		for (int i = 0; i < arraySize<int>(ButtonsStrings); i++) {
 			if (strncmp(start, ButtonsStrings[i], end - start) == 0) {
 				buttonIndex = i;
 				break;

@@ -11,6 +11,9 @@ namespace nCine
 	class GLClearColor
 	{
 	public:
+		GLClearColor() = delete;
+		~GLClearColor() = delete;
+
 		struct State
 		{
 			Colorf color = Colorf(0.0f, 0.0f, 0.0f, 0.0f);
@@ -29,16 +32,6 @@ namespace nCine
 
 	private:
 		static State state_;
-
-		/// Deleted default constructor
-		GLClearColor() = delete;
-		/// Deleted destructor
-		~GLClearColor() = delete;
-
-		/// Deleted copy constructor
-		GLClearColor(const GLClearColor&) = delete;
-		/// Deleted assignment operator
-		GLClearColor& operator=(const GLClearColor&) = delete;
 	};
 
 }

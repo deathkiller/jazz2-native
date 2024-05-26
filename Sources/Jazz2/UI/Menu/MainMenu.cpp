@@ -1,5 +1,6 @@
 ﻿#include "MainMenu.h"
 #include "MenuResources.h"
+#include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 #include "../ControlScheme.h"
 #include "BeginSection.h"
@@ -23,7 +24,7 @@ namespace Jazz2::UI::Menu
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)
 		: _root(root), _activeCanvas(ActiveCanvas::Background), _transitionWhite(afterIntro ? 1.0f : 0.0f),
 			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
-			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _touchButtonsTimer(0.0f)
+			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0), _touchButtonsTimer(0.0f)
 	{
 		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
@@ -57,6 +58,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		bool isPlayable = ((_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 		if (PreferencesCache::FirstRun && isPlayable) {
+			// Show intro section on the first run
 			SwitchToSection<FirstRunSection>();
 		}
 #endif
@@ -175,12 +177,12 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::OnKeyPressed(const KeyboardEvent& event)
 	{
-		_pressedKeys.Set((uint32_t)event.sym);
+		_pressedKeys.set((std::size_t)event.sym);
 	}
 
 	void MainMenu::OnKeyReleased(const KeyboardEvent& event)
 	{
-		_pressedKeys.Reset((uint32_t)event.sym);
+		_pressedKeys.reset((std::size_t)event.sym);
 	}
 
 	void MainMenu::OnTouchEvent(const nCine::TouchEvent& event)

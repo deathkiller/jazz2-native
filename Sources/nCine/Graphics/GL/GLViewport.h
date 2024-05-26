@@ -10,7 +10,12 @@ namespace nCine
 	/// A class to handle OpenGL viewport
 	class GLViewport
 	{
+		friend class IGfxDevice; // for `initRect()`
+
 	public:
+		GLViewport() = delete;
+		~GLViewport() = delete;
+
 		struct State
 		{
 			Recti rect = Recti(0, 0, 0, 0);
@@ -31,18 +36,6 @@ namespace nCine
 		static State state_;
 
 		static void initRect(GLint x, GLint y, GLsizei width, GLsizei height);
-
-		/// Deleted default constructor
-		GLViewport() = delete;
-		/// Deleted destructor
-		~GLViewport() = delete;
-
-		/// Deleted copy constructor
-		GLViewport(const GLViewport&) = delete;
-		/// Deleted assignment operator
-		GLViewport& operator=(const GLViewport&) = delete;
-
-		friend class IGfxDevice; // for `initRect()`
 	};
 
 }

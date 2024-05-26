@@ -12,7 +12,7 @@ namespace Jazz2::Tiles
 {
 	TileMap::TileMap(const StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
-			_triggerState(TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
+			_triggerState(ValueInit, TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
@@ -1323,7 +1323,7 @@ namespace Jazz2::Tiles
 			return;
 		}
 
-		_triggerState.Set(triggerId, newState);
+		_triggerState.set(triggerId, newState);
 
 		// Go through all tiles and update any that are influenced by this trigger
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
@@ -1366,7 +1366,7 @@ namespace Jazz2::Tiles
 			}
 		}
 
-		src.Read(_triggerState.RawData(), _triggerState.SizeInBytes());
+		src.Read(_triggerState.data(), _triggerState.sizeInBytes());
 	}
 
 	void TileMap::SerializeResumableToStream(Stream& dest)
@@ -1383,7 +1383,7 @@ namespace Jazz2::Tiles
 			dest.WriteVariableInt32(spriteLayer.Layout[i].DestructFrameIndex);
 		}
 
-		dest.Write(_triggerState.RawData(), _triggerState.SizeInBytes());
+		dest.Write(_triggerState.data(), _triggerState.sizeInBytes());
 	}
 
 	void TileMap::RenderTexturedBackground(RenderQueue& renderQueue, TileMapLayer& layer, float x, float y)
