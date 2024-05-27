@@ -866,8 +866,8 @@ namespace Death { namespace Containers { namespace StringUtils {
 		do {
 			auto [c, nextIdx] = Utf8::NextChar(string, idx);
 
-			const char32_t* f = std::lower_bound(u2l, u2l + countof(u2l), c);
-			if (f != u2l + countof(u2l) && *f == c) {
+			const char32_t* f = std::lower_bound(std::begin(u2l), std::end(u2l), c);
+			if (f != std::end(u2l) && *f == c) {
 				c = lc[f - u2l];
 			}
 
@@ -1090,8 +1090,8 @@ namespace Death { namespace Containers { namespace StringUtils {
 		do {
 			auto [c, nextIdx] = Utf8::NextChar(string, idx);
 
-			const char32_t* f = std::lower_bound(l2u, l2u + countof(l2u), c);
-			if (f != l2u + countof(l2u) && *f == c) {
+			const char32_t* f = std::lower_bound(std::begin(l2u), std::end(l2u), c);
+			if (f != std::end(l2u) && *f == c) {
 				c = uc[f - l2u];
 			}
 
