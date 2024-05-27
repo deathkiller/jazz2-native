@@ -127,8 +127,10 @@ namespace Jazz2::UI::Menu
 		}
 
 		float imageScale = (contentBounds.W >= 400 ? 1.0f : 0.5f);
-		_root->DrawElement(MenuDim, 0, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f * imageScale, 36.0f * imageScale);
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
+		float imageOffsetX = center.X * (contentBounds.W >= 400 ? 0.36f : 0.32f);
+		float imageOffsetY = center.Y * (contentBounds.W >= 400 ? 1.4f : 1.06f);
+		_root->DrawElement(MenuDim, 0, imageOffsetX, imageOffsetY, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f * imageScale, 36.0f * imageScale);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, imageOffsetX, imageOffsetY + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 
 		if (_imageTransition < 1.0f) {
 			AnimState lastDifficultyImage;
@@ -138,10 +140,10 @@ namespace Jazz2::UI::Menu
 				case 1: lastDifficultyImage = MenuDifficultySpaz; break;
 				case 2: lastDifficultyImage = MenuDifficultyLori; break;
 			}
-			_root->DrawElement(lastDifficultyImage, _lastDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
+			_root->DrawElement(lastDifficultyImage, _lastDifficulty, imageOffsetX, imageOffsetY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 		}
 
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, imageOffsetX, imageOffsetY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 
 		int32_t charOffset = 0;
 		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {

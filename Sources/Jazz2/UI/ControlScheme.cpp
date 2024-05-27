@@ -68,30 +68,30 @@ namespace Jazz2::UI
 							if (analogAsButtons && axisValue >= IInputManager::AnalogButtonDeadZone) {
 								result.PressedActions |= (1ull << (std::uint32_t)i) | (1ull << (32 + (std::uint32_t)i));
 							}
-							if (i < 4 && axisValue > IInputManager::AnalogButtonDeadZone) {
+							if (i < 4 && axisValue > GamepadDeadZone) {
 								switch ((PlayerActions)i) {
 									case PlayerActions::Left: {
 										float axisValueAdjusted = -axisValue;
-										if (result.Movement.X < IInputManager::LeftStickDeadZone && axisValueAdjusted < result.Movement.X) {
+										if (result.Movement.X < GamepadDeadZone && axisValueAdjusted < result.Movement.X) {
 											result.Movement.X = axisValueAdjusted;
 										}
 										break;
 									}
 									case PlayerActions::Right: {
-										if (result.Movement.X > -IInputManager::LeftStickDeadZone && axisValue > result.Movement.X) {
+										if (result.Movement.X > -GamepadDeadZone && axisValue > result.Movement.X) {
 											result.Movement.X = axisValue;
 										}
 										break;
 									}
 									case PlayerActions::Up: {
 										float axisValueAdjusted = -axisValue;
-										if (result.Movement.Y < IInputManager::LeftStickDeadZone && axisValueAdjusted < result.Movement.Y) {
+										if (result.Movement.Y < GamepadDeadZone && axisValueAdjusted < result.Movement.Y) {
 											result.Movement.Y = axisValueAdjusted;
 										}
 										break;
 									}
 									case PlayerActions::Down: {
-										if (result.Movement.Y > -IInputManager::LeftStickDeadZone && axisValue > result.Movement.Y) {
+										if (result.Movement.Y > -GamepadDeadZone && axisValue > result.Movement.Y) {
 											result.Movement.Y = axisValue;
 										}
 										break;
@@ -134,12 +134,12 @@ namespace Jazz2::UI
 
 		// Normalize both axes
 		float movementLengthX = std::abs(result.Movement.X);
-		float normalizedLength = (movementLengthX - IInputManager::LeftStickDeadZone) / (1.0f - IInputManager::LeftStickDeadZone * 2.0f);
+		float normalizedLength = (movementLengthX - GamepadDeadZone) / (1.0f - GamepadDeadZone * 2.0f);
 		normalizedLength = std::clamp(normalizedLength, 0.0f, 1.0f);
 		result.Movement.X = std::copysign(normalizedLength, result.Movement.X);
 
 		float movementLengthY = std::abs(result.Movement.Y);
-		normalizedLength = (movementLengthY - IInputManager::LeftStickDeadZone) / (1.0f - IInputManager::LeftStickDeadZone * 2.0f);
+		normalizedLength = (movementLengthY - GamepadDeadZone) / (1.0f - GamepadDeadZone * 2.0f);
 		normalizedLength = std::clamp(normalizedLength, 0.0f, 1.0f);
 		result.Movement.Y = std::copysign(normalizedLength, result.Movement.Y);
 
