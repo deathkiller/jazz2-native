@@ -213,7 +213,7 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(NCINE_ARM_PROCESSOR)
 		include(check_atomic)
 	endif()
-	if(NCINE_WITH_OPENGLES)
+	if(NCINE_WITH_OPENGLES OR NINTENDO_SWITCH)
 		find_package(OpenGLES2)
 	endif()
 	# Look for both GLFW and SDL2 to make the fallback logic work
