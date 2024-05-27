@@ -1521,7 +1521,7 @@ msgstr "Przełączanie biegu"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
 msgid "Gamepad Button Labels"
-msgstr ""
+msgstr "Oznaczenia przycisków kontrolera"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
