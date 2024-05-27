@@ -204,7 +204,7 @@ namespace Jazz2::UI::Menu
 
 		auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)item.Item.Type];
 
-		_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX * 0.3f, item.Y, IMenuContainer::FontLayer, Alignment::Left,
+		_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX * 0.3f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
 			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f);
 
 		std::int32_t targetCount = (std::int32_t)mapping.Targets.size();

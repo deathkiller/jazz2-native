@@ -10,6 +10,7 @@
 #include "Player.h"
 #include "Weapons/FreezerShot.h"
 #include "Weapons/ToasterShot.h"
+#include "Weapons/Thunderbolt.h"
 
 #if !defined(WITH_COROUTINES)
 #	pragma message("WITH_COROUTINES is not defined, building without asynchronous loading support")
@@ -1099,7 +1100,7 @@ namespace Jazz2::Actors
 				_renderer.AnimPaused = true;
 				freezerShot->DecreaseHealth(INT32_MAX);
 			}
-		} else if(auto* toasterShot = runtime_cast<Weapons::ToasterShot*>(shot)) {
+		} else if(runtime_cast<Weapons::ToasterShot*>(shot) || runtime_cast<Weapons::Thunderbolt*>(shot)) {
 			_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);
 		}
 	}

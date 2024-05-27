@@ -67,6 +67,7 @@ namespace Jazz2::UI
 		static constexpr std::uint32_t GamepadNegativeMask = 0x20000000u;
 		static constexpr std::uint32_t GamepadIndexMask = 0x0FFF0000u;
 		static constexpr std::uint32_t ButtonMask = 0x0000FFFFu;
+		static constexpr float GamepadDeadZone = 0.1f;
 
 		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (std::int32_t)PlayerActions::Count];
 	};

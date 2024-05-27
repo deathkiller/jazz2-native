@@ -129,8 +129,8 @@ namespace Jazz2::UI::Menu
 		_y = (availableHeight - _height < 0.0f ? std::clamp(_y, availableHeight - _height, 0.0f) : 0.0f);
 
 		Vector2f center = Vector2f(centerX, topLine + 12.0f + _y);
-		float column1 = contentBounds.X + contentBounds.W * 0.25f;
-		float column2 = contentBounds.X + contentBounds.W * 0.52f;
+		float column1 = contentBounds.X + (contentBounds.W >= 460 ? (contentBounds.W * 0.25f) : 20.0f);
+		float column2 = contentBounds.X + (contentBounds.W >= 460 ? (contentBounds.W * 0.52f) : (contentBounds.W * 0.44f));
 
 		std::size_t itemsCount = _items.size();
 		for (int32_t i = 0; i < itemsCount; i++) {
