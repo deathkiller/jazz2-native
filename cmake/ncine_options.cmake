@@ -48,9 +48,10 @@ else()
 		option(NCINE_BUILD_FLATPAK "Build Flatpak version of the game" OFF)
 		cmake_dependent_option(NCINE_ASSEMBLE_DEB "Assemble DEB package of the game" OFF "NOT NCINE_BUILD_FLATPAK" OFF)
 		cmake_dependent_option(NCINE_ASSEMBLE_RPM "Assemble RPM package of the game" OFF "NOT NCINE_BUILD_FLATPAK" OFF)
+		cmake_dependent_option(NCINE_WITH_OPENGLES "Use OpenGL|ES 2 instead of OpenGL" OFF "NOT NCINE_ARM_PROCESSOR" ON)
 	endif()
 	
-	if((WIN32 OR NOT NCINE_ARM_PROCESSOR) AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH)
+	if((WIN32 OR NOT NCINE_WITH_OPENGLES) AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH)
 		option(NCINE_WITH_GLEW "Use GLEW library" ON)
 	endif()
 
