@@ -43,6 +43,8 @@ elseif(OPENGL_FOUND)
 	else()
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
 	endif()
+else()
+	message(STATUS "No graphics library found! Make sure OpenGL or OpenGL|ES library is available on your system.")
 endif()
 
 if(GLEW_FOUND)

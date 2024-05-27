@@ -14,6 +14,7 @@ namespace Death {
 	{
 	public:
 		Unaligned() = delete;
+		~Unaligned() = delete;
 
 		static std::uint16_t Load16(const void* p);
 		static std::uint32_t Load32(const void* p);

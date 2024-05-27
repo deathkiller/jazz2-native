@@ -512,19 +512,19 @@ namespace Death { namespace Containers {
 						bool success2 = false;
 #if defined(DEATH_TARGET_WINDOWS)
 						wchar_t buffer[64];
-						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, countof(buffer));
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, arraySize<int>(buffer));
 						if (bufferLength > 0) {
 							if (buffer[bufferLength - 1] == '\0') {
 								bufferLength--;
 							}
 							buffer[bufferLength++] = ' ';
-							std::int32_t timeLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer + bufferLength, countof(buffer) - bufferLength);
+							std::int32_t timeLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer + bufferLength, arraySize<int>(buffer) - bufferLength);
 							if (timeLength > 0) {
 								bufferLength += timeLength;
 								if (buffer[bufferLength - 1] == '\0') {
 									bufferLength--;
 								}
-								std::size_t format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+								std::size_t format2Length = TranslateFromUnicodeFormat(format2, arraySize(format2), buffer, bufferLength);
 								if (format2Length > 0) {
 									success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
 								}
@@ -660,21 +660,21 @@ namespace Death { namespace Containers {
 						bool success2 = false;
 #if defined(DEATH_TARGET_WINDOWS)
 						wchar_t buffer[64];
-						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, countof(buffer));
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, arraySize<int>(buffer));
 						if (bufferLength > 0) {
 							if (buffer[bufferLength - 1] == '\0') {
 								bufferLength--;
 							}
-							std::size_t format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+							std::size_t format2Length = TranslateFromUnicodeFormat(format2, arraySize(format2), buffer, bufferLength);
 							if (format2Length > 0) {
 								success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
 								if (!success2) {
-									std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SLONGDATE, buffer, countof(buffer));
+									std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SLONGDATE, buffer, arraySize<int>(buffer));
 									if (bufferLength > 0) {
 										if (buffer[bufferLength - 1] == '\0') {
 											bufferLength--;
 										}
-										format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+										format2Length = TranslateFromUnicodeFormat(format2, arraySize(format2), buffer, bufferLength);
 										if (format2Length > 0) {
 											success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
 										}
@@ -710,12 +710,12 @@ namespace Death { namespace Containers {
 						bool success2 = false;
 #if defined(DEATH_TARGET_WINDOWS)
 						wchar_t buffer[64];
-						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer, countof(buffer));
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer, arraySize<int>(buffer));
 						if (bufferLength > 0) {
 							if (buffer[bufferLength - 1] == '\0') {
 								bufferLength--;
 							}
-							std::size_t format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+							std::size_t format2Length = TranslateFromUnicodeFormat(format2, arraySize(format2), buffer, bufferLength);
 							if (format2Length > 0) {
 								success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
 							}
