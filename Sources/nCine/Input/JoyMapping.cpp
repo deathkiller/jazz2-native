@@ -554,6 +554,11 @@ namespace nCine
 				const uint8_t* g = joyGuid.data;
 				LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
+
+			if (!mapping.isValid) {
+				const uint8_t* g = joyGuid.data;
+				LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), please provide correct mapping in \"gamecontrollerdb.txt\" file, otherwise the joystick will not work properly", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+			}
 		}
 #endif
 
