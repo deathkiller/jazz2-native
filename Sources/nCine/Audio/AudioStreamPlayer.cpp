@@ -53,7 +53,9 @@ namespace nCine
 			case PlayerState::Stopped: {
 				const unsigned int source = device.registerPlayer(this);
 				if (source == IAudioDevice::UnavailableSource) {
-					LOGW("No more available audio sources for playing");
+					if (device.isValid()) {
+						LOGW("No more available audio sources for playing");
+					}
 					break;
 				}
 				sourceId_ = source;

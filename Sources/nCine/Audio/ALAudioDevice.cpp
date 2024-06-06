@@ -48,10 +48,10 @@ namespace nCine
 		const ALenum error = alGetError();
 		if (error != AL_NO_ERROR) {
 			LOGE("alGenSources() failed with error 0x%x", error);
-		}
-
-		for (int i = MaxSources - 1; i >= 0; i--) {
-			sourcePool_.push_back(sources_[i]);
+		} else {
+			for (int i = MaxSources - 1; i >= 0; i--) {
+				sourcePool_.push_back(sources_[i]);
+			}
 		}
 
 		alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
@@ -88,6 +88,16 @@ namespace nCine
 		if (!alcCloseDevice(device_)) {
 			LOGW("alcCloseDevice() failed with error 0x%x", alGetError());
 		}
+	}
+
+	bool ALAudioDevice::isValid() const
+	{
+		return (device_ != nullptr);
+	}
+
+	const char* ALAudioDevice::name() const
+	{
+		return deviceName_;
 	}
 
 	void ALAudioDevice::setGain(ALfloat gain)
