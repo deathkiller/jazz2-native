@@ -12,10 +12,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ElectroShot::ElectroShot()
-		:
-		_fired(0),
-		_currentStep(0.0f),
-		_particleSpawnTime(0.0f)
+		: _fired(0), _currentStep(0.0f), _particleSpawnTime(0.0f)
 	{
 	}
 

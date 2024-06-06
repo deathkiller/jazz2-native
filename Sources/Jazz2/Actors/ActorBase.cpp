@@ -424,6 +424,7 @@ namespace Jazz2::Actors
 
 	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(const StringView identifier, float gain, float pitch)
 	{
+#if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
@@ -431,6 +432,9 @@ namespace Jazz2::Actors
 		} else {
 			return nullptr;
 		}
+#else
+		return nullptr;
+#endif
 	}
 
 	bool ActorBase::SetAnimation(AnimState state, bool skipAnimation)

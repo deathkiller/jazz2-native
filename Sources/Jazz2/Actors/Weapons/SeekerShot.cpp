@@ -16,9 +16,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	SeekerShot::SeekerShot()
-		:
-		_fired(0),
-		_followRecomputeTime(0.0f)
+		: _fired(0), _followRecomputeTime(0.0f)
 	{
 	}
 

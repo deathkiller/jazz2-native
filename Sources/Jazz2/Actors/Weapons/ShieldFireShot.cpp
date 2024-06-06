@@ -13,8 +13,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ShieldFireShot::ShieldFireShot()
-		:
-		_fired(0)
+		: _fired(0)
 	{
 	}
 
@@ -59,11 +58,6 @@ namespace Jazz2::Actors::Weapons
 		_renderer.setDrawEnabled(false);
 
 		PlaySfx("Fire"_s, 0.8f);
-
-		//auto noise = PlaySfx("Noise"_s);
-		//if (noise != nullptr) {
-		//	noise->setLooping(true);
-		//}
 	}
 
 	void ShieldFireShot::OnUpdate(float timeMult)

@@ -19,10 +19,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	TNT::TNT()
-		:
-		_timeLeft(0.0f),
-		_lightIntensity(0.0f),
-		_isExploded(false)
+		: _timeLeft(0.0f), _lightIntensity(0.0f), _isExploded(false)
 	{
 	}
 

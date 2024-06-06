@@ -56,6 +56,7 @@ namespace Jazz2::UI::Menu
 
 		_owner->UpdatePressedActions();
 
+#if defined(WITH_AUDIO)
 		// Destroy stopped players
 		for (int32_t i = (int32_t)_owner->_playingSounds.size() - 1; i >= 0; i--) {
 			if (_owner->_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
@@ -64,6 +65,7 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 		}
+#endif
 
 		if (_owner->_touchButtonsTimer > 0.0f) {
 			_owner->_touchButtonsTimer -= timeMult;
@@ -279,6 +281,7 @@ namespace Jazz2::UI::Menu
 			_root->OnInitializeViewport(res.X, res.Y);
 		}
 
+#if defined(WITH_AUDIO)
 		if ((type & ChangedPreferencesType::Audio) == ChangedPreferencesType::Audio) {
 			if (_root->_music != nullptr) {
 				_root->_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
@@ -287,6 +290,7 @@ namespace Jazz2::UI::Menu
 				_root->_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			}
 		}
+#endif
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
 			// All sections have to be recreated to load new language
@@ -391,6 +395,7 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::PlaySfx(const StringView identifier, float gain)
 	{
+#if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
@@ -403,6 +408,7 @@ namespace Jazz2::UI::Menu
 		} else {
 			LOGE("Sound effect \"%s\" was not found", identifier.data());
 		}
+#endif
 	}
 
 	void InGameMenu::ResumeGame()

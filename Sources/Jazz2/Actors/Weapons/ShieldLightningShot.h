@@ -29,6 +29,8 @@ namespace Jazz2::Actors::Weapons
 	private:
 		Vector2f _gunspotPos;
 		int32_t _fired;
+#if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _noise;
+#endif
 	};
 }

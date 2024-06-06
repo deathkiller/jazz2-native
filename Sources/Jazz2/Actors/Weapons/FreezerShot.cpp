@@ -14,9 +14,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	FreezerShot::FreezerShot()
-		:
-		_fired(0),
-		_particlesTime(1.0f)
+		: _fired(0), _particlesTime(1.0f)
 	{
 	}
 

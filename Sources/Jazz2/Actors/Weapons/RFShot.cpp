@@ -9,9 +9,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	RFShot::RFShot()
-		:
-		_fired(0),
-		_smokeTimer(3.0f)
+		: _fired(0), _smokeTimer(3.0f)
 	{
 	}
 

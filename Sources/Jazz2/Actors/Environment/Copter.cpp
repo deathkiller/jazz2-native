@@ -13,10 +13,12 @@ namespace Jazz2::Actors::Environment
 
 	Copter::~Copter()
 	{
+#if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
 			_noise->stop();
 			_noise = nullptr;
 		}
+#endif
 	}
 
 	Task<bool> Copter::OnActivatedAsync(const ActorActivationDetails& details)
@@ -56,6 +58,7 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
+#if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
 			float newGain = _noise->gain() - (_noiseDec * timeMult);
 			if (newGain <= 0.0f) {
@@ -66,6 +69,7 @@ namespace Jazz2::Actors::Environment
 				_noise->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 			}
 		}
+#endif
 	}
 
 	bool Copter::OnHandleCollision(std::shared_ptr<ActorBase> other)
@@ -91,11 +95,13 @@ namespace Jazz2::Actors::Environment
 			_state = State::Unmounted;
 			_phase = timeLeft;
 
+#if defined(WITH_AUDIO)
 			_noise = PlaySfx("Copter"_s, 0.8f, 0.8f);
 			if (_noise != nullptr) {
 				_noise->setLooping(true);
 				_noiseDec = _noise->gain() * 0.005f;
 			}
+#endif
 
 			SetState(ActorState::ApplyGravitation, true);
 		}

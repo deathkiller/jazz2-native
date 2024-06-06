@@ -58,7 +58,11 @@ namespace Jazz2
 	}
 
 	ContentResolver::ContentResolver()
-		: _isHeadless(false), _isLoading(false), _cachedMetadata(64), _cachedGraphics(256), _cachedSounds(192), _palettes{}
+		: _isHeadless(false), _isLoading(false), _cachedMetadata(64), _cachedGraphics(256),
+#if defined(WITH_AUDIO)
+			_cachedSounds(192),
+#endif
+			_palettes {}
 	{
 		InitializePaths();
 	}
@@ -71,7 +75,9 @@ namespace Jazz2
 	{
 		_cachedMetadata.clear();
 		_cachedGraphics.clear();
+#if defined(WITH_AUDIO)
 		_cachedSounds.clear();
+#endif
 
 		for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
 			_fonts[i] = nullptr;
@@ -356,9 +362,11 @@ namespace Jazz2
 		for (auto& resource : _cachedGraphics) {
 			resource.second->Flags &= ~GenericGraphicResourceFlags::Referenced;
 		}
+#if defined(WITH_AUDIO)
 		for (auto& resource : _cachedSounds) {
 			resource.second->Flags &= ~GenericSoundResourceFlags::Referenced;
 		}
+#endif
 	}
 
 	void ContentResolver::EndLoading()
@@ -405,6 +413,7 @@ namespace Jazz2
 			}
 		}
 
+#if defined(WITH_AUDIO)
 		// Released unreferenced sounds
 		{
 			auto it = _cachedSounds.begin();
@@ -422,6 +431,7 @@ namespace Jazz2
 				}
 			}
 		}
+#endif
 
 #if defined(DEATH_DEBUG)
 		LOGW("Metadata: %i|%i, Animations: %i|%i, Sounds: %i|%i", metadataKept, metadataReleased,
@@ -449,11 +459,13 @@ namespace Jazz2
 				resource.Base->Flags |= GenericGraphicResourceFlags::Referenced;
 			}
 
+#if defined(WITH_AUDIO)
 			for (const auto& [key, resource] : it->second->Sounds) {
 				for (const auto& base : resource.Buffers) {
 					base->Flags |= GenericSoundResourceFlags::Referenced;
 				}
 			}
+#endif
 
 			return it->second.get();
 		}
@@ -583,6 +595,7 @@ namespace Jazz2
 				sort(metadata->Animations.begin(), metadata->Animations.end());
 			}
 
+#if defined(WITH_AUDIO)
 			if (!_isHeadless) {
 				// Don't load sounds in headless mode
 				ondemand::object sounds;
@@ -626,6 +639,7 @@ namespace Jazz2
 					}
 				}
 			}
+#endif
 		}
 
 		return _cachedMetadata.emplace(metadata->Path, std::move(metadata)).first->second.get();
@@ -1370,6 +1384,7 @@ namespace Jazz2
 
 	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(const StringView path)
 	{
+#if defined(WITH_AUDIO)
 		// Don't load sounds in headless mode
 		if (_isHeadless) {
 			return nullptr;
@@ -1384,6 +1399,9 @@ namespace Jazz2
 			return nullptr;
 		}
 		return std::make_unique<AudioStreamPlayer>(fullPath);
+#else
+		return nullptr;
+#endif
 	}
 
 	UI::Font* ContentResolver::GetFont(FontType fontType)

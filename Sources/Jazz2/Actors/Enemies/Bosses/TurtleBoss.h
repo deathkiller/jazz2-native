@@ -49,7 +49,9 @@ namespace Jazz2::Actors::Bosses
 			bool _returning;
 			float _returnTime;
 			Vector2f _targetSpeed;
+#if defined(WITH_AUDIO)
 			std::shared_ptr<AudioBufferPlayer> _sound;
+#endif
 
 			void FollowNearestPlayer();
 		};

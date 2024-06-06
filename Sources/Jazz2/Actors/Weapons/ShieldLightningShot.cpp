@@ -13,17 +13,18 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ShieldLightningShot::ShieldLightningShot()
-		:
-		_fired(0)
+		: _fired(0)
 	{
 	}
 
 	ShieldLightningShot::~ShieldLightningShot()
 	{
+#if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
 			_noise->stop();
 			_noise = nullptr;
 		}
+#endif
 	}
 
 	Task<bool> ShieldLightningShot::OnActivatedAsync(const ActorActivationDetails& details)
@@ -65,7 +66,9 @@ namespace Jazz2::Actors::Weapons
 		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);
 
+#if defined(WITH_AUDIO)
 		_noise = PlaySfx("Fire"_s, 0.8f, 1.2f);
+#endif
 	}
 
 	void ShieldLightningShot::OnUpdate(float timeMult)
@@ -88,9 +91,11 @@ namespace Jazz2::Actors::Weapons
 			_renderer.setDrawEnabled(true);
 		}
 
+#if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
 			_noise->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 		}
+#endif
 	}
 
 	void ShieldLightningShot::OnUpdateHitbox()

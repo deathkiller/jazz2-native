@@ -303,12 +303,14 @@ namespace Jazz2
 		float _waterLevel;
 		float _ambientLightTarget;
 		Vector4f _ambientColor;
+#if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
+		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
+#endif
 		Metadata* _commonResources;
 		std::unique_ptr<UI::HUD> _hud;
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
-		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
 		std::shared_ptr<Actors::Bosses::BossBase> _activeBoss;
 		WeatherType _weatherType;
 		uint8_t _weatherIntensity;

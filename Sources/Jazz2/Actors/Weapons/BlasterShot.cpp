@@ -13,8 +13,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	BlasterShot::BlasterShot()
-		:
-		_fired(0)
+		: _fired(0)
 	{
 	}
 

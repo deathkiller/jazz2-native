@@ -13,8 +13,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ShieldWaterShot::ShieldWaterShot()
-		:
-		_fired(0)
+		: _fired(0)
 	{
 	}
 

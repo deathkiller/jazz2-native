@@ -14,11 +14,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ShotBase::ShotBase()
-		:
-		_timeLeft(0),
-		_upgrades(0),
-		_strength(0),
-		_lastRicochet(nullptr)
+		: _timeLeft(0), _upgrades(0), _strength(0), _lastRicochet(nullptr)
 	{
 	}
 

@@ -9,8 +9,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ToasterShot::ToasterShot()
-		:
-		_fired(0)
+		: _fired(0)
 	{
 	}
 

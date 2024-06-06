@@ -755,6 +755,7 @@ namespace Jazz2
 
 	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, const StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
+#if defined(WITH_AUDIO)
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
@@ -769,29 +770,35 @@ namespace Jazz2
 
 		player->play();
 		return player;
+#else
+		return nullptr;
+#endif
 	}
 
 	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlayCommonSfx(const StringView identifier, const Vector3f& pos, float gain, float pitch)
 	{
+#if defined(WITH_AUDIO)
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView(identifier));
-		if (it != _commonResources->Sounds.end()) {
-			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
-			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
-			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
-			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-
-			if (pos.Y >= _waterLevel) {
-				player->setLowPass(/*0.2f*/0.05f);
-				player->setPitch(pitch * 0.7f);
-			} else {
-				player->setPitch(pitch);
-			}
-
-			player->play();
-			return player;
-		} else {
+		if (it == _commonResources->Sounds.end()) {
 			return nullptr;
 		}
+		int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
+		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
+		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
+		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+
+		if (pos.Y >= _waterLevel) {
+			player->setLowPass(/*0.2f*/0.05f);
+			player->setPitch(pitch * 0.7f);
+		} else {
+			player->setPitch(pitch);
+		}
+
+		player->play();
+		return player;
+#else
+		return nullptr;
+#endif
 	}
 
 	void LevelHandler::WarpCameraToTarget(Actors::ActorBase* actor, bool fast)
