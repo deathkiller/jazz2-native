@@ -31,7 +31,9 @@ namespace nCine
 		alGetError();
 		alGenBuffers(1, &bufferId_);
 		const ALenum error = alGetError();
-		FATAL_ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers() failed with error 0x%x", error);
+		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
+			LOGW("alGenBuffers() failed with error 0x%x", error);
+		}
 	}
 
 	/*AudioBuffer::AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize)
