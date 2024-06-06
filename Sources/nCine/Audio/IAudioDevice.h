@@ -23,6 +23,8 @@ namespace nCine
 			Stream
 		};
 
+		virtual bool isValid() const = 0;
+
 		virtual const char* name() const = 0;
 
 		virtual ~IAudioDevice() = 0;
@@ -74,6 +76,10 @@ namespace nCine
 	class NullAudioDevice : public IAudioDevice
 	{
 	public:
+		bool isValid() const override {
+			return false;
+		}
+
 		const char* name() const override {
 			return "NullAudioDevice";
 		}

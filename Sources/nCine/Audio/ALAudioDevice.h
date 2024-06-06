@@ -28,9 +28,9 @@ namespace nCine
 		ALAudioDevice();
 		~ALAudioDevice() override;
 
-		inline const char* name() const override {
-			return deviceName_;
-		}
+		bool isValid() const override;
+
+		const char* name() const override;
 
 		float gain() const override {
 			return gain_;
