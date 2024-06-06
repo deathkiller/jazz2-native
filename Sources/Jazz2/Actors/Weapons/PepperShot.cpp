@@ -10,8 +10,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	PepperShot::PepperShot()
-		:
-		_fired(0)
+		: _fired(0)
 	{
 	}
 

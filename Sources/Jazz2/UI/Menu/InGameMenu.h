@@ -116,7 +116,9 @@ namespace Jazz2::UI::Menu
 		Metadata* _metadata;
 		Font* _smallFont;
 		Font* _mediumFont;
+#if defined(WITH_AUDIO)
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
+#endif
 
 		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;
 		uint32_t _pressedActions;

@@ -98,7 +98,9 @@ namespace Jazz2
 		String Path;
 		MetadataFlags Flags;
 		SmallVector<GraphicResource, 0> Animations;
+#if defined(WITH_AUDIO)
 		HashMap<String, SoundResource> Sounds;
+#endif
 		Vector2i BoundingBox;
 
 		Metadata() noexcept;

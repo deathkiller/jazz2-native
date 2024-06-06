@@ -17,8 +17,10 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(OptionsItem { OptionsItemType::Gameplay, _("Gameplay") });
 		// TRANSLATORS: Menu item in Options section
 		_items.emplace_back(OptionsItem { OptionsItemType::Graphics, _("Graphics") });
+#if defined(WITH_AUDIO)
 		// TRANSLATORS: Menu item in Options section
 		_items.emplace_back(OptionsItem { OptionsItemType::Sounds, _("Sounds") });
+#endif
 		// TRANSLATORS: Menu item in Options section
 		_items.emplace_back(OptionsItem { OptionsItemType::Controls, _("Controls") });
 	}

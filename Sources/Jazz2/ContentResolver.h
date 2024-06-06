@@ -123,7 +123,9 @@ namespace Jazz2
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<Reference<String>, std::unique_ptr<Metadata>, FNV1aHashFunc<String>, StringRefEqualTo> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
+#if defined(WITH_AUDIO)
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
+#endif
 		std::unique_ptr<UI::Font> _fonts[(int32_t)FontType::Count];
 		std::unique_ptr<Shader> _precompiledShaders[(int32_t)PrecompiledShader::Count];
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

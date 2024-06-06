@@ -104,6 +104,7 @@ namespace Jazz2::UI::Menu
 		UpdatePressedActions();
 		UpdateDebris(timeMult);
 
+#if defined(WITH_AUDIO)
 		// Destroy stopped players
 		for (int32_t i = (int32_t)_playingSounds.size() - 1; i >= 0; i--) {
 			if (_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
@@ -112,6 +113,7 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 		}
+#endif
 
 		_texturedBackgroundPos.X += timeMult * 1.2f;
 		_texturedBackgroundPos.Y += timeMult * -0.2f + timeMult * sinf(_texturedBackgroundPhase) * 0.6f;
@@ -400,11 +402,13 @@ namespace Jazz2::UI::Menu
 			OnInitializeViewport(res.X, res.Y);
 		}
 
+#if defined(WITH_AUDIO)
 		if ((type & ChangedPreferencesType::Audio) == ChangedPreferencesType::Audio) {
 			if (_music != nullptr) {
 				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			}
 		}
+#endif
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
 			// All sections have to be recreated to load new language
@@ -521,6 +525,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::PlaySfx(const StringView identifier, float gain)
 	{
+#if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
@@ -533,6 +538,7 @@ namespace Jazz2::UI::Menu
 		} else {
 			LOGE("Sound effect \"%s\" was not found", identifier.data());
 		}
+#endif
 	}
 
 	bool MainMenu::ActionPressed(PlayerActions action)
@@ -547,7 +553,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::PlayMenuMusic()
 	{
-#if defined(WITH_OPENMPT)
+#if defined(WITH_AUDIO) && defined(WITH_OPENMPT)
 		auto& resolver = ContentResolver::Get();
 
 		if (PreferencesCache::EnableReforgedMainMenu) {

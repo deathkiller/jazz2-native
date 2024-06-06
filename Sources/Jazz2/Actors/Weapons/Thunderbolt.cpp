@@ -10,10 +10,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	Thunderbolt::Thunderbolt()
-		:
-		_hit(false),
-		_lightProgress(0.0f),
-		_firedUp(false)
+		: _hit(false), _lightProgress(0.0f), _firedUp(false)
 	{
 	}
 

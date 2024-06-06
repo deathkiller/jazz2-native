@@ -222,7 +222,9 @@ namespace Jazz2::Actors
 		bool _canDoubleJump;
 		float _externalForceCooldown;
 		float _springCooldown;
+#if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
+#endif
 
 		std::int32_t _lives, _coins, _coinsCheckpoint, _foodEaten, _foodEatenCheckpoint, _score;
 		Vector2f _checkpointPos;
@@ -264,7 +266,9 @@ namespace Jazz2::Actors
 		std::uint16_t _weaponAmmoCheckpoint[(std::int32_t)WeaponType::Count];
 		std::uint8_t _weaponUpgrades[(std::int32_t)WeaponType::Count];
 		std::uint8_t _weaponUpgradesCheckpoint[(std::int32_t)WeaponType::Count];
+#if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
+#endif
 		WeaponWheelState _weaponWheelState;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

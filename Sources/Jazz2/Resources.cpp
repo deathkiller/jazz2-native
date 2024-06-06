@@ -16,6 +16,7 @@ namespace Jazz2
 		return State < p.State;
 	}
 
+#if defined(WITH_AUDIO)
 	GenericSoundResource::GenericSoundResource(std::unique_ptr<Stream> stream, const StringView filename) noexcept
 		: Buffer(std::move(stream), filename), Flags(GenericSoundResourceFlags::None)
 	{
@@ -24,6 +25,7 @@ namespace Jazz2
 	SoundResource::SoundResource() noexcept
 	{
 	}
+#endif
 
 	Metadata::Metadata() noexcept
 		: Flags(MetadataFlags::None)

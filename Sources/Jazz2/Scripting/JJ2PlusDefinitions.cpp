@@ -2093,47 +2093,56 @@ namespace Jazz2::Scripting
 	bool LevelScriptLoader::jjMusicLoad(const String& filename, bool forceReload, bool temporary) {
 		noop();
 
+#if defined(WITH_AUDIO)
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->BeginPlayMusic(filename, !temporary, forceReload);
-
+#endif
 		return false;
 	}
 	void LevelScriptLoader::jjMusicStop() {
 		noop();
 
+#if defined(WITH_AUDIO)
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		if (_this->_levelHandler->_music != nullptr) {
 			_this->_levelHandler->_music->stop();
 		}
+#endif
 	}
 	void LevelScriptLoader::jjMusicPlay() {
 		noop();
 
+#if defined(WITH_AUDIO)
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		if (_this->_levelHandler->_music != nullptr) {
 			_this->_levelHandler->_music->play();
 		}
+#endif
 	}
 	void LevelScriptLoader::jjMusicPause() {
 		noop();
 
+#if defined(WITH_AUDIO)
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		if (_this->_levelHandler->_music != nullptr) {
 			_this->_levelHandler->_music->stop();
 		}
+#endif
 	}
 	void LevelScriptLoader::jjMusicResume() {
 		noop();
 
+#if defined(WITH_AUDIO)
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->isPaused()) {
 			_this->_levelHandler->_music->play();
 		}
+#endif
 	}
 
 	void playSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) {

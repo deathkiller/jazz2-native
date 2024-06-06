@@ -107,6 +107,7 @@ namespace Jazz2::Actors
 			_spawnedBird->FlyAway();
 			_spawnedBird = nullptr;
 		}
+#if defined(WITH_AUDIO)
 		if (_copterSound != nullptr) {
 			_copterSound->stop();
 			_copterSound = nullptr;
@@ -115,6 +116,7 @@ namespace Jazz2::Actors
 			_weaponSound->stop();
 			_weaponSound = nullptr;
 		}
+#endif
 	}
 
 	Task<bool> Player::OnActivatedAsync(const ActorActivationDetails& details)
@@ -535,6 +537,7 @@ namespace Jazz2::Actors
 			}
 		}
 
+#if defined(WITH_AUDIO)
 		if (_copterSound != nullptr) {
 			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
 				_copterSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
@@ -543,6 +546,7 @@ namespace Jazz2::Actors
 				_copterSound = nullptr;
 			}
 		}
+#endif
 
 		// Trail
 		if (PreferencesCache::ShowPlayerTrails) {
@@ -601,12 +605,13 @@ namespace Jazz2::Actors
 				SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset, true);
 			} else {
 				// Skip controls, player is not controllable in tube
+#if defined(WITH_AUDIO)
 				// Weapons are automatically disabled if player is not controllable
 				if (_weaponSound != nullptr) {
 					_weaponSound->stop();
 					_weaponSound = nullptr;
 				}
-
+#endif
 				return;
 			}
 		}
@@ -700,6 +705,7 @@ namespace Jazz2::Actors
 		}
 
 		if (!_controllable || !_controllableExternal || _currentSpecialMove == SpecialMoveType::Buttstomp) {
+#if defined(WITH_AUDIO)
 			// Weapons are automatically disabled if player is not controllable
 			if (_currentWeapon != WeaponType::Thunderbolt || _fireFramesLeft <= 0.0f) {
 				if (_weaponSound != nullptr) {
@@ -707,7 +713,7 @@ namespace Jazz2::Actors
 					_weaponSound = nullptr;
 				}
 			}
-
+#endif
 			return;
 		}
 
@@ -834,13 +840,14 @@ namespace Jazz2::Actors
 												SetAnimation(AnimState::Copter);
 											}
 											_copterFramesLeft = 70.0f;
-
+#if defined(WITH_AUDIO)
 											if (_copterSound == nullptr) {
 												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
 												if (_copterSound != nullptr) {
 													_copterSound->setLooping(true);
 												}
 											}
+#endif
 										}
 									}
 									break;
@@ -891,13 +898,14 @@ namespace Jazz2::Actors
 												SetAnimation(AnimState::Copter);
 											}
 											_copterFramesLeft = 70.0f;
-
+#if defined(WITH_AUDIO)
 											if (_copterSound == nullptr) {
 												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
 												if (_copterSound != nullptr) {
 													_copterSound->setLooping(true);
 												}
 											}
+#endif
 										}
 									}
 									break;
@@ -1000,6 +1008,7 @@ namespace Jazz2::Actors
 			_weaponCooldown = 0.0f;
 		}
 
+#if defined(WITH_AUDIO)
 		if (_weaponSound != nullptr) {
 			if (weaponInUse) {
 				_weaponSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
@@ -1008,6 +1017,7 @@ namespace Jazz2::Actors
 				_weaponSound = nullptr;
 			}
 		}
+#endif
 
 		if (_controllable && _controllableExternal && _playerType != PlayerType::Frog) {
 			bool isGamepad;
@@ -2407,6 +2417,7 @@ namespace Jazz2::Actors
 
 	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(const StringView identifier, float gain, float pitch)
 	{
+#if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
@@ -2414,6 +2425,9 @@ namespace Jazz2::Actors
 		} else {
 			return nullptr;
 		}
+#else
+		return nullptr;
+#endif
 	}
 
 	bool Player::SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback)
@@ -2448,6 +2462,8 @@ namespace Jazz2::Actors
 	void Player::OnPerishInner()
 	{
 		_trailLastPos = _pos;
+
+#if defined(WITH_AUDIO)
 		if (_copterSound != nullptr) {
 			_copterSound->stop();
 			_copterSound = nullptr;
@@ -2456,6 +2472,7 @@ namespace Jazz2::Actors
 			_weaponSound->stop();
 			_weaponSound = nullptr;
 		}
+#endif
 
 		SetState(ActorState::CanJump, false);
 		_speed.X = 0.0f;
@@ -2551,10 +2568,12 @@ namespace Jazz2::Actors
 
 	void Player::SwitchToNextWeapon()
 	{
+#if defined(WITH_AUDIO)
 		if (_weaponSound != nullptr) {
 			_weaponSound->stop();
 			_weaponSound = nullptr;
 		}
+#endif
 
 		// Find next available weapon
 		WeaponType weaponType = (WeaponType)(((std::int32_t)_currentWeapon + 1) % (std::int32_t)WeaponType::Count);
@@ -2572,12 +2591,12 @@ namespace Jazz2::Actors
 			PlayPlayerSfx("ChangeWeapon"_s);
 			return;
 		}
-
+#if defined(WITH_AUDIO)
 		if (_weaponSound != nullptr) {
 			_weaponSound->stop();
 			_weaponSound = nullptr;
 		}
-
+#endif
 		SetCurrentWeapon((WeaponType)weaponIndex);
 		_weaponCooldown = 1.0f;
 	}
@@ -2744,6 +2763,7 @@ namespace Jazz2::Actors
 			AddExternalForce(IsFacingLeft() ? 2.0f : -2.0f, 0.0f);
 		}
 
+#if defined(WITH_AUDIO)
 		if (_weaponSound == nullptr) {
 			PlaySfx("WeaponThunderboltStart"_s, 0.5f);
 			_weaponSound = PlaySfx("WeaponThunderbolt"_s, 1.0f);
@@ -2753,6 +2773,7 @@ namespace Jazz2::Actors
 				_weaponSound->setLowPass(0.9f);
 			}
 		}
+#endif
 
 		return true;
 	}
@@ -2805,12 +2826,14 @@ namespace Jazz2::Actors
 						return false;
 					}
 					FireWeapon<Weapons::ToasterShot, WeaponType::Toaster>(6.0f, 0.0f);
+#if defined(WITH_AUDIO)
 					if (_weaponSound == nullptr) {
 						_weaponSound = PlaySfx("WeaponToaster"_s, 0.6f);
 						if (_weaponSound != nullptr) {
 							_weaponSound->setLooping(true);
 						}
 					}
+#endif
 					ammoDecrease = 50;
 					break;
 				}
@@ -3402,12 +3425,14 @@ namespace Jazz2::Actors
 
 				_copterFramesLeft = 10.0f * FrameTimer::FramesPerSecond;
 
+#if defined(WITH_AUDIO)
 				if (_copterSound == nullptr) {
 					_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
 					if (_copterSound != nullptr) {
 						_copterSound->setLooping(true);
 					}
 				}
+#endif
 				break;
 			}
 			case Modifier::LizardCopter: {

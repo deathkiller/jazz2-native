@@ -11,10 +11,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	BouncerShot::BouncerShot()
-		:
-		_fired(0),
-		_hitLimit(0.0f),
-		_targetSpeedX(0.0f)
+		: _fired(0), _hitLimit(0.0f), _targetSpeedX(0.0f)
 	{
 	}
 

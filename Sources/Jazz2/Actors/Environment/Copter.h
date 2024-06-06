@@ -35,7 +35,9 @@ namespace Jazz2::Actors::Environment
 		Vector2f _originPos;
 		float _phase;
 		State _state;
+#if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _noise;
+#endif
 		float _noiseDec;
 	};
 }

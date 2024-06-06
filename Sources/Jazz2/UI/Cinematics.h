@@ -59,6 +59,7 @@ namespace Jazz2::UI
 			RenderCommand _renderCommand;
 		};
 
+#if defined(WITH_AUDIO)
 		struct SfxItem {
 			std::unique_ptr<AudioBuffer> Buffer;
 
@@ -73,13 +74,16 @@ namespace Jazz2::UI
 			float Panning;
 			std::unique_ptr<AudioBufferPlayer> CurrentPlayer;
 		};
+#endif
 
 		IRootController* _root;
 		UI::UpscaleRenderPass _upscalePass;
 		std::unique_ptr<CinematicsCanvas> _canvas;
+#if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<SfxItem> _sfxSamples;
 		SmallVector<SfxPlaylistItem> _sfxPlaylist;
+#endif
 		std::function<bool(IRootController*, bool)> _callback;
 		uint32_t _width, _height;
 		float _frameDelay, _frameProgress;

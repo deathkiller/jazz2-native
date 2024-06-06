@@ -178,8 +178,10 @@ namespace Jazz2::UI::Menu
 
 		float _transitionWhite;
 		float _logoTransition;
+#if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
+#endif
 		SmallVector<Tiles::TileMap::DestructibleDebris, 0> _debrisList;
 
 		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;

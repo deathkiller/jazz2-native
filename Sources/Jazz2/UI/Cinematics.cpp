@@ -122,7 +122,7 @@ namespace Jazz2::UI
 			return;
 		}
 
-#if defined(WITH_OPENMPT)
+#if defined(WITH_AUDIO) && defined(WITH_OPENMPT)
 		_music = resolver.GetMusic(String(path + ".j2b"_s));
 		if (_music != nullptr) {
 			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
@@ -194,6 +194,7 @@ namespace Jazz2::UI
 
 	bool Cinematics::LoadSfxList(const StringView path)
 	{
+#if defined(WITH_AUDIO)
 		auto& resolver = ContentResolver::Get();
 		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2sfx"_s)));
 		if (!s->IsValid()) {
@@ -235,6 +236,9 @@ namespace Jazz2::UI
 		}
 
 		return true;
+#else
+		return false;
+#endif
 	}
 
 	void Cinematics::PrepareNextFrame()
@@ -292,6 +296,7 @@ namespace Jazz2::UI
 		// Create copy of the buffer
 		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
 
+#if defined(WITH_AUDIO)
 		for (std::size_t i = 0; i < _sfxPlaylist.size(); i++) {
 			if (_sfxPlaylist[i].Frame == _frameIndex) {
 				auto& item = _sfxPlaylist[i];
@@ -307,6 +312,7 @@ namespace Jazz2::UI
 				item.CurrentPlayer->play();
 			}
 		}
+#endif
 
 		_frameIndex++;
 	}
@@ -390,6 +396,7 @@ namespace Jazz2::UI
 		return true;
 	}
 
+#if defined(WITH_AUDIO)
 	Cinematics::SfxItem::SfxItem()
 	{
 	}
@@ -398,4 +405,5 @@ namespace Jazz2::UI
 		: Buffer(std::make_unique<AudioBuffer>(std::move(stream), path))
 	{
 	}
+#endif
 }
