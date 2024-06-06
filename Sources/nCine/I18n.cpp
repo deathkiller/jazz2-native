@@ -757,35 +757,35 @@ namespace nCine
 
 			for (std::int32_t i = 0; i < n; i++) {
 				CFTypeRef element = CFArrayGetValueAtIndex(prefArray, i);
-				if (element != nullptr && CFGetTypeID(element) == CFStringGetTypeID() && CFStringGetCString((CFStringRef)element, buffer, sizeof(buffer), kCFStringEncodingASCII)) {
-					String langId = String(buffer);
-					StringUtils::lowercaseInPlace(langId);
-					arrayAppend(preferred, std::move(langId));
-				} else {
+				if (element == nullptr || CFGetTypeID(element) != CFStringGetTypeID() || !CFStringGetCString((CFStringRef)element, buffer, sizeof(buffer), kCFStringEncodingASCII)) {
 					break;
 				}
+				String langId = String(buffer);
+				StringUtils::lowercaseInPlace(langId);
+				arrayAppend(preferred, std::move(langId));
 			}
 		}
 #elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX)
 		char* langRaw = ::getenv("LANG");
-		if (langRaw == nullptr) {
+		if (langRaw == nullptr || langRaw[0] == '\0' || strcasecmp(langRaw, "C") == 0) {
 			langRaw = ::getenv("LC_ALL");
-			if (langRaw == nullptr) {
+			if (langRaw == nullptr || langRaw[0] == '\0' || strcasecmp(langRaw, "C") == 0) {
 				langRaw = ::getenv("LC_MESSAGES");
+				if (langRaw == nullptr || langRaw[0] == '\0' || strcasecmp(langRaw, "C") == 0) {
+					// No suitable environment variable is defined
+					return preferred;
+				}
 			}
 		}
-		if (langRaw != nullptr) {
-			String langId = langRaw;
-			StringView suffix = langId.findAny(".@"_s);
-			if (suffix != nullptr) {
-				langId = langId.prefix(suffix.begin());
-			}
-			for (char& c : langId) {
-				if (c == '_') c = '-';
-			}
-			StringUtils::lowercaseInPlace(langId);
-			arrayAppend(preferred, std::move(langId));
+
+		String langId = langRaw;
+		StringView suffix = langId.findAny(".@"_s);
+		if (suffix != nullptr) {
+			langId = langId.prefix(suffix.begin());
 		}
+		StringUtils::replaceAllInPlace(langId, '_', '-');
+		StringUtils::lowercaseInPlace(langId);
+		arrayAppend(preferred, std::move(langId));
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (Environment::IsWindows10()) {
 			// Get list of all preferred UI languages on Windows 10
@@ -795,7 +795,7 @@ namespace nCine
 				Array<wchar_t> languages(NoInit, bufferSize);
 				if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, languages.data(), &bufferSize)) {
 					wchar_t* buffer = languages.data();
-					for (ULONG k = 0; k < numberOfLanguages; ++k) {
+					for (ULONG k = 0; k < numberOfLanguages; k++) {
 						String langId = Utf8::FromUtf16(buffer);
 						StringUtils::lowercaseInPlace(langId);
 						arrayAppend(preferred, std::move(langId));

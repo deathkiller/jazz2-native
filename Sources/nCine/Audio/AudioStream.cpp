@@ -18,7 +18,9 @@ namespace nCine
 		alGetError();
 		alGenBuffers(NumBuffers, buffersIds_.data());
 		const ALenum error = alGetError();
-		ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers() failed with error 0x%x", error);
+		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
+			LOGW("alGenBuffers() failed with error 0x%x", error);
+		}
 		memBuffer_ = std::make_unique<char[]>(BufferSize);
 	}
 

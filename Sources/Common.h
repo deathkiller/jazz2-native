@@ -34,15 +34,15 @@
 #include <stdlib.h>
 
 // Return assert macros
-#define RETURN_ASSERT_MSG(x, fmt, ...) do { if (!(x)) { LOGE(fmt, ##__VA_ARGS__); return; } } while (false)
-#define RETURN_ASSERT(x) do { if (!(x)) { LOGE("RETURN_ASSERT(" #x ")"); return; } } while (false)
+#define RETURN_ASSERT_MSG(x, fmt, ...) do { if DEATH_UNLIKELY(!(x)) { LOGE(fmt, ##__VA_ARGS__); return; } } while (false)
+#define RETURN_ASSERT(x) do { if DEATH_UNLIKELY(!(x)) { LOGE("RETURN_ASSERT(" #x ")"); return; } } while (false)
 
 // Return macros
 #define RETURN_MSG(fmt, ...) do { LOGE(fmt, ##__VA_ARGS__); return; } while (false)
 
 // Return false assert macros
-#define RETURNF_ASSERT_MSG(x, fmt, ...) do { if (!(x)) { LOGE(fmt, ##__VA_ARGS__); return false; } } while (false)
-#define RETURNF_ASSERT(x) do { if (!(x)) { LOGE("RETURNF_ASSERT(" #x ")"); return false; } } while (false)
+#define RETURNF_ASSERT_MSG(x, fmt, ...) do { if DEATH_UNLIKELY(!(x)) { LOGE(fmt, ##__VA_ARGS__); return false; } } while (false)
+#define RETURNF_ASSERT(x) do { if DEATH_UNLIKELY(!(x)) { LOGE("RETURNF_ASSERT(" #x ")"); return false; } } while (false)
 
 // Return false macros
 #define RETURNF_MSG(fmt, ...) do { LOGE(fmt, ##__VA_ARGS__); return false; } while (false)
@@ -67,60 +67,50 @@
 #endif
 
 // Fatal assert macros
-#define FATAL_ASSERT_MSG(x, fmt, ...) \
-	do \
-	{ \
-		if (!(x)) \
-		{ \
-			LOGF(fmt, ##__VA_ARGS__); \
-			BREAK(); \
-		} \
+#define FATAL_ASSERT_MSG(x, fmt, ...)		\
+	do {									\
+		if DEATH_UNLIKELY(!(x)) {			\
+			LOGF(fmt, ##__VA_ARGS__);		\
+			BREAK();						\
+		}									\
 	} while (false)
 
-#define FATAL_ASSERT(x) \
-	do \
-	{ \
-		if (!(x)) \
-		{ \
-			LOGF("FATAL_ASSERT(" #x ")"); \
-			BREAK(); \
-		} \
+#define FATAL_ASSERT(x)						\
+	do {									\
+		if DEATH_UNLIKELY(!(x)) {			\
+			LOGF("FATAL_ASSERT(" #x ")");	\
+			BREAK();						\
+		}									\
 	} while (false)
 
 // Fatal macros
-#define FATAL_MSG(fmt, ...) \
-	do \
-	{ \
-		LOGF(fmt, ##__VA_ARGS__); \
-		BREAK(); \
+#define FATAL_MSG(fmt, ...)					\
+	do {									\
+		LOGF(fmt, ##__VA_ARGS__);			\
+		BREAK();							\
 	} while (false)
 
-#define FATAL() \
-	do \
-	{ \
-		BREAK(); \
+#define FATAL()								\
+	do {									\
+		BREAK();							\
 	} while (false)
 
 // Non-fatal assert macros
 #if defined(DEATH_TRACE)
-#	define ASSERT_MSG(x, fmt, ...) \
-		do \
-		{ \
-			if (!(x)) \
-			{ \
-				LOGE(fmt, ##__VA_ARGS__); \
-				BREAK(); \
-			} \
+#	define ASSERT_MSG(x, fmt, ...)			\
+		do {								\
+			if DEATH_UNLIKELY(!(x)) {		\
+				LOGE(fmt, ##__VA_ARGS__);	\
+				BREAK();					\
+			}								\
 		} while (false)
 
-#	define ASSERT(x) \
-		do \
-		{ \
-			if (!(x)) \
-			{ \
-				LOGE("ASSERT(" #x ")"); \
-				BREAK(); \
-			} \
+#	define ASSERT(x)						\
+		do {								\
+			if DEATH_UNLIKELY(!(x)) {		\
+				LOGE("ASSERT(" #x ")");		\
+				BREAK();					\
+			}								\
 		} while (false)
 #else
 #	define ASSERT_MSG(x, fmt, ...) do { } while (false)
