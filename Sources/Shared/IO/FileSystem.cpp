@@ -156,9 +156,10 @@ namespace Death { namespace IO {
 
 					WIN32_FIND_DATA data;
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-					HANDLE hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, 0);
+					HANDLE hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 #	else
-					HANDLE hFindFile = ::FindFirstFileExW(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard, &data, FindExSearchNameMatch, nullptr, 0);
+					HANDLE hFindFile = ::FindFirstFileExW(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard,
+						&data, FindExSearchNameMatch, nullptr, Environment::IsWindows7() ? FIND_FIRST_EX_LARGE_FETCH : 0);
 #	endif
 					if (hFindFile != NULL && hFindFile != INVALID_HANDLE_VALUE) {
 						do {
@@ -449,9 +450,10 @@ namespace Death { namespace IO {
 
 					WIN32_FIND_DATA data;
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-					_hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, 0);
+					_hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 #	else
-					_hFindFile = ::FindFirstFileExW(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard, &data, FindExSearchNameMatch, nullptr, 0);
+					_hFindFile = ::FindFirstFileExW(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard,
+						&data, FindExSearchNameMatch, nullptr, Environment::IsWindows7() ? FIND_FIRST_EX_LARGE_FETCH : 0);
 #	endif
 					if (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE) {
 						if ((data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) ||

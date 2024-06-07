@@ -420,14 +420,14 @@ namespace Jazz2
 			while (it != _cachedSounds.end()) {
 				if ((it->second->Flags & GenericSoundResourceFlags::Referenced) != GenericSoundResourceFlags::Referenced) {
 					it = _cachedSounds.erase(it);
-#if defined(DEATH_DEBUG)
+#	if defined(DEATH_DEBUG)
 					soundsReleased++;
-#endif
+#	endif
 				} else {
 					++it;
-#if defined(DEATH_DEBUG)
+#	if defined(DEATH_DEBUG)
 					soundsKept++;
-#endif
+#	endif
 				}
 			}
 		}
@@ -443,7 +443,7 @@ namespace Jazz2
 
 	void ContentResolver::PreloadMetadataAsync(const StringView path)
 	{
-		// TODO: reimplement async preloading
+		// TODO: Reimplement async preloading
 		RequestMetadata(path);
 	}
 

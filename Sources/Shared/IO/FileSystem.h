@@ -36,7 +36,8 @@ namespace Death { namespace IO {
 	{
 	public:
 #if defined(DEATH_TARGET_WINDOWS)
-		static constexpr std::uint32_t MaxPathLength = /*MAX_PATH*/260;
+		// Windows 10 supports long paths everywhere, so increase it a bit
+		static constexpr std::uint32_t MaxPathLength = /*MAX_PATH*/2048;
 		static constexpr char PathSeparator[] = "\\";
 #else
 		static constexpr std::uint32_t MaxPathLength = PATH_MAX;
@@ -54,18 +55,6 @@ namespace Death { namespace IO {
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(Permission);
-
-		struct FileDate
-		{
-			std::int32_t Year;
-			std::int32_t Month;
-			std::int32_t Day;
-			std::int32_t Hour;
-			std::int32_t Minute;
-			std::int32_t Second;
-
-			std::uint64_t Ticks;
-		};
 
 		enum class EnumerationOptions
 		{
