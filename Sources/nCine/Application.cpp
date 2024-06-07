@@ -176,10 +176,10 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 {
 	constexpr std::int32_t MaxEntryLength = 4096;
 	char logEntry[MaxEntryLength];
+	const char* logEntryWithoutLevel = logEntry;
 
 #if defined(DEATH_TARGET_ANDROID)
 	android_LogPriority priority;
-
 	switch (level) {
 		case TraceLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
 		case TraceLevel::Error:		priority = ANDROID_LOG_ERROR; break;
@@ -202,22 +202,26 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 
 	svcOutputDebugString(logEntry, length);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
-	logEntry[0] = '[';
+	char levelIdentifier;
 	switch (level) {
-		case TraceLevel::Fatal:		logEntry[1] = 'F'; break;
-		case TraceLevel::Error:		logEntry[1] = 'E'; break;
-		case TraceLevel::Warning:	logEntry[1] = 'W'; break;
-		case TraceLevel::Info:		logEntry[1] = 'I'; break;
-		default:					logEntry[1] = 'D'; break;
+		case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
+		case TraceLevel::Error:		levelIdentifier = 'E'; break;
+		case TraceLevel::Warning:	levelIdentifier = 'W'; break;
+		case TraceLevel::Info:		levelIdentifier = 'I'; break;
+		default:					levelIdentifier = 'D'; break;
 	}
-	logEntry[2] = ']';
-	logEntry[3] = ' ';
+	std::int32_t length = snprintf(logEntry, MaxEntryLength, "[%c]{%u} ", levelIdentifier, ::GetCurrentThreadId());
+	logEntryWithoutLevel += length;
 
 	va_list args;
 	va_start(args, fmt);
-	std::int32_t length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
+	std::int32_t partLength = vsnprintf(logEntry + length, MaxEntryLength - length, fmt, args);
 	va_end(args);
+	if (partLength <= 0) {
+		return;
+	}
 
+	length += partLength;
 	if (length >= MaxEntryLength - 2) {
 		length = MaxEntryLength - 2;
 	}
@@ -229,7 +233,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		logEntryW[lengthW++] = '\n';
 		logEntryW[lengthW] = '\0';
 
-		::OutputDebugString(logEntryW);
+		::OutputDebugStringW(logEntryW);
 	}
 #else
 	static const char Reset[] = "\033[0m";
@@ -374,22 +378,26 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 #	if defined(DEATH_TARGET_WINDOWS)
 	} else {
 #		if defined(DEATH_DEBUG)
-		logEntry[0] = '[';
+		char levelIdentifier;
 		switch (level) {
-			case TraceLevel::Fatal:		logEntry[1] = 'F'; break;
-			case TraceLevel::Error:		logEntry[1] = 'E'; break;
-			case TraceLevel::Warning:	logEntry[1] = 'W'; break;
-			case TraceLevel::Info:		logEntry[1] = 'I'; break;
-			default:					logEntry[1] = 'D'; break;
+			case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
+			case TraceLevel::Error:		levelIdentifier = 'E'; break;
+			case TraceLevel::Warning:	levelIdentifier = 'W'; break;
+			case TraceLevel::Info:		levelIdentifier = 'I'; break;
+			default:					levelIdentifier = 'D'; break;
 		}
-		logEntry[2] = ']';
-		logEntry[3] = ' ';
+		std::int32_t length = snprintf(logEntry, MaxEntryLength, "[%c]{%u} ", levelIdentifier, ::GetCurrentThreadId());
+		logEntryWithoutLevel += length;
 
 		va_list args;
 		va_start(args, fmt);
-		std::int32_t length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
+		std::int32_t partLength = vsnprintf(logEntry + length, MaxEntryLength - length, fmt, args);
 		va_end(args);
+		if (partLength <= 0) {
+			return;
+		}
 
+		length += partLength;
 		if (length >= MaxEntryLength - 2) {
 			length = MaxEntryLength - 2;
 		}
@@ -401,7 +409,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 			logEntryW[lengthW++] = '\n';
 			logEntryW[lengthW] = '\0';
 
-			::OutputDebugString(logEntryW);
+			::OutputDebugStringW(logEntryW);
 		}
 #		endif
 	}
@@ -411,30 +419,18 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	// Allow to attach custom target using Application::AttachTraceTarget()
 	if (__logFile != nullptr) {
-		const char* levelIdentifier;
+		char levelIdentifier;
 		switch (level) {
-			case TraceLevel::Fatal:		levelIdentifier = "F"; break;
-			case TraceLevel::Error:		levelIdentifier = "E"; break;
-			case TraceLevel::Warning:	levelIdentifier = "W"; break;
-			case TraceLevel::Info:		levelIdentifier = "I"; break;
-			default:					levelIdentifier = "D"; break;
+			case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
+			case TraceLevel::Error:		levelIdentifier = 'E'; break;
+			case TraceLevel::Warning:	levelIdentifier = 'W'; break;
+			case TraceLevel::Info:		levelIdentifier = 'I'; break;
+			default:					levelIdentifier = 'D'; break;
 		}
 
 		TraceDateTime dateTime = GetTraceDateTime();
-
-#	if defined(DEATH_TARGET_WINDOWS_RT)
-		// [X] is always prepended on UWP
-		const char* logEntryWithoutLevel = &logEntry[4];
-#	elif defined(DEATH_TARGET_WINDOWS)
-		// [X] is prepended only if console is not attached
-		const char* logEntryWithoutLevel = (__showLogConsole ? logEntry : &logEntry[4]);
-#	else
-		// [X] is never prepended
-		const char* logEntryWithoutLevel = logEntry;
-#	endif
-
 		FileStream* s = static_cast<FileStream*>(__logFile.get());
-		fprintf(s->GetHandle(), "%02d:%02d:%02d.%03ld [%s] %s\n", dateTime.Hours, dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds, levelIdentifier, logEntryWithoutLevel);
+		fprintf(s->GetHandle(), "%02d:%02d:%02d.%03ld [%c] %s\n", dateTime.Hours, dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds, levelIdentifier, logEntryWithoutLevel);
 		s->Flush();
 	}
 #endif
@@ -449,12 +445,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		default:					colorTracy = 0x969696; break;
 	}
 
-	va_list argsTracy;
-	va_start(argsTracy, fmt);
-	std::int32_t lengthTracy = vsnprintf(logEntry, MaxEntryLength, fmt, argsTracy);
-	va_end(argsTracy);
-
-	TracyMessageC(logEntry, lengthTracy, colorTracy);
+	TracyMessageC(logEntryWithoutLevel, strlen(logEntryWithoutLevel), colorTracy);
 #endif
 }
 
