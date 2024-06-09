@@ -57,26 +57,26 @@ namespace Death { namespace IO {
 
 	std::int64_t AndroidAssetStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		std::int64_t newPos = ErrorInvalidStream;
+		std::int64_t newPos = Stream::Invalid;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			switch (origin) {
 				case SeekOrigin::Begin: newPos = ::lseek(_fileDescriptor, _startOffset + offset, SEEK_SET); break;
 				case SeekOrigin::Current: newPos = ::lseek(_fileDescriptor, offset, SEEK_CUR); break;
 				case SeekOrigin::End: newPos = ::lseek(_fileDescriptor, _startOffset + _size + offset, SEEK_END); break;
-				default: return ErrorInvalidParameter;
+				default: return Stream::OutOfRange;
 			}
 			if (newPos >= _startOffset) {
 				newPos -= _startOffset;
 			} else if (newPos < 0) {
-				newPos = ErrorInvalidParameter;
+				newPos = Stream::OutOfRange;
 			}
 		}
 #else
 		if (_asset != nullptr) {
 			newPos = AAsset_seek64(_asset, offset, static_cast<std::int32_t>(origin));
 			if (newPos < 0) {
-				newPos = ErrorInvalidParameter;
+				newPos = Stream::OutOfRange;
 			}
 		}
 #endif
@@ -85,7 +85,7 @@ namespace Death { namespace IO {
 
 	std::int64_t AndroidAssetStream::GetPosition() const
 	{
-		std::int64_t pos = ErrorInvalidStream;
+		std::int64_t pos = Stream::Invalid;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR) - _startOffset;
@@ -129,7 +129,7 @@ namespace Death { namespace IO {
 	std::int32_t AndroidAssetStream::Write(const void* buffer, std::int32_t bytes)
 	{
 		// Not supported
-		return ErrorInvalidStream;
+		return Stream::Invalid;
 	}
 
 	bool AndroidAssetStream::Flush()
