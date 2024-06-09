@@ -3,11 +3,17 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
 
-#if ENABLE_GL_LOGGING
+#if defined(DEATH_TRACE) && defined(DEATH_TRACE_GL_ERRORS)
 #	include "../../../Common.h"
-#	define GL_LOG_ERRORS() do { GLenum __err = glGetError(); if (__err != GL_NO_ERROR) { LOGW("OpenGL returned error: %i", __err); } } while (false)
+#	define GL_LOG_ERRORS()										\
+		do {													\
+			GLenum __err = glGetError();						\
+			if (__err != GL_NO_ERROR) {							\
+				LOGW("OpenGL returned error: %i", __err);		\
+			}													\
+		} while (false)
 #else
-#	define GL_LOG_ERRORS() do { } while (false)
+#	define GL_LOG_ERRORS() do {} while (false)
 #endif
 
 namespace nCine
@@ -20,7 +26,19 @@ namespace nCine
 	public:
 		enum class LabelTypes
 		{
-#if !defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_APPLE)
+			Buffer,
+			Shader,
+			Program,
+			VertexArray,
+			Query,
+			ProgramPipeline,
+			TransformFeedback,
+			Sampler,
+			Texture,
+			RenderBuffer,
+			FrameBuffer
+#else
 			TransformFeedback = GL_TRANSFORM_FEEDBACK,
 			Texture = GL_TEXTURE,
 			RenderBuffer = GL_RENDERBUFFER,
@@ -42,18 +60,6 @@ namespace nCine
 			ProgramPipeline = GL_PROGRAM_PIPELINE,
 			Sampler = GL_SAMPLER
 #	endif
-#else
-			Buffer,
-			Shader,
-			Program,
-			VertexArray,
-			Query,
-			ProgramPipeline,
-			TransformFeedback,
-			Sampler,
-			Texture,
-			RenderBuffer,
-			FrameBuffer
 #endif
 		};
 

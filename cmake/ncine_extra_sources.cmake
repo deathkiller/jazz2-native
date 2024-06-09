@@ -30,7 +30,7 @@ if(ANGLE_FOUND OR OPENGLES2_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE EGL::EGL OpenGLES2::GLES2)
 
 	if(ANGLE_FOUND)
-		message(STATUS "ANGLE has been found")
+		message(STATUS "Using ANGLE as OpenGL|ES backend")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGLE")
 	endif()
 
@@ -565,9 +565,23 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		"${MSVC_WINRT_BINDIR}/msvcp140.dll"
 		"${MSVC_WINRT_BINDIR}/vcruntime140.dll"
 		"${MSVC_WINRT_BINDIR}/vcruntime140_1.dll"
-		"${MSVC_WINRT_BINDIR}/libEGL.dll"
-		"${MSVC_WINRT_BINDIR}/libGLESv2.dll"
 	)
+	
+	if(NCINE_WITH_ANGLE)
+		list(APPEND UWP_DEPENDENCIES
+			"${MSVC_WINRT_BINDIR}/libEGL.dll"
+			"${MSVC_WINRT_BINDIR}/libGLESv2.dll")
+	else()
+		message(STATUS "Using Mesa as OpenGL|ES backend (Experimental)")
+
+		list(APPEND UWP_DEPENDENCIES
+			"${MSVC_WINRT_BINDIR}/Mesa/dxil.dll"
+			"${MSVC_WINRT_BINDIR}/Mesa/libEGL.dll"
+			"${MSVC_WINRT_BINDIR}/Mesa/libgallium_wgl.dll"
+			"${MSVC_WINRT_BINDIR}/Mesa/libglapi.dll"
+			"${MSVC_WINRT_BINDIR}/Mesa/libGLESv2.dll"
+			"${MSVC_WINRT_BINDIR}/Mesa/z-1.dll")
+	endif()
 		
 	if(ZLIB_FOUND)
 		list(APPEND UWP_DEPENDENCIES "${MSVC_BINDIR}/zlib.dll")

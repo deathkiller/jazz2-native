@@ -19,14 +19,22 @@ jobs:
       matrix:
         include:
         - BuildType: Release
+          Backend: ANGLE
           Platform: x64
           ArchExts:
           
         - BuildType: Release
+          Backend: ANGLE
           Platform: x64
           ArchExts: AVX
           
         - BuildType: Release
+          Backend: ANGLE
+          Platform: x64
+          ArchExts: AVX2
+
+        - BuildType: Release
+          Backend: Mesa
           Platform: x64
           ArchExts: AVX2
 
@@ -43,11 +51,15 @@ jobs:
         
     - name: 'Configure CMake'
       run: |
+        switch('${{ matrix.Backend }}') {
+          'ANGLE' { $withAngle = 'ON' } 
+          'Mesa' { $withAngle = 'OFF' } 
+        }
         switch('${{ matrix.Platform }}') {
           'x86' { $arch = 'Win32' } 
           'x64' { $arch = 'x64' } 
         }
-        
+
         rm -force ".\Content\Translations\*.po"
         
         $currentDirectory = Get-Location
@@ -55,7 +67,7 @@ jobs:
         $certPath = Join-Path -Path $currentDirectory -ChildPath "_cert.pfx"
         [IO.File]::WriteAllBytes("$certPath", $certBytes)
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS="${{ matrix.ArchExts }}" -D NCINE_STRIP_BINARIES=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}" -D DEATH_TRACE=OFF
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS="${{ matrix.ArchExts }}" -D NCINE_STRIP_BINARIES=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}" -D NCINE_WITH_ANGLE="$withAngle" -D DEATH_TRACE=OFF
 
     - name: 'Build'
       run: |
@@ -78,7 +90,7 @@ jobs:
         Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.msixbundle"
         Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         
-        if ('${{ matrix.ArchExts }}') { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}_${{ matrix.ArchExts }}' } else { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}' }
+        if ('${{ matrix.ArchExts }}') { $artifactPath = 'Jazz2_UWP_${{ matrix.Backend }}_${{ matrix.Platform }}_${{ matrix.ArchExts }}' } else { $artifactPath = 'Jazz2_UWP_${{ matrix.Backend }}_${{ matrix.Platform }}' }
         Add-Content -Path $env:GITHUB_ENV -Value "artifactPath=$artifactPath"
         
     - name: 'Upload Package'

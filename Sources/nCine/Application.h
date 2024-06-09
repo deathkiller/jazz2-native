@@ -186,7 +186,7 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 		float timings_[(std::int32_t)Timings::Count];
 #endif
-#if defined(DEATH_TARGET_WINDOWS)
+#if 0 //defined(DEATH_TARGET_WINDOWS)
 		HANDLE _waitableTimer;
 #endif
 
