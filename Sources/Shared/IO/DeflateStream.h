@@ -43,6 +43,7 @@ namespace Death { namespace IO {
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 		bool Flush() override;
 		bool IsValid() override;
+		std::int64_t GetSize() const override;
 
 		bool CeaseReading();
 
@@ -59,6 +60,7 @@ namespace Death { namespace IO {
 
 		Stream* _inputStream;
 		z_stream _strm;
+		std::int64_t _size;
 		std::int32_t _inputSize;
 		State _state;
 		bool _rawInflate;
@@ -87,6 +89,7 @@ namespace Death { namespace IO {
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 		bool Flush() override;
 		bool IsValid() override;
+		std::int64_t GetSize() const override;
 
 		static std::int64_t GetMaxDeflatedSize(std::int64_t uncompressedSize);
 

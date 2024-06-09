@@ -243,7 +243,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	static const char BrightRed[] = "\033[91m";
 	static const char BrightYellow[] = "\033[93m";
 
-#	if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
 	if (__showLogConsole) {
 #	endif
 
@@ -375,9 +375,8 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	}
 #	endif
 
-#	if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
 	} else {
-#		if defined(DEATH_DEBUG)
 		char levelIdentifier;
 		switch (level) {
 			case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
@@ -411,7 +410,6 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 
 			::OutputDebugStringW(logEntryW);
 		}
-#		endif
 	}
 #	endif
 #endif

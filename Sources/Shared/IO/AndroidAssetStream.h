@@ -25,7 +25,8 @@ namespace Death { namespace IO {
 	public:
 		static constexpr Containers::StringView Prefix = "asset:"_s;
 
-		AndroidAssetStream(const Containers::String& path, FileAccess mode);
+		AndroidAssetStream(const Containers::StringView path, FileAccess mode);
+		AndroidAssetStream(Containers::String&& path, FileAccess mode);
 		~AndroidAssetStream() override;
 
 		AndroidAssetStream(const AndroidAssetStream&) = delete;
@@ -37,8 +38,9 @@ namespace Death { namespace IO {
 		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 		bool Flush() override;
-		bool IsValid() override;
-		
+		bool IsValid() override;	
+		std::int64_t GetSize() const override;
+
 		/** @brief Returns file path */
 		Containers::StringView GetPath() const;
 
@@ -79,6 +81,7 @@ namespace Death { namespace IO {
 		static const char* _internalDataPath;
 
 		Containers::String _path;
+		std::int64_t _size;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t _fileDescriptor;
 		unsigned long int _startOffset;

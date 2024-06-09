@@ -39,8 +39,8 @@ namespace nCine
 		winrt::init_apartment();
 
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
-		wchar_t pBuf[MAX_PATH];
-		DWORD pBufLength = ::GetModuleFileName(NULL, pBuf, countof(pBuf));
+		wchar_t pBuf[fs::MaxPathLength];
+		DWORD pBufLength = ::GetModuleFileNameW(NULL, pBuf, (DWORD)arraySize(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
 			if (lastSlash == nullptr) {
@@ -49,7 +49,7 @@ namespace nCine
 			if (lastSlash != nullptr) {
 				lastSlash++;
 				*lastSlash = '\0';
-				::SetCurrentDirectory(pBuf);
+				::SetCurrentDirectoryW(pBuf);
 			}
 		}
 
@@ -89,7 +89,7 @@ namespace nCine
 
 	void UwpApplication::Run()
 	{
-		auto gfxDevice = dynamic_cast<UwpGfxDevice*>(gfxDevice_.get());
+		auto* gfxDevice = static_cast<UwpGfxDevice*>(gfxDevice_.get());
 		gfxDevice->MakeCurrent();
 
 		InitCommon();
@@ -239,7 +239,7 @@ namespace nCine
 
 	void UwpApplication::OnWindowSizeChanged(const winrtWF::IInspectable& sender, winrtWUC::WindowSizeChangedEventArgs const& args)
 	{
-		auto gfxDevice = dynamic_cast<UwpGfxDevice*>(gfxDevice_.get());
+		auto* gfxDevice = static_cast<UwpGfxDevice*>(gfxDevice_.get());
 		if (gfxDevice != nullptr) {
 			gfxDevice->isFullscreen_ = winrtWUV::ApplicationView::GetForCurrentView().IsFullScreenMode();
 			gfxDevice->_sizeChanged = 10;

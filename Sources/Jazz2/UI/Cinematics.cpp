@@ -139,16 +139,14 @@ namespace Jazz2::UI
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();
-		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, String(path + ".j2v") });
-		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v")));
-		}
-
-		std::unique_ptr<Stream> s = fs::Open(fullPath, FileAccess::Read);
+		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2v"_s)));
 		if (!s->IsValid()) {
-			return false;
+			s = fs::Open(fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v"_s))), FileAccess::Read);
+			if (!s->IsValid()) {
+				return false;
+			}
 		}
-
+		
 		RETURNF_ASSERT_MSG(s->GetSize() > 32 && s->GetSize() < 64 * 1024 * 1024,
 			"Cannot load \"%s.j2v\" - unexpected file size", path.data());
 

@@ -35,12 +35,14 @@ namespace Death { namespace IO {
 	class Stream : public IDisposable
 	{
 	public:
-		/** @brief Returned if @ref Stream doesn't point to valid source */
-		static constexpr std::int32_t ErrorInvalidStream = -1;
-		/** @brief Returned if one of the parameters provided to a method is not valid */
-		static constexpr std::int32_t ErrorInvalidParameter = -2;
-		/** @brief Returned if seek operation is not supported by @ref Stream or the stream length is unknown */
-		static constexpr std::int32_t ErrorNotSeekable = -3;
+		enum {
+			/** @brief Returned if @ref Stream doesn't point to valid source */
+			Invalid = -1,
+			/** @brief Returned if one of the parameters provided to a method is not valid */
+			OutOfRange = -2,
+			/** @brief Returned if seek operation is not supported by @ref Stream or the stream length is unknown */
+			NotSeekable = -3
+		};
 
 		Stream();
 
@@ -60,9 +62,7 @@ namespace Death { namespace IO {
 		virtual bool IsValid() = 0;
 
 		/** @brief Returns stream size in bytes */
-		DEATH_ALWAYS_INLINE std::int64_t GetSize() const {
-			return _size;
-		}
+		virtual std::int64_t GetSize() const = 0;
 
 		/** @brief Reads the bytes from the current stream and writes them to the target stream */
 		std::int64_t CopyTo(Stream& targetStream);
@@ -146,9 +146,6 @@ namespace Death { namespace IO {
 				((value << 8) & 0x000000FF00000000ULL) | ((value >> 8) & 0x00000000FF000000ULL) |
 				((value >> 24) & 0x0000000000FF0000ULL) | ((value >> 40) & 0x000000000000FF00ULL) | (value << 56);
 		}
-
-	protected:
-		std::int64_t _size;
 	};
 
 }}

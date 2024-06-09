@@ -27,6 +27,7 @@ namespace Death { namespace IO {
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 		bool Flush() override;
 		bool IsValid() override;
+		std::int64_t GetSize() const override;
 
 		/** @brief Returns file path */
 		Containers::StringView GetPath() const;
@@ -45,6 +46,7 @@ namespace Death { namespace IO {
 
 	private:
 		Containers::String _path;
+		std::int64_t _size;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t _fileDescriptor;
 #else

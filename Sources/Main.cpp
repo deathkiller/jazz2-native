@@ -1030,6 +1030,7 @@ RecreateCache:
 
 			pakWriter = nullptr;
 			Timer::sleep(t * 100);
+			t++;
 			pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s));
 		}
 

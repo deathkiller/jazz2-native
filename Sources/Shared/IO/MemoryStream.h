@@ -26,6 +26,7 @@ namespace Death { namespace IO {
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 		bool Flush() override;
 		bool IsValid() override;
+		std::int64_t GetSize() const override;
 
 		void ReserveCapacity(std::int64_t bytes);
 		std::int32_t FetchFromStream(Stream& s, std::int32_t bytes);
@@ -43,6 +44,7 @@ namespace Death { namespace IO {
 		};
 
 		Containers::Array<std::uint8_t> _buffer;
+		std::int64_t _size;
 		std::int64_t _seekOffset;
 		AccessMode _mode;
 	};

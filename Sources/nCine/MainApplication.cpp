@@ -218,7 +218,7 @@ namespace nCine
 		hidInitializeTouchScreen();
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
-		wchar_t pBuf[MAX_PATH];
+		wchar_t pBuf[fs::MaxPathLength];
 		DWORD pBufLength = ::GetModuleFileNameW(NULL, pBuf, (DWORD)arraySize(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');

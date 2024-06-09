@@ -26,17 +26,18 @@ namespace Death { namespace IO {
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 		bool Flush() override;
 		bool IsValid() override;
+		std::int64_t GetSize() const override;
 
 	private:
 		FileStream _underlyingStream;
 		std::uint64_t _offset;
+		std::uint64_t _size;
 		std::int64_t _pos;
 	};
 
 	BoundedStream::BoundedStream(const String& path, std::uint64_t offset, std::uint32_t size)
-		: _underlyingStream(path, FileAccess::Read), _offset(offset), _pos(0)
+		: _underlyingStream(path, FileAccess::Read), _offset(offset), _size(size), _pos(0)
 	{
-		_size = size;
 		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
 	}
 
@@ -52,11 +53,11 @@ namespace Death { namespace IO {
 			case SeekOrigin::Begin: newPos = _offset + offset; break;
 			case SeekOrigin::Current: newPos = _pos + offset; break;
 			case SeekOrigin::End: newPos = _offset + _size + offset; break;
-			default: return ErrorInvalidParameter;
+			default: return Stream::OutOfRange;
 		}
 
 		if (newPos < static_cast<std::int64_t>(_offset) || newPos > static_cast<std::int64_t>(_offset) + _size) {
-			newPos = ErrorInvalidParameter;
+			newPos = Stream::OutOfRange;
 		} else {
 			newPos = _underlyingStream.Seek(newPos, SeekOrigin::Begin);
 			if (newPos >= static_cast<std::int64_t>(_offset)) {
@@ -92,7 +93,7 @@ namespace Death { namespace IO {
 	std::int32_t BoundedStream::Write(const void* buffer, std::int32_t bytes)
 	{
 		// Not supported
-		return ErrorInvalidStream;
+		return Stream::Invalid;
 	}
 
 	bool BoundedStream::Flush()
@@ -104,6 +105,11 @@ namespace Death { namespace IO {
 	bool BoundedStream::IsValid()
 	{
 		return _underlyingStream.IsValid();
+	}
+
+	std::int64_t BoundedStream::GetSize() const
+	{
+		return _size;
 	}
 
 #if defined(WITH_ZLIB)
@@ -123,16 +129,17 @@ namespace Death { namespace IO {
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 		bool Flush() override;
 		bool IsValid() override;
+		std::int64_t GetSize() const override;
 
 	private:
 		BoundedStream _underlyingStream;
 		DeflateStream _deflateStream;
+		std::int64_t _uncompressedSize;
 	};
 
 	ZlibCompressedBoundedStream::ZlibCompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
-		: _underlyingStream(path, offset, compressedSize)
+		: _underlyingStream(path, offset, compressedSize), _uncompressedSize(uncompressedSize)
 	{
-		_size = uncompressedSize;
 		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
 		_deflateStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
 	}
@@ -161,7 +168,7 @@ namespace Death { namespace IO {
 	std::int32_t ZlibCompressedBoundedStream::Write(const void* buffer, std::int32_t bytes)
 	{
 		// Not supported
-		return ErrorInvalidStream;
+		return Stream::Invalid;
 	}
 
 	bool ZlibCompressedBoundedStream::Flush()
@@ -173,6 +180,11 @@ namespace Death { namespace IO {
 	bool ZlibCompressedBoundedStream::IsValid()
 	{
 		return _underlyingStream.IsValid() && _deflateStream.IsValid();
+	}
+
+	std::int64_t ZlibCompressedBoundedStream::GetSize() const
+	{
+		return _uncompressedSize;
 	}
 
 #endif
