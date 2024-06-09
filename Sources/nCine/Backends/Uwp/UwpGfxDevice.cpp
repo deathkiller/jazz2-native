@@ -1,38 +1,56 @@
 #include "UwpGfxDevice.h"
 #include "UwpApplication.h"
 
-#include <angle_windowsstore.h>
-
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.Graphics.Display.h>
+#include <winrt/Windows.Graphics.Display.Core.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 
+#include <Environment.h>
 #include <Utf8.h>
+
+#if defined(WITH_ANGLE)
+#	include <angle_windowsstore.h>
+#endif
+
+namespace winrtWGD = winrt::Windows::Graphics::Display;
+namespace winrtWGDC = winrt::Windows::Graphics::Display::Core;
 
 namespace nCine
 {
-	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const /*winrtWUXC::SwapChainPanel*/winrtWUC::CoreWindow& withVisual)
-		: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual), _sizeChanged(2)
+	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window)
+		: IGfxDevice(windowMode, glContextInfo, displayMode), _window(window), _renderSurface{EGL_NO_SURFACE}, _sizeChanged(2)
 	{
 		updateMonitors();
 		Initialize();
-		CreateRenderSurface();
 	}
 
 	UwpGfxDevice::~UwpGfxDevice()
 	{
-		DestroyRenderSurface();
 		Cleanup();
 	}
 
 	void UwpGfxDevice::Initialize()
 	{
-		constexpr EGLint configAttributes[] = { EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_STENCIL_SIZE, 8, EGL_NONE };
+#if defined(WITH_OPENGLES)
+#	if defined(WITH_ANGLE)
+		static const EGLint configAttributes[] = {
+			EGL_RED_SIZE, 8,
+			EGL_GREEN_SIZE, 8,
+			EGL_BLUE_SIZE, 8,
+			EGL_ALPHA_SIZE, 8,
+			EGL_DEPTH_SIZE, 8,
+			EGL_STENCIL_SIZE, 8,
+			EGL_NONE
+		};
 
-		constexpr EGLint contextAttributes[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
+		static const EGLint contextAttributes[] = {
+			EGL_CONTEXT_CLIENT_VERSION, 2,
+			EGL_NONE
+		};
 
-		constexpr EGLint defaultDisplayAttributes[] = {
+		static const EGLint defaultDisplayAttributes[] = {
 			// These are the default display attributes, used to request ANGLE's D3D11 renderer.
 			// eglInitialize will only succeed with these attributes if the hardware supports D3D11 Feature Level 10_0+.
 			EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
@@ -50,7 +68,7 @@ namespace nCine
 			EGL_NONE,
 		};
 
-		constexpr EGLint fl9_3DisplayAttributes[] = {
+		static const EGLint fl9_3DisplayAttributes[] = {
 			// These can be used to request ANGLE's D3D11 renderer, with D3D11 Feature Level 9_3.
 			// These attributes are used if the call to eglInitialize fails with the default display attributes.
 			EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
@@ -61,7 +79,7 @@ namespace nCine
 			EGL_NONE,
 		};
 
-		constexpr EGLint warpDisplayAttributes[] = {
+		static const EGLint warpDisplayAttributes[] = {
 			// These attributes can be used to request D3D11 WARP.
 			// They are used if eglInitialize fails with both the default display attributes and the 9_3 display attributes.
 			EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
@@ -73,7 +91,7 @@ namespace nCine
 
 		// eglGetPlatformDisplayEXT is an alternative to eglGetDisplay. It allows us to pass in display attributes, used to configure D3D11.
 		PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
-		FATAL_ASSERT_MSG(eglGetPlatformDisplayEXT != nullptr, "Failed to get function eglGetPlatformDisplayEXT");
+		FATAL_ASSERT_MSG(eglGetPlatformDisplayEXT != nullptr, "Failed to get function eglGetPlatformDisplayEXT()");
 
 		//
 		// To initialize the display, we make three sets of calls to eglGetPlatformDisplayEXT and eglInitialize, with varying
@@ -116,66 +134,128 @@ namespace nCine
 
 		_eglContext = eglCreateContext(_eglDisplay, _eglConfig, EGL_NO_CONTEXT, contextAttributes);
 		FATAL_ASSERT_MSG(_eglContext != EGL_NO_CONTEXT, "Failed to create EGL context");
+
+		winrtWF::Collections::PropertySet surfaceProperties;
+		surfaceProperties.Insert(EGLNativeWindowTypeProperty, _window);
+
+		_renderSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, static_cast<EGLNativeWindowType>(winrt::get_abi(surfaceProperties)), nullptr);
+		FATAL_ASSERT_MSG(_renderSurface != EGL_NO_SURFACE, "Failed to create EGL surface");
+#	else
+		// Generic/Mesa initialization
+		static const EGLint configAttributes[] = {
+			EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+			EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+			EGL_RED_SIZE, 8,
+			EGL_GREEN_SIZE, 8,
+			EGL_BLUE_SIZE, 8,
+			EGL_ALPHA_SIZE, 8,
+			EGL_DEPTH_SIZE, 8,
+			EGL_STENCIL_SIZE, 8,
+			EGL_NONE
+		};
+
+		static const EGLint contextAttributes[] = {
+			EGL_CONTEXT_CLIENT_VERSION, 2,
+			EGL_NONE
+		};
+
+		static const EGLint windowAttributes[] = {
+			EGL_RENDER_BUFFER, EGL_BACK_BUFFER,
+			EGL_NONE
+		};
+
+		_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+		FATAL_ASSERT_MSG(_eglDisplay != EGL_NO_DISPLAY, "Failed to get EGL display");
+
+		if (eglInitialize(_eglDisplay, NULL, NULL) == EGL_FALSE) {
+			LOGW("Cannot initialize EGL");
+		}
+
+		EGLint numConfigs = 0;
+		if (eglChooseConfig(_eglDisplay, configAttributes, &_eglConfig, 1, &numConfigs) == EGL_FALSE || numConfigs == 0) {
+			LOGE("Failed to choose first EGLConfig");
+		}
+
+		_eglContext = eglCreateContext(_eglDisplay, _eglConfig, EGL_NO_CONTEXT, contextAttributes);
+		FATAL_ASSERT_MSG(_eglContext != EGL_NO_CONTEXT, "Failed to create EGL context");
+
+		_renderSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, static_cast<EGLNativeWindowType>(winrt::get_abi(_window)), windowAttributes);
+		FATAL_ASSERT_MSG(_renderSurface != EGL_NO_SURFACE, "Failed to create EGL surface");
+#	endif
+#else
+#	error "For DEATH_TARGET_WINDOWS_RT, OpenGL|ES should be used instead of OpenGL"
+#endif
 	}
 
 	void UwpGfxDevice::Cleanup()
 	{
-		if (_eglDisplay != EGL_NO_DISPLAY && _eglContext != EGL_NO_CONTEXT) {
-			eglDestroyContext(_eglDisplay, _eglContext);
-			_eglContext = EGL_NO_CONTEXT;
-		}
-		if (_eglDisplay != EGL_NO_DISPLAY) {
-			eglTerminate(_eglDisplay);
-			_eglDisplay = EGL_NO_DISPLAY;
-		}
-	}
-
-	void UwpGfxDevice::CreateRenderSurface()
-	{
-		if (_renderSurface != EGL_NO_SURFACE) {
-			return;
-		}
-
-		winrtWF::Collections::PropertySet surfaceProperties;
-		surfaceProperties.Insert(EGLNativeWindowTypeProperty, _hostVisual);
-
-		_renderSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, static_cast<EGLNativeWindowType>(winrt::get_abi(surfaceProperties)), nullptr);
-		FATAL_ASSERT_MSG(_renderSurface != EGL_NO_SURFACE, "Failed to create EGL surface");
-	}
-
-	void UwpGfxDevice::DestroyRenderSurface()
-	{
+#if defined(WITH_OPENGLES)
 		if (_renderSurface != EGL_NO_SURFACE) {
 			eglDestroySurface(_eglDisplay, _renderSurface);
 			_renderSurface = EGL_NO_SURFACE;
 		}
+		if (_eglDisplay != EGL_NO_DISPLAY) {
+			if (_eglContext != EGL_NO_CONTEXT) {
+				eglDestroyContext(_eglDisplay, _eglContext);
+				_eglContext = EGL_NO_CONTEXT;
+			}
+			eglTerminate(_eglDisplay);
+			_eglDisplay = EGL_NO_DISPLAY;
+		}
+#endif
 	}
 
 	void UwpGfxDevice::MakeCurrent()
 	{
+#if defined(WITH_OPENGLES)
 		EGLBoolean result = eglMakeCurrent(_eglDisplay, _renderSurface, _renderSurface, _eglContext);
-		FATAL_ASSERT_MSG(result != EGL_FALSE, "Failed to make EGLSurface current");
+		FATAL_ASSERT_MSG(result != EGL_FALSE, "eglMakeCurrent() failed");
+
+		const int interval = (displayMode_.hasVSync() ? 1 : 0);
+		eglSwapInterval(_eglDisplay, interval);
+#endif
 	}
 
 	void UwpGfxDevice::update()
 	{
+#if defined(WITH_OPENGLES)
 		eglSwapBuffers(_eglDisplay, _renderSurface);
 
 		if (_sizeChanged > 0) {
-			EGLint panelWidth = 0, panelHeight = 0;
-			eglQuerySurface(_eglDisplay, _renderSurface, EGL_WIDTH, &panelWidth);
-			eglQuerySurface(_eglDisplay, _renderSurface, EGL_HEIGHT, &panelHeight);
-			if (panelWidth > 0 && panelHeight > 0) {
+			EGLint currentWidth = 0, currentHeight = 0;
+			eglQuerySurface(_eglDisplay, _renderSurface, EGL_WIDTH, &currentWidth);
+			eglQuerySurface(_eglDisplay, _renderSurface, EGL_HEIGHT, &currentHeight);
+
+			// TODO: This doesn't work correctly
+			/*std::uint32_t currentWidth = 0, currentHeight = 0;
+			if (Environment::CurrentDeviceType == DeviceType::Xbox) {
+				const winrtWGDC::HdmiDisplayInformation hdi = winrtWGDC::HdmiDisplayInformation::GetForCurrentView();
+				if (hdi) {
+					winrtWGDC::HdmiDisplayMode displayMode = hdi.GetCurrentDisplayMode();
+					currentWidth = displayMode.ResolutionWidthInRawPixels();
+					currentHeight = displayMode.ResolutionHeightInRawPixels();
+				}
+			}
+
+			if (currentWidth <= 0 || currentHeight <= 0) {
+				std::int32_t scale = static_cast<std::int32_t>(winrtWGD::DisplayInformation::GetForCurrentView().ResolutionScale());
+				auto bounds = _window.Bounds();
+				currentWidth = (bounds.Width * scale) / 100;
+				currentHeight = (bounds.Height * scale) / 100;
+			}*/
+
+			if (currentWidth > 0 && currentHeight > 0) {
 				_sizeChanged--;
-				if (panelWidth != width_ || panelHeight != height_) {
-					width_ = panelWidth;
-					height_ = panelHeight;
+				if (currentWidth != width_ || currentHeight != height_) {
+					width_ = currentWidth;
+					height_ = currentHeight;
 					drawableWidth_ = width_;
 					drawableHeight_ = height_;
 					theApplication().ResizeScreenViewport(drawableWidth_, drawableHeight_);
 				}
 			}
 		}
+#endif
 	}
 
 	void UwpGfxDevice::setResolution(bool fullscreen, int width, int height)
@@ -219,7 +299,7 @@ namespace nCine
 
 	void UwpGfxDevice::updateMonitors()
 	{
-		auto displayInfo = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView();
+		auto displayInfo = winrtWGD::DisplayInformation::GetForCurrentView();
 
 		numMonitors_ = 1;
 		auto& monitor = monitors_[0];

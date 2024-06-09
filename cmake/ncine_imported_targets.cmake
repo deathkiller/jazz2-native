@@ -7,7 +7,7 @@ if(NCINE_DOWNLOAD_DEPENDENCIES AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH)
 				set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/raw/2.0.1-macos/jazz2-libraries-macos.tar.gz")
 			endif()
 		else()
-			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/2.6.1.tar.gz")
+			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/2.8.0.tar.gz")
 		endif()
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
@@ -360,7 +360,6 @@ elseif(MSVC OR MINGW OR MSYS)
 	if(NCINE_WITH_ANGLE AND
 	   EXISTS "${MSVC_LIBDIR}/libEGL.lib" AND EXISTS "${MSVC_BINDIR}/libEGL.dll" AND
 	   EXISTS "${MSVC_LIBDIR}/libGLESv2.lib" AND EXISTS "${MSVC_BINDIR}/libGLESv2.dll")
-
 		add_library(EGL::EGL SHARED IMPORTED)
 		set_target_properties(EGL::EGL PROPERTIES
 			IMPORTED_IMPLIB "${MSVC_LIBDIR}/libEGL.lib"
@@ -373,6 +372,19 @@ elseif(MSVC OR MINGW OR MSYS)
 			IMPORTED_LOCATION "${MSVC_BINDIR}/libGLESv2.dll"
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
 		set(ANGLE_FOUND 1)
+	elseif(WINDOWS_PHONE OR WINDOWS_STORE)
+		add_library(EGL::EGL SHARED IMPORTED)
+		set_target_properties(EGL::EGL PROPERTIES
+			IMPORTED_IMPLIB "${MSVC_WINRT_BINDIR}/Mesa/libEGL.lib"
+			IMPORTED_LOCATION "${MSVC_WINRT_BINDIR}/Mesa/libEGL.dll"
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
+
+		add_library(OpenGLES2::GLES2 SHARED IMPORTED)
+		set_target_properties(OpenGLES2::GLES2 PROPERTIES
+			IMPORTED_IMPLIB "${MSVC_WINRT_BINDIR}/Mesa/libGLESv2.lib"
+			IMPORTED_LOCATION "${MSVC_WINRT_BINDIR}/Mesa/libGLESv2.dll"
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
+		set(OPENGLES2_FOUND 1)
 	else()
 		if(EXISTS "${MSVC_LIBDIR}/glew32.lib" AND EXISTS "${MSVC_BINDIR}/glew32.dll")
 			add_library(GLEW::GLEW SHARED IMPORTED)

@@ -6,7 +6,14 @@
 #	include <GLES3/gl32.h>
 #endif
 
-#if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && (GL_ES_VERSION_3_0 && !GL_ES_VERSION_3_2)
+#if defined(DEATH_DEBUG) &&																				\
+	((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || !defined(DEATH_TARGET_ANDROID)) &&		\
+	!defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) &&								\
+	!defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	define GL_DEBUG_SUPPORTED
+#endif
+
+#if defined(GL_DEBUG_SUPPORTED) && defined(WITH_OPENGLES) && GL_ES_VERSION_3_0 && !GL_ES_VERSION_3_2
 #	define glPushDebugGroup glPushDebugGroupKHR
 #	define glPopDebugGroup glPopDebugGroupKHR
 #	define glDebugMessageInsert glDebugMessageInsertKHR
@@ -43,7 +50,7 @@
 
 namespace nCine
 {
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 	namespace
 	{
 		static const char emptyString[1] = { '\0' };
@@ -56,7 +63,7 @@ namespace nCine
 
 	void GLDebug::init(const IGfxCapabilities& gfxCaps)
 	{
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 		debugAvailable_ = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG) &&
 			theApplication().GetGfxDevice().glContextInfo().debugContext;
 
@@ -70,7 +77,7 @@ namespace nCine
 
 	void GLDebug::pushGroup(const char* message)
 	{
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
 			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, debugGroupId_++, -1, message ? message : emptyString);
 		}
@@ -79,7 +86,7 @@ namespace nCine
 
 	void GLDebug::popGroup()
 	{
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
 			glPopDebugGroup();
 		}
@@ -88,7 +95,7 @@ namespace nCine
 
 	void GLDebug::messageInsert(const char* message)
 	{
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
 			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, debugGroupId_++, GL_DEBUG_SEVERITY_NOTIFICATION, -1, message ? message : emptyString);
 		}
@@ -97,7 +104,7 @@ namespace nCine
 
 	void GLDebug::objectLabel(LabelTypes identifier, GLuint name, const char* label)
 	{
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
 			glObjectLabel(static_cast<GLenum>(identifier), name, -1, label ? label : emptyString);
 		}
@@ -106,7 +113,7 @@ namespace nCine
 
 	void GLDebug::objectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label)
 	{
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
 			glObjectLabel(static_cast<GLenum>(identifier), name, label ? length : 0, label ? label : emptyString);
 		}
@@ -115,50 +122,49 @@ namespace nCine
 
 	void GLDebug::getObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label)
 	{
-#if defined(DEATH_DEBUG) && ((!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
+#if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
 			glGetObjectLabel(static_cast<GLenum>(identifier), name, bufSize, length, label);
 		}
 #endif
 	}
 
-#if defined(DEATH_DEBUG) && ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && GL_ES_VERSION_3_0
-
+#if defined(GL_DEBUG_SUPPORTED)
 	/// Callback for `glDebugMessageCallback()`
 	void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
 	{
-		const char* sourceString = "Unknown";
+		const char* sourceString;
 		switch (source) {
 			case GL_DEBUG_SOURCE_API: sourceString = "API"; break;
-			case GL_DEBUG_SOURCE_WINDOW_SYSTEM: sourceString = "Window system"; break;
-			case GL_DEBUG_SOURCE_SHADER_COMPILER: sourceString = "Shader compiler"; break;
-			case GL_DEBUG_SOURCE_THIRD_PARTY: sourceString = "Third party"; break;
+			case GL_DEBUG_SOURCE_WINDOW_SYSTEM: sourceString = "Window System"; break;
+			case GL_DEBUG_SOURCE_SHADER_COMPILER: sourceString = "Shader Compiler"; break;
+			case GL_DEBUG_SOURCE_THIRD_PARTY: sourceString = "3rd Party"; break;
 			case GL_DEBUG_SOURCE_APPLICATION: sourceString = "Application"; break;
 			case GL_DEBUG_SOURCE_OTHER: sourceString = "Other"; break;
 			default: sourceString = "Unknown"; break;
 		}
 
-		const char* typeString = "Unknown";
+		const char* typeString;
 		switch (type) {
 			case GL_DEBUG_TYPE_ERROR: typeString = "Error"; break;
-			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: typeString = "Deprecated behavior"; break;
-			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: typeString = "Undefined behavior"; break;
+			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: typeString = "Deprecated Behavior"; break;
+			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: typeString = "Undefined Behavior"; break;
 			case GL_DEBUG_TYPE_PORTABILITY: typeString = "Portability"; break;
 			case GL_DEBUG_TYPE_PERFORMANCE: typeString = "Performance"; break;
 			case GL_DEBUG_TYPE_MARKER: typeString = "Marker"; break;
-			case GL_DEBUG_TYPE_PUSH_GROUP: typeString = "Push group"; break;
-			case GL_DEBUG_TYPE_POP_GROUP: typeString = "Pop group"; break;
+			case GL_DEBUG_TYPE_PUSH_GROUP: typeString = "Push Group"; break;
+			case GL_DEBUG_TYPE_POP_GROUP: typeString = "Pop Group"; break;
 			case GL_DEBUG_TYPE_OTHER: typeString = "Other"; break;
 			default: typeString = "Unknown"; break;
 		}
 
-		const char* severityString = "unknown";
+		const char* severityString;
 		switch (severity) {
 			case GL_DEBUG_SEVERITY_NOTIFICATION: severityString = "notification"; break;
 			case GL_DEBUG_SEVERITY_LOW: severityString = "low"; break;
 			case GL_DEBUG_SEVERITY_MEDIUM: severityString = "medium"; break;
 			case GL_DEBUG_SEVERITY_HIGH: severityString = "high"; break;
-			default: severityString = "unknown"; break;
+			default: severityString = "Unknown"; break;
 		}
 
 		LOGD("OpenGL message %u of type \"%s\" from source \"%s\" with %s severity: \"%s\"", id, typeString, sourceString, severityString, message);
@@ -167,7 +173,7 @@ namespace nCine
 
 	void GLDebug::enableDebugOutput()
 	{
-#if defined(DEATH_DEBUG) && ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && GL_ES_VERSION_3_0
+#if defined(GL_DEBUG_SUPPORTED)
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(static_cast<GLDEBUGPROC>(debugCallback), nullptr);
 		LOGI("OpenGL debug callback set");

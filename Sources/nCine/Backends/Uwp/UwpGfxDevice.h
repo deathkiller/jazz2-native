@@ -7,16 +7,19 @@
 #include <winrt/base.h>
 #include <winrt/Windows.UI.ViewManagement.h>
 
-#ifndef EGL_EGL_PROTOTYPES
-#	define EGL_EGL_PROTOTYPES 1
-#endif
-// OpenGL ES includes
-#define _USE_MATH_DEFINES
+#if defined(WITH_OPENGLES)
+#	if !defined(EGL_EGL_PROTOTYPES)
+#		define EGL_EGL_PROTOTYPES 1
+#	endif
+#	define _USE_MATH_DEFINES
 
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <EGL/eglplatform.h>
-#include <EGL/eglext_angle.h>
+#	include <EGL/egl.h>
+#	include <EGL/eglext.h>
+#	include <EGL/eglplatform.h>
+#	if defined(WITH_ANGLE)
+#		include <EGL/eglext_angle.h>
+#	endif
+#endif
 
 namespace winrtWF = winrt::Windows::Foundation;
 namespace winrtWUC = winrt::Windows::UI::Core;
@@ -32,7 +35,7 @@ namespace nCine
 		friend class UwpApplication;
 
 	public:
-		UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& withVisual);
+		UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window);
 		~UwpGfxDevice();
 
 		void update() override;
@@ -58,16 +61,16 @@ namespace nCine
 	private:
 		void Initialize();
 		void Cleanup();
-		void CreateRenderSurface();
-		void DestroyRenderSurface();
 		void MakeCurrent();
 
+		winrtWUC::CoreWindow _window;
+#if defined(WITH_OPENGLES)
 		EGLSurface _renderSurface;
-		winrtWUC::CoreWindow _hostVisual;
 		EGLDisplay _eglDisplay;
 		EGLContext _eglContext;
 		EGLConfig  _eglConfig;
-		int _sizeChanged;
+#endif
+		std::int32_t _sizeChanged;
 		VideoMode _currentViewMode;
 	};
 }

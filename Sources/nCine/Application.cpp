@@ -176,7 +176,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 {
 	constexpr std::int32_t MaxEntryLength = 4096;
 	char logEntry[MaxEntryLength];
+	char logEntryWithColors[MaxEntryLength + 24];
 	const char* logEntryWithoutLevel = logEntry;
+	std::int32_t length;
 
 #if defined(DEATH_TARGET_ANDROID)
 	android_LogPriority priority;
@@ -190,14 +192,14 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	/*std::int32_t length =*/ vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
 	va_end(args);
 
 	__android_log_write(priority, NCINE_APP, logEntry);
 #elif defined(DEATH_TARGET_SWITCH)
 	va_list args;
 	va_start(args, fmt);
-	std::int32_t length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
 	va_end(args);
 
 	svcOutputDebugString(logEntry, length);
@@ -210,7 +212,12 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		case TraceLevel::Info:		levelIdentifier = 'I'; break;
 		default:					levelIdentifier = 'D'; break;
 	}
-	std::int32_t length = snprintf(logEntry, MaxEntryLength, "[%c]{%u} ", levelIdentifier, ::GetCurrentThreadId());
+
+#	if defined(WITH_THREADS)
+	length = snprintf(logEntry, MaxEntryLength, "[%c]%u} ", levelIdentifier, static_cast<std::uint32_t>(nCine::Thread::GetCurrentId()));
+#	else
+	length = snprintf(logEntry, MaxEntryLength, "[%c] ", levelIdentifier);
+#	endif
 	logEntryWithoutLevel += length;
 
 	va_list args;
@@ -247,13 +254,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	if (__showLogConsole) {
 #	endif
 
-	char logEntryWithColors[MaxEntryLength];
-	logEntryWithColors[0] = '\0';
-	logEntryWithColors[MaxEntryLength - 1] = '\0';
-
 	va_list args;
 	va_start(args, fmt);
-	std::int32_t length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
 	va_end(args);
 
 	// Colorize the output
@@ -385,7 +388,11 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 			case TraceLevel::Info:		levelIdentifier = 'I'; break;
 			default:					levelIdentifier = 'D'; break;
 		}
-		std::int32_t length = snprintf(logEntry, MaxEntryLength, "[%c]{%u} ", levelIdentifier, ::GetCurrentThreadId());
+#		if defined(WITH_THREADS)
+		length = snprintf(logEntry, MaxEntryLength, "[%c]%u} ", levelIdentifier, static_cast<std::uint32_t>(nCine::Thread::GetCurrentId()));
+#		else
+		length = snprintf(logEntry, MaxEntryLength, "[%c] ", levelIdentifier);
+#		endif
 		logEntryWithoutLevel += length;
 
 		va_list args;
@@ -428,7 +435,27 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 
 		TraceDateTime dateTime = GetTraceDateTime();
 		FileStream* s = static_cast<FileStream*>(__logFile.get());
-		fprintf(s->GetHandle(), "%02d:%02d:%02d.%03ld [%c] %s\n", dateTime.Hours, dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds, levelIdentifier, logEntryWithoutLevel);
+
+#	if defined(WITH_THREADS)
+		std::int32_t length2 = snprintf(logEntryWithColors, MaxEntryLength, "%02d:%02d:%02d.%03ld [%c]%u}", dateTime.Hours, dateTime.Minutes,
+			dateTime.Seconds, dateTime.Milliseconds, levelIdentifier, static_cast<std::uint32_t>(nCine::Thread::GetCurrentId()));
+
+		while (length2 < 23) {
+			logEntryWithColors[length2++] = ' ';
+		}
+		logEntryWithColors[length2++] = ' ';
+
+		std::int32_t partLength = std::min(length - (std::int32_t)(logEntryWithoutLevel - logEntry), MaxEntryLength - length2 - 2);
+		std::memcpy(&logEntryWithColors[length2], logEntryWithoutLevel, partLength);
+		length2 += partLength;
+
+		logEntryWithColors[length2++] = '\n';
+		logEntryWithColors[length2] = '\0';
+		fputs(logEntryWithColors, s->GetHandle());
+#	else
+		fprintf(s->GetHandle(), "%02d:%02d:%02d.%03ld [%c] %s\n", dateTime.Hours, dateTime.Minutes,
+			dateTime.Seconds, dateTime.Milliseconds, levelIdentifier, logEntryWithoutLevel);
+#	endif
 		s->Flush();
 	}
 #endif
@@ -575,14 +602,9 @@ namespace nCine
 		RenderDocCapture::init();
 #endif
 
-		// Swapping frame now for a cleaner API trace capture when debugging
-		gfxDevice_->update();
-		FrameMark;
-		TracyGpuCollect;
-
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
-#if defined(DEATH_TARGET_WINDOWS)
-		_waitableTimer = ::CreateWaitableTimer(NULL, TRUE, NULL);
+#if 0 //defined(DEATH_TARGET_WINDOWS)
+		_waitableTimer = ::CreateWaitableTimerW(NULL, TRUE, NULL);
 #endif
 
 		LOGI("Creating rendering resources...");
@@ -608,7 +630,7 @@ namespace nCine
 #endif
 
 		// Initialization of the static random generator seeds
-		Random().Initialize(static_cast<uint64_t>(TimeStamp::now().ticks()), static_cast<uint64_t>(profileStartTime_.ticks()));
+		Random().Initialize(TimeStamp::now().ticks(), profileStartTime_.ticks());
 
 		LOGI("Application initialized");
 #if defined(NCINE_PROFILING)
@@ -819,7 +841,7 @@ namespace nCine
 		inputManager_.reset();
 		gfxDevice_.reset();
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if 0 //defined(DEATH_TARGET_WINDOWS)
 		::CloseHandle(_waitableTimer);
 #endif
 
