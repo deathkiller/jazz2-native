@@ -16,8 +16,9 @@
 #	include <unistd.h>		// For close()
 #endif
 
-// `_nolock` functions are not supported by VC-LTL, `_unlocked` functions are not supported on Android and Apple
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(_Build_By_LTL)) || (!defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE))
+// `_nolock` functions are not supported by VC-LTL msvcrt, `_unlocked` functions are not supported on Android and Apple
+#if (defined(DEATH_TARGET_WINDOWS) && !(defined(_Build_By_LTL) && _LTL_vcruntime_module_type != 2)) \
+	|| (!defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE))
 #	define DEATH_USE_NOLOCK_IN_FILE
 #endif
 
@@ -30,7 +31,7 @@ namespace Death { namespace IO {
 	}
 
 	FileStream::FileStream(Containers::String&& path, FileAccess mode)
-		: _path(std::move(path)),
+		: _path(std::move(path)), _size(Stream::Invalid),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 			_fileDescriptor(-1)
 #else
@@ -72,7 +73,7 @@ namespace Death { namespace IO {
 
 	std::int64_t FileStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		std::int64_t newPos = ErrorInvalidStream;
+		std::int64_t newPos = Stream::Invalid;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			newPos = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
@@ -96,7 +97,7 @@ namespace Death { namespace IO {
 			}
 #	endif
 			else {
-				newPos = ErrorInvalidParameter;
+				newPos = Stream::OutOfRange;
 			}
 		}
 #endif
@@ -105,7 +106,7 @@ namespace Death { namespace IO {
 
 	std::int64_t FileStream::GetPosition() const
 	{
-		std::int64_t pos = ErrorInvalidStream;
+		std::int64_t pos = Stream::Invalid;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
@@ -206,6 +207,11 @@ namespace Death { namespace IO {
 #endif
 	}
 
+	std::int64_t FileStream::GetSize() const
+	{
+		return _size;
+	}
+
 	Containers::StringView FileStream::GetPath() const
 	{
 		return _path;
@@ -268,7 +274,7 @@ namespace Death { namespace IO {
 				break;
 			case FileAccess::ReadWrite:
 				desireAccess = GENERIC_READ | GENERIC_WRITE;
-				creationDisposition = OPEN_ALWAYS;
+				creationDisposition = /*OPEN_ALWAYS*/OPEN_EXISTING;		// NOTE: File must already exist (for consistency with other platforms)
 				openFlag = _O_RDWR | _O_BINARY;
 				modeInternal = "r+b";
 				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
@@ -281,7 +287,15 @@ namespace Death { namespace IO {
 		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, nullptr);
 		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open file \"%s\" - failed with error 0x%08X", _path.data(), error);
+			const char* errorName;
+			switch (error) {
+				case ERROR_FILE_NOT_FOUND: errorName = " (FILE_NOT_FOUND)"; break;
+				case ERROR_PATH_NOT_FOUND: errorName = " (PATH_NOT_FOUND)"; break;
+				case ERROR_ACCESS_DENIED: errorName = " (ACCESS_DENIED)"; break;
+				case ERROR_SHARING_VIOLATION: errorName = " (SHARING_VIOLATION)"; break;
+				default: errorName = ""; break;
+			}
+			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, errorName);
 			return;
 		}
 		// Automatically transfers ownership of the Win32 file handle to the file descriptor
@@ -306,7 +320,15 @@ namespace Death { namespace IO {
 		_handle = _wfsopen(Utf8::ToUtf16(_path), modeInternal, shareMode);
 		if (_handle == nullptr) {
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open file \"%s\" - failed with error 0x%08X", _path.data(), error);
+			const char* errorName;
+			switch (error) {
+				case ERROR_FILE_NOT_FOUND: errorName = " (FILE_NOT_FOUND)"; break;
+				case ERROR_PATH_NOT_FOUND: errorName = " (PATH_NOT_FOUND)"; break;
+				case ERROR_ACCESS_DENIED: errorName = " (ACCESS_DENIED)"; break;
+				case ERROR_SHARING_VIOLATION: errorName = " (SHARING_VIOLATION)"; break;
+				default: errorName = ""; break;
+			}
+			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, errorName);
 			return;
 		}
 #	else
@@ -314,7 +336,7 @@ namespace Death { namespace IO {
 		switch (mode & ~FileAccess::Exclusive) {
 			case FileAccess::Read: modeInternal = "rb"; break;
 			case FileAccess::Write: modeInternal = "wb"; break;
-			case FileAccess::ReadWrite: modeInternal = "r+b"; break;
+			case FileAccess::ReadWrite: modeInternal = "r+b"; break;	// NOTE: File must already exist
 			default:
 				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;

@@ -12,14 +12,19 @@ namespace Death { namespace IO {
 	AAssetManager* AndroidAssetStream::_assetManager = nullptr;
 	const char* AndroidAssetStream::_internalDataPath = nullptr;
 
-	AndroidAssetStream::AndroidAssetStream(const Containers::String& path, FileAccess mode)
+	AndroidAssetStream::AndroidAssetStream(const Containers::StringView path, FileAccess mode)
+		: AndroidAssetStream(Containers::String{path}, mode)
+	{
+	}
+
+	AndroidAssetStream::AndroidAssetStream(Containers::String&& path, FileAccess mode)
+		: _path(std::move(path)), _size(Stream::Invalid),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
-		: _fileDescriptor(-1), _startOffset(0L)
+			_fileDescriptor(-1), _startOffset(0L)
 #else
-		: _asset(nullptr)
+			_asset(nullptr)
 #endif
 	{
-		_path = path;
 		Open(mode);
 	}
 
@@ -140,6 +145,11 @@ namespace Death { namespace IO {
 #else
 		return (_asset != nullptr);
 #endif
+	}
+
+	std::int64_t AndroidAssetStream::GetSize() const
+	{
+		return _size;
 	}
 
 	Containers::StringView AndroidAssetStream::GetPath() const

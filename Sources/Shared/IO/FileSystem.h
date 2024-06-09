@@ -127,6 +127,9 @@ namespace Death { namespace IO {
 			std::shared_ptr<Impl> _impl;
 		};
 
+		FileSystem() = delete;
+		~FileSystem() = delete;
+
 #if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
 		// Windows is already case in-sensitive by default
 		DEATH_ALWAYS_INLINE static const Containers::StringView FindPathCaseInsensitive(const Containers::StringView path) {
@@ -296,9 +299,6 @@ namespace Death { namespace IO {
 		static const Containers::String& GetSavePath(const Containers::StringView applicationName);
 
 	private:
-		FileSystem(const FileSystem&) = delete;
-		FileSystem& operator=(const FileSystem&) = delete;
-		
 		static Containers::String _savePath;
 
 		static void InitializeSavePath(const Containers::StringView applicationName);

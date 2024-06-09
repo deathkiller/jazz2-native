@@ -22,7 +22,7 @@ namespace nCine
 
 	void ServiceLocator::UnregisterAudioDevice()
 	{
-		registeredAudioDevice_.reset(nullptr);
+		registeredAudioDevice_ = nullptr;
 		audioDevice_ = &nullAudioDevice_;
 	}
 
@@ -34,7 +34,7 @@ namespace nCine
 
 	void ServiceLocator::UnregisterThreadPool()
 	{
-		registeredThreadPool_.reset(nullptr);
+		registeredThreadPool_ = nullptr;
 		threadPool_ = &nullThreadPool_;
 	}
 
@@ -46,7 +46,7 @@ namespace nCine
 
 	void ServiceLocator::UnregisterGfxCapabilities()
 	{
-		registeredGfxCapabilities_.reset(nullptr);
+		registeredGfxCapabilities_ = nullptr;
 		gfxCapabilities_ = &nullGfxCapabilities_;
 	}
 
@@ -54,13 +54,13 @@ namespace nCine
 	{
 		LOGI("Unregistering all services");
 
-		registeredAudioDevice_.reset(nullptr);
+		registeredAudioDevice_ = nullptr;
 		audioDevice_ = &nullAudioDevice_;
 
-		registeredThreadPool_.reset(nullptr);
+		registeredThreadPool_ = nullptr;
 		threadPool_ = &nullThreadPool_;
 
-		registeredGfxCapabilities_.reset(nullptr);
+		registeredGfxCapabilities_ = nullptr;
 		gfxCapabilities_ = &nullGfxCapabilities_;
 	}
 }

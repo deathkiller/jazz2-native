@@ -30,7 +30,7 @@ namespace Death { namespace IO {
 
 	void MemoryStream::Dispose()
 	{
-		_size = ErrorInvalidStream;
+		_size = Stream::Invalid;
 		_seekOffset = 0;
 		_mode = AccessMode::None;
 	}
@@ -42,11 +42,11 @@ namespace Death { namespace IO {
 			case SeekOrigin::Begin: newPos = offset; break;
 			case SeekOrigin::Current: newPos = _seekOffset + offset; break;
 			case SeekOrigin::End: newPos = _size + offset; break;
-			default: return ErrorInvalidParameter;
+			default: return Stream::OutOfRange;
 		}
 
 		if (newPos < 0 || newPos > _size) {
-			newPos = ErrorInvalidParameter;
+			newPos = Stream::OutOfRange;
 		} else {
 			_seekOffset = newPos;
 		}
@@ -102,6 +102,11 @@ namespace Death { namespace IO {
 	bool MemoryStream::IsValid()
 	{
 		return (_mode != AccessMode::None);
+	}
+
+	std::int64_t MemoryStream::GetSize() const
+	{
+		return _size;
 	}
 
 	void MemoryStream::ReserveCapacity(std::int64_t bytes)

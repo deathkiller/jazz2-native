@@ -4,7 +4,6 @@ namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	Stream::Stream()
-		: _size(ErrorInvalidStream)
 	{
 	}
 

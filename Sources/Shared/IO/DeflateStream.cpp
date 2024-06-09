@@ -22,9 +22,8 @@ namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	DeflateStream::DeflateStream()
-		: _inputStream(nullptr), _inputSize(-1), _state(State::Unknown)
+		: _inputStream(nullptr), _size(Stream::Invalid), _inputSize(-1), _state(State::Unknown)
 	{
-		_size = ErrorInvalidStream;
 	}
 
 	DeflateStream::DeflateStream(Stream& inputStream, std::int32_t inputSize, bool rawInflate)
@@ -76,7 +75,7 @@ namespace Death { namespace IO {
 	{
 		switch (origin) {
 			case SeekOrigin::Current: {
-				DEATH_ASSERT(offset >= 0, ErrorInvalidParameter, "Cannot seek to negative values");
+				DEATH_ASSERT(offset >= 0, Stream::OutOfRange, "Cannot seek to negative values");
 
 				char buffer[4096];
 				while (offset > 0) {
@@ -92,7 +91,7 @@ namespace Death { namespace IO {
 			}
 		}
 
-		return ErrorInvalidParameter;
+		return Stream::OutOfRange;
 	}
 
 	std::int64_t DeflateStream::GetPosition() const
@@ -119,7 +118,7 @@ namespace Death { namespace IO {
 	std::int32_t DeflateStream::Write(const void* buffer, std::int32_t bytes)
 	{
 		// Not supported
-		return ErrorInvalidStream;
+		return Stream::Invalid;
 	}
 
 	bool DeflateStream::Flush()
@@ -136,6 +135,11 @@ namespace Death { namespace IO {
 		return (_state == State::Initialized || _state == State::Finished);
 	}
 
+	std::int64_t DeflateStream::GetSize() const
+	{
+		return _size;
+	}
+
 	void DeflateStream::Open(Stream& inputStream, std::int32_t inputSize, bool rawInflate)
 	{
 		Dispose();
@@ -144,7 +148,7 @@ namespace Death { namespace IO {
 		_inputSize = inputSize;
 		_state = State::Created;
 		_rawInflate = rawInflate;
-		_size = ErrorNotSeekable;
+		_size = Stream::NotSeekable;
 
 		_strm.zalloc = Z_NULL;
 		_strm.zfree = Z_NULL;
@@ -159,7 +163,7 @@ namespace Death { namespace IO {
 		CeaseReading();
 		_inputStream = nullptr;
 		_state = State::Unknown;
-		_size = ErrorInvalidStream;
+		_size = Stream::Invalid;
 	}
 
 	void DeflateStream::InitializeInternal()
@@ -184,7 +188,7 @@ namespace Death { namespace IO {
 			InitializeInternal();
 		}
 		if (_state == State::Unknown || _state >= State::Finished) {
-			return ErrorInvalidStream;
+			return Stream::Invalid;
 		}
 
 		if (_strm.avail_in == 0) {
@@ -244,8 +248,6 @@ namespace Death { namespace IO {
 	DeflateWriter::DeflateWriter(Stream& outputStream, std::int32_t compressionLevel, bool rawInflate)
 		: _outputStream(&outputStream), _state(State::Created)
 	{
-		_size = ErrorNotSeekable;
-
 		_strm.zalloc = Z_NULL;
 		_strm.zfree = Z_NULL;
 		_strm.opaque = Z_NULL;
@@ -284,18 +286,18 @@ namespace Death { namespace IO {
 
 	std::int64_t DeflateWriter::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		return ErrorNotSeekable;
+		return Stream::NotSeekable;
 	}
 
 	std::int64_t DeflateWriter::GetPosition() const
 	{
-		return ErrorNotSeekable;
+		return Stream::NotSeekable;
 	}
 
 	std::int32_t DeflateWriter::Read(void* buffer, std::int32_t bytes)
 	{
 		// Not supported
-		return ErrorInvalidStream;
+		return Stream::Invalid;
 	}
 
 	std::int32_t DeflateWriter::Write(const void* buffer, std::int32_t bytes)
@@ -304,7 +306,7 @@ namespace Death { namespace IO {
 			return 0;
 		}
 		if (_state != State::Created && _state != State::Initialized) {
-			return ErrorInvalidStream;
+			return Stream::Invalid;
 		}
 
 		_state = State::Initialized;
@@ -319,6 +321,11 @@ namespace Death { namespace IO {
 	bool DeflateWriter::IsValid()
 	{
 		return(_state != State::Failed && _outputStream->IsValid());
+	}
+
+	std::int64_t DeflateWriter::GetSize() const
+	{
+		return Stream::NotSeekable;
 	}
 
 	std::int32_t DeflateWriter::WriteInternal(const void* buffer, std::int32_t bytes, bool finish)
@@ -346,7 +353,7 @@ namespace Death { namespace IO {
 			}
 			if (error != Z_OK) {
 				LOGE("Failed to deflate uncompressed buffer with error: %i", error);
-				return ErrorInvalidStream;
+				return Stream::Invalid;
 			}
 		}
 

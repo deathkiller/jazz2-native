@@ -39,7 +39,7 @@ namespace nCine
 			return;
 		}
 
-#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
+#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX) && (!defined(DEATH_TARGET_WINDOWS_RT) || defined(WITH_ANGLE))
 		if (gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY)) {
 			_glGetProgramBinary = glGetProgramBinaryOES;
 			_glProgramBinary = glProgramBinaryOES;
