@@ -2,11 +2,12 @@
 #include "GrowableArray.h"
 #include "../Cpu.h"
 
-#if defined(DEATH_ENABLE_SSE2)
+#if defined(DEATH_ENABLE_AVX2) || defined(DEATH_ENABLE_BMI1)
+#	include "../IntrinsicsAvx.h" /* TZCNT is in AVX headers :( */
+#elif defined(DEATH_ENABLE_SSE41)
+#	include "../IntrinsicsSse4.h"
+#elif defined(DEATH_ENABLE_SSE2)
 #	include "../IntrinsicsSse2.h"
-#endif
-#if defined(DEATH_ENABLE_AVX2)
-#	include "../IntrinsicsAvx.h"
 #endif
 #if defined(DEATH_ENABLE_SIMD128)
 #	include <wasm_simd128.h>
@@ -25,6 +26,236 @@ namespace Death { namespace Containers { namespace StringUtils {
 
 	namespace Implementation
 	{
+		namespace
+		{
+			// Basically a variant of the stringFindCharacterImplementation(), using the same high-level logic with branching only on every four vectors.
+			// See its documentation for more information.
+#if defined(DEATH_ENABLE_SSE2) && defined(DEATH_ENABLE_BMI1)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE(SSE2, BMI1) typename std::decay<decltype(commonPrefix)>::type commonPrefixImplementation(DEATH_CPU_DECLARE(Cpu::Sse2 | Cpu::Bmi1)) {
+				return [](const char* const a, const char* const b, const std::size_t sizeA, const std::size_t sizeB) DEATH_ENABLE(SSE2, BMI1) {
+					const std::size_t size = std::min(sizeA, sizeB);
+
+					// If we have less than 16 bytes, do it the stupid way
+					{
+						const char* i = a, * j = b;
+						switch (size) {
+							case 15: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case 14: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case 13: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case 12: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case 11: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case 10: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  9: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  8: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  7: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  6: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  5: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  4: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  3: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  2: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  1: if (*i++ != *j++) return i - 1; DEATH_FALLTHROUGH
+							case  0: return a + size;
+						}
+					}
+
+					// Unconditionally compare the first vector a slower, unaligned way
+					{
+						const __m128i chunkA = _mm_loadu_si128(reinterpret_cast<const __m128i*>(a));
+						const __m128i chunkB = _mm_loadu_si128(reinterpret_cast<const __m128i*>(b));
+						const int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(chunkA, chunkB));
+						if (mask != 0xffff)
+							return a + _tzcnt_u32(~mask);
+					}
+
+					// Go to the next aligned position of *one* of the inputs. If the pointer was already aligned,
+					// we'll go to the next aligned vector; if not, there will be an overlap and we'll check some bytes twice.
+					// The other input is then processed unaligned, or if we're lucky it's aligned the same way (such
+					// as when the strings are at the start of a default-aligned allocation, which on 64 bits is 16 bytes).
+					// Alternatively we could try to load both in an aligned way and then compare shifted values,
+					// but on recent architecture the extra overhead from the patching would probably be larger
+					// than just reading unaligned.
+					const char* i = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(a + 16) & ~0xf);
+					const char* j = b + (i - a);
+					DEATH_DEBUG_ASSERT(i > a && j > b && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
+
+					// Go four vectors at a time with the aligned pointer
+					const char* const endA = a + size;
+					const char* const endB = b + size;
+					for (; i + 4 * 16 <= endA; i += 4 * 16, j += 4 * 16) {
+						const __m128i iA = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 0);
+						const __m128i iB = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 1);
+						const __m128i iC = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 2);
+						const __m128i iD = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 3);
+						// The second input is loaded unaligned always
+						const __m128i jA = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j) + 0);
+						const __m128i jB = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j) + 1);
+						const __m128i jC = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j) + 2);
+						const __m128i jD = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j) + 3);
+
+						const __m128i eqA = _mm_cmpeq_epi8(iA, jA);
+						const __m128i eqB = _mm_cmpeq_epi8(iB, jB);
+						const __m128i eqC = _mm_cmpeq_epi8(iC, jC);
+						const __m128i eqD = _mm_cmpeq_epi8(iD, jD);
+
+						const __m128i and1 = _mm_and_si128(eqA, eqB);
+						const __m128i and2 = _mm_and_si128(eqC, eqD);
+						const __m128i and3 = _mm_and_si128(and1, and2);
+						if (_mm_movemask_epi8(and3) != 0xffff) {
+							const int maskA = _mm_movemask_epi8(eqA);
+							if (maskA != 0xffff)
+								return i + 0 * 16 + _tzcnt_u32(~maskA);
+							const int maskB = _mm_movemask_epi8(eqB);
+							if (maskB != 0xffff)
+								return i + 1 * 16 + _tzcnt_u32(~maskB);
+							const int maskC = _mm_movemask_epi8(eqC);
+							if (maskC != 0xffff)
+								return i + 2 * 16 + _tzcnt_u32(~maskC);
+							const int maskD = _mm_movemask_epi8(eqD);
+							if (maskD != 0xffff)
+								return i + 3 * 16 + _tzcnt_u32(~maskD);
+							// Unreachable
+						}
+					}
+
+					// Handle remaining less than four aligned vectors
+					for (; i + 16 <= endA; i += 16, j += 16) {
+						const __m128i chunkA = _mm_load_si128(reinterpret_cast<const __m128i*>(i));
+						// The second input is loaded unaligned always
+						const __m128i chunkB = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j));
+						const int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(chunkA, chunkB));
+						if (mask != 0xffff)
+							return i + _tzcnt_u32(~mask);
+					}
+
+					// Handle remaining less than a vector with an unaligned load, again overlapping back with the previous already-compared elements
+					if (i < endA) {
+						DEATH_DEBUG_ASSERT(i + 16 > endA && endB - j == endA - i);
+						i = endA - 16;
+						j = endB - 16;
+						const __m128i chunkA = _mm_loadu_si128(reinterpret_cast<const __m128i*>(i));
+						const __m128i chunkB = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j));
+						const int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(chunkA, chunkB));
+						if (mask != 0xffff)
+							return i + _tzcnt_u32(~mask);
+					}
+
+					return endA;
+				};
+			}
+#endif
+
+#if defined(DEATH_ENABLE_AVX2) && defined(DEATH_ENABLE_BMI1)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE(AVX2, BMI1) typename std::decay<decltype(commonPrefix)>::type commonPrefixImplementation(DEATH_CPU_DECLARE(Cpu::Avx2 | Cpu::Bmi1)) {
+				return [](const char* const a, const char* const b, const std::size_t sizeA, const std::size_t sizeB) DEATH_ENABLE(AVX2, BMI1) {
+					const std::size_t size = std::min(sizeA, sizeB);
+
+					// If we have less than 32 bytes, fall back to the SSE variant
+					if (size < 32)
+						return commonPrefixImplementation(DEATH_CPU_SELECT(Cpu::Sse2 | Cpu::Bmi1))(a, b, sizeA, sizeB);
+
+					// Unconditionally compare the first vector a slower, unaligned way
+					{
+						// _mm256_lddqu_si256 is just an alias to _mm256_loadu_si256, no reason to use it: https://stackoverflow.com/a/47426790
+						const __m256i chunkA = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(a));
+						const __m256i chunkB = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(b));
+						const std::uint32_t mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunkA, chunkB));
+						if (mask != 0xffffffffu)
+							return a + _tzcnt_u32(~mask);
+					}
+
+					// Go to the next aligned position of *one* of the inputs. If the pointer was already aligned,
+					// we'll go to the next aligned vector; if not, there will be an overlap and we'll check some bytes twice.
+					// Second input is treated as unaligned always, see the SSE2 variant for explanation.
+					const char* i = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(a + 32) & ~0x1f);
+					const char* j = b + (i - a);
+					DEATH_DEBUG_ASSERT(i > a && j > b && reinterpret_cast<std::uintptr_t>(i) % 32 == 0);
+
+					// Go four vectors at a time with the aligned pointer
+					const char* const endA = a + size;
+					const char* const endB = b + size;
+					for (; i + 4 * 32 <= endA; i += 4 * 32, j += 4 * 32) {
+						const __m256i iA = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 0);
+						const __m256i iB = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 1);
+						const __m256i iC = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 2);
+						const __m256i iD = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 3);
+						// The second input is loaded unaligned always
+						const __m256i jA = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(j) + 0);
+						const __m256i jB = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(j) + 1);
+						const __m256i jC = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(j) + 2);
+						const __m256i jD = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(j) + 3);
+
+						const __m256i eqA = _mm256_cmpeq_epi8(iA, jA);
+						const __m256i eqB = _mm256_cmpeq_epi8(iB, jB);
+						const __m256i eqC = _mm256_cmpeq_epi8(iC, jC);
+						const __m256i eqD = _mm256_cmpeq_epi8(iD, jD);
+
+						const __m256i and1 = _mm256_and_si256(eqA, eqB);
+						const __m256i and2 = _mm256_and_si256(eqC, eqD);
+						const __m256i and3 = _mm256_and_si256(and1, and2);
+						if (std::uint32_t(_mm256_movemask_epi8(and3)) != 0xffffffffu) {
+							const std::uint32_t maskA = _mm256_movemask_epi8(eqA);
+							if (maskA != 0xffffffffu)
+								return i + 0 * 32 + _tzcnt_u32(~maskA);
+							const std::uint32_t maskB = _mm256_movemask_epi8(eqB);
+							if (maskB != 0xffffffffu)
+								return i + 1 * 32 + _tzcnt_u32(~maskB);
+							const std::uint32_t maskC = _mm256_movemask_epi8(eqC);
+							if (maskC != 0xffffffffu)
+								return i + 2 * 32 + _tzcnt_u32(~maskC);
+							const std::uint32_t maskD = _mm256_movemask_epi8(eqD);
+							if (maskD != 0xffffffffu)
+								return i + 3 * 32 + _tzcnt_u32(~maskD);
+							// Unreachable
+						}
+					}
+
+					// Handle remaining less than four aligned vectors
+					for (; i + 32 <= endA; i += 32, j += 32) {
+						const __m256i chunkA = _mm256_load_si256(reinterpret_cast<const __m256i*>(i));
+						// The second input is loaded unaligned always
+						const __m256i chunkB = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(j));
+						const std::uint32_t mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunkA, chunkB));
+						if (mask != 0xffffffffu)
+							return i + _tzcnt_u32(~mask);
+					}
+
+					// Handle remaining less than a vector with an unaligned load, again overlapping back with the previous already-compared elements
+					if (i < endA) {
+						DEATH_DEBUG_ASSERT(i + 32 > endA && endB - j == endA - i);
+						i = endA - 32;
+						j = endB - 32;
+						const __m256i chunkA = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(i));
+						const __m256i chunkB = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(j));
+						const std::uint32_t mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunkA, chunkB));
+						if (mask != 0xffffffffu)
+							return i + _tzcnt_u32(~mask);
+					}
+
+					return endA;
+				};
+			}
+#endif
+
+			DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(commonPrefix)>::type commonPrefixImplementation(DEATH_CPU_DECLARE(Cpu::Scalar)) {
+				return [](const char* const a, const char* const b, const std::size_t sizeA, const std::size_t sizeB) {
+					const std::size_t size = std::min(sizeA, sizeB);
+					const char* const endA = a + size;
+					for (const char* i = a, *j = b; i != endA; ++i, ++j)
+						if (*i != *j) return i;
+					return endA;
+				};
+			}
+		}
+
+#if defined(DEATH_TARGET_X86)
+		DEATH_CPU_DISPATCHER(commonPrefixImplementation, Cpu::Bmi1)
+#else
+		DEATH_CPU_DISPATCHER(commonPrefixImplementation)
+#endif
+		DEATH_CPU_DISPATCHED(commonPrefixImplementation, const char* DEATH_CPU_DISPATCHED_DECLARATION(commonPrefix)(const char* a, const char* b, std::size_t sizeA, std::size_t sizeB))({
+			return commonPrefixImplementation(DEATH_CPU_SELECT(Cpu::Default))(a, b, sizeA, sizeB);
+		})
+
 		namespace
 		{
 			DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(lowercaseInPlace)>::type lowercaseInPlaceImplementation(Cpu::ScalarT) {
@@ -1178,12 +1409,299 @@ namespace Death { namespace Containers { namespace StringUtils {
 		return string;
 	}
 
-	void replaceAllInPlace(const MutableStringView string, char search, char replace) {
-		for (char& c : string) {
-			if (c == search) {
-				c = replace;
+	namespace Implementation
+	{
+		namespace
+		{
+			// Has to be first because the Avx2 variant may delegate to it if DEATH_ENABLE_SSE41 isn't defined due to compiler warts
+			DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(replaceAllInPlaceCharacter)>::type replaceAllInPlaceCharacterImplementation(Cpu::ScalarT) {
+				return [](char* const data, const std::size_t size, const char search, const char replace) {
+					for (char* i = data, *end = data + size; i != end; ++i)
+						if (*i == search) *i = replace;
+				};
 			}
+
+			// SIMD implementation of character replacement. All tricks inherited from stringFindCharacterImplementation(),
+			// in particular the unaligned preamble and postamble, as well as reducing the branching overhead by going through
+			// four vectors at a time. See its documentation for more background info.
+#if defined(DEATH_ENABLE_SSE41)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SSE41 typename std::decay<decltype(replaceAllInPlaceCharacter)>::type replaceAllInPlaceCharacterImplementation(Cpu::Sse41T) {
+				return [](char* const data, const std::size_t size, const char search, const char replace) DEATH_ENABLE_SSE41 {
+					// If we have less than 16 bytes, do it the stupid way
+					{
+						char* j = data;
+						switch (size) {
+							case 15: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 14: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 13: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 12: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 11: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 10: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  9: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  8: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  7: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  6: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  5: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  4: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  3: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  2: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  1: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  0: return;
+						}
+					}
+
+					const __m128i vsearch = _mm_set1_epi8(search);
+					const __m128i vreplace = _mm_set1_epi8(replace);
+
+					// Calculate the next aligned position. If the pointer was already aligned, we'll go to the next aligned
+					// vector; if not, there will be an overlap and we'll process some bytes twice.
+					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 16) & ~0xf);
+					DEATH_DEBUG_ASSERT(i > data && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
+
+					// Unconditionally process the first vector a slower, unaligned way. Do the replacement unconditionally
+					// because it's faster than checking first.
+					{
+						const __m128i in = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data));
+						const __m128i out = _mm_blendv_epi8(in, vreplace, _mm_cmpeq_epi8(in, vsearch));
+						_mm_storeu_si128(reinterpret_cast<__m128i*>(data), out);
+					}
+
+					// Go four aligned vectors at a time. Bytes overlapping with the previous unaligned load will be processed
+					// twice, but as everything is already replaced there, it'll be a no-op for those. Similarly to the find()
+					// implementation, this reduces the branching overhead compared to branching on every vector, making
+					// it comparable to an unconditional replace with a character that occurs often, but significantly faster
+					// for characters that are rare.
+					char* const end = data + size;
+					for (; i + 4 * 16 <= end; i += 4 * 16) {
+						const __m128i inA = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 0);
+						const __m128i inB = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 1);
+						const __m128i inC = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 2);
+						const __m128i inD = _mm_load_si128(reinterpret_cast<const __m128i*>(i) + 3);
+
+						const __m128i eqA = _mm_cmpeq_epi8(inA, vsearch);
+						const __m128i eqB = _mm_cmpeq_epi8(inB, vsearch);
+						const __m128i eqC = _mm_cmpeq_epi8(inC, vsearch);
+						const __m128i eqD = _mm_cmpeq_epi8(inD, vsearch);
+
+						const __m128i or1 = _mm_or_si128(eqA, eqB);
+						const __m128i or2 = _mm_or_si128(eqC, eqD);
+						const __m128i or3 = _mm_or_si128(or1, or2);
+						// If any of the four vectors contained the character, replace all of them -- branching again
+						// on each would hurt the "common character" case
+						if (_mm_movemask_epi8(or3)) {
+							const __m128i outA = _mm_blendv_epi8(inA, vreplace, eqA);
+							const __m128i outB = _mm_blendv_epi8(inB, vreplace, eqB);
+							const __m128i outC = _mm_blendv_epi8(inC, vreplace, eqC);
+							const __m128i outD = _mm_blendv_epi8(inD, vreplace, eqD);
+
+							_mm_store_si128(reinterpret_cast<__m128i*>(i) + 0, outA);
+							_mm_store_si128(reinterpret_cast<__m128i*>(i) + 1, outB);
+							_mm_store_si128(reinterpret_cast<__m128i*>(i) + 2, outC);
+							_mm_store_si128(reinterpret_cast<__m128i*>(i) + 3, outD);
+						}
+					}
+
+					// Handle remaining less than four aligned vectors. Again do the replacement unconditionally.
+					for (; i + 16 <= end; i += 16) {
+						const __m128i in = _mm_load_si128(reinterpret_cast<const __m128i*>(i));
+						const __m128i out = _mm_blendv_epi8(in, vreplace, _mm_cmpeq_epi8(in, vsearch));
+						_mm_store_si128(reinterpret_cast<__m128i*>(i), out);
+					}
+
+					// Handle remaining less than a vector in an unaligned way, again unconditionally and again overlapping bytes are no-op.
+					if (i < end) {
+						DEATH_DEBUG_ASSERT(i + 16 > end);
+						i = end - 16;
+						const __m128i in = _mm_loadu_si128(reinterpret_cast<const __m128i*>(i));
+						const __m128i out = _mm_blendv_epi8(in, vreplace, _mm_cmpeq_epi8(in, vsearch));
+						_mm_storeu_si128(reinterpret_cast<__m128i*>(i), out);
+					}
+				};
+			}
+#endif
+
+#if defined(DEATH_ENABLE_AVX2)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_AVX2 typename std::decay<decltype(replaceAllInPlaceCharacter)>::type replaceAllInPlaceCharacterImplementation(Cpu::Avx2T) {
+				return [](char* const data, const std::size_t size, const char search, const char replace) DEATH_ENABLE_AVX2 {
+					// If we have less than 32 bytes, fall back to the SSE variant
+					if (size < 32)
+						return replaceAllInPlaceCharacterImplementation(Cpu::Sse41)(data, size, search, replace);
+
+					const __m256i vsearch = _mm256_set1_epi8(search);
+					const __m256i vreplace = _mm256_set1_epi8(replace);
+
+					// Calculate the next aligned position. If the pointer was already aligned, we'll go to the next aligned vector;
+					// if not, there will be an overlap and we'll process some bytes twice.
+					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 32) & ~0x1f);
+					DEATH_DEBUG_ASSERT(i > data && reinterpret_cast<std::uintptr_t>(i) % 32 == 0);
+
+					// Unconditionally process the first vector a slower, unaligned way. Do the replacement unconditionally
+					// because it's faster than checking first.
+					{
+						// _mm256_lddqu_si256 is just an alias to _mm256_loadu_si256, no reason to use it: https://stackoverflow.com/a/47426790
+						const __m256i in = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data));
+						const __m256i out = _mm256_blendv_epi8(in, vreplace, _mm256_cmpeq_epi8(in, vsearch));
+						_mm256_storeu_si256(reinterpret_cast<__m256i*>(data), out);
+					}
+
+					// Go four aligned vectors at a time. Bytes overlapping with the previous unaligned load will be processed twice,
+					// but as everything is already replaced there, it'll be a no-op for those. Similarly to the SSE2 implementation,
+					// this reduces the branching overhead compared to branching on every vector, making it comparable to an unconditional
+					// replace with a character that occurs often, but significantly faster for characters that are rare.
+					char* const end = data + size;
+					for (; i + 4 * 32 <= end; i += 4 * 32) {
+						const __m256i inA = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 0);
+						const __m256i inB = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 1);
+						const __m256i inC = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 2);
+						const __m256i inD = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) + 3);
+
+						const __m256i eqA = _mm256_cmpeq_epi8(inA, vsearch);
+						const __m256i eqB = _mm256_cmpeq_epi8(inB, vsearch);
+						const __m256i eqC = _mm256_cmpeq_epi8(inC, vsearch);
+						const __m256i eqD = _mm256_cmpeq_epi8(inD, vsearch);
+
+						const __m256i or1 = _mm256_or_si256(eqA, eqB);
+						const __m256i or2 = _mm256_or_si256(eqC, eqD);
+						const __m256i or3 = _mm256_or_si256(or1, or2);
+						// If any of the four vectors contained the character, replace all of them -- branching again
+						// on each would hurt the "common character" case
+						if (_mm256_movemask_epi8(or3)) {
+							const __m256i outA = _mm256_blendv_epi8(inA, vreplace, eqA);
+							const __m256i outB = _mm256_blendv_epi8(inB, vreplace, eqB);
+							const __m256i outC = _mm256_blendv_epi8(inC, vreplace, eqC);
+							const __m256i outD = _mm256_blendv_epi8(inD, vreplace, eqD);
+
+							_mm256_store_si256(reinterpret_cast<__m256i*>(i) + 0, outA);
+							_mm256_store_si256(reinterpret_cast<__m256i*>(i) + 1, outB);
+							_mm256_store_si256(reinterpret_cast<__m256i*>(i) + 2, outC);
+							_mm256_store_si256(reinterpret_cast<__m256i*>(i) + 3, outD);
+						}
+					}
+
+					// Handle remaining less than four aligned vectors. Again do the replacement unconditionally.
+					for (; i + 32 <= end; i += 32) {
+						const __m256i in = _mm256_load_si256(reinterpret_cast<const __m256i*>(i));
+						const __m256i out = _mm256_blendv_epi8(in, vreplace, _mm256_cmpeq_epi8(in, vsearch));
+						_mm256_store_si256(reinterpret_cast<__m256i*>(i), out);
+					}
+
+					// Handle remaining less than a vector in an unaligned way, again unconditionally and again overlapping bytes are no-op.
+					if (i < end) {
+						DEATH_DEBUG_ASSERT(i + 32 > end);
+						i = end - 32;
+						// _mm256_lddqu_si256 is just an alias to _mm256_loadu_si256, no reason to use it: https://stackoverflow.com/a/47426790
+						const __m256i in = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(i));
+						const __m256i out = _mm256_blendv_epi8(in, vreplace, _mm256_cmpeq_epi8(in, vsearch));
+						_mm256_storeu_si256(reinterpret_cast<__m256i*>(i), out);
+					}
+				};
+			}
+#endif
+
+			// Just a direct translation of the SSE4.1 code
+#if defined(DEATH_ENABLE_SIMD128)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SIMD128 typename std::decay<decltype(replaceAllInPlaceCharacter)>::type replaceAllInPlaceCharacterImplementation(Cpu::Simd128T) {
+				return [](char* const data, const std::size_t size, const char search, const char replace) DEATH_ENABLE_SIMD128 {
+					// If we have less than 16 bytes, do it the stupid way
+					{
+						char* j = data;
+						switch (size) {
+							case 15: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 14: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 13: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 12: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 11: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case 10: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  9: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  8: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  7: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  6: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  5: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  4: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  3: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  2: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  1: if (*j++ == search) *(j - 1) = replace; DEATH_FALLTHROUGH
+							case  0: return;
+						}
+					}
+
+					const v128_t vsearch = wasm_i8x16_splat(search);
+					const v128_t vreplace = wasm_i8x16_splat(replace);
+
+					// Calculate the next aligned position. If the pointer was already aligned, we'll go to the next aligned
+					// vector; if not, there will be an overlap and we'll process some bytes twice.
+					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 16) & ~0xf);
+					DEATH_DEBUG_ASSERT(i > data && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
+
+					// Unconditionally process the first vector a slower, unaligned way. WASM doesn't differentiate between
+					// aligned and unaligned load/store, it's always unaligned, but the hardware might behave better if we
+					// try to avoid unaligned operations.
+					{
+						const v128_t in = wasm_v128_load(reinterpret_cast<const v128_t*>(data));
+						const v128_t out = wasm_v128_bitselect(vreplace, in, wasm_i8x16_eq(in, vsearch));
+						wasm_v128_store(reinterpret_cast<v128_t*>(data), out);
+					}
+
+					// Go four aligned vectors at a time. Bytes overlapping with the previous unaligned load will be processed
+					// twice, but as everything is already replaced there, it'll be a no-op for those. Similarly to the SSE2 / AVX2
+					// implementation, this reduces the branching overhead compared to branching on every vector, making it
+					// comparable to an unconditional replace with a character that occurs often, but significantly faster for
+					// characters that are rare, on x86 at least. Elsewhere it *can* be slower due to the slow movemask emulation.
+					char* const end = data + size;
+					for (; i + 4 * 16 <= end; i += 4 * 16) {
+						const v128_t inA = wasm_v128_load(reinterpret_cast<const v128_t*>(i) + 0);
+						const v128_t inB = wasm_v128_load(reinterpret_cast<const v128_t*>(i) + 1);
+						const v128_t inC = wasm_v128_load(reinterpret_cast<const v128_t*>(i) + 2);
+						const v128_t inD = wasm_v128_load(reinterpret_cast<const v128_t*>(i) + 3);
+
+						const v128_t eqA = wasm_i8x16_eq(inA, vsearch);
+						const v128_t eqB = wasm_i8x16_eq(inB, vsearch);
+						const v128_t eqC = wasm_i8x16_eq(inC, vsearch);
+						const v128_t eqD = wasm_i8x16_eq(inD, vsearch);
+
+						const v128_t or1 = wasm_v128_or(eqA, eqB);
+						const v128_t or2 = wasm_v128_or(eqC, eqD);
+						const v128_t or3 = wasm_v128_or(or1, or2);
+						// If any of the four vectors contained the character, replace all of them -- branching again
+						// on each would hurt the "common character" case
+						if (wasm_i8x16_bitmask(or3)) {
+							const v128_t outA = wasm_v128_bitselect(vreplace, inA, eqA);
+							const v128_t outB = wasm_v128_bitselect(vreplace, inB, eqB);
+							const v128_t outC = wasm_v128_bitselect(vreplace, inC, eqC);
+							const v128_t outD = wasm_v128_bitselect(vreplace, inD, eqD);
+
+							wasm_v128_store(reinterpret_cast<v128_t*>(i) + 0, outA);
+							wasm_v128_store(reinterpret_cast<v128_t*>(i) + 1, outB);
+							wasm_v128_store(reinterpret_cast<v128_t*>(i) + 2, outC);
+							wasm_v128_store(reinterpret_cast<v128_t*>(i) + 3, outD);
+						}
+					}
+
+					// Handle remaining less than four aligned vectors. Again do the replacement unconditionally.
+					for (; i + 16 <= end; i += 16) {
+						const v128_t in = wasm_v128_load(reinterpret_cast<const v128_t*>(i));
+						const v128_t out = wasm_v128_bitselect(vreplace, in, wasm_i8x16_eq(in, vsearch));
+						wasm_v128_store(reinterpret_cast<v128_t*>(i), out);
+					}
+
+					// Handle remaining less than a vector in an unaligned way. Overlapping bytes are again no-op.
+					// Again WASM doesn't have any dedicated unaligned load/store instruction.
+					if (i < end) {
+						DEATH_DEBUG_ASSERT(i + 16 > end);
+						i = end - 16;
+						const v128_t in = wasm_v128_load(reinterpret_cast<const v128_t*>(i));
+						const v128_t out = wasm_v128_bitselect(vreplace, in, wasm_i8x16_eq(in, vsearch));
+						wasm_v128_store(reinterpret_cast<v128_t*>(i), out);
+					}
+				};
+			}
+#endif
 		}
+
+		DEATH_CPU_DISPATCHER_BASE(replaceAllInPlaceCharacterImplementation)
+		DEATH_CPU_DISPATCHED(replaceAllInPlaceCharacterImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(replaceAllInPlaceCharacter)(char* data, std::size_t size, char search, char replace))({
+			return replaceAllInPlaceCharacterImplementation(Cpu::DefaultBase)(data, size, search, replace);
+		})
 	}
 
 }}}

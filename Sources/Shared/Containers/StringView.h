@@ -570,7 +570,8 @@ namespace Death { namespace Containers {
 		 * variants. Those algorithms on the other hand have to perform certain
 		 * preprocessing of the input and keep extra state and due to that
 		 * overhead aren't generally suited for one-time searches. Consider
-		 * using @ref find(char) const instead for single-byte substrings.
+		 * using @ref find(char) const instead for single-byte substrings, see
+		 * also @ref count(char) const for counting the number of occurences.
 		 *
 		 * This function is equivalent to calling @relativeref{std::string,find()}
 		 * on a @ref std::string or a @ref std::string_view.
@@ -674,7 +675,8 @@ namespace Death { namespace Containers {
 		 *
 		 * A slightly lighter variant of @ref find() useful when you only want
 		 * to know if a substring was found or not. Consider using
-		 * @ref contains(char) const for single-byte substrings.
+		 * @ref contains(char) const for single-byte substrings, see also
+		 * @ref count(char) const for counting the number of occurences.
 		 */
 		bool contains(StringView substring) const;
 
@@ -751,6 +753,15 @@ namespace Death { namespace Containers {
 		 */
 		bool containsAny(StringView substring) const;
 
+		/**
+		 * @brief Count of occurences of given character
+		 *
+		 * If it's only needed to know whether a character is contained in a
+		 * string at all, consider using @ref contains(char) const instead.
+		 * @see @ref find(char) const
+		 */
+		std::size_t count(char character) const;
+
 	private:
 		/* Needed for mutable/immutable conversion */
 		template<class> friend class BasicStringView;
@@ -815,6 +826,15 @@ namespace Death { namespace Containers {
 
 	namespace Literals
 	{
+		// According to https://wg21.link/CWG2521, space between "" and literal name is deprecated because _Uppercase or 
+		// _double names could be treated as reserved depending on whether the space was present or not, and whitespace is
+		// not load-bearing in any other contexts. Clang 17+ adds an off-by-default warning for this; GCC 4.8 however *requires*
+		// the space there, so until GCC 4.8 support is dropped, we suppress this warning instead of removing the space.
+		#if defined(CORRADE_TARGET_CLANG) && __clang_major__ >= 17
+		#	pragma clang diagnostic push
+		#	pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
+		#endif
+
 		/**
 			@relatesalso Death::Containers::BasicStringView
 			@brief String view literal
@@ -825,6 +845,10 @@ namespace Death { namespace Containers {
 			// Using plain bit ops instead of EnumSet to speed up debug builds
 			return StringView{data, size, StringViewFlags(std::size_t(StringViewFlags::Global) | std::size_t(StringViewFlags::NullTerminated))};
 		}
+
+		#if defined(CORRADE_TARGET_CLANG) && __clang_major__ >= 17
+		#	pragma clang diagnostic pop
+		#endif
 	}
 
 	template<class T> constexpr T& BasicStringView<T>::operator[](const std::size_t i) const {
@@ -878,6 +902,8 @@ namespace Death { namespace Containers {
 		const char* stringFindLastAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
 		const char* stringFindNotAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
 		const char* stringFindLastNotAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
+		extern std::size_t DEATH_CPU_DISPATCHED_DECLARATION(stringCountCharacter)(const char* data, std::size_t size, char character);
+		DEATH_CPU_DISPATCHER_DECLARATION(stringCountCharacter)
 	}
 
 	template<class T> inline BasicStringView<T> BasicStringView<T>::trimmedPrefix(const StringView characters) const {
@@ -959,6 +985,10 @@ namespace Death { namespace Containers {
 
 	template<class T> inline bool BasicStringView<T>::containsAny(const StringView characters) const {
 		return Implementation::stringFindAny(_data, size(), characters._data, characters.size());
+	}
+
+	template<class T> inline std::size_t BasicStringView<T>::count(const char character) const {
+		return Implementation::stringCountCharacter(_data, size(), character);
 	}
 
 	namespace Implementation

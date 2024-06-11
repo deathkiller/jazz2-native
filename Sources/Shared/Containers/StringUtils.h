@@ -31,11 +31,26 @@ namespace Death { namespace Containers { namespace StringUtils {
 
 	namespace Implementation
 	{
+		extern const char* DEATH_CPU_DISPATCHED_DECLARATION(commonPrefix)(const char* a, const char* b, std::size_t sizeA, std::size_t sizeB);
+		DEATH_CPU_DISPATCHER_DECLARATION(commonPrefix)
+	}
+
+	/**
+		@brief Longest common prefix of two strings
+
+		The returned view is a prefix of @p a.
+	*/
+	inline Containers::StringView commonPrefix(Containers::StringView a, Containers::StringView b) {
+		return a.prefix(Implementation::commonPrefix(a.data(), b.data(), a.size(), b.size()));
+	}
+
+	namespace Implementation
+	{
 		extern void DEATH_CPU_DISPATCHED_DECLARATION(lowercaseInPlace)(char* data, std::size_t size);
 		DEATH_CPU_DISPATCHER_DECLARATION(lowercaseInPlace)
-		extern void DEATH_CPU_DISPATCHED_DECLARATION(uppercaseInPlace)(char* data, std::size_t size);
+			extern void DEATH_CPU_DISPATCHED_DECLARATION(uppercaseInPlace)(char* data, std::size_t size);
 		DEATH_CPU_DISPATCHER_DECLARATION(uppercaseInPlace)
-		extern bool DEATH_CPU_DISPATCHED_DECLARATION(equalsIgnoreCase)(const char* data1, const char* data2, std::size_t size);
+			extern bool DEATH_CPU_DISPATCHED_DECLARATION(equalsIgnoreCase)(const char* data1, const char* data2, std::size_t size);
 		DEATH_CPU_DISPATCHER_DECLARATION(equalsIgnoreCase)
 	}
 
@@ -153,9 +168,17 @@ namespace Death { namespace Containers { namespace StringUtils {
 	*/
 	String replaceAll(String string, char search, char replace);
 
+	namespace Implementation
+	{
+		extern void DEATH_CPU_DISPATCHED_DECLARATION(replaceAllInPlaceCharacter)(char* data, std::size_t size, char search, char replace);
+		DEATH_CPU_DISPATCHER_DECLARATION(replaceAllInPlaceCharacter)
+	}
+
 	/**
 		@brief Replace all occurrences of a character in a string with another character in-place
 	*/
-	void replaceAllInPlace(const MutableStringView string, char search, char replace);
+	inline void replaceAllInPlace(const Containers::MutableStringView string, const char search, const char replace) {
+		Implementation::replaceAllInPlaceCharacter(string.data(), string.size(), search, replace);
+	}
 
 }}}

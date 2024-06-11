@@ -11,8 +11,8 @@ namespace nCine
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
-		if (theApplication().inputManager().isJoyMapped(0)) {
-			const JoyMappedState& state = theApplication().inputManager().joyMappedState(0);
+		if (theApplication().GetInputManager().isJoyMapped(0)) {
+			const JoyMappedState& state = theApplication().GetInputManager().joyMappedState(0);
 
 			// clang-format off
 			#define IM_SATURATE(V)                      (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)

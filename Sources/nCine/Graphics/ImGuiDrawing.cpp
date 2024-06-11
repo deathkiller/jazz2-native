@@ -42,6 +42,13 @@ namespace nCine
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
 
+#if defined(IMGUI_HAS_DOCK)
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;		// Enable Docking
+#endif
+#if defined(IMGUI_HAS_VIEWPORT)
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;		// Enable Multi-Viewport / Platform Windows
+#endif
+
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		io.BackendRendererName = "nCine_OpenGL_ES";
 #else
@@ -55,7 +62,7 @@ namespace nCine
 #endif*/
 
 #if !(defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;	// We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
 
 		imguiShaderProgram_ = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
@@ -249,11 +256,11 @@ namespace nCine
 			memcpy(indices, imCmdList->IdxBuffer.Data, imCmdList->IdxBuffer.Size * sizeof(GLushort));
 			firstCmd.geometry().releaseIndexPointer();
 
-			if (lastLayerValue_ != theApplication().guiSettings().imguiLayer) {
+			if (lastLayerValue_ != theApplication().GetGuiSettings().imguiLayer) {
 				// It is enough to set the uniform value once as every ImGui command share the same shader
-				const float depth = RenderCommand::calculateDepth(theApplication().guiSettings().imguiLayer, -1.0f, 1.0f);
+				const float depth = RenderCommand::calculateDepth(theApplication().GetGuiSettings().imguiLayer, -1.0f, 1.0f);
 				firstCmd.material().uniform(Material::DepthUniformName)->setFloatValue(depth);
-				lastLayerValue_ = theApplication().guiSettings().imguiLayer;
+				lastLayerValue_ = theApplication().GetGuiSettings().imguiLayer;
 			}
 
 			for (int cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
@@ -278,7 +285,7 @@ namespace nCine
 				currCmd.geometry().setNumIndices(imCmd->ElemCount);
 				currCmd.geometry().setFirstIndex(imCmd->IdxOffset);
 				currCmd.geometry().setFirstVertex(imCmd->VtxOffset);
-				currCmd.setLayer(theApplication().guiSettings().imguiLayer);
+				currCmd.setLayer(theApplication().GetGuiSettings().imguiLayer);
 				currCmd.setVisitOrder(numCmd);
 				currCmd.material().setTexture(reinterpret_cast<GLTexture*>(imCmd->GetTexID()));
 
