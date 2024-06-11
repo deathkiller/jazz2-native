@@ -1,5 +1,6 @@
 #include "StringUtils.h"
 #include "GrowableArray.h"
+#include "../Asserts.h"
 #include "../Cpu.h"
 
 #if defined(DEATH_ENABLE_AVX2) || defined(DEATH_ENABLE_BMI1)
