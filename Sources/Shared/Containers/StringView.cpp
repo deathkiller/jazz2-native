@@ -4,6 +4,7 @@
 #include "GrowableArray.h"
 #include "StaticArray.h"
 #include "String.h"
+#include "../Asserts.h"
 #include "../Cpu.h"
 
 #include <cstring>
