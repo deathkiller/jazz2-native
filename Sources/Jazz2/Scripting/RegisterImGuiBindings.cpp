@@ -390,8 +390,8 @@ namespace Jazz2::Scripting
 		// TODO engine->RegisterGlobalFunction("void EndChildFrame()", asFUNCTION(+[]() {
 		//	ImGui::EndChildFrame(); }), asCALL_CDECL);
 
-		engine->RegisterGlobalFunction("int GetKeyIndex(int)", asFUNCTION(+[](int a) {
-			return ImGui::GetKeyIndex((ImGuiKey)a); }), asCALL_CDECL);
+		//engine->RegisterGlobalFunction("int GetKeyIndex(int)", asFUNCTION(+[](int a) {
+		//	return ImGui::GetKeyIndex((ImGuiKey)a); }), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool IsKeyDown(int)", asFUNCTION(+[](int a) {
 			return ImGui::IsKeyDown((ImGuiKey)a); }), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool IsKeyPressed(int, bool = true)", asFUNCTION(+[](int a, bool b) {

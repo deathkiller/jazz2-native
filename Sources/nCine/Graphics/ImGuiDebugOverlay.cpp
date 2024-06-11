@@ -104,7 +104,7 @@ namespace nCine
 		//ImGui::ShowMetricsWindow();
 
 		if (settings_.showInfoText) {
-			const AppConfiguration& appCfg = theApplication().appConfiguration();
+			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 			if (appCfg.withScenegraph) {
 #if defined(NCINE_PROFILING)
 				guiTopLeft();
@@ -123,12 +123,12 @@ namespace nCine
 	void ImGuiDebugOverlay::updateFrameTimings()
 	{
 		if (lastUpdateTime_.secondsSince() > updateTime_) {
-			const AppConfiguration& appCfg = theApplication().appConfiguration();
+			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 
-			plotValues_[ValuesType::FrameTime][index_] = theApplication().frameTimer().lastFrameDuration() * 1000.0f;
+			plotValues_[ValuesType::FrameTime][index_] = theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f;
 
 #if defined(NCINE_PROFILING)
-			const float* timings = theApplication().timings();
+			const float* timings = theApplication().GetTimings();
 			plotValues_[ValuesType::FrameStart][index_] = timings[(int)Application::Timings::FrameStart] * 1000.0f;
 			if (appCfg.withScenegraph) {
 				plotValues_[ValuesType::PostUpdate][index_] = timings[(int)Application::Timings::PostUpdate] * 1000.0f;
@@ -224,27 +224,27 @@ namespace nCine
 		const char* mappedButtonNameToString(ButtonName name)
 		{
 			switch (name) {
-				case ButtonName::UNKNOWN: return "Unknown";
+				case ButtonName::Unknown: return "Unknown";
 				case ButtonName::A: return "A";
 				case ButtonName::B: return "B";
 				case ButtonName::X: return "X";
 				case ButtonName::Y: return "Y";
-				case ButtonName::BACK: return "Back";
-				case ButtonName::GUIDE: return "Guide";
-				case ButtonName::START: return "Start";
-				case ButtonName::LSTICK: return "LStick";
-				case ButtonName::RSTICK: return "RStick";
-				case ButtonName::LBUMPER: return "LBumper";
-				case ButtonName::RBUMPER: return "RBumper";
-				case ButtonName::DPAD_UP: return "DPad_Up";
-				case ButtonName::DPAD_DOWN: return "DPad_Down";
-				case ButtonName::DPAD_LEFT: return "DPad_Left";
-				case ButtonName::DPAD_RIGHT: return "DPad_Right";
-				case ButtonName::MISC1: return "Misc1";
-				case ButtonName::PADDLE1: return "Paddle1";
-				case ButtonName::PADDLE2: return "Paddle2";
-				case ButtonName::PADDLE3: return "Paddle3";
-				case ButtonName::PADDLE4: return "Paddle4";
+				case ButtonName::Back: return "Back";
+				case ButtonName::Guide: return "Guide";
+				case ButtonName::Start: return "Start";
+				case ButtonName::LeftStick: return "LStick";
+				case ButtonName::RightStick: return "RStick";
+				case ButtonName::LeftBumper: return "LBumper";
+				case ButtonName::RightBumper: return "RBumper";
+				case ButtonName::Up: return "DPad_Up";
+				case ButtonName::Down: return "DPad_Down";
+				case ButtonName::Left: return "DPad_Left";
+				case ButtonName::Right: return "DPad_Right";
+				case ButtonName::Misc1: return "Misc1";
+				case ButtonName::Paddle1: return "Paddle1";
+				case ButtonName::Paddle2: return "Paddle2";
+				case ButtonName::Paddle3: return "Paddle3";
+				case ButtonName::Paddle4: return "Paddle4";
 				default: return "Unknown";
 			}
 		}
@@ -252,13 +252,13 @@ namespace nCine
 		const char* mappedAxisNameToString(AxisName name)
 		{
 			switch (name) {
-				case AxisName::UNKNOWN: return "Unknown";
-				case AxisName::LX: return "LX";
-				case AxisName::LY: return "LY";
-				case AxisName::RX: return "RX";
-				case AxisName::RY: return "RY";
-				case AxisName::LTRIGGER: return "LTrigger";
-				case AxisName::RTRIGGER: return "RTrigger";
+				case AxisName::Unknown: return "Unknown";
+				case AxisName::LeftX: return "LX";
+				case AxisName::LeftY: return "LY";
+				case AxisName::RightX: return "RX";
+				case AxisName::RightY: return "RY";
+				case AxisName::LeftTrigger: return "LTrigger";
+				case AxisName::RightTrigger: return "RTrigger";
 				default: return "Unknown";
 			}
 		}
@@ -281,11 +281,11 @@ namespace nCine
 		ImGui::PopStyleColor();
 #endif
 
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 
-		bool disableAutoSuspension = !theApplication().autoSuspension();
+		bool disableAutoSuspension = !theApplication().GetAutoSuspension();
 		ImGui::Checkbox("Disable auto-suspension", &disableAutoSuspension);
-		theApplication().setAutoSuspension(!disableAutoSuspension);
+		theApplication().SetAutoSuspension(!disableAutoSuspension);
 		/*ImGui::SameLine();
 		if (ImGui::Button("Quit")) {
 			theApplication().quit();
@@ -316,7 +316,7 @@ namespace nCine
 		static int numValues = 0;
 
 		if (ImGui::CollapsingHeader("Configure GUI")) {
-			const AppConfiguration& appCfg = theApplication().appConfiguration();
+			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 
 			ImGui::Checkbox("Show interface", &settings_.showInterface);
 			if (ImGui::TreeNodeEx("Overlays", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -421,7 +421,7 @@ namespace nCine
 	{
 #if defined(NCINE_PROFILING)
 		if (ImGui::CollapsingHeader("Init Times")) {
-			const float* timings = theApplication().timings();
+			const float* timings = theApplication().GetTimings();
 
 			float initTimes[3];
 			initTimes[0] = timings[(int)Application::Timings::PreInit] * 1000.0f;
@@ -455,7 +455,7 @@ namespace nCine
 	void ImGuiDebugOverlay::guiGraphicsCapabilities()
 	{
 		if (ImGui::CollapsingHeader("Graphics Capabilities")) {
-			const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+			const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 
 			const IGfxCapabilities::GlInfoStrings& glInfoStrings = gfxCaps.glInfoStrings();
 			ImGui::Text("%s Vendor: %s", openglApiName, glInfoStrings.vendor);
@@ -501,7 +501,7 @@ namespace nCine
 	void ImGuiDebugOverlay::guiApplicationConfiguration()
 	{
 		if (ImGui::CollapsingHeader("Application Configuration")) {
-			const AppConfiguration& appCfg = theApplication().appConfiguration();
+			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 #if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			ImGui::Text("OpenGL Core: %s", appCfg.glCoreProfile() ? "true" : "false");
 			ImGui::Text("OpenGL Forward: %s", appCfg.glForwardCompatible() ? "true" : "false");
@@ -562,7 +562,7 @@ namespace nCine
 	void ImGuiDebugOverlay::guiRenderingSettings()
 	{
 		if (ImGui::CollapsingHeader("Rendering Settings")) {
-			Application::RenderingSettings& settings = theApplication().renderingSettings();
+			Application::RenderingSettings& settings = theApplication().GetRenderingSettings();
 			int minBatchSize = settings.minBatchSize;
 			int maxBatchSize = settings.maxBatchSize;
 
@@ -697,24 +697,24 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		if (ImGui::CollapsingHeader("Audio Players")) {
-			ImGui::Text("Device Name: %s", theServiceLocator().audioDevice().name());
-			ImGui::Text("Listener Gain: %f", theServiceLocator().audioDevice().gain());
+			ImGui::Text("Device Name: %s", theServiceLocator().GetAudioDevice().name());
+			ImGui::Text("Listener Gain: %f", theServiceLocator().GetAudioDevice().gain());
 
-			unsigned int numPlayers = theServiceLocator().audioDevice().numPlayers();
+			unsigned int numPlayers = theServiceLocator().GetAudioDevice().numPlayers();
 			ImGui::Text("Active Players: %d", numPlayers);
 
 			if (numPlayers > 0) {
 				if (ImGui::Button("Stop"))
-					theServiceLocator().audioDevice().stopPlayers();
+					theServiceLocator().GetAudioDevice().stopPlayers();
 				ImGui::SameLine();
 				if (ImGui::Button("Pause"))
-					theServiceLocator().audioDevice().pausePlayers();
+					theServiceLocator().GetAudioDevice().pausePlayers();
 			}
 
 			// Stopping or pausing players change the number of active ones
-			numPlayers = theServiceLocator().audioDevice().numPlayers();
+			numPlayers = theServiceLocator().GetAudioDevice().numPlayers();
 			for (unsigned int i = 0; i < numPlayers; i++) {
-				const IAudioPlayer* player = theServiceLocator().audioDevice().player(i);
+				const IAudioPlayer* player = theServiceLocator().GetAudioDevice().player(i);
 				char widgetName[32];
 				formatString(widgetName, sizeof(widgetName), "Player %d", i);
 				if (ImGui::TreeNode(widgetName)) {
@@ -747,7 +747,7 @@ namespace nCine
 	void ImGuiDebugOverlay::guiInputState()
 	{
 		if (ImGui::CollapsingHeader("Input State")) {
-			const IInputManager& input = theApplication().inputManager();
+			const IInputManager& input = theApplication().GetInputManager();
 
 			/*if (ImGui::TreeNode("Keyboard")) {
 				nctl::String pressedKeys;
@@ -1258,7 +1258,7 @@ namespace nCine
 	void ImGuiDebugOverlay::guiNodeInspector()
 	{
 		if (ImGui::CollapsingHeader("Node Inspector")) {
-			guiViewports(&theApplication().screenViewport(), 0);
+			guiViewports(&theApplication().GetScreenViewport(), 0);
 			for (unsigned int i = 0; i < Viewport::chain().size(); i++)
 				guiViewports(Viewport::chain()[i], i + 1);
 		}
@@ -1338,11 +1338,11 @@ namespace nCine
 
 		ImGui::Begin("###Top-Right", nullptr, windowFlags);
 
-		ImGui::Text("FPS: %.0f (%.2f ms - %.2fx)", theApplication().frameTimer().averageFps(), theApplication().frameTimer().lastFrameDuration() * 1000.0f, theApplication().timeMult());
-		ImGui::Text("Num Frames: %lu", theApplication().numFrames());
+		ImGui::Text("FPS: %.0f (%.2f ms - %.2fx)", theApplication().GetFrameTimer().GetAverageFps(), theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f, theApplication().GetTimeMult());
+		ImGui::Text("Num Frames: %lu", theApplication().GetFrameCount());
 
 #if defined(NCINE_PROFILING)
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		if (appCfg.withScenegraph) {
 			const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Sprite);
 			const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::MeshSprite);
@@ -1480,7 +1480,7 @@ namespace nCine
 
 	void ImGuiDebugOverlay::guiPlots()
 	{
-		const float appWidth = theApplication().width();
+		const float appWidth = theApplication().GetWidth();
 
 		const ImVec2 windowPos = ImVec2(appWidth * 0.5f, ImGui::GetIO().DisplaySize.y - Margin);
 		const ImVec2 windowPosPivot = ImVec2(0.5f, 1.0f);
@@ -1494,7 +1494,7 @@ namespace nCine
 		ImGui::PlotLines("Frame time", plotValues_[ValuesType::FrameTime].get(), numValues_, index_, nullptr, 0.0f, maxFrameTime_, ImVec2(appWidth * 0.2f, 0.0f));
 
 #if defined(NCINE_PROFILING)
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		if (appCfg.withScenegraph) {
 			ImGui::Separator();
 			ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));

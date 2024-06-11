@@ -819,6 +819,10 @@ namespace Death { namespace Containers {
 		return StringView{*this}.containsAny(substring);
 	}
 
+	std::size_t String::count(const char character) const {
+		return StringView{*this}.count(character);
+	}
+
 	char* String::release() {
 		DEATH_DEBUG_ASSERT(!(_small.size & Implementation::SmallStringBit), {},
 			"Containers::String::release(): Cannot call on a SSO instance");
