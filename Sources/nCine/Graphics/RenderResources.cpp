@@ -10,7 +10,7 @@
 #include "../ServiceLocator.h"
 #include "../../Common.h"
 
-#include <cstddef>	// for `offsetof()`
+#include <cstddef>	// for offsetof()
 #include <cstring>
 
 #if defined(WITH_EMBEDDED_SHADERS)

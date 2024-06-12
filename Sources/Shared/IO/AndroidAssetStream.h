@@ -9,7 +9,7 @@
 #include "../Containers/String.h"
 #include "../Containers/StringView.h"
 
-#include <android_native_app_glue.h>	// For android_app
+#include <android_native_app_glue.h>	// for android_app
 #include <android/asset_manager.h>
 
 namespace Death { namespace IO {

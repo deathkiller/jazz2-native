@@ -31,6 +31,11 @@ namespace nCine
 	/// The GLFW based graphics device
 	class GlfwGfxDevice : public IGfxDevice
 	{
+		friend class GlfwInputManager;
+		friend class GlfwMouseState;
+		friend class GlfwKeyboardState;
+		friend class ImGuiDrawing;
+
 	public:
 		GlfwGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
 		~GlfwGfxDevice() override;
@@ -104,10 +109,6 @@ namespace nCine
 
 		/// Callback for `glfwSetErrorCallback()`
 		static void errorCallback(int error, const char* description);
-
-		friend class GlfwInputManager;
-		friend class GlfwMouseState;
-		friend class GlfwKeyboardState;
 	};
 
 }

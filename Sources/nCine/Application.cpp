@@ -195,7 +195,13 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
 	va_end(args);
 
-	__android_log_write(priority, NCINE_APP, logEntry);
+	std::int32_t result = __android_log_write(priority, NCINE_APP, logEntry);
+	std::int32_t n = 0;
+	while (result == -11 /*EAGAIN*/ && n < 2) {
+		::usleep(5000); // in microseconds
+		result = __android_log_write(priority, NCINE_APP, logEntry);
+		n++;
+	}
 #elif defined(DEATH_TARGET_SWITCH)
 	va_list args;
 	va_start(args, fmt);

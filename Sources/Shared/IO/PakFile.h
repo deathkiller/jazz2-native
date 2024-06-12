@@ -6,7 +6,7 @@
 #include "FileStream.h"
 #include "FileSystem.h"
 
-#include <cstdio>		// For FILE
+#include <cstdio>	// for FILE
 #include <memory>
 
 namespace Death { namespace IO {
