@@ -103,6 +103,7 @@ using namespace Death::IO;
 #elif defined(DEATH_TARGET_ANDROID)
 #	include <stdarg.h>
 #	include <time.h>
+#	include <unistd.h>
 #	include <android/log.h>
 #else
 #	include <cstdarg>
