@@ -4,8 +4,8 @@
 #include "GfxCapabilities.h"
 #include "../../Common.h"
 
-#include <cstdio> // for sscanf()
-#include <cstring> // for checkGLExtension()
+#include <cstdio>	// for sscanf()
+#include <cstring>	// for checkGLExtension()
 
 #include <Containers/ArrayView.h>
 

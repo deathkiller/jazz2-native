@@ -11,9 +11,9 @@
 #	endif
 #else
 #	include <cerrno>
-#	include <sys/stat.h>	// For open()
-#	include <fcntl.h>		// For open()
-#	include <unistd.h>		// For close()
+#	include <sys/stat.h>	// for open()
+#	include <fcntl.h>		// for open()
+#	include <unistd.h>		// for close()
 #endif
 
 // `_nolock` functions are not supported by VC-LTL msvcrt, `_unlocked` functions are not supported on Android and Apple

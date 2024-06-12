@@ -907,7 +907,7 @@ namespace Death { namespace Containers {
 	template<class T> template<std::size_t size_> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(std::size_t begin) const {
 		static_assert(begin + size_ <= _size, "Slice needs to have a positive size");
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(begin + size_ <= _size,
-					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin_, begin + size_, _size),
+					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin, begin + size_, _size),
 				StaticArrayView<size_, T>{_data + begin};
 	}
 

@@ -6,10 +6,14 @@
 #include "../Input/ImGuiJoyMappedInput.h"
 
 #if defined(DEATH_TARGET_APPLE)
-#	define GLFW_EXPOSE_NATIVE_COCOA
+#	if !defined(GLFW_EXPOSE_NATIVE_COCOA)
+#		define GLFW_EXPOSE_NATIVE_COCOA
+#	endif
 #elif defined(DEATH_TARGET_WINDOWS)
 #	undef APIENTRY
-#	define GLFW_EXPOSE_NATIVE_WIN32
+#	if !defined(GLFW_EXPOSE_NATIVE_WIN32)
+#		define GLFW_EXPOSE_NATIVE_WIN32
+#	endif
 #endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS)
 #	if defined(__HAS_LOCAL_GLFW)

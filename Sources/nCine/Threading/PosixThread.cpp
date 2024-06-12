@@ -6,8 +6,8 @@
 
 #include "../../Common.h"
 
-#include <unistd.h> // for sysconf()
-#include <sched.h> // for sched_yield()
+#include <unistd.h>		// for sysconf()
+#include <sched.h>		// for sched_yield()
 #include <cstring>
 #include <utility>
 

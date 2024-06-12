@@ -2,9 +2,9 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 
-#include <sys/stat.h>		// For open()
-#include <fcntl.h>			// For open()
-#include <unistd.h>			// For close()
+#include <sys/stat.h>		// for open()
+#include <fcntl.h>			// for open()
+#include <unistd.h>			// for close()
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -

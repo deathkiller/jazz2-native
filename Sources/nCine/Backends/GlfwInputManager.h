@@ -229,7 +229,7 @@ namespace nCine
 		static KeyMod keyModValueToEnum(int keymod);
 		static int enumToKeySymValue(KeySym keysym);
 
-		friend class GlfwGfxDevice; // for `setWindowPosition()`
+		friend class GlfwGfxDevice; // for setWindowPosition()
 	};
 
 	inline const MouseState& GlfwInputManager::mouseState() const
