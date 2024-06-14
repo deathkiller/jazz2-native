@@ -200,20 +200,11 @@ namespace nCine
 		ImGui::EndFrame();
 		ImGui::Render();
 
-		ImGuiIO& io = ImGui::GetIO();
-
-#if defined(IMGUI_HAS_VIEWPORT)
-		// Update and Render additional Platform Windows
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-
-			// Restore the OpenGL rendering context to the main window DC, since platform windows might have changed it.
-			auto& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().GetGfxDevice());
-			glfwMakeContextCurrent(gfxDevice.windowHandle());
-		}
+#if defined(WITH_GLFW)
+		ImGuiGlfwInput::endFrame();
 #endif
 
+		ImGuiIO& io = ImGui::GetIO();
 		if (io.WantCaptureKeyboard) {
 			if (appInputHandler_ == nullptr) {
 				appInputHandler_ = IInputManager::handler();
@@ -430,7 +421,8 @@ namespace nCine
 		ImGuiIO& io = ImGui::GetIO();
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
 
-		ImGui::GetPlatformIO().Renderer_RenderWindow = onRenderViewportWindow;
+		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+		platformIo.Renderer_RenderWindow = onRenderPlatformWindow;
 
 		// Backup GL state
 		GLint lastTexture, lastArrayBuffer;
@@ -461,13 +453,13 @@ namespace nCine
 		glBindVertexArray(lastVertexArray);
 	}
 
-	void ImGuiDrawing::onRenderViewportWindow(ImGuiViewport* viewport, void*)
+	void ImGuiDrawing::onRenderPlatformWindow(ImGuiViewport* viewport, void*)
 	{
 		ImGuiDrawing* _this = static_cast<ImGuiDrawing*>(ImGui::GetIO().BackendRendererUserData);
-		_this->drawViewportWindow(viewport);
+		_this->drawPlatformWindow(viewport);
 	}
 
-	void ImGuiDrawing::drawViewportWindow(ImGuiViewport* viewport)
+	void ImGuiDrawing::drawPlatformWindow(ImGuiViewport* viewport)
 	{
 		if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear)) {
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -488,7 +480,7 @@ namespace nCine
 		// The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
 		GLuint vertexArrayObject = 0;
 		GL_CALL(glGenVertexArrays(1, &vertexArrayObject));
-		setupRenderStateForOtherWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
+		setupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
 
 		// Will project scissor/clipping rectangles into framebuffer space
 		ImVec2 clipOff = drawData->DisplayPos;         // (0,0) unless using multi-viewports
@@ -508,7 +500,7 @@ namespace nCine
 					// User callback, registered via ImDrawList::AddCallback()
 					// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
 					if (imCmd->UserCallback == ImDrawCallback_ResetRenderState) {
-						setupRenderStateForOtherWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
+						setupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
 					} else {
 						imCmd->UserCallback(imCmdList, imCmd);
 					}
@@ -521,13 +513,13 @@ namespace nCine
 					}
 
 					// Apply scissor/clipping rectangle (Y is inverted in OpenGL)
-					GL_CALL(glScissor((int)clipMin.x, (int)((float)fbHeight - clipMax.y), (int)(clipMax.x - clipMin.x), (int)(clipMax.y - clipMin.y)));
+					GL_CALL(glScissor(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
+						static_cast<GLint>(clipMax.x - clipMin.x), static_cast<GLint>(clipMax.y - clipMin.y)));
 
-					// Bind texture, Draw
-					//GL_CALL(glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->GetTexID()));
-					auto* tex = reinterpret_cast<nCine::GLTexture*>(imCmd->GetTexID());
-					GL_CALL(glBindTexture(GL_TEXTURE_2D, tex->glHandle()));
-					GL_CALL(glDrawElements(GL_TRIANGLES, (GLsizei)imCmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(imCmd->IdxOffset * sizeof(ImDrawIdx))));
+					auto* texture = reinterpret_cast<nCine::GLTexture*>(imCmd->GetTexID());
+					GL_CALL(glBindTexture(GL_TEXTURE_2D, texture->glHandle()));
+					GL_CALL(glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
+						reinterpret_cast<void*>(static_cast<intptr_t>(imCmd->IdxOffset * sizeof(ImDrawIdx)))));
 				}
 			}
 		}
@@ -536,7 +528,7 @@ namespace nCine
 		GL_CALL(glDeleteVertexArrays(1, &vertexArrayObject));
 	}
 
-	void ImGuiDrawing::setupRenderStateForOtherWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject)
+	void ImGuiDrawing::setupRenderStateForPlatformWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject)
 	{
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);
@@ -554,8 +546,7 @@ namespace nCine
 		float T = drawData->DisplayPos.y;
 		float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
 
-		const float ortho_projection[4][4] =
-		{
+		const float ortho_projection[4][4] = {
 			{ 2.0f / (R - L),		0.0f,				0.0f,		0.0f },
 			{ 0.0f,					2.0f / (T - B),		0.0f,		0.0f },
 			{ 0.0f,					0.0f,				-1.0f,		0.0f },

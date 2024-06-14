@@ -460,7 +460,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		logEntryWithColors[length2] = '\0';
 		fputs(logEntryWithColors, s->GetHandle());
 #	else
-		fprintf(s->GetHandle(), "%02d:%02d:%02d.%03ld [%c] %s\n", dateTime.Hours, dateTime.Minutes,
+		fprintf(s->GetHandle(), "%02u:%02u:%02u.%03u [%c] %s\n", dateTime.Hours, dateTime.Minutes,
 			dateTime.Seconds, dateTime.Milliseconds, levelIdentifier, logEntryWithoutLevel);
 #	endif
 		s->Flush();

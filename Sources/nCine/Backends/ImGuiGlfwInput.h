@@ -15,6 +15,7 @@ namespace nCine
 		static void init(GLFWwindow* window, bool withCallbacks);
 		static void shutdown();
 		static void newFrame();
+		static void endFrame();
 
 		static inline void setInputEnabled(bool inputEnabled) {
 			inputEnabled_ = inputEnabled;

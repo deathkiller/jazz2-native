@@ -437,22 +437,22 @@ namespace nCine
 
 #if defined(IMGUI_HAS_VIEWPORT)
 		// Register platform interface (will be coupled with a renderer interface)
-		ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-		platform_io.Platform_CreateWindow = onCreateWindow;
-		platform_io.Platform_DestroyWindow = onDestroyWindow;
-		platform_io.Platform_ShowWindow = onShowWindow;
-		platform_io.Platform_SetWindowPos = onSetWindowPos;
-		platform_io.Platform_GetWindowPos = onGetWindowPos;
-		platform_io.Platform_SetWindowSize = onSetWindowSize;
-		platform_io.Platform_GetWindowSize = onGetWindowSize;
-		platform_io.Platform_SetWindowFocus = onSetWindowFocus;
-		platform_io.Platform_GetWindowFocus = onGetWindowFocus;
-		platform_io.Platform_GetWindowMinimized = onGetWindowMinimized;
-		platform_io.Platform_SetWindowTitle = onSetWindowTitle;
-		platform_io.Platform_RenderWindow = onRenderWindow;
-		platform_io.Platform_SwapBuffers = onSwapBuffers;
+		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+		platformIo.Platform_CreateWindow = onCreateWindow;
+		platformIo.Platform_DestroyWindow = onDestroyWindow;
+		platformIo.Platform_ShowWindow = onShowWindow;
+		platformIo.Platform_SetWindowPos = onSetWindowPos;
+		platformIo.Platform_GetWindowPos = onGetWindowPos;
+		platformIo.Platform_SetWindowSize = onSetWindowSize;
+		platformIo.Platform_GetWindowSize = onGetWindowSize;
+		platformIo.Platform_SetWindowFocus = onSetWindowFocus;
+		platformIo.Platform_GetWindowFocus = onGetWindowFocus;
+		platformIo.Platform_GetWindowMinimized = onGetWindowMinimized;
+		platformIo.Platform_SetWindowTitle = onSetWindowTitle;
+		platformIo.Platform_RenderWindow = onRenderWindow;
+		platformIo.Platform_SwapBuffers = onSwapBuffers;
 #	if GLFW_HAS_WINDOW_ALPHA
-		platform_io.Platform_SetWindowAlpha = onSetWindowAlpha;
+		platformIo.Platform_SetWindowAlpha = onSetWindowAlpha;
 #	endif
 
 		// Register main window handle (which is owned by the main application, not by us)
@@ -530,7 +530,7 @@ namespace nCine
 		if (currentTime <= time_) {
 			currentTime = time_ + 0.00001f;
 		}
-		io.DeltaTime = time_ > 0.0 ? static_cast<float>(currentTime - time_) : static_cast<float>(1.0f / 60.0f);
+		io.DeltaTime = (time_ > 0.0 ? static_cast<float>(currentTime - time_) : static_cast<float>(1.0f / 60.0f));
 		time_ = currentTime;
 
 		updateMouseData();
@@ -538,6 +538,21 @@ namespace nCine
 
 		// Update game controllers (if enabled and available)
 		updateGamepads();
+	}
+
+	void ImGuiGlfwInput::endFrame()
+	{
+#if defined(IMGUI_HAS_VIEWPORT)
+		// Update and render additional Platform Windows
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+
+			// Restore the OpenGL rendering context to the main window DC, since platform windows might have changed it.
+			glfwMakeContextCurrent(window_);
+		}
+#endif
 	}
 
 	void ImGuiGlfwInput::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -674,8 +689,9 @@ namespace nCine
 #if defined(IMGUI_HAS_VIEWPORT)
 	void ImGuiGlfwInput::windowCloseCallback(GLFWwindow* window)
 	{
-		if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
+		if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window)) {
 			viewport->PlatformRequestClose = true;
+		}
 	}
 
 	// GLFW may dispatch window pos/size events after calling glfwSetWindowPos()/glfwSetWindowSize().
@@ -805,8 +821,8 @@ namespace nCine
 			// FIXME: This is currently only correct on Win32. See what we do below with the WM_NCHITTEST, missing an equivalent for other systems.
 			// See https://github.com/glfw/glfw/issues/1236 if you want to help in making this a GLFW feature.
 #	if GLFW_HAS_MOUSE_PASSTHROUGH
-			const bool window_no_input = (viewport->Flags & ImGuiViewportFlags_NoInputs) != 0;
-			glfwSetWindowAttrib(window, GLFW_MOUSE_PASSTHROUGH, window_no_input);
+			const bool windowNoInput = (viewport->Flags & ImGuiViewportFlags_NoInputs) != 0;
+			glfwSetWindowAttrib(window, GLFW_MOUSE_PASSTHROUGH, windowNoInput);
 #	endif
 #	if GLFW_HAS_MOUSE_PASSTHROUGH || GLFW_HAS_WINDOW_HOVERED
 			if (glfwGetWindowAttrib(window, GLFW_HOVERED)) {
@@ -949,42 +965,42 @@ namespace nCine
 	void ImGuiGlfwInput::updateMonitors()
 	{
 #if defined(IMGUI_HAS_DOCK)
-		ImGuiPlatformIO& io = ImGui::GetPlatformIO();
+		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
 		wantUpdateMonitors_ = false;
 
-		int monitors_count = 0;
-		GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
-		if (monitors_count == 0) { // Preserve existing monitor list if there are none. Happens on macOS sleeping (#5683)
+		int monitorsCount = 0;
+		GLFWmonitor** glfwMonitors = glfwGetMonitors(&monitorsCount);
+		if (monitorsCount == 0) { // Preserve existing monitor list if there are none. Happens on macOS sleeping (#5683)
 			return;
 		}
 
-		io.Monitors.resize(0);
-		for (int n = 0; n < monitors_count; n++) {
+		platformIo.Monitors.resize(0);
+		for (int n = 0; n < monitorsCount; n++) {
 			ImGuiPlatformMonitor monitor;
 			int x, y;
-			glfwGetMonitorPos(glfw_monitors[n], &x, &y);
-			const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
-			if (vid_mode == nullptr) {
+			glfwGetMonitorPos(glfwMonitors[n], &x, &y);
+			const GLFWvidmode* vidMode = glfwGetVideoMode(glfwMonitors[n]);
+			if (vidMode == nullptr) {
 				continue; // Failed to get Video mode (e.g. Emscripten does not support this function)
 			}
-			monitor.MainPos = monitor.WorkPos = ImVec2((float)x, (float)y);
-			monitor.MainSize = monitor.WorkSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
+			monitor.MainPos = monitor.WorkPos = ImVec2(static_cast<float>(x), static_cast<float>(y));
+			monitor.MainSize = monitor.WorkSize = ImVec2(static_cast<float>(vidMode->width), static_cast<float>(vidMode->height));
 #	if GLFW_HAS_MONITOR_WORK_AREA
 			int w, h;
-			glfwGetMonitorWorkarea(glfw_monitors[n], &x, &y, &w, &h);
+			glfwGetMonitorWorkarea(glfwMonitors[n], &x, &y, &w, &h);
 			if (w > 0 && h > 0) { // Workaround a small GLFW issue reporting zero on monitor changes: https://github.com/glfw/glfw/pull/1761
-				monitor.WorkPos = ImVec2((float)x, (float)y);
-				monitor.WorkSize = ImVec2((float)w, (float)h);
+				monitor.WorkPos = ImVec2(static_cast<float>(x), static_cast<float>(y));
+				monitor.WorkSize = ImVec2(static_cast<float>(w), static_cast<float>(h));
 			}
 #	endif
 #	if GLFW_HAS_PER_MONITOR_DPI
 			// Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
-			float x_scale, y_scale;
-			glfwGetMonitorContentScale(glfw_monitors[n], &x_scale, &y_scale);
-			monitor.DpiScale = x_scale;
+			float xScale, yScale;
+			glfwGetMonitorContentScale(glfwMonitors[n], &xScale, &yScale);
+			monitor.DpiScale = xScale;
 #	endif
-			monitor.PlatformHandle = (void*)glfw_monitors[n]; // [...] GLFW doc states: "guaranteed to be valid only until the monitor configuration changes"
-			io.Monitors.push_back(monitor);
+			monitor.PlatformHandle = static_cast<void*>(glfwMonitors[n]); // [...] GLFW doc states: "guaranteed to be valid only until the monitor configuration changes"
+			platformIo.Monitors.push_back(monitor);
 		}
 #endif
 	}
@@ -1007,15 +1023,15 @@ namespace nCine
 		glfwWindowHint(GLFW_FLOATING, (viewport->Flags & ImGuiViewportFlags_TopMost ? true : false));
 #	endif
 		GLFWwindow* shareWindow = window_;
-		vd->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", nullptr, shareWindow);
+		vd->Window = glfwCreateWindow(static_cast<int>(viewport->Size.x), static_cast<int>(viewport->Size.y), "", nullptr, shareWindow);
 		vd->WindowOwned = true;
-		viewport->PlatformHandle = (void*)vd->Window;
+		viewport->PlatformHandle = static_cast<void*>(vd->Window);
 #	if defined(DEATH_TARGET_WINDOWS)
 		viewport->PlatformHandleRaw = glfwGetWin32Window(vd->Window);
 #	elif defined(DEATH_TARGET_APPLE)
-		viewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(vd->Window);
+		viewport->PlatformHandleRaw = static_cast<void*>(glfwGetCocoaWindow(vd->Window));
 #	endif
-		glfwSetWindowPos(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+		glfwSetWindowPos(vd->Window, static_cast<int>(viewport->Pos.x), static_cast<int>(viewport->Pos.y));
 
 		// Install GLFW callbacks for secondary viewports
 		glfwSetWindowFocusCallback(vd->Window, windowFocusCallback);
@@ -1066,10 +1082,10 @@ namespace nCine
 		// GLFW hack: Hide icon from task bar
 		HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 		if (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) {
-			LONG ex_style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
-			ex_style &= ~WS_EX_APPWINDOW;
-			ex_style |= WS_EX_TOOLWINDOW;
-			::SetWindowLong(hwnd, GWL_EXSTYLE, ex_style);
+			LONG exStyle = ::GetWindowLong(hwnd, GWL_EXSTYLE);
+			exStyle &= ~WS_EX_APPWINDOW;
+			exStyle |= WS_EX_TOOLWINDOW;
+			::SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
 		}
 
 		// GLFW hack: install hook for WM_NCHITTEST message handler
@@ -1099,14 +1115,14 @@ namespace nCine
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		int x = 0, y = 0;
 		glfwGetWindowPos(vd->Window, &x, &y);
-		return ImVec2((float)x, (float)y);
+		return ImVec2(static_cast<float>(x), static_cast<float>(y));
 	}
 
 	void ImGuiGlfwInput::onSetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		vd->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
-		glfwSetWindowPos(vd->Window, (int)pos.x, (int)pos.y);
+		glfwSetWindowPos(vd->Window, static_cast<int>(pos.x), static_cast<int>(pos.y));
 	}
 
 	ImVec2 ImGuiGlfwInput::onGetWindowSize(ImGuiViewport* viewport)
@@ -1114,7 +1130,7 @@ namespace nCine
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		int w = 0, h = 0;
 		glfwGetWindowSize(vd->Window, &w, &h);
-		return ImVec2((float)w, (float)h);
+		return ImVec2(static_cast<float>(w), static_cast<float>(h));
 	}
 
 	void ImGuiGlfwInput::onSetWindowSize(ImGuiViewport* viewport, ImVec2 size)
@@ -1131,7 +1147,7 @@ namespace nCine
 		glfwSetWindowPos(vd->Window, x, y - height + size.y);
 #	endif
 		vd->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
-		glfwSetWindowSize(vd->Window, (int)size.x, (int)size.y);
+		glfwSetWindowSize(vd->Window, static_cast<int>(size.x), static_cast<int>(size.y));
 	}
 
 	void ImGuiGlfwInput::onSetWindowTitle(ImGuiViewport* viewport, const char* title)

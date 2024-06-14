@@ -71,9 +71,9 @@ namespace nCine
 
 #if defined(IMGUI_HAS_VIEWPORT)
 		void prepareForViewports();
-		static void onRenderViewportWindow(ImGuiViewport* viewport, void*);
-		void drawViewportWindow(ImGuiViewport* viewport);
-		void setupRenderStateForOtherWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject);
+		static void onRenderPlatformWindow(ImGuiViewport* viewport, void*);
+		void drawPlatformWindow(ImGuiViewport* viewport);
+		void setupRenderStateForPlatformWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject);
 #endif
 	};
 }
