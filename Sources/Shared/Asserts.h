@@ -32,22 +32,22 @@ enum class TraceLevel {
 void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-#		define __DEATH_LOG_FUNCTION __PRETTY_FUNCTION__
+#		define __DEATH_CURRENT_FUNCTION __PRETTY_FUNCTION__
 #	elif defined(DEATH_TARGET_MSVC)
-#		define __DEATH_LOG_FUNCTION __FUNCTION__ "()"
+#		define __DEATH_CURRENT_FUNCTION __FUNCTION__ "()"
 #	else
-#		define __DEATH_LOG_FUNCTION __func__
+#		define __DEATH_CURRENT_FUNCTION __func__
 #	endif
 
 #	if defined(DEATH_DEBUG)
-#		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, "%s #> " fmt, __DEATH_LOG_FUNCTION, ##__VA_ARGS__)
+#		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
-#	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, "%s #> " fmt, __DEATH_LOG_FUNCTION, ##__VA_ARGS__)
-#	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, "%s #> " fmt, __DEATH_LOG_FUNCTION, ##__VA_ARGS__)
-#	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, "%s #> " fmt, __DEATH_LOG_FUNCTION, ##__VA_ARGS__)
-#	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, "%s #> " fmt, __DEATH_LOG_FUNCTION, ##__VA_ARGS__)
+#	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #else
 #	define LOGD(fmt, ...) do {} while (false)
 #	define LOGI(fmt, ...) do {} while (false)
@@ -81,21 +81,21 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_DEBUG_ASSERT(condition, ...) assert(condition)
 #	else
-#		define _DEATH_DEBUG_ASSERT0(condition, ...)					\
+#		define __DEATH_DEBUG_ASSERT0(condition, ...)				\
 			do {													\
 				if(!(condition)) {									\
 					LOGF("Assertion (" #condition ") failed at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
 					std::abort();									\
 				}													\
 			} while(false)
-#		define _DEATH_DEBUG_ASSERTn(condition, returnValue, message, ...)	\
+#		define __DEATH_DEBUG_ASSERTn(condition, returnValue, message, ...)	\
 			do {													\
 				if(!(condition)) {									\
 					LOGF(message, ##__VA_ARGS__);					\
 					return returnValue;								\
 				}													\
 			} while(false)
-#		define DEATH_DEBUG_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_DEBUG_ASSERTn, _DEATH_DEBUG_ASSERTn, _DEATH_DEBUG_ASSERTn, _DEATH_DEBUG_ASSERTn, _DEATH_DEBUG_ASSERTn, _DEATH_DEBUG_ASSERTn, _DEATH_DEBUG_ASSERT0, )(__VA_ARGS__))
+#		define DEATH_DEBUG_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERT0, )(__VA_ARGS__))
 #	endif
 #endif
 

@@ -33,15 +33,15 @@
 #if !defined(DEATH_CONTAINERS_NO_SANITIZER_ANNOTATIONS)
 #	if defined(__has_feature)
 #		if __has_feature(address_sanitizer)
-#			define _DEATH_CONTAINERS_SANITIZER_ENABLED
+#			define __DEATH_CONTAINERS_SANITIZER_ENABLED
 #		endif
 #	endif
 #	if defined(__SANITIZE_ADDRESS__)
-#		define _DEATH_CONTAINERS_SANITIZER_ENABLED
+#		define __DEATH_CONTAINERS_SANITIZER_ENABLED
 #	endif
 #endif
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 // https://github.com/llvm/llvm-project/blob/main/compiler-rt/include/sanitizer/common_interface_defs.h
 extern "C" void __sanitizer_annotate_contiguous_container(const void* beg, const void* end, const void* old_mid, const void* new_mid)
 	// Declaration of this function in <vector> in MSVC 2022 14.35 and earlier STL includes a noexcept for some strange unexplained reason,
@@ -1174,7 +1174,7 @@ namespace Death { namespace Containers {
 			array = Array<T>{newArray, arrayGuts.size, Allocator::deleter};
 		} else Allocator::reallocate(arrayGuts.data, arrayGuts.size, capacity);
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 		__sanitizer_annotate_contiguous_container(
 			Allocator::base(arrayGuts.data),
 			arrayGuts.data + capacity,
@@ -1202,7 +1202,7 @@ namespace Death { namespace Containers {
 				arrayGuts.size < size ? arrayGuts.size : size);
 			array = Array<T>{newArray, size, Allocator::deleter};
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + arrayGuts.size,
@@ -1218,7 +1218,7 @@ namespace Death { namespace Containers {
 				arrayGuts.size < size ? arrayGuts.size : size, size);
 			arrayGuts.size = size;
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + arrayGuts.size,
@@ -1231,7 +1231,7 @@ namespace Death { namespace Containers {
 		} else {
 			Implementation::arrayDestruct<T>(arrayGuts.data + size, arrayGuts.data + arrayGuts.size);
 			// This is a NoInit resize, so not constructing the new elements, only updating the size
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + Allocator::capacity(array),
@@ -1281,7 +1281,7 @@ namespace Death { namespace Containers {
 			// know where the original memory comes from.
 			const std::size_t desiredCapacity = arrayGuts.size + count;
 			std::size_t capacity;
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			T* oldMid = nullptr;
 #endif
 			if (arrayGuts.deleter != Allocator::deleter) {
@@ -1297,7 +1297,7 @@ namespace Death { namespace Containers {
 					capacity = Allocator::grow(arrayGuts.data, desiredCapacity);
 					Allocator::reallocate(arrayGuts.data, arrayGuts.size, capacity);
 				} else {
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 					oldMid = arrayGuts.data + arrayGuts.size;
 #endif
 				}
@@ -1305,7 +1305,7 @@ namespace Death { namespace Containers {
 
 			// Increase array size and return the previous end pointer
 			T* const it = arrayGuts.data + arrayGuts.size;
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + capacity,
@@ -1412,7 +1412,7 @@ namespace Death { namespace Containers {
 			// index separately. Not using reallocate() as we don't know where the original memory comes from.
 			const std::size_t desiredCapacity = arrayGuts.size + count;
 			std::size_t capacity;
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			T* oldMid = nullptr;
 #endif
 			bool needsShiftForward = false;
@@ -1431,7 +1431,7 @@ namespace Death { namespace Containers {
 					capacity = Allocator::grow(arrayGuts.data, desiredCapacity);
 					Allocator::reallocate(arrayGuts.data, arrayGuts.size, capacity);
 				} else {
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 					oldMid = arrayGuts.data + arrayGuts.size;
 #endif
 				}
@@ -1441,7 +1441,7 @@ namespace Death { namespace Containers {
 
 			// Increase array size and return the position at index
 			T* const it = arrayGuts.data + index;
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + capacity,
@@ -1544,7 +1544,7 @@ namespace Death { namespace Containers {
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
 			array = Array<T>{newArray, arrayGuts.size - count, Allocator::deleter};
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + arrayGuts.size,
@@ -1555,7 +1555,7 @@ namespace Death { namespace Containers {
 		// Otherwise shift the elements after index backward
 		} else {
 			Implementation::arrayShiftBackward(arrayGuts.data + index + count, arrayGuts.data + index, arrayGuts.size - index - count, count);
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + Allocator::capacity(arrayGuts.data),
@@ -1583,7 +1583,7 @@ namespace Death { namespace Containers {
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
 			array = Array<T>{newArray, arrayGuts.size - count, Allocator::deleter};
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + arrayGuts.size,
@@ -1595,7 +1595,7 @@ namespace Death { namespace Containers {
 		} else {
 			const std::size_t moveCount = std::min(count, arrayGuts.size - count - index);
 			Implementation::arrayShiftBackward(arrayGuts.data + arrayGuts.size - moveCount, arrayGuts.data + index, moveCount, count);
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + Allocator::capacity(arrayGuts.data),
@@ -1621,7 +1621,7 @@ namespace Death { namespace Containers {
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size - count);
 			array = Array<T>{newArray, arrayGuts.size - count, Allocator::deleter};
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + arrayGuts.size,
@@ -1632,7 +1632,7 @@ namespace Death { namespace Containers {
 		// Otherwise call the destructor on the excessive elements and update the size
 		} else {
 			Implementation::arrayDestruct<T>(arrayGuts.data + arrayGuts.size - count, arrayGuts.data + arrayGuts.size);
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
 				arrayGuts.data + Allocator::capacity(arrayGuts.data),
@@ -1656,7 +1656,7 @@ namespace Death { namespace Containers {
 		Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
 		array = std::move(newArray);
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 		// Nothing to do (not annotating the arrays with default deleter)
 #endif
 	}
@@ -1674,12 +1674,12 @@ namespace Death { namespace Containers {
 		Implementation::arrayMoveAssign<T>(arrayGuts.data, newArray, arrayGuts.size);
 		array = std::move(newArray);
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 		// Nothing to do (not annotating the arrays with default deleter)
 #endif
 	}
 }}
 
-#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
-#	undef _DEATH_CONTAINERS_SANITIZER_ENABLED
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
+#	undef __DEATH_CONTAINERS_SANITIZER_ENABLED
 #endif

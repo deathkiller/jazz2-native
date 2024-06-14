@@ -57,30 +57,6 @@ namespace Death { namespace Implementation {
 /** @brief Get number of arguments in a variadic macro */
 #define DEATH_HELPER_ARGS_COUNT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
-//namespace Death { namespace Implementation {
-//	template<typename T/*, typename = std::enable_if_t<std::is_invocable_v<T>>*/>
-//	class ScopeExit
-//	{
-//	public:
-//		constexpr explicit ScopeExit(T deferredCallback) noexcept : _deferredCallback(std::move(deferredCallback)) {}
-//		ScopeExit& operator=(const ScopeExit&) = delete;
-//		~ScopeExit() noexcept { _deferredCallback(); }
-//
-//	private:
-//		T _deferredCallback;
-//	};
-//
-//	struct ScopeExitHelper {};
-//
-//	template<typename T>
-//	ScopeExit<T> operator%(const ScopeExitHelper&, T deferredCallback) {
-//		return ScopeExit<T>{std::move(deferredCallback)};
-//	}
-//}}
-//
-///** @brief Defer execution of following block to the end of current scope */
-//#define DEATH_DEFER DEATH_UNUSED auto const& DEATH_PASTE(_deferred_, __LINE__) = Death::Implementation::ScopeExitHelper{} % [&]()
-
 // Compile-time and runtime CPU instruction set dispatch
 namespace Death { namespace Cpu {
 	class Features;
@@ -88,8 +64,8 @@ namespace Death { namespace Cpu {
 
 #if defined(DEATH_CPU_USE_RUNTIME_DISPATCH) && !defined(DEATH_CPU_USE_IFUNC)
 #	define DEATH_CPU_DISPATCHER_DECLARATION(name) decltype(name) name ## Implementation(Cpu::Features);
-#	define DEATH_CPU_DISPATCHER(...) _DEATH_CPU_DISPATCHER(__VA_ARGS__)
-#	define DEATH_CPU_DISPATCHER_BASE(...) _DEATH_CPU_DISPATCHER_BASE(__VA_ARGS__)
+#	define DEATH_CPU_DISPATCHER(...) __DEATH_CPU_DISPATCHER(__VA_ARGS__)
+#	define DEATH_CPU_DISPATCHER_BASE(...) __DEATH_CPU_DISPATCHER_BASE(__VA_ARGS__)
 #	define DEATH_CPU_DISPATCHED_DECLARATION(name) (*name)
 #	define DEATH_CPU_DISPATCHED(dispatcher, ...) DEATH_CPU_DISPATCHED_POINTER(dispatcher, __VA_ARGS__) DEATH_NOOP
 #	define DEATH_CPU_MAYBE_UNUSED
@@ -97,8 +73,8 @@ namespace Death { namespace Cpu {
 #	define DEATH_CPU_DISPATCHER_DECLARATION(name)
 #	define DEATH_CPU_DISPATCHED_DECLARATION(name) (name)
 #	if defined(DEATH_CPU_USE_RUNTIME_DISPATCH) && defined(DEATH_CPU_USE_IFUNC)
-#		define DEATH_CPU_DISPATCHER(...) namespace { _DEATH_CPU_DISPATCHER(__VA_ARGS__) }
-#		define DEATH_CPU_DISPATCHER_BASE(...) namespace { _DEATH_CPU_DISPATCHER_BASE(__VA_ARGS__) }
+#		define DEATH_CPU_DISPATCHER(...) namespace { __DEATH_CPU_DISPATCHER(__VA_ARGS__) }
+#		define DEATH_CPU_DISPATCHER_BASE(...) namespace { __DEATH_CPU_DISPATCHER_BASE(__VA_ARGS__) }
 #		define DEATH_CPU_DISPATCHED(dispatcher, ...) DEATH_CPU_DISPATCHED_IFUNC(dispatcher, __VA_ARGS__) DEATH_NOOP
 #		define DEATH_CPU_MAYBE_UNUSED
 #	else
