@@ -7,8 +7,7 @@
 
 #include <memory>
 
-// TODO: This include should be probably removed
-#include <glew.h>
+#include <imgui.h>
 
 namespace nCine
 {
@@ -36,32 +35,10 @@ namespace nCine
 		/// Renders ImGui directly with OpenGL
 		void endFrame();
 
-
-
-		GLuint          GlVersion = 0;               // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries (e.g. 320 for GL 3.2)
-		bool            GlProfileIsES2 = false;
-		bool            GlProfileIsES3 = false;
-		bool            GlProfileIsCompat = false;
-		GLint           GlProfileMask = 0;
-		GLint           AttribLocationTex = 0;       // Uniforms location
-		GLint           AttribLocationProjMtx = 0;
-		GLuint          AttribLocationVtxPos = 0;    // Vertex attributes location
-		GLuint          AttribLocationVtxUV = 0;
-		GLuint          AttribLocationVtxColor = 0;
-		unsigned int    VboHandle = 0, ElementsHandle = 0;
-		GLsizeiptr      VertexBufferSize = 0;
-		GLsizeiptr      IndexBufferSize = 0;
-		bool            HasPolygonMode = false;
-		bool            HasClipOrigin = false;
-		bool            UseBufferSubData = false;
-
-
-	// TODO: Temporary solution
-	//private:
+	private:
 		bool withSceneGraph_;
 		std::unique_ptr<GLTexture> texture_;
 		std::unique_ptr<GLShaderProgram> imguiShaderProgram_;
-
 		std::unique_ptr<GLBufferObject> vbo_;
 		std::unique_ptr<GLBufferObject> ibo_;
 
@@ -75,12 +52,29 @@ namespace nCine
 		Matrix4x4f projectionMatrix_;
 		uint16_t lastLayerValue_;
 
+#if defined(IMGUI_HAS_VIEWPORT)
+		int attribLocationTex_;
+		int attribLocationProjMtx_;
+		unsigned int attribLocationVtxPos_;
+		unsigned int attribLocationVtxUV_;
+		unsigned int attribLocationVtxColor_;
+		unsigned int vboHandle_;
+		unsigned int elementsHandle_;
+#endif
+
 		RenderCommand* retrieveCommandFromPool();
 		void setupRenderCmd(RenderCommand& cmd);
 		void draw(RenderQueue& renderQueue);
 
 		void setupBuffersAndShader();
 		void draw();
+
+#if defined(IMGUI_HAS_VIEWPORT)
+		void prepareForViewports();
+		static void onRenderViewportWindow(ImGuiViewport* viewport, void*);
+		void drawViewportWindow(ImGuiViewport* viewport);
+		void setupRenderStateForOtherWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject);
+#endif
 	};
 }
 

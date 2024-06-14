@@ -444,7 +444,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		FileStream* s = static_cast<FileStream*>(__logFile.get());
 
 #	if defined(WITH_THREADS)
-		std::int32_t length2 = snprintf(logEntryWithColors, MaxEntryLength, "%02d:%02d:%02d.%03ld [%c]%u}", dateTime.Hours, dateTime.Minutes,
+		std::int32_t length2 = snprintf(logEntryWithColors, MaxEntryLength, "%02u:%02u:%02u.%03u [%c]%u}", dateTime.Hours, dateTime.Minutes,
 			dateTime.Seconds, dateTime.Milliseconds, levelIdentifier, static_cast<std::uint32_t>(nCine::Thread::GetCurrentId()));
 
 		while (length2 < 23) {
