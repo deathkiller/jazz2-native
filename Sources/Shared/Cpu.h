@@ -243,7 +243,7 @@ extern "C" {
 
 	If the variants are tagged with extra instruction sets instead of just the
 	base instruction set like in the @cpp lookup() @ce case
-	@ref Cpu-usage-extra "shown above", you'll use the @ref _DEATH_CPU_DISPATCHER()
+	@ref Cpu-usage-extra "shown above", you'll use the @ref __DEATH_CPU_DISPATCHER()
 	macro instead. There, to avoid a combinatorial explosion of cases to check,
 	you're expected to list the actual extra tags the overloads use.
 
@@ -1622,13 +1622,13 @@ namespace Death { namespace Cpu {
 		@relativeref{Death,Cpu::Avx2} or @relativeref{Death,Cpu::Neon}, but not the
 		extra instruction sets like @relativeref{Death,Cpu::Lzcnt} or
 		@relativeref{Death,Cpu::AvxFma}. For a dispatch that takes extra instruction
-		sets into account as well use @ref _DEATH_CPU_DISPATCHER() instead.
+		sets into account as well use @ref __DEATH_CPU_DISPATCHER() instead.
 	*/
-	// Ideally this would reuse _DEATH_CPU_DISPATCHER_IMPLEMENTATION(), unfortunately due to MSVC not being able
+	// Ideally this would reuse __DEATH_CPU_DISPATCHER_IMPLEMENTATION(), unfortunately due to MSVC not being able
 	// to defer macro calls unless "the new preprocessor" is enabled it wouldn't be possible to get rid of the
 	// DEATH_CPU_SELECT() macro from there.
 #if defined(DEATH_TARGET_X86)
-	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
+	#define __DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			if(features & Death::Cpu::Avx512f)									\
 				return function(Death::Cpu::Avx512f);							\
@@ -1649,7 +1649,7 @@ namespace Death { namespace Cpu {
 			return function(Death::Cpu::Scalar);								\
 		}
 #elif defined(DEATH_TARGET_ARM)
-	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
+	#define __DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			if(features & Death::Cpu::NeonFp16)									\
 				return function(Death::Cpu::NeonFp16);							\
@@ -1660,21 +1660,21 @@ namespace Death { namespace Cpu {
 			return function(Death::Cpu::Scalar);								\
 		}
 #elif defined(DEATH_TARGET_WASM)
-	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
+	#define __DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			if(features & Death::Cpu::Simd128)									\
 				return function(Death::Cpu::Simd128);							\
 			return function(Death::Cpu::Scalar);								\
 		}
 #else
-	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
+	#define __DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			return function(Death::Cpu::Scalar);								\
 		}
 #endif
 
 #if defined(DEATH_TARGET_X86)
-	#define _DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
+	#define __DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
 		if(features >= (Death::Cpu::Avx512f extra))								\
 			return function(DEATH_CPU_SELECT(Death::Cpu::Avx512f extra));		\
 		if(features >= (Death::Cpu::Avx2 extra))								\
@@ -1693,7 +1693,7 @@ namespace Death { namespace Cpu {
 			return function(DEATH_CPU_SELECT(Death::Cpu::Sse2 extra));			\
 		return function(DEATH_CPU_SELECT(Death::Cpu::Scalar extra));
 #elif defined(DEATH_TARGET_ARM)
-	#define _DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
+	#define __DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
 		if(features >= (Death::Cpu::NeonFp16 extra))							\
 			return function(DEATH_CPU_SELECT(Death::Cpu::NeonFp16 extra));		\
 		if(features >= (Death::Cpu::NeonFma extra))								\
@@ -1702,29 +1702,29 @@ namespace Death { namespace Cpu {
 			return function(DEATH_CPU_SELECT(Death::Cpu::Neon extra));			\
 		return function(DEATH_CPU_SELECT(Death::Cpu::Scalar extra));
 #elif defined(DEATH_TARGET_WASM)
-	#define _DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
+	#define __DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
 		if(features >= (Death::Cpu::Simd128 extra))								\
 			return function(DEATH_CPU_SELECT(Death::Cpu::Simd128 extra));		\
 		return function(DEATH_CPU_SELECT(Death::Cpu::Scalar extra));
 #else
-	#define _DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
+	#define __DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
 		return function(DEATH_CPU_SELECT(Death::Cpu::Scalar extra));
 #endif
 
-	// _DEATH_CPU_DISPATCHER() specialization for 0 extra instruction sets. Basically equivalent to DEATH_CPU_DISPATCHER_BASE()
+	// __DEATH_CPU_DISPATCHER() specialization for 0 extra instruction sets. Basically equivalent to DEATH_CPU_DISPATCHER_BASE()
 	// except for the extra DEATH_CPU_SELECT() macro.
-	#define _DEATH_CPU_DISPATCHER0(function)									\
+	#define __DEATH_CPU_DISPATCHER0(function)									\
 		decltype(function(DEATH_CPU_SELECT(Death::Cpu::Scalar))) function(Death::Cpu::Features features) {	\
-			_DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, )					\
+			__DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, )					\
 		}
 
-	// _DEATH_CPU_DISPATCHER() specialization for 1+ extra instruction sets. On Clang this still generates quite a reasonable code
+	// __DEATH_CPU_DISPATCHER() specialization for 1+ extra instruction sets. On Clang this still generates quite a reasonable code
 	// for 2 extra sets compared to DEATH_CPU_DISPATCHER_BASE(), on GCC it's ~25% longer but also still reasonable.
-	// I attempted adding an "unrolled" _DEATH_CPU_DISPATCHER2() but it made everything significantly worse on both compilers,
+	// I attempted adding an "unrolled" __DEATH_CPU_DISPATCHER2() but it made everything significantly worse on both compilers,
 	// more than doubling the amount of generated code.
-	#define _DEATH_CPU_DISPATCHERn(function, ...)								\
+	#define __DEATH_CPU_DISPATCHERn(function, ...)								\
 		template<unsigned int value> DEATH_ALWAYS_INLINE decltype(function(DEATH_CPU_SELECT(Death::Cpu::Scalar))) function ## Internal(Death::Cpu::Features features, Death::Cpu::Implementation::Tags<value>) { \
-			_DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, |Death::Cpu::Implementation::Tags<value>{Death::Cpu::Implementation::Init})	\
+			__DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, |Death::Cpu::Implementation::Tags<value>{Death::Cpu::Implementation::Init})	\
 		}																		\
 		template<unsigned int value, class First, class ...Next> DEATH_ALWAYS_INLINE decltype(function(DEATH_CPU_SELECT(Death::Cpu::Scalar))) function ## Internal(Death::Cpu::Features features, Death::Cpu::Implementation::Tags<value> extra, First first, Next... next) { \
 			static_assert(!(static_cast<unsigned int>(Death::Cpu::Implementation::tags(First{Death::Cpu::Implementation::Init})) & Death::Cpu::Implementation::BaseTagMask),	\
@@ -1756,8 +1756,8 @@ namespace Death { namespace Cpu {
 		For a dispatch using just the base instruction set use
 		@ref DEATH_CPU_DISPATCHER_BASE() instead.
 	*/
-	#define _DEATH_CPU_DISPATCHER(...)											\
-		DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHERn, _DEATH_CPU_DISPATCHER0, )(__VA_ARGS__))
+	#define __DEATH_CPU_DISPATCHER(...)										\
+		DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHER0, )(__VA_ARGS__))
 
 	/**
 		@brief Create a runtime-dispatched function pointer
@@ -1895,12 +1895,12 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_SSE2)
 #	define DEATH_ENABLE_SSE2
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE2
+#		define __DEATH_ENABLE_SSE2
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 #	define DEATH_ENABLE_SSE2 __attribute__((__target__("sse2")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE2 "sse2",
+#		define __DEATH_ENABLE_SSE2 "sse2",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_SSE2
@@ -1936,13 +1936,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_SSE3)
 #	define DEATH_ENABLE_SSE3
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE3
+#		define __DEATH_ENABLE_SSE3
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 // The -msse3 option implies -msse2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -msse3`)
 #	define DEATH_ENABLE_SSE3 __attribute__((__target__("sse3")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE3 "sse3",
+#		define __DEATH_ENABLE_SSE3 "sse3",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_SSE3
@@ -1978,13 +1978,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_SSSE3)
 #	define DEATH_ENABLE_SSSE3
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSSE3
+#		define __DEATH_ENABLE_SSSE3
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 // The -mssse3 option implies -msse2 -msse3 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mssse3`)
 #	define DEATH_ENABLE_SSSE3 __attribute__((__target__("ssse3")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSSE3 "ssse3",
+#		define __DEATH_ENABLE_SSSE3 "ssse3",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_SSSE3
@@ -2021,13 +2021,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_SSE41)
 #	define DEATH_ENABLE_SSE41
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE41
+#		define __DEATH_ENABLE_SSE41
 #	endif
 #elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* also matches clang-cl */
 // The -msse4.1 option implies -msse2 -msse3 -mssse3 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -msse4.1`)
 #	define DEATH_ENABLE_SSE41 __attribute__((__target__("sse4.1")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE41 "sse4.1",
+#		define __DEATH_ENABLE_SSE41 "sse4.1",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_SSE41
@@ -2063,13 +2063,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_SSE42)
 #	define DEATH_ENABLE_SSE42
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE42
+#		define __DEATH_ENABLE_SSE42
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 // The -msse4.2 option implies -msse2 -msse3 -mssse3 -msse4.1 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -msse4.2`)
 #	define DEATH_ENABLE_SSE42 __attribute__((__target__("sse4.2")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SSE42 "sse4.2",
+#		define __DEATH_ENABLE_SSE42 "sse4.2",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_SSE42
@@ -2108,12 +2108,12 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_POPCNT)
 #	define DEATH_ENABLE_POPCNT
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_POPCNT
+#		define __DEATH_ENABLE_POPCNT
 #	endif
 #elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* matches clang-cl */
 #	define DEATH_ENABLE_POPCNT __attribute__((__target__("popcnt")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_POPCNT "popcnt",
+#		define __DEATH_ENABLE_POPCNT "popcnt",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_POPCNT
@@ -2155,12 +2155,12 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_LZCNT)
 #	define DEATH_ENABLE_LZCNT
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_LZCNT
+#		define __DEATH_ENABLE_LZCNT
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 #	define DEATH_ENABLE_LZCNT __attribute__((__target__("lzcnt")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_LZCNT "lzcnt",
+#		define __DEATH_ENABLE_LZCNT "lzcnt",
 #	endif
 #elif defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
@@ -2206,12 +2206,12 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_BMI1)
 #	define DEATH_ENABLE_BMI1
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_BMI1
+#		define __DEATH_ENABLE_BMI1
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 #	define DEATH_ENABLE_BMI1 __attribute__((__target__("bmi")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_BMI1 "bmi",
+#		define __DEATH_ENABLE_BMI1 "bmi",
 #	endif
 #elif defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
@@ -2257,12 +2257,12 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_BMI2)
 #	define DEATH_ENABLE_BMI2
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_BMI2
+#		define __DEATH_ENABLE_BMI2
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 #	define DEATH_ENABLE_BMI2 __attribute__((__target__("bmi2")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_BMI2 "bmi2",
+#		define __DEATH_ENABLE_BMI2 "bmi2",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
 // still present in Jul 2022, meaning we can only use these if __BMI2__ is defined. Funnily enough the older headers don't have
@@ -2304,13 +2304,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_AVX)
 #	define DEATH_ENABLE_AVX
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX
+#		define __DEATH_ENABLE_AVX
 #	endif
 #elif defined(DEATH_TARGET_GCC) /* does not match clang-cl */
 // The -mavx option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx`)
 #	define DEATH_ENABLE_AVX __attribute__((__target__("avx")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX "avx",
+#		define __DEATH_ENABLE_AVX "avx",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
 // still present in Jul 2022, meaning we can only use these if __AVX__ is defined. Funnily enough the older headers don't have
@@ -2356,13 +2356,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_AVX_F16C)
 #	define DEATH_ENABLE_AVX_F16C
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX_F16C
+#		define __DEATH_ENABLE_AVX_F16C
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 // The -mf16c option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang (verified with `echo | gcc -dM -E - -mf16c`)
 #	define DEATH_ENABLE_AVX_F16C __attribute__((__target__("f16c")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX_F16C "f16c",
+#		define __DEATH_ENABLE_AVX_F16C "f16c",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
 // still present in Jul 2022, meaning we can only use these if __F16C__ is defined. Funnily enough the older headers don't have
@@ -2408,13 +2408,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_AVX_FMA)
 #	define DEATH_ENABLE_AVX_FMA
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX_FMA
+#		define __DEATH_ENABLE_AVX_FMA
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 // The -mfma option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang (verified with `echo | gcc -dM -E - -mf16c`)
 #	define DEATH_ENABLE_AVX_FMA __attribute__((__target__("fma")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX_FMA "fma",
+#		define __DEATH_ENABLE_AVX_FMA "fma",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
 // still present in Jul 2022, meaning we can only use these if __FMA__ is defined. Funnily enough the older headers don't have
@@ -2457,13 +2457,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_AVX2)
 #	define DEATH_ENABLE_AVX2
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX2
+#		define __DEATH_ENABLE_AVX2
 #	endif
 #elif defined(DEATH_TARGET_GCC) /* does not match clang-cl */
 // The -mavx2 option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx2`)
 #	define DEATH_ENABLE_AVX2 __attribute__((__target__("avx2")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX2 "avx2",
+#		define __DEATH_ENABLE_AVX2 "avx2",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
 // still present in Jul 2022, meaning we can only use these if __AVX2__ is defined. Funnily enough the older headers don't have
@@ -2499,13 +2499,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_AVX512F)
 #	define DEATH_ENABLE_AVX512F
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX512F
+#		define __DEATH_ENABLE_AVX512F
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 // The -mavx512 option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx -mavx2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx512f`)
 #	define DEATH_ENABLE_AVX512F __attribute__((__target__("avx512f")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_AVX512F "avx512f",
+#		define __DEATH_ENABLE_AVX512F "avx512f",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
 // still present in Jul 2022, meaning we can only use these if __AVX512F__ is defined. Funnily enough the older headers don't have
@@ -2542,7 +2542,7 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_NEON)
 #	define DEATH_ENABLE_NEON
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_NEON
+#		define __DEATH_ENABLE_NEON
 #	endif
 // https://github.com/android/ndk/issues/1066 is the only reported (and ignored) issue I found, feels strange that people would
 // just not use ifunc or target attributes on Android at all and instead put everything in separate files. Needs further
@@ -2550,7 +2550,7 @@ namespace Death { namespace Cpu {
 #elif defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)
 #	define DEATH_ENABLE_NEON __attribute__((__target__("fpu=neon")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_NEON "fpu=neon",
+#		define __DEATH_ENABLE_NEON "fpu=neon",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_NEON
@@ -2581,13 +2581,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_NEON_FMA)
 #	define DEATH_ENABLE_NEON_FMA
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_NEON_FMA
+#		define __DEATH_ENABLE_NEON_FMA
 #	endif
 // See DEATH_ENABLE_NEON above for details about Clang
 #elif defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)
 #	define DEATH_ENABLE_NEON_FMA __attribute__((__target__("fpu=neon-vfpv4")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_NEON_FMA "fpu=neon-vfpv4",
+#		define __DEATH_ENABLE_NEON_FMA "fpu=neon-vfpv4",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_NEON_FMA
@@ -2617,13 +2617,13 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_NEON_FP16)
 #	define DEATH_ENABLE_NEON_FP16
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_NEON_FP16
+#		define __DEATH_ENABLE_NEON_FP16
 #	endif
 // See DEATH_ENABLE_NEON above for details about Clang
 #elif defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)
 #	define DEATH_ENABLE_NEON_FP16 __attribute__((__target__("arch=armv8.2-a+fp16")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_NEON_FP16 "arch=armv8.2-a+fp16",
+#		define __DEATH_ENABLE_NEON_FP16 "arch=armv8.2-a+fp16",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
 #	define DEATH_ENABLE_NEON_FP16
@@ -2653,7 +2653,7 @@ namespace Death { namespace Cpu {
 #if defined(DEATH_TARGET_SIMD128)
 #	define DEATH_ENABLE_SIMD128
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#		define _DEATH_ENABLE_SIMD128
+#		define __DEATH_ENABLE_SIMD128
 #	endif
 #endif
 #endif
@@ -2662,77 +2662,77 @@ namespace Death { namespace Cpu {
 // that as if only "foo" was specified, which is different but also wrong (I didn't bother finding a commit backing this) and it's
 // still broken in Clang 15. Instead, the only accepted form is __attribute__((target("foo,bar"))). Fortunately, string literal
 // concatenation works here, thus with some extra macro trickery we can produce __attribute__((target("foo" "," "bar"))).
-// The pieces are _DEATH_ENABLE_* variants defined if and only if a corresponding DEATH_ENABLE_* macro is defined. These can
+// The pieces are __DEATH_ENABLE_* variants defined if and only if a corresponding DEATH_ENABLE_* macro is defined. These can
 // however be empty, thus it's not possible to just join them all with "," in between. Instead, the macros themselves have a trailing
 // comma after the string literal (thus "foo",), which causes the empty macros be filtered out when passed one after another
-// (without commas) from _DEATH_ENABLEn to _DEATH_ENABLE_CONCATENATE().
+// (without commas) from __DEATH_ENABLEn to __DEATH_ENABLE_CONCATENATE().
 #if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
-#define _DEATH_ENABLE_CONCATENATE0(unused)
-#define _DEATH_ENABLE_CONCATENATE1(v0, unused)								\
+#define __DEATH_ENABLE_CONCATENATE0(unused)
+#define __DEATH_ENABLE_CONCATENATE1(v0, unused)								\
 	__attribute__((__target__(v0)))
-#define _DEATH_ENABLE_CONCATENATE2(v0, v1, unused)							\
+#define __DEATH_ENABLE_CONCATENATE2(v0, v1, unused)							\
 	__attribute__((__target__(v0 "," v1)))
-#define _DEATH_ENABLE_CONCATENATE3(v0, v1, v2, unused)						\
+#define __DEATH_ENABLE_CONCATENATE3(v0, v1, v2, unused)						\
 	__attribute__((__target__(v0 "," v1 "," v2)))
-#define _DEATH_ENABLE_CONCATENATE4(v0, v1, v2, v3, unused)					\
+#define __DEATH_ENABLE_CONCATENATE4(v0, v1, v2, v3, unused)					\
 	__attribute__((__target__(v0 "," v1 "," v2 "," v3)))
-#define _DEATH_ENABLE_CONCATENATE5(v0, v1, v2, v3, v4, unused)				\
+#define __DEATH_ENABLE_CONCATENATE5(v0, v1, v2, v3, v4, unused)				\
 	__attribute__((__target__(v0 "," v1 "," v2 "," v3 "," v4)))
-#define _DEATH_ENABLE_CONCATENATE6(v0, v1, v2, v3, v4, v5, unused)			\
+#define __DEATH_ENABLE_CONCATENATE6(v0, v1, v2, v3, v4, v5, unused)			\
 	__attribute__((__target__(v0 "," v1 "," v2 "," v3 "," v4 "," v5)))
-#define _DEATH_ENABLE_CONCATENATE7(v0, v1, v2, v3, v4, v5, v6, unused)		\
+#define __DEATH_ENABLE_CONCATENATE7(v0, v1, v2, v3, v4, v5, v6, unused)		\
 	__attribute__((__target__(v0 "," v1 "," v2 "," v3 "," v4 "," v5 "," v6)))
-#define _DEATH_ENABLE_CONCATENATE(...)										\
-	DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_ENABLE_CONCATENATE7, _DEATH_ENABLE_CONCATENATE6, _DEATH_ENABLE_CONCATENATE5, _DEATH_ENABLE_CONCATENATE4, _DEATH_ENABLE_CONCATENATE3, _DEATH_ENABLE_CONCATENATE2, _DEATH_ENABLE_CONCATENATE1, _DEATH_ENABLE_CONCATENATE0, )(__VA_ARGS__)
-// No _DEATH_HELPER_PASTE() needed here, as there's enough other indirections to make that work
-#define _DEATH_ENABLE1(v0)													\
-	_DEATH_ENABLE_CONCATENATE(												\
-		_DEATH_ENABLE_ ## v0												\
+#define __DEATH_ENABLE_CONCATENATE(...)										\
+	DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_ENABLE_CONCATENATE7, __DEATH_ENABLE_CONCATENATE6, __DEATH_ENABLE_CONCATENATE5, __DEATH_ENABLE_CONCATENATE4, __DEATH_ENABLE_CONCATENATE3, __DEATH_ENABLE_CONCATENATE2, __DEATH_ENABLE_CONCATENATE1, __DEATH_ENABLE_CONCATENATE0, )(__VA_ARGS__)
+// No __DEATH_HELPER_PASTE() needed here, as there's enough other indirections to make that work
+#define __DEATH_ENABLE1(v0)													\
+	__DEATH_ENABLE_CONCATENATE(												\
+		__DEATH_ENABLE_ ## v0												\
 	)
-#define _DEATH_ENABLE2(v0, v1)												\
-	_DEATH_ENABLE_CONCATENATE(												\
-		_DEATH_ENABLE_ ## v0												\
-		_DEATH_ENABLE_ ## v1												\
+#define __DEATH_ENABLE2(v0, v1)												\
+	__DEATH_ENABLE_CONCATENATE(												\
+		__DEATH_ENABLE_ ## v0												\
+		__DEATH_ENABLE_ ## v1												\
 	)
-#define _DEATH_ENABLE3(v0, v1, v2)											\
-	_DEATH_ENABLE_CONCATENATE(												\
-		_DEATH_ENABLE_ ## v0												\
-		_DEATH_ENABLE_ ## v1												\
-		_DEATH_ENABLE_ ## v2												\
+#define __DEATH_ENABLE3(v0, v1, v2)											\
+	__DEATH_ENABLE_CONCATENATE(												\
+		__DEATH_ENABLE_ ## v0												\
+		__DEATH_ENABLE_ ## v1												\
+		__DEATH_ENABLE_ ## v2												\
 	)
-#define _DEATH_ENABLE4(v0, v1, v2, v3)										\
-	_DEATH_ENABLE_CONCATENATE(												\
-		_DEATH_ENABLE_ ## v0												\
-		_DEATH_ENABLE_ ## v1												\
-		_DEATH_ENABLE_ ## v2												\
-		_DEATH_ENABLE_ ## v3												\
+#define __DEATH_ENABLE4(v0, v1, v2, v3)										\
+	__DEATH_ENABLE_CONCATENATE(												\
+		__DEATH_ENABLE_ ## v0												\
+		__DEATH_ENABLE_ ## v1												\
+		__DEATH_ENABLE_ ## v2												\
+		__DEATH_ENABLE_ ## v3												\
 	)
-#define _DEATH_ENABLE5(v0, v1, v2, v3, v4)									\
-	_DEATH_ENABLE_CONCATENATE(												\
-		_DEATH_ENABLE_ ## v0												\
-		_DEATH_ENABLE_ ## v1												\
-		_DEATH_ENABLE_ ## v2												\
-		_DEATH_ENABLE_ ## v3												\
-		_DEATH_ENABLE_ ## v4												\
+#define __DEATH_ENABLE5(v0, v1, v2, v3, v4)									\
+	__DEATH_ENABLE_CONCATENATE(												\
+		__DEATH_ENABLE_ ## v0												\
+		__DEATH_ENABLE_ ## v1												\
+		__DEATH_ENABLE_ ## v2												\
+		__DEATH_ENABLE_ ## v3												\
+		__DEATH_ENABLE_ ## v4												\
 	)
-#define _DEATH_ENABLE6(v0, v1, v2, v3, v4, v5)								\
-	_DEATH_ENABLE_CONCATENATE(												\
-		_DEATH_ENABLE_ ## v0												\
-		_DEATH_ENABLE_ ## v1												\
-		_DEATH_ENABLE_ ## v2												\
-		_DEATH_ENABLE_ ## v3												\
-		_DEATH_ENABLE_ ## v4												\
-		_DEATH_ENABLE_ ## v5												\
+#define __DEATH_ENABLE6(v0, v1, v2, v3, v4, v5)								\
+	__DEATH_ENABLE_CONCATENATE(												\
+		__DEATH_ENABLE_ ## v0												\
+		__DEATH_ENABLE_ ## v1												\
+		__DEATH_ENABLE_ ## v2												\
+		__DEATH_ENABLE_ ## v3												\
+		__DEATH_ENABLE_ ## v4												\
+		__DEATH_ENABLE_ ## v5												\
 	)
-#define _DEATH_ENABLE7(v0, v1, v2, v3, v4, v5, v6)							\
-	_DEATH_ENABLE_CONCATENATE(												\
-		_DEATH_ENABLE_ ## v0												\
-		_DEATH_ENABLE_ ## v1												\
-		_DEATH_ENABLE_ ## v2												\
-		_DEATH_ENABLE_ ## v3												\
-		_DEATH_ENABLE_ ## v4												\
-		_DEATH_ENABLE_ ## v5												\
-		_DEATH_ENABLE_ ## v6												\
+#define __DEATH_ENABLE7(v0, v1, v2, v3, v4, v5, v6)							\
+	__DEATH_ENABLE_CONCATENATE(												\
+		__DEATH_ENABLE_ ## v0												\
+		__DEATH_ENABLE_ ## v1												\
+		__DEATH_ENABLE_ ## v2												\
+		__DEATH_ENABLE_ ## v3												\
+		__DEATH_ENABLE_ ## v4												\
+		__DEATH_ENABLE_ ## v5												\
+		__DEATH_ENABLE_ ## v6												\
 	)
 // None of this is needed for GCC 12+, fortunately, so here the whole thing expands to just DEATH_ENABLE_FOO DEATH_ENABLE_BAR.
 // I hope Clang eventually fixes this as well, thus keeping both variants so I can drop the nasty one in the future.
@@ -2741,34 +2741,34 @@ namespace Death { namespace Cpu {
 #elif defined(DEATH_TARGET_GCC) || !defined(DEATH_TARGET_MSVC)
 // Using __DEATH_PASTE() instead of DEATH_PASTE() here, as that's enough to make that work and it's less
 // work for the preprocessor. Concatenating directly doesn't work, unlike in the above case for GCC.
-#define _DEATH_ENABLE1(v0)													\
+#define __DEATH_ENABLE1(v0)													\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)
-#define _DEATH_ENABLE2(v0, v1)												\
+#define __DEATH_ENABLE2(v0, v1)												\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v1)
-#define _DEATH_ENABLE3(v0, v1, v2)											\
+#define __DEATH_ENABLE3(v0, v1, v2)											\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v2)
-#define _DEATH_ENABLE4(v0, v1, v2, v3)										\
+#define __DEATH_ENABLE4(v0, v1, v2, v3)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v3)
-#define _DEATH_ENABLE5(v0, v1, v2, v3, v4)									\
+#define __DEATH_ENABLE5(v0, v1, v2, v3, v4)									\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v3)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v4)
-#define _DEATH_ENABLE6(v0, v1, v2, v3, v4, v5)								\
+#define __DEATH_ENABLE6(v0, v1, v2, v3, v4, v5)								\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v3)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v4)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v5)
-#define _DEATH_ENABLE7(v0, v1, v2, v3, v4, v5, v6)							\
+#define __DEATH_ENABLE7(v0, v1, v2, v3, v4, v5, v6)							\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
@@ -2776,7 +2776,7 @@ namespace Death { namespace Cpu {
 	__DEATH_PASTE(DEATH_ENABLE_, v4)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v5)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v6)
-#define _DEATH_ENABLE8(v0, v1, v2, v3, v4, v5, v6, v7)						\
+#define __DEATH_ENABLE8(v0, v1, v2, v3, v4, v5, v6, v7)						\
 	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
@@ -2812,7 +2812,7 @@ namespace Death { namespace Cpu {
 			@cpp #ifdef @ce guard.
 	*/
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL)
-#	define DEATH_ENABLE(...) DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_ENABLE8, _DEATH_ENABLE7, _DEATH_ENABLE6, _DEATH_ENABLE5, _DEATH_ENABLE4, _DEATH_ENABLE3, _DEATH_ENABLE2, _DEATH_ENABLE1, )(__VA_ARGS__)
+#	define DEATH_ENABLE(...) DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_ENABLE8, __DEATH_ENABLE7, __DEATH_ENABLE6, __DEATH_ENABLE5, __DEATH_ENABLE4, __DEATH_ENABLE3, __DEATH_ENABLE2, __DEATH_ENABLE1, )(__VA_ARGS__)
 #else
 #	define DEATH_ENABLE(...)
 #endif
