@@ -464,7 +464,8 @@ namespace nCine
 			prevUserCallbackKey(window, keycode, scancode, action, mods);
 		}
 
-		if (!inputEnabled_) {
+		// TODO: Move it from ImGui_ImplGlfw_KeyCallback
+		/*if (!inputEnabled_) {
 			return;
 		}
 
@@ -476,6 +477,7 @@ namespace nCine
 		ImGuiKey imguiKey = glfwKeyToImGuiKey(keycode);
 		io.AddKeyEvent(imguiKey, (action == GLFW_PRESS));
 		io.SetKeyEventNativeData(imguiKey, keycode, scancode); // To support legacy indexing (<1.87 user code)
+		*/
 	}
 
 	void ImGuiGlfwInput::windowFocusCallback(GLFWwindow* window, int focused)
@@ -494,6 +496,7 @@ namespace nCine
 			prevUserCallbackCursorPos(window, x, y);
 		}
 
+		// TODO: Move it from ImGui_ImplGlfw_CursorPosCallback
 		if (!inputEnabled_) {
 			return;
 		}
@@ -509,6 +512,7 @@ namespace nCine
 			prevUserCallbackCursorEnter(window, entered);
 		}
 
+		// TODO: Move it from ImGui_ImplGlfw_CursorEnterCallback
 		if (entered) {
 			mouseWindow_ = window;
 		}
@@ -538,6 +542,8 @@ namespace nCine
 		}
 
 		// Unused in 'master' branch but 'docking' branch will use this, so we declare it ahead of it so if you have to install callbacks you can install this one too.
+		
+		// TODO: Move it from ImGui_ImplGlfw_MonitorCallback
 	}
 
 	void ImGuiGlfwInput::installCallbacks(GLFWwindow* window)
@@ -585,8 +591,10 @@ namespace nCine
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
+		// TODO: Move it from ImGui_ImplGlfw_UpdateMouseData
+
 		// (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
-		{
+		/*{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 			const bool isWindowFocused = true;
 #else
@@ -606,12 +614,14 @@ namespace nCine
 					io.AddMousePosEvent(static_cast<float>(mouseX), static_cast<float>(mouseY));
 				}
 			}
-		}
+		}*/
 	}
 
 	void ImGuiGlfwInput::updateMouseCursor()
 	{
-		ImGuiIO& io = ImGui::GetIO();
+		// TODO: Move it from ImGui_ImplGlfw_UpdateMouseCursor
+
+		/*ImGuiIO& io = ImGui::GetIO();
 		if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(window_, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
 			return;
 		}
@@ -628,7 +638,7 @@ namespace nCine
 				glfwSetCursor(window_, mouseCursors_[imguiCursor] ? mouseCursors_[imguiCursor] : mouseCursors_[ImGuiMouseCursor_Arrow]);
 				glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
-		}
+		}*/
 	}
 
 	void ImGuiGlfwInput::updateGamepads()
