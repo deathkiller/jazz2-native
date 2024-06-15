@@ -123,7 +123,7 @@ namespace nCine
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
 
-		static constexpr unsigned int DefaultShaderProgramsCount = static_cast<unsigned int>(Material::ShaderProgramType::CUSTOM);
+		static constexpr unsigned int DefaultShaderProgramsCount = static_cast<unsigned int>(Material::ShaderProgramType::Custom);
 		static std::unique_ptr<GLShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
 		static HashMap<const GLShaderProgram*, GLShaderProgram*> batchedShaders_;
 

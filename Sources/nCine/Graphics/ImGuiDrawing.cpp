@@ -13,8 +13,6 @@
 #include "../Application.h"
 #include "../Input/IInputManager.h"
 
-#include <imgui.h>
-
 #include <IO/FileSystem.h>
 
 #if defined(WITH_GLFW)
@@ -34,6 +32,19 @@
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
+#if defined(DEATH_TRACE_GL_ERRORS)
+#	define GL_CALL(op)													\
+		do {															\
+			op;															\
+			GLenum glErr_ = glGetError();								\
+			if (glErr_ != 0) {											\
+				LOGE("GL error 0x%x returned from '%s'", glErr_, #op);	\
+			}															\
+		} while (0)
+#else
+#	define GL_CALL(op) op
+#endif
+
 namespace nCine
 {
 	ImGuiDrawing::ImGuiDrawing(bool withSceneGraph)
@@ -49,6 +60,7 @@ namespace nCine
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;		// Enable Multi-Viewport / Platform Windows
 #endif
 
+		io.BackendRendererUserData = this;
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		io.BackendRendererName = "nCine_OpenGL_ES";
 #else
@@ -80,6 +92,10 @@ namespace nCine
 			setupBuffersAndShader();
 		}
 
+#if defined(IMGUI_HAS_VIEWPORT)
+		prepareForViewports();
+#endif
+
 		// Set custom style
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.WindowRounding = 4.0f;
@@ -88,7 +104,7 @@ namespace nCine
 
 		// Try to use system font
 #if defined(DEATH_TARGET_WINDOWS)
-		String systemFont = fs::CombinePath(fs::GetWindowsDirectory(), "Fonts\\SegoeUI.ttf");
+		String systemFont = fs::CombinePath({ fs::GetWindowsDirectory(), "Fonts"_s, "SegoeUI.ttf"_s });
 		if (fs::FileExists(systemFont)) {
 			// Include the most of european latin characters
 			static const ImWchar ranges[] = { 0x0020, 0x017E, 0 };
@@ -110,10 +126,25 @@ namespace nCine
 
 	ImGuiDrawing::~ImGuiDrawing()
 	{
+#if defined(IMGUI_HAS_VIEWPORT)
+		if (vboHandle_) {
+			glDeleteBuffers(1, &vboHandle_);
+			vboHandle_ = 0;
+		}
+		if (elementsHandle_) {
+			glDeleteBuffers(1, &elementsHandle_);
+			elementsHandle_ = 0;
+		}
+#endif
+
 		ImGuiIO& io = ImGui::GetIO();
 		io.Fonts->SetTexID(nullptr);
 		io.BackendRendererName = nullptr;
+		io.BackendRendererUserData = nullptr;
 		io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
+#if defined(IMGUI_HAS_VIEWPORT)
+		io.BackendFlags &= ~ImGuiBackendFlags_RendererHasViewports;
+#endif
 	}
 
 	bool ImGuiDrawing::buildFonts()
@@ -145,9 +176,12 @@ namespace nCine
 		ImGuiAndroidInput::newFrame();
 #endif
 
+#if !defined(IMGUI_HAS_VIEWPORT)
+		// projectionMatrix_ must be recaltulated when the main window moves if viewports are active
 		ImGuiIO& io = ImGui::GetIO();
-
 		if (lastFrameWidth_ != io.DisplaySize.x || lastFrameHeight_ != io.DisplaySize.y) {
+			lastFrameWidth_ = io.DisplaySize.x;
+			lastFrameHeight_ = io.DisplaySize.y;
 			projectionMatrix_ = Matrix4x4f::Ortho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
 
 			if (!withSceneGraph_) {
@@ -156,6 +190,7 @@ namespace nCine
 				imguiShaderUniforms_->commitUniforms();
 			}
 		}
+#endif
 
 		ImGui::NewFrame();
 	}
@@ -164,6 +199,10 @@ namespace nCine
 	{
 		ImGui::EndFrame();
 		ImGui::Render();
+
+#if defined(WITH_GLFW)
+		ImGuiGlfwInput::endFrame();
+#endif
 
 		ImGuiIO& io = ImGui::GetIO();
 		if (io.WantCaptureKeyboard) {
@@ -201,7 +240,7 @@ namespace nCine
 
 	void ImGuiDrawing::setupRenderCmd(RenderCommand& cmd)
 	{
-		cmd.setType(RenderCommand::CommandTypes::ImGui);
+		cmd.setType(RenderCommand::Type::ImGui);
 
 		Material& material = cmd.material();
 		material.setShaderProgram(imguiShaderProgram_.get());
@@ -234,17 +273,19 @@ namespace nCine
 		const ImVec2 clipOff = drawData->DisplayPos;
 		const ImVec2 clipScale = drawData->FramebufferScale;
 
+#if defined(IMGUI_HAS_VIEWPORT)
+		// projectionMatrix_ must be recaltulated when the main window moves if viewports are active
+		projectionMatrix_ = Matrix4x4f::Ortho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
+		projectionMatrix_.Translate(-clipOff.x, -clipOff.y, 0.0f);
+#endif
+
 		unsigned int numCmd = 0;
 		for (int n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
 
 			RenderCommand& firstCmd = *retrieveCommandFromPool();
-			if (lastFrameWidth_ != static_cast<int>(io.DisplaySize.x) ||
-				lastFrameHeight_ != static_cast<int>(io.DisplaySize.y)) {
-				firstCmd.material().uniform(Material::GuiProjectionMatrixUniformName)->setFloatVector(projectionMatrix_.Data());
-				lastFrameWidth_ = static_cast<int>(io.DisplaySize.x);
-				lastFrameHeight_ = static_cast<int>(io.DisplaySize.y);
-			}
+
+			firstCmd.material().uniform(Material::GuiProjectionMatrixUniformName)->setFloatVector(projectionMatrix_.Data());
 
 			firstCmd.geometry().shareVbo(nullptr);
 			GLfloat* vertices = firstCmd.geometry().acquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
@@ -373,6 +414,167 @@ namespace nCine
 		GLCullFace::setState(cullFaceState);
 		GLBlending::setState(blendingState);
 	}
+
+#if defined(IMGUI_HAS_VIEWPORT)
+	void ImGuiDrawing::prepareForViewports()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
+
+		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+		platformIo.Renderer_RenderWindow = onRenderPlatformWindow;
+
+		// Backup GL state
+		GLint lastTexture, lastArrayBuffer;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &lastTexture);
+		glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &lastArrayBuffer);
+		GLint lastPixelUnpackBuffer = 0;
+
+		GLint lastVertexArray;
+		glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &lastVertexArray);
+
+		// TODO: Use nCine shaders directly instead
+		auto shaderHandle = imguiShaderProgram_.get()->glHandle();
+
+		attribLocationTex_ = glGetUniformLocation(shaderHandle, "uTexture");
+		attribLocationProjMtx_ = glGetUniformLocation(shaderHandle, "uGuiProjection");
+		attribLocationVtxPos_ = (GLuint)glGetAttribLocation(shaderHandle, "aPosition");
+		attribLocationVtxUV_ = (GLuint)glGetAttribLocation(shaderHandle, "aTexCoords");
+		attribLocationVtxColor_ = (GLuint)glGetAttribLocation(shaderHandle, "aColor");
+
+		// Create buffers
+		// TODO: Use nCine GLBufferObject directly
+		glGenBuffers(1, &vboHandle_);
+		glGenBuffers(1, &elementsHandle_);
+
+		// Restore modified GL state
+		glBindTexture(GL_TEXTURE_2D, lastTexture);
+		glBindBuffer(GL_ARRAY_BUFFER, lastArrayBuffer);
+
+		glBindVertexArray(lastVertexArray);
+	}
+
+	void ImGuiDrawing::onRenderPlatformWindow(ImGuiViewport* viewport, void*)
+	{
+		ImGuiDrawing* _this = static_cast<ImGuiDrawing*>(ImGui::GetIO().BackendRendererUserData);
+		_this->drawPlatformWindow(viewport);
+	}
+
+	void ImGuiDrawing::drawPlatformWindow(ImGuiViewport* viewport)
+	{
+		if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear)) {
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
+		
+		ImDrawData* drawData = viewport->DrawData;
+
+		// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+		int fbWidth = static_cast<int>(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+		int fbHeight = static_cast<int>(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+		if (fbWidth <= 0 || fbHeight <= 0) {
+			return;
+		}
+
+		// Setup desired GL state
+		// Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
+		// The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
+		GLuint vertexArrayObject = 0;
+		GL_CALL(glGenVertexArrays(1, &vertexArrayObject));
+		setupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
+
+		// Will project scissor/clipping rectangles into framebuffer space
+		ImVec2 clipOff = drawData->DisplayPos;         // (0,0) unless using multi-viewports
+		ImVec2 clipScale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+		for (int n = 0; n < drawData->CmdListsCount; n++) {
+			const ImDrawList* imCmdList = drawData->CmdLists[n];
+
+			const GLsizeiptr vtxBufferSize = (GLsizeiptr)imCmdList->VtxBuffer.Size * (int)sizeof(ImDrawVert);
+			const GLsizeiptr idxBufferSize = (GLsizeiptr)imCmdList->IdxBuffer.Size * (int)sizeof(ImDrawIdx);
+			GL_CALL(glBufferData(GL_ARRAY_BUFFER, vtxBufferSize, (const GLvoid*)imCmdList->VtxBuffer.Data, GL_STREAM_DRAW));
+			GL_CALL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, idxBufferSize, (const GLvoid*)imCmdList->IdxBuffer.Data, GL_STREAM_DRAW));
+
+			for (int cmd_i = 0; cmd_i < imCmdList->CmdBuffer.Size; cmd_i++) {
+				const ImDrawCmd* imCmd = &imCmdList->CmdBuffer[cmd_i];
+				if (imCmd->UserCallback != nullptr) {
+					// User callback, registered via ImDrawList::AddCallback()
+					// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+					if (imCmd->UserCallback == ImDrawCallback_ResetRenderState) {
+						setupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
+					} else {
+						imCmd->UserCallback(imCmdList, imCmd);
+					}
+				} else {
+					// Project scissor/clipping rectangles into framebuffer space
+					ImVec2 clipMin((imCmd->ClipRect.x - clipOff.x) * clipScale.x, (imCmd->ClipRect.y - clipOff.y) * clipScale.y);
+					ImVec2 clipMax((imCmd->ClipRect.z - clipOff.x) * clipScale.x, (imCmd->ClipRect.w - clipOff.y) * clipScale.y);
+					if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) {
+						continue;
+					}
+
+					// Apply scissor/clipping rectangle (Y is inverted in OpenGL)
+					GL_CALL(glScissor(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
+						static_cast<GLint>(clipMax.x - clipMin.x), static_cast<GLint>(clipMax.y - clipMin.y)));
+
+					auto* texture = reinterpret_cast<nCine::GLTexture*>(imCmd->GetTexID());
+					GL_CALL(glBindTexture(GL_TEXTURE_2D, texture->glHandle()));
+					GL_CALL(glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
+						reinterpret_cast<void*>(static_cast<intptr_t>(imCmd->IdxOffset * sizeof(ImDrawIdx)))));
+				}
+			}
+		}
+
+		// Destroy the temporary VAO
+		GL_CALL(glDeleteVertexArrays(1, &vertexArrayObject));
+	}
+
+	void ImGuiDrawing::setupRenderStateForPlatformWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject)
+	{
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glEnable(GL_SCISSOR_TEST);
+
+		// Setup viewport, orthographic projection matrix
+		// Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
+		GL_CALL(glViewport(0, 0, (GLsizei)fbWidth, (GLsizei)fbHeight));
+		float L = drawData->DisplayPos.x;
+		float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
+		float T = drawData->DisplayPos.y;
+		float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
+
+		const float ortho_projection[4][4] = {
+			{ 2.0f / (R - L),		0.0f,				0.0f,		0.0f },
+			{ 0.0f,					2.0f / (T - B),		0.0f,		0.0f },
+			{ 0.0f,					0.0f,				-1.0f,		0.0f },
+			{ (R + L) / (L - R),	(T + B) / (B - T),  0.0f,		1.0f },
+		};
+
+		// TODO: Use nCine shaders directly instead
+		auto shaderHandle = imguiShaderProgram_.get()->glHandle();
+
+		glUseProgram(shaderHandle);
+		glUniform1i(attribLocationTex_, 0);
+		glUniformMatrix4fv(attribLocationProjMtx_, 1, GL_FALSE, &ortho_projection[0][0]);
+
+		glBindVertexArray(vertexArrayObject);
+
+		// Bind vertex/index buffers and setup attributes for ImDrawVert
+		GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, vboHandle_));
+		GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementsHandle_));
+
+		GL_CALL(glEnableVertexAttribArray(attribLocationVtxPos_));
+		GL_CALL(glEnableVertexAttribArray(attribLocationVtxUV_));
+		GL_CALL(glEnableVertexAttribArray(attribLocationVtxColor_));
+		GL_CALL(glVertexAttribPointer(attribLocationVtxPos_, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, pos)));
+		GL_CALL(glVertexAttribPointer(attribLocationVtxUV_, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, uv)));
+		GL_CALL(glVertexAttribPointer(attribLocationVtxColor_, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
+	}
+#endif
 }
 
 #endif

@@ -18,7 +18,7 @@
       <uap:VisualElements
         DisplayName="@NCINE_APP_NAME@"
         Description="@NCINE_APP_DESCRIPTION@"
-        BackgroundColor="#FFFFFF"
+        BackgroundColor="#000000"
         Square150x150Logo="Assets/Logo.png"
         Square44x44Logo="Assets/SmallLogo.png">
         <uap:SplashScreen Image="Assets/SplashScreen.png" />

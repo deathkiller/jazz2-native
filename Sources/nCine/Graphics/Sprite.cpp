@@ -56,9 +56,9 @@ namespace nCine
 		}*/
 
 		_type = ObjectType::Sprite;
-		renderCommand_.setType(RenderCommand::CommandTypes::Sprite);
+		renderCommand_.setType(RenderCommand::Type::Sprite);
 
-		Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_NO_TEXTURE);
+		Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
 		renderCommand_.material().setShaderProgramType(shaderProgramType);
 		shaderHasChanged();
 		renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -70,8 +70,8 @@ namespace nCine
 
 	void Sprite::textureHasChanged(Texture* newTexture)
 	{
-		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::CUSTOM) {
-			Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_NO_TEXTURE);
+		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::Custom) {
+			Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
 			const bool hasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
 			if (hasChanged) {
 				shaderHasChanged();

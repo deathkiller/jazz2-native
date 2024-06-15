@@ -41,8 +41,8 @@ namespace Jazz2::Actors::Environment
 		}
 
 		for (int i = 0; i < ChunkCount; i++) {
-			_chunks[i] = std::make_unique<RenderCommand>();
-			_chunks[i]->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+			_chunks[i] = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
+			_chunks[i]->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 			_chunks[i]->material().setBlendingEnabled(true);
 			_chunks[i]->material().reserveUniformsDataMemory();
 			_chunks[i]->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);

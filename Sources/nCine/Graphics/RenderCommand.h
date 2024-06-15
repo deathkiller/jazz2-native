@@ -15,20 +15,21 @@ namespace nCine
 	public:
 		/// Command types
 		/*! Its sole purpose is to allow separated profiling counters in the `RenderStatistics` class. */
-		enum class CommandTypes
+		enum class Type
 		{
 			Unspecified = 0,
 			Sprite,
 			MeshSprite,
 			TileMap,
 			Particle,
+			Lighting,
 			Text,
 			ImGui,
 
 			Count
 		};
 
-		explicit RenderCommand(CommandTypes profilingType);
+		explicit RenderCommand(Type profilingType);
 		RenderCommand();
 
 		/// Returns the number of instances collected in the command or zero if instancing is not used
@@ -89,15 +90,15 @@ namespace nCine
 		void issue();
 
 		/// Gets the command type (for profiling purposes)
-		inline CommandTypes type() const {
+		inline Type type() const {
 #if defined(NCINE_PROFILING)
 			return profilingType_;
 #else
-			return CommandTypes::Unspecified;
+			return Type::Unspecified;
 #endif
 		}
 		/// Sets the command type (for profiling purposes)
-		inline void setType(CommandTypes type) {
+		inline void setType(Type type) {
 #if defined(NCINE_PROFILING)
 			profilingType_ = type;
 #endif
@@ -155,7 +156,7 @@ namespace nCine
 		bool transformationCommitted_;
 
 #if defined(NCINE_PROFILING)
-		CommandTypes profilingType_;
+		Type profilingType_;
 #endif
 
 		Recti scissorRect_;

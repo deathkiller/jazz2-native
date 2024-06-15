@@ -750,7 +750,7 @@ namespace Jazz2::Tiles
 					}
 
 					auto command = RentRenderCommand(layer.Description.RendererType);
-					command->setType(RenderCommand::CommandTypes::TileMap);
+					command->setType(RenderCommand::Type::TileMap);
 					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 					Vector2i texSize = tileSet->TextureDiffuse->size();
@@ -821,7 +821,7 @@ namespace Jazz2::Tiles
 		bool shaderChanged;
 		switch (type) {
 			case LayerRendererType::Tinted: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Tinted)); break;
-			default: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE); break;
+			default: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::Sprite); break;
 		}
 		if (shaderChanged) {
 			command->material().reserveUniformsDataMemory();
@@ -1287,7 +1287,7 @@ namespace Jazz2::Tiles
 			}
 
 			auto command = RentRenderCommand(LayerRendererType::Default);
-			command->setType(RenderCommand::CommandTypes::Particle);
+			command->setType(RenderCommand::Type::Particle);
 
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
 				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
@@ -1475,7 +1475,7 @@ namespace Jazz2::Tiles
 			_renderCommands.reserve(renderCommandCount);
 			for (std::int32_t i = 0; i < renderCommandCount; i++) {
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-				command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+				command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -1486,6 +1486,7 @@ namespace Jazz2::Tiles
 			}
 
 			// Prepare output render command
+			_outputRenderCommand.setType(RenderCommand::Type::TileMap);
 			_outputRenderCommand.material().setShader(ContentResolver::Get().GetShader(_owner->_layers[_owner->_texturedBackgroundLayer].Description.RendererType == LayerRendererType::Circle
 				? PrecompiledShader::TexturedBackgroundCircle
 				: PrecompiledShader::TexturedBackground));

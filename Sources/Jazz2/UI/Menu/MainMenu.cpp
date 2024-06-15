@@ -704,7 +704,8 @@ namespace Jazz2::UI::Menu
 	{
 		for (auto& debris : _debrisList) {
 			auto command = _canvasOverlay->RentRenderCommand();
-			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+			command->setType(RenderCommand::Type::Particle);
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
@@ -872,7 +873,8 @@ namespace Jazz2::UI::Menu
 			Vector2f size = base->FrameDimensions.As<float>() * scale;
 
 			auto command = _canvasBackground->RentRenderCommand();
-			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+			command->setType(RenderCommand::Type::TileMap);
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
@@ -917,7 +919,8 @@ namespace Jazz2::UI::Menu
 			centerBg.Y += 96.0f * cosf(animTime * 0.31f);
 
 			auto command = _canvasBackground->RentRenderCommand();
-			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+			command->setType(RenderCommand::Type::TileMap);
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
@@ -962,7 +965,8 @@ namespace Jazz2::UI::Menu
 			centerBg.Y += 64.0f * cosf(animTime * 0.32f);
 
 			auto command = _canvasBackground->RentRenderCommand();
-			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+			command->setType(RenderCommand::Type::TileMap);
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
@@ -1021,8 +1025,8 @@ namespace Jazz2::UI::Menu
 			int32_t renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
 			_renderCommands.reserve(renderCommandCount);
 			for (int32_t i = 0; i < renderCommandCount; i++) {
-				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-				command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::TileMap));
+				command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 

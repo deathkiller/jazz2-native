@@ -51,6 +51,7 @@ namespace nCine
 				MeshSpriteVertices,
 				TileMapVertices,
 				ParticleVertices,
+				LightingVertices,
 				TextVertices,
 				ImGuiVertices,
 				UnspecifiedVertices,

@@ -65,14 +65,15 @@ namespace nCine
 		const char* commandTypeString(const RenderCommand& command)
 		{
 			switch (command.type()) {
-				case RenderCommand::CommandTypes::Unspecified: return "unspecified";
-				case RenderCommand::CommandTypes::Sprite: return "sprite";
-				case RenderCommand::CommandTypes::MeshSprite: return "mesh sprite";
-				case RenderCommand::CommandTypes::TileMap: return "tile map";
-				case RenderCommand::CommandTypes::Particle: return "particle";
-				case RenderCommand::CommandTypes::Text: return "text";
+				case RenderCommand::Type::Unspecified: return "unspecified";
+				case RenderCommand::Type::Sprite: return "sprite";
+				case RenderCommand::Type::MeshSprite: return "mesh sprite";
+				case RenderCommand::Type::TileMap: return "tile map";
+				case RenderCommand::Type::Particle: return "particle";
+				case RenderCommand::Type::Lighting: return "lighting";
+				case RenderCommand::Type::Text: return "text";
 #	if defined(WITH_IMGUI)
-				case RenderCommand::CommandTypes::ImGui: return "imgui";
+				case RenderCommand::Type::ImGui: return "imgui";
 #	endif
 				default: return "unknown";
 			}

@@ -143,7 +143,7 @@ namespace nCine
 			return allCommands_;
 		}
 		/// Returns the commnad statistics for the specified type
-		static inline const Commands& commands(RenderCommand::CommandTypes type) {
+		static inline const Commands& commands(RenderCommand::Type type) {
 			return typedCommands_[(int)type];
 		}
 
@@ -184,7 +184,7 @@ namespace nCine
 
 	private:
 		static Commands allCommands_;
-		static Commands typedCommands_[(int)RenderCommand::CommandTypes::Count];
+		static Commands typedCommands_[(int)RenderCommand::Type::Count];
 		static Buffers typedBuffers_[(int)RenderBuffersManager::BufferTypes::Count];
 		static Textures textures_;
 		static CustomBuffers customVbos_;

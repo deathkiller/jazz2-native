@@ -460,10 +460,10 @@ namespace Jazz2::UI
 					);
 
 					auto command = canvas->RentRenderCommand();
-					command->setType(RenderCommand::CommandTypes::Text);
+					command->setType(RenderCommand::Type::Text);
 					bool shaderChanged = (colorizeShader
 						? command->material().setShader(colorizeShader)
-						: command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE));
+						: command->material().setShaderProgramType(Material::ShaderProgramType::Sprite));
 					if (shaderChanged) {
 						command->material().reserveUniformsDataMemory();
 						command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);

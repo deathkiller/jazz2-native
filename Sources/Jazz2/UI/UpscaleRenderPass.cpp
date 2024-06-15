@@ -112,9 +112,9 @@ namespace Jazz2::UI
 
 		bool shaderChanged = (_resizeShader != nullptr
 			? _renderCommand.material().setShader(_resizeShader)
-			: _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE));
+			: _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::Sprite));
 #else
-		bool shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+		bool shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 #endif
 		if (shaderChanged) {
 			_renderCommand.material().reserveUniformsDataMemory();

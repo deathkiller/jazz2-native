@@ -256,8 +256,8 @@ namespace nCine
 	template<class T>
 	inline bool Rect<T>::Contains(const Rect& rect) const
 	{
-		const bool containsMin = Contains(rect.min());
-		const bool containsMax = Contains(rect.max());
+		const bool containsMin = Contains(rect.Min());
+		const bool containsMax = Contains(rect.Max());
 		return (containsMin && containsMax);
 	}
 

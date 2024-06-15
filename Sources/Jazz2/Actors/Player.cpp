@@ -1042,11 +1042,11 @@ namespace Jazz2::Actors
 			if (res != nullptr) {
 				auto& command = _weaponFlareCommand;
 				if (command == nullptr) {
-					command = std::make_unique<RenderCommand>();
+					command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 					command->material().setBlendingEnabled(true);
 				}
 
-				if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+				if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
 					command->material().reserveUniformsDataMemory();
 					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 					//command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1135,7 +1135,7 @@ namespace Jazz2::Actors
 					{
 						auto& command = _shieldRenderCommands[0];
 						if (command == nullptr) {
-							command = std::make_unique<RenderCommand>();
+							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 							command->material().setBlendingEnabled(true);
 						}
 
@@ -1164,7 +1164,7 @@ namespace Jazz2::Actors
 					{
 						auto& command = _shieldRenderCommands[1];
 						if (command == nullptr) {
-							command = std::make_unique<RenderCommand>();
+							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 							command->material().setBlendingEnabled(true);
 						}
 
@@ -1202,11 +1202,11 @@ namespace Jazz2::Actors
 
 					auto& command = _shieldRenderCommands[1];
 					if (command == nullptr) {
-						command = std::make_unique<RenderCommand>();
+						command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 						command->material().setBlendingEnabled(true);
 					}
 
-					if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+					if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
 						command->material().reserveUniformsDataMemory();
 						command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 						command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -1266,7 +1266,7 @@ namespace Jazz2::Actors
 					{
 						auto& command = _shieldRenderCommands[0];
 						if (command == nullptr) {
-							command = std::make_unique<RenderCommand>();
+							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 							command->material().setBlendingEnabled(true);
 						}
 
@@ -1295,7 +1295,7 @@ namespace Jazz2::Actors
 					{
 						auto& command = _shieldRenderCommands[1];
 						if (command == nullptr) {
-							command = std::make_unique<RenderCommand>();
+							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 							command->material().setBlendingEnabled(true);
 						}
 
