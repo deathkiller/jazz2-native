@@ -26,10 +26,16 @@ namespace nCine
 		float pixelRatio2 = emscripten_get_device_pixel_ratio();
 		LOGI("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->windowInnerWidth * pixelRatio2), (int)(event->windowInnerHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
 #	endif
+
 		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
-			float pixelRatio = emscripten_get_device_pixel_ratio();
 			IGfxDevice* gfxDevice = static_cast<IGfxDevice*>(userData);
+#if defined(GLFW_HAS_EMSCRIPTEN_HDPI)
+			// `contrib.glfw3` should handle HiDPI automatically
+			gfxDevice->setResolutionInternal(static_cast<int>(event->windowInnerWidth), static_cast<int>(event->windowInnerHeight));
+#else
+			float pixelRatio = emscripten_get_device_pixel_ratio();
 			gfxDevice->setResolutionInternal(static_cast<int>(event->windowInnerWidth * pixelRatio), static_cast<int>(event->windowInnerHeight * pixelRatio));
+#endif
 		}
 		return 1;
 	}
@@ -47,8 +53,13 @@ namespace nCine
 		gfxDevice->isFullscreen_ = event->isFullscreen;
 
 		if (event->elementWidth > 0 && event->elementHeight > 0) {
+#if defined(GLFW_HAS_EMSCRIPTEN_HDPI)
+			// `contrib.glfw3` should handle HiDPI automatically
+			gfxDevice->setResolutionInternal(static_cast<int>(event->elementWidth), static_cast<int>(event->elementHeight));
+#else
 			float pixelRatio = emscripten_get_device_pixel_ratio();
 			gfxDevice->setResolutionInternal(static_cast<int>(event->elementWidth * pixelRatio), static_cast<int>(event->elementHeight * pixelRatio));
+#endif
 		}
 
 		return 1;
@@ -76,9 +87,16 @@ namespace nCine
 		double cssHeight = 0.0;
 		// Referring to the first element of type <canvas> in the DOM
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
+#	if defined(GLFW_HAS_EMSCRIPTEN_HDPI)
+		// `contrib.glfw3` should handle HiDPI automatically
+		width_ = static_cast<int>(cssWidth);
+		height_ = static_cast<int>(cssHeight);
+#	else
 		float pixelRatio = emscripten_get_device_pixel_ratio();
 		width_ = static_cast<int>(cssWidth * pixelRatio);
 		height_ = static_cast<int>(cssHeight * pixelRatio);
+#	endif
+		
 		drawableWidth_ = width_;
 		drawableHeight_ = height_;
 

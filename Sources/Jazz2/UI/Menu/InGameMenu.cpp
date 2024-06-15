@@ -127,7 +127,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
-			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - 30.0f, ShadowLayer, Alignment::Center, Colorf::White);
+			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - (ViewSize.Y >= 300 ? 30.0f : 12.0f), ShadowLayer, Alignment::Center, Colorf::White);
 		}
 
 		// Title

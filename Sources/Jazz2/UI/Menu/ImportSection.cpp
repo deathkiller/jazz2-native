@@ -52,8 +52,8 @@ namespace Jazz2::UI::Menu
 	{
 		Recti contentBounds = _root->GetContentBounds();
 		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.5f);
-		float topLine = contentBounds.Y + 31.0f;
-		float bottomLine = contentBounds.Y + contentBounds.H - 42.0f;
+		float topLine = contentBounds.Y + TopLine + 28.0f;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
 		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
@@ -63,11 +63,11 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		int32_t charOffset = 0;
 
-		_root->DrawStringShadow(_("Import Episodes"), charOffset, center.X, topLine - 21.0f - 34.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Import Episodes"), charOffset, center.X, contentBounds.Y + TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		// TRANSLATORS: Header in Import Episodes section
-		_root->DrawStringShadow(_("Select files of your original game to unlock additional episodes"), charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Select files of your original game to unlock additional episodes"), charOffset, center.X, topLine - 15.0f - 4.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		switch (_state) {

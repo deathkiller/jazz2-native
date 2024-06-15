@@ -213,7 +213,7 @@ namespace nCine
 
 		ShaderLoad shadersToLoad[] = {
 #if defined(WITH_EMBEDDED_SHADERS)
-						// Skipping the initial new line character of the raw string literal
+			// Skipping the initial new line character of the raw string literal
 			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::Sprite)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_fs + 1, GLShaderProgram::Introspection::Enabled, "Sprite" },
 			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SpriteGray)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, GLShaderProgram::Introspection::Enabled, "Sprite_Gray" },
 			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SpriteNoTexture)], ShaderStrings::sprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, GLShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
@@ -254,7 +254,7 @@ namespace nCine
 		const int maxUniformBlockSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		char sourceString[64];
-		const char *vertexStrings[3] = { nullptr, nullptr, nullptr };
+		const char* vertexStrings[3] = { nullptr, nullptr, nullptr };
 
 		for (unsigned int i = 0; i < arraySize<unsigned int>(shadersToLoad); i++) {
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
