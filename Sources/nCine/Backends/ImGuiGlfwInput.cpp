@@ -4,7 +4,10 @@
 #include "ImGuiGlfwInput.h"
 #include "../Input/ImGuiJoyMappedInput.h"
 
-#if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <emscripten.h>
+#	include <emscripten/html5.h>
+#elif defined(DEATH_TARGET_APPLE)
 #	if !defined(GLFW_EXPOSE_NATIVE_COCOA)
 #		define GLFW_EXPOSE_NATIVE_COCOA
 #	endif
@@ -20,11 +23,6 @@
 #	else
 #		include <glfw3native.h>	// for glfwGetCocoaWindow() / glfwGetWin32Window()
 #	endif
-#endif
-
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-#	include <emscripten.h>
-#	include <emscripten/html5.h>
 #endif
 
 // We gather version tests as define in order to easily see which features are version-dependent.
@@ -62,11 +60,11 @@ namespace nCine
 		struct ViewportData
 		{
 			GLFWwindow* Window;
-			bool        WindowOwned;
-			int         IgnoreWindowPosEventFrame;
-			int         IgnoreWindowSizeEventFrame;
+			bool WindowOwned;
+			int IgnoreWindowPosEventFrame;
+			int IgnoreWindowSizeEventFrame;
 #if defined(DEATH_TARGET_WINDOWS)
-			WNDPROC     PrevWndProc;
+			WNDPROC PrevWndProc;
 #endif
 
 			ViewportData()
@@ -314,7 +312,7 @@ namespace nCine
 			}
 		}
 
-		LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+		LRESULT CALLBACK wndProcHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			WNDPROC prevWndproc = glfwWndProc;
 #if defined(IMGUI_HAS_VIEWPORT)
@@ -483,7 +481,7 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 		glfwWndProc = (WNDPROC)::GetWindowLongPtr((HWND)mainViewport->PlatformHandleRaw, GWLP_WNDPROC);
 		IM_ASSERT(glfwWndProc != nullptr);
-		::SetWindowLongPtr((HWND)mainViewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
+		::SetWindowLongPtr((HWND)mainViewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)wndProcHook);
 #endif
 	}
 
@@ -1140,7 +1138,7 @@ namespace nCine
 #		if !GLFW_HAS_MOUSE_PASSTHROUGH && GLFW_HAS_WINDOW_HOVERED && defined(DEATH_TARGET_WINDOWS)
 		::SetPropA(hwnd, "IMGUI_VIEWPORT", viewport);
 		vd->PrevWndProc = (WNDPROC)::GetWindowLongPtrW(hwnd, GWLP_WNDPROC);
-		::SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
+		::SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)wndProcHook);
 #		endif
 
 #		if !GLFW_HAS_FOCUS_ON_SHOW
@@ -1226,7 +1224,6 @@ namespace nCine
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		return glfwGetWindowAttrib(vd->Window, GLFW_ICONIFIED) != 0;
 	}
-
 
 	void ImGuiGlfwInput::onSetWindowAlpha(ImGuiViewport* viewport, float alpha)
 	{

@@ -33,16 +33,16 @@ using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
 #if defined(DEATH_TRACE_GL_ERRORS)
-#	define GL_CALL(_CALL)													\
-		do {																\
-			_CALL;															\
-			GLenum glErr_ = glGetError();									\
-			if (glErr_ != 0) {												\
-				LOGE("GL error 0x%x returned from '%s'", glErr_, #_CALL);	\
-			}																\
+#	define GL_CALL(op)													\
+		do {															\
+			op;															\
+			GLenum glErr_ = glGetError();								\
+			if (glErr_ != 0) {											\
+				LOGE("GL error 0x%x returned from '%s'", glErr_, #op);	\
+			}															\
 		} while (0)
 #else
-#	define GL_CALL(_CALL) _CALL
+#	define GL_CALL(op) op
 #endif
 
 namespace nCine
@@ -443,6 +443,7 @@ namespace nCine
 		attribLocationVtxColor_ = (GLuint)glGetAttribLocation(shaderHandle, "aColor");
 
 		// Create buffers
+		// TODO: Use nCine GLBufferObject directly
 		glGenBuffers(1, &vboHandle_);
 		glGenBuffers(1, &elementsHandle_);
 
