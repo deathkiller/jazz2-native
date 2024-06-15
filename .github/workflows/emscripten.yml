@@ -50,7 +50,7 @@ jobs:
         cd emsdk
         
         #EMSDK_VERSION=latest
-        EMSDK_VERSION=3.1.40
+        EMSDK_VERSION=3.1.60
         ./emsdk install $EMSDK_VERSION
         ./emsdk activate $EMSDK_VERSION
 
