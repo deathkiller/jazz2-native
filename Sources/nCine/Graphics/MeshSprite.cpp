@@ -275,9 +275,9 @@ namespace nCine
 		}*/
 
 		_type = ObjectType::MeshSprite;
-		renderCommand_.setType(RenderCommand::CommandTypes::MeshSprite);
+		renderCommand_.setType(RenderCommand::Type::MeshSprite);
 
-		const Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE);
+		const Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::MeshSprite : Material::ShaderProgramType::MeshSpriteNoTexture);
 		renderCommand_.material().setShaderProgramType(shaderProgramType);
 
 		shaderHasChanged();
@@ -298,8 +298,8 @@ namespace nCine
 
 	void MeshSprite::textureHasChanged(Texture* newTexture)
 	{
-		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::CUSTOM) {
-			const Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE);
+		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::Custom) {
+			const Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::MeshSprite : Material::ShaderProgramType::MeshSpriteNoTexture);
 			const bool hasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
 			if (hasChanged) {
 				shaderHasChanged();

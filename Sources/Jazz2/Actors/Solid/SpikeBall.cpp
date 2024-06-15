@@ -35,8 +35,8 @@ namespace Jazz2::Actors::Solid
 
 		for (int i = 0; i < length; i++) {
 			ChainPiece& piece = _pieces.emplace_back();
-			piece.Command = std::make_unique<RenderCommand>();
-			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+			piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
+			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 			piece.Command->material().setBlendingEnabled(true);
 			piece.Command->material().reserveUniformsDataMemory();
 			piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);

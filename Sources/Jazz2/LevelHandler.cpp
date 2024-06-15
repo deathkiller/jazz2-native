@@ -1949,7 +1949,7 @@ namespace Jazz2
 			_renderCommandsCount++;
 			return command;
 		} else {
-			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
+			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Lighting));
 			_renderCommandsCount++;
 			command->material().setShader(_owner->_lightingShader);
 			command->material().setBlendingEnabled(true);

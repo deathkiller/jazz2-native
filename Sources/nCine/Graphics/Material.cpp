@@ -16,7 +16,7 @@ namespace nCine
 
 	Material::Material(GLShaderProgram* program, GLTexture* texture)
 		: isBlendingEnabled_(false), srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
-			shaderProgramType_(ShaderProgramType::CUSTOM), shaderProgram_(program), uniformsHostBufferSize_(0)
+			shaderProgramType_(ShaderProgramType::Custom), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
 		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			textures_[i] = nullptr;
@@ -52,7 +52,7 @@ namespace nCine
 	{
 		// Allow self-assignment to take into account the case where the shader program loads new shaders
 
-		shaderProgramType_ = ShaderProgramType::CUSTOM;
+		shaderProgramType_ = ShaderProgramType::Custom;
 		shaderProgram_ = program;
 		// The camera uniforms are handled separately as they have a different update frequency
 		shaderUniforms_.setProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);

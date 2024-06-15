@@ -209,7 +209,7 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 #endif
 
 #if defined(WITH_IMGUI)
-	//config.withDebugOverlay = true;
+	config.withDebugOverlay = true;
 #endif
 }
 
@@ -218,7 +218,7 @@ void GameEventHandler::OnInit()
 	ZoneScopedC(0x888888);
 
 #if defined(WITH_IMGUI)
-	//theApplication().GetDebugOverlaySettings().showInterface = true;
+	theApplication().GetDebugOverlaySettings().showInterface = true;
 #endif
 
 	_flags |= Flags::IsInitialized;

@@ -21,39 +21,39 @@ namespace nCine
 		enum class ShaderProgramType
 		{
 			/// Shader program for Sprite classes
-			SPRITE = 0,
+			Sprite = 0,
 			/// Shader program for Sprite classes with grayscale font texture
-			//SPRITE_GRAY,
+			//SpriteGray,
 			/// Shader program for Sprite classes with a solid color and no texture
-			SPRITE_NO_TEXTURE,
+			SpriteNoTexture,
 			/// Shader program for MeshSprite classes
-			MESH_SPRITE,
+			MeshSprite,
 			/// Shader program for MeshSprite classes with grayscale font texture
-			//MESH_SPRITE_GRAY,
+			//MeshSpriteGray,
 			/// Shader program for MeshSprite classes with a solid color and no texture
-			MESH_SPRITE_NO_TEXTURE,
+			MeshSpriteNoTexture,
 			/// Shader program for TextNode classes with glyph data in alpha channel
-			//TEXTNODE_ALPHA,
+			//TextNodeAlpha,
 			/// Shader program for TextNode classes with glyph data in red channel
-			//TEXTNODE_RED,
+			//TextNodeRed,
 			/// Shader program for a batch of Sprite classes
-			BATCHED_SPRITES,
+			BatchedSprites,
 			/// Shader program for a batch of Sprite classes with grayscale font texture
-			//BATCHED_SPRITES_GRAY,
+			//BatchedSpritesGray,
 			/// Shader program for a batch of Sprite classes with solid colors and no texture
-			BATCHED_SPRITES_NO_TEXTURE,
+			BatchedSpritesNoTexture,
 			/// Shader program for a batch of MeshSprite classes
-			BATCHED_MESH_SPRITES,
+			BatchedMeshSprites,
 			/// Shader program for a batch of MeshSprite classes with grayscale font texture
-			//BATCHED_MESH_SPRITES_GRAY,
+			//BatchedMeshSpritesGray,
 			/// Shader program for a batch of MeshSprite classes with solid colors and no texture
-			BATCHED_MESH_SPRITES_NO_TEXTURE,
+			BatchedMeshSpritesNoTexture,
 			/// Shader program for a batch of TextNode classes with color font texture
-			//BATCHED_TEXTNODES_ALPHA,
+			//BatchedTextNodesAlpha,
 			/// Shader program for a batch of TextNode classes with grayscale font texture
-			//BATCHED_TEXTNODES_RED,
+			//BatchedTextNodesRed,
 			/// A custom shader program
-			CUSTOM
+			Custom
 		};
 
 		// Shader uniform block and model matrix uniform names

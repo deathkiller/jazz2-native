@@ -29,7 +29,7 @@ namespace nCine
 	}
 
 	ShaderState::ShaderState(DrawableNode* node, Shader* shader)
-		: node_(nullptr), shader_(nullptr), previousShaderType_(static_cast<int>(Material::ShaderProgramType::CUSTOM))
+		: node_(nullptr), shader_(nullptr), previousShaderType_(static_cast<int>(Material::ShaderProgramType::Custom))
 	{
 		setNode(node);
 		setShader(shader);
@@ -79,7 +79,7 @@ namespace nCine
 				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(previousShaderType_);
 				material.setShaderProgramType(programType);
 			} else if (shader->isLinked()) {
-				if (material.shaderProgramType() != Material::ShaderProgramType::CUSTOM)
+				if (material.shaderProgramType() != Material::ShaderProgramType::Custom)
 					previousShaderType_ = static_cast<int>(material.shaderProgramType());
 
 				material.setShaderProgram(shader->glShaderProgram_.get());

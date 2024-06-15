@@ -37,4 +37,5 @@ VS_VERSION_INFO VERSIONINFO
 }
 
 GLFW_ICON				ICON		".\\Icons\\Main.ico"
-LOG_ICON				ICON		".\\Icons\\Log.ico"
+WINDOW_ICON				ICON		".\\Icons\\Window.ico"
+IMGUI_ICON				ICON		".\\Icons\\WindowImGui.ico"

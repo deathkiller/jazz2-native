@@ -1267,6 +1267,10 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 	void ImGuiDebugOverlay::guiTopLeft()
 	{
+		if (!showTopLeftOverlay_) {
+			return;
+		}
+
 		const RenderStatistics::VaoPool& vaoPool = RenderStatistics::vaoPool();
 		const RenderStatistics::CommandPool& commandPool = RenderStatistics::commandPool();
 		const RenderStatistics::Textures& textures = RenderStatistics::textures();
@@ -1280,45 +1284,51 @@ namespace nCine
 		const ImVec2 windowPosPivot = ImVec2(0.0f, 0.0f);
 		ImGui::SetNextWindowPos(windowPos, ImGuiCond_FirstUseEver, windowPosPivot);
 		ImGui::SetNextWindowBgAlpha(Transparency);
-		ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+		ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;	
+#if defined(IMGUI_HAS_DOCK)
+		windowFlags |= ImGuiWindowFlags_NoDocking;
+#endif
 		if (lockOverlayPositions_)
 			windowFlags |= ImGuiWindowFlags_NoMove;
-		if (showTopLeftOverlay_) {
-			ImGui::Begin("###Top-Left", nullptr, windowFlags);
 
-			ImGui::Text("Culled nodes: %u", RenderStatistics::culled());
-			if (plotOverlayValues_) {
-				ImGui::SameLine(180.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::CulledNodes].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-			}
+		ImGui::Begin("Top-Left Panel", nullptr, windowFlags);
 
-			ImGui::Text("%u/%u VAOs (%u reuses, %u bindings)", vaoPool.size, vaoPool.capacity, vaoPool.reuses, vaoPool.bindings);
-			ImGui::Text("%u/%u RenderCommands in the pool (%u retrievals)", commandPool.usedSize, commandPool.usedSize + commandPool.freeSize, commandPool.retrievals);
-			ImGui::Text("%.2f Kb in %u Texture(s)", textures.dataSize / 1024.0f, textures.count);
-			ImGui::Text("%.2f Kb in %u custom VBO(s)", customVbos.dataSize / 1024.0f, customVbos.count);
-			ImGui::Text("%.2f Kb in %u custom IBO(s)", customIbos.dataSize / 1024.0f, customIbos.count);
-			ImGui::Text("%.2f/%lu Kb in %u VBO(s)", vboBuffers.usedSpace / 1024.0f, vboBuffers.size / 1024, vboBuffers.count);
-			if (plotOverlayValues_) {
-				ImGui::SameLine(180.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::VboUsed].get(), numValues_, index_, nullptr, 0.0f, vboBuffers.size / 1024.0f);
-			}
-
-			ImGui::Text("%.2f/%lu Kb in %u IBO(s)", iboBuffers.usedSpace / 1024.0f, iboBuffers.size / 1024, iboBuffers.count);
-			if (plotOverlayValues_) {
-				ImGui::SameLine(180.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::IboUsed].get(), numValues_, index_, nullptr, 0.0f, iboBuffers.size / 1024.0f);
-			}
-
-			ImGui::Text("%.2f/%lu Kb in %u UBO(s)", uboBuffers.usedSpace / 1024.0f, uboBuffers.size / 1024, uboBuffers.count);
-			if (plotOverlayValues_) {
-				ImGui::SameLine(180.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::UboUsed].get(), numValues_, index_, nullptr, 0.0f, uboBuffers.size / 1024.0f);
-			}
-
-			ImGui::Text("Viewport chain length: %u", Viewport::chain().size());
-
-			ImGui::End();
+		ImGui::Text("Culled nodes: %u", RenderStatistics::culled());
+		if (plotOverlayValues_) {
+			ImGui::SameLine(180.0f);
+			ImGui::PlotLines("", plotValues_[ValuesType::CulledNodes].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 		}
+
+		ImGui::Text("%u/%u VAOs (%u reuses, %u bindings)", vaoPool.size, vaoPool.capacity, vaoPool.reuses, vaoPool.bindings);
+		ImGui::Text("%u/%u RenderCommands in the pool (%u retrievals)", commandPool.usedSize, commandPool.usedSize + commandPool.freeSize, commandPool.retrievals);
+		if (textures.dataSize > 2 * 1024 * 1024) {
+			ImGui::Text("%.2f MB in %u Texture(s)", textures.dataSize / (1024.0f * 1024.0f), textures.count);
+		} else {
+			ImGui::Text("%.2f kB in %u Texture(s)", textures.dataSize / 1024.0f, textures.count);
+		}
+		ImGui::Text("%.2f kB in %u custom VBO(s)", customVbos.dataSize / 1024.0f, customVbos.count);
+		ImGui::Text("%.2f kB in %u custom IBO(s)", customIbos.dataSize / 1024.0f, customIbos.count);
+		ImGui::Text("%.2f/%lu kB in %u VBO(s)", vboBuffers.usedSpace / 1024.0f, vboBuffers.size / 1024, vboBuffers.count);
+		if (plotOverlayValues_) {
+			ImGui::SameLine(180.0f);
+			ImGui::PlotLines("", plotValues_[ValuesType::VboUsed].get(), numValues_, index_, nullptr, 0.0f, vboBuffers.size / 1024.0f);
+		}
+
+		ImGui::Text("%.2f/%lu kB in %u IBO(s)", iboBuffers.usedSpace / 1024.0f, iboBuffers.size / 1024, iboBuffers.count);
+		if (plotOverlayValues_) {
+			ImGui::SameLine(180.0f);
+			ImGui::PlotLines("", plotValues_[ValuesType::IboUsed].get(), numValues_, index_, nullptr, 0.0f, iboBuffers.size / 1024.0f);
+		}
+
+		ImGui::Text("%.2f/%lu kB in %u UBO(s)", uboBuffers.usedSpace / 1024.0f, uboBuffers.size / 1024, uboBuffers.count);
+		if (plotOverlayValues_) {
+			ImGui::SameLine(180.0f);
+			ImGui::PlotLines("", plotValues_[ValuesType::UboUsed].get(), numValues_, index_, nullptr, 0.0f, uboBuffers.size / 1024.0f);
+		}
+
+		ImGui::Text("Viewport chain length: %u", Viewport::chain().size());
+
+		ImGui::End();
 	}
 #endif
 
@@ -1333,24 +1343,28 @@ namespace nCine
 		ImGui::SetNextWindowPos(windowPos, ImGuiCond_FirstUseEver, windowPosPivot);
 		ImGui::SetNextWindowBgAlpha(Transparency);
 		ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+#if defined(IMGUI_HAS_DOCK)
+		windowFlags |= ImGuiWindowFlags_NoDocking;
+#endif
 		if (lockOverlayPositions_)
 			windowFlags |= ImGuiWindowFlags_NoMove;
 
-		ImGui::Begin("###Top-Right", nullptr, windowFlags);
+		ImGui::Begin("Top-Right Panel", nullptr, windowFlags);
 
 		ImGui::Text("FPS: %.0f (%.2f ms - %.2fx)", theApplication().GetFrameTimer().GetAverageFps(), theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f, theApplication().GetTimeMult());
-		ImGui::Text("Num Frames: %lu", theApplication().GetFrameCount());
+		ImGui::Text("Frame Count: %lu", theApplication().GetFrameCount());
 
 #if defined(NCINE_PROFILING)
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		if (appCfg.withScenegraph) {
-			const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Sprite);
-			const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::MeshSprite);
-			const RenderStatistics::Commands& tileMapCommands = RenderStatistics::commands(RenderCommand::CommandTypes::TileMap);
-			const RenderStatistics::Commands& particleCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Particle);
-			const RenderStatistics::Commands& textCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Text);
-			const RenderStatistics::Commands& imguiCommands = RenderStatistics::commands(RenderCommand::CommandTypes::ImGui);
-			const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Unspecified);
+			const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::Type::Sprite);
+			const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::Type::MeshSprite);
+			const RenderStatistics::Commands& tileMapCommands = RenderStatistics::commands(RenderCommand::Type::TileMap);
+			const RenderStatistics::Commands& particleCommands = RenderStatistics::commands(RenderCommand::Type::Particle);
+			const RenderStatistics::Commands& lightingCommands = RenderStatistics::commands(RenderCommand::Type::Lighting);
+			const RenderStatistics::Commands& textCommands = RenderStatistics::commands(RenderCommand::Type::Text);
+			const RenderStatistics::Commands& imguiCommands = RenderStatistics::commands(RenderCommand::Type::ImGui);
+			const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::Type::Unspecified);
 			const RenderStatistics::Commands& allCommands = RenderStatistics::allCommands();
 
 			ImGui::Separator();
@@ -1376,6 +1390,12 @@ namespace nCine
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
 				ImGui::PlotLines("", plotValues_[ValuesType::ParticleVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+
+			ImGui::Text("Lighting: %uV, %uDC (%u Tr), %uI/%uB\n", lightingCommands.vertices, lightingCommands.commands, lightingCommands.transparents, lightingCommands.instances, lightingCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::LightingVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Text: %uV, %uDC (%u Tr), %uI/%uB", textCommands.vertices, textCommands.commands, textCommands.transparents, textCommands.instances, textCommands.batchSize);
@@ -1487,9 +1507,12 @@ namespace nCine
 		ImGui::SetNextWindowPos(windowPos, ImGuiCond_FirstUseEver, windowPosPivot);
 		ImGui::SetNextWindowBgAlpha(Transparency);
 		ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+#if defined(IMGUI_HAS_DOCK)
+		windowFlags |= ImGuiWindowFlags_NoDocking;
+#endif
 		if (lockOverlayPositions_)
 			windowFlags |= ImGuiWindowFlags_NoMove;
-		ImGui::Begin("###Plots", nullptr, windowFlags);
+		ImGui::Begin("Plots", nullptr, windowFlags);
 
 		ImGui::PlotLines("Frame time", plotValues_[ValuesType::FrameTime].get(), numValues_, index_, nullptr, 0.0f, maxFrameTime_, ImVec2(appWidth * 0.2f, 0.0f));
 
@@ -1542,13 +1565,14 @@ namespace nCine
 		const RenderStatistics::Buffers& iboBuffers = RenderStatistics::buffers(RenderBuffersManager::BufferTypes::ElementArray);
 		const RenderStatistics::Buffers& uboBuffers = RenderStatistics::buffers(RenderBuffersManager::BufferTypes::Uniform);
 
-		const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Sprite);
-		const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::MeshSprite);
-		const RenderStatistics::Commands& tileMapCommands = RenderStatistics::commands(RenderCommand::CommandTypes::TileMap);
-		const RenderStatistics::Commands& particleCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Particle);
-		const RenderStatistics::Commands& textCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Text);
-		const RenderStatistics::Commands& imguiCommands = RenderStatistics::commands(RenderCommand::CommandTypes::ImGui);
-		const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Unspecified);
+		const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::Type::Sprite);
+		const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::Type::MeshSprite);
+		const RenderStatistics::Commands& tileMapCommands = RenderStatistics::commands(RenderCommand::Type::TileMap);
+		const RenderStatistics::Commands& particleCommands = RenderStatistics::commands(RenderCommand::Type::Particle);
+		const RenderStatistics::Commands& lightingCommands = RenderStatistics::commands(RenderCommand::Type::Lighting);
+		const RenderStatistics::Commands& textCommands = RenderStatistics::commands(RenderCommand::Type::Text);
+		const RenderStatistics::Commands& imguiCommands = RenderStatistics::commands(RenderCommand::Type::ImGui);
+		const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::Type::Unspecified);
 		const RenderStatistics::Commands& allCommands = RenderStatistics::allCommands();
 
 		plotValues_[ValuesType::CulledNodes][index_] = static_cast<float>(RenderStatistics::culled());
@@ -1560,6 +1584,7 @@ namespace nCine
 		plotValues_[ValuesType::MeshSpriteVertices][index_] = static_cast<float>(meshspriteCommands.vertices);
 		plotValues_[ValuesType::TileMapVertices][index_] = static_cast<float>(tileMapCommands.vertices);
 		plotValues_[ValuesType::ParticleVertices][index_] = static_cast<float>(particleCommands.vertices);
+		plotValues_[ValuesType::LightingVertices][index_] = static_cast<float>(lightingCommands.vertices);
 		plotValues_[ValuesType::TextVertices][index_] = static_cast<float>(textCommands.vertices);
 		plotValues_[ValuesType::ImGuiVertices][index_] = static_cast<float>(imguiCommands.vertices);
 		plotValues_[ValuesType::UnspecifiedVertices][index_] = static_cast<float>(unspecifiedCommands.vertices);

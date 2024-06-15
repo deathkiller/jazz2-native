@@ -1186,7 +1186,7 @@ namespace Jazz2::Actors
 			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
 	{
 		_type = ObjectType::Sprite;
-		renderCommand_.setType(RenderCommand::CommandTypes::Sprite);
+		renderCommand_.setType(RenderCommand::Type::Sprite);
 		Initialize(ActorRendererType::Default);
 	}
 
@@ -1204,7 +1204,7 @@ namespace Jazz2::Actors
 			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::WhiteMask)); break;
 			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::PartialWhiteMask)); break;
 			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::FrozenMask)); break;
-			default: shaderChanged = renderCommand_.material().setShaderProgramType(Material::ShaderProgramType::SPRITE); break;
+			default: shaderChanged = renderCommand_.material().setShaderProgramType(Material::ShaderProgramType::Sprite); break;
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
