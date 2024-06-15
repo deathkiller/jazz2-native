@@ -94,7 +94,7 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			return profilingType_;
 #else
-			return CommandTypes::Unspecified;
+			return Type::Unspecified;
 #endif
 		}
 		/// Sets the command type (for profiling purposes)
