@@ -29,6 +29,9 @@ namespace Jazz2::UI::Menu
 			Success
 		};
 
+		static constexpr std::int32_t TopLine = 31;
+		static constexpr std::int32_t BottomLine = 42;
+
 		float _animation;
 		State _state;
 		int32_t _fileCount;
