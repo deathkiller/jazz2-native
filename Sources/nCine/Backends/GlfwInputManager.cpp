@@ -422,7 +422,7 @@ namespace nCine
 				touchEvent.type = TouchEventType::Move;
 				break;
 			default:
-				touchEvent.type = (touchEvent.count >= 0 ? TouchEventType::PointerUp : TouchEventType::Up);
+				touchEvent.type = (touchEvent.count >= 2 ? TouchEventType::PointerUp : TouchEventType::Up);
 				break;
 		}
 
@@ -438,8 +438,9 @@ namespace nCine
 			}
 
 			touchEvent.actionIndex = pointer.id;
-			inputManager->inputEventHandler_->OnTouchEvent(touchEvent);
 		}
+
+		inputManager->inputEventHandler_->OnTouchEvent(touchEvent);
 
 		return 1;
 	}
