@@ -56,6 +56,9 @@ namespace nCine
 		static void updateMonitors();
 
 #if defined(IMGUI_HAS_VIEWPORT)
+		static ImGuiViewport* getParentViewport(ImGuiViewport* viewport);
+		static void addParentToView(ImGuiViewport* viewport, ImGuiViewport* parentViewport);
+
 		static void onCreateWindow(ImGuiViewport* viewport);
 		static void onDestroyWindow(ImGuiViewport* viewport);
 		static void onShowWindow(ImGuiViewport* viewport);

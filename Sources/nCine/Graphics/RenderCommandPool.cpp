@@ -14,15 +14,13 @@ namespace nCine
 
 	RenderCommand* RenderCommandPool::add()
 	{
-		std::unique_ptr<RenderCommand>& player = usedCommandsPool_.emplace_back(std::make_unique<RenderCommand>());
-		return player.get();
+		return usedCommandsPool_.emplace_back(std::make_unique<RenderCommand>()).get();
 	}
 
 	RenderCommand* RenderCommandPool::add(GLShaderProgram* shaderProgram)
 	{
 		RenderCommand* newCommand = add();
 		newCommand->material().setShaderProgram(shaderProgram);
-
 		return newCommand;
 	}
 

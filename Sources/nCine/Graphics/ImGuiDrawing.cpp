@@ -240,7 +240,7 @@ namespace nCine
 
 	void ImGuiDrawing::setupRenderCmd(RenderCommand& cmd)
 	{
-		cmd.setType(RenderCommand::CommandTypes::ImGui);
+		cmd.setType(RenderCommand::Type::ImGui);
 
 		Material& material = cmd.material();
 		material.setShaderProgram(imguiShaderProgram_.get());

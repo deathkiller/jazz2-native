@@ -1186,11 +1186,11 @@ namespace Jazz2::UI
 			command = _weaponWheelRenderCommands[_weaponWheelRenderCommandsCount].get();
 			_weaponWheelRenderCommandsCount++;
 		} else {
-			command = _weaponWheelRenderCommands.emplace_back(std::make_unique<RenderCommand>()).get();
+			command = _weaponWheelRenderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::MeshSprite)).get();
 			command->material().setBlendingEnabled(true);
 		}
 
-		if (command->material().setShaderProgramType(Material::ShaderProgramType::MESH_SPRITE)) {
+		if (command->material().setShaderProgramType(Material::ShaderProgramType::MeshSprite)) {
 			command->material().reserveUniformsDataMemory();
 
 			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);

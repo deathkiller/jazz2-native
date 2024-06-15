@@ -71,8 +71,8 @@ namespace Jazz2::Actors::Solid
 		for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 			BridgePiece& piece = _pieces.emplace_back();
 			piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
-			piece.Command = std::make_unique<RenderCommand>();
-			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+			piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
+			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 			piece.Command->material().setBlendingEnabled(true);
 			piece.Command->material().reserveUniformsDataMemory();
 			piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);

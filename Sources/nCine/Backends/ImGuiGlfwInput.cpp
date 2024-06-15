@@ -51,6 +51,10 @@
 #define GLFW_HAS_GETKEYNAME				(GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 #define GLFW_HAS_GETERROR				(GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
 
+#if defined(IMGUI_HAS_VIEWPORT)
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+#endif
+
 namespace nCine
 {
 	namespace
@@ -90,6 +94,11 @@ namespace nCine
 		GLFWmonitorfun prevUserCallbackMonitor = nullptr;
 #if defined(DEATH_TARGET_WINDOWS)
 		WNDPROC glfwWndProc = nullptr;
+
+#	if defined(IMGUI_HAS_VIEWPORT)
+		HICON windowIcon = NULL;
+		HICON windowIconSmall = NULL;
+#	endif
 #endif
 
 		const char* clipboardText(void* userData)
@@ -462,6 +471,12 @@ namespace nCine
 		vd->WindowOwned = false;
 		mainViewport->PlatformUserData = vd;
 		mainViewport->PlatformHandle = (void*)window_;
+
+#	if defined(DEATH_TARGET_WINDOWS)
+		HINSTANCE inst = ((HINSTANCE)&__ImageBase);
+		windowIcon = (HICON)::LoadImage(inst, L"IMGUI_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTSIZE);
+		windowIconSmall = (HICON)::LoadImage(inst, L"IMGUI_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTSIZE);
+#	endif
 #endif
 
 		// Windows: Register a WndProc hook so we can intercept some messages.
@@ -478,6 +493,17 @@ namespace nCine
 
 #if defined(IMGUI_HAS_VIEWPORT)
 		ImGui::DestroyPlatformWindows();
+
+#	if defined(DEATH_TARGET_WINDOWS)
+		if (windowIcon != NULL) {
+			::DestroyIcon(windowIcon);
+			windowIcon = NULL;
+		}
+		if (windowIconSmall != NULL) {
+			::DestroyIcon(windowIconSmall);
+			windowIconSmall = NULL;
+		}
+#	endif
 #endif
 
 		if (installedCallbacks_) {
@@ -1006,6 +1032,18 @@ namespace nCine
 	}
 
 #if defined(IMGUI_HAS_VIEWPORT)
+	ImGuiViewport* ImGuiGlfwInput::getParentViewport(ImGuiViewport* viewport)
+	{
+		return (viewport->ParentViewportId ? ImGui::FindViewportByID(viewport->ParentViewportId) : nullptr);
+	}
+
+	void ImGuiGlfwInput::addParentToView(ImGuiViewport* viewport, ImGuiViewport* parentViewport)
+	{
+#	if defined(DEATH_TARGET_WINDOWS)
+		::SetWindowLongPtr(reinterpret_cast<HWND>(viewport->PlatformHandleRaw), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(parentViewport->PlatformHandleRaw));
+#	endif
+	}
+
 	void ImGuiGlfwInput::onCreateWindow(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = new ViewportData();
@@ -1027,11 +1065,21 @@ namespace nCine
 		vd->WindowOwned = true;
 		viewport->PlatformHandle = static_cast<void*>(vd->Window);
 #	if defined(DEATH_TARGET_WINDOWS)
-		viewport->PlatformHandleRaw = glfwGetWin32Window(vd->Window);
+		HWND hwnd = glfwGetWin32Window(vd->Window);
+		viewport->PlatformHandleRaw = hwnd;
 #	elif defined(DEATH_TARGET_APPLE)
 		viewport->PlatformHandleRaw = static_cast<void*>(glfwGetCocoaWindow(vd->Window));
 #	endif
 		glfwSetWindowPos(vd->Window, static_cast<int>(viewport->Pos.x), static_cast<int>(viewport->Pos.y));
+
+#	if defined(DEATH_TARGET_WINDOWS)
+		if (windowIconSmall != NULL) ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)windowIconSmall);
+		if (windowIcon != NULL) ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)windowIcon);
+#	endif
+
+		//if (ImGuiViewport* parentViewport = getParentViewport(viewport)) {
+		//	addParentToView(viewport, parentViewport);
+		//}
 
 		// Install GLFW callbacks for secondary viewports
 		glfwSetWindowFocusCallback(vd->Window, windowFocusCallback);

@@ -6,7 +6,7 @@
 namespace nCine
 {
 	RenderStatistics::Commands RenderStatistics::allCommands_;
-	RenderStatistics::Commands RenderStatistics::typedCommands_[(int)RenderCommand::CommandTypes::Count];
+	RenderStatistics::Commands RenderStatistics::typedCommands_[(int)RenderCommand::Type::Count];
 	RenderStatistics::Buffers RenderStatistics::typedBuffers_[(int)RenderBuffersManager::BufferTypes::Count];
 	RenderStatistics::Textures RenderStatistics::textures_;
 	RenderStatistics::CustomBuffers RenderStatistics::customVbos_;
@@ -21,7 +21,7 @@ namespace nCine
 		TracyPlot("Vertices", static_cast<int64_t>(allCommands_.vertices));
 		TracyPlot("Render Commands", static_cast<int64_t>(allCommands_.commands));
 
-		for (unsigned int i = 0; i < (unsigned int)RenderCommand::CommandTypes::Count; i++) {
+		for (unsigned int i = 0; i < (unsigned int)RenderCommand::Type::Count; i++) {
 			typedCommands_[i].reset();
 		}
 		allCommands_.reset();

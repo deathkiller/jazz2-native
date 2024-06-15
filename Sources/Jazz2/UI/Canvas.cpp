@@ -36,7 +36,7 @@ namespace Jazz2::UI
 	void Canvas::DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle)
 	{
 		auto command = RentRenderCommand();
-		if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+		if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
 			command->material().reserveUniformsDataMemory();
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
@@ -75,7 +75,7 @@ namespace Jazz2::UI
 	void Canvas::DrawSolid(const Vector2f& pos, uint16_t z, const Vector2f& size, const Colorf& color, bool additiveBlending)
 	{
 		auto command = RentRenderCommand();
-		if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE_NO_TEXTURE)) {
+		if (command->material().setShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
 			command->material().reserveUniformsDataMemory();
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
@@ -119,12 +119,11 @@ namespace Jazz2::UI
 	{
 		if (_renderCommandsCount < _renderCommands.size()) {
 			RenderCommand* command = _renderCommands[_renderCommandsCount].get();
-			command->setType(RenderCommand::CommandTypes::Sprite);
+			command->setType(RenderCommand::Type::Sprite);
 			_renderCommandsCount++;
 			return command;
 		} else {
-			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-			command->setType(RenderCommand::CommandTypes::Sprite);
+			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Sprite));
 			command->material().setBlendingEnabled(true);
 			_renderCommandsCount++;
 			return command.get();
