@@ -63,9 +63,10 @@ if(EMSCRIPTEN)
 		add_library(GLFW::GLFW INTERFACE IMPORTED)
 		#set_target_properties(GLFW::GLFW PROPERTIES
 		#	INTERFACE_LINK_OPTIONS "SHELL:-s USE_GLFW=3")
+		
+		# Newer GLFW implementation supported since Emscripten 3.1.55
 		set_target_properties(GLFW::GLFW PROPERTIES
-			INTERFACE_LINK_OPTIONS "SHELL:--use-port=contrib.glfw3"
-			INTERFACE_COMPILE_DEFINITIONS "GLFW_HAS_EMSCRIPTEN_HDPI")
+			INTERFACE_LINK_OPTIONS "SHELL:--use-port=contrib.glfw3")
 		set(GLFW_FOUND 1)
 	elseif(NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 		add_library(SDL2::SDL2 INTERFACE IMPORTED)
