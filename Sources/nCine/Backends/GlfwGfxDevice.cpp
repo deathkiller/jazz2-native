@@ -274,7 +274,7 @@ namespace nCine
 			lastWindowHeight_ = height_;
 		}
 
-		// setting window hints and creating a window with GLFW
+		// Setting window hints and creating a window with GLFW
 		glfwWindowHint(GLFW_RESIZABLE, isResizable ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, static_cast<int>(glContextInfo_.majorVersion));
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(glContextInfo_.minorVersion));

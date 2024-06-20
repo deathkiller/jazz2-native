@@ -4,7 +4,7 @@
 namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	std::size_t GetLength(const Containers::StringView text)
+	std::size_t GetLength(Containers::ArrayView<const char> text)
 	{
 		std::size_t size = text.size();
 		std::size_t result = 0;
@@ -18,14 +18,14 @@ namespace Death { namespace Utf8 {
 
 	std::pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
-		DEATH_ASSERT(cursor < text.size(), {}, "Utf8::NextChar(): Cursor out of range");
+		DEATH_DEBUG_ASSERT(cursor < text.size(), {}, "Utf8::NextChar(): Expected cursor to be less than %zu but got %zu", text.size(), cursor);
 
 		std::uint32_t character = text[cursor];
 		std::size_t end = cursor;
 		std::uint32_t mask;
 
 		// Sequence size
-		if (character < 128) {
+		if (character < 0x80) {
 			end += 1;
 			mask = 0x7f;
 		} else if ((character & 0xe0) == 0xc0) {
@@ -59,7 +59,7 @@ namespace Death { namespace Utf8 {
 
 	std::pair<char32_t, std::size_t> PrevChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
-		DEATH_ASSERT(cursor > 0, {}, "Utf8::PrevChar(): Cursor already at the beginning");
+		DEATH_DEBUG_ASSERT(cursor > 0, {}, "Utf8::PrevChar(): Expected cursor to be greater than 0 and less than or equal to %zu but got %zu", text.size(), cursor);
 
 		std::size_t begin;
 		std::uint32_t mask;

@@ -29,7 +29,7 @@ namespace nCine
 
 		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
 			IGfxDevice* gfxDevice = static_cast<IGfxDevice*>(userData);
-#if defined(GLFW_HAS_EMSCRIPTEN_HDPI)
+#if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
 			// `contrib.glfw3` should handle HiDPI automatically
 			gfxDevice->setResolutionInternal(static_cast<int>(event->windowInnerWidth), static_cast<int>(event->windowInnerHeight));
 #else
@@ -53,7 +53,7 @@ namespace nCine
 		gfxDevice->isFullscreen_ = event->isFullscreen;
 
 		if (event->elementWidth > 0 && event->elementHeight > 0) {
-#if defined(GLFW_HAS_EMSCRIPTEN_HDPI)
+#if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
 			// `contrib.glfw3` should handle HiDPI automatically
 			gfxDevice->setResolutionInternal(static_cast<int>(event->elementWidth), static_cast<int>(event->elementHeight));
 #else
@@ -87,7 +87,7 @@ namespace nCine
 		double cssHeight = 0.0;
 		// Referring to the first element of type <canvas> in the DOM
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
-#	if defined(GLFW_HAS_EMSCRIPTEN_HDPI)
+#	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
 		// `contrib.glfw3` should handle HiDPI automatically
 		width_ = static_cast<int>(cssWidth);
 		height_ = static_cast<int>(cssHeight);

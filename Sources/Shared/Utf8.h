@@ -10,7 +10,7 @@ namespace Death { namespace Utf8 {
 	/**
 		@brief Number of UTF-8 characters in a string
 	*/
-	std::size_t GetLength(const Containers::StringView text);
+	std::size_t GetLength(Containers::ArrayView<const char> text);
 
 	/**
 		@brief Next UTF-8 character
