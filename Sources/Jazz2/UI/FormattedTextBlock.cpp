@@ -75,7 +75,7 @@ namespace Jazz2::UI
 	}
 
 	FormattedTextBlock::FormattedTextBlock(const FormattedTextBlockParams& params)
-		: _font(params.Font), _text(params.Text), _flags(FormattedTextBlockFlags::None), _defaultColor(params.Color),
+		: _font(params.TextFont), _text(params.Text), _flags(FormattedTextBlockFlags::None), _defaultColor(params.Color),
 			_proposedWidth(4096), _cachedWidth(0), _defaultScale(params.Scale), _defaultCharSpacing(params.CharSpacing),
 			_defaultLineSpacing(params.LineSpacing), _alignment(params.Align)
 	{

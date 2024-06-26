@@ -30,7 +30,9 @@ namespace nCine
 		void update() override;
 		void updateFrameTimings() override;
 
+#if defined(DEATH_TRACE)
 		void log(TraceLevel level, StringView time, std::uint32_t threadId, StringView message) override;
+#endif
 
 	private:
 		static constexpr float Margin = 10.0f;

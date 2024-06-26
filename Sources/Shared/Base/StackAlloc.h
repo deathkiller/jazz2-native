@@ -2,8 +2,13 @@
 
 #include "../Common.h"
 
-#include <malloc.h>
 #include <memory>
+
+#if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+#	include <malloc.h>
+#else
+#	include <alloca.h>
+#endif
 
 namespace Death { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -54,8 +59,15 @@ namespace Death { namespace Implementation {
 	If @p size is bigger than 4024, it will use heap allocation instead.
 	Usage: `auto array = stack_alloc(std::int32_t, 1024);`
 */
-#define stack_alloc(type, size)																					\
-	__pragma(warning(suppress: 6255 6386))																		\
-	(((size) * sizeof(type)) < (4024)																			\
-		? Death::Implementation::stack_alloc<type>(new (_alloca((size) * sizeof(type))) type[(size)], (size))	\
-		: Death::Implementation::stack_alloc<type>(new type[(size)], UINT32_MAX))
+#if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+#	define stack_alloc(type, size)																					\
+		__pragma(warning(suppress: 6255 6386))																		\
+		(((size) * sizeof(type)) < (4024)																			\
+			? Death::Implementation::stack_alloc<type>(new (_alloca((size) * sizeof(type))) type[(size)], (size))	\
+			: Death::Implementation::stack_alloc<type>(new type[(size)], UINT32_MAX))
+#else
+#	define stack_alloc(type, size)																					\
+		(((size) * sizeof(type)) < (4024)																			\
+			? Death::Implementation::stack_alloc<type>(new (alloca((size) * sizeof(type))) type[(size)], (size))	\
+			: Death::Implementation::stack_alloc<type>(new type[(size)], UINT32_MAX))
+#endif

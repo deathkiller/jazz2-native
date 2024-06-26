@@ -219,10 +219,12 @@ namespace nCine
 		}
 	}
 
+#if defined(DEATH_TRACE)
 	void ImGuiDebugOverlay::log(TraceLevel level, StringView time, std::uint32_t threadId, StringView message)
 	{
 		logBuffer_.emplace_back(LogMessage{time, message, threadId, level});
 	}
+#endif
 
 	namespace
 	{
