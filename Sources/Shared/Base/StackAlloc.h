@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+#if defined(DEATH_TARGET_MSVC)
 #	include <malloc.h>
 #else
 #	include <alloca.h>
@@ -59,7 +59,7 @@ namespace Death { namespace Implementation {
 	If @p size is bigger than 4024, it will use heap allocation instead.
 	Usage: `auto array = stack_alloc(std::int32_t, 1024);`
 */
-#if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+#if defined(DEATH_TARGET_MSVC)
 #	define stack_alloc(type, size)																					\
 		__pragma(warning(suppress: 6255 6386))																		\
 		(((size) * sizeof(type)) < (4024)																			\
