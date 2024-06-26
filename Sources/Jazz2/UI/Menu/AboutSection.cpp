@@ -6,7 +6,7 @@
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	define _i1 "UWP"
 #elif defined(WITH_OPENGLES)
-#	define _i1 "OpenGL ES"
+#	define _i1 "OpenGL|ES"
 #else
 #	define _i1 "OpenGL"
 #endif
@@ -19,100 +19,148 @@
 
 #if defined(WITH_ANGLE)
 #	define _i3 ", ANGLE"
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+#	define _i3 ", Mesa"
 #else
 #	define _i3 ""
 #endif
 
 #if defined(WITH_GLFW)
-#	define _i4 ", GLFW"
+#	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
+#		define _i4 ", GLFW/contrib"
+#	else
+#		define _i4 ", GLFW"
+#	endif
+#elif defined(WITH_QT5)
+#	define _i4 ", Qt5"
+#elif defined(WITH_SDL)
+#	define _i4 ", SDL2"
 #else
 #	define _i4 ""
 #endif
 
-#if defined(WITH_QT5)
-#	define _i5 ", Qt"
+#if defined(WITH_AUDIO)
+#	if defined(DEATH_TARGET_ANDROID)
+#		define _i5 ", OpenSL|ES, OpenAL"
+#	else
+#		define _i5 ", OpenAL"
+#	endif
 #else
 #	define _i5 ""
 #endif
 
-#if defined(WITH_SDL)
-#	define _i6 ", SDL2"
+#if defined(WITH_VORBIS)
+#	define _i6 ", Vorbis"
 #else
 #	define _i6 ""
 #endif
 
-#if defined(WITH_AUDIO)
-#	if defined(DEATH_TARGET_ANDROID)
-#		define _i7 ", OpenSL ES, OpenAL"
-#	else
-#		define _i7 ", OpenAL"
-#	endif
+#if defined(WITH_OPENMPT)
+#	define _i7 ", libopenmpt"
 #else
 #	define _i7 ""
 #endif
 
-#if defined(WITH_VORBIS)
-#	define _i8 ", Vorbis"
+#if defined(WITH_WEBP)
+#	define _i8 ", libwebp"
 #else
 #	define _i8 ""
 #endif
 
-#if defined(WITH_OPENMPT)
-#	define _i9 ", libopenmpt"
+#if defined(WITH_ZLIB)
+#	define _i9 ", zlib"
 #else
 #	define _i9 ""
 #endif
 
-#if defined(WITH_WEBP)
-#	define _i10 ", libwebp"
+#if defined(WITH_IMGUI)
+#	define _i10 ", ImGui"
 #else
 #	define _i10 ""
 #endif
 
-#if defined(WITH_ZLIB)
-#	define _i11 ", zlib"
+#if defined(WITH_ANGELSCRIPT)
+#	define _i11 ", AngelScript"
 #else
 #	define _i11 ""
 #endif
 
-#if defined(WITH_ANGELSCRIPT)
-#	define _i12 ", AngelScript"
+#if defined(WITH_MULTIPLAYER)
+#	define _i12 ", ENet"
 #else
 #	define _i12 ""
 #endif
 
-#if defined(WITH_IMGUI)
-#	define _i13 ", ImGui"
+#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
+#	if defined(DEATH_CPU_USE_IFUNC)
+#		define _i13 ", GNU IFUNC"
+#	else
+#		define _i13 ",\n\f[h:86]CPU Runtime Dispatch\f[/h]"
+#	endif
 #else
 #	define _i13 ""
 #endif
 
-#if defined(WITH_MULTIPLAYER)
-#	define _i14 ", ENet"
+#if defined(WITH_TRACY)
+#	define _i14 "\n\n\f[h:86]Tracy integration is enabled!\f[/h]"
 #else
 #	define _i14 ""
 #endif
 
-#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
-#	define _i15 ", GNU IFUNC"
-#else
-#	define _i15 ""
-#endif
-
-#if defined(WITH_TRACY)
-#	define _i16 "\n\nTracy integration is enabled!"
-#else
-#	define _i16 ""
-#endif
-
-#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15 _i16
+#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14
 
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
 	AboutSection::AboutSection()
+		: _scrollOffset(0.0f), _scrollRate(0.0f), _autoScroll(true), _rewind(false)
 	{
+		auto& resolver = ContentResolver::Get();
+
+		char text[8192];
+		char* textPtr = text;
+		std::size_t textSize = sizeof(text);
+
+		// TRANSLATORS: Header text in About section
+		auto headerText = _("Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and Christmas Chronicles). Also, it partially supports some features of JJ2+ extension.");
+		// TRANSLATORS: Link to website under header text in About section
+		auto websiteText = _f("For more information, visit the official website: %s", "\f[c:#707070]https://deat.tk/jazz2/\f[/c]");
+		// TRANSLATORS: Label in About section
+		auto developersText = _("Developers");
+		// TRANSLATORS: Label in About section
+		auto contributorsText = _("Contributors");
+		// TRANSLATORS: Label in About section
+		auto translatorsText = _("Translators");
+		// TRANSLATORS: Footer text in About section
+		auto footerText = _("This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and following libraries:");
+
+		std::int32_t headerLength = formatString(textPtr, textSize, "%s\n%s\n\n\n\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#d0705d]Dan R.\f[/c]\n\n\n\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#707070]\f[w:80]JJ\f[h:86]2\f[/h]\f[/w]⁺\f[w:50] \f[/w]Team\f[/c]\n\f[c:#707070]Bioxxdevil\f[/c]\n\f[c:#707070]JWP\f[/c]  \f[h:86](xtradeb maintainer)\f[/h]\n\f[c:#707070]Kreeblah\f[/c]  \f[h:86](Homebrew maintainer)\f[/h]\n\f[c:#707070]nat\f[/c]  \f[h:86](NixOS maintainer)\f[/h]\n\f[c:#707070]roox\f[/c]  \f[h:86](OpenSUSE maintainer)\f[/h]\n\f[c:#707070]tunip3\f[/c]\n\n\n\f[h:125]\f[j]%s\f[/j]\f[/h]\n", headerText.data(), websiteText.data(), developersText.data(), contributorsText.data(), translatorsText.data());
+		textPtr += headerLength;
+		textSize -= headerLength;
+
+		// Search both "Content/Translations/" and "Cache/Translations/" for translators
+		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+			AddTranslator(item, textPtr, textSize);
+		}
+
+		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+			AddTranslator(item, textPtr, textSize);
+		}
+
+		formatString(textPtr, textSize, "\n\n%s\n%s", footerText.data(), ADDITIONAL_INFO);
+
+		_textBlock.SetAlignment(Alignment::Center);
+		_textBlock.SetScale(0.8f);
+		_textBlock.SetMultiline(true);
+		_textBlock.SetWrapping(true);
+		_textBlock.SetFont(resolver.GetFont(FontType::Small));
+		_textBlock.SetText(StringView(text));
+	}
+
+	Recti AboutSection::GetClipRectangle(const Recti& contentBounds)
+	{
+		return Recti(contentBounds.X, contentBounds.Y + TopLine - 1, contentBounds.W, contentBounds.H - TopLine - BottomLine + 2);
 	}
 
 	void AboutSection::OnUpdate(float timeMult)
@@ -120,63 +168,132 @@ namespace Jazz2::UI::Menu
 		if (_root->ActionHit(PlayerActions::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
+		} else if (_root->ActionPressed(PlayerActions::Up)) {
+			if (_scrollRate < MaxScrollRate) {
+				_scrollRate += 0.16f * timeMult;
+			}
+			_scrollOffset -= _scrollRate * timeMult;
+			_autoScroll = false;
+		} else if (_root->ActionPressed(PlayerActions::Down)) {
+			if (_scrollRate < MaxScrollRate) {
+				_scrollRate += 0.16f * timeMult;
+			}
+			_scrollOffset += _scrollRate * timeMult;
+			_autoScroll = false;
+		} else {
+			_scrollRate = 0.0f;
+
+			if (_autoScroll) {
+				_scrollOffset += (_rewind ? (AutoScrollRate * -40.0f) : AutoScrollRate) * timeMult;
+			}
 		}
 	}
 
 	void AboutSection::OnDraw(Canvas* canvas)
 	{
-		Vector2i viewSize = canvas->ViewSize;
-		
-		Vector2f pos = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
-		pos.Y = (viewSize.Y >= 300 ? std::round(std::max(150.0f, pos.Y * 0.86f)) : 30.0f);
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
-		_root->DrawElement(MenuDim, pos.X, pos.Y + 24.0f - 2.0f, IMenuContainer::BackgroundLayer,
-			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
+		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+	}
 
-		pos.X = std::round(pos.X * 0.35f);
+	void AboutSection::OnDrawClipped(Canvas* canvas)
+	{
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
-		int32_t charOffset = 0;
-
-		if (viewSize.Y >= 300) {
-			// TRANSLATORS: Main information in About section
-			_root->DrawStringShadow(_f("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension.\nFor more information, visit the official website: %s", "\f[c:0x707070]https://deat.tk/jazz2/\f[c]"),
-				charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
-				Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f, 1.2f);
+		float viewHeight = (bottomLine - topLine);
+		float textBlockHeight = _textBlock.GetCachedHeight();
+		float maxScrollOffset = textBlockHeight + viewHeight;
+		if (_autoScroll && _rewind && _scrollOffset < viewHeight - 16.0f) {
+			_scrollOffset = viewHeight - 16.0f;
+			_autoScroll = false;
+		} else if (_scrollOffset < 0.0f || textBlockHeight <= 0.0f) {
+			_scrollOffset = 0.0f;
+		} else if (_scrollOffset > maxScrollOffset) {
+			_scrollOffset = maxScrollOffset;
+			if (_autoScroll) {
+				_rewind = true;
+			}
 		}
 
-		// TRANSLATORS: Header in About section
-		_root->DrawStringShadow(_("Created By"), charOffset, pos.X, pos.Y + 42.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Font::DefaultColor, 0.85f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
-		_root->DrawStringShadow("Dan R."_s, charOffset, pos.X + 25.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Font::DefaultColor, 1.0f, 0.4f, 0.75f, 0.75f, 0.6f, 0.9f);
+		int32_t charOffset = 0;
+		_textBlock.Draw(canvas, Rectf(contentBounds.X + 60.0f, topLine + viewHeight - roundf(_scrollOffset), contentBounds.W - 120.0f, 1000000.0f),
+			IMenuContainer::FontLayer, charOffset, 0.7f, 1.0f, 1.0f);
 
-		_root->DrawStringShadow("&  Contributors: \f[c:0xd0705d]JJ2+ Team\f[c], \f[c:0x707070]Bioxxdevil\f[c], \f[c:0x707070]roox\f[c], \f[c:0x707070]tunip3\f[c], ..."_s, charOffset, pos.X + 22.0f + 70.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
-
-		_root->DrawStringShadow(I18n::Get().GetTranslationDescription(),
-			charOffset, pos.X + 25.0f, pos.Y + 45.0f + 44.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Font::DefaultColor, 0.74f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
-
-		// TRANSLATORS: Bottom information in About section
-		_root->DrawStringShadow(_f("This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and following libraries:\n%s", ADDITIONAL_INFO), charOffset, viewSize.X * 0.5f, pos.Y + 54.0f + std::max(60.0f, pos.Y * 0.4f), IMenuContainer::FontLayer,
-			Alignment::Top, Font::DefaultColor, 0.76f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
-
-		_root->DrawElement(MenuLine, 0, viewSize.X * 0.5f, pos.Y + 24.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-
-		//pos.Y = viewSize.Y - 100.0f;
+		if (_scrollOffset > viewHeight - 6.0f) {
+			_root->DrawElement(MenuGlow, 0, centerX, topLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+		}
+		if (_scrollOffset < maxScrollOffset - viewHeight) {
+			_root->DrawElement(MenuGlow, 0, centerX, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+		}
 	}
 
 	void AboutSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
-		if (event.type == TouchEventType::Down) {
-			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-				if (y < 80.0f) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_root->LeaveSection();
+		switch (event.type) {
+			case TouchEventType::Down: {
+				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				if (pointerIndex != -1) {
+					std::int32_t y = (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y);
+					if (y < 80) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_root->LeaveSection();
+						return;
+					}
+
+					_touchLast = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), y);
+					_autoScroll = false;
 				}
+				break;
+			}
+			case TouchEventType::Move: {
+				if (_touchLast != Vector2i::Zero) {
+					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					if (pointerIndex != -1) {
+						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
+						_scrollOffset += _touchLast.Y - touchMove.Y;
+						_touchLast = touchMove;
+					}
+				}
+				break;
 			}
 		}
+	}
+
+	void AboutSection::AddTranslator(const StringView languageFile, char*& result, std::size_t& resultLength)
+	{
+		if (fs::GetExtension(languageFile) != "mo"_s) {
+			return;
+		}
+
+		auto language = fs::GetFileNameWithoutExtension(languageFile);
+		if (language.empty() || language.size() >= sizeof(PreferencesCache::Language)) {
+			return;
+		}
+
+		I18n i18n;
+		if (!i18n.LoadFromFile(languageFile)) {
+			return;
+		}
+
+		String desc = i18n.GetTranslationDescription();
+		std::size_t descLength = desc.size();
+		if (descLength == 0 || descLength >= resultLength) {
+			return;
+		}
+
+		StringView langName = I18n::GetLanguageName(language);
+
+		std::int32_t lineLength = formatString(result, resultLength, "\f[c:#707070]%s\f[/c]  \f[h:86](%s)\f[/h]\n", desc.data(), langName.data());
+		result += lineLength;
+		resultLength -= lineLength;
 	}
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Common.h"
 #include "Graphics/IGfxDevice.h"
 #include "Graphics/IDebugOverlay.h"
 #include "AppConfiguration.h"
@@ -233,6 +234,10 @@ namespace nCine
 		friend class IGfxDevice;
 #endif
 		friend class Viewport;
+
+#if defined(DEATH_TRACE)
+		friend void ::DEATH_TRACE(TraceLevel level, const char* fmt, ...);
+#endif
 	};
 
 	// Meyers' Singleton

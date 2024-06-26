@@ -58,7 +58,7 @@ namespace Jazz2::UI
 
 			int32_t unicodeCharCount = asciiCount + s->ReadValue<int32_t>();
 			for (; i < unicodeCharCount; i++) {
-				char c[4] = { };
+				char c[4] {};
 				s->Read(c, 1);
 
 				int32_t remainingBytes =
@@ -107,7 +107,35 @@ namespace Jazz2::UI
 		}
 	}
 
-	Vector2f Font::MeasureString(const StringView text, float scale, float charSpacing, float lineSpacing)
+	std::int32_t Font::GetSizeInPixels() const
+	{
+		// TODO
+		return _charSize.Y;
+	}
+
+	std::int32_t Font::GetAscentInPixels() const
+	{
+		// TODO
+		return (_charSize.Y * 4 / 5);
+	}
+
+	Vector2f Font::MeasureChar(char32_t c) const
+	{
+		Rectf uvRect;
+		if (c < 128) {
+			uvRect = _asciiChars[c];
+		} else {
+			auto it = _unicodeChars.find(c);
+			if (it != _unicodeChars.end()) {
+				uvRect = it->second;
+			} else {
+				uvRect = _asciiChars[0];
+			}
+		}
+		return Vector2f(uvRect.W, uvRect.H);
+	}
+
+	Vector2f Font::MeasureString(StringView text, float scale, float charSpacing, float lineSpacing)
 	{
 		size_t textLength = text.size();
 		if (textLength == 0 || _charSize.Y <= 0) {
@@ -143,20 +171,9 @@ namespace Jazz2::UI
 					} while (idx < textLength);
 				}
 			} else {
-				Rectf uvRect;
-				if (cursor.first < 128) {
-					uvRect = _asciiChars[cursor.first];
-				} else {
-					auto it = _unicodeChars.find(cursor.first);
-					if (it != _unicodeChars.end()) {
-						uvRect = it->second;
-					} else {
-						uvRect = _asciiChars[0];
-					}
-				}
-
-				if (uvRect.W > 0 && uvRect.H > 0) {
-					lastWidth += (uvRect.W + _baseSpacing) * charSpacingPre * scalePre;
+				Vector2f charSize = MeasureChar(cursor.first);
+				if (charSize.X > 0 && charSize.Y > 0) {
+					lastWidth += (charSize.X + _baseSpacing) * charSpacingPre * scalePre;
 				}
 			}
 
@@ -171,7 +188,51 @@ namespace Jazz2::UI
 		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
 	}
 
-	void Font::DrawString(Canvas* canvas, const StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
+	Vector2f Font::MeasureStringEx(StringView text, float scale, float charSpacing, float maxWidth, std::int32_t* charFit, float* charFitWidths)
+	{
+		if (charFit != nullptr) {
+			*charFit = 0;
+		}
+
+		std::size_t textLength = text.size();
+		if (textLength == 0 || _charSize.Y <= 0) {
+			return Vector2f::Zero;
+		}
+
+		float totalWidth = 0.0f, totalHeight = 0.0f;
+		std::size_t idx = 0;;
+		std::size_t lastCharFit = 0;
+
+		do {
+			auto [c, next] = Utf8::NextChar(text, idx);
+
+			Vector2f charSize = MeasureChar(c);
+			if (charSize.X > 0 && charSize.Y > 0) {
+				float totalWidthNew = totalWidth + (charSize.X + _baseSpacing) * charSpacing * scale;
+				if (charFitWidths != nullptr) {
+					do {
+						charFitWidths[lastCharFit++] = totalWidthNew;
+					} while (lastCharFit < next);
+				}
+				if (totalWidthNew > maxWidth) {
+					break;
+				}
+				totalWidth = totalWidthNew;
+			}
+
+			idx = next;
+		} while (idx < textLength);
+
+		if (charFit != nullptr) {
+			*charFit = static_cast<std::int32_t>(idx);
+		}
+
+		totalHeight += (_charSize.Y * scale);
+
+		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
+	}
+
+	void Font::DrawString(Canvas* canvas, StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		size_t textLength = text.size();
 		if (textLength == 0 || _charSize.Y <= 0) {
@@ -342,43 +403,33 @@ namespace Jazz2::UI
 							// Set custom color
 							idx = cursor.second;
 							cursor = Utf8::NextChar(text, idx);
-							if (cursor.first == '0') {
+							if (cursor.first == '#') {
 								idx = cursor.second;
-								cursor = Utf8::NextChar(text, idx);
-								if (cursor.first == 'x') {
+								int32_t paramLength = 0;
+								char param[9];
+								do {
+									cursor = Utf8::NextChar(text, idx);
+									if (cursor.first == ']') {
+										break;
+									}
+									if (paramLength < arraySize<std::int32_t>(param) - 1) {
+										param[paramLength++] = (char)cursor.first;
+									}
 									idx = cursor.second;
-									int32_t paramLength = 0;
-									char param[9];
-									do {
-										cursor = Utf8::NextChar(text, idx);
-										if (cursor.first == ']') {
-											break;
-										}
-										if (paramLength < arraySize<std::int32_t>(param) - 1) {
-											param[paramLength++] = (char)cursor.first;
-										}
-										idx = cursor.second;
-									} while (idx < textLength);
+								} while (idx < textLength);
 
-									if (paramLength > 0 && !useRandomColor && !isShadow) {
-										param[paramLength] = '\0';
-										char* end = &param[paramLength];
-										unsigned long paramValue = strtoul(param, &end, 16);
-										if (param != end) {
-											color = Color(paramValue);
-											color.SetAlpha(0.5f * alpha);
-											if (colorizeShader == nullptr) {
-												colorizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Colorized);
-											}
+								if (paramLength > 0 && !useRandomColor && !isShadow) {
+									param[paramLength] = '\0';
+									char* end = &param[paramLength];
+									unsigned long paramValue = strtoul(param, &end, 16);
+									if (param != end) {
+										color = Color(paramValue);
+										color.SetAlpha(0.5f * alpha);
+										if (colorizeShader == nullptr) {
+											colorizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Colorized);
 										}
 									}
 								}
-							}
-						} else if (cursor.first == ']') {
-							// Reset color
-							if (!useRandomColor && !isShadow) {
-								color = Colorf(1.0f, 1.0f, 1.0f, alpha);
-								colorizeShader = nullptr;
 							}
 						}
 					} else if (cursor.first == 'w') {
@@ -407,11 +458,25 @@ namespace Jazz2::UI
 									charSpacing = paramValue * 0.01f;
 								}
 							}
-						} else if (cursor.first == ']') {
+						}
+					} else if (cursor.first == '/') {
+						idx = cursor.second;
+						cursor = Utf8::NextChar(text, idx);
+						if (cursor.first == 'c') {
+							// Reset color
+							if (!useRandomColor && !isShadow) {
+								color = Colorf(1.0f, 1.0f, 1.0f, alpha);
+								colorizeShader = nullptr;
+							}
+						} else if (cursor.first == 'w') {
 							// Reset char spacing
 							charSpacing = charSpacingPre;
 						}
 					}
+				}
+
+				while (cursor.first != ']') {
+					cursor = Utf8::NextChar(text, cursor.second);
 				}
 			} else {
 				Rectf uvRect;

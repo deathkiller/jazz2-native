@@ -215,6 +215,7 @@ namespace Jazz2::Compatibility
 
 					if (text[i] == '/') {
 						buffer[j++] = '[';
+						buffer[j++] = '/';
 						buffer[j++] = 'w';
 						buffer[j++] = ']';
 					} else {
@@ -259,10 +260,11 @@ namespace Jazz2::Compatibility
 					int colorIndex2 = colorIndex % (arraySize<int>(DefaultFontColors) + 1);
 					if (colorIndex2 == 0) {
 						buffer[j++] = '[';
+						buffer[j++] = '/';
 						buffer[j++] = 'c';
 						buffer[j++] = ']';
 					} else {
-						j += formatString(&buffer[j], 16, "[c:0x%08x]", DefaultFontColors[colorIndex2 - 1]);
+						j += formatString(&buffer[j], 16, "[c:#%08x]", DefaultFontColors[colorIndex2 - 1]);
 					}
 				}
 

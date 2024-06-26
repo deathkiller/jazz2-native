@@ -180,11 +180,11 @@ namespace Jazz2::UI::Menu
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
 			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0)) {
 				char stringBuffer[64];
-				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:0xd0705d]%s\f[c] %s ", _("Change Weapon").data(), _("or").data());
+				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:#d0705d]%s\f[/c] %s ", _("Change Weapon").data(), _("or").data());
 
 				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 10.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
-				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 19.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
 				// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 				_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -204,8 +204,12 @@ namespace Jazz2::UI::Menu
 
 		auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)item.Item.Type];
 
+		if (isSelected) {
+			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer - 200, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
+		}
+
 		_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX * 0.3f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f);
+			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
 
 		std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
 		for (std::int32_t j = 0; j < targetCount; j++) {

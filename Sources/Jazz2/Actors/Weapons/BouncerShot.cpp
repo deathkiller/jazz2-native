@@ -89,7 +89,7 @@ namespace Jazz2::Actors::Weapons
 
 		_fired++;
 		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
+			MoveInstantly(_gunspotPos, MoveType::Absolute);
 			_renderer.setDrawEnabled(true);
 		}
 	}

@@ -45,6 +45,12 @@ namespace nCine
 		isFullscreen_ = fullscreen;
 
 		if (fullscreen) {
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			// On Emscripten, requesting full screen on GLFW is done by changing the window size to the screen size
+			EmscriptenFullscreenChangeEvent fsce;
+			emscripten_get_fullscreen_status(&fsce);
+			glfwSetWindowSize(windowHandle_, fsce.screenWidth, fsce.screenHeight);
+#else
 			int width = (monitor != nullptr ? currentMode->width : width_);
 			int height = (monitor != nullptr ? currentMode->height : height_);
 			int refreshRate = (monitor != nullptr ? currentMode->refreshRate : GLFW_DONT_CARE);
@@ -56,12 +62,6 @@ namespace nCine
 				refreshRate = (int)mode.refreshRate;
 			}
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-			// On Emscripten, requesting full screen on GLFW is done by changing the window size to the screen size
-			EmscriptenFullscreenChangeEvent fsce;
-			emscripten_get_fullscreen_status(&fsce);
-			glfwSetWindowSize(windowHandle_, fsce.screenWidth, fsce.screenHeight);
-#else
 			glfwSetWindowMonitor(windowHandle_, monitor, 0, 0, width, height, refreshRate);
 
 #	if defined(DEATH_TARGET_WINDOWS)

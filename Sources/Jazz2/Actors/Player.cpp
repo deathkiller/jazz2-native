@@ -969,7 +969,7 @@ namespace Jazz2::Actors
 		// Fire
 		bool weaponInUse = false;
 		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Fire)) {
-			if (!_isLifting && _suspendType != SuspendType::SwingingVine && (_currentAnimation->State & AnimState::Push) != AnimState::Push && _pushFramesLeft <= 0.0f) {
+			if (!_isLifting && _suspendType != SuspendType::SwingingVine) {
 				if (_playerType == PlayerType::Frog) {
 					if (_currentTransition == nullptr && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {
 						PlayPlayerSfx("Tongue"_s, 0.8f);
@@ -984,6 +984,9 @@ namespace Jazz2::Actors
 					}
 				} else if (_weaponAmmo[(int)_currentWeapon] != 0) {
 					_wasFirePressed = true;
+
+					// Shooting has higher priority than pushing
+					_pushFramesLeft = 0.0f;
 
 					bool weaponCooledDown = (_weaponCooldown <= 0.0f);
 					weaponInUse = FireCurrentWeapon(_currentWeapon);
@@ -1727,7 +1730,7 @@ namespace Jazz2::Actors
 			newState = AnimState::Swing;
 		} else if (_isLifting) {
 			newState = AnimState::Lift;
-		} else if (GetState(ActorState::CanJump) && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f) {
+		} else if (GetState(ActorState::CanJump) && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
 			newState = AnimState::Push;
 
 			if (_inIdleTransition) {

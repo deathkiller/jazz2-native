@@ -585,7 +585,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			if (levelInit.LevelName != ":end"_s) {
 				if (!SetLevelHandler(levelInit)) {
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
 				}
 			} else {
@@ -621,7 +621,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			{
 				if (!SetLevelHandler(levelInit)) {
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
 				}
 			}
@@ -671,7 +671,7 @@ void GameEventHandler::ResumeSavedState()
 		}
 
 		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot resume saved state!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
+		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot resume saved state!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 		SetStateHandler(std::move(mainMenu));
 	});
 }
@@ -806,14 +806,14 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			}
 
 			switch (reason) {
-				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot connect to the server!\f[c]\n\n\nYour client version is not compatible with the server.")); break;
-				case Reason::ServerIsFull: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot connect to the server!\f[c]\n\n\nServer capacity is full.\nPlease try it later.")); break;
-				case Reason::ServerNotReady: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot connect to the server!\f[c]\n\n\nServer is not in a state where it can process your request.\nPlease try again in a few seconds.")); break;
-				case Reason::ServerStopped: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Connection has been closed!\f[c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
-				case Reason::ConnectionLost: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Connection has been lost!\f[c]\n\n\nPlease try it again and if the problem persists,\ncheck your network connection.")); break;
-				case Reason::ConnectionTimedOut: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot connect to the server!\f[c]\n\n\nThe server is not responding for connection request.")); break;
-				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Connection has been closed!\f[c]\n\n\nYou have been \f[c:0x907050]kicked\f[c] off the server.\nContact server administrators for more information.")); break;
-				case Reason::Banned: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Connection has been closed!\f[c]\n\n\nYou have been \f[c:0x725040]banned\f[c] off the server.\nContact server administrators for more information.")); break;
+				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client version is not compatible with the server.")); break;
+				case Reason::ServerIsFull: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer capacity is full.\nPlease try it later.")); break;
+				case Reason::ServerNotReady: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer is not in a state where it can process your request.\nPlease try again in a few seconds.")); break;
+				case Reason::ServerStopped: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
+				case Reason::ConnectionLost: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been lost!\f[/c]\n\n\nPlease try it again and if the problem persists,\ncheck your network connection.")); break;
+				case Reason::ConnectionTimedOut: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe server is not responding for connection request.")); break;
+				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#907050]kicked\f[/c] off the server.\nContact server administrators for more information.")); break;
+				case Reason::Banned: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#725040]banned\f[/c] off the server.\nContact server administrators for more information.")); break;
 			}
 		});
 	}

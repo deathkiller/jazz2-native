@@ -14,6 +14,8 @@
 #include "MeshSprite.h"
 #include "ParticleSystem.h"
 
+#include <Containers/StaticArray.h>
+
 #include <imgui.h>
 
 #if defined(WITH_AUDIO)
@@ -32,6 +34,25 @@
 #if defined(WITH_ALLOCATORS)
 #	include "allocators_config.h"
 #endif
+
+namespace ImGui
+{
+	void TextInRoundedRectangle(const char* text, const char* text_end = nullptr)
+	{
+		auto drawList = ImGui::GetWindowDrawList();
+		ImVec2 cursorScreenPos = ImGui::GetCursorScreenPos();
+		ImVec2 textSize = ImGui::CalcTextSize(text, text_end, true);
+		ImVec2 start = ImVec2(cursorScreenPos.x, cursorScreenPos.y + 2.0f);
+		ImVec2 end = ImVec2(start.x + textSize.x + 7.0f, start.y + textSize.y - 1.0f);
+
+		drawList->AddRectFilled(start, end, 0xFF46310B, 1.0f);
+		drawList->AddRect(start, end, 0xFF736346, 1.0f);
+		drawList->AddText(ImVec2(cursorScreenPos.x + 4.0f, cursorScreenPos.y), 0xFFFFFFFF, text, text_end);
+
+		cursorScreenPos.x = end.x + 4.0f;
+		ImGui::SetCursorScreenPos(cursorScreenPos);
+	}
+}
 
 namespace nCine
 {
@@ -102,6 +123,7 @@ namespace nCine
 		guiWindow();
 
 		//ImGui::ShowMetricsWindow();
+		//ImGui::ShowDemoWindow();
 
 		if (settings_.showInfoText) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
@@ -113,6 +135,7 @@ namespace nCine
 			}
 			guiTopRight();
 			guiBottomLeft();
+			guiLog();
 		}
 
 		if (settings_.showProfilerGraphs) {
@@ -196,6 +219,11 @@ namespace nCine
 		}
 	}
 
+	void ImGuiDebugOverlay::log(TraceLevel level, StringView time, std::uint32_t threadId, StringView message)
+	{
+		logBuffer_.emplace_back(LogMessage{time, message, threadId, level});
+	}
+
 	namespace
 	{
 #if defined(WITH_AUDIO)
@@ -276,36 +304,37 @@ namespace nCine
 #if defined(IMGUI_HAS_SHADOWS)
 		ImGui::PushStyleColor(ImGuiCol_WindowShadow, ImVec4(0, 0, 0, 1));
 #endif
-		ImGui::Begin("Debug Overlay", &settings_.showInterface);
+		bool isVisible = ImGui::Begin("Debug Overlay", &settings_.showInterface);
 #if defined(IMGUI_HAS_SHADOWS)
 		ImGui::PopStyleColor();
 #endif
 
-		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
+		if (isVisible) {
+			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 
-		bool disableAutoSuspension = !theApplication().GetAutoSuspension();
-		ImGui::Checkbox("Disable auto-suspension", &disableAutoSuspension);
-		theApplication().SetAutoSuspension(!disableAutoSuspension);
-		/*ImGui::SameLine();
-		if (ImGui::Button("Quit")) {
-			theApplication().quit();
-		}*/
+			bool disableAutoSuspension = !theApplication().GetAutoSuspension();
+			ImGui::Checkbox("Disable auto-suspension", &disableAutoSuspension);
+			theApplication().SetAutoSuspension(!disableAutoSuspension);
+			/*ImGui::SameLine();
+			if (ImGui::Button("Quit")) {
+				theApplication().quit();
+			}*/
 
-		guiConfigureGui();
-		guiInitTimes();
-		guiLog();
-		guiGraphicsCapabilities();
-		guiApplicationConfiguration();
-		if (appCfg.withScenegraph) {
-			guiRenderingSettings();
-		}
-		//guiWindowSettings();
-		guiAudioPlayers();
-		//guiInputState();
-		guiRenderDoc();
-		guiAllocators();
-		if (appCfg.withScenegraph) {
-			guiNodeInspector();
+			guiConfigureGui();
+			guiInitTimes();
+			guiGraphicsCapabilities();
+			guiApplicationConfiguration();
+			if (appCfg.withScenegraph) {
+				guiRenderingSettings();
+			}
+			//guiWindowSettings();
+			guiAudioPlayers();
+			//guiInputState();
+			guiRenderDoc();
+			guiAllocators();
+			if (appCfg.withScenegraph) {
+				guiNodeInspector();
+			}
 		}
 
 		ImGui::End();
@@ -438,18 +467,58 @@ namespace nCine
 
 	void ImGuiDebugOverlay::guiLog()
 	{
-		/*if (ImGui::CollapsingHeader("Log")) {
-			ILogger& logger = theServiceLocator().logger();
+#if defined(IMGUI_HAS_SHADOWS)
+		ImGui::PushStyleColor(ImGuiCol_WindowShadow, ImVec4(0, 0, 0, 1));
+#endif
+		bool isVisible = ImGui::Begin("Log", &settings_.showInterface);
+#if defined(IMGUI_HAS_SHADOWS)
+		ImGui::PopStyleColor();
+#endif
+		if (isVisible) {
+			ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner | ImGuiTableFlags_NoPadOuterX;
+			if (ImGui::BeginTable("log", 3, flags, ImVec2(0.0f, 0.0f))) {
+				ImGuiListClipper clipper;
+				clipper.Begin(logBuffer_.size());
+				while (clipper.Step()) {
+					for (std::int32_t row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+						const auto& message = logBuffer_[row];
 
-			ImGui::BeginChild("scrolling", ImVec2(0.0f, -1.2f * ImGui::GetFrameHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar);
-			ImGui::TextUnformatted(logger.logString());
-			ImGui::EndChild();
-			ImGui::Separator();
-			if (ImGui::Button("Clear"))
-				logger.clearLogString();
-			ImGui::SameLine();
-			ImGui::Text("Length: %u / %u", logger.logStringLength(), logger.logStringCapacity());
-		}*/
+						ImGui::TableNextRow();
+
+						std::uint32_t color;
+						switch (message.Level) {
+							case TraceLevel::Fatal:		color = 0xFF403EEC; break;
+							case TraceLevel::Error:		color = 0xFF5050D8; break;
+							case TraceLevel::Warning:	color = 0xFF7AC7EB; break;
+							case TraceLevel::Info:		color = 0xFFEEEEEE; break;
+							default:					color = 0xFF969696; break;
+						}
+						ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+						ImGui::TableSetColumnIndex(0);
+						ImGui::TextUnformatted(message.Time.begin(), message.Time.end());
+
+						ImGui::TableSetColumnIndex(1);
+						ImGui::Text("%i", message.ThreadId);
+
+						ImGui::TableSetColumnIndex(2);
+
+						auto separator = message.Text.partition(" #> ");
+						if (!separator[0].empty()) {
+							ImGui::TextInRoundedRectangle(separator[0].begin(), separator[0].end());
+							ImGui::TextUnformatted(separator[2].begin(), separator[2].end());
+						} else {
+							ImGui::TextUnformatted(message.Text.begin(), message.Text.end());
+						}
+
+						ImGui::PopStyleColor();
+					}
+				}
+				ImGui::EndTable();
+			}
+		}
+
+		ImGui::End();
 	}
 
 	void ImGuiDebugOverlay::guiGraphicsCapabilities()
