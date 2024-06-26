@@ -17,7 +17,7 @@ namespace Jazz2::UI
 	struct FormattedTextBlockParams
 	{
 		StringView Text;
-		Font* Font = nullptr;
+		Font* TextFont = nullptr;
 		Alignment Align = Alignment::Left;
 		Colorf Color = Font::DefaultColor;
 		float Scale = 1.0f;
