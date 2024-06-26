@@ -15,7 +15,7 @@ namespace Jazz2::UI::Menu
 		auto& resolver = ContentResolver::Get();
 
 		auto& defaultLanguage = _items.emplace_back();
-		defaultLanguage.Item.DisplayName = "English \f[c:0x707070]· en"_s;
+		defaultLanguage.Item.DisplayName = "English \f[c:#707070]· en"_s;
 
 		// Search both "Content/Translations/" and "Cache/Translations/"
 		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
@@ -114,6 +114,6 @@ namespace Jazz2::UI::Menu
 
 		auto& episode = _items.emplace_back();
 		episode.Item.FileName = languageFile;
-		episode.Item.DisplayName = I18n::GetLanguageName(language) + " \f[c:0x707070]· "_s + language;
+		episode.Item.DisplayName = I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language;
 	}
 }

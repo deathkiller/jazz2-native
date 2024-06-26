@@ -1,4 +1,4 @@
-﻿#include "../Common.h"
+﻿#include "Application.h"
 
 #if defined(DEATH_TARGET_WINDOWS)
 extern "C"
@@ -42,7 +42,6 @@ extern "C"
 #	endif
 #endif
 
-#include "Application.h"
 #include "Base/Algorithms.h"
 #include "Base/Random.h"
 #include "IAppEventHandler.h"
@@ -467,6 +466,23 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	}
 #endif
 
+#if defined(WITH_IMGUI)
+	auto* debugOverlay = nCine::theApplication().debugOverlay_.get();
+	if (debugOverlay != nullptr) {
+#	if defined(WITH_THREADS)
+		std::uint32_t tid = static_cast<std::uint32_t>(nCine::Thread::GetCurrentId());
+#	else
+		std::uint32_t tid = 0;
+#	endif
+
+		TraceDateTime dateTime = GetTraceDateTime();
+		snprintf(logEntryWithColors, MaxEntryLength, "%02u:%02u:%02u.%03u", dateTime.Hours,
+			dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds);
+
+		debugOverlay->log(level, logEntryWithColors, tid, logEntryWithoutLevel);
+	}
+#endif
+
 #if defined(WITH_TRACY)
 	std::uint32_t colorTracy;
 	switch (level) {
@@ -832,21 +848,21 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		appEventHandler_->OnShutdown();
 		LOGI("IAppEventHandler::OnShutdown() invoked");
-		appEventHandler_.reset();
+		appEventHandler_ = nullptr;
 
 #if defined(WITH_IMGUI)
-		imguiDrawing_.reset(nullptr);
-		debugOverlay_.reset(nullptr);
+		imguiDrawing_ = nullptr;
+		debugOverlay_ = nullptr;
 #endif
 #if defined(WITH_RENDERDOC)
 		RenderDocCapture::removeHooks();
 #endif
 
-		rootNode_.reset();
+		rootNode_ = nullptr;
 		RenderResources::dispose();
-		frameTimer_.reset();
-		inputManager_.reset();
-		gfxDevice_.reset();
+		frameTimer_ = nullptr;
+		inputManager_ = nullptr;
+		gfxDevice_ = nullptr;
 
 #if 0 //defined(DEATH_TARGET_WINDOWS)
 		::CloseHandle(_waitableTimer);

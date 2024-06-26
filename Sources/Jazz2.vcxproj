@@ -464,6 +464,7 @@
     <ClInclude Include="Jazz2\UI\ControlScheme.h" />
     <ClInclude Include="Jazz2\UI\DiscordRpcClient.h" />
     <ClInclude Include="Jazz2\UI\Font.h" />
+    <ClInclude Include="Jazz2\UI\FormattedTextBlock.h" />
     <ClInclude Include="Jazz2\UI\HUD.h" />
     <ClInclude Include="Jazz2\UI\LoadingHandler.h" />
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h" />
@@ -696,6 +697,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStl.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\FileAccess.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\IDisposable.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\StackAlloc.h" />
     <ClInclude Include="simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>
@@ -841,6 +843,7 @@
     <ClCompile Include="Jazz2\UI\ControlScheme.cpp" />
     <ClCompile Include="Jazz2\UI\DiscordRpcClient.cpp" />
     <ClCompile Include="Jazz2\UI\Font.cpp" />
+    <ClCompile Include="Jazz2\UI\FormattedTextBlock.cpp" />
     <ClCompile Include="Jazz2\UI\HUD.cpp" />
     <ClCompile Include="Jazz2\UI\LoadingHandler.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />

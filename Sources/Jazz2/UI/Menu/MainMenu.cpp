@@ -251,7 +251,7 @@ namespace Jazz2::UI::Menu
 
 		auto newestVersion = _owner->_root->GetNewestVersion();
 		if (!newestVersion.empty() && newestVersion != NCINE_VERSION) {
-			String newerVersion = "v" NCINE_VERSION "  › \f[c:0x9e7056]v" + newestVersion;
+			String newerVersion = "v" NCINE_VERSION "  › \f[c:#9e7056]v" + newestVersion;
 			_owner->DrawStringShadow(newerVersion, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
 				Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 		} else {

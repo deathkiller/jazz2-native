@@ -192,12 +192,12 @@ namespace Jazz2::UI::Menu
 				if ((flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume) {
 					_root->DrawStringShadow(_("Access to external storage has been granted!"), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
 						Alignment::Bottom, Colorf(0.2f, 0.45f, 0.2f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
-					_root->DrawStringShadow(_("\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x337233] files correctly."), charOffset, center.X, center.Y * 0.96f + 10.0f, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_("\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#337233] files correctly."), charOffset, center.X, center.Y * 0.96f + 10.0f, IMenuContainer::FontLayer,
 						Alignment::Center, Font::DefaultColor, 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 				} else
 #	endif
 				{
-					_root->DrawStringShadow(_("\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x704a4a] files!"), charOffset, center.X, center.Y * 0.96f - 10.0f, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_("\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#704a4a] files!"), charOffset, center.X, center.Y * 0.96f - 10.0f, IMenuContainer::FontLayer,
 						Alignment::Bottom, Font::DefaultColor, 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 					_root->DrawStringShadow(_("Make sure Jazz Jackrabbit 2 files are present in following path:"), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.44f, 0.29f, 0.29f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);

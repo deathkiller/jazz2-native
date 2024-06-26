@@ -12,6 +12,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSsse3.h
 	${NCINE_SOURCE_DIR}/Shared/Utf8.h
 	${NCINE_SOURCE_DIR}/Shared/Base/IDisposable.h
+	${NCINE_SOURCE_DIR}/Shared/Base/StackAlloc.h
 	${NCINE_SOURCE_DIR}/Shared/Base/TypeInfo.h
 	${NCINE_SOURCE_DIR}/Shared/Base/Unaligned.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Array.h
@@ -333,6 +334,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/ControlScheme.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/DiscordRpcClient.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/FormattedTextBlock.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.h

@@ -4,7 +4,8 @@
 
 namespace Jazz2::UI
 {
-	enum class Alignment {
+	enum class Alignment
+	{
 		Center = 0x00,
 
 		Left = 0x01,

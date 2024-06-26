@@ -1485,6 +1485,12 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\IDisposable.h">
       <Filter>Header Files\Shared\Base</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\FormattedTextBlock.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\StackAlloc.h">
+      <Filter>Header Files\Shared\Base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2452,6 +2458,9 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\PakFile.cpp">
       <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\FormattedTextBlock.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
