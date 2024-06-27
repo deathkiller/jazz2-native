@@ -63,7 +63,7 @@ namespace Jazz2::Actors
 		_lastExitType(ExitType::None),
 		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false), _isRunPressed(false),
 		_currentSpecialMove(SpecialMoveType::None),
-		_isAttachedToPole(false),
+		_isAttachedToPole(false), _canPushFurther(false),
 		_copterFramesLeft(0.0f), _fireFramesLeft(0.0f), _pushFramesLeft(0.0f), _waterCooldownLeft(0.0f),
 		_levelExiting(LevelExitingState::None),
 		_isFreefall(false), _inWater(false), _isLifting(false), _isSpring(false),
@@ -71,9 +71,8 @@ namespace Jazz2::Actors
 		_activeModifier(Modifier::None),
 		_externalForceCooldown(0.0f),
 		_springCooldown(0.0f),
-		_inIdleTransition(false), _inLedgeTransition(false),
+		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true),
 		_carryingObject(nullptr),
-		_canDoubleJump(true),
 		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
@@ -969,7 +968,7 @@ namespace Jazz2::Actors
 		// Fire
 		bool weaponInUse = false;
 		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Fire)) {
-			if (!_isLifting && _suspendType != SuspendType::SwingingVine) {
+			if (!_isLifting && _suspendType != SuspendType::SwingingVine && !_canPushFurther) {
 				if (_playerType == PlayerType::Frog) {
 					if (_currentTransition == nullptr && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {
 						PlayPlayerSfx("Tongue"_s, 0.8f);
@@ -985,7 +984,7 @@ namespace Jazz2::Actors
 				} else if (_weaponAmmo[(int)_currentWeapon] != 0) {
 					_wasFirePressed = true;
 
-					// Shooting has higher priority than pushing
+					// Shooting has higher priority than pushing if object can't be moved further anymore
 					_pushFramesLeft = 0.0f;
 
 					bool weaponCooledDown = (_weaponCooldown <= 0.0f);
@@ -1545,7 +1544,7 @@ namespace Jazz2::Actors
 		} else {
 			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorState::CanJump) &&
 				!_inWater && _currentSpecialMove == SpecialMoveType::None && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionUppercutEnd) &&
-				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f) {
+				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
 
 				// Check if the character supports ledge climbing
 				if (_metadata->FindAnimation(AnimState::TransitionLedgeClimb)) {
@@ -1890,6 +1889,8 @@ namespace Jazz2::Actors
 	{
 		if (_pushFramesLeft > 0.0f) {
 			_pushFramesLeft -= timeMult;
+		} else {
+			_canPushFurther = false;
 		}
 
 		if (GetState(ActorState::CanJump) && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > 0.0f) {
@@ -1903,6 +1904,10 @@ namespace Jazz2::Actors
 					if (std::abs(pushSpeedX) > 0.0f) {
 						_speed.X = pushSpeedX * 1.2f * timeMult;
 						_pushFramesLeft = 3.0f;
+						_fireFramesLeft = 0.0f;
+						_canPushFurther = true;
+					} else {
+						_canPushFurther = false;
 					}
 					SetState(ActorState::IsSolidObject, true);
 				}
