@@ -211,15 +211,15 @@ namespace Jazz2::Actors
 
 		PlayerType _playerType, _playerTypeOriginal;
 		SpecialMoveType _currentSpecialMove;
-		bool _isAttachedToPole;
+		bool _isAttachedToPole, _canPushFurther;
 		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;
 		LevelExitingState _levelExiting;
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
 		std::int32_t _inShallowWater;
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
-		ActorBase* _carryingObject;
 		bool _canDoubleJump;
+		ActorBase* _carryingObject;
 		float _externalForceCooldown;
 		float _springCooldown;
 #if defined(WITH_AUDIO)
@@ -266,10 +266,10 @@ namespace Jazz2::Actors
 		std::uint16_t _weaponAmmoCheckpoint[(std::int32_t)WeaponType::Count];
 		std::uint8_t _weaponUpgrades[(std::int32_t)WeaponType::Count];
 		std::uint8_t _weaponUpgradesCheckpoint[(std::int32_t)WeaponType::Count];
+		WeaponWheelState _weaponWheelState;
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
 #endif
-		WeaponWheelState _weaponWheelState;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnTileDeactivated() override;

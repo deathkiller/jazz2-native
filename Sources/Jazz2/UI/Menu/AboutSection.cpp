@@ -6,7 +6,7 @@
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	define _i1 "UWP"
 #elif defined(WITH_OPENGLES)
-#	define _i1 "OpenGL|ES"
+#	define _i1 "OpenGL│ES"
 #else
 #	define _i1 "OpenGL"
 #endif
@@ -41,7 +41,7 @@
 
 #if defined(WITH_AUDIO)
 #	if defined(DEATH_TARGET_ANDROID)
-#		define _i5 ", OpenSL|ES, OpenAL"
+#		define _i5 ", OpenSL│ES, OpenAL"
 #	else
 #		define _i5 ", OpenAL"
 #	endif
@@ -135,7 +135,12 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Footer text in About section
 		auto footerText = _("This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and following libraries:");
 
-		std::int32_t headerLength = formatString(textPtr, textSize, "%s\n%s\n\n\n\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#d0705d]Dan R.\f[/c]\n\n\n\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#707070]\f[w:80]JJ\f[h:86]2\f[/h]\f[/w]⁺\f[w:50] \f[/w]Team\f[/c]\n\f[c:#707070]Bioxxdevil\f[/c]\n\f[c:#707070]JWP\f[/c]  \f[h:86](xtradeb maintainer)\f[/h]\n\f[c:#707070]Kreeblah\f[/c]  \f[h:86](Homebrew maintainer)\f[/h]\n\f[c:#707070]nat\f[/c]  \f[h:86](NixOS maintainer)\f[/h]\n\f[c:#707070]roox\f[/c]  \f[h:86](OpenSUSE maintainer)\f[/h]\n\f[c:#707070]tunip3\f[/c]\n\n\n\f[h:125]\f[j]%s\f[/j]\f[/h]\n", headerText.data(), websiteText.data(), developersText.data(), contributorsText.data(), translatorsText.data());
+		std::int32_t headerLength = formatString(textPtr, textSize, 
+			"%s\n%s\n\n\n"
+			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#d0705d]Dan R.\f[/c]\n\n\n"
+			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#707070]\f[w:80]JJ\f[h:86]2\f[/h]\f[/w]⁺\f[w:50] \f[/w]Team\f[/c]\n\f[c:#707070]Bioxxdevil\f[/c]\n\f[c:#707070]JWP\f[/c]  \f[h:86](xtradeb maintainer)\f[/h]\n\f[c:#707070]Kreeblah\f[/c]  \f[h:86](Homebrew maintainer)\f[/h]\n\f[c:#707070]nat\f[/c]  \f[h:86](NixOS maintainer)\f[/h]\n\f[c:#707070]roox\f[/c]  \f[h:86](OpenSUSE maintainer)\f[/h]\n\f[c:#707070]tunip3\f[/c]\n\n\n"
+			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n",
+			headerText.data(), websiteText.data(), developersText.data(), contributorsText.data(), translatorsText.data());
 		textPtr += headerLength;
 		textSize -= headerLength;
 
