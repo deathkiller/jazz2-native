@@ -811,7 +811,7 @@ namespace Jazz2::UI
 		std::int32_t charFit;
 		Vector2f size = _font->MeasureStringEx("..."_s, scale, charSpacing, maxWidth, &charFit, charFitWidths);
 		if (charFit > 0) {
-			Part& ellipsis = _parts.emplace_back("...", charFit, currentLocation,
+			_parts.emplace_back("...", charFit, currentLocation,
 				size.Y * lineSpacing, currentColor, scale, charSpacing, allowVariance);
 			currentLocation.X += charFitWidths[charFit - 1];
 		}

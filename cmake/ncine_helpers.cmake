@@ -456,7 +456,7 @@ function(ncine_apply_compiler_options target)
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 			target_compile_options(${target} PRIVATE "-fdiagnostics-color=auto")
 			target_compile_options(${target} PRIVATE "-Wall" "-Wno-old-style-cast" "-Wno-long-long" "-Wno-unused-parameter" "-Wno-ignored-qualifiers"
-				"-Wno-variadic-macros" "-Wcast-align" "-Wno-multichar" "-Wno-switch" "-Wno-unknown-pragmas" "-Wno-reorder")
+				"-Wno-variadic-macros" "-Wcast-align" "-Wno-multichar" "-Wno-switch" "-Wno-unknown-pragmas" "-Wno-reorder" "-Wno-sign-compare")
 
 			target_link_options(${target} PRIVATE "-Wno-free-nonheap-object")
 			#if(NCINE_DYNAMIC_LIBRARY)

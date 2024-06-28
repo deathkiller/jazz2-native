@@ -155,8 +155,6 @@ static TraceDateTime GetTraceDateTime()
 	clock_gettime(CLOCK_REALTIME, &currentTime);
 
 	time_t seconds = currentTime.tv_sec;
-	long milliseconds = (currentTime.tv_nsec / 1000000) % 1000;
-
 	struct tm localTime;
 	localtime_r(&seconds, &localTime);
 

@@ -36,7 +36,6 @@ namespace Jazz2::UI::Menu
 		Recti contentBounds = _root->GetContentBounds();
 		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.5f);
 		float topLine = contentBounds.Y + 31.0f;
-		float bottomLine = contentBounds.Y + contentBounds.H - 42.0f;
 
 		_root->DrawElement(MenuDim, center.X, topLine - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
