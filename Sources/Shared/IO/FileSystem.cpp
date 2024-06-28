@@ -1941,8 +1941,8 @@ namespace Death { namespace IO {
 			}
 			ssize_t sz = ::sendfile(destFd, sourceFd, nullptr, bytesToCopy);
 			if DEATH_UNLIKELY(sz < 0) {
-				std::int32_t err = errno;
-				if (errno == EINTR) {
+				std::int32_t error = errno;
+				if (error == EINTR) {
 					continue;
 				}
 
