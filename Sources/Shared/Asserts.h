@@ -120,7 +120,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 /** @brief Debug-only constexpr assertion macro */
 #if !defined(DEATH_DEBUG_CONSTEXPR_ASSERT)
 #	if defined(DEATH_DEBUG)
-#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message, ...) DEATH_CONSTEXPR_ASSERT(condition, message, __VA_ARGS__)
+#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message, ...) DEATH_CONSTEXPR_ASSERT(condition, message, ##__VA_ARGS__)
 #	else
 #		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message, ...) static_cast<void>(0)
 #	endif
