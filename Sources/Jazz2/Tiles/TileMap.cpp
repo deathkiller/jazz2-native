@@ -572,21 +572,23 @@ namespace Jazz2::Tiles
 
 		const Vector2i& layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		for (std::int32_t i = 0; i < _activeCollapsingTiles.size(); i++) {
-			Vector2i tilePos = _activeCollapsingTiles[i];
+		auto it = _activeCollapsingTiles.begin();
+		while (it != _activeCollapsingTiles.end()) {
+			Vector2i tilePos = *it;
 			auto& tile = _layers[_sprLayerIndex].Layout[tilePos.X + tilePos.Y * layoutSize.X];
 			if (tile.TileParams == 0) {
 				std::int32_t amount = 1;
 				if (!AdvanceDestructibleTileAnimation(tile, tilePos.X, tilePos.Y, amount, "SceneryCollapse"_s)) {
 					tile.DestructType = TileDestructType::None;
-					_activeCollapsingTiles.erase(_activeCollapsingTiles.begin() + i);
-					i--;
+					it = _activeCollapsingTiles.eraseUnordered(it);
+					continue;
 				} else {
 					tile.TileParams = 4;
 				}
 			} else {
 				tile.TileParams--;
 			}
+			++it;
 		}
 	}
 

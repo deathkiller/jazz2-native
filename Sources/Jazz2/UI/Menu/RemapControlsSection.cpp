@@ -315,7 +315,7 @@ namespace Jazz2::UI::Menu
 			}
 
 			if (_selectedColumn < mapping[_selectedIndex].Targets.size()) {
-				mapping[_selectedIndex].Targets.erase(mapping[_selectedIndex].Targets.begin() + _selectedColumn);
+				mapping[_selectedIndex].Targets.erase(_selectedColumn);
 
 				_isDirty = true;
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -388,7 +388,7 @@ namespace Jazz2::UI::Menu
 						}
 
 						if (_selectedColumn < mapping.Targets.size()) {
-							mapping.Targets.erase(mapping.Targets.begin() + _selectedColumn);
+							mapping.Targets.erase(_selectedColumn);
 
 							_isDirty = true;
 							_root->PlaySfx("MenuSelect"_s, 0.5f);

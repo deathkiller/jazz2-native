@@ -353,12 +353,13 @@ namespace Jazz2
 			}
 		}
 
-		for (std::int32_t i = (std::int32_t)_playingSounds.size() - 1; i >= 0; i--) {
-			if (_playingSounds[i]->isStopped()) {
-				_playingSounds.erase(&_playingSounds[i]);
-			} else {
-				break;
+		auto it = _playingSounds.begin();
+		while (it != _playingSounds.end()) {
+			if ((*it)->isStopped()) {
+				it = _playingSounds.eraseUnordered(it);
+				continue;
 			}
+			++it;
 		}
 #endif
 
@@ -1460,7 +1461,7 @@ namespace Jazz2
 					_collisions.DestroyProxy(actor->CollisionProxyID);
 					actor->CollisionProxyID = Collisions::NullNode;
 				}
-				it = _actors.erase(it);
+				it = _actors.eraseUnordered(it);
 				continue;
 			}
 			

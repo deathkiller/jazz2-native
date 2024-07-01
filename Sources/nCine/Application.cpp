@@ -364,15 +364,19 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 			}
 		}
 	}
-#	endif
-
-	if (level == TraceLevel::Error || level == TraceLevel::Fatal) {
-		fputs(logEntryWithColors, stderr);
-	} else {
-		fputs(logEntryWithColors, stdout);
+	if (hasVirtualTerminal && length2 < MaxEntryLength) {
+		// Console can be shared with parent process, so clear the rest of the line (using "\x1b[0K" sequence)
+		length2--;
+		logEntryWithColors[length2++] = '\x1b';
+		logEntryWithColors[length2++] = '[';
+		logEntryWithColors[length2++] = '0';
+		logEntryWithColors[length2++] = 'K';
+		logEntryWithColors[length2++] = '\n';
+		logEntryWithColors[length2] = '\0';
 	}
 
-#	if defined(DEATH_TARGET_WINDOWS)
+	fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
+
 	// Save the last cursor position for later
 	if (__consoleHandleOut != NULL) {
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -380,6 +384,8 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 			__consoleCursorY = csbi.dwCursorPosition.Y;
 		}
 	}
+#	else
+	fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
 #	endif
 
 #	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)

@@ -58,12 +58,13 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_AUDIO)
 		// Destroy stopped players
-		for (int32_t i = (int32_t)_owner->_playingSounds.size() - 1; i >= 0; i--) {
-			if (_owner->_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
-				_owner->_playingSounds.erase(&_owner->_playingSounds[i]);
-			} else {
-				break;
+		auto it = _owner->_playingSounds.begin();
+		while (it != _owner->_playingSounds.end()) {
+			if ((*it)->isStopped()) {
+				it = _owner->_playingSounds.eraseUnordered(it);
+				continue;
 			}
+			++it;
 		}
 #endif
 
