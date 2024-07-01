@@ -3288,8 +3288,8 @@ namespace Jazz2::Actors
 		}
 		bool positive = (activeForce >= 0.0f);
 
-		float tx = x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2;
-		float ty = y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2;
+		float tx = static_cast<float>(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
+		float ty = static_cast<float>(y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
 
 		if (_levelHandler->IsReforged()) {
 			auto* events = _levelHandler->EventMap();

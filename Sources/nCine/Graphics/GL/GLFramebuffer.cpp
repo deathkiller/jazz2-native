@@ -94,7 +94,7 @@ namespace nCine
 				bind(GL_FRAMEBUFFER);
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, 0);
 				GL_LOG_ERRORS();
-				attachedRenderbuffers_.erase(attachedRenderbuffers_.begin() + i);
+				attachedRenderbuffers_.eraseUnordered(i);
 				return true;
 			}
 		}

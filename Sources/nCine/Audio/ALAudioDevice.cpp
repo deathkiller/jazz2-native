@@ -136,11 +136,14 @@ namespace nCine
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		for (int i = (int)players_.size() - 1; i >= 0; i--) {
-			if (players_[i]->type() == objectType) {
-				players_[i]->stop();
-				players_.erase(&players_[i]);
+		auto it = players_.begin();
+		while (it != players_.end()) {
+			if ((*it)->type() == objectType) {
+				(*it)->stop();
+				it = players_.eraseUnordered(it);
+				continue;
 			}
+			++it;
 		}
 	}
 
@@ -150,11 +153,14 @@ namespace nCine
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		for (int i = (int)players_.size() - 1; i >= 0; i--) {
-			if (players_[i]->type() == objectType) {
-				players_[i]->pause();
-				players_.erase(&players_[i]);
+		auto it = players_.begin();
+		while (it != players_.end()) {
+			if ((*it)->type() == objectType) {
+				(*it)->pause();
+				it = players_.eraseUnordered(it);
+				continue;
 			}
+			++it;
 		}
 	}
 
@@ -202,9 +208,8 @@ namespace nCine
 			if (*it == player) {
 				players_.erase(it);
 				break;
-			} else {
-				++it;
 			}
+			++it;
 		}
 	}
 

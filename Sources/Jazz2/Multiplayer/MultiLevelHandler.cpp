@@ -972,7 +972,7 @@ namespace Jazz2::Multiplayer
 
 				for (std::size_t i = 0; i < _players.size(); i++) {
 					if (_players[i] == player) {
-						_players.erase(_players.begin() + i);
+						_players.eraseUnordered(i);
 						break;
 					}
 				}

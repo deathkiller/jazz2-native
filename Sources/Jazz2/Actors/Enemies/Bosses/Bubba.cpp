@@ -46,9 +46,9 @@ namespace Jazz2::Actors::Bosses
 		// Process level bounds
 		Recti levelBounds = _levelHandler->LevelBounds();
 		if (_pos.X < levelBounds.X) {
-			_pos.X = levelBounds.X;
+			_pos.X = static_cast<float>(levelBounds.X);
 		} else if (_pos.X > levelBounds.X + levelBounds.W) {
-			_pos.X = levelBounds.X + levelBounds.W;
+			_pos.X = static_cast<float>(levelBounds.X + levelBounds.W);
 		}
 
 		if (_frozenTimeLeft > 0.0f) {

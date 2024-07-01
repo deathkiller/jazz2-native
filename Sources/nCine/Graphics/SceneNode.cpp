@@ -165,11 +165,10 @@ namespace nCine
 		children_[index]->parent_ = nullptr;
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
-		// TODO: Fast removal without preserving the order
-		children_.erase(&children_[index]);
+		children_.eraseUnordered(&children_[index]);
 		// The last child has been moved to this index position
-		//if (children_.size() > index)
-		//	children_[index]->childOrderIndex_ = index;
+		if (children_.size() > index)
+			children_[index]->childOrderIndex_ = index;
 		return true;
 	}
 

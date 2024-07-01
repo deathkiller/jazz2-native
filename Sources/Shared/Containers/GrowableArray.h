@@ -76,28 +76,24 @@ namespace Death { namespace Containers {
 #endif
 		};
 
-		template<class T> inline void arrayConstruct(DefaultInitT, T*, T*, typename std::enable_if<
-			std::is_trivially_constructible<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0>
+		inline void arrayConstruct(DefaultInitT, T*, T*) {
 			// Nothing to do
 		}
 
-		template<class T> inline void arrayConstruct(DefaultInitT, T* begin, T* const end, typename std::enable_if<!
-			std::is_trivially_constructible<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0>
+		inline void arrayConstruct(DefaultInitT, T* begin, T* const end) {
 			// Needs to be < because sometimes begin > end. No {}, we want trivial types non-initialized
 			for (; begin < end; ++begin) new(begin) T;
 		}
 
-		template<class T> inline void arrayConstruct(ValueInitT, T* const begin, T* const end, typename std::enable_if<
-			std::is_trivially_constructible<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0>
+		inline void arrayConstruct(ValueInitT, T* const begin, T* const end) {
 			if (begin < end) std::memset(begin, 0, (end - begin) * sizeof(T));
 		}
 
-		template<class T> inline void arrayConstruct(ValueInitT, T* begin, T* const end, typename std::enable_if<!
-			std::is_trivially_constructible<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0>
+		inline void arrayConstruct(ValueInitT, T* begin, T* const end) {
 			// Needs to be < because sometimes begin > end
 			for (; begin < end; ++begin) new(begin) T{};
 		}
@@ -1031,16 +1027,14 @@ namespace Death { namespace Containers {
 			void(*deleter)(T*, std::size_t);
 		};
 
-		template<class T> inline void arrayMoveConstruct(T* const src, T* const dst, const std::size_t count, typename std::enable_if<
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayMoveConstruct(T* const src, T* const dst, const std::size_t count) {
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
 			if (count != 0) std::memcpy(dst, src, count * sizeof(T));
 		}
 
-		template<class T> inline void arrayMoveConstruct(T* src, T* dst, const std::size_t count, typename std::enable_if<!
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayMoveConstruct(T* src, T* dst, const std::size_t count) {
 			static_assert(std::is_nothrow_move_constructible<T>::value,
 				"nothrow move-constructible type is required");
 			for (T* end = src + count; src != end; ++src, ++dst)
@@ -1052,32 +1046,28 @@ namespace Death { namespace Containers {
 #endif
 		}
 
-		template<class T> inline void arrayMoveAssign(T* const src, T* const dst, const std::size_t count, typename std::enable_if<
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayMoveAssign(T* const src, T* const dst, const std::size_t count) {
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
 			if (count != 0) std::memcpy(dst, src, count * sizeof(T));
 		}
 
-		template<class T> inline void arrayMoveAssign(T* src, T* dst, const std::size_t count, typename std::enable_if<!
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayMoveAssign(T* src, T* dst, const std::size_t count) {
 			static_assert(std::is_nothrow_move_assignable<T>::value,
 				"nothrow move-assignable type is required");
 			for (T* end = src + count; src != end; ++src, ++dst)
 				*dst = std::move(*src);
 		}
 
-		template<class T> inline void arrayCopyConstruct(const T* const src, T* const dst, const std::size_t count, typename std::enable_if<
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayCopyConstruct(const T* const src, T* const dst, const std::size_t count) {
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
 			if (count != 0) std::memcpy(dst, src, count * sizeof(T));
 		}
 
-		template<class T> inline void arrayCopyConstruct(const T* src, T* dst, const std::size_t count, typename std::enable_if<!
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayCopyConstruct(const T* src, T* dst, const std::size_t count) {
 			for (const T* end = src + count; src != end; ++src, ++dst)
 				// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
@@ -1358,18 +1348,16 @@ namespace Death { namespace Containers {
 
 	namespace Implementation
 	{
-		template<class T> inline void arrayShiftForward(T* const src, T* const dst, const std::size_t count, typename std::enable_if<
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayShiftForward(T* const src, T* const dst, const std::size_t count) {
 			// Compared to the non-trivially-copyable variant below, just delegate to memmove() and assume it can figure
 			// out how to copy from back to front more efficiently that we ever could.
 			// Same as with memcpy(), apparently memmove() can't be called with null pointers, even if size is zero. I call that bullying.
 			if (count != 0) std::memmove(dst, src, count * sizeof(T));
 		}
 
-		template<class T> inline void arrayShiftForward(T* const src, T* const dst, const std::size_t count, typename std::enable_if<!
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayShiftForward(T* const src, T* const dst, const std::size_t count) {
 			static_assert(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value,
 				"nothrow move-constructible and move-assignable type is required");
 
@@ -1501,18 +1489,16 @@ namespace Death { namespace Containers {
 
 	namespace Implementation
 	{
-		template<class T> inline void arrayShiftBackward(T* const src, T* const dst, const std::size_t moveCount, std::size_t, typename std::enable_if<
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayShiftBackward(T* const src, T* const dst, const std::size_t moveCount, std::size_t) {
 			// Compared to the non-trivially-copyable variant below, just delegate to memmove() and assume it can figure
 			// out how to copy from front to back more efficiently that we ever could.
 			// Same as with memcpy(), apparently memmove() can't be called with null pointers, even if size is zero. I call that bullying.
 			if (moveCount != 0) std::memmove(dst, src, moveCount * sizeof(T));
 		}
 
-		template<class T> inline void arrayShiftBackward(T* const src, T* const dst, const std::size_t moveCount, std::size_t destructCount, typename std::enable_if<!
-			std::is_trivially_copyable<T>::value
-		>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_copyable<T>::value, int>::type = 0>
+		inline void arrayShiftBackward(T* const src, T* const dst, const std::size_t moveCount, std::size_t destructCount) {
 			static_assert(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value,
 				"nothrow move-constructible and move-assignable type is required");
 

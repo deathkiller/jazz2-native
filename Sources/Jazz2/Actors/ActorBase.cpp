@@ -55,7 +55,7 @@ namespace Jazz2::Actors
 		// Recalculate hotspot
 		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res != nullptr) {
-			_renderer.Hotspot.X = (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
+			_renderer.Hotspot.X = static_cast<float>(IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
 		}
 	}
 
@@ -1042,8 +1042,8 @@ namespace Jazz2::Actors
 		_renderer.AnimDuration = res->AnimDuration;
 		_renderer.AnimTime = (skipAnimation && res->AnimDuration >= 0.0f && _renderer.LoopMode != AnimationLoopMode::FixedSingle ? _renderer.AnimDuration : 0.0f);
 
-		_renderer.Hotspot.X = (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
-		_renderer.Hotspot.Y = res->Base->Hotspot.Y;
+		_renderer.Hotspot.X = static_cast<float>(IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
+		_renderer.Hotspot.Y = static_cast<float>(res->Base->Hotspot.Y);
 
 		_renderer.setTexture(res->Base->TextureDiffuse.get());
 		_renderer.UpdateVisibleFrames();
