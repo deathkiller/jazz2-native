@@ -63,13 +63,13 @@ namespace Jazz2
 	// These structures are aligned manually, because they are serialized and it should work cross-platform
 	struct EpisodeContinuationState {
 		EpisodeContinuationFlags Flags;
-		uint8_t DifficultyAndPlayerType;
-		uint8_t Lives;
-		uint8_t Unused1;
-		int32_t Score;
-		uint16_t Unused2;
-		uint16_t Ammo[(int32_t)WeaponType::Count];
-		uint8_t WeaponUpgrades[(int32_t)WeaponType::Count];
+		std::uint8_t DifficultyAndPlayerType;
+		std::uint8_t Lives;
+		std::uint8_t Unused1;
+		std::int32_t Score;
+		std::uint16_t Unused2;
+		std::uint16_t Ammo[(std::int32_t)WeaponType::Count];
+		std::uint8_t WeaponUpgrades[(std::int32_t)WeaponType::Count];
 	};
 
 	struct EpisodeContinuationStateWithLevel {

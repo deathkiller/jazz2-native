@@ -36,14 +36,14 @@ namespace Jazz2::UI::Menu
 		static constexpr std::int32_t BottomLine = 42;
 
 		SmallVector<ItemData> _items;
-		int32_t _selectedIndex;
+		std::int32_t _selectedIndex;
 		float _animation;
 		float _y;
 		float _height;
 		Vector2f _touchStart;
 		Vector2f _touchLast;
 		float _touchTime;
-		int32_t _pressedCount;
+		std::int32_t _pressedCount;
 		float _noiseCooldown;
 		Multiplayer::ServerDiscovery _discovery;
 

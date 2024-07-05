@@ -33,16 +33,16 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
-		bool _multiplayer;
 		float _expandedAnimation;
-		bool _expanded;
 		float _transitionTime;
+		bool _multiplayer;
+		bool _expanded;
 		bool _shouldStart;
 
-		void OnTouchUp(int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
+		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
 		void OnExecuteSelected() override;
-		void OnDrawEmptyText(Canvas* canvas, int32_t& charOffset) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected) override;
+		void OnDrawEmptyText(Canvas* canvas, std::int32_t& charOffset) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 
 		void OnAfterTransition();
 		void AddEpisode(const StringView& episodeFile);

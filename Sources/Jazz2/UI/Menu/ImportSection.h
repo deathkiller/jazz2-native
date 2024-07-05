@@ -34,15 +34,15 @@ namespace Jazz2::UI::Menu
 
 		float _animation;
 		State _state;
-		int32_t _fileCount;
+		std::int32_t _fileCount;
 		float _timeout;
 		HashMap<String, bool> _foundLevels;
 
-		static void FileDataCallback(void* context, std::unique_ptr<char[]> data, size_t length, const StringView& name);
-		static void FileCountCallback(void* context, int32_t fileCount);
+		static void FileDataCallback(void* context, std::unique_ptr<char[]> data, std::size_t length, StringView name);
+		static void FileCountCallback(void* context, std::int32_t fileCount);
 
 		void CheckFoundLevels();
-		bool HasAllLevels(ArrayView<StringView> levelNames);
+		bool HasAllLevels(ArrayView<const StringView> levelNames);
 	};
 }
 

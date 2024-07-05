@@ -41,7 +41,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
 		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Touch Controls"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
@@ -61,7 +61,7 @@ namespace Jazz2::UI::Menu
 	{
 		switch(event.type) {
 			case TouchEventType::Down: {
-				int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 				if (pointerIndex != -1) {
 					float x = event.pointers[pointerIndex].x;
 					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -75,7 +75,7 @@ namespace Jazz2::UI::Menu
 					if (y > 120.0f) {
 						if (x < 0.4f) {
 							_selectedZone = SelectedZone::Left;
-						} else if(x > 0.6f) {
+						} else if (x > 0.6f) {
 							_selectedZone = SelectedZone::Right;
 						}
 						_lastPos = Vector2f(event.pointers[pointerIndex].x, event.pointers[pointerIndex].y);
@@ -86,7 +86,7 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Move: {
 				if (event.actionIndex == _lastPointerId) {
-					int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
 						Vector2f newPos = Vector2f(event.pointers[pointerIndex].x, event.pointers[pointerIndex].y);
 						Vector2f diff = (newPos - _lastPos) * Vector2f(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
@@ -123,7 +123,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void TouchControlsOptionsSection::DrawOutlinedSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size)
+	void TouchControlsOptionsSection::DrawOutlinedSolid(float x, float y, std::uint16_t z, Alignment align, const Vector2f& size)
 	{
 		_root->DrawSolid(x, y, z, align, size, Colorf(1.0f, 1.0f, 1.0f, 0.5f));
 

@@ -29,11 +29,11 @@ namespace Jazz2::UI::Menu
 			float TouchY;
 		};
 
-		ItemData _items[(int32_t)Item::Count];
-		int32_t _selectedIndex;
+		ItemData _items[(std::int32_t)Item::Count];
+		std::int32_t _selectedIndex;
 		float _animation;
-		bool _isDirty;
 		float _pressedCooldown;
-		int32_t _pressedCount;
+		std::int32_t _pressedCount;
+		bool _isDirty;
 	};
 }

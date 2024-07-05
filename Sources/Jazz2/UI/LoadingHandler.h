@@ -11,8 +11,8 @@ namespace Jazz2::UI
 	class LoadingHandler : public IStateHandler
 	{
 	public:
-		static constexpr int32_t DefaultWidth = 720;
-		static constexpr int32_t DefaultHeight = 405;
+		static constexpr std::int32_t DefaultWidth = 720;
+		static constexpr std::int32_t DefaultHeight = 405;
 
 		LoadingHandler(IRootController* root);
 		LoadingHandler(IRootController* root, const std::function<bool(IRootController*)>& callback);
@@ -20,7 +20,7 @@ namespace Jazz2::UI
 		~LoadingHandler() override;
 
 		void OnBeginFrame() override;
-		void OnInitializeViewport(int32_t width, int32_t height) override;
+		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 
 	private:
 		IRootController* _root;

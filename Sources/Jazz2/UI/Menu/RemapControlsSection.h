@@ -25,14 +25,14 @@ namespace Jazz2::UI::Menu
 		void OnDraw(Canvas* canvas) override;
 
 	private:
-		int32_t _selectedColumn;
-		int32_t _currentPlayerIndex;
-		bool _isDirty;
-		bool _waitForInput;
+		std::int32_t _selectedColumn;
+		std::int32_t _currentPlayerIndex;
 		float _timeout;
 		float _hintAnimation;
 		BitArray _keysPressedLast;
 		JoyMappedState _joyStatesLast[ControlScheme::MaxConnectedGamepads];
+		bool _isDirty;
+		bool _waitForInput;
 
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;

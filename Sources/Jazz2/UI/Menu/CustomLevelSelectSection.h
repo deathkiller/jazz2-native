@@ -35,14 +35,14 @@ namespace Jazz2::UI::Menu
 
 		SmallVector<ItemData> _items;
 		bool _multiplayer;
-		int32_t _selectedIndex;
+		std::int32_t _selectedIndex;
 		float _animation;
 		float _y;
 		float _height;
 		Vector2f _touchStart;
 		Vector2f _touchLast;
 		float _touchTime;
-		int32_t _pressedCount;
+		std::int32_t _pressedCount;
 		float _noiseCooldown;
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		Thread _indexingThread;

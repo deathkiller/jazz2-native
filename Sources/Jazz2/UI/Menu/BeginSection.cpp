@@ -126,10 +126,10 @@ namespace Jazz2::UI::Menu
 				ExecuteSelected();
 			} else if (_root->ActionHit(PlayerActions::Menu)) {
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-				if (_selectedIndex != (int32_t)_items.size() - 1) {
+				if (_selectedIndex != (std::int32_t)_items.size() - 1) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_animation = 0.0f;
-					_selectedIndex = (int32_t)_items.size() - 1;
+					_selectedIndex = (std::int32_t)_items.size() - 1;
 				}
 #endif
 			} else if (_root->ActionHit(PlayerActions::Up)) {
@@ -142,13 +142,13 @@ namespace Jazz2::UI::Menu
 						goto SkipDisabledOnUp;
 					}
 				} else {
-					_selectedIndex = (int32_t)_items.size() - 1;
+					_selectedIndex = (std::int32_t)_items.size() - 1;
 				}
 			} else if (_root->ActionHit(PlayerActions::Down)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
 			SkipDisabledOnDown:
-				if (_selectedIndex < (int32_t)_items.size() - 1) {
+				if (_selectedIndex < (std::int32_t)_items.size() - 1) {
 					_selectedIndex++;
 					if (_items[_selectedIndex].Y <= DisabledItem) {
 						goto SkipDisabledOnDown;
@@ -168,12 +168,12 @@ namespace Jazz2::UI::Menu
 	void BeginSection::OnDraw(Canvas* canvas)
 	{
 		Recti contentBounds = _root->GetContentBounds();
-		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.2f * (1.0f - 0.048f * (int32_t)_items.size()));
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.2f * (1.0f - 0.048f * (std::int32_t)_items.size()));
 		if (contentBounds.H < 230) {
 			center.Y *= 0.85f;
 		}
 
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		bool isPlayable = true;
@@ -231,7 +231,7 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
-		for (int32_t i = 0; i < (int32_t)_items.size(); i++) {
+		for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
 			_items[i].Y = center.Y;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -294,7 +294,7 @@ namespace Jazz2::UI::Menu
 	void BeginSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -307,7 +307,7 @@ namespace Jazz2::UI::Menu
 				}
 #endif
 
-				for (int32_t i = 0; i < (int32_t)_items.size(); i++) {
+				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
 					float itemHeight = (!isPlayable && i == 0 ? 60.0f : 22.0f);
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < itemHeight) {
 						if (_selectedIndex == i) {

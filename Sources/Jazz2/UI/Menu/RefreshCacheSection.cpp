@@ -72,7 +72,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 
 		_root->DrawStringShadow(_("Refresh Cache"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

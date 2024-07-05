@@ -12,11 +12,11 @@ namespace Jazz2::UI::Menu
 		: _selectedIndex(0), _animation(0.0f), _isDirty(false), _pressedCooldown(0.0f), _pressedCount(0)
 	{
 		// TRANSLATORS: Menu item in Options > Sounds section
-		_items[(int32_t)Item::MasterVolume].Name = _("Master Volume");
+		_items[(std::int32_t)Item::MasterVolume].Name = _("Master Volume");
 		// TRANSLATORS: Menu item in Options > Sounds section
-		_items[(int32_t)Item::SfxVolume].Name = _("SFX Volume");
+		_items[(std::int32_t)Item::SfxVolume].Name = _("SFX Volume");
 		// TRANSLATORS: Menu item in Options > Sounds section
-		_items[(int32_t)Item::MusicVolume].Name = _("Music Volume");
+		_items[(std::int32_t)Item::MusicVolume].Name = _("Music Volume");
 	}
 
 	SoundsOptionsSection::~SoundsOptionsSection()
@@ -88,7 +88,7 @@ namespace Jazz2::UI::Menu
 
 	void SoundsOptionsSection::OnDraw(Canvas* canvas)
 	{
-		constexpr int BlockCount = 33;
+		constexpr std::int32_t BlockCount = 33;
 
 		Recti contentBounds = _root->GetContentBounds();
 		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.5f);
@@ -100,15 +100,15 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int32_t)Item::Count;
-		int charOffset = 0;
+		center.Y = topLine + (bottomLine - topLine) * 0.35f / (std::int32_t)Item::Count;
+		std::int32_t charOffset = 0;
 
 		_root->DrawStringShadow(_("Sounds"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		char stringBuffer[34];
 
-		for (int i = 0; i < (int32_t)Item::Count; i++) {
+		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
 
 			if (_selectedIndex == i) {
@@ -128,15 +128,15 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			int currentBlockCount;
+			std::int32_t currentBlockCount;
 			switch (i) {
 				default:
-				case (int32_t)Item::MasterVolume: currentBlockCount = (int32_t)std::round(PreferencesCache::MasterVolume * BlockCount); break;
-				case (int32_t)Item::SfxVolume: currentBlockCount = (int32_t)std::round(PreferencesCache::SfxVolume * BlockCount); break;
-				case (int32_t)Item::MusicVolume: currentBlockCount = (int32_t)std::round(PreferencesCache::MusicVolume * BlockCount); break;
+				case (std::int32_t)Item::MasterVolume: currentBlockCount = (std::int32_t)std::round(PreferencesCache::MasterVolume * BlockCount); break;
+				case (std::int32_t)Item::SfxVolume: currentBlockCount = (std::int32_t)std::round(PreferencesCache::SfxVolume * BlockCount); break;
+				case (std::int32_t)Item::MusicVolume: currentBlockCount = (std::int32_t)std::round(PreferencesCache::MusicVolume * BlockCount); break;
 			}
 
-			for (int i = 0; i < BlockCount; i++) {
+			for (std::int32_t i = 0; i < BlockCount; i++) {
 				stringBuffer[i] = '|';
 			}
 			stringBuffer[BlockCount] = '\0';
@@ -144,7 +144,7 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow(stringBuffer, charOffset, center.X - 66.0f, center.Y + 24.0f, IMenuContainer::FontShadowLayer + 2,
 				Alignment::Left, Colorf(0.38f, 0.37f, 0.34f, 0.34f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
-			for (int i = 0; i < currentBlockCount; i++) {
+			for (std::int32_t i = 0; i < currentBlockCount; i++) {
 				stringBuffer[i] = '|';
 			}
 			stringBuffer[currentBlockCount] = '\0';
@@ -153,14 +153,14 @@ namespace Jazz2::UI::Menu
 				Alignment::Left, (_selectedIndex == i ? Font::RandomColor : Font::DefaultColor), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 
-			center.Y += (bottomLine - topLine) * 0.9f / (int32_t)Item::Count;
+			center.Y += (bottomLine - topLine) * 0.9f / (std::int32_t)Item::Count;
 		}
 	}
 
 	void SoundsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -171,15 +171,15 @@ namespace Jazz2::UI::Menu
 					return;
 				}
 
-				for (int i = 0; i < (int32_t)Item::Count; i++) {
+				for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
 						if (_selectedIndex == i) {
 							float* value;
 							switch (_selectedIndex) {
 								default:
-								case (int32_t)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
-								case (int32_t)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
-								case (int32_t)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
+								case (std::int32_t)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
+								case (std::int32_t)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
+								case (std::int32_t)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
 							}
 
 							*value = std::clamp(*value + (x < 0.5f ? -0.03f : 0.03f), 0.0f, 1.0f);

@@ -21,11 +21,11 @@ namespace Jazz2::UI::Menu
 			Right
 		};
 
-		bool _isDirty;
 		SelectedZone _selectedZone;
 		Vector2f _lastPos;
-		int32_t _lastPointerId;
+		std::int32_t _lastPointerId;
+		bool _isDirty;
 
-		void DrawOutlinedSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size);
+		void DrawOutlinedSolid(float x, float y, std::uint16_t z, Alignment align, const Vector2f& size);
 	};
 }

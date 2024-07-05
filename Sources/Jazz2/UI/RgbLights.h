@@ -38,10 +38,10 @@ namespace ChromaSDK::Keyboard
 	} EFFECT_TYPE;
 
 	//! Maximum number of rows in a keyboard.
-	const size_t MAX_ROW = 6;
+	const std::size_t MAX_ROW = 6;
 
 	//! Maximum number of columns in a keyboard.
-	const size_t MAX_COLUMN = 22;
+	const std::size_t MAX_COLUMN = 22;
 
 	//! Custom effect (This effect type has deprecated and should not be used).
 	typedef struct CUSTOM_EFFECT_TYPE {

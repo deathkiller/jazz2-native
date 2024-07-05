@@ -7,7 +7,7 @@
 
 namespace Jazz2::UI
 {
-	void UpscaleRenderPass::Initialize(int32_t width, int32_t height, int32_t targetWidth, int32_t targetHeight)
+	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
 	{
 		_targetSize = Vector2f((float)targetWidth, (float)targetHeight);
 
@@ -16,8 +16,8 @@ namespace Jazz2::UI
 			float widthFrac = modff((float)targetWidth / width, &widthRatio);
 			float heightFrac = modff((float)targetHeight / height, &heightRatio);
 
-			int32_t requiredWidth = (int32_t)(widthFrac > 0.004f ? (width * (widthRatio + 1)) : targetWidth);
-			int32_t requiredHeight = (int32_t)(heightFrac > 0.004f ? (height * (heightRatio + 1)) : targetHeight);
+			std::int32_t requiredWidth = (std::int32_t)(widthFrac > 0.004f ? (width * (widthRatio + 1)) : targetWidth);
+			std::int32_t requiredHeight = (std::int32_t)(heightFrac > 0.004f ? (height * (heightRatio + 1)) : targetHeight);
 
 			if (std::abs(requiredWidth - targetWidth) > 2 || std::abs(requiredHeight - targetHeight) > 2) {
 				if (_antialiasing._target == nullptr) {
@@ -182,7 +182,7 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	void UpscaleRenderPassWithClipping::Initialize(int32_t width, int32_t height, int32_t targetWidth, int32_t targetHeight)
+	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
 	{
 		if (_clippedView != nullptr) {
 			_clippedView->removeAllTextures();

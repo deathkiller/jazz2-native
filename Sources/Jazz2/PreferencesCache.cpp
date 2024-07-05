@@ -165,19 +165,19 @@ namespace Jazz2
 		if (!resetConfig) {
 			auto s = fs::Open(_configPath, FileAccess::Read);
 			if (s->GetSize() > 18) {
-				uint64_t signature = s->ReadValue<uint64_t>();
-				uint8_t fileType = s->ReadValue<uint8_t>();
-				uint8_t version = s->ReadValue<uint8_t>();
+				std::uint64_t signature = s->ReadValue<std::uint64_t>();
+				std::uint8_t fileType = s->ReadValue<std::uint8_t>();
+				std::uint8_t version = s->ReadValue<std::uint8_t>();
 				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version <= FileVersion) {
 					if (version == 1) {
 						// Version 1 included compressedSize and decompressedSize, it's not needed anymore
-						/*int32_t compressedSize =*/ s->ReadValue<int32_t>();
-						/*int32_t uncompressedSize =*/ s->ReadValue<int32_t>();
+						/*std::int32_t compressedSize =*/ s->ReadValue<std::int32_t>();
+						/*std::int32_t uncompressedSize =*/ s->ReadValue<std::int32_t>();
 					}
 
 					DeflateStream uc(*s);
 
-					BoolOptions boolOptions = (BoolOptions)uc.ReadValue<uint64_t>();
+					BoolOptions boolOptions = (BoolOptions)uc.ReadValue<std::uint64_t>();
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 					EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
@@ -218,21 +218,21 @@ namespace Jazz2
 					}
 
 					// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
-					UnlockedEpisodes = (UnlockableEpisodes)uc.ReadValue<uint32_t>();
+					UnlockedEpisodes = (UnlockableEpisodes)uc.ReadValue<std::uint32_t>();
 
-					ActiveRescaleMode = (RescaleMode)uc.ReadValue<uint8_t>();
+					ActiveRescaleMode = (RescaleMode)uc.ReadValue<std::uint8_t>();
 
-					MasterVolume = uc.ReadValue<uint8_t>() / 255.0f;
-					SfxVolume = uc.ReadValue<uint8_t>() / 255.0f;
-					MusicVolume = uc.ReadValue<uint8_t>() / 255.0f;
+					MasterVolume = uc.ReadValue<std::uint8_t>() / 255.0f;
+					SfxVolume = uc.ReadValue<std::uint8_t>() / 255.0f;
+					MusicVolume = uc.ReadValue<std::uint8_t>() / 255.0f;
 
-					TouchLeftPadding.X = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
-					TouchLeftPadding.Y = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
-					TouchRightPadding.X = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
-					TouchRightPadding.Y = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+					TouchLeftPadding.X = std::round(uc.ReadValue<std::int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+					TouchLeftPadding.Y = std::round(uc.ReadValue<std::int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+					TouchRightPadding.X = std::round(uc.ReadValue<std::int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+					TouchRightPadding.Y = std::round(uc.ReadValue<std::int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
 
 					if (version >= 5) {
-						GamepadButtonLabels = (GamepadType)uc.ReadValue<uint8_t>();
+						GamepadButtonLabels = (GamepadType)uc.ReadValue<std::uint8_t>();
 					}
 
 					// Controls
@@ -265,16 +265,16 @@ namespace Jazz2
 						}
 					} else {
 						// Skip old control mapping definitions
-						uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
+						std::uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
 						uc.Seek(controlMappingCount * sizeof(std::uint32_t), SeekOrigin::Current);
 					}
 
 					// Episode End
-					uint16_t episodeEndSize = uc.ReadValue<uint16_t>();
-					uint16_t episodeEndCount = uc.ReadValue<uint16_t>();
+					std::uint16_t episodeEndSize = uc.ReadValue<std::uint16_t>();
+					std::uint16_t episodeEndCount = uc.ReadValue<std::uint16_t>();
 
-					for (uint32_t i = 0; i < episodeEndCount; i++) {
-						uint8_t nameLength = uc.ReadValue<uint8_t>();
+					for (std::uint32_t i = 0; i < episodeEndCount; i++) {
+						std::uint8_t nameLength = uc.ReadValue<std::uint8_t>();
 						String episodeName = String(NoInit, nameLength);
 						uc.Read(episodeName.data(), nameLength);
 
@@ -291,17 +291,17 @@ namespace Jazz2
 					}
 
 					// Episode Continue
-					uint16_t episodeContinueSize = uc.ReadValue<uint16_t>();
-					uint16_t episodeContinueCount = uc.ReadValue<uint16_t>();
+					std::uint16_t episodeContinueSize = uc.ReadValue<std::uint16_t>();
+					std::uint16_t episodeContinueCount = uc.ReadValue<std::uint16_t>();
 
-					for (uint32_t i = 0; i < episodeContinueCount; i++) {
-						uint8_t nameLength = uc.ReadValue<uint8_t>();
+					for (std::uint32_t i = 0; i < episodeContinueCount; i++) {
+						std::uint8_t nameLength = uc.ReadValue<std::uint8_t>();
 						String episodeName = String(NoInit, nameLength);
 						uc.Read(episodeName.data(), nameLength);
 
 						if (episodeContinueSize == sizeof(EpisodeContinuationState)) {
 							EpisodeContinuationStateWithLevel stateWithLevel = { };
-							nameLength = uc.ReadValue<uint8_t>();
+							nameLength = uc.ReadValue<std::uint8_t>();
 							stateWithLevel.LevelName = String(NoInit, nameLength);
 							uc.Read(stateWithLevel.LevelName.data(), nameLength);
 
@@ -309,7 +309,7 @@ namespace Jazz2
 							_episodeContinue.emplace(std::move(episodeName), std::move(stateWithLevel));
 						} else {
 							// Struct has different size, so it's better to skip it
-							nameLength = uc.ReadValue<uint8_t>();
+							nameLength = uc.ReadValue<std::uint8_t>();
 							uc.Seek(nameLength + episodeContinueSize, SeekOrigin::Current);
 						}
 					}
@@ -386,9 +386,9 @@ namespace Jazz2
 			return;
 		}
 
-		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);
-		so->WriteValue<uint8_t>(ContentResolver::ConfigFile);
-		so->WriteValue<uint8_t>(FileVersion);
+		so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);
+		so->WriteValue<std::uint8_t>(ContentResolver::ConfigFile);
+		so->WriteValue<std::uint8_t>(FileVersion);
 
 		DeflateWriter co(*so);
 
@@ -413,27 +413,27 @@ namespace Jazz2
 		if (ResumeOnStart) boolOptions |= BoolOptions::ResumeOnStart;
 		if (EnableReforgedHUD) boolOptions |= BoolOptions::EnableReforgedHUD;
 		if (EnableReforgedMainMenu) boolOptions |= BoolOptions::EnableReforgedMainMenu;
-		co.WriteValue<uint64_t>((uint64_t)boolOptions);
+		co.WriteValue<std::uint64_t>((std::uint64_t)boolOptions);
 
 		if (Language[0] != '\0') {
 			co.Write(Language, sizeof(Language));
 		}
 
 		// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
-		co.WriteValue<uint32_t>((uint32_t)UnlockedEpisodes);
+		co.WriteValue<std::uint32_t>((std::uint32_t)UnlockedEpisodes);
 
-		co.WriteValue<uint8_t>((uint8_t)ActiveRescaleMode);
+		co.WriteValue<std::uint8_t>((std::uint8_t)ActiveRescaleMode);
 
-		co.WriteValue<uint8_t>((uint8_t)(MasterVolume * 255.0f));
-		co.WriteValue<uint8_t>((uint8_t)(SfxVolume * 255.0f));
-		co.WriteValue<uint8_t>((uint8_t)(MusicVolume * 255.0f));
+		co.WriteValue<std::uint8_t>((std::uint8_t)(MasterVolume * 255.0f));
+		co.WriteValue<std::uint8_t>((std::uint8_t)(SfxVolume * 255.0f));
+		co.WriteValue<std::uint8_t>((std::uint8_t)(MusicVolume * 255.0f));
 
-		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.X * INT8_MAX * TouchPaddingMultiplier));
-		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.Y * INT8_MAX * TouchPaddingMultiplier));
-		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.X * INT8_MAX * TouchPaddingMultiplier));
-		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.Y * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>((std::int8_t)(TouchLeftPadding.X * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>((std::int8_t)(TouchLeftPadding.Y * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>((std::int8_t)(TouchRightPadding.X * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>((std::int8_t)(TouchRightPadding.Y * INT8_MAX * TouchPaddingMultiplier));
 
-		co.WriteValue<uint8_t>((uint8_t)GamepadButtonLabels);
+		co.WriteValue<std::uint8_t>((std::uint8_t)GamepadButtonLabels);
 
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();
@@ -450,26 +450,26 @@ namespace Jazz2
 		}
 
 		// Episode End
-		co.WriteValue<uint16_t>((uint16_t)sizeof(EpisodeContinuationState));
-		co.WriteValue<uint16_t>((uint16_t)_episodeEnd.size());
+		co.WriteValue<std::uint16_t>((std::uint16_t)sizeof(EpisodeContinuationState));
+		co.WriteValue<std::uint16_t>((std::uint16_t)_episodeEnd.size());
 
 		for (auto& pair : _episodeEnd) {
-			co.WriteValue<uint8_t>((uint8_t)pair.first.size());
+			co.WriteValue<std::uint8_t>((std::uint8_t)pair.first.size());
 			co.Write(pair.first.data(), (uint32_t)pair.first.size());
 
 			co.Write(&pair.second, sizeof(EpisodeContinuationState));
 		}
 
 		// Episode Continue
-		co.WriteValue<uint16_t>((uint16_t)sizeof(EpisodeContinuationState));
-		co.WriteValue<uint16_t>((uint16_t)_episodeContinue.size());
+		co.WriteValue<std::uint16_t>((std::uint16_t)sizeof(EpisodeContinuationState));
+		co.WriteValue<std::uint16_t>((std::uint16_t)_episodeContinue.size());
 
 		for (auto& pair : _episodeContinue) {
-			co.WriteValue<uint8_t>((uint8_t)pair.first.size());
-			co.Write(pair.first.data(), (uint32_t)pair.first.size());
+			co.WriteValue<std::uint8_t>((std::uint8_t)pair.first.size());
+			co.Write(pair.first.data(), (std::uint32_t)pair.first.size());
 
-			co.WriteValue<uint8_t>((uint8_t)pair.second.LevelName.size());
-			co.Write(pair.second.LevelName.data(), (uint32_t)pair.second.LevelName.size());
+			co.WriteValue<std::uint8_t>((std::uint8_t)pair.second.LevelName.size());
+			co.Write(pair.second.LevelName.data(), (std::uint32_t)pair.second.LevelName.size());
 
 			co.Write(&pair.second.State, sizeof(EpisodeContinuationState));
 		}
