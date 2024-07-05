@@ -22,8 +22,8 @@ namespace Jazz2::UI::Menu
 		}
 
 	private:
-		int32_t _itemCount;
-		int32_t _selectedIndex;
+		std::int32_t _itemCount;
+		std::int32_t _selectedIndex;
 		float _animation;
 
 		void OnHandleInput();

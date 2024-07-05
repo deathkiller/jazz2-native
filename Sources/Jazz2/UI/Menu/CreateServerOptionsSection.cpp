@@ -156,8 +156,8 @@ namespace Jazz2::UI::Menu
 
 		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f, 0.88f);
 
-		int32_t charOffset = 0;
-		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
+		std::int32_t charOffset = 0;
+		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 		    if (_selectedIndex == i) {
 		        float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
@@ -190,7 +190,7 @@ namespace Jazz2::UI::Menu
 		            spacing = 300.0f / _availableCharacters;
 		        }
 
-		        for (int32_t j = 0; j < _availableCharacters; j++) {
+		        for (std::int32_t j = 0; j < _availableCharacters; j++) {
 		            float x = center.X - offset + j * spacing;
 		            if (_selectedPlayerType == j) {
 		                _root->DrawElement(MenuGlow, 0, x, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(playerTypes[j]) + 3) * 0.4f, 2.2f, true, true);
@@ -258,7 +258,7 @@ namespace Jazz2::UI::Menu
 	void CreateServerOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (!_shouldStart && event.type == TouchEventType::Down) {
-			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x * (float)viewSize.X;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -270,11 +270,11 @@ namespace Jazz2::UI::Menu
 					return;
 				}
 
-				for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
+				for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 					if (std::abs(x - halfWidth) < 150.0f && std::abs(y - _items[i].TouchY) < 30.0f) {
 						switch (i) {
 							case 0: {
-								int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
+								std::int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
 								if (_selectedPlayerType != selectedSubitem) {
 									StartImageTransition();
 									_selectedPlayerType = selectedSubitem;
@@ -283,7 +283,7 @@ namespace Jazz2::UI::Menu
 								break;
 							}
 							/*case 1: {
-								int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
+								std::int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
 								if (_selectedDifficulty != selectedSubitem) {
 									StartImageTransition();
 									_selectedDifficulty = selectedSubitem;
@@ -317,14 +317,14 @@ namespace Jazz2::UI::Menu
 	void CreateServerOptionsSection::ExecuteSelected()
 	{
 		switch (_selectedIndex) {
-			case (int32_t)Item::GameMode: {
+			case (std::int32_t)Item::GameMode: {
 				if (_episodeName == "unknown"_s) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<MultiplayerGameModeSelectSection>();
 				}
 				break;
 			}
-			case (int32_t)Item::Start: {
+			case (std::int32_t)Item::Start: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 				_shouldStart = true;

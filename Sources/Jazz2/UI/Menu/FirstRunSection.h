@@ -30,7 +30,7 @@ namespace Jazz2::UI::Menu
 		bool _committed;
 
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 		void OnBackPressed() override;
 		void OnSelectionChanged(ListViewItem& item) override;
 		void OnExecuteSelected() override;

@@ -39,14 +39,14 @@ namespace Jazz2::UI::Menu
 		String _previousEpisodeName;
 		Multiplayer::MultiplayerGameMode _gameMode;
 
-		ItemData _items[(int32_t)Item::Count];
-		int32_t _selectedIndex;
+		ItemData _items[(std::int32_t)Item::Count];
+		std::int32_t _selectedIndex;
 
-		int32_t _availableCharacters;
-		int32_t _selectedPlayerType;
-		int32_t _selectedDifficulty;
-		int32_t _lastPlayerType;
-		int32_t _lastDifficulty;
+		std::int32_t _availableCharacters;
+		std::int32_t _selectedPlayerType;
+		std::int32_t _selectedDifficulty;
+		std::int32_t _lastPlayerType;
+		std::int32_t _lastDifficulty;
 		float _imageTransition;
 
 		float _animation;

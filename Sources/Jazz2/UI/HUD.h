@@ -28,8 +28,8 @@ namespace Jazz2::UI
 		void OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions);
 
 		void ShowLevelText(const StringView text);
-		void ShowCoins(int32_t count);
-		void ShowGems(int32_t count);
+		void ShowCoins(std::int32_t count);
+		void ShowGems(std::int32_t count);
 
 		void BeginFadeIn();
 		void BeginFadeOut(float delay = 0.0f);
@@ -53,7 +53,7 @@ namespace Jazz2::UI
 			float Height;
 
 			GraphicResource* Graphics;
-			int32_t CurrentPointerId;
+			std::int32_t CurrentPointerId;
 			Alignment Align;
 		};
 
@@ -67,21 +67,21 @@ namespace Jazz2::UI
 				: X(x), Y(y), U(u), V(v) {}
 		};
 
-		static constexpr uint32_t VertexBytes = sizeof(Vertex);
-		static constexpr uint32_t VertexFloats = VertexBytes / sizeof(float);
+		static constexpr std::uint32_t VertexBytes = sizeof(Vertex);
+		static constexpr std::uint32_t VertexFloats = VertexBytes / sizeof(float);
 
 		static constexpr Alignment Fixed = (Alignment)0x40;
 		static constexpr Alignment AllowRollover = (Alignment)0x80;
 
-		static constexpr uint16_t MainLayer = 100;
-		static constexpr uint16_t ShadowLayer = 80;
-		static constexpr uint16_t FontLayer = 200;
-		static constexpr uint16_t FontShadowLayer = 120;
-		static constexpr uint16_t TouchButtonsLayer = 400;
-		static constexpr int32_t TouchButtonsCount = 10;
+		static constexpr std::uint16_t MainLayer = 100;
+		static constexpr std::uint16_t ShadowLayer = 80;
+		static constexpr std::uint16_t FontLayer = 200;
+		static constexpr std::uint16_t FontShadowLayer = 120;
+		static constexpr std::uint16_t TouchButtonsLayer = 400;
+		static constexpr std::int32_t TouchButtonsCount = 10;
 
 		static constexpr float WeaponWheelAnimDuration = 20.0f;
-		static constexpr int32_t WeaponWheelMaxVertices = 512;
+		static constexpr std::int32_t WeaponWheelMaxVertices = 512;
 		
 		LevelHandler* _levelHandler;
 		Metadata* _metadata;
@@ -90,22 +90,22 @@ namespace Jazz2::UI
 
 		String _levelText;
 		float _levelTextTime;
-		int32_t _coins;
-		int32_t _gems;
+		std::int32_t _coins;
+		std::int32_t _gems;
 		float _coinsTime;
 		float _gemsTime;
 		float _activeBossTime;
 		float _rgbAmbientLight;
 		float _rgbHealthLast;
 
-		int32_t _weaponWheelCount;
+		std::int32_t _weaponWheelCount;
 		float _weaponWheelAnim;
 		bool _weaponWheelShown;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _weaponWheelRenderCommands;
-		int32_t  _weaponWheelRenderCommandsCount;
+		std::int32_t  _weaponWheelRenderCommandsCount;
 		std::unique_ptr<Vertex[]> _weaponWheelVertices;
-		int32_t _weaponWheelVerticesCount;
-		int32_t _lastWeaponWheelIndex;
+		std::int32_t _weaponWheelVerticesCount;
+		std::int32_t _lastWeaponWheelIndex;
 		float _rgbLightsAnim;
 		float _rgbLightsTime;
 		TransitionState _transitionState;
@@ -119,18 +119,18 @@ namespace Jazz2::UI
 		void DrawScore(const Rectf& view, Actors::Player* player);
 		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
 		void DrawActiveBoss(const Rectf& adjustedView);
-		void DrawLevelText(int32_t& charOffset);
-		void DrawCoins(int32_t& charOffset);
-		void DrawGems(int32_t& charOffset);
+		void DrawLevelText(std::int32_t& charOffset);
+		void DrawCoins(std::int32_t& charOffset);
+		void DrawGems(std::int32_t& charOffset);
 
-		void DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
-		void DrawElementClipped(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
+		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
+		void DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
 		AnimState GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
 
 		void DrawWeaponWheel(Actors::Player* player);
-		bool PrepareWeaponWheel(Actors::Player* player, int& weaponCount);
-		static int32_t GetWeaponCount(Actors::Player* player);
-		void DrawWeaponWheelSegment(float x, float y, float width, float height, uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
+		bool PrepareWeaponWheel(Actors::Player* player, std::int32_t& weaponCount);
+		static std::int32_t GetWeaponCount(Actors::Player* player);
+		void DrawWeaponWheelSegment(float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
 
 		TouchButtonInfo CreateTouchButton(PlayerActions action, AnimState state, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);

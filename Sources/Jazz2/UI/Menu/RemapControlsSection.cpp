@@ -119,7 +119,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			for (std::size_t key = 0; key < (std::int32_t)KeySym::COUNT && waitingForInput; key++) {
+			for (std::size_t key = 0; key < (std::size_t)KeySym::COUNT && waitingForInput; key++) {
 				bool isPressed = keyState.isKeyDown((KeySym)key);
 				if (isPressed != _keysPressedLast[key]) {
 					_keysPressedLast.set(key, isPressed);
@@ -166,7 +166,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
@@ -229,7 +229,7 @@ namespace Jazz2::UI::Menu
 					if (axisAnim != AnimState::Default) {
 						_root->DrawElement(axisAnim, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
-						for (int32_t i = 0; i < joyIdx + 1; i++) {
+						for (std::int32_t i = 0; i < joyIdx + 1; i++) {
 							stringBuffer[i] = '1';
 						}
 						stringBuffer[joyIdx + 1] = '\0';
@@ -275,7 +275,7 @@ namespace Jazz2::UI::Menu
 					if (_waitForInput) {
 						color = Colorf(0.62f, 0.44f, 0.34f, 0.5f);
 					} else {
-						color = (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
+						color = (_selectedIndex == (std::int32_t)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
 					}
 
 					_root->DrawStringShadow(value, charOffset, centerX * (0.81f + j * 0.2f), item.Y, IMenuContainer::MainLayer - 10,
@@ -303,7 +303,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		auto* mapping = &ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count];
+		auto* mapping = &ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count];
 
 		if (_root->ActionHit(PlayerActions::Menu)) {
 			OnBackPressed();
@@ -432,7 +432,7 @@ namespace Jazz2::UI::Menu
 
 		_keysPressedLast.resetAll();
 
-		for (int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
+		for (std::int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
 			if (keyState.isKeyDown((KeySym)key)) {
 				_keysPressedLast.set(key);
 			}

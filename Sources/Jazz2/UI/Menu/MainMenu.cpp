@@ -142,18 +142,18 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void MainMenu::OnInitializeViewport(int32_t width, int32_t height)
+	void MainMenu::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
-		int32_t w, h;
+		std::int32_t w, h;
 		if (currentRatio > defaultRatio) {
 			w = std::min(DefaultWidth, width);
-			h = (int32_t)(w / currentRatio);
+			h = (std::int32_t)(w / currentRatio);
 		} else if (currentRatio < defaultRatio) {
 			h = std::min(DefaultHeight, height);
-			w = (int32_t)(h * currentRatio);
+			w = (std::int32_t)(h * currentRatio);
 		} else {
 			w = std::min(DefaultWidth, width);
 			h = std::min(DefaultHeight, height);
@@ -211,8 +211,8 @@ namespace Jazz2::UI::Menu
 		}
 
 		Vector2i center = ViewSize / 2;
-		int32_t charOffset = 0;
-		int32_t charOffsetShadow = 0;
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
 
 		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
 		float logoBaseScale = (ViewSize.Y >= 300 ? 1.0f : 0.85f);
@@ -428,7 +428,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void MainMenu::DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
+	void MainMenu::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
 	{
 		auto* res = _metadata->FindAnimation(state);
 		if (res == nullptr) {
@@ -436,7 +436,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (frame < 0) {
-			frame = res->FrameOffset + ((int32_t)(_canvasBackground->AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
+			frame = res->FrameOffset + ((std::int32_t)(_canvasBackground->AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
 		}
 
 		Canvas* currentCanvas = GetActiveCanvas();
@@ -449,8 +449,8 @@ namespace Jazz2::UI::Menu
 		}
 
 		Vector2i texSize = base->TextureDiffuse->size();
-		int32_t col = frame % base->FrameConfiguration.X;
-		int32_t row = frame / base->FrameConfiguration.X;
+		std::int32_t col = frame % base->FrameConfiguration.X;
+		std::int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(
 			float(base->FrameDimensions.X) / float(texSize.X),
 			float(base->FrameDimensions.X * col) / float(texSize.X),
@@ -461,7 +461,7 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
 
-	void MainMenu::DrawElement(AnimState state, float x, float y, uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords, bool unaligned)
+	void MainMenu::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords, bool unaligned)
 	{
 		auto* res = _metadata->FindAnimation(state);
 		if (res == nullptr) {
@@ -479,7 +479,7 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
 
-	void MainMenu::DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
+	void MainMenu::DrawSolid(float x, float y, std::uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
@@ -489,7 +489,7 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
 
-	void MainMenu::DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned)
+	void MainMenu::DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
@@ -506,7 +506,7 @@ namespace Jazz2::UI::Menu
 		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);
 	}
 
-	void MainMenu::DrawStringShadow(const StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
+	void MainMenu::DrawStringShadow(const StringView text, int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		if (_logoTransition < 1.0f) {
@@ -518,7 +518,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		Canvas* currentCanvas = GetActiveCanvas();
-		int32_t charOffsetShadow = charOffset;
+		std::int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
 			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
@@ -530,7 +530,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
-			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
+			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
 			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
@@ -545,12 +545,12 @@ namespace Jazz2::UI::Menu
 
 	bool MainMenu::ActionPressed(PlayerActions action)
 	{
-		return ((_pressedActions & (1 << (int32_t)action)) == (1 << (int32_t)action));
+		return ((_pressedActions & (1 << (std::int32_t)action)) == (1 << (std::int32_t)action));
 	}
 
 	bool MainMenu::ActionHit(PlayerActions action)
 	{
-		return ((_pressedActions & ((1 << (int32_t)action) | (1 << (16 + (int32_t)action)))) == (1 << (int32_t)action));
+		return ((_pressedActions & ((1 << (std::int32_t)action) | (1 << (16 + (std::int32_t)action)))) == (1 << (std::int32_t)action));
 	}
 
 	void MainMenu::PlayMenuMusic()
@@ -623,8 +623,8 @@ namespace Jazz2::UI::Menu
 	void MainMenu::UpdateDebris(float timeMult)
 	{
 		if (_preset == Preset::Xmas && PreferencesCache::EnableReforgedMainMenu) {
-			int32_t weatherIntensity = Random().Fast(0, (int32_t)(3 * timeMult) + 1);
-			for (int32_t i = 0; i < weatherIntensity; i++) {
+			std::int32_t weatherIntensity = Random().Fast(0, (std::int32_t)(3 * timeMult) + 1);
+			for (std::int32_t i = 0; i < weatherIntensity; i++) {
 				Vector2i viewSize = _canvasOverlay->ViewSize;
 				Vector2f debrisPos = Vector2f(Random().FastFloat(viewSize.X * -0.3f, viewSize.X * 1.3f),
 					Random().NextFloat(viewSize.Y * -0.5f, viewSize.Y * 0.5f));
@@ -654,9 +654,9 @@ namespace Jazz2::UI::Menu
 
 					debris.Time = 160.0f;
 
-					int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-					int32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-					int32_t row = curAnimFrame / resBase->FrameConfiguration.X;
+					std::int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+					std::int32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+					std::int32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 					debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
 					debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
 					debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
@@ -669,8 +669,8 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		int32_t size = (int32_t)_debrisList.size();
-		for (int32_t i = 0; i < size; i++) {
+		std::int32_t size = (std::int32_t)_debrisList.size();
+		for (std::int32_t i = 0; i < size; i++) {
 			Tiles::TileMap::DestructibleDebris& debris = _debrisList[i];
 
 			if (debris.Scale <= 0.0f || debris.Alpha <= 0.0f) {
@@ -743,10 +743,10 @@ namespace Jazz2::UI::Menu
 		time_t t = time(nullptr);
 #if defined(DEATH_TARGET_WINDOWS)
 		struct tm local; localtime_s(&local, &t);
-		int32_t month = local.tm_mon;
+		std::int32_t month = local.tm_mon;
 #else
 		struct tm* local = localtime(&t);
-		int32_t month = local->tm_mon;
+		std::int32_t month = local->tm_mon;
 #endif
 		bool hasXmas = ((month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
 		if (!hasXmas &&
@@ -758,36 +758,36 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		constexpr int32_t Width = 8;
-		constexpr int32_t Height = 8;
+		constexpr std::int32_t Width = 8;
+		constexpr std::int32_t Height = 8;
 
-		constexpr int32_t StartIndexDefault = 360;
-		constexpr int32_t StartIndexXmas = 420;
-		constexpr int32_t StartIndexDemo = 240;
-		constexpr int32_t AdditionalIndexDemo = 451;
-		constexpr int32_t SplitRowDemo = 6;
+		constexpr std::int32_t StartIndexDefault = 360;
+		constexpr std::int32_t StartIndexXmas = 420;
+		constexpr std::int32_t StartIndexDemo = 240;
+		constexpr std::int32_t AdditionalIndexDemo = 451;
+		constexpr std::int32_t SplitRowDemo = 6;
 
 		std::unique_ptr<LayerTile[]> layout = std::make_unique<LayerTile[]>(Width * Height);
 
-		int32_t n = 0;
+		std::int32_t n = 0;
 		if (_preset == Preset::SharewareDemo) {
 			// Shareware Demo tileset is not contiguous for some reason
-			for (int32_t i = StartIndexDemo; i < StartIndexDemo + SplitRowDemo * 10; i += 10) {
-				for (int32_t j = 0; j < 8; j++) {
+			for (std::int32_t i = StartIndexDemo; i < StartIndexDemo + SplitRowDemo * 10; i += 10) {
+				for (std::int32_t j = 0; j < 8; j++) {
 					LayerTile& tile = layout[n++];
 					tile.TileID = i + j;
 				}
 			}
-			for (int32_t i = AdditionalIndexDemo; i < AdditionalIndexDemo + (Height - SplitRowDemo) * 10; i += 10) {
-				for (int32_t j = 0; j < 8; j++) {
+			for (std::int32_t i = AdditionalIndexDemo; i < AdditionalIndexDemo + (Height - SplitRowDemo) * 10; i += 10) {
+				for (std::int32_t j = 0; j < 8; j++) {
 					LayerTile& tile = layout[n++];
 					tile.TileID = i + j;
 				}
 			}
 		} else {
-			int32_t startIndex = (_preset == Preset::Xmas ? StartIndexXmas : StartIndexDefault);
-			for (int32_t i = startIndex; i < startIndex + Height * 10; i += 10) {
-				for (int32_t j = 0; j < 8; j++) {
+			std::int32_t startIndex = (_preset == Preset::Xmas ? StartIndexXmas : StartIndexDefault);
+			for (std::int32_t i = startIndex; i < startIndex + Height * 10; i += 10) {
+				for (std::int32_t j = 0; j < 8; j++) {
 					LayerTile& tile = layout[n++];
 					tile.TileID = i + j;
 				}
@@ -1009,8 +1009,8 @@ namespace Jazz2::UI::Menu
 
 		if (notInitialized) {
 			Vector2i layoutSize = _owner->_texturedBackgroundLayer.LayoutSize;
-			int32_t width = layoutSize.X * TileSet::DefaultTileSize;
-			int32_t height = layoutSize.Y * TileSet::DefaultTileSize;
+			std::int32_t width = layoutSize.X * TileSet::DefaultTileSize;
+			std::int32_t height = layoutSize.Y * TileSet::DefaultTileSize;
 
 			_camera = std::make_unique<Camera>();
 			_camera->setOrthoProjection(0, static_cast<float>(width), 0, static_cast<float>(height));
@@ -1024,9 +1024,9 @@ namespace Jazz2::UI::Menu
 			_target->setWrap(SamplerWrapping::Repeat);
 
 			// Prepare render commands
-			int32_t renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
+			std::int32_t renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
 			_renderCommands.reserve(renderCommandCount);
-			for (int32_t i = 0; i < renderCommandCount; i++) {
+			for (std::int32_t i = 0; i < renderCommandCount; i++) {
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::TileMap));
 				command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->material().reserveUniformsDataMemory();
@@ -1057,11 +1057,11 @@ namespace Jazz2::UI::Menu
 		TileMapLayer& layer = _owner->_texturedBackgroundLayer;
 		Vector2i layoutSize = layer.LayoutSize;
 
-		int32_t renderCommandIndex = 0;
+		std::int32_t renderCommandIndex = 0;
 		bool isAnimated = false;
 
-		for (int32_t y = 0; y < layoutSize.Y; y++) {
-			for (int32_t x = 0; x < layoutSize.X; x++) {
+		for (std::int32_t y = 0; y < layoutSize.Y; y++) {
+			for (std::int32_t x = 0; x < layoutSize.X; x++) {
 				LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
 
 				auto command = _renderCommands[renderCommandIndex++].get();
@@ -1086,7 +1086,7 @@ namespace Jazz2::UI::Menu
 
 		if (!isAnimated && _alreadyRendered) {
 			// If it's not animated, it can be rendered only once
-			for (int32_t i = Viewport::chain().size() - 1; i >= 0; i--) {
+			for (std::int32_t i = Viewport::chain().size() - 1; i >= 0; i--) {
 				auto& item = Viewport::chain()[i];
 				if (item == _view.get()) {
 					Viewport::chain().erase(&item);

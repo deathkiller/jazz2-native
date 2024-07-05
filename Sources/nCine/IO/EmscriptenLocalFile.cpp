@@ -7,6 +7,7 @@
 #include "../../Common.h"
 
 #include <Containers/String.h>
+#include <Containers/StringStl.h>
 
 namespace nCine
 {
@@ -20,8 +21,8 @@ namespace nCine
 			auto eventType = event["type"].as<std::string>();
 			if (eventType != "load") {
 				// FileReader failed - Call user file data handler
-				EmscriptenLocalFile::FileDataCallbackType* fileDataCallback = reinterpret_cast<EmscriptenLocalFile::FileDataCallbackType*>(fileReader["data-dataCallback"].as<size_t>());
-				void* context = reinterpret_cast<void*>(fileReader["data-callbackContext"].as<size_t>());
+				EmscriptenLocalFile::FileDataCallbackType* fileDataCallback = reinterpret_cast<EmscriptenLocalFile::FileDataCallbackType*>(fileReader["data-dataCallback"].as<std::size_t>());
+				void* context = reinterpret_cast<void*>(fileReader["data-callbackContext"].as<std::size_t>());
 				fileDataCallback(context, nullptr, 0, nullptr);
 				return;
 			}
@@ -32,17 +33,17 @@ namespace nCine
 			emscripten::val sourceTypedArray = Uint8Array.new_(result);
 
 			// Allocate and set up destination typed array
-			const size_t size = result["byteLength"].as<size_t>();
+			std::size_t size = result["byteLength"].as<std::size_t>();
 			char* buffer = new char[size];
-			emscripten::val destinationTypedArray = Uint8Array.new_(emscripten::val::module_property("HEAPU8")["buffer"], size_t(buffer), size);
+			emscripten::val destinationTypedArray = Uint8Array.new_(emscripten::val::module_property("HEAPU8")["buffer"], std::size_t(buffer), size);
 			destinationTypedArray.call<void>("set", sourceTypedArray);
 
 			auto fileName = fileReader["data-name"].as<std::string>();
 
 			// Call user file data handler
-			EmscriptenLocalFile::FileDataCallbackType* fileDataCallback = reinterpret_cast<EmscriptenLocalFile::FileDataCallbackType*>(fileReader["data-dataCallback"].as<size_t>());
-			void* context = reinterpret_cast<void*>(fileReader["data-callbackContext"].as<size_t>());
-			fileDataCallback(context, std::unique_ptr<char[]>(buffer), size, StringView(fileName.data(), fileName.size()));
+			EmscriptenLocalFile::FileDataCallbackType* fileDataCallback = reinterpret_cast<EmscriptenLocalFile::FileDataCallbackType*>(fileReader["data-dataCallback"].as<std::size_t>());
+			void* context = reinterpret_cast<void*>(fileReader["data-callbackContext"].as<std::size_t>());
+			fileDataCallback(context, std::unique_ptr<char[]>(buffer), size, fileName);
 		}
 
 		void ReadFiles(emscripten::val event)
@@ -50,15 +51,15 @@ namespace nCine
 			// Read all selected files using FileReader
 			emscripten::val target = event["target"];
 			emscripten::val files = target["files"];
-			const int fileCount = files["length"].as<int>();
+			const std::int32_t fileCount = files["length"].as<std::int32_t>();
 
-			EmscriptenLocalFile::FileCountCallbackType* doneCallback = reinterpret_cast<EmscriptenLocalFile::FileCountCallbackType*>(target["data-countCallback"].as<size_t>());
-			void* context = reinterpret_cast<void*>(target["data-callbackContext"].as<size_t>());
+			EmscriptenLocalFile::FileCountCallbackType* doneCallback = reinterpret_cast<EmscriptenLocalFile::FileCountCallbackType*>(target["data-countCallback"].as<std::size_t>());
+			void* context = reinterpret_cast<void*>(target["data-callbackContext"].as<std::size_t>());
 			doneCallback(context, fileCount);
 
 			auto fileCallback = emscripten::val::module_property("jsReadFileContent");
 
-			for (int i = 0; i < fileCount; i++) {
+			for (std::int32_t i = 0; i < fileCount; i++) {
 				emscripten::val file = files[i];
 				emscripten::val fileReader = emscripten::val::global("FileReader").new_();
 				fileReader.set("onload", fileCallback);
@@ -133,10 +134,9 @@ namespace nCine
 			function("jsReadFiles", &ReadFiles);
 			function("jsReadFileContent", &ReadFileContent);
 		};
-
 	}
 
-	void EmscriptenLocalFile::Load(const StringView& fileFilter, bool multiple, FileDataCallbackType fileDataCallback, FileCountCallbackType fileCountCallback, void* userData)
+	void EmscriptenLocalFile::Load(StringView fileFilter, bool multiple, FileDataCallbackType fileDataCallback, FileCountCallbackType fileCountCallback, void* userData)
 	{
 		LoadFile(String::nullTerminatedView(fileFilter).data(), multiple, fileDataCallback, fileCountCallback, userData);
 	}

@@ -49,7 +49,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 		// TRANSLATORS: Header in First Run section
 		_root->DrawStringShadow(_("Welcome to \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementation!"), charOffset, centerX, topLine - 66.0f - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
@@ -65,7 +65,7 @@ namespace Jazz2::UI::Menu
 		item.Height = 68;
 	}
 
-	void FirstRunSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected)
+	void FirstRunSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
 

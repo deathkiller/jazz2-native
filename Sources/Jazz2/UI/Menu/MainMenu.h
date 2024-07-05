@@ -44,7 +44,7 @@ namespace Jazz2::UI::Menu
 		void Reset();
 
 		void OnBeginFrame() override;
-		void OnInitializeViewport(int32_t width, int32_t height) override;
+		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;
@@ -72,14 +72,14 @@ namespace Jazz2::UI::Menu
 			return _contentBounds;
 		}
 
-		void DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
+		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false) override;
-		void DrawElement(AnimState state, float x, float y, uint16_t z, Alignment align, const Colorf& color,
+		void DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			const Vector2f& size, const Vector4f& texCoords, bool unaligned = false) override;
-		void DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending = false) override;
-		void DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned = false) override;
+		void DrawSolid(float x, float y, std::uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending = false) override;
+		void DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned = false) override;
 		Vector2f MeasureString(const StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
-		void DrawStringShadow(const StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color,
+		void DrawStringShadow(const StringView text, std::int32_t& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
 		void PlaySfx(const StringView identifier, float gain = 1.0f) override;
@@ -186,7 +186,7 @@ namespace Jazz2::UI::Menu
 
 		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;
 		BitArray _pressedKeys;
-		uint32_t _pressedActions;
+		std::uint32_t _pressedActions;
 		float _touchButtonsTimer;
 
 		void PlayMenuMusic();

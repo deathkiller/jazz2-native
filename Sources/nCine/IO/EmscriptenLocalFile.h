@@ -18,16 +18,13 @@ namespace nCine
 	class EmscriptenLocalFile
 	{
 	public:
-		using FileDataCallbackType = void(void* context, std::unique_ptr<char[]> data, size_t length, const StringView& name);
-		using FileCountCallbackType = void(void* context, int fileCount);
+		using FileDataCallbackType = void(void* context, std::unique_ptr<char[]> data, std::size_t length, StringView name);
+		using FileCountCallbackType = void(void* context, std::int32_t fileCount);
 
-		static void Load(const StringView& fileFilter, bool multiple, FileDataCallbackType fileDataCallback, FileCountCallbackType fileCountCallback, void* userData);
+		EmscriptenLocalFile() = delete;
+		~EmscriptenLocalFile() = delete;
 
-	private:
-		/// Deleted copy constructor
-		EmscriptenLocalFile(const EmscriptenLocalFile&) = delete;
-		/// Deleted assignment operator
-		EmscriptenLocalFile& operator=(const EmscriptenLocalFile&) = delete;
+		static void Load(StringView fileFilter, bool multiple, FileDataCallbackType fileDataCallback, FileCountCallbackType fileCountCallback, void* userData);
 	};
 }
 

@@ -32,8 +32,8 @@ namespace Jazz2::UI::Menu
 
 		bool shouldExit = false;
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		int32_t jc = 0;
-		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < static_cast<std::int32_t>(arraySize(joyStates)); i++) {
+		std::int32_t jc = 0;
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < static_cast<std::int32_t>(arraySize(joyStates)); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc] = &input.joyMappedState(i);
 				if (joyStates[jc]->isButtonPressed(ButtonName::Start) && joyStates[jc]->isButtonPressed(ButtonName::Back)) {
@@ -76,8 +76,8 @@ namespace Jazz2::UI::Menu
 		auto& input = theApplication().GetInputManager();
 
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		int32_t jc = 0;
-		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < static_cast<std::int32_t>(arraySize(joyStates)); i++) {
+		std::int32_t jc = 0;
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < static_cast<std::int32_t>(arraySize(joyStates)); i++) {
 			if (input.isJoyPresent(i)) {
 				jc++;
 			}
@@ -101,14 +101,14 @@ namespace Jazz2::UI::Menu
 		const JoystickState& rawState = input.joystickState(_selectedIndex);
 		const JoyMappedState& mappedState = input.joyMappedState(_selectedIndex);
 		const char* joyName = input.joyName(_selectedIndex);
-		int32_t numAxes = input.joyNumAxes(_selectedIndex);
-		int32_t numButtons = input.joyNumButtons(_selectedIndex);
-		int32_t numHats = input.joyNumHats(_selectedIndex);
+		std::int32_t numAxes = input.joyNumAxes(_selectedIndex);
+		std::int32_t numButtons = input.joyNumButtons(_selectedIndex);
+		std::int32_t numHats = input.joyNumHats(_selectedIndex);
 
 		char buffer[128];
 		formatString(buffer, sizeof(buffer), "%s (%i axes, %i buttons, %i hats)", joyName, numAxes, numButtons, numHats);
 
-		size_t joyNameStringLength = Utf8::GetLength(buffer);
+		std::size_t joyNameStringLength = Utf8::GetLength(buffer);
 		float xMultiplier = joyNameStringLength * 0.5f;
 		float easing = IMenuContainer::EaseOutElastic(_animation);
 		float x = center.X * 0.4f + xMultiplier - easing * xMultiplier;
@@ -146,7 +146,7 @@ namespace Jazz2::UI::Menu
 		PrintAxisValue("LT", mappedState.axisValue(AxisName::LeftTrigger), center.X * 0.4f, topLine + 90.0f);
 		PrintAxisValue("RT", mappedState.axisValue(AxisName::RightTrigger), center.X * 0.4f + 110.0f, topLine + 90.0f);
 
-		int32_t buttonsLength = 0;
+		std::int32_t buttonsLength = 0;
 		buffer[0] = '\0';
 		if (mappedState.isButtonPressed(ButtonName::A)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "A ");
 		if (mappedState.isButtonPressed(ButtonName::B)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "B ");
@@ -177,7 +177,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
 		float sx = 0, sy = 0;
-		for (int32_t i = 0; i < numAxes; i++) {
+		for (std::int32_t i = 0; i < numAxes; i++) {
 			formatString(buffer, sizeof(buffer), "a%i", i);
 			PrintAxisValue(buffer, rawState.axisValue(i), center.X * 0.4f + sx, topLine + 140.0f + sy);
 			sx += 110.0f;
@@ -192,7 +192,7 @@ namespace Jazz2::UI::Menu
 			sy += 15.0f;
 		}
 
-		for (int32_t i = 0; i < numButtons; i++) {
+		for (std::int32_t i = 0; i < numButtons; i++) {
 			formatString(buffer, sizeof(buffer), "b%i: %i", i, rawState.isButtonPressed(i) ? 1 : 0);
 			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
@@ -208,7 +208,7 @@ namespace Jazz2::UI::Menu
 			sy += 15.0f;
 		}
 
-		for (int32_t i = 0; i < numHats; i++) {
+		for (std::int32_t i = 0; i < numHats; i++) {
 			formatString(buffer, sizeof(buffer), "h%i: %i", i, rawState.hatState(i));
 			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
@@ -258,7 +258,7 @@ namespace Jazz2::UI::Menu
 	void InputDiagnosticsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -292,7 +292,7 @@ namespace Jazz2::UI::Menu
 		char text[64];
 		formatString(text, sizeof(text), "%s: %0.2f", name, value);
 
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(text, charOffset, x, y, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 	}

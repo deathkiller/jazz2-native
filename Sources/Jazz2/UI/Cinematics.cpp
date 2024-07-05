@@ -56,7 +56,7 @@ namespace Jazz2::UI
 
 		UpdatePressedActions();
 
-		if ((_pressedActions & ((1 << (int32_t)PlayerActions::Fire) | (1 << (16 + (int32_t)PlayerActions::Fire)))) == (1 << (int32_t)PlayerActions::Fire)) {
+		if ((_pressedActions & ((1 << (std::int32_t)PlayerActions::Fire) | (1 << (16 + (std::int32_t)PlayerActions::Fire)))) == (1 << (std::int32_t)PlayerActions::Fire)) {
 			if (_callback != nullptr && _callback(_root, false)) {
 				_callback = nullptr;
 				_framesLeft = 0;
@@ -64,18 +64,18 @@ namespace Jazz2::UI
 		}
 	}
 
-	void Cinematics::OnInitializeViewport(int32_t width, int32_t height)
+	void Cinematics::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
-		int32_t w, h;
+		std::int32_t w, h;
 		if (currentRatio > defaultRatio) {
 			w = std::min(DefaultWidth, width);
-			h = (int32_t)(w / currentRatio);
+			h = (std::int32_t)(w / currentRatio);
 		} else if (currentRatio < defaultRatio) {
 			h = std::min(DefaultHeight, height);
-			w = (int32_t)(h * currentRatio);
+			w = (std::int32_t)(h * currentRatio);
 		} else {
 			w = std::min(DefaultWidth, width);
 			h = std::min(DefaultHeight, height);
@@ -132,7 +132,7 @@ namespace Jazz2::UI
 #endif
 
 		// Mark Fire button as already pressed to avoid some issues
-		_pressedActions = (1 << (int32_t)PlayerActions::Fire) | (1 << ((int32_t)PlayerActions::Fire + 16));
+		_pressedActions = (1 << (std::int32_t)PlayerActions::Fire) | (1 << ((std::int32_t)PlayerActions::Fire + 16));
 	}
 
 	bool Cinematics::LoadCinematicsFromFile(const StringView path)
@@ -156,24 +156,24 @@ namespace Jazz2::UI
 		RETURNF_ASSERT_MSG(strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0,
 			"Cannot load \"%s.j2v\" - invalid signature", path.data());
 
-		_width = s->ReadValue<uint32_t>();
-		_height = s->ReadValue<uint32_t>();
+		_width = s->ReadValue<std::uint32_t>();
+		_height = s->ReadValue<std::uint32_t>();
 		s->Seek(2, SeekOrigin::Current); // Bits per pixel
-		_frameDelay = s->ReadValue<uint16_t>() / (FrameTimer::SecondsPerFrame * 1000); // Delay in milliseconds
-		_framesLeft = s->ReadValue<uint32_t>();
+		_frameDelay = s->ReadValue<std::uint16_t>() / (FrameTimer::SecondsPerFrame * 1000); // Delay in milliseconds
+		_framesLeft = s->ReadValue<std::uint32_t>();
 		s->Seek(20, SeekOrigin::Current);
 
 		_texture = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _width, _height);
-		_buffer = std::make_unique<uint8_t[]>(_width * _height);
-		_lastBuffer = std::make_unique<uint8_t[]>(_width * _height);
-		_currentFrame = std::make_unique<uint32_t[]>(_width * _height);
+		_buffer = std::make_unique<std::uint8_t[]>(_width * _height);
+		_lastBuffer = std::make_unique<std::uint8_t[]>(_width * _height);
+		_currentFrame = std::make_unique<std::uint32_t[]>(_width * _height);
 
 		// Read all 4 compressed streams
 		std::uint32_t totalOffset = s->GetPosition();
 
 		while (totalOffset < s->GetSize()) {
 			for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_decompressedStreams)); i++) {
-				std::int32_t bytesLeft = s->ReadValue<int32_t>();
+				std::int32_t bytesLeft = s->ReadValue<std::int32_t>();
 				totalOffset += 4 + bytesLeft;
 				_compressedStreams[i].FetchFromStream(*s, bytesLeft);
 			}
@@ -315,7 +315,7 @@ namespace Jazz2::UI
 		_frameIndex++;
 	}
 
-	void Cinematics::Read(int streamIndex, void* buffer, std::uint32_t bytes)
+	void Cinematics::Read(std::int32_t streamIndex, void* buffer, std::uint32_t bytes)
 	{
 		_decompressedStreams[streamIndex].Read(buffer, bytes);
 	}

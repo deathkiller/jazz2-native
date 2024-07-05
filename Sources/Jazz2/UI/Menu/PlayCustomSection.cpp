@@ -47,7 +47,7 @@ namespace Jazz2::UI::Menu
 		item.Height = ItemHeight * 8 / 7;
 	}
 
-	void PlayCustomSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected)
+	void PlayCustomSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
 

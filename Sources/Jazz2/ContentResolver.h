@@ -73,9 +73,9 @@ namespace Jazz2
 
 		void PreloadMetadataAsync(const StringView path);
 		Metadata* RequestMetadata(const StringView path);
-		GenericGraphicResource* RequestGraphics(const StringView path, uint16_t paletteOffset);
+		GenericGraphicResource* RequestGraphics(const StringView path, std::uint16_t paletteOffset);
 
-		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView path, uint16_t captionTileId, bool applyPalette, const uint8_t* paletteRemapping = nullptr);
+		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr);
 		bool LevelExists(const StringView episodeName, const StringView levelName);
 		bool TryLoadLevel(const StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
 		void ApplyDefaultPalette();
@@ -107,8 +107,8 @@ namespace Jazz2
 
 		void InitializePaths();
 
-		GenericGraphicResource* RequestGraphicsAura(const StringView path, uint16_t paletteOffset);
-		static void ReadImageFromFile(std::unique_ptr<Stream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
+		GenericGraphicResource* RequestGraphicsAura(const StringView path, std::uint16_t paletteOffset);
+		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 		
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
@@ -120,7 +120,7 @@ namespace Jazz2
 
 		bool _isHeadless;
 		bool _isLoading;
-		uint32_t _palettes[PaletteCount * ColorsPerPalette];
+		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<Reference<String>, std::unique_ptr<Metadata>, FNV1aHashFunc<String>, StringRefEqualTo> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 #if defined(WITH_AUDIO)

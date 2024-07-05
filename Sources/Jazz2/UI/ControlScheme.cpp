@@ -215,18 +215,18 @@ namespace Jazz2::UI
 		}
 
 		// Also allow Return (Enter) as confirm key
-		if (pressedKeys[(uint32_t)KeySym::RETURN]) {
-			pressedActions |= (1 << (int32_t)PlayerActions::Fire);
+		if (pressedKeys[(std::uint32_t)KeySym::RETURN]) {
+			pressedActions |= (1 << (std::int32_t)PlayerActions::Fire);
 		}
 #if defined(DEATH_TARGET_ANDROID)
 		// Allow native Android back button as menu key
-		if (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK]) {
-			pressedActions |= (1 << (int32_t)PlayerActions::Menu);
+		if (PreferencesCache::UseNativeBackButton && pressedKeys[(std::uint32_t)KeySym::BACK]) {
+			pressedActions |= (1 << (std::int32_t)PlayerActions::Menu);
 		}
 #endif
 		// Use ChangeWeapon action as delete key
-		if (pressedKeys[(uint32_t)KeySym::Delete]) {
-			pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
+		if (pressedKeys[(std::uint32_t)KeySym::Delete]) {
+			pressedActions |= (1 << (std::int32_t)PlayerActions::ChangeWeapon);
 		}
 
 		return pressedActions;

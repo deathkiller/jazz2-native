@@ -37,7 +37,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void LoadingHandler::OnInitializeViewport(int32_t width, int32_t height)
+	void LoadingHandler::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
@@ -79,8 +79,8 @@ namespace Jazz2::UI
 			Vector2f pos = Vector2f(ViewSize.X - size.X - 50.0f, ViewSize.Y - size.Y - 40.0f);
 
 			Vector2i texSize = base->TextureDiffuse->size();
-			int32_t col = frame % base->FrameConfiguration.X;
-			int32_t row = frame / base->FrameConfiguration.X;
+			std::int32_t col = frame % base->FrameConfiguration.X;
+			std::int32_t row = frame / base->FrameConfiguration.X;
 			Vector4f texCoords = Vector4f(
 				float(base->FrameDimensions.X) / float(texSize.X),
 				float(base->FrameDimensions.X * col) / float(texSize.X),

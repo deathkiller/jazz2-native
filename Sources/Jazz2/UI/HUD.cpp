@@ -13,7 +13,7 @@
 #include "../../nCine/Application.h"
 
 // Position of key in 22x6 grid
-static const uint8_t KeyLayout[] = {
+static const std::uint8_t KeyLayout[] = {
 	0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17,
 	22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 37, 38, 39, 40, 41, 42, 43,
 	44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
@@ -205,7 +205,7 @@ namespace Jazz2::UI
 			adjustedView.W = adjustedView.W - adjustedView.X - (195.0f + PreferencesCache::TouchRightPadding.X);
 		}
 
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 		char stringBuffer[32];
 
 		auto& players = _levelHandler->GetPlayers();
@@ -265,7 +265,7 @@ namespace Jazz2::UI
 
 		// FPS
 		if (PreferencesCache::ShowPerformanceMetrics) {
-			i32tos((int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
+			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 1.0f, FontLayer,
 				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 		}
@@ -302,23 +302,23 @@ namespace Jazz2::UI
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
 				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
-				for (uint32_t i = 0; i < TouchButtonsCount; i++) {
+				for (std::uint32_t i = 0; i < TouchButtonsCount; i++) {
 					auto& button = _touchButtons[i];
 					if (button.Action != PlayerActions::None) {
 						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
 							button.CurrentPointerId = event.actionIndex;
-							overrideActions |= (1 << (int32_t)button.Action);
+							overrideActions |= (1 << (std::int32_t)button.Action);
 						}
 					}
 				}
 			}
 		} else if (event.type == TouchEventType::Move) {
-			for (uint32_t i = 0; i < TouchButtonsCount; i++) {
+			for (std::uint32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.Action != PlayerActions::None) {
 					if (button.CurrentPointerId != -1) {
 						bool isPressed = false;
-						int32_t pointerIndex = event.findPointerIndex(button.CurrentPointerId);
+						std::int32_t pointerIndex = event.findPointerIndex(button.CurrentPointerId);
 						if (pointerIndex != -1) {
 							float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
 							float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
@@ -327,7 +327,7 @@ namespace Jazz2::UI
 
 						if (!isPressed) {
 							button.CurrentPointerId = -1;
-							overrideActions &= ~(1 << (int32_t)button.Action);
+							overrideActions &= ~(1 << (std::int32_t)button.Action);
 						}
 					} else {
 						// Only some buttons should allow roll-over (only when the player's on foot)
@@ -335,12 +335,12 @@ namespace Jazz2::UI
 						bool canPlayerMoveVertically = (!players.empty() && players[0]->CanMoveVertically());
 						if ((button.Align & AllowRollover) != AllowRollover && !canPlayerMoveVertically) continue;
 
-						for (uint32_t j = 0; j < event.count; j++) {
+						for (std::uint32_t j = 0; j < event.count; j++) {
 							float x = event.pointers[j].x * (float)ViewSize.X;
 							float y = event.pointers[j].y * (float)ViewSize.Y;
 							if (IsOnButton(button, x, y)) {
 								button.CurrentPointerId = event.pointers[j].id;
-								overrideActions |= (1 << (int32_t)button.Action);
+								overrideActions |= (1 << (std::int32_t)button.Action);
 								break;
 							}
 						}
@@ -348,20 +348,20 @@ namespace Jazz2::UI
 				}
 			}
 		} else if (event.type == TouchEventType::Up) {
-			for (uint32_t i = 0; i < TouchButtonsCount; i++) {
+			for (std::uint32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.CurrentPointerId != -1) {
 					button.CurrentPointerId = -1;
-					overrideActions &= ~(1 << (int32_t)button.Action);
+					overrideActions &= ~(1 << (std::int32_t)button.Action);
 				}
 			}
 
 		} else if (event.type == TouchEventType::PointerUp) {
-			for (uint32_t i = 0; i < TouchButtonsCount; i++) {
+			for (std::uint32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.CurrentPointerId == event.actionIndex) {
 					button.CurrentPointerId = -1;
-					overrideActions &= ~(1 << (int32_t)button.Action);
+					overrideActions &= ~(1 << (std::int32_t)button.Action);
 				}
 			}
 		}
@@ -377,7 +377,7 @@ namespace Jazz2::UI
 		_levelTextTime = 0.0f;
 	}
 
-	void HUD::ShowCoins(int32_t count)
+	void HUD::ShowCoins(std::int32_t count)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -399,7 +399,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::ShowGems(int32_t count)
+	void HUD::ShowGems(std::int32_t count)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -728,7 +728,7 @@ namespace Jazz2::UI
 
 		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f);
 
-		int32_t charOffsetShadow = charOffset;
+		std::int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, FontShadowLayer,
 			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
 
@@ -741,7 +741,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawCoins(int32_t& charOffset)
+	void HUD::DrawCoins(std::int32_t& charOffset)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -774,7 +774,7 @@ namespace Jazz2::UI
 		char stringBuffer[32];
 		snprintf(stringBuffer, arraySize(stringBuffer), "x%i", _coins);
 
-		int32_t charOffsetShadow = charOffset;
+		std::int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
@@ -788,7 +788,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawGems(int32_t& charOffset)
+	void HUD::DrawGems(std::int32_t& charOffset)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -821,7 +821,7 @@ namespace Jazz2::UI
 		char stringBuffer[32];
 		snprintf(stringBuffer, arraySize(stringBuffer), "x%i", _gems);
 
-		int32_t charOffsetShadow = charOffset;
+		std::int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
@@ -835,7 +835,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
+	void HUD::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
 	{
 		auto* res = _metadata->FindAnimation(state);
 		if (res == nullptr) {
@@ -843,7 +843,7 @@ namespace Jazz2::UI
 		}
 
 		if (frame < 0) {
-			frame = res->FrameOffset + ((int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
+			frame = res->FrameOffset + ((std::int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
 		}
 
 		GenericGraphicResource* base = res->Base;
@@ -851,8 +851,8 @@ namespace Jazz2::UI
 		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
-		int32_t col = frame % base->FrameConfiguration.X;
-		int32_t row = frame / base->FrameConfiguration.X;
+		std::int32_t col = frame % base->FrameConfiguration.X;
+		std::int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(
 			float(base->FrameDimensions.X) / float(texSize.X),
 			float(base->FrameDimensions.X * col) / float(texSize.X),
@@ -863,7 +863,7 @@ namespace Jazz2::UI
 		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle);
 	}
 
-	void HUD::DrawElementClipped(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)
+	void HUD::DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)
 	{
 		auto* res = _metadata->FindAnimation(state);
 		if (res == nullptr) {
@@ -871,7 +871,7 @@ namespace Jazz2::UI
 		}
 
 		if (frame < 0) {
-			frame = res->FrameOffset + ((int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
+			frame = res->FrameOffset + ((std::int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
 		}
 
 		GenericGraphicResource* base = res->Base;
@@ -879,8 +879,8 @@ namespace Jazz2::UI
 		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), base->FrameDimensions.As<float>());
 
 		Vector2i texSize = base->TextureDiffuse->size();
-		int32_t col = frame % base->FrameConfiguration.X;
-		int32_t row = frame / base->FrameConfiguration.X;
+		std::int32_t col = frame % base->FrameConfiguration.X;
+		std::int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(
 			std::floor(float(base->FrameDimensions.X) * clipX) / float(texSize.X),
 			float(base->FrameDimensions.X * col) / float(texSize.X),
@@ -905,7 +905,7 @@ namespace Jazz2::UI
 			offset.X += 6;
 		}
 
-		if ((player->_weaponUpgrades[(int32_t)weapon] & 0x01) != 0) {
+		if ((player->_weaponUpgrades[(std::int32_t)weapon] & 0x01) != 0) {
 			switch (weapon) {
 				default:
 				case WeaponType::Blaster:
@@ -991,7 +991,7 @@ namespace Jazz2::UI
 		_weaponWheelRenderCommandsCount = 0;
 
 		float requestedAngle;
-		int32_t requestedIndex;
+		std::int32_t requestedIndex;
 		if (h == 0.0f && v == 0.0f) {
 			requestedAngle = NAN;
 			requestedIndex = -1;
@@ -1006,7 +1006,7 @@ namespace Jazz2::UI
 				adjustedAngle -= fTwoPi;
 			}
 
-			requestedIndex = (int32_t)(_weaponWheelCount * adjustedAngle / fTwoPi);
+			requestedIndex = (std::int32_t)(_weaponWheelCount * adjustedAngle / fTwoPi);
 		}
 
 		float alpha = _weaponWheelAnim / WeaponWheelAnimDuration;
@@ -1021,7 +1021,7 @@ namespace Jazz2::UI
 		}
 
 		float angle = -fPiOver2;
-		for (int32_t i = 0, j = 0; i < static_cast<std::int32_t>(arraySize(player->_weaponAmmo)); i++) {
+		for (std::int32_t i = 0, j = 0; i < static_cast<std::int32_t>(arraySize(player->_weaponAmmo)); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				float x = cosf(angle) * distance;
 				float y = sinf(angle) * distance;
@@ -1054,7 +1054,7 @@ namespace Jazz2::UI
 						ammoCount = stringBuffer;
 					}
 
-					int32_t charOffset = 0;
+					std::int32_t charOffset = 0;
 					_smallFont->DrawString(this, ammoCount, charOffset, center.X + cosf(angle) * distance * 1.4f, center.Y + sinf(angle) * distance * 1.4f, FontLayer,
 						Alignment::Center, isSelected ? Colorf(0.62f, 0.44f, 0.34f, 0.5f * alpha) : Colorf(0.45f, 0.45f, 0.45f, 0.48f * alpha), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 				}
@@ -1079,7 +1079,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	bool HUD::PrepareWeaponWheel(Actors::Player* player, int& weaponCount)
+	bool HUD::PrepareWeaponWheel(Actors::Player* player, std::int32_t& weaponCount)
 	{
 		weaponCount = 0;
 
@@ -1114,11 +1114,11 @@ namespace Jazz2::UI
 		return (weaponCount > 0);
 	}
 
-	int32_t HUD::GetWeaponCount(Actors::Player* player)
+	std::int32_t HUD::GetWeaponCount(Actors::Player* player)
 	{
-		int32_t weaponCount = 0;
+		std::int32_t weaponCount = 0;
 
-		for (int32_t i = 0; i < static_cast<std::int32_t>(arraySize(player->_weaponAmmo)); i++) {
+		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(player->_weaponAmmo)); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				weaponCount++;
 			}
@@ -1132,15 +1132,15 @@ namespace Jazz2::UI
 		return weaponCount;
 	}
 
-	void HUD::DrawWeaponWheelSegment(float x, float y, float width, float height, uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color)
+	void HUD::DrawWeaponWheelSegment(float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color)
 	{
 		width *= 0.5f; x += width;
 		height *= 0.5f; y += height;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
-		int32_t segmentNum = std::clamp((int32_t)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
+		std::int32_t segmentNum = std::clamp((std::int32_t)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
 		float angleStep = angleRange / (segmentNum - 1);
-		int32_t vertexCount = segmentNum + 2;
+		std::int32_t vertexCount = segmentNum + 2;
 		float angle = minAngle;
 
 		Vertex* vertices = &_weaponWheelVertices[_weaponWheelVerticesCount];
@@ -1154,14 +1154,14 @@ namespace Jazz2::UI
 		constexpr float Mult = 2.2f;
 
 		{
-			int32_t j = 0;
+			std::int32_t j = 0;
 			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
 			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
 			vertices[j].U = 0.0f;
 			vertices[j].V = 0.0f;
 		}
 
-		for (int32_t i = 1; i < vertexCount - 1; i++) {
+		for (std::int32_t i = 1; i < vertexCount - 1; i++) {
 			vertices[i].X = x + cosf(angle) * (width - 0.5f);
 			vertices[i].Y = y + sinf(angle) * (height - 0.5f);
 			vertices[i].U = 0.15f + (0.7f * (float)(i - 1) / (vertexCount - 3));
@@ -1173,7 +1173,7 @@ namespace Jazz2::UI
 		{
 			angle -= angleStep;
 
-			int32_t j = vertexCount - 1;
+			std::int32_t j = vertexCount - 1;
 			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
 			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
 			vertices[j].U = 1.0f;
@@ -1286,32 +1286,32 @@ namespace Jazz2::UI
 		_rgbHealthLast = lerp(_rgbHealthLast, health, 0.2f);
 		_rgbAmbientLight = _levelHandler->_ambientColor.W;
 
-		constexpr int32_t KeyMax2 = 14;
+		constexpr std::int32_t KeyMax2 = 14;
 		Color colors[RgbLights::ColorsSize] { };
 
 		Color* captionTile = _levelHandler->_tileMap->GetCaptionTile();
 		if (captionTile != nullptr) {
-			for (int32_t i = 0; i < static_cast<std::int32_t>(arraySize(KeyLayout)); i++) {
-				int32_t x = KeyLayout[i] % AURA_KEYBOARD_WIDTH;
-				int32_t y = KeyLayout[i] / AURA_KEYBOARD_WIDTH;
+			for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(KeyLayout)); i++) {
+				std::int32_t x = KeyLayout[i] % AURA_KEYBOARD_WIDTH;
+				std::int32_t y = KeyLayout[i] / AURA_KEYBOARD_WIDTH;
 				Color tileColor = captionTile[y * 32 + x];
 				colors[AURA_COLORS_LIMITED_SIZE + i] = ApplyRgbGradientAlpha(tileColor, x, y, _rgbLightsAnim, _rgbAmbientLight);
 			}
 		}
 
-		int32_t percent, percentR, percentG;
-		percent = (int32_t)(_rgbHealthLast * 255);
+		std::int32_t percent, percentR, percentG;
+		percent = (std::int32_t)(_rgbHealthLast * 255);
 		percentG = percent * percent / 255;
 		percentR = (255 - (percent - 120) * 2);
 		percentR = std::clamp(percentR, 0, 255);
 
-		for (int32_t i = 0; i < KeyMax2; i++) {
-			int32_t intensity = (int32_t)((_rgbHealthLast - ((float)i / KeyMax2)) * 255 * KeyMax2);
+		for (std::int32_t i = 0; i < KeyMax2; i++) {
+			std::int32_t intensity = (std::int32_t)((_rgbHealthLast - ((float)i / KeyMax2)) * 255 * KeyMax2);
 			intensity = std::clamp(intensity, 0, 200);
 
 			if (intensity > 0) {
-				colors[(int32_t)AuraLight::Tilde + i] = Color(percentR * intensity / 255, percentG * intensity / 255, 0);
-				colors[(int32_t)AuraLight::Tab + i] = Color(percentR * intensity / (255 * 12), percentG * intensity / (255 * 12), 0);
+				colors[(std::int32_t)AuraLight::Tilde + i] = Color(percentR * intensity / 255, percentG * intensity / 255, 0);
+				colors[(std::int32_t)AuraLight::Tab + i] = Color(percentR * intensity / (255 * 12), percentG * intensity / (255 * 12), 0);
 			}
 		}
 

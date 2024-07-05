@@ -15,11 +15,11 @@ namespace Jazz2::UI::Menu
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
 	{
 		// TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
-		_items[(int32_t)Item::Character].Name = _("Character");
+		_items[(std::int32_t)Item::Character].Name = _("Character");
 		// TRANSLATORS: Menu item to select difficulty
-		_items[(int32_t)Item::Difficulty].Name = _("Difficulty");
+		_items[(std::int32_t)Item::Difficulty].Name = _("Difficulty");
 		// TRANSLATORS: Menu item to start selected episode/level
-		_items[(int32_t)Item::Start].Name = _("Start");
+		_items[(std::int32_t)Item::Start].Name = _("Start");
 	}
 
 	void StartGameOptionsSection::OnShow(IMenuContainer* root)
@@ -145,8 +145,8 @@ namespace Jazz2::UI::Menu
 
 		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, imageOffsetX, imageOffsetY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 
-		int32_t charOffset = 0;
-		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
+		std::int32_t charOffset = 0;
+		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 		    if (_selectedIndex == i) {
 		        float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
@@ -160,8 +160,8 @@ namespace Jazz2::UI::Menu
 		    }
 
 		    if (i == 0) {
-		        constexpr const StringView playerTypes[] = { "Jazz"_s, "Spaz"_s, "Lori"_s };
-		        constexpr Colorf playerColors[] = {
+		        static const StringView playerTypes[] = { "Jazz"_s, "Spaz"_s, "Lori"_s };
+		        static const Colorf playerColors[] = {
 		            Colorf(0.2f, 0.45f, 0.2f, 0.5f),
 		            Colorf(0.45f, 0.27f, 0.22f, 0.5f),
 		            Colorf(0.5f, 0.45f, 0.22f, 0.5f)
@@ -184,7 +184,7 @@ namespace Jazz2::UI::Menu
 					spacing *= 0.7f;
 				}
 
-		        for (int32_t j = 0; j < _availableCharacters; j++) {
+		        for (std::int32_t j = 0; j < _availableCharacters; j++) {
 		            float x = center.X - offset + j * spacing;
 		            if (_selectedPlayerType == j) {
 		                _root->DrawElement(MenuGlow, 0, x, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(playerTypes[j]) + 3) * 0.4f, 2.2f, true, true);
@@ -204,10 +204,10 @@ namespace Jazz2::UI::Menu
 
 				_items[i].TouchY = center.Y + 28.0f;
 		    } else if (i == 1) {
-				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
+				static const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
 				float spacing = (contentBounds.W >= 400 ? 100.0f : 70.0f);
 
-		        for (int32_t j = 0; j < static_cast<std::int32_t>(arraySize(difficultyTypes)); j++) {
+		        for (std::int32_t j = 0; j < static_cast<std::int32_t>(arraySize(difficultyTypes)); j++) {
 		            if (_selectedDifficulty == j) {
 		                _root->DrawElement(MenuGlow, 0, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(difficultyTypes[j]) + 3) * 0.4f, 2.2f, true, true);
 
@@ -259,7 +259,7 @@ namespace Jazz2::UI::Menu
 	void StartGameOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (!_shouldStart && event.type == TouchEventType::Down) {
-			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x * (float)viewSize.X;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -271,11 +271,11 @@ namespace Jazz2::UI::Menu
 					return;
 				}
 
-				for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
+				for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 					if (std::abs(x - halfWidth) < 150.0f && std::abs(y - _items[i].TouchY) < 30.0f) {
 						switch (i) {
 							case 0: {
-								int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
+								std::int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
 								if (_selectedPlayerType != selectedSubitem) {
 									StartImageTransition();
 									_selectedPlayerType = selectedSubitem;
@@ -284,7 +284,7 @@ namespace Jazz2::UI::Menu
 								break;
 							}
 							case 1: {
-								int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
+								std::int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
 								if (_selectedDifficulty != selectedSubitem) {
 									StartImageTransition();
 									_selectedDifficulty = selectedSubitem;
@@ -324,8 +324,8 @@ namespace Jazz2::UI::Menu
 	{
 		bool playTutorial = (!PreferencesCache::TutorialCompleted && _episodeName == "prince"_s && _levelName == "01_castle1"_s);
 
-		PlayerType players[] = { (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType) };
-		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((int32_t)GameDifficulty::Easy + _selectedDifficulty),
+		PlayerType players[] = { (PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType) };
+		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((std::int32_t)GameDifficulty::Easy + _selectedDifficulty),
 			PreferencesCache::EnableReforgedGameplay, false, players, static_cast<std::int32_t>(arraySize(players)));
 
 		if (!_previousEpisodeName.empty()) {

@@ -79,7 +79,7 @@ namespace Jazz2::UI::Menu
 						if (_selectedIndex > 0) {
 							_selectedIndex--;
 						} else {
-							_selectedIndex = (int32_t)(_items.size() - 1);
+							_selectedIndex = (std::int32_t)(_items.size() - 1);
 						}
 						EnsureVisibleSelected();
 						_pressedCount = std::min(_pressedCount + 6, 10);
@@ -121,7 +121,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Play Custom Levels"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
@@ -132,7 +132,7 @@ namespace Jazz2::UI::Menu
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
 		float topLine = contentBounds.Y + TopLine;
 		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
-		int32_t charOffset = 0;
+		std::int32_t charOffset = 0;
 
 		if (_items.empty()) {
 			_root->DrawStringShadow(_("No custom level found!"), charOffset, centerX, contentBounds.Y + contentBounds.H * 0.33f, IMenuContainer::FontLayer,
@@ -150,7 +150,7 @@ namespace Jazz2::UI::Menu
 		float column2 = contentBounds.X + (contentBounds.W >= 460 ? (contentBounds.W * 0.52f) : (contentBounds.W * 0.44f));
 
 		std::size_t itemsCount = _items.size();
-		for (int32_t i = 0; i < itemsCount; i++) {
+		for (std::int32_t i = 0; i < itemsCount; i++) {
 			_items[i].Y = center.Y;
 
 			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
@@ -188,7 +188,7 @@ namespace Jazz2::UI::Menu
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {
-				int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 				if (pointerIndex != -1) {
 					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 					if (y < 80.0f) {
@@ -205,7 +205,7 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Move: {
 				if (_touchStart != Vector2f::Zero) {
-					int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
 						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * (float)viewSize.X, event.pointers[pointerIndex].y * (float)viewSize.Y);
 						_y += touchMove.Y - _touchLast.Y;
@@ -223,7 +223,7 @@ namespace Jazz2::UI::Menu
 
 				float halfW = viewSize.X * 0.5f;
 				std::size_t itemsCount = _items.size();
-				for (int32_t i = 0; i < itemsCount; i++) {
+				for (std::int32_t i = 0; i < itemsCount; i++) {
 					if (std::abs(_touchLast.X - halfW) < 150.0f && std::abs(_touchLast.Y - _items[i].Y) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
@@ -305,11 +305,11 @@ namespace Jazz2::UI::Menu
 		auto s = fs::Open(levelFile, FileAccess::Read);
 		RETURN_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
-		uint64_t signature = s->ReadValue<uint64_t>();
-		uint8_t fileType = s->ReadValue<uint8_t>();
+		std::uint64_t signature = s->ReadValue<std::uint64_t>();
+		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		RETURN_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature");
 
-		uint16_t flags = s->ReadValue<uint16_t>();
+		std::uint16_t flags = s->ReadValue<std::uint16_t>();
 
 #if !defined(DEATH_DEBUG)
 		// Don't show hidden levels in Release build if unlock cheat is not active, but show all levels in Debug build
@@ -319,12 +319,12 @@ namespace Jazz2::UI::Menu
 #endif
 
 		// Read compressed data
-		int32_t compressedSize = s->ReadValue<int32_t>();
+		std::int32_t compressedSize = s->ReadValue<std::int32_t>();
 
 		DeflateStream uc(*s, compressedSize);
 
 		// Read metadata
-		uint8_t nameSize = uc.ReadValue<uint8_t>();
+		std::uint8_t nameSize = uc.ReadValue<std::uint8_t>();
 		String name(NoInit, nameSize);
 		uc.Read(name.data(), nameSize);
 
