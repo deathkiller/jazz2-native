@@ -56,13 +56,13 @@ namespace Jazz2::Actors::Solid
 
 		switch (_bridgeType) {
 			default:
-			case BridgeType::Rope: async_await RequestMetadataAsync("Bridge/Rope"_s); _widths = PieceWidthsRope; _widthsCount = arraySize<std::int32_t>(PieceWidthsRope); break;
-			case BridgeType::Stone: async_await RequestMetadataAsync("Bridge/Stone"_s); _widths = PieceWidthsStone; _widthsCount = arraySize<std::int32_t>(PieceWidthsStone); break;
-			case BridgeType::Vine: async_await RequestMetadataAsync("Bridge/Vine"_s); _widths = PieceWidthsVine; _widthsCount = arraySize<std::int32_t>(PieceWidthsVine); _widthOffset = 8; break;
-			case BridgeType::StoneRed: async_await RequestMetadataAsync("Bridge/StoneRed"_s); _widths = PieceWidthsStoneRed; _widthsCount = arraySize<std::int32_t>(PieceWidthsStoneRed); break;
-			case BridgeType::Log: async_await RequestMetadataAsync("Bridge/Log"_s); _widths = PieceWidthsLog; _widthsCount = arraySize<std::int32_t>(PieceWidthsLog); break;
-			case BridgeType::Gem: async_await RequestMetadataAsync("Bridge/Gem"_s); _widths = PieceWidthsGem; _widthsCount = arraySize<std::int32_t>(PieceWidthsGem); break;
-			case BridgeType::Lab: async_await RequestMetadataAsync("Bridge/Lab"_s); _widths = PieceWidthsLab; _widthsCount = arraySize<std::int32_t>(PieceWidthsLab); _widthOffset = 12; break;
+			case BridgeType::Rope: async_await RequestMetadataAsync("Bridge/Rope"_s); _widths = PieceWidthsRope; _widthsCount = static_cast<std::int32_t>(arraySize(PieceWidthsRope)); break;
+			case BridgeType::Stone: async_await RequestMetadataAsync("Bridge/Stone"_s); _widths = PieceWidthsStone; _widthsCount = static_cast<std::int32_t>(arraySize(PieceWidthsStone)); break;
+			case BridgeType::Vine: async_await RequestMetadataAsync("Bridge/Vine"_s); _widths = PieceWidthsVine; _widthsCount = static_cast<std::int32_t>(arraySize(PieceWidthsVine)); _widthOffset = 8; break;
+			case BridgeType::StoneRed: async_await RequestMetadataAsync("Bridge/StoneRed"_s); _widths = PieceWidthsStoneRed; _widthsCount = static_cast<std::int32_t>(arraySize(PieceWidthsStoneRed)); break;
+			case BridgeType::Log: async_await RequestMetadataAsync("Bridge/Log"_s); _widths = PieceWidthsLog; _widthsCount = static_cast<std::int32_t>(arraySize(PieceWidthsLog)); break;
+			case BridgeType::Gem: async_await RequestMetadataAsync("Bridge/Gem"_s); _widths = PieceWidthsGem; _widthsCount = static_cast<std::int32_t>(arraySize(PieceWidthsGem)); break;
+			case BridgeType::Lab: async_await RequestMetadataAsync("Bridge/Lab"_s); _widths = PieceWidthsLab; _widthsCount = static_cast<std::int32_t>(arraySize(PieceWidthsLab)); _widthOffset = 12; break;
 		}
 
 		SetAnimation(AnimState::Default);

@@ -150,12 +150,12 @@ namespace Jazz2::UI::Menu
 		static const StringView TheSecretFilesLevels[] = { "Easter Bunny"_s, "Spring Chickens"_s, "Scrambled Eggs"_s, "Ghostly Antics"_s, "Skeletons Turf"_s, "Graveyard Shift"_s, "Turtle Town"_s, "Suburbia Commando"_s, "Urban Brawl"_s };
 
 		UnlockableEpisodes unlockedEpisodes = PreferencesCache::UnlockedEpisodes;
-		if (HasAllLevels(FormerlyAPrinceLevels, arraySize<std::int32_t>(FormerlyAPrinceLevels))) unlockedEpisodes |= UnlockableEpisodes::FormerlyAPrince;
-		if (HasAllLevels(JazzInTimeLevels, arraySize<std::int32_t>(JazzInTimeLevels))) unlockedEpisodes |= UnlockableEpisodes::JazzInTime;
-		if (HasAllLevels(FlashbackLevels, arraySize<std::int32_t>(FlashbackLevels))) unlockedEpisodes |= UnlockableEpisodes::Flashback;
-		if (HasAllLevels(FunkyMonkeysLevels, arraySize<std::int32_t>(FunkyMonkeysLevels))) unlockedEpisodes |= UnlockableEpisodes::FunkyMonkeys;
-		if (HasAllLevels(ChristmasChroniclesLevels, arraySize<std::int32_t>(ChristmasChroniclesLevels))) unlockedEpisodes |= UnlockableEpisodes::ChristmasChronicles;
-		if (HasAllLevels(TheSecretFilesLevels, arraySize<std::int32_t>(TheSecretFilesLevels))) unlockedEpisodes |= UnlockableEpisodes::TheSecretFiles;
+		if (HasAllLevels(FormerlyAPrinceLevels)) unlockedEpisodes |= UnlockableEpisodes::FormerlyAPrince;
+		if (HasAllLevels(JazzInTimeLevels)) unlockedEpisodes |= UnlockableEpisodes::JazzInTime;
+		if (HasAllLevels(FlashbackLevels)) unlockedEpisodes |= UnlockableEpisodes::Flashback;
+		if (HasAllLevels(FunkyMonkeysLevels)) unlockedEpisodes |= UnlockableEpisodes::FunkyMonkeys;
+		if (HasAllLevels(ChristmasChroniclesLevels)) unlockedEpisodes |= UnlockableEpisodes::ChristmasChronicles;
+		if (HasAllLevels(TheSecretFilesLevels)) unlockedEpisodes |= UnlockableEpisodes::TheSecretFiles;
 
 		if (PreferencesCache::UnlockedEpisodes != unlockedEpisodes) {
 			PreferencesCache::UnlockedEpisodes = unlockedEpisodes;
@@ -169,10 +169,10 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	bool ImportSection::HasAllLevels(const StringView* levelNames, int32_t count)
+	bool ImportSection::HasAllLevels(ArrayView<StringView> levelNames)
 	{
 		bool hasAll = true;
-		for (int32_t i = 0; i < count; i++) {
+		for (std::size_t i = 0; i < levelNames.size(); i++) {
 			if (_foundLevels.find(String::nullTerminatedView(levelNames[i])) == _foundLevels.end()) {
 				hasAll = false;
 				break;

@@ -126,7 +126,7 @@ namespace nCine
 			, "GL_OES_compressed_ETC1_RGB8_texture",
 #endif
 		};
-		static_assert(arraySize<int>(ExtensionNames) == (int)GLExtensions::Count, "GLExtensions count mismatch");
+		static_assert(static_cast<std::int32_t>(arraySize(ExtensionNames)) == (int)GLExtensions::Count, "GLExtensions count mismatch");
 
 		checkGLExtensions(ExtensionNames, glExtensions_, (int)GLExtensions::Count);
 

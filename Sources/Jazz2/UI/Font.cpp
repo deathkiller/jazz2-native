@@ -284,7 +284,7 @@ namespace Jazz2::UI
 								if (cursor.first == ']') {
 									break;
 								}
-								if (paramLength < arraySize<std::int32_t>(param) - 1) {
+								if (paramLength < static_cast<std::int32_t>(arraySize(param)) - 1) {
 									param[paramLength++] = (char)cursor.first;
 								}
 								idx = cursor.second;
@@ -412,7 +412,7 @@ namespace Jazz2::UI
 									if (cursor.first == ']') {
 										break;
 									}
-									if (paramLength < arraySize<std::int32_t>(param) - 1) {
+									if (paramLength < static_cast<std::int32_t>(arraySize(param)) - 1) {
 										param[paramLength++] = (char)cursor.first;
 									}
 									idx = cursor.second;
@@ -444,7 +444,7 @@ namespace Jazz2::UI
 								if (cursor.first == ']') {
 									break;
 								}
-								if (paramLength < arraySize<std::int32_t>(param) - 1) {
+								if (paramLength < static_cast<std::int32_t>(arraySize(param)) - 1) {
 									param[paramLength++] = (char)cursor.first;
 								}
 								idx = cursor.second;
@@ -493,7 +493,7 @@ namespace Jazz2::UI
 
 				if (uvRect.W > 0 && uvRect.H > 0) {
 					if (useRandomColor) {
-						const Colorf& newColor = RandomColors[charOffset % arraySize<std::int32_t>(RandomColors)];
+						const Colorf& newColor = RandomColors[charOffset % static_cast<std::int32_t>(arraySize(RandomColors))];
 						color = Colorf(newColor.R, newColor.G, newColor.B, color.A);
 					}
 

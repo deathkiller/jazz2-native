@@ -62,6 +62,10 @@ using namespace Death::Containers::Literals;
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+#if defined(DEATH_TARGET_WINDOWS)
+	const char* __GetWin32ErrorSuffix(DWORD error);
+#endif
+
 	namespace
 	{
 		static std::size_t GetPathRootLength(const StringView path)
@@ -1698,7 +1702,7 @@ namespace Death { namespace IO {
 #	endif
 						DWORD error = ::GetLastError();
 						if (error != ERROR_ALREADY_EXISTS) {
-							LOGW("Cannot create directory \"%s\" with error %u (0x%08x)", fullPath.data(), error, error);
+							LOGW("Cannot create directory \"%S\" with error 0x%08x%s", fullPath.data(), error, __GetWin32ErrorSuffix(error));
 							return false;
 						}
 					}
@@ -1718,7 +1722,7 @@ namespace Death { namespace IO {
 #	endif
 				DWORD error = ::GetLastError();
 				if (error != ERROR_ALREADY_EXISTS) {
-					LOGW("Cannot create directory \"%s\" with error %u (0x%08x)", fullPath.data(), error, error);
+					LOGW("Cannot create directory \"%S\" with error 0x%08x%s", fullPath.data(), error, __GetWin32ErrorSuffix(error));
 					return false;
 				}
 			}
@@ -1736,7 +1740,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 
-		String fullPath = String { nullTerminatedPath };
+		String fullPath = String{nullTerminatedPath};
 		bool slashWasLast = true;
 		struct stat sb;
 		for (std::size_t i = 0; i < fullPath.size(); i++) {
@@ -2470,7 +2474,7 @@ namespace Death { namespace IO {
 		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), fileDesiredAccess, shareMode, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (hFile == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open file \"%s\" with error %u (0x%08x)", String::nullTerminatedView(path).data(), error, error);
+			LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
 			return { };
 		}
 
@@ -2486,14 +2490,14 @@ namespace Death { namespace IO {
 		} else {
 			if (!(hMap = ::CreateFileMappingW(hFile, nullptr, protect, 0, 0, nullptr))) {
 				DWORD error = ::GetLastError();
-				LOGE("Cannot open file \"%s\" with error %u (0x%08x)", String::nullTerminatedView(path).data(), error, error);
+				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
 				::CloseHandle(hFile);
 				return { };
 			}
 
 			if (!(data = reinterpret_cast<char*>(::MapViewOfFile(hMap, mapDesiredAccess, 0, 0, 0)))) {
 				DWORD error = ::GetLastError();
-				LOGE("Cannot open file \"%s\" with error %u (0x%08x)", String::nullTerminatedView(path).data(), error, error);
+				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
 				::CloseHandle(hMap);
 				::CloseHandle(hFile);
 				return { };

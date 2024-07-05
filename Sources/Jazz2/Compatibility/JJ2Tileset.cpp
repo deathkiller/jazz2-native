@@ -191,14 +191,14 @@ namespace Jazz2::Compatibility
 			std::memcpy(palette, _palette, sizeof(_palette));
 
 			bool hasAlphaChannel = false;
-			for (std::int32_t i = 1; i < arraySize<std::int32_t>(palette); i++) {
+			for (std::int32_t i = 1; i < static_cast<std::int32_t>(arraySize(palette)); i++) {
 				if ((palette[i] & 0xff000000) != 0) {
 					hasAlphaChannel = true;
 					break;
 				}
 			}
 			if (!hasAlphaChannel) {
-				for (std::int32_t i = 1; i < arraySize<std::int32_t>(palette); i++) {
+				for (std::int32_t i = 1; i < static_cast<std::int32_t>(arraySize(palette)); i++) {
 					palette[i] |= 0xff000000;
 				}
 			}

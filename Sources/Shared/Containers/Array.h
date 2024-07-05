@@ -20,7 +20,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#pragma once 
+#pragma once
 
 #include "../CommonBase.h"
 #include "../Asserts.h"
@@ -576,8 +576,8 @@ namespace Death { namespace Containers {
 	}
 
 	/** @brief Array size */
-	template<class S = std::size_t, class T> S arraySize(const Array<T>& view) {
-		return static_cast<S>(view.size());
+	template<class T> std::size_t arraySize(const Array<T>& view) {
+		return view.size();
 	}
 
 	template<class T, class D> inline Array<T, D>::Array(Array<T, D>&& other) noexcept : _data{other._data}, _size{other._size}, _deleter{other._deleter} {

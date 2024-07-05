@@ -25,6 +25,22 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+#if defined(DEATH_TARGET_WINDOWS)
+	const char* __GetWin32ErrorSuffix(DWORD error)
+	{
+		switch (error) {
+			case ERROR_FILE_NOT_FOUND: return " (FILE_NOT_FOUND)"; break;
+			case ERROR_PATH_NOT_FOUND: return " (PATH_NOT_FOUND)"; break;
+			case ERROR_ACCESS_DENIED: return " (ACCESS_DENIED)"; break;
+			case ERROR_SHARING_VIOLATION: return " (SHARING_VIOLATION)"; break;
+			case ERROR_INVALID_PARAMETER: return " (INVALID_PARAMETER)"; break;
+			case ERROR_DISK_FULL: return " (DISK_FULL)"; break;
+			case ERROR_INVALID_NAME: return " (INVALID_NAME)"; break;
+			default: return ""; break;
+		}
+	}
+#endif
+
 	FileStream::FileStream(const Containers::StringView path, FileAccess mode)
 		: FileStream(Containers::String{path}, mode)
 	{
@@ -287,15 +303,7 @@ namespace Death { namespace IO {
 		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, nullptr);
 		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
-			const char* errorName;
-			switch (error) {
-				case ERROR_FILE_NOT_FOUND: errorName = " (FILE_NOT_FOUND)"; break;
-				case ERROR_PATH_NOT_FOUND: errorName = " (PATH_NOT_FOUND)"; break;
-				case ERROR_ACCESS_DENIED: errorName = " (ACCESS_DENIED)"; break;
-				case ERROR_SHARING_VIOLATION: errorName = " (SHARING_VIOLATION)"; break;
-				default: errorName = ""; break;
-			}
-			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, errorName);
+			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 			return;
 		}
 		// Automatically transfers ownership of the Win32 file handle to the file descriptor
@@ -320,15 +328,7 @@ namespace Death { namespace IO {
 		_handle = _wfsopen(Utf8::ToUtf16(_path), modeInternal, shareMode);
 		if (_handle == nullptr) {
 			DWORD error = ::GetLastError();
-			const char* errorName;
-			switch (error) {
-				case ERROR_FILE_NOT_FOUND: errorName = " (FILE_NOT_FOUND)"; break;
-				case ERROR_PATH_NOT_FOUND: errorName = " (PATH_NOT_FOUND)"; break;
-				case ERROR_ACCESS_DENIED: errorName = " (ACCESS_DENIED)"; break;
-				case ERROR_SHARING_VIOLATION: errorName = " (SHARING_VIOLATION)"; break;
-				default: errorName = ""; break;
-			}
-			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, errorName);
+			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 			return;
 		}
 #	else
