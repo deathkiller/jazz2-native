@@ -237,15 +237,18 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		length = MaxEntryLength - 2;
 	}
 
-	wchar_t logEntryW[MaxEntryLength];
+	// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
+	/*wchar_t logEntryW[MaxEntryLength];
 	std::int32_t lengthW = Death::Utf8::ToUtf16(logEntryW, logEntry, length);
 	if (lengthW > 0) {
-		// Keep original logEntry without a new line
 		logEntryW[lengthW++] = '\n';
 		logEntryW[lengthW] = '\0';
-
 		::OutputDebugStringW(logEntryW);
-	}
+	}*/
+	logEntry[length] = '\n';
+	logEntry[length + 1] = '\0';
+	::OutputDebugStringA(logEntry);
+	logEntry[length] = '\0';
 #else
 	static const char Reset[] = "\033[0m";
 	static const char Bold[] = "\033[1m";
@@ -286,19 +289,19 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	std::int32_t length2 = 0;
 	if (logMsgFuncLength > 0) {
 		if (hasVirtualTerminal) {
-			length2 += nCine::copyStringFirst(logEntryWithColors, MaxEntryLength - 1, Faint, arraySize<std::int32_t>(Faint) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors, MaxEntryLength - 1, Faint, static_cast<std::int32_t>(arraySize(Faint)) - 1);
 
 			switch (level) {
 				case TraceLevel::Error:
 				case TraceLevel::Fatal:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, arraySize<std::int32_t>(BrightRed) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
 					break;
 				case TraceLevel::Warning:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, arraySize<std::int32_t>(BrightYellow) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
 					break;
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 				case TraceLevel::Debug:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, arraySize<std::int32_t>(DarkGray) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, static_cast<std::int32_t>(arraySize(DarkGray)) - 1);
 					break;
 #	endif
 			}
@@ -312,28 +315,28 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		if (level != TraceLevel::Warning && level != TraceLevel::Debug)
 #	endif
 		{
-			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, arraySize<std::int32_t>(Reset) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
 		}
 
 		switch (level) {
 			case TraceLevel::Error:
 			case TraceLevel::Fatal:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, arraySize<std::int32_t>(BrightRed) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
 				if (level == TraceLevel::Fatal) {
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, arraySize<std::int32_t>(Bold) - 1);
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
 				}
 				break;
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			case TraceLevel::Info:
 			case TraceLevel::Warning:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, arraySize<std::int32_t>(Bold) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
 				break;
 #	else
 			case TraceLevel::Warning:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, arraySize<std::int32_t>(BrightYellow) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
 				break;
 			case TraceLevel::Debug:
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, arraySize<std::int32_t>(DarkGray) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, static_cast<std::int32_t>(arraySize(DarkGray)) - 1);
 				break;
 #	endif
 		}
@@ -343,7 +346,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 
 	if (hasVirtualTerminal) {
 		if (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Fatal) {
-			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, arraySize<std::int32_t>(Reset) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
 		}
 	}
 
@@ -418,15 +421,18 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 			length = MaxEntryLength - 2;
 		}
 
-		wchar_t logEntryW[MaxEntryLength];
+		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
+		/*wchar_t logEntryW[MaxEntryLength];
 		std::int32_t lengthW = Death::Utf8::ToUtf16(logEntryW, logEntry, length);
 		if (lengthW > 0) {
-			// Keep original logEntry without a new line
 			logEntryW[lengthW++] = '\n';
 			logEntryW[lengthW] = '\0';
-
 			::OutputDebugStringW(logEntryW);
-		}
+		}*/
+		logEntry[length] = '\n';
+		logEntry[length + 1] = '\0';
+		::OutputDebugStringA(logEntry);
+		logEntry[length] = '\0';
 	}
 #	endif
 #endif

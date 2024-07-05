@@ -367,7 +367,7 @@ namespace Jazz2::UI::Menu
 
 		PlayerType players[] = { (PlayerType)((episodeContinue->State.DifficultyAndPlayerType >> 4) & 0x0f) };
 		LevelInitialization levelInit(selectedItem.Item.Description.Name, episodeContinue->LevelName, (GameDifficulty)(episodeContinue->State.DifficultyAndPlayerType & 0x0f),
-			PreferencesCache::EnableReforgedGameplay, false, players, arraySize<int>(players));
+			PreferencesCache::EnableReforgedGameplay, false, players, static_cast<std::int32_t>(arraySize(players)));
 
 		if ((episodeContinue->State.Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
 			levelInit.CheatsUsed = true;

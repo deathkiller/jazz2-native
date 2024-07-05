@@ -948,7 +948,7 @@ namespace Jazz2::Compatibility
 
 					bool allZeroes = true;
 					if (tileEvent.Converted.Type != EventType::Empty) {
-						for (int i = 0; i < arraySize<int>(tileEvent.Converted.Params); i++) {
+						for (int i = 0; i < static_cast<std::int32_t>(arraySize(tileEvent.Converted.Params)); i++) {
 							if (tileEvent.Converted.Params[i] != 0) {
 								allZeroes = false;
 								break;

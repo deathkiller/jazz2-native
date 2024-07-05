@@ -338,7 +338,7 @@ namespace Jazz2::UI::Menu
 	{
 		PlayerType players[] = { (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit(_episodeName, StringView(_levelName), GameDifficulty::Multiplayer,
-			PreferencesCache::EnableReforgedGameplay, false, players, arraySize<int>(players));
+			PreferencesCache::EnableReforgedGameplay, false, players, static_cast<std::int32_t>(arraySize(players)));
 
 		if (!_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);

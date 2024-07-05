@@ -512,13 +512,13 @@ namespace Death { namespace Containers {
 						bool success2 = false;
 #if defined(DEATH_TARGET_WINDOWS)
 						wchar_t buffer[64];
-						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, arraySize<int>(buffer));
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, static_cast<int>(arraySize(buffer)));
 						if (bufferLength > 0) {
 							if (buffer[bufferLength - 1] == '\0') {
 								bufferLength--;
 							}
 							buffer[bufferLength++] = ' ';
-							std::int32_t timeLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer + bufferLength, arraySize<int>(buffer) - bufferLength);
+							std::int32_t timeLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer + bufferLength, static_cast<int>(arraySize(buffer)) - bufferLength);
 							if (timeLength > 0) {
 								bufferLength += timeLength;
 								if (buffer[bufferLength - 1] == '\0') {
@@ -660,7 +660,7 @@ namespace Death { namespace Containers {
 						bool success2 = false;
 #if defined(DEATH_TARGET_WINDOWS)
 						wchar_t buffer[64];
-						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, arraySize<int>(buffer));
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, static_cast<int>(arraySize(buffer)));
 						if (bufferLength > 0) {
 							if (buffer[bufferLength - 1] == '\0') {
 								bufferLength--;
@@ -669,7 +669,7 @@ namespace Death { namespace Containers {
 							if (format2Length > 0) {
 								success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
 								if (!success2) {
-									std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SLONGDATE, buffer, arraySize<int>(buffer));
+									std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SLONGDATE, buffer, static_cast<int>(arraySize(buffer)));
 									if (bufferLength > 0) {
 										if (buffer[bufferLength - 1] == '\0') {
 											bufferLength--;
@@ -710,7 +710,7 @@ namespace Death { namespace Containers {
 						bool success2 = false;
 #if defined(DEATH_TARGET_WINDOWS)
 						wchar_t buffer[64];
-						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer, arraySize<int>(buffer));
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer, static_cast<int>(arraySize(buffer)));
 						if (bufferLength > 0) {
 							if (buffer[bufferLength - 1] == '\0') {
 								bufferLength--;

@@ -38,6 +38,7 @@
 namespace Death { namespace Containers { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/** @brief Provides automatic conversion from/to STL @ref std::string */
 	template<> struct StringConverter<std::string> {
 		static String from(const std::string& other) {
 			return String{other.data(), other.size()};
@@ -47,6 +48,7 @@ namespace Death { namespace Containers { namespace Implementation {
 		}
 	};
 
+	/** @brief Provides automatic conversion from/to STL @ref std::string */
 	template<> struct StringViewConverter<const char, std::string> {
 		static StringView from(const std::string& other) {
 			return StringView{other.data(), other.size(), StringViewFlags::NullTerminated};
@@ -56,6 +58,7 @@ namespace Death { namespace Containers { namespace Implementation {
 		}
 	};
 
+	/** @brief Provides automatic conversion from/to STL @ref std::string */
 	template<> struct StringViewConverter<char, std::string> {
 		static MutableStringView from(std::string& other) {
 			// .data() returns a const pointer until C++17, so have to use &other[0]. It's guaranteed

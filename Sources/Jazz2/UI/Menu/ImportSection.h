@@ -42,7 +42,7 @@ namespace Jazz2::UI::Menu
 		static void FileCountCallback(void* context, int32_t fileCount);
 
 		void CheckFoundLevels();
-		bool HasAllLevels(const StringView* levelNames, int32_t count);
+		bool HasAllLevels(ArrayView<StringView> levelNames);
 	};
 }
 
