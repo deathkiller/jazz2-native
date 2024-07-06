@@ -5,6 +5,7 @@
 #include "PlayerType.h"
 #include "WeaponType.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include <Containers/ArrayView.h>
