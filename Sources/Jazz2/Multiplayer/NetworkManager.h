@@ -44,6 +44,9 @@ namespace Jazz2::Multiplayer
 		NetworkManager();
 		~NetworkManager();
 
+		NetworkManager(const NetworkManager&) = delete;
+		NetworkManager& operator=(const NetworkManager&) = delete;
+
 		bool CreateClient(INetworkHandler* handler, const StringView& address, std::uint16_t port, std::uint32_t clientData);
 		bool CreateServer(INetworkHandler* handler, std::uint16_t port);
 		void Dispose();
@@ -55,9 +58,6 @@ namespace Jazz2::Multiplayer
 		void KickClient(const Peer& peer, Reason reason);
 
 	private:
-		NetworkManager(const NetworkManager&) = delete;
-		NetworkManager& operator=(const NetworkManager&) = delete;
-
 		static constexpr std::size_t MaxPeerCount = 64;
 		static constexpr std::uint32_t ProcessingIntervalMs = 4;
 

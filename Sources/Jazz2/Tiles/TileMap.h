@@ -53,7 +53,7 @@ namespace Jazz2::Tiles
 		Vector4f Color;
 	};
 
-	enum class LayerTileFlags : uint8_t {
+	enum class LayerTileFlags : std::uint8_t {
 		None = 0x00,
 
 		FlipX = 0x01,
@@ -79,12 +79,10 @@ namespace Jazz2::Tiles
 	};
 
 	struct TileMapLayer {
-		bool Visible;
-
 		std::unique_ptr<LayerTile[]> Layout;
 		Vector2i LayoutSize;
-
 		LayerDescription Description;
+		bool Visible;
 	};
 
 	struct AnimatedTileFrame {

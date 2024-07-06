@@ -17,23 +17,23 @@ namespace Jazz2::Compatibility
 	class JJ2Episode // .j2e / .j2pe
 	{
 	public:
-		int32_t Position;
+		std::int32_t Position;
 		String Name;
 		String DisplayName;
 		String FirstLevel;
 		String PreviousEpisode;
 		String NextEpisode;
 
-		int32_t ImageWidth;
-		int32_t ImageHeight;
-		std::unique_ptr<uint8_t[]> ImageData;
+		std::int32_t ImageWidth;
+		std::int32_t ImageHeight;
+		std::unique_ptr<std::uint8_t[]> ImageData;
 
-		int32_t TitleWidth;
-		int32_t TitleHeight;
-		std::unique_ptr<uint8_t[]> TitleData;
+		std::int32_t TitleWidth;
+		std::int32_t TitleHeight;
+		std::unique_ptr<std::uint8_t[]> TitleData;
 
 		JJ2Episode();
-		JJ2Episode(const StringView name, const StringView displayName, const StringView firstLevel, int32_t position);
+		JJ2Episode(const StringView name, const StringView displayName, const StringView firstLevel, std::int32_t position);
 
 		bool Open(const StringView path);
 

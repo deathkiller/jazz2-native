@@ -13,43 +13,43 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-    class JJ2Tileset // .j2t
-    {
-    public:
-        static constexpr int BlockSize = 32;
+	class JJ2Tileset // .j2t
+	{
+	public:
+		static constexpr std::int32_t BlockSize = 32;
 
-        JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }
+		JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }
 
-        bool Open(const StringView path, bool strictParser);
+		bool Open(const StringView path, bool strictParser);
 
-        void Convert(const StringView targetPath) const;
+		void Convert(const StringView targetPath) const;
 
-        int GetMaxSupportedTiles() const {
-            return (_version == JJ2Version::BaseGame ? 1024 : 4096);
-        }
+		std::int32_t GetMaxSupportedTiles() const {
+			return (_version == JJ2Version::BaseGame ? 1024 : 4096);
+		}
 
-    private:
-        struct TilesetTileSection {
-            bool Opaque;
-            uint32_t ImageDataOffset;
-            uint32_t AlphaDataOffset;
-            uint32_t MaskDataOffset;
+	private:
+		struct TilesetTileSection {
+			bool Opaque;
+			std::uint32_t ImageDataOffset;
+			std::uint32_t AlphaDataOffset;
+			std::uint32_t MaskDataOffset;
 
-            uint8_t Image[BlockSize * BlockSize];
-            //uint8_t Mask[BlockSize * BlockSize];
-            uint8_t Mask[BlockSize * BlockSize / 8];
-        };
+			std::uint8_t Image[BlockSize * BlockSize];
+			//std::uint8_t Mask[BlockSize * BlockSize];
+			std::uint8_t Mask[BlockSize * BlockSize / 8];
+		};
 
 		static constexpr std::int32_t PaletteSize = 256;
 
-        String _name;
-        JJ2Version _version;
-        uint32_t _palette[PaletteSize];
-        std::unique_ptr<TilesetTileSection[]> _tiles;
-        int _tileCount;
+		String _name;
+		JJ2Version _version;
+		std::uint32_t _palette[PaletteSize];
+		std::unique_ptr<TilesetTileSection[]> _tiles;
+		std::int32_t _tileCount;
 
-        void LoadMetadata(JJ2Block& block);
-        void LoadImageData(JJ2Block& imageBlock, JJ2Block& alphaBlock);
-        void LoadMaskData(JJ2Block& block);
-    };
+		void LoadMetadata(JJ2Block& block);
+		void LoadImageData(JJ2Block& imageBlock, JJ2Block& alphaBlock);
+		void LoadMaskData(JJ2Block& block);
+	};
 }

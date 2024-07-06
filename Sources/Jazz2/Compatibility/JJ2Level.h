@@ -33,14 +33,14 @@ namespace Jazz2::Compatibility
 
 		struct ExtraTilesetEntry {
 			String Name;
-			uint16_t Offset;
-			uint16_t Count;
+			std::uint16_t Offset;
+			std::uint16_t Count;
 			bool HasPaletteRemapping;
-			uint8_t PaletteRemapping[256];
+			std::uint8_t PaletteRemapping[256];
 		};
 
-		static constexpr int JJ2LayerCount = 8;
-		static constexpr int TextEventStringsCount = 16;
+		static constexpr std::int32_t JJ2LayerCount = 8;
+		static constexpr std::int32_t TextEventStringsCount = 16;
 
 		String LevelName;
 		String DisplayName;
@@ -51,7 +51,7 @@ namespace Jazz2::Compatibility
 		String BonusLevel;
 		String SecretLevel;
 
-		uint8_t LightingMin, LightingStart;
+		std::uint8_t LightingMin, LightingStart;
 
 		JJ2Level() : _version(JJ2Version::Unknown), _animCount(0), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasPitInstantDeath(false), _hasCTF(false), _hasLaps(false), _useLevelPalette(false) { }
 
@@ -63,10 +63,10 @@ namespace Jazz2::Compatibility
 		JJ2Version GetVersion() const {
 			return _version;
 		}
-		int GetMaxSupportedTiles() const {
+		std::int32_t GetMaxSupportedTiles() const {
 			return (_version == JJ2Version::BaseGame ? 1024 : 4096);
 		}
-		int GetMaxSupportedAnims() const {
+		std::int32_t GetMaxSupportedAnims() const {
 			return (_version == JJ2Version::BaseGame ? 128 : 256);
 		}
 
@@ -81,15 +81,15 @@ namespace Jazz2::Compatibility
 		};
 
 		struct LayerSection {
-			uint32_t Flags;
-			uint8_t Type;				// Ignored
+			std::uint32_t Flags;
+			std::uint8_t Type;				// Ignored
 			bool Used;
 			bool Visible;
-			int32_t Width;
-			int32_t InternalWidth;
-			int32_t Height;
-			int32_t Depth;
-			uint8_t DetailLevel;		// Ignored
+			std::uint8_t DetailLevel;		// Ignored
+			std::int32_t Width;
+			std::int32_t InternalWidth;
+			std::int32_t Height;
+			std::int32_t Depth;
 			float OffsetX;
 			float OffsetY;
 			float SpeedX;
@@ -98,68 +98,68 @@ namespace Jazz2::Compatibility
 			float AutoSpeedY;
 			LayerSectionSpeedModel SpeedModelX;
 			LayerSectionSpeedModel SpeedModelY;
-			uint8_t TexturedBackgroundType;
-			uint8_t TexturedParams1;
-			uint8_t TexturedParams2;
-			uint8_t TexturedParams3;
-			uint8_t SpriteMode;
-			uint8_t SpriteParam;
-			std::unique_ptr<uint16_t[]> Tiles;
+			std::uint8_t TexturedBackgroundType;
+			std::uint8_t TexturedParams1;
+			std::uint8_t TexturedParams2;
+			std::uint8_t TexturedParams3;
+			std::uint8_t SpriteMode;
+			std::uint8_t SpriteParam;
+			std::unique_ptr<std::uint16_t[]> Tiles;
 		};
 
 		struct TileEventSection {
 			JJ2Event EventType;
-			uint8_t Difficulty;
+			std::uint8_t GeneratorFlags;
+			std::uint8_t Difficulty;
 			bool Illuminate;
-			uint32_t TileParams;		// Partially supported
+			std::uint32_t TileParams;		// Partially supported
 
-			int GeneratorDelay;
-			uint8_t GeneratorFlags;
+			std::int32_t GeneratorDelay;
 			ConversionResult Converted;
 		};
 
 		struct TilePropertiesSection {
 			TileEventSection Event;
 			bool Flipped;
-			uint8_t Type;
+			std::uint8_t Type;
 		};
 
 		struct AnimatedTileSection {
-			uint16_t Delay;
-			uint16_t DelayJitter;
-			uint16_t ReverseDelay;
+			std::uint16_t Delay;
+			std::uint16_t DelayJitter;
+			std::uint16_t ReverseDelay;
 			bool IsPingPong;
-			uint8_t Speed;
-			uint8_t FrameCount;
-			uint16_t Frames[64];
+			std::uint8_t Speed;
+			std::uint8_t FrameCount;
+			std::uint16_t Frames[64];
 		};
 
 		JJ2Version _version;
 
-		uint16_t _animCount;
+		std::uint16_t _animCount;
 		bool _isHidden, _verticalMPSplitscreen, _isMpLevel;
 		bool _hasPit, _hasPitInstantDeath, _hasCTF, _hasLaps;
-		uint32_t _darknessColor;
+		std::uint32_t _darknessColor;
 		WeatherType _weatherType;
-		uint8_t _weatherIntensity;
-		uint16_t _waterLevel;
+		std::uint8_t _weatherIntensity;
+		std::uint16_t _waterLevel;
 
 		String _textEventStrings[TextEventStringsCount];
-		uint8_t _levelPalette[256 * 3];
+		std::uint8_t _levelPalette[256 * 3];
 		bool _useLevelPalette;
 
 		SmallVector<LayerSection, JJ2LayerCount> _layers;
 		std::unique_ptr<TilePropertiesSection[]> _staticTiles;
 		std::unique_ptr<AnimatedTileSection[]> _animatedTiles;
 		std::unique_ptr<TileEventSection[]> _events;
-		SmallVector<uint8_t, TextEventStringsCount> _levelTokenTextIds;
+		SmallVector<std::uint8_t, TextEventStringsCount> _levelTokenTextIds;
 
 		void LoadMetadata(JJ2Block& block, bool strictParser);
 		void LoadStaticTileData(JJ2Block& block, bool strictParser);
 		void LoadAnimatedTiles(JJ2Block& block, bool strictParser);
 		void LoadLayerMetadata(JJ2Block& block, bool strictParser);
 		void LoadEvents(JJ2Block& block, bool strictParser);
-		void LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser);
+		void LoadLayers(JJ2Block& dictBlock, std::int32_t dictLength, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser);
 
 		static void WriteLevelName(Stream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);

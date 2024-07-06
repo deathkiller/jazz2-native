@@ -30,35 +30,35 @@ namespace Jazz2::Collisions
 
 		m_pairCapacity = 16;
 		m_pairCount = 0;
-		m_pairBuffer = (CollisionPair*)malloc(m_pairCapacity * sizeof(CollisionPair));
+		m_pairBuffer = (CollisionPair*)std::malloc(m_pairCapacity * sizeof(CollisionPair));
 
 		m_moveCapacity = 16;
 		m_moveCount = 0;
-		m_moveBuffer = (int32_t*)malloc(m_moveCapacity * sizeof(int32_t));
+		m_moveBuffer = (std::int32_t*)std::malloc(m_moveCapacity * sizeof(int32_t));
 	}
 
 	DynamicTreeBroadPhase::~DynamicTreeBroadPhase()
 	{
-		free(m_moveBuffer);
-		free(m_pairBuffer);
+		std::free(m_moveBuffer);
+		std::free(m_pairBuffer);
 	}
 
 	int32_t DynamicTreeBroadPhase::CreateProxy(const AABBf& aabb, void* userData)
 	{
-		int32_t proxyId = m_tree.CreateProxy(aabb, userData);
+		std::int32_t proxyId = m_tree.CreateProxy(aabb, userData);
 		++m_proxyCount;
 		BufferMove(proxyId);
 		return proxyId;
 	}
 
-	void DynamicTreeBroadPhase::DestroyProxy(int32_t proxyId)
+	void DynamicTreeBroadPhase::DestroyProxy(std::int32_t proxyId)
 	{
 		UnBufferMove(proxyId);
 		--m_proxyCount;
 		m_tree.DestroyProxy(proxyId);
 	}
 
-	void DynamicTreeBroadPhase::MoveProxy(int32_t proxyId, const AABBf& aabb, const Vector2f& displacement)
+	void DynamicTreeBroadPhase::MoveProxy(std::int32_t proxyId, const AABBf& aabb, const Vector2f& displacement)
 	{
 		// NOTE: Touch proxy everytime, because it's called only when something changes
 		/*bool buffer =*/ m_tree.MoveProxy(proxyId, aabb, displacement);
@@ -67,28 +67,28 @@ namespace Jazz2::Collisions
 		//}
 	}
 
-	void DynamicTreeBroadPhase::TouchProxy(int32_t proxyId)
+	void DynamicTreeBroadPhase::TouchProxy(std::int32_t proxyId)
 	{
 		BufferMove(proxyId);
 	}
 
-	void DynamicTreeBroadPhase::BufferMove(int32_t proxyId)
+	void DynamicTreeBroadPhase::BufferMove(std::int32_t proxyId)
 	{
 		if (m_moveCount == m_moveCapacity) {
-			int32_t* oldBuffer = m_moveBuffer;
+			std::int32_t* oldBuffer = m_moveBuffer;
 			m_moveCapacity *= 2;
-			m_moveBuffer = (int32_t*)malloc(m_moveCapacity * sizeof(int32_t));
-			memcpy(m_moveBuffer, oldBuffer, m_moveCount * sizeof(int32_t));
-			free(oldBuffer);
+			m_moveBuffer = (std::int32_t*)malloc(m_moveCapacity * sizeof(std::int32_t));
+			std::memcpy(m_moveBuffer, oldBuffer, m_moveCount * sizeof(std::int32_t));
+			std::free(oldBuffer);
 		}
 
 		m_moveBuffer[m_moveCount] = proxyId;
 		++m_moveCount;
 	}
 
-	void DynamicTreeBroadPhase::UnBufferMove(int32_t proxyId)
+	void DynamicTreeBroadPhase::UnBufferMove(std::int32_t proxyId)
 	{
-		for (int32_t i = 0; i < m_moveCount; ++i) {
+		for (std::int32_t i = 0; i < m_moveCount; ++i) {
 			if (m_moveBuffer[i] == proxyId) {
 				m_moveBuffer[i] = NullNode;
 			}
@@ -96,7 +96,7 @@ namespace Jazz2::Collisions
 	}
 
 	// This is called from b2DynamicTree::Query when we are gathering pairs.
-	bool DynamicTreeBroadPhase::OnCollisionQuery(int32_t proxyId)
+	bool DynamicTreeBroadPhase::OnCollisionQuery(std::int32_t proxyId)
 	{
 		// A proxy cannot form a pair with itself.
 		if (proxyId == m_queryProxyId) {
@@ -114,8 +114,8 @@ namespace Jazz2::Collisions
 			CollisionPair* oldBuffer = m_pairBuffer;
 			m_pairCapacity = m_pairCapacity + (m_pairCapacity >> 1);
 			m_pairBuffer = (CollisionPair*)malloc(m_pairCapacity * sizeof(CollisionPair));
-			memcpy(m_pairBuffer, oldBuffer, m_pairCount * sizeof(CollisionPair));
-			free(oldBuffer);
+			std::memcpy(m_pairBuffer, oldBuffer, m_pairCount * sizeof(CollisionPair));
+			std::free(oldBuffer);
 		}
 
 		m_pairBuffer[m_pairCount].proxyIdA = std::min(proxyId, m_queryProxyId);

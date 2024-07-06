@@ -237,7 +237,7 @@ namespace Jazz2::Events
 
 	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, std::uint8_t* spawnParams, ActorState flags, std::int32_t x, std::int32_t y, std::int32_t z)
 	{
-		return SpawnEvent(type, spawnParams, flags, Vector3i(x * 32 + 16, y * 32 + 16, (int)z));
+		return SpawnEvent(type, spawnParams, flags, Vector3i(x * 32 + 16, y * 32 + 16, (std::int32_t)z));
 	}
 
 	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, std::uint8_t* spawnParams, ActorState flags, const Vector3i& pos)

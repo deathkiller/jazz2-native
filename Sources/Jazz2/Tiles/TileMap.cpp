@@ -861,8 +861,8 @@ namespace Jazz2::Tiles
 
 		TileMapLayer& newLayer = _layers.emplace_back();
 
-		int32_t width = s.ReadValue<int32_t>();
-		int32_t height = s.ReadValue<int32_t>();
+		std::int32_t width = s.ReadValue<std::int32_t>();
+		std::int32_t height = s.ReadValue<std::int32_t>();
 		newLayer.LayoutSize = Vector2i(width, height);
 		newLayer.Visible = ((layerFlags & 0x08) == 0x08);
 
@@ -879,7 +879,7 @@ namespace Jazz2::Tiles
 			newLayer.Description.AutoSpeedY = s.ReadValue<float>();
 			newLayer.Description.RepeatX = ((layerFlags & 0x01) == 0x01);
 			newLayer.Description.RepeatY = ((layerFlags & 0x02) == 0x02);
-			int16_t depth = s.ReadValue<int16_t>();
+			std::int16_t depth = s.ReadValue<std::int16_t>();
 			newLayer.Description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - depth);
 			newLayer.Description.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
 
@@ -944,7 +944,7 @@ namespace Jazz2::Tiles
 
 	void TileMap::ReadAnimatedTiles(Stream& s)
 	{
-		int16_t count = s.ReadValue<int16_t>();
+		std::int16_t count = s.ReadValue<std::int16_t>();
 
 		_animatedTiles.reserve(count);
 

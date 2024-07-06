@@ -10,7 +10,7 @@ using namespace Death::Containers::Literals;
 using namespace Death::IO;
 using namespace nCine;
 
-static const uint16_t Windows1250_Utf8[256] = {
+static const std::uint16_t Windows1250_Utf8[256] = {
 	0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f,
 	0x0010, 0x0011, 0x0012, 0x0013, 0x0014, 0x0015, 0x0016, 0x0017, 0x0018, 0x0019, 0x001a, 0x001b, 0x001c, 0x001d, 0x001e, 0x001f,
 	0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027, 0x0028, 0x0029, 0x002a, 0x002b, 0x002c, 0x002d, 0x002e, 0x002f,
@@ -29,7 +29,7 @@ static const uint16_t Windows1250_Utf8[256] = {
 	0x0111, 0x0144, 0x0148, 0x00f3, 0x00f4, 0x0151, 0x00f6, 0x00f7, 0x0159, 0x016f, 0x00fa, 0x0171, 0x00fc, 0x00fd, 0x0163, 0x02d9
 };
 
-static const uint32_t DefaultFontColors[] = {
+static const std::uint32_t DefaultFontColors[] = {
 	0x707485,
 	0x409062,
 	0x629040,
@@ -49,26 +49,26 @@ namespace Jazz2::Compatibility
 		Name = fs::GetFileNameWithoutExtension(path);
 		StringUtils::lowercaseInPlace(Name);
 
-		uint32_t offsetArraySize = s->ReadValue<uint32_t>();
+		std::uint32_t offsetArraySize = s->ReadValue<std::uint32_t>();
 
-		uint32_t textArraySize = s->ReadValue<uint32_t>();
+		std::uint32_t textArraySize = s->ReadValue<std::uint32_t>();
 		std::unique_ptr<char[]> textArray = std::make_unique<char[]>(textArraySize);
 		s->Read(textArray.get(), textArraySize);
 
 		CommonTexts.reserve(offsetArraySize);
-		for (uint32_t i = 0; i < offsetArraySize; i++) {
-			uint32_t offset = s->ReadValue<uint32_t>();
+		for (std::uint32_t i = 0; i < offsetArraySize; i++) {
+			std::uint32_t offset = s->ReadValue<std::uint32_t>();
 			CommonTexts.emplace_back(&textArray[offset]);
 		}
 
-		uint32_t levelEntryCount = s->ReadValue<uint32_t>();
+		std::uint32_t levelEntryCount = s->ReadValue<std::uint32_t>();
 
-		SmallVector<uint32_t, 0> counts, offsets;
+		SmallVector<std::uint32_t, 0> counts, offsets;
 		counts.reserve(levelEntryCount);
 		offsets.reserve(levelEntryCount + 1);
 
 		LevelTexts.reserve(levelEntryCount);
-		for (uint32_t i = 0; i < levelEntryCount; i++) {
+		for (std::uint32_t i = 0; i < levelEntryCount; i++) {
 			char levelName[8 + 1];
 			s->Read(levelName, 8);
 			levelName[8] = '\0';
@@ -76,16 +76,16 @@ namespace Jazz2::Compatibility
 			LevelEntry& levelEntry = LevelTexts.emplace_back(String(levelName));
 			StringUtils::lowercaseInPlace(levelEntry.Name);
 
-			/*uint8_t unknown =*/ s->ReadValue<uint8_t>();
-			counts.emplace_back(s->ReadValue<uint8_t>());
-			offsets.emplace_back(s->ReadValue<uint16_t>());
+			/*uint8_t unknown =*/ s->ReadValue<std::uint8_t>();
+			counts.emplace_back(s->ReadValue<std::uint8_t>());
+			offsets.emplace_back(s->ReadValue<std::uint16_t>());
 		}
 
-		uint32_t textArray2Size = s->ReadValue<uint32_t>();
+		std::uint32_t textArray2Size = s->ReadValue<std::uint32_t>();
 		offsets.emplace_back(textArray2Size);
 
-		uint32_t k = 0;
-		for (uint32_t i = 0; i < levelEntryCount; i++) {
+		std::uint32_t k = 0;
+		for (std::uint32_t i = 0; i < levelEntryCount; i++) {
 			auto offset = offsets[i + 1];
 			auto count = counts[i];
 
@@ -93,9 +93,9 @@ namespace Jazz2::Compatibility
 			level.TextEvents.resize(count + 1);
 
 			while (k < offset) {
-				uint8_t index = s->ReadValue<uint8_t>() % 16;
+				std::uint8_t index = s->ReadValue<std::uint8_t>() % 16;
 				k++;
-				uint8_t size = s->ReadValue<uint8_t>();
+				std::uint8_t size = s->ReadValue<std::uint8_t>();
 				k++;
 
 				String text = String(NoInit, size);
@@ -115,7 +115,7 @@ namespace Jazz2::Compatibility
 
 		so->Write("\xEF\xBB\xBF// Common\n", sizeof("\xEF\xBB\xBF// Common\n") - 1);
 
-		for (size_t i = 0; i < CommonTexts.size(); i++) {
+		for (std::size_t i = 0; i < CommonTexts.size(); i++) {
 			String formattedText = RecodeString(CommonTexts[i], false, true);
 			if (formattedText.empty()) {
 				so->Write("// [Empty text]\n", sizeof("// [Empty text]\n") - 1);
@@ -151,7 +151,7 @@ namespace Jazz2::Compatibility
 				levelName = "unknown/"_s + level.Name;
 			}
 
-			for (size_t i = 0; i < level.TextEvents.size(); i++) {
+			for (std::size_t i = 0; i < level.TextEvents.size(); i++) {
 				String formattedText = RecodeString(level.TextEvents[i], false, true);
 				if (formattedText.empty()) {
 					so->Write("// [Empty text]\n", sizeof("// [Empty text]\n") - 1);
@@ -164,7 +164,7 @@ namespace Jazz2::Compatibility
 				so->Write("\"); // ", sizeof("\"); // ") - 1);
 
 				char buffer[32];
-				u32tos((uint32_t)i, buffer);
+				u32tos((std::uint32_t)i, buffer);
 				so->Write(buffer, std::strlen(buffer));
 
 				so->Write("\n", sizeof("\n") - 1);
@@ -181,13 +181,13 @@ namespace Jazz2::Compatibility
 		}
 
 		char buffer[1024];
-		int colorIndex = 0;
+		std::int32_t colorIndex = 0;
 		bool colorRandom = false;
 		bool colorEmitted = true;
 		bool colorFrozen = true;
-		size_t length = text.size();
-		size_t j = 0;
-		for (size_t i = 0; i < length && j < sizeof(buffer) - 16; i++) {
+		std::size_t length = text.size();
+		std::size_t j = 0;
+		for (std::size_t i = 0; i < length && j < sizeof(buffer) - 16; i++) {
 			char current = text[i];
 
 			if (current == '@') {
@@ -219,8 +219,8 @@ namespace Jazz2::Compatibility
 						buffer[j++] = 'w';
 						buffer[j++] = ']';
 					} else {
-						uint32_t spacing = text[i] - '0';
-						uint32_t converted = 100 - (spacing * 10);
+						std::uint32_t spacing = text[i] - '0';
+						std::uint32_t converted = 100 - (spacing * 10);
 						j += formatString(&buffer[j], 16, "[w:%i]", converted);
 						if (colorRandom && !colorFrozen) {
 							colorIndex++;
@@ -257,7 +257,7 @@ namespace Jazz2::Compatibility
 					} else {
 						buffer[j++] = '\f';
 					}
-					int colorIndex2 = colorIndex % (static_cast<std::int32_t>(arraySize(DefaultFontColors)) + 1);
+					std::int32_t colorIndex2 = colorIndex % (static_cast<std::int32_t>(arraySize(DefaultFontColors)) + 1);
 					if (colorIndex2 == 0) {
 						buffer[j++] = '[';
 						buffer[j++] = '/';
@@ -268,7 +268,7 @@ namespace Jazz2::Compatibility
 					}
 				}
 
-				const uint16_t c = Windows1250_Utf8[(uint8_t)current];
+				const std::uint16_t c = Windows1250_Utf8[(std::uint8_t)current];
 				if (c < 0x80) {
 					buffer[j++] = c;
 				} else if (c < 0x800) {

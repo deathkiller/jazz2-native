@@ -373,8 +373,8 @@ namespace Jazz2
 
 			// Weather
 			if (_weatherType != WeatherType::None) {
-				int32_t weatherIntensity = std::max((int32_t)(_weatherIntensity * timeMult), 1);
-				for (int32_t i = 0; i < weatherIntensity; i++) {
+				std::int32_t weatherIntensity = std::max((std::int32_t)(_weatherIntensity * timeMult), 1);
+				for (std::int32_t i = 0; i < weatherIntensity; i++) {
 					TileMap::DebrisFlags debrisFlags;
 					if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
 						debrisFlags = TileMap::DebrisFlags::Disappear;
@@ -400,7 +400,7 @@ namespace Jazz2
 
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
-							debris.Depth = MainPlaneZ - 100 + (uint16_t)(200 * scale);
+							debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
 							debris.Size = resBase->FrameDimensions.As<float>();
 							debris.Speed = Vector2f(speedX, speedY);
 							debris.Acceleration = Vector2f(0.0f, 0.0f);
@@ -414,9 +414,9 @@ namespace Jazz2
 
 							debris.Time = 180.0f;
 
-							uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-							uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-							uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
+							std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+							std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+							std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
 							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
 							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
@@ -439,7 +439,7 @@ namespace Jazz2
 
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
-							debris.Depth = MainPlaneZ - 100 + (uint16_t)(200 * scale);
+							debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
 							debris.Size = resBase->FrameDimensions.As<float>();
 							debris.Speed = Vector2f(speedX, speedY);
 							debris.Acceleration = Vector2f(accel, -std::abs(accel));
@@ -453,9 +453,9 @@ namespace Jazz2
 
 							debris.Time = 180.0f;
 
-							uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-							uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-							uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
+							std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+							std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+							std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
 							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
 							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
@@ -532,10 +532,10 @@ namespace Jazz2
 		}
 #endif
 
-		TracyPlot("Actors", static_cast<int64_t>(_actors.size()));
+		TracyPlot("Actors", static_cast<std::int64_t>(_actors.size()));
 	}
 
-	void LevelHandler::OnInitializeViewport(int32_t width, int32_t height)
+	void LevelHandler::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
 		ZoneScopedC(0x4876AF);
 
@@ -545,10 +545,10 @@ namespace Jazz2
 		int32_t w, h;
 		if (currentRatio > defaultRatio) {
 			w = std::min(DefaultWidth, width);
-			h = (int32_t)(w / currentRatio);
+			h = (std::int32_t)(w / currentRatio);
 		} else if (currentRatio < defaultRatio) {
 			h = std::min(DefaultHeight, height);
-			w = (int32_t)(h * currentRatio);
+			w = (std::int32_t)(h * currentRatio);
 		} else {
 			w = std::min(DefaultWidth, width);
 			h = std::min(DefaultHeight, height);
@@ -704,7 +704,7 @@ namespace Jazz2
 								if (_cheatsBuffer[2] == (char)KeySym::P && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::W && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::R) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									for (int32_t i = 0; i < (int32_t)WeaponType::Count; i++) {
+									for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
 										_players[0]->AddWeaponUpgrade((WeaponType)i, 0x01);
 									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::C && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::N && _cheatsBuffer[6] == (char)KeySym::S) {
@@ -717,7 +717,7 @@ namespace Jazz2
 								if (_cheatsBuffer[2] == (char)KeySym::S && _cheatsBuffer[3] == (char)KeySym::H && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::L && _cheatsBuffer[7] == (char)KeySym::D) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									ShieldType shieldType = (ShieldType)(((int32_t)_players[0]->GetActiveShield() + 1) % (int32_t)ShieldType::Count);
+									ShieldType shieldType = (ShieldType)(((std::int32_t)_players[0]->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
 									_players[0]->SetShield(shieldType, 600.0f * FrameTimer::FramesPerSecond);
 								}
 								break;
@@ -783,7 +783,7 @@ namespace Jazz2
 		if (it == _commonResources->Sounds.end()) {
 			return nullptr;
 		}
-		int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
+		std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
@@ -894,7 +894,7 @@ namespace Jazz2
 			const AABBf& AABB;
 			const std::function<bool(Actors::ActorBase*)>& Callback;
 
-			bool OnCollisionQuery(int32_t nodeId) {
+			bool OnCollisionQuery(std::int32_t nodeId) {
 				Actors::ActorBase* actor = (Actors::ActorBase*)Handler->_collisions.GetUserData(nodeId);
 				if (Self == actor || (actor->GetState() & (Actors::ActorState::CollideWithOtherActors | Actors::ActorState::IsDestroyed)) != Actors::ActorState::CollideWithOtherActors) {
 					return true;
@@ -921,7 +921,7 @@ namespace Jazz2
 			const float RadiusSquared;
 			const std::function<bool(Actors::ActorBase*)>& Callback;
 
-			bool OnCollisionQuery(int32_t nodeId) {
+			bool OnCollisionQuery(std::int32_t nodeId) {
 				Actors::ActorBase* actor = (Actors::ActorBase*)Handler->_collisions.GetUserData(nodeId);
 				if ((actor->GetState() & (Actors::ActorState::CollideWithOtherActors | Actors::ActorState::IsDestroyed)) != Actors::ActorState::CollideWithOtherActors) {
 					return true;
@@ -960,7 +960,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams)
+	void LevelHandler::BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams)
 	{
 		switch (eventType) {
 			case EventType::AreaActivateBoss: {
@@ -999,7 +999,7 @@ namespace Jazz2
 			}
 			case EventType::ModifierSetWater: {
 				// TODO: Implement Instant (non-instant transition), Lighting
-				_waterLevel = *(uint16_t*)&eventParams[0];
+				_waterLevel = *(std::uint16_t*)&eventParams[0];
 				break;
 			}
 		}
@@ -1138,7 +1138,7 @@ namespace Jazz2
 
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView("SugarRush"_s));
 		if (it != _commonResources->Sounds.end()) {
-			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
+			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 			_sugarRushMusic->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
 			_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
@@ -1167,19 +1167,19 @@ namespace Jazz2
 		_hud->ShowGems(count);
 	}
 
-	StringView LevelHandler::GetLevelText(uint32_t textId, int32_t index, uint32_t delimiter)
+	StringView LevelHandler::GetLevelText(std::uint32_t textId, std::int32_t index, std::uint32_t delimiter)
 	{
 		if (textId >= _levelTexts.size()) {
 			return { };
 		}
 
 		StringView text = _levelTexts[textId];
-		int32_t textSize = (int32_t)text.size();
+		std::int32_t textSize = (std::int32_t)text.size();
 
 		if (textSize > 0 && index >= 0) {
-			int32_t delimiterCount = 0;
-			int32_t start = 0;
-			int32_t idx = 0;
+			std::int32_t delimiterCount = 0;
+			std::int32_t start = 0;
+			std::int32_t idx = 0;
 			do {
 				std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
 
@@ -1192,7 +1192,7 @@ namespace Jazz2
 					delimiterCount++;
 				}
 
-				idx = (int32_t)cursor.second;
+				idx = (std::int32_t)cursor.second;
 			} while (idx < textSize);
 
 			if (delimiterCount == index) {
@@ -1207,7 +1207,7 @@ namespace Jazz2
 		return text;
 	}
 
-	void LevelHandler::OverrideLevelText(uint32_t textId, const StringView value)
+	void LevelHandler::OverrideLevelText(std::uint32_t textId, const StringView value)
 	{
 		if (textId >= _levelTexts.size()) {
 			if (value.empty()) {
@@ -1220,49 +1220,49 @@ namespace Jazz2
 		_levelTexts[textId] = value;
 	}
 
-	bool LevelHandler::PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads)
+	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
 		bool isGamepad;
 		return PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
 
-	bool LevelHandler::PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		if (index != 0) {
 			return false;
 		}
 
 		isGamepad = false;
-		if ((_pressedActions & (1ull << (int32_t)action)) != 0) {
-			isGamepad = (_pressedActions & (1ull << (32 + (int32_t)action))) != 0;
+		if ((_pressedActions & (1ull << (std::int32_t)action)) != 0) {
+			isGamepad = (_pressedActions & (1ull << (32 + (std::int32_t)action))) != 0;
 			return true;
 		}
 
 		return false;
 	}
 
-	bool LevelHandler::PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads)
+	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
 		bool isGamepad;
 		return PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
 
-	bool LevelHandler::PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		if (index != 0) {
 			return false;
 		}
 
 		isGamepad = false;
-		if ((_pressedActions & (1ull << (int32_t)action)) != 0 && (_pressedActionsLast & (1ull << (int32_t)action)) == 0) {
-			isGamepad = (_pressedActions & (1ull << (32 + (int32_t)action))) != 0;
+		if ((_pressedActions & (1ull << (std::int32_t)action)) != 0 && (_pressedActionsLast & (1ull << (std::int32_t)action)) == 0) {
+			isGamepad = (_pressedActions & (1ull << (32 + (std::int32_t)action))) != 0;
 			return true;
 		}
 
 		return false;
 	}
 
-	float LevelHandler::PlayerHorizontalMovement(int32_t index)
+	float LevelHandler::PlayerHorizontalMovement(std::int32_t index)
 	{
 		if (index != 0) {
 			return 0.0f;
@@ -1271,7 +1271,7 @@ namespace Jazz2
 		return (_playerFrozenEnabled ? _playerFrozenMovement.X : _playerRequiredMovement.X);
 	}
 
-	float LevelHandler::PlayerVerticalMovement(int32_t index)
+	float LevelHandler::PlayerVerticalMovement(std::int32_t index)
 	{
 		if (index != 0) {
 			return 0.0f;
@@ -1633,7 +1633,7 @@ namespace Jazz2
 		device.updateListener(Vector3f(_cameraPos, 0.0f), Vector3f(focusSpeed, 0.0f));
 	}
 
-	void LevelHandler::LimitCameraView(int left, int width)
+	void LevelHandler::LimitCameraView(std::int32_t left, std::int32_t width)
 	{
 		_levelBounds.X = left;
 		if (width > 0.0f) {
@@ -1680,7 +1680,7 @@ namespace Jazz2
 		_tileMap->SetTrigger(triggerId, newState);
 	}
 
-	void LevelHandler::SetWeather(WeatherType type, uint8_t intensity)
+	void LevelHandler::SetWeather(WeatherType type, std::uint8_t intensity)
 	{
 		_weatherType = type;
 		_weatherIntensity = intensity;
@@ -1901,8 +1901,8 @@ namespace Jazz2
 #endif
 
 		// Mark Menu button as already pressed to avoid some issues
-		_pressedActions |= (1ull << (int32_t)PlayerActions::Menu);
-		_pressedActionsLast |= (1ull << (int32_t)PlayerActions::Menu);
+		_pressedActions |= (1ull << (std::int32_t)PlayerActions::Menu);
+		_pressedActionsLast |= (1ull << (std::int32_t)PlayerActions::Menu);
 	}
 
 #if defined(WITH_IMGUI)
@@ -1966,7 +1966,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::BlurRenderPass::Initialize(Texture* source, int32_t width, int32_t height, const Vector2f& direction)
+	void LevelHandler::BlurRenderPass::Initialize(Texture* source, std::int32_t width, std::int32_t height, const Vector2f& direction)
 	{
 		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
@@ -2031,7 +2031,7 @@ namespace Jazz2
 		return true;
 	}
 
-	void LevelHandler::CombineRenderer::Initialize(int32_t width, int32_t height)
+	void LevelHandler::CombineRenderer::Initialize(std::int32_t width, std::int32_t height)
 	{
 		_size = Vector2f(static_cast<float>(width), static_cast<float>(height));
 

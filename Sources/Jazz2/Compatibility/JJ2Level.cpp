@@ -28,7 +28,7 @@ namespace Jazz2::Compatibility
 
 		JJ2Block headerBlock(s, 262 - 180);
 
-		uint32_t magic = headerBlock.ReadUInt32();
+		std::uint32_t magic = headerBlock.ReadUInt32();
 		RETURNF_ASSERT_MSG(magic == 0x4C56454C /*LEVL*/, "Invalid magic string");
 
 		// passwordHash is 3 bytes
@@ -38,7 +38,7 @@ namespace Jazz2::Compatibility
 
 		DisplayName = headerBlock.ReadString(32, true);
 
-		uint16_t version = headerBlock.ReadUInt16();
+		std::uint16_t version = headerBlock.ReadUInt16();
 		_version = (version <= 514 ? JJ2Version::BaseGame : JJ2Version::TSF);
 
 		_darknessColor = 0;
@@ -46,7 +46,7 @@ namespace Jazz2::Compatibility
 		_weatherIntensity = 0;
 		_waterLevel = 32767;
 
-		int recordedSize = headerBlock.ReadInt32();
+		std::int32_t recordedSize = headerBlock.ReadInt32();
 		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
 
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
@@ -56,14 +56,14 @@ namespace Jazz2::Compatibility
 
 		// Read the lengths, uncompress the blocks and bail if any block could not be uncompressed
 		// This could look better without all the copy-paste, but meh.
-		int infoBlockPackedSize = headerBlock.ReadInt32();
-		int infoBlockUnpackedSize = headerBlock.ReadInt32();
-		int eventBlockPackedSize = headerBlock.ReadInt32();
-		int eventBlockUnpackedSize = headerBlock.ReadInt32();
-		int dictBlockPackedSize = headerBlock.ReadInt32();
-		int dictBlockUnpackedSize = headerBlock.ReadInt32();
-		int layoutBlockPackedSize = headerBlock.ReadInt32();
-		int layoutBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t infoBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t infoBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t eventBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t eventBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t dictBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t dictBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t layoutBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t layoutBlockUnpackedSize = headerBlock.ReadInt32();
 
 		JJ2Block infoBlock(s, infoBlockPackedSize, infoBlockUnpackedSize);
 		JJ2Block eventBlock(s, eventBlockPackedSize, eventBlockUnpackedSize);
@@ -75,11 +75,11 @@ namespace Jazz2::Compatibility
 		LoadLayers(dictBlock, dictBlockUnpackedSize / 8, layoutBlock, strictParser);
 
 		// Try to read MLLE data stream
-		uint32_t mlleMagic = s->ReadValue<uint32_t>();
+		std::uint32_t mlleMagic = s->ReadValue<std::uint32_t>();
 		if (mlleMagic == 0x454C4C4D /*MLLE*/) {
-			uint32_t mlleVersion = s->ReadValue<uint32_t>();
-			int mlleBlockPackedSize = s->ReadValue<int>();
-			int mlleBlockUnpackedSize = s->ReadValue<int>();
+			std::uint32_t mlleVersion = s->ReadValue<std::uint32_t>();
+			std::int32_t mlleBlockPackedSize = s->ReadValue<std::int32_t>();
+			std::int32_t mlleBlockUnpackedSize = s->ReadValue<std::int32_t>();
 
 			JJ2Block mlleBlock(s, mlleBlockPackedSize, mlleBlockUnpackedSize);
 			LoadMlleData(mlleBlock, mlleVersion, path, strictParser);
@@ -102,7 +102,7 @@ namespace Jazz2::Compatibility
 		_isMpLevel = block.ReadBool();
 
 		// This should be the same as size of block in the start?
-		/*int headerSize =*/ block.ReadInt32();
+		/*std::int32_t headerSize =*/ block.ReadInt32();
 
 		String secondLevelName = block.ReadString(32, true);
 		//ASSERT_MSG(!strictParser || DisplayName == secondLevelName, "Level name mismatch");
@@ -113,7 +113,7 @@ namespace Jazz2::Compatibility
 		SecretLevel = block.ReadString(32, true);
 		Music = block.ReadString(32, true);
 
-		for (int i = 0; i < TextEventStringsCount; ++i) {
+		for (std::int32_t i = 0; i < TextEventStringsCount; ++i) {
 			_textEventStrings[i] = block.ReadString(512, true);
 		}
 
@@ -176,71 +176,71 @@ namespace Jazz2::Compatibility
 	{
 		_layers.resize(JJ2LayerCount);
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Flags = block.ReadUInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Type = block.ReadByte();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Used = block.ReadBool();
 			_layers[i].Visible = true;
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Width = block.ReadInt32();
 		}
 
 		// This is related to how data is presented in the file, the above is a WYSIWYG version, solely shown on the UI
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].InternalWidth = block.ReadInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Height = block.ReadInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Depth = block.ReadInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].DetailLevel = block.ReadByte();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].OffsetX = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].OffsetY = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].SpeedX = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].SpeedY = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedX = block.ReadFloatEncoded();
 			_layers[i].SpeedModelX = LayerSectionSpeedModel::Normal;
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedY = block.ReadFloatEncoded();
 			_layers[i].SpeedModelY = LayerSectionSpeedModel::Normal;
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].TexturedBackgroundType = block.ReadByte();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].TexturedParams1 = block.ReadByte();
 			_layers[i].TexturedParams2 = block.ReadByte();
 			_layers[i].TexturedParams3 = block.ReadByte();
@@ -252,21 +252,21 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadEvents(JJ2Block& block, bool strictParser)
 	{
-		int width = _layers[3].Width;
-		int height = _layers[3].Height;
+		std::int32_t width = _layers[3].Width;
+		std::int32_t height = _layers[3].Height;
 		if (width <= 0 && height <= 0) {
 			return;
 		}
 
 		_events = std::make_unique<TileEventSection[]>(width * height);
 
-		for (int y = 0; y < _layers[3].Height; y++) {
-			for (int x = 0; x < width; x++) {
-				uint32_t eventData = block.ReadUInt32();
+		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
+			for (std::int32_t x = 0; x < width; x++) {
+				std::uint32_t eventData = block.ReadUInt32();
 
 				auto& tileEvent = _events[x + y * width];
-				tileEvent.EventType = (JJ2Event)(uint8_t)(eventData & 0x000000FF);
-				tileEvent.Difficulty = (uint8_t)((eventData & 0x00000300) >> 8);
+				tileEvent.EventType = (JJ2Event)(std::uint8_t)(eventData & 0x000000FF);
+				tileEvent.Difficulty = (std::uint8_t)((eventData & 0x00000300) >> 8);
 				tileEvent.Illuminate = ((eventData & 0x00000400) >> 10 == 1);
 				tileEvent.TileParams = ((eventData & 0xFFFFF000) >> 12);
 			}
@@ -284,7 +284,7 @@ namespace Jazz2::Compatibility
 			_hasPitInstantDeath = false;
 		}
 
-		for (int i = 0; i < width * height; i++) {
+		for (std::int32_t i = 0; i < width * height; i++) {
 			if (_events[i].EventType == JJ2Event::CTF_BASE) {
 				_hasCTF = true;
 			} else if (_events[i].EventType == JJ2Event::WARP_ORIGIN) {
@@ -295,29 +295,29 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser)
+	void JJ2Level::LoadLayers(JJ2Block& dictBlock, std::int32_t dictLength, JJ2Block& layoutBlock, bool strictParser)
 	{
 		struct DictionaryEntry {
-			uint16_t Tiles[4];
+			std::uint16_t Tiles[4];
 		};
 
 		std::unique_ptr<DictionaryEntry[]> dictionary = std::make_unique<DictionaryEntry[]>(dictLength);
-		for (int i = 0; i < dictLength; i++) {
+		for (std::int32_t i = 0; i < dictLength; i++) {
 			auto& entry = dictionary[i];
-			for (int j = 0; j < 4; j++) {
+			for (std::int32_t j = 0; j < 4; j++) {
 				entry.Tiles[j] = dictBlock.ReadUInt16();
 			}
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (std::int32_t i = 0; i < JJ2LayerCount; ++i) {
 			auto& layer = _layers[i];
 
 			if (layer.Used) {
-				layer.Tiles = std::make_unique<uint16_t[]>(layer.InternalWidth * layer.Height);
+				layer.Tiles = std::make_unique<std::uint16_t[]>(layer.InternalWidth * layer.Height);
 
-				for (int y = 0; y < layer.Height; y++) {
-					for (int x = 0; x < layer.InternalWidth; x += 4) {
-						uint16_t dictIdx = layoutBlock.ReadUInt16();
+				for (std::int32_t y = 0; y < layer.Height; y++) {
+					for (std::int32_t x = 0; x < layer.InternalWidth; x += 4) {
+						std::uint16_t dictIdx = layoutBlock.ReadUInt16();
 
 						for (int j = 0; j < 4; j++) {
 							if (j + x >= layer.Width) {
@@ -330,12 +330,12 @@ namespace Jazz2::Compatibility
 				}
 			} else {
 				// Array will be initialized with zeros
-				layer.Tiles = std::make_unique<uint16_t[]>(layer.Width * layer.Height);
+				layer.Tiles = std::make_unique<std::uint16_t[]>(layer.Width * layer.Height);
 			}
 		}
 	}
 
-	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser)
+	void JJ2Level::LoadMlleData(JJ2Block& block, std::uint32_t version, const StringView& path, bool strictParser)
 	{
 		if (version > 0x106) {
 			LOGW("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
@@ -344,9 +344,9 @@ namespace Jazz2::Compatibility
 
 		bool isSnowing = block.ReadBool();
 		bool isSnowingOutdoorsOnly = block.ReadBool();
-		uint8_t snowIntensity = block.ReadByte();
+		std::uint8_t snowIntensity = block.ReadByte();
 		// Weather particles type (Snow, Flower, Rain, Leaf)
-		uint8_t snowType = block.ReadByte();
+		std::uint8_t snowType = block.ReadByte();
 
 		if (isSnowing) {
 			_weatherIntensity = snowIntensity;
@@ -360,19 +360,19 @@ namespace Jazz2::Compatibility
 		bool warpsTransmuteCoins = block.ReadBool();
 		// TODO: Objects spawned from Generators will derive their parameters from tile they first appear at (e.g., after gravitation)
 		bool delayGeneratedCrateOrigins = block.ReadBool();
-		int32_t echo = block.ReadInt32();
-		uint32_t darknessColorBgra = block.ReadUInt32();
+		std::int32_t echo = block.ReadInt32();
+		std::uint32_t darknessColorBgra = block.ReadUInt32();
 		_darknessColor = ((darknessColorBgra >> 16) & 0xff) | (darknessColorBgra & 0x0000ff00) | ((darknessColorBgra << 16) & 0x00ff0000);
 		// TODO: Water level change speed
 		float waterChangeSpeed = block.ReadFloat();
 		// TODO: How player should react to being underwater (PositionBased, Swim, LowGravity)
-		uint8_t waterInteraction = block.ReadByte();
-		int32_t waterLayer = block.ReadInt32();
+		std::uint8_t waterInteraction = block.ReadByte();
+		std::int32_t waterLayer = block.ReadInt32();
 		// TODO: How water and ambient lighting should interact in the level (None, Global, Lagunicus)
-		uint8_t waterLighting = block.ReadByte();
-		_waterLevel = (uint16_t)block.ReadFloat();
-		uint32_t waterGradientStart = block.ReadUInt32();
-		uint32_t waterGradientStop = block.ReadUInt32();
+		std::uint8_t waterLighting = block.ReadByte();
+		_waterLevel = (std::uint16_t)block.ReadFloat();
+		std::uint32_t waterGradientStart = block.ReadUInt32();
+		std::uint32_t waterGradientStop = block.ReadUInt32();
 
 		// Level palette
 		_useLevelPalette = block.ReadBool();
@@ -387,17 +387,17 @@ namespace Jazz2::Compatibility
 
 		// TODO: Additional palettes
 		if (version >= 0x106) {
-			uint8_t extraPaletteCount = block.ReadByte();
+			std::uint8_t extraPaletteCount = block.ReadByte();
 			while (extraPaletteCount-- != 0) {
-				int32_t nameLength = block.ReadUint7bitEncoded();
+				std::int32_t nameLength = block.ReadUint7bitEncoded();
 				block.DiscardBytes(nameLength);
 				block.DiscardBytes(256 * 3);
 			}
 		}
 
 		// TODO: Recolorable sprites
-		int32_t recolorableSpriteListSize = (version >= 0x105 ? 20 : 11);
-		for (int32_t i = 0; i < recolorableSpriteListSize; ++i) {
+		std::int32_t recolorableSpriteListSize = (version >= 0x105 ? 20 : 11);
+		for (std::int32_t i = 0; i < recolorableSpriteListSize; ++i) {
 			// NOTE: Recolorable sprite list was expanded in MLLE-Include-1.5
 			if (block.ReadBool()) {
 				block.DiscardBytes(256);
@@ -405,11 +405,11 @@ namespace Jazz2::Compatibility
 		}
 
 		// Extra tilesets
-		int32_t extraTilesetCount = block.ReadByte();
-		for (int32_t i = 0; i < extraTilesetCount; i++) {
+		std::int32_t extraTilesetCount = block.ReadByte();
+		for (std::int32_t i = 0; i < extraTilesetCount; i++) {
 			auto& tileset = ExtraTilesets.emplace_back();
 
-			int tilesetNameLength = block.ReadUint7bitEncoded();
+			std::int32_t tilesetNameLength = block.ReadUint7bitEncoded();
 			tileset.Name = block.ReadString(tilesetNameLength, false);
 
 			tileset.Offset = block.ReadUInt16();
@@ -422,9 +422,9 @@ namespace Jazz2::Compatibility
 
 		// Additional layers
 		if (version >= 0x102) {
-			int32_t layerCount = block.ReadInt32();
+			std::int32_t layerCount = block.ReadInt32();
 
-			for (int32_t i = 8; i < layerCount; i += 8) {
+			for (std::int32_t i = 8; i < layerCount; i += 8) {
 				char numberBuffer[16];
 				i32tos(i / 8, numberBuffer);
 
@@ -433,21 +433,21 @@ namespace Jazz2::Compatibility
 
 				JJ2Level extraLayersFile;
 				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
-					for (int j = 0; j < 8 && (i + j) < layerCount; j++) {
+					for (std::int32_t j = 0; j < 8 && (i + j) < layerCount; j++) {
 						_layers.emplace_back(std::move(extraLayersFile._layers[j]));
 					}
 				} else {
-					for (int j = 0; j < 8 && (i + j) < layerCount; j++) {
+					for (std::int32_t j = 0; j < 8 && (i + j) < layerCount; j++) {
 						_layers.emplace_back(LayerSection{});
 					}
 				}
 			}
 
-			SmallVector<int32_t, JJ2LayerCount * 2> layerOrder(layerCount);
-			int nextExtraLayerIdx = JJ2LayerCount;
-			for (int i = 0; i < layerCount; i++) {
-				int8_t id = (int8_t)block.ReadByte();
-				int32_t idx;
+			SmallVector<std::int32_t, JJ2LayerCount * 2> layerOrder(layerCount);
+			std::int32_t nextExtraLayerIdx = JJ2LayerCount;
+			for (std::int32_t i = 0; i < layerCount; i++) {
+				std::int8_t id = (std::int8_t)block.ReadByte();
+				std::int32_t idx;
 				if (id >= 0) {
 					idx = id;
 				} else {
@@ -456,15 +456,15 @@ namespace Jazz2::Compatibility
 				auto& layer = _layers[idx];
 				layerOrder[idx] = i;
 
-				int layerNameLength = block.ReadUint7bitEncoded();
+				std::int32_t layerNameLength = block.ReadUint7bitEncoded();
 				//String layerName = block.ReadString(layerNameLength, false);
 				block.DiscardBytes(layerNameLength);
 
 				layer.Visible = !block.ReadBool();
 				layer.SpriteMode = block.ReadByte();
 				layer.SpriteParam = block.ReadByte();
-				int rotationAngle = block.ReadInt32();
-				int rotationRadiusMult = block.ReadInt32();
+				std::int32_t rotationAngle = block.ReadInt32();
+				std::int32_t rotationRadiusMult = block.ReadInt32();
 
 				if (version >= 0x106) {
 					layer.SpeedModelX = (LayerSectionSpeedModel)block.ReadByte();
@@ -480,7 +480,7 @@ namespace Jazz2::Compatibility
 					//layer.InnerAutoSpeedY = block.ReadFloat();
 					block.DiscardBytes(26);
 
-					int8_t texture = (int8_t)block.ReadByte();
+					std::int8_t texture = (std::int8_t)block.ReadByte();
 					if (texture < 0) {
 						//layer.TextureImage = block.ReadBytes(256 * 256);
 						block.DiscardBytes(256 * 256);
@@ -490,11 +490,11 @@ namespace Jazz2::Compatibility
 			}
 
 			// Sprite layer has zero depth
-			int zeroDepthIdx = layerOrder[3];
+			std::int32_t zeroDepthIdx = layerOrder[3];
 
 			// Adjust depth of all layers
-			for (size_t i = 0; i < _layers.size(); i++) {
-				int newIdx = layerOrder[i];
+			for (std::size_t i = 0; i < _layers.size(); i++) {
+				std::int32_t newIdx = layerOrder[i];
 
 				auto& layer = _layers[i];
 				layer.Depth = (newIdx - zeroDepthIdx) * 100;
@@ -520,14 +520,14 @@ namespace Jazz2::Compatibility
 		so->WriteValue<uint8_t>(ContentResolver::LevelFile);
 
 		// Preprocess events first, so they can change some level properties
-		for (int y = 0; y < _layers[3].Height; y++) {
-			for (int x = 0; x < _layers[3].Width; x++) {
+		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
+			for (std::int32_t x = 0; x < _layers[3].Width; x++) {
 				auto& tileEvent = _events[x + y * _layers[3].Width];
 
 				JJ2Event eventType;
 				if (tileEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
 					// Generators are converted differently
-					uint8_t eventParams[8];
+					std::uint8_t eventParams[8];
 					EventConverter::ConvertParamInt(tileEvent.TileParams, {
 						{ JJ2ParamUInt, 8 },	// Event
 						{ JJ2ParamUInt, 8 },	// Delay
@@ -536,7 +536,7 @@ namespace Jazz2::Compatibility
 
 					eventType = (JJ2Event)eventParams[0];
 					tileEvent.GeneratorDelay = eventParams[1];
-					tileEvent.GeneratorFlags = (uint8_t)eventParams[2];
+					tileEvent.GeneratorFlags = (std::uint8_t)eventParams[2];
 				} else {
 					eventType = tileEvent.EventType;
 					tileEvent.GeneratorDelay = -1;
@@ -548,7 +548,7 @@ namespace Jazz2::Compatibility
 		}
 
 		// Flags
-		uint16_t flags = 0;
+		std::uint16_t flags = 0;
 		if (_hasPit) {
 			flags |= 0x01;
 		}
@@ -573,14 +573,14 @@ namespace Jazz2::Compatibility
 		if (_verticalMPSplitscreen) {
 			flags |= 0x80;
 		}
-		so->WriteValue<uint16_t>(flags);
+		so->WriteValue<std::uint16_t>(flags);
 
 		MemoryStream ms(1024 * 1024);
 		{
 			DeflateWriter co(ms);
 
 			String formattedName = JJ2Strings::RecodeString(DisplayName, true);
-			co.WriteValue<uint8_t>((uint8_t)formattedName.size());
+			co.WriteValue<std::uint8_t>((std::uint8_t)formattedName.size());
 			co.Write(formattedName.data(), formattedName.size());
 
 			StringUtils::lowercaseInPlace(NextLevel);
@@ -596,69 +596,69 @@ namespace Jazz2::Compatibility
 			if (StringHasSuffixIgnoreCase(Tileset, ".j2t"_s)) {
 				Tileset = Tileset.exceptSuffix(4);
 			}
-			co.WriteValue<uint8_t>((uint8_t)Tileset.size());
+			co.WriteValue<std::uint8_t>((std::uint8_t)Tileset.size());
 			co.Write(Tileset.data(), Tileset.size());
 
 			// Default Music
 			StringUtils::lowercaseInPlace(Music);
 			if (Music.find('.') == nullptr) {
 				String music = Music + ".j2b"_s;
-				co.WriteValue<uint8_t>((uint8_t)music.size());
+				co.WriteValue<std::uint8_t>((std::uint8_t)music.size());
 				co.Write(music.data(), music.size());
 			} else {
-				co.WriteValue<uint8_t>((uint8_t)Music.size());
+				co.WriteValue<std::uint8_t>((std::uint8_t)Music.size());
 				co.Write(Music.data(), Music.size());
 			}
 
-			co.WriteValue<uint8_t>(_darknessColor & 0xff);
-			co.WriteValue<uint8_t>((_darknessColor >> 8) & 0xff);
-			co.WriteValue<uint8_t>((_darknessColor >> 16) & 0xff);
-			co.WriteValue<uint8_t>((uint8_t)std::min(LightingStart * 255 / 64, 255));
+			co.WriteValue<std::uint8_t>(_darknessColor & 0xff);
+			co.WriteValue<std::uint8_t>((_darknessColor >> 8) & 0xff);
+			co.WriteValue<std::uint8_t>((_darknessColor >> 16) & 0xff);
+			co.WriteValue<std::uint8_t>((std::uint8_t)std::min(LightingStart * 255 / 64, 255));
 
-			co.WriteValue<uint8_t>((uint8_t)_weatherType);
-			co.WriteValue<uint8_t>(_weatherIntensity);
-			co.WriteValue<uint16_t>(_waterLevel);
+			co.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
+			co.WriteValue<std::uint8_t>(_weatherIntensity);
+			co.WriteValue<std::uint16_t>(_waterLevel);
 
 			// Find caption tile
-			uint16_t maxTiles = (uint16_t)GetMaxSupportedTiles();
+			std::uint16_t maxTiles = (std::uint16_t)GetMaxSupportedTiles();
 
-			uint16_t captionTileId = 0;
-			for (uint16_t i = 0; i < maxTiles; i++) {
+			std::uint16_t captionTileId = 0;
+			for (std::uint16_t i = 0; i < maxTiles; i++) {
 				if (_staticTiles[i].Type == 4) {
 					captionTileId = i;
 					break;
 				}
 			}
-			co.WriteValue<uint16_t>(captionTileId);
+			co.WriteValue<std::uint16_t>(captionTileId);
 
 			// Custom palette
 			if (_useLevelPalette) {
-				for (int i = 0; i < sizeof(_levelPalette); i += 3) {
+				for (std::int32_t i = 0; i < sizeof(_levelPalette); i += 3) {
 					// Expand JJ2+ RGB palette to RGBA
-					uint32_t color = (uint32_t)_levelPalette[i] | ((uint32_t)_levelPalette[i + 1] << 8) | ((uint32_t)_levelPalette[i + 2] << 16) | 0xff000000;
-					co.WriteValue<uint32_t>(color);
+					std::uint32_t color = (std::uint32_t)_levelPalette[i] | ((std::uint32_t)_levelPalette[i + 1] << 8) | ((std::uint32_t)_levelPalette[i + 2] << 16) | 0xff000000;
+					co.WriteValue<std::uint32_t>(color);
 				}
 			}
 
 			// Extra Tilesets
-			co.WriteValue<uint8_t>((uint8_t)ExtraTilesets.size());
+			co.WriteValue<std::uint8_t>((std::uint8_t)ExtraTilesets.size());
 			for (auto& tileset : ExtraTilesets) {
-				uint8_t tilesetFlags = 0;
+				std::uint8_t tilesetFlags = 0;
 				if (tileset.HasPaletteRemapping) {
 					tilesetFlags |= 0x01;
 				}
-				co.WriteValue<uint8_t>(tilesetFlags);
+				co.WriteValue<std::uint8_t>(tilesetFlags);
 
 				StringUtils::lowercaseInPlace(tileset.Name);
 				if (StringHasSuffixIgnoreCase(tileset.Name, ".j2t"_s)) {
 					tileset.Name = tileset.Name.exceptSuffix(4);
 				}
 
-				co.WriteValue<uint8_t>((uint8_t)tileset.Name.size());
+				co.WriteValue<std::uint8_t>((std::uint8_t)tileset.Name.size());
 				co.Write(tileset.Name.data(), tileset.Name.size());
 
-				co.WriteValue<uint16_t>(tileset.Offset);
-				co.WriteValue<uint16_t>(tileset.Count);
+				co.WriteValue<std::uint16_t>(tileset.Offset);
+				co.WriteValue<std::uint16_t>(tileset.Count);
 
 				if (tileset.HasPaletteRemapping) {
 					co.Write(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
@@ -666,12 +666,12 @@ namespace Jazz2::Compatibility
 			}
 
 			// Text Event Strings
-			co.WriteValue<uint8_t>(TextEventStringsCount);
-			for (int i = 0; i < TextEventStringsCount; i++) {
+			co.WriteValue<std::uint8_t>(TextEventStringsCount);
+			for (std::int32_t i = 0; i < TextEventStringsCount; i++) {
 				String& text = _textEventStrings[i];
 
 				bool isLevelToken = false;
-				for (uint8_t textId : _levelTokenTextIds) {
+				for (std::uint8_t textId : _levelTokenTextIds) {
 					if (i == textId) {
 						isLevelToken = true;
 						break;
@@ -720,7 +720,7 @@ namespace Jazz2::Compatibility
 					// In J2L, each flipped tile had a separate entry in the tile list, probably to make
 					// the dictionary concept easier to handle.
 					bool flipX = false, flipY = false;
-					uint16_t tileIdx = tile.Frames[j];
+					std::uint16_t tileIdx = tile.Frames[j];
 					if ((tileIdx & maxTiles) != 0) {
 						flipX = true;
 						tileIdx &= ~maxTiles;
@@ -771,22 +771,22 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			co.WriteValue<uint8_t>(layerCount);
+			co.WriteValue<std::uint8_t>(layerCount);
 			for (std::int32_t i = 0; i < _layers.size(); i++) {
 				auto& layer = _layers[i];
 				if (layer.Used) {
 					bool isSky = (i == 7);
 					bool isSprite = (i == 3);
-					co.WriteValue<uint8_t>(isSprite ? 2 : (isSky ? 1 : 0));	// Layer type
+					co.WriteValue<std::uint8_t>(isSprite ? 2 : (isSky ? 1 : 0));	// Layer type
 
-					uint16_t flags = (uint16_t)(layer.Flags & (0x01 | 0x02 | 0x04)); // RepeatX, RepeatY, UseInherentOffset are mapped 1:1
+					std::uint16_t flags = (std::uint16_t)(layer.Flags & (0x01 | 0x02 | 0x04)); // RepeatX, RepeatY, UseInherentOffset are mapped 1:1
 					if (layer.Visible) {
 						flags |= 0x08;
 					}
-					co.WriteValue<uint16_t>(flags);	// Layer flags
+					co.WriteValue<std::uint16_t>(flags);	// Layer flags
 
-					co.WriteValue<int32_t>(layer.Width);
-					co.WriteValue<int32_t>(layer.Height);
+					co.WriteValue<std::int32_t>(layer.Width);
+					co.WriteValue<std::int32_t>(layer.Height);
 
 					if (!isSprite) {
 						Tiles::LayerSpeedModel speedModelX, speedModelY;
@@ -802,8 +802,8 @@ namespace Jazz2::Compatibility
 							case LayerSectionSpeedModel::SpeedMultipliers: speedModelY = Tiles::LayerSpeedModel::SpeedMultipliers; break;
 							default: speedModelY = Tiles::LayerSpeedModel::Default; break;
 						}
-						uint8_t combinedSpeedModel = ((int)speedModelX & 0x0f) | (((int)speedModelY & 0x0f) << 4);
-						co.WriteValue<uint8_t>(combinedSpeedModel);
+						std::uint8_t combinedSpeedModel = (std::uint8_t)(((std::int32_t)speedModelX & 0x0f) | (((std::int32_t)speedModelY & 0x0f) << 4));
+						co.WriteValue<std::uint8_t>(combinedSpeedModel);
 
 						bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
 						if (isSky && !hasTexturedBackground && layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && layer.SpeedModelY <= LayerSectionSpeedModel::Legacy) {
@@ -837,32 +837,32 @@ namespace Jazz2::Compatibility
 						co.WriteValue<float>(speedY);
 						co.WriteValue<float>(autoSpeedX);
 						co.WriteValue<float>(autoSpeedY);
-						co.WriteValue<int16_t>((int16_t)layer.Depth);
+						co.WriteValue<std::int16_t>((std::int16_t)layer.Depth);
 
 						if (isSky && hasTexturedBackground) {
-							co.WriteValue<uint8_t>(layer.TexturedBackgroundType + (uint8_t)Tiles::LayerRendererType::Sky);
-							co.WriteValue<uint8_t>(layer.TexturedParams1);
-							co.WriteValue<uint8_t>(layer.TexturedParams2);
-							co.WriteValue<uint8_t>(layer.TexturedParams3);
-							co.WriteValue<uint8_t>((layer.Flags & 0x10) == 0x10 ? 255 : 0);	// ParallaxStarsEnabled
+							co.WriteValue<std::uint8_t>(layer.TexturedBackgroundType + (std::uint8_t)Tiles::LayerRendererType::Sky);
+							co.WriteValue<std::uint8_t>(layer.TexturedParams1);
+							co.WriteValue<std::uint8_t>(layer.TexturedParams2);
+							co.WriteValue<std::uint8_t>(layer.TexturedParams3);
+							co.WriteValue<std::uint8_t>((layer.Flags & 0x10) == 0x10 ? 255 : 0);	// ParallaxStarsEnabled
 						} else if (layer.SpriteMode == 2) {
-							co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Tinted);
-							co.WriteValue<uint8_t>(layer.SpriteParam);
-							co.WriteValue<uint8_t>(0);
-							co.WriteValue<uint8_t>(0);
-							co.WriteValue<uint8_t>(255);
+							co.WriteValue<std::uint8_t>((std::uint8_t)Tiles::LayerRendererType::Tinted);
+							co.WriteValue<std::uint8_t>(layer.SpriteParam);
+							co.WriteValue<std::uint8_t>(0);
+							co.WriteValue<std::uint8_t>(0);
+							co.WriteValue<std::uint8_t>(255);
 						} else {
-							co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Default);
-							co.WriteValue<uint8_t>(255);
-							co.WriteValue<uint8_t>(255);
-							co.WriteValue<uint8_t>(255);
-							co.WriteValue<uint8_t>(255);
+							co.WriteValue<std::uint8_t>((std::uint8_t)Tiles::LayerRendererType::Default);
+							co.WriteValue<std::uint8_t>(255);
+							co.WriteValue<std::uint8_t>(255);
+							co.WriteValue<std::uint8_t>(255);
+							co.WriteValue<std::uint8_t>(255);
 						}
 					}
 
-					for (int y = 0; y < layer.Height; y++) {
-						for (int x = 0; x < layer.Width; x++) {
-							uint16_t tileIdx = layer.Tiles[y * layer.InternalWidth + x];
+					for (std::int32_t y = 0; y < layer.Height; y++) {
+						for (std::int32_t x = 0; x < layer.Width; x++) {
+							std::uint16_t tileIdx = layer.Tiles[y * layer.InternalWidth + x];
 
 							bool flipX = false, flipY = false;
 							if ((tileIdx & 0x2000) != 0) {
@@ -897,7 +897,7 @@ namespace Jazz2::Compatibility
 								invisible = (_staticTiles[tileIdx].Type == 3);
 							}
 
-							uint8_t tileFlags = 0;
+							std::uint8_t tileFlags = 0;
 							if (flipX) {
 								tileFlags |= 0x01;
 							}
@@ -914,20 +914,20 @@ namespace Jazz2::Compatibility
 								tileFlags |= 0x20;
 							}
 
-							co.WriteValue<uint8_t>(tileFlags);
-							co.WriteValue<uint16_t>(tileIdx);
+							co.WriteValue<std::uint8_t>(tileFlags);
+							co.WriteValue<std::uint16_t>(tileIdx);
 						}
 					}
 				}
 			}
 
 			// Events
-			for (int y = 0; y < _layers[3].Height; y++) {
-				for (int x = 0; x < _layers[3].Width; x++) {
+			for (std::int32_t y = 0; y < _layers[3].Height; y++) {
+				for (std::int32_t x = 0; x < _layers[3].Width; x++) {
 					auto& tileEvent = _events[x + y * _layers[3].Width];
 
 					// TODO: Flag 0x08 not used
-					int flags = 0;
+					std::int32_t flags = 0;
 					if (tileEvent.Illuminate) {
 						flags |= 0x04; // Illuminated
 					}
@@ -944,11 +944,11 @@ namespace Jazz2::Compatibility
 						flags |= 0x80; // Multiplayer Only
 					}
 
-					co.WriteValue<uint16_t>((uint16_t)tileEvent.Converted.Type);
+					co.WriteValue<std::uint16_t>((std::uint16_t)tileEvent.Converted.Type);
 
 					bool allZeroes = true;
 					if (tileEvent.Converted.Type != EventType::Empty) {
-						for (int i = 0; i < static_cast<std::int32_t>(arraySize(tileEvent.Converted.Params)); i++) {
+						for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(tileEvent.Converted.Params)); i++) {
 							if (tileEvent.Converted.Params[i] != 0) {
 								allZeroes = false;
 								break;
@@ -958,19 +958,19 @@ namespace Jazz2::Compatibility
 
 					if (allZeroes) {
 						if (tileEvent.GeneratorDelay == -1) {
-							co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/);
+							co.WriteValue<std::uint8_t>(flags | 0x01 /*NoParams*/);
 						} else {
-							co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
-							co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
-							co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
+							co.WriteValue<std::uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
+							co.WriteValue<std::uint8_t>(tileEvent.GeneratorFlags);
+							co.WriteValue<std::uint8_t>(tileEvent.GeneratorDelay);
 						}
 					} else {
 						if (tileEvent.GeneratorDelay == -1) {
-							co.WriteValue<uint8_t>(flags);
+							co.WriteValue<std::uint8_t>(flags);
 						} else {
-							co.WriteValue<uint8_t>(flags | 0x02 /*Generator*/);
-							co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
-							co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
+							co.WriteValue<std::uint8_t>(flags | 0x02 /*Generator*/);
+							co.WriteValue<std::uint8_t>(tileEvent.GeneratorFlags);
+							co.WriteValue<std::uint8_t>(tileEvent.GeneratorDelay);
 						}
 
 						co.Write(tileEvent.Converted.Params, sizeof(tileEvent.Converted.Params));
@@ -985,8 +985,8 @@ namespace Jazz2::Compatibility
 #if defined(DEATH_DEBUG)
 		/*auto episodeName = fs::GetFileName(fs::GetDirectoryName(targetPath));
 		if (episodeName != "unknown"_s) {
-			int lastStringIdx = -1;
-			for (int i = TextEventStringsCount - 1; i >= 0; i--) {
+			std::int32_t lastStringIdx = -1;
+			for (std::int32_t i = TextEventStringsCount - 1; i >= 0; i--) {
 				String& text = _textEventStrings[i];
 				if (!text.empty()) {
 					lastStringIdx = i;
@@ -998,11 +998,11 @@ namespace Jazz2::Compatibility
 				auto so = fs::Open(targetPath + ".h"_s, FileAccessMode::Write);
 				ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
-				for (int i = 0; i <= lastStringIdx; i++) {
+				for (std::int32_t i = 0; i <= lastStringIdx; i++) {
 					String& text = _textEventStrings[i];
 
 					bool isLevelToken = false;
-					for (uint8_t textId : _levelTokenTextIds) {
+					for (std::uint8_t textId : _levelTokenTextIds) {
 						if (i == textId) {
 							isLevelToken = true;
 							break;
@@ -1033,7 +1033,7 @@ namespace Jazz2::Compatibility
 #endif
 	}
 
-	void JJ2Level::AddLevelTokenTextID(uint8_t textId)
+	void JJ2Level::AddLevelTokenTextID(std::uint8_t textId)
 	{
 		_levelTokenTextIds.push_back(textId);
 	}
@@ -1051,18 +1051,18 @@ namespace Jazz2::Compatibility
 				LevelToken token = levelTokenConversion(adjustedValue);
 				if (!token.Episode.empty()) {
 					String fullName = token.Episode + '/' + token.Level;
-					so.WriteValue<uint8_t>(fullName.size());
+					so.WriteValue<std::uint8_t>(fullName.size());
 					so.Write(fullName.data(), fullName.size());
 				} else {
-					so.WriteValue<uint8_t>(token.Level.size());
+					so.WriteValue<std::uint8_t>(token.Level.size());
 					so.Write(token.Level.data(), token.Level.size());
 				}
 			} else {
-				so.WriteValue<uint8_t>(adjustedValue.size());
+				so.WriteValue<std::uint8_t>(adjustedValue.size());
 				so.Write(adjustedValue.data(), adjustedValue.size());
 			}
 		} else {
-			so.WriteValue<uint8_t>(0);
+			so.WriteValue<std::uint8_t>(0);
 		}
 	}
 
