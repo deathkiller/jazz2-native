@@ -58,10 +58,10 @@ namespace Jazz2::UI
 		second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(KeySym::D));
 		second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(KeySym::W));
 		second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(KeySym::S));
-		second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::R));
-		second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(KeySym::F));
-		second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(KeySym::T));
-		second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::G));
+		second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::F));
+		second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(KeySym::R));
+		second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(KeySym::G));
+		second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::T));
 	}
 
 	ProcessedInput ControlScheme::FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons)

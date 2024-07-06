@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "MenuSection.h"
+#include "../ControlScheme.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -17,7 +18,7 @@ namespace Jazz2::UI::Menu
 
 	private:
 		enum class Item {
-			Character,
+			PlayerCount,
 			Difficulty,
 			Start,
 
@@ -33,14 +34,15 @@ namespace Jazz2::UI::Menu
 		String _levelName;
 		String _previousEpisodeName;
 
-		ItemData _items[(int32_t)Item::Count];
-		int32_t _selectedIndex;
+		ItemData _items[(std::int32_t)Item::Count];
+		std::int32_t _selectedIndex;
 
-		int32_t _availableCharacters;
-		int32_t _selectedPlayerType;
-		int32_t _selectedDifficulty;
-		int32_t _lastPlayerType;
-		int32_t _lastDifficulty;
+		std::int32_t _availableCharacters;
+		std::int32_t _playerCount;
+		std::int32_t _lastPlayerType;
+		std::int32_t _lastDifficulty;
+		std::int32_t _selectedPlayerType[ControlScheme::MaxSupportedPlayers];
+		std::int32_t _selectedDifficulty;
 		float _imageTransition;
 
 		float _animation;

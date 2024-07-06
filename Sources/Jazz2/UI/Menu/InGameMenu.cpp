@@ -122,12 +122,19 @@ namespace Jazz2::UI::Menu
 		float logoTextTranslate = 0.0f;
 
 		// Show blurred viewports behind
-		for (auto& viewport : _owner->_root->_assignedViewports) {
-			Rectf bounds = viewport->GetBounds();
-			DrawTexture(*viewport->_blurPass4.GetTarget(), Vector2f(bounds.X, bounds.Y), 500, Vector2f(bounds.W, bounds.H), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
+		for (std::size_t i = 0; i < _owner->_root->_assignedViewports.size(); i++) {
+			auto& viewport = _owner->_root->_assignedViewports[i];
+			Rectf scopedView = viewport->GetBounds();
+			DrawTexture(*viewport->_blurPass4.GetTarget(), Vector2f(scopedView.X, scopedView.Y), 500, Vector2f(scopedView.W, scopedView.H), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
+			
+			if (i < _owner->_root->_assignedViewports.size() - 1) {
+				DrawSolid(Vector2f(0.0f, scopedView.H - 1.0f), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.03f), true);
+				DrawSolid(Vector2f(0.0f, scopedView.H), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
+			}
+
 			Vector4f ambientColor = viewport->_ambientLight;
 			if (ambientColor.W < 1.0f) {
-				DrawSolid(Vector2f(bounds.X, bounds.Y), 502, Vector2f(bounds.W, bounds.H), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
+				DrawSolid(Vector2f(scopedView.X, scopedView.Y), 502, Vector2f(scopedView.W, scopedView.H), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
 			}
 		}
 

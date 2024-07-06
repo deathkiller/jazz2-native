@@ -156,6 +156,7 @@ namespace Jazz2
 			Actors::Player* ptr = player.get();
 			_players.push_back(ptr);
 			AddActor(player);
+			AssignViewport(ptr);
 		}
 
 		OnInitialized();
@@ -321,9 +322,9 @@ namespace Jazz2
 			Actors::Player* ptr = player.get();
 			_players.push_back(ptr);
 			AddActor(player);
+			AssignViewport(ptr);
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
-			AssignViewport(ptr);
 		}
 	}
 
@@ -658,7 +659,7 @@ namespace Jazz2
 		}
 
 		if (_pauseMenu != nullptr) {
-			_pauseMenu->OnInitializeViewport(w, h);
+			_pauseMenu->OnInitializeViewport(_viewSize.X, _viewSize.Y);
 		}
 	}
 

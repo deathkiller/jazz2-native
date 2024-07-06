@@ -187,7 +187,8 @@ namespace Jazz2::UI
 
 		auto& players = _levelHandler->GetPlayers();
 		
-		for (auto& viewport : _levelHandler->_assignedViewports) {
+		for (std::size_t i = 0; i < _levelHandler->_assignedViewports.size(); i++) {
+			auto& viewport = _levelHandler->_assignedViewports[i];
 			Actors::Player* player = viewport->GetTargetPlayer();
 			Rectf scopedView = viewport->GetBounds();
 			Rectf adjustedScopedView = scopedView;
@@ -195,6 +196,11 @@ namespace Jazz2::UI
 			float right = std::min(adjustedScopedView.X + adjustedScopedView.W, adjustedView.X + adjustedView.W);
 			adjustedScopedView.X = left;
 			adjustedScopedView.W = right - left;
+
+			if (i < _levelHandler->_assignedViewports.size() - 1) {
+				DrawSolid(Vector2f(0.0f, scopedView.H - 1.0f), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+				DrawSolid(Vector2f(0.0f, scopedView.H), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			}
 
 			DrawHealth(scopedView, adjustedScopedView, player);
 			DrawScore(scopedView, player);

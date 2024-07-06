@@ -122,7 +122,7 @@ namespace Jazz2
 		bool _isLoading;
 		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<Reference<String>, std::unique_ptr<Metadata>, FNV1aHashFunc<String>, StringRefEqualTo> _cachedMetadata;
-		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
+		HashMap<Pair<String, std::uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 #if defined(WITH_AUDIO)
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
 #endif
