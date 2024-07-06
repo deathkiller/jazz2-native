@@ -1316,7 +1316,6 @@ namespace Jazz2::UI
 		float health = std::clamp((float)player->_health / player->_maxHealth, 0.0f, 1.0f);
 
 		_rgbHealthLast = lerp(_rgbHealthLast, health, 0.2f);
-		// TODO: Viewports
 		_rgbAmbientLight = viewport->_ambientLight.W;
 
 		constexpr std::int32_t KeyMax2 = 14;

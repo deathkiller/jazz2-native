@@ -151,7 +151,7 @@ namespace Jazz2::UI::Menu
 
 		float imageScale = (contentBounds.W >= 400 ? 1.0f : 0.5f);
 		float imageOffsetX = center.X * (contentBounds.W >= 400 ? 0.36f : 0.32f);
-		float imageOffsetY = center.Y * (contentBounds.W >= 400 ? 1.4f : 1.06f);
+		float imageOffsetY = center.Y * (contentBounds.W >= 400 ? 1.4f : 1.7f);
 		_root->DrawElement(MenuDim, 0, imageOffsetX, imageOffsetY, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f * imageScale, 36.0f * imageScale);
 		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, imageOffsetX, imageOffsetY + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f * imageScale, 0.88f * imageScale);
 
