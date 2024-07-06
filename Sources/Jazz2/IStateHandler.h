@@ -11,16 +11,15 @@ namespace Jazz2
 		IStateHandler() { }
 		virtual ~IStateHandler() { }
 
+		IStateHandler(const IStateHandler&) = delete;
+		IStateHandler& operator=(const IStateHandler&) = delete;
+
 		virtual void OnBeginFrame() { }
 		virtual void OnEndFrame() { }
-		virtual void OnInitializeViewport(int width, int height) { }
+		virtual void OnInitializeViewport(std::int32_t width, std::int32_t height) { }
 
 		virtual void OnKeyPressed(const nCine::KeyboardEvent& event) { }
 		virtual void OnKeyReleased(const nCine::KeyboardEvent& event) { }
 		virtual void OnTouchEvent(const nCine::TouchEvent& event) { }
-		
-	private:
-		IStateHandler(const IStateHandler&) = delete;
-		IStateHandler& operator=(const IStateHandler&) = delete;
 	};
 }

@@ -23,24 +23,24 @@ namespace Jazz2::Compatibility
 
 		bool seemsLikeCC = false;
 
-		uint32_t magic = s->ReadValue<uint32_t>();
+		std::uint32_t magic = s->ReadValue<std::uint32_t>();
 		ASSERT(magic == 0x42494C41);
 
-		uint32_t signature = s->ReadValue<uint32_t>();
+		std::uint32_t signature = s->ReadValue<std::uint32_t>();
 		ASSERT(signature == 0x00BEBA00);
 
-		uint32_t headerLen = s->ReadValue<uint32_t>();
+		std::uint32_t headerLen = s->ReadValue<std::uint32_t>();
 
-		uint32_t magicUnknown = s->ReadValue<uint32_t>();	// Probably `uint16_t version` and `uint16_t unknown`
+		std::uint32_t magicUnknown = s->ReadValue<std::uint32_t>();	// Probably `uint16_t version` and `uint16_t unknown`
 		ASSERT(magicUnknown == 0x18080200);
 
-		/*uint32_t fileLen =*/ s->ReadValue<uint32_t>();
-		/*uint32_t crc =*/ s->ReadValue<uint32_t>();
-		int32_t setCount = s->ReadValue<int32_t>();
-		SmallVector<uint32_t, 0> setAddresses(setCount);
+		/*std::uint32_t fileLen =*/ s->ReadValue<std::uint32_t>();
+		/*std::uint32_t crc =*/ s->ReadValue<std::uint32_t>();
+		std::int32_t setCount = s->ReadValue<std::int32_t>();
+		SmallVector<std::uint32_t, 0> setAddresses(setCount);
 
-		for (int32_t i = 0; i < setCount; i++) {
-			setAddresses[i] = s->ReadValue<uint32_t>();
+		for (std::int32_t i = 0; i < setCount; i++) {
+			setAddresses[i] = s->ReadValue<std::uint32_t>();
 		}
 
 		ASSERT(headerLen == s->GetPosition());
@@ -48,26 +48,26 @@ namespace Jazz2::Compatibility
 		// Read content
 		bool isStreamComplete = true;
 
-		for (int32_t i = 0; i < setCount; i++) {
+		for (std::int32_t i = 0; i < setCount; i++) {
 			if (s->GetPosition() >= s->GetSize()) {
 				isStreamComplete = false;
 				LOGW("Stream should contain %i sets, but found %i sets instead!", setCount, i);
 				break;
 			}
 
-			uint32_t magicANIM = s->ReadValue<uint32_t>();
-			uint8_t animCount = s->ReadValue<uint8_t>();
-			uint8_t sndCount = s->ReadValue<uint8_t>();
-			/*uint16_t frameCount =*/ s->ReadValue<uint16_t>();
-			/*uint32_t cumulativeSndIndex =*/ s->ReadValue<uint32_t>();
-			int32_t infoBlockLenC = s->ReadValue<int32_t>();
-			int32_t infoBlockLenU = s->ReadValue<int32_t>();
-			int32_t frameDataBlockLenC = s->ReadValue<int32_t>();
-			int32_t frameDataBlockLenU = s->ReadValue<int32_t>();
-			int32_t imageDataBlockLenC = s->ReadValue<int32_t>();
-			int32_t imageDataBlockLenU = s->ReadValue<int32_t>();
-			int32_t sampleDataBlockLenC = s->ReadValue<int32_t>();
-			int32_t sampleDataBlockLenU = s->ReadValue<int32_t>();
+			std::uint32_t magicANIM = s->ReadValue<std::uint32_t>();
+			std::uint8_t animCount = s->ReadValue<std::uint8_t>();
+			std::uint8_t sndCount = s->ReadValue<std::uint8_t>();
+			/*std::uint16_t frameCount =*/ s->ReadValue<std::uint16_t>();
+			/*std::uint32_t cumulativeSndIndex =*/ s->ReadValue<std::uint32_t>();
+			std::int32_t infoBlockLenC = s->ReadValue<std::int32_t>();
+			std::int32_t infoBlockLenU = s->ReadValue<std::int32_t>();
+			std::int32_t frameDataBlockLenC = s->ReadValue<std::int32_t>();
+			std::int32_t frameDataBlockLenU = s->ReadValue<std::int32_t>();
+			std::int32_t imageDataBlockLenC = s->ReadValue<std::int32_t>();
+			std::int32_t imageDataBlockLenU = s->ReadValue<std::int32_t>();
+			std::int32_t sampleDataBlockLenC = s->ReadValue<std::int32_t>();
+			std::int32_t sampleDataBlockLenU = s->ReadValue<std::int32_t>();
 
 			JJ2Block infoBlock(s, infoBlockLenC, infoBlockLenU);
 			JJ2Block frameDataBlock(s, frameDataBlockLenC, frameDataBlockLenU);
@@ -79,7 +79,7 @@ namespace Jazz2::Compatibility
 				continue;
 			}
 
-			for (uint16_t j = 0; j < animCount; j++) {
+			for (std::uint16_t j = 0; j < animCount; j++) {
 				AnimSection& anim = anims.emplace_back();
 				anim.Set = i;
 				anim.Anim = j;
@@ -91,7 +91,7 @@ namespace Jazz2::Compatibility
 				infoBlock.DiscardBytes(4);
 
 				if (anim.FrameCount > 0) {
-					for (uint16_t k = 0; k < anim.FrameCount; k++) {
+					for (std::uint16_t k = 0; k < anim.FrameCount; k++) {
 						AnimFrameSection& frame = anim.Frames[k];
 
 						frame.SizeX = frameDataBlock.ReadInt16();
@@ -108,46 +108,46 @@ namespace Jazz2::Compatibility
 
 						// Adjust normalized position
 						// In the output images, we want to make the hotspot and image size constant.
-						anim.NormalizedHotspotX = std::max((int16_t)-frame.HotspotX, anim.NormalizedHotspotX);
-						anim.NormalizedHotspotY = std::max((int16_t)-frame.HotspotY, anim.NormalizedHotspotY);
+						anim.NormalizedHotspotX = std::max((std::int16_t)-frame.HotspotX, anim.NormalizedHotspotX);
+						anim.NormalizedHotspotY = std::max((std::int16_t)-frame.HotspotY, anim.NormalizedHotspotY);
 
-						anim.LargestOffsetX = std::max((int16_t)(frame.SizeX + frame.HotspotX), anim.LargestOffsetX);
-						anim.LargestOffsetY = std::max((int16_t)(frame.SizeY + frame.HotspotY), anim.LargestOffsetY);
+						anim.LargestOffsetX = std::max((std::int16_t)(frame.SizeX + frame.HotspotX), anim.LargestOffsetX);
+						anim.LargestOffsetY = std::max((std::int16_t)(frame.SizeY + frame.HotspotY), anim.LargestOffsetY);
 
 						anim.AdjustedSizeX = std::max(
-							(int16_t)(anim.NormalizedHotspotX + anim.LargestOffsetX),
+							(std::int16_t)(anim.NormalizedHotspotX + anim.LargestOffsetX),
 							anim.AdjustedSizeX
 						);
 						anim.AdjustedSizeY = std::max(
-							(int16_t)(anim.NormalizedHotspotY + anim.LargestOffsetY),
+							(std::int16_t)(anim.NormalizedHotspotY + anim.LargestOffsetY),
 							anim.AdjustedSizeY
 						);
 
-						int32_t dpos = (frame.ImageAddr + 4);
+						std::int32_t dpos = (frame.ImageAddr + 4);
 
 						imageDataBlock.SeekTo(dpos - 4);
-						uint16_t width2 = imageDataBlock.ReadUInt16();
+						std::uint16_t width2 = imageDataBlock.ReadUInt16();
 						imageDataBlock.SeekTo(dpos - 2);
-						/*uint16_t height2 =*/ imageDataBlock.ReadUInt16();
+						/*std::uint16_t height2 =*/ imageDataBlock.ReadUInt16();
 
 						frame.DrawTransparent = (width2 & 0x8000) > 0;
 
-						int32_t pxRead = 0;
-						int32_t pxTotal = (frame.SizeX * frame.SizeY);
+						std::int32_t pxRead = 0;
+						std::int32_t pxTotal = (frame.SizeX * frame.SizeY);
 						bool lastOpEmpty = true;
 
-						frame.ImageData = std::make_unique<uint8_t[]>(pxTotal);
+						frame.ImageData = std::make_unique<std::uint8_t[]>(pxTotal);
 
 						imageDataBlock.SeekTo(dpos);
 
 						while (pxRead < pxTotal) {
-							uint8_t op = imageDataBlock.ReadByte();
+							std::uint8_t op = imageDataBlock.ReadByte();
 							if (op < 0x80) {
 								// Skip the given number of pixels, writing them with the transparent color 0, array should be already zeroed
 								pxRead += op;
 							} else if (op == 0x80) {
 								// Skip until the end of the line, array should be already zeroed
-								uint16_t linePxLeft = (uint16_t)(frame.SizeX - pxRead % frame.SizeX);
+								std::uint16_t linePxLeft = (std::uint16_t)(frame.SizeX - pxRead % frame.SizeX);
 								if (pxRead % frame.SizeX == 0 && !lastOpEmpty) {
 									linePxLeft = 0;
 								}
@@ -155,7 +155,7 @@ namespace Jazz2::Compatibility
 								pxRead += linePxLeft;
 							} else {
 								// Copy specified amount of pixels (ignoring the high bit)
-								uint16_t bytesToRead = (uint16_t)(op & 0x7F);
+								std::uint16_t bytesToRead = (std::uint16_t)(op & 0x7F);
 								imageDataBlock.ReadRawBytes(frame.ImageData.get() + pxRead, bytesToRead);
 								pxRead += bytesToRead;
 							}
@@ -164,14 +164,14 @@ namespace Jazz2::Compatibility
 						}
 
 						// TODO: Sprite mask
-						/*frame.MaskData = std::make_unique<uint8_t[]>(pxTotal);
+						/*frame.MaskData = std::make_unique<std::uint8_t[]>(pxTotal);
 
 						if (frame.MaskAddr != 0xFFFFFFFF) {
 							imageDataBlock.SeekTo(frame.MaskAddr);
 							pxRead = 0;
 							while (pxRead < pxTotal) {
-								uint8_t b = imageDataBlock.ReadByte();
-								for (uint8_t bit = 0; bit < 8 && (pxRead + bit) < pxTotal; ++bit) {
+								std::uint8_t b = imageDataBlock.ReadByte();
+								for (std::uint8_t bit = 0; bit < 8 && (pxRead + bit) < pxTotal; ++bit) {
 									frame.MaskData[pxRead + bit] = ((b & (1 << (7 - bit))) != 0);
 								}
 								pxRead += 8;
@@ -185,21 +185,21 @@ namespace Jazz2::Compatibility
 				seemsLikeCC = true;
 			}
 
-			for (uint16_t j = 0; j < sndCount; j++) {
+			for (std::uint16_t j = 0; j < sndCount; j++) {
 				SampleSection& sample = samples.emplace_back();
 				sample.IdInSet = j;
 				sample.Set = i;
 
-				int32_t totalSize = sampleDataBlock.ReadInt32();
-				uint32_t magicRIFF = sampleDataBlock.ReadUInt32();
-				int32_t chunkSize = sampleDataBlock.ReadInt32();
+				std::int32_t totalSize = sampleDataBlock.ReadInt32();
+				std::uint32_t magicRIFF = sampleDataBlock.ReadUInt32();
+				std::int32_t chunkSize = sampleDataBlock.ReadInt32();
 				// "ASFF" for 1.20, "AS  " for 1.24
-				uint32_t format = sampleDataBlock.ReadUInt32();
+				std::uint32_t format = sampleDataBlock.ReadUInt32();
 				ASSERT(format == 0x46465341 || format == 0x20205341);
 				bool isASFF = (format == 0x46465341);
 
-				uint32_t magicSAMP = sampleDataBlock.ReadUInt32();
-				/*uint32_t sampSize =*/ sampleDataBlock.ReadUInt32();
+				std::uint32_t magicSAMP = sampleDataBlock.ReadUInt32();
+				/*std::uint32_t sampSize =*/ sampleDataBlock.ReadUInt32();
 				ASSERT_MSG(magicRIFF == 0x46464952 && magicSAMP == 0x504D4153, "Sample has invalid header");
 
 				// Padding/unknown data #1
@@ -230,7 +230,7 @@ namespace Jazz2::Compatibility
 				sample.SampleRate = sampleDataBlock.ReadUInt32();
 				sample.DataSize = chunkSize - 76 + (isASFF ? 12 : 0);
 
-				sample.Data = std::make_unique<uint8_t[]>(sample.DataSize);
+				sample.Data = std::make_unique<std::uint8_t[]>(sample.DataSize);
 				sampleDataBlock.ReadRawBytes(sample.Data.get(), sample.DataSize);
 				// Padding #3
 				sampleDataBlock.DiscardBytes(4);
@@ -311,14 +311,14 @@ namespace Jazz2::Compatibility
 				continue;
 			}
 
-			int32_t sizeX = (anim.AdjustedSizeX + AddBorder * 2);
-			int32_t sizeY = (anim.AdjustedSizeY + AddBorder * 2);
+			std::int32_t sizeX = (anim.AdjustedSizeX + AddBorder * 2);
+			std::int32_t sizeY = (anim.AdjustedSizeY + AddBorder * 2);
 			// Determine the frame configuration to use.
 			// Each asset must fit into a 4096 by 4096 texture,
 			// as that is the smallest texture size we have decided to support.
 			if (anim.FrameCount > 1) {
-				int32_t rows = std::max(1, (int32_t)std::ceil(sqrt(anim.FrameCount * sizeX / sizeY)));
-				int32_t columns = std::max(1, (int32_t)std::ceil(anim.FrameCount * 1.0 / rows));
+				std::int32_t rows = std::max(1, (std::int32_t)std::ceil(sqrt(anim.FrameCount * sizeX / sizeY)));
+				std::int32_t columns = std::max(1, (std::int32_t)std::ceil(anim.FrameCount * 1.0 / rows));
 
 				// Do a bit of optimization, as the above algorithm ends occasionally with some extra space
 				// (it is careful with not underestimating the required space)
@@ -326,10 +326,10 @@ namespace Jazz2::Compatibility
 					rows--;
 				}
 
-				anim.FrameConfigurationX = (uint8_t)columns;
-				anim.FrameConfigurationY = (uint8_t)rows;
+				anim.FrameConfigurationX = (std::uint8_t)columns;
+				anim.FrameConfigurationY = (std::uint8_t)rows;
 			} else {
-				anim.FrameConfigurationX = (uint8_t)anim.FrameCount;
+				anim.FrameConfigurationX = (std::uint8_t)anim.FrameCount;
 				anim.FrameConfigurationY = 1;
 			}
 
@@ -364,20 +364,20 @@ namespace Jazz2::Compatibility
 				filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".aura"_s) });
 			}
 
-			int32_t stride = sizeX * anim.FrameConfigurationX;
-			std::unique_ptr<uint8_t[]> pixels = std::make_unique<uint8_t[]>(stride * sizeY * anim.FrameConfigurationY * 4);
+			std::int32_t stride = sizeX * anim.FrameConfigurationX;
+			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(stride * sizeY * anim.FrameConfigurationY * 4);
 
-			for (int32_t j = 0; j < anim.Frames.size(); j++) {
+			for (std::int32_t j = 0; j < anim.Frames.size(); j++) {
 				auto& frame = anim.Frames[j];
 
-				int32_t offsetX = anim.NormalizedHotspotX + frame.HotspotX;
-				int32_t offsetY = anim.NormalizedHotspotY + frame.HotspotY;
+				std::int32_t offsetX = anim.NormalizedHotspotX + frame.HotspotX;
+				std::int32_t offsetY = anim.NormalizedHotspotY + frame.HotspotY;
 
-				for (int32_t y = 0; y < frame.SizeY; y++) {
-					for (int32_t x = 0; x < frame.SizeX; x++) {
-						int32_t targetX = (j % anim.FrameConfigurationX) * sizeX + offsetX + x + AddBorder;
-						int32_t targetY = (j / anim.FrameConfigurationX) * sizeY + offsetY + y + AddBorder;
-						uint8_t colorIdx = frame.ImageData[frame.SizeX * y + x];
+				for (std::int32_t y = 0; y < frame.SizeY; y++) {
+					for (std::int32_t x = 0; x < frame.SizeX; x++) {
+						std::int32_t targetX = (j % anim.FrameConfigurationX) * sizeX + offsetX + x + AddBorder;
+						std::int32_t targetY = (j / anim.FrameConfigurationX) * sizeY + offsetY + y + AddBorder;
+						std::uint8_t colorIdx = frame.ImageData[frame.SizeX * y + x];
 
 						// Apply palette fixes
 						if (applyToasterPowerUpFix) {
@@ -400,7 +400,7 @@ namespace Jazz2::Compatibility
 
 						if (entry->Palette == JJ2DefaultPalette::Menu) {
 							const Color& src = MenuPalette[colorIdx];
-							uint8_t a;
+							std::uint8_t a;
 							if (colorIdx == 0) {
 								a = 0;
 							} else if (frame.DrawTransparent) {
@@ -414,7 +414,7 @@ namespace Jazz2::Compatibility
 							pixels[(stride * targetY + targetX) * 4 + 2] = src.B;
 							pixels[(stride * targetY + targetX) * 4 + 3] = a;
 						} else {
-							uint8_t a;
+							std::uint8_t a;
 							if (colorIdx == 0) {
 								a = 0;
 							} else if (frame.DrawTransparent) {
@@ -487,8 +487,8 @@ namespace Jazz2::Compatibility
 			// by the read header data. It is not clear if they actually are or if the header data is just
 			// read incorrectly, though - one would think the data would need to be reshaped between 24 and 8
 			// but it works just fine as is.
-			int bytesPerSample = (sample.Multiplier / 4) % 2 + 1;
-			int dataOffset = 0;
+			std::int32_t bytesPerSample = (sample.Multiplier / 4) % 2 + 1;
+			std::int32_t dataOffset = 0;
 			if (sample.Data[0] == 0x00 && sample.Data[1] == 0x00 && sample.Data[2] == 0x00 && sample.Data[3] == 0x00 &&
 				(sample.Data[4] != 0x00 || sample.Data[5] != 0x00 || sample.Data[6] != 0x00 || sample.Data[7] != 0x00) &&
 				(sample.Data[7] == 0x00 || sample.Data[8] == 0x00)) {
@@ -499,23 +499,23 @@ namespace Jazz2::Compatibility
 			// Create PCM wave file
 			// Main header
 			so.Write("RIFF", 4);
-			so.WriteValue<uint32_t>(36 + sample.DataSize - dataOffset); // File size
+			so.WriteValue<std::uint32_t>(36 + sample.DataSize - dataOffset); // File size
 			so.Write("WAVE", 4);
 
 			// Format header
 			so.Write("fmt ", 4);
-			so.WriteValue<uint32_t>(16); // Header remainder length
-			so.WriteValue<uint16_t>(1); // Format = PCM
-			so.WriteValue<uint16_t>(1); // Channels
-			so.WriteValue<uint32_t>(sample.SampleRate); // Sample rate
-			so.WriteValue<uint32_t>(sample.SampleRate * bytesPerSample); // Bytes per second
-			so.WriteValue<uint32_t>(bytesPerSample * 0x00080001);
+			so.WriteValue<std::uint32_t>(16); // Header remainder length
+			so.WriteValue<std::uint16_t>(1); // Format = PCM
+			so.WriteValue<std::uint16_t>(1); // Channels
+			so.WriteValue<std::uint32_t>(sample.SampleRate); // Sample rate
+			so.WriteValue<std::uint32_t>(sample.SampleRate * bytesPerSample); // Bytes per second
+			so.WriteValue<std::uint32_t>(bytesPerSample * 0x00080001);
 
 			// Payload
 			so.Write("data", 4);
-			so.WriteValue<uint32_t>(sample.DataSize - dataOffset); // Payload size
-			for (uint32_t k = dataOffset; k < sample.DataSize; k++) {
-				so.WriteValue<uint8_t>((bytesPerSample << 7) ^ sample.Data[k]);
+			so.WriteValue<std::uint32_t>(sample.DataSize - dataOffset); // Payload size
+			for (std::uint32_t k = dataOffset; k < sample.DataSize; k++) {
+				so.WriteValue<std::uint8_t>((bytesPerSample << 7) ^ sample.Data[k]);
 			}
 
 			so.Seek(0, SeekOrigin::Begin);
@@ -524,16 +524,16 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Anims::WriteImageToFile(const StringView targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
+	void JJ2Anims::WriteImageToFile(const StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
 		FileStream so(targetPath, FileAccess::Write);
 		ASSERT_MSG(so.IsValid(), "Cannot open file for writing");
 		WriteImageToStream(so, data, width, height, channelCount, anim, entry);
 	}
 
-	void JJ2Anims::WriteImageToStream(Stream& targetStream, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
+	void JJ2Anims::WriteImageToStream(Stream& targetStream, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
-		uint8_t flags = 0x00;
+		std::uint8_t flags = 0x00;
 		if (entry != nullptr) {
 			flags |= 0x80;
 			/*if (!entry->AllowRealtimePalette && entry->Palette == JJ2DefaultPalette::Sprite) {
@@ -551,40 +551,40 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		targetStream.WriteValue<uint64_t>(0xB8EF8498E2BFBBEF);
-		targetStream.WriteValue<uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+		targetStream.WriteValue<std::uint64_t>(0xB8EF8498E2BFBBEF);
+		targetStream.WriteValue<std::uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
 
-		targetStream.WriteValue<uint8_t>(channelCount);
-		targetStream.WriteValue<uint32_t>(width);
-		targetStream.WriteValue<uint32_t>(height);
+		targetStream.WriteValue<std::uint8_t>(channelCount);
+		targetStream.WriteValue<std::uint32_t>(width);
+		targetStream.WriteValue<std::uint32_t>(height);
 
 		// Include Sprite extension
 		if (entry != nullptr) {
-			targetStream.WriteValue<uint8_t>(anim.FrameConfigurationX);
-			targetStream.WriteValue<uint8_t>(anim.FrameConfigurationY);
-			targetStream.WriteValue<uint16_t>(anim.FrameCount);
-			targetStream.WriteValue<uint16_t>((uint16_t)(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate));
+			targetStream.WriteValue<std::uint8_t>(anim.FrameConfigurationX);
+			targetStream.WriteValue<std::uint8_t>(anim.FrameConfigurationY);
+			targetStream.WriteValue<std::uint16_t>(anim.FrameCount);
+			targetStream.WriteValue<std::uint16_t>((std::uint16_t)(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate));
 
 			if (anim.NormalizedHotspotX != 0 || anim.NormalizedHotspotY != 0) {
-				targetStream.WriteValue<uint16_t>(anim.NormalizedHotspotX + AddBorder);
-				targetStream.WriteValue<uint16_t>(anim.NormalizedHotspotY + AddBorder);
+				targetStream.WriteValue<std::uint16_t>(anim.NormalizedHotspotX + AddBorder);
+				targetStream.WriteValue<std::uint16_t>(anim.NormalizedHotspotY + AddBorder);
 			} else {
-				targetStream.WriteValue<uint16_t>(UINT16_MAX);
-				targetStream.WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
 			}
 			if (anim.Frames[0].ColdspotX != 0 || anim.Frames[0].ColdspotY != 0) {
-				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder);
-				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder);
+				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder);
+				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder);
 			} else {
-				targetStream.WriteValue<uint16_t>(UINT16_MAX);
-				targetStream.WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
 			}
 			if (anim.Frames[0].GunspotX != 0 || anim.Frames[0].GunspotY != 0) {
-				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder);
-				targetStream.WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder);
+				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder);
+				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder);
 			} else {
-				targetStream.WriteValue<uint16_t>(UINT16_MAX);
-				targetStream.WriteValue<uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
 			}
 
 			width *= anim.FrameConfigurationX;
@@ -594,13 +594,13 @@ namespace Jazz2::Compatibility
 		WriteImageContent(targetStream, data, width, height, channelCount);
 	}
 
-	void JJ2Anims::WriteImageContent(Stream& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
+	void JJ2Anims::WriteImageContent(Stream& so, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount)
 	{
 		typedef union {
 			struct {
-				unsigned char r, g, b, a;
+				std::uint8_t r, g, b, a;
 			} rgba;
-			unsigned int v;
+			std::uint32_t v;
 		} rgba_t;
 
 		#define QOI_OP_INDEX  0x00 /* 00xxxxxx */
@@ -614,22 +614,22 @@ namespace Jazz2::Compatibility
 
 		#define QOI_COLOR_HASH(C) (C.rgba.r*3 + C.rgba.g*5 + C.rgba.b*7 + C.rgba.a*11)
 
-		auto pixels = (const uint8_t*)data;
+		auto pixels = (const std::uint8_t*)data;
 
 		rgba_t index[64] { };
 		rgba_t px, px_prev;
 
-		int run = 0;
+		std::int32_t run = 0;
 		px_prev.rgba.r = 0;
 		px_prev.rgba.g = 0;
 		px_prev.rgba.b = 0;
 		px_prev.rgba.a = 255;
 		px = px_prev;
 
-		int px_len = width * height * channelCount;
-		int px_end = px_len - channelCount;
+		std::int32_t px_len = width * height * channelCount;
+		std::int32_t px_end = px_len - channelCount;
 
-		for (int px_pos = 0; px_pos < px_len; px_pos += channelCount) {
+		for (std::int32_t px_pos = 0; px_pos < px_len; px_pos += channelCount) {
 			if (channelCount == 4) {
 				px = *(rgba_t*)(pixels + px_pos);
 			} else {
@@ -641,57 +641,57 @@ namespace Jazz2::Compatibility
 			if (px.v == px_prev.v) {
 				run++;
 				if (run == 62 || px_pos == px_end) {
-					so.WriteValue<uint8_t>(QOI_OP_RUN | (run - 1));
+					so.WriteValue<std::uint8_t>(QOI_OP_RUN | (run - 1));
 					run = 0;
 				}
 			} else {
-				int index_pos;
+				std::int32_t index_pos;
 
 				if (run > 0) {
-					so.WriteValue<uint8_t>(QOI_OP_RUN | (run - 1));
+					so.WriteValue<std::uint8_t>(QOI_OP_RUN | (run - 1));
 					run = 0;
 				}
 
 				index_pos = QOI_COLOR_HASH(px) % 64;
 
 				if (index[index_pos].v == px.v) {
-					so.WriteValue<uint8_t>(QOI_OP_INDEX | index_pos);
+					so.WriteValue<std::uint8_t>(QOI_OP_INDEX | index_pos);
 				} else {
 					index[index_pos] = px;
 
 					if (px.rgba.a == px_prev.rgba.a) {
-						signed char vr = px.rgba.r - px_prev.rgba.r;
-						signed char vg = px.rgba.g - px_prev.rgba.g;
-						signed char vb = px.rgba.b - px_prev.rgba.b;
+						std::int8_t vr = px.rgba.r - px_prev.rgba.r;
+						std::int8_t vg = px.rgba.g - px_prev.rgba.g;
+						std::int8_t vb = px.rgba.b - px_prev.rgba.b;
 
-						signed char vg_r = vr - vg;
-						signed char vg_b = vb - vg;
+						std::int8_t vg_r = vr - vg;
+						std::int8_t vg_b = vb - vg;
 
 						if (
 							vr > -3 && vr < 2 &&
 							vg > -3 && vg < 2 &&
 							vb > -3 && vb < 2
 						) {
-							so.WriteValue<uint8_t>(QOI_OP_DIFF | (vr + 2) << 4 | (vg + 2) << 2 | (vb + 2));
+							so.WriteValue<std::uint8_t>(QOI_OP_DIFF | (vr + 2) << 4 | (vg + 2) << 2 | (vb + 2));
 						} else if (
 							vg_r >  -9 && vg_r < 8 &&
 							vg   > -33 && vg   < 32 &&
 							vg_b >  -9 && vg_b < 8
 						) {
-							so.WriteValue<uint8_t>(QOI_OP_LUMA | (vg + 32));
-							so.WriteValue<uint8_t>((vg_r + 8) << 4 | (vg_b + 8));
+							so.WriteValue<std::uint8_t>(QOI_OP_LUMA | (vg + 32));
+							so.WriteValue<std::uint8_t>((vg_r + 8) << 4 | (vg_b + 8));
 						} else {
-							so.WriteValue<uint8_t>(QOI_OP_RGB);
-							so.WriteValue<uint8_t>(px.rgba.r);
-							so.WriteValue<uint8_t>(px.rgba.g);
-							so.WriteValue<uint8_t>(px.rgba.b);
+							so.WriteValue<std::uint8_t>(QOI_OP_RGB);
+							so.WriteValue<std::uint8_t>(px.rgba.r);
+							so.WriteValue<std::uint8_t>(px.rgba.g);
+							so.WriteValue<std::uint8_t>(px.rgba.b);
 						}
 					} else {
-						so.WriteValue<uint8_t>(QOI_OP_RGBA);
-						so.WriteValue<uint8_t>(px.rgba.r);
-						so.WriteValue<uint8_t>(px.rgba.g);
-						so.WriteValue<uint8_t>(px.rgba.b);
-						so.WriteValue<uint8_t>(px.rgba.a);
+						so.WriteValue<std::uint8_t>(QOI_OP_RGBA);
+						so.WriteValue<std::uint8_t>(px.rgba.r);
+						so.WriteValue<std::uint8_t>(px.rgba.g);
+						so.WriteValue<std::uint8_t>(px.rgba.b);
+						so.WriteValue<std::uint8_t>(px.rgba.a);
 					}
 				}
 			}

@@ -113,9 +113,9 @@ namespace Jazz2::Actors
 		Vector3i Pos;
 		ActorState State;
 		EventType Type;
-		const uint8_t* Params;
+		const std::uint8_t* Params;
 
-		ActorActivationDetails(ILevelHandler* levelHandler, const Vector3i& pos, const uint8_t* params = nullptr)
+		ActorActivationDetails(ILevelHandler* levelHandler, const Vector3i& pos, const std::uint8_t* params = nullptr)
 			: LevelHandler(levelHandler), Pos(pos), State(ActorState::None), Type(EventType::Empty), Params(params)
 		{
 		}
@@ -152,7 +152,7 @@ namespace Jazz2::Actors
 
 		AABBf AABB;
 		AABBf AABBInner;
-		int32_t CollisionProxyID;
+		std::int32_t CollisionProxyID;
 
 		bool IsFacingLeft();
 
@@ -161,10 +161,10 @@ namespace Jazz2::Actors
 		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
 
 		bool IsInvulnerable();
-		int GetHealth();
-		void SetHealth(int value);
-		int GetMaxHealth();
-		void DecreaseHealth(int amount = 1, ActorBase* collider = nullptr);
+		std::int32_t GetHealth();
+		void SetHealth(std::int32_t value);
+		std::int32_t GetMaxHealth();
+		void DecreaseHealth(std::int32_t amount = 1, ActorBase* collider = nullptr);
 
 		bool MoveInstantly(const Vector2f& pos, MoveType type, Tiles::TileCollisionParams& params);
 		bool MoveInstantly(const Vector2f& pos, MoveType type)
@@ -233,13 +233,13 @@ namespace Jazz2::Actors
 			float _rendererTransition;
 
 			void UpdateVisibleFrames();
-			static int NormalizeFrame(int frame, int min, int max);
+			static std::int32_t NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max);
 		};
 
-		static constexpr uint8_t AlphaThreshold = 40;
+		static constexpr std::uint8_t AlphaThreshold = 40;
 		static constexpr float CollisionCheckStep = 0.5f;
-		static constexpr int PerPixelCollisionStep = 3;
-		static constexpr int AnimationCandidatesCount = 5;
+		static constexpr std::int32_t PerPixelCollisionStep = 3;
+		static constexpr std::int32_t AnimationCandidatesCount = 5;
 
 		ILevelHandler* _levelHandler;
 
@@ -251,8 +251,8 @@ namespace Jazz2::Actors
 		float _friction;
 		float _unstuckCooldown;
 		float _frozenTimeLeft;
-		int _maxHealth;
-		int _health;
+		std::int32_t _maxHealth;
+		std::int32_t _health;
 
 		Vector2i _originTile;
 		float _spawnFrames;
@@ -281,12 +281,12 @@ namespace Jazz2::Actors
 		virtual void OnTriggeredEvent(EventType eventType, uint8_t* eventParams);
 
 		void TryStandardMovement(float timeMult, Tiles::TileCollisionParams& params);
-		void UpdateHitbox(int w, int h);
+		void UpdateHitbox(std::int32_t w, std::int32_t h);
 		void UpdateFrozenState(float timeMult);
 		void HandleFrozenStateChange(ActorBase* shot);
 
 		void CreateParticleDebris();
-		void CreateSpriteDebris(AnimState state, int count);
+		void CreateSpriteDebris(AnimState state, std::int32_t count);
 		virtual float GetIceShrapnelScale() const;
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView identifier, float gain = 1.0f, float pitch = 1.0f);

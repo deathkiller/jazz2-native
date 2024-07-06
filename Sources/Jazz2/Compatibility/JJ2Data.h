@@ -19,8 +19,8 @@ namespace Jazz2::Compatibility
 	public:
 		struct Item {
 			String Filename;
-			std::uint32_t Type;
 			std::unique_ptr<uint8_t[]> Blob;
+			std::uint32_t Type;
 			std::int32_t Size;
 		};
 

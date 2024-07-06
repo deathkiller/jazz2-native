@@ -40,7 +40,7 @@ namespace Jazz2::Multiplayer
 
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
-		void OnInitializeViewport(int32_t width, int32_t height) override;
+		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;
@@ -67,20 +67,20 @@ namespace Jazz2::Multiplayer
 		void ShowLevelText(const StringView text) override;
 		void ShowCoins(Actors::Player* player, std::int32_t count) override;
 		void ShowGems(Actors::Player* player, std::int32_t count) override;
-		StringView GetLevelText(uint32_t textId, int32_t index = -1, uint32_t delimiter = 0) override;
-		void OverrideLevelText(uint32_t textId, const StringView value) override;
-		void LimitCameraView(int left, int width) override;
+		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
+		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
+		void LimitCameraView(std::int32_t left, std::int32_t width) override;
 		void ShakeCameraView(float duration) override;
 		void SetTrigger(std::uint8_t triggerId, bool newState) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;
 		bool BeginPlayMusic(const StringView path, bool setDefault = false, bool forceReload = false) override;
 
-		bool PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
-		bool PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
-		float PlayerHorizontalMovement(int32_t index) override;
-		float PlayerVerticalMovement(int32_t index) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
+		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
+		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
+		float PlayerHorizontalMovement(std::int32_t index) override;
+		float PlayerVerticalMovement(std::int32_t index) override;
 
 		bool SerializeResumableToStream(Stream& dest) override;
 

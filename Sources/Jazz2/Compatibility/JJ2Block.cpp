@@ -6,7 +6,7 @@
 
 namespace Jazz2::Compatibility
 {
-	JJ2Block::JJ2Block(std::unique_ptr<Stream>& s, int32_t length, int32_t uncompressedLength)
+	JJ2Block::JJ2Block(std::unique_ptr<Stream>& s, std::int32_t length, std::int32_t uncompressedLength)
 		: _length(0), _offset(0)
 	{
 		if (uncompressedLength > 0) {
@@ -22,12 +22,12 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Block::SeekTo(int32_t offset)
+	void JJ2Block::SeekTo(std::int32_t offset)
 	{
 		_offset = offset;
 	}
 
-	void JJ2Block::DiscardBytes(int32_t length)
+	void JJ2Block::DiscardBytes(std::int32_t length)
 	{
 		_offset += length;
 	}
@@ -42,7 +42,7 @@ namespace Jazz2::Compatibility
 		return _buffer[_offset++] != 0x00;
 	}
 
-	uint8_t JJ2Block::ReadByte()
+	std::uint8_t JJ2Block::ReadByte()
 	{
 		if (_offset >= _length) {
 			_offset = INT32_MAX;
@@ -52,59 +52,58 @@ namespace Jazz2::Compatibility
 		return _buffer[_offset++];
 	}
 
-	int16_t JJ2Block::ReadInt16()
+	std::int16_t JJ2Block::ReadInt16()
 	{
 		if (_offset > _length - 2) {
 			_offset = INT32_MAX;
 			return false;
 		}
 
-		int16_t result = *(int16_t*)&_buffer[_offset];
+		std::int16_t result = *(std::int16_t*)&_buffer[_offset];
 		_offset += 2;
 		return result;
 	}
 
-	uint16_t JJ2Block::ReadUInt16()
+	std::uint16_t JJ2Block::ReadUInt16()
 	{
 		if (_offset > _length - 2) {
 			_offset = INT32_MAX;
 			return false;
 		}
 
-		uint16_t result = *(uint16_t*)&_buffer[_offset];
+		std::uint16_t result = *(std::uint16_t*)&_buffer[_offset];
 		_offset += 2;
 		return result;
 	}
 
-	int32_t JJ2Block::ReadInt32()
-	{
-		if (_offset > _length - 4) {
-			_offset = INT32_MAX;
-			return false;
-		}
-		//int32_t result = *(int32_t*)&_buffer[_offset];
-		int32_t result = (int32_t)(_buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24));
-		_offset += 4;
-		return result;
-	}
-
-	uint32_t JJ2Block::ReadUInt32()
+	std::int32_t JJ2Block::ReadInt32()
 	{
 		if (_offset > _length - 4) {
 			_offset = INT32_MAX;
 			return false;
 		}
 
-		//uint32_t result = *(uint32_t*)&_buffer[_offset];
-		uint32_t result = _buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24);
+		std::int32_t result = (std::int32_t)(_buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24));
+		_offset += 4;
+		return result;
+	}
+
+	std::uint32_t JJ2Block::ReadUInt32()
+	{
+		if (_offset > _length - 4) {
+			_offset = INT32_MAX;
+			return false;
+		}
+
+		std::uint32_t result = _buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24);
 		_offset += 4;
 		return result;
 	}
 
 
-	int32_t JJ2Block::ReadUint7bitEncoded()
+	std::int32_t JJ2Block::ReadUint7bitEncoded()
 	{
-		int result = 0;
+		std::int32_t result = 0;
 
 		while (true) {
 			if (_offset >= _length) {
@@ -112,7 +111,7 @@ namespace Jazz2::Compatibility
 				break;
 			}
 
-			uint8_t current = _buffer[_offset++];
+			std::uint8_t current = _buffer[_offset++];
 			result |= (current & 0x7F);
 			if (current >= 0x80) {
 				result <<= 7;
@@ -141,9 +140,9 @@ namespace Jazz2::Compatibility
 		return ((float)ReadInt32() / 65536.0f);
 	}
 
-	void JJ2Block::ReadRawBytes(uint8_t* dst, int32_t length)
+	void JJ2Block::ReadRawBytes(std::uint8_t* dst, std::int32_t length)
 	{
-		int bytesLeft = _length - _offset;
+		std::int32_t bytesLeft = _length - _offset;
 		bool endOfStream = false;
 		if (length > bytesLeft) {
 			length = bytesLeft;
@@ -161,18 +160,18 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	StringView JJ2Block::ReadString(int32_t length, bool trimToNull)
+	StringView JJ2Block::ReadString(std::int32_t length, bool trimToNull)
 	{
-		int bytesLeft = _length - _offset;
+		std::int32_t bytesLeft = _length - _offset;
 		bool endOfStream = false;
 		if (length > bytesLeft) {
 			length = bytesLeft;
 			endOfStream = true;
 		}
 
-		int realLength = length;
+		std::int32_t realLength = length;
 		if (trimToNull) {
-			for (int i = 0; i < realLength; i++) {
+			for (std::int32_t i = 0; i < realLength; i++) {
 				if (_buffer[_offset + i] == '\0') {
 					realLength = i;
 					break;

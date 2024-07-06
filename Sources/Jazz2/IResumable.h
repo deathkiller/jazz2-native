@@ -11,7 +11,7 @@ namespace Jazz2
 	class IResumable
 	{
 	public:
-		IResumable() { }
+		IResumable() {}
 
 		virtual bool SerializeResumableToStream(Stream& dest) = 0;
 	};

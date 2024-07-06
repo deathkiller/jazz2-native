@@ -22,31 +22,31 @@ namespace Jazz2::Compatibility
 		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
-		uint32_t magic = s->ReadValue<uint32_t>();
-		uint32_t signature = s->ReadValue<uint32_t>();
+		std::uint32_t magic = s->ReadValue<std::uint32_t>();
+		std::uint32_t signature = s->ReadValue<std::uint32_t>();
 		RETURNF_ASSERT_MSG(magic == 0x42494C50 /*PLIB*/ && signature == 0xBEBAADDE, "Invalid signature");
 
-		/*uint32_t version =*/ s->ReadValue<uint32_t>();
+		/*std::uint32_t version =*/ s->ReadValue<std::uint32_t>();
 
-		uint32_t recordedSize = s->ReadValue<uint32_t>();
+		std::uint32_t recordedSize = s->ReadValue<std::uint32_t>();
 		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
 
-		/*uint32_t recordedCRC =*/ s->ReadValue<uint32_t>();
-		int32_t headerBlockPackedSize = s->ReadValue<int32_t>();
-		int32_t headerBlockUnpackedSize = s->ReadValue<int32_t>();
+		/*uint32_t recordedCRC =*/ s->ReadValue<std::uint32_t>();
+		std::int32_t headerBlockPackedSize = s->ReadValue<std::int32_t>();
+		std::int32_t headerBlockUnpackedSize = s->ReadValue<std::int32_t>();
 
 		JJ2Block headerBlock(s, headerBlockPackedSize, headerBlockUnpackedSize);
 
-		int32_t baseOffset = s->GetPosition();
+		std::int32_t baseOffset = s->GetPosition();
 
 		while (s->GetPosition() < s->GetSize()) {
 			StringView name = headerBlock.ReadString(32, true);
 
-			uint32_t type = headerBlock.ReadUInt32();
-			uint32_t offset = headerBlock.ReadUInt32();
-			/*uint32_t fileCRC =*/ headerBlock.ReadUInt32();
-			int32_t filePackedSize = headerBlock.ReadInt32();
-			int32_t fileUnpackedSize = headerBlock.ReadInt32();
+			std::uint32_t type = headerBlock.ReadUInt32();
+			std::uint32_t offset = headerBlock.ReadUInt32();
+			/*std::uint32_t fileCRC =*/ headerBlock.ReadUInt32();
+			std::int32_t filePackedSize = headerBlock.ReadInt32();
+			std::int32_t fileUnpackedSize = headerBlock.ReadInt32();
 
 			s->Seek(baseOffset + offset, SeekOrigin::Begin);
 
@@ -56,7 +56,7 @@ namespace Jazz2::Compatibility
 			Item& item = Items.emplace_back();
 			item.Filename = name;
 			item.Type = type;
-			item.Blob = std::make_unique<uint8_t[]>(fileUnpackedSize);
+			item.Blob = std::make_unique<std::uint8_t[]>(fileUnpackedSize);
 			item.Size = fileUnpackedSize;
 			fileBlock.ReadRawBytes(item.Blob.get(), fileUnpackedSize);
 		}

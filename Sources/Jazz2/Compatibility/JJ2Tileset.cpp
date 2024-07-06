@@ -20,18 +20,18 @@ namespace Jazz2::Compatibility
 
 		JJ2Block headerBlock(s, 262 - 180);
 
-		uint32_t magic = headerBlock.ReadUInt32();
+		std::uint32_t magic = headerBlock.ReadUInt32();
 		RETURNF_ASSERT_MSG(magic == 0x454C4954 /*TILE*/, "Invalid magic string");
 
-		uint32_t signature = headerBlock.ReadUInt32();
+		std::uint32_t signature = headerBlock.ReadUInt32();
 		RETURNF_ASSERT_MSG(signature == 0xAFBEADDE, "Invalid signature");
 
 		_name = headerBlock.ReadString(32, true);
 
-		uint16_t versionNum = headerBlock.ReadUInt16();
+		std::uint16_t versionNum = headerBlock.ReadUInt16();
 		_version = (versionNum <= 512 ? JJ2Version::BaseGame : JJ2Version::TSF);
 
-		int recordedSize = headerBlock.ReadInt32();
+		std::int32_t recordedSize = headerBlock.ReadInt32();
 		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
 
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
@@ -64,8 +64,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Tileset::LoadMetadata(JJ2Block& block)
 	{
-		for (int i = 0; i < 256; i++) {
-			uint32_t color = block.ReadUInt32();
+		for (std::int32_t i = 0; i < 256; i++) {
+			std::uint32_t color = block.ReadUInt32();
 			color = (color & 0x00ffffff) | ((255 - ((color >> 24) & 0xff)) << 24);
 			_palette[i] = color;
 		}
@@ -73,31 +73,31 @@ namespace Jazz2::Compatibility
 		_tileCount = block.ReadInt32();
 
 		// TODO: Use _tileCount instead of maxTiles ???
-		int maxTiles = GetMaxSupportedTiles();
+		std::int32_t maxTiles = GetMaxSupportedTiles();
 		_tiles = std::make_unique<TilesetTileSection[]>(maxTiles);
 
-		for (int i = 0; i < maxTiles; ++i) {
+		for (std::int32_t i = 0; i < maxTiles; ++i) {
 			_tiles[i].Opaque = block.ReadBool();
 		}
 
 		// Block of unknown values, skip
 		block.DiscardBytes(maxTiles);
 
-		for (int i = 0; i < maxTiles; ++i) {
+		for (std::int32_t i = 0; i < maxTiles; ++i) {
 			_tiles[i].ImageDataOffset = block.ReadUInt32();
 		}
 
 		// Block of unknown values, skip
 		block.DiscardBytes(4 * maxTiles);
 
-		for (int i = 0; i < maxTiles; ++i) {
+		for (std::int32_t i = 0; i < maxTiles; ++i) {
 			_tiles[i].AlphaDataOffset = block.ReadUInt32();
 		}
 
 		// Block of unknown values, skip
 		block.DiscardBytes(4 * maxTiles);
 
-		for (int i = 0; i < maxTiles; ++i) {
+		for (std::int32_t i = 0; i < maxTiles; ++i) {
 			_tiles[i].MaskDataOffset = block.ReadUInt32();
 		}
 
@@ -107,11 +107,11 @@ namespace Jazz2::Compatibility
 
 	void JJ2Tileset::LoadImageData(JJ2Block& imageBlock, JJ2Block& alphaBlock)
 	{
-		uint8_t imageBuffer[BlockSize * BlockSize];
-		uint8_t maskBuffer[BlockSize * BlockSize / 8];
+		std::uint8_t imageBuffer[BlockSize * BlockSize];
+		std::uint8_t maskBuffer[BlockSize * BlockSize / 8];
 
-		int maxTiles = GetMaxSupportedTiles();
-		for (int i = 0; i < maxTiles; i++) {
+		std::int32_t maxTiles = GetMaxSupportedTiles();
+		for (std::int32_t i = 0; i < maxTiles; i++) {
 			auto& tile = _tiles[i];
 
 			imageBlock.SeekTo(tile.ImageDataOffset);
@@ -119,8 +119,8 @@ namespace Jazz2::Compatibility
 			alphaBlock.SeekTo(tile.AlphaDataOffset);
 			alphaBlock.ReadRawBytes(maskBuffer, sizeof(maskBuffer));
 
-			for (int j = 0; j < (BlockSize * BlockSize); j++) {
-				uint8_t idx = imageBuffer[j];
+			for (std::int32_t j = 0; j < (BlockSize * BlockSize); j++) {
+				std::uint8_t idx = imageBuffer[j];
 				if (((maskBuffer[j / 8] >> (j % 8)) & 0x01) == 0x00) {
 					// Empty mask
 					idx = 0;
@@ -133,21 +133,21 @@ namespace Jazz2::Compatibility
 
 	void JJ2Tileset::LoadMaskData(JJ2Block& block)
 	{
-		//uint8_t maskBuffer[BlockSize * BlockSize / 8];
+		//std::uint8_t maskBuffer[BlockSize * BlockSize / 8];
 
-		int maxTiles = GetMaxSupportedTiles();
-		for (int i = 0; i < maxTiles; i++) {
+		std::int32_t maxTiles = GetMaxSupportedTiles();
+		for (std::int32_t i = 0; i < maxTiles; i++) {
 			auto& tile = _tiles[i];
 
 			block.SeekTo(tile.MaskDataOffset);
 			/*block.ReadRawBytes(maskBuffer, sizeof(maskBuffer));
 
-			for (int j = 0; j < 128; j++) {
-				uint8_t idx = maskBuffer[j];
-				for (int k = 0; k < 8; k++) {
-					int pixelIdx = 8 * j + k;
-					int x = pixelIdx % BlockSize;
-					int y = pixelIdx / BlockSize;
+			for (std::int32_t j = 0; j < 128; j++) {
+				std::uint8_t idx = maskBuffer[j];
+				for (std::int32_t k = 0; k < 8; k++) {
+					std::int32_t pixelIdx = 8 * j + k;
+					std::int32_t x = pixelIdx % BlockSize;
+					std::int32_t y = pixelIdx / BlockSize;
 					if (((idx >> k) & 0x01) == 0) {
 						tile.Mask[y * BlockSize + x] = 0;
 					} else {

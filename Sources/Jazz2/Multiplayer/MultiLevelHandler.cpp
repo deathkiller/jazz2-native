@@ -355,7 +355,7 @@ namespace Jazz2::Multiplayer
 #endif
 	}
 
-	void MultiLevelHandler::OnInitializeViewport(int32_t width, int32_t height)
+	void MultiLevelHandler::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
 		LevelHandler::OnInitializeViewport(width, height);
 	}
@@ -743,12 +743,12 @@ namespace Jazz2::Multiplayer
 		LevelHandler::ShowGems(player, count);
 	}
 
-	StringView MultiLevelHandler::GetLevelText(uint32_t textId, int32_t index, uint32_t delimiter)
+	StringView MultiLevelHandler::GetLevelText(std::uint32_t textId, std::int32_t index, std::uint32_t delimiter)
 	{
 		return LevelHandler::GetLevelText(textId, index, delimiter);
 	}
 
-	void MultiLevelHandler::OverrideLevelText(uint32_t textId, const StringView value)
+	void MultiLevelHandler::OverrideLevelText(std::uint32_t textId, const StringView value)
 	{
 		LevelHandler::OverrideLevelText(textId, value);
 
@@ -765,13 +765,13 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool MultiLevelHandler::PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads)
+	bool MultiLevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
 		// TODO: Remove this override
 		return LevelHandler::PlayerActionPressed(index, action, includeGamepads);
 	}
 
-	bool MultiLevelHandler::PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool MultiLevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		if (index > 0) {
 			auto it = _playerStates.find(index);
@@ -790,20 +790,20 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
 
-	bool MultiLevelHandler::PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads)
+	bool MultiLevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
 		// TODO: Remove this override
 		return LevelHandler::PlayerActionHit(index, action, includeGamepads);
 	}
 
-	bool MultiLevelHandler::PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool MultiLevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
 				std::uint64_t pressedKeys = it->second.PressedKeys;
-				if ((pressedKeys & ((1ull << (int32_t)action) | (1ull << (32 + (int32_t)action)))) == (1ull << (int32_t)action)) {
-					isGamepad = (pressedKeys & (1ull << (16 + (int32_t)action))) != 0;
+				if ((pressedKeys & ((1ull << (std::int32_t)action) | (1ull << (32 + (std::int32_t)action)))) == (1ull << (std::int32_t)action)) {
+					isGamepad = (pressedKeys & (1ull << (16 + (std::int32_t)action))) != 0;
 					return true;
 				}
 
@@ -815,14 +815,14 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
 
-	float MultiLevelHandler::PlayerHorizontalMovement(int32_t index)
+	float MultiLevelHandler::PlayerHorizontalMovement(std::int32_t index)
 	{
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Left)) != 0) {
+				if ((it->second.PressedKeys & (1ull << (std::int32_t)PlayerActions::Left)) != 0) {
 					return -1.0f;
-				} else if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Right)) != 0) {
+				} else if ((it->second.PressedKeys & (1ull << (std::int32_t)PlayerActions::Right)) != 0) {
 					return 1.0f;
 				} else {
 					return 0.0f;
@@ -833,14 +833,14 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::PlayerHorizontalMovement(index);
 	}
 
-	float MultiLevelHandler::PlayerVerticalMovement(int32_t index)
+	float MultiLevelHandler::PlayerVerticalMovement(std::int32_t index)
 	{
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Up)) != 0) {
+				if ((it->second.PressedKeys & (1ull << (std::int32_t)PlayerActions::Up)) != 0) {
 					return -1.0f;
-				} else if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Down)) != 0) {
+				} else if ((it->second.PressedKeys & (1ull << (std::int32_t)PlayerActions::Down)) != 0) {
 					return 1.0f;
 				} else {
 					return 0.0f;
@@ -1216,7 +1216,7 @@ namespace Jazz2::Multiplayer
 
 					_root->InvokeAsync([this, playerType, health, teamId, posX, posY]() {
 						std::shared_ptr<Actors::Multiplayer::RemotablePlayer> player = std::make_shared<Actors::Multiplayer::RemotablePlayer>();
-						uint8_t playerParams[2] = { (uint8_t)playerType, 0 };
+						std::uint8_t playerParams[2] = { (std::uint8_t)playerType, 0 };
 						player->OnActivated(Actors::ActorActivationDetails(
 							this,
 							Vector3i(posX, posY, PlayerZ),
@@ -1455,7 +1455,7 @@ namespace Jazz2::Multiplayer
 		return false;
 	}
 
-	void MultiLevelHandler::LimitCameraView(int left, int width)
+	void MultiLevelHandler::LimitCameraView(std::int32_t left, std::int32_t width)
 	{
 		// TODO: This should probably be client local
 		LevelHandler::LimitCameraView(left, width);
@@ -1481,7 +1481,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MultiLevelHandler::SetWeather(WeatherType type, uint8_t intensity)
+	void MultiLevelHandler::SetWeather(WeatherType type, std::uint8_t intensity)
 	{
 		// TODO: This should probably be client local
 		LevelHandler::SetWeather(type, intensity);

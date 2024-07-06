@@ -62,9 +62,9 @@ namespace Jazz2
 		friend class UI::Menu::InGameMenu;
 
 	public:
-		static constexpr int32_t DefaultWidth = 720;
-		static constexpr int32_t DefaultHeight = 405;
-		static constexpr int32_t ActivateTileRange = 26;
+		static constexpr std::int32_t DefaultWidth = 720;
+		static constexpr std::int32_t DefaultHeight = 405;
+		static constexpr std::int32_t ActivateTileRange = 26;
 
 		LevelHandler(IRootController* root);
 		~LevelHandler() override;
@@ -111,7 +111,7 @@ namespace Jazz2
 
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
-		void OnInitializeViewport(int32_t width, int32_t height) override;
+		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;
@@ -127,7 +127,7 @@ namespace Jazz2
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback) override;
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback) override;
 
-		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
+		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView nextLevel) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
@@ -138,21 +138,21 @@ namespace Jazz2
 		void ShowLevelText(const StringView text) override;
 		void ShowCoins(Actors::Player* player, std::int32_t count) override;
 		void ShowGems(Actors::Player* player, std::int32_t count) override;
-		StringView GetLevelText(uint32_t textId, int32_t index = -1, uint32_t delimiter = 0) override;
-		void OverrideLevelText(uint32_t textId, const StringView value) override;
-		void LimitCameraView(int left, int width) override;
+		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
+		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
+		void LimitCameraView(std::int32_t left, std::int32_t width) override;
 		void ShakeCameraView(float duration) override;
 		bool GetTrigger(std::uint8_t triggerId) override;
 		void SetTrigger(std::uint8_t triggerId, bool newState) override;
-		void SetWeather(WeatherType type, uint8_t intensity) override;
+		void SetWeather(WeatherType type, std::uint8_t intensity) override;
 		bool BeginPlayMusic(const StringView path, bool setDefault = false, bool forceReload = false) override;
 
-		bool PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
-		bool PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
-		float PlayerHorizontalMovement(int32_t index) override;
-		float PlayerVerticalMovement(int32_t index) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
+		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
+		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
+		float PlayerHorizontalMovement(std::int32_t index) override;
+		float PlayerVerticalMovement(std::int32_t index) override;
 
 		bool SerializeResumableToStream(Stream& dest) override;
 
@@ -182,7 +182,7 @@ namespace Jazz2
 		private:
 			LevelHandler* _owner;
 			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
-			int32_t _renderCommandsCount;
+			std::int32_t _renderCommandsCount;
 			SmallVector<LightEmitter, 0> _emittedLightsCache;
 
 			RenderCommand* RentRenderCommand();
@@ -197,7 +197,7 @@ namespace Jazz2
 				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 			}
 
-			void Initialize(Texture* source, int32_t width, int32_t height, const Vector2f& direction);
+			void Initialize(Texture* source, std::int32_t width, std::int32_t height, const Vector2f& direction);
 			void Register();
 
 			bool OnDraw(RenderQueue& renderQueue) override;
@@ -227,7 +227,7 @@ namespace Jazz2
 				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 			}
 
-			void Initialize(int32_t width, int32_t height);
+			void Initialize(std::int32_t width, std::int32_t height);
 
 			bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -278,7 +278,7 @@ namespace Jazz2
 		bool _isReforged, _cheatsUsed;
 		bool _checkpointCreated;
 		char _cheatsBuffer[9];
-		uint32_t _cheatsBufferLength;
+		std::uint32_t _cheatsBufferLength;
 		SmallVector<String, 0> _levelTexts;
 
 		String _nextLevel;
@@ -313,11 +313,11 @@ namespace Jazz2
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<Actors::Bosses::BossBase> _activeBoss;
 		WeatherType _weatherType;
-		uint8_t _weatherIntensity;
+		std::uint8_t _weatherIntensity;
 
 		BitArray _pressedKeys;
-		uint64_t _pressedActions, _pressedActionsLast;
-		uint32_t _overrideActions;
+		std::uint64_t _pressedActions, _pressedActionsLast;
+		std::uint32_t _overrideActions;
 		Vector2f _playerRequiredMovement;
 		Vector2f _playerFrozenMovement;
 		bool _playerFrozenEnabled;

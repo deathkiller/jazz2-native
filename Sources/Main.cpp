@@ -95,7 +95,7 @@ public:
 	void OnInit() override;
 	void OnFrameStart() override;
 	void OnPostUpdate() override;
-	void OnResizeWindow(int width, int height) override;
+	void OnResizeWindow(std::int32_t width, std::int32_t height) override;
 	void OnShutdown() override;
 	void OnSuspend() override;
 	void OnResume() override;
@@ -429,7 +429,7 @@ void GameEventHandler::OnPostUpdate()
 	_currentHandler->OnEndFrame();
 }
 
-void GameEventHandler::OnResizeWindow(int width, int height)
+void GameEventHandler::OnResizeWindow(std::int32_t width, std::int32_t height)
 {
 	// Resolution was changed, all viewports have to be recreated
 	Viewport::chain().clear();
@@ -1593,7 +1593,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 			episodeContinue->State.Flags |= EpisodeContinuationFlags::CheatsUsed;
 		}
 
-		episodeContinue->State.DifficultyAndPlayerType = ((int32_t)levelInit.Difficulty & 0x0f) | (((int32_t)firstPlayer->Type & 0x0f) << 4);
+		episodeContinue->State.DifficultyAndPlayerType = ((std::int32_t)levelInit.Difficulty & 0x0f) | (((std::int32_t)firstPlayer->Type & 0x0f) << 4);
 		episodeContinue->State.Lives = firstPlayer->Lives;
 		episodeContinue->State.Score = firstPlayer->Score;
 		std::memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));

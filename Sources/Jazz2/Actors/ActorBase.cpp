@@ -69,10 +69,10 @@ namespace Jazz2::Actors
 		_state |= details.State | ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation;
 		_levelHandler = details.LevelHandler;
 		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
-		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
+		_originTile = Vector2i((std::int32_t)details.Pos.X / 32, (std::int32_t)details.Pos.Y / 32);
 		_spawnFrames = _levelHandler->ElapsedFrames();
 
-		uint16_t layer = (uint16_t)details.Pos.Z;
+		std::uint16_t layer = (std::uint16_t)details.Pos.Z;
 		_renderer.setLayer(layer);
 
 		bool success = async_await OnActivatedAsync(details);
@@ -234,7 +234,7 @@ namespace Jazz2::Actors
 				float xDiff = std::abs(effectiveSpeedX);
 				float maxXDiff = -xDiff;
 				if (!success) {
-					int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
+					std::int32_t sign = (effectiveSpeedX > 0.0f ? 1 : -1);
 					for (; xDiff >= maxXDiff; xDiff -= CollisionCheckStep) {
 						if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
 							success = true;
@@ -289,7 +289,7 @@ namespace Jazz2::Actors
 				if (!MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
 					// First, attempt to move horizontally as much as possible
 					float maxDiff = std::abs(effectiveSpeedX);
-					int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
+					std::int32_t sign = (effectiveSpeedX > 0.0f ? 1 : -1);
 					float xDiff = maxDiff;
 					for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
 						if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
@@ -371,7 +371,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void ActorBase::UpdateHitbox(int w, int h)
+	void ActorBase::UpdateHitbox(std::int32_t w, std::int32_t h)
 	{
 		if (_currentAnimation == nullptr) {
 			return;
@@ -406,7 +406,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void ActorBase::CreateSpriteDebris(AnimState state, int count)
+	void ActorBase::CreateSpriteDebris(AnimState state, std::int32_t count)
 	{
 		auto* tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr && _metadata != nullptr) {
@@ -427,7 +427,7 @@ namespace Jazz2::Actors
 #if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
-			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			return _levelHandler->PlaySfx(this, identifier, &it->second.Buffers[idx]->Buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
 		} else {
 			return nullptr;
@@ -638,23 +638,23 @@ namespace Jazz2::Actors
 			uint8_t* p;
 			GraphicResource* res;
 			bool isFacingLeftCurrent;
-			int x1, y1, x2, y2, xs, dx, dy, stride;
+			std::int32_t x1, y1, x2, y2, xs, dx, dy, stride;
 			if (perPixel1) {
 				res = res1;
 				p = res->Base->Mask.get();
 
 				isFacingLeftCurrent = GetState(ActorState::IsFacingLeft);
 
-				x1 = (int)std::max(inter.L, other->AABBInner.L);
-				y1 = (int)std::max(inter.T, other->AABBInner.T);
-				x2 = (int)std::min(inter.R, other->AABBInner.R);
-				y2 = (int)std::min(inter.B, other->AABBInner.B);
+				x1 = (std::int32_t)std::max(inter.L, other->AABBInner.L);
+				y1 = (std::int32_t)std::max(inter.T, other->AABBInner.T);
+				x2 = (std::int32_t)std::min(inter.R, other->AABBInner.R);
+				y2 = (std::int32_t)std::min(inter.B, other->AABBInner.B);
 
-				xs = (int)aabb1.L;
+				xs = (std::int32_t)aabb1.L;
 
-				int frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
+				std::int32_t frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
 				dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-				dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabb1.T;
+				dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (std::int32_t)aabb1.T;
 
 			} else {
 				res = res2;
@@ -662,24 +662,24 @@ namespace Jazz2::Actors
 
 				isFacingLeftCurrent = other->GetState(ActorState::IsFacingLeft);
 
-				x1 = (int)std::max(inter.L, AABBInner.L);
-				y1 = (int)std::max(inter.T, AABBInner.T);
-				x2 = (int)std::min(inter.R, AABBInner.R);
-				y2 = (int)std::min(inter.B, AABBInner.B);
+				x1 = (std::int32_t)std::max(inter.L, AABBInner.L);
+				y1 = (std::int32_t)std::max(inter.T, AABBInner.T);
+				x2 = (std::int32_t)std::min(inter.R, AABBInner.R);
+				y2 = (std::int32_t)std::min(inter.B, AABBInner.B);
 
-				xs = (int)aabb2.L;
+				xs = (std::int32_t)aabb2.L;
 
-				int frame2 = std::min(other->_renderer.CurrentFrame, res->FrameCount - 1);
+				std::int32_t frame2 = std::min(other->_renderer.CurrentFrame, res->FrameCount - 1);
 				dx = (frame2 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-				dy = (frame2 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabb2.T;
+				dy = (frame2 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (std::int32_t)aabb2.T;
 			}
 
 			stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
 
 			// Per-pixel collision check
-			for (int i = x1; i < x2; i += PerPixelCollisionStep) {
-				for (int j = y1; j < y2; j += PerPixelCollisionStep) {
-					int i1 = i - xs;
+			for (std::int32_t i = x1; i < x2; i += PerPixelCollisionStep) {
+				for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
+					std::int32_t i1 = i - xs;
 					if (isFacingLeftCurrent) {
 						i1 = res->Base->FrameDimensions.X - i1 - 1;
 					}
@@ -690,35 +690,35 @@ namespace Jazz2::Actors
 				}
 			}
 		} else {
-			int x1 = (int)inter.L;
-			int y1 = (int)inter.T;
-			int x2 = (int)inter.R;
-			int y2 = (int)inter.B;
+			std::int32_t x1 = (std::int32_t)inter.L;
+			std::int32_t y1 = (std::int32_t)inter.T;
+			std::int32_t x2 = (std::int32_t)inter.R;
+			std::int32_t y2 = (std::int32_t)inter.B;
 
-			int x1s = (int)aabb1.L;
-			int x2s = (int)aabb2.L;
+			std::int32_t x1s = (std::int32_t)aabb1.L;
+			std::int32_t x2s = (std::int32_t)aabb2.L;
 
-			int frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
-			int dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
-			int dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y - (int)aabb1.T;
-			int stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
+			std::int32_t frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
+			std::int32_t dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
+			std::int32_t dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y - (std::int32_t)aabb1.T;
+			std::int32_t stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
 
-			int frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
-			int dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
-			int dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y - (int)aabb2.T;
-			int stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
+			std::int32_t frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
+			std::int32_t dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
+			std::int32_t dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y - (std::int32_t)aabb2.T;
+			std::int32_t stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
 
 			// Per-pixel collision check
 			auto p1 = res1->Base->Mask.get();
 			auto p2 = res2->Base->Mask.get();
 
-			for (int i = x1; i < x2; i += PerPixelCollisionStep) {
-				for (int j = y1; j < y2; j += PerPixelCollisionStep) {
-					int i1 = i - x1s;
+			for (std::int32_t i = x1; i < x2; i += PerPixelCollisionStep) {
+				for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
+					std::int32_t i1 = i - x1s;
 					if (GetState(ActorState::IsFacingLeft)) {
 						i1 = res1->Base->FrameDimensions.X - i1 - 1;
 					}
-					int i2 = i - x2s;
+					std::int32_t i2 = i - x2s;
 					if (other->GetState(ActorState::IsFacingLeft)) {
 						i2 = res2->Base->FrameDimensions.X - i2 - 1;
 					}
@@ -767,24 +767,24 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		int x1 = (int)std::max(inter.L, aabb.L);
-		int y1 = (int)std::max(inter.T, aabb.T);
-		int x2 = (int)std::min(inter.R, aabb.R);
-		int y2 = (int)std::min(inter.B, aabb.B);
+		std::int32_t x1 = (std::int32_t)std::max(inter.L, aabb.L);
+		std::int32_t y1 = (std::int32_t)std::max(inter.T, aabb.T);
+		std::int32_t x2 = (std::int32_t)std::min(inter.R, aabb.R);
+		std::int32_t y2 = (std::int32_t)std::min(inter.B, aabb.B);
 
-		int xs = (int)aabbSelf.L;
+		std::int32_t xs = (std::int32_t)aabbSelf.L;
 
-		int frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
-		int dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-		int dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabbSelf.T;
-		int stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+		std::int32_t frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
+		std::int32_t dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
+		std::int32_t dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabbSelf.T;
+		std::int32_t stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
 
 		// Per-pixel collision check
 		auto p = res->Base->Mask.get();
 
-		for (int i = x1; i < x2; i += PerPixelCollisionStep) {
-			for (int j = y1; j < y2; j += PerPixelCollisionStep) {
-				int i1 = i - xs;
+		for (std::int32_t i = x1; i < x2; i += PerPixelCollisionStep) {
+			for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
+				std::int32_t i1 = i - xs;
 				if (GetState(ActorState::IsFacingLeft)) {
 					i1 = res->Base->FrameDimensions.X - i1 - 1;
 				}
@@ -818,10 +818,10 @@ namespace Jazz2::Actors
 		}
 		transform2 = Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f) * Matrix4x4f::RotationZ(other->_renderer.rotation()) * transform2;
 
-		int width1 = res1->Base->FrameDimensions.X;
-		int height1 = res1->Base->FrameDimensions.Y;
-		int width2 = res2->Base->FrameDimensions.X;
-		int height2 = res2->Base->FrameDimensions.Y;
+		std::int32_t width1 = res1->Base->FrameDimensions.X;
+		std::int32_t height1 = res1->Base->FrameDimensions.Y;
+		std::int32_t width2 = res2->Base->FrameDimensions.X;
+		std::int32_t height2 = res2->Base->FrameDimensions.Y;
 
 		// Bounding Box intersection
 		AABBf aabb1, aabb2;
@@ -865,25 +865,25 @@ namespace Jazz2::Actors
 
 		Vector3f yPosIn2 = Vector3f::Zero * transformAToB;
 
-		int frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
-		int dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
-		int dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y;
-		int stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
+		std::int32_t frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
+		std::int32_t dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
+		std::int32_t dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y;
+		std::int32_t stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
 
-		int frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
-		int dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
-		int dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y;
-		int stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
+		std::int32_t frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
+		std::int32_t dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
+		std::int32_t dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y;
+		std::int32_t stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
 
 		auto p1 = res1->Base->Mask.get();
 		auto p2 = res2->Base->Mask.get();
 
-		for (int y1 = 0; y1 < height1; y1 += PerPixelCollisionStep) {
+		for (std::int32_t y1 = 0; y1 < height1; y1 += PerPixelCollisionStep) {
 			Vector3f posIn2 = yPosIn2;
 
-			for (int x1 = 0; x1 < width1; x1 += PerPixelCollisionStep) {
-				int x2 = (int)std::round(posIn2.X);
-				int y2 = (int)std::round(posIn2.Y);
+			for (std::int32_t x1 = 0; x1 < width1; x1 += PerPixelCollisionStep) {
+				std::int32_t x2 = (std::int32_t)std::round(posIn2.X);
+				std::int32_t y2 = (std::int32_t)std::round(posIn2.Y);
 
 				if (x2 >= 0 && x2 < width2 && y2 >= 0 && y2 < height2) {
 					if (p1[((y1 + dy1) * stride1) + x1 + dx1] > AlphaThreshold && p2[((y2 + dy2) * stride2) + x2 + dx2] > AlphaThreshold) {
@@ -911,8 +911,8 @@ namespace Jazz2::Actors
 		}
 		transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
 
-		int width = res->Base->FrameDimensions.X;
-		int height = res->Base->FrameDimensions.Y;
+		std::int32_t width = res->Base->FrameDimensions.X;
+		std::int32_t height = res->Base->FrameDimensions.Y;
 
 		// Bounding Box intersection
 		AABBf aabbSelf;
@@ -940,19 +940,19 @@ namespace Jazz2::Actors
 
 		Vector3f yPosInAABB = Vector3f::Zero * transform;
 
-		int frame = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
-		int dx = (frame % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-		int dy = (frame / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y;
-		int stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+		std::int32_t frame = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
+		std::int32_t dx = (frame % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
+		std::int32_t dy = (frame / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y;
+		std::int32_t stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
 
 		auto p = res->Base->Mask.get();
 
-		for (int y1 = 0; y1 < height; y1 += PerPixelCollisionStep) {
+		for (std::int32_t y1 = 0; y1 < height; y1 += PerPixelCollisionStep) {
 			Vector3f posInAABB = yPosInAABB;
 
-			for (int x1 = 0; x1 < width; x1 += PerPixelCollisionStep) {
-				int x2 = (int)std::round(posInAABB.X);
-				int y2 = (int)std::round(posInAABB.Y);
+			for (std::int32_t x1 = 0; x1 < width; x1 += PerPixelCollisionStep) {
+				std::int32_t x2 = (std::int32_t)std::round(posInAABB.X);
+				std::int32_t y2 = (std::int32_t)std::round(posInAABB.Y);
 
 				if (p[((y1 + dy) * stride) + x1 + dx] > AlphaThreshold &&
 					x2 >= aabb.L && x2 < aabb.R && y2 >= aabb.T && y2 < aabb.B) {
@@ -1085,11 +1085,11 @@ namespace Jazz2::Actors
 				_renderer.Initialize(ActorRendererType::Default);
 
 				float scale = GetIceShrapnelScale();
-				for (int i = 0; i < 10; i++) {
-					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel, scale);
+				for (std::int32_t i = 0; i < 10; i++) {
+					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel, scale);
 				}
 
-				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite, scale);
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite, scale);
 
 				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 			}
@@ -1114,22 +1114,22 @@ namespace Jazz2::Actors
 		return GetState(ActorState::IsInvulnerable);
 	}
 
-	int ActorBase::GetHealth()
+	std::int32_t ActorBase::GetHealth()
 	{
 		return _health;
 	}
 
-	void ActorBase::SetHealth(int value)
+	void ActorBase::SetHealth(std::int32_t value)
 	{
 		_health = value;
 	}
 
-	int ActorBase::GetMaxHealth()
+	std::int32_t ActorBase::GetMaxHealth()
 	{
 		return _maxHealth;
 	}
 
-	void ActorBase::DecreaseHealth(int amount, ActorBase* collider)
+	void ActorBase::DecreaseHealth(std::int32_t amount, ActorBase* collider)
 	{
 		if (amount == 0) {
 			return;
@@ -1346,7 +1346,7 @@ namespace Jazz2::Actors
 		setAbsAnchorPoint(Hotspot.X, Hotspot.Y);
 	}
 
-	int ActorBase::ActorRenderer::NormalizeFrame(int frame, int min, int max)
+	int ActorBase::ActorRenderer::NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max)
 	{
 		if (frame >= min && frame < max) {
 			return frame;
