@@ -14,8 +14,10 @@ namespace Jazz2::UI::Menu
 	ControlsOptionsSection::ControlsOptionsSection()
 		: _isDirty(false)
 	{
-		// TRANSLATORS: Menu item in Options > Controls section
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _("Remap Controls") });
+		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+			// TRANSLATORS: Menu item in Options > Controls section
+			_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _f("Remap Controls for Player #%i", i + 1), false, i });
+		}
 		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });
 		// TRANSLATORS: Menu item in Options > Controls section
@@ -112,7 +114,7 @@ namespace Jazz2::UI::Menu
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		switch (_items[_selectedIndex].Item.Type) {
-			case ControlsOptionsItemType::RemapControls: _root->SwitchToSection<RemapControlsSection>(); break;
+			case ControlsOptionsItemType::RemapControls: _root->SwitchToSection<RemapControlsSection>(_items[_selectedIndex].Item.PlayerIndex); break;
 			case ControlsOptionsItemType::TouchControls: _root->SwitchToSection<TouchControlsOptionsSection>(); break;
 			case ControlsOptionsItemType::ToggleRunAction:
 				PreferencesCache::ToggleRunAction = !PreferencesCache::ToggleRunAction;

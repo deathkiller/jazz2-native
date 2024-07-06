@@ -2,8 +2,9 @@
 #include "MenuResources.h"
 #include "PauseSection.h"
 #include "../ControlScheme.h"
-#include "../../PreferencesCache.h"
 #include "../../LevelHandler.h"
+#include "../../PlayerViewport.h"
+#include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
@@ -120,11 +121,14 @@ namespace Jazz2::UI::Menu
 		float logoTranslateY = 0.0f;
 		float logoTextTranslate = 0.0f;
 
-		// Show blurred viewport behind
-		DrawTexture(*_owner->_root->_blurPass4.GetTarget(), Vector2f::Zero, 500, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
-		Vector4f ambientColor = _owner->_root->_ambientColor;
-		if (ambientColor.W < 1.0f) {
-			DrawSolid(Vector2f::Zero, 502, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
+		// Show blurred viewports behind
+		for (auto& viewport : _owner->_root->_assignedViewports) {
+			Rectf bounds = viewport->GetBounds();
+			DrawTexture(*viewport->_blurPass4.GetTarget(), Vector2f(bounds.X, bounds.Y), 500, Vector2f(bounds.W, bounds.H), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
+			Vector4f ambientColor = viewport->_ambientLight;
+			if (ambientColor.W < 1.0f) {
+				DrawSolid(Vector2f(bounds.X, bounds.Y), 502, Vector2f(bounds.W, bounds.H), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
+			}
 		}
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
@@ -462,6 +466,6 @@ namespace Jazz2::UI::Menu
 			allowGamepads = lastSection->IsGamepadNavigationEnabled();
 		}
 
-		_pressedActions |= ControlScheme::FetchNativation(0, _root->_pressedKeys, ArrayView(joyStates, joyStatesCount), allowGamepads);
+		_pressedActions |= ControlScheme::FetchNativation(_root->_pressedKeys, ArrayView(joyStates, joyStatesCount), allowGamepads);
 	}
 }

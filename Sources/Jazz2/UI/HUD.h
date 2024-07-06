@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 #include "Canvas.h"
+#include "ControlScheme.h"
 #include "Font.h"
 #include "RgbLights.h"
 #include "../ILevelHandler.h"
+#include "../PlayerViewport.h"
 #include "../Actors/Player.h"
 
 #include "../../nCine/Input/InputEvents.h"
@@ -34,7 +36,7 @@ namespace Jazz2::UI
 		void BeginFadeIn();
 		void BeginFadeOut(float delay = 0.0f);
 
-		bool IsWeaponWheelVisible() const;
+		bool IsWeaponWheelVisible(std::int32_t playerIndex) const;
 
 	private:
 		enum class TransitionState {
@@ -65,6 +67,19 @@ namespace Jazz2::UI
 				: X(0.0f), Y(0.0f), U(0.0f), V(0.0f) {}
 			Vertex(float x, float y, float u, float v)
 				: X(x), Y(y), U(u), V(v) {}
+		};
+
+		struct WeaponWheelState {
+			SmallVector<std::unique_ptr<RenderCommand>, 0> RenderCommands;
+			std::unique_ptr<Vertex[]> Vertices;
+			std::int32_t WeaponCount;
+			std::int32_t  RenderCommandsCount;
+			std::int32_t VerticesCount;
+			std::int32_t LastIndex;
+			float Anim;
+			bool Shown;
+
+			WeaponWheelState();
 		};
 
 		static constexpr std::uint32_t VertexBytes = sizeof(Vertex);
@@ -98,14 +113,7 @@ namespace Jazz2::UI
 		float _rgbAmbientLight;
 		float _rgbHealthLast;
 
-		std::int32_t _weaponWheelCount;
-		float _weaponWheelAnim;
-		bool _weaponWheelShown;
-		SmallVector<std::unique_ptr<RenderCommand>, 0> _weaponWheelRenderCommands;
-		std::int32_t  _weaponWheelRenderCommandsCount;
-		std::unique_ptr<Vertex[]> _weaponWheelVertices;
-		std::int32_t _weaponWheelVerticesCount;
-		std::int32_t _lastWeaponWheelIndex;
+		WeaponWheelState _weaponWheel[ControlScheme::MaxSupportedPlayers];
 		float _rgbLightsAnim;
 		float _rgbLightsTime;
 		TransitionState _transitionState;
@@ -120,22 +128,23 @@ namespace Jazz2::UI
 		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
 		void DrawActiveBoss(const Rectf& adjustedView);
 		void DrawLevelText(std::int32_t& charOffset);
-		void DrawCoins(std::int32_t& charOffset);
-		void DrawGems(std::int32_t& charOffset);
+		void DrawCoins(const Rectf& view, std::int32_t& charOffset);
+		void DrawGems(const Rectf& view, std::int32_t& charOffset);
 
 		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
 		void DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
 		AnimState GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
 
-		void DrawWeaponWheel(Actors::Player* player);
+		void DrawWeaponWheel(const Rectf& view, Actors::Player* player);
+		void UpdateWeaponWheel(float timeMult);
 		bool PrepareWeaponWheel(Actors::Player* player, std::int32_t& weaponCount);
 		static std::int32_t GetWeaponCount(Actors::Player* player);
-		void DrawWeaponWheelSegment(float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
+		void DrawWeaponWheelSegment(WeaponWheelState& state, float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
 
 		TouchButtonInfo CreateTouchButton(PlayerActions action, AnimState state, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
 
-		void UpdateRgbLights(float timeMult, Actors::Player* player);
+		void UpdateRgbLights(float timeMult, PlayerViewport* viewport);
 		static Color ApplyRgbGradientAlpha(Color color, std::int32_t x, std::int32_t y, float animProgress, float ambientLight);
 		static AuraLight KeyToAuraLight(KeySym key);
 	};

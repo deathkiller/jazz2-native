@@ -35,7 +35,7 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		float GetAmbientLight() const override;
+		float GetDefaultAmbientLight() const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
 
 		void OnBeginFrame() override;
@@ -69,8 +69,9 @@ namespace Jazz2::Multiplayer
 		void ShowGems(Actors::Player* player, std::int32_t count) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
-		void LimitCameraView(std::int32_t left, std::int32_t width) override;
-		void ShakeCameraView(float duration) override;
+		void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) override;
+		void ShakeCameraView(Actors::Player* player, float duration) override;
+		void ShakeCameraViewNear(Vector2f pos, float duration) override;
 		void SetTrigger(std::uint8_t triggerId, bool newState) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;
 		bool BeginPlayMusic(const StringView path, bool setDefault = false, bool forceReload = false) override;

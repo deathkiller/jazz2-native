@@ -11,6 +11,7 @@
 #include "Tiles/ITileMapOwner.h"
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
+#include "UI/ControlScheme.h"
 #include "UI/UpscaleRenderPass.h"
 #include "UI/Menu/InGameMenu.h"
 
@@ -24,6 +25,11 @@
 
 namespace Jazz2
 {
+	class LightingRenderer;
+	class BlurRenderPass;
+	class CombineRenderer;
+	class PlayerViewport;
+
 	namespace Actors
 	{
 		class Player;
@@ -55,6 +61,10 @@ namespace Jazz2
 	{
 		DEATH_RUNTIME_OBJECT(ILevelHandler);
 
+		friend class LightingRenderer;
+		friend class BlurRenderPass;
+		friend class CombineRenderer;
+		friend class PlayerViewport;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
@@ -105,8 +115,7 @@ namespace Jazz2
 		const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const override;
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
 
-		Vector2f GetCameraPos() const override { return _cameraPos; }
-		float GetAmbientLight() const override;
+		float GetDefaultAmbientLight() const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
 
 		void OnBeginFrame() override;
@@ -140,8 +149,9 @@ namespace Jazz2
 		void ShowGems(Actors::Player* player, std::int32_t count) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
-		void LimitCameraView(std::int32_t left, std::int32_t width) override;
-		void ShakeCameraView(float duration) override;
+		void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) override;
+		void ShakeCameraView(Actors::Player* player, float duration) override;
+		void ShakeCameraViewNear(Vector2f pos, float duration) override;
 		bool GetTrigger(std::uint8_t triggerId) override;
 		void SetTrigger(std::uint8_t triggerId, bool newState) override;
 		void SetWeather(WeatherType type, std::uint8_t intensity) override;
@@ -159,89 +169,23 @@ namespace Jazz2
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override { }
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;
 
-		Vector2i GetViewSize() const override { return _view->size(); }
+		Vector2i GetViewSize() const;
 
 		virtual void AttachComponents(LevelDescriptor&& descriptor);
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);
 
 	protected:
+		struct PlayerInput {
+			std::uint64_t PressedActions;
+			std::uint64_t PressedActionsLast;
+			Vector2f RequiredMovement;
+			Vector2f FrozenMovement;
+			bool Frozen;
+
+			PlayerInput();
+		};
+
 		IRootController* _root;
-
-		class LightingRenderer : public SceneNode
-		{
-		public:
-			LightingRenderer(LevelHandler* owner)
-				: _owner(owner), _renderCommandsCount(0)
-			{
-				_emittedLightsCache.reserve(32);
-				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
-			}
-
-			bool OnDraw(RenderQueue& renderQueue) override;
-
-		private:
-			LevelHandler* _owner;
-			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
-			std::int32_t _renderCommandsCount;
-			SmallVector<LightEmitter, 0> _emittedLightsCache;
-
-			RenderCommand* RentRenderCommand();
-		};
-
-		class BlurRenderPass : public SceneNode
-		{
-		public:
-			BlurRenderPass(LevelHandler* owner)
-				: _owner(owner)
-			{
-				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
-			}
-
-			void Initialize(Texture* source, std::int32_t width, std::int32_t height, const Vector2f& direction);
-			void Register();
-
-			bool OnDraw(RenderQueue& renderQueue) override;
-
-			Texture* GetTarget() const {
-				return _target.get();
-			}
-
-		private:
-			LevelHandler* _owner;
-			std::unique_ptr<Texture> _target;
-			std::unique_ptr<Viewport> _view;
-			std::unique_ptr<Camera> _camera;
-			RenderCommand _renderCommand;
-
-			Texture* _source;
-			bool _downsampleOnly;
-			Vector2f _direction;
-		};
-
-		class CombineRenderer : public SceneNode
-		{
-		public:
-			CombineRenderer(LevelHandler* owner)
-				: _owner(owner)
-			{
-				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
-			}
-
-			void Initialize(std::int32_t width, std::int32_t height);
-
-			bool OnDraw(RenderQueue& renderQueue) override;
-
-		private:
-			LevelHandler* _owner;
-			RenderCommand _renderCommand;
-			RenderCommand _renderCommandWithWater;
-			Vector2f _size;
-		};
-
-		std::unique_ptr<LightingRenderer> _lightingRenderer;
-		std::unique_ptr<CombineRenderer> _combineRenderer;
-		std::unique_ptr<Viewport> _lightingView;
-		std::unique_ptr<Texture> _lightingBuffer;
 
 		Shader* _lightingShader;
 		Shader* _blurShader;
@@ -249,18 +193,11 @@ namespace Jazz2
 		Shader* _combineShader;
 		Shader* _combineWithWaterShader;
 
-		BlurRenderPass _downsamplePass;
-		BlurRenderPass _blurPass2;
-		BlurRenderPass _blurPass1;
-		BlurRenderPass _blurPass3;
-		BlurRenderPass _blurPass4;
 		UI::UpscaleRenderPassWithClipping _upscalePass;
 
 		std::unique_ptr<SceneNode> _rootNode;
-		std::unique_ptr<Viewport> _view;
-		std::unique_ptr<Texture> _viewTexture;
-		std::unique_ptr<Camera> _camera;
 		std::unique_ptr<Texture> _noiseTexture;
+		SmallVector<std::unique_ptr<PlayerViewport>, 0> _assignedViewports;
 
 #if defined(WITH_ANGELSCRIPT)
 		std::unique_ptr<Scripting::LevelScriptLoader> _scripts;
@@ -273,6 +210,11 @@ namespace Jazz2
 		String _defaultNextLevel;
 		String _defaultSecretLevel;
 		GameDifficulty _difficulty;
+		WeatherType _weatherType;
+		std::uint8_t _weatherIntensity;
+		ExitType _nextLevelType;
+		float _nextLevelTime;
+		String _nextLevelName;
 		String _musicDefaultPath, _musicCurrentPath;
 		Recti _levelBounds;
 		bool _isReforged, _cheatsUsed;
@@ -281,28 +223,18 @@ namespace Jazz2
 		std::uint32_t _cheatsBufferLength;
 		SmallVector<String, 0> _levelTexts;
 
-		String _nextLevel;
-		ExitType _nextLevelType;
-		float _nextLevelTime;
-
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
 		std::unique_ptr<Tiles::TileMap> _tileMap;
 		Collisions::DynamicTreeBroadPhase _collisions;
 
-		float _elapsedFrames;
-		float _checkpointFrames;
+		Vector2i _viewSize;
 		Rectf _viewBounds;
 		Rectf _viewBoundsTarget;
-		Vector2f _cameraPos;
-		Vector2f _cameraLastPos;
-		Vector2f _cameraDistanceFactor;
-		Vector2f _cameraResponsiveness;
-		float _shakeDuration;
-		Vector2f _shakeOffset;
+		float _elapsedFrames;
+		float _checkpointFrames;
 		float _waterLevel;
-		float _ambientLightTarget;
-		Vector4f _ambientColor;
+		Vector4f _defaultAmbientLight;
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
@@ -312,15 +244,10 @@ namespace Jazz2
 		std::unique_ptr<UI::HUD> _hud;
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<Actors::Bosses::BossBase> _activeBoss;
-		WeatherType _weatherType;
-		std::uint8_t _weatherIntensity;
 
 		BitArray _pressedKeys;
-		std::uint64_t _pressedActions, _pressedActionsLast;
 		std::uint32_t _overrideActions;
-		Vector2f _playerRequiredMovement;
-		Vector2f _playerFrozenMovement;
-		bool _playerFrozenEnabled;
+		PlayerInput _playerInputs[UI::ControlScheme::MaxSupportedPlayers];
 
 		virtual void OnInitialized();
 		virtual void BeforeActorDestroyed(Actors::ActorBase* actor);
@@ -329,8 +256,8 @@ namespace Jazz2
 		virtual void PrepareNextLevelInitialization(LevelInitialization& levelInit);
 
 		void ResolveCollisions(float timeMult);
-		void InitializeCamera();
-		void UpdateCamera(float timeMult);
+		void AssignViewport(Actors::Player* player);
+		void InitializeCamera(PlayerViewport& viewport);
 		void UpdatePressedActions();
 		void UpdateRichPresence();
 

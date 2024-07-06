@@ -237,7 +237,7 @@ namespace Jazz2
 
 					// Controls
 					if (version >= 4) {
-						auto mappings = UI::ControlScheme::GetMappings();
+						auto mappings = UI::ControlScheme::GetAllMappings();
 
 						std::uint8_t playerCount = uc.ReadValue<std::uint8_t>();
 						std::uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
@@ -436,16 +436,17 @@ namespace Jazz2
 		co.WriteValue<std::uint8_t>((std::uint8_t)GamepadButtonLabels);
 
 		// Controls
-		auto mappings = UI::ControlScheme::GetMappings();
 		co.WriteValue<std::uint8_t>((std::uint8_t)UI::ControlScheme::MaxSupportedPlayers);
-		co.WriteValue<std::uint8_t>((std::uint8_t)mappings.size());
-		for (std::uint32_t i = 0; i < mappings.size(); i++) {
-			const auto& mapping = mappings[i];
-
-			std::uint8_t targetCount = (std::uint8_t)mapping.Targets.size();
-			co.WriteValue<std::uint8_t>(targetCount);
-			for (std::uint32_t k = 0; k < targetCount; k++) {
-				co.WriteValue<std::uint32_t>(mapping.Targets[k].Data);
+		co.WriteValue<std::uint8_t>((std::uint8_t)PlayerActions::Count);
+		for (std::int32_t i = 0; i < UI::ControlScheme::MaxSupportedPlayers; i++) {
+			auto mappings = UI::ControlScheme::GetMappings(i);
+			for (std::uint32_t j = 0; j < mappings.size(); j++) {
+				const auto& mapping = mappings[j];
+				std::uint8_t targetCount = (std::uint8_t)mapping.Targets.size();
+				co.WriteValue<std::uint8_t>(targetCount);
+				for (std::uint32_t k = 0; k < targetCount; k++) {
+					co.WriteValue<std::uint32_t>(mapping.Targets[k].Data);
+				}
 			}
 		}
 

@@ -99,9 +99,9 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	float MultiLevelHandler::GetAmbientLight() const
+	float MultiLevelHandler::GetDefaultAmbientLight() const
 	{
-		return LevelHandler::GetAmbientLight();
+		return LevelHandler::GetDefaultAmbientLight();
 	}
 
 	void MultiLevelHandler::SetAmbientLight(Actors::Player* player, float value)
@@ -121,11 +121,12 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::OnBeginFrame();
 
-		if ((_pressedActions & 0xffffffffu) != ((_pressedActions >> 32) & 0xffffffffu)) {
+		auto& input = _playerInputs[0];
+		if ((input.PressedActions & 0xffffffffu) != ((input.PressedActions >> 32) & 0xffffffffu)) {
 			MemoryStream packet(9);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::PlayerKeyPress);
 			packet.WriteVariableUint32(_lastSpawnedActorId);
-			packet.WriteVariableUint32((std::uint32_t)(_pressedActions & 0xffffffffu));
+			packet.WriteVariableUint32((std::uint32_t)(input.PressedActions & 0xffffffffu));
 			_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
 		}
 	}
@@ -1455,16 +1456,22 @@ namespace Jazz2::Multiplayer
 		return false;
 	}
 
-	void MultiLevelHandler::LimitCameraView(std::int32_t left, std::int32_t width)
+	void MultiLevelHandler::LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width)
 	{
 		// TODO: This should probably be client local
-		LevelHandler::LimitCameraView(left, width);
+		LevelHandler::LimitCameraView(player, left, width);
 	}
 
-	void MultiLevelHandler::ShakeCameraView(float duration)
+	void MultiLevelHandler::ShakeCameraView(Actors::Player* player, float duration)
 	{
 		// TODO: This should probably be client local
-		LevelHandler::ShakeCameraView(duration);
+		LevelHandler::ShakeCameraView(player, duration);
+	}
+	
+	void MultiLevelHandler::ShakeCameraViewNear(Vector2f pos, float duration)
+	{
+		// TODO: This should probably be client local
+		LevelHandler::ShakeCameraViewNear(pos, duration);
 	}
 
 	void MultiLevelHandler::SetTrigger(std::uint8_t triggerId, bool newState)

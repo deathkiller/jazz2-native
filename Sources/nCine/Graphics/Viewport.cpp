@@ -317,7 +317,6 @@ namespace nCine
 		RenderResources::setCurrentViewport(this);
 		RenderResources::setCurrentCamera(camera_);
 
-		calculateCullingRect();
 		if (rootNode_ != nullptr) {
 			ZoneScopedC(0x81A861);
 			if (rootNode_->lastFrameUpdated() < theApplication().GetFrameCount()) {
@@ -333,6 +332,8 @@ namespace nCine
 	void Viewport::visit()
 	{
 		RenderResources::setCurrentViewport(this);
+
+		calculateCullingRect();
 
 		if (rootNode_ != nullptr) {
 			ZoneScopedC(0x81A861);

@@ -603,7 +603,7 @@ namespace Jazz2::UI::Menu
 			allowGamepads = lastSection->IsGamepadNavigationEnabled();
 		}
 
-		_pressedActions |= ControlScheme::FetchNativation(0, _pressedKeys, ArrayView(joyStates, joyStatesCount), allowGamepads);
+		_pressedActions |= ControlScheme::FetchNativation(_pressedKeys, ArrayView(joyStates, joyStatesCount), allowGamepads);
 	}
 
 	void MainMenu::UpdateRichPresence()
