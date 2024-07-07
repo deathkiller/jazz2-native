@@ -280,10 +280,10 @@ namespace Jazz2
 
 		// The position to focus on
 		Vector2i halfView = _view->size() / 2;
-		Vector2f focusPos = _targetPlayer->GetPos();
+		Vector2f focusPos = _targetPlayer->_pos;
 
 		// If player doesn't move but has some speed, it's probably stuck, so reset the speed
-		Vector2f focusSpeed = _targetPlayer->GetSpeed();
+		Vector2f focusSpeed = _targetPlayer->_speed;
 		if (std::abs(_cameraLastPos.X - focusPos.X) < 1.0f) {
 			focusSpeed.X = 0.0f;
 		}
@@ -351,10 +351,12 @@ namespace Jazz2
 
 		_camera->setView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);
 
-		// TODO: Viewports
-		// Update audio listener position
-		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		device.updateListener(Vector3f(_cameraPos, 0.0f), Vector3f(focusSpeed, 0.0f));
+		// TODO: Viewports - Audio listener
+		if (_targetPlayer->_playerIndex == 0) {
+			// Update audio listener position
+			IAudioDevice& device = theServiceLocator().GetAudioDevice();
+			device.updateListener(Vector3f(_cameraPos, 0.0f), Vector3f(focusSpeed, 0.0f));
+		}
 	}
 
 	void PlayerViewport::ShakeCameraView(float duration)
