@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-06-27 00:12+0200\n"
+"POT-Creation-Date: 2024-07-07 09:12+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Consul\n"
@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.4.4\n"
+"X-Generator: Poedit 3.5\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1495,43 +1495,44 @@ msgid "Allow access to external storage"
 msgstr "Harici depolama erişimine izin ver"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:18
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:19
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:170
-msgid "Remap Controls"
-msgstr "Kontrolleri Düzenle"
+#, c-format
+msgid "Remap Controls for Player #%i"
+msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:46
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:45
 msgid "Touch Controls"
 msgstr "Dokunmatik Kontrol Ayarları"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
 msgid "Toggle Run"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:25
 msgid "Gamepad Button Labels"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:28
 msgid "Native Back Button"
 msgstr "Geri Tuşu"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:28
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
 msgid "Input Diagnostics"
 msgstr "Giriş Tanılama"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
 msgid "Controls"
 msgstr "Kontrol Ayarları"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:107
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:142
@@ -1541,7 +1542,7 @@ msgstr "Kontrol Ayarları"
 msgid "Enabled"
 msgstr "Açık"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:107
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
@@ -1552,7 +1553,6 @@ msgstr "Kapalı"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:31
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
 msgid "Character"
 msgstr "Karakter"
 
@@ -1685,7 +1685,7 @@ msgstr "Mermi ile Etkin"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:44
-#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:43
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:42
 msgid "Language"
 msgstr "Dil Ayarları"
 
@@ -1984,6 +1984,11 @@ msgstr "Ses Efektleri Seviyesi"
 msgid "Music Volume"
 msgstr "Müzik Seviyesi"
 
+#. TRANSLATORS: Menu item to select number of players
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
+msgid "Number of Local Players"
+msgstr ""
+
 #. TRANSLATORS: Menu item to select difficulty
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:20
 msgid "Difficulty"
@@ -1994,20 +1999,20 @@ msgstr "Zorluk"
 msgid "Start"
 msgstr "Oyuna Başla"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Easy"
 msgstr "Kolay"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Medium"
 msgstr "Orta"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Hard"
 msgstr "Zor"
 
 #. TRANSLATORS: Header in Options > Controls > Touch Controls section
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:50
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:49
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr ""
 "Dokunma bölgelerini tutup bırakarak bulundukları pozisyonu ayarlayabilirsin."

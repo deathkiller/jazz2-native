@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-06-27 00:11+0200\n"
-"PO-Revision-Date: 2024-06-27 00:11+0200\n"
+"POT-Creation-Date: 2024-07-07 09:09+0200\n"
+"PO-Revision-Date: 2024-07-07 09:10+0200\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n>=2 && n<=4 ? 1 : 2);\n"
-"X-Generator: Poedit 3.4.4\n"
+"X-Generator: Poedit 3.5\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1499,43 +1499,44 @@ msgid "Allow access to external storage"
 msgstr "Povolit přístup k externímu uložišti"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:18
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:19
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:170
-msgid "Remap Controls"
-msgstr "Přenastavit ovládání"
+#, c-format
+msgid "Remap Controls for Player #%i"
+msgstr "Přenastavit ovládání pro hráče %i"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:46
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:45
 msgid "Touch Controls"
 msgstr "Dotykové ovládací prvky"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
 msgid "Toggle Run"
 msgstr "Přepínat běhání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:25
 msgid "Gamepad Button Labels"
 msgstr "Popisky tlačítek na gamepadu"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:28
 msgid "Native Back Button"
 msgstr "Nativní tlačítko Zpět"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:28
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
 msgid "Input Diagnostics"
 msgstr "Diagnostika ovládání"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
 msgid "Controls"
 msgstr "Ovládání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:107
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:142
@@ -1545,7 +1546,7 @@ msgstr "Ovládání"
 msgid "Enabled"
 msgstr "Povoleno"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:107
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
@@ -1556,7 +1557,6 @@ msgstr "Zakázáno"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:31
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
 msgid "Character"
 msgstr "Postava"
 
@@ -1689,7 +1689,7 @@ msgstr "Povoleno s počtem munice"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:44
-#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:43
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:42
 msgid "Language"
 msgstr "Jazyk"
 
@@ -1988,6 +1988,11 @@ msgstr "Hlasitost zvukových efektů"
 msgid "Music Volume"
 msgstr "Hlasitost hudby"
 
+#. TRANSLATORS: Menu item to select number of players
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
+msgid "Number of Local Players"
+msgstr "Počet lokálních hráčů"
+
 #. TRANSLATORS: Menu item to select difficulty
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:20
 msgid "Difficulty"
@@ -1998,20 +2003,20 @@ msgstr "Obtížnost"
 msgid "Start"
 msgstr "Spustit hru"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Easy"
 msgstr "Lehká"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Medium"
 msgstr "Střední"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Hard"
 msgstr "Těžká"
 
 #. TRANSLATORS: Header in Options > Controls > Touch Controls section
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:50
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:49
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Pozice zón dotyku můžete upravit přetažením."
 
