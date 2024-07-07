@@ -41,7 +41,7 @@ namespace Jazz2::UI
 		if (_camera == nullptr) {
 			_camera = std::make_unique<Camera>();
 		}
-		_camera->setOrthoProjection(0.0f, width, height, 0.0f);
+		_camera->setOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
 		_camera->setView(0, 0, 0, 1);
 
 		if (_view == nullptr) {
