@@ -298,6 +298,14 @@ namespace Jazz2
 
 	void LevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
 	{
+		std::int32_t playerCount = 0;
+		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(levelInit.PlayerCarryOvers)); i++) {
+			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
+				continue;
+			}
+			playerCount++;
+		}
+
 		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(levelInit.PlayerCarryOvers)); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
@@ -315,7 +323,7 @@ namespace Jazz2
 			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
-				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
+				Vector3i((std::int32_t)spawnPosition.X + (i * 10) - (playerCount * 5), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
 				playerParams
 			));
 
@@ -374,107 +382,7 @@ namespace Jazz2
 			}
 
 			ProcessEvents(timeMult);
-
-			// Weather
-			if (_weatherType != WeatherType::None) {
-				std::int32_t weatherIntensity = std::max((std::int32_t)(_weatherIntensity * timeMult), 1);
-				for (std::int32_t i = 0; i < weatherIntensity; i++) {
-					TileMap::DebrisFlags debrisFlags;
-					if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
-						debrisFlags = TileMap::DebrisFlags::Disappear;
-					} else {
-						debrisFlags = (Random().FastFloat() > 0.7f
-							? TileMap::DebrisFlags::None
-							: TileMap::DebrisFlags::Disappear);
-					}
-
-					// TODO: Viewports
-					PlayerViewport& v = *_assignedViewports[0];
-					Vector2i viewSize = v._viewTexture->size();
-					Vector2f debrisPos = Vector2f(v._cameraPos.X + Random().FastFloat(viewSize.X * -1.5f, viewSize.X * 1.5f),
-						v._cameraPos.Y + Random().NextFloat(viewSize.Y * -1.5f, viewSize.Y * 1.5f));
-
-					WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
-					if (realWeatherType == WeatherType::Rain) {
-						auto* res = _commonResources->FindAnimation(Rain);
-						if (res != nullptr) {
-							auto& resBase = res->Base;
-							Vector2i texSize = resBase->TextureDiffuse->size();
-							float scale = Random().FastFloat(0.4f, 1.1f);
-							float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
-							float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
-
-							TileMap::DestructibleDebris debris = { };
-							debris.Pos = debrisPos;
-							debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
-							debris.Size = resBase->FrameDimensions.As<float>();
-							debris.Speed = Vector2f(speedX, speedY);
-							debris.Acceleration = Vector2f(0.0f, 0.0f);
-
-							debris.Scale = scale;
-							debris.ScaleSpeed = 0.0f;
-							debris.Angle = atan2f(speedY, speedX);
-							debris.AngleSpeed = 0.0f;
-							debris.Alpha = 1.0f;
-							debris.AlphaSpeed = 0.0f;
-
-							debris.Time = 180.0f;
-
-							std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-							std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-							std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
-							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
-							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
-							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
-							debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
-
-							debris.DiffuseTexture = resBase->TextureDiffuse.get();
-							debris.Flags = debrisFlags;
-
-							_tileMap->CreateDebris(debris);
-						}
-					} else {
-						auto* res = _commonResources->FindAnimation(Snow);
-						if (res != nullptr) {
-							auto& resBase = res->Base;
-							Vector2i texSize = resBase->TextureDiffuse->size();
-							float scale = Random().FastFloat(0.4f, 1.1f);
-							float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
-							float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
-							float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
-
-							TileMap::DestructibleDebris debris = { };
-							debris.Pos = debrisPos;
-							debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
-							debris.Size = resBase->FrameDimensions.As<float>();
-							debris.Speed = Vector2f(speedX, speedY);
-							debris.Acceleration = Vector2f(accel, -std::abs(accel));
-
-							debris.Scale = scale;
-							debris.ScaleSpeed = 0.0f;
-							debris.Angle = Random().FastFloat(0.0f, fTwoPi);
-							debris.AngleSpeed = speedX * 0.02f;
-							debris.Alpha = 1.0f;
-							debris.AlphaSpeed = 0.0f;
-
-							debris.Time = 180.0f;
-
-							std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-							std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-							std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
-							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
-							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
-							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
-							debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
-
-							debris.DiffuseTexture = resBase->TextureDiffuse.get();
-							debris.Flags = debrisFlags;
-
-							_tileMap->CreateDebris(debris);
-						}
-					}
-				}
-			}
+			ProcessWeather(timeMult);
 
 			// Active Boss
 			if (_activeBoss != nullptr && _activeBoss->GetHealth() <= 0) {
@@ -1358,7 +1266,7 @@ namespace Jazz2
 
 		if (!_players.empty()) {
 			std::size_t playerCount = _players.size();
-			SmallVector<AABBi, 2> playerZones;
+			SmallVector<AABBi, UI::ControlScheme::MaxSupportedPlayers * 2> playerZones;
 			playerZones.reserve(playerCount * 2);
 			for (std::size_t i = 0; i < playerCount; i++) {
 				auto pos = _players[i]->GetPos();
@@ -1454,6 +1362,131 @@ namespace Jazz2
 
 		for (std::int32_t i = 0; i < _players.size(); i++) {
 			levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
+		}
+	}
+
+	void LevelHandler::ProcessWeather(float timeMult)
+	{
+		if (_weatherType == WeatherType::None) {
+			return;
+		}
+
+		std::size_t playerCount = _assignedViewports.size();
+		SmallVector<Rectf, UI::ControlScheme::MaxSupportedPlayers> playerZones;
+		playerZones.reserve(playerCount);
+		for (std::size_t i = 0; i < playerCount; i++) {
+			Rectf cullingRect = _assignedViewports[i]->_view->cullingRect();
+
+			bool found = false;
+			for (std::size_t j = 0; j < playerZones.size(); j++) {
+				if (playerZones[j].Overlaps(cullingRect)) {
+					playerZones[j].Union(cullingRect);
+					found = true;
+					break;
+				}
+			}
+
+			if (!found) {
+				playerZones.emplace_back(cullingRect);
+			}
+		}
+
+		std::int32_t weatherIntensity = std::max((std::int32_t)(_weatherIntensity * timeMult), 1);
+
+		for (auto& zone : playerZones) {
+			for (std::int32_t i = 0; i < weatherIntensity; i++) {
+				TileMap::DebrisFlags debrisFlags;
+				if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
+					debrisFlags = TileMap::DebrisFlags::Disappear;
+				} else {
+					debrisFlags = (Random().FastFloat() > 0.7f
+						? TileMap::DebrisFlags::None
+						: TileMap::DebrisFlags::Disappear);
+				}
+
+				Vector2f debrisPos = Vector2f(zone.X + Random().FastFloat(zone.W * -1.0f, zone.W * 2.0f),
+					zone.Y + Random().NextFloat(zone.H * -1.0f, zone.H * 2.0f));
+
+				WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
+				if (realWeatherType == WeatherType::Rain) {
+					auto* res = _commonResources->FindAnimation(Rain);
+					if (res != nullptr) {
+						auto& resBase = res->Base;
+						Vector2i texSize = resBase->TextureDiffuse->size();
+						float scale = Random().FastFloat(0.4f, 1.1f);
+						float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
+						float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
+
+						TileMap::DestructibleDebris debris = { };
+						debris.Pos = debrisPos;
+						debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
+						debris.Size = resBase->FrameDimensions.As<float>();
+						debris.Speed = Vector2f(speedX, speedY);
+						debris.Acceleration = Vector2f(0.0f, 0.0f);
+
+						debris.Scale = scale;
+						debris.ScaleSpeed = 0.0f;
+						debris.Angle = atan2f(speedY, speedX);
+						debris.AngleSpeed = 0.0f;
+						debris.Alpha = 1.0f;
+						debris.AlphaSpeed = 0.0f;
+
+						debris.Time = 180.0f;
+
+						std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+						std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+						std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
+						debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
+						debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
+						debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
+						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+
+						debris.DiffuseTexture = resBase->TextureDiffuse.get();
+						debris.Flags = debrisFlags;
+
+						_tileMap->CreateDebris(debris);
+					}
+				} else {
+					auto* res = _commonResources->FindAnimation(Snow);
+					if (res != nullptr) {
+						auto& resBase = res->Base;
+						Vector2i texSize = resBase->TextureDiffuse->size();
+						float scale = Random().FastFloat(0.4f, 1.1f);
+						float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
+						float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
+						float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
+
+						TileMap::DestructibleDebris debris = { };
+						debris.Pos = debrisPos;
+						debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
+						debris.Size = resBase->FrameDimensions.As<float>();
+						debris.Speed = Vector2f(speedX, speedY);
+						debris.Acceleration = Vector2f(accel, -std::abs(accel));
+
+						debris.Scale = scale;
+						debris.ScaleSpeed = 0.0f;
+						debris.Angle = Random().FastFloat(0.0f, fTwoPi);
+						debris.AngleSpeed = speedX * 0.02f;
+						debris.Alpha = 1.0f;
+						debris.AlphaSpeed = 0.0f;
+
+						debris.Time = 180.0f;
+
+						std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+						std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+						std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
+						debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
+						debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
+						debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
+						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+
+						debris.DiffuseTexture = resBase->TextureDiffuse.get();
+						debris.Flags = debrisFlags;
+
+						_tileMap->CreateDebris(debris);
+					}
+				}
+			}
 		}
 	}
 

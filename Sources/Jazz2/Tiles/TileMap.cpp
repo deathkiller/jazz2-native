@@ -1201,7 +1201,7 @@ namespace Jazz2::Tiles
 
 			debris.Time -= timeMult;
 			if (debris.Time <= 0.0f) {
-				debris.AlphaSpeed = -std::min(0.02f, debris.Alpha);
+				debris.Alpha = -std::min(0.02f, debris.Alpha);
 			}
 
 			if ((debris.Flags & (DebrisFlags::Disappear | DebrisFlags::Bounce)) != DebrisFlags::None) {

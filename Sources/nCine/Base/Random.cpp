@@ -98,6 +98,6 @@ namespace nCine
 
 	float RandomGenerator::FastFloat(float min, float max)
 	{
-		return min + static_cast<float>(random(_state, _increment) / static_cast<float>(UINT32_MAX)) * (max - min);
+		return min + (static_cast<float>(random(_state, _increment)) / static_cast<float>(UINT32_MAX)) * (max - min);
 	}
 }
