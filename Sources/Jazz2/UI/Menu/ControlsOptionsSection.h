@@ -17,8 +17,9 @@ namespace Jazz2::UI::Menu
 
 	struct ControlsOptionsItem {
 		ControlsOptionsItemType Type;
-		StringView DisplayName;
+		String DisplayName;
 		bool HasBooleanValue;
+		std::int32_t PlayerIndex;
 	};
 
 	class ControlsOptionsSection : public ScrollableMenuSection<ControlsOptionsItem>

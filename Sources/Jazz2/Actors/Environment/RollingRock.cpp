@@ -193,7 +193,7 @@ namespace Jazz2::Actors::Environment
 		if (!_triggered && eventType == EventType::RollingRockTrigger && eventParams[0] == _id) {
 			_triggered = true;
 
-			_levelHandler->ShakeCameraView(60.0f);
+			_levelHandler->ShakeCameraViewNear(_pos, 60.0f);
 
 			// TODO: Shake amplitude
 			/*float distanceToPlayer;

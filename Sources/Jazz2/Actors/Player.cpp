@@ -149,7 +149,7 @@ namespace Jazz2::Actors
 		_currentWeapon = WeaponType::Blaster;
 
 		_checkpointPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
-		_checkpointLight = _levelHandler->GetAmbientLight();
+		_checkpointLight = _levelHandler->GetDefaultAmbientLight();
 		_trailLastPos = _checkpointPos;
 
 		async_return true;
@@ -232,15 +232,19 @@ namespace Jazz2::Actors
 			_lastExitType = ExitType::None;
 		}
 
-		// Process level bounds
-		Vector2f lastPos = _pos;
-		Recti levelBounds = _levelHandler->LevelBounds();
-		if (lastPos.X < levelBounds.X) {
-			lastPos.X = (float)levelBounds.X;
-			_pos = lastPos;
-		} else if (lastPos.X > levelBounds.X + levelBounds.W) {
-			lastPos.X = (float)(levelBounds.X + levelBounds.W);
-			_pos = lastPos;
+		// Process level bounds (if not warping)
+		if (_currentTransition == nullptr ||
+			(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpInFreefall &&
+			 _currentTransition->State != AnimState::TransitionWarpOut && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
+			Vector2f lastPos = _pos;
+			Recti levelBounds = _levelHandler->LevelBounds();
+			if (lastPos.X < levelBounds.X) {
+				lastPos.X = (float)levelBounds.X;
+				_pos = lastPos;
+			} else if (lastPos.X > levelBounds.X + levelBounds.W) {
+				lastPos.X = (float)(levelBounds.X + levelBounds.W);
+				_pos = lastPos;
+			}
 		}
 
 		PushSolidObjects(timeMult);
@@ -2214,7 +2218,7 @@ namespace Jazz2::Actors
 			case EventType::ModifierLimitCameraView: { // Left, Width
 				uint16_t left = *(uint16_t*)&p[0];
 				uint16_t width = *(uint16_t*)&p[2];
-				_levelHandler->LimitCameraView((left == 0 ? (int)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
+				_levelHandler->LimitCameraView(this, (left == 0 ? (int)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
 				break;
 			}
 			case EventType::ModifierHPole: {

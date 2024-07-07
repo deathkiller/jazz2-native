@@ -5,6 +5,7 @@
 
 #include "../Common.h"
 #include "../Asserts.h"
+#include "ArrayView.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -1374,6 +1375,25 @@ namespace Death { namespace Containers {
 #if SIZE_MAX > UINT32_MAX
 	extern template class SmallVectorBase<std::uint64_t>;
 #endif
+
+	namespace Implementation
+	{
+		template<class T, unsigned N> struct ArrayViewConverter<T, SmallVector<T, N>> {
+			static ArrayView<T> from(SmallVector<T, N>& other) {
+				return { other.data(), other.size() };
+			}
+			static ArrayView<T> from(SmallVector<T, N>&& other) {
+				return { other.data(), other.size() };
+			}
+		};
+		template<class T, unsigned N> struct ArrayViewConverter<const T, SmallVector<T, N>> {
+			static ArrayView<const T> from(const SmallVector<T, N>& other) {
+				return { other.data(), other.size() };
+			}
+		};
+		template<class T, unsigned N> struct ErasedArrayViewConverter<SmallVector<T, N>> : ArrayViewConverter<T, SmallVector<T, N>> {};
+		template<class T, unsigned N> struct ErasedArrayViewConverter<const SmallVector<T, N>> : ArrayViewConverter<const T, SmallVector<T, N>> {};
+	}
 
 }}
 

@@ -440,6 +440,7 @@
     <ClInclude Include="Jazz2\PitType.h" />
     <ClInclude Include="Jazz2\PlayerActions.h" />
     <ClInclude Include="Jazz2\PlayerType.h" />
+    <ClInclude Include="Jazz2\PlayerViewport.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h" />
@@ -825,6 +826,7 @@
     <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
+    <ClCompile Include="Jazz2\PlayerViewport.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />

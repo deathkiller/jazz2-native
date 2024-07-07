@@ -4,7 +4,8 @@
 
 namespace Jazz2
 {
-	enum class PlayerType : uint8_t {
+	enum class PlayerType : std::uint8_t
+	{
 		None,
 
 		Jazz,

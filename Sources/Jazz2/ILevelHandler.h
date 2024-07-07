@@ -62,8 +62,7 @@ namespace Jazz2
 		virtual const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const = 0;
 		virtual const SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
 
-		virtual Vector2f GetCameraPos() const = 0;
-		virtual float GetAmbientLight() const = 0;
+		virtual float GetDefaultAmbientLight() const = 0;
 		virtual void SetAmbientLight(Actors::Player* player, float value) = 0;
 
 		virtual void AddActor(std::shared_ptr<Actors::ActorBase> actor) = 0;
@@ -96,8 +95,9 @@ namespace Jazz2
 		virtual void ShowGems(Actors::Player* player, std::int32_t count) = 0;
 		virtual StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) = 0;
 		virtual void OverrideLevelText(std::uint32_t textId, const StringView value) = 0;
-		virtual void LimitCameraView(std::int32_t left, std::int32_t width) = 0;
-		virtual void ShakeCameraView(float duration) = 0;
+		virtual void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) = 0;
+		virtual void ShakeCameraView(Actors::Player* player, float duration) = 0;
+		virtual void ShakeCameraViewNear(Vector2f pos, float duration) = 0;
 		virtual bool GetTrigger(std::uint8_t triggerId) = 0;
 		virtual void SetTrigger(std::uint8_t triggerId, bool newState) = 0;
 		virtual void SetWeather(WeatherType type, std::uint8_t intensity) = 0;

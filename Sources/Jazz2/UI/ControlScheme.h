@@ -42,7 +42,7 @@ namespace Jazz2::UI
 		ControlScheme() = delete;
 		~ControlScheme() = delete;
 
-		static constexpr std::int32_t MaxSupportedPlayers = 1;
+		static constexpr std::int32_t MaxSupportedPlayers = 2;
 #if defined(DEATH_TARGET_SWITCH)
 		// TODO: Game is crashing on Switch if more than 1 gamepad is used
 		static constexpr std::int32_t MaxConnectedGamepads = 1;
@@ -53,9 +53,10 @@ namespace Jazz2::UI
 		static void Reset();
 
 		static ProcessedInput FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons = true);
-		static std::uint32_t FetchNativation(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool allowGamepads = true);
+		static std::uint32_t FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool allowGamepads = true);
 
-		static ArrayView<ControlSchemeMapping> GetMappings();
+		static ArrayView<ControlSchemeMapping> GetAllMappings();
+		static ArrayView<ControlSchemeMapping> GetMappings(std::int32_t playerIdx);
 
 		static MappingTarget CreateTarget(KeySym key);
 		static MappingTarget CreateTarget(std::uint32_t gamepadIndex, ButtonName button);

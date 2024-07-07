@@ -5,8 +5,10 @@
 #include "PlayerType.h"
 #include "WeaponType.h"
 
+#include <algorithm>
 #include <cstring>
 
+#include <Containers/ArrayView.h>
 #include <Containers/String.h>
 
 using namespace Death::Containers;
@@ -14,20 +16,20 @@ using namespace Death::Containers;
 namespace Jazz2
 {
 	struct PlayerCarryOver {
-		static constexpr int WeaponCount = (int)WeaponType::Count;
+		static constexpr std::int32_t WeaponCount = (std::int32_t)WeaponType::Count;
 
 		PlayerType Type;
 		WeaponType CurrentWeapon;
-		uint8_t Lives;
-		uint8_t FoodEaten;
-		int32_t Score;
-		uint16_t Ammo[WeaponCount];
-		uint8_t WeaponUpgrades[WeaponCount];
+		std::uint8_t Lives;
+		std::uint8_t FoodEaten;
+		std::int32_t Score;
+		std::uint16_t Ammo[WeaponCount];
+		std::uint8_t WeaponUpgrades[WeaponCount];
 	};
 
 	struct LevelInitialization {
-		static constexpr int MaxPlayerCount = 4;
-		static constexpr int DefaultLives = 3;
+		static constexpr std::int32_t MaxPlayerCount = 4;
+		static constexpr std::int32_t DefaultLives = 3;
 
 		String LevelName;
 		String EpisodeName;
@@ -55,7 +57,7 @@ namespace Jazz2
 
 			LastExitType = ExitType::None;
 
-			for (int i = 0; i < MaxPlayerCount; i++) {
+			for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
 				PlayerCarryOvers[i].Type = PlayerType::None;
 			}
 		}
@@ -74,12 +76,12 @@ namespace Jazz2
 			PlayerCarryOvers[0].Type = playerType;
 			PlayerCarryOvers[0].Lives = DefaultLives;
 
-			for (int i = 1; i < MaxPlayerCount; i++) {
+			for (std::int32_t i = 1; i < MaxPlayerCount; i++) {
 				PlayerCarryOvers[i].Type = PlayerType::None;
 			}
 		}
 
-		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, const PlayerType* playerTypes, int playerCount)
+		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
 			: PlayerCarryOvers{}
 		{
 			LevelName = level;
@@ -90,12 +92,13 @@ namespace Jazz2
 
 			LastExitType = ExitType::None;
 
-			for (int i = 0; i < playerCount; i++) {
+			std::int32_t playerCount = std::min((std::int32_t)playerTypes.size(), MaxPlayerCount);
+			for (std::int32_t i = 0; i < playerCount; i++) {
 				PlayerCarryOvers[i].Type = playerTypes[i];
 				PlayerCarryOvers[i].Lives = DefaultLives;
 			}
 
-			for (int i = playerCount; i < MaxPlayerCount; i++) {
+			for (std::int32_t i = playerCount; i < MaxPlayerCount; i++) {
 				PlayerCarryOvers[i].Type = PlayerType::None;
 			}
 		}

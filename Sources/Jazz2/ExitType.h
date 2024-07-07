@@ -4,7 +4,8 @@
 
 namespace Jazz2
 {
-	enum class ExitType : uint8_t {
+	enum class ExitType : std::uint8_t
+	{
 		None,
 
 		Normal,

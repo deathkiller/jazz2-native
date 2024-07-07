@@ -4,7 +4,8 @@
 
 namespace Jazz2
 {
-	enum class PitType {
+	enum class PitType
+	{
 		FallForever,
 		InstantDeathPit,
 		StandOnPlatform,

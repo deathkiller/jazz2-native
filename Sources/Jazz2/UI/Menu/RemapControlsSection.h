@@ -16,9 +16,9 @@ namespace Jazz2::UI::Menu
 	class RemapControlsSection : public ScrollableMenuSection<RemapControlsItem>
 	{
 	public:
-		static constexpr int32_t MaxTargetCount = 6;
+		static constexpr std::int32_t MaxTargetCount = 6;
 
-		RemapControlsSection();
+		RemapControlsSection(std::int32_t playerIndex);
 		~RemapControlsSection() override;
 
 		void OnUpdate(float timeMult) override;
@@ -26,7 +26,7 @@ namespace Jazz2::UI::Menu
 
 	private:
 		std::int32_t _selectedColumn;
-		std::int32_t _currentPlayerIndex;
+		std::int32_t _playerIndex;
 		float _timeout;
 		float _hintAnimation;
 		BitArray _keysPressedLast;

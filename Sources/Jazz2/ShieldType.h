@@ -4,7 +4,8 @@
 
 namespace Jazz2
 {
-	enum class ShieldType : uint8_t {
+	enum class ShieldType : uint8_t
+	{
 		None,
 
 		Fire,

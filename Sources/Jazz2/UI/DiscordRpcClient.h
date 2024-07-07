@@ -56,7 +56,7 @@ namespace Jazz2::UI
 		HANDLE _hEventWrite;
 		String _pendingFrame;
 #else
-		int _sockFd;
+		std::int32_t _sockFd;
 #endif
 		Thread _thread;
 		std::int32_t _nonce;
