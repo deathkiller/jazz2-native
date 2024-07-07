@@ -100,6 +100,7 @@ namespace Jazz2
 		static bool ShowPlayerTrails;
 		static bool LowWaterQuality;
 		static bool UnalignedViewport;
+		static bool PreferVerticalSplitscreen;
 
 		// Gameplay
 		static bool EnableReforgedGameplay;
@@ -150,6 +151,7 @@ namespace Jazz2
 			ShowPlayerTrails = 0x08,
 			LowWaterQuality = 0x10,
 			UnalignedViewport = 0x20,
+			PreferVerticalSplitscreen = 0x40,
 
 			EnableReforgedGameplay = 0x100,
 			EnableLedgeClimb = 0x200,

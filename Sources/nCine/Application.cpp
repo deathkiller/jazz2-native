@@ -667,7 +667,7 @@ namespace nCine
 
 		LOGI("Application initialized");
 #if defined(NCINE_PROFILING)
-		timings_[(int)Timings::InitCommon] = profileStartTime_.secondsSince();
+		timings_[(std::int32_t)Timings::InitCommon] = profileStartTime_.secondsSince();
 #endif
 		{
 			ZoneScopedNC("onInit", 0x81A861);
@@ -676,7 +676,7 @@ namespace nCine
 #endif
 			appEventHandler_->OnInit();
 #if defined(NCINE_PROFILING)
-			timings_[(int)Timings::AppInit] = profileStartTime_.secondsSince();
+			timings_[(std::int32_t)Timings::AppInit] = profileStartTime_.secondsSince();
 #endif
 			LOGI("IAppEventHandler::OnInit() invoked");
 		}
@@ -712,13 +712,13 @@ namespace nCine
 #endif
 
 		{
-			ZoneScopedNC("OnFrameStart", 0x81A861);
+			ZoneScopedNC("OnBeginFrame", 0x81A861);
 #if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #endif
-			appEventHandler_->OnFrameStart();
+			appEventHandler_->OnBeginFrame();
 #if defined(NCINE_PROFILING)
-			timings_[(int)Timings::FrameStart] = profileStartTime_.secondsSince();
+			timings_[(std::int32_t)Timings::BeginFrame] = profileStartTime_.secondsSince();
 #endif
 		}
 
@@ -737,7 +737,7 @@ namespace nCine
 #endif
 				screenViewport_->update();
 #if defined(NCINE_PROFILING)
-				timings_[(int)Timings::Update] = profileStartTime_.secondsSince();
+				timings_[(std::int32_t)Timings::Update] = profileStartTime_.secondsSince();
 #endif
 			}
 
@@ -748,7 +748,7 @@ namespace nCine
 #endif
 				appEventHandler_->OnPostUpdate();
 #if defined(NCINE_PROFILING)
-				timings_[(int)Timings::PostUpdate] = profileStartTime_.secondsSince();
+				timings_[(std::int32_t)Timings::PostUpdate] = profileStartTime_.secondsSince();
 #endif
 			}
 
@@ -759,7 +759,7 @@ namespace nCine
 #endif
 				screenViewport_->visit();
 #if defined(NCINE_PROFILING)
-				timings_[(int)Timings::Visit] = profileStartTime_.secondsSince();
+				timings_[(std::int32_t)Timings::Visit] = profileStartTime_.secondsSince();
 #endif
 			}
 
@@ -772,7 +772,7 @@ namespace nCine
 				RenderQueue* imguiRenderQueue = (guiSettings_.imguiViewport ? guiSettings_.imguiViewport->renderQueue_.get() : screenViewport_->renderQueue_.get());
 				imguiDrawing_->endFrame(*imguiRenderQueue);
 #	if defined(NCINE_PROFILING)
-				timings_[(int)Timings::ImGui] += profileStartTime_.secondsSince();
+				timings_[(std::int32_t)Timings::ImGui] += profileStartTime_.secondsSince();
 #	endif
 			}
 #endif
@@ -785,7 +785,7 @@ namespace nCine
 				screenViewport_->sortAndCommitQueue();
 				screenViewport_->draw();
 #if defined(NCINE_PROFILING)
-				timings_[(int)Timings::Draw] = profileStartTime_.secondsSince();
+				timings_[(std::int32_t)Timings::Draw] = profileStartTime_.secondsSince();
 #endif
 			}
 		} else {
@@ -797,7 +797,7 @@ namespace nCine
 #	endif
 				imguiDrawing_->endFrame();
 #	if defined(NCINE_PROFILING)
-				timings_[(int)Timings::ImGui] += profileStartTime_.secondsSince();
+				timings_[(std::int32_t)Timings::ImGui] += profileStartTime_.secondsSince();
 #	endif
 			}
 #endif
@@ -812,9 +812,9 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #endif
-			appEventHandler_->OnFrameEnd();
+			appEventHandler_->OnEndFrame();
 #if defined(NCINE_PROFILING)
-			timings_[(int)Timings::FrameEnd] = profileStartTime_.secondsSince();
+			timings_[(std::int32_t)Timings::EndFrame] = profileStartTime_.secondsSince();
 #endif
 		}
 

@@ -69,14 +69,14 @@ namespace nCine
 			PreInit,
 			InitCommon,
 			AppInit,
-			FrameStart,
+			BeginFrame,
 			UpdateVisitDraw,
 			Update,
 			PostUpdate,
 			Visit,
 			Draw,
 			ImGui,
-			FrameEnd,
+			EndFrame,
 
 			Count
 		};

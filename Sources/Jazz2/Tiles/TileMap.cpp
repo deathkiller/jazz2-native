@@ -158,7 +158,12 @@ namespace Jazz2::Tiles
 
 		AdvanceCollapsingTileTimers(timeMult);
 		UpdateDebris(timeMult);
+	}
 
+	void TileMap::OnEndFrame()
+	{
+		// The command cache must be reset every frame,
+		// OnDraw() is called multiple times if multiple viewports are active
 		_renderCommandsCount = 0;
 	}
 

@@ -43,14 +43,14 @@ namespace nCine
 			enum
 			{
 				FrameTime = 0,
-				FrameStart,
+				BeginFrame,
 				UpdateVisitDraw,
 				Update,
 				PostUpdate,
 				Visit,
 				Draw,
 				ImGui,
-				FrameEnd,
+				EndFrame,
 				CulledNodes,
 				VboUsed,
 				IboUsed,

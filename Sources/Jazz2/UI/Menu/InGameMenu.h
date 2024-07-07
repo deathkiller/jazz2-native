@@ -84,6 +84,8 @@ namespace Jazz2::UI::Menu
 
 		private:
 			InGameMenu* _owner;
+
+			void DrawViewportSeparators();
 		};
 
 		class MenuClippedCanvas : public Canvas

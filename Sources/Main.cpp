@@ -93,7 +93,7 @@ public:
 
 	void OnPreInit(AppConfiguration& config) override;
 	void OnInit() override;
-	void OnFrameStart() override;
+	void OnBeginFrame() override;
 	void OnPostUpdate() override;
 	void OnResizeWindow(std::int32_t width, std::int32_t height) override;
 	void OnShutdown() override;
@@ -409,7 +409,7 @@ void GameEventHandler::OnInit()
 	LOGI("Rendering resolution: %ix%i", res.X, res.Y);
 }
 
-void GameEventHandler::OnFrameStart()
+void GameEventHandler::OnBeginFrame()
 {
 	if (!_pendingCallbacks.empty()) {
 		ZoneScopedNC("Pending callbacks", 0x888888);

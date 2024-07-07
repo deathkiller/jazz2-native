@@ -158,6 +158,7 @@ namespace Jazz2::Tiles
 		void SetPitType(PitType value);
 
 		void OnUpdate(float timeMult) override;
+		void OnEndFrame();
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 		bool IsTileEmpty(std::int32_t tx, std::int32_t ty);

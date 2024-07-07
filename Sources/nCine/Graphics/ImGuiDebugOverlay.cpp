@@ -152,12 +152,12 @@ namespace nCine
 
 #if defined(NCINE_PROFILING)
 			const float* timings = theApplication().GetTimings();
-			plotValues_[ValuesType::FrameStart][index_] = timings[(int)Application::Timings::FrameStart] * 1000.0f;
+			plotValues_[ValuesType::BeginFrame][index_] = timings[(int)Application::Timings::BeginFrame] * 1000.0f;
 			if (appCfg.withScenegraph) {
 				plotValues_[ValuesType::PostUpdate][index_] = timings[(int)Application::Timings::PostUpdate] * 1000.0f;
 			}
 			plotValues_[ValuesType::ImGui][index_] = timings[(int)Application::Timings::ImGui] * 1000.0f;
-			plotValues_[ValuesType::FrameEnd][index_] = timings[(int)Application::Timings::FrameEnd] * 1000.0f;
+			plotValues_[ValuesType::EndFrame][index_] = timings[(int)Application::Timings::EndFrame] * 1000.0f;
 
 			if (appCfg.withScenegraph) {
 				plotValues_[ValuesType::UpdateVisitDraw][index_] = timings[(int)Application::Timings::Update] * 1000.0f +
@@ -1607,10 +1607,10 @@ namespace nCine
 
 		if (plotAdditionalFrameValues_) {
 			ImGui::Separator();
-			ImGui::PlotLines("OnFrameStart", plotValues_[ValuesType::FrameStart].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("OnFrameStart", plotValues_[ValuesType::BeginFrame].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 			if (appCfg.withScenegraph)
 				ImGui::PlotLines("OnPostUpdate", plotValues_[ValuesType::PostUpdate].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
-			ImGui::PlotLines("OnFrameEnd", plotValues_[ValuesType::FrameEnd].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("OnFrameEnd", plotValues_[ValuesType::EndFrame].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 			ImGui::PlotLines("ImGui", plotValues_[ValuesType::ImGui].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 		}
 #endif

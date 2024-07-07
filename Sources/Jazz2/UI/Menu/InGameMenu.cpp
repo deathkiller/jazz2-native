@@ -127,17 +127,14 @@ namespace Jazz2::UI::Menu
 			auto& viewport = viewports[i];
 			Rectf scopedView = viewport->GetBounds();
 			DrawTexture(*viewport->_blurPass4.GetTarget(), Vector2f(scopedView.X, scopedView.Y), 500, Vector2f(scopedView.W, scopedView.H), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
-			
-			if (i < viewports.size() - 1) {
-				DrawSolid(Vector2f(0.0f, scopedView.H - 1.0f), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);
-				DrawSolid(Vector2f(0.0f, scopedView.H), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
-			}
 
 			Vector4f ambientColor = viewport->_ambientLight;
 			if (ambientColor.W < 1.0f) {
 				DrawSolid(Vector2f(scopedView.X, scopedView.Y), 502, Vector2f(scopedView.W, scopedView.H), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
 			}
 		}
+
+		DrawViewportSeparators();
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
 			float arrowScale = (ViewSize.Y >= 300 ? 1.0f : 0.7f);
@@ -181,6 +178,39 @@ namespace Jazz2::UI::Menu
 		}
 
 		return true;
+	}
+
+	void InGameMenu::MenuBackgroundCanvas::DrawViewportSeparators()
+	{
+		switch (_owner->_root->_assignedViewports.size()) {
+			case 2: {
+				if (PreferencesCache::PreferVerticalSplitscreen) {
+					std::int32_t halfW = ViewSize.X / 2;
+					DrawSolid(Vector2f(halfW - 1.0f, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
+					DrawSolid(Vector2f(halfW, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);
+				} else {
+					std::int32_t halfH = ViewSize.Y / 2;
+					DrawSolid(Vector2f(0.0f, halfH - 1.0f), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);
+					DrawSolid(Vector2f(0.0f, halfH), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
+				}
+				break;
+			}
+			case 3: {
+				std::int32_t halfW = ViewSize.X / 2;
+				std::int32_t halfH = ViewSize.Y / 2;
+				DrawSolid(Vector2f(halfW, halfH), ShadowLayer, Vector2f(halfW, halfH), Colorf::Black);
+				DEATH_FALLTHROUGH
+			}
+			case 4: {
+				std::int32_t halfW = ViewSize.X / 2;
+				std::int32_t halfH = ViewSize.Y / 2;
+				DrawSolid(Vector2f(halfW - 1.0f, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
+				DrawSolid(Vector2f(halfW, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);
+				DrawSolid(Vector2f(0.0f, halfH - 1.0f), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);
+				DrawSolid(Vector2f(0.0f, halfH), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
+				break;
+			}
+		}
 	}
 
 	bool InGameMenu::MenuClippedCanvas::OnDraw(RenderQueue& renderQueue)
