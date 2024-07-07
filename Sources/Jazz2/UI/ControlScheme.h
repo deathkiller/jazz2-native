@@ -42,11 +42,12 @@ namespace Jazz2::UI
 		ControlScheme() = delete;
 		~ControlScheme() = delete;
 
-		static constexpr std::int32_t MaxSupportedPlayers = 2;
 #if defined(DEATH_TARGET_SWITCH)
+		static constexpr std::int32_t MaxSupportedPlayers = 1;
 		// TODO: Game is crashing on Switch if more than 1 gamepad is used
 		static constexpr std::int32_t MaxConnectedGamepads = 1;
 #else
+		static constexpr std::int32_t MaxSupportedPlayers = 4;
 		static constexpr std::int32_t MaxConnectedGamepads = 4;
 #endif
 

@@ -19,13 +19,13 @@ namespace nCine
 		/// Called once on application initialization
 		virtual void OnInit() { }
 		/// Called at the start of each frame
-		virtual void OnFrameStart() { }
+		virtual void OnBeginFrame() { }
 		/// Called every time the scenegraph has been traversed and all nodes have been transformed
 		virtual void OnPostUpdate() { }
 		/// Called every time a viewport is going to be drawn
 		virtual void OnDrawViewport(Viewport& viewport) { }
 		/// Called at the end of each frame, just before swapping buffers
-		virtual void OnFrameEnd() { }
+		virtual void OnEndFrame() { }
 		/// Called every time the window is resized (by the system or the user)
 		virtual void OnResizeWindow(int width, int height) { }
 		/// Called once on application shutdown

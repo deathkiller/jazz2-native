@@ -13,6 +13,7 @@ namespace Jazz2::UI::Menu
 		LowWaterQuality,
 		ShowPlayerTrails,
 		UnalignedViewport,
+		PreferVerticalSplitscreen,
 		KeepAspectRatioInCinematics,
 		ShowPerformanceMetrics
 	};

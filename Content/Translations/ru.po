@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-07-07 09:12+0200\n"
+"POT-Creation-Date: 2024-07-07 20:28+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: MAN-biker\n"
@@ -1505,59 +1505,65 @@ msgid "Allow access to external storage"
 msgstr "ДАТЬ ДОСТУП К ВНЕШНЕМУ ХРАНИЛИЩУ"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:19
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:170
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
 #, c-format
-msgid "Remap Controls for Player #%i"
+msgid "Remap Controls for Player %i"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:174
+msgid "Remap Controls"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:45
 msgid "Touch Controls"
 msgstr "СЕНСОРНОЕ УПРАВЛЕНИЕ"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:29
 msgid "Toggle Run"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:25
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
 msgid "Gamepad Button Labels"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:28
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:33
 msgid "Native Back Button"
 msgstr "ОРИГИНАЛЬНАЯ КНОПКА «НАЗАД»"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:35
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
 msgid "Input Diagnostics"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:68
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
 msgid "Controls"
 msgstr "УПРАВЛЕНИЕ"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:107
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:142
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:145
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:124
 msgid "Enabled"
 msgstr "ВКЛЮЧЕНО"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:107
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:124
 msgid "Disabled"
 msgstr "ВЫКЛЮЧЕНО"
 
@@ -1753,30 +1759,43 @@ msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
+msgid "Preferred Splitscreen"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "СОХРАНЯТЬ ПРОПОРЦИИ ВИДЕОРОЛИКОВ"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
 msgid "Performance Metrics"
 msgstr "ОТОБРАЖЕНИЕ СЧЁТЧИКА КАДРОВ"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:76
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
 msgid "Graphics"
 msgstr "ГРАФИКА"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
 msgid "Low"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
 msgid "High"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+msgid "Vertical"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+msgid "Horizontal"
 msgstr ""
 
 #. TRANSLATORS: Header in Import Episodes section
@@ -1909,7 +1928,7 @@ msgstr "БЕГ"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:183
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
 msgid "Change Weapon"
 msgstr "СМЕНА ОРУЖИЯ"
 
@@ -1925,16 +1944,16 @@ msgid "Weapon %i"
 msgstr ""
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:177
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:182
 msgid "Press any key or button to assign"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:183
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
 msgid "or"
 msgstr ""
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:189
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:194
 msgid "to remove assignment"
 msgstr ""
 

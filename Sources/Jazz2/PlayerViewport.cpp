@@ -233,7 +233,7 @@ namespace Jazz2
 		return _targetPlayer;
 	}
 
-	void PlayerViewport::OnFrameEnd()
+	void PlayerViewport::OnEndFrame()
 	{
 		_lightingView->setClearColor(_ambientLight.W, 0.0f, 0.0f, 1.0f);
 	}

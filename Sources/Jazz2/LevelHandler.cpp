@@ -404,6 +404,8 @@ namespace Jazz2
 
 		float timeMult = theApplication().GetTimeMult();
 
+		_tileMap->OnEndFrame();
+
 		if (!IsPausable() || _pauseMenu == nullptr) {
 			ResolveCollisions(timeMult);
 
@@ -415,7 +417,7 @@ namespace Jazz2
 		}
 
 		for (auto& viewport : _assignedViewports) {
-			viewport->OnFrameEnd();
+			viewport->OnEndFrame();
 		}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
@@ -450,7 +452,7 @@ namespace Jazz2
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
-		int32_t w, h;
+		std::int32_t w, h;
 		if (currentRatio > defaultRatio) {
 			w = std::min(DefaultWidth, width);
 			h = (std::int32_t)(w / currentRatio);
@@ -463,16 +465,16 @@ namespace Jazz2
 		}
 
 		_viewSize = Vector2i(w, h);
-
-		// Divide viewports 
-		h /= (std::int32_t)_assignedViewports.size();
+		_upscalePass.Initialize(w, h, width, height);
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			PlayerViewport& viewport = *_assignedViewports[i];
 			bool notInitialized = (viewport._view == nullptr);
 
+			Recti bounds = GetPlayerViewportBounds(w, h, (std::int32_t)i);
+
 			if (notInitialized) {
-				viewport._viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
+				viewport._viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, bounds.W, bounds.H);
 				viewport._view = std::make_unique<Viewport>(viewport._viewTexture.get(), Viewport::DepthStencilFormat::None);
 
 				viewport._camera = std::make_unique<Camera>();
@@ -482,14 +484,14 @@ namespace Jazz2
 				viewport._view->setRootNode(_rootNode.get());
 			} else {
 				viewport._view->removeAllTextures();
-				viewport._viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
+				viewport._viewTexture->init(nullptr, Texture::Format::RGB8, bounds.W, bounds.H);
 				viewport._view->setTexture(viewport._viewTexture.get());
 			}
 
 			viewport._viewTexture->setMagFiltering(SamplerFilter::Nearest);
 			viewport._viewTexture->setWrap(SamplerWrapping::ClampToEdge);
 
-			viewport._camera->setOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
+			viewport._camera->setOrthoProjection(0.0f, (float)bounds.W, (float)bounds.H, 0.0f);
 
 			auto& resolver = ContentResolver::Get();
 
@@ -507,42 +509,24 @@ namespace Jazz2
 				: PrecompiledShader::CombineWithWater);
 
 			if (notInitialized) {
-				viewport._lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+				viewport._lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, bounds.W, bounds.H);
 				viewport._lightingView = std::make_unique<Viewport>(viewport._lightingBuffer.get(), Viewport::DepthStencilFormat::None);
 				viewport._lightingView->setRootNode(viewport._lightingRenderer.get());
 				viewport._lightingView->setCamera(viewport._camera.get());
 			} else {
 				viewport._lightingView->removeAllTextures();
-				viewport._lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
+				viewport._lightingBuffer->init(nullptr, Texture::Format::RG8, bounds.W, bounds.H);
 				viewport._lightingView->setTexture(viewport._lightingBuffer.get());
 			}
 
 			viewport._lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
 			viewport._lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
 
-			viewport._downsamplePass.Initialize(viewport._viewTexture.get(), w / 2, h / 2, Vector2f::Zero);
-			viewport._blurPass1.Initialize(viewport._downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
-			viewport._blurPass2.Initialize(viewport._blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
-			viewport._blurPass3.Initialize(viewport._blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
-			viewport._blurPass4.Initialize(viewport._blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
-		}
-
-		_upscalePass.Initialize(_viewSize.X, _viewSize.Y, width, height);
-
-		// Viewports must be registered in reverse order
-		_upscalePass.Register();
-
-		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
-			PlayerViewport& viewport = *_assignedViewports[i];
-			bool notInitialized = (viewport._combineRenderer == nullptr);
-
-			viewport._blurPass4.Register();
-			viewport._blurPass3.Register();
-			viewport._blurPass2.Register();
-			viewport._blurPass1.Register();
-			viewport._downsamplePass.Register();
-
-			Viewport::chain().push_back(viewport._lightingView.get());
+			viewport._downsamplePass.Initialize(viewport._viewTexture.get(), bounds.W / 2, bounds.H / 2, Vector2f::Zero);
+			viewport._blurPass1.Initialize(viewport._downsamplePass.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(1.0f, 0.0f));
+			viewport._blurPass2.Initialize(viewport._blurPass1.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(0.0f, 1.0f));
+			viewport._blurPass3.Initialize(viewport._blurPass2.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(1.0f, 0.0f));
+			viewport._blurPass4.Initialize(viewport._blurPass3.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(0.0f, 1.0f));
 
 			if (notInitialized) {
 				viewport._combineRenderer = std::make_unique<CombineRenderer>(&viewport);
@@ -553,8 +537,22 @@ namespace Jazz2
 				}
 			}
 
-			viewport._combineRenderer->Initialize(0, h * (std::int32_t)i, w, h);
+			viewport._combineRenderer->Initialize(bounds.X, bounds.Y, bounds.W, bounds.H);
+		}
 
+		// Viewports must be registered in reverse order
+		_upscalePass.Register();
+
+		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
+			PlayerViewport& viewport = *_assignedViewports[i];
+
+			viewport._blurPass4.Register();
+			viewport._blurPass3.Register();
+			viewport._blurPass2.Register();
+			viewport._blurPass1.Register();
+			viewport._downsamplePass.Register();
+
+			Viewport::chain().push_back(viewport._lightingView.get());
 			Viewport::chain().push_back(viewport._view.get());
 
 			if (_pauseMenu != nullptr) {
@@ -1365,6 +1363,32 @@ namespace Jazz2
 		}
 	}
 
+	Recti LevelHandler::GetPlayerViewportBounds(std::int32_t w, std::int32_t h, std::int32_t index)
+	{
+		std::int32_t count = (std::int32_t)_assignedViewports.size();
+
+		switch (count) {
+			case 1: {
+				return Recti(0, 0, w, h);
+			}
+			case 2: {
+				if (PreferencesCache::PreferVerticalSplitscreen) {
+					std::int32_t halfW = w / 2;
+					return Recti(index * halfW, 0, halfW, h);
+				} else {
+					std::int32_t halfH = h / 2;
+					return Recti(0, index * halfH, w, halfH);
+				}
+			}
+			case 3:
+			case 4: {
+				std::int32_t halfW = (w + 1) / 2;
+				std::int32_t halfH = (h + 1) / 2;
+				return Recti((index % 2) * halfW, (index / 2) * halfH, halfW, halfH);
+			}
+		}
+	}
+
 	void LevelHandler::ProcessWeather(float timeMult)
 	{
 		if (_weatherType == WeatherType::None) {
@@ -1894,12 +1918,15 @@ namespace Jazz2
 #if defined(WITH_IMGUI)
 	ImVec2 LevelHandler::WorldPosToScreenSpace(const Vector2f pos)
 	{
-		Vector2i originalSize = _view->size();
+		auto& mainViewport = _assignedViewports[0];
+		
+		Rectf bounds = mainViewport->GetBounds();
+		Vector2i originalSize = mainViewport->_view->size();
 		Vector2f upscaledSize = _upscalePass.GetTargetSize();
-		Vector2i halfView = originalSize / 2;
+		Vector2f halfView = bounds.Center();
 		return ImVec2(
-			(pos.X - _cameraPos.X + halfView.X) * upscaledSize.X / originalSize.X,
-			(pos.Y - _cameraPos.Y + halfView.Y) * upscaledSize.Y / originalSize.Y
+			(pos.X - mainViewport->_cameraPos.X + halfView.X) * upscaledSize.X / originalSize.X,
+			(pos.Y - mainViewport->_cameraPos.Y + halfView.Y) * upscaledSize.Y / originalSize.Y
 		);
 	}
 #endif

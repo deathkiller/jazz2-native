@@ -14,9 +14,14 @@ namespace Jazz2::UI::Menu
 	ControlsOptionsSection::ControlsOptionsSection()
 		: _isDirty(false)
 	{
-		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+		if (ControlScheme::MaxSupportedPlayers > 1) {
+			for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+				// TRANSLATORS: Menu item in Options > Controls section
+				_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _f("Remap Controls for Player %i", i + 1), false, i });
+			}
+		} else {
 			// TRANSLATORS: Menu item in Options > Controls section
-			_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _f("Remap Controls for Player #%i", i + 1), false, i });
+			_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _("Remap Controls") });
 		}
 		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });
@@ -66,7 +71,7 @@ namespace Jazz2::UI::Menu
 
 	void ControlsOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		item.Height = (item.Item.HasBooleanValue ? 52 : ItemHeight * 8 / 7);
+		item.Height = (item.Item.HasBooleanValue ? 52 : (item.Item.Type == ControlsOptionsItemType::RemapControls ? (ItemHeight * 4 / 5) : (ItemHeight * 8 / 7)));
 	}
 
 	void ControlsOptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected)

@@ -197,11 +197,6 @@ namespace Jazz2::UI
 			adjustedScopedView.X = left;
 			adjustedScopedView.W = right - left;
 
-			if (i < _levelHandler->_assignedViewports.size() - 1) {
-				DrawSolid(Vector2f(0.0f, scopedView.H - 1.0f), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
-				DrawSolid(Vector2f(0.0f, scopedView.H), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			}
-
 			DrawHealth(scopedView, adjustedScopedView, player);
 			DrawScore(scopedView, player);
 			DrawWeaponAmmo(adjustedScopedView, player);
@@ -209,6 +204,7 @@ namespace Jazz2::UI
 			DrawWeaponWheel(scopedView, player);
 		}
 
+		DrawViewportSeparators();
 		DrawCoins(view, charOffset);
 		DrawGems(view, charOffset);
 		DrawActiveBoss(adjustedView);
@@ -733,6 +729,39 @@ namespace Jazz2::UI
 		if (_levelTextTime > TotalTime) {
 			_levelTextTime = -1.0f;
 			_levelText = { };
+		}
+	}
+
+	void HUD::DrawViewportSeparators()
+	{
+		switch (_levelHandler->_assignedViewports.size()) {
+			case 2: {
+				if (PreferencesCache::PreferVerticalSplitscreen) {
+					std::int32_t halfW = ViewSize.X / 2;
+					DrawSolid(Vector2f(halfW - 1.0f, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+					DrawSolid(Vector2f(halfW, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+				} else {
+					std::int32_t halfH = ViewSize.Y / 2;
+					DrawSolid(Vector2f(0.0f, halfH - 1.0f), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+					DrawSolid(Vector2f(0.0f, halfH), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+				}
+				break;
+			}
+			case 3: {
+				std::int32_t halfW = ViewSize.X / 2;
+				std::int32_t halfH = ViewSize.Y / 2;
+				DrawSolid(Vector2f(halfW, halfH), ShadowLayer, Vector2f(halfW, halfH), Colorf::Black);
+				DEATH_FALLTHROUGH
+			}
+			case 4: {
+				std::int32_t halfW = ViewSize.X / 2;
+				std::int32_t halfH = ViewSize.Y / 2;
+				DrawSolid(Vector2f(halfW - 1.0f, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+				DrawSolid(Vector2f(halfW, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+				DrawSolid(Vector2f(0.0f, halfH - 1.0f), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+				DrawSolid(Vector2f(0.0f, halfH), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+				break;
+			}
 		}
 	}
 

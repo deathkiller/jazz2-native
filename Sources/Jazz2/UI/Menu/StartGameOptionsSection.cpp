@@ -195,8 +195,8 @@ namespace Jazz2::UI::Menu
 					offset = 50.0f;
 					spacing = 100.0f;
 				} else {
-					offset = 100.0f;
-					spacing = 300.0f / _availableCharacters;
+					offset = 36.0f + 20.0f * ControlScheme::MaxSupportedPlayers;
+					spacing = 300.0f / ControlScheme::MaxSupportedPlayers;
 				}
 
 				if (contentBounds.W < 480) {
@@ -217,10 +217,10 @@ namespace Jazz2::UI::Menu
 						_root->DrawElement(MenuGlow, 0, x, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (j + 3) * 0.4f, 2.2f, true, true);
 
 						_root->DrawStringShadow(stringBuffer, charOffset, x, center.Y + 28.0f, IMenuContainer::FontLayer,
-							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
+							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 1.0f);
 					} else {
 						_root->DrawStringShadow(stringBuffer, charOffset, x, center.Y + 28.0f, IMenuContainer::FontLayer,
-							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
+							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 1.0f);
 					}
 				}
 

@@ -30,6 +30,7 @@ namespace Jazz2::UI
 		void OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions);
 
 		void ShowLevelText(const StringView text);
+		void DrawViewportSeparators();
 		void ShowCoins(std::int32_t count);
 		void ShowGems(std::int32_t count);
 

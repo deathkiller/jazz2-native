@@ -112,7 +112,7 @@ namespace Jazz2
 
 		Rectf GetBounds() const;
 		Actors::Player* GetTargetPlayer() const;
-		void OnFrameEnd();
+		void OnEndFrame();
 		void UpdateCamera(float timeMult);
 		void ShakeCameraView(float duration);
 		void WarpCameraToTarget(bool fast);

@@ -29,6 +29,7 @@ namespace Jazz2
 	bool PreferencesCache::ShowPlayerTrails = true;
 	bool PreferencesCache::LowWaterQuality = false;
 	bool PreferencesCache::UnalignedViewport = false;
+	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;
@@ -187,6 +188,7 @@ namespace Jazz2
 					ShowPlayerTrails = ((boolOptions & BoolOptions::ShowPlayerTrails) == BoolOptions::ShowPlayerTrails);
 					LowWaterQuality = ((boolOptions & BoolOptions::LowWaterQuality) == BoolOptions::LowWaterQuality);
 					UnalignedViewport = ((boolOptions & BoolOptions::UnalignedViewport) == BoolOptions::UnalignedViewport);
+					PreferVerticalSplitscreen = ((boolOptions & BoolOptions::PreferVerticalSplitscreen) == BoolOptions::PreferVerticalSplitscreen);
 					EnableReforgedGameplay = ((boolOptions & BoolOptions::EnableReforgedGameplay) == BoolOptions::EnableReforgedGameplay);
 					EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 					WeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel ? WeaponWheelStyle::Enabled : WeaponWheelStyle::Disabled);
@@ -399,6 +401,7 @@ namespace Jazz2
 		if (ShowPlayerTrails) boolOptions |= BoolOptions::ShowPlayerTrails;
 		if (LowWaterQuality) boolOptions |= BoolOptions::LowWaterQuality;
 		if (UnalignedViewport) boolOptions |= BoolOptions::UnalignedViewport;
+		if (PreferVerticalSplitscreen) boolOptions |= BoolOptions::PreferVerticalSplitscreen;
 		if (EnableReforgedGameplay) boolOptions |= BoolOptions::EnableReforgedGameplay;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (WeaponWheel != WeaponWheelStyle::Disabled) boolOptions |= BoolOptions::EnableWeaponWheel;
