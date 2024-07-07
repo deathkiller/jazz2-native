@@ -81,7 +81,7 @@ namespace Jazz2::Actors::Bosses
 		TryStandardMovement(timeMult, params);
 		OnUpdateHitbox();
 		if (params.TilesDestroyed > 0) {
-			_levelHandler->ShakeCameraView(20.0f);
+			_levelHandler->ShakeCameraViewNear(_pos, 20.0f);
 		}
 
 		HandleBlinking(timeMult);
@@ -146,7 +146,7 @@ namespace Jazz2::Actors::Bosses
 							));
 							_levelHandler->AddActor(brick);
 
-							_levelHandler->ShakeCameraView(20.0f);
+							_levelHandler->ShakeCameraViewNear(_pos, 20.0f);
 						});
 					});
 				}

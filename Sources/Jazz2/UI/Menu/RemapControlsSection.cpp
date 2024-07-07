@@ -9,8 +9,8 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	RemapControlsSection::RemapControlsSection()
-		: _selectedColumn(0), _currentPlayerIndex(0), _isDirty(false), _waitForInput(false), _timeout(0.0f),
+	RemapControlsSection::RemapControlsSection(std::int32_t playerIndex)
+		: _selectedColumn(0), _playerIndex(playerIndex), _isDirty(false), _waitForInput(false), _timeout(0.0f),
 			_hintAnimation(0.0f), _keysPressedLast(ValueInit, (std::size_t)KeySym::COUNT)
 	{
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
@@ -119,7 +119,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			for (std::size_t key = 0; key < (std::size_t)KeySym::COUNT && waitingForInput; key++) {
+			for (std::int32_t key = 0; key < (std::int32_t)KeySym::COUNT && waitingForInput; key++) {
 				bool isPressed = keyState.isKeyDown((KeySym)key);
 				if (isPressed != _keysPressedLast[key]) {
 					_keysPressedLast.set(key, isPressed);
@@ -139,7 +139,7 @@ namespace Jazz2::UI::Menu
 			}
 
 			if (!waitingForInput) {
-				auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)_items[_selectedIndex].Item.Type];
+				auto& mapping = ControlScheme::GetMappings(_playerIndex)[(std::int32_t)_items[_selectedIndex].Item.Type];
 				if (_selectedColumn < mapping.Targets.size()) {
 					mapping.Targets[_selectedColumn] = newTarget;
 				} else {
@@ -167,7 +167,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_f("Remap Controls for Player #%i", _playerIndex + 1), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		if (_waitForInput) {
@@ -177,8 +177,8 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset, centerX, contentBounds.Y + contentBounds.H - 18.0f * IMenuContainer::EaseOutCubic(_hintAnimation), IMenuContainer::FontLayer,
 				Alignment::Center, textColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else {
-			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
-			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0)) {
+			auto& mapping = ControlScheme::GetMappings(_playerIndex)[_selectedIndex];
+			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (std::int32_t)PlayerActions::Menu && _selectedColumn == 0)) {
 				char stringBuffer[64];
 				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:#d0705d]%s\f[/c] %s ", _("Change Weapon").data(), _("or").data());
 
@@ -202,7 +202,7 @@ namespace Jazz2::UI::Menu
 		float centerX = canvas->ViewSize.X * 0.5f;
 		char stringBuffer[16];
 
-		auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)item.Item.Type];
+		const auto& mapping = ControlScheme::GetMappings(_playerIndex)[(std::int32_t)item.Item.Type];
 
 		if (isSelected) {
 			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer - 200, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
@@ -303,7 +303,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		auto* mapping = &ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count];
+		auto mapping = ControlScheme::GetMappings(_playerIndex);
 
 		if (_root->ActionHit(PlayerActions::Menu)) {
 			OnBackPressed();
@@ -368,7 +368,7 @@ namespace Jazz2::UI::Menu
 
 	void RemapControlsSection::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
 	{
-		auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + newIndex];
+		auto& mapping = ControlScheme::GetMappings(_playerIndex)[newIndex];
 
 		float centerX = viewSize.X / 2;
 		float firstColumnX = centerX * (0.81f - 0.1f);
@@ -450,7 +450,7 @@ namespace Jazz2::UI::Menu
 	bool RemapControlsSection::HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment)
 	{
 		for (std::int32_t i = 0; i < (std::int32_t)PlayerActions::Count; i++) {
-			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + i];
+			auto& mapping = ControlScheme::GetMappings(_playerIndex)[i];
 			std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
 			for (std::int32_t j = 0; j < targetCount; j++) {
 				if (mapping.Targets[j].Data == target.Data) {

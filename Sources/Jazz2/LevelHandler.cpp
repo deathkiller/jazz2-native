@@ -1,6 +1,6 @@
 ﻿#include "LevelHandler.h"
+#include "PlayerViewport.h"
 #include "PreferencesCache.h"
-#include "UI/ControlScheme.h"
 #include "UI/HUD.h"
 #include "../Common.h"
 
@@ -17,13 +17,13 @@
 #include "../nCine/ServiceLocator.h"
 #include "../nCine/tracy.h"
 #include "../nCine/Input/IInputEventHandler.h"
+#include "../nCine/Base/Random.h"
 #include "../nCine/Graphics/Camera.h"
 #include "../nCine/Graphics/Sprite.h"
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
 #include "../nCine/Graphics/RenderQueue.h"
 #include "../nCine/Audio/AudioReaderMpt.h"
-#include "../nCine/Base/Random.h"
 
 #include "Actors/Player.h"
 #include "Actors/SolidObjectBase.h"
@@ -51,17 +51,16 @@ namespace Jazz2
 	LevelHandler::LevelHandler(IRootController* root)
 		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
-			_cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
-			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0), _pressedActionsLast(0), _overrideActions(0),
-			_playerFrozenEnabled(false)
+			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _overrideActions(0)
 	{
 	}
 
 	LevelHandler::~LevelHandler()
 	{
 		// Remove nodes from UpscaleRenderPass
-		_combineRenderer->setParent(nullptr);
+		for (auto& viewport : _assignedViewports) {
+			viewport->_combineRenderer->setParent(nullptr);
+		}
 		_hud->setParent(nullptr);
 
 		TracyPlot("Actors", 0LL);
@@ -157,6 +156,7 @@ namespace Jazz2
 			Actors::Player* ptr = player.get();
 			_players.push_back(ptr);
 			AddActor(player);
+			AssignViewport(ptr);
 		}
 
 		OnInitialized();
@@ -214,18 +214,22 @@ namespace Jazz2
 		return _players;
 	}
 
-	float LevelHandler::GetAmbientLight() const
+	float LevelHandler::GetDefaultAmbientLight() const
 	{
-		return _ambientLightTarget;
+		return _defaultAmbientLight.W;
 	}
 
 	void LevelHandler::SetAmbientLight(Actors::Player* player, float value)
 	{
-		_ambientLightTarget = value;
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				viewport->_ambientLightTarget = value;
 
-		// Skip transition if it was changed at the beginning of level
-		if (_elapsedFrames < FrameTimer::FramesPerSecond * 0.25f) {
-			_ambientColor.W = value;
+				// Skip transition if it was changed at the beginning of level
+				if (_elapsedFrames < FrameTimer::FramesPerSecond * 0.25f) {
+					viewport->_ambientLight.W = value;
+				}
+			}
 		}
 	}
 
@@ -254,8 +258,7 @@ namespace Jazz2
 		_viewBounds = _levelBounds.As<float>();
 		_viewBoundsTarget = _viewBounds;		
 
-		_ambientColor = descriptor.AmbientColor;
-		_ambientLightTarget = descriptor.AmbientColor.W;
+		_defaultAmbientLight = descriptor.AmbientColor;
 
 		_weatherType = descriptor.Weather;
 		_weatherIntensity = descriptor.WeatherIntensity;
@@ -319,6 +322,7 @@ namespace Jazz2
 			Actors::Player* ptr = player.get();
 			_players.push_back(ptr);
 			AddActor(player);
+			AssignViewport(ptr);
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
@@ -384,9 +388,11 @@ namespace Jazz2
 							: TileMap::DebrisFlags::Disappear);
 					}
 
-					Vector2i viewSize = _viewTexture->size();
-					Vector2f debrisPos = Vector2f(_cameraPos.X + Random().FastFloat(viewSize.X * -1.5f, viewSize.X * 1.5f),
-						_cameraPos.Y + Random().NextFloat(viewSize.Y * -1.5f, viewSize.Y * 1.5f));
+					// TODO: Viewports
+					PlayerViewport& v = *_assignedViewports[0];
+					Vector2i viewSize = v._viewTexture->size();
+					Vector2f debrisPos = Vector2f(v._cameraPos.X + Random().FastFloat(viewSize.X * -1.5f, viewSize.X * 1.5f),
+						v._cameraPos.Y + Random().NextFloat(viewSize.Y * -1.5f, viewSize.Y * 1.5f));
 
 					WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
 					if (realWeatherType == WeatherType::Rain) {
@@ -493,22 +499,16 @@ namespace Jazz2
 		if (!IsPausable() || _pauseMenu == nullptr) {
 			ResolveCollisions(timeMult);
 
-			// Ambient Light Transition
-			if (_ambientColor.W != _ambientLightTarget) {
-				float step = timeMult * 0.012f;
-				if (std::abs(_ambientColor.W - _ambientLightTarget) < step) {
-					_ambientColor.W = _ambientLightTarget;
-				} else {
-					_ambientColor.W += step * ((_ambientLightTarget < _ambientColor.W) ? -1.0f : 1.0f);
-				}
+			for (auto& viewport : _assignedViewports) {
+				viewport->UpdateCamera(timeMult);
 			}
-
-			UpdateCamera(timeMult);
 
 			_elapsedFrames += timeMult;
 		}
 
-		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
+		for (auto& viewport : _assignedViewports) {
+			viewport->OnFrameEnd();
+		}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		if (PreferencesCache::ShowPerformanceMetrics) {
@@ -554,94 +554,112 @@ namespace Jazz2
 			h = std::min(DefaultHeight, height);
 		}
 
-		bool notInitialized = (_view == nullptr);
+		_viewSize = Vector2i(w, h);
 
-		if (notInitialized) {
-			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
-			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
+		// Divide viewports 
+		h /= (std::int32_t)_assignedViewports.size();
 
-			_camera = std::make_unique<Camera>();
-			InitializeCamera();
+		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
+			PlayerViewport& viewport = *_assignedViewports[i];
+			bool notInitialized = (viewport._view == nullptr);
 
-			_view->setCamera(_camera.get());
-			_view->setRootNode(_rootNode.get());
-		} else {
-			_view->removeAllTextures();
-			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
-			_view->setTexture(_viewTexture.get());
+			if (notInitialized) {
+				viewport._viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
+				viewport._view = std::make_unique<Viewport>(viewport._viewTexture.get(), Viewport::DepthStencilFormat::None);
+
+				viewport._camera = std::make_unique<Camera>();
+				InitializeCamera(viewport);
+
+				viewport._view->setCamera(viewport._camera.get());
+				viewport._view->setRootNode(_rootNode.get());
+			} else {
+				viewport._view->removeAllTextures();
+				viewport._viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
+				viewport._view->setTexture(viewport._viewTexture.get());
+			}
+
+			viewport._viewTexture->setMagFiltering(SamplerFilter::Nearest);
+			viewport._viewTexture->setWrap(SamplerWrapping::ClampToEdge);
+
+			viewport._camera->setOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
+
+			auto& resolver = ContentResolver::Get();
+
+			if (viewport._lightingRenderer == nullptr) {
+				_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
+				_blurShader = resolver.GetShader(PrecompiledShader::Blur);
+				_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
+				_combineShader = resolver.GetShader(PrecompiledShader::Combine);
+
+				viewport._lightingRenderer = std::make_unique<LightingRenderer>(&viewport);
+			}
+
+			_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
+				? PrecompiledShader::CombineWithWaterLow
+				: PrecompiledShader::CombineWithWater);
+
+			if (notInitialized) {
+				viewport._lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+				viewport._lightingView = std::make_unique<Viewport>(viewport._lightingBuffer.get(), Viewport::DepthStencilFormat::None);
+				viewport._lightingView->setRootNode(viewport._lightingRenderer.get());
+				viewport._lightingView->setCamera(viewport._camera.get());
+			} else {
+				viewport._lightingView->removeAllTextures();
+				viewport._lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
+				viewport._lightingView->setTexture(viewport._lightingBuffer.get());
+			}
+
+			viewport._lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
+			viewport._lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
+
+			viewport._downsamplePass.Initialize(viewport._viewTexture.get(), w / 2, h / 2, Vector2f::Zero);
+			viewport._blurPass1.Initialize(viewport._downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
+			viewport._blurPass2.Initialize(viewport._blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
+			viewport._blurPass3.Initialize(viewport._blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
+			viewport._blurPass4.Initialize(viewport._blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
 		}
 
-		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
-		_viewTexture->setWrap(SamplerWrapping::ClampToEdge);
-
-		_camera->setOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
-
-		auto& resolver = ContentResolver::Get();
-
-		if (_lightingRenderer == nullptr) {			
-			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
-			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
-			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
-			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
-
-			_lightingRenderer = std::make_unique<LightingRenderer>(this);
-		}
-
-		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
-			? PrecompiledShader::CombineWithWaterLow
-			: PrecompiledShader::CombineWithWater);
-
-		if (notInitialized) {
-			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
-			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::None);
-			_lightingView->setRootNode(_lightingRenderer.get());
-			_lightingView->setCamera(_camera.get());
-		} else {
-			_lightingView->removeAllTextures();
-			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
-			_lightingView->setTexture(_lightingBuffer.get());
-		}
-
-		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
-		_lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
-
-		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f::Zero);
-		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
-		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
-		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
-		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
-		_upscalePass.Initialize(w, h, width, height);
+		_upscalePass.Initialize(_viewSize.X, _viewSize.Y, width, height);
 
 		// Viewports must be registered in reverse order
 		_upscalePass.Register();
-		_blurPass4.Register();
-		_blurPass3.Register();
-		_blurPass2.Register();
-		_blurPass1.Register();
-		_downsamplePass.Register();
 
-		Viewport::chain().push_back(_lightingView.get());
+		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
+			PlayerViewport& viewport = *_assignedViewports[i];
+			bool notInitialized = (viewport._combineRenderer == nullptr);
 
-		if (notInitialized) {
-			_combineRenderer = std::make_unique<CombineRenderer>(this);
-			_combineRenderer->setParent(_upscalePass.GetNode());
+			viewport._blurPass4.Register();
+			viewport._blurPass3.Register();
+			viewport._blurPass2.Register();
+			viewport._blurPass1.Register();
+			viewport._downsamplePass.Register();
 
-			if (_hud != nullptr) {
-				_hud->setParent(_upscalePass.GetNode());
+			Viewport::chain().push_back(viewport._lightingView.get());
+
+			if (notInitialized) {
+				viewport._combineRenderer = std::make_unique<CombineRenderer>(&viewport);
+				viewport._combineRenderer->setParent(_upscalePass.GetNode());
+
+				if (_hud != nullptr) {
+					_hud->setParent(_upscalePass.GetNode());
+				}
+			}
+
+			viewport._combineRenderer->Initialize(0, h * (std::int32_t)i, w, h);
+
+			Viewport::chain().push_back(viewport._view.get());
+
+			if (_pauseMenu != nullptr) {
+				viewport.UpdateCamera(0.0f);	// Force update camera if game is paused
 			}
 		}
-
-		_combineRenderer->Initialize(w, h);
-
-		Viewport::chain().push_back(_view.get());
 
 		if (_tileMap != nullptr) {
 			_tileMap->OnInitializeViewport();
 		}
 
 		if (_pauseMenu != nullptr) {
-			_pauseMenu->OnInitializeViewport(w, h);
-			UpdateCamera(0.0f);	// Force update camera if game is paused
+			_pauseMenu->OnInitializeViewport(_viewSize.X, _viewSize.Y);
 		}
 	}
 
@@ -804,21 +822,10 @@ namespace Jazz2
 
 	void LevelHandler::WarpCameraToTarget(Actors::ActorBase* actor, bool fast)
 	{
-		// TODO: Allow multiple cameras
-		if (_players[0] != actor) {
-			return;
-		}
-
-		Vector2f focusPos = actor->_pos;
-		if (!fast) {
-			_cameraPos = focusPos;
-			_cameraLastPos = _cameraPos;
-			_cameraDistanceFactor = Vector2f(0.0f, 0.0f);
-			_cameraResponsiveness = Vector2f(1.0f, 1.0f);
-		} else {
-			Vector2f diff = _cameraLastPos - _cameraPos;
-			_cameraPos = focusPos;
-			_cameraLastPos = _cameraPos + diff;
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == actor) {
+				viewport->WarpCameraToTarget(fast);
+			}
 		}
 	}
 
@@ -1015,7 +1022,7 @@ namespace Jazz2
 			return;
 		}
 
-		_nextLevel = nextLevel;
+		_nextLevelName = nextLevel;
 		_nextLevelType = exitType;
 		
 		if ((exitType & ExitType::FastTransition) == ExitType::FastTransition) {
@@ -1083,8 +1090,17 @@ namespace Jazz2
 	{
 		_checkpointFrames = ElapsedFrames();
 
+		// All players will be respawned at the checkpoint, so also set the same ambient light
+		float ambientLight = _defaultAmbientLight.W;
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				viewport->_ambientLightTarget;
+				break;
+			}
+		}
+
 		for (auto& player : _players) {
-			player->SetCheckpoint(pos, _ambientLightTarget);
+			player->SetCheckpoint(pos, ambientLight);
 		}
 
 		if (_difficulty != GameDifficulty::Multiplayer) {
@@ -1095,7 +1111,7 @@ namespace Jazz2
 	void LevelHandler::RollbackToCheckpoint(Actors::Player* player)
 	{
 		// Reset the camera
-		LimitCameraView(0, 0);
+		LimitCameraView(player, 0, 0);
 
 		WarpCameraToTarget(player);
 
@@ -1228,13 +1244,10 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
-		if (index != 0) {
-			return false;
-		}
-
 		isGamepad = false;
-		if ((_pressedActions & (1ull << (std::int32_t)action)) != 0) {
-			isGamepad = (_pressedActions & (1ull << (32 + (std::int32_t)action))) != 0;
+		auto& input = _playerInputs[index];
+		if ((input.PressedActions & (1ull << (std::int32_t)action)) != 0) {
+			isGamepad = (input.PressedActions & (1ull << (32 + (std::int32_t)action))) != 0;
 			return true;
 		}
 
@@ -1249,13 +1262,10 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
-		if (index != 0) {
-			return false;
-		}
-
 		isGamepad = false;
-		if ((_pressedActions & (1ull << (std::int32_t)action)) != 0 && (_pressedActionsLast & (1ull << (std::int32_t)action)) == 0) {
-			isGamepad = (_pressedActions & (1ull << (32 + (std::int32_t)action))) != 0;
+		auto& input = _playerInputs[index];
+		if ((input.PressedActions & (1ull << (std::int32_t)action)) != 0 && (input.PressedActionsLast & (1ull << (std::int32_t)action)) == 0) {
+			isGamepad = (input.PressedActions & (1ull << (32 + (std::int32_t)action))) != 0;
 			return true;
 		}
 
@@ -1264,20 +1274,14 @@ namespace Jazz2
 
 	float LevelHandler::PlayerHorizontalMovement(std::int32_t index)
 	{
-		if (index != 0) {
-			return 0.0f;
-		}
-
-		return (_playerFrozenEnabled ? _playerFrozenMovement.X : _playerRequiredMovement.X);
+		auto& input = _playerInputs[index];
+		return (input.Frozen ? input.FrozenMovement.X : input.RequiredMovement.X);
 	}
 
 	float LevelHandler::PlayerVerticalMovement(std::int32_t index)
 	{
-		if (index != 0) {
-			return 0.0f;
-		}
-
-		return (_playerFrozenEnabled ? _playerFrozenMovement.Y : _playerRequiredMovement.Y);
+		auto& input = _playerInputs[index];
+		return (input.Frozen ? input.FrozenMovement.Y : input.RequiredMovement.Y);
 	}
 
 	bool LevelHandler::SerializeResumableToStream(Stream& dest)
@@ -1336,6 +1340,11 @@ namespace Jazz2
 			));
 			AddActor(iceBlock);
 		}
+	}
+
+	Vector2i LevelHandler::GetViewSize() const
+	{
+		return _viewSize;
 	}
 
 	void LevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)
@@ -1420,8 +1429,8 @@ namespace Jazz2
 	void LevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
 	{
 		StringView realNextLevel;
-		if (!_nextLevel.empty()) {
-			realNextLevel = _nextLevel;
+		if (!_nextLevelName.empty()) {
+			realNextLevel = _nextLevelName;
 		} else {
 			realNextLevel = ((_nextLevelType & ExitType::TypeMask) == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
 		}
@@ -1498,142 +1507,38 @@ namespace Jazz2
 		_collisions.UpdatePairs(&helper);
 	}
 
-	void LevelHandler::InitializeCamera()
+	void LevelHandler::AssignViewport(Actors::Player* player)
 	{
-		if (_players.empty()) {
+		_assignedViewports.emplace_back(std::make_unique<PlayerViewport>(this, player));
+	}
+
+	void LevelHandler::InitializeCamera(PlayerViewport& viewport)
+	{
+		if (viewport._targetPlayer == nullptr) {
 			return;
 		}
 
-		auto* targetObj = _players[0];
-
 		// The position to focus on
-		Vector2f focusPos = targetObj->_pos;
-		Vector2i halfView = _view->size() / 2;
+		Vector2f focusPos = viewport._targetPlayer->_pos;
+		Vector2i halfView = viewport._view->size() / 2;
 
 		// Clamp camera position to level bounds
 		if (_viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::round(std::clamp(focusPos.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X));
+			viewport._cameraPos.X = std::round(std::clamp(focusPos.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X));
 		} else {
-			_cameraPos.X = std::round(_viewBounds.X + _viewBounds.W * 0.5f);
+			viewport._cameraPos.X = std::round(_viewBounds.X + _viewBounds.W * 0.5f);
 		}
 		if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::round(std::clamp(focusPos.Y, _viewBounds.Y + halfView.Y, _viewBounds.Y + _viewBounds.H - halfView.Y));
+			viewport._cameraPos.Y = std::round(std::clamp(focusPos.Y, _viewBounds.Y + halfView.Y, _viewBounds.Y + _viewBounds.H - halfView.Y));
 		} else {
-			_cameraPos.Y = std::round(_viewBounds.Y + _viewBounds.H * 0.5f);
+			viewport._cameraPos.Y = std::round(_viewBounds.Y + _viewBounds.H * 0.5f);
 		}
 
-		_cameraLastPos = _cameraPos;
-		_camera->setView(_cameraPos, 0.0f, 1.0f);
+		viewport._cameraLastPos = viewport._cameraPos;
+		viewport._camera->setView(viewport._cameraPos, 0.0f, 1.0f);
 	}
 
-	void LevelHandler::UpdateCamera(float timeMult)
-	{
-		ZoneScopedC(0x4876AF);
-
-		constexpr float ResponsivenessChange = 0.04f;
-		constexpr float ResponsivenessMin = 0.3f;
-		constexpr float SlowRatioX = 0.3f;
-		constexpr float SlowRatioY = 0.3f;
-		constexpr float FastRatioX = 0.2f;
-		constexpr float FastRatioY = 0.04f;
-
-		if (_players.empty()) {
-			return;
-		}
-
-		auto* targetObj = _players[0];
-
-		// Viewport bounds animation
-		if (_viewBounds != _viewBoundsTarget) {
-			if (std::abs(_viewBounds.X - _viewBoundsTarget.X) < 2.0f) {
-				_viewBounds = _viewBoundsTarget;
-			} else {
-				constexpr float TransitionSpeed = 0.02f;
-				float dx = (_viewBoundsTarget.X - _viewBounds.X) * TransitionSpeed * timeMult;
-				_viewBounds.X += dx;
-				_viewBounds.W -= dx;
-			}
-		}
-
-		// The position to focus on
-		Vector2i halfView = _view->size() / 2;
-		Vector2f focusPos = targetObj->_pos;
-
-		// If player doesn't move but has some speed, it's probably stuck, so reset the speed
-		Vector2f focusSpeed = targetObj->_speed;
-		if (std::abs(_cameraLastPos.X - focusPos.X) < 1.0f) {
-			focusSpeed.X = 0.0f;
-		}
-		if (std::abs(_cameraLastPos.Y - focusPos.Y) < 1.0f) {
-			focusSpeed.Y = 0.0f;
-		}
-
-		Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
-
-		// Camera responsiveness (smoothing unexpected movements)
-		if (focusVelocity.X < 1.0f) {
-			if (_cameraResponsiveness.X > ResponsivenessMin) {
-				_cameraResponsiveness.X = std::max(_cameraResponsiveness.X - ResponsivenessChange * timeMult, ResponsivenessMin);
-			}
-		} else {
-			if (_cameraResponsiveness.X < 1.0f) {
-				_cameraResponsiveness.X = std::min(_cameraResponsiveness.X + ResponsivenessChange * timeMult, 1.0f);
-			}
-		}
-		if (focusVelocity.Y < 1.0f) {
-			if (_cameraResponsiveness.Y > ResponsivenessMin) {
-				_cameraResponsiveness.Y = std::max(_cameraResponsiveness.Y - ResponsivenessChange * timeMult, ResponsivenessMin);
-			}
-		} else {
-			if (_cameraResponsiveness.Y < 1.0f) {
-				_cameraResponsiveness.Y = std::min(_cameraResponsiveness.Y + ResponsivenessChange * timeMult, 1.0f);
-			}
-		}
-
-		_cameraLastPos.X = lerpByTime(_cameraLastPos.X, focusPos.X, _cameraResponsiveness.X, timeMult);
-		_cameraLastPos.Y = lerpByTime(_cameraLastPos.Y, focusPos.Y, _cameraResponsiveness.Y, timeMult);
-
-		_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, focusSpeed.X * 8.0f, (focusVelocity.X < 2.0f ? SlowRatioX : FastRatioX), timeMult);
-		_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, focusSpeed.Y * 5.0f, (focusVelocity.Y < 2.0f ? SlowRatioY : FastRatioY), timeMult);
-
-		if (_shakeDuration > 0.0f) {
-			_shakeDuration -= timeMult;
-
-			if (_shakeDuration <= 0.0f) {
-				_shakeOffset = Vector2f::Zero;
-			} else {
-				float shakeFactor = 0.1f * timeMult;
-				_shakeOffset.X = lerp(_shakeOffset.X, nCine::Random().NextFloat(-0.2f, 0.2f) * halfView.X, shakeFactor) * std::min(_shakeDuration * 0.1f, 1.0f);
-				_shakeOffset.Y = lerp(_shakeOffset.Y, nCine::Random().NextFloat(-0.2f, 0.2f) * halfView.Y, shakeFactor) * std::min(_shakeDuration * 0.1f, 1.0f);
-			}
-		}
-
-		// Clamp camera position to level bounds
-		if (_viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
-			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.X) < 1.0f) {
-				_cameraPos.X = std::floor(_cameraPos.X);
-			}
-		} else {
-			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
-		}
-		if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
-			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.Y) < 1.0f) {
-				_cameraPos.Y = std::floor(_cameraPos.Y);
-			}
-		} else {
-			_cameraPos.Y = std::floor(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
-		}
-
-		_camera->setView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);
-
-		// Update audio listener position
-		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		device.updateListener(Vector3f(_cameraPos, 0.0f), Vector3f(focusSpeed, 0.0f));
-	}
-
-	void LevelHandler::LimitCameraView(std::int32_t left, std::int32_t width)
+	void LevelHandler::LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width)
 	{
 		_levelBounds.X = left;
 		if (width > 0.0f) {
@@ -1647,7 +1552,19 @@ namespace Jazz2
 			_viewBoundsTarget = _viewBounds;
 		} else {
 			Rectf bounds = _levelBounds.As<float>();
-			float viewWidth = (float)_view->size().X;
+
+			PlayerViewport* currentViewport = nullptr;
+			float viewWidth = 0.0f;
+			for (auto& viewport : _assignedViewports) {
+				Rectf bounds = viewport->GetBounds();
+				if (viewWidth < bounds.W) {
+					viewWidth = bounds.W;
+				}
+				if (viewport->_targetPlayer == player) {
+					currentViewport = viewport.get();
+				}
+			}
+
 			if (bounds.W < viewWidth) {
 				bounds.X -= (viewWidth - bounds.W);
 				bounds.W = viewWidth;
@@ -1655,18 +1572,45 @@ namespace Jazz2
 
 			_viewBoundsTarget = bounds;
 
-			float limit = _cameraPos.X - viewWidth * 0.6f;
+			float limit = currentViewport->_cameraPos.X - viewWidth * 0.6f;
 			if (_viewBounds.X < limit) {
 				_viewBounds.W += (_viewBounds.X - limit);
 				_viewBounds.X = limit;
 			}
+
+			// Warp distant player to this player
+			for (auto& viewport : _assignedViewports) {
+				if (viewport->_targetPlayer != player) {
+					Vector2f pos = viewport->_targetPlayer->_pos;
+					if ((pos.X < _viewBounds.X || pos.X >= _viewBounds.X + _viewBounds.W) && (pos - player->_pos).Length() > 100.0f) {
+						viewport->_targetPlayer->WarpToPosition(player->_pos, Actors::WarpFlags::Default);
+						if (currentViewport != nullptr) {
+							viewport->_ambientLight = currentViewport->_ambientLight;
+							viewport->_ambientLightTarget = currentViewport->_ambientLightTarget;
+						}
+					}
+				}
+			}
 		}
 	}
 
-	void LevelHandler::ShakeCameraView(float duration)
+	void LevelHandler::ShakeCameraView(Actors::Player* player, float duration)
 	{
-		if (_shakeDuration < duration) {
-			_shakeDuration = duration;
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				viewport->ShakeCameraView(duration);
+			}
+		}
+	}
+
+	void LevelHandler::ShakeCameraViewNear(Vector2f pos, float duration)
+	{
+		constexpr float MaxDistance = 800.0f;
+
+		for (auto& viewport : _assignedViewports) {
+			if ((viewport->_targetPlayer->_pos - pos).Length() <= MaxDistance) {
+				viewport->ShakeCameraView(duration);
+			}
 		}
 	}
 
@@ -1737,7 +1681,6 @@ namespace Jazz2
 		ZoneScopedC(0x4876AF);
 
 		auto& input = theApplication().GetInputManager();
-		_pressedActionsLast = _pressedActions;
 
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
@@ -1747,23 +1690,31 @@ namespace Jazz2
 			}
 		}
 
-		auto processedInput = UI::ControlScheme::FetchProcessedInput(0,
-			_pressedKeys, ArrayView(joyStates, joyStatesCount), !_hud->IsWeaponWheelVisible());
-		_pressedActions = processedInput.PressedActions;
-		_playerRequiredMovement = processedInput.Movement;
+		for (std::int32_t i = 0; i < UI::ControlScheme::MaxSupportedPlayers; i++) {
+			auto processedInput = UI::ControlScheme::FetchProcessedInput(i,
+				_pressedKeys, ArrayView(joyStates, joyStatesCount), !_hud->IsWeaponWheelVisible(i));
+
+			auto& input = _playerInputs[i];
+			input.PressedActionsLast = input.PressedActions;
+			input.PressedActions = processedInput.PressedActions;
+			input.RequiredMovement = processedInput.Movement;
+		}
 
 		// Also apply overriden actions (by touch controls)
-		_pressedActions |= _overrideActions;
+		{
+			auto& input = _playerInputs[0];
+			input.PressedActions |= _overrideActions;
 
-		if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Right)) != 0) {
-			_playerRequiredMovement.X = 1.0f;
-		} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Left)) != 0) {
-			_playerRequiredMovement.X = -1.0f;
-		}
-		if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Down)) != 0) {
-			_playerRequiredMovement.Y = 1.0f;
-		} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Up)) != 0) {
-			_playerRequiredMovement.Y = -1.0f;
+			if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Right)) != 0) {
+				input.RequiredMovement.X = 1.0f;
+			} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Left)) != 0) {
+				input.RequiredMovement.X = -1.0f;
+			}
+			if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Down)) != 0) {
+				input.RequiredMovement.Y = 1.0f;
+			} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Up)) != 0) {
+				input.RequiredMovement.Y = -1.0f;
+			}
 		}
 	}
 
@@ -1901,8 +1852,10 @@ namespace Jazz2
 #endif
 
 		// Mark Menu button as already pressed to avoid some issues
-		_pressedActions |= (1ull << (std::int32_t)PlayerActions::Menu);
-		_pressedActionsLast |= (1ull << (std::int32_t)PlayerActions::Menu);
+		for (auto& input : _playerInputs) {
+			input.PressedActions |= (1ull << (std::int32_t)PlayerActions::Menu);
+			input.PressedActionsLast |= (1ull << (std::int32_t)PlayerActions::Menu);
+		}
 	}
 
 #if defined(WITH_IMGUI)
@@ -1918,205 +1871,8 @@ namespace Jazz2
 	}
 #endif
 
-	bool LevelHandler::LightingRenderer::OnDraw(RenderQueue& renderQueue)
+	LevelHandler::PlayerInput::PlayerInput()
+		: PressedActions(0), PressedActionsLast(0), Frozen(false)
 	{
-		_renderCommandsCount = 0;
-		_emittedLightsCache.clear();
-
-		// Collect all active light emitters
-		std::size_t actorsCount = _owner->_actors.size();
-		for (std::size_t i = 0; i < actorsCount; i++) {
-			_owner->_actors[i]->OnEmitLights(_emittedLightsCache);
-		}
-
-		for (auto& light : _emittedLightsCache) {
-			auto command = RentRenderCommand();
-			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(light.Pos.X, light.Pos.Y, light.RadiusNear / light.RadiusFar, 0.0f);
-			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(light.RadiusFar * 2.0f, light.RadiusFar * 2.0f);
-			instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(light.Intensity, light.Brightness, 0.0f, 0.0f);
-			command->setTransformation(Matrix4x4f::Translation(light.Pos.X, light.Pos.Y, 0));
-
-			renderQueue.addCommand(command);
-		}
-
-		return true;
-	}
-
-	RenderCommand* LevelHandler::LightingRenderer::RentRenderCommand()
-	{
-		if (_renderCommandsCount < _renderCommands.size()) {
-			RenderCommand* command = _renderCommands[_renderCommandsCount].get();
-			_renderCommandsCount++;
-			return command;
-		} else {
-			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Lighting));
-			_renderCommandsCount++;
-			command->material().setShader(_owner->_lightingShader);
-			command->material().setBlendingEnabled(true);
-			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-			command->material().reserveUniformsDataMemory();
-			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
-			}
-			return command.get();
-		}
-	}
-
-	void LevelHandler::BlurRenderPass::Initialize(Texture* source, std::int32_t width, std::int32_t height, const Vector2f& direction)
-	{
-		_source = source;
-		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
-		_direction = direction;
-
-		bool notInitialized = (_view == nullptr);
-
-		if (notInitialized) {
-			_camera = std::make_unique<Camera>();
-		}
-		_camera->setOrthoProjection(0.0f, (float)width, (float)height, 0.0f);
-		_camera->setView(0.0f, 0.0f, 0.0f, 1.0f);
-
-		if (notInitialized) {
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-			_target->setWrap(SamplerWrapping::ClampToEdge);
-			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
-			_view->setRootNode(this);
-			_view->setCamera(_camera.get());
-			//_view->setClearMode(Viewport::ClearMode::Never);
-		} else {
-			_view->removeAllTextures();
-			_target->init(nullptr, Texture::Format::RGB8, width, height);
-			_view->setTexture(_target.get());
-		}
-		_target->setMagFiltering(SamplerFilter::Linear);
-
-		// Prepare render command
-		_renderCommand.material().setShader(_downsampleOnly ? _owner->_downsampleShader : _owner->_blurShader);
-		//_renderCommand.material().setBlendingEnabled(true);
-		_renderCommand.material().reserveUniformsDataMemory();
-		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->intValue(0) != 0) {
-			textureUniform->setIntValue(0); // GL_TEXTURE0
-		}
-	}
-
-	void LevelHandler::BlurRenderPass::Register()
-	{
-		Viewport::chain().push_back(_view.get());
-	}
-
-	bool LevelHandler::BlurRenderPass::OnDraw(RenderQueue& renderQueue)
-	{
-		Vector2i size = _target->size();
-
-		auto* instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
-
-		_renderCommand.material().uniform("uPixelOffset")->setFloatValue(1.0f / size.X, 1.0f / size.Y);
-		if (!_downsampleOnly) {
-			_renderCommand.material().uniform("uDirection")->setFloatValue(_direction.X, _direction.Y);
-		}
-		_renderCommand.material().setTexture(0, *_source);
-
-		renderQueue.addCommand(&_renderCommand);
-
-		return true;
-	}
-
-	void LevelHandler::CombineRenderer::Initialize(std::int32_t width, std::int32_t height)
-	{
-		_size = Vector2f(static_cast<float>(width), static_cast<float>(height));
-
-		if (_renderCommand.material().setShader(_owner->_combineShader)) {
-			_renderCommand.material().reserveUniformsDataMemory();
-			_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-			// Required to reset render command properly
-			_renderCommand.setTransformation(_renderCommand.transformation());
-
-			GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
-			}
-			GLUniformCache* lightTexUniform = _renderCommand.material().uniform("uTextureLighting");
-			if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
-				lightTexUniform->setIntValue(1); // GL_TEXTURE1
-			}
-			GLUniformCache* blurHalfTexUniform = _renderCommand.material().uniform("uTextureBlurHalf");
-			if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
-				blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
-			}
-			GLUniformCache* blurQuarterTexUniform = _renderCommand.material().uniform("uTextureBlurQuarter");
-			if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
-				blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
-			}
-		}
-
-		if (_renderCommandWithWater.material().setShader(_owner->_combineWithWaterShader)) {
-			_renderCommandWithWater.material().reserveUniformsDataMemory();
-			_renderCommandWithWater.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-			// Required to reset render command properly
-			_renderCommandWithWater.setTransformation(_renderCommandWithWater.transformation());
-
-			GLUniformCache* textureUniform = _renderCommandWithWater.material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
-			}
-			GLUniformCache* lightTexUniform = _renderCommandWithWater.material().uniform("uTextureLighting");
-			if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
-				lightTexUniform->setIntValue(1); // GL_TEXTURE1
-			}
-			GLUniformCache* blurHalfTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurHalf");
-			if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
-				blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
-			}
-			GLUniformCache* blurQuarterTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurQuarter");
-			if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
-				blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
-			}
-			GLUniformCache* displacementTexUniform = _renderCommandWithWater.material().uniform("uTextureDisplacement");
-			if (displacementTexUniform && displacementTexUniform->intValue(0) != 4) {
-				displacementTexUniform->setIntValue(4); // GL_TEXTURE4
-			}
-		}
-	}
-
-	bool LevelHandler::CombineRenderer::OnDraw(RenderQueue& renderQueue)
-	{
-		float viewWaterLevel = _owner->_waterLevel - _owner->_cameraPos.Y + _size.Y * 0.5f;
-		bool viewHasWater = (viewWaterLevel < _size.Y);
-		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);
-
-		command.material().setTexture(0, *_owner->_viewTexture);
-		command.material().setTexture(1, *_owner->_lightingBuffer);
-		command.material().setTexture(2, *_owner->_blurPass2.GetTarget());
-		command.material().setTexture(3, *_owner->_blurPass4.GetTarget());
-		if (viewHasWater && !PreferencesCache::LowWaterQuality) {
-			command.material().setTexture(4, *_owner->_noiseTexture);
-		}
-
-		auto* instanceBlock = command.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_size.X, _size.Y);
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
-
-		command.material().uniform("uAmbientColor")->setFloatVector(_owner->_ambientColor.Data());
-		command.material().uniform("uTime")->setFloatValue(_owner->_elapsedFrames * 0.0018f);
-
-		if (viewHasWater) {
-			command.material().uniform("uWaterLevel")->setFloatValue(viewWaterLevel / _size.Y);
-			command.material().uniform("uCameraPos")->setFloatVector(_owner->_cameraPos.Data());
-		}
-
-		renderQueue.addCommand(&command);
-
-		return true;
 	}
 }

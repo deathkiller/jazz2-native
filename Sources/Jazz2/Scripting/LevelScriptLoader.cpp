@@ -3403,14 +3403,16 @@ namespace Jazz2::Scripting
 	{
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_ambientLightTarget;
+		// TODO: Viewports
+		return _this->_levelHandler->_defaultAmbientLight.W;
 	}
 
 	void LevelScriptLoader::asSetAmbientLight(float value)
 	{
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->_ambientLightTarget = value;
+		// TODO: Viewports
+		_this->_levelHandler->_defaultAmbientLight.W = value;
 	}
 
 	float LevelScriptLoader::asGetWaterLevel()

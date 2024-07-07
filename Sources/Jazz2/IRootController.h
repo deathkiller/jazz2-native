@@ -28,6 +28,9 @@ namespace Jazz2
 		IRootController() { }
 		virtual ~IRootController() { }
 
+		IRootController(const IRootController&) = delete;
+		IRootController& operator=(const IRootController&) = delete;
+
 		virtual void InvokeAsync(const std::function<void()>& callback) = 0;
 		virtual void InvokeAsync(std::function<void()>&& callback) = 0;
 		virtual void GoToMainMenu(bool afterIntro) = 0;
@@ -45,9 +48,5 @@ namespace Jazz2
 		virtual StringView GetNewestVersion() const = 0;
 
 		virtual void RefreshCacheLevels() = 0;
-		
-	private:
-		IRootController(const IRootController&) = delete;
-		IRootController& operator=(const IRootController&) = delete;
 	};
 }

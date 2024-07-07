@@ -2,7 +2,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr uint64_t Version = 4;
+	constexpr std::uint64_t Version = 4;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;

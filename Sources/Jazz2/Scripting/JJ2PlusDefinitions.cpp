@@ -1084,7 +1084,8 @@ namespace Jazz2::Scripting
 	}
 	uint8_t jjPLAYER::get_lighting() const {
 		noop();
-		return (uint8_t)(_levelScriptLoader->_levelHandler->GetAmbientLight() * 64.0f);
+		// TODO: Viewports
+		return (uint8_t)(_levelScriptLoader->_levelHandler->GetDefaultAmbientLight() * 64.0f);
 	}
 	uint8_t jjPLAYER::set_lighting(uint8_t value) {
 		noop();
@@ -1292,7 +1293,8 @@ namespace Jazz2::Scripting
 	bool jjPLAYER::limitXScroll(uint16_t left, uint16_t width) {
 		noop();
 
-		_levelScriptLoader->_levelHandler->LimitCameraView(left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
+		// TODO: Viewports
+		_levelScriptLoader->_levelHandler->LimitCameraView(nullptr, left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
 		return true;
 	}
 	void jjPLAYER::cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant) {

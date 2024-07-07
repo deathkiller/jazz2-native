@@ -11,8 +11,5 @@ namespace Jazz2::Tiles
 
 		virtual void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) = 0;
 		virtual void OnTileFrozen(std::int32_t x, std::int32_t y) = 0;
-
-		virtual Vector2f GetCameraPos() const = 0;
-		virtual Vector2i GetViewSize() const = 0;
 	};
 }

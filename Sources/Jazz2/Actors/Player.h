@@ -10,6 +10,11 @@ namespace Death::IO
 	class Stream;
 }
 
+namespace Jazz2
+{
+	class PlayerViewport;
+}
+
 #if defined(WITH_ANGELSCRIPT)
 namespace Jazz2::Scripting
 {
@@ -65,6 +70,7 @@ namespace Jazz2::Actors
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
+		friend class PlayerViewport;
 		friend class UI::HUD;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
