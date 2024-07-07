@@ -255,6 +255,7 @@ namespace Jazz2
 		virtual void ProcessQueuedNextLevel();
 		virtual void PrepareNextLevelInitialization(LevelInitialization& levelInit);
 
+		void ProcessWeather(float timeMult);
 		void ResolveCollisions(float timeMult);
 		void AssignViewport(Actors::Player* player);
 		void InitializeCamera(PlayerViewport& viewport);

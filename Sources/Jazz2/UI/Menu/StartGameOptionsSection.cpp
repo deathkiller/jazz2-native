@@ -385,12 +385,12 @@ namespace Jazz2::UI::Menu
 								_root->PlaySfx("MenuSelect"_s, 0.5f);
 							}
 						} else {
-							if (_selectedIndex == i) {
+							if (_selectedIndex == i + _playerCount) {
 								ExecuteSelected();
 							} else {
 								_root->PlaySfx("MenuSelect"_s, 0.5f);
 								_animation = 0.0f;
-								_selectedIndex = i;
+								_selectedIndex = i + _playerCount;
 							}
 						}
 						break;

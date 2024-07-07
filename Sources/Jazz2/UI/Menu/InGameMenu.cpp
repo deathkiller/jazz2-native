@@ -122,13 +122,14 @@ namespace Jazz2::UI::Menu
 		float logoTextTranslate = 0.0f;
 
 		// Show blurred viewports behind
-		for (std::size_t i = 0; i < _owner->_root->_assignedViewports.size(); i++) {
-			auto& viewport = _owner->_root->_assignedViewports[i];
+		auto& viewports = _owner->_root->_assignedViewports;
+		for (std::size_t i = 0; i < viewports.size(); i++) {
+			auto& viewport = viewports[i];
 			Rectf scopedView = viewport->GetBounds();
 			DrawTexture(*viewport->_blurPass4.GetTarget(), Vector2f(scopedView.X, scopedView.Y), 500, Vector2f(scopedView.W, scopedView.H), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
 			
-			if (i < _owner->_root->_assignedViewports.size() - 1) {
-				DrawSolid(Vector2f(0.0f, scopedView.H - 1.0f), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.03f), true);
+			if (i < viewports.size() - 1) {
+				DrawSolid(Vector2f(0.0f, scopedView.H - 1.0f), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);
 				DrawSolid(Vector2f(0.0f, scopedView.H), ShadowLayer, Vector2f(scopedView.W, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
 			}
 

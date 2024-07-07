@@ -91,6 +91,9 @@ namespace nCine
 		/// Intersects this rectangle with the other rectangle
 		void Intersect(const Rect<T>& rect);
 
+		/// Unions this rectangle with the other rectangle
+		void Union(const Rect<T>& rect);
+
 		/// Eqality operator
 		bool operator==(const Rect& rect) const;
 		bool operator!=(const Rect& rect) const;
@@ -282,13 +285,38 @@ namespace nCine
 
 		Vector2<T> newMin = Min();
 		Vector2<T> newMax = Max();
-		if (rectMin.X > newMin.X)
+		if (newMin.X < rectMin.X)
 			newMin.X = rectMin.X;
-		if (rectMin.Y > newMin.Y)
+		if (newMin.Y < rectMin.Y)
 			newMin.Y = rectMin.Y;
 		if (rectMax.X < newMax.X)
 			newMax.X = rectMax.X;
 		if (rectMax.Y < newMax.Y)
+			newMax.Y = rectMax.Y;
+
+		if (W < T(0))
+			std::swap(newMin.X, newMax.X);
+		if (H < T(0))
+			std::swap(newMin.Y, newMax.Y);
+
+		SetMinMax(newMin, newMax);
+	}
+
+	template<class T>
+	inline void Rect<T>::Union(const Rect& rect)
+	{
+		const Vector2<T> rectMin = rect.Min();
+		const Vector2<T> rectMax = rect.Max();
+
+		Vector2<T> newMin = Min();
+		Vector2<T> newMax = Max();
+		if (rectMin.X < newMin.X)
+			newMin.X = rectMin.X;
+		if (rectMin.Y < newMin.Y)
+			newMin.Y = rectMin.Y;
+		if (newMax.X < rectMax.X)
+			newMax.X = rectMax.X;
+		if (newMax.Y < rectMax.Y)
 			newMax.Y = rectMax.Y;
 
 		if (W < T(0))

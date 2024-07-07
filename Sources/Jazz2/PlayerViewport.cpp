@@ -130,10 +130,6 @@ namespace Jazz2
 		if (_renderCommand.material().setShader(_owner->_levelHandler->_combineShader)) {
 			_renderCommand.material().reserveUniformsDataMemory();
 			_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-			// Required to reset render command properly
-			//_renderCommand.setTransformation(_renderCommand.transformation());
-			_renderCommand.setTransformation(Matrix4x4f::Translation(x, y, 0.0f));
-
 			GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {
 				textureUniform->setIntValue(0); // GL_TEXTURE0
@@ -155,10 +151,6 @@ namespace Jazz2
 		if (_renderCommandWithWater.material().setShader(_owner->_levelHandler->_combineWithWaterShader)) {
 			_renderCommandWithWater.material().reserveUniformsDataMemory();
 			_renderCommandWithWater.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-			// Required to reset render command properly
-			//_renderCommandWithWater.setTransformation(_renderCommandWithWater.transformation());
-			_renderCommand.setTransformation(Matrix4x4f::Translation(x, y, 0.0f));
-
 			GLUniformCache* textureUniform = _renderCommandWithWater.material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {
 				textureUniform->setIntValue(0); // GL_TEXTURE0
@@ -180,6 +172,9 @@ namespace Jazz2
 				displacementTexUniform->setIntValue(4); // GL_TEXTURE4
 			}
 		}
+
+		_renderCommand.setTransformation(Matrix4x4f::Translation(x, y, 0.0f));
+		_renderCommandWithWater.setTransformation(Matrix4x4f::Translation(x, y, 0.0f));
 	}
 
 	Rectf CombineRenderer::GetBounds() const
