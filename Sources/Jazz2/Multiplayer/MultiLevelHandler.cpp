@@ -46,6 +46,7 @@
 #include <Utf8.h>
 #include <Containers/StaticArray.h>
 #include <IO/MemoryStream.h>
+#include <IO/DeflateStream.h>
 
 using namespace nCine;
 
@@ -55,6 +56,10 @@ namespace Jazz2::Multiplayer
 		: LevelHandler(root), _gameMode(MultiplayerGameMode::Unknown), _networkManager(networkManager), _updateTimeLeft(1.0f),
 			_initialUpdateSent(false), _lastSpawnedActorId(-1), _seqNum(0), _seqNumWarped(0), _suppressRemoting(false),
 			_ignorePackets(false)
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+			, _plotIndex(0), _actorsMaxCount(0.0f), _actorsCount{}, _remoteActorsCount{}, _remotingActorsCount{},
+			_mirroredActorsCount{}, _updatePacketMaxSize(0.0f), _updatePacketSize {}, _compressedUpdatePacketSize {}
+#endif
 	{
 		_isServer = (networkManager->GetState() == NetworkState::Listening);
 	}
@@ -122,11 +127,11 @@ namespace Jazz2::Multiplayer
 		LevelHandler::OnBeginFrame();
 
 		auto& input = _playerInputs[0];
-		if ((input.PressedActions & 0xffffffffu) != ((input.PressedActions >> 32) & 0xffffffffu)) {
+		if (input.PressedActions != input.PressedActionsLast) {
 			MemoryStream packet(9);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::PlayerKeyPress);
 			packet.WriteVariableUint32(_lastSpawnedActorId);
-			packet.WriteVariableUint32((std::uint32_t)(input.PressedActions & 0xffffffffu));
+			packet.WriteVariableUint64(input.PressedActions);
 			_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
 		}
 	}
@@ -138,7 +143,7 @@ namespace Jazz2::Multiplayer
 		float timeMult = theApplication().GetTimeMult();
 
 		for (auto& [playerIndex, playerState] : _playerStates) {
-			playerState.PressedKeys |= ((playerState.PressedKeys & 0xffffffffu) << 32);
+			playerState.PressedKeysLast |= playerState.PressedKeys;
 		}
 
 		_updateTimeLeft -= timeMult;
@@ -155,11 +160,36 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+			_plotIndex = (_plotIndex + 1) % PlotValueCount;
+
+			_actorsCount[_plotIndex] = _actors.size();
+			_actorsMaxCount = std::max(_actorsMaxCount, _actorsCount[_plotIndex]);
+			_remoteActorsCount[_plotIndex] = 0;
+			_mirroredActorsCount[_plotIndex] = 0;
+			for (auto& actor : _remoteActors) {
+				if (actor.second == nullptr) {
+					continue;
+				}
+
+				bool isMirrored = (_isServer
+					? ActorShouldBeMirrored(actor.second.get())
+					: runtime_cast<Actors::Multiplayer::RemoteActor*>(actor.second) == nullptr);
+
+				if (isMirrored) {
+					_mirroredActorsCount[_plotIndex]++;
+				} else {
+					_remoteActorsCount[_plotIndex]++;
+				}
+			}
+			_remotingActorsCount[_plotIndex] = _remotingActors.size();
+#endif
+
 			if (_isServer) {
 				std::uint32_t actorCount = (std::uint32_t)(_players.size() + _remotingActors.size());
 
 				MemoryStream packet(5 + actorCount * 19);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::UpdateAllActors);
+				//packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::UpdateAllActors);
 				packet.WriteVariableUint32(actorCount);
 
 				for (Actors::Player* player : _players) {
@@ -240,7 +270,19 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
 				}
 
-				_networkManager->SendToAll(NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
+				MemoryStream packetCompressed(1024);
+				packetCompressed.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::UpdateAllActors);
+				DeflateWriter dw(packetCompressed);
+				dw.Write(packet.GetBuffer(), packet.GetSize());
+				dw.Dispose();
+
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+				_updatePacketSize[_plotIndex] = packet.GetSize();
+				_updatePacketMaxSize = std::max(_updatePacketMaxSize, _updatePacketSize[_plotIndex]);
+				_compressedUpdatePacketSize[_plotIndex] = packetCompressed.GetSize();
+#endif
+
+				_networkManager->SendToAll(NetworkChannel::UnreliableUpdates, packetCompressed.GetBuffer(), packetCompressed.GetSize());
 
 				SynchronizePeers();
 			} else {
@@ -279,12 +321,19 @@ namespace Jazz2::Multiplayer
 						packet.WriteVariableUint64(_seqNumWarped);
 					}
 
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+					_updatePacketSize[_plotIndex] = packet.GetSize();
+					_updatePacketMaxSize = std::max(_updatePacketMaxSize, _updatePacketSize[_plotIndex]);
+#endif
+
 					_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
 				}
 			}
 		}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+		ShowDebugWindow();
+
 		if (PreferencesCache::ShowPerformanceMetrics) {
 			ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 
@@ -777,9 +826,8 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				std::uint64_t pressedKeys = it->second.PressedKeys;
-				if ((pressedKeys & (1ull << (int32_t)action)) != 0) {
-					isGamepad = (pressedKeys & (1ull << (16 + (int32_t)action))) != 0;
+				if ((it->second.PressedKeys & (1ull << (std::int32_t)action)) != 0) {
+					isGamepad = (it->second.PressedKeys & (1ull << (32 + (std::int32_t)action))) != 0;
 					return true;
 				}
 
@@ -802,9 +850,8 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				std::uint64_t pressedKeys = it->second.PressedKeys;
-				if ((pressedKeys & ((1ull << (std::int32_t)action) | (1ull << (32 + (std::int32_t)action)))) == (1ull << (std::int32_t)action)) {
-					isGamepad = (pressedKeys & (1ull << (16 + (std::int32_t)action))) != 0;
+				if ((it->second.PressedKeys & (1ull << (std::int32_t)action)) != 0 && (it->second.PressedKeysLast & (1ull << (std::int32_t)action)) == 0) {
+					isGamepad = (it->second.PressedKeys & (1ull << (32 + (std::int32_t)action))) != 0;
 					return true;
 				}
 
@@ -932,6 +979,7 @@ namespace Jazz2::Multiplayer
 			Actors::Multiplayer::LocalPlayerOnServer* ptr = player.get();
 			_players.push_back(ptr);
 			AddActor(player);
+			AssignViewport(ptr);
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
@@ -1012,6 +1060,8 @@ namespace Jazz2::Multiplayer
 			auto packetType = (ClientPacketType)data[0];
 			switch (packetType) {
 				case ClientPacketType::Auth: {
+					LOGD("ClientPacketType::Auth received - peer: %p", peer._enet);
+
 					std::uint8_t flags = 0;
 					if (PreferencesCache::EnableReforgedGameplay) {
 						flags |= 0x01;
@@ -1030,6 +1080,8 @@ namespace Jazz2::Multiplayer
 					return true;
 				}
 				case ClientPacketType::LevelReady: {
+					LOGD("ClientPacketType::LevelReady received - peer: %p", peer._enet);
+
 					_peerDesc[peer] = PeerDesc(nullptr, PeerState::LevelLoaded);
 					return true;
 				}
@@ -1139,8 +1191,8 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 					
-					std::uint64_t prevState = (it->second.PressedKeys & 0xffffffffu);
-					it->second.PressedKeys = packet.ReadVariableUint32() | (prevState << 32);
+					it->second.PressedKeysLast = it->second.PressedKeys;
+					it->second.PressedKeys = packet.ReadVariableUint64();
 
 					//LOGD("Player %i pressed 0x%08x, last state was 0x%08x", playerIndex, it->second.PressedKeys & 0xffffffffu, prevState);
 					return true;
@@ -1157,6 +1209,9 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::ChangeGameMode: {
 					MemoryStream packet(data + 1, dataLength - 1);
 					MultiplayerGameMode gameMode = (MultiplayerGameMode)packet.ReadValue<std::uint8_t>();
+
+					LOGD("ServerPacketType::ChangeGameMode received - mode: %u", gameMode);
+
 					_gameMode = gameMode;
 					break;
 				}
@@ -1200,6 +1255,9 @@ namespace Jazz2::Multiplayer
 					std::uint32_t messageLength = packet.ReadVariableUint32();
 					String message = String(NoInit, messageLength);
 					packet.Read(message.data(), messageLength);
+
+					LOGD("ServerPacketType::ShowMessage received - text: \"%s\"", message.data());
+
 					_hud->ShowLevelText(message);
 					break;
 				}
@@ -1212,6 +1270,9 @@ namespace Jazz2::Multiplayer
 					std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
 					std::int32_t posX = packet.ReadVariableInt32();
 					std::int32_t posY = packet.ReadVariableInt32();
+
+					LOGD("ServerPacketType::CreateControllablePlayer received - playerIndex: %u, playerType: %u, health: %u, flags: %u, team: %u, x: %i, y: %i",
+						playerIndex, playerType, health, flags, teamId, posX, posY);
 
 					_lastSpawnedActorId = playerIndex;
 
@@ -1229,6 +1290,10 @@ namespace Jazz2::Multiplayer
 						Actors::Multiplayer::RemotablePlayer* ptr = player.get();
 						_players.push_back(ptr);
 						AddActor(player);
+						AssignViewport(ptr);
+						// TODO: Needed to initialize newly assigned viewport, because it called asynchronously, not from handler initialization
+						Vector2i res = theApplication().GetResolution();
+						OnInitializeViewport(res.X, res.Y);
 					});
 					return true;
 				}
@@ -1295,7 +1360,8 @@ namespace Jazz2::Multiplayer
 					return true;
 				}
 				case ServerPacketType::UpdateAllActors: {
-					MemoryStream packet(data + 1, dataLength - 1);
+					MemoryStream packetCompressed(data + 1, dataLength - 1);
+					DeflateStream packet(packetCompressed);
 					std::uint32_t actorCount = packet.ReadVariableUint32();
 					for (std::uint32_t i = 0; i < actorCount; i++) {
 						std::uint32_t index = packet.ReadVariableUint32();
@@ -1318,6 +1384,9 @@ namespace Jazz2::Multiplayer
 				}
 				case ServerPacketType::SyncTileMap: {
 					MemoryStream packet(data + 1, dataLength - 1);
+
+					LOGD("ServerPacketType::SyncTileMap received");
+
 					// TODO: No lock here ???
 					TileMap()->InitializeFromStream(packet);
 					return true;
@@ -1326,6 +1395,9 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint8_t triggerId = packet.ReadValue<std::uint8_t>();
 					bool newState = (bool)packet.ReadValue<std::uint8_t>();
+
+					LOGD("ServerPacketType::SetTrigger received - id: %u, state: %u", triggerId, newState);
+
 					_root->InvokeAsync([this, triggerId, newState]() {
 						TileMap()->SetTrigger(triggerId, newState);
 					});
@@ -1353,6 +1425,9 @@ namespace Jazz2::Multiplayer
 					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
 					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
 
+					LOGD("ServerPacketType::PlayerMoveInstantly received - playerIndex: %u, x: %f, y: %f, sx: %f, sy: %f",
+						playerIndex, posX, posY, speedX, speedY);
+
 					_root->InvokeAsync([this, posX, posY, speedX, speedY]() {
 						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY));
 					});
@@ -1362,6 +1437,9 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					std::uint64_t seqNum = packet.ReadVariableUint64();
+
+					LOGD("ServerPacketType::PlayerAckWarped received - playerIndex: %u, seqNum: %llu", playerIndex, seqNum);
+
 					if (_lastSpawnedActorId == playerIndex && _seqNumWarped == seqNum) {
 						_seqNumWarped = 0;
 					}
@@ -1371,10 +1449,14 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGW("ServerPacketType::PlayerChangeWeapon received - malformed packet");
 						return true;
 					}
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+
+					LOGD("ServerPacketType::PlayerChangeWeapon received - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
+
 					_players[0]->SetCurrentWeapon((WeaponType)weaponType);
 					return true;
 				}
@@ -1387,6 +1469,9 @@ namespace Jazz2::Multiplayer
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 					std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
+
+					LOGD("ServerPacketType::PlayerRefreshAmmo received - playerIndex: %u, weaponType: %u, weaponAmmo: %u", playerIndex, weaponType, weaponAmmo);
+
 					_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
 					return true;
 				}
@@ -1399,6 +1484,9 @@ namespace Jazz2::Multiplayer
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 					std::uint8_t weaponUpgrades = packet.ReadValue<std::uint8_t>();
+
+					LOGD("ServerPacketType::PlayerRefreshWeaponUpgrades received - playerIndex: %u, weaponType: %u, weaponUpgrades: %u", playerIndex, weaponType, weaponUpgrades);
+
 					_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
 					return true;
 				}
@@ -1411,6 +1499,9 @@ namespace Jazz2::Multiplayer
 
 					std::int32_t health = packet.ReadVariableInt32();
 					float pushForce = packet.ReadValue<std::int16_t>() / 512.0f;
+
+					LOGD("ServerPacketType::PlayerTakeDamage received - playerIndex: %u, health: %i, pushForce: %f", playerIndex, health, pushForce);
+
 					_root->InvokeAsync([this, health, pushForce]() {
 						_players[0]->TakeDamage(_players[0]->_health - health, pushForce);
 					});
@@ -1442,8 +1533,11 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGW("ServerPacketType::PlayerWarpIn received - malformed packet");
 						return true;
 					}
+
+					LOGD("ServerPacketType::PlayerWarpIn received - playerIndex: %u", playerIndex);
 
 					_root->InvokeAsync([this]() {
 						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn();
@@ -1558,6 +1652,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			std::uint8_t playerIndex = FindFreePlayerId();
+			LOGD("Syncing player %u", playerIndex);
 
 			std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>();
 			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spaz, (std::uint8_t)playerIndex };
@@ -1851,12 +1946,117 @@ namespace Jazz2::Multiplayer
 		playerState.Flags = (flags & ~PlayerFlags::JustWarped);
 	}*/
 
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+	void MultiLevelHandler::ShowDebugWindow()
+	{
+		const float appWidth = theApplication().GetWidth();
+
+		//const ImVec2 windowPos = ImVec2(appWidth * 0.5f, ImGui::GetIO().DisplaySize.y - Margin);
+		//const ImVec2 windowPosPivot = ImVec2(0.5f, 1.0f);
+		//ImGui::SetNextWindowPos(windowPos, ImGuiCond_FirstUseEver, windowPosPivot);
+		ImGui::Begin("Multiplayer Debug", nullptr);
+
+		ImGui::PlotLines("Update Packet Size", _updatePacketSize, PlotValueCount, _plotIndex, nullptr, 0.0f, _updatePacketMaxSize, ImVec2(appWidth * 0.2f, 40.0f));
+		ImGui::SameLine(360.0f);
+		ImGui::Text("%.0f bytes", _updatePacketSize[_plotIndex]);
+
+		ImGui::PlotLines("Update Packet Size Compressed", _compressedUpdatePacketSize, PlotValueCount, _plotIndex, nullptr, 0.0f, _updatePacketMaxSize, ImVec2(appWidth * 0.2f, 40.0f));
+		ImGui::SameLine(360.0f);
+		ImGui::Text("%.0f bytes", _compressedUpdatePacketSize[_plotIndex]);
+
+		ImGui::Separator();
+
+		ImGui::PlotLines("Actors", _actorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
+		ImGui::SameLine(360.0f);
+		ImGui::Text("%.0f", _actorsCount[_plotIndex]);
+
+		ImGui::PlotLines("Remote Actors", _remoteActorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
+		ImGui::SameLine(360.0f);
+		ImGui::Text("%.0f", _remoteActorsCount[_plotIndex]);
+
+		ImGui::PlotLines("Mirrored Actors", _mirroredActorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
+		ImGui::SameLine(360.0f);
+		ImGui::Text("%.0f", _mirroredActorsCount[_plotIndex]);
+
+		ImGui::PlotLines("Remoting Actors", _remotingActorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
+		ImGui::SameLine(360.0f);
+		ImGui::Text("%.0f", _remotingActorsCount[_plotIndex]);
+
+		ImGui::Text("Last spawned ID: %u", _lastSpawnedActorId);
+
+		ImGui::SeparatorText("Peers");
+
+		ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner | ImGuiTableFlags_NoPadOuterX;
+		if (ImGui::BeginTable("peers", 6, flags, ImVec2(0.0f, 0.0f))) {
+			ImGui::TableSetupColumn("Peer");
+			ImGui::TableSetupColumn("Player Index");
+			ImGui::TableSetupColumn("State");
+			ImGui::TableSetupColumn("Last Updated");
+			ImGui::TableSetupColumn("X");
+			ImGui::TableSetupColumn("Y");
+			ImGui::TableHeadersRow();
+			
+			for (auto& [peer, desc] : _peerDesc) {
+				ImGui::TableNextRow();
+
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Text("0x%p", peer._enet);
+
+				ImGui::TableSetColumnIndex(1);
+				ImGui::Text("%u", desc.Player != nullptr ? desc.Player->GetPlayerIndex() : -1);
+
+				ImGui::TableSetColumnIndex(2);
+				ImGui::Text("0x%x", desc.State);
+
+				ImGui::TableSetColumnIndex(3);
+				ImGui::Text("%u", desc.LastUpdated);
+
+				ImGui::TableSetColumnIndex(4);
+				ImGui::Text("%.2f", desc.Player != nullptr ? desc.Player->GetPos().X : -1.0f);
+
+				ImGui::TableSetColumnIndex(5);
+				ImGui::Text("%.2f", desc.Player != nullptr ? desc.Player->GetPos().Y : -1.0f);
+			}
+			ImGui::EndTable();
+		}
+
+		ImGui::SeparatorText("Player States");
+
+		if (ImGui::BeginTable("playerStates", 4, flags, ImVec2(0.0f, 0.0f))) {
+			ImGui::TableSetupColumn("Player Index");
+			ImGui::TableSetupColumn("Flags");
+			ImGui::TableSetupColumn("Pressed");
+			ImGui::TableSetupColumn("Pressed (Last)");
+			ImGui::TableHeadersRow();
+
+			for (auto& [playerIdx, state] : _playerStates) {
+				ImGui::TableNextRow();
+
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Text("%u", playerIdx);
+
+				ImGui::TableSetColumnIndex(1);
+				ImGui::Text("0x%08x", state.Flags);
+
+				ImGui::TableSetColumnIndex(2);
+				ImGui::Text("0x%08x", state.PressedKeys);
+
+				ImGui::TableSetColumnIndex(3);
+				ImGui::Text("0x%08x", state.PressedKeysLast);
+			}
+			ImGui::EndTable();
+		}
+
+		ImGui::End();
+	}
+#endif
+
 	MultiLevelHandler::PlayerState::PlayerState()
 	{
 	}
 
 	MultiLevelHandler::PlayerState::PlayerState(const Vector2f& pos, const Vector2f& speed)
-		: Flags(PlayerFlags::None), PressedKeys(0)/*, WarpSeqNum(0), WarpTimeLeft(0.0f)*/
+		: Flags(PlayerFlags::None), PressedKeys(0), PressedKeysLast(0)/*, WarpSeqNum(0), WarpTimeLeft(0.0f)*/
 	{
 	}
 }

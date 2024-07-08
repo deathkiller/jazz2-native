@@ -35,11 +35,11 @@ namespace Jazz2::UI::Menu
 		float topLine = contentBounds.Y + 31.0f;
 
 		_root->DrawElement(MenuDim, center.X, topLine - 2.0f, IMenuContainer::BackgroundLayer,
-			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
+			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
 		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_message, charOffset, center.X, topLine - 40.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_message, charOffset, center.X, topLine - 30.0f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 	}
 
