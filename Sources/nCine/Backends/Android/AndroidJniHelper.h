@@ -13,10 +13,17 @@ namespace nCine
 	/// The class for setting up JNI and initialize requests classes
 	class AndroidJniHelper
 	{
+		friend class AndroidApplication;
+
 	public:
 		inline static unsigned int SdkVersion() { return sdkVersion_; }
 
 		static JNIEnv *jniEnv;
+
+		AndroidJniHelper() = delete;
+		~AndroidJniHelper() = delete;
+
+		static bool CheckAndClearExceptions();
 
 	private:
 		static JavaVM* javaVM_;
@@ -28,14 +35,7 @@ namespace nCine
 		static void DetachJVM();
 		static void InitializeClasses();
 
-		/// Static class, no constructor
-		AndroidJniHelper();
-		/// Static class, no copy constructor
-		AndroidJniHelper(const AndroidJniHelper& other);
-		/// Static class, no assignement operator
-		AndroidJniHelper& operator=(const AndroidJniHelper& other);
-
-		friend class AndroidApplication;
+		static String ExceptionToString(JNIEnv* env, jthrowable exception);
 	};
 
 	/// The base class for the classes handling JNI requests to the Android API

@@ -62,11 +62,31 @@ namespace nCine
 
 	// ------------------- AndroidJniHelper -------------------
 
+	bool AndroidJniHelper::CheckAndClearExceptions()
+	{
+		if DEATH_UNLIKELY(jniEnv->ExceptionCheck()) {
+			if (jthrowable exception = jniEnv->ExceptionOccurred()) {
+				jniEnv->ExceptionClear();
+				String message = ExceptionToString(jniEnv, exception);
+				if (!message.empty()) {
+					LOGE("%s", message.data());
+				}
+				jniEnv->DeleteLocalRef(exception);
+			} else {
+				jniEnv->ExceptionDescribe();
+				jniEnv->ExceptionClear();
+			}
+			return true;
+		}
+
+		return false;
+	}
+
 	void AndroidJniHelper::AttachJVM(struct android_app* state)
 	{
 		javaVM_ = state->activity->vm;
 
-        // This is called before PreInitCommon(), so trace targets are usually not attached yet, only logcat
+		// This is called before PreInitCommon(), so trace targets are usually not attached yet, only logcat
 		if (javaVM_ == nullptr) {
 			LOGE("JavaVM pointer is null");
 		} else {
@@ -121,6 +141,47 @@ namespace nCine
 		AndroidJniClass_DisplayMode::init();
 	}
 
+	String AndroidJniHelper::ExceptionToString(JNIEnv* env, jthrowable exception)
+	{
+		if (!exception) {
+			return {};
+		}
+
+		auto checkAndClear = [env]() {
+			if DEATH_UNLIKELY(env->ExceptionCheck()) {
+				env->ExceptionClear();
+				return true;
+			}
+			return false;
+		};
+
+		const jclass logClazz = env->FindClass("android/util/Log");
+		if (checkAndClear() || !logClazz) {
+			LOGW("Failed to fetch the last exception message");
+			return {};
+		}
+
+		const jmethodID methodId = env->GetStaticMethodID(logClazz, "getStackTraceString", "(Ljava/lang/Throwable;)Ljava/lang/String;");
+		if (checkAndClear() || !methodId) {
+			LOGW("Failed to fetch the last exception message");
+			return {};
+		}
+
+		jvalue value;
+		value.l = static_cast<jobject>(exception);
+		const jobject messageObj = env->CallStaticObjectMethodA(logClazz, methodId, &value);
+		const jstring jmessage = static_cast<jstring>(messageObj);
+		if (checkAndClear()) {
+			return {};
+		}
+
+		char const* utf8Message = env->GetStringUTFChars(jmessage, 0);
+		String result = utf8Message;
+		env->ReleaseStringUTFChars(jmessage, utf8Message);
+
+		return result;
+	}
+
 	// ------------------- AndroidJniClass -------------------
 
 	AndroidJniClass::AndroidJniClass(jobject javaObject)
@@ -156,8 +217,9 @@ namespace nCine
 	{
 		ASSERT(name != nullptr);
 		jclass javaClass = AndroidJniHelper::jniEnv->FindClass(name);
-		if (javaClass == nullptr) {
+		if (AndroidJniHelper::CheckAndClearExceptions() || javaClass == nullptr) {
 			LOGE("Cannot find Java class \"%s\"", name);
+			return nullptr;
 		}
 		return javaClass;
 	}
@@ -169,8 +231,9 @@ namespace nCine
 		ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetStaticMethodID(javaClass, name, signature);
-			if (mid == nullptr) {
+			if (AndroidJniHelper::CheckAndClearExceptions() || mid == nullptr) {
 				LOGE("Cannot get static method \"%s()\" with signature \"%s\"", name, signature);
+				return nullptr;
 			}
 		} else {
 			LOGE("Cannot get static methods before finding the Java class");
@@ -185,8 +248,9 @@ namespace nCine
 		ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetMethodID(javaClass, name, signature);
-			if (mid == nullptr) {
+			if (AndroidJniHelper::CheckAndClearExceptions() || mid == nullptr) {
 				LOGE("Cannot get method \"%s()\" with signature \"%s\"", name, signature);
+				return nullptr;
 			}
 		} else {
 			LOGE("Cannot get methods before finding the Java class");
@@ -201,8 +265,9 @@ namespace nCine
 		ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			fid = AndroidJniHelper::jniEnv->GetStaticFieldID(javaClass, name, signature);
-			if (fid == nullptr) {
+			if (AndroidJniHelper::CheckAndClearExceptions() || fid == nullptr) {
 				LOGE("Cannot get static field \"%s\" with signature \"%s\"", name, signature);
+				return nullptr;
 			}
 		} else {
 			LOGE("Cannot get static fields before finding the Java class");

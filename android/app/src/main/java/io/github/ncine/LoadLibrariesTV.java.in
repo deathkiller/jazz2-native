@@ -82,6 +82,11 @@ public class LoadLibrariesTV extends NativeActivity implements DisplayManager.Di
 		}
 	}
 	
+	@Keep
+	public void setActivityEnabled(String activityName, boolean enable) {
+		// Not supported on Android TV to avoid duplicating activities
+	}
+	
 	static {
 		@JAVA_SYSTEM_LOADLIBRARY_OPENAL@
 		@JAVA_SYSTEM_LOADLIBRARY_NCINE@

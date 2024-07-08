@@ -141,6 +141,7 @@ namespace Jazz2::Multiplayer
 		struct PlayerState {
 			PlayerFlags Flags;
 			std::uint64_t PressedKeys;
+			std::uint64_t PressedKeysLast;
 			//std::uint64_t WarpSeqNum;
 			//float WarpTimeLeft;
 
@@ -171,6 +172,22 @@ namespace Jazz2::Multiplayer
 		std::uint8_t FindFreePlayerId();
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
+
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+		static constexpr std::int32_t PlotValueCount = 512;
+		
+		std::int32_t _plotIndex;
+		float _actorsMaxCount;
+		float _actorsCount[PlotValueCount];
+		float _remoteActorsCount[PlotValueCount];
+		float _remotingActorsCount[PlotValueCount];
+		float _mirroredActorsCount[PlotValueCount];
+		float _updatePacketMaxSize;
+		float _updatePacketSize[PlotValueCount];
+		float _compressedUpdatePacketSize[PlotValueCount];
+
+		void ShowDebugWindow();
+#endif
 	};
 }
 
