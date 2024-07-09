@@ -999,7 +999,7 @@ namespace Jazz2
 			std::int32_t increment = (newCount - prevCount);
 			for (auto current : _players) {
 				if (current != player) {
-					current->_coins += increment;
+					current->AddCoinsInternal(increment);
 				}
 			}
 		}
