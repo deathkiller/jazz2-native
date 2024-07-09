@@ -141,12 +141,12 @@ namespace Jazz2
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
 		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
+		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
+		void HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void ActivateSugarRush(Actors::Player* player) override;
 		void ShowLevelText(const StringView text) override;
-		void ShowCoins(Actors::Player* player, std::int32_t count) override;
-		void ShowGems(Actors::Player* player, std::int32_t count) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
 		void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) override;

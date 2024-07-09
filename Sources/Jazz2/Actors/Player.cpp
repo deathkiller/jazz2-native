@@ -1484,7 +1484,7 @@ namespace Jazz2::Actors
 					_gems += _coins;
 					_coins = 0;
 				} else if (_bonusWarpTimer <= 0.0f) {
-					_levelHandler->ShowCoins(this, _coins);
+					_levelHandler->HandlePlayerCoins(this, _coins, _coins);
 					PlaySfx("BonusWarpNotEnoughCoins"_s);
 
 					_bonusWarpTimer = 400.0f;
@@ -1750,7 +1750,7 @@ namespace Jazz2::Actors
 					composite |= AnimState::Dash;
 				} else if (_keepRunningTime > 0.0f) {
 					composite |= AnimState::Run;
-				} else if (absSpeedX > 0.0f) {
+				} else if (absSpeedX > (_fireFramesLeft > 0.0f ? 1.0f : 0.0f)) {	// Shooting needs higher threshold to fix pushing into a wall
 					composite |= AnimState::Walk;
 				}
 
@@ -2286,7 +2286,7 @@ namespace Jazz2::Actors
 						}
 						_levelHandler->BeginLevelChange(exitType, nextLevel);
 					} else if (_bonusWarpTimer <= 0.0f) {
-						_levelHandler->ShowCoins(this, _coins);
+						_levelHandler->HandlePlayerCoins(this, _coins, _coins);
 						PlaySfx("BonusWarpNotEnoughCoins"_s);
 
 						_bonusWarpTimer = 400.0f;
@@ -3627,15 +3627,17 @@ namespace Jazz2::Actors
 
 	void Player::AddCoins(int count)
 	{
+		std::int32_t prevCoins = _coins;
 		_coins += count;
-		_levelHandler->ShowCoins(this, _coins);
+		_levelHandler->HandlePlayerCoins(this, prevCoins, _coins);
 		PlayPlayerSfx("PickupCoin"_s);
 	}
 
 	void Player::AddGems(int count)
 	{
+		std::int32_t prevGems = _gems;
 		_gems += count;
-		_levelHandler->ShowGems(this, _gems);
+		_levelHandler->HandlePlayerGems(this, prevGems, _gems);
 		PlayPlayerSfx("PickupGem"_s, 1.0f, std::min(0.7f + _gemsPitch * 0.05f, 1.3f));
 
 		_gemsTimer = 120.0f;

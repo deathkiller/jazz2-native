@@ -47,11 +47,7 @@ namespace Jazz2
 	bool PreferencesCache::AllowUnsignedScripts = true;
 	bool PreferencesCache::ToggleRunAction = false;
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
-#if defined(DEATH_TARGET_ANDROID)
-	bool PreferencesCache::UseNativeBackButton = true;
-#else
 	bool PreferencesCache::UseNativeBackButton = false;
-#endif
 	bool PreferencesCache::EnableDiscordIntegration = false;
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::ResumeOnStart = false;

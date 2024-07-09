@@ -992,6 +992,38 @@ namespace Jazz2
 		}
 	}
 
+	void LevelHandler::HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
+	{
+		// Coins are shared in cooperation, add it also to all other local players
+		if (prevCount < newCount) {
+			std::int32_t increment = (newCount - prevCount);
+			for (auto current : _players) {
+				if (current != player) {
+					current->_coins += increment;
+				}
+			}
+		}
+
+		// Show notification only for local players (which have assigned viewport)
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				_hud->ShowCoins(newCount);
+				break;
+			}
+		}
+	}
+
+	void LevelHandler::HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
+	{
+		// Show notification only for local players (which have assigned viewport)
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				_hud->ShowGems(newCount);
+				break;
+			}
+		}
+	}
+
 	void LevelHandler::SetCheckpoint(Actors::Player* player, const Vector2f& pos)
 	{
 		_checkpointFrames = ElapsedFrames();
@@ -1077,16 +1109,6 @@ namespace Jazz2
 	void LevelHandler::ShowLevelText(const StringView text)
 	{
 		_hud->ShowLevelText(text);
-	}
-
-	void LevelHandler::ShowCoins(Actors::Player* player, std::int32_t count)
-	{
-		_hud->ShowCoins(count);
-	}
-
-	void LevelHandler::ShowGems(Actors::Player* player, std::int32_t count)
-	{
-		_hud->ShowGems(count);
 	}
 
 	StringView LevelHandler::GetLevelText(std::uint32_t textId, std::int32_t index, std::uint32_t delimiter)

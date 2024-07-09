@@ -65,6 +65,7 @@ namespace Jazz2::Actors
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
+		friend class LevelHandler;
 		friend class UI::HUD;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
