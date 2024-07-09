@@ -747,6 +747,42 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MultiLevelHandler::HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
+	{
+		LevelHandler::HandlePlayerCoins(player, prevCount, newCount);
+
+		if (_isServer) {
+			for (const auto& [peer, peerDesc] : _peerDesc) {
+				if (peerDesc.Player == player) {
+					MemoryStream packet(9);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerRefreshCoins);
+					packet.WriteVariableUint32(player->_playerIndex);
+					packet.WriteVariableInt32(newCount);
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					break;
+				}
+			}
+		}
+	}
+
+	void MultiLevelHandler::HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
+	{
+		LevelHandler::HandlePlayerGems(player, prevCount, newCount);
+
+		if (_isServer) {
+			for (const auto& [peer, peerDesc] : _peerDesc) {
+				if (peerDesc.Player == player) {
+					MemoryStream packet(9);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerRefreshGems);
+					packet.WriteVariableUint32(player->_playerIndex);
+					packet.WriteVariableInt32(newCount);
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					break;
+				}
+			}
+		}
+	}
+
 	void MultiLevelHandler::SetCheckpoint(Actors::Player* player, const Vector2f& pos)
 	{
 		LevelHandler::SetCheckpoint(player, pos);
@@ -765,32 +801,6 @@ namespace Jazz2::Multiplayer
 	void MultiLevelHandler::ShowLevelText(const StringView text)
 	{
 		LevelHandler::ShowLevelText(text);
-	}
-
-	void MultiLevelHandler::ShowCoins(Actors::Player* player, std::int32_t count)
-	{
-		if (_isServer) {
-			auto it = _playerStates.find(player->_playerIndex);
-			if (it != _playerStates.end()) {
-				// TODO: Send it to remote peer
-				return;
-			}
-		}
-
-		LevelHandler::ShowCoins(player, count);
-	}
-
-	void MultiLevelHandler::ShowGems(Actors::Player* player, std::int32_t count)
-	{
-		if (_isServer) {
-			auto it = _playerStates.find(player->_playerIndex);
-			if (it != _playerStates.end()) {
-				// TODO: Send it to remote peer
-				return;
-			}
-		}
-
-		LevelHandler::ShowGems(player, count);
 	}
 
 	StringView MultiLevelHandler::GetLevelText(std::uint32_t textId, std::int32_t index, std::uint32_t delimiter)
@@ -1488,6 +1498,36 @@ namespace Jazz2::Multiplayer
 					LOGD("ServerPacketType::PlayerRefreshWeaponUpgrades received - playerIndex: %u, weaponType: %u, weaponUpgrades: %u", playerIndex, weaponType, weaponUpgrades);
 
 					_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
+					return true;
+				}
+				case ServerPacketType::PlayerRefreshCoins: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						return true;
+					}
+
+					std::int32_t newCount = packet.ReadVariableInt32();
+
+					LOGD("ServerPacketType::PlayerRefreshCoins received - playerIndex: %u, newCount: %i, weaponUpgrades: %u", playerIndex, newCount);
+
+					_players[0]->_coins = newCount;
+					_hud->ShowCoins(newCount);
+					return true;
+				}
+				case ServerPacketType::PlayerRefreshGems: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						return true;
+					}
+
+					std::int32_t newCount = packet.ReadVariableInt32();
+
+					LOGD("ServerPacketType::PlayerRefreshGems received - playerIndex: %u, newCount: %i, weaponUpgrades: %u", playerIndex, newCount);
+
+					_players[0]->_gems = newCount;
+					_hud->ShowGems(newCount);
 					return true;
 				}
 				case ServerPacketType::PlayerTakeDamage: {

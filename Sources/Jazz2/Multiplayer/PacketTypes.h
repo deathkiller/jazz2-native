@@ -49,6 +49,8 @@ namespace Jazz2::Multiplayer
 		PlayerChangeWeapon,
 		PlayerRefreshAmmo,
 		PlayerRefreshWeaponUpgrades,
+		PlayerRefreshCoins,
+		PlayerRefreshGems,
 		PlayerSetControllable,		// TODO
 		PlayerSetDizzyTime,			// TODO
 		PlayerSetInvulnerability,	// TODO
