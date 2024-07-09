@@ -65,7 +65,6 @@ namespace Jazz2::Actors
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
-		friend class LevelHandler;
 		friend class UI::HUD;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
@@ -109,11 +108,11 @@ namespace Jazz2::Actors
 			return _currentSpecialMove;
 		}
 
-		const uint16_t* GetWeaponAmmo() const {
+		ArrayView<const std::uint16_t> GetWeaponAmmo() const {
 			return _weaponAmmo;
 		}
 
-		const uint8_t* GetWeaponUpgrades() const {
+		ArrayView<const std::uint8_t> GetWeaponUpgrades() const {
 			return _weaponUpgrades;
 		}
 
@@ -136,11 +135,12 @@ namespace Jazz2::Actors
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
 		void SetInvulnerability(float time, bool withCircleEffect);
 
-		void AddScore(uint32_t amount);
-		bool AddHealth(int amount);
-		bool AddLives(int count);
-		void AddCoins(int count);
-		void AddGems(int count);
+		void AddScore(std::uint32_t amount);
+		bool AddHealth(std::int32_t amount);
+		bool AddLives(std::int32_t count);
+		void AddCoins(std::int32_t count);
+		void AddCoinsInternal(std::int32_t count);
+		void AddGems(std::int32_t count);
 		void ConsumeFood(bool isDrinkable);
 		void ActivateSugarRush(float duration);
 		virtual bool AddAmmo(WeaponType weaponType, std::int16_t count);
@@ -309,10 +309,10 @@ namespace Jazz2::Actors
 		void CheckEndOfSpecialMoves(float timeMult);
 		void CheckSuspendState(float timeMult);
 		void OnHandleWater();
-		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, int& areaWaterBlock);
+		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock);
 
 		void InitialPoleStage(bool horizontal);
-		void NextPoleStage(bool horizontal, bool positive, int stagesLeft, float lastSpeed);
+		void NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed);
 
 		void OnPerishInner();
 
