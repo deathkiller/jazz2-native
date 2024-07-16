@@ -13,7 +13,7 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-	const int IInputManager::MaxNumJoysticks = 4;
+	const std::int32_t IInputManager::MaxNumJoysticks = 4;
 
 	ASensorManager* AndroidInputManager::sensorManager_ = nullptr;
 	const ASensor* AndroidInputManager::accelerometerSensor_ = nullptr;
@@ -277,13 +277,13 @@ namespace nCine
 	
 	bool AndroidInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
 	{
-		// TODO
+		// TODO: Rumble on Android
 		return false;
 	}
 
 	bool AndroidInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
 	{
-		// TODO
+		// TODO: Rumble on Android
 		return false;
 	}
 
@@ -402,7 +402,7 @@ namespace nCine
 				}
 			}
 		} else {
-			LOGW("No available joystick id for device %d, dropping button event", deviceId);
+			LOGW("No available joystick ID for device %d, dropping button event", deviceId);
 		}
 
 		return true;
@@ -700,7 +700,6 @@ namespace nCine
 		if (!inputDevice.IsNull()) {
 			auto& joyState = joystickStates_[joyId];
 
-			// InputDevice.getName()
 			inputDevice.getName(joyState.name_, AndroidJoystickState::MaxNameLength);
 			if (StringView(joyState.name_) == "uinput-fpc"_s) {
 				// Fingerprint Sensor is sometimes incorrectly recognized as joystick, disable it
@@ -714,7 +713,7 @@ namespace nCine
 			const int vendorId = inputDevice.getVendorId();
 			const int productId = inputDevice.getProductId();
 			inputDevice.getDescriptor(deviceInfoString, MaxStringLength);
-			joyState.guid_ = JoyMapping::createJoystickGuid(/*SDL_HARDWARE_BUS_BLUETOOTH*/0x05, vendorId, productId, 0, deviceInfoString, 0, 0);
+			joyState.guid_ = JoyMapping::CreateJoystickGuid(/*SDL_HARDWARE_BUS_BLUETOOTH*/0x05, vendorId, productId, 0, deviceInfoString, 0, 0);
 
 			// Checking all AKEYCODE_BUTTON_* plus AKEYCODE_BACK
 			constexpr int maxButtons = AndroidJoystickState::MaxButtons;
@@ -728,7 +727,6 @@ namespace nCine
 				// Back button is always the last one
 				buttonsToCheck[maxButtons - 1] = AKEYCODE_BACK;
 
-				// InputDevice.hasKeys()
 				inputDevice.hasKeys(buttonsToCheck, maxButtons, checkedButtons);
 			}
 
@@ -782,7 +780,6 @@ namespace nCine
 					buttonsToCheck[i] = AKEYCODE_DPAD_UP + i;
 				}
 
-				// InputDevice.hasKeys()
 				inputDevice.hasKeys(buttonsToCheck, countof(buttonsToCheck), checkedButtons);
 
 				for (int i = 0; i < countof(buttonsToCheck); i++) {
@@ -807,7 +804,7 @@ namespace nCine
 			std::memset(deviceInfoString, 0, MaxStringLength);
 #endif
 			joyState.hasHatAxes_ = true;
-			// InputDevice.getMotionRange()
+
 			int numAxes = 0;
 			int numAxesMapped = 0;
 			for (int i = 0; i < AndroidJoystickState::NumAxesToMap; i++) {
