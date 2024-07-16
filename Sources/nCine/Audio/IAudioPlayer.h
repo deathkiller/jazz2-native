@@ -9,6 +9,8 @@ namespace nCine
 	/// Audio player interface class
 	class IAudioPlayer : public Object
 	{
+		DEATH_RUNTIME_OBJECT();
+
 	public:
 		/// Player state
 		enum class PlayerState {
@@ -30,6 +32,7 @@ namespace nCine
 		inline unsigned int sourceId() const {
 			return sourceId_;
 		}
+
 		/// Returns the OpenAL id of the currently playing buffer
 		virtual unsigned int bufferId() const = 0;
 
@@ -49,9 +52,9 @@ namespace nCine
 		virtual unsigned long bufferSize() const = 0;
 
 		/// Returns the playback position expressed in samples
-		int sampleOffset() const;
+		virtual int sampleOffset() const;
 		/// Sets the playback position expressed in samples
-		void setSampleOffset(int offset);
+		virtual void setSampleOffset(int offset);
 
 		/// Starts playing
 		virtual void play() = 0;
@@ -90,12 +93,12 @@ namespace nCine
 			return GetFlags(PlayerFlags::SourceRelative);
 		}
 		/// Sets player source relative property
-		void setSourceRelative(bool value);
+		virtual void setSourceRelative(bool value);
 
 		inline bool isAs2D() const {
 			return GetFlags(PlayerFlags::As2D);
 		}
-		void setAs2D(bool value) {
+		virtual void setAs2D(bool value) {
 			SetFlags(PlayerFlags::As2D, value);
 		}
 
@@ -104,25 +107,28 @@ namespace nCine
 			return gain_;
 		}
 		/// Sets player gain value
-		void setGain(float gain);
+		virtual void setGain(float gain);
+
 		/// Returns player pitch value
 		inline float pitch() const {
 			return pitch_;
 		}
 		/// Sets player pitch value
-		void setPitch(float pitch);
+		virtual void setPitch(float pitch);
+
 		/// Returns player low-pass value
 		inline float lowPass() const {
 			return lowPass_;
 		}
 		/// Sets player low-pass value
-		void setLowPass(float value);
+		virtual void setLowPass(float value);
+
 		/// Returns player position value
 		inline Vector3f position() const {
 			return position_;
 		}
 		/// Sets player position value through vector
-		void setPosition(const Vector3f& position);
+		virtual void setPosition(const Vector3f& position);
 
 	protected:
 		enum class PlayerFlags {
@@ -169,6 +175,8 @@ namespace nCine
 		virtual void updateState() = 0;
 
 		virtual void updateFilters();
+
+		void setPositionInternal(const Vector3f& position);
 
 		static Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D);
 

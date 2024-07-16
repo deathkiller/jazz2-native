@@ -9,6 +9,8 @@ namespace nCine
 	/// Audio buffer player class
 	class AudioBufferPlayer : public IAudioPlayer
 	{
+		DEATH_RUNTIME_OBJECT(IAudioPlayer);
+
 	public:
 		/// Default constructor
 		AudioBufferPlayer();

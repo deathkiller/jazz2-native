@@ -48,6 +48,56 @@ namespace Jazz2
 
 	using namespace Jazz2::Resources;
 
+#if defined(WITH_AUDIO)
+	class AudioBufferPlayerForSplitscreen : public AudioBufferPlayer
+	{
+		DEATH_RUNTIME_OBJECT(AudioBufferPlayer);
+
+	public:
+		explicit AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer);
+
+		void setPosition(const Vector3f& position) override;
+
+		void updatePosition(ArrayView<std::unique_ptr<PlayerViewport>> viewports);
+	};
+
+	AudioBufferPlayerForSplitscreen::AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer)
+		: AudioBufferPlayer(audioBuffer)
+	{
+	}
+
+	void AudioBufferPlayerForSplitscreen::setPosition(const Vector3f& position)
+	{
+		position_ = position;
+		if (state_ == PlayerState::Playing && (GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D))) {
+			IAudioDevice& device = theServiceLocator().GetAudioDevice();
+			setPositionInternal(getAdjustedPosition(device, position_, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D)));
+		}
+	}
+
+	void AudioBufferPlayerForSplitscreen::updatePosition(ArrayView<std::unique_ptr<PlayerViewport>> viewports)
+	{
+		if (state_ != PlayerState::Playing || GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D)) {
+			return;
+		}
+
+		std::size_t minIndex = 0;
+		float minDistance = FLT_MAX;
+
+		for (std::size_t i = 0; i < viewports.size(); i++) {
+			float distance = (position_.ToVector2() - viewports[i]->_cameraPos).SqrLength();
+			if (minDistance > distance) {
+				minDistance = distance;
+				minIndex = i;
+			}
+		}
+
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+		Vector3f relativePos = (position_ - Vector3f(viewports[minIndex]->_cameraPos, 0.0f));
+		setPositionInternal(getAdjustedPosition(device, relativePos, false, false));
+	}
+#endif
+
 	LevelHandler::LevelHandler(IRootController* root)
 		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
@@ -413,6 +463,25 @@ namespace Jazz2
 				viewport->UpdateCamera(timeMult);
 			}
 
+#if defined(WITH_AUDIO)
+			if (!_assignedViewports.empty()) {
+				// Update audio listener position
+				IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
+				if (_assignedViewports.size() == 1) {
+					audioDevice.updateListener(Vector3f(_assignedViewports[0]->_cameraPos, 0.0f),
+						Vector3f(_assignedViewports[0]->_targetPlayer->GetSpeed(), 0.0f));
+				} else {
+					audioDevice.updateListener(Vector3f::Zero, Vector3f::Zero);
+
+					for (auto& player : _playingSounds) {
+						if (auto* splitscreenPlayer = runtime_cast<AudioBufferPlayerForSplitscreen*>(player)) {
+							splitscreenPlayer->updatePosition(_assignedViewports);
+						}
+					}
+				}
+			}
+#endif
+
 			_elapsedFrames += timeMult;
 		}
 
@@ -588,14 +657,18 @@ namespace Jazz2
 								if (_cheatsBuffer[2] == (char)KeySym::K) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									_players[0]->TakeDamage(INT32_MAX);
+									for (auto* player : _players) {
+										player->TakeDamage(INT32_MAX);
+									}
 								}
 								break;
 							case 5:
 								if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::D) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									_players[0]->SetInvulnerability(36000.0f, true);
+									for (auto* player : _players) {
+										player->SetInvulnerability(36000.0f, true);
+									}
 								}
 								break;
 							case 6:
@@ -607,33 +680,44 @@ namespace Jazz2
 										   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									for (int32_t i = 0; i < (int32_t)WeaponType::Count; i++) {
-										_players[0]->AddAmmo((WeaponType)i, 99);
+									for (auto* player : _players) {
+										for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+											player->AddAmmo((WeaponType)i, 99);
+										}
 									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::R && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::S && _cheatsBuffer[5] == (char)KeySym::H) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									_players[0]->ActivateSugarRush(1300.0f);
+									for (auto* player : _players) {
+										player->ActivateSugarRush(1300.0f);
+									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::S) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									_players[0]->AddGems(5);
+									for (auto* player : _players) {
+										player->AddGems(5);
+									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::B && _cheatsBuffer[3] == (char)KeySym::I && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::D) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									_players[0]->SpawnBird(0, _players[0]->GetPos());
+									for (auto* player : _players) {
+										player->SpawnBird(0, player->GetPos());
+									}
 								}
 								break;
 							case 7:
 								if (_cheatsBuffer[2] == (char)KeySym::P && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::W && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::R) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
-										_players[0]->AddWeaponUpgrade((WeaponType)i, 0x01);
+									for (auto* player : _players) {
+										for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+											player->AddWeaponUpgrade((WeaponType)i, 0x01);
+										}
 									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::C && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::N && _cheatsBuffer[6] == (char)KeySym::S) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
+									// Coins are synchronized automatically
 									_players[0]->AddCoins(5);
 								}
 								break;
@@ -641,8 +725,10 @@ namespace Jazz2
 								if (_cheatsBuffer[2] == (char)KeySym::S && _cheatsBuffer[3] == (char)KeySym::H && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::L && _cheatsBuffer[7] == (char)KeySym::D) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									ShieldType shieldType = (ShieldType)(((std::int32_t)_players[0]->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
-									_players[0]->SetShield(shieldType, 600.0f * FrameTimer::FramesPerSecond);
+									for (auto* player : _players) {
+										ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
+										player->SetShield(shieldType, 600.0f * FrameTimer::FramesPerSecond);
+									}
 								}
 								break;
 						}
@@ -681,7 +767,9 @@ namespace Jazz2
 	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, const StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
 #if defined(WITH_AUDIO)
-		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
+		auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
+			? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer)
+			: std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 		player->setSourceRelative(sourceRelative);
@@ -708,12 +796,15 @@ namespace Jazz2
 			return nullptr;
 		}
 		std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
-		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
+		auto* buffer = &it->second.Buffers[idx]->Buffer;
+		auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
+			? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer)
+			: std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 
 		if (pos.Y >= _waterLevel) {
-			player->setLowPass(/*0.2f*/0.05f);
+			player->setLowPass(0.05f);
 			player->setPitch(pitch * 0.7f);
 		} else {
 			player->setPitch(pitch);
