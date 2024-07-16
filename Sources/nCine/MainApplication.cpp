@@ -359,7 +359,7 @@ namespace nCine
 #else
 		const char* envGameControllerConfig = ::getenv("SDL_GAMECONTROLLERCONFIG");
 		if (envGameControllerConfig != nullptr && envGameControllerConfig[0] != '\0') {
-			inputManager_->AddJoyMappingsFromString(envGameControllerConfig, "SDL_GAMECONTROLLERCONFIG variable"_s);
+			inputManager_->addJoyMappingsFromString(envGameControllerConfig, "SDL_GAMECONTROLLERCONFIG variable"_s);
 		}
 #endif
 
