@@ -176,9 +176,9 @@ namespace nCine
 
 		virtual void updateFilters();
 
-		void setPositionInternal(const Vector3f& position);
+		virtual Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D);
 
-		static Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D);
+		void setPositionInternal(const Vector3f& position);
 
 		friend class ALAudioDevice;
 	};

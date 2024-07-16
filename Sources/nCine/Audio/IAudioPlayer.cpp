@@ -137,7 +137,7 @@ namespace nCine
 		adjustedPos.Z *= 0.5f;
 
 		// Normalize audio position for smooth panning when near. Do it in physical units, so this remains constant regardless of unit changes.
-		constexpr float SmoothPanRadius = 32.0f;
+		constexpr float SmoothPanRadius = 26.0f;
 		float listenerSpaceDist = adjustedPos.Length();
 		if (listenerSpaceDist < SmoothPanRadius) {
 			float panningActive = listenerSpaceDist / SmoothPanRadius;

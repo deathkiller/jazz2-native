@@ -223,6 +223,80 @@ namespace Jazz2
 		_ambientLightTarget = _ambientLight.W;
 	}
 
+	bool PlayerViewport::Initialize(SceneNode* sceneNode, SceneNode* outputNode, Recti bounds, bool useHalfRes)
+	{
+		bool notInitialized = (_view == nullptr);
+
+		std::int32_t w = bounds.W;
+		std::int32_t h = bounds.H;
+
+		if (useHalfRes) {
+			w *= 2;
+			h *= 2;
+		}
+
+		if (notInitialized) {
+			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
+			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
+
+			_camera = std::make_unique<Camera>();
+
+			_view->setCamera(_camera.get());
+			_view->setRootNode(sceneNode);
+		} else {
+			_view->removeAllTextures();
+			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
+			_view->setTexture(_viewTexture.get());
+		}
+
+		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
+		_viewTexture->setWrap(SamplerWrapping::ClampToEdge);
+
+		_camera->setOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
+
+		if (notInitialized) {
+			_lightingRenderer = std::make_unique<LightingRenderer>(this);
+			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::None);
+			_lightingView->setRootNode(_lightingRenderer.get());
+			_lightingView->setCamera(_camera.get());
+		} else {
+			_lightingView->removeAllTextures();
+			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
+			_lightingView->setTexture(_lightingBuffer.get());
+		}
+
+		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
+		_lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
+
+		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
+		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
+		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
+		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
+		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
+
+		if (notInitialized) {
+			_combineRenderer = std::make_unique<CombineRenderer>(this);
+			_combineRenderer->setParent(outputNode);
+		}
+
+		_combineRenderer->Initialize(bounds.X, bounds.Y, bounds.W, bounds.H);
+
+		return notInitialized;
+	}
+
+	void PlayerViewport::Register()
+	{
+		_blurPass4.Register();
+		_blurPass3.Register();
+		_blurPass2.Register();
+		_blurPass1.Register();
+		_downsamplePass.Register();
+
+		Viewport::chain().push_back(_lightingView.get());
+		Viewport::chain().push_back(_view.get());
+	}
+
 	Rectf PlayerViewport::GetBounds() const
 	{
 		return _combineRenderer->GetBounds();
