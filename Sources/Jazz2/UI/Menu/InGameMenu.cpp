@@ -130,7 +130,7 @@ namespace Jazz2::UI::Menu
 
 			Vector4f ambientColor = viewport->_ambientLight;
 			if (ambientColor.W < 1.0f) {
-				DrawSolid(Vector2f(scopedView.X, scopedView.Y), 502, Vector2f(scopedView.W, scopedView.H), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
+				DrawSolid(Vector2f(scopedView.X, scopedView.Y), 502, Vector2f(scopedView.W, scopedView.H), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - powf(ambientColor.W, 1.6f)) * std::min(AnimTime * 8.0f, 1.0f)));
 			}
 		}
 

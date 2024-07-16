@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-07-07 20:27+0200\n"
+"POT-Creation-Date: 2024-07-17 00:48+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -1183,7 +1183,7 @@ msgstr "Controlos"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:142
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:145
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:124
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Enabled"
 msgstr "Ativado"
 
@@ -1191,8 +1191,8 @@ msgstr "Ativado"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:124
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Disabled"
 msgstr "Desativado"
 
@@ -1383,12 +1383,12 @@ msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
-msgid "Unaligned Viewport"
+msgid "Preferred Splitscreen"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
-msgid "Preferred Splitscreen"
+msgid "Prefer Zoom Out"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
@@ -1398,33 +1398,38 @@ msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
+msgid "Unaligned Viewport"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
 msgid "Performance Metrics"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:76
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:78
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
 msgid "Graphics"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 msgid "Low"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 msgid "High"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
-msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
-msgstr ""
-
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Vertical"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Horizontal"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
+msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr ""
 
 #. TRANSLATORS: Header in Import Episodes section

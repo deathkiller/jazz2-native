@@ -54,47 +54,56 @@ namespace Jazz2
 		DEATH_RUNTIME_OBJECT(AudioBufferPlayer);
 
 	public:
-		explicit AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer);
+		explicit AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer, ArrayView<std::unique_ptr<PlayerViewport>> viewports);
 
-		void setPosition(const Vector3f& position) override;
+		Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D) override;
 
-		void updatePosition(ArrayView<std::unique_ptr<PlayerViewport>> viewports);
+		void updatePosition();
+		void updateViewports(ArrayView<std::unique_ptr<PlayerViewport>> viewports);
+
+	private:
+		ArrayView<std::unique_ptr<PlayerViewport>> _viewports;
 	};
 
-	AudioBufferPlayerForSplitscreen::AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer)
-		: AudioBufferPlayer(audioBuffer)
+	AudioBufferPlayerForSplitscreen::AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer, ArrayView<std::unique_ptr<PlayerViewport>> viewports)
+		: AudioBufferPlayer(audioBuffer), _viewports(viewports)
 	{
 	}
 
-	void AudioBufferPlayerForSplitscreen::setPosition(const Vector3f& position)
+	Vector3f AudioBufferPlayerForSplitscreen::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)
 	{
-		position_ = position;
-		if (state_ == PlayerState::Playing && (GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D))) {
-			IAudioDevice& device = theServiceLocator().GetAudioDevice();
-			setPositionInternal(getAdjustedPosition(device, position_, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D)));
-		}
-	}
-
-	void AudioBufferPlayerForSplitscreen::updatePosition(ArrayView<std::unique_ptr<PlayerViewport>> viewports)
-	{
-		if (state_ != PlayerState::Playing || GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D)) {
-			return;
+		if (isSourceRelative || isAs2D) {
+			return AudioBufferPlayer::getAdjustedPosition(device, pos, isSourceRelative, isAs2D);
 		}
 
 		std::size_t minIndex = 0;
 		float minDistance = FLT_MAX;
 
-		for (std::size_t i = 0; i < viewports.size(); i++) {
-			float distance = (position_.ToVector2() - viewports[i]->_cameraPos).SqrLength();
+		for (std::size_t i = 0; i < _viewports.size(); i++) {
+			float distance = (pos.ToVector2() - _viewports[i]->_cameraPos).SqrLength();
 			if (minDistance > distance) {
 				minDistance = distance;
 				minIndex = i;
 			}
 		}
 
+		Vector3f relativePos = (pos - Vector3f(_viewports[minIndex]->_cameraPos, 0.0f));
+		return AudioBufferPlayer::getAdjustedPosition(device, relativePos, false, false);
+	}
+
+	void AudioBufferPlayerForSplitscreen::updatePosition()
+	{
+		if (state_ != PlayerState::Playing || GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D)) {
+			return;
+		}
+
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		Vector3f relativePos = (position_ - Vector3f(viewports[minIndex]->_cameraPos, 0.0f));
-		setPositionInternal(getAdjustedPosition(device, relativePos, false, false));
+		setPositionInternal(getAdjustedPosition(device, position_, false, false));
+	}
+
+	void AudioBufferPlayerForSplitscreen::updateViewports(ArrayView<std::unique_ptr<PlayerViewport>> viewports)
+	{
+		_viewports = viewports;
 	}
 #endif
 
@@ -373,7 +382,7 @@ namespace Jazz2
 			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
-				Vector3i((std::int32_t)spawnPosition.X + (i * 10) - (playerCount * 5), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
+				Vector3i((std::int32_t)spawnPosition.X + (i * 10) - ((playerCount - 1) * 5), (std::int32_t)spawnPosition.Y - (i * 20) + ((playerCount - 1) * 10), PlayerZ - i),
 				playerParams
 			));
 
@@ -473,9 +482,10 @@ namespace Jazz2
 				} else {
 					audioDevice.updateListener(Vector3f::Zero, Vector3f::Zero);
 
-					for (auto& player : _playingSounds) {
-						if (auto* splitscreenPlayer = runtime_cast<AudioBufferPlayerForSplitscreen*>(player)) {
-							splitscreenPlayer->updatePosition(_assignedViewports);
+					// All audio players must be updated to the nearest listener
+					for (auto& current : _playingSounds) {
+						if (auto* current2 = runtime_cast<AudioBufferPlayerForSplitscreen*>(current)) {
+							current2->updatePosition();
 						}
 					}
 				}
@@ -536,77 +546,32 @@ namespace Jazz2
 		_viewSize = Vector2i(w, h);
 		_upscalePass.Initialize(w, h, width, height);
 
+		bool notInitialized = (_combineShader == nullptr);
+
+		auto& resolver = ContentResolver::Get();
+		if (notInitialized) {
+			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
+			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
+			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
+			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
+
+			if (_hud != nullptr) {
+				_hud->setParent(_upscalePass.GetNode());
+			}
+		}
+
+		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
+			? PrecompiledShader::CombineWithWaterLow
+			: PrecompiledShader::CombineWithWater);
+
+		bool useHalfRes = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3);
+
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			PlayerViewport& viewport = *_assignedViewports[i];
-			bool notInitialized = (viewport._view == nullptr);
-
 			Recti bounds = GetPlayerViewportBounds(w, h, (std::int32_t)i);
-
-			if (notInitialized) {
-				viewport._viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, bounds.W, bounds.H);
-				viewport._view = std::make_unique<Viewport>(viewport._viewTexture.get(), Viewport::DepthStencilFormat::None);
-
-				viewport._camera = std::make_unique<Camera>();
+			if (viewport.Initialize(_rootNode.get(), _upscalePass.GetNode(), bounds, useHalfRes)) {
 				InitializeCamera(viewport);
-
-				viewport._view->setCamera(viewport._camera.get());
-				viewport._view->setRootNode(_rootNode.get());
-			} else {
-				viewport._view->removeAllTextures();
-				viewport._viewTexture->init(nullptr, Texture::Format::RGB8, bounds.W, bounds.H);
-				viewport._view->setTexture(viewport._viewTexture.get());
 			}
-
-			viewport._viewTexture->setMagFiltering(SamplerFilter::Nearest);
-			viewport._viewTexture->setWrap(SamplerWrapping::ClampToEdge);
-
-			viewport._camera->setOrthoProjection(0.0f, (float)bounds.W, (float)bounds.H, 0.0f);
-
-			auto& resolver = ContentResolver::Get();
-
-			if (viewport._lightingRenderer == nullptr) {
-				_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
-				_blurShader = resolver.GetShader(PrecompiledShader::Blur);
-				_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
-				_combineShader = resolver.GetShader(PrecompiledShader::Combine);
-
-				viewport._lightingRenderer = std::make_unique<LightingRenderer>(&viewport);
-			}
-
-			_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
-				? PrecompiledShader::CombineWithWaterLow
-				: PrecompiledShader::CombineWithWater);
-
-			if (notInitialized) {
-				viewport._lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, bounds.W, bounds.H);
-				viewport._lightingView = std::make_unique<Viewport>(viewport._lightingBuffer.get(), Viewport::DepthStencilFormat::None);
-				viewport._lightingView->setRootNode(viewport._lightingRenderer.get());
-				viewport._lightingView->setCamera(viewport._camera.get());
-			} else {
-				viewport._lightingView->removeAllTextures();
-				viewport._lightingBuffer->init(nullptr, Texture::Format::RG8, bounds.W, bounds.H);
-				viewport._lightingView->setTexture(viewport._lightingBuffer.get());
-			}
-
-			viewport._lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
-			viewport._lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
-
-			viewport._downsamplePass.Initialize(viewport._viewTexture.get(), bounds.W / 2, bounds.H / 2, Vector2f::Zero);
-			viewport._blurPass1.Initialize(viewport._downsamplePass.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(1.0f, 0.0f));
-			viewport._blurPass2.Initialize(viewport._blurPass1.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(0.0f, 1.0f));
-			viewport._blurPass3.Initialize(viewport._blurPass2.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(1.0f, 0.0f));
-			viewport._blurPass4.Initialize(viewport._blurPass3.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(0.0f, 1.0f));
-
-			if (notInitialized) {
-				viewport._combineRenderer = std::make_unique<CombineRenderer>(&viewport);
-				viewport._combineRenderer->setParent(_upscalePass.GetNode());
-
-				if (_hud != nullptr) {
-					_hud->setParent(_upscalePass.GetNode());
-				}
-			}
-
-			viewport._combineRenderer->Initialize(bounds.X, bounds.Y, bounds.W, bounds.H);
 		}
 
 		// Viewports must be registered in reverse order
@@ -614,15 +579,7 @@ namespace Jazz2
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			PlayerViewport& viewport = *_assignedViewports[i];
-
-			viewport._blurPass4.Register();
-			viewport._blurPass3.Register();
-			viewport._blurPass2.Register();
-			viewport._blurPass1.Register();
-			viewport._downsamplePass.Register();
-
-			Viewport::chain().push_back(viewport._lightingView.get());
-			Viewport::chain().push_back(viewport._view.get());
+			viewport.Register();			
 
 			if (_pauseMenu != nullptr) {
 				viewport.UpdateCamera(0.0f);	// Force update camera if game is paused
@@ -768,7 +725,7 @@ namespace Jazz2
 	{
 #if defined(WITH_AUDIO)
 		auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
-			? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer)
+			? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer, _assignedViewports)
 			: std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
@@ -798,7 +755,7 @@ namespace Jazz2
 		std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 		auto* buffer = &it->second.Buffers[idx]->Buffer;
 		auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
-			? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer)
+			? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer, _assignedViewports)
 			: std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
@@ -1481,6 +1438,7 @@ namespace Jazz2
 		std::int32_t count = (std::int32_t)_assignedViewports.size();
 
 		switch (count) {
+			default:
 			case 1: {
 				return Recti(0, 0, w, h);
 			}
@@ -1680,6 +1638,14 @@ namespace Jazz2
 	void LevelHandler::AssignViewport(Actors::Player* player)
 	{
 		_assignedViewports.emplace_back(std::make_unique<PlayerViewport>(this, player));
+
+#if defined(WITH_AUDIO)
+		for (auto& current : _playingSounds) {
+			if (auto* current2 = runtime_cast<AudioBufferPlayerForSplitscreen*>(current)) {
+				current2->updateViewports(_assignedViewports);
+			}
+		}
+#endif
 	}
 
 	void LevelHandler::InitializeCamera(PlayerViewport& viewport)

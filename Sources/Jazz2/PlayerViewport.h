@@ -110,6 +110,9 @@ namespace Jazz2
 
 		PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer);
 
+		bool Initialize(SceneNode* sceneNode, SceneNode* outputNode, Recti bounds, bool useHalfRes);
+		void Register();
+
 		Rectf GetBounds() const;
 		Actors::Player* GetTargetPlayer() const;
 		void OnEndFrame();
