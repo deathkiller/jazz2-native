@@ -81,7 +81,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_DEBUG_ASSERT(condition, ...) assert(condition)
 #	else
-#		define __DEATH_DEBUG_ASSERT0(condition, ...)				\
+#		define __DEATH_DEBUG_ASSERT1(condition, ...)				\
 			do {													\
 				if(!(condition)) {									\
 					LOGF("Assertion (" #condition ") failed at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
@@ -95,7 +95,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 					return returnValue;								\
 				}													\
 			} while(false)
-#		define DEATH_DEBUG_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERT0, )(__VA_ARGS__))
+#		define DEATH_DEBUG_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERT1, __DEATH_DEBUG_ASSERT1, )(__VA_ARGS__))
 #	endif
 #endif
 

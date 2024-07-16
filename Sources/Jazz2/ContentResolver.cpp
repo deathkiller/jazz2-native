@@ -38,12 +38,12 @@ static Vector2i GetVector2iFromJson(simdjson_result<T> value, Vector2i defaultVa
 	ondemand::array itemArray;
 	ondemand::array_iterator itemIterator;
 	if (value.get(itemArray) == SUCCESS && itemArray.begin().get(itemIterator) == SUCCESS) {
-		int64_t x = 0, y = 0;
+		std::int64_t x = 0, y = 0;
 		bool xf = (*itemIterator).get(x) == SUCCESS;
 		++itemIterator;
 		bool yf = (*itemIterator).get(y) == SUCCESS;
 		if (xf && yf) {
-			return Vector2i((int32_t)x, (int32_t)y);
+			return Vector2i((std::int32_t)x, (std::int32_t)y);
 		}
 	}
 	return defaultValue;

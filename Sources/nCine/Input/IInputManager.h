@@ -104,9 +104,9 @@ namespace nCine
 		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
 
 		/// Adds joystick mapping configurations from a text file
-		void addJoyMappingsFromFile(const StringView& path);
-		/// Adds joystick mapping configurations from a strings array terminated by a `nullptr`
-		void addJoyMappingsFromStrings(const char** mappingStrings);
+		void addJoyMappingsFromFile(StringView path);
+		/// Adds joystick mapping configurations from a string
+		void addJoyMappingsFromString(StringView mappingStrings, StringView traceSource = {});
 		/// Returns the current number of valid joystick mappings
 		unsigned int numJoyMappings() const;
 		/// Returns true if mapping exists for specified joystick by GUID

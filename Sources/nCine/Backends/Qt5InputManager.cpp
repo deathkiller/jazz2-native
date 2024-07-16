@@ -46,7 +46,7 @@ namespace nCine
 		}
 #endif
 
-		joyMapping_.init(this);
+		joyMapping_.Init(this);
 
 #if defined(WITH_IMGUI)
 		ImGuiQt5Input::init(&widget);
@@ -146,7 +146,7 @@ namespace nCine
 					joystickStates_[i].gamepad_->setDeviceId(-1);
 					joyConnectionEvent_.joyId = i;
 					inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
-					joyMapping_.onJoyDisconnected(joyConnectionEvent_);
+					joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
 				}
 			}
 		}
@@ -181,10 +181,10 @@ namespace nCine
 						joyButtonEvent_.joyId = joyId;
 						joyButtonEvent_.buttonId = buttonId;
 						if (newButtonState) {
-							joyMapping_.onJoyButtonPressed(joyButtonEvent_);
+							joyMapping_.OnJoyButtonPressed(joyButtonEvent_);
 							inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 						} else {
-							joyMapping_.onJoyButtonReleased(joyButtonEvent_);
+							joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
 							inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 						}
 					}
@@ -198,7 +198,7 @@ namespace nCine
 					joyHatEvent_.joyId = joyId;
 					joyHatEvent_.hatId = 0;
 					joyHatEvent_.hatState = newHatState;
-					joyMapping_.onJoyHatMoved(joyHatEvent_);
+					joyMapping_.OnJoyHatMoved(joyHatEvent_);
 					inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 				}
 			}
@@ -211,7 +211,7 @@ namespace nCine
 						joyAxisEvent_.joyId = joyId;
 						joyAxisEvent_.axisId = axisId;
 						joyAxisEvent_.value = newAxisValue;
-						joyMapping_.onJoyAxisMoved(joyAxisEvent_);
+						joyMapping_.OnJoyAxisMoved(joyAxisEvent_);
 						inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 					}
 				}

@@ -78,33 +78,33 @@ namespace nCine
 	void IInputManager::setHandler(IInputEventHandler* inputEventHandler)
 	{
 		inputEventHandler_ = inputEventHandler;
-		joyMapping_.setHandler(inputEventHandler);
+		joyMapping_.SetHandler(inputEventHandler);
 	}
 
 	/*! \note Joystick will stay mapped in the`OnJoyConnected()` and `OnJoyDisconnected()` callbacks */
 	bool IInputManager::isJoyMapped(int joyId) const
 	{
-		return joyMapping_.isJoyMapped(joyId);
+		return joyMapping_.IsJoyMapped(joyId);
 	}
 
 	const JoyMappedState& IInputManager::joyMappedState(int joyId) const
 	{
-		return joyMapping_.joyMappedState(joyId);
+		return joyMapping_.GetMappedState(joyId);
 	}
 
 	void IInputManager::deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const
 	{
-		return joyMapping_.deadZoneNormalize(joyVector, deadZoneValue);
+		return joyMapping_.DeadZoneNormalize(joyVector, deadZoneValue);
 	}
 
-	void IInputManager::addJoyMappingsFromFile(const StringView& path)
+	void IInputManager::addJoyMappingsFromFile(StringView path)
 	{
-		joyMapping_.addMappingsFromFile(path);
+		joyMapping_.AddMappingsFromFile(path);
 	}
 
-	void IInputManager::addJoyMappingsFromStrings(const char** mappingStrings)
+	void IInputManager::addJoyMappingsFromString(StringView mappingString, StringView traceSource)
 	{
-		joyMapping_.addMappingsFromStrings(mappingStrings);
+		joyMapping_.AddMappingsFromString(mappingString, traceSource);
 	}
 
 	unsigned int IInputManager::numJoyMappings() const
@@ -114,12 +114,12 @@ namespace nCine
 
 	bool IInputManager::hasMappingByGuid(const JoystickGuid& guid) const
 	{
-		return (joyMapping_.findMappingByGuid(guid) != -1);
+		return (joyMapping_.FindMappingByGuid(guid) != -1);
 	}
 
 	bool IInputManager::hasMappingByName(const char* name) const
 	{
-		return (joyMapping_.findMappingByName(name) != -1);
+		return (joyMapping_.FindMappingByName(name) != -1);
 	}
 
 	void IInputManager::setCursor(Cursor cursor)

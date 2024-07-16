@@ -59,7 +59,7 @@ namespace nCine
 		glfwSetScrollCallback(GlfwGfxDevice::windowHandle(), scrollCallback);
 		glfwSetJoystickCallback(joystickCallback);
 
-		joyMapping_.init(this);
+		joyMapping_.Init(this);
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		emscripten_set_touchstart_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
@@ -390,7 +390,7 @@ namespace nCine
 			updateJoystickStates();
 			
 			if (inputEventHandler_ != nullptr) {
-				joyMapping_.onJoyConnected(joyConnectionEvent_);
+				joyMapping_.OnJoyConnected(joyConnectionEvent_);
 				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
 			}
 		} else if (event == GLFW_DISCONNECTED) {
@@ -398,7 +398,7 @@ namespace nCine
 			LOGI("Joystick %d has been disconnected", joyId);
 			if (inputEventHandler_ != nullptr) {
 				inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
-				joyMapping_.onJoyDisconnected(joyConnectionEvent_);
+				joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
 			}
 		}
 	}
@@ -467,10 +467,10 @@ namespace nCine
 				joyButtonEvent_.joyId = joyId;
 				joyButtonEvent_.buttonId = buttonId;
 				if (joystickStates_[joyId].buttons_[buttonId] == GLFW_PRESS) {
-					joyMapping_.onJoyButtonPressed(joyButtonEvent_);
+					joyMapping_.OnJoyButtonPressed(joyButtonEvent_);
 					inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 				} else if (joystickStates_[joyId].buttons_[buttonId] == GLFW_RELEASE) {
-					joyMapping_.onJoyButtonReleased(joyButtonEvent_);
+					joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
 					inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 				}
 			}
@@ -489,7 +489,7 @@ namespace nCine
 				joyHatEvent_.hatId = hatId;
 				joyHatEvent_.hatState = hats[hatId];
 
-				joyMapping_.onJoyHatMoved(joyHatEvent_);
+				joyMapping_.OnJoyHatMoved(joyHatEvent_);
 				inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 			}
 		}
@@ -506,7 +506,7 @@ namespace nCine
 				joyAxisEvent_.joyId = joyId;
 				joyAxisEvent_.axisId = axisId;
 				joyAxisEvent_.value = axesValues[axisId];
-				joyMapping_.onJoyAxisMoved(joyAxisEvent_);
+				joyMapping_.OnJoyAxisMoved(joyAxisEvent_);
 				inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 			}
 		}

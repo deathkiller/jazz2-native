@@ -66,7 +66,7 @@ namespace nCine
 	AndroidInputManager::AndroidInputManager(struct android_app* state)
 	{
 		initAccelerometerSensor(state);
-		joyMapping_.init(this);
+		joyMapping_.Init(this);
 		checkConnectedJoysticks();
 
 #if defined(WITH_IMGUI)
@@ -312,12 +312,12 @@ namespace nCine
 						switch (AKeyEvent_getAction(event)) {
 							case AKEY_EVENT_ACTION_DOWN:
 								joystickStates_[joyId].buttons_[buttonIndex] = true;
-								joyMapping_.onJoyButtonPressed(joyButtonEvent_);
+								joyMapping_.OnJoyButtonPressed(joyButtonEvent_);
 								inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 								break;
 							case AKEY_EVENT_ACTION_UP:
 								joystickStates_[joyId].buttons_[buttonIndex] = false;
-								joyMapping_.onJoyButtonReleased(joyButtonEvent_);
+								joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
 								inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 								break;
 							case AKEY_EVENT_ACTION_MULTIPLE:
@@ -348,7 +348,7 @@ namespace nCine
 							joystickStates_[joyId].hatState_ = hatState;
 							joyHatEvent_.hatState = joystickStates_[joyId].hatState_;
 
-							joyMapping_.onJoyHatMoved(joyHatEvent_);
+							joyMapping_.OnJoyHatMoved(joyHatEvent_);
 							inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 						}
 					}
@@ -387,7 +387,7 @@ namespace nCine
 							
 							joyAxisEvent_.axisId = i;
 							joyAxisEvent_.value = axisValue;
-							joyMapping_.onJoyAxisMoved(joyAxisEvent_);
+							joyMapping_.OnJoyAxisMoved(joyAxisEvent_);
 							inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 						}
 					}
@@ -395,7 +395,7 @@ namespace nCine
 					if (joyState.hatState_ != hatState) {
 						joyState.hatState_ = hatState;
 						joyHatEvent_.hatState = joyState.hatState_;
-						joyMapping_.onJoyHatMoved(joyHatEvent_);
+						joyMapping_.OnJoyHatMoved(joyHatEvent_);
 						inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 					}
 					break;
@@ -612,7 +612,7 @@ namespace nCine
 				if (inputEventHandler_ != nullptr && joystickStates_[i].guid_.isValid()) {
 					joyConnectionEvent_.joyId = i;
 					inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
-					joyMapping_.onJoyDisconnected(joyConnectionEvent_);
+					joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
 				}
 			}
 		}
@@ -677,7 +677,7 @@ namespace nCine
 
 			if (inputEventHandler_ != nullptr && joystickStates_[joyId].guid_.isValid()) {
 				joyConnectionEvent_.joyId = joyId;
-				joyMapping_.onJoyConnected(joyConnectionEvent_);
+				joyMapping_.OnJoyConnected(joyConnectionEvent_);
 				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
 			}
 		}
