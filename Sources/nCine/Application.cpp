@@ -703,7 +703,7 @@ namespace nCine
 #	endif
 			imguiDrawing_->newFrame();
 #	if defined(NCINE_PROFILING)
-			timings_[(int)Timings::ImGui] = profileStartTime_.secondsSince();
+			timings_[(std::int32_t)Timings::ImGui] = profileStartTime_.secondsSince();
 #	endif
 		}
 #endif
