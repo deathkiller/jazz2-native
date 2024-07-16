@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <Base/TypeInfo.h>
 
 namespace nCine
 {

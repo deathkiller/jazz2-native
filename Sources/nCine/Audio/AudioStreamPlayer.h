@@ -8,11 +8,11 @@ namespace nCine
 	/// Audio stream player class
 	class AudioStreamPlayer : public IAudioPlayer
 	{
+		DEATH_RUNTIME_OBJECT(IAudioPlayer);
+
 	public:
 		/// Default constructor
 		AudioStreamPlayer();
-		/// A constructor creating a player from a named memory buffer
-		//AudioStreamPlayer(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a player from a file
 		explicit AudioStreamPlayer(const StringView& filename);
 		~AudioStreamPlayer() override;

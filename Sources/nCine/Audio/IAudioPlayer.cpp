@@ -82,8 +82,7 @@ namespace nCine
 		position_ = position;
 		if (state_ == PlayerState::Playing) {
 			IAudioDevice& device = theServiceLocator().GetAudioDevice();
-			Vector3f adjustedPos = getAdjustedPosition(device, position_, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D));
-			alSource3f(sourceId_, AL_POSITION, adjustedPos.X, adjustedPos.Y, adjustedPos.Z);
+			setPositionInternal(getAdjustedPosition(device, position_, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D)));
 		}
 	}
 
@@ -107,6 +106,11 @@ namespace nCine
 			alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 		}
 #endif
+	}
+
+	void IAudioPlayer::setPositionInternal(const Vector3f& position)
+	{
+		alSource3f(sourceId_, AL_POSITION, position.X, position.Y, position.Z);
 	}
 
 	Vector3f IAudioPlayer::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)

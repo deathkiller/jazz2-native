@@ -95,12 +95,11 @@ namespace nCine
 
 				bool isSourceRelative = GetFlags(PlayerFlags::SourceRelative);
 				bool isAs2D = GetFlags(PlayerFlags::As2D);
-				Vector3f adjustedPos = getAdjustedPosition(device, position_, isSourceRelative, isAs2D);
 
 				alSourcei(sourceId_, AL_SOURCE_RELATIVE, isSourceRelative || isAs2D ? AL_TRUE : AL_FALSE);
-				alSource3f(sourceId_, AL_POSITION, adjustedPos.X, adjustedPos.Y, adjustedPos.Z);
 				alSourcef(sourceId_, AL_REFERENCE_DISTANCE, IAudioDevice::ReferenceDistance);
 				alSourcef(sourceId_, AL_MAX_DISTANCE, IAudioDevice::MaxDistance);
+				setPositionInternal(getAdjustedPosition(device, position_, isSourceRelative, isAs2D));
 
 				alSourcePlay(sourceId_);
 				state_ = PlayerState::Playing;

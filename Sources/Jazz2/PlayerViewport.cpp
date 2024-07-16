@@ -345,13 +345,6 @@ namespace Jazz2
 		}
 
 		_camera->setView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);
-
-		// TODO: Viewports - Audio listener
-		if (_targetPlayer->GetPlayerIndex() == 0) {
-			// Update audio listener position
-			IAudioDevice& device = theServiceLocator().GetAudioDevice();
-			device.updateListener(Vector3f(_cameraPos, 0.0f), Vector3f(focusSpeed, 0.0f));
-		}
 	}
 
 	void PlayerViewport::ShakeCameraView(float duration)
