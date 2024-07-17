@@ -37,7 +37,7 @@ namespace Jazz2::UI::Menu
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
 		// Mark Menu button as already pressed to avoid some issues
-		_pressedActions = (1 << (int32_t)PlayerActions::Menu) | (1 << ((int32_t)PlayerActions::Menu + 16));
+		_pressedActions = (1 << (std::int32_t)PlayerActions::Menu) | (1 << ((std::int32_t)PlayerActions::Menu + 16));
 
 		SwitchToSection<PauseSection>();
 
@@ -126,11 +126,11 @@ namespace Jazz2::UI::Menu
 		for (std::size_t i = 0; i < viewports.size(); i++) {
 			auto& viewport = viewports[i];
 			Rectf scopedView = viewport->GetBounds();
-			DrawTexture(*viewport->_blurPass4.GetTarget(), Vector2f(scopedView.X, scopedView.Y), 500, Vector2f(scopedView.W, scopedView.H), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
+			DrawTexture(*viewport->_blurPass4.GetTarget(), scopedView.GetLocation(), 500, scopedView.GetSize(), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
 
 			Vector4f ambientColor = viewport->_ambientLight;
 			if (ambientColor.W < 1.0f) {
-				DrawSolid(Vector2f(scopedView.X, scopedView.Y), 502, Vector2f(scopedView.W, scopedView.H), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - powf(ambientColor.W, 1.6f)) * std::min(AnimTime * 8.0f, 1.0f)));
+				DrawSolid(scopedView.GetLocation(), 502, scopedView.GetSize(), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - powf(ambientColor.W, 1.6f)) * std::min(AnimTime * 8.0f, 1.0f)));
 			}
 		}
 

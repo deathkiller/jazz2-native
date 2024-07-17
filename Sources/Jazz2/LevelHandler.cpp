@@ -550,10 +550,16 @@ namespace Jazz2
 
 		auto& resolver = ContentResolver::Get();
 		if (notInitialized) {
+			LOGI("Acquiring required shaders");
+
 			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
+			if (_lightingShader == nullptr) { LOGW("PrecompiledShader::Lighting failed"); }
 			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
+			if (_blurShader == nullptr) { LOGW("PrecompiledShader::Blur failed"); }
 			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
+			if (_downsampleShader == nullptr) { LOGW("PrecompiledShader::Downsample failed"); }
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
+			if (_combineShader == nullptr) { LOGW("PrecompiledShader::Combine failed"); }
 
 			if (_hud != nullptr) {
 				_hud->setParent(_upscalePass.GetNode());
@@ -563,6 +569,13 @@ namespace Jazz2
 		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
 			? PrecompiledShader::CombineWithWaterLow
 			: PrecompiledShader::CombineWithWater);
+		if (_combineWithWaterShader == nullptr) {
+			if (PreferencesCache::LowWaterQuality) {
+				LOGW("PrecompiledShader::CombineWithWaterLow failed");
+			} else {
+				LOGW("PrecompiledShader::CombineWithWater failed");
+			}
+		}
 
 		bool useHalfRes = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3);
 

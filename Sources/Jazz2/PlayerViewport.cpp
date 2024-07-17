@@ -86,8 +86,17 @@ namespace Jazz2
 		}
 		_target->setMagFiltering(SamplerFilter::Linear);
 
+		Shader* shader = _downsampleOnly ? _owner->_levelHandler->_downsampleShader : _owner->_levelHandler->_blurShader;
+		if (shader == nullptr) {
+			if (_downsampleOnly) {
+				LOGE("PrecompiledShader::Downsample is not assigned");
+			} else {
+				LOGE("PrecompiledShader::Blur is not assigned");
+			}
+		}
+
 		// Prepare render command
-		_renderCommand.material().setShader(_downsampleOnly ? _owner->_levelHandler->_downsampleShader : _owner->_levelHandler->_blurShader);
+		_renderCommand.material().setShader(shader);
 		//_renderCommand.material().setBlendingEnabled(true);
 		_renderCommand.material().reserveUniformsDataMemory();
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -269,11 +278,17 @@ namespace Jazz2
 		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
 		_lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
 
+		LOGW("Initializing blur pass 1");
 		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
+		LOGW("Initializing blur pass 2");
 		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
+		LOGW("Initializing blur pass 3");
 		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
+		LOGW("Initializing blur pass 4");
 		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
+		LOGW("Initializing blur pass 5");
 		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
+		LOGW("Initializing blur pass 6");
 
 		if (notInitialized) {
 			_combineRenderer = std::make_unique<CombineRenderer>(this);
