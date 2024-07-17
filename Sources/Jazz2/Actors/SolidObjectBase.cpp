@@ -18,9 +18,7 @@ namespace Jazz2::Actors
 	{
 		auto& players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
-			if (player->GetCarryingObject() == this) {
-				player->SetCarryingObject(nullptr);
-			}
+			player->CancelCarryingObject(this);
 		}
 	}
 
@@ -74,7 +72,7 @@ namespace Jazz2::Actors
 						bool success = false;
 						Vector2f playerPos = player->GetPos();
 						Vector2f adjustedPos = Vector2f(playerPos.X + diff.X, playerPos.Y + diff.Y);
-						for (int i = 0; i < 8; i++) {
+						for (std::int32_t i = 0; i < 8; i++) {
 							if (player->MoveInstantly(adjustedPos, MoveType::Absolute)) {
 								success = true;
 								break;
@@ -86,21 +84,19 @@ namespace Jazz2::Actors
 							player->MoveInstantly(Vector2f(0.0f, diff.Y), MoveType::Relative);
 						}
 
-						player->SetCarryingObject(this, true);
+						player->UpdateCarryingObject(this);
 					} else {
-						player->SetCarryingObject(nullptr);
+						player->CancelCarryingObject();
 					}
 				} else if (aabb.Overlaps(player->AABBInner) && player->GetSpeed().Y >= diff.Y * timeMult && !player->CanMoveVertically()) {
-					player->SetCarryingObject(this, true);
+					player->UpdateCarryingObject(this);
 				}
 			}
 		} else {
 			// If it's not frozen, reset carrying state
 			auto& players = _levelHandler->GetPlayers();
 			for (auto* player : players) {
-				if (player->GetCarryingObject() == this) {
-					player->SetCarryingObject(nullptr);
-				}
+				player->CancelCarryingObject(this);
 			}
 		}
 	}

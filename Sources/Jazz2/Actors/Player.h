@@ -120,6 +120,7 @@ namespace Jazz2::Actors
 			return (_sugarRushLeft > 0.0f);
 		}
 
+		bool CanJump() const;
 		bool CanBreakSolidObjects() const;
 		bool CanMoveVertically() const;
 
@@ -163,7 +164,8 @@ namespace Jazz2::Actors
 		ActorBase* GetCarryingObject() const {
 			return _carryingObject;
 		}
-		void SetCarryingObject(ActorBase* actor, bool resetSpeed = false, SuspendType suspendType = SuspendType::None);
+		void CancelCarryingObject(ActorBase* expectedActor = nullptr);
+		void UpdateCarryingObject(ActorBase* actor, SuspendType suspendType = SuspendType::None);
 
 		void SwitchToWeaponByIndex(std::uint32_t weaponIndex);
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);

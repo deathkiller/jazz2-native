@@ -15,9 +15,7 @@ namespace Jazz2::Actors::Solid
 	{
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
-			if (player->GetCarryingObject() == this) {
-				player->SetCarryingObject(nullptr);
-			}
+			player->CancelCarryingObject(this);
 		}
 	}
 
@@ -129,13 +127,13 @@ namespace Jazz2::Actors::Solid
 							player->MoveInstantly(Vector2f(0.0f, diff.Y), MoveType::Relative);
 						}
 
-						player->SetCarryingObject(this, true);
+						player->UpdateCarryingObject(this);
 					} else {
-						player->SetCarryingObject(nullptr);
+						player->CancelCarryingObject();
 						SetState(ActorState::IsSolidObject, false);
 					}
 				} else if (aabb.Overlaps(player->AABBInner) && player->GetSpeed().Y >= diff.Y * timeMult && !player->CanMoveVertically()) {
-					player->SetCarryingObject(this, true);
+					player->UpdateCarryingObject(this);
 					SetState(ActorState::IsSolidObject, true);
 				}
 			}

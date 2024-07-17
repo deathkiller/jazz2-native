@@ -153,7 +153,7 @@ namespace Jazz2::UI::Menu
 			AddTranslator(item, textPtr, textSize);
 		}
 
-		formatString(textPtr, textSize, "\n\n%s\n%s", footerText.data(), ADDITIONAL_INFO);
+		formatString(textPtr, textSize, "\n\n%s\n%s, parallel-hashmap, pdqsort, simdjson", footerText.data(), ADDITIONAL_INFO);
 
 		_textBlock.SetAlignment(Alignment::Center);
 		_textBlock.SetScale(0.8f);

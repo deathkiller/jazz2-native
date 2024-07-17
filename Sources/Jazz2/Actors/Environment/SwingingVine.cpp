@@ -19,9 +19,7 @@ namespace Jazz2::Actors::Environment
 	{
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
-			if (player->GetCarryingObject() == this) {
-				player->SetCarryingObject(nullptr);
-			}
+			player->CancelCarryingObject(this);
 		}
 	}
 
@@ -143,7 +141,7 @@ namespace Jazz2::Actors::Environment
 	{
 		if (auto* player = runtime_cast<Player*>(other)) {
 			if (player->_springCooldown <= 0.0f) {
-				player->SetCarryingObject(this, true, SuspendType::SwingingVine);
+				player->UpdateCarryingObject(this, SuspendType::SwingingVine);
 			}
 			return true;
 		}
