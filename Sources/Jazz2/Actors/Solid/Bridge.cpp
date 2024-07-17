@@ -8,12 +8,7 @@
 namespace Jazz2::Actors::Solid
 {
 	Bridge::Bridge()
-		:
-		_widths(nullptr),
-		_widthsCount(0),
-		_widthOffset(0),
-		_foundHeight(0.0f),
-		_foundX(0.0f)
+		: _widths(nullptr), _widthsCount(0), _widthOffset(0), _leftX(0.0f), _leftHeight(0.0f), _rightX(0.0f), _rightHeight(0.0f)
 	{
 	}
 
@@ -21,9 +16,7 @@ namespace Jazz2::Actors::Solid
 	{
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
-			if (player->GetCarryingObject() == this) {
-				player->SetCarryingObject(nullptr);
-			}
+			player->CancelCarryingObject(this);
 		}
 	}
 
@@ -90,43 +83,73 @@ namespace Jazz2::Actors::Solid
 
 	void Bridge::OnUpdate(float timeMult)
 	{
-		int hits = 0;
-		Player* foundPlayers[4];
-		float foundDiffs[4];
+		int n = 0;
+		Player* foundPlayers[8];
+		float foundX[8];
 
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
 			auto diff = player->GetPos() - _pos;
 			if (diff.X >= -20.0f && diff.X <= _bridgeWidth + 20.0f && diff.Y > -27.0f && diff.Y < _heightFactor && player->GetSpeed().Y >= 0.0f) {
-				foundDiffs[hits] = diff.X;
-				foundPlayers[hits] = player;
-				hits++;
-			} else if (player->GetCarryingObject() == this) {
-				player->SetCarryingObject(nullptr);
+				foundX[n] = diff.X;
+				foundPlayers[n] = player;
+				n++;
+			} else {
+				player->CancelCarryingObject(this);
 			}
 		}
 
-		if (hits >= 1) {
-			float fase = fPi * std::clamp(foundDiffs[0] / _bridgeWidth, 0.0f, 1.0f);
-			float height = _heightFactor * sinf(fase);
-			_foundX = foundDiffs[0];
-			_foundHeight = lerp(_foundHeight, height, timeMult * 0.1f);
+		if (n >= 2) {
+			float left = std::numeric_limits<float>::max();
+			float right = std::numeric_limits<float>::min();
 
-			SetState(ActorState::IsSolidObject, true);
-			OnUpdateHitbox();
+			for (std::int32_t i = 0; i < n; i++) {
+				if (left > foundX[i]) {
+					left = foundX[i];
+				}
+				if (right < foundX[i]) {
+					right = foundX[i];
+				}
+			}
 
-			auto player = foundPlayers[0];
-			auto playerPos = player->GetPos();
-			player->SetCarryingObject(this);
-			player->MoveInstantly(Vector2f(playerPos.X, _pos.Y + playerPos.Y - player->AABBInner.B + BaseY + _foundHeight), MoveType::Absolute | MoveType::Force);
+			_leftHeight = (std::abs(_leftX - left) < 64.0f ? lerpByTime(_leftHeight, GetSectionHeight(left), 0.1f, timeMult) : 0.0f);
+			_rightHeight = (std::abs(_rightX - right) < 64.0f ? lerpByTime(_rightHeight, GetSectionHeight(right), 0.1f, timeMult) : 0.0f);
+			_leftX = left;
+			_rightX = right;
+
+			for (std::int32_t i = 0; i < n; i++) {
+				float height;
+				if (foundX[i] <= left) {
+					height = _leftHeight;
+				} else if (right <= foundX[i]) {
+					height = _rightHeight;
+				} else {
+					height = lerp(_leftHeight, _rightHeight, (foundX[i] - left) / (right - left));
+				}
+
+				auto* player = foundPlayers[i];
+				auto playerPos = player->GetPos();
+				player->UpdateCarryingObject(this);
+				player->MoveInstantly(Vector2f(playerPos.X, _pos.Y + playerPos.Y - player->AABBInner.B + BaseY + height),
+					MoveType::Absolute | MoveType::Force);
+			}
+		} else if (n == 1) {
+			_leftHeight = _rightHeight = lerpByTime(std::max(_leftHeight, _rightHeight), GetSectionHeight(foundX[0]), 0.1f, timeMult);
+			_leftX = _rightX = foundX[0];
+
+			for (std::int32_t i = 0; i < n; i++) {
+				auto* player = foundPlayers[i];
+				auto playerPos = player->GetPos();
+				player->UpdateCarryingObject(this);
+				player->MoveInstantly(Vector2f(playerPos.X, _pos.Y + playerPos.Y - player->AABBInner.B + BaseY + _leftHeight),
+					MoveType::Absolute | MoveType::Force);
+			}
 		} else {
-			_foundHeight = lerp(_foundHeight, 0.0f, timeMult * 0.1f);
-
-			SetState(ActorState::IsSolidObject, false);
-			OnUpdateHitbox();
+			_leftHeight = lerpByTime(_leftHeight, 0.0f, 0.1f, timeMult);
+			_rightHeight = lerpByTime(_rightHeight, 0.0f, 0.1f, timeMult);
 		}
 
-		if (_foundHeight <= 0.001f) {
+		if (_leftHeight <= 0.001f && _rightHeight <= 0.001f) {
 			// Render straight bridge
 			int widthCovered = _widths[0] / 2 - _widthOffset;
 			for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
@@ -139,10 +162,12 @@ namespace Jazz2::Actors::Solid
 			int widthCovered = _widths[0] / 2 - _widthOffset;
 			for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 				float drop;
-				if (widthCovered < _foundX) {
-					drop = _foundHeight * sinf(fPiOver2 * widthCovered / _foundX);
+				if (widthCovered < _leftX) {
+					drop = _leftHeight * sinf(fPiOver2 * widthCovered / _leftX);
+				} else if(_rightX < widthCovered) {
+					drop = _rightHeight * sinf(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - _rightX));
 				} else {
-					drop = _foundHeight * sinf(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - _foundX));
+					drop = lerp(_leftHeight, _rightHeight, (widthCovered - _leftX) / (_rightX - _leftX));
 				}
 
 				BridgePiece& piece = _pieces[i];
@@ -155,7 +180,7 @@ namespace Jazz2::Actors::Solid
 
 	void Bridge::OnUpdateHitbox()
 	{
-		AABBInner = AABBf(_pos.X - 16.0f, _pos.Y + BaseY + _foundHeight, _pos.X + _bridgeWidth + 16.0f, _pos.Y + BaseY + 12.0f + _foundHeight);
+		AABBInner = AABBf(_pos.X - 16.0f, _pos.Y + BaseY, _pos.X + _bridgeWidth + 16.0f, _pos.Y - BaseY);
 	}
 
 	bool Bridge::OnDraw(RenderQueue& renderQueue)
@@ -189,5 +214,11 @@ namespace Jazz2::Actors::Solid
 		}
 
 		return true;
+	}
+
+	float Bridge::GetSectionHeight(float x) const
+	{
+		float fase = fPi * std::clamp(x / _bridgeWidth, 0.0f, 1.0f);
+		return _heightFactor * sinf(fase);
 	}
 }

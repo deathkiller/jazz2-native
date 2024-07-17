@@ -155,6 +155,11 @@ namespace Jazz2::Actors
 		async_return true;
 	}
 
+	bool Player::CanJump() const
+	{
+		return (GetState(ActorState::CanJump) || _carryingObject != nullptr);
+	}
+
 	bool Player::CanBreakSolidObjects() const
 	{
 		if (_sugarRushLeft > 0.0f) {
@@ -676,7 +681,7 @@ namespace Jazz2::Actors
 					}
 				}
 
-				if (GetState(ActorState::CanJump)) {
+				if (CanJump()) {
 					_wasUpPressed = _wasDownPressed = false;
 				}
 			} else {
@@ -739,7 +744,7 @@ namespace Jazz2::Actors
 			// Look-up
 			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Up)) {
 				if (!_wasUpPressed && _dizzyTime <= 0.0f) {
-					if ((GetState(ActorState::CanJump) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
+					if ((CanJump() || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 						_wasUpPressed = true;
 
 						SetAnimation(AnimState::Lookup | (_currentAnimation->State & AnimState::Hook));
@@ -764,7 +769,7 @@ namespace Jazz2::Actors
 
 					SetState(ActorState::ApplyGravitation, true);
 				} else if (_dizzyTime <= 0.0f) {
-					if (GetState(ActorState::CanJump)) {
+					if (CanJump()) {
 						if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 							_wasDownPressed = true;
 							if (_fireFramesLeft > 0.0f) {
@@ -803,7 +808,7 @@ namespace Jazz2::Actors
 					_wasJumpPressed = true;
 
 					if (_suspendType == SuspendType::None && _jumpTime <= 0.0f) {
-						if (_isLifting && GetState(ActorState::CanJump) && _currentSpecialMove == SpecialMoveType::None) {
+						if (_isLifting && CanJump() && _currentSpecialMove == SpecialMoveType::None) {
 							SetState(ActorState::CanJump, false);
 							SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
 							PlayPlayerSfx("Jump"_s);
@@ -835,7 +840,7 @@ namespace Jazz2::Actors
 											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 										});
 									} else {
-										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+										if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
 											_externalForce.Y = 0.0f;
@@ -868,7 +873,7 @@ namespace Jazz2::Actors
 
 										PlayPlayerSfx("Sidekick"_s);
 									} else {
-										if (!GetState(ActorState::CanJump) && _canDoubleJump) {
+										if (!CanJump() && _canDoubleJump) {
 											_canDoubleJump = false;
 											_isFreefall = false;
 
@@ -893,7 +898,7 @@ namespace Jazz2::Actors
 											SetState(ActorState::ApplyGravitation, false);
 										});
 									} else {
-										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+										if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
 											_externalForce.Y = 0.0f;
@@ -919,7 +924,7 @@ namespace Jazz2::Actors
 				} else {
 					if (_suspendType != SuspendType::None) {
 						if (_suspendType == SuspendType::SwingingVine) {
-							SetCarryingObject(nullptr);
+							CancelCarryingObject();
 							_springCooldown = 30.0f;
 						} else {
 							MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
@@ -927,7 +932,7 @@ namespace Jazz2::Actors
 						SetState(ActorState::CanJump, true);
 						_canDoubleJump = true;
 					}
-					if (!GetState(ActorState::CanJump)) {
+					if (!CanJump()) {
 						if (_copterFramesLeft > 0.0f) {
 							_copterFramesLeft = 70.0f;
 						}
@@ -1436,7 +1441,7 @@ namespace Jazz2::Actors
 					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::Small);
 
 					if (_sugarRushLeft > 0.0f) {
-						if (!_inWater && GetState(ActorState::CanJump)) {
+						if (!_inWater && CanJump()) {
 							_speed.Y = 3;
 							SetState(ActorState::CanJump, false);
 							_externalForce.Y = -0.6f;
@@ -1507,7 +1512,7 @@ namespace Jazz2::Actors
 		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y + 24)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		} else if (!_inWater && _activeModifier == Modifier::None) {
-			if (_hitFloorTime <= 0.0f && !GetState(ActorState::CanJump)) {
+			if (_hitFloorTime <= 0.0f && !CanJump()) {
 				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);
 
@@ -1546,7 +1551,7 @@ namespace Jazz2::Actors
 		if (_levelHandler->TileMap()->IsTileHurting(_pos.X + (_speed.X > 0.0f ? 1.0f : -1.0f) * 16.0f, _pos.Y)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		} else {
-			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorState::CanJump) &&
+			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !CanJump() &&
 				!_inWater && _currentSpecialMove == SpecialMoveType::None && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionUppercutEnd) &&
 				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
 
@@ -1733,7 +1738,7 @@ namespace Jazz2::Actors
 			newState = AnimState::Swing;
 		} else if (_isLifting) {
 			newState = AnimState::Lift;
-		} else if (GetState(ActorState::CanJump) && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
+		} else if (CanJump() && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
 			newState = AnimState::Push;
 
 			if (_inIdleTransition) {
@@ -1767,7 +1772,7 @@ namespace Jazz2::Actors
 			if (_suspendType != SuspendType::None) {
 				composite |= AnimState::Hook;
 			} else {
-				if (GetState(ActorState::CanJump) || _carryingObject != nullptr) {
+				if (CanJump()) {
 					// Grounded, no vertical speed
 					if (_dizzyTime > 0.0f) {
 						composite |= AnimState::Dizzy;
@@ -1897,7 +1902,7 @@ namespace Jazz2::Actors
 			_canPushFurther = false;
 		}
 
-		if (GetState(ActorState::CanJump) && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > 0.0f) {
+		if (CanJump() && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > 0.0f) {
 			AABBf hitbox = AABBInner + Vector2f(_speed.X < 0.0f ? -2.0f : 2.0f, 0.0f);
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
@@ -1943,7 +1948,7 @@ namespace Jazz2::Actors
 	void Player::CheckEndOfSpecialMoves(float timeMult)
 	{
 		// Buttstomp
-		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorState::CanJump) || _suspendType != SuspendType::None || _carryingObject != nullptr)) {
+		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (CanJump() || _suspendType != SuspendType::None)) {
 			EndDamagingMove();
 			if (_suspendType == SuspendType::None && !_isSpring) {
 				std::int32_t tx = (std::int32_t)_pos.X / 32;
@@ -1998,7 +2003,7 @@ namespace Jazz2::Actors
 			// TODO: Is this still needed?
 			bool cancelCopter;
 			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-				cancelCopter = (GetState(ActorState::CanJump) || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
+				cancelCopter = (CanJump() || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
 
 				_copterFramesLeft -= timeMult;
 				_speed.Y = std::min(_speed.Y + _levelHandler->Gravity * timeMult, 1.5f);
@@ -2935,7 +2940,7 @@ namespace Jazz2::Actors
 
 		switch (_levelExiting) {
 			case LevelExitingState::Waiting: {
-				if (GetState(ActorState::CanJump) && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
+				if (CanJump() && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
 					_levelExiting = LevelExitingState::Transition;
 
 					ForceCancelTransition();
@@ -2977,7 +2982,7 @@ namespace Jazz2::Actors
 					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 						newState |= AnimState::Walk;
 					}
-					if (!GetState(ActorState::CanJump)) {
+					if (!CanJump()) {
 						if (_speed.Y < 0.0f) {
 							newState |= AnimState::Jump;
 						} else {
@@ -3017,7 +3022,7 @@ namespace Jazz2::Actors
 					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 						newState |= AnimState::Walk;
 					}
-					if (!GetState(ActorState::CanJump)) {
+					if (!CanJump()) {
 						if (_speed.Y < 0.0f) {
 							newState |= AnimState::Jump;
 						} else {
@@ -3903,16 +3908,30 @@ namespace Jazz2::Actors
 		std::memcpy(_weaponUpgradesCheckpoint, _weaponUpgrades, sizeof(_weaponUpgrades));
 	}
 
-	void Player::SetCarryingObject(ActorBase* actor, bool resetSpeed, SuspendType suspendType)
+	void Player::CancelCarryingObject(ActorBase* expectedActor)
 	{
+		if (expectedActor != nullptr && _carryingObject != expectedActor) {
+			return;
+		}
+
+		_carryingObject = nullptr;
+
+		if (_suspendType == SuspendType::SwingingVine) {
+			_suspendType = SuspendType::None;
+			SetState(ActorState::ApplyGravitation, true);
+			_renderer.setRotation(0.0f);
+		}
+	}
+
+	void Player::UpdateCarryingObject(ActorBase* actor, SuspendType suspendType)
+	{
+		DEATH_DEBUG_ASSERT(actor != nullptr);
+
 		_carryingObject = actor;
 
-		if (resetSpeed) {
-			SetState(ActorState::CanJump, true);
-			_speed.Y = 0.0f;
-			_externalForce.Y = 0.0f;
-			_internalForceY = 0.0f;
-		}
+		_speed.Y = 0.0f;
+		_externalForce.Y = 0.0f;
+		_internalForceY = 0.0f;
 
 		if (suspendType == SuspendType::SwingingVine) {
 			_suspendType = suspendType;

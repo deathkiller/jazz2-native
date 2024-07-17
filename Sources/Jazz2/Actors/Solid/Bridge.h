@@ -40,24 +40,25 @@ namespace Jazz2::Actors::Solid
 
 		static constexpr float BaseY = -6.0f;
 
-		static constexpr int PieceWidthsRope[] = { 13, 13, 10, 13, 13, 12, 11 };
-		static constexpr int PieceWidthsStone[] = { 15, 9, 10, 9, 15, 9, 15 };
-		static constexpr int PieceWidthsVine[] = { 7, 7, 7, 7, 10, 7, 7, 7, 7 };
-		static constexpr int PieceWidthsStoneRed[] = { 10, 11, 11, 12 };
-		static constexpr int PieceWidthsLog[] = { 13, 13, 13 };
-		static constexpr int PieceWidthsGem[] = { 14 };
-		static constexpr int PieceWidthsLab[] = { 14 };
+		static constexpr std::int32_t PieceWidthsRope[] = { 13, 13, 10, 13, 13, 12, 11 };
+		static constexpr std::int32_t PieceWidthsStone[] = { 15, 9, 10, 9, 15, 9, 15 };
+		static constexpr std::int32_t PieceWidthsVine[] = { 7, 7, 7, 7, 10, 7, 7, 7, 7 };
+		static constexpr std::int32_t PieceWidthsStoneRed[] = { 10, 11, 11, 12 };
+		static constexpr std::int32_t PieceWidthsLog[] = { 13, 13, 13 };
+		static constexpr std::int32_t PieceWidthsGem[] = { 14 };
+		static constexpr std::int32_t PieceWidthsLab[] = { 14 };
 
 		BridgeType _bridgeType;
-		int _bridgeWidth;
+		std::int32_t _bridgeWidth;
 		float _heightFactor;
-		const int* _widths;
-		int _widthsCount;
-		int _widthOffset;
+		const std::int32_t* _widths;
+		std::int32_t _widthsCount;
+		std::int32_t _widthOffset;
 
-		float _foundHeight;
-		float _foundX;
+		float _leftX, _leftHeight, _rightX, _rightHeight;
 
 		SmallVector<BridgePiece, 0> _pieces;
+
+		float GetSectionHeight(float x) const;
 	};
 }
