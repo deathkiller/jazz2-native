@@ -606,7 +606,7 @@ namespace nCine
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
 			const int deviceId = joystickStates_[i].deviceId_;
 			if (deviceId > -1 && !isDeviceConnected(deviceId)) {
-				LOGI("Joystick %d (device %d) \"%s\" has been disconnected", i, deviceId, joystickStates_[i].name_);
+				LOGI("Gamepad %d (device %d) \"%s\" has been disconnected", i, deviceId, joystickStates_[i].name_);
 				joystickStates_[i].deviceId_ = -1;
 
 				if (inputEventHandler_ != nullptr && joystickStates_[i].guid_.isValid()) {
@@ -670,7 +670,7 @@ namespace nCine
 			deviceInfo(deviceId, joyId);
 
 			const uint8_t* g = joystickStates_[joyId].guid_.data;
-			LOGI("Device %d, \"%s\" (%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x), has been connected as joystick %d - %d axes, %d buttons",
+			LOGI("Device %d, \"%s\" (%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x), has been connected as gamepad %d - %d axes, %d buttons",
 				deviceId, joystickStates_[joyId].name_, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_);
 			
 			joystickStates_[joyId].deviceId_ = deviceId;

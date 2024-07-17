@@ -459,7 +459,7 @@ namespace nCine
 	bool JoyMapping::OnJoyConnected(const JoyConnectionEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Controller connected - joyId: %d", event.joyId);
+		LOGI("Gamepad connected - joyId: %d", event.joyId);
 #endif
 
 		const char* joyName = inputManager_->joyName(event.joyId);
@@ -475,7 +475,7 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const std::uint8_t* g = joyGuid.data;
-				LOGI("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), also known as \"%s\"", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId, mappings_[index].name);
+				LOGI("Gamepad mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), also known as \"%s\"", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId, mappings_[index].name);
 			}
 		}
 
@@ -489,7 +489,7 @@ namespace nCine
 			}
 
 			const std::uint8_t * g = joyGuid.data;
-			LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+			LOGI("Gamepad mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 
 			mapping.isValid = true;
 
@@ -523,7 +523,7 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const std::uint8_t* g = joyGuid.data;
-				LOGI("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+				LOGI("Gamepad mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 		}
 
@@ -545,12 +545,12 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const uint8_t* g = joyGuid.data;
-				LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+				LOGI("Gamepad mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 
 			if (!mapping.isValid) {
 				const uint8_t* g = joyGuid.data;
-				LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), please provide correct mapping in \"gamecontrollerdb.txt\" file, otherwise the joystick will not work properly", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+				LOGI("Gamepad mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), please provide correct mapping in \"gamecontrollerdb.txt\" file, otherwise the joystick will not work properly", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 		}
 #endif
@@ -561,7 +561,7 @@ namespace nCine
 	void JoyMapping::OnJoyDisconnected(const JoyConnectionEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Controller disconnected - joyId: %d", event.joyId);
+		LOGI("Gamepad disconnected - joyId: %d", event.joyId);
 #endif
 
 #if defined(WITH_SDL)

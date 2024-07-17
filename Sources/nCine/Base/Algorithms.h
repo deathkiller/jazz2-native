@@ -276,7 +276,7 @@ namespace nCine
 
 	template <std::size_t size>
 	inline std::int32_t copyStringFirst(char(&dest)[size], Containers::StringView source) {
-		return copyStringFirst(dest, size, source.data(), source.size());
+		return copyStringFirst(dest, size, source.data(), (std::int32_t)source.size());
 	}
 
 	int formatString(char* buffer, std::size_t maxLen, const char* format, ...);

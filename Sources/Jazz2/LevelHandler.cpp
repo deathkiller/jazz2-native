@@ -108,7 +108,8 @@ namespace Jazz2
 #endif
 
 	LevelHandler::LevelHandler(IRootController* root)
-		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
+		: _root(root), _lightingShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr), _combineWithWaterShader(nullptr),
+			_eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
 			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _overrideActions(0)
 	{
