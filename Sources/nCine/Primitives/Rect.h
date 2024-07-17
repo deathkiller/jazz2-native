@@ -40,6 +40,9 @@ namespace nCine
 		/// Creates a rectangle from minimum and maximum coordinates as two `Vector2`
 		static Rect FromMinMax(const Vector2<T>& min, const Vector2<T>& max);
 
+		Vector2<T> GetSize() const;
+		Vector2<T> GetLocation() const;
+
 		/// Calculates the center of the rectangle
 		Vector2<T> Center() const;
 		/// Calculates the minimum coordinates of the rectangle
@@ -131,6 +134,18 @@ namespace nCine
 	inline Rect<T> Rect<T>::FromMinMax(const Vector2<T>& min, const Vector2<T>& max)
 	{
 		return Rect(min.X, min.Y, max.X - min.X, max.Y - min.Y);
+	}
+
+	template<class T>
+	inline Vector2<T> Rect<T>::GetSize() const
+	{
+		return Vector2<T>(W, H);
+	}
+
+	template<class T>
+	inline Vector2<T> Rect<T>::GetLocation() const
+	{
+		return Vector2<T>(X, Y);
 	}
 
 	template<class T>
