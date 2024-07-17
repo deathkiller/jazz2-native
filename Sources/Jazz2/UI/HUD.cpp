@@ -1044,7 +1044,7 @@ namespace Jazz2::UI
 
 		float alphaInner = std::min(Vector2f(h, v).Length() * easing * 1.5f - 0.6f, 1.0f);
 		if (alphaInner > 0.0f) {
-			DrawElement(WeaponWheelInner, -1, center.X, center.Y, MainLayer + 5, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alphaInner), easing, easing, true, requestedAngle);
+			DrawElement(WeaponWheelInner, -1, center.X, center.Y, MainLayer + 5, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alphaInner), scale * easing, scale * easing, true, requestedAngle);
 		}
 
 		float angle = -fPiOver2;

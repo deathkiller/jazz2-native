@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <climits>
 #include <functional>
 #include <utility>
 #include <iterator>
