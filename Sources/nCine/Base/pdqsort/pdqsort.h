@@ -68,8 +68,36 @@ namespace pdqsort_detail
     // Returns floor(log2(n)), assumes n > 0.
     template<class T>
     inline int log2(T n) {
+#if DEATH_CXX_STANDARD >= 201103L
+        typename std::make_unsigned<T>::type u = n;
+#else
+        if (n < 0) {
+            return sizeof(T) * CHAR_BIT - 1;
+        }
+        T u  = n;
+#endif
+#if defined(__has_builtin)
+#	if __has_builtin(__builtin_clz)
+        if (sizeof(T) <= sizeof(int)) {
+            return sizeof(int) * CHAR_BIT - __builtin_clz(u) - 1;
+        }
+#	endif
+#	if __has_builtin(__builtin_clzl)
+        if (sizeof(T) <= sizeof(int)) {
+            return sizeof(long) * CHAR_BIT - __builtin_clzl(u) - 1;
+        }
+#	endif
+#	if __has_builtin(__builtin_clzll) && __cplusplus >= 201103L
+        if (sizeof(T) <= sizeof(long long)) {
+            return sizeof(long long) * CHAR_BIT - __builtin_clzll(u) - 1;
+        }
+#	endif
+#endif
         int log = 0;
-        while (n >>= 1) ++log;
+        int cnt = sizeof(T) * CHAR_BIT;
+        while (cnt >>= 1) {
+            log += (u >> (log + cnt)) ? cnt : 0;
+        }
         return log;
     }
 
@@ -227,10 +255,10 @@ namespace pdqsort_detail
             // The following branchless partitioning is derived from "BlockQuicksort: How Branch
             // Mispredictions don’t affect Quicksort" by Stefan Edelkamp and Armin Weiss, but
             // heavily micro-optimized.
-            unsigned char offsets_l_storage[block_size + cacheline_size];
-            unsigned char offsets_r_storage[block_size + cacheline_size];
-            unsigned char* offsets_l = align_cacheline(offsets_l_storage);
-            unsigned char* offsets_r = align_cacheline(offsets_r_storage);
+            unsigned char offsets_l_storage[block_size * 1];
+            unsigned char offsets_r_storage[block_size * 1];
+            unsigned char* offsets_l = offsets_l_storage;
+            unsigned char* offsets_r = offsets_r_storage;
 
             Iter offsets_l_base = first;
             Iter offsets_r_base = last;
@@ -426,6 +454,7 @@ namespace pdqsort_detail
             // recurse on the left partition, since it's sorted (all equal).
             if (!leftmost && !comp(*(begin - 1), *begin)) {
                 begin = partition_left(begin, end, comp) + 1;
+                leftmost = false;
                 continue;
             }
 
@@ -476,8 +505,19 @@ namespace pdqsort_detail
             } else {
                 // If we were decently balanced and we tried to sort an already partitioned
                 // sequence try to use insertion sort.
-                if (already_partitioned && partial_insertion_sort(begin, pivot_pos, comp)
-                                        && partial_insertion_sort(pivot_pos + 1, end, comp)) return;
+                if (already_partitioned && partial_insertion_sort(begin, pivot_pos, comp)) {
+                    if(partial_insertion_sort(pivot_pos + 1, end, comp)) return;
+                    begin = pivot_pos + 1;
+                    leftmost = false;
+                    continue;
+                }
+
+            }
+
+            if((end - (pivot_pos + 1)) < insertion_sort_threshold) {
+                unguarded_insertion_sort(pivot_pos + 1, end, comp);
+                end = pivot_pos;
+                continue;
             }
                 
             // Sort the left partition first using recursion and do tail recursion elimination for

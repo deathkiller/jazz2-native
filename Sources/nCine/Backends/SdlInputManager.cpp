@@ -60,7 +60,7 @@ namespace nCine
 			sdlJoysticks_[i] = SDL_JoystickOpen(i);
 			if (sdlJoysticks_[i]) {
 				SDL_Joystick* sdlJoy = sdlJoysticks_[i];
-				LOGI("Joystick %d \"%s\" - %d hats, %d axes, %d buttons, %d balls",
+				LOGI("Gamepad %d \"%s\" - %d hats, %d axes, %d buttons, %d balls",
 						i, SDL_JoystickName(sdlJoy), SDL_JoystickNumHats(sdlJoy), SDL_JoystickNumAxes(sdlJoy),
 						SDL_JoystickNumButtons(sdlJoy), SDL_JoystickNumBalls(sdlJoy));
 			}
@@ -381,7 +381,7 @@ namespace nCine
 			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
 			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
-			LOGI("Joystick %d \"%s\" (%s) has been connected - %d hats, %d axes, %d buttons, %d balls",
+			LOGI("Gamepad %d \"%s\" (%s) has been connected - %d hats, %d axes, %d buttons, %d balls",
 				   deviceIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
 #endif
 			joyMapping_.OnJoyConnected(joyConnectionEvent_);
@@ -402,7 +402,7 @@ namespace nCine
 			}
 			sdlJoysticks_[MaxNumJoysticks - 1] = nullptr;
 
-			LOGI("Joystick %d has been disconnected", deviceIndex);
+			LOGI("Gamepad %d has been disconnected", deviceIndex);
 			inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 			joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
 		}

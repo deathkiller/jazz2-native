@@ -384,7 +384,7 @@ namespace nCine
 			const char* guid = nullptr;
 #	endif
 			glfwGetJoystickAxes(joy, &numAxes);
-			LOGI("Joystick %d \"%s\" (%s) has been connected - %d axes, %d buttons, %d hats",
+			LOGI("Gamepad %d \"%s\" (%s) has been connected - %d axes, %d buttons, %d hats",
 			       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
 #endif
 			updateJoystickStates();
@@ -395,7 +395,7 @@ namespace nCine
 			}
 		} else if (event == GLFW_DISCONNECTED) {
 			joyEventsSimulator_.resetJoystickState(joyId);
-			LOGI("Joystick %d has been disconnected", joyId);
+			LOGI("Gamepad %d has been disconnected", joyId);
 			if (inputEventHandler_ != nullptr) {
 				inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 				joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
