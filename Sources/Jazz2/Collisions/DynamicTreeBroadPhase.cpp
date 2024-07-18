@@ -26,27 +26,27 @@ namespace Jazz2::Collisions
 {
 	DynamicTreeBroadPhase::DynamicTreeBroadPhase()
 	{
-		m_proxyCount = 0;
+		_proxyCount = 0;
 
-		m_pairCapacity = 16;
-		m_pairCount = 0;
-		m_pairBuffer = (CollisionPair*)std::malloc(m_pairCapacity * sizeof(CollisionPair));
+		_pairCapacity = DefaultPairCapacity;
+		_pairCount = 0;
+		_pairBuffer = new CollisionPair[_pairCapacity];
 
-		m_moveCapacity = 16;
-		m_moveCount = 0;
-		m_moveBuffer = (std::int32_t*)std::malloc(m_moveCapacity * sizeof(int32_t));
+		_moveCapacity = DefaultMoveCapacity;
+		_moveCount = 0;
+		_moveBuffer = new std::int32_t[_moveCapacity];
 	}
 
 	DynamicTreeBroadPhase::~DynamicTreeBroadPhase()
 	{
-		std::free(m_moveBuffer);
-		std::free(m_pairBuffer);
+		delete[] _moveBuffer;
+		delete[] _pairBuffer;
 	}
 
 	int32_t DynamicTreeBroadPhase::CreateProxy(const AABBf& aabb, void* userData)
 	{
-		std::int32_t proxyId = m_tree.CreateProxy(aabb, userData);
-		++m_proxyCount;
+		std::int32_t proxyId = _tree.CreateProxy(aabb, userData);
+		++_proxyCount;
 		BufferMove(proxyId);
 		return proxyId;
 	}
@@ -54,14 +54,14 @@ namespace Jazz2::Collisions
 	void DynamicTreeBroadPhase::DestroyProxy(std::int32_t proxyId)
 	{
 		UnBufferMove(proxyId);
-		--m_proxyCount;
-		m_tree.DestroyProxy(proxyId);
+		--_proxyCount;
+		_tree.DestroyProxy(proxyId);
 	}
 
-	void DynamicTreeBroadPhase::MoveProxy(std::int32_t proxyId, const AABBf& aabb, const Vector2f& displacement)
+	void DynamicTreeBroadPhase::MoveProxy(std::int32_t proxyId, const AABBf& aabb, Vector2f displacement)
 	{
 		// NOTE: Touch proxy everytime, because it's called only when something changes
-		/*bool buffer =*/ m_tree.MoveProxy(proxyId, aabb, displacement);
+		/*bool buffer =*/ _tree.MoveProxy(proxyId, aabb, displacement);
 		//if (buffer) {
 			BufferMove(proxyId);
 		//}
@@ -74,23 +74,23 @@ namespace Jazz2::Collisions
 
 	void DynamicTreeBroadPhase::BufferMove(std::int32_t proxyId)
 	{
-		if (m_moveCount == m_moveCapacity) {
-			std::int32_t* oldBuffer = m_moveBuffer;
-			m_moveCapacity *= 2;
-			m_moveBuffer = (std::int32_t*)malloc(m_moveCapacity * sizeof(std::int32_t));
-			std::memcpy(m_moveBuffer, oldBuffer, m_moveCount * sizeof(std::int32_t));
-			std::free(oldBuffer);
+		if (_moveCount == _moveCapacity) {
+			std::int32_t* oldBuffer = _moveBuffer;
+			_moveCapacity *= 2;
+			_moveBuffer = new std::int32_t[_moveCapacity];
+			std::memcpy(_moveBuffer, oldBuffer, _moveCount * sizeof(std::int32_t));
+			delete[] oldBuffer;
 		}
 
-		m_moveBuffer[m_moveCount] = proxyId;
-		++m_moveCount;
+		_moveBuffer[_moveCount] = proxyId;
+		++_moveCount;
 	}
 
 	void DynamicTreeBroadPhase::UnBufferMove(std::int32_t proxyId)
 	{
-		for (std::int32_t i = 0; i < m_moveCount; ++i) {
-			if (m_moveBuffer[i] == proxyId) {
-				m_moveBuffer[i] = NullNode;
+		for (std::int32_t i = 0; i < _moveCount; ++i) {
+			if (_moveBuffer[i] == proxyId) {
+				_moveBuffer[i] = NullNode;
 			}
 		}
 	}
@@ -99,28 +99,28 @@ namespace Jazz2::Collisions
 	bool DynamicTreeBroadPhase::OnCollisionQuery(std::int32_t proxyId)
 	{
 		// A proxy cannot form a pair with itself.
-		if (proxyId == m_queryProxyId) {
+		if (proxyId == _queryProxyId) {
 			return true;
 		}
 
-		const bool moved = m_tree.WasMoved(proxyId);
-		if (moved && proxyId > m_queryProxyId) {
+		const bool moved = _tree.WasMoved(proxyId);
+		if (moved && proxyId > _queryProxyId) {
 			// Both proxies are moving. Avoid duplicate pairs.
 			return true;
 		}
 
 		// Grow the pair buffer as needed.
-		if (m_pairCount == m_pairCapacity) {
-			CollisionPair* oldBuffer = m_pairBuffer;
-			m_pairCapacity = m_pairCapacity + (m_pairCapacity >> 1);
-			m_pairBuffer = (CollisionPair*)malloc(m_pairCapacity * sizeof(CollisionPair));
-			std::memcpy(m_pairBuffer, oldBuffer, m_pairCount * sizeof(CollisionPair));
-			std::free(oldBuffer);
+		if (_pairCount == _pairCapacity) {
+			CollisionPair* oldBuffer = _pairBuffer;
+			_pairCapacity = _pairCapacity + (_pairCapacity >> 1);
+			_pairBuffer = new CollisionPair[_pairCapacity];
+			std::memcpy(_pairBuffer, oldBuffer, _pairCount * sizeof(CollisionPair));
+			delete[] oldBuffer;
 		}
 
-		m_pairBuffer[m_pairCount].proxyIdA = std::min(proxyId, m_queryProxyId);
-		m_pairBuffer[m_pairCount].proxyIdB = std::max(proxyId, m_queryProxyId);
-		++m_pairCount;
+		_pairBuffer[_pairCount].ProxyIdA = std::min(proxyId, _queryProxyId);
+		_pairBuffer[_pairCount].ProxyIdB = std::max(proxyId, _queryProxyId);
+		++_pairCount;
 
 		return true;
 	}

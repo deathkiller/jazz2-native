@@ -237,68 +237,7 @@ namespace Jazz2::Actors
 			_lastExitType = ExitType::None;
 		}
 
-		// Process level bounds (if not warping)
-		if (_currentTransition == nullptr ||
-			(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpInFreefall &&
-			 _currentTransition->State != AnimState::TransitionWarpOut && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
-			Vector2f lastPos = _pos;
-			Recti levelBounds = _levelHandler->LevelBounds();
-			if (lastPos.X < levelBounds.X) {
-				lastPos.X = (float)levelBounds.X;
-				_pos = lastPos;
-			} else if (lastPos.X > levelBounds.X + levelBounds.W) {
-				lastPos.X = (float)(levelBounds.X + levelBounds.W);
-				_pos = lastPos;
-			}
-		}
-
-		PushSolidObjects(timeMult);
-
-		//ActorBase::OnUpdate(timeMult);
-		{
-			TileCollisionParams params = { TileDestructType::Collapse, _speed.Y >= 0.0f };
-			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
-				params.DestructType |= TileDestructType::Special;
-			}
-			if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon() || std::abs(_speed.Y) > std::numeric_limits<float>::epsilon() || _sugarRushLeft > 0.0f) {
-				params.DestructType |= TileDestructType::Speed;
-				params.Speed = (_sugarRushLeft > 0.0f ? 64.0f : std::max(std::abs(_speed.X), std::abs(_speed.Y)));
-			}
-
-			if (timeMult * (std::abs(_speed.X + _externalForce.X) + std::abs(_speed.Y + _externalForce.Y)) > 20.0f) {
-				TryStandardMovement(timeMult * 0.5f, params);
-				TryStandardMovement(timeMult * 0.5f, params);
-			} else {
-				TryStandardMovement(timeMult, params);
-			}
-
-			if (params.TilesDestroyed > 0) {
-				AddScore(params.TilesDestroyed * 50);
-			}
-
-			OnUpdateHitbox();
-
-			//UpdateFrozenState(timeMult);
-			if (_renderer.AnimPaused) {
-				if (_frozenTimeLeft <= 0.0f) {
-					_renderer.AnimPaused = false;
-					_renderer.Initialize(ActorRendererType::Default);
-
-					for (std::int32_t i = 0; i < 10; i++) {
-						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
-					}
-					
-					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
-
-					_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
-				} else {
-					// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
-					// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
-					_renderer.Initialize(ActorRendererType::FrozenMask);
-					_frozenTimeLeft -= timeMult;
-				}
-			}
-		}
+		OnUpdatePhysics(timeMult);
 
 		UpdateAnimation(timeMult);
 		CheckSuspendState(timeMult);
@@ -310,9 +249,115 @@ namespace Jazz2::Actors
 		std::int32_t areaWaterBlock = -1;
 		OnHandleAreaEvents(timeMult, areaWeaponAllowed, areaWaterBlock);
 
+		// Shallow Water
+		if (areaWaterBlock != -1) {
+			if (_inShallowWater == -1) {
+				OnWaterSplash(Vector2f(_pos.X, (float)areaWaterBlock), true);
+			}
+
+			_inShallowWater = areaWaterBlock;
+		} else if (_inShallowWater != -1) {
+			OnWaterSplash(Vector2f(_pos.X, (float)_inShallowWater), false);
+
+			_inShallowWater = -1;
+		}
+
+		OnUpdateTimers(timeMult);
+		OnHandleMovement(timeMult, areaWeaponAllowed);
+
+		// Handle weapon switching
+		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog) {
+			bool isGamepad;
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad)) {
+				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
+					SwitchToNextWeapon();
+				}
+			} else {
+				for (std::uint32_t i = 0; i <= (std::uint32_t)PlayerActions::SwitchToThunderbolt - (std::uint32_t)PlayerActions::SwitchToBlaster; i++) {
+					if (_levelHandler->PlayerActionHit(_playerIndex, (PlayerActions)(i + (std::uint32_t)PlayerActions::SwitchToBlaster))) {
+						SwitchToWeaponByIndex(i);
+					}
+				}
+			}
+		}
+	}
+
+	void Player::OnUpdatePhysics(float timeMult)
+	{
 		// Force collisions every frame even if player doesn't move
 		SetState(ActorState::IsDirty, true);
 
+		// Process level bounds (if not warping)
+		if (_currentTransition == nullptr ||
+			(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpInFreefall &&
+				_currentTransition->State != AnimState::TransitionWarpOut && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
+			Vector2f lastPos = _pos;
+			Recti levelBounds = _levelHandler->LevelBounds();
+			if (lastPos.X < levelBounds.X) {
+				lastPos.X = (float)levelBounds.X;
+				_pos = lastPos;
+			} else if (lastPos.X > levelBounds.X + levelBounds.W) {
+				lastPos.X = (float)(levelBounds.X + levelBounds.W);
+				_pos = lastPos;
+			}
+		}
+
+		// Reset vertical speed if the position is managed by carrying object
+		if (_carryingObject != nullptr) {
+			_speed.Y = 0.0f;
+			_externalForce.Y = 0.0f;
+			_internalForceY = 0.0f;
+		}
+
+		PushSolidObjects(timeMult);
+
+		// Custom implementation of `ActorBase::OnUpdate(timeMult)`
+		TileCollisionParams params = { TileDestructType::Collapse, _speed.Y >= 0.0f };
+		if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
+			params.DestructType |= TileDestructType::Special;
+		}
+		if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon() || std::abs(_speed.Y) > std::numeric_limits<float>::epsilon() || _sugarRushLeft > 0.0f) {
+			params.DestructType |= TileDestructType::Speed;
+			params.Speed = (_sugarRushLeft > 0.0f ? 64.0f : std::max(std::abs(_speed.X), std::abs(_speed.Y)));
+		}
+
+		if (timeMult * (std::abs(_speed.X + _externalForce.X) + std::abs(_speed.Y + _externalForce.Y)) > 20.0f) {
+			TryStandardMovement(timeMult * 0.5f, params);
+			TryStandardMovement(timeMult * 0.5f, params);
+		} else {
+			TryStandardMovement(timeMult, params);
+		}
+
+		if (params.TilesDestroyed > 0) {
+			AddScore(params.TilesDestroyed * 50);
+		}
+
+		OnUpdateHitbox();
+
+		//UpdateFrozenState(timeMult);
+		if (_renderer.AnimPaused) {
+			if (_frozenTimeLeft <= 0.0f) {
+				_renderer.AnimPaused = false;
+				_renderer.Initialize(ActorRendererType::Default);
+
+				for (std::int32_t i = 0; i < 10; i++) {
+					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+				}
+
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
+
+				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+			} else {
+				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
+				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+				_renderer.Initialize(ActorRendererType::FrozenMask);
+				_frozenTimeLeft -= timeMult;
+			}
+		}
+	}
+
+	void Player::OnUpdateTimers(float timeMult)
+	{
 		// Invulnerability
 		if (_invulnerableTime > 0.0f) {
 			_invulnerableTime -= timeMult;
@@ -372,7 +417,6 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// Timers
 		if (_controllableTimeout > 0.0f) {
 			_controllableTimeout -= timeMult;
 
@@ -591,19 +635,6 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// Shallow Water
-		if (areaWaterBlock != -1) {
-			if (_inShallowWater == -1) {
-				OnWaterSplash(Vector2f(_pos.X, (float)areaWaterBlock), true);
-			}
-
-			_inShallowWater = areaWaterBlock;
-		} else if (_inShallowWater != -1) {
-			OnWaterSplash(Vector2f(_pos.X, (float)_inShallowWater), false);
-
-			_inShallowWater = -1;
-		}
-
 		// Tube
 		if (_inTubeTime > 0.0f) {
 			_inTubeTime -= timeMult;
@@ -620,11 +651,12 @@ namespace Jazz2::Actors
 					_weaponSound = nullptr;
 				}
 #endif
-				return;
 			}
 		}
+	}
 
-		// Controls
+	void Player::OnHandleMovement(float timeMult, bool areaWeaponAllowed)
+	{
 		// Move
 		if (PreferencesCache::ToggleRunAction) {
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Run)) {
@@ -1029,21 +1061,6 @@ namespace Jazz2::Actors
 			}
 		}
 #endif
-
-		if (_controllable && _controllableExternal && _playerType != PlayerType::Frog) {
-			bool isGamepad;
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad)) {
-				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
-					SwitchToNextWeapon();
-				}
-			} else {
-				for (std::uint32_t i = 0; i <= (std::uint32_t)PlayerActions::SwitchToThunderbolt - (std::uint32_t)PlayerActions::SwitchToBlaster; i++) {
-					if (_levelHandler->PlayerActionHit(_playerIndex, (PlayerActions)(i + (std::uint32_t)PlayerActions::SwitchToBlaster))) {
-						SwitchToWeaponByIndex(i);
-					}
-				}
-			}
-		}
 	}
 
 	bool Player::OnDraw(RenderQueue& renderQueue)
@@ -2511,6 +2528,15 @@ namespace Jazz2::Actors
 		SetShield(ShieldType::None, 0.0f);
 
 		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this]() {
+			_speed.X = 0.0f;
+			_speed.Y = 0.0f;
+			_externalForce.X = 0.0f;
+			_externalForce.Y = 0.0f;
+			_internalForceY = 0.0f;
+			_inShallowWater = -1;
+			_keepRunningTime = 0.0f;
+			_carryingObject = nullptr;
+
 			if (_lives > 1 || _levelHandler->Difficulty() == GameDifficulty::Multiplayer) {
 				if (_lives > 1 && _lives < UINT8_MAX) {
 					_lives--;
@@ -3927,11 +3953,11 @@ namespace Jazz2::Actors
 	{
 		DEATH_DEBUG_ASSERT(actor != nullptr);
 
-		_carryingObject = actor;
+		if (_carryingObject != nullptr && _carryingObject != actor) {
+			return;
+		}
 
-		_speed.Y = 0.0f;
-		_externalForce.Y = 0.0f;
-		_internalForceY = 0.0f;
+		_carryingObject = actor;
 
 		if (suspendType == SuspendType::SwingingVine) {
 			_suspendType = suspendType;

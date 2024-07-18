@@ -27,8 +27,8 @@
 namespace Jazz2::Collisions
 {
 	struct CollisionPair {
-		std::int32_t proxyIdA;
-		std::int32_t proxyIdB;
+		std::int32_t ProxyIdA;
+		std::int32_t ProxyIdB;
 	};
 
 	/// The broad-phase is used for computing pairs and performing volume queries and ray casts.
@@ -51,7 +51,7 @@ namespace Jazz2::Collisions
 
 		/// Call MoveProxy as many times as you like, then when you are done
 		/// call UpdatePairs to finalized the proxy pairs (for your time step).
-		void MoveProxy(std::int32_t proxyId, const AABBf& aabb, const Vector2f& displacement);
+		void MoveProxy(std::int32_t proxyId, const AABBf& aabb, Vector2f displacement);
 
 		/// Call to trigger a re-processing of it's pairs on the next call to UpdatePairs.
 		void TouchProxy(std::int32_t proxyId);
@@ -99,124 +99,127 @@ namespace Jazz2::Collisions
 		/// Shift the world origin. Useful for large worlds.
 		/// The shift formula is: position -= newOrigin
 		/// @param newOrigin the new origin with respect to the old origin
-		void ShiftOrigin(const Vector2f& newOrigin);
+		void ShiftOrigin(Vector2f newOrigin);
 
 	private:
+		static constexpr std::int32_t DefaultPairCapacity = 16;
+		static constexpr std::int32_t DefaultMoveCapacity = /*16*/64;
+
+		DynamicTree _tree;
+
+		std::int32_t _proxyCount;
+
+		std::int32_t* _moveBuffer;
+		std::int32_t _moveCapacity;
+		std::int32_t _moveCount;
+
+		CollisionPair* _pairBuffer;
+		std::int32_t _pairCapacity;
+		std::int32_t _pairCount;
+
+		std::int32_t _queryProxyId;
+
 		void BufferMove(std::int32_t proxyId);
 		void UnBufferMove(std::int32_t proxyId);
 
 		bool OnCollisionQuery(std::int32_t proxyId);
-
-		DynamicTree m_tree;
-
-		std::int32_t m_proxyCount;
-
-		std::int32_t* m_moveBuffer;
-		std::int32_t m_moveCapacity;
-		std::int32_t m_moveCount;
-
-		CollisionPair* m_pairBuffer;
-		std::int32_t m_pairCapacity;
-		std::int32_t m_pairCount;
-
-		std::int32_t m_queryProxyId;
 	};
 
 	inline void* DynamicTreeBroadPhase::GetUserData(std::int32_t proxyId) const
 	{
-		return m_tree.GetUserData(proxyId);
+		return _tree.GetUserData(proxyId);
 	}
 
 	inline bool DynamicTreeBroadPhase::TestOverlap(std::int32_t proxyIdA, std::int32_t proxyIdB) const
 	{
-		const AABBf& aabbA = m_tree.GetFatAABB(proxyIdA);
-		const AABBf& aabbB = m_tree.GetFatAABB(proxyIdB);
+		const AABBf& aabbA = _tree.GetFatAABB(proxyIdA);
+		const AABBf& aabbB = _tree.GetFatAABB(proxyIdB);
 		return aabbA.Overlaps(aabbB);
 	}
 
 	inline const AABBf& DynamicTreeBroadPhase::GetFatAABB(std::int32_t proxyId) const
 	{
-		return m_tree.GetFatAABB(proxyId);
+		return _tree.GetFatAABB(proxyId);
 	}
 
 	inline std::int32_t DynamicTreeBroadPhase::GetProxyCount() const
 	{
-		return m_proxyCount;
+		return _proxyCount;
 	}
 
 	inline std::int32_t DynamicTreeBroadPhase::GetTreeHeight() const
 	{
-		return m_tree.GetHeight();
+		return _tree.GetHeight();
 	}
 
 	inline std::int32_t DynamicTreeBroadPhase::GetTreeBalance() const
 	{
-		return m_tree.GetMaxBalance();
+		return _tree.GetMaxBalance();
 	}
 
 	inline float DynamicTreeBroadPhase::GetTreeQuality() const
 	{
-		return m_tree.GetAreaRatio();
+		return _tree.GetAreaRatio();
 	}
 
 	template <typename T>
 	void DynamicTreeBroadPhase::UpdatePairs(T* callback)
 	{
 		// Reset pair buffer
-		m_pairCount = 0;
+		_pairCount = 0;
 
 		// Perform tree queries for all moving proxies.
-		for (std::int32_t i = 0; i < m_moveCount; ++i) {
-			m_queryProxyId = m_moveBuffer[i];
-			if (m_queryProxyId == NullNode) {
+		for (std::int32_t i = 0; i < _moveCount; ++i) {
+			_queryProxyId = _moveBuffer[i];
+			if (_queryProxyId == NullNode) {
 				continue;
 			}
 
 			// We have to query the tree with the fat AABB so that
 			// we don't fail to create a pair that may touch later.
-			const AABBf& fatAABB = m_tree.GetFatAABB(m_queryProxyId);
+			const AABBf& fatAABB = _tree.GetFatAABB(_queryProxyId);
 
 			// Query tree, create pairs and add them pair buffer.
-			m_tree.Query(this, fatAABB);
+			_tree.Query(this, fatAABB);
 		}
 
 		// Send pairs to caller
-		for (std::int32_t i = 0; i < m_pairCount; ++i) {
-			CollisionPair* primaryPair = m_pairBuffer + i;
-			void* userDataA = m_tree.GetUserData(primaryPair->proxyIdA);
-			void* userDataB = m_tree.GetUserData(primaryPair->proxyIdB);
+		for (std::int32_t i = 0; i < _pairCount; ++i) {
+			CollisionPair* primaryPair = &_pairBuffer[i];
+			void* userDataA = _tree.GetUserData(primaryPair->ProxyIdA);
+			void* userDataB = _tree.GetUserData(primaryPair->ProxyIdB);
 
 			callback->OnPairAdded(userDataA, userDataB);
 		}
 
 		// Clear move flags
-		for (std::int32_t i = 0; i < m_moveCount; ++i) {
-			std::int32_t proxyId = m_moveBuffer[i];
+		for (std::int32_t i = 0; i < _moveCount; ++i) {
+			std::int32_t proxyId = _moveBuffer[i];
 			if (proxyId == NullNode) {
 				continue;
 			}
 
-			m_tree.ClearMoved(proxyId);
+			_tree.ClearMoved(proxyId);
 		}
 
 		// Reset move buffer
-		m_moveCount = 0;
+		_moveCount = 0;
 	}
 
 	template <typename T>
 	inline void DynamicTreeBroadPhase::Query(T* callback, const AABBf& aabb) const
 	{
-		m_tree.Query(callback, aabb);
+		_tree.Query(callback, aabb);
 	}
 
 	/*template <typename T>
 	inline void DynamicTreeBroadPhase::RayCast(T* callback, const b2RayCastInput& input) const
 	{
-		m_tree.RayCast(callback, input);
+		_tree.RayCast(callback, input);
 	}*/
 
-	inline void DynamicTreeBroadPhase::ShiftOrigin(const Vector2f& newOrigin)
+	inline void DynamicTreeBroadPhase::ShiftOrigin(Vector2f newOrigin)
 	{
-		m_tree.ShiftOrigin(newOrigin);
+		_tree.ShiftOrigin(newOrigin);
 	}
 }
