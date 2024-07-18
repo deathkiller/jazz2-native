@@ -28,66 +28,64 @@ namespace Jazz2::Collisions
 {
 	DynamicTree::DynamicTree()
 	{
-		m_root = NullNode;
+		_root = NullNode;
 
-		m_nodeCapacity = 16;
-		m_nodeCount = 0;
-		m_nodes = (TreeNode*)malloc(m_nodeCapacity * sizeof(TreeNode));
-		std::memset(m_nodes, 0, m_nodeCapacity * sizeof(TreeNode));
+		_nodeCapacity = DefaultNodeCapacity;
+		_nodeCount = 0;
+		_nodes = new TreeNode[_nodeCapacity];
 
 		// Build a linked list for the free list.
-		for (int32_t i = 0; i < m_nodeCapacity - 1; ++i) {
-			m_nodes[i].next = i + 1;
-			m_nodes[i].height = -1;
+		for (std::int32_t i = 0; i < _nodeCapacity - 1; ++i) {
+			_nodes[i].Next = i + 1;
+			_nodes[i].Height = -1;
 		}
-		m_nodes[m_nodeCapacity - 1].next = NullNode;
-		m_nodes[m_nodeCapacity - 1].height = -1;
-		m_freeList = 0;
+		_nodes[_nodeCapacity - 1].Next = NullNode;
+		_nodes[_nodeCapacity - 1].Height = -1;
+		_freeList = 0;
 
-		m_insertionCount = 0;
+		_insertionCount = 0;
 	}
 
 	DynamicTree::~DynamicTree()
 	{
-		// This frees the entire tree in one shot.
-		std::free(m_nodes);
+		delete[] _nodes;
 	}
 
 	// Allocate a node from the pool. Grow the pool if necessary.
 	std::int32_t DynamicTree::AllocateNode()
 	{
 		// Expand the node pool as needed.
-		if (m_freeList == NullNode) {
+		if (_freeList == NullNode) {
 			//b2Assert(m_nodeCount == m_nodeCapacity);
 
 			// The free list is empty. Rebuild a bigger pool.
-			TreeNode* oldNodes = m_nodes;
-			m_nodeCapacity *= 2;
-			m_nodes = (TreeNode*)malloc(m_nodeCapacity * sizeof(TreeNode));
-			std::memcpy(m_nodes, oldNodes, m_nodeCount * sizeof(TreeNode));
-			std::free(oldNodes);
+			TreeNode* oldNodes = _nodes;
+			_nodeCapacity *= 2;
+			_nodes = new TreeNode[_nodeCapacity];
+			std::memcpy(_nodes, oldNodes, _nodeCount * sizeof(TreeNode));
+			delete[] oldNodes;
 
 			// Build a linked list for the free list. The parent
 			// pointer becomes the "next" pointer.
-			for (std::int32_t i = m_nodeCount; i < m_nodeCapacity - 1; ++i) {
-				m_nodes[i].next = i + 1;
-				m_nodes[i].height = -1;
+			for (std::int32_t i = _nodeCount; i < _nodeCapacity - 1; ++i) {
+				_nodes[i].Next = i + 1;
+				_nodes[i].Height = -1;
 			}
-			m_nodes[m_nodeCapacity - 1].next = NullNode;
-			m_nodes[m_nodeCapacity - 1].height = -1;
-			m_freeList = m_nodeCount;
+			_nodes[_nodeCapacity - 1].Next = NullNode;
+			_nodes[_nodeCapacity - 1].Height = -1;
+			_freeList = _nodeCount;
 		}
 
 		// Peel a node off the free list.
-		std::int32_t nodeId = m_freeList;
-		m_freeList = m_nodes[nodeId].next;
-		m_nodes[nodeId].parent = NullNode;
-		m_nodes[nodeId].child1 = NullNode;
-		m_nodes[nodeId].child2 = NullNode;
-		m_nodes[nodeId].height = 0;
-		m_nodes[nodeId].userData = nullptr;
-		m_nodes[nodeId].moved = false;
-		++m_nodeCount;
+		std::int32_t nodeId = _freeList;
+		_freeList = _nodes[nodeId].Next;
+		_nodes[nodeId].Parent = NullNode;
+		_nodes[nodeId].Child1 = NullNode;
+		_nodes[nodeId].Child2 = NullNode;
+		_nodes[nodeId].Height = 0;
+		_nodes[nodeId].UserData = nullptr;
+		_nodes[nodeId].Moved = false;
+		++_nodeCount;
 		return nodeId;
 	}
 
@@ -96,10 +94,10 @@ namespace Jazz2::Collisions
 	{
 		//b2Assert(0 <= nodeId && nodeId < m_nodeCapacity);
 		//b2Assert(0 < m_nodeCount);
-		m_nodes[nodeId].next = m_freeList;
-		m_nodes[nodeId].height = -1;
-		m_freeList = nodeId;
-		--m_nodeCount;
+		_nodes[nodeId].Next = _freeList;
+		_nodes[nodeId].Height = -1;
+		_freeList = nodeId;
+		--_nodeCount;
 	}
 
 	// Create a proxy in the tree as a leaf node. We return the index
@@ -109,15 +107,14 @@ namespace Jazz2::Collisions
 	{
 		std::int32_t proxyId = AllocateNode();
 
-		// Fatten the aabb.
-		Vector2f r(AabbExtension, AabbExtension);
-		m_nodes[proxyId].aabb.L = aabb.L - r.X;
-		m_nodes[proxyId].aabb.T = aabb.T - r.Y;
-		m_nodes[proxyId].aabb.R = aabb.R + r.X;
-		m_nodes[proxyId].aabb.B = aabb.B + r.Y;
-		m_nodes[proxyId].userData = userData;
-		m_nodes[proxyId].height = 0;
-		m_nodes[proxyId].moved = true;
+		// Fatten the aabb
+		_nodes[proxyId].Aabb.L = aabb.L - AabbExtension;
+		_nodes[proxyId].Aabb.T = aabb.T - AabbExtension;
+		_nodes[proxyId].Aabb.R = aabb.R + AabbExtension;
+		_nodes[proxyId].Aabb.B = aabb.B + AabbExtension;
+		_nodes[proxyId].UserData = userData;
+		_nodes[proxyId].Height = 0;
+		_nodes[proxyId].Moved = true;
 
 		InsertLeaf(proxyId);
 
@@ -141,11 +138,10 @@ namespace Jazz2::Collisions
 
 		// Extend AABB
 		AABBf fatAABB;
-		Vector2f r(AabbExtension, AabbExtension);
-		fatAABB.L = aabb.L - r.X;
-		fatAABB.T = aabb.T - r.Y;
-		fatAABB.R = aabb.R + r.X;
-		fatAABB.B = aabb.B + r.Y;
+		fatAABB.L = aabb.L - AabbExtension;
+		fatAABB.T = aabb.T - AabbExtension;
+		fatAABB.R = aabb.R + AabbExtension;
+		fatAABB.B = aabb.B + AabbExtension;
 
 		// Predict AABB movement
 		Vector2f d = AabbMultiplier * displacement;
@@ -162,16 +158,16 @@ namespace Jazz2::Collisions
 			fatAABB.B += d.Y;
 		}
 
-		const AABBf& treeAABB = m_nodes[proxyId].aabb;
+		const AABBf& treeAABB = _nodes[proxyId].Aabb;
 		if (treeAABB.Contains(aabb)) {
 			// The tree AABB still contains the object, but it might be too large.
 			// Perhaps the object was moving fast but has since gone to sleep.
 			// The huge AABB is larger than the new fat AABB.
 			AABBf hugeAABB;
-			hugeAABB.L = fatAABB.L - 4.0f * r.X;
-			hugeAABB.T = fatAABB.T - 4.0f * r.Y;
-			hugeAABB.R = fatAABB.R + 4.0f * r.X;
-			hugeAABB.B = fatAABB.B + 4.0f * r.Y;
+			hugeAABB.L = fatAABB.L - 4.0f * AabbExtension;
+			hugeAABB.T = fatAABB.T - 4.0f * AabbExtension;
+			hugeAABB.R = fatAABB.R + 4.0f * AabbExtension;
+			hugeAABB.B = fatAABB.B + 4.0f * AabbExtension;
 
 			if (hugeAABB.Contains(treeAABB)) {
 				// The tree AABB contains the object AABB and the tree AABB is
@@ -184,35 +180,35 @@ namespace Jazz2::Collisions
 
 		RemoveLeaf(proxyId);
 
-		m_nodes[proxyId].aabb = fatAABB;
+		_nodes[proxyId].Aabb = fatAABB;
 
 		InsertLeaf(proxyId);
 
-		m_nodes[proxyId].moved = true;
+		_nodes[proxyId].Moved = true;
 
 		return true;
 	}
 
 	void DynamicTree::InsertLeaf(std::int32_t leaf)
 	{
-		++m_insertionCount;
+		++_insertionCount;
 
-		if (m_root == NullNode) {
-			m_root = leaf;
-			m_nodes[m_root].parent = NullNode;
+		if (_root == NullNode) {
+			_root = leaf;
+			_nodes[_root].Parent = NullNode;
 			return;
 		}
 
 		// Find the best sibling for this node
-		AABBf leafAABB = m_nodes[leaf].aabb;
-		std::int32_t index = m_root;
-		while (!m_nodes[index].IsLeaf()) {
-			std::int32_t child1 = m_nodes[index].child1;
-			std::int32_t child2 = m_nodes[index].child2;
+		AABBf leafAABB = _nodes[leaf].Aabb;
+		std::int32_t index = _root;
+		while (!_nodes[index].IsLeaf()) {
+			std::int32_t child1 = _nodes[index].Child1;
+			std::int32_t child2 = _nodes[index].Child2;
 
-			float area = m_nodes[index].aabb.GetPerimeter();
+			float area = _nodes[index].Aabb.GetPerimeter();
 
-			AABBf combinedAABB = AABBf::Combine(m_nodes[index].aabb, leafAABB);
+			AABBf combinedAABB = AABBf::Combine(_nodes[index].Aabb, leafAABB);
 			float combinedArea = combinedAABB.GetPerimeter();
 
 			// Cost of creating a new parent for this node and the new leaf
@@ -223,24 +219,24 @@ namespace Jazz2::Collisions
 
 			// Cost of descending into child1
 			float cost1;
-			if (m_nodes[child1].IsLeaf()) {
-				AABBf aabb = AABBf::Combine(leafAABB, m_nodes[child1].aabb);
+			if (_nodes[child1].IsLeaf()) {
+				AABBf aabb = AABBf::Combine(leafAABB, _nodes[child1].Aabb);
 				cost1 = aabb.GetPerimeter() + inheritanceCost;
 			} else {
-				AABBf aabb = AABBf::Combine(leafAABB, m_nodes[child1].aabb);
-				float oldArea = m_nodes[child1].aabb.GetPerimeter();
+				AABBf aabb = AABBf::Combine(leafAABB, _nodes[child1].Aabb);
+				float oldArea = _nodes[child1].Aabb.GetPerimeter();
 				float newArea = aabb.GetPerimeter();
 				cost1 = (newArea - oldArea) + inheritanceCost;
 			}
 
 			// Cost of descending into child2
 			float cost2;
-			if (m_nodes[child2].IsLeaf()) {
-				AABBf aabb = AABBf::Combine(leafAABB, m_nodes[child2].aabb);
+			if (_nodes[child2].IsLeaf()) {
+				AABBf aabb = AABBf::Combine(leafAABB, _nodes[child2].Aabb);
 				cost2 = aabb.GetPerimeter() + inheritanceCost;
 			} else {
-				AABBf aabb = AABBf::Combine(leafAABB, m_nodes[child2].aabb);
-				float oldArea = m_nodes[child2].aabb.GetPerimeter();
+				AABBf aabb = AABBf::Combine(leafAABB, _nodes[child2].Aabb);
+				float oldArea = _nodes[child2].Aabb.GetPerimeter();
 				float newArea = aabb.GetPerimeter();
 				cost2 = newArea - oldArea + inheritanceCost;
 			}
@@ -261,49 +257,49 @@ namespace Jazz2::Collisions
 		std::int32_t sibling = index;
 
 		// Create a new parent.
-		std::int32_t oldParent = m_nodes[sibling].parent;
+		std::int32_t oldParent = _nodes[sibling].Parent;
 		std::int32_t newParent = AllocateNode();
-		m_nodes[newParent].parent = oldParent;
-		m_nodes[newParent].userData = nullptr;
-		m_nodes[newParent].aabb = AABBf::Combine(leafAABB, m_nodes[sibling].aabb);
-		m_nodes[newParent].height = m_nodes[sibling].height + 1;
+		_nodes[newParent].Parent = oldParent;
+		_nodes[newParent].UserData = nullptr;
+		_nodes[newParent].Aabb = AABBf::Combine(leafAABB, _nodes[sibling].Aabb);
+		_nodes[newParent].Height = _nodes[sibling].Height + 1;
 
 		if (oldParent != NullNode) {
 			// The sibling was not the root.
-			if (m_nodes[oldParent].child1 == sibling) {
-				m_nodes[oldParent].child1 = newParent;
+			if (_nodes[oldParent].Child1 == sibling) {
+				_nodes[oldParent].Child1 = newParent;
 			} else {
-				m_nodes[oldParent].child2 = newParent;
+				_nodes[oldParent].Child2 = newParent;
 			}
 
-			m_nodes[newParent].child1 = sibling;
-			m_nodes[newParent].child2 = leaf;
-			m_nodes[sibling].parent = newParent;
-			m_nodes[leaf].parent = newParent;
+			_nodes[newParent].Child1 = sibling;
+			_nodes[newParent].Child2 = leaf;
+			_nodes[sibling].Parent = newParent;
+			_nodes[leaf].Parent = newParent;
 		} else {
 			// The sibling was the root.
-			m_nodes[newParent].child1 = sibling;
-			m_nodes[newParent].child2 = leaf;
-			m_nodes[sibling].parent = newParent;
-			m_nodes[leaf].parent = newParent;
-			m_root = newParent;
+			_nodes[newParent].Child1 = sibling;
+			_nodes[newParent].Child2 = leaf;
+			_nodes[sibling].Parent = newParent;
+			_nodes[leaf].Parent = newParent;
+			_root = newParent;
 		}
 
 		// Walk back up the tree fixing heights and AABBs
-		index = m_nodes[leaf].parent;
+		index = _nodes[leaf].Parent;
 		while (index != NullNode) {
 			index = Balance(index);
 
-			std::int32_t child1 = m_nodes[index].child1;
-			std::int32_t child2 = m_nodes[index].child2;
+			std::int32_t child1 = _nodes[index].Child1;
+			std::int32_t child2 = _nodes[index].Child2;
 
 			//b2Assert(child1 != NullNode);
 			//b2Assert(child2 != NullNode);
 
-			m_nodes[index].height = 1 + std::max(m_nodes[child1].height, m_nodes[child2].height);
-			m_nodes[index].aabb = AABBf::Combine(m_nodes[child1].aabb, m_nodes[child2].aabb);
+			_nodes[index].Height = 1 + std::max(_nodes[child1].Height, _nodes[child2].Height);
+			_nodes[index].Aabb = AABBf::Combine(_nodes[child1].Aabb, _nodes[child2].Aabb);
 
-			index = m_nodes[index].parent;
+			index = _nodes[index].Parent;
 		}
 
 		//Validate();
@@ -311,28 +307,28 @@ namespace Jazz2::Collisions
 
 	void DynamicTree::RemoveLeaf(std::int32_t leaf)
 	{
-		if (leaf == m_root) {
-			m_root = NullNode;
+		if (leaf == _root) {
+			_root = NullNode;
 			return;
 		}
 
-		std::int32_t parent = m_nodes[leaf].parent;
-		std::int32_t grandParent = m_nodes[parent].parent;
+		std::int32_t parent = _nodes[leaf].Parent;
+		std::int32_t grandParent = _nodes[parent].Parent;
 		std::int32_t sibling;
-		if (m_nodes[parent].child1 == leaf) {
-			sibling = m_nodes[parent].child2;
+		if (_nodes[parent].Child1 == leaf) {
+			sibling = _nodes[parent].Child2;
 		} else {
-			sibling = m_nodes[parent].child1;
+			sibling = _nodes[parent].Child1;
 		}
 
 		if (grandParent != NullNode) {
 			// Destroy parent and connect sibling to grandParent.
-			if (m_nodes[grandParent].child1 == parent) {
-				m_nodes[grandParent].child1 = sibling;
+			if (_nodes[grandParent].Child1 == parent) {
+				_nodes[grandParent].Child1 = sibling;
 			} else {
-				m_nodes[grandParent].child2 = sibling;
+				_nodes[grandParent].Child2 = sibling;
 			}
-			m_nodes[sibling].parent = grandParent;
+			_nodes[sibling].Parent = grandParent;
 			FreeNode(parent);
 
 			// Adjust ancestor bounds.
@@ -340,17 +336,17 @@ namespace Jazz2::Collisions
 			while (index != NullNode) {
 				index = Balance(index);
 
-				std::int32_t child1 = m_nodes[index].child1;
-				std::int32_t child2 = m_nodes[index].child2;
+				std::int32_t child1 = _nodes[index].Child1;
+				std::int32_t child2 = _nodes[index].Child2;
 
-				m_nodes[index].aabb = AABBf::Combine(m_nodes[child1].aabb, m_nodes[child2].aabb);
-				m_nodes[index].height = 1 + std::max(m_nodes[child1].height, m_nodes[child2].height);
+				_nodes[index].Aabb = AABBf::Combine(_nodes[child1].Aabb, _nodes[child2].Aabb);
+				_nodes[index].Height = 1 + std::max(_nodes[child1].Height, _nodes[child2].Height);
 
-				index = m_nodes[index].parent;
+				index = _nodes[index].Parent;
 			}
 		} else {
-			m_root = sibling;
-			m_nodes[sibling].parent = NullNode;
+			_root = sibling;
+			_nodes[sibling].Parent = NullNode;
 			FreeNode(parent);
 		}
 
@@ -363,66 +359,66 @@ namespace Jazz2::Collisions
 	{
 		//b2Assert(iA != NullNode);
 
-		TreeNode* A = m_nodes + iA;
-		if (A->IsLeaf() || A->height < 2) {
+		TreeNode* A = &_nodes[iA];
+		if (A->IsLeaf() || A->Height < 2) {
 			return iA;
 		}
 
-		std::int32_t iB = A->child1;
-		std::int32_t iC = A->child2;
+		std::int32_t iB = A->Child1;
+		std::int32_t iC = A->Child2;
 		//b2Assert(0 <= iB && iB < m_nodeCapacity);
 		//b2Assert(0 <= iC && iC < m_nodeCapacity);
 
-		TreeNode* B = m_nodes + iB;
-		TreeNode* C = m_nodes + iC;
+		TreeNode* B = &_nodes[iB];
+		TreeNode* C = &_nodes[iC];
 
-		std::int32_t balance = C->height - B->height;
+		std::int32_t balance = C->Height - B->Height;
 
 		// Rotate C up
 		if (balance > 1) {
-			std::int32_t iF = C->child1;
-			std::int32_t iG = C->child2;
-			TreeNode* F = m_nodes + iF;
-			TreeNode* G = m_nodes + iG;
+			std::int32_t iF = C->Child1;
+			std::int32_t iG = C->Child2;
+			TreeNode* F = &_nodes[iF];
+			TreeNode* G = &_nodes[iG];
 			//b2Assert(0 <= iF && iF < m_nodeCapacity);
 			//b2Assert(0 <= iG && iG < m_nodeCapacity);
 
 			// Swap A and C
-			C->child1 = iA;
-			C->parent = A->parent;
-			A->parent = iC;
+			C->Child1 = iA;
+			C->Parent = A->Parent;
+			A->Parent = iC;
 
 			// A's old parent should point to C
-			if (C->parent != NullNode) {
-				if (m_nodes[C->parent].child1 == iA) {
-					m_nodes[C->parent].child1 = iC;
+			if (C->Parent != NullNode) {
+				if (_nodes[C->Parent].Child1 == iA) {
+					_nodes[C->Parent].Child1 = iC;
 				} else {
 					//b2Assert(m_nodes[C->parent].child2 == iA);
-					m_nodes[C->parent].child2 = iC;
+					_nodes[C->Parent].Child2 = iC;
 				}
 			} else {
-				m_root = iC;
+				_root = iC;
 			}
 
 			// Rotate
-			if (F->height > G->height) {
-				C->child2 = iF;
-				A->child2 = iG;
-				G->parent = iA;
-				A->aabb = AABBf::Combine(B->aabb, G->aabb);
-				C->aabb = AABBf::Combine(A->aabb, F->aabb);
+			if (F->Height > G->Height) {
+				C->Child2 = iF;
+				A->Child2 = iG;
+				G->Parent = iA;
+				A->Aabb = AABBf::Combine(B->Aabb, G->Aabb);
+				C->Aabb = AABBf::Combine(A->Aabb, F->Aabb);
 
-				A->height = 1 + std::max(B->height, G->height);
-				C->height = 1 + std::max(A->height, F->height);
+				A->Height = 1 + std::max(B->Height, G->Height);
+				C->Height = 1 + std::max(A->Height, F->Height);
 			} else {
-				C->child2 = iG;
-				A->child2 = iF;
-				F->parent = iA;
-				A->aabb = AABBf::Combine(B->aabb, F->aabb);
-				C->aabb = AABBf::Combine(A->aabb, G->aabb);
+				C->Child2 = iG;
+				A->Child2 = iF;
+				F->Parent = iA;
+				A->Aabb = AABBf::Combine(B->Aabb, F->Aabb);
+				C->Aabb = AABBf::Combine(A->Aabb, G->Aabb);
 
-				A->height = 1 + std::max(B->height, F->height);
-				C->height = 1 + std::max(A->height, G->height);
+				A->Height = 1 + std::max(B->Height, F->Height);
+				C->Height = 1 + std::max(A->Height, G->Height);
 			}
 
 			return iC;
@@ -430,49 +426,49 @@ namespace Jazz2::Collisions
 
 		// Rotate B up
 		if (balance < -1) {
-			std::int32_t iD = B->child1;
-			std::int32_t iE = B->child2;
-			TreeNode* D = m_nodes + iD;
-			TreeNode* E = m_nodes + iE;
+			std::int32_t iD = B->Child1;
+			std::int32_t iE = B->Child2;
+			TreeNode* D = &_nodes[iD];
+			TreeNode* E = &_nodes[iE];
 			//b2Assert(0 <= iD && iD < m_nodeCapacity);
 			//b2Assert(0 <= iE && iE < m_nodeCapacity);
 
 			// Swap A and B
-			B->child1 = iA;
-			B->parent = A->parent;
-			A->parent = iB;
+			B->Child1 = iA;
+			B->Parent = A->Parent;
+			A->Parent = iB;
 
 			// A's old parent should point to B
-			if (B->parent != NullNode) {
-				if (m_nodes[B->parent].child1 == iA) {
-					m_nodes[B->parent].child1 = iB;
+			if (B->Parent != NullNode) {
+				if (_nodes[B->Parent].Child1 == iA) {
+					_nodes[B->Parent].Child1 = iB;
 				} else {
 					//b2Assert(m_nodes[B->parent].child2 == iA);
-					m_nodes[B->parent].child2 = iB;
+					_nodes[B->Parent].Child2 = iB;
 				}
 			} else {
-				m_root = iB;
+				_root = iB;
 			}
 
 			// Rotate
-			if (D->height > E->height) {
-				B->child2 = iD;
-				A->child1 = iE;
-				E->parent = iA;
-				A->aabb = AABBf::Combine(C->aabb, E->aabb);
-				B->aabb = AABBf::Combine(A->aabb, D->aabb);
+			if (D->Height > E->Height) {
+				B->Child2 = iD;
+				A->Child1 = iE;
+				E->Parent = iA;
+				A->Aabb = AABBf::Combine(C->Aabb, E->Aabb);
+				B->Aabb = AABBf::Combine(A->Aabb, D->Aabb);
 
-				A->height = 1 + std::max(C->height, E->height);
-				B->height = 1 + std::max(A->height, D->height);
+				A->Height = 1 + std::max(C->Height, E->Height);
+				B->Height = 1 + std::max(A->Height, D->Height);
 			} else {
-				B->child2 = iE;
-				A->child1 = iD;
-				D->parent = iA;
-				A->aabb = AABBf::Combine(C->aabb, D->aabb);
-				B->aabb = AABBf::Combine(A->aabb, E->aabb);
+				B->Child2 = iE;
+				A->Child1 = iD;
+				D->Parent = iA;
+				A->Aabb = AABBf::Combine(C->Aabb, D->Aabb);
+				B->Aabb = AABBf::Combine(A->Aabb, E->Aabb);
 
-				A->height = 1 + std::max(C->height, D->height);
-				B->height = 1 + std::max(A->height, E->height);
+				A->Height = 1 + std::max(C->Height, D->Height);
+				B->Height = 1 + std::max(A->Height, E->Height);
 			}
 
 			return iB;
@@ -483,32 +479,32 @@ namespace Jazz2::Collisions
 
 	std::int32_t DynamicTree::GetHeight() const
 	{
-		if (m_root == NullNode) {
+		if (_root == NullNode) {
 			return 0;
 		}
 
-		return m_nodes[m_root].height;
+		return _nodes[_root].Height;
 	}
 
 	//
 	float DynamicTree::GetAreaRatio() const
 	{
-		if (m_root == NullNode) {
+		if (_root == NullNode) {
 			return 0.0f;
 		}
 
-		const TreeNode* root = m_nodes + m_root;
-		float rootArea = root->aabb.GetPerimeter();
+		const TreeNode* root = &_nodes[_root];
+		float rootArea = root->Aabb.GetPerimeter();
 
 		float totalArea = 0.0f;
-		for (std::int32_t i = 0; i < m_nodeCapacity; ++i) {
-			const TreeNode* node = m_nodes + i;
-			if (node->height < 0) {
+		for (std::int32_t i = 0; i < _nodeCapacity; ++i) {
+			const TreeNode* node = _nodes + i;
+			if (node->Height < 0) {
 				// Free node in pool
 				continue;
 			}
 
-			totalArea += node->aabb.GetPerimeter();
+			totalArea += node->Aabb.GetPerimeter();
 		}
 
 		return totalArea / rootArea;
@@ -518,53 +514,55 @@ namespace Jazz2::Collisions
 	std::int32_t DynamicTree::ComputeHeight(std::int32_t nodeId) const
 	{
 		//b2Assert(0 <= nodeId && nodeId < m_nodeCapacity);
-		TreeNode* node = m_nodes + nodeId;
+		TreeNode* node = &_nodes[nodeId];
 
 		if (node->IsLeaf()) {
 			return 0;
 		}
 
-		std::int32_t height1 = ComputeHeight(node->child1);
-		std::int32_t height2 = ComputeHeight(node->child2);
+		std::int32_t height1 = ComputeHeight(node->Child1);
+		std::int32_t height2 = ComputeHeight(node->Child2);
 		return 1 + std::max(height1, height2);
 	}
 
 	std::int32_t DynamicTree::ComputeHeight() const
 	{
-		std::int32_t height = ComputeHeight(m_root);
+		std::int32_t height = ComputeHeight(_root);
 		return height;
 	}
 
 	void DynamicTree::ValidateStructure(std::int32_t index) const
 	{
+		/*
 		if (index == NullNode) {
 			return;
 		}
 
-		if (index == m_root) {
-			//b2Assert(m_nodes[index].parent == NullNode);
+		if (index == _root) {
+			//b2Assert(_nodes[index].Parent == NullNode);
 		}
 
-		const TreeNode* node = m_nodes + index;
+		const TreeNode* node = &_nodes[index];
 
-		std::int32_t child1 = node->child1;
-		std::int32_t child2 = node->child2;
+		std::int32_t child1 = node->Child1;
+		std::int32_t child2 = node->Child2;
 
 		if (node->IsLeaf()) {
 			//b2Assert(child1 == NullNode);
 			//b2Assert(child2 == NullNode);
-			//b2Assert(node->height == 0);
+			//b2Assert(node->Height == 0);
 			return;
 		}
 
-		//b2Assert(0 <= child1 && child1 < m_nodeCapacity);
-		//b2Assert(0 <= child2 && child2 < m_nodeCapacity);
+		//b2Assert(0 <= child1 && child1 < _nodeCapacity);
+		//b2Assert(0 <= child2 && child2 < _nodeCapacity);
 
-		//b2Assert(m_nodes[child1].parent == index);
-		//b2Assert(m_nodes[child2].parent == index);
+		//b2Assert(_nodes[child1].Parent == index);
+		//b2Assert(_nodes[child2].Parent == index);
 
 		ValidateStructure(child1);
 		ValidateStructure(child2);
+		*/
 	}
 
 	/*void DynamicTree::ValidateMetrics(std::int32_t index) const
@@ -573,29 +571,29 @@ namespace Jazz2::Collisions
 			return;
 		}
 
-		const TreeNode* node = m_nodes + index;
+		const TreeNode* node = &_nodes[index];
 
-		std::int32_t child1 = node->child1;
-		std::int32_t child2 = node->child2;
+		std::int32_t child1 = node->Child1;
+		std::int32_t child2 = node->Child2;
 
 		if (node->IsLeaf()) {
 			//b2Assert(child1 == NullNode);
 			//b2Assert(child2 == NullNode);
-			//b2Assert(node->height == 0);
+			//b2Assert(node->Height == 0);
 			return;
 		}
 
-		//b2Assert(0 <= child1 && child1 < m_nodeCapacity);
-		//b2Assert(0 <= child2 && child2 < m_nodeCapacity);
+		//b2Assert(0 <= child1 && child1 < _nodeCapacity);
+		//b2Assert(0 <= child2 && child2 < _nodeCapacity);
 
-		std::int32_t height1 = m_nodes[child1].height;
-		std::int32_t height2 = m_nodes[child2].height;
+		std::int32_t height1 = _nodes[child1].Height;
+		std::int32_t height2 = _nodes[child2].Height;
 		std::int32_t height = 1 + std::max(height1, height2);
-		//b2Assert(node->height == height);
+		//b2Assert(node->Height == height);
 
-		//AABBf aabb = AABBf::Combine(m_nodes[child1].aabb, m_nodes[child2].aabb);
-		//b2Assert(aabb.lowerBound == node->aabb.lowerBound);
-		//b2Assert(aabb.upperBound == node->aabb.upperBound);
+		//AABBf aabb = AABBf::Combine(_nodes[child1].Aabb, _nodes[child2].Aabb);
+		//b2Assert(aabb.lowerBound == node->Aabb.lowerBound);
+		//b2Assert(aabb.upperBound == node->Aabb.upperBound);
 
 		ValidateMetrics(child1);
 		ValidateMetrics(child2);
@@ -604,36 +602,36 @@ namespace Jazz2::Collisions
 	void DynamicTree::Validate() const
 	{
 #if defined(b2DEBUG)
-		ValidateStructure(m_root);
-		//ValidateMetrics(m_root);
+		ValidateStructure(_root);
+		//ValidateMetrics(_root);
 
 		std::int32_t freeCount = 0;
-		std::int32_t freeIndex = m_freeList;
+		std::int32_t freeIndex = _freeList;
 		while (freeIndex != NullNode) {
-			//b2Assert(0 <= freeIndex && freeIndex < m_nodeCapacity);
-			freeIndex = m_nodes[freeIndex].next;
+			//b2Assert(0 <= freeIndex && freeIndex < _nodeCapacity);
+			freeIndex = _nodes[freeIndex].next;
 			++freeCount;
 		}
 
 		//b2Assert(GetHeight() == ComputeHeight());
-		//b2Assert(m_nodeCount + freeCount == m_nodeCapacity);
+		//b2Assert(_nodeCount + freeCount == _nodeCapacity);
 #endif
 	}
 
 	std::int32_t DynamicTree::GetMaxBalance() const
 	{
 		std::int32_t maxBalance = 0;
-		for (std::int32_t i = 0; i < m_nodeCapacity; ++i) {
-			const TreeNode* node = m_nodes + i;
-			if (node->height <= 1) {
+		for (std::int32_t i = 0; i < _nodeCapacity; ++i) {
+			const TreeNode* node = &_nodes[i];
+			if (node->Height <= 1) {
 				continue;
 			}
 
-			//b2Assert(node->IsLeaf() == false);
+			//b2Assert(!node->IsLeaf());
 
-			std::int32_t child1 = node->child1;
-			std::int32_t child2 = node->child2;
-			std::int32_t balance = std::abs(m_nodes[child2].height - m_nodes[child1].height);
+			std::int32_t child1 = node->Child1;
+			std::int32_t child2 = node->Child2;
+			std::int32_t balance = std::abs(_nodes[child2].Height - _nodes[child1].Height);
 			maxBalance = std::max(maxBalance, balance);
 		}
 
@@ -642,18 +640,18 @@ namespace Jazz2::Collisions
 
 	void DynamicTree::RebuildBottomUp()
 	{
-		std::int32_t* nodes = (std::int32_t*)std::malloc(m_nodeCount * sizeof(std::int32_t));
+		std::unique_ptr<std::int32_t[]> nodes = std::make_unique<std::int32_t[]>(_nodeCount);
 		std::int32_t count = 0;
 
 		// Build array of leaves. Free the rest.
-		for (std::int32_t i = 0; i < m_nodeCapacity; ++i) {
-			if (m_nodes[i].height < 0) {
+		for (std::int32_t i = 0; i < _nodeCapacity; ++i) {
+			if (_nodes[i].Height < 0) {
 				// free node in pool
 				continue;
 			}
 
-			if (m_nodes[i].IsLeaf()) {
-				m_nodes[i].parent = NullNode;
+			if (_nodes[i].IsLeaf()) {
+				_nodes[i].Parent = NullNode;
 				nodes[count] = i;
 				++count;
 			} else {
@@ -665,10 +663,10 @@ namespace Jazz2::Collisions
 			float minCost = FLT_MAX;
 			std::int32_t iMin = -1, jMin = -1;
 			for (std::int32_t i = 0; i < count; ++i) {
-				AABBf aabbi = m_nodes[nodes[i]].aabb;
+				AABBf aabbi = _nodes[nodes[i]].Aabb;
 
 				for (std::int32_t j = i + 1; j < count; ++j) {
-					AABBf aabbj = m_nodes[nodes[j]].aabb;
+					AABBf aabbj = _nodes[nodes[j]].Aabb;
 					AABBf b = AABBf::Combine(aabbi, aabbj);
 					float cost = b.GetPerimeter();
 					if (cost < minCost) {
@@ -681,39 +679,39 @@ namespace Jazz2::Collisions
 
 			std::int32_t index1 = nodes[iMin];
 			std::int32_t index2 = nodes[jMin];
-			TreeNode* child1 = m_nodes + index1;
-			TreeNode* child2 = m_nodes + index2;
+			TreeNode* child1 = &_nodes[index1];
+			TreeNode* child2 = &_nodes[index2];
 
 			std::int32_t parentIndex = AllocateNode();
-			TreeNode* parent = m_nodes + parentIndex;
-			parent->child1 = index1;
-			parent->child2 = index2;
-			parent->height = 1 + std::max(child1->height, child2->height);
-			parent->aabb = AABBf::Combine(child1->aabb, child2->aabb);
-			parent->parent = NullNode;
+			TreeNode* parent = &_nodes[parentIndex];
+			parent->Child1 = index1;
+			parent->Child2 = index2;
+			parent->Height = 1 + std::max(child1->Height, child2->Height);
+			parent->Aabb = AABBf::Combine(child1->Aabb, child2->Aabb);
+			parent->Parent = NullNode;
 
-			child1->parent = parentIndex;
-			child2->parent = parentIndex;
+			child1->Parent = parentIndex;
+			child2->Parent = parentIndex;
 
 			nodes[jMin] = nodes[count - 1];
 			nodes[iMin] = parentIndex;
 			--count;
 		}
 
-		m_root = nodes[0];
-		std::free(nodes);
+		_root = nodes[0];
+		//std::free(nodes);
 
 		Validate();
 	}
 
-	void DynamicTree::ShiftOrigin(const Vector2f& newOrigin)
+	void DynamicTree::ShiftOrigin(Vector2f newOrigin)
 	{
 		// Build array of leaves. Free the rest.
-		for (std::int32_t i = 0; i < m_nodeCapacity; ++i) {
-			m_nodes[i].aabb.L -= newOrigin.X;
-			m_nodes[i].aabb.T -= newOrigin.Y;
-			m_nodes[i].aabb.R -= newOrigin.X;
-			m_nodes[i].aabb.B -= newOrigin.Y;
+		for (std::int32_t i = 0; i < _nodeCapacity; ++i) {
+			_nodes[i].Aabb.L -= newOrigin.X;
+			_nodes[i].Aabb.T -= newOrigin.Y;
+			_nodes[i].Aabb.R -= newOrigin.X;
+			_nodes[i].Aabb.B -= newOrigin.Y;
 		}
 	}
 }

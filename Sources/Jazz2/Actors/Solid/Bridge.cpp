@@ -90,7 +90,8 @@ namespace Jazz2::Actors::Solid
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
 			auto diff = player->GetPos() - _pos;
-			if (diff.X >= -20.0f && diff.X <= _bridgeWidth + 20.0f && diff.Y > -27.0f && diff.Y < _heightFactor && player->GetSpeed().Y >= 0.0f) {
+			if (n < arraySize(foundPlayers) && diff.X >= -20.0f && diff.X <= _bridgeWidth + 20.0f &&
+				diff.Y > -27.0f && diff.Y < _heightFactor && player->GetSpeed().Y >= 0.0f) {
 				foundX[n] = diff.X;
 				foundPlayers[n] = player;
 				n++;

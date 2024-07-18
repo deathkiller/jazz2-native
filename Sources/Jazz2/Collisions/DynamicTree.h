@@ -42,29 +42,34 @@ namespace Jazz2::Collisions
 	/// A node in the dynamic tree. The client does not interact with this directly.
 	struct TreeNode
 	{
-		bool IsLeaf() const
-		{
-			return (child1 == NullNode);
-		}
-
 		/// Enlarged AABB
-		AABBf aabb;
+		AABBf Aabb;
 
-		void* userData;
+		void* UserData;
 
 		union
 		{
-			std::int32_t parent;
-			std::int32_t next;
+			std::int32_t Parent;
+			std::int32_t Next;
 		};
 
-		std::int32_t child1;
-		std::int32_t child2;
+		std::int32_t Child1;
+		std::int32_t Child2;
 
 		// leaf = 0, free node = -1
-		std::int32_t height;
+		std::int32_t Height;
 
-		bool moved;
+		bool Moved;
+
+		/*TreeNode()
+			: Parent(0), Child1(0), Child2(0), Height(0), Moved(false)
+		{
+		}*/
+
+		bool IsLeaf() const
+		{
+			return (Child1 == NullNode);
+		}
 	};
 
 	/// A dynamic AABB tree broad-phase, inspired by Nathanael Presson's btDbvt.
@@ -141,9 +146,10 @@ namespace Jazz2::Collisions
 		/// Shift the world origin. Useful for large worlds.
 		/// The shift formula is: position -= newOrigin
 		/// @param newOrigin the new origin with respect to the old origin
-		void ShiftOrigin(const Vector2f& newOrigin);
+		void ShiftOrigin(Vector2f newOrigin);
 
 	private:
+		static constexpr std::int32_t DefaultNodeCapacity = /*16*/128;
 
 		std::int32_t AllocateNode();
 		void FreeNode(std::int32_t node);
@@ -159,46 +165,46 @@ namespace Jazz2::Collisions
 		void ValidateStructure(std::int32_t index) const;
 		//void ValidateMetrics(std::int32_t index) const;
 
-		std::int32_t m_root;
+		std::int32_t _root;
 
-		TreeNode* m_nodes;
-		std::int32_t m_nodeCount;
-		std::int32_t m_nodeCapacity;
+		TreeNode* _nodes;
+		std::int32_t _nodeCount;
+		std::int32_t _nodeCapacity;
 
-		std::int32_t m_freeList;
+		std::int32_t _freeList;
 
-		std::int32_t m_insertionCount;
+		std::int32_t _insertionCount;
 	};
 
 	inline void* DynamicTree::GetUserData(std::int32_t proxyId) const
 	{
 		//b2Assert(0 <= proxyId && proxyId < m_nodeCapacity);
-		return m_nodes[proxyId].userData;
+		return _nodes[proxyId].UserData;
 	}
 
 	inline bool DynamicTree::WasMoved(std::int32_t proxyId) const
 	{
 		//b2Assert(0 <= proxyId && proxyId < m_nodeCapacity);
-		return m_nodes[proxyId].moved;
+		return _nodes[proxyId].Moved;
 	}
 
 	inline void DynamicTree::ClearMoved(std::int32_t proxyId)
 	{
 		//b2Assert(0 <= proxyId && proxyId < m_nodeCapacity);
-		m_nodes[proxyId].moved = false;
+		_nodes[proxyId].Moved = false;
 	}
 
 	inline const AABBf& DynamicTree::GetFatAABB(std::int32_t proxyId) const
 	{
 		//b2Assert(0 <= proxyId && proxyId < m_nodeCapacity);
-		return m_nodes[proxyId].aabb;
+		return _nodes[proxyId].Aabb;
 	}
 
 	template<typename T>
 	inline void DynamicTree::Query(T* callback, const AABBf& aabb) const
 	{
 		SmallVector<std::int32_t, 256> stack;
-		stack.push_back(m_root);
+		stack.push_back(_root);
 
 		while (!stack.empty()) {
 			std::int32_t nodeId = stack.pop_back_val();
@@ -206,17 +212,17 @@ namespace Jazz2::Collisions
 				continue;
 			}
 
-			const TreeNode* node = m_nodes + nodeId;
+			const TreeNode* node = &_nodes[nodeId];
 
-			if (node->aabb.Overlaps(aabb)) {
+			if (node->Aabb.Overlaps(aabb)) {
 				if (node->IsLeaf()) {
 					bool proceed = callback->OnCollisionQuery(nodeId);
 					if (!proceed) {
 						return;
 					}
 				} else {
-					stack.push_back(node->child1);
-					stack.push_back(node->child2);
+					stack.push_back(node->Child1);
+					stack.push_back(node->Child2);
 				}
 			}
 		}
