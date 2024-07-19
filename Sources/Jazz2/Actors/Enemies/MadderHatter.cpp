@@ -47,8 +47,8 @@ namespace Jazz2::Actors::Enemies
 
 		if (_currentTransition == nullptr) {
 			if (_attackTime <= 0.0f) {
-				auto& players = _levelHandler->GetPlayers();
-				for (auto& player : players) {
+				auto players = _levelHandler->GetPlayers();
+				for (auto* player : players) {
 					Vector2f newPos = player->GetPos();
 					if ((newPos - _pos).Length() <= 200.0f) {
 						SetFacingLeft(newPos.X < _pos.X);
@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Enemies
 							bulletSpitParams[0] = (IsFacingLeft() ? 1 : 0);
 							bulletSpit->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42.0f : 42.0f), (std::int32_t)_pos.Y - 6.0f, _renderer.layer() + 2),
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 6, _renderer.layer() + 2),
 								bulletSpitParams
 							));
 							_levelHandler->AddActor(bulletSpit);

@@ -15,7 +15,7 @@ namespace Jazz2
 		_emittedLightsCache.clear();
 
 		// Collect all active light emitters
-		auto& actors = _owner->_levelHandler->GetActors();
+		auto actors = _owner->_levelHandler->GetActors();
 		std::size_t actorsCount = actors.size();
 		for (std::size_t i = 0; i < actorsCount; i++) {
 			actors[i]->OnEmitLights(_emittedLightsCache);
@@ -175,8 +175,8 @@ namespace Jazz2
 			}
 		}
 
-		_renderCommand.setTransformation(Matrix4x4f::Translation(x, y, 0.0f));
-		_renderCommandWithWater.setTransformation(Matrix4x4f::Translation(x, y, 0.0f));
+		_renderCommand.setTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
+		_renderCommandWithWater.setTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
 	}
 
 	Rectf CombineRenderer::GetBounds() const
@@ -302,6 +302,11 @@ namespace Jazz2
 	Rectf PlayerViewport::GetBounds() const
 	{
 		return _combineRenderer->GetBounds();
+	}
+
+	Vector2i PlayerViewport::GetViewportSize() const
+	{
+		return _viewTexture->size();
 	}
 
 	Actors::Player* PlayerViewport::GetTargetPlayer() const

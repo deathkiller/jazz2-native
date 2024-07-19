@@ -14,8 +14,8 @@ namespace Jazz2::Actors::Solid
 
 	Bridge::~Bridge()
 	{
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			player->CancelCarryingObject(this);
 		}
 	}
@@ -60,8 +60,8 @@ namespace Jazz2::Actors::Solid
 
 		SetAnimation(AnimState::Default);
 
-		int widthCovered = _widths[0] / 2 - _widthOffset;
-		for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+		std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
+		for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 			BridgePiece& piece = _pieces.emplace_back();
 			piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
 			piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
@@ -83,12 +83,12 @@ namespace Jazz2::Actors::Solid
 
 	void Bridge::OnUpdate(float timeMult)
 	{
-		int n = 0;
+		std::int32_t n = 0;
 		Player* foundPlayers[8];
 		float foundX[8];
 
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			auto diff = player->GetPos() - _pos;
 			if (n < arraySize(foundPlayers) && diff.X >= -20.0f && diff.X <= _bridgeWidth + 20.0f &&
 				diff.Y > -27.0f && diff.Y < _heightFactor && player->GetSpeed().Y >= 0.0f) {
@@ -152,16 +152,16 @@ namespace Jazz2::Actors::Solid
 
 		if (_leftHeight <= 0.001f && _rightHeight <= 0.001f) {
 			// Render straight bridge
-			int widthCovered = _widths[0] / 2 - _widthOffset;
-			for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+			std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
+			for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 				BridgePiece& piece = _pieces[i];
 				piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
 				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
 			}
 		} else {
 			// Render deformed bridge
-			int widthCovered = _widths[0] / 2 - _widthOffset;
-			for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+			std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
+			for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 				float drop;
 				if (widthCovered < _leftX) {
 					drop = _leftHeight * sinf(fPiOver2 * widthCovered / _leftX);
@@ -189,23 +189,23 @@ namespace Jazz2::Actors::Solid
 		if (_currentAnimation != nullptr) {
 			Vector2i texSize = _currentAnimation->Base->TextureDiffuse->size();
 
-			for (int i = 0; i < _pieces.size(); i++) {
-				auto command = _pieces[i].Command.get();
+			for (std::int32_t i = 0; i < _pieces.size(); i++) {
+				auto* command = _pieces[i].Command.get();
 
-				int curAnimFrame = _currentAnimation->FrameOffset + (i % _currentAnimation->FrameCount);
-				int col = curAnimFrame % _currentAnimation->Base->FrameConfiguration.X;
-				int row = curAnimFrame / _currentAnimation->Base->FrameConfiguration.X;
+				std::int32_t curAnimFrame = _currentAnimation->FrameOffset + (i % _currentAnimation->FrameCount);
+				std::int32_t col = curAnimFrame % _currentAnimation->Base->FrameConfiguration.X;
+				std::int32_t row = curAnimFrame / _currentAnimation->Base->FrameConfiguration.X;
 				float texScaleX = (float(_currentAnimation->Base->FrameDimensions.X) / float(texSize.X));
 				float texBiasX = (float(_currentAnimation->Base->FrameDimensions.X * col) / float(texSize.X));
 				float texScaleY = (float(_currentAnimation->Base->FrameDimensions.Y) / float(texSize.Y));
 				float texBiasY = (float(_currentAnimation->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+				auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)_currentAnimation->Base->FrameDimensions.X, (float)_currentAnimation->Base->FrameDimensions.Y);
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-				auto& pos = _pieces[i].Pos;
+				auto pos = _pieces[i].Pos;
 				command->setTransformation(Matrix4x4f::Translation(pos.X - _currentAnimation->Base->FrameDimensions.X / 2, pos.Y - _currentAnimation->Base->FrameDimensions.Y / 2, 0.0f));
 				command->setLayer(_renderer.layer());
 				command->material().setTexture(*_currentAnimation->Base->TextureDiffuse.get());

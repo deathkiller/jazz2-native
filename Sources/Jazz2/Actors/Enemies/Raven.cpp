@@ -102,8 +102,8 @@ namespace Jazz2::Actors::Enemies
 		bool found = false;
 		Vector2f foundPos = Vector2f::Zero;
 		float targetDistance = 300.0f;
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			Vector2f newPos = player->GetPos();
 			float distance = (_lastPos - newPos).Length();
 			if (distance < targetDistance) {

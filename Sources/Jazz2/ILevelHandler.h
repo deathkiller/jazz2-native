@@ -43,8 +43,6 @@ namespace Jazz2
 		static constexpr std::int32_t SpritePlaneZ = MainPlaneZ + 10;
 		static constexpr std::int32_t PlayerZ = MainPlaneZ + 20;
 
-		ILevelHandler() : Gravity(0.0f) { }
-
 		virtual bool Initialize(const LevelInitialization& levelInit) = 0;
 		virtual bool Initialize(Stream& src) = 0;
 
@@ -55,12 +53,14 @@ namespace Jazz2
 		virtual GameDifficulty Difficulty() const = 0;
 		virtual bool IsPausable() const = 0;
 		virtual bool IsReforged() const = 0;
+		virtual bool CanPlayersCollide() const = 0;
 		virtual Recti LevelBounds() const = 0;
 		virtual float ElapsedFrames() const = 0;
+		virtual float Gravity() const = 0;
 		virtual float WaterLevel() const = 0;
 
-		virtual const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const = 0;
-		virtual const SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
+		virtual ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const = 0;
+		virtual ArrayView<Actors::Player* const> GetPlayers() const = 0;
 
 		virtual float GetDefaultAmbientLight() const = 0;
 		virtual void SetAmbientLight(Actors::Player* player, float value) = 0;
@@ -109,7 +109,5 @@ namespace Jazz2
 		virtual bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
 		virtual float PlayerHorizontalMovement(std::int32_t index) = 0;
 		virtual float PlayerVerticalMovement(std::int32_t index) = 0;
-
-		float Gravity;
 	};
 }

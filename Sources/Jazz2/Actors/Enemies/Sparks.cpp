@@ -44,8 +44,8 @@ namespace Jazz2::Actors::Enemies
 		MoveInstantly(_speed * timeMult, MoveType::Relative | MoveType::Force);
 
 		Vector2f targetPos;
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			targetPos = player->GetPos();
 			Vector2f direction = (_pos - targetPos);
 			float length = direction.Length();

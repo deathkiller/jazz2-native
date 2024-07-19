@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Environment
 			_renderer.AnimTime = 0.0f;
 			_renderer.AnimPaused = true;
 		} else if (GetState(ActorState::ApplyGravitation)) {
-			_externalForce.Y = _levelHandler->Gravity * -0.8f;
+			_externalForce.Y = _levelHandler->Gravity() * -0.8f;
 		}
 	}
 

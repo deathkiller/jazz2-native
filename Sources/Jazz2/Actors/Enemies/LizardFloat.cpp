@@ -102,8 +102,8 @@ namespace Jazz2::Actors::Enemies
 		bool found = false;
 		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
 
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			Vector2f newPos = player->GetPos();
 			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
 				targetPos = newPos;
@@ -122,7 +122,7 @@ namespace Jazz2::Actors::Enemies
 					bombParams[1] = (IsFacingLeft() ? 1 : 0);
 					bomb->OnActivated(ActorActivationDetails(
 						_levelHandler,
-						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -30.0f : 30.0f), (std::int32_t)_pos.Y - 10.0f, _renderer.layer() + 2),
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -30 : 30), (std::int32_t)_pos.Y - 10, _renderer.layer() + 2),
 						bombParams
 					));
 					_levelHandler->AddActor(bomb);

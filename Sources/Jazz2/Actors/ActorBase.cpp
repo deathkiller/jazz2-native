@@ -180,7 +180,7 @@ namespace Jazz2::Actors
 		float currentGravity;
 		float currentElasticity = _elasticity;
 		if ((_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation) {
-			currentGravity = _levelHandler->Gravity;
+			currentGravity = _levelHandler->Gravity();
 			if (_pos.Y >= _levelHandler->WaterLevel()) {
 				currentGravity *= 0.5f;
 				currentElasticity *= 0.7f;

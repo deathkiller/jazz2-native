@@ -2,112 +2,120 @@
 #include "MenuResources.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-#	define _i1 "WebGL"
+#	define _i1 "\nWebGL"
 #elif defined(DEATH_TARGET_WINDOWS_RT)
-#	define _i1 "UWP"
+#	define _i1 "\nUWP"
 #elif defined(WITH_OPENGLES)
-#	define _i1 "OpenGL│ES"
+#	define _i1 "\nOpenGL│ES"
 #else
-#	define _i1 "OpenGL"
+#	define _i1 "\nOpenGL"
 #endif
 
-#if defined(WITH_GLEW)
-#	define _i2 ", GLEW"
+#if defined(WITH_AUDIO) && defined(DEATH_TARGET_ANDROID)
+#	define _i2 " · OpenSL│ES"
 #else
 #	define _i2 ""
 #endif
 
-#if defined(WITH_ANGLE)
-#	define _i3 ", ANGLE"
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-#	define _i3 ", Mesa"
+#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
+#	if defined(DEATH_CPU_USE_IFUNC)
+#		define _i3 " · GNU IF\f[h:82]UNC\f[/h]"
+#	else
+#		define _i3 " · \f[h:86]CPU Runtime Dispatch\f[/h]"
+#	endif
 #else
 #	define _i3 ""
 #endif
 
-#if defined(WITH_GLFW)
-#	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
-#		define _i4 ", GLFW/contrib"
-#	else
-#		define _i4 ", GLFW"
-#	endif
-#elif defined(WITH_QT5)
-#	define _i4 ", Qt5"
-#elif defined(WITH_SDL)
-#	define _i4 ", SDL2"
+#if defined(WITH_ANGLE)
+#	define _i4 "\nANGLE \f[c:#707070]· \f[h:80]https://github.com/google/angle\f[/h]\f[/c]"
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+#	define _i4 "\nMesa \f[c:#707070]· \f[h:80]https://gitlab.freedesktop.org/mesa/mesa\f[/h]\f[/c]"
 #else
 #	define _i4 ""
 #endif
 
-#if defined(WITH_AUDIO)
-#	if defined(DEATH_TARGET_ANDROID)
-#		define _i5 ", OpenSL│ES, OpenAL"
+#if defined(WITH_GLFW)
+#	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
+#		define _i5 "\nGLFW/contrib \f[c:#707070]· \f[h:80]https://github.com/pongasoft/emscripten-glfw\f[/h]\f[/c]"
 #	else
-#		define _i5 ", OpenAL"
+#		define _i5 "\nGLFW \f[c:#707070]· \f[h:80]https://www.glfw.org/\f[/h]\f[/c]"
 #	endif
+#elif defined(WITH_QT5)
+#	define _i5 "\nQt5 \f[c:#707070]· \f[h:80]https://www.qt.io/\f[/h]\f[/c]"
+#elif defined(WITH_SDL)
+#	define _i5 "\nSDL2 \f[c:#707070]· \f[h:80]https://www.libsdl.org/\f[/h]\f[/c]"
 #else
 #	define _i5 ""
 #endif
 
-#if defined(WITH_VORBIS)
-#	define _i6 ", Vorbis"
+#if defined(WITH_GLEW)
+#	define _i6 "\nGLEW \f[c:#707070]· \f[h:80]https://glew.sourceforge.net/\f[/h]\f[/c]"
 #else
 #	define _i6 ""
 #endif
 
-#if defined(WITH_OPENMPT)
-#	define _i7 ", libopenmpt"
+#if defined(WITH_AUDIO)
+#	if defined(DEATH_TARGET_ANDROID)
+#		define _i7 "\nOpenSL│ES\nOpenAL \f[c:#707070]· \f[h:80]https://github.com/kcat/openal-soft\f[/h]\f[/c]"
+#	else
+#		define _i7 "\nOpenAL \f[c:#707070]· \f[h:80]https://github.com/kcat/openal-soft\f[/h]\f[/c]"
+#	endif
 #else
-#	define _i7 ""
+#	define _i6 ""
 #endif
 
-#if defined(WITH_WEBP)
-#	define _i8 ", libwebp"
+#if defined(WITH_VORBIS)
+#	define _i8 "\nVorbis \f[c:#707070]· \f[h:80]https://github.com/xiph/vorbis\f[/h]\f[/c]"
 #else
 #	define _i8 ""
 #endif
 
-#if defined(WITH_ZLIB)
-#	define _i9 ", zlib"
+#if defined(WITH_OPENMPT)
+#	define _i9 "\nlibopenmpt \f[c:#707070]· \f[h:80]https://lib.openmpt.org/libopenmpt/\f[/h]\f[/c]"
 #else
 #	define _i9 ""
 #endif
 
-#if defined(WITH_IMGUI)
-#	define _i10 ", ImGui"
+#if defined(WITH_WEBP)
+#	define _i10 "\nlibwebp \f[c:#707070]· \f[h:80]https://github.com/webmproject/libwebp\f[/h]\f[/c]"
 #else
 #	define _i10 ""
 #endif
 
-#if defined(WITH_ANGELSCRIPT)
-#	define _i11 ", AngelScript"
+#if defined(WITH_ZLIB)
+#	define _i11 "\nzlib \f[c:#707070]· \f[h:80]https://github.com/zlib-ng/zlib-ng\f[/h]\f[/c]"
 #else
 #	define _i11 ""
 #endif
 
-#if defined(WITH_MULTIPLAYER)
-#	define _i12 ", ENet"
+#if defined(WITH_IMGUI)
+#	define _i12 "\nImGui \f[c:#707070]· \f[h:80]https://github.com/ocornut/imgui\f[/h]\f[/c]"
 #else
 #	define _i12 ""
 #endif
 
-#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
-#	if defined(DEATH_CPU_USE_IFUNC)
-#		define _i13 ", GNU IFUNC"
-#	else
-#		define _i13 ",\n\f[h:86]CPU Runtime Dispatch\f[/h]"
-#	endif
+#if defined(WITH_ANGELSCRIPT)
+#	define _i13 "\nAngelScript \f[c:#707070]· \f[h:80]https://www.angelcode.com/angelscript/\f[/h]\f[/c]"
 #else
 #	define _i13 ""
 #endif
 
-#if defined(WITH_TRACY)
-#	define _i14 "\n\n\f[h:86]Tracy integration is enabled!\f[/h]"
+#if defined(WITH_MULTIPLAYER)
+#	define _i14 "\nENet \f[c:#707070]· \f[h:80]https://github.com/lsalzman/enet\f[/h]\f[/c]"
 #else
 #	define _i14 ""
 #endif
 
-#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14
+#define _i15 "\nParallel Hashmap \f[c:#707070]· \f[h:80]https://github.com/greg7mdp/parallel-hashmap\f[/h]\f[/c]\nPattern-defeating quicksort \f[c:#707070]· \f[h:80]https://github.com/orlp/pdqsort\f[/h]\f[/c]\nsimdjson \f[c:#707070]· \f[h:80]https://github.com/simdjson/simdjson\f[/h]\f[/c]"
+
+#if defined(WITH_TRACY)
+#	define _i16 "\n\n\f[h:86]Tracy integration is enabled.\f[/h]"
+#else
+#	define _i16 ""
+#endif
+
+#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15 _i16
 
 using namespace Jazz2::UI::Menu::Resources;
 
@@ -153,7 +161,7 @@ namespace Jazz2::UI::Menu
 			AddTranslator(item, textPtr, textSize);
 		}
 
-		formatString(textPtr, textSize, "\n\n%s\n%s, parallel-hashmap, pdqsort, simdjson", footerText.data(), ADDITIONAL_INFO);
+		formatString(textPtr, textSize, "\n\n%s%s", footerText.data(), ADDITIONAL_INFO);
 
 		_textBlock.SetAlignment(Alignment::Center);
 		_textBlock.SetScale(0.8f);

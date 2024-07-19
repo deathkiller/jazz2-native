@@ -44,8 +44,8 @@ namespace Jazz2::Actors::Enemies
 
 		bool found = false;
 		Vector2f targetPos;
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			Vector2f newPos = player->GetPos();
 			if ((newPos - _pos).Length() <= 220.0f) {
 				targetPos = newPos;
@@ -91,7 +91,7 @@ namespace Jazz2::Actors::Enemies
 							fireParams[0] = (IsFacingLeft() ? 1 : 0);
 							fire->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -14.0f : 14.0f), (std::int32_t)_pos.Y - 6.0f, _renderer.layer() + 2),
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -14 : 14), (std::int32_t)_pos.Y - 6, _renderer.layer() + 2),
 								fireParams
 							));
 							_levelHandler->AddActor(fire);

@@ -48,7 +48,7 @@ namespace Jazz2::Actors::Environment
 			case State::Unmounted: {
 				ActorBase::OnUpdate(timeMult);
 
-				_speed.Y = _levelHandler->Gravity * -0.5f;
+				_speed.Y = _levelHandler->Gravity() * -0.5f;
 				_renderer.setAlphaF(_renderer.alpha() - (0.004f * timeMult));
 				_phase -= timeMult;
 				if (_phase <= 0.0f) {

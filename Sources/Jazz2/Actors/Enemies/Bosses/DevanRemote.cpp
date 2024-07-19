@@ -49,10 +49,10 @@ namespace Jazz2::Actors::Bosses
 		StringView text = _levelHandler->GetLevelText(_introText);
 		_levelHandler->ShowLevelText(text);
 
-		auto& actors = _levelHandler->GetActors();
+		auto actors = _levelHandler->GetActors();
 		for (auto& actor : actors) {
-			if (auto robot = std::dynamic_pointer_cast<Robot>(actor)) {
-				_robot = robot;
+			if (auto* robot = runtime_cast<Robot*>(actor)) {
+				_robot = std::shared_ptr<Robot>(actor, robot);
 				_robot->Activate();
 
 				// Copy health to Devan to enable HealthBar

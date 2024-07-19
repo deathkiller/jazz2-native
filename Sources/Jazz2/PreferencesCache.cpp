@@ -30,7 +30,7 @@ namespace Jazz2
 	bool PreferencesCache::LowWaterQuality = false;
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
-	bool PreferencesCache::PreferZoomOut = true;
+	bool PreferencesCache::PreferZoomOut = false;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;

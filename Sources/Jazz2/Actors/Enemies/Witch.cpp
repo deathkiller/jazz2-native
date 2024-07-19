@@ -61,8 +61,8 @@ namespace Jazz2::Actors::Enemies
 
 		Vector2f targetPos;
 
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			targetPos = player->GetPos();
 			// Fly above the player
 			targetPos.Y -= 100.0f;
@@ -198,8 +198,8 @@ namespace Jazz2::Actors::Enemies
 		bool found = false;
 		Vector2f targetPos;
 
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			Vector2f newPos = player->GetPos();
 			if (!found || (_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
 				targetPos = newPos;

@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Enemies
 		SetAnimation(AnimState::Default);
 
 		_canHurtPlayer = false;
-		_friction = _levelHandler->Gravity * 0.04f;
+		_friction = _levelHandler->Gravity() * 0.04f;
 		_elasticity = 0.5f;
 		_health = 8;
 

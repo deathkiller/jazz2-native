@@ -232,11 +232,6 @@ namespace Jazz2
 
 	void LevelHandler::OnInitialized()
 	{
-		constexpr float DefaultGravity = 0.3f;
-
-		// Higher gravity in Reforged mode
-		Gravity = (_isReforged ? DefaultGravity : DefaultGravity * 0.8f);
-
 		auto& resolver = ContentResolver::Get();
 		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
 		resolver.PreloadMetadataAsync("Common/Explosions"_s);
@@ -254,9 +249,58 @@ namespace Jazz2
 #endif
 	}
 
+	Events::EventSpawner* LevelHandler::EventSpawner()
+	{
+		return &_eventSpawner;
+	}
+
+	Events::EventMap* LevelHandler::EventMap()
+	{
+		return _eventMap.get();
+	}
+
+	Tiles::TileMap* LevelHandler::TileMap()
+	{
+		return _tileMap.get();
+	}
+
+	GameDifficulty LevelHandler::Difficulty() const
+	{
+		return _difficulty;
+	}
+
+	bool LevelHandler::IsPausable() const
+	{
+		return true;
+	}
+
+	bool LevelHandler::IsReforged() const
+	{
+		return _isReforged;
+	}
+
+	bool LevelHandler::CanPlayersCollide() const
+	{
+		// TODO
+		return false;
+	}
+
 	Recti LevelHandler::LevelBounds() const
 	{
 		return _levelBounds;
+	}
+
+	float LevelHandler::ElapsedFrames() const
+	{
+		return _elapsedFrames;
+	}
+
+	float LevelHandler::Gravity() const
+	{
+		constexpr float DefaultGravity = 0.3f;
+
+		// Higher gravity in Reforged mode
+		return (_isReforged ? DefaultGravity : DefaultGravity * 0.8f);
 	}
 
 	float LevelHandler::WaterLevel() const
@@ -264,12 +308,12 @@ namespace Jazz2
 		return _waterLevel;
 	}
 
-	const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& LevelHandler::GetActors() const
+	ArrayView<const std::shared_ptr<Actors::ActorBase>> LevelHandler::GetActors() const
 	{
 		return _actors;
 	}
 
-	const SmallVectorImpl<Actors::Player*>& LevelHandler::GetPlayers() const
+	ArrayView<Actors::Player* const> LevelHandler::GetPlayers() const
 	{
 		return _players;
 	}
@@ -941,8 +985,9 @@ namespace Jazz2
 			case EventType::AreaActivateBoss: {
 				if (_activeBoss == nullptr) {
 					for (auto& actor : _actors) {
-						_activeBoss = std::dynamic_pointer_cast<Actors::Bosses::BossBase>(actor);
-						if (_activeBoss != nullptr) {
+						auto* bossPtr = runtime_cast<Actors::Bosses::BossBase*>(actor);
+						if (bossPtr != nullptr) {
+							_activeBoss = std::shared_ptr<Actors::Bosses::BossBase>(actor, bossPtr);
 							break;
 						}
 					}
@@ -1035,6 +1080,13 @@ namespace Jazz2
 		if (_activeBoss != nullptr) {
 			if (_activeBoss->OnPlayerDied()) {
 				_activeBoss = nullptr;
+			}
+		}
+
+		// Warp all other players to checkpoint without transition to avoid issues
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer != player) {
+				viewport->_targetPlayer->WarpToCheckpoint();
 			}
 		}
 
@@ -1704,39 +1756,41 @@ namespace Jazz2
 			Rectf bounds = _levelBounds.As<float>();
 
 			PlayerViewport* currentViewport = nullptr;
-			float viewWidth = 0.0f;
+			float maxViewWidth = 0.0f;
 			for (auto& viewport : _assignedViewports) {
-				Rectf bounds = viewport->GetBounds();
-				if (viewWidth < bounds.W) {
-					viewWidth = bounds.W;
+				auto size = viewport->GetViewportSize();
+				if (maxViewWidth < size.X) {
+					maxViewWidth = size.X;
 				}
 				if (viewport->_targetPlayer == player) {
 					currentViewport = viewport.get();
 				}
 			}
 
-			if (bounds.W < viewWidth) {
-				bounds.X -= (viewWidth - bounds.W);
-				bounds.W = viewWidth;
+			if (bounds.W < maxViewWidth) {
+				bounds.X -= (maxViewWidth - bounds.W);
+				bounds.W = maxViewWidth;
 			}
 
-			_viewBoundsTarget = bounds;
+			if (_viewBoundsTarget != bounds) {
+				_viewBoundsTarget = bounds;
 
-			float limit = currentViewport->_cameraPos.X - viewWidth * 0.6f;
-			if (_viewBounds.X < limit) {
-				_viewBounds.W += (_viewBounds.X - limit);
-				_viewBounds.X = limit;
-			}
+				float limit = currentViewport->_cameraPos.X - (maxViewWidth * 0.6f);
+				if (_viewBounds.X < limit) {
+					_viewBounds.W += (_viewBounds.X - limit);
+					_viewBounds.X = limit;
+				}
 
-			// Warp distant player to this player
-			for (auto& viewport : _assignedViewports) {
-				if (viewport->_targetPlayer != player) {
-					Vector2f pos = viewport->_targetPlayer->_pos;
-					if ((pos.X < _viewBounds.X || pos.X >= _viewBounds.X + _viewBounds.W) && (pos - player->_pos).Length() > 100.0f) {
-						viewport->_targetPlayer->WarpToPosition(player->_pos, Actors::WarpFlags::Default);
-						if (currentViewport != nullptr) {
-							viewport->_ambientLight = currentViewport->_ambientLight;
-							viewport->_ambientLightTarget = currentViewport->_ambientLightTarget;
+				// Warp all other distant players to this player
+				for (auto& viewport : _assignedViewports) {
+					if (viewport->_targetPlayer != player) {
+						auto pos = viewport->_targetPlayer->_pos;
+						if ((pos.X < _viewBounds.X || pos.X >= _viewBounds.X + _viewBounds.W) && (pos - player->_pos).Length() > 100.0f) {
+							viewport->_targetPlayer->WarpToPosition(player->_pos, Actors::WarpFlags::Default);
+							if (currentViewport != nullptr) {
+								viewport->_ambientLight = currentViewport->_ambientLight;
+								viewport->_ambientLightTarget = currentViewport->_ambientLightTarget;
+							}
 						}
 					}
 				}

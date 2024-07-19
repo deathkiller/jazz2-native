@@ -13,8 +13,8 @@ namespace Jazz2::Actors::Solid
 
 	MovingPlatform::~MovingPlatform()
 	{
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			player->CancelCarryingObject(this);
 		}
 	}
@@ -38,9 +38,9 @@ namespace Jazz2::Actors::Solid
 	{
 		_type = (PlatformType)details.Params[0];
 
-		uint8_t length = details.Params[3];
-		_speed = *(int8_t*)&details.Params[2] * 0.0072f;
-		uint8_t sync = details.Params[1];
+		std::uint8_t length = details.Params[3];
+		_speed = *(std::int8_t*)&details.Params[2] * 0.0072f;
+		std::uint8_t sync = details.Params[1];
 		_isSwing = details.Params[4] != 0;
 		_phase = sync * fPiOver2 - _speed * _levelHandler->ElapsedFrames();
 
@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Solid
 
 		SetAnimation((AnimState)0);
 
-		for (int i = 0; i < length; i++) {
+		for (std::int32_t i = 0; i < length; i++) {
 			ChainPiece& piece = _pieces.emplace_back();
 			piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
@@ -94,7 +94,7 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
-		MoveInstantly(GetPhasePosition((int)_pieces.size()), MoveType::Absolute | MoveType::Force);
+		MoveInstantly(GetPhasePosition((std::int32_t)_pieces.size()), MoveType::Absolute | MoveType::Force);
 
 		for (int i = 0; i < _pieces.size(); i++) {
 			_pieces[i].Pos = GetPhasePosition(i);
@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Solid
 		aabb.T -= 4.0f;
 
 		if (_type != PlatformType::SpikeBall) {
-			auto& players = _levelHandler->GetPlayers();
+			auto players = _levelHandler->GetPlayers();
 			for (auto* player : players) {
 				if (player->GetCarryingObject() == this) {
 					AABBf aabb3 = aabb;
@@ -115,7 +115,7 @@ namespace Jazz2::Actors::Solid
 						bool success = false;
 						Vector2f playerPos = player->GetPos();
 						Vector2f adjustedPos = Vector2f(playerPos.X + diff.X, playerPos.Y + diff.Y);
-						for (int i = 0; i < 8; i++) {
+						for (std::int32_t i = 0; i < 8; i++) {
 							if (player->MoveInstantly(adjustedPos, MoveType::Absolute)) {
 								success = true;
 								break;
@@ -211,23 +211,23 @@ namespace Jazz2::Actors::Solid
 			if (chainAnim != nullptr) {
 				Vector2i texSize = chainAnim->Base->TextureDiffuse->size();
 
-				for (int i = 0; i < _pieces.size(); i++) {
-					auto command = _pieces[i].Command.get();
+				for (std::int32_t i = 0; i < (std::int32_t)_pieces.size(); i++) {
+					auto* command = _pieces[i].Command.get();
 
-					int curAnimFrame = chainAnim->FrameOffset + (i % chainAnim->FrameCount);
-					int col = curAnimFrame % chainAnim->Base->FrameConfiguration.X;
-					int row = curAnimFrame / chainAnim->Base->FrameConfiguration.X;
+					std::int32_t curAnimFrame = chainAnim->FrameOffset + (i % chainAnim->FrameCount);
+					std::int32_t col = curAnimFrame % chainAnim->Base->FrameConfiguration.X;
+					std::int32_t row = curAnimFrame / chainAnim->Base->FrameConfiguration.X;
 					float texScaleX = (float(chainAnim->Base->FrameDimensions.X) / float(texSize.X));
 					float texBiasX = (float(chainAnim->Base->FrameDimensions.X * col) / float(texSize.X));
 					float texScaleY = (float(chainAnim->Base->FrameDimensions.Y) / float(texSize.Y));
 					float texBiasY = (float(chainAnim->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)chainAnim->Base->FrameDimensions.X, (float)chainAnim->Base->FrameDimensions.Y);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-					auto& pos = _pieces[i].Pos;
+					auto pos = _pieces[i].Pos;
 					command->setTransformation(Matrix4x4f::Translation(pos.X - chainAnim->Base->FrameDimensions.X / 2, pos.Y - chainAnim->Base->FrameDimensions.Y / 2, 0.0f));
 					command->setLayer(_renderer.layer() - 2);
 					command->material().setTexture(*chainAnim->Base->TextureDiffuse.get());
@@ -240,7 +240,7 @@ namespace Jazz2::Actors::Solid
 		return SolidObjectBase::OnDraw(renderQueue);
 	}
 
-	Vector2f MovingPlatform::GetPhasePosition(int distance)
+	Vector2f MovingPlatform::GetPhasePosition(std::int32_t distance)
 	{
 		float effectivePhase = _phase;
 

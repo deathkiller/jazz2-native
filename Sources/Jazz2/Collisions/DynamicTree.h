@@ -61,11 +61,6 @@ namespace Jazz2::Collisions
 
 		bool Moved;
 
-		/*TreeNode()
-			: Parent(0), Child1(0), Child2(0), Height(0), Moved(false)
-		{
-		}*/
-
 		bool IsLeaf() const
 		{
 			return (Child1 == NullNode);
