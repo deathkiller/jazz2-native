@@ -16,7 +16,7 @@ namespace Jazz2::Actors
 
 	SolidObjectBase::~SolidObjectBase()
 	{
-		auto& players = _levelHandler->GetPlayers();
+		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
 			player->CancelCarryingObject(this);
 		}
@@ -62,7 +62,7 @@ namespace Jazz2::Actors
 			AABBf aabb = AABBInner;
 			aabb.T -= 1.0f;
 
-			auto& players = _levelHandler->GetPlayers();
+			auto players = _levelHandler->GetPlayers();
 			for (auto* player : players) {
 				if (player->GetCarryingObject() == this) {
 					AABBf aabb3 = aabb;
@@ -94,7 +94,7 @@ namespace Jazz2::Actors
 			}
 		} else {
 			// If it's not frozen, reset carrying state
-			auto& players = _levelHandler->GetPlayers();
+			auto players = _levelHandler->GetPlayers();
 			for (auto* player : players) {
 				player->CancelCarryingObject(this);
 			}

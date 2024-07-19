@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Environment
 
 		_type = details.Params[0];
 		uint8_t playerIndex = details.Params[1];
-		auto& players = _levelHandler->GetPlayers();
+		auto players = _levelHandler->GetPlayers();
 		if (playerIndex < players.size()) {
 			_owner = players[playerIndex];
 		}

@@ -81,8 +81,8 @@ namespace Jazz2::Actors::Enemies
 			bool found = false;
 			Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
 
-			auto& players = _levelHandler->GetPlayers();
-			for (auto player : players) {
+			auto players = _levelHandler->GetPlayers();
+			for (auto* player : players) {
 				Vector2f newPos = player->GetPos();
 				if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
 					targetPos = newPos;
@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Enemies
 								bananaParams[0] = (IsFacingLeft() ? 1 : 0);
 								banana->OnActivated(ActorActivationDetails(
 									_levelHandler,
-									Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -8.0f : 8.0f), (std::int32_t)_pos.Y - 8.0f, _renderer.layer() + 2),
+									Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -8 : 8), (std::int32_t)_pos.Y - 8, _renderer.layer() + 2),
 									bananaParams
 								));
 								_levelHandler->AddActor(banana);
@@ -129,7 +129,7 @@ namespace Jazz2::Actors::Enemies
 							bananaParams[0] = (IsFacingLeft() ? 1 : 0);
 							banana->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42.0f : 42.0f), (std::int32_t)_pos.Y - 8.0f, _renderer.layer() + 2),
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 8, _renderer.layer() + 2),
 								bananaParams
 							));
 							_levelHandler->AddActor(banana);

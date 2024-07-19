@@ -131,6 +131,7 @@ namespace Jazz2::Actors
 		void SerializeResumableToStream(Stream& dest);
 
 		virtual void WarpToPosition(const Vector2f& pos, WarpFlags flags);
+		void WarpToCheckpoint();
 		Modifier GetModifier() const;
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);

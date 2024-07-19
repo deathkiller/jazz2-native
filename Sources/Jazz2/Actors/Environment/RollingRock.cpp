@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Environment
 
 		if (GetState(ActorState::ApplyGravitation)) {
 			// Rock is triggered
-			float currentGravity = _levelHandler->Gravity;
+			float currentGravity = _levelHandler->Gravity();
 
 			_speed.X = std::clamp(_speed.X + _externalForce.X * timeMult, -3.0f, 3.0f) * powf(0.6f, timeMult);
 

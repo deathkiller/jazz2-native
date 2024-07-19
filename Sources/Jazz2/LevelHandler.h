@@ -82,38 +82,21 @@ namespace Jazz2
 		bool Initialize(const LevelInitialization& levelInit) override;
 		bool Initialize(Stream& src) override;
 
-		Events::EventSpawner* EventSpawner() override {
-			return &_eventSpawner;
-		}
-		Events::EventMap* EventMap() override {
-			return _eventMap.get();
-		}
-		Tiles::TileMap* TileMap() override {
-			return _tileMap.get();
-		}
+		Events::EventSpawner* EventSpawner() override;
+		Events::EventMap* EventMap() override;
+		Tiles::TileMap* TileMap() override;
 
-		GameDifficulty Difficulty() const override {
-			return _difficulty;
-		}
-
-		bool IsPausable() const override {
-			return true;
-		}
-
-		bool IsReforged() const override {
-			return _isReforged;
-		}
-
+		GameDifficulty Difficulty() const override;
+		bool IsPausable() const override;
+		bool IsReforged() const override;
+		bool CanPlayersCollide() const override;
 		Recti LevelBounds() const override;
-
-		float ElapsedFrames() const override {
-			return _elapsedFrames;
-		}
-
+		float ElapsedFrames() const override;
+		float Gravity() const override;
 		float WaterLevel() const override;
 
-		const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const override;
-		const SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
+		ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const override;
+		ArrayView<Actors::Player* const> GetPlayers() const override;
 
 		float GetDefaultAmbientLight() const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;

@@ -196,14 +196,14 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 			case 3: {
-				std::int32_t halfW = ViewSize.X / 2;
-				std::int32_t halfH = ViewSize.Y / 2;
+				std::int32_t halfW = (ViewSize.X + 1) / 2;
+				std::int32_t halfH = (ViewSize.Y + 1) / 2;
 				DrawSolid(Vector2f(halfW, halfH), ShadowLayer, Vector2f(halfW, halfH), Colorf::Black);
 				DEATH_FALLTHROUGH
 			}
 			case 4: {
-				std::int32_t halfW = ViewSize.X / 2;
-				std::int32_t halfH = ViewSize.Y / 2;
+				std::int32_t halfW = (ViewSize.X + 1) / 2;
+				std::int32_t halfH = (ViewSize.Y + 1) / 2;
 				DrawSolid(Vector2f(halfW - 1.0f, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
 				DrawSolid(Vector2f(halfW, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);
 				DrawSolid(Vector2f(0.0f, halfH - 1.0f), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.02f), true);

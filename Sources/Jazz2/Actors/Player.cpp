@@ -1514,6 +1514,19 @@ namespace Jazz2::Actors
 			}
 
 			handled = true;
+		} else if (auto* otherPlayer = runtime_cast<Player*>(other)) {
+			if (_levelHandler->CanPlayersCollide() &&
+				(_currentTransition == nullptr ||
+				 (_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpInFreefall &&
+				  _currentTransition->State != AnimState::TransitionWarpOut && _currentTransition->State != AnimState::TransitionWarpOutFreefall))) {
+				Vector2f diff = (_pos - otherPlayer->GetPos());
+				if (diff.SqrLength() < 24.0f * 24.0f) {
+					_speed = diff.Normalize() * 4.0f - (_isActivelyPushing ? (_speed * 0.2f) : Vector2f::Zero);
+					if (diff.Y < 0.0f && std::abs(_speed.X) < 2.0f) {
+						_speed.X = (_speed.X < 0.0f ? -2.0f : 2.0f);
+					}
+				}
+			}
 		}
 
 		if (removeSpecialMove) {
@@ -2023,7 +2036,7 @@ namespace Jazz2::Actors
 				cancelCopter = (CanJump() || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
 
 				_copterFramesLeft -= timeMult;
-				_speed.Y = std::min(_speed.Y + _levelHandler->Gravity * timeMult, 1.5f);
+				_speed.Y = std::min(_speed.Y + _levelHandler->Gravity() * timeMult, 1.5f);
 			} else {
 				cancelCopter = ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall && _copterFramesLeft > 0.0f);
 			}
@@ -2238,8 +2251,8 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::ModifierLimitCameraView: { // Left, Width
-				uint16_t left = *(uint16_t*)&p[0];
-				uint16_t width = *(uint16_t*)&p[2];
+				std::uint16_t left = *(std::uint16_t*)&p[0];
+				std::uint16_t width = *(std::uint16_t*)&p[2];
 				_levelHandler->LimitCameraView(this, (left == 0 ? (std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
 				break;
 			}
@@ -2402,13 +2415,13 @@ namespace Jazz2::Actors
 					// External force of pinball bumber has higher priority
 					if (_externalForceCooldown <= 0.0f || _speed.Y < 0.0f) {
 						if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult * 8.0f, -6.0f);
+							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity() * timeMult * 8.0f, -6.0f);
 						} else if (GetState(ActorState::ApplyGravitation)) {
-							float gravity = _levelHandler->Gravity;
+							float gravity = _levelHandler->Gravity();
 							_externalForce.Y = -2.0f * gravity * timeMult;
 							_speed.Y = std::min(gravity * timeMult, _speed.Y);
 						} else {
-							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult, -6.0f);
+							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity() * timeMult, -6.0f);
 						}
 					}
 				}
@@ -3295,6 +3308,12 @@ namespace Jazz2::Actors
 				});
 			});
 		}
+	}
+
+	void Player::WarpToCheckpoint()
+	{
+		WarpToPosition(_checkpointPos, WarpFlags::Fast);
+		_levelHandler->SetAmbientLight(this, _checkpointLight);
 	}
 
 	void Player::InitialPoleStage(bool horizontal)

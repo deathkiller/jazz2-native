@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Collectibles
 
 		_scoreValue = 200;
 
-		auto& players = _levelHandler->GetPlayers();
+		auto players = _levelHandler->GetPlayers();
 		PlayerType playerType = (!players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
 		switch (playerType) {
 			default:

@@ -92,11 +92,11 @@ namespace Jazz2::Actors::Solid
 
 		if (_content.empty()) {
 			// Random Ammo create
-			SmallVector<WeaponType, (int)WeaponType::Count> weaponTypes;
-			auto& players = _levelHandler->GetPlayers();
-			for (auto& player : players) {
+			SmallVector<WeaponType, (std::int32_t)WeaponType::Count> weaponTypes;
+			auto players = _levelHandler->GetPlayers();
+			for (auto* player : players) {
 				const auto playerAmmo = player->GetWeaponAmmo();
-				for (int i = 1; i < (int)WeaponType::Count; i++) {
+				for (std::int32_t i = 1; i < (std::int32_t)WeaponType::Count; i++) {
 					if (playerAmmo[i] > 0) {
 						weaponTypes.push_back((WeaponType)i);
 					}
@@ -107,9 +107,9 @@ namespace Jazz2::Actors::Solid
 				weaponTypes.push_back(WeaponType::Bouncer);
 			}
 
-			int n = Random().Next(4, 7);
-			for (int i = 0; i < n; i++) {
-				uint8_t weaponType = (uint8_t)weaponTypes[Random().Next(0, (uint32_t)weaponTypes.size())];
+			std::int32_t n = Random().Next(4, 7);
+			for (std::int32_t i = 0; i < n; i++) {
+				std::uint8_t weaponType = (std::uint8_t)weaponTypes[Random().Next(0, (std::uint32_t)weaponTypes.size())];
 				AddContent(EventType::Ammo, 1, &weaponType, sizeof(weaponType));
 			}
 

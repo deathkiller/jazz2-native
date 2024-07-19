@@ -17,8 +17,8 @@ namespace Jazz2::Actors::Environment
 
 	SwingingVine::~SwingingVine()
 	{
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			player->CancelCarryingObject(this);
 		}
 	}
@@ -70,8 +70,8 @@ namespace Jazz2::Actors::Environment
 		auto& lastChunk = _chunkPos[ChunkCount - 1];
 		AABBInner = AABBf(lastChunk.X - 10.0f, lastChunk.Y - 10.0f, lastChunk.X + 10.0f, lastChunk.Y + 10.0f);
 
-		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
 			if (player->GetCarryingObject() == this) {
 				float chunkAngle = sinf(_phase - ChunkCount * 0.08f) * 0.6f;
 				Vector2f prevPos = player->GetPos();

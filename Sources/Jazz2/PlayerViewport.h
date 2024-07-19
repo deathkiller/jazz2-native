@@ -114,6 +114,7 @@ namespace Jazz2
 		void Register();
 
 		Rectf GetBounds() const;
+		Vector2i GetViewportSize() const;
 		Actors::Player* GetTargetPlayer() const;
 		void OnEndFrame();
 		void UpdateCamera(float timeMult);

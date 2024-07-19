@@ -185,7 +185,7 @@ namespace Jazz2::UI
 		std::int32_t charOffset = 0;
 		char stringBuffer[32];
 
-		auto& players = _levelHandler->GetPlayers();
+		auto players = _levelHandler->GetPlayers();
 		
 		for (std::size_t i = 0; i < _levelHandler->_assignedViewports.size(); i++) {
 			auto& viewport = _levelHandler->_assignedViewports[i];
@@ -322,7 +322,7 @@ namespace Jazz2::UI
 						}
 					} else {
 						// Only some buttons should allow roll-over (only when the player's on foot)
-						auto& players = _levelHandler->GetPlayers();
+						auto players = _levelHandler->GetPlayers();
 						bool canPlayerMoveVertically = (!players.empty() && players[0]->CanMoveVertically());
 						if ((button.Align & AllowRollover) != AllowRollover && !canPlayerMoveVertically) continue;
 
@@ -748,14 +748,14 @@ namespace Jazz2::UI
 				break;
 			}
 			case 3: {
-				std::int32_t halfW = ViewSize.X / 2;
-				std::int32_t halfH = ViewSize.Y / 2;
+				std::int32_t halfW = (ViewSize.X + 1) / 2;
+				std::int32_t halfH = (ViewSize.Y + 1) / 2;
 				DrawSolid(Vector2f(halfW, halfH), ShadowLayer, Vector2f(halfW, halfH), Colorf::Black);
 				DEATH_FALLTHROUGH
 			}
 			case 4: {
-				std::int32_t halfW = ViewSize.X / 2;
-				std::int32_t halfH = ViewSize.Y / 2;
+				std::int32_t halfW = (ViewSize.X + 1) / 2;
+				std::int32_t halfH = (ViewSize.Y + 1) / 2;
 				DrawSolid(Vector2f(halfW - 1.0f, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 				DrawSolid(Vector2f(halfW, 0.0f), ShadowLayer, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
 				DrawSolid(Vector2f(0.0f, halfH - 1.0f), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
@@ -1108,7 +1108,7 @@ namespace Jazz2::UI
 
 	void HUD::UpdateWeaponWheel(float timeMult)
 	{
-		auto& players = _levelHandler->GetPlayers();
+		auto players = _levelHandler->GetPlayers();
 
 		for (auto& viewport : _levelHandler->_assignedViewports) {
 			Actors::Player* player = viewport->GetTargetPlayer();

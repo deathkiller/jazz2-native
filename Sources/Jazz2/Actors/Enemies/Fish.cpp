@@ -64,8 +64,8 @@ namespace Jazz2::Actors::Enemies
 			_attackCooldown = 60.0f;
 
 			Vector2f targetPos;
-			auto& players = _levelHandler->GetPlayers();
-			for (auto& player : players) {
+			auto players = _levelHandler->GetPlayers();
+			for (auto* player : players) {
 				targetPos = player->GetPos();
 				_direction.X = targetPos.X - _pos.X;
 				_direction.Y = targetPos.Y - _pos.Y;
