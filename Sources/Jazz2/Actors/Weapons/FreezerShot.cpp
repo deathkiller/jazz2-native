@@ -108,7 +108,7 @@ namespace Jazz2::Actors::Weapons
 				debris.Pos = Vector2f(_pos.X + dx, _pos.Y + dy);
 				debris.Depth = _renderer.layer();
 				debris.Size = Vector2f(currentSize, currentSize);
-				debris.Acceleration = Vector2f(0.0f, _levelHandler->Gravity);
+				debris.Acceleration = Vector2f(0.0f, _levelHandler->Gravity());
 
 				debris.Scale = 1.2f,
 					debris.Alpha = 1.0f;
