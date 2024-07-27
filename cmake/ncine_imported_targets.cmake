@@ -211,8 +211,24 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(GLEW)
 	endif()
 	if(NOT NINTENDO_SWITCH)
-		set(OPENGL_USE_OPENGL ON)
-		find_package(OpenGL)
+		# Use pkg-config's pkg_search_module() instead of find_package()
+		# which isn't reliable for GLVND
+		find_package(PkgConfig REQUIRED)
+		pkg_search_module(OPENGL REQUIRED opengl)
+		# Create import target
+		add_library(OpenGL::OpenGL INTERFACE IMPORTED)
+		# Set import target properties
+		set_target_properties(OpenGL::OpenGL PROPERTIES
+			INTERFACE_INCLUDE_DIRECTORIES "${GLVND_INCLUDE_DIRS}"
+			INTERFACE_LINK_LIBRARIES "${GLVND_LIBRARIES}"
+		)
+
+		if(OPENGL_FOUND)
+			message(STATUS "Using modern GLVND for OpenGL")
+		else()
+			message(STATUS "Trying to use legacy OpenGL GLX for OpenGL")
+			find_package(OpenGL)
+		endif()
 	endif()
 	if(NCINE_ARM_PROCESSOR)
 		include(check_atomic)
