@@ -2080,8 +2080,12 @@ namespace Jazz2
 
 	RumbleDescription* LevelHandler::RegisterRumbleEffect(StringView name)
 	{
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 		auto it = _rumbleEffects.emplace(name, std::make_shared<RumbleDescription>());
 		return (it.second ? it.first->second.get() : nullptr);
+#else
+		return nullptr;
+#endif
 	}
 
 	void LevelHandler::PauseGame()
