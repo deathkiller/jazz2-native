@@ -443,6 +443,8 @@
     <ClInclude Include="Jazz2\PlayerViewport.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
+    <ClInclude Include="Jazz2\RumbleDescription.h" />
+    <ClInclude Include="Jazz2\RumbleProcessor.h" />
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
@@ -829,6 +831,7 @@
     <ClCompile Include="Jazz2\PlayerViewport.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
+    <ClCompile Include="Jazz2\RumbleProcessor.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />

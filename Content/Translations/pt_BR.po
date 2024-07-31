@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-07-17 00:48+0200\n"
+"POT-Creation-Date: 2024-07-31 19:49+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Eduardo Karasinski <edukara@gmail.com>\n"
 "Language-Team: edukara\n"
@@ -1373,7 +1373,7 @@ msgstr ""
 "www.project2.com"
 
 #. TRANSLATORS: Header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:126
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:134
 msgid ""
 "Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released "
 "in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare "
@@ -1386,28 +1386,28 @@ msgstr ""
 "funcionalidades da extensão JJ2+."
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:128
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:136
 #, c-format
 msgid "For more information, visit the official website: %s"
 msgstr "Para mais informações, visite o site oficial: %s"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:130
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
 msgid "Developers"
 msgstr ""
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:132
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:140
 msgid "Contributors"
 msgstr ""
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:134
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:142
 msgid "Translators"
 msgstr ""
 
 #. TRANSLATORS: Footer text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:136
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:144
 msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
@@ -1531,23 +1531,47 @@ msgstr ""
 msgid "Gamepad Button Labels"
 msgstr ""
 
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
+msgid "Gamepad Rumble"
+msgstr ""
+
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:33
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:36
 msgid "Native Back Button"
 msgstr "Botão de Retorno Nativo"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:35
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:38
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
 msgid "Input Diagnostics"
 msgstr "Diagnósticos"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:68
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:71
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
 msgid "Controls"
 msgstr "Controles"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
+#. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
+msgid "Strong"
+msgstr ""
+
+#. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+msgid "Weak"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:117
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
+msgid "Disabled"
+msgstr "Desabilitado"
+
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:142
@@ -1556,15 +1580,6 @@ msgstr "Controles"
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Enabled"
 msgstr "Habilitado"
-
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
-msgid "Disabled"
-msgstr "Desabilitado"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:31

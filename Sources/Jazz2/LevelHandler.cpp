@@ -240,6 +240,7 @@ namespace Jazz2
 
 		_eventMap->PreloadEventsAsync();
 
+		InitializeRumbleEffects();
 		UpdateRichPresence();
 
 #if defined(WITH_ANGELSCRIPT)
@@ -512,6 +513,8 @@ namespace Jazz2
 
 		if (!IsPausable() || _pauseMenu == nullptr) {
 			ResolveCollisions(timeMult);
+
+			_rumble.OnEndFrame(timeMult);
 
 			for (auto& viewport : _assignedViewports) {
 				viewport->UpdateCamera(timeMult);
@@ -1326,6 +1329,21 @@ namespace Jazz2
 		return (input.Frozen ? input.FrozenMovement.Y : input.RequiredMovement.Y);
 	}
 
+	void LevelHandler::PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect)
+	{
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+		auto it = _rumbleEffects.find(String::nullTerminatedView(rumbleEffect));
+		if (it == _rumbleEffects.end()) {
+			return;
+		}
+
+		std::int32_t joyIdx = UI::ControlScheme::GetGamepadForPlayer(index);
+		if (joyIdx >= 0) {
+			_rumble.ExecuteEffect(joyIdx, it->second);
+		}
+#endif
+	}
+
 	bool LevelHandler::SerializeResumableToStream(Stream& dest)
 	{
 		std::uint8_t flags = 0;
@@ -1805,6 +1823,8 @@ namespace Jazz2
 				viewport->ShakeCameraView(duration);
 			}
 		}
+
+		PlayerExecuteRumble(player->GetPlayerIndex(), "Shake"_s);
 	}
 
 	void LevelHandler::ShakeCameraViewNear(Vector2f pos, float duration)
@@ -1814,6 +1834,8 @@ namespace Jazz2
 		for (auto& viewport : _assignedViewports) {
 			if ((viewport->_targetPlayer->_pos - pos).Length() <= MaxDistance) {
 				viewport->ShakeCameraView(duration);
+
+				PlayerExecuteRumble(viewport->_targetPlayer->GetPlayerIndex(), "Shake"_s);
 			}
 		}
 	}
@@ -2004,6 +2026,62 @@ namespace Jazz2
 #endif
 	}
 
+	void LevelHandler::InitializeRumbleEffects()
+	{
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+		if (auto* breakTile = RegisterRumbleEffect("BreakTile"_s)) {
+			breakTile->AddToTimeline(10, 1.0f, 0.0f);
+		}
+
+		if (auto* hurt = RegisterRumbleEffect("Hurt"_s)) {
+			hurt->AddToTimeline(4, 0.15f, 0.0f);
+			hurt->AddToTimeline(8, 0.45f, 0.0f);
+			hurt->AddToTimeline(12, 0.15f, 0.0f);
+		}
+
+		if (auto* die = RegisterRumbleEffect("Die"_s)) {
+			die->AddToTimeline(4, 0.9f, 0.3f);
+			die->AddToTimeline(8, 0.3f, 0.9f);
+			die->AddToTimeline(12, 0.0f, 0.9f);
+		}
+
+		if (auto* land = RegisterRumbleEffect("Land"_s)) {
+			land->AddToTimeline(4, 0.0f, 0.525f);
+		}
+
+		if (auto* spring = RegisterRumbleEffect("Spring"_s)) {
+			spring->AddToTimeline(10, 0.0f, 0.8f);
+		}
+
+		if (auto* fire = RegisterRumbleEffect("Fire"_s)) {
+			fire->AddToTimeline(4, 0.0f, 0.0f, 0.0f, 0.3f);
+		}
+
+		if (auto* warp = RegisterRumbleEffect("Warp"_s)) {
+			warp->AddToTimeline(2, 0.0f, 0.0f, 0.02f, 0.01f);
+			warp->AddToTimeline(6, 0.3f, 0.0f, 0.04f, 0.02f);
+			warp->AddToTimeline(10, 0.2f, 0.0f, 0.08f, 0.02f);
+			warp->AddToTimeline(13, 0.1f, 0.0f, 0.04f, 0.04f);
+			warp->AddToTimeline(16, 0.0f, 0.0f, 0.02f, 0.08f);
+			warp->AddToTimeline(20, 0.0f, 0.0f, 0.0f, 0.04f);
+			warp->AddToTimeline(22, 0.0f, 0.0f, 0.0f, 0.02f);
+		}
+
+		if (auto* shake = RegisterRumbleEffect("Shake"_s)) {
+			shake->AddToTimeline(20, 1.0f, 1.0f);
+			shake->AddToTimeline(20, 0.6f, 0.6f);
+			shake->AddToTimeline(30, 0.2f, 0.2f);
+			shake->AddToTimeline(40, 0.2f, 0.0f);
+		}
+#endif
+	}
+
+	RumbleDescription* LevelHandler::RegisterRumbleEffect(StringView name)
+	{
+		auto it = _rumbleEffects.emplace(name, std::make_shared<RumbleDescription>());
+		return (it.second ? it.first->second.get() : nullptr);
+	}
+
 	void LevelHandler::PauseGame()
 	{
 		// Show in-game pause menu
@@ -2011,6 +2089,7 @@ namespace Jazz2
 		if (IsPausable()) {
 			// Prevent updating of all level objects
 			_rootNode->setUpdateEnabled(false);
+			_rumble.CancelAllEffects();
 		}
 
 #if defined(WITH_AUDIO)

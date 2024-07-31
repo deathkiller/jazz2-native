@@ -28,7 +28,10 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::ToggleRunAction, _("Toggle Run"), true });
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnableAltGamepad, _("Gamepad Button Labels"), true });
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnableGamepadRumble, _("Gamepad Rumble"), true });
+#endif
+#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 		// TRANSLATORS: Menu item in Options > Controls section (Android only)
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::UseNativeBackButton, _("Native Back Button"), true });
 #endif
@@ -103,7 +106,18 @@ namespace Jazz2::UI::Menu
 			switch (item.Item.Type) {
 				case ControlsOptionsItemType::ToggleRunAction: enabled = PreferencesCache::ToggleRunAction; break;
 				case ControlsOptionsItemType::EnableAltGamepad: enabled = PreferencesCache::GamepadButtonLabels != GamepadType::Xbox; customText = (enabled ? "PlayStation™"_s : "Xbox"_s); break;
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+				case ControlsOptionsItemType::EnableGamepadRumble:
+					customText = (PreferencesCache::GamepadRumble == 2
+						// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
+						? _("Strong")
+						: (PreferencesCache::GamepadRumble == 1
+							// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
+							? _("Weak")
+							: _("Disabled")));
+					break;
+#endif
+#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 				case ControlsOptionsItemType::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
 #endif
 				default: enabled = false; break;
@@ -135,7 +149,16 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+			case ControlsOptionsItemType::EnableGamepadRumble:
+				PreferencesCache::GamepadRumble = (PreferencesCache::GamepadRumble == 1
+					? 2
+					: (PreferencesCache::GamepadRumble == 2 ? 0 : 1));
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+#endif
+#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 			case ControlsOptionsItemType::UseNativeBackButton:
 				PreferencesCache::UseNativeBackButton = !PreferencesCache::UseNativeBackButton;
 				_isDirty = true;
