@@ -233,6 +233,7 @@ namespace Jazz2::Actors
 
 			_renderer.setDrawEnabled(true);
 			PlayPlayerSfx("WarpOut"_s);
+			_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 			_lastExitType = ExitType::None;
 		}
@@ -330,6 +331,7 @@ namespace Jazz2::Actors
 
 		if (params.TilesDestroyed > 0) {
 			AddScore(params.TilesDestroyed * 50);
+			_levelHandler->PlayerExecuteRumble(_playerIndex, "BreakTile"_s);
 		}
 
 		OnUpdateHitbox();
@@ -347,6 +349,7 @@ namespace Jazz2::Actors
 				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
 
 				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+				_levelHandler->PlayerExecuteRumble(_playerIndex, "Hurt"_s);
 			} else {
 				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
 				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
@@ -1037,8 +1040,11 @@ namespace Jazz2::Actors
 
 						SetAnimation(_currentAnimation->State | AnimState::Shoot);
 						// Rewind the animation, if it should be played only once
-						if (weaponCooledDown && _currentAnimation->LoopMode == AnimationLoopMode::Once) {
-							_renderer.AnimTime = 0.0f;
+						if (weaponCooledDown) {
+							if (_currentAnimation->LoopMode == AnimationLoopMode::Once) {
+								_renderer.AnimTime = 0.0f;
+							}
+							_levelHandler->PlayerExecuteRumble(_playerIndex, "Fire"_s);
 						}
 
 						_fireFramesLeft = 20.0f;
@@ -1478,11 +1484,15 @@ namespace Jazz2::Actors
 							_speed.X *= 0.5f;
 						}
 					}
-				}
 
-				// Decrease remaining shield time by 5 secs
-				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+					_levelHandler->PlayerExecuteRumble(_playerIndex, "Land"_s);
+				}
+				
+				if (enemy->IsInvulnerable() || (_currentSpecialMove == SpecialMoveType::None && _sugarRushLeft <= 0.0f)) {
+					// Decrease remaining shield time by 5 secs
+					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
+						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+					}
 				}
 			} else if (enemy->CanHurtPlayer()) {
 				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
@@ -1545,6 +1555,7 @@ namespace Jazz2::Actors
 			if (_hitFloorTime <= 0.0f && !CanJump()) {
 				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);
+				_levelHandler->PlayerExecuteRumble(_playerIndex, "Land"_s);
 
 				if (Random().NextFloat() < 0.6f) {
 					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y + 20, _renderer.layer() - 2), Explosion::Type::TinyDark);
@@ -1697,6 +1708,7 @@ namespace Jazz2::Actors
 			}
 
 			SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
+			_levelHandler->PlayerExecuteRumble(_playerIndex, "Spring"_s);
 			_controllableTimeout = 2.0f;
 		} else if (std::abs(force.Y) > 0.0f) {
 			MoveInstantly(Vector2f(lerp(_pos.X, pos.X, 0.3f), _pos.Y), MoveType::Absolute);
@@ -1738,6 +1750,7 @@ namespace Jazz2::Actors
 				_isSpring = true;
 			}
 
+			_levelHandler->PlayerExecuteRumble(_playerIndex, "Spring"_s);
 			PlaySfx("Spring"_s);
 		}
 	}
@@ -2620,6 +2633,7 @@ namespace Jazz2::Actors
 		});
 
 		PlayPlayerSfx("Die"_s, 1.3f);
+		_levelHandler->PlayerExecuteRumble(_playerIndex, "Die"_s);
 	}
 
 	void Player::SwitchToNextWeapon()
@@ -3007,6 +3021,7 @@ namespace Jazz2::Actors
 						_levelExiting = LevelExitingState::Ready;
 					});
 					PlayPlayerSfx("WarpIn"_s);
+					_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 					SetState(ActorState::ApplyGravitation, false);
 					_speed.X = 0.0f;
@@ -3047,6 +3062,7 @@ namespace Jazz2::Actors
 						_levelExiting = LevelExitingState::Ready;
 					});
 					PlayPlayerSfx("WarpIn"_s);
+					_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 					SetState(ActorState::ApplyGravitation, false);
 					_speed.X = 0.0f;
@@ -3281,12 +3297,14 @@ namespace Jazz2::Actors
 			_renderer.setRotation(0.0f);
 
 			PlayPlayerSfx("WarpIn"_s);
+			_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, flags, pos]() {
 				Vector2f posPrev = _pos;
 				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 				_trailLastPos = _pos;
 				PlayPlayerSfx("WarpOut"_s);
+				_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 				_levelHandler->HandlePlayerWarped(this, posPrev, false);
 
@@ -3574,6 +3592,7 @@ namespace Jazz2::Actors
 			float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
 			SetInvulnerability(invulnerableTime, false);
 			PlayPlayerSfx("Hurt"_s);
+			_levelHandler->PlayerExecuteRumble(_playerIndex, "Hurt"_s);
 		} else {
 			_externalForce.X = 0.0f;
 			_speed.Y = 0.0f;

@@ -48,6 +48,7 @@ namespace Jazz2
 	bool PreferencesCache::AllowUnsignedScripts = true;
 	bool PreferencesCache::ToggleRunAction = false;
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
+	std::uint8_t PreferencesCache::GamepadRumble = 1;
 	bool PreferencesCache::UseNativeBackButton = false;
 	bool PreferencesCache::EnableDiscordIntegration = false;
 	bool PreferencesCache::TutorialCompleted = false;
@@ -233,6 +234,10 @@ namespace Jazz2
 
 					if (version >= 5) {
 						GamepadButtonLabels = (GamepadType)uc.ReadValue<std::uint8_t>();
+					}
+
+					if (version >= 6) {
+						GamepadRumble = uc.ReadValue<std::uint8_t>();
 					}
 
 					// Controls
@@ -436,6 +441,7 @@ namespace Jazz2
 		co.WriteValue<std::int8_t>((std::int8_t)(TouchRightPadding.Y * INT8_MAX * TouchPaddingMultiplier));
 
 		co.WriteValue<std::uint8_t>((std::uint8_t)GamepadButtonLabels);
+		co.WriteValue<std::uint8_t>(GamepadRumble);
 
 		// Controls
 		co.WriteValue<std::uint8_t>((std::uint8_t)UI::ControlScheme::MaxSupportedPlayers);

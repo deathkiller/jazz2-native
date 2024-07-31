@@ -117,6 +117,7 @@ namespace Jazz2
 		static bool AllowUnsignedScripts;
 		static bool ToggleRunAction;
 		static GamepadType GamepadButtonLabels;
+		static std::uint8_t GamepadRumble;
 		static bool UseNativeBackButton;
 		static bool EnableDiscordIntegration;
 		static bool TutorialCompleted;
@@ -175,7 +176,7 @@ namespace Jazz2
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 5;
+		static constexpr std::uint8_t FileVersion = 6;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

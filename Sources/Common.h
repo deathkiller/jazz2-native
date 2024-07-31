@@ -33,6 +33,14 @@
 
 #include <stdlib.h>
 
+// Check platform-specific features
+#if defined(WITH_SDL)
+#	define NCINE_HAS_GAMEPAD_RUMBLE
+#endif
+#if defined(DEATH_TARGET_ANDROID)
+#	define NCINE_HAS_NATIVE_BACK_BUTTON
+#endif
+
 // Return assert macros
 #define RETURN_ASSERT_MSG(x, fmt, ...) do { if DEATH_UNLIKELY(!(x)) { LOGE(fmt, ##__VA_ARGS__); return; } } while (false)
 #define RETURN_ASSERT(x) do { if DEATH_UNLIKELY(!(x)) { LOGE("RETURN_ASSERT(" #x ")"); return; } } while (false)

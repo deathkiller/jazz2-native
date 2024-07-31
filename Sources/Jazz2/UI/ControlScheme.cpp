@@ -32,10 +32,12 @@ namespace Jazz2::UI
 
 		first[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(KeySym::SPACE));
 		first[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(0, ButtonName::X));
+		first[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(0, AxisName::RightTrigger));
 		first[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::V));
 		first[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(0, ButtonName::A));
 		first[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(KeySym::C));
 		first[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(0, ButtonName::B));
+		first[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(0, AxisName::LeftTrigger));
 		first[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::X));
 		first[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(0, ButtonName::Y));
 		first[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(KeySym::ESCAPE));
@@ -78,11 +80,12 @@ namespace Jazz2::UI
 					if (joyIdx < joyStateCount) {
 						if (target.Data & GamepadAnalogMask) {
 							// Analog axis
-							float axisValue = joyStates[joyIdx]->axisValue((AxisName)(target.Data & ButtonMask));
+							AxisName axisName = (AxisName)(target.Data & ButtonMask);
+							float axisValue = joyStates[joyIdx]->axisValue(axisName);
 							if (target.Data & GamepadNegativeMask) {
 								axisValue = -axisValue;
 							}
-							if (analogAsButtons && axisValue >= IInputManager::AnalogButtonDeadZone) {
+							if (analogAsButtons && axisValue >= (axisName >= AxisName::LeftTrigger ? IInputManager::TriggerButtonDeadZone : IInputManager::AnalogButtonDeadZone)) {
 								result.PressedActions |= (1ull << (std::uint32_t)i) | (1ull << (32 + (std::uint32_t)i));
 							}
 							if (i < 4 && axisValue > GamepadDeadZone) {
@@ -184,11 +187,12 @@ namespace Jazz2::UI
 						if (allowGamepads && joyIdx < joyStateCount) {
 							if (target.Data & GamepadAnalogMask) {
 								// Analog axis
-								float axisValue = joyStates[joyIdx]->axisValue((AxisName)(target.Data & ButtonMask));
+								AxisName axisName = (AxisName)(target.Data & ButtonMask);
+								float axisValue = joyStates[joyIdx]->axisValue(axisName);
 								if (target.Data & GamepadNegativeMask) {
 									axisValue = -axisValue;
 								}
-								if (axisValue >= IInputManager::AnalogButtonDeadZone) {
+								if (axisValue >= (axisName >= AxisName::LeftTrigger ? IInputManager::TriggerButtonDeadZone : IInputManager::AnalogButtonDeadZone)) {
 									pressedActions |= (1 << (std::uint32_t)i);
 								}
 							} else {
@@ -259,6 +263,20 @@ namespace Jazz2::UI
 	ArrayView<ControlSchemeMapping> ControlScheme::GetMappings(std::int32_t playerIdx)
 	{
 		return ArrayView(&_mappings[playerIdx * (std::int32_t)PlayerActions::Count], (std::int32_t)PlayerActions::Count);
+	}
+
+	std::int32_t ControlScheme::GetGamepadForPlayer(std::int32_t playerIdx)
+	{
+		const auto* mappings = &_mappings[playerIdx * (std::int32_t)PlayerActions::Count];
+		for (std::size_t i = 0; i < (std::size_t)PlayerActions::CountInMenu; i++) {
+			for (const auto& target : mappings[i].Targets) {
+				if (target.Data & GamepadMask) {
+					std::uint32_t joyIdx = (target.Data & GamepadIndexMask) >> 16;
+					return joyIdx;
+				}
+			}
+		}
+		return -1;
 	}
 
 	MappingTarget ControlScheme::CreateTarget(KeySym key)

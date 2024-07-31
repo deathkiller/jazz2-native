@@ -127,9 +127,10 @@ namespace Jazz2::UI::Menu
 		} else if (joyGuid == JoystickGuidType::Xinput) {
 			formatString(buffer, sizeof(buffer), "GUID: xinput");
 		} else {
+			const std::uint8_t* g = joyGuid.data;
 			formatString(buffer, sizeof(buffer), "GUID: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%s",
-				joyGuid.data[0], joyGuid.data[1], joyGuid.data[2], joyGuid.data[3], joyGuid.data[4], joyGuid.data[5], joyGuid.data[6], joyGuid.data[7],
-				joyGuid.data[8], joyGuid.data[9], joyGuid.data[10], joyGuid.data[11], joyGuid.data[12], joyGuid.data[13], joyGuid.data[14], joyGuid.data[15],
+				g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7],
+				g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
 				input.hasMappingByGuid(joyGuid) ? "" : (input.hasMappingByName(joyName) ? " (similar mapping)" : " (no mapping)"));
 		}
 

@@ -9,7 +9,10 @@ namespace Jazz2::UI::Menu
 		TouchControls,
 		ToggleRunAction,
 		EnableAltGamepad,
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+		EnableGamepadRumble,
+#endif
+#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 		UseNativeBackButton,
 #endif
 		InputDiagnostics

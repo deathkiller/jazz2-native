@@ -219,7 +219,7 @@ namespace Jazz2::UI
 					if (button.Graphics == nullptr) {
 						continue;
 					}
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 					if (button.Action == PlayerActions::Menu && PreferencesCache::UseNativeBackButton) {
 						continue;
 					}

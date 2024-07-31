@@ -19,6 +19,10 @@
 #include "../nCine/Audio/AudioBufferPlayer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
 
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+#	include "RumbleProcessor.h"
+#endif
+
 #if defined(WITH_IMGUI)
 #	include <imgui.h>
 #endif
@@ -146,6 +150,7 @@ namespace Jazz2
 		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
 		float PlayerHorizontalMovement(std::int32_t index) override;
 		float PlayerVerticalMovement(std::int32_t index) override;
+		void PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect) override;
 
 		bool SerializeResumableToStream(Stream& dest) override;
 
@@ -232,6 +237,11 @@ namespace Jazz2
 		std::uint32_t _overrideActions;
 		PlayerInput _playerInputs[UI::ControlScheme::MaxSupportedPlayers];
 
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+		RumbleProcessor _rumble;
+		HashMap<String, std::shared_ptr<RumbleDescription>> _rumbleEffects;
+#endif
+
 		virtual void OnInitialized();
 		virtual void BeforeActorDestroyed(Actors::ActorBase* actor);
 		virtual void ProcessEvents(float timeMult);
@@ -245,6 +255,8 @@ namespace Jazz2
 		void InitializeCamera(PlayerViewport& viewport);
 		void UpdatePressedActions();
 		void UpdateRichPresence();
+		void InitializeRumbleEffects();
+		RumbleDescription* RegisterRumbleEffect(StringView name);
 
 		void PauseGame();
 		void ResumeGame();

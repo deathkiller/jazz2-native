@@ -109,5 +109,6 @@ namespace Jazz2
 		virtual bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
 		virtual float PlayerHorizontalMovement(std::int32_t index) = 0;
 		virtual float PlayerVerticalMovement(std::int32_t index) = 0;
+		virtual void PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect) = 0;
 	};
 }

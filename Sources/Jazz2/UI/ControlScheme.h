@@ -58,6 +58,7 @@ namespace Jazz2::UI
 
 		static ArrayView<ControlSchemeMapping> GetAllMappings();
 		static ArrayView<ControlSchemeMapping> GetMappings(std::int32_t playerIdx);
+		static std::int32_t GetGamepadForPlayer(std::int32_t playerIdx);
 
 		static MappingTarget CreateTarget(KeySym key);
 		static MappingTarget CreateTarget(std::uint32_t gamepadIndex, ButtonName button);
