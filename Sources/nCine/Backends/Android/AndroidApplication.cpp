@@ -47,7 +47,7 @@ namespace nCine
 			int ident, events;
 			struct android_poll_source* source;
 
-			while ((ident = ALooper_pollAll(app.ShouldSuspend() ? -1 : 0, nullptr, &events, reinterpret_cast<void**>(&source))) >= 0) {
+			while ((ident = ALooper_pollOnce(app.ShouldSuspend() ? -1 : 0, nullptr, &events, reinterpret_cast<void**>(&source))) >= 0) {
 				if (source != nullptr) {
 					source->process(state, source);
 				}
