@@ -5,6 +5,7 @@
 #include "IStateHandler.h"
 #include "IRootController.h"
 #include "LevelDescriptor.h"
+#include "RumbleProcessor.h"
 #include "WeatherType.h"
 #include "Events/EventMap.h"
 #include "Events/EventSpawner.h"
@@ -18,10 +19,6 @@
 #include "../nCine/Graphics/Shader.h"
 #include "../nCine/Audio/AudioBufferPlayer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
-
-#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
-#	include "RumbleProcessor.h"
-#endif
 
 #if defined(WITH_IMGUI)
 #	include <imgui.h>
