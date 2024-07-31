@@ -10,9 +10,7 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 #
 #	include <psapi.h>
 #	include <strsafe.h>
-#elif defined(DEATH_TARGET_APPLE)
-#	include <cstring>
-#elif defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include <cstdio>
 #	include <cstdlib>
 #	include <cstring>

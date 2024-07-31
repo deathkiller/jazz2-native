@@ -514,7 +514,9 @@ namespace Jazz2
 		if (!IsPausable() || _pauseMenu == nullptr) {
 			ResolveCollisions(timeMult);
 
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 			_rumble.OnEndFrame(timeMult);
+#endif
 
 			for (auto& viewport : _assignedViewports) {
 				viewport->UpdateCamera(timeMult);
