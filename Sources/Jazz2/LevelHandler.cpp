@@ -2095,7 +2095,9 @@ namespace Jazz2
 		if (IsPausable()) {
 			// Prevent updating of all level objects
 			_rootNode->setUpdateEnabled(false);
+#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 			_rumble.CancelAllEffects();
+#endif
 		}
 
 #if defined(WITH_AUDIO)
