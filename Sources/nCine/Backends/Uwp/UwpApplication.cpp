@@ -39,17 +39,17 @@ namespace nCine
 		winrt::init_apartment();
 
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
-		wchar_t pBuf[fs::MaxPathLength];
-		DWORD pBufLength = ::GetModuleFileNameW(NULL, pBuf, (DWORD)arraySize(pBuf));
-		if (pBufLength > 0) {
-			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
+		wchar_t path[fs::MaxPathLength];
+		DWORD pathLength = ::GetModuleFileNameW(NULL, path, (DWORD)arraySize(path));
+		if (pathLength > 0) {
+			wchar_t* lastSlash = wcsrchr(path, L'\\');
 			if (lastSlash == nullptr) {
-				lastSlash = wcsrchr(pBuf, L'/');
+				lastSlash = wcsrchr(path, L'/');
 			}
 			if (lastSlash != nullptr) {
 				lastSlash++;
 				*lastSlash = '\0';
-				::SetCurrentDirectoryW(pBuf);
+				::SetCurrentDirectoryW(path);
 			}
 		}
 
@@ -134,12 +134,12 @@ namespace nCine
 			auto task = statusBar.HideAsync();
 		}
 
-		// Only `OnPreInit()` can modify the application configuration
+		// Only `OnPreInitialize()` can modify the application configuration
 		// TODO: Parse arguments from Uri
 		//appCfg_.argc_ = argc;
 		//appCfg_.argv_ = argv;
-		appEventHandler_->OnPreInit(appCfg_);
-		LOGI("IAppEventHandler::OnPreInit() invoked");
+		appEventHandler_->OnPreInitialize(appCfg_);
+		LOGI("IAppEventHandler::OnPreInitialize() invoked");
 
 		winrtWUC::CoreWindow window = winrtWUC::CoreWindow::GetForCurrentThread();
 
@@ -196,7 +196,7 @@ namespace nCine
 		//}
 
 #if defined(NCINE_PROFILING)
-		timings_[(int)Timings::PreInit] = profileStartTime_.secondsSince();
+		timings_[(std::int32_t)Timings::PreInit] = profileStartTime_.secondsSince();
 #endif
 	}
 
