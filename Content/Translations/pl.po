@@ -1403,7 +1403,7 @@ msgstr ""
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
 msgid "Developers"
-msgstr "Deweloperzy"
+msgstr "Autorzy"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:140
