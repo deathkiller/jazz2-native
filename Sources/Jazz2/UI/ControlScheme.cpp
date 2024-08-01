@@ -1,12 +1,11 @@
 #include "ControlScheme.h"
-#include "../PreferencesCache.h"
 #include "../../nCine/Input/IInputManager.h"
 
 using namespace nCine;
 
 namespace Jazz2::UI
 {
-	ControlSchemeMapping ControlScheme::_mappings[MaxSupportedPlayers * (std::int32_t)PlayerActions::Count] { };
+	ControlSchemeMapping ControlScheme::_mappings[MaxSupportedPlayers * (std::int32_t)PlayerActions::Count] = {};
 
 	void ControlScheme::Reset()
 	{
@@ -57,13 +56,28 @@ namespace Jazz2::UI
 		// Set default mappings for 2nd player
 		auto second = GetMappings(1);
 		second[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(KeySym::A));
+		second[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(1, ButtonName::Left));
+		second[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(1, AxisName::LeftX, true));
 		second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(KeySym::D));
+		second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(1, ButtonName::Right));
+		second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(1, AxisName::LeftX));
 		second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(KeySym::W));
+		second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(1, ButtonName::Up));
+		second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(1, AxisName::LeftY, true));
 		second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(KeySym::S));
-		second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::F));
+		second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(1, ButtonName::Down));
+		second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(1, AxisName::LeftY));
+
 		second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(KeySym::R));
+		second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(1, ButtonName::X));
+		second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(1, AxisName::RightTrigger));
+		second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::F));
+		second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(1, ButtonName::A));
 		second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(KeySym::G));
+		second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(1, ButtonName::B));
+		second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(1, AxisName::LeftTrigger));
 		second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::T));
+		second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(1, ButtonName::Y));
 	}
 
 	ProcessedInput ControlScheme::FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons)
