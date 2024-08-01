@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.4.4\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1401,17 +1401,17 @@ msgstr "Pour plus d'information, visitez le site officiel: %s"
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
 msgid "Developers"
-msgstr ""
+msgstr "Développeurs"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:140
 msgid "Contributors"
-msgstr ""
+msgstr "Contributeurs"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:142
 msgid "Translators"
-msgstr ""
+msgstr "Traducteurs"
 
 #. TRANSLATORS: Footer text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:144
@@ -1515,13 +1515,13 @@ msgstr "Autoriser l'accès au stockage externe"
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
 #, c-format
 msgid "Remap Controls for Player %i"
-msgstr ""
+msgstr "Changer les contrôles pour le joueur %i"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:174
 msgid "Remap Controls"
-msgstr ""
+msgstr "Changer les contrôles"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
@@ -1540,7 +1540,7 @@ msgstr "Etiquettes des boutons de la manette"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
 msgid "Gamepad Rumble"
-msgstr ""
+msgstr "Vibrations de la manette"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:36
@@ -1561,12 +1561,12 @@ msgstr "Contrôles"
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
 msgid "Strong"
-msgstr ""
+msgstr "Fortes"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
 msgid "Weak"
-msgstr ""
+msgstr "Faibles"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:117
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
@@ -1782,12 +1782,12 @@ msgstr "Afficher traînées joueur"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
 msgid "Preferred Splitscreen"
-msgstr ""
+msgstr "Écran partagé préféré"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
 msgid "Prefer Zoom Out"
-msgstr ""
+msgstr "Préférer dézoomé"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
@@ -1820,11 +1820,11 @@ msgstr "Haut"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Vertical"
-msgstr ""
+msgstr "Vertical"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Horizontal"
-msgstr ""
+msgstr "Horizontal"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
@@ -1995,7 +1995,7 @@ msgstr "pour désattribuer"
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "None / Pixel-perfect"
-msgstr "Aucun / Pixel-perfect"
+msgstr "Aucun / Au pixel près"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:29
@@ -2047,7 +2047,7 @@ msgstr "Musique"
 #. TRANSLATORS: Menu item to select number of players
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
 msgid "Number of Local Players"
-msgstr ""
+msgstr "Nombre de joueurs locaux"
 
 #. TRANSLATORS: Menu item to select difficulty
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:20
