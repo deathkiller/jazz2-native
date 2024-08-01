@@ -22,14 +22,19 @@
 
 static const char* ControllerMappings[] = {
 	// Additional nCine gamepad mappings
-#ifdef SDL_PLATFORM_ANDROID
+#if defined(SDL_PLATFORM_ANDROID)
 	"05000000791d000009000000cf7f3f00,NYKO PLAYPAD PRO,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,leftstick:b6,rightstick:b7,start:b8,back:b9,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:a4,righttrigger:a5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2",
 	"05000000c82d000001610000ffff3f00,8BitDo SN30 Pro,a:b1,b:b0,back:b13,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b6,leftstick:b10,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b11,righttrigger:b9,rightx:a2,righty:a3,start:b12,x:b4,y:b3",
 #endif
-#ifdef SDL_JOYSTICK_LINUX
+#if defined(SDL_JOYSTICK_LINUX)
 	"03000000c82d00000160000011010000,8BitDo SN30 Pro,a:b1,b:b0,back:b10,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b6,leftstick:b13,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b14,righttrigger:b9,rightx:a2,righty:a3,start:b11,x:b4,y:b3",
 #endif
-
+#if defined(SDL_PLATFORM_MACOS)
+	"03008fe54c050000c405000000016800,8BitDo Pro 2 (USB/BT A),a:b0,b:b1,x:b2,y:b3,dpup:b11,dpdown:b12,dpleft:b13,dpright:b14,leftshoulder:b9,lefttrigger:a4,leftstick:b7,leftx:a0,lefty:a1,rightshoulder:b10,righttrigger:a5,rightstick:b8,rightx:a2,righty:a3,start:b6,back:b4,guide:b5,hint:!SDL_GAMECONTROLLER_USE_BUTTON_LABELS:=1,",
+	"030056fb7e0500000920000001006803,8BitDo Pro 2 (USB/BT S),a:b1,b:b0,x:b3,y:b2,dpup:b11,dpdown:b12,dpleft:b13,dpright:b14,leftshoulder:b9,lefttrigger:a4,leftstick:b7,leftx:a0,lefty:a1,rightshoulder:b10,righttrigger:a5,rightstick:b8,rightx:a2,righty:a3,start:b6,back:b4,guide:b5,hint:!SDL_GAMECONTROLLER_USE_BUTTON_LABELS:=1,",
+	"030094fbc82d00000660000000010000,8BitDo Pro 2 (BT D),a:b1,b:b0,x:b4,y:b3,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,leftshoulder:b6,lefttrigger:a5,leftstick:b13,leftx:a0,lefty:a1,rightshoulder:b7,righttrigger:a4,rightstick:b14,rightx:a2,righty:a3,start:b11,back:b10,guide:b12,hint:!SDL_GAMECONTROLLER_USE_BUTTON_LABELS:=1,",
+	"030082795e040000e002000003096800,8BitDo Pro 2 (BT X),a:b0,b:b1,x:b2,y:b3,dpup:b11,dpdown:b12,dpleft:b13,dpright:b14,leftshoulder:b9,lefttrigger:a4,leftstick:b7,leftx:a0,lefty:a1,rightshoulder:b10,righttrigger:a5,rightstick:b8,rightx:a2,righty:a3,start:b6,back:b4,guide:b5,hint:!SDL_GAMECONTROLLER_USE_BUTTON_LABELS:=1,",
+#endif
 #if defined(DEATH_TARGET_SWITCH)
 	"53776974636820436f6e74726f6c6c65,Switch Controller,a:b0,b:b1,back:b11,dpdown:b15,dpleft:b12,dpright:b14,dpup:b13,leftshoulder:b6,leftstick:b4,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b5,righttrigger:b9,rightx:a2,righty:a3,start:b10,x:b2,y:b3,",
 #endif
