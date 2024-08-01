@@ -575,8 +575,8 @@ namespace nCine
 #endif
 
 		appEventHandler_ = std::move(appEventHandler);
-		appEventHandler_->OnPreInit(appCfg_);
-		LOGI("IAppEventHandler::OnPreInit() invoked");
+		appEventHandler_->OnPreInitialize(appCfg_);
+		LOGI("IAppEventHandler::OnPreInitialize() invoked");
 	}
 
 	void Application::InitCommon()
@@ -670,15 +670,15 @@ namespace nCine
 		timings_[(std::int32_t)Timings::InitCommon] = profileStartTime_.secondsSince();
 #endif
 		{
-			ZoneScopedNC("onInit", 0x81A861);
+			ZoneScopedNC("OnInitialize", 0x81A861);
 #if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #endif
-			appEventHandler_->OnInit();
+			appEventHandler_->OnInitialize();
 #if defined(NCINE_PROFILING)
 			timings_[(std::int32_t)Timings::AppInit] = profileStartTime_.secondsSince();
 #endif
-			LOGI("IAppEventHandler::OnInit() invoked");
+			LOGI("IAppEventHandler::OnInitialize() invoked");
 		}
 
 #if defined(WITH_IMGUI)

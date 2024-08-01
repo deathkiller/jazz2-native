@@ -91,8 +91,8 @@ public:
 	static constexpr std::uint32_t MultiplayerProtocolVersion = 1;
 #endif
 
-	void OnPreInit(AppConfiguration& config) override;
-	void OnInit() override;
+	void OnPreInitialize(AppConfiguration& config) override;
+	void OnInitialize() override;
 	void OnBeginFrame() override;
 	void OnPostUpdate() override;
 	void OnResizeWindow(std::int32_t width, std::int32_t height) override;
@@ -144,7 +144,8 @@ private:
 	std::unique_ptr<NetworkManager> _networkManager;
 #endif
 
-	void InitializeBase();
+	void OnBeforeInitialize();
+	void OnAfterInitialize();
 	void SetStateHandler(std::unique_ptr<IStateHandler>&& handler);
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
@@ -162,7 +163,7 @@ private:
 	static void ExtractPakFile(const StringView pakFile, const StringView targetPath);
 };
 
-void GameEventHandler::OnPreInit(AppConfiguration& config)
+void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
 
@@ -213,64 +214,11 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 #endif
 }
 
-void GameEventHandler::OnInit()
+void GameEventHandler::OnInitialize()
 {
 	ZoneScopedC(0x888888);
 
-#if defined(WITH_IMGUI)
-	theApplication().GetDebugOverlaySettings().showInterface = true;
-#endif
-
-	_flags |= Flags::IsInitialized;
-
-	std::memset(_newestVersion, 0, sizeof(_newestVersion));
-
-	auto& resolver = ContentResolver::Get();
-
-#if defined(DEATH_TARGET_ANDROID)
-	theApplication().SetAutoSuspension(true);
-
-	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
-		_flags |= Flags::HasExternalStoragePermission;
-	}
-
-	// Try to load gamepad mappings from parent directory of `Source` on Android
-	String mappingsPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "gamecontrollerdb.txt"_s);
-	if (fs::IsReadableFile(mappingsPath)) {
-		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
-	}
-#elif !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-#	if defined(DEATH_TARGET_WINDOWS_RT)
-	// Xbox is always fullscreen
-	if (PreferencesCache::EnableFullscreen || Environment::CurrentDeviceType == DeviceType::Xbox) {
-#	else
-	if (PreferencesCache::EnableFullscreen) {
-#	endif
-		theApplication().GetGfxDevice().setResolution(true);
-		theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
-	}
-
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
-	// Try to load gamepad mappings from `Content` directory
-	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
-	if (fs::IsReadableFile(mappingsPath)) {
-		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
-	}
-#	endif
-#endif
-
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
-	// Try to load gamepad mappings also from config directory
-	auto configDir = PreferencesCache::GetDirectory();
-	if (!configDir.empty()) {
-		String mappingsPath2 = fs::CombinePath(configDir, "gamecontrollerdb.txt"_s);
-		if (fs::IsReadableFile(mappingsPath2)) {
-			theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath2);
-		}
-	}
-#endif
-
-	resolver.CompileShaders();
+	OnBeforeInitialize();
 
 #if !defined(SHAREWARE_DEMO_ONLY)
 	if (PreferencesCache::ResumeOnStart) {
@@ -278,13 +226,7 @@ void GameEventHandler::OnInit()
 		PreferencesCache::ResumeOnStart = false;
 		PreferencesCache::Save();
 		if (HasResumableState()) {
-			InitializeBase();
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-			// All required files are already included in Emscripten version, so nothing is verified
-			_flags |= Flags::IsVerified | Flags::IsPlayable;
-#	else
-			RefreshCache();
-#	endif
+			OnAfterInitialize();
 			ResumeSavedState();
 			return;
 		}
@@ -299,12 +241,8 @@ void GameEventHandler::OnInit()
 		auto handler = static_cast<GameEventHandler*>(arg);
 		ASSERT(handler != nullptr);
 
-		handler->InitializeBase();
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-		// All required files are already included in Emscripten version, so nothing is verified
-		handler->_flags |= Flags::IsVerified | Flags::IsPlayable;
-#	else
-		handler->RefreshCache();
+		handler->OnAfterInitialize();
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		handler->CheckUpdates();
 #	endif
 	}, this);
@@ -362,13 +300,8 @@ void GameEventHandler::OnInit()
 	}));
 #else
 	// Building without threading support is not recommended, so it can look ugly
-	InitializeBase();
-
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-	// All required files are already included in Emscripten version, so nothing is verified
-	_flags |= Flags::IsVerified | Flags::IsPlayable;
-#	else
-	RefreshCache();
+	OnAfterInitialize();
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 	CheckUpdates();
 #	endif
 
@@ -438,7 +371,7 @@ void GameEventHandler::OnResizeWindow(std::int32_t width, std::int32_t height)
 		_currentHandler->OnInitializeViewport(width, height);
 	}
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#if defined(NCINE_HAS_WINDOWS)
 	PreferencesCache::EnableFullscreen = theApplication().GetGfxDevice().isFullscreen();
 #endif
 
@@ -495,7 +428,7 @@ void GameEventHandler::OnResume()
 
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 {
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#if defined(NCINE_HAS_WINDOWS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// Allow F11 and Alt+Enter to switch fullscreen
 	if (event.sym == KeySym::F11 || (event.sym == KeySym::RETURN && (event.mod & KeyMod::MASK) == KeyMod::LALT)) {
 #	if defined(DEATH_TARGET_WINDOWS_RT)
@@ -572,10 +505,11 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 			PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
 
-			std::optional<Episode> lastEpisode = ContentResolver::Get().GetEpisode(levelInit.LastEpisodeName);
+			auto& resolver = ContentResolver::Get();
+			std::optional<Episode> lastEpisode = resolver.GetEpisode(levelInit.LastEpisodeName);
 			if (lastEpisode) {
 				// Redirect to next episode
-				std::optional<Episode> nextEpisode = ContentResolver::Get().GetEpisode(lastEpisode->NextEpisode);
+				std::optional<Episode> nextEpisode = resolver.GetEpisode(lastEpisode->NextEpisode);
 				if (nextEpisode) {
 					levelInit.EpisodeName = lastEpisode->NextEpisode;
 					levelInit.LevelName = nextEpisode->FirstLevel;
@@ -894,7 +828,65 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 }
 #endif
 
-void GameEventHandler::InitializeBase()
+void GameEventHandler::OnBeforeInitialize()
+{
+#if defined(WITH_IMGUI)
+	theApplication().GetDebugOverlaySettings().showInterface = true;
+#endif
+
+	_flags |= Flags::IsInitialized;
+
+	std::memset(_newestVersion, 0, sizeof(_newestVersion));
+
+	auto& resolver = ContentResolver::Get();
+
+#if defined(DEATH_TARGET_ANDROID)
+	theApplication().SetAutoSuspension(true);
+
+	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+		_flags |= Flags::HasExternalStoragePermission;
+	}
+
+	// Try to load gamepad mappings from parent directory of `Source` on Android
+	String mappingsPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "gamecontrollerdb.txt"_s);
+	if (fs::IsReadableFile(mappingsPath)) {
+		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
+	}
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+	// Try to load gamepad mappings from `Content` directory
+	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
+	if (fs::IsReadableFile(mappingsPath)) {
+		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
+	}
+#endif
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+	// Try to load gamepad mappings also from config directory
+	auto configDir = PreferencesCache::GetDirectory();
+	if (!configDir.empty()) {
+		String mappingsPath2 = fs::CombinePath(configDir, "gamecontrollerdb.txt"_s);
+		if (fs::IsReadableFile(mappingsPath2)) {
+			theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath2);
+		}
+	}
+#endif
+
+#if defined(NCINE_HAS_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+	// Xbox is always fullscreen
+	if (PreferencesCache::EnableFullscreen || Environment::CurrentDeviceType == DeviceType::Xbox) {
+#	else
+	if (PreferencesCache::EnableFullscreen) {
+#	endif
+		theApplication().GetGfxDevice().setResolution(true);
+		theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
+	}
+#endif
+
+	resolver.CompileShaders();
+}
+
+void GameEventHandler::OnAfterInitialize()
 {
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 	if (PreferencesCache::EnableDiscordIntegration) {
@@ -909,6 +901,13 @@ void GameEventHandler::InitializeBase()
 			i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }));
 		}
 	}
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+	// All required files are already included in Emscripten version, so nothing is verified
+	_flags |= Flags::IsVerified | Flags::IsPlayable;
+#else
+	RefreshCache();
+#endif
 }
 
 void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)

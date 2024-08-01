@@ -34,11 +34,14 @@
 #include <stdlib.h>
 
 // Check platform-specific features
-#if defined(WITH_SDL)
+#if defined(WITH_SDL) || defined(DEATH_TARGET_WINDOWS_RT)
 #	define NCINE_HAS_GAMEPAD_RUMBLE
 #endif
 #if defined(DEATH_TARGET_ANDROID)
 #	define NCINE_HAS_NATIVE_BACK_BUTTON
+#endif
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#	define NCINE_HAS_WINDOWS
 #endif
 
 // Return assert macros

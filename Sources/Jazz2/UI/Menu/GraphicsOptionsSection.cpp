@@ -17,7 +17,7 @@ namespace Jazz2::UI::Menu
 	{
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::RescaleMode, _("Rescale Mode") });
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#if defined(NCINE_HAS_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		// Xbox is always fullscreen
 		if (Environment::CurrentDeviceType != DeviceType::Xbox)
