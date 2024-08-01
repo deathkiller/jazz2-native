@@ -1,4 +1,5 @@
 #include "ControlScheme.h"
+#include "../PreferencesCache.h"
 #include "../../nCine/Input/IInputManager.h"
 
 using namespace nCine;
