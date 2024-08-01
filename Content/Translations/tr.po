@@ -1387,17 +1387,17 @@ msgstr "Daha fazla bilgi için %s sitesini ziyaret edebilirsin."
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
 msgid "Developers"
-msgstr ""
+msgstr "Yazılımcılar"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:140
 msgid "Contributors"
-msgstr ""
+msgstr "Katkıda Bulunanlar"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:142
 msgid "Translators"
-msgstr ""
+msgstr "Çevirmenler"
 
 #. TRANSLATORS: Footer text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:144
@@ -1499,13 +1499,13 @@ msgstr "Harici depolama erişimine izin ver"
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
 #, c-format
 msgid "Remap Controls for Player %i"
-msgstr ""
+msgstr "Oyuncu %i İçin Kontrolleri Değiştir"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:174
 msgid "Remap Controls"
-msgstr ""
+msgstr "Kontrolleri Değiştir"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
@@ -1516,15 +1516,15 @@ msgstr "Dokunmatik Kontrol Ayarları"
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:29
 msgid "Toggle Run"
-msgstr ""
+msgstr "Sürekli Koşma"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
 msgid "Gamepad Button Labels"
-msgstr ""
+msgstr "Gamepad Tuşu İkonları"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
 msgid "Gamepad Rumble"
-msgstr ""
+msgstr "Gamepad Titreşim Seviyesi"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:36
@@ -1545,12 +1545,12 @@ msgstr "Kontrol Ayarları"
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
 msgid "Strong"
-msgstr ""
+msgstr "Güçlü"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
 msgid "Weak"
-msgstr ""
+msgstr "Zayıf"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:117
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
@@ -1764,12 +1764,12 @@ msgstr "Karakter İzini Göster"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
 msgid "Preferred Splitscreen"
-msgstr ""
+msgstr "Tercih Edilen Bölünmüş Ekran Modu"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
 msgid "Prefer Zoom Out"
-msgstr ""
+msgstr "Uzaklaştırmayı Ayarla"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
@@ -1802,11 +1802,11 @@ msgstr "Yüksek"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Vertical"
-msgstr ""
+msgstr "Dikey"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Horizontal"
-msgstr ""
+msgstr "Yatay"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
@@ -1955,21 +1955,21 @@ msgstr "Geri"
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 #, c-format
 msgid "Weapon %i"
-msgstr ""
+msgstr "Silah %i"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:182
 msgid "Press any key or button to assign"
-msgstr ""
+msgstr "Tuş atayın"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
 msgid "or"
-msgstr ""
+msgstr "ya da"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:194
 msgid "to remove assignment"
-msgstr ""
+msgstr "ile atanmış tuşu silin"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
@@ -2026,7 +2026,7 @@ msgstr "Müzik Seviyesi"
 #. TRANSLATORS: Menu item to select number of players
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
 msgid "Number of Local Players"
-msgstr ""
+msgstr "Yerel Oyuncu Sayısı"
 
 #. TRANSLATORS: Menu item to select difficulty
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:20
