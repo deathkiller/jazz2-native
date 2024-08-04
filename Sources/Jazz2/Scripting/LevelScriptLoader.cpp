@@ -3542,7 +3542,7 @@ namespace Jazz2::Scripting
 	{
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->BeginLevelChange((ExitType)exitType, path);
+		_this->_levelHandler->BeginLevelChange(nullptr, (ExitType)exitType, path);
 	}
 
 	void LevelScriptLoader::asShowLevelText(const String& text)

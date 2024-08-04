@@ -1546,8 +1546,9 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 		}
 	}
 
-	if (playerCount == 1) {
-		auto episodeEnd = PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName, true);
+	// Don't overwrite existing data in multiplayer
+	if (playerCount == 1 || !PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName)) {
+		auto* episodeEnd = PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName, true);
 		episodeEnd->Flags = EpisodeContinuationFlags::IsCompleted;
 		if (levelInit.CheatsUsed) {
 			episodeEnd->Flags |= EpisodeContinuationFlags::CheatsUsed;
@@ -1584,6 +1585,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 		}
 	}
 
+	// Don't save continue in multiplayer
 	if (playerCount == 1) {
 		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(levelInit.EpisodeName, true);
 		episodeContinue->LevelName = levelInit.LevelName;

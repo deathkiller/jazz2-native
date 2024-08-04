@@ -99,6 +99,7 @@ namespace Jazz2
 		std::unique_ptr<Texture> _viewTexture;
 		std::unique_ptr<Camera> _camera;
 
+		Rectf _viewBounds;
 		Vector2f _cameraPos;
 		Vector2f _cameraLastPos;
 		Vector2f _cameraDistanceFactor;

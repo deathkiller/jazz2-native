@@ -5,7 +5,6 @@
 #include "../LevelHandler.h"
 #include "MultiplayerGameMode.h"
 #include "NetworkManager.h"
-#include "../Actors/Player.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
@@ -57,10 +56,10 @@ namespace Jazz2::Multiplayer
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback) override;
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
-		void BeginLevelChange(ExitType exitType, const StringView nextLevel) override;
+		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
-		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
+		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
@@ -102,7 +101,7 @@ namespace Jazz2::Multiplayer
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
 		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY);
-		void HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, Actors::WarpFlags flags);
+		void HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, WarpFlags flags);
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);

@@ -189,6 +189,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/RumbleProcessor.h
 	${NCINE_SOURCE_DIR}/Jazz2/ShieldType.h
 	${NCINE_SOURCE_DIR}/Jazz2/SuspendType.h
+	${NCINE_SOURCE_DIR}/Jazz2/WarpFlags.h
 	${NCINE_SOURCE_DIR}/Jazz2/WeaponType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WeatherType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/ActorBase.h

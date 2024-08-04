@@ -291,7 +291,7 @@ namespace Jazz2::UI::Menu
 				center.Y += (contentBounds.H >= 250 ? 24.0f : 20.0f);
 				continue;
 		    } else if (i == _playerCount + 1) {
-				static const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
+				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
 				float spacing = (contentBounds.W >= 400 ? 100.0f : 70.0f);
 
 		        for (std::int32_t j = 0; j < static_cast<std::int32_t>(arraySize(difficultyTypes)); j++) {

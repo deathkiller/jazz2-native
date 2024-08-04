@@ -93,7 +93,7 @@ namespace Jazz2::Actors::Multiplayer
 			_trailLastPos = _pos;
 			PlayPlayerSfx("WarpOut"_s);
 
-			_levelHandler->HandlePlayerWarped(this, posPrev, false);
+			_levelHandler->HandlePlayerWarped(this, posPrev, WarpFlags::Default);
 
 			_renderer.setDrawEnabled(true);
 			_isFreefall |= CanFreefall();
@@ -103,7 +103,7 @@ namespace Jazz2::Actors::Multiplayer
 				_controllable = true;
 			});
 		} else {
-			_levelHandler->HandlePlayerWarped(this, posPrev, true);
+			_levelHandler->HandlePlayerWarped(this, posPrev, WarpFlags::Fast);
 		}
 	}
 }
