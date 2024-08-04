@@ -869,7 +869,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		})
 	}
 
-	String lowercase(const StringView string) {
+	String lowercase(StringView string) {
 		// Theoretically doing the copy in the same loop as case change could be faster for *really long* strings due
 		// to cache reuse, but until that proves to be a bottleneck I'll go with the simpler solution.
 		// Not implementing through lowercase(String) as the call stack is deep enough already and we don't
@@ -888,7 +888,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		return string;
 	}
 
-	String uppercase(const StringView string) {
+	String uppercase(StringView string) {
 		// Theoretically doing the copy in the same loop as case change could be faster for *really long* strings due
 		// to cache reuse, but until that proves to be a bottleneck I'll go with the simpler solution.
 		// Not implementing through uppercase(String) as the call stack is deep enough already and we don't
@@ -907,7 +907,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		return string;
 	}
 
-	String lowercaseUnicode(const StringView string) {
+	String lowercaseUnicode(StringView string) {
 		static const char32_t u2l[1411] = {
 			0x00041, 0x00042, 0x00043, 0x00044, 0x00045, 0x00046, 0x00047, 0x00048, 0x00049, 0x0004a, 0x0004b, 0x0004c, 0x0004d, 0x0004e, 0x0004f, 0x00050,
 			0x00051, 0x00052, 0x00053, 0x00054, 0x00055, 0x00056, 0x00057, 0x00058, 0x00059, 0x0005a, 0x000b5, 0x000c0, 0x000c1, 0x000c2, 0x000c3, 0x000c4,
@@ -1132,7 +1132,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		return String{output.release(), size - 1, deleter};
 	}
 
-	String uppercaseUnicode(const StringView string) {
+	String uppercaseUnicode(StringView string) {
 		static const char32_t l2u[1384] = {
 			0x00061, 0x00062, 0x00063, 0x00064, 0x00065, 0x00066, 0x00067, 0x00068, 0x00069, 0x0006a, 0x0006b, 0x0006c, 0x0006d, 0x0006e, 0x0006f, 0x00070,
 			0x00071, 0x00072, 0x00073, 0x00074, 0x00075, 0x00076, 0x00077, 0x00078, 0x00079, 0x0007a, 0x000df, 0x000e0, 0x000e1, 0x000e2, 0x000e3, 0x000e4,
@@ -1356,7 +1356,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		return String{output.release(), size - 1, deleter};
 	}
 	
-	String replaceFirst(const StringView string, const StringView search, const StringView replace) {
+	String replaceFirst(StringView string, StringView search, StringView replace) {
 		// Handle also the case when the search string is empty - find() returns (empty) begin in that case and we just
 		// prepend the replace string.
 		const StringView found = string.find(search);
@@ -1373,7 +1373,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		return string;
 	}
 
-	String replaceAll(StringView string, const StringView search, const StringView replace) {
+	String replaceAll(StringView string, StringView search, StringView replace) {
 		DEATH_ASSERT(!search.empty(), {}, "StringUtils::replaceAll(): Empty search string would cause an infinite loop");
 		Array<char> output;
 		while (const StringView found = string.find(search)) {

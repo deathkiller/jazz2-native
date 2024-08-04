@@ -62,7 +62,7 @@
 #		define _i7 "\nOpenAL \f[c:#707070]· \f[h:80]https://github.com/kcat/openal-soft\f[/h]\f[/c]"
 #	endif
 #else
-#	define _i6 ""
+#	define _i7 ""
 #endif
 
 #if defined(WITH_VORBIS)
