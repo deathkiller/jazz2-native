@@ -504,6 +504,7 @@
     <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\RgbLights.h" />
     <ClInclude Include="Jazz2\UI\UpscaleRenderPass.h" />
+    <ClInclude Include="Jazz2\WarpFlags.h" />
     <ClInclude Include="Jazz2\WeaponType.h" />
     <ClInclude Include="Jazz2\WeatherType.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />

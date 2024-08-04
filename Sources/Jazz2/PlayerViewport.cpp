@@ -341,16 +341,14 @@ namespace Jazz2
 		}
 
 		// Viewport bounds animation
-		auto& viewBounds = _levelHandler->_viewBounds;
-
-		if (viewBounds != _levelHandler->_viewBoundsTarget) {
-			if (std::abs(viewBounds.X - _levelHandler->_viewBoundsTarget.X) < 2.0f) {
-				viewBounds = _levelHandler->_viewBoundsTarget;
+		if (_viewBounds != _levelHandler->_viewBoundsTarget) {
+			if (std::abs(_viewBounds.X - _levelHandler->_viewBoundsTarget.X) < 2.0f) {
+				_viewBounds = _levelHandler->_viewBoundsTarget;
 			} else {
 				constexpr float TransitionSpeed = 0.02f;
-				float dx = (_levelHandler->_viewBoundsTarget.X - viewBounds.X) * TransitionSpeed * timeMult;
-				viewBounds.X += dx;
-				viewBounds.W -= dx;
+				float dx = (_levelHandler->_viewBoundsTarget.X - _viewBounds.X) * TransitionSpeed * timeMult;
+				_viewBounds.X += dx;
+				_viewBounds.W -= dx;
 			}
 		}
 
@@ -408,21 +406,21 @@ namespace Jazz2
 		}
 
 		// Clamp camera position to level bounds
-		if (viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, viewBounds.X + halfView.X, viewBounds.X + viewBounds.W - halfView.X) + _shakeOffset.X;
+		if (_viewBounds.W > halfView.X * 2) {
+			_cameraPos.X = std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
 			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.X) < 1.0f) {
 				_cameraPos.X = std::floor(_cameraPos.X);
 			}
 		} else {
-			_cameraPos.X = std::floor(viewBounds.X + viewBounds.W * 0.5f + _shakeOffset.X);
+			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
-		if (viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, viewBounds.Y + halfView.Y - 1.0f, viewBounds.Y + viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
+		if (_viewBounds.H > halfView.Y * 2) {
+			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
 			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.Y) < 1.0f) {
 				_cameraPos.Y = std::floor(_cameraPos.Y);
 			}
 		} else {
-			_cameraPos.Y = std::floor(viewBounds.Y + viewBounds.H * 0.5f + _shakeOffset.Y);
+			_cameraPos.Y = std::floor(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
 		}
 
 		_camera->setView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);

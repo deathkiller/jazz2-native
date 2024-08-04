@@ -568,14 +568,14 @@ namespace Jazz2::Multiplayer
 		LevelHandler::BroadcastTriggeredEvent(initiator, eventType, eventParams);
 	}
 
-	void MultiLevelHandler::BeginLevelChange(ExitType exitType, const StringView nextLevel)
+	void MultiLevelHandler::BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel)
 	{
 		if (!_isServer) {
 			// Level can be changed only by server
 			return;
 		}
 
-		LevelHandler::BeginLevelChange(exitType, nextLevel);
+		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
 	}
 
 	void MultiLevelHandler::HandleGameOver(Actors::Player* player)
@@ -620,17 +620,17 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	void MultiLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, Actors::WarpFlags flags)
+	void MultiLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, WarpFlags flags)
 	{
 		if (!_isServer) {
 			return;
 		}
 
-		if (_gameMode == MultiplayerGameMode::Race && (flags & Actors::WarpFlags::IncrementLaps) == Actors::WarpFlags::IncrementLaps) {
+		if (_gameMode == MultiplayerGameMode::Race && (flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
 			// TODO: Increment laps
 		}
 
-		if ((flags & Actors::WarpFlags::Fast) == Actors::WarpFlags::Fast) {
+		if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
 			// Nothing to do, sending PlayerMoveInstantly packet is enough
 			return;
 		}
@@ -717,9 +717,9 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MultiLevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast)
+	void MultiLevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags)
 	{
-		LevelHandler::HandlePlayerWarped(player, prevPos, fast);
+		LevelHandler::HandlePlayerWarped(player, prevPos, flags);
 
 		/*if (_isServer) {
 			auto it = _playerStates.find(player->_playerIndex);

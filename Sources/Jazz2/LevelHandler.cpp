@@ -360,8 +360,7 @@ namespace Jazz2
 
 		Vector2i levelBounds = _tileMap->GetLevelBounds();
 		_levelBounds = Recti(0, 0, levelBounds.X, levelBounds.Y);
-		_viewBounds = _levelBounds.As<float>();
-		_viewBoundsTarget = _viewBounds;		
+		_viewBoundsTarget = _levelBounds.As<float>();
 
 		_defaultAmbientLight = descriptor.AmbientColor;
 
@@ -456,7 +455,7 @@ namespace Jazz2
 #if defined(DEATH_DEBUG)
 			if (PreferencesCache::AllowCheats && PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
 				_cheatsUsed = true;
-				BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
+				BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 			}
 #endif
 		}
@@ -492,7 +491,7 @@ namespace Jazz2
 			// Active Boss
 			if (_activeBoss != nullptr && _activeBoss->GetHealth() <= 0) {
 				_activeBoss = nullptr;
-				BeginLevelChange(ExitType::Boss, nullptr);
+				BeginLevelChange(nullptr, ExitType::Boss);
 			}
 
 #if defined(WITH_ANGELSCRIPT)
@@ -695,7 +694,7 @@ namespace Jazz2
 								if (_cheatsBuffer[2] == (char)KeySym::N && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::X && _cheatsBuffer[5] == (char)KeySym::T) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
+									BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 								} else if ((_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::N && _cheatsBuffer[5] == (char)KeySym::S) ||
 										   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
 									_cheatsBufferLength = 0;
@@ -1000,7 +999,7 @@ namespace Jazz2
 					if (_activeBoss == nullptr) {
 						// No boss was found, it's probably a bug in the level, so go to the next level
 						LOGW("No boss was found, skipping to the next level");
-						BeginLevelChange(ExitType::Boss, nullptr);
+						BeginLevelChange(nullptr, ExitType::Boss);
 						return;
 					}
 
@@ -1034,7 +1033,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::BeginLevelChange(ExitType exitType, const StringView nextLevel)
+	void LevelHandler::BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel)
 	{
 		if (_nextLevelType != ExitType::None) {
 			return;
@@ -1070,7 +1069,7 @@ namespace Jazz2
 		}
 
 		for (auto player : _players) {
-			player->OnLevelChanging(exitType);
+			player->OnLevelChanging(initiator, exitType);
 		}
 	}
 
@@ -1086,12 +1085,12 @@ namespace Jazz2
 			if (_activeBoss->OnPlayerDied()) {
 				_activeBoss = nullptr;
 			}
-		}
 
-		// Warp all other players to checkpoint without transition to avoid issues
-		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer != player) {
-				viewport->_targetPlayer->WarpToCheckpoint();
+			// Warp all other players to checkpoint without transition to avoid issues
+			for (auto& viewport : _assignedViewports) {
+				if (viewport->_targetPlayer != player) {
+					viewport->_targetPlayer->WarpToCheckpoint();
+				}
 			}
 		}
 
@@ -1099,9 +1098,9 @@ namespace Jazz2
 		return true;
 	}
 
-	void LevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast)
+	void LevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags)
 	{
-		if (fast) {
+		if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
 			WarpCameraToTarget(player, true);
 		} else {
 			Vector2f pos = player->GetPos();
@@ -1478,7 +1477,7 @@ namespace Jazz2
 		bool playersReady = true;
 		for (auto player : _players) {
 			// Exit type was already provided in BeginLevelChange()
-			playersReady &= player->OnLevelChanging(ExitType::None);
+			playersReady &= player->OnLevelChanging(nullptr, ExitType::None);
 		}
 
 		if (playersReady && _nextLevelTime <= 0.0f) {
@@ -1740,20 +1739,22 @@ namespace Jazz2
 			return;
 		}
 
+		viewport._viewBounds = _viewBoundsTarget;
+
 		// The position to focus on
 		Vector2f focusPos = viewport._targetPlayer->_pos;
 		Vector2i halfView = viewport._view->size() / 2;
 
 		// Clamp camera position to level bounds
-		if (_viewBounds.W > halfView.X * 2) {
-			viewport._cameraPos.X = std::round(std::clamp(focusPos.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X));
+		if (viewport._viewBounds.W > halfView.X * 2) {
+			viewport._cameraPos.X = std::round(std::clamp(focusPos.X, viewport._viewBounds.X + halfView.X, viewport._viewBounds.X + viewport._viewBounds.W - halfView.X));
 		} else {
-			viewport._cameraPos.X = std::round(_viewBounds.X + _viewBounds.W * 0.5f);
+			viewport._cameraPos.X = std::round(viewport._viewBounds.X + viewport._viewBounds.W * 0.5f);
 		}
-		if (_viewBounds.H > halfView.Y * 2) {
-			viewport._cameraPos.Y = std::round(std::clamp(focusPos.Y, _viewBounds.Y + halfView.Y, _viewBounds.Y + _viewBounds.H - halfView.Y));
+		if (viewport._viewBounds.H > halfView.Y * 2) {
+			viewport._cameraPos.Y = std::round(std::clamp(focusPos.Y, viewport._viewBounds.Y + halfView.Y, viewport._viewBounds.Y + viewport._viewBounds.H - halfView.Y));
 		} else {
-			viewport._cameraPos.Y = std::round(_viewBounds.Y + _viewBounds.H * 0.5f);
+			viewport._cameraPos.Y = std::round(viewport._viewBounds.Y + viewport._viewBounds.H * 0.5f);
 		}
 
 		viewport._cameraLastPos = viewport._cameraPos;
@@ -1769,12 +1770,13 @@ namespace Jazz2
 			_levelBounds.W = _tileMap->GetLevelBounds().X - left;
 		}
 
+		Rectf bounds = _levelBounds.As<float>();
 		if (left == 0 && width == 0) {
-			_viewBounds = _levelBounds.As<float>();
-			_viewBoundsTarget = _viewBounds;
+			for (auto& viewport : _assignedViewports) {
+				viewport->_viewBounds = bounds;
+			}
+			_viewBoundsTarget = bounds;
 		} else {
-			Rectf bounds = _levelBounds.As<float>();
-
 			PlayerViewport* currentViewport = nullptr;
 			float maxViewWidth = 0.0f;
 			for (auto& viewport : _assignedViewports) {
@@ -1795,18 +1797,26 @@ namespace Jazz2
 			if (_viewBoundsTarget != bounds) {
 				_viewBoundsTarget = bounds;
 
-				float limit = currentViewport->_cameraPos.X - (maxViewWidth * 0.6f);
-				if (_viewBounds.X < limit) {
-					_viewBounds.W += (_viewBounds.X - limit);
-					_viewBounds.X = limit;
+				if (currentViewport != nullptr) {
+					float limit = currentViewport->_cameraPos.X - (maxViewWidth * 0.6f);
+					if (currentViewport->_viewBounds.X < limit) {
+						currentViewport->_viewBounds.W += (currentViewport->_viewBounds.X - limit);
+						currentViewport->_viewBounds.X = limit;
+					}
 				}
 
 				// Warp all other distant players to this player
 				for (auto& viewport : _assignedViewports) {
 					if (viewport->_targetPlayer != player) {
+						float limit = viewport->_cameraPos.X - (maxViewWidth * 0.6f);
+						if (viewport->_viewBounds.X < limit) {
+							viewport->_viewBounds.W += (viewport->_viewBounds.X - limit);
+							viewport->_viewBounds.X = limit;
+						}
+
 						auto pos = viewport->_targetPlayer->_pos;
-						if ((pos.X < _viewBounds.X || pos.X >= _viewBounds.X + _viewBounds.W) && (pos - player->_pos).Length() > 100.0f) {
-							viewport->_targetPlayer->WarpToPosition(player->_pos, Actors::WarpFlags::Default);
+						if ((pos.X < bounds.X || pos.X >= bounds.X + bounds.W) && (pos - player->_pos).Length() > 100.0f) {
+							viewport->_targetPlayer->WarpToPosition(player->_pos, WarpFlags::SkipWarpIn);
 							if (currentViewport != nullptr) {
 								viewport->_ambientLight = currentViewport->_ambientLight;
 								viewport->_ambientLightTarget = currentViewport->_ambientLightTarget;

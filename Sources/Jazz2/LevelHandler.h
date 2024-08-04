@@ -121,10 +121,10 @@ namespace Jazz2
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback) override;
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) override;
-		void BeginLevelChange(ExitType exitType, const StringView nextLevel) override;
+		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
-		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
+		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
@@ -214,7 +214,6 @@ namespace Jazz2
 		Collisions::DynamicTreeBroadPhase _collisions;
 
 		Vector2i _viewSize;
-		Rectf _viewBounds;
 		Rectf _viewBoundsTarget;
 		float _elapsedFrames;
 		float _checkpointFrames;

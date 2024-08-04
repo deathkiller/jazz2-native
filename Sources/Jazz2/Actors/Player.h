@@ -4,6 +4,7 @@
 #include "../LevelInitialization.h"
 #include "../ShieldType.h"
 #include "../SuspendType.h"
+#include "../WarpFlags.h"
 
 namespace Death::IO
 {
@@ -50,16 +51,6 @@ namespace Jazz2::Actors
 	{
 		class Thunderbolt;
 	}
-
-	enum class WarpFlags
-	{
-		Default = 0,
-		Fast = 0x01,
-		Freeze = 0x02,
-		IncrementLaps = 0x04
-	};
-
-	DEFINE_ENUM_OPERATORS(WarpFlags);
 
 	class Player : public ActorBase
 	{
@@ -124,7 +115,7 @@ namespace Jazz2::Actors
 		bool CanBreakSolidObjects() const;
 		bool CanMoveVertically() const;
 
-		bool OnLevelChanging(ExitType exitType);
+		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		PlayerCarryOver PrepareLevelCarryOver();
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src);
@@ -316,6 +307,7 @@ namespace Jazz2::Actors
 		void OnHandleMovement(float timeMult, bool areaWeaponAllowed);
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock);
+		void DoWarpOut(Vector2f pos, WarpFlags flags);
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed);
 

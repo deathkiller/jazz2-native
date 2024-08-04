@@ -232,7 +232,7 @@ namespace Jazz2::Actors
 			});
 
 			_renderer.setDrawEnabled(true);
-			PlayPlayerSfx("WarpOut"_s);
+			PlayPlayerSfx("WarpOut"_s, 1.0f / _levelHandler->GetPlayers().size());
 			_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 			_lastExitType = ExitType::None;
@@ -2328,11 +2328,11 @@ namespace Jazz2::Actors
 						if (p[1] != 0) {
 							exitType |= ExitType::FastTransition;
 						}
-						String nextLevel;
+						StringView nextLevel;
 						if (p[2] != 0 && p[3] != 0) {
 							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
 						}
-						_levelHandler->BeginLevelChange(exitType, nextLevel);
+						_levelHandler->BeginLevelChange(this, exitType, nextLevel);
 					} else if (_bonusWarpTimer <= 0.0f) {
 						_levelHandler->HandlePlayerCoins(this, _coins, _coins);
 						PlaySfx("BonusWarpNotEnoughCoins"_s);
@@ -2708,7 +2708,7 @@ namespace Jazz2::Actors
 
 		uint8_t shotParams[1] = { _weaponUpgrades[(std::int32_t)WeaponType::RF] };
 
-		if ((_weaponUpgrades[(int)WeaponType::RF] & 0x1) != 0) {
+		if ((_weaponUpgrades[(std::int32_t)WeaponType::RF] & 0x1) != 0) {
 			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
 			shot1->OnActivated(ActorActivationDetails(
 				_levelHandler,
@@ -2827,7 +2827,7 @@ namespace Jazz2::Actors
 		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
 		_levelHandler->AddActor(shot);
 
-		_weaponCooldown = 12.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 0.1f);
+		_weaponCooldown = 12.0f - (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] * 0.1f);
 
 		if (!_inWater && (_currentAnimation->State & AnimState::Lookup) != AnimState::Lookup) {
 			AddExternalForce(IsFacingLeft() ? 2.0f : -2.0f, 0.0f);
@@ -2979,7 +2979,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	bool Player::OnLevelChanging(ExitType exitType)
+	bool Player::OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType)
 	{
 		// Deactivate any shield
 		if (_activeShieldTime > 70.0f) {
@@ -3002,7 +3002,7 @@ namespace Jazz2::Actors
 						_renderer.setDrawEnabled(false);
 						_levelExiting = LevelExitingState::Ready;
 					});
-					PlayPlayerSfx("EndOfLevel1"_s);
+					PlayPlayerSfx("EndOfLevel1"_s, 1.0f / _levelHandler->GetPlayers().size());
 
 					SetState(ActorState::ApplyGravitation, false);
 					_speed.X = 0.0f;
@@ -3020,7 +3020,7 @@ namespace Jazz2::Actors
 						_renderer.setDrawEnabled(false);
 						_levelExiting = LevelExitingState::Ready;
 					});
-					PlayPlayerSfx("WarpIn"_s);
+					PlayPlayerSfx("WarpIn"_s, 1.0f / _levelHandler->GetPlayers().size());
 					_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 					SetState(ActorState::ApplyGravitation, false);
@@ -3061,7 +3061,7 @@ namespace Jazz2::Actors
 						_renderer.setDrawEnabled(false);
 						_levelExiting = LevelExitingState::Ready;
 					});
-					PlayPlayerSfx("WarpIn"_s);
+					PlayPlayerSfx("WarpIn"_s, 1.0f / _levelHandler->GetPlayers().size());
 					_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
 					SetState(ActorState::ApplyGravitation, false);
@@ -3131,7 +3131,9 @@ namespace Jazz2::Actors
 				return true;
 			}
 		} else {
-			PlayPlayerSfx("EndOfLevel"_s);
+			if (initiator == this || (initiator == nullptr && _playerIndex == 0)) {
+				PlayPlayerSfx("EndOfLevel"_s);
+			}
 
 			if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss || _inWater) {
 				_levelExiting = LevelExitingState::WaitingForWarp;
@@ -3276,7 +3278,7 @@ namespace Jazz2::Actors
 			if (hideTrail) {
 				_trailLastPos = _pos;
 			}
-			_levelHandler->HandlePlayerWarped(this, posPrev, true);
+			_levelHandler->HandlePlayerWarped(this, posPrev, flags);
 		} else {
 			EndDamagingMove();
 			SetState(ActorState::IsInvulnerable, true);
@@ -3296,41 +3298,50 @@ namespace Jazz2::Actors
 			// For warping from the water
 			_renderer.setRotation(0.0f);
 
-			PlayPlayerSfx("WarpIn"_s);
-			_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
-
-			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, flags, pos]() {
-				Vector2f posPrev = _pos;
-				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
-				_trailLastPos = _pos;
-				PlayPlayerSfx("WarpOut"_s);
+			if ((flags & WarpFlags::SkipWarpIn) == WarpFlags::SkipWarpIn) {
+				DoWarpOut(pos, flags);
+			} else {
+				PlayPlayerSfx("WarpIn"_s);
 				_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
 
-				_levelHandler->HandlePlayerWarped(this, posPrev, false);
-
-				_isFreefall |= CanFreefall();
-				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, flags]() {
-					SetState(ActorState::IsInvulnerable, false);
-					SetState(ActorState::ApplyGravitation, true);
-
-					if ((flags & WarpFlags::Freeze) == WarpFlags::Freeze) {
-						_renderer.AnimPaused = true;
-						_controllable = false;
-						_controllableTimeout = 100.0f;
-						_frozenTimeLeft = 100.0f;
-					} else {
-						_controllable = true;
-						// UpdateAnimation() was probably skipped in this step, because _controllable was false, so call it here
-						UpdateAnimation(0.0f);
-					}
+				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, pos, flags]() {
+					DoWarpOut(pos, flags);
 				});
-			});
+			}
 		}
+	}
+
+	void Player::DoWarpOut(Vector2f pos, WarpFlags flags)
+	{
+		Vector2f posPrev = _pos;
+		MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+		_trailLastPos = _pos;
+		PlayPlayerSfx("WarpOut"_s);
+		_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
+
+		_levelHandler->HandlePlayerWarped(this, posPrev, flags);
+
+		_isFreefall |= CanFreefall();
+		SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, flags]() {
+			SetState(ActorState::IsInvulnerable, false);
+			SetState(ActorState::ApplyGravitation, true);
+
+			if ((flags & WarpFlags::Freeze) == WarpFlags::Freeze) {
+				_renderer.AnimPaused = true;
+				_controllable = false;
+				_controllableTimeout = 100.0f;
+				_frozenTimeLeft = 100.0f;
+			} else {
+				_controllable = true;
+				// UpdateAnimation() was probably skipped in this step, because _controllable was false, so call it here
+				UpdateAnimation(0.0f);
+			}
+		});
 	}
 
 	void Player::WarpToCheckpoint()
 	{
-		WarpToPosition(_checkpointPos, WarpFlags::Fast);
+		WarpToPosition(_checkpointPos, WarpFlags::SkipWarpIn);
 		_levelHandler->SetAmbientLight(this, _checkpointLight);
 	}
 
