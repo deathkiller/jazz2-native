@@ -69,6 +69,7 @@
 	</provides>
 
 	<releases>
+		<release version="2.8.0" date="2024-08-04"/>
 		<release version="2.7.0" date="2024-05-27"/>
 		<release version="2.6.0" date="2024-03-08"/>
 		<release version="2.5.0" date="2024-01-26"/>
