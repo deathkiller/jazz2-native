@@ -1780,7 +1780,7 @@ msgstr "Preferenze schermo condiviso"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
 msgid "Prefer Zoom Out"
-msgstr "Visuale più ampia"
+msgstr "Visuale più ampia (multi)"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
