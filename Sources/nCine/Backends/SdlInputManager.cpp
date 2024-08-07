@@ -58,12 +58,17 @@ namespace nCine
 		const std::int32_t numJoysticks = SDL_NumJoysticks();
 		for (std::int32_t i = 0; i < numJoysticks; i++) {
 			sdlJoysticks_[i] = SDL_JoystickOpen(i);
-			if (sdlJoysticks_[i]) {
-				SDL_Joystick* sdlJoy = sdlJoysticks_[i];
-				LOGI("Gamepad %d \"%s\" - %d hats, %d axes, %d buttons, %d balls",
-						i, SDL_JoystickName(sdlJoy), SDL_JoystickNumHats(sdlJoy), SDL_JoystickNumAxes(sdlJoy),
-						SDL_JoystickNumButtons(sdlJoy), SDL_JoystickNumBalls(sdlJoy));
+#if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
+			if (sdlJoysticks_[i] != nullptr) {
+				SDL_Joystick* joy = sdlJoysticks_[i];
+				std::int32_t playerIndex = SDL_JoystickGetPlayerIndex(joy);
+				const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
+				SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
+				LOGI("Gamepad %d [%d] \"%s\" [%s] has been connected - %d hats, %d axes, %d buttons, %d balls",
+						i, playerIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy),
+						SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
 			}
+#endif
 		}
 
 		joyMapping_.Init(this);
@@ -375,14 +380,22 @@ namespace nCine
 		if (event.type == SDL_JOYDEVICEADDED) {
 			const std::int32_t deviceIndex = event.jdevice.which;
 			joyConnectionEvent_.joyId = deviceIndex;
+
+			auto* prevInstance = sdlJoysticks_[deviceIndex];
 			sdlJoysticks_[deviceIndex] = SDL_JoystickOpen(deviceIndex);
+
+			if (prevInstance != nullptr) {
+				SDL_JoystickClose(prevInstance);
+			}
 
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
+			std::int32_t playerIndex = SDL_JoystickGetPlayerIndex(joy);
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
 			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
-			LOGI("Gamepad %d \"%s\" (%s) has been connected - %d hats, %d axes, %d buttons, %d balls",
-				   deviceIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
+			LOGI("Gamepad %d [%d] \"%s\" [%s] has been %s - %d hats, %d axes, %d buttons, %d balls",
+					deviceIndex, playerIndex, SDL_JoystickName(joy), joyGuidString_, prevInstance != nullptr ? "reattached" : "connected",
+					SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
 #endif
 			joyMapping_.OnJoyConnected(joyConnectionEvent_);
 			inputEventHandler_->OnJoyConnected(joyConnectionEvent_);

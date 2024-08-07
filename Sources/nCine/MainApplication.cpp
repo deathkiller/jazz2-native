@@ -347,22 +347,6 @@ namespace nCine
 			}
 		}
 
-#if defined(DEATH_TARGET_WINDOWS)
-		DWORD envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", nullptr, 0);
-		if (envLength > 0) {
-			Array<wchar_t> envGameControllerConfig(NoInit, envLength);
-			envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", envGameControllerConfig, envGameControllerConfig.size());
-			if (envLength > 0) {
-				inputManager_->addJoyMappingsFromString(Utf8::FromUtf16(envGameControllerConfig, envLength), "SDL_GAMECONTROLLERCONFIG variable"_s);
-			}
-		}
-#else
-		StringView envGameControllerConfig = ::getenv("SDL_GAMECONTROLLERCONFIG");
-		if (envGameControllerConfig != nullptr) {
-			inputManager_->addJoyMappingsFromString(envGameControllerConfig, "SDL_GAMECONTROLLERCONFIG variable"_s);
-		}
-#endif
-
 #if defined(NCINE_PROFILING)
 		timings_[(std::int32_t)Timings::PreInit] = profileStartTime_.secondsSince();
 #endif

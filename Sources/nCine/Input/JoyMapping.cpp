@@ -8,9 +8,15 @@
 
 #include <Containers/SmallVector.h>
 #include <Containers/StaticArray.h>
+#include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
+
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <CommonWindows.h>
+#	include <Utf8.h>
+#endif
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
@@ -144,10 +150,26 @@ namespace nCine
 
 		LOGI("Added %u internal gamepad mappings for current platform", mappings_.size());
 
+#if defined(DEATH_TARGET_WINDOWS)
+		DWORD envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", nullptr, 0);
+		if (envLength > 0) {
+			Array<wchar_t> envGameControllerConfig(NoInit, envLength);
+			envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", envGameControllerConfig, envGameControllerConfig.size());
+			if (envLength > 0) {
+				AddMappingsFromStringInternal(Utf8::FromUtf16(envGameControllerConfig, envLength), "SDL_GAMECONTROLLERCONFIG variable"_s);
+			}
+		}
+#elif !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+		StringView envGameControllerConfig = ::getenv("SDL_GAMECONTROLLERCONFIG");
+		if (envGameControllerConfig != nullptr) {
+			AddMappingsFromStringInternal(envGameControllerConfig, "SDL_GAMECONTROLLERCONFIG variable"_s);
+		}
+#endif
+
 		CheckConnectedJoystics();
 	}
 
-	bool JoyMapping::AddMappingsFromString(StringView mappingString, StringView traceSource)
+	bool JoyMapping::AddMappingsFromStringInternal(StringView mappingString, StringView traceSource)
 	{
 		std::int32_t parsedMappings = 0;
 
@@ -175,19 +197,26 @@ namespace nCine
 			LOGI("Added %u gamepad mappings", parsedMappings);
 		}
 
-		if (parsedMappings > 0) {
-			CheckConnectedJoystics();
-		}
-
 		return (parsedMappings > 0);
 	}
 
-	void JoyMapping::AddMappingsFromFile(StringView path)
+	bool JoyMapping::AddMappingsFromString(StringView mappingString)
+	{
+		bool mappingsAdded = AddMappingsFromStringInternal(mappingString, {});
+
+		if (mappingsAdded) {
+			CheckConnectedJoystics();
+		}
+
+		return mappingsAdded;
+	}
+
+	bool JoyMapping::AddMappingsFromFile(StringView path)
 	{
 		std::unique_ptr<Stream> fileHandle = fs::Open(path, FileAccess::Read);
 		std::int64_t fileSize = fileHandle->GetSize();
 		if (fileSize == 0 || fileSize > 32 * 1024 * 1024) {
-			return;
+			return false;
 		}
 
 		std::int32_t parsedMappings = 0;
@@ -197,31 +226,15 @@ namespace nCine
 		fileHandle.reset(nullptr);
 		fileBuffer[fileSize] = '\0';
 
-		StringView rest = fileBuffer.get();
-		while (!rest.empty()) {
-			auto split = rest.partition('\n');
-			rest = split[2];
-
-			MappedJoystick newMapping;
-			if (ParseMappingFromString(split[0], newMapping)) {
-				std::int32_t index = FindMappingByGuid(newMapping.guid);
-				// if GUID is not found then mapping has to be added, not replaced
-				if (index < 0) {
-					mappings_.emplace_back(std::move(newMapping));
-				} else {
-					mappings_[index] = std::move(newMapping);
-				}
-				parsedMappings++;
-			}
-		}
+		bool mappingsAdded = AddMappingsFromStringInternal(fileBuffer.get(), String("file \""_s + path + "\""_s));
 
 		fileBuffer = nullptr;
 
-		LOGI("Added %i gamepad mappings from file \"%s\"", parsedMappings, String::nullTerminatedView(path).data());
-
-		if (parsedMappings > 0) {
+		if (mappingsAdded) {
 			CheckConnectedJoystics();
 		}
+
+		return mappingsAdded;
 	}
 
 	void JoyMapping::OnJoyButtonPressed(const JoyButtonEvent& event)
@@ -690,7 +703,7 @@ namespace nCine
 		auto sub = mappingString.partition(',');
 		sub[0] = sub[0].trimmed();
 		if (sub[0].empty()) {
-			LOGE("Invalid mapping string");
+			LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
 			return false;
 		}
 
@@ -699,7 +712,7 @@ namespace nCine
 		sub = sub[2].partition(',');
 		sub[0] = sub[0].trimmed();
 		if (sub[0].empty()) {
-			LOGE("Invalid mapping string");
+			LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
 			return false;
 		}
 
@@ -712,7 +725,7 @@ namespace nCine
 			keyValue[0] = keyValue[0].trimmed();
 			keyValue[2] = keyValue[2].trimmed();
 			if (keyValue[0].empty()) {
-				LOGE("Invalid mapping string");
+				LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
 				return false;
 			}
 
@@ -721,7 +734,7 @@ namespace nCine
 				if (!ParsePlatformName(keyValue[2])) {
 					return false;
 				}
-			} else {
+			} else if (keyValue[0] != "crc"_s && keyValue[0] != "hint"_s) {
 				// Axis
 				const std::int32_t axisIndex = ParseAxisName(keyValue[0]);
 				if (axisIndex != -1) {
@@ -739,7 +752,8 @@ namespace nCine
 							map.desc.buttonAxes[buttonAxisMapping] = static_cast<AxisName>(axisIndex);
 						} else if (!keyValue[2].empty()) {
 							// It's empty sometimes
-							LOGI("Unsupported mapping source \"%s\" in \"%s\"", String::nullTerminatedView(keyValue[0]).data(), map.name);
+							const uint8_t* g = map.guid.data;
+							LOGI("Unsupported assignment in mapping source \"%s\" in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[0]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 						}
 					}
 				} else {
@@ -762,14 +776,19 @@ namespace nCine
 									} else if (axis.max < 0.0f) {
 										map.desc.axes[axisMapping].buttonNameNegative = static_cast<ButtonName>(buttonIndex);
 									} else {
-										LOGI("Unsupported axis value \"%s\" for button mapping in \"%s\"", String::nullTerminatedView(keyValue[2]).data(), map.name);
+										const uint8_t* g = map.guid.data;
+										LOGI("Unsupported axis value \"%s\" for button mapping in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[2]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 									}
-								} else if (!keyValue[2].empty()) {
-									// It's empty sometimes
-									LOGI("Unsupported mapping source \"%s\" in \"%s\"", String::nullTerminatedView(keyValue[0]).data(), map.name);
+								} else if (!keyValue[2].empty()) { // It's empty sometimes
+									const uint8_t* g = map.guid.data;
+									LOGI("Unsupported assignment in mapping source \"%s\" in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[0]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 								}
 							}
 						}
+					} else {
+						// Unknown key
+						const uint8_t* g = map.guid.data;
+						LOGD("Unsupported mapping source \"%s\" in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[0]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 					}
 				}
 			}

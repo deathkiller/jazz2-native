@@ -1555,7 +1555,10 @@ namespace Jazz2::Actors
 			if (_hitFloorTime <= 0.0f && !CanJump()) {
 				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);
-				_levelHandler->PlayerExecuteRumble(_playerIndex, "Land"_s);
+				if (PreferencesCache::GamepadRumble >= 2) {
+					// "Land" effect is enabled only for Strong preset
+					_levelHandler->PlayerExecuteRumble(_playerIndex, "Land"_s);
+				}
 
 				if (Random().NextFloat() < 0.6f) {
 					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y + 20, _renderer.layer() - 2), Explosion::Type::TinyDark);

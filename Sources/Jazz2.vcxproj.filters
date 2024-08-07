@@ -1494,13 +1494,13 @@
     <ClInclude Include="Jazz2\PlayerViewport.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\RumbleDescription.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Jazz2\WarpFlags.h">
+      <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\RumbleProcessor.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\WarpFlags.h">
+    <ClInclude Include="Jazz2\RumbleDescription.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2478,7 +2478,7 @@
       <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\RumbleProcessor.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
