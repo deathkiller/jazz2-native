@@ -102,9 +102,9 @@ namespace nCine
 		joyMapping_.AddMappingsFromFile(path);
 	}
 
-	void IInputManager::addJoyMappingsFromString(StringView mappingString, StringView traceSource)
+	void IInputManager::addJoyMappingsFromString(StringView mappingString)
 	{
-		joyMapping_.AddMappingsFromString(mappingString, traceSource);
+		joyMapping_.AddMappingsFromString(mappingString);
 	}
 
 	unsigned int IInputManager::numJoyMappings() const

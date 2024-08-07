@@ -107,7 +107,7 @@ namespace nCine
 		/// Adds joystick mapping configurations from a text file
 		void addJoyMappingsFromFile(StringView path);
 		/// Adds joystick mapping configurations from a string
-		void addJoyMappingsFromString(StringView mappingStrings, StringView traceSource = {});
+		void addJoyMappingsFromString(StringView mappingStrings);
 		/// Returns the current number of valid joystick mappings
 		unsigned int numJoyMappings() const;
 		/// Returns true if mapping exists for specified joystick by GUID

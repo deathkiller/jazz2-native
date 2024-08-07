@@ -79,6 +79,7 @@ namespace Jazz2::UI
 		second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(1, AxisName::LeftTrigger));
 		second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::T));
 		second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(1, ButtonName::Y));
+		second[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(1, ButtonName::Start));
 	}
 
 	ProcessedInput ControlScheme::FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons)

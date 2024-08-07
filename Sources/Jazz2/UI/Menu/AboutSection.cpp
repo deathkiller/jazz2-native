@@ -84,7 +84,7 @@
 #endif
 
 #if defined(WITH_ZLIB)
-#	define _i11 "\nzlib \f[c:#707070]· \f[h:80]https://github.com/zlib-ng/zlib-ng\f[/h]\f[/c]"
+#	define _i11 "\nzlib \f[c:#707070]· \f[h:80]https://www.zlib.net/\f[/h]\f[/c]"
 #else
 #	define _i11 ""
 #endif

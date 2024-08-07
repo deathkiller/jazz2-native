@@ -29,8 +29,8 @@ namespace nCine
 			inputEventHandler_ = inputEventHandler;
 		}
 
-		bool AddMappingsFromString(StringView mappingString, StringView traceSource = {});
-		void AddMappingsFromFile(StringView path);
+		bool AddMappingsFromString(StringView mappingString);
+		bool AddMappingsFromFile(StringView path);
 
 		inline std::int32_t numMappings() const {
 			return (std::int32_t)mappings_.size();
@@ -96,7 +96,7 @@ namespace nCine
 		static const char* AxesStrings[];
 		static const char* ButtonsStrings[];
 
-		static const std::int32_t MaxNumJoysticks = 4;
+		static const std::int32_t MaxNumJoysticks = 5;
 		SmallVector<MappedJoystick, 0> mappings_;
 		AssignedMapping assignedMappings_[MaxNumJoysticks];
 
@@ -108,6 +108,7 @@ namespace nCine
 		const IInputManager* inputManager_;
 		IInputEventHandler* inputEventHandler_;
 
+		bool AddMappingsFromStringInternal(StringView mappingString, StringView traceSource);
 		void CheckConnectedJoystics();
 		bool ParseMappingFromString(StringView mappingString, MappedJoystick& map);
 		bool ParsePlatformName(StringView value) const;
