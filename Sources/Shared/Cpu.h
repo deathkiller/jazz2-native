@@ -317,7 +317,7 @@ namespace Death { namespace Cpu {
 	{
 		// A common type used in all tag constructors to avoid ambiguous calls when using { }
 		struct InitT { };
-		constexpr InitT Init{ };
+		constexpr InitT Init { };
 
 		enum: unsigned int { ExtraTagBitOffset = 16 };
 	}
@@ -330,7 +330,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct ScalarT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit ScalarT(Implementation::InitT) { }
+		constexpr explicit ScalarT(Implementation::InitT) {}
 	};
 
 	// Scalar code is when nothing else is available, thus no bits set
@@ -347,9 +347,9 @@ namespace Death { namespace Cpu {
 		and the @ref Sse2 tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct Sse2T: ScalarT {
+	struct Sse2T : ScalarT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Sse2T(Implementation::InitT): ScalarT{Implementation::Init} { }
+		constexpr explicit Sse2T(Implementation::InitT) : ScalarT{Implementation::Init} {}
 	};
 
 	/**
@@ -359,9 +359,9 @@ namespace Death { namespace Cpu {
 		and the @ref Sse3 tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct Sse3T: Sse2T {
+	struct Sse3T : Sse2T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Sse3T(Implementation::InitT): Sse2T{Implementation::Init} { }
+		constexpr explicit Sse3T(Implementation::InitT) : Sse2T{Implementation::Init} {}
 	};
 
 	/**
@@ -371,9 +371,9 @@ namespace Death { namespace Cpu {
 		and the @ref Ssse3 tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct Ssse3T: Sse3T {
+	struct Ssse3T : Sse3T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Ssse3T(Implementation::InitT): Sse3T{Implementation::Init} { }
+		constexpr explicit Ssse3T(Implementation::InitT) : Sse3T{Implementation::Init} {}
 	};
 
 	/**
@@ -383,9 +383,9 @@ namespace Death { namespace Cpu {
 		and the @ref Sse41T tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct Sse41T: Ssse3T {
+	struct Sse41T : Ssse3T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Sse41T(Implementation::InitT): Ssse3T{Implementation::Init} { }
+		constexpr explicit Sse41T(Implementation::InitT) : Ssse3T{Implementation::Init} {}
 	};
 
 	/**
@@ -395,9 +395,9 @@ namespace Death { namespace Cpu {
 		and the @ref Sse42T tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct Sse42T: Sse41T {
+	struct Sse42T : Sse41T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Sse42T(Implementation::InitT): Sse41T{Implementation::Init} { }
+		constexpr explicit Sse42T(Implementation::InitT) : Sse41T{Implementation::Init} {}
 	};
 
 	/**
@@ -409,7 +409,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct PopcntT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit PopcntT(Implementation::InitT) { }
+		constexpr explicit PopcntT(Implementation::InitT) {}
 	};
 
 	/**
@@ -421,7 +421,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct LzcntT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit LzcntT(Implementation::InitT) { }
+		constexpr explicit LzcntT(Implementation::InitT) {}
 	};
 
 	/**
@@ -433,7 +433,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct Bmi1T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Bmi1T(Implementation::InitT) { }
+		constexpr explicit Bmi1T(Implementation::InitT) {}
 	};
 
 	/**
@@ -444,7 +444,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct Bmi2T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Bmi2T(Implementation::InitT) { }
+		constexpr explicit Bmi2T(Implementation::InitT) {}
 	};
 
 	/**
@@ -456,7 +456,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct AvxT: Sse42T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit AvxT(Implementation::InitT): Sse42T{Implementation::Init} { }
+		constexpr explicit AvxT(Implementation::InitT) : Sse42T{Implementation::Init} {}
 	};
 
 	/**
@@ -468,7 +468,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct AvxF16cT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit AvxF16cT(Implementation::InitT) { }
+		constexpr explicit AvxF16cT(Implementation::InitT) {}
 	};
 
 	/**
@@ -480,7 +480,7 @@ namespace Death { namespace Cpu {
 	*/
 	struct AvxFmaT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit AvxFmaT(Implementation::InitT) { }
+		constexpr explicit AvxFmaT(Implementation::InitT) {}
 	};
 
 	/**
@@ -490,9 +490,9 @@ namespace Death { namespace Cpu {
 		and the @ref Avx2 tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct Avx2T: AvxT {
+	struct Avx2T : AvxT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Avx2T(Implementation::InitT): AvxT{Implementation::Init} { }
+		constexpr explicit Avx2T(Implementation::InitT) : AvxT{Implementation::Init} {}
 	};
 
 	/**
@@ -502,9 +502,9 @@ namespace Death { namespace Cpu {
 		and the @ref Avx512f tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct Avx512fT: Avx2T {
+	struct Avx512fT : Avx2T {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit Avx512fT(Implementation::InitT): Avx2T{Implementation::Init} { }
+		constexpr explicit Avx512fT(Implementation::InitT) : Avx2T{Implementation::Init} {}
 	};
 
 	// Features earlier in the hierarchy should have lower bits set
@@ -576,9 +576,9 @@ namespace Death { namespace Cpu {
 		and the @ref Neon tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct NeonT: ScalarT {
+	struct NeonT : ScalarT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit NeonT(Implementation::InitT): ScalarT{Implementation::Init} { }
+		constexpr explicit NeonT(Implementation::InitT) : ScalarT{Implementation::Init} {}
 	};
 
 	/**
@@ -588,9 +588,9 @@ namespace Death { namespace Cpu {
 		and the @ref NeonFma tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct NeonFmaT: NeonT {
+	struct NeonFmaT : NeonT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit NeonFmaT(Implementation::InitT): NeonT{Implementation::Init} { }
+		constexpr explicit NeonFmaT(Implementation::InitT) : NeonT{Implementation::Init} {}
 	};
 
 	/**
@@ -600,9 +600,9 @@ namespace Death { namespace Cpu {
 		and the @ref NeonFp16 tag for more information.
 		@see @ref tag(), @ref features()
 	*/
-	struct NeonFp16T: NeonFmaT {
+	struct NeonFp16T : NeonFmaT {
 		// Explicit constructor to avoid ambiguous calls when using { }
-		constexpr explicit NeonFp16T(Implementation::InitT): NeonFmaT{Implementation::Init} { }
+		constexpr explicit NeonFp16T(Implementation::InitT) : NeonFmaT{Implementation::Init} {}
 	};
 
 	template<> struct TypeTraits<NeonT> {
@@ -911,13 +911,23 @@ namespace Death { namespace Cpu {
 			};
 
 			// Empty initialization. Should not be needed by public code.
-			constexpr explicit Tags(InitT) { }
+			constexpr explicit Tags(InitT) {}
 
 			// Conversion from other tag combination, allowed only if the other is not a subset
-			template<unsigned int otherValue> constexpr Tags(Tags<otherValue>, typename std::enable_if<IsTagConversionAllowed<value, otherValue>::Value>::type* = { }) { }
+			// MSVC 2015 and 2017 cannot handle SFINAE in the template, putting it in the argument instead
+#ifndef DEATH_MSVC2017_COMPATIBILITY
+			template<unsigned int otherValue, typename std::enable_if<IsTagConversionAllowed<value, otherValue>::Value, int>::type = 0> constexpr Tags(Tags<otherValue>) {}
+#else
+			template<unsigned int otherValue> constexpr Tags(Tags<otherValue>, typename std::enable_if<IsTagConversionAllowed<value, otherValue>::Value>::type* = {}) {}
+#endif
 
 			// Conversion from a single tag, allowed only if we're a single bit and the other is not a subset
-			template<class T> constexpr Tags(T, typename std::enable_if<IsSingleTagConversionAllowed<Value, TypeTraits<T>::Index>::Value>::type* = { }) { }
+			// MSVC 2015 and 2017 cannot handle SFINAE in the template, putting it in the argument instead
+#ifndef DEATH_MSVC2017_COMPATIBILITY
+			template<class T, typename std::enable_if<IsSingleTagConversionAllowed<Value, TypeTraits<T>::Index>::Value, int>::type = 0> constexpr Tags(T) {}
+#else
+			template<class T> constexpr Tags(T, typename std::enable_if<IsSingleTagConversionAllowed<Value, TypeTraits<T>::Index>::Value>::type* = {}) {}
+#endif
 
 			//A subset of operators on Features, excluding the assignment ones -- since they modify the type, they make no sense here
 			template<unsigned int otherValue> constexpr Tags<value | otherValue> operator|(Tags<otherValue>) const {
@@ -1202,22 +1212,22 @@ namespace Death { namespace Cpu {
 		 *
 		 * Equivalent to @ref Scalar.
 		 */
-		constexpr explicit Features() noexcept : _data { } { }
+		constexpr explicit Features() noexcept : _data{} {}
 
 		/**
 		 * @brief Construct from a tag
 		 *
 		 * @see @ref features()
 		 */
-		template<class T, class = decltype(TypeTraits<T>::Index)> constexpr /*implicit*/ Features(T) noexcept : _data { TypeTraits<T>::Index } {
+		template<class T, class = decltype(TypeTraits<T>::Index)> constexpr /*implicit*/ Features(T) noexcept : _data{TypeTraits<T>::Index} {
 			// GCC 4.8 loudly complains about enum comparison if I don't cast; Clang 14 warns if I don't cast
 			// because bitwise operations between different enums are deprecated in C++20
 			static_assert(((static_cast<unsigned int>(TypeTraits<T>::Index) & Implementation::ExtraTagMask) >> Implementation::ExtraTagBitOffset) < (1 << static_cast<unsigned int>(Implementation::ExtraTagCount)),
-				"extra tag out of expected bounds");
+				"Extra tag out of expected bounds");
 		}
 
 		// The compile-time Tags<> is an implementation detail, don't show that in the docs
-		template<unsigned int value> constexpr /*implicit*/ Features(Implementation::Tags<value>) noexcept : _data { value } { }
+		template<unsigned int value> constexpr /*implicit*/ Features(Implementation::Tags<value>) noexcept : _data{value} {}
 
 		/** @brief Equality comparison */
 		constexpr bool operator==(Features other) const {
@@ -1249,7 +1259,7 @@ namespace Death { namespace Cpu {
 
 		/** @brief Union of two feature sets */
 		constexpr Features operator|(Features other) const {
-			return Features { _data | other._data };
+			return Features{_data | other._data};
 		}
 
 		/** @brief Union two feature sets and assign */
@@ -1260,7 +1270,7 @@ namespace Death { namespace Cpu {
 
 		/** @brief Intersection of two feature sets */
 		constexpr Features operator&(Features other) const {
-			return Features { _data & other._data };
+			return Features{_data & other._data};
 		}
 
 		/** @brief Intersect two feature sets and assign */
@@ -1271,7 +1281,7 @@ namespace Death { namespace Cpu {
 
 		/** @brief XOR of two feature sets */
 		constexpr Features operator^(Features other) const {
-			return Features { _data ^ other._data };
+			return Features{_data ^ other._data};
 		}
 
 		/** @brief XOR two feature sets and assign */
@@ -1282,7 +1292,7 @@ namespace Death { namespace Cpu {
 
 		/** @brief Feature set complement */
 		constexpr Features operator~() const {
-			return Features { ~_data };
+			return Features{~_data};
 		}
 
 		/**
@@ -1315,7 +1325,7 @@ namespace Death { namespace Cpu {
 		friend Features Implementation::runtimeFeatures(unsigned long);
 #endif
 
-		constexpr explicit Features(unsigned int data) noexcept : _data { data } { }
+		constexpr explicit Features(unsigned int data) noexcept : _data{data} {}
 
 		unsigned int _data;
 	};
@@ -1329,7 +1339,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag()
 	*/
 	template<class T> constexpr Features features() {
-		return Features { TypeTraits<T>::Index };
+		return Features{TypeTraits<T>::Index};
 	}
 
 	/** @relates Features
@@ -2878,7 +2888,7 @@ namespace Death { namespace Cpu {
 		// AVX needs OS support checked, as the OS needs to be capable of saving and restoring the expanded registers when switching contexts:
 		// https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Operating_system_support
 		if ((cpuid.e.cx & (1 << 27)) && /* XSAVE/XRESTORE CPU support */
-		   (cpuid.e.cx & (1 << 28)))   /* AVX CPU support */
+		    (cpuid.e.cx & (1 << 28)))   /* AVX CPU support */
 		{
 			// XGETBV indicates that the registers will be properly saved and restored by the OS: https://stackoverflow.com/a/22521619.
 
@@ -2925,7 +2935,7 @@ namespace Death { namespace Cpu {
 		Implementation::cpuid(cpuid.data, 0x80000001, 0);
 		if (cpuid.e.cx & (1 << 5)) out |= TypeTraits<LzcntT>::Index;
 
-		return Features { out };
+		return Features{out};
 	}
 #endif
 
@@ -2962,7 +2972,7 @@ namespace Death { namespace Cpu {
 			// This one also isn't present on 32-bit, so I assume it's ARM64-only?
 			if (caps & (1 << 10) /*HWCAP_ASIMDHP*/) out |= TypeTraits<NeonFp16T>::Index;
 #	endif
-			return Features { out };
+			return Features{out};
 		}
 	}
 #endif

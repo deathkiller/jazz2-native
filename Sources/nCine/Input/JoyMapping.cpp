@@ -93,7 +93,8 @@ namespace nCine
 		"paddle1",
 		"paddle2",
 		"paddle3",
-		"paddle4"
+		"paddle4",
+		"touchpad"
 	};
 
 	JoyMappedState JoyMapping::nullMappedJoyState_;
@@ -159,11 +160,26 @@ namespace nCine
 				AddMappingsFromStringInternal(Utf8::FromUtf16(envGameControllerConfig, envLength), "SDL_GAMECONTROLLERCONFIG variable"_s);
 			}
 		}
+
+#	if defined(DEATH_TRACE)
+		wchar_t envAllowSteamVirtualGamepad[2] = {};
+		envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD", envAllowSteamVirtualGamepad, 2);
+		if (envLength == 1 && envAllowSteamVirtualGamepad[0] == L'1') {
+			LOGI("Steam Input detected");
+		}
+#	endif
 #elif !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 		StringView envGameControllerConfig = ::getenv("SDL_GAMECONTROLLERCONFIG");
 		if (envGameControllerConfig != nullptr) {
 			AddMappingsFromStringInternal(envGameControllerConfig, "SDL_GAMECONTROLLERCONFIG variable"_s);
 		}
+
+#	if defined(DEATH_TRACE)
+		StringView envAllowSteamVirtualGamepad = ::getenv("SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD");
+		if (envAllowSteamVirtualGamepad == "1"_s) {
+			LOGI("Steam Input detected");
+		}
+#	endif
 #endif
 
 		CheckConnectedJoystics();
@@ -243,7 +259,7 @@ namespace nCine
 		LOGI("Button pressed - joyId: %d, buttonId: %d", event.joyId, event.buttonId);
 #endif
 
-		if (inputEventHandler_ == nullptr) {
+		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
 			return;
 		}
 
@@ -290,7 +306,7 @@ namespace nCine
 		LOGI("Button released - joyId: %d, buttonId: %d", event.joyId, event.buttonId);
 #endif
 
-		if (inputEventHandler_ == nullptr) {
+		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
 			return;
 		}
 
@@ -338,7 +354,7 @@ namespace nCine
 		LOGI("Hat moved - joyId: %d, hatId: %d, hatState: 0x%02x", event.joyId, event.hatId, event.hatState);
 #endif
 
-		if (inputEventHandler_ == nullptr) {
+		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
 			return;
 		}
 
@@ -391,7 +407,7 @@ namespace nCine
 		LOGI("Axis moved - joyId: %d, axisId: %d, value: %f", event.joyId, event.axisId, event.value);
 #endif
 
-		if (inputEventHandler_ == nullptr) {
+		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
 			return;
 		}
 
@@ -474,6 +490,11 @@ namespace nCine
 #if defined(NCINE_INPUT_DEBUGGING)
 		LOGI("Gamepad connected - joyId: %d", event.joyId);
 #endif
+
+		if (event.joyId >= MaxNumJoysticks) {
+			LOGW("Maximum number of gamepads reached, skipping newly connected (%i)", event.joyId);
+			return false;
+		}
 
 		const char* joyName = inputManager_->joyName(event.joyId);
 		const JoystickGuid joyGuid = inputManager_->joyGuid(event.joyId);
@@ -576,6 +597,10 @@ namespace nCine
 #if defined(NCINE_INPUT_DEBUGGING)
 		LOGI("Gamepad disconnected - joyId: %d", event.joyId);
 #endif
+
+		if (event.joyId >= MaxNumJoysticks) {
+			return;
+		}
 
 #if defined(WITH_SDL)
 		// Compacting the array of mapping indices
@@ -703,7 +728,10 @@ namespace nCine
 		auto sub = mappingString.partition(',');
 		sub[0] = sub[0].trimmed();
 		if (sub[0].empty()) {
-			LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
+			// Ignore malformed string comming from Steam Input (2024/08/13)
+			if (!mappingString.hasPrefix(",platform:"_s)) {
+				LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
+			}
 			return false;
 		}
 

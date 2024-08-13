@@ -122,6 +122,10 @@
 			"Path": "UI/gamepad_rt.aura",
 			"States": [ 56 ]
 		},
+		"GamepadMisc1": {
+			"Path": "UI/gamepad_misc1.aura",
+			"States": [ 57 ]
+		},
 		"GamepadAltA": {
 			"Path": "UI/gamepad_alt_a.aura",
 			"States": [ 58 ]
@@ -169,6 +173,10 @@
 		"GamepadAltMisc1": {
 			"Path": "UI/gamepad_alt_misc1.aura",
 			"States": [ 69 ]
+		},
+		"GamepadAltTouchpad": {
+			"Path": "UI/gamepad_alt_touchpad.aura",
+			"States": [ 70 ]
 		},
 		
 		"Menu16": {

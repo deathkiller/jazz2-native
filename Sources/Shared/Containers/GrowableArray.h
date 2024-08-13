@@ -1077,11 +1077,11 @@ namespace Death { namespace Containers {
 #endif
 		}
 
-		template<class T> inline void arrayDestruct(T*, T*, typename std::enable_if<std::is_trivially_destructible<T>::value>::type* = nullptr) {
+		template<class T, typename std::enable_if<std::is_trivially_destructible<T>::value, int>::type = 0> inline void arrayDestruct(T*, T*) {
 			// Nothing to do
 		}
 
-		template<class T> inline void arrayDestruct(T* begin, T* const end, typename std::enable_if<!std::is_trivially_destructible<T>::value>::type* = nullptr) {
+		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> inline void arrayDestruct(T* begin, T* const end) {
 			// Needs to be < because sometimes begin > end
 			for (; begin < end; ++begin) begin->~T();
 		}

@@ -169,6 +169,7 @@ namespace Jazz2::UI::Menu
 		if (mappedState.isButtonPressed(ButtonName::Paddle2)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle2 ");
 		if (mappedState.isButtonPressed(ButtonName::Paddle3)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle3 ");
 		if (mappedState.isButtonPressed(ButtonName::Paddle4)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle4 ");
+		if (mappedState.isButtonPressed(ButtonName::Touchpad)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Touchpad ");
 
 		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, topLine + 105.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
