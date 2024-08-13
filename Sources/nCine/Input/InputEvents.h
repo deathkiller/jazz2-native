@@ -28,6 +28,7 @@ namespace nCine
 		Paddle2,
 		Paddle3,
 		Paddle4,
+		Touchpad,
 
 		Count
 	};

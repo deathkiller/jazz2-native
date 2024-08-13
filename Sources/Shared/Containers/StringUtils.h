@@ -48,9 +48,9 @@ namespace Death { namespace Containers { namespace StringUtils {
 	{
 		extern void DEATH_CPU_DISPATCHED_DECLARATION(lowercaseInPlace)(char* data, std::size_t size);
 		DEATH_CPU_DISPATCHER_DECLARATION(lowercaseInPlace)
-			extern void DEATH_CPU_DISPATCHED_DECLARATION(uppercaseInPlace)(char* data, std::size_t size);
+		extern void DEATH_CPU_DISPATCHED_DECLARATION(uppercaseInPlace)(char* data, std::size_t size);
 		DEATH_CPU_DISPATCHER_DECLARATION(uppercaseInPlace)
-			extern bool DEATH_CPU_DISPATCHED_DECLARATION(equalsIgnoreCase)(const char* data1, const char* data2, std::size_t size);
+		extern bool DEATH_CPU_DISPATCHED_DECLARATION(equalsIgnoreCase)(const char* data1, const char* data2, std::size_t size);
 		DEATH_CPU_DISPATCHER_DECLARATION(equalsIgnoreCase)
 	}
 

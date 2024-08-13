@@ -36,7 +36,7 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState GamepadRightShoulder = (AnimState)54;
 	static constexpr AnimState GamepadRightStick = (AnimState)55;
 	static constexpr AnimState GamepadRightTrigger = (AnimState)56;
-	//static constexpr AnimState GamepadMisc1 = (AnimState)57;
+	static constexpr AnimState GamepadMisc1 = (AnimState)57;
 
 	static constexpr AnimState GamepadAltA = (AnimState)58;
 	static constexpr AnimState GamepadAltB = (AnimState)59;
@@ -50,6 +50,7 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState GamepadAltBack = (AnimState)67;
 	static constexpr AnimState GamepadAltStart = (AnimState)68;
 	static constexpr AnimState GamepadAltMisc1 = (AnimState)69;
+	static constexpr AnimState GamepadAltTouchpad = (AnimState)70;
 
 	static constexpr AnimState Menu16 = (AnimState)70;
 	static constexpr AnimState Menu32 = (AnimState)71;
@@ -88,7 +89,8 @@ namespace Jazz2::UI::Menu::Resources
 			case ButtonName::Down: return alt ? GamepadAltDPadDown : GamepadDPadDown; break;
 			case ButtonName::Left: return alt ? GamepadAltDPadLeft : GamepadDPadLeft; break;
 			case ButtonName::Right: return alt ? GamepadAltDPadRight : GamepadDPadRight; break;
-			case ButtonName::Misc1: return GamepadAltMisc1; break;
+			case ButtonName::Misc1: return alt ? GamepadAltMisc1 : GamepadMisc1; break;
+			case ButtonName::Touchpad: return GamepadAltTouchpad; break;
 			default: return AnimState::Default; break;
 		}
 	}

@@ -59,6 +59,38 @@ namespace nCine
 		glfwSetScrollCallback(GlfwGfxDevice::windowHandle(), scrollCallback);
 		glfwSetJoystickCallback(joystickCallback);
 
+#if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		for (std::int32_t i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; i++) {
+			if (glfwJoystickPresent(i)) {
+				const int joyId = i - GLFW_JOYSTICK_1;
+
+				int numButtons = -1;
+				int numAxes = -1;
+				int numHats = -1;
+				glfwGetJoystickButtons(i, &numButtons);
+				glfwGetJoystickAxes(i, &numAxes);
+#	if GLFW_VERSION_COMBINED >= 3300
+				glfwGetJoystickHats(i, &numHats);
+#	else
+				numHats = 0;
+#	endif
+				if (numButtons <= 0 && numAxes <= 0 && numHats <= 0) {
+					LOGI("Gamepad %d has been connected, but reports no axes/buttons/hats - skipping", joyId);
+					continue;
+				}
+
+#	if GLFW_VERSION_COMBINED >= 3300
+				// It seems `glfwGetJoystickGUID` can cause crash if the gamepad is quickly disconnected
+				const char* guid = glfwGetJoystickGUID(i);
+#	else
+				const char* guid = "default";
+#	endif
+				LOGI("Gamepad %d \"%s\" [%s] has been connected - %d axes, %d buttons, %d hats",
+					   joyId, glfwGetJoystickName(i), guid, numAxes, numButtons, numHats);
+			}
+		}
+#endif
+
 		joyMapping_.Init(this);
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -368,22 +400,28 @@ namespace nCine
 		joyConnectionEvent_.joyId = joyId;
 
 		if (event == GLFW_CONNECTED) {
-#if defined(DEATH_TRACE)
 			int numButtons = -1;
 			int numAxes = -1;
 			int numHats = -1;
 			glfwGetJoystickButtons(joy, &numButtons);
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-			numHats = 0;
-			const char* guid = "default";
-#	elif GLFW_VERSION_COMBINED >= 3300
+			glfwGetJoystickAxes(joy, &numAxes);
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && GLFW_VERSION_COMBINED >= 3300
 			glfwGetJoystickHats(joy, &numHats);
+#else
+			numHats = 0;
+#endif
+			if (numButtons <= 0 && numAxes <= 0 && numHats <= 0) {
+				LOGI("Gamepad %d has been connected, but reports no axes/buttons/hats - skipping", joyId);
+				return;
+			}
+
+#if defined(DEATH_TRACE)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && GLFW_VERSION_COMBINED >= 3300
+			// It seems `glfwGetJoystickGUID` can cause crash if the gamepad is quickly disconnected
 			const char* guid = glfwGetJoystickGUID(joy);
 #	else
-			numHats = 0;
-			const char* guid = nullptr;
+			const char* guid = "default";
 #	endif
-			glfwGetJoystickAxes(joy, &numAxes);
 			LOGI("Gamepad %d \"%s\" [%s] has been connected - %d axes, %d buttons, %d hats",
 			       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
 #endif

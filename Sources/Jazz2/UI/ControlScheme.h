@@ -48,7 +48,7 @@ namespace Jazz2::UI
 		static constexpr std::int32_t MaxConnectedGamepads = 1;
 #else
 		static constexpr std::int32_t MaxSupportedPlayers = 4;
-		static constexpr std::int32_t MaxConnectedGamepads = 4;
+		static constexpr std::int32_t MaxConnectedGamepads = 5;
 #endif
 
 		static void Reset();

@@ -234,7 +234,7 @@ namespace Death { namespace Containers {
 		 * @ref String(char*, std::size_t, Deleter).
 		 */
 		/* Gets ambigous when calling String{ptr, 0}. FFS, zero as null pointerwas deprecated in C++11 already, why is this still a problem?! */
-		template<class T> String(typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, char*>::type data, T deleter) noexcept : String{deleter, nullptr, data} {}
+		template<class T, typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> String(char* data, T deleter) noexcept : String{deleter, nullptr, data} {}
 
 		/**
 		 * @brief Take ownership of an immutable external data array
@@ -272,7 +272,7 @@ namespace Death { namespace Containers {
 		 * strings, @p data *can't* be @cpp nullptr @ce.
 		 */
 		/* Gets ambigous when calling String{nullptr, 0}. FFS, zero as null pointer was deprecated in C++11 already, why is this still a problem?! */
-		template<class T> String(typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, std::nullptr_t>::type, T) noexcept = delete;
+		template<class T, typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> String(std::nullptr_t, T) noexcept = delete;
 
 		/**
 		 * @brief Create a zero-initialized string
@@ -298,7 +298,7 @@ namespace Death { namespace Containers {
 		explicit String(DirectInitT, std::size_t size, char c);
 
 		/**
-		 * @brief Construct a view on an external type / from an external representation
+		 * @brief Construct from an external representation
 		 */
 		/* There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
 		   `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,

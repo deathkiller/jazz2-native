@@ -717,19 +717,19 @@ namespace Death { namespace Containers {
 	namespace Implementation
 	{
 		template<class U, std::size_t size, class T> struct ArrayViewConverter<U, StaticArray<size, T>> {
-			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, ArrayView<U>>::type from(StaticArray<size, T>& other) {
+			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static ArrayView<U> from(StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
 				return { other.data(), other.size() };
 			}
 		};
 		template<class U, std::size_t size, class T> struct ArrayViewConverter<const U, StaticArray<size, T>> {
-			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, ArrayView<const U>>::type from(const StaticArray<size, T>& other) {
+			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static ArrayView<const U> from(const StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
 				return { other.data(), other.size() };
 			}
 		};
 		template<class U, std::size_t size, class T> struct ArrayViewConverter<const U, StaticArray<size, const T>> {
-			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, ArrayView<const U>>::type from(const StaticArray<size, const T>& other) {
+			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static ArrayView<const U> from(const StaticArray<size, const T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
 				return { other.data(), other.size() };
 			}
@@ -738,19 +738,19 @@ namespace Death { namespace Containers {
 		template<std::size_t size, class T> struct ErasedArrayViewConverter<const StaticArray<size, T>> : ArrayViewConverter<const T, StaticArray<size, T>> {};
 
 		template<class U, std::size_t size, class T> struct StaticArrayViewConverter<size, U, StaticArray<size, T>> {
-			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, StaticArrayView<size, U>>::type from(StaticArray<size, T>& other) {
+			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static StaticArrayView<size, U> from(StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
 				return StaticArrayView<size, T>{other.data()};
 			}
 		};
 		template<class U, std::size_t size, class T> struct StaticArrayViewConverter<size, const U, StaticArray<size, T>> {
-			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, StaticArrayView<size, const U>>::type from(const StaticArray<size, T>& other) {
+			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static StaticArrayView<size, const U> from(const StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
 				return StaticArrayView<size, const T>(other.data());
 			}
 		};
 		template<class U, std::size_t size, class T> struct StaticArrayViewConverter<size, const U, StaticArray<size, const T>> {
-			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, StaticArrayView<size, const U>>::type from(const StaticArray<size, const T>& other) {
+			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static StaticArrayView<size, const U> from(const StaticArray<size, const T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
 				return StaticArrayView<size, const T>(other.data());
 			}
