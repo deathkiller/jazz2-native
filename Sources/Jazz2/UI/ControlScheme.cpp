@@ -254,7 +254,7 @@ namespace Jazz2::UI
 		}
 
 		// Also allow Return (Enter) as confirm key
-		if (pressedKeys[(std::uint32_t)KeySym::RETURN]) {
+		if (pressedKeys[(std::uint32_t)KeySym::RETURN] || pressedKeys[(std::uint32_t)KeySym::KP_ENTER]) {
 			pressedActions |= (1 << (std::int32_t)PlayerActions::Fire);
 		}
 #if defined(DEATH_TARGET_ANDROID)

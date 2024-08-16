@@ -139,7 +139,7 @@ namespace Jazz2::Actors
 		virtual bool AddAmmo(WeaponType weaponType, std::int16_t count);
 		virtual void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade);
 		bool AddFastFire(std::int32_t count);
-		void MorphTo(PlayerType type);
+		bool MorphTo(PlayerType type);
 		void MorphRevert();
 		bool SetDizzyTime(float time);
 

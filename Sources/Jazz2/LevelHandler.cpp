@@ -738,6 +738,20 @@ namespace Jazz2
 									_cheatsUsed = true;
 									// Coins are synchronized automatically
 									_players[0]->AddCoins(5);
+								} else if (_cheatsBuffer[2] == (char)KeySym::M && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::P && _cheatsBuffer[6] == (char)KeySym::H) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+
+									PlayerType newType;
+									switch (_players[0]->GetPlayerType()) {
+										case PlayerType::Jazz: newType = PlayerType::Spaz; break;
+										case PlayerType::Spaz: newType = PlayerType::Lori; break;
+										default: newType = PlayerType::Jazz; break;
+									}
+
+									if (!_players[0]->MorphTo(newType)) {
+										_players[0]->MorphTo(PlayerType::Jazz);
+									}
 								}
 								break;
 							case 8:
