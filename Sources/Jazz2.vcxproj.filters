@@ -1377,7 +1377,7 @@
     <ClInclude Include="Jazz2\Multiplayer\Reason.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\Base\Unaligned.h">
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\Memory.h">
       <Filter>Header Files\Shared\Base</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h">

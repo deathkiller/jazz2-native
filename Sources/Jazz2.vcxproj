@@ -187,7 +187,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;__WITH_GLFW;WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;__WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -303,7 +303,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\FileSystem.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\MemoryStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Stream.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\Base\Unaligned.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\Memory.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\TypeInfo.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\PakFile.h" />
     <ClInclude Include="backward\backward.h" />

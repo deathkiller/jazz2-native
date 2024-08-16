@@ -1,6 +1,6 @@
 #include "HashFunctions.h"
 
-#include <Base/Unaligned.h>
+#include <Base/Memory.h>
 
 #if defined(DEATH_TARGET_APPLE)
 #	include <libkern/OSByteOrder.h>
@@ -100,24 +100,24 @@ namespace nCine
 #endif
 	}
 
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-#	define uint32_in_expected_order(x) (ByteSwap32(x))
-#	define uint64_in_expected_order(x) (ByteSwap64(x))
-#else
-#	define uint32_in_expected_order(x) (x)
-#	define uint64_in_expected_order(x) (x)
-#endif
-
 	static std::uint64_t Fetch64(const char* p)
 	{
-		using Death::Unaligned;
-		return uint64_in_expected_order(Unaligned::Load64(p));
+		using Death::Memory;
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		return ByteSwap64(Memory::loadUnaligned<std::uint64_t>(p));
+#else
+		return Memory::loadUnaligned<std::uint64_t>(p);
+#endif
 	}
 
 	static std::uint32_t Fetch32(const char* p)
 	{
-		using Death::Unaligned;
-		return uint32_in_expected_order(Unaligned::Load32(p));
+		using Death::Memory;
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		return ByteSwap32(Memory::loadUnaligned<std::uint32_t>(p));
+#else
+		return Memory::loadUnaligned<std::uint32_t>(p);
+#endif
 	}
 
 	// Some primes between 2^63 and 2^64 for various uses.

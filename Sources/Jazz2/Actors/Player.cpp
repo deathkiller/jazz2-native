@@ -988,6 +988,9 @@ namespace Jazz2::Actors
 						if (_levelHandler->IsReforged()) {
 							_speed.Y = -3.55f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 							_internalForceY = -1.02f - 0.07f * (1.0f - timeMult);
+							if (_playerType == PlayerType::Lori) {
+								_speed.Y *= 1.3f;
+							}
 						} else {
 							_speed.Y = -8.0f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 						}
@@ -3815,10 +3818,10 @@ namespace Jazz2::Actors
 		return true;
 	}
 
-	void Player::MorphTo(PlayerType type)
+	bool Player::MorphTo(PlayerType type)
 	{
 		if (_playerType == type) {
-			return;
+			return false;
 		}
 
 		PlayerType playerTypePrevious = _playerType;
@@ -3839,11 +3842,15 @@ namespace Jazz2::Actors
 			AnimState prevAnim = _currentAnimation->State;
 			_currentAnimation = nullptr;
 			if (!SetAnimation(prevAnim)) {
-				SetAnimation(AnimState::Idle);
+				if (!SetAnimation(AnimState::Idle)) {
+					return false;
+				}
 			}
 		} else {
 			_currentAnimation = nullptr;
-			SetAnimation(AnimState::Fall);
+			if (!SetAnimation(AnimState::Fall)) {
+				return false;
+			}
 
 			SetState(ActorState::ApplyGravitation, true);
 			_controllable = true;
@@ -3897,6 +3904,8 @@ namespace Jazz2::Actors
 
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)(_pos.Y + 12.0f), _renderer.layer() + 6), Explosion::Type::SmokeBrown);
 		}
+
+		return true;
 	}
 
 	void Player::MorphRevert()
