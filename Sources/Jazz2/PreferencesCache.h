@@ -36,6 +36,12 @@ namespace Jazz2
 		Switch
 	};
 
+	enum class EpisodeEndOverwriteMode : std::uint8_t {
+		Always,
+		NoCheatsOnly,
+		HigherScoreOnly
+	};
+
 	enum class UnlockableEpisodes : std::uint32_t {
 		None = 0x00,
 
@@ -125,6 +131,7 @@ namespace Jazz2
 		static bool AllowCheats;
 		static bool AllowCheatsLives;
 		static bool AllowCheatsUnlock;
+		static EpisodeEndOverwriteMode OverwriteEpisodeEnd;
 		static Vector2f TouchLeftPadding;
 		static Vector2f TouchRightPadding;
 		static char Language[6];
@@ -171,12 +178,13 @@ namespace Jazz2
 
 			EnableReforgedHUD = 0x100000,
 			EnableReforgedMainMenu = 0x200000,
-			ToggleRunAction = 0x400000
+			ToggleRunAction = 0x400000,
+			AllowCheats = 0x1000000
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 6;
+		static constexpr std::uint8_t FileVersion = 7;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

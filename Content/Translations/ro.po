@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-07-31 19:49+0200\n"
+"POT-Creation-Date: 2024-08-19 20:14+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: 1NSH4N3 & Akfiz\n"
@@ -1566,7 +1566,7 @@ msgstr "Slab"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:167
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Disabled"
@@ -1575,9 +1575,9 @@ msgstr "Dezactivat"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:142
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:145
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:167
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Enabled"
 msgstr "Activat"
@@ -1653,7 +1653,7 @@ msgstr "Bine ați venit la \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementare!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:93
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:97
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Gameplay"
 msgstr "Gameplay"
@@ -1721,30 +1721,64 @@ msgid "Language"
 msgstr "Limbă"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:47
-msgid "Discord Integration"
-msgstr "Integrare cu Discord"
-
-#. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:51
-msgid "Razer Chroma™"
-msgstr "Suport Razer Chroma™"
-
-#. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:56
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 msgid "Scripting"
 msgstr "Scripturi"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
+msgid "Allow Cheats"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:52
+msgid "Overwrite Episode Completion"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
+msgid "Discord Integration"
+msgstr "Integrare cu Discord"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+msgid "Razer Chroma™"
+msgstr "Suport Razer Chroma™"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:65
 msgid "Browse \"Source\" Directory"
 msgstr "Răsfoiți directorul sursa \"Source\""
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:70
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:77
 msgid "Refresh Cache"
 msgstr "Reîncarcă Memoria Cache"
+
+#. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
+msgid "\f[c:#d86664]Yes\f[/c]"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
+msgid "No"
+msgstr ""
+
+#. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:147
+msgid "No Cheats Only"
+msgstr ""
+
+#. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
+msgid "Higher Score Only"
+msgstr ""
+
+#. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
+msgid "Always"
+msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19
@@ -2066,16 +2100,16 @@ msgstr "Greu"
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Poți ajusta poziția zonelor tactile prin a le trage și fixa."
 
-#: Sources/Main.cpp:333 Sources/Main.cpp:393
+#: Sources/Main.cpp:271 Sources/Main.cpp:326
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "Conectare la %s:%u..."
 
-#: Sources/Main.cpp:380
+#: Sources/Main.cpp:313
 msgid "Creating server..."
 msgstr "Crearea serverului..."
 
-#: Sources/Main.cpp:588 Sources/Main.cpp:624
+#: Sources/Main.cpp:520 Sources/Main.cpp:554
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2089,7 +2123,7 @@ msgstr ""
 "Asigură-te că toate fișierele necesare\n"
 "sunt accesibile și încearcă din nou."
 
-#: Sources/Main.cpp:674
+#: Sources/Main.cpp:604
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2103,7 +2137,7 @@ msgstr ""
 "Asigurați-vă că toate fișierele necesare\n"
 "sunt accesibile și încercați din nou."
 
-#: Sources/Main.cpp:809
+#: Sources/Main.cpp:739
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2115,7 +2149,7 @@ msgstr ""
 "\n"
 "Versiunea clientului dvs. nu este compatibilă cu serverul."
 
-#: Sources/Main.cpp:810
+#: Sources/Main.cpp:740
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2129,7 +2163,7 @@ msgstr ""
 "Capacitatea serverului este completă.\n"
 "Vă rugăm să încercați mai târziu."
 
-#: Sources/Main.cpp:811
+#: Sources/Main.cpp:741
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2144,7 +2178,7 @@ msgstr ""
 "dumneavoastră.\n"
 "Vă rugăm să încercați din nou în câteva secunde."
 
-#: Sources/Main.cpp:812
+#: Sources/Main.cpp:742
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2158,7 +2192,7 @@ msgstr ""
 "Serverul se închide.\n"
 "Vă rugăm să încercați mai târziu."
 
-#: Sources/Main.cpp:813
+#: Sources/Main.cpp:743
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2172,7 +2206,7 @@ msgstr ""
 "Vă rugăm să încercați din nou și dacă problema persistă,\n"
 "verificați conexiunea de rețea."
 
-#: Sources/Main.cpp:814
+#: Sources/Main.cpp:744
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2184,7 +2218,7 @@ msgstr ""
 "\n"
 "Serverul nu răspunde la cererea de conectare."
 
-#: Sources/Main.cpp:815
+#: Sources/Main.cpp:745
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2198,7 +2232,7 @@ msgstr ""
 "Ați fost \f[c:#90705050]dat afară\f[/c] de pe server.\n"
 "Contactați administratorii serverului pentru mai multe informații."
 
-#: Sources/Main.cpp:816
+#: Sources/Main.cpp:746
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"

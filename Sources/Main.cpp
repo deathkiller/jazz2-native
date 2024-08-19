@@ -503,8 +503,6 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			// End of episode
 			SaveEpisodeEnd(levelInit);
 
-			PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
-
 			auto& resolver = ContentResolver::Get();
 			std::optional<Episode> lastEpisode = resolver.GetEpisode(levelInit.LastEpisodeName);
 			if (lastEpisode) {
@@ -528,8 +526,6 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		} else if (levelInit.LevelName == ":credits"_s) {
 			// End of game
 			SaveEpisodeEnd(levelInit);
-
-			PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
 
 			newHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
 				root->GoToMainMenu(false);
@@ -1546,21 +1542,36 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 		}
 	}
 
-	// Don't overwrite existing data in multiplayer
-	if (playerCount == 1 || !PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName)) {
-		auto* episodeEnd = PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName, true);
-		episodeEnd->Flags = EpisodeContinuationFlags::IsCompleted;
-		if (levelInit.CheatsUsed) {
-			episodeEnd->Flags |= EpisodeContinuationFlags::CheatsUsed;
+	PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
+
+	if (playerCount > 0) {
+		auto* prevEnd = PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName);
+
+		bool shouldSaveEpisodeEnd = (prevEnd == nullptr);
+		if (!shouldSaveEpisodeEnd) {
+			switch (PreferencesCache::OverwriteEpisodeEnd) {
+				// Don't overwrite existing data in multiplayer/splitscreen
+				default: shouldSaveEpisodeEnd = (playerCount == 1); break;
+				case EpisodeEndOverwriteMode::NoCheatsOnly: shouldSaveEpisodeEnd = (playerCount == 1 && !levelInit.CheatsUsed); break;
+				case EpisodeEndOverwriteMode::HigherScoreOnly: shouldSaveEpisodeEnd = (playerCount == 1 && !levelInit.CheatsUsed && firstPlayer->Score >= prevEnd->Score); break;
+			}
 		}
 
-		episodeEnd->Lives = firstPlayer->Lives;
-		episodeEnd->Score = firstPlayer->Score;
-		std::memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
-		std::memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
+		if (shouldSaveEpisodeEnd) {
+			auto* episodeEnd = PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName, true);
+			episodeEnd->Flags = EpisodeContinuationFlags::IsCompleted;
+			if (levelInit.CheatsUsed) {
+				episodeEnd->Flags |= EpisodeContinuationFlags::CheatsUsed;
+			}
 
-		PreferencesCache::Save();
+			episodeEnd->Lives = firstPlayer->Lives;
+			episodeEnd->Score = firstPlayer->Score;
+			std::memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
+			std::memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
+		}
 	}
+
+	PreferencesCache::Save();
 }
 
 void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
