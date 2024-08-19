@@ -52,10 +52,11 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState GamepadAltMisc1 = (AnimState)69;
 	static constexpr AnimState GamepadAltTouchpad = (AnimState)70;
 
-	static constexpr AnimState Menu16 = (AnimState)70;
-	static constexpr AnimState Menu32 = (AnimState)71;
-	static constexpr AnimState Menu128 = (AnimState)72;
-	static constexpr AnimState LoriExistsCheck = (AnimState)80;
+	static constexpr AnimState Menu16 = (AnimState)80;
+	static constexpr AnimState Menu32 = (AnimState)81;
+	static constexpr AnimState Menu128 = (AnimState)82;
+
+	static constexpr AnimState LoriExistsCheck = (AnimState)90;
 
 	inline AnimState GetResourceForAxisName(AxisName axis, Containers::StringView& axisName)
 	{
