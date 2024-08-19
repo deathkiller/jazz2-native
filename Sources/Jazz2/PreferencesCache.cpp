@@ -56,6 +56,7 @@ namespace Jazz2
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsLives = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
+	EpisodeEndOverwriteMode PreferencesCache::OverwriteEpisodeEnd = EpisodeEndOverwriteMode::Always;
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
 	char PreferencesCache::Language[6] { };
@@ -240,6 +241,11 @@ namespace Jazz2
 						GamepadRumble = uc.ReadValue<std::uint8_t>();
 					}
 
+					if (version >= 7) {
+						AllowCheats = ((boolOptions & BoolOptions::AllowCheats) == BoolOptions::AllowCheats);
+						OverwriteEpisodeEnd = (EpisodeEndOverwriteMode)uc.ReadValue<std::uint8_t>();
+					}
+
 					// Controls
 					if (version >= 4) {
 						auto mappings = UI::ControlScheme::GetAllMappings();
@@ -420,6 +426,7 @@ namespace Jazz2
 		if (ResumeOnStart) boolOptions |= BoolOptions::ResumeOnStart;
 		if (EnableReforgedHUD) boolOptions |= BoolOptions::EnableReforgedHUD;
 		if (EnableReforgedMainMenu) boolOptions |= BoolOptions::EnableReforgedMainMenu;
+		if (AllowCheats) boolOptions |= BoolOptions::AllowCheats;
 		co.WriteValue<std::uint64_t>((std::uint64_t)boolOptions);
 
 		if (Language[0] != '\0') {
@@ -442,6 +449,7 @@ namespace Jazz2
 
 		co.WriteValue<std::uint8_t>((std::uint8_t)GamepadButtonLabels);
 		co.WriteValue<std::uint8_t>(GamepadRumble);
+		co.WriteValue<std::uint8_t>((std::uint8_t)OverwriteEpisodeEnd);
 
 		// Controls
 		co.WriteValue<std::uint8_t>((std::uint8_t)UI::ControlScheme::MaxSupportedPlayers);

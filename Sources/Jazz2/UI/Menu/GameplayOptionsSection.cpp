@@ -42,6 +42,16 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Enhancements, _("Enhancements") });
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Language, _("Language") });
+#if defined(WITH_ANGELSCRIPT)
+		if (!isInGame) {
+			// TRANSLATORS: Menu item in Options > Gameplay section
+			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true });
+			// TRANSLATORS: Menu item in Options > Gameplay section
+			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowCheats, _("Allow Cheats"), true });
+			// TRANSLATORS: Menu item in Options > Gameplay section
+			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::OverwriteEpisodeEnd, _("Overwrite Episode Completion"), true });
+		}
+#endif
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableDiscordIntegration, _("Discord Integration"), true });
@@ -49,12 +59,6 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableRgbLights, _("Razer Chroma™"), true });
-#endif
-#if defined(WITH_ANGELSCRIPT)
-		if (!isInGame) {
-			// TRANSLATORS: Menu item in Options > Gameplay section
-			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true });
-		}
 #endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
 		// TRANSLATORS: Menu item in Options > Gameplay section
@@ -123,16 +127,29 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (item.Item.HasBooleanValue) {
+			StringView customText;
 			bool enabled;
 			switch (item.Item.Type) {
+#if defined(WITH_ANGELSCRIPT)
+				case GameplayOptionsItemType::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
+#endif
+				// TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
+				case GameplayOptionsItemType::AllowCheats: enabled = PreferencesCache::AllowCheats; customText = (enabled ? _("\f[c:#d86664]Yes\f[/c]") : _("No")); break;
+				case GameplayOptionsItemType::OverwriteEpisodeEnd:
+					customText = (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::NoCheatsOnly
+						// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
+						? _("No Cheats Only")
+						: (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::HigherScoreOnly
+							// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
+							? _("Higher Score Only")
+							// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
+							: _("Always")));
+					break;
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 				case GameplayOptionsItemType::EnableDiscordIntegration: enabled = PreferencesCache::EnableDiscordIntegration; break;
 #endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 				case GameplayOptionsItemType::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
-#endif
-#if defined(WITH_ANGELSCRIPT)
-				case GameplayOptionsItemType::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
 #endif
 				default: enabled = false; break;
 			}
@@ -147,7 +164,7 @@ namespace Jazz2::UI::Menu
 			} else
 #endif
 			{
-				_root->DrawStringShadow(enabled ? _("Enabled") : _("Disabled"), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+				_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 			}
 		}
@@ -160,6 +177,30 @@ namespace Jazz2::UI::Menu
 		switch (_items[_selectedIndex].Item.Type) {
 			case GameplayOptionsItemType::Enhancements: _root->SwitchToSection<GameplayEnhancementsSection>(); break;
 			case GameplayOptionsItemType::Language: _root->SwitchToSection<LanguageSelectSection>(); break;
+#if defined(WITH_ANGELSCRIPT)
+			case GameplayOptionsItemType::AllowUnsignedScripts: {
+				PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts;
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+			}
+#endif
+			case GameplayOptionsItemType::AllowCheats: {
+				PreferencesCache::AllowCheats = !PreferencesCache::AllowCheats;
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+			}
+			case GameplayOptionsItemType::OverwriteEpisodeEnd: {
+				PreferencesCache::OverwriteEpisodeEnd = (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::NoCheatsOnly
+					? EpisodeEndOverwriteMode::HigherScoreOnly
+					: (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::HigherScoreOnly
+						? EpisodeEndOverwriteMode::Always
+						: EpisodeEndOverwriteMode::NoCheatsOnly));
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+			}
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			case GameplayOptionsItemType::EnableDiscordIntegration: {
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
@@ -177,14 +218,6 @@ namespace Jazz2::UI::Menu
 				if (!PreferencesCache::EnableRgbLights) {
 					RgbLights::Get().Clear();
 				}
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
-#endif
-#if defined(WITH_ANGELSCRIPT)
-			case GameplayOptionsItemType::AllowUnsignedScripts: {
-				PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts;
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
