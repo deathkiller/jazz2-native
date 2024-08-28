@@ -237,7 +237,7 @@ msgid ""
 "You found a secret area."
 msgstr ""
 "\n"
-"Znalazłeś sekretny pokój."
+"Znalazłeś sekretną okolicę."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:3
 msgctxt "prince/01_castle1"
@@ -649,7 +649,7 @@ msgid ""
 msgstr ""
 "\n"
 "Nie ma nagrody dla tych,\n"
-"co sięgają do kabury lekką ręką."
+"których swędzą paluszki."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:3
 msgctxt "secretf/01_easter1"
@@ -809,7 +809,7 @@ msgid ""
 "Water Level control crate above."
 msgstr ""
 "\n"
-"Skrzynia kontrolująca poziom wody nad tobą."
+"Skrzynia kontrolująca poziom wody znajduje się nad tobą."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:5
 msgctxt "secretf/04_haunted1"
@@ -818,7 +818,7 @@ msgid ""
 "Stomping crates can be good and bad..."
 msgstr ""
 "\n"
-"Rozwalanie skrzyń może być obosieczne..."
+"Rozwalanie skrzyń ma swoje plusy i minusy..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:7
 msgctxt "secretf/04_haunted1"
@@ -910,7 +910,7 @@ msgid ""
 "Find the crate and the gems are yours!"
 msgstr ""
 "\n"
-"Znajdź skrzynkę, a skarby będą twoje!"
+"Znajdź skrzynkę, a klejnoty będą twoje!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:2
 msgctxt "secretf/08_town2"
@@ -928,7 +928,7 @@ msgid ""
 "Collecting 20 coins is more rewarding..."
 msgstr ""
 "\n"
-"Za 20 monet czeka cię większa nagroda..."
+"Za zebranie 20 monet czeka cię większa nagroda..."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:1
 msgctxt "secretf/09_town3"
@@ -1020,7 +1020,7 @@ msgid ""
 "the secret metal crate."
 msgstr ""
 "\n"
-"Aby przejść tą część uderz\n"
+"Aby przejść tę część uderz\n"
 "w sekretną, metalową skrzynkę."
 
 #: .fake/Translations/share/01_share1.j2l.h:4
@@ -1252,7 +1252,7 @@ msgstr ""
 "Wejście do Szlaku Klejnotów.\n"
 "Wspinaj się na wierzchołki drzew, \n"
 "aby znaleźć i walnąć zadkiem\n"
-"w skrzynie wejściowe."
+"w skrzynię wejściową."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:14
 msgctxt "xmas99/02_xmas2"
@@ -1766,26 +1766,26 @@ msgstr "Odśwież pamięć podręczną"
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "\f[c:#d86664]Yes\f[/c]"
-msgstr ""
+msgstr "\f[c:#d86664]Tak\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "No"
-msgstr ""
+msgstr "Nie"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:147
 msgid "No Cheats Only"
-msgstr ""
+msgstr "Tylko bez cheatów"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
 msgid "Higher Score Only"
-msgstr ""
+msgstr "Tylko wyższy wynik"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
 msgid "Always"
-msgstr ""
+msgstr "Zawsze"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19
@@ -1845,11 +1845,11 @@ msgstr "Grafika"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 msgid "Low"
-msgstr "Brzydka"
+msgstr "Niski"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 msgid "High"
-msgstr "Ładna"
+msgstr "Wysoki"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Vertical"
