@@ -167,10 +167,6 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
 
-#if defined(DEATH_TARGET_SWITCH)
-	LOGW("SWITCH TRACE 000");
-#endif
-
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	// Allow `/extract-pak` only on PC platforms
 	if (config.argc() >= 3) {
@@ -197,10 +193,6 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 
 	PreferencesCache::Initialize(config);
 
-#if defined(DEATH_TARGET_SWITCH)
-	LOGW("SWITCH TRACE 009");
-#endif
-
 	config.windowTitle = NCINE_APP_NAME;
 	if (PreferencesCache::MaxFps == PreferencesCache::UseVsync) {
 		config.withVSync = true;
@@ -220,25 +212,13 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 #if defined(WITH_IMGUI)
 	config.withDebugOverlay = true;
 #endif
-
-#if defined(DEATH_TARGET_SWITCH)
-	LOGW("SWITCH TRACE 010");
-#endif
 }
 
 void GameEventHandler::OnInitialize()
 {
 	ZoneScopedC(0x888888);
 
-#if defined(DEATH_TARGET_SWITCH)
-	LOGW("SWITCH TRACE 011");
-#endif
-
 	OnBeforeInitialize();
-
-#if defined(DEATH_TARGET_SWITCH)
-	LOGW("SWITCH TRACE 012");
-#endif
 
 #if !defined(SHAREWARE_DEMO_ONLY)
 	if (PreferencesCache::ResumeOnStart) {
@@ -356,10 +336,6 @@ void GameEventHandler::OnInitialize()
 		root->GoToMainMenu(endOfStream);
 		return true;
 	}));
-#endif
-
-#if defined(DEATH_TARGET_SWITCH)
-	LOGW("SWITCH TRACE 013");
 #endif
 
 	Vector2i res = theApplication().GetResolution();
