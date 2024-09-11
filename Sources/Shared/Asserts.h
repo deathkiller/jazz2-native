@@ -63,9 +63,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	else
 #		if defined(__has_builtin)
 #			if __has_builtin(__builtin_debugtrap)
-#				define __DEATH_ASSERT_BREAK __builtin_debugtrap()
+#				define __DEATH_ASSERT_BREAK() __builtin_debugtrap()
 #			elif __has_builtin(__builtin_trap)
-#				define __DEATH_ASSERT_BREAK __builtin_trap()
+#				define __DEATH_ASSERT_BREAK() __builtin_trap()
 #			endif
 #		endif
 #		if !defined(__DEATH_ASSERT_BREAK)

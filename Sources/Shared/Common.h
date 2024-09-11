@@ -59,7 +59,8 @@ namespace Death { namespace Implementation {
 
 #define __DEATH_NOOP__DEATH_REMOVE_PARENS_EXTRACT
 #define __DEATH_REMOVE_PARENS_EXTRACT(...) __DEATH_REMOVE_PARENS_EXTRACT __VA_ARGS__
-#define __DEATH_REMOVE_PARENS_EVALUATE(x, ...) __DEATH_PASTE(x, __VA_ARGS__)
+#define __DEATH_REMOVE_PARENS_PASTE(x, ...) x ## __VA_ARGS__
+#define __DEATH_REMOVE_PARENS_EVALUATE(x, ...) __DEATH_REMOVE_PARENS_PASTE(x, __VA_ARGS__)
 /** @brief Remove optional parentheses from argument */
 #define DEATH_REMOVE_PARENS(x) __DEATH_REMOVE_PARENS_EVALUATE(__DEATH_NOOP, __DEATH_REMOVE_PARENS_EXTRACT x)
 
