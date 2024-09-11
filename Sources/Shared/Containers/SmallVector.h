@@ -178,8 +178,8 @@ namespace Death { namespace Containers {
 
 		/// Check whether Elt will be invalidated by resizing the vector to NewSize.
 		void assertSafeToReferenceAfterResize(const void* Elt, std::size_t NewSize) {
-			DEATH_DEBUG_ASSERT(isSafeToReferenceAfterResize(Elt, NewSize), ,
-				   "Attempting to reference an element of the vector in an operation that invalidates it");
+			DEATH_DEBUG_ASSERT(isSafeToReferenceAfterResize(Elt, NewSize),
+				   "Attempting to reference an element of the vector in an operation that invalidates it", );
 		}
 
 		/// Check whether Elt will be invalidated by increasing the size of the
@@ -673,7 +673,7 @@ namespace Death { namespace Containers {
 
 		/// Like resize, but requires that \p N is less than \a size().
 		void truncate(size_type N) {
-			DEATH_DEBUG_ASSERT(this->size() >= N, , "Cannot increase size with truncate");
+			DEATH_DEBUG_ASSERT(this->size() >= N, "Cannot increase size with truncate", );
 			this->destroy_range(this->begin() + N, this->end());
 			this->set_size(N);
 		}
@@ -779,7 +779,7 @@ namespace Death { namespace Containers {
 			// Just cast away constness because this is a non-const member function.
 			iterator I = const_cast<iterator>(CI);
 
-			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(CI), I, "Iterator to erase is out of bounds");
+			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(CI), "Iterator to erase is out of bounds", I);
 
 			iterator N = I;
 			// Shift all elts down one.
@@ -794,7 +794,7 @@ namespace Death { namespace Containers {
 			iterator S = const_cast<iterator>(CS);
 			iterator E = const_cast<iterator>(CE);
 
-			DEATH_DEBUG_ASSERT(this->isRangeInStorage(S, E), S, "Range to erase is out of bounds");
+			DEATH_DEBUG_ASSERT(this->isRangeInStorage(S, E), "Range to erase is out of bounds", S);
 
 			iterator N = S;
 			// Shift all elts down.
@@ -813,7 +813,7 @@ namespace Death { namespace Containers {
 			// Just cast away constness because this is a non-const member function.
 			iterator I = const_cast<iterator>(CI);
 
-			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(CI), I, "Iterator to erase is out of bounds");
+			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(CI), "Iterator to erase is out of bounds", I);
 
 			iterator IL = this->end() - 1;
 			if (I != IL) {
@@ -838,7 +838,7 @@ namespace Death { namespace Containers {
 				return this->end() - 1;
 			}
 
-			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(I), I, "Insertion iterator is out of bounds");
+			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(I), "Insertion iterator is out of bounds", I);
 
 			// Grow if necessary.
 			std::size_t Index = I - this->begin();
@@ -880,7 +880,7 @@ namespace Death { namespace Containers {
 				return this->begin() + InsertElt;
 			}
 
-			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(I), I, "Insertion iterator is out of bounds");
+			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(I), "Insertion iterator is out of bounds", I);
 
 			// Ensure there is enough space, and get the (maybe updated) address of
 			// Elt.
@@ -945,7 +945,7 @@ namespace Death { namespace Containers {
 				return this->begin() + InsertElt;
 			}
 
-			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(I), I, "Insertion iterator is out of bounds");
+			DEATH_DEBUG_ASSERT(this->isReferenceToStorage(I), "Insertion iterator is out of bounds", I);
 
 			// Check that the reserve that follows doesn't invalidate the iterators.
 			this->assertSafeToAddRange(From, To);

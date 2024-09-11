@@ -15,7 +15,7 @@ namespace Jazz2::Multiplayer
 	ServerDiscovery::ServerDiscovery(INetworkHandler* server, std::uint16_t port)
 		: _server(server), _observer(nullptr), _actualPort(port)
 	{
-		DEATH_DEBUG_ASSERT(server != nullptr, , "server cannot be null");
+		DEATH_DEBUG_ASSERT(server != nullptr, "server cannot be null", );
 
 		NetworkManager::InitializeBackend();
 
@@ -28,7 +28,7 @@ namespace Jazz2::Multiplayer
 	ServerDiscovery::ServerDiscovery(IServerObserver* observer)
 		: _server(nullptr), _observer(observer)
 	{
-		DEATH_DEBUG_ASSERT(observer != nullptr, , "observer cannot be null");
+		DEATH_DEBUG_ASSERT(observer != nullptr, "observer cannot be null", );
 
 		NetworkManager::InitializeBackend();
 

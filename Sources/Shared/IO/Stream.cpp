@@ -9,7 +9,7 @@ namespace Death { namespace IO {
 
 	std::int64_t Stream::CopyTo(Stream& targetStream)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH)
 		constexpr std::int32_t BufferSize = 8192;
 #else
 		constexpr std::int32_t BufferSize = 16384;

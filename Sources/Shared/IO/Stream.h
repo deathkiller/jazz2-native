@@ -14,7 +14,7 @@
 #include "../Common.h"
 #include "../Base/IDisposable.h"
 
-#include <cstdio>		// For FILE
+#include <cstdio>		// for FILE
 #include <memory>
 
 namespace Death { namespace IO {

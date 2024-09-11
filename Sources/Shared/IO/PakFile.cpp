@@ -75,7 +75,7 @@ namespace Death { namespace IO {
 
 	std::int32_t BoundedStream::Read(void* buffer, std::int32_t bytes)
 	{
-		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
+		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
 
 		if (bytes <= 0) {
 			return 0;
@@ -192,23 +192,23 @@ namespace Death { namespace IO {
 	PakFile::PakFile(const StringView path)
 	{
 		std::unique_ptr<Stream> s = std::make_unique<FileStream>(path, FileAccess::Read);
-		DEATH_ASSERT(s->GetSize() > 24, , "Invalid .pak file");
+		DEATH_ASSERT(s->GetSize() > 24, "Invalid .pak file", );
 
 		// Header size is 18 bytes
 		bool isSeekable = s->Seek(-18, SeekOrigin::End) >= 0;
-		DEATH_ASSERT(isSeekable, , ".pak file must be opened from seekable stream");
+		DEATH_ASSERT(isSeekable, ".pak file must be opened from seekable stream", );
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
-		DEATH_ASSERT(signature == Signature, , "Invalid .pak file");
+		DEATH_ASSERT(signature == Signature, "Invalid .pak file", );
 
 		std::uint16_t fileVersion = s->ReadValue<std::uint16_t>();
 		std::uint64_t rootIndexOffset = s->ReadValue<std::uint64_t>();
 
-		DEATH_ASSERT(rootIndexOffset < INT64_MAX, , "Malformed .pak file");
+		DEATH_ASSERT(rootIndexOffset < INT64_MAX, "Malformed .pak file", );
 		s->Seek(static_cast<std::int64_t>(rootIndexOffset), SeekOrigin::Begin);
 
 		std::uint32_t mountPointLength = s->ReadVariableUint32();
-		DEATH_ASSERT(mountPointLength < INT32_MAX, , "Malformed .pak file");
+		DEATH_ASSERT(mountPointLength < INT32_MAX, "Malformed .pak file", );
 		String relativeMountPoint(NoInit, mountPointLength);
 		s->Read(relativeMountPoint.data(), static_cast<std::int32_t>(mountPointLength));
 
@@ -259,7 +259,7 @@ namespace Death { namespace IO {
 			item.Flags = (ItemFlags)s->ReadVariableUint32();
 
 			std::uint32_t nameLength = s->ReadVariableUint32();
-			DEATH_ASSERT(nameLength == 0 || nameLength < INT32_MAX, , "Malformed .pak file");
+			DEATH_ASSERT(nameLength == 0 || nameLength < INT32_MAX, "Malformed .pak file", );
 			item.Name = String(NoInit, nameLength);
 			s->Read(item.Name.data(), static_cast<std::int32_t>(nameLength));
 
@@ -544,8 +544,8 @@ namespace Death { namespace IO {
 
 	bool PakWriter::AddFile(Stream& stream, StringView path, bool compress)
 	{
-		DEATH_ASSERT(_outputStream->IsValid(), false, "Invalid output stream specified");
-		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\', false, "\"%s\" is not valid file path", String::nullTerminatedView(path).data());
+		DEATH_ASSERT(_outputStream->IsValid(), "Invalid output stream specified", false);
+		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\', ("\"%s\" is not valid file path", String::nullTerminatedView(path).data()), false);
 
 		PakFile::Item* parentItem = FindOrCreateParentItem(path);
 		Array<PakFile::Item>* items;
@@ -580,9 +580,9 @@ namespace Death { namespace IO {
 			size = 0;
 		}
 
-		DEATH_ASSERT(uncompressedSize > 0, false, "Failed to copy stream to .pak file");
+		DEATH_ASSERT(uncompressedSize > 0, "Failed to copy stream to .pak file", false);
 		// NOTE: Files inside .pak are limited to 4GBs only for now
-		DEATH_ASSERT(uncompressedSize < UINT32_MAX && size < UINT32_MAX, false, "File size in .pak file exceeded the allowed range");
+		DEATH_ASSERT(uncompressedSize < UINT32_MAX && size < UINT32_MAX, "File size in .pak file exceeded the allowed range", false);
 
 		PakFile::Item* newItem = &arrayAppend(*items, PakFile::Item());
 		newItem->Name = path;

@@ -19,6 +19,17 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 namespace Death { namespace Environment {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	bool IsSandboxed()
+	{
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
+		return true;
+#elif defined(DEATH_TARGET_APPLE)
+		return std::getenv("APP_SANDBOX_CONTAINER_ID");
+#else
+		return false;
+#endif
+	}
+
 #if defined(DEATH_TARGET_APPLE)
 	Containers::String GetAppleVersion()
 	{

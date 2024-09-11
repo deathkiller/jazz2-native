@@ -90,7 +90,7 @@ namespace Death { namespace Containers {
 	template<class T> Array<BasicStringView<T>> BasicStringView<T>::split(const StringView delimiter) const {
 		const char* const delimiterData = delimiter.data();
 		const std::size_t delimiterSize = delimiter.size();
-		DEATH_ASSERT(delimiterSize, {}, "Containers::StringView::split(): delimiter is empty");
+		DEATH_ASSERT(delimiterSize, "Delimiter is empty", {});
 
 		Array<BasicStringView<T>> parts;
 		const char* const end = this->end();
@@ -534,7 +534,7 @@ namespace Death { namespace Containers {
 					// Go to the next aligned position. If the pointer was already aligned, we'll go to the next aligned vector;
 					// if not, there will be an overlap and we'll check some bytes twice.
 					const char* i = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(data + 16) & ~0xf);
-					//DEATH_DEBUG_ASSERT(i > data && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
+					DEATH_DEBUG_ASSERT(i > data && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
 
 					// Go four vectors at a time with the aligned pointer
 					const char* const end = data + size;
@@ -1113,14 +1113,14 @@ namespace Death { namespace Containers {
 	template<class T> BasicStringView<T> BasicStringView<T>::exceptPrefix(const StringView prefix) const {
 		// Stripping a hardcoded prefix is unlikely to be called in a tight loop -- and the main purpose of this API is this
 		// check -- so it shouldn't be a debug assert
-		DEATH_ASSERT(hasPrefix(prefix), {}, "Containers::StringView::exceptPrefix(): String doesn't begin with specified prefix");
+		DEATH_ASSERT(hasPrefix(prefix), "String doesn't begin with specified prefix", {});
 		return exceptPrefix(prefix.size());
 	}
 
 	template<class T> BasicStringView<T> BasicStringView<T>::exceptSuffix(const StringView suffix) const {
 		// Stripping a hardcoded suffix is unlikely to be called in a tight loop -- and the main purpose of this API is this
 		// check -- so it shouldn't be a debug assert
-		DEATH_ASSERT(hasSuffix(suffix), {}, "Containers::StringView::exceptSuffix(): String doesn't end with specified suffix");
+		DEATH_ASSERT(hasSuffix(suffix), "String doesn't end with specified suffix", {});
 		return exceptSuffix(suffix.size());
 	}
 

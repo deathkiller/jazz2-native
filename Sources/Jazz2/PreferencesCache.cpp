@@ -159,12 +159,24 @@ namespace Jazz2
 #	endif
 #endif
 
+#if defined(DEATH_TARGET_SWITCH)
+		LOGW("SWITCH TRACE 001");
+#endif
+
 		UI::ControlScheme::Reset();
+
+#if defined(DEATH_TARGET_SWITCH)
+		LOGW("SWITCH TRACE 002");
+#endif
 
 		// Try to read config file
 		if (!resetConfig) {
 			auto s = fs::Open(_configPath, FileAccess::Read);
 			if (s->GetSize() > 18) {
+#if defined(DEATH_TARGET_SWITCH)
+				LOGW("SWITCH TRACE 003");
+#endif
+
 				std::uint64_t signature = s->ReadValue<std::uint64_t>();
 				std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 				std::uint8_t version = s->ReadValue<std::uint8_t>();
@@ -233,6 +245,10 @@ namespace Jazz2
 					TouchRightPadding.X = std::round(uc.ReadValue<std::int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
 					TouchRightPadding.Y = std::round(uc.ReadValue<std::int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
 
+#if defined(DEATH_TARGET_SWITCH)
+					LOGW("SWITCH TRACE 004");
+#endif
+
 					if (version >= 5) {
 						GamepadButtonLabels = (GamepadType)uc.ReadValue<std::uint8_t>();
 					}
@@ -279,6 +295,10 @@ namespace Jazz2
 						std::uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
 						uc.Seek(controlMappingCount * sizeof(std::uint32_t), SeekOrigin::Current);
 					}
+
+#if defined(DEATH_TARGET_SWITCH)
+					LOGW("SWITCH TRACE 005");
+#endif
 
 					// Episode End
 					std::uint16_t episodeEndSize = uc.ReadValue<std::uint16_t>();
@@ -329,6 +349,10 @@ namespace Jazz2
 				FirstRun = true;
 				TryLoadPreferredLanguage();
 
+#if defined(DEATH_TARGET_SWITCH)
+				LOGW("SWITCH TRACE 006");
+#endif
+
 				fs::CreateDirectories(configDir);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -338,6 +362,10 @@ namespace Jazz2
 #endif
 			}
 		}
+
+#if defined(DEATH_TARGET_SWITCH)
+		LOGW("SWITCH TRACE 007");
+#endif
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 		// Override some settings by command-line arguments
@@ -382,6 +410,10 @@ namespace Jazz2
 			}
 #	endif
 		}
+#endif
+
+#if defined(DEATH_TARGET_SWITCH)
+		LOGW("SWITCH TRACE 008");
 #endif
 	}
 

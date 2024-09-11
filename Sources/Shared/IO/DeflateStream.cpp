@@ -75,7 +75,7 @@ namespace Death { namespace IO {
 	{
 		switch (origin) {
 			case SeekOrigin::Current: {
-				DEATH_ASSERT(offset >= 0, Stream::OutOfRange, "Cannot seek to negative values");
+				DEATH_ASSERT(offset >= 0, "Cannot seek to negative values", Stream::OutOfRange);
 
 				char buffer[4096];
 				while (offset > 0) {
@@ -171,7 +171,7 @@ namespace Death { namespace IO {
 		std::int32_t error = (_rawInflate ? inflateInit2(&_strm, -MAX_WBITS) : inflateInit(&_strm));
 		if (error != Z_OK) {
 			_state = State::Failed;
-			LOGE("Failed to initialize compressed stream with error: %i", error);
+			LOGE("Failed to initialize compressed stream with error %i", error);
 			return;
 		}
 
@@ -215,7 +215,7 @@ namespace Death { namespace IO {
 		if (res != Z_OK && res != Z_STREAM_END) {
 			CeaseReading();
 			_state = State::Failed;
-			LOGE("Failed to inflate compressed stream with error: %i", res);
+			LOGE("Failed to inflate compressed stream with error %i", res);
 			return -1;
 		}
 		size -= _strm.avail_out;
@@ -237,7 +237,7 @@ namespace Death { namespace IO {
 
 		std::int32_t error = inflateEnd((z_stream*)&_strm);
 		if (error != Z_OK) {
-			LOGE("Failed to finalize compressed stream with error: %i", error);
+			LOGE("Failed to finalize compressed stream with error %i", error);
 		}
 
 		_state = State::Finished;
@@ -256,7 +256,7 @@ namespace Death { namespace IO {
 			? deflateInit2(&_strm, compressionLevel, Z_DEFLATED, -MAX_WBITS, MAX_MEM_LEVEL >= 8 ? 8 : MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY)
 			: deflateInit(&_strm, compressionLevel));
 		if (error != Z_OK) {
-			LOGE("Failed to initialize compressed stream with error: %i", error);
+			LOGE("Failed to initialize compressed stream with error %i", error);
 			_state = State::Failed;
 		}
 	}
@@ -278,7 +278,7 @@ namespace Death { namespace IO {
 
 		std::int32_t error = deflateEnd(&_strm);
 		if (error != Z_OK) {
-			LOGE("Failed to finalize compressed stream with error: %i", error);
+			LOGE("Failed to finalize compressed stream with error %i", error);
 		}
 
 		_state = State::Finished;
@@ -352,7 +352,7 @@ namespace Death { namespace IO {
 				break;
 			}
 			if (error != Z_OK) {
-				LOGE("Failed to deflate uncompressed buffer with error: %i", error);
+				LOGE("Failed to deflate uncompressed buffer with error %i", error);
 				return Stream::Invalid;
 			}
 		}

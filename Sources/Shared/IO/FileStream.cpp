@@ -145,7 +145,7 @@ namespace Death { namespace IO {
 
 	std::int32_t FileStream::Read(void* buffer, std::int32_t bytes)
 	{
-		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
+		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
 
 		if (bytes <= 0) {
 			return 0;
@@ -176,7 +176,7 @@ namespace Death { namespace IO {
 
 	std::int32_t FileStream::Write(const void* buffer, std::int32_t bytes)
 	{
-		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
+		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
 
 		if (bytes <= 0) {
 			return 0;

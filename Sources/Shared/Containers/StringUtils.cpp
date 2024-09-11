@@ -1128,7 +1128,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		// able to std::realloc(). The deleter doesn't use the size argument so it should be fine to transfer it over
 		// to a String with the size excluding the null terminator.
 		void(*const deleter)(char*, std::size_t) = output.deleter();
-		DEATH_DEBUG_ASSERT(deleter, {}, "StringUtils::lowercaseUnicode(): Invalid deleter used");
+		DEATH_DEBUG_ASSERT(deleter, "StringUtils::lowercaseUnicode(): Invalid deleter used", {});
 		return String{output.release(), size - 1, deleter};
 	}
 
@@ -1352,7 +1352,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		// able to std::realloc(). The deleter doesn't use the size argument so it should be fine to transfer it over
 		// to a String with the size excluding the null terminator.
 		void(*const deleter)(char*, std::size_t) = output.deleter();
-		DEATH_DEBUG_ASSERT(deleter, {}, "StringUtils::uppercaseUnicode(): Invalid deleter used");
+		DEATH_DEBUG_ASSERT(deleter, "StringUtils::uppercaseUnicode(): Invalid deleter used", {});
 		return String{output.release(), size - 1, deleter};
 	}
 	
@@ -1374,7 +1374,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 	}
 
 	String replaceAll(StringView string, StringView search, StringView replace) {
-		DEATH_ASSERT(!search.empty(), {}, "StringUtils::replaceAll(): Empty search string would cause an infinite loop");
+		DEATH_ASSERT(!search.empty(), "Empty search string would cause an infinite loop", {});
 		Array<char> output;
 		while (const StringView found = string.find(search)) {
 			arrayAppend(output, string.prefix(found.begin()));
@@ -1388,7 +1388,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		// able to std::realloc(). The deleter doesn't use the size argument so it should be fine to transfer it over
 		// to a String with the size excluding the null terminator.
 		void(*const deleter)(char*, std::size_t) = output.deleter();
-		DEATH_DEBUG_ASSERT(deleter, {}, "StringUtils::replaceAll(): Invalid deleter used");
+		DEATH_DEBUG_ASSERT(deleter, "StringUtils::replaceAll(): Invalid deleter used", {});
 		return String{output.release(), size - 1, deleter};
 	}
 

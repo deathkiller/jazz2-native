@@ -518,8 +518,8 @@ namespace Death { namespace Containers {
 		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		const std::size_t size = view.size() * sizeof(T) / sizeof(U);
-		DEATH_ASSERT(size * sizeof(U) == view.size() * sizeof(T), {},
-			"Containers::arrayCast(): Can't reinterpret %zu %zu-byte items into a %zu-byte type", view.size(), sizeof(T), sizeof(U));
+		DEATH_ASSERT(size * sizeof(U) == view.size() * sizeof(T),
+			("Can't reinterpret %zu %zu-byte items into a %zu-byte type", view.size(), sizeof(T), sizeof(U)), {});
 		return { reinterpret_cast<U*>(view.begin()), size };
 	}
 
@@ -533,8 +533,8 @@ namespace Death { namespace Containers {
 	template<class U> ArrayView<U> arrayCast(ArrayView<const void> view) {
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		const std::size_t size = view.size() / sizeof(U);
-		DEATH_ASSERT(size * sizeof(U) == view.size(), {},
-			"Containers::arrayCast(): Can't reinterpret %zu bytes into a %zu-byte type", view.size(), sizeof(U));
+		DEATH_ASSERT(size * sizeof(U) == view.size(),
+			("Can't reinterpret %zu bytes into a %zu-byte type", view.size(), sizeof(U)), {});
 		return { reinterpret_cast<U*>(view.data()), size };
 	}
 
@@ -865,20 +865,20 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T> template<class U, class> constexpr T& ArrayView<T>::operator[](const U i) const {
-		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < _size, "Containers::ArrayView::operator[](): Index %zu out of range for %zu elements", std::size_t(i), _size),
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < _size, ("Containers::ArrayView::operator[](): Index %zu out of range for %zu elements", std::size_t(i), _size)),
 				_data[i];
 	}
 
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(T* begin, T* end) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(_data <= begin && begin <= end && end <= _data + _size,
-					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements",
-					std::size_t(begin - _data), std::size_t(end - _data), _size),
+					("Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements",
+					 std::size_t(begin - _data), std::size_t(end - _data), _size)),
 				ArrayView<T>{begin, std::size_t(end - begin)};
 	}
 
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(std::size_t begin, std::size_t end) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(begin <= end && end <= _size,
-					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin, end, _size),
+					("Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin, end, _size)),
 				ArrayView<T>{_data + begin, end - begin};
 	}
 
@@ -893,28 +893,28 @@ namespace Death { namespace Containers {
 	}
 
 	template<std::size_t size_, class T> template<class U, class> constexpr T& StaticArrayView<size_, T>::operator[](const U i) const {
-		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, "Containers::ArrayView::operator[](): Index %zu out of range for %zu elements", std::size_t(i), size_),
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, ("Containers::ArrayView::operator[](): Index %zu out of range for %zu elements", std::size_t(i), size_)),
 				_data[i];
 	}
 
 	template<class T> template<std::size_t size_, class U, class> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(const U begin) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(_data <= begin && begin + size_ <= _data + _size,
-					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements",
-					std::size_t(begin - _data), std::size_t(begin + size_ - _data), _size),
+					("Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements",
+					 std::size_t(begin - _data), std::size_t(begin + size_ - _data), _size)),
 				StaticArrayView<size_, T>{begin};
 	}
 
 	template<class T> template<std::size_t size_> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(std::size_t begin) const {
 		static_assert(begin + size_ <= _size, "Slice needs to have a positive size");
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(begin + size_ <= _size,
-					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin, begin + size_, _size),
+					("Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin, begin + size_, _size)),
 				StaticArrayView<size_, T>{_data + begin};
 	}
 
 	template<class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> ArrayView<T>::slice() const {
 		static_assert(begin_ < end_, "Fixed-size slice needs to have a positive size");
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(end_ <= _size,
-					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin_, end_, _size),
+					("Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin_, end_, _size)),
 				StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
 
