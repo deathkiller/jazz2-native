@@ -13,8 +13,8 @@ namespace Death { namespace IO {
 	{
 	public:
 		explicit MemoryStream(std::int64_t initialCapacity = 0);
-		MemoryStream(std::uint8_t* bufferPtr, std::int64_t bufferSize);
-		MemoryStream(const std::uint8_t* bufferPtr, std::int64_t bufferSize);
+		MemoryStream(void* bufferPtr, std::int64_t bufferSize);
+		MemoryStream(const void* bufferPtr, std::int64_t bufferSize);
 
 		MemoryStream(const MemoryStream&) = delete;
 		MemoryStream& operator=(const MemoryStream&) = delete;
@@ -31,8 +31,17 @@ namespace Death { namespace IO {
 		void ReserveCapacity(std::int64_t bytes);
 		std::int32_t FetchFromStream(Stream& s, std::int32_t bytes);
 
-		DEATH_ALWAYS_INLINE const std::uint8_t* GetBuffer() const {
+		DEATH_ALWAYS_INLINE std::uint8_t* GetBuffer() {
 			return _buffer.data();
+		}
+
+		DEATH_ALWAYS_INLINE const std::uint8_t* GetCurrentPointer(std::int32_t bytes) {
+			if (_seekOffset + bytes > _size) {
+				return nullptr;
+			}
+			const std::uint8_t* ptr = &_buffer[_seekOffset];
+			_seekOffset += bytes;
+			return ptr;
 		}
 
 	private:

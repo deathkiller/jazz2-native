@@ -136,7 +136,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return _InterlockedIncrement((long*)addend);
+		return (T)_InterlockedIncrement((long*)addend);
 #else
 		T result = __sync_add_and_fetch(addend, 1);
 		InterlockedOperationBarrier();
@@ -149,7 +149,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return _InterlockedDecrement((long*)addend);
+		return (T)_InterlockedDecrement((long*)addend);
 #else
 		T result = __sync_sub_and_fetch(addend, 1);
 		InterlockedOperationBarrier();
@@ -162,7 +162,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return _InterlockedExchange((long*)destination, value);
+		return (T)_InterlockedExchange((long*)destination, (long)value);
 #else
 		T result = __atomic_exchange_n(destination, value, __ATOMIC_ACQ_REL);
 		InterlockedOperationBarrier();
@@ -175,7 +175,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return _InterlockedCompareExchange((long*)destination, exchange, comparand);
+		return (T)_InterlockedCompareExchange((long*)destination, (long)exchange, (long)comparand);
 #else
 		T result = __sync_val_compare_and_swap(destination, comparand, exchange);
 		InterlockedOperationBarrier();
@@ -188,7 +188,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return _InterlockedExchangeAdd((long*)addend, value);
+		return (T)_InterlockedExchangeAdd((long*)addend, (long)value);
 #else
 		T result = __sync_fetch_and_add(addend, value);
 		InterlockedOperationBarrier();
@@ -201,7 +201,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(std::int64_t), "Size of T must be the same as size of std::int64_t");
-		return _InterlockedExchangeAdd64((std::int64_t*)addend, value);
+		return (T)_InterlockedExchangeAdd64((std::int64_t*)addend, (std::int64_t)value);
 #else
 		T result = __sync_fetch_and_add(addend, value);
 		InterlockedOperationBarrier();
@@ -215,10 +215,10 @@ namespace Death {
 #if defined(DEATH_TARGET_MSVC)
 #	if !defined(DEATH_TARGET_32BIT)
 		static_assert(sizeof(T) == sizeof(std::int64_t), "Size of T must be the same as size of std::int64_t");
-		return _InterlockedExchangeAdd64((std::int64_t*)addend, value);
+		return (T)_InterlockedExchangeAdd64((std::int64_t*)addend, (std::int64_t)value);
 #	else
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return _InterlockedExchangeAdd((long*)addend, value);
+		return (T)_InterlockedExchangeAdd((long*)addend, (long)value);
 #	endif
 #else
 		T result = __sync_fetch_and_add(addend, value);
@@ -232,7 +232,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		_InterlockedAnd((long*)destination, value);
+		_InterlockedAnd((long*)destination, (long)value);
 #else
 		__sync_and_and_fetch(destination, value);
 		InterlockedOperationBarrier();
@@ -244,7 +244,7 @@ namespace Death {
 	{
 #if defined(DEATH_TARGET_MSVC)
 		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		_InterlockedOr((long*)destination, value);
+		_InterlockedOr((long*)destination, (long)value);
 #else
 		__sync_or_and_fetch(destination, value);
 		InterlockedOperationBarrier();

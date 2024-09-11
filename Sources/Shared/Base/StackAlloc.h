@@ -24,12 +24,6 @@ namespace Death { namespace Implementation {
 			: _data(data), _size((std::uint32_t)size)
 		{
 		}
-	
-		stack_alloc(stack_alloc&& o) noexcept
-			: _data(o._data), _size(o._size)
-		{
-			o._size = 0;
-		}
 
 		~stack_alloc()
 		{
@@ -40,7 +34,12 @@ namespace Death { namespace Implementation {
 					_data[i].~T();
 				}
 			}
-			_size = 0;
+		}
+
+		stack_alloc(stack_alloc&& o) noexcept
+			: _data(o._data), _size(o._size)
+		{
+			o._size = 0;
 		}
 
 		constexpr T& operator*() const { return *_data; }

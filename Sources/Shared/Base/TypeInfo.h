@@ -2,7 +2,7 @@
 
 #include "../Common.h"
 
-// If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used instead of runtime_cast<T>()
+// If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used instead of optimized runtime_cast<T>()
 #if !defined(DEATH_NO_RUNTIME_CAST)
 
 #include <memory>
@@ -60,7 +60,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		return TypeInfoSkip{sizeAtBegin, sizeAtEnd, untilRuntime, moreAtRuntime ? N - 1 : 0};
 	}
 
-	template <std::size_t N>
+	template<std::size_t N>
 	constexpr TypeInfoSkip CreateTypeInfoSkip(std::size_t sizeAtBegin, std::size_t sizeAtEnd, const char(&untilRuntime)[N]) {
 		return TypeInfoSkip{sizeAtBegin, sizeAtEnd, untilRuntime, N - 1};
 	}

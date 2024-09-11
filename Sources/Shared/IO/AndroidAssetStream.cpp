@@ -100,7 +100,7 @@ namespace Death { namespace IO {
 
 	std::int32_t AndroidAssetStream::Read(void* buffer, std::int32_t bytes)
 	{
-		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
+		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
 
 		if (bytes <= 0) {
 			return 0;
@@ -165,7 +165,7 @@ namespace Death { namespace IO {
 
 	const char* AndroidAssetStream::TryGetAssetPath(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, nullptr, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, "path is null", nullptr);
 		if (strncmp(path, Prefix.data(), Prefix.size()) == 0) {
 			// Skip leading path separator character
 			return (path[7] == '/' || path[7] == '\\' ? path + 8 : path + 7);
@@ -175,13 +175,13 @@ namespace Death { namespace IO {
 
 	bool AndroidAssetStream::TryOpen(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, false, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, "path is null", false);
 		return (TryOpenFile(path) || TryOpenDirectory(path));
 	}
 
 	bool AndroidAssetStream::TryOpenFile(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, false, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, "path is null", false);
 		const char* strippedPath = TryGetAssetPath(path);
 		if (strippedPath == nullptr) {
 			return false;
@@ -198,7 +198,7 @@ namespace Death { namespace IO {
 
 	bool AndroidAssetStream::TryOpenDirectory(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, false, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, "path is null", false);
 		const char* strippedPath = TryGetAssetPath(path);
 		if (strippedPath == nullptr) {
 			return false;
@@ -221,7 +221,7 @@ namespace Death { namespace IO {
 
 	std::int64_t AndroidAssetStream::GetFileSize(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, 0, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, "path is null", 0);
 
 		off64_t assetLength = 0;
 		const char* strippedPath = TryGetAssetPath(path);
@@ -240,7 +240,7 @@ namespace Death { namespace IO {
 
 	AAssetDir* AndroidAssetStream::OpenDirectory(const char* dirName)
 	{
-		DEATH_ASSERT(dirName != nullptr, nullptr, "dirName is nullptr");
+		DEATH_ASSERT(dirName != nullptr, "dirName is null", nullptr);
 		return AAssetManager_openDir(_assetManager, dirName);
 	}
 

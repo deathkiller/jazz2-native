@@ -56,7 +56,11 @@ namespace Death { namespace IO {
 			Failed
 		};
 
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH)
+		static constexpr std::int32_t BufferSize = 8192;
+#else
 		static constexpr std::int32_t BufferSize = 16384;
+#endif
 
 		Stream* _inputStream;
 		z_stream _strm;
@@ -101,7 +105,11 @@ namespace Death { namespace IO {
 			Failed
 		};
 
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH)
+		static constexpr std::int32_t BufferSize = 8192;
+#else
 		static constexpr std::int32_t BufferSize = 16384;
+#endif
 
 		Stream* _outputStream;
 		z_stream _strm;

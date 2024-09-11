@@ -16,14 +16,14 @@ namespace Death { namespace IO {
 		}
 	}
 
-	MemoryStream::MemoryStream(std::uint8_t* bufferPtr, std::int64_t bufferSize)
-		: _buffer(bufferPtr, bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::Writable)
+	MemoryStream::MemoryStream(void* bufferPtr, std::int64_t bufferSize)
+		: _buffer(static_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::Writable)
 	{
 		_size = bufferSize;
 	}
 
-	MemoryStream::MemoryStream(const std::uint8_t* bufferPtr, std::int64_t bufferSize)
-		: _buffer(const_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::ReadOnly)
+	MemoryStream::MemoryStream(const void* bufferPtr, std::int64_t bufferSize)
+		: _buffer(const_cast<std::uint8_t*>(static_cast<const std::uint8_t*>(bufferPtr)), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::ReadOnly)
 	{
 		_size = bufferSize;
 	}
@@ -60,7 +60,7 @@ namespace Death { namespace IO {
 
 	std::int32_t MemoryStream::Read(void* buffer, std::int32_t bytes)
 	{
-		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
+		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
 
 		std::int32_t bytesRead = 0;
 
@@ -75,7 +75,7 @@ namespace Death { namespace IO {
 
 	std::int32_t MemoryStream::Write(const void* buffer, std::int32_t bytes)
 	{
-		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
+		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
 
 		std::int32_t bytesWritten = 0;
 

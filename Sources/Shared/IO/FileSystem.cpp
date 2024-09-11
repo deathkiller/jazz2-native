@@ -2511,15 +2511,15 @@ namespace Death { namespace IO {
 
 	std::unique_ptr<Stream> FileSystem::CreateFromMemory(std::uint8_t* bufferPtr, std::int32_t bufferSize)
 	{
-		DEATH_ASSERT(bufferPtr != nullptr, nullptr, "bufferPtr is nullptr");
-		DEATH_ASSERT(bufferSize > 0, nullptr, "bufferSize is 0");
+		DEATH_ASSERT(bufferPtr != nullptr, "bufferPtr is null", nullptr);
+		DEATH_ASSERT(bufferSize > 0, "bufferSize is 0", nullptr);
 		return std::make_unique<MemoryStream>(bufferPtr, bufferSize);
 	}
 
 	std::unique_ptr<Stream> FileSystem::CreateFromMemory(const std::uint8_t* bufferPtr, std::int32_t bufferSize)
 	{
-		DEATH_ASSERT(bufferPtr != nullptr, nullptr, "bufferPtr is nullptr");
-		DEATH_ASSERT(bufferSize > 0, nullptr, "bufferSize is 0");
+		DEATH_ASSERT(bufferPtr != nullptr, "bufferPtr is null", nullptr);
+		DEATH_ASSERT(bufferSize > 0, "bufferSize is 0", nullptr);
 		return std::make_unique<MemoryStream>(bufferPtr, bufferSize);
 	}
 

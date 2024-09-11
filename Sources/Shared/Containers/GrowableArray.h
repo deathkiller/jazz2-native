@@ -250,7 +250,7 @@ namespace Death { namespace Containers {
 			// the array into a different type (as the deleter is a typeless std::free() in any case)
 			const std::size_t inBytes = capacity * sizeof(T) + AllocationOffset;
 			char* const memory = static_cast<char*>(std::malloc(inBytes));
-			DEATH_ASSERT(memory != nullptr, {}, "Containers::ArrayMallocAllocator: Can't allocate %zu bytes", inBytes);
+			DEATH_ASSERT(memory != nullptr, ("Can't allocate %zu bytes", inBytes), {});
 			reinterpret_cast<std::size_t*>(memory)[0] = inBytes;
 			return reinterpret_cast<T*>(memory + AllocationOffset);
 		}
@@ -360,11 +360,11 @@ namespace Death { namespace Containers {
 			return {};
 
 		// Unlike arrayInsert() etc, this is not called that often and should be as checked as possible, so it's not a debug assert
-		DEATH_ASSERT(array.deleter() == Allocator<T>::deleter && (std::is_base_of<ArrayMallocAllocator<T>, Allocator<T>>::value), {},
-			"Containers::arrayAllocatorCast(): The array has to use the ArrayMallocAllocator or a derivative");
+		DEATH_ASSERT(array.deleter() == Allocator<T>::deleter && (std::is_base_of<ArrayMallocAllocator<T>, Allocator<T>>::value),
+			"The array has to use the ArrayMallocAllocator or a derivative", {});
 		const std::size_t size = array.size() * sizeof(T) / sizeof(U);
-		DEATH_ASSERT(size * sizeof(U) == array.size() * sizeof(T), {},
-			"Containers::arrayAllocatorCast(): Can't reinterpret %zu %zu-byte items into a %zu-byte type", array.size(), sizeof(T), sizeof(U));
+		DEATH_ASSERT(size * sizeof(U) == array.size() * sizeof(T),
+			("Can't reinterpret %zu %zu-byte items into a %zu-byte type", array.size(), sizeof(T), sizeof(U)), {});
 		return Array<U>{reinterpret_cast<U*>(array.release()), size, Allocator<U>::deleter};
 	}
 
@@ -606,6 +606,12 @@ namespace Death { namespace Containers {
 		@ref ArrayAllocator) itself needs, @p T is required to be nothrow
 		move-constructible and copy-constructible.
 
+		To have the append operation as performant as possible, the @p value
+		reference is expected to *not* point inside @p array. If you need to append
+		values from within the array itself, use the list-taking
+		@ref arrayAppend(Array<T>&, typename std::common_type<ArrayView<const T>>::type)
+		overload, which handles this case.
+
 		This function is equivalent to calling @relativeref{std::vector,push_back()} on
 		a @ref std::vector.
 	*/
@@ -633,6 +639,16 @@ namespace Death { namespace Containers {
 		needs, @p T is required to be nothrow move-constructible and constructible from
 		provided @p args.
 
+		The behavior is undefined if any @p args are pointing inside the @p array
+		items or their internals as the implementation has no way to check for such
+		scenario. If you want to have robust checks against such cases, use the
+		@ref arrayAppend(Array<T>&, const typename std::common_type<T>::type&),
+		@ref arrayAppend(Array<T>&, typename std::common_type<T>::type&&)
+		overloads which perform a copy or move instead of an in-place construction,
+		or the list-taking @ref arrayAppend(Array<T>&, typename std::common_type<ArrayView<const T>>::type)
+		which detects and appropriately adjusts the view in case it's a
+		slice of the @p array itself.
+
 		This function is equivalent to calling @relativeref{std::vector,emplace_back()}
 		on a @ref std::vector.
 	*/
@@ -656,8 +672,15 @@ namespace Death { namespace Containers {
 		@return Reference to the newly appended item
 
 		Calls @ref arrayAppend(Array<T>&, InPlaceInitT, Args&&... args) with @p value.
+
+		To have the append operation as performant as possible, the @p value
+		reference is expected to *not* point inside @p array. If you need to
+		move-append values from within the array itself, move them to a temporary
+		location first.
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayAppend(Array<T>& array, typename std::common_type<T>::type&& value) {
+		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= (arrayCapacity<T, Allocator>(array)),
+			"Containers::arrayAppend(): Use the list variant to append values from within the array itself", *array.data());
 		return arrayAppend<T, Allocator>(array, InPlaceInit, std::move(value));
 	}
 
@@ -681,6 +704,11 @@ namespace Death { namespace Containers {
 		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
 		needs, @p T is required to be nothrow move-constructible and
 		copy-constructible.
+
+		Compared to the single-value @ref arrayAppend(Array<T>&, const typename std::common_type<T>::type&),
+		this function also handles the case where @p values are a slice of the @p array
+		itself. In particular, if the @p array needs to be reallocated in order to fit
+		the new items, the @p arrayvalues to append are then copied from the new location.
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayAppend(Array<T>& array, typename std::common_type<ArrayView<const T>>::type values);
 
@@ -749,6 +777,12 @@ namespace Death { namespace Containers {
 		(or the default @ref ArrayAllocator) itself needs, @p T is required to be
 		nothrow move-constructible, nothrow move-assignable and copy-constructible.
 
+		To have the insert operation as performant as possible, the @p value
+		reference is expected to *not* point inside @p array. If you need to insert
+		values from within the array itself, use the list-taking
+		@ref arrayInsert(Array<T>&, std::size_t, typename std::common_type<ArrayView<const T>>::type)
+		overload, which handles this case.
+
 		This function is equivalent to calling @relativeref{std::vector,insert()} on
 		a @ref std::vector.
 	*/
@@ -776,6 +810,16 @@ namespace Death { namespace Containers {
 		needs, @p T is required to be nothrow move-constructible, nothrow
 		move-assignable and constructible from provided @p args.
 
+		The behavior is undefined if any @p args are pointing inside the @p array
+		items or their internals as the implementation has no way to check for such
+		scenario. If you want to have robust checks against such cases, use the
+		@ref arrayInsert(Array<T>&, std::size_t, const typename std::common_type<T>::type&),
+		@ref arrayInsert(Array<T>&, std::size_t, typename std::common_type<T>::type&&)
+		overloads which perform a copy or move instead of an in-place construction,
+		or the list-taking @ref arrayInsert(Array<T>&, std::size_t, typename std::common_type<ArrayView<const T>>::type)
+		which detects and appropriately adjusts the view in case it's a slice of
+		the @p array itself.
+
 		This function is equivalent to calling @relativeref{std::vector,emplace()}
 		on a @ref std::vector.
 	*/
@@ -800,8 +844,15 @@ namespace Death { namespace Containers {
 
 		Calls @ref arrayInsert(Array<T>&, std::size_t, InPlaceInitT, Args&&... args)
 		with @p value.
+
+		To have the insert operation as performant as possible, the @p value
+		reference is expected to *not* point inside @p array. If you need to
+		move-insert values from within the array itself, move them to a temporary
+		location first.
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<T>::type&& value) {
+		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= (arrayCapacity<T, Allocator>(array)),
+			"Containers::arrayInsert(): Use the list variant to insert values from within the array itself", *array.data());
 		return arrayInsert<T, Allocator>(array, index, InPlaceInit, std::move(value));
 	}
 
@@ -827,6 +878,14 @@ namespace Death { namespace Containers {
 		of what the @p Allocator (or the default @ref ArrayAllocator) itself needs,
 		@p T is required to be nothrow move-constructible, nothrow move-assignable and
 		copy-constructible.
+
+		Compared to the single-value @ref arrayInsert(Array<T>&, std::size_t, const typename std::common_type<T>::type&),
+		this function also handles the case where @p values are a slice of the @p array
+		itself. In particular, if the @p array needs to be reallocated in order to fit
+		the new items, the @p values to insert are then copied from the new location.
+		It's however expected that the slice and @p index don't overlap --- in that
+		case the caller has to handle that on its own, such as by splitting the
+		insertion in two.
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<ArrayView<const T>>::type values);
 
@@ -1124,7 +1183,7 @@ namespace Death { namespace Containers {
 	template<class T> void ArrayMallocAllocator<T>::reallocate(T*& array, std::size_t, const std::size_t newCapacity) {
 		const std::size_t inBytes = newCapacity * sizeof(T) + AllocationOffset;
 		char* const memory = static_cast<char*>(std::realloc(reinterpret_cast<char*>(array) - AllocationOffset, inBytes));
-		DEATH_ASSERT(memory != nullptr, , "Containers::ArrayMallocAllocator: Can't reallocate %zu bytes", inBytes);
+		DEATH_ASSERT(memory != nullptr, ("Can't reallocate %zu bytes", inBytes), );
 		reinterpret_cast<std::size_t*>(memory)[0] = inBytes;
 		array = reinterpret_cast<T*>(memory + AllocationOffset);
 	}
@@ -1310,6 +1369,8 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T, class Allocator> inline T& arrayAppend(Array<T>& array, const typename std::common_type<T>::type& value) {
+		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= arrayCapacity(array),
+			"Containers::arrayAppend(): Use the list variant to append values from within the array itself", *array.data());
 		T* const it = Implementation::arrayGrowBy<T, Allocator>(array, 1);
 		// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
@@ -1322,10 +1383,25 @@ namespace Death { namespace Containers {
 
 	template<class T, class Allocator> inline ArrayView<T> arrayAppend(Array<T>& array, const typename std::common_type<ArrayView<const T>>::type values) {
 		// Direct access & caching to speed up debug builds
+		const T* const valueData = values.data();
 		const std::size_t valueCount = values.size();
 
+		// If the values are actually a slice of the original array, we need to relocate the view after growing
+		// because it may point to a stale location afterwards. If the offset is outside of the [0, capacity) range
+		// of the original array, we don't relocate. Similar check is in arrayInsert(), where it additionally has
+		// to adjust the offset based on whether the values are before or after the insertion point.
+		std::size_t relocateOffset = std::size_t(valueData - array.data());
+		if (relocateOffset >= arrayCapacity<T, Allocator>(array))
+			relocateOffset = ~std::size_t{};
+
 		T* const it = Implementation::arrayGrowBy<T, Allocator>(array, valueCount);
-		Implementation::arrayCopyConstruct<T>(values.data(), it, valueCount);
+		Implementation::arrayCopyConstruct<T>(
+			// If values were a slice of the original array, relocate the view pointer relative to the (potentially reallocated)
+			// array. It may have pointed into the (potentially uninitialized) capacity, in which case we'll likely copy some
+			// garbage or we overwrite ourselves, but that's the user fault (and ASan would catch it). OTOH, if the capacity
+			// wouldn't be taken into account above, we may end up reading from freed memory, which is far worse.
+			relocateOffset != ~std::size_t{} ? array.data() + relocateOffset : valueData,
+			it, valueCount);
 		return { it, valueCount };
 	}
 
@@ -1390,7 +1466,7 @@ namespace Death { namespace Containers {
 		template<class T, class Allocator> T* arrayGrowAtBy(Array<T>& array, const std::size_t index, const std::size_t count) {
 			// Direct access & caching to speed up debug builds
 			auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-			DEATH_DEBUG_ASSERT(index <= arrayGuts.size, arrayGuts.data, "Containers::arrayInsert(): Can't insert at index %zu into an array of size %zu", index, arrayGuts.size);
+			DEATH_DEBUG_ASSERT(index <= arrayGuts.size, ("Containers::arrayInsert(): Can't insert at index %zu into an array of size %zu", index, arrayGuts.size), arrayGuts.data);
 
 			// No values to add, early exit
 			if (count == 0)
@@ -1451,6 +1527,8 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T, class Allocator> inline T& arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<T>::type& value) {
+		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= arrayCapacity(array),
+			"Containers::arrayInsert(): Use the list variant to insert values from within the array itself", *array.data());
 		T* const it = Implementation::arrayGrowAtBy<T, Allocator>(array, index, 1);
 		// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
@@ -1463,10 +1541,31 @@ namespace Death { namespace Containers {
 
 	template<class T, class Allocator> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<ArrayView<const T>>::type values) {
 		// Direct access & caching to speed up debug builds
+		const T* const valueData = values.data();
 		const std::size_t valueCount = values.size();
 
+		// If the values are actually a slice of the original array, we need to relocate the view after growing
+		// because it may point to a stale location afterwards. If the offset is outside of the [0, capacity)
+		// range of the original array, we don't relocate. Similar but simpler check is in arrayAppend().
+		std::size_t relocateOffset = std::size_t(valueData - array.data());
+		if (relocateOffset < arrayCapacity<T, Allocator>(array)) {
+			// If we're inserting before the original slice, the new offset has to include also the inserted size
+			if (index <= relocateOffset)
+				relocateOffset += valueCount;
+			// Otherwise the index should not point inside the slice, as we'd have to split the copy into two parts.
+			// The assumption is that this is a very rare scenario (with very questionable practical usefulness),
+			// and the caller should handle that on its own.
+			else DEATH_DEBUG_ASSERT(relocateOffset + valueCount <= index,
+				("Containers::arrayInsert(): Attempting to insert a slice [%zu:%zu] into itself at index %zu", relocateOffset, relocateOffset + valueCount, index), {});
+		} else relocateOffset = ~std::size_t{};
+
 		T* const it = Implementation::arrayGrowAtBy<T, Allocator>(array, index, valueCount);
-		Implementation::arrayCopyConstruct<T>(values.data(), it, valueCount);
+		Implementation::arrayCopyConstruct<T>(
+			// If values were a slice of the original array, relocate the view pointer relative to the (potentially
+			// reallocated) array. Similarly as with arrayAppend(), it may have pointed into the capacity, which
+			// we handle by copying potential garbage instead of accessing freed memory.
+			relocateOffset != ~std::size_t{} ? array.data() + relocateOffset : valueData,
+			it, valueCount);
 		return { it, valueCount };
 	}
 
@@ -1516,7 +1615,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemove(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, , "Containers::arrayRemove(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size);
+		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Containers::arrayRemove(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;
@@ -1555,7 +1654,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemoveUnordered(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, , "Containers::arrayRemoveUnordered(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size);
+		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Containers::arrayRemoveUnordered(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;
@@ -1595,7 +1694,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemoveSuffix(Array<T>& array, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(count <= arrayGuts.size, , "Containers::arrayRemoveSuffix(): Can't remove %zu elements from an array of size %zu", count, arrayGuts.size);
+		DEATH_DEBUG_ASSERT(count <= arrayGuts.size, ("Containers::arrayRemoveSuffix(): Can't remove %zu elements from an array of size %zu", count, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;

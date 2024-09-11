@@ -21,6 +21,8 @@ namespace Death {
 namespace Death { namespace Environment {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	bool IsSandboxed();
+	
 #if defined(DEATH_TARGET_APPLE)
 	Containers::String GetAppleVersion();
 #elif defined(DEATH_TARGET_SWITCH)

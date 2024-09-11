@@ -166,7 +166,7 @@ namespace Death {
 			"Alignment expected to be a power of two not larger than 256");
 
 		// Required only by aligned_alloc() I think, but it's good to have the same requirements on all platforms for better portability
-		DEATH_ASSERT(size * sizeof(T) % alignment == 0, {}, "Memory::allocateAligned(): Total byte size %zu not a multiple of a %zu-byte alignment", size * sizeof(T), alignment);
+		DEATH_ASSERT(size * sizeof(T) % alignment == 0, ("Total byte size %zu not a multiple of a %zu-byte alignment", size * sizeof(T), alignment), {});
 
 #if defined(DEATH_TARGET_UNIX)
 		// Unix platforms

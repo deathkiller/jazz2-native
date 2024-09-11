@@ -25,6 +25,7 @@ enum class TraceLevel {
 	Info,
 	Warning,
 	Error,
+	Assert,
 	Fatal
 };
 
@@ -56,20 +57,44 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	define LOGF(fmt, ...) do {} while (false)
 #endif
 
+#if defined(DEATH_DEBUG)
+#	if defined(DEATH_TARGET_WINDOWS)
+#		define __DEATH_ASSERT_BREAK() __debugbreak()
+#	else
+#		if defined(__has_builtin)
+#			if __has_builtin(__builtin_debugtrap)
+#				define __DEATH_ASSERT_BREAK __builtin_debugtrap()
+#			elif __has_builtin(__builtin_trap)
+#				define __DEATH_ASSERT_BREAK __builtin_trap()
+#			endif
+#		endif
+#		if !defined(__DEATH_ASSERT_BREAK)
+#			define __DEATH_ASSERT_BREAK() ::abort()
+#		endif
+#	endif
+#else
+#	define __DEATH_ASSERT_BREAK() do {} while (false)
+#endif
+
 // Assertions
+#if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE)
+#	define __DEATH_ASSERT_BASE(fmt, ...) DEATH_TRACE(TraceLevel::Assert, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define __DEATH_ASSERT_TRACE(...) DEATH_HELPER_EXPAND(__DEATH_ASSERT_BASE(__VA_ARGS__))
+#endif
+
 /** @brief Assertion macro */
 #if !defined(DEATH_ASSERT)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
-#		define DEATH_ASSERT(condition, returnValue, message, ...) do {} while (false)
+#		define DEATH_ASSERT(condition, message, returnValue) do {} while (false)
 #	elif defined(DEATH_STANDARD_ASSERT)
-#		define DEATH_ASSERT(condition, returnValue, message, ...) assert(condition)
+#		define DEATH_ASSERT(condition, message, returnValue) assert(condition)
 #	else
-#		define DEATH_ASSERT(condition, returnValue, message, ...)	\
-			do {													\
-				if(!(condition)) {									\
-					LOGF(message, ##__VA_ARGS__);					\
-					return returnValue;								\
-				}													\
+#		define DEATH_ASSERT(condition, message, returnValue)			\
+			do {														\
+				if DEATH_UNLIKELY(!(condition)) {						\
+					__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));	\
+					return returnValue;									\
+				}														\
 			} while(false)
 #	endif
 #endif
@@ -81,38 +106,41 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_DEBUG_ASSERT(condition, ...) assert(condition)
 #	else
-#		define __DEATH_DEBUG_ASSERT1(condition, ...)				\
-			do {													\
-				if(!(condition)) {									\
-					LOGF("Assertion (" #condition ") failed at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
-					std::abort();									\
-				}													\
+#		define __DEATH_DEBUG_ASSERT1(condition)							\
+			do {														\
+				if DEATH_UNLIKELY(!(condition)) {						\
+					__DEATH_ASSERT_TRACE("Assertion (" #condition ") failed at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
+					__DEATH_ASSERT_BREAK();								\
+					std::abort();										\
+				}														\
 			} while(false)
-#		define __DEATH_DEBUG_ASSERTn(condition, returnValue, message, ...)	\
-			do {													\
-				if(!(condition)) {									\
-					LOGF(message, ##__VA_ARGS__);					\
-					return returnValue;								\
-				}													\
+#		define __DEATH_DEBUG_ASSERT3(condition, message, returnValue)	\
+			do {														\
+				if DEATH_UNLIKELY(!(condition)) {						\
+					__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));	\
+					__DEATH_ASSERT_BREAK();								\
+					return returnValue;									\
+				}														\
 			} while(false)
-#		define DEATH_DEBUG_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERTn, __DEATH_DEBUG_ASSERT1, __DEATH_DEBUG_ASSERT1, )(__VA_ARGS__))
+#		define DEATH_DEBUG_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT1, __DEATH_DEBUG_ASSERT1, )(__VA_ARGS__))
 #	endif
 #endif
 
 /** @brief Constexpr assertion macro */
 #if !defined(DEATH_CONSTEXPR_ASSERT)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
-#		define DEATH_CONSTEXPR_ASSERT(condition, message, ...) static_cast<void>(0)
+#		define DEATH_CONSTEXPR_ASSERT(condition, message) static_cast<void>(0)
 #	elif defined(DEATH_STANDARD_ASSERT)
-#		define DEATH_CONSTEXPR_ASSERT(condition, message, ...)		\
-			static_cast<void>((condition) ? 0 : ([&]() {			\
-				assert(!#condition);								\
+#		define DEATH_CONSTEXPR_ASSERT(condition, message)				\
+			static_cast<void>((condition) ? 0 : ([&]() {				\
+				assert(!#condition);									\
 			}(), 0))
 #	else
-#		define DEATH_CONSTEXPR_ASSERT(condition, message, ...)		\
-			static_cast<void>((condition) ? 0 : ([&]() {			\
-				LOGF(message, ##__VA_ARGS__);						\
-				std::abort();										\
+#		define DEATH_CONSTEXPR_ASSERT(condition, message)				\
+			static_cast<void>((condition) ? 0 : ([&]() {				\
+				__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));		\
+				__DEATH_ASSERT_BREAK();									\
+				std::abort();											\
 			}(), 0))
 #	endif
 #endif
@@ -120,9 +148,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 /** @brief Debug-only constexpr assertion macro */
 #if !defined(DEATH_DEBUG_CONSTEXPR_ASSERT)
 #	if defined(DEATH_DEBUG)
-#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message, ...) DEATH_CONSTEXPR_ASSERT(condition, message, ##__VA_ARGS__)
+#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message) DEATH_CONSTEXPR_ASSERT(condition, message)
 #	else
-#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message, ...) static_cast<void>(0)
+#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message) static_cast<void>(0)
 #	endif
 #endif
 
@@ -139,10 +167,11 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_ASSERT_UNREACHABLE() assert(!"Unreachable code")
 #	else
-#		define DEATH_ASSERT_UNREACHABLE()							\
-			do {													\
-				LOGF("Reached unreachable code at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
-				std::abort();										\
+#		define DEATH_ASSERT_UNREACHABLE()								\
+			do {														\
+				__DEATH_ASSERT_TRACE("Reached unreachable code at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
+				__DEATH_ASSERT_BREAK();									\
+				std::abort();											\
 			} while (false)
 #	endif
 #endif
