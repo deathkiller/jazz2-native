@@ -46,12 +46,14 @@ namespace Jazz2::UI::Menu
 		if (!isInGame) {
 			// TRANSLATORS: Menu item in Options > Gameplay section
 			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true });
+		}
+#endif
+		if (!isInGame) {
 			// TRANSLATORS: Menu item in Options > Gameplay section
 			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowCheats, _("Allow Cheats"), true });
 			// TRANSLATORS: Menu item in Options > Gameplay section
 			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::OverwriteEpisodeEnd, _("Overwrite Episode Completion"), true });
 		}
-#endif
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableDiscordIntegration, _("Discord Integration"), true });
