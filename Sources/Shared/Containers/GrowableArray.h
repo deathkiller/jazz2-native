@@ -680,7 +680,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayAppend(Array<T>& array, typename std::common_type<T>::type&& value) {
 		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= (arrayCapacity<T, Allocator>(array)),
-			"Containers::arrayAppend(): Use the list variant to append values from within the array itself", *array.data());
+			"Use the list variant to append values from within the array itself", *array.data());
 		return arrayAppend<T, Allocator>(array, InPlaceInit, std::move(value));
 	}
 
@@ -852,7 +852,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<T>::type&& value) {
 		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= (arrayCapacity<T, Allocator>(array)),
-			"Containers::arrayInsert(): Use the list variant to insert values from within the array itself", *array.data());
+			"Use the list variant to insert values from within the array itself", *array.data());
 		return arrayInsert<T, Allocator>(array, index, InPlaceInit, std::move(value));
 	}
 
@@ -1370,7 +1370,7 @@ namespace Death { namespace Containers {
 
 	template<class T, class Allocator> inline T& arrayAppend(Array<T>& array, const typename std::common_type<T>::type& value) {
 		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= arrayCapacity(array),
-			"Containers::arrayAppend(): Use the list variant to append values from within the array itself", *array.data());
+			"Use the list variant to append values from within the array itself", *array.data());
 		T* const it = Implementation::arrayGrowBy<T, Allocator>(array, 1);
 		// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
@@ -1466,7 +1466,7 @@ namespace Death { namespace Containers {
 		template<class T, class Allocator> T* arrayGrowAtBy(Array<T>& array, const std::size_t index, const std::size_t count) {
 			// Direct access & caching to speed up debug builds
 			auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-			DEATH_DEBUG_ASSERT(index <= arrayGuts.size, ("Containers::arrayInsert(): Can't insert at index %zu into an array of size %zu", index, arrayGuts.size), arrayGuts.data);
+			DEATH_DEBUG_ASSERT(index <= arrayGuts.size, ("Can't insert at index %zu into an array of size %zu", index, arrayGuts.size), arrayGuts.data);
 
 			// No values to add, early exit
 			if (count == 0)
@@ -1528,7 +1528,7 @@ namespace Death { namespace Containers {
 
 	template<class T, class Allocator> inline T& arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<T>::type& value) {
 		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= arrayCapacity(array),
-			"Containers::arrayInsert(): Use the list variant to insert values from within the array itself", *array.data());
+			"Use the list variant to insert values from within the array itself", *array.data());
 		T* const it = Implementation::arrayGrowAtBy<T, Allocator>(array, index, 1);
 		// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
@@ -1556,7 +1556,7 @@ namespace Death { namespace Containers {
 			// The assumption is that this is a very rare scenario (with very questionable practical usefulness),
 			// and the caller should handle that on its own.
 			else DEATH_DEBUG_ASSERT(relocateOffset + valueCount <= index,
-				("Containers::arrayInsert(): Attempting to insert a slice [%zu:%zu] into itself at index %zu", relocateOffset, relocateOffset + valueCount, index), {});
+				("Attempting to insert a slice [%zu:%zu] into itself at index %zu", relocateOffset, relocateOffset + valueCount, index), {});
 		} else relocateOffset = ~std::size_t{};
 
 		T* const it = Implementation::arrayGrowAtBy<T, Allocator>(array, index, valueCount);
@@ -1615,7 +1615,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemove(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Containers::arrayRemove(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
+		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;
@@ -1654,7 +1654,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemoveUnordered(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Containers::arrayRemoveUnordered(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
+		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;
@@ -1694,7 +1694,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemoveSuffix(Array<T>& array, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(count <= arrayGuts.size, ("Containers::arrayRemoveSuffix(): Can't remove %zu elements from an array of size %zu", count, arrayGuts.size), );
+		DEATH_DEBUG_ASSERT(count <= arrayGuts.size, ("Can't remove %zu elements from an array of size %zu", count, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;

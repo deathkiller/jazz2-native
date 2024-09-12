@@ -105,7 +105,7 @@ namespace Death { namespace IO {
 			Failed
 		};
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		static constexpr std::int32_t BufferSize = 8192;
 #else
 		static constexpr std::int32_t BufferSize = 16384;
