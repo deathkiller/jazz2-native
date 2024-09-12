@@ -853,21 +853,21 @@ namespace Death { namespace Containers {
 
 	template<class T> constexpr T& BasicStringView<T>::operator[](const std::size_t i) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(i < size() + ((flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated ? 1 : 0),
-					("Containers::StringView::operator[](): Index %zu out of range for %zu %s", i, size(), ((flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated ? "null-terminated bytes" : "bytes"))),
+					("Index %zu out of range for %zu %s", i, size(), ((flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated ? "null-terminated bytes" : "bytes"))),
 				_data[i];
 	}
 
 	template<class T> constexpr T& BasicStringView<T>::front() const {
-		return DEATH_DEBUG_CONSTEXPR_ASSERT(size(), "Containers::StringView::front(): View is empty"), _data[0];
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(size(), "View is empty"), _data[0];
 	}
 
 	template<class T> constexpr T& BasicStringView<T>::back() const {
-		return DEATH_DEBUG_CONSTEXPR_ASSERT(size(), "Containers::StringView::back(): View is empty"), _data[size() - 1];
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(size(), "View is empty"), _data[size() - 1];
 	}
 
 	template<class T> constexpr BasicStringView<T> BasicStringView<T>::slice(T* const begin, T* const end) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(_data <= begin && begin <= end && end <= _data + (_sizePlusFlags & ~Implementation::StringViewSizeMask),
-					("Containers::StringView::slice(): Slice [%zu:%zu] out of range for %zu elements",
+					("Slice [%zu:%zu] out of range for %zu elements",
 					 std::size_t(begin - _data), std::size_t(end - _data), (_sizePlusFlags & ~Implementation::StringViewSizeMask))),
 				BasicStringView<T>{begin, std::size_t(end - begin) |
 					// Propagate the global flag always
@@ -880,7 +880,7 @@ namespace Death { namespace Containers {
 
 	template<class T> constexpr BasicStringView<T> BasicStringView<T>::slice(const std::size_t begin, const std::size_t end) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(begin <= end && end <= (_sizePlusFlags & ~Implementation::StringViewSizeMask),
-					("Containers::StringView::slice(): Slice [%zu:%zu] out of range for %zu elements",
+					("Slice [%zu:%zu] out of range for %zu elements",
 					 begin, end, (_sizePlusFlags & ~Implementation::StringViewSizeMask))),
 				BasicStringView<T>{_data + begin, (end - begin) |
 					// Propagate the global flag always

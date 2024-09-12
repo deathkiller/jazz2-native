@@ -1128,7 +1128,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		// able to std::realloc(). The deleter doesn't use the size argument so it should be fine to transfer it over
 		// to a String with the size excluding the null terminator.
 		void(*const deleter)(char*, std::size_t) = output.deleter();
-		DEATH_DEBUG_ASSERT(deleter, "StringUtils::lowercaseUnicode(): Invalid deleter used", {});
+		DEATH_DEBUG_ASSERT(deleter, "Invalid deleter used", {});
 		return String{output.release(), size - 1, deleter};
 	}
 
@@ -1352,7 +1352,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		// able to std::realloc(). The deleter doesn't use the size argument so it should be fine to transfer it over
 		// to a String with the size excluding the null terminator.
 		void(*const deleter)(char*, std::size_t) = output.deleter();
-		DEATH_DEBUG_ASSERT(deleter, "StringUtils::uppercaseUnicode(): Invalid deleter used", {});
+		DEATH_DEBUG_ASSERT(deleter, "Invalid deleter used", {});
 		return String{output.release(), size - 1, deleter};
 	}
 	
@@ -1388,7 +1388,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		// able to std::realloc(). The deleter doesn't use the size argument so it should be fine to transfer it over
 		// to a String with the size excluding the null terminator.
 		void(*const deleter)(char*, std::size_t) = output.deleter();
-		DEATH_DEBUG_ASSERT(deleter, "StringUtils::replaceAll(): Invalid deleter used", {});
+		DEATH_DEBUG_ASSERT(deleter, "Invalid deleter used", {});
 		return String{output.release(), size - 1, deleter};
 	}
 

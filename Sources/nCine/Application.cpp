@@ -182,6 +182,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	android_LogPriority priority;
 	switch (level) {
 		case TraceLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
+		case TraceLevel::Assert:	// Android doesn't support this priority, use ANDROID_LOG_ERROR instead
 		case TraceLevel::Error:		priority = ANDROID_LOG_ERROR; break;
 		case TraceLevel::Warning:	priority = ANDROID_LOG_WARN; break;
 		case TraceLevel::Info:		priority = ANDROID_LOG_INFO; break;
@@ -211,6 +212,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	char levelIdentifier;
 	switch (level) {
 		case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
+		case TraceLevel::Assert:	levelIdentifier = 'A'; break;
 		case TraceLevel::Error:		levelIdentifier = 'E'; break;
 		case TraceLevel::Warning:	levelIdentifier = 'W'; break;
 		case TraceLevel::Info:		levelIdentifier = 'I'; break;
@@ -256,6 +258,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	static const char DarkGray[] = "\033[90m";
 	static const char BrightRed[] = "\033[91m";
 	static const char BrightYellow[] = "\033[93m";
+	static const char BrightMagenta[] = "\033[95m";
 
 #	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
 	if (__showLogConsole) {
@@ -296,6 +299,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 				case TraceLevel::Fatal:
 					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
 					break;
+				case TraceLevel::Assert:
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightMagenta, static_cast<std::int32_t>(arraySize(BrightMagenta)) - 1);
+					break;
 				case TraceLevel::Warning:
 					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
 					break;
@@ -326,6 +332,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
 				}
 				break;
+			case TraceLevel::Assert:
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightMagenta, static_cast<std::int32_t>(arraySize(BrightMagenta)) - 1);
+				break;
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			case TraceLevel::Info:
 			case TraceLevel::Warning:
@@ -345,7 +354,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
 
 	if (hasVirtualTerminal) {
-		if (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Fatal) {
+		if (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal) {
 			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
 		}
 	}
@@ -396,6 +405,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		char levelIdentifier;
 		switch (level) {
 			case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
+			case TraceLevel::Assert:	levelIdentifier = 'A'; break;
 			case TraceLevel::Error:		levelIdentifier = 'E'; break;
 			case TraceLevel::Warning:	levelIdentifier = 'W'; break;
 			case TraceLevel::Info:		levelIdentifier = 'I'; break;
@@ -443,6 +453,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		char levelIdentifier;
 		switch (level) {
 			case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
+			case TraceLevel::Assert:	levelIdentifier = 'A'; break;
 			case TraceLevel::Error:		levelIdentifier = 'E'; break;
 			case TraceLevel::Warning:	levelIdentifier = 'W'; break;
 			case TraceLevel::Info:		levelIdentifier = 'I'; break;
@@ -497,6 +508,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	std::uint32_t colorTracy;
 	switch (level) {
 		case TraceLevel::Fatal:		colorTracy = 0xEC3E40; break;
+		case TraceLevel::Assert:	colorTracy = 0xD651B0; break;
 		case TraceLevel::Error:		colorTracy = 0xD85050; break;
 		case TraceLevel::Warning:	colorTracy = 0xEBC77A; break;
 		case TraceLevel::Info:		colorTracy = 0xD2D2D2; break;

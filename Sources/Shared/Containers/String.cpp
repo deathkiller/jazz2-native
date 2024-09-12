@@ -359,7 +359,7 @@ namespace Death { namespace Containers {
 
 	auto String::deleter() const -> Deleter {
 		DEATH_DEBUG_ASSERT(!(_small.size & Implementation::SmallStringBit),
-			"Containers::String::deleter(): Cannot call on a SSO instance", {});
+			"Can't call on a SSO instance", {});
 		return _large.deleter;
 	}
 
@@ -406,7 +406,7 @@ namespace Death { namespace Containers {
 	}
 
 	char& String::front() {
-		DEATH_DEBUG_ASSERT(size(), "Containers::String::front(): String is empty", *begin());
+		DEATH_DEBUG_ASSERT(size(), "String is empty", *begin());
 		return *begin();
 	}
 
@@ -415,7 +415,7 @@ namespace Death { namespace Containers {
 	}
 
 	char& String::back() {
-		DEATH_DEBUG_ASSERT(size(), "Containers::String::back(): String is empty", *(end() - 1));
+		DEATH_DEBUG_ASSERT(size(), "String is empty", *(end() - 1));
 		return *(end() - 1);
 	}
 
@@ -425,7 +425,7 @@ namespace Death { namespace Containers {
 
 	char& String::operator[](std::size_t i) {
 		// Accessing the null terminator is fine
-		DEATH_DEBUG_ASSERT(i < size() + 1, ("Containers::String::operator[](): Index %zu out of range for %zu null-terminated bytes", i, size()), _small.data[0]);
+		DEATH_DEBUG_ASSERT(i < size() + 1, ("Index %zu out of range for %zu null-terminated bytes", i, size()), _small.data[0]);
 		if (_small.size & Implementation::SmallStringBit)
 			return _small.data[i];
 		return _large.data[i];
@@ -433,7 +433,7 @@ namespace Death { namespace Containers {
 
 	char String::operator[](std::size_t i) const {
 		// Accessing the null terminator is fine
-		DEATH_DEBUG_ASSERT(i < size() + 1, ("Containers::String::operator[](): Index %zu out of range for %zu null-terminated bytes", i, size()), _small.data[0]);
+		DEATH_DEBUG_ASSERT(i < size() + 1, ("Index %zu out of range for %zu null-terminated bytes", i, size()), _small.data[0]);
 		if (_small.size & Implementation::SmallStringBit)
 			return _small.data[i];
 		return _large.data[i];
@@ -825,7 +825,7 @@ namespace Death { namespace Containers {
 
 	char* String::release() {
 		DEATH_DEBUG_ASSERT(!(_small.size & Implementation::SmallStringBit),
-			"Containers::String::release(): Cannot call on a SSO instance", {});
+			"Can't call on a SSO instance", {});
 		char* data = _large.data;
 
 		// Create a zero-size small string to fullfil the guarantee of data() being always non-null and null-terminated.
