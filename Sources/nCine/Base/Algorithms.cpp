@@ -247,12 +247,16 @@ namespace nCine
 
 	static inline std::uint32_t as_uint32(const float x)
 	{
-		return *(std::uint32_t*)&x;
+		union {float f; uint32_t i;} u;
+		u.f = x;
+		return u.i;
 	}
 
 	static inline float as_float(const std::uint32_t x)
 	{
-		return *(float*)&x;
+		union {float f; uint32_t i;} u;
+		u.i = x;
+		return u.f;
 	}
 
 	float halfToFloat(std::uint16_t value)
