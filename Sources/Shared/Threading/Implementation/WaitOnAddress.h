@@ -6,6 +6,7 @@
 #if defined(DEATH_TARGET_WINDOWS)
 #	include "../../Environment.h"
 #elif defined(DEATH_TARGET_APPLE)
+#	include <errno.h>
 extern "C"
 {
 	// Source: https://github.com/apple-oss-distributions/xnu/blob/xnu-8792.81.2/bsd/sys/ulock.h
@@ -39,6 +40,7 @@ extern "C"
 #elif defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <linux/futex.h>
 #	include <sys/syscall.h>
+#	include <errno.h>
 #	include <unistd.h>
 #endif
 
@@ -177,7 +179,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	template<typename T>
 	inline void WakeByAddressAll(T& futex)
 	{
-		FutexOp(GetFutexAddress(&futex), FUTEX_WAKE, INT_MAX);
+		FutexOp(GetFutexAddress(&futex), FUTEX_WAKE, INT32_MAX);
 	}
 
 	template<typename T>
