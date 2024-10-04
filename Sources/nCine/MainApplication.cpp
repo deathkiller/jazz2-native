@@ -218,17 +218,23 @@ namespace nCine
 		hidInitializeTouchScreen();
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
-		wchar_t pBuf[fs::MaxPathLength];
-		DWORD pBufLength = ::GetModuleFileNameW(NULL, pBuf, (DWORD)arraySize(pBuf));
-		if (pBufLength > 0) {
-			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
+		wchar_t workingDir[fs::MaxPathLength];
+		DWORD workingDirLength = ::GetModuleFileNameW(NULL, workingDir, (DWORD)arraySize(workingDir));
+		if (workingDirLength > 0) {
+			wchar_t* lastSlash = wcsrchr(workingDir, L'\\');
 			if (lastSlash == nullptr) {
-				lastSlash = wcsrchr(pBuf, L'/');
+				lastSlash = wcsrchr(workingDir, L'/');
 			}
 			if (lastSlash != nullptr) {
 				lastSlash++;
+				workingDirLength = (DWORD)(lastSlash - workingDir);
 				*lastSlash = '\0';
-				::SetCurrentDirectoryW(pBuf);
+				if (!::SetCurrentDirectoryW(workingDir)) {
+					LOGE("Failed to change working directory with error 0x%08x", ::GetLastError());
+					workingDirLength = 0;
+				}
+			} else {
+				workingDirLength = 0;
 			}
 		}
 
@@ -265,6 +271,12 @@ namespace nCine
 
 		MainApplication& app = static_cast<MainApplication&>(theApplication());
 		app.Init(createAppEventHandler, argc, argv);
+
+#if defined(DEATH_TARGET_WINDOWS)
+		if (workingDirLength > 0) {
+			LOGI("Current working directory: %s", Utf8::FromUtf16(workingDir, workingDirLength).data());
+		}
+#endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		while (!app.shouldQuit_) {

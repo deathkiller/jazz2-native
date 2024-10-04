@@ -13,6 +13,7 @@
 #include <Threading/Interlocked.h>
 
 using namespace Death::Containers::Literals;
+using namespace Death::Threading;
 
 namespace Jazz2::UI
 {
@@ -132,7 +133,7 @@ namespace Jazz2::UI
 	void DiscordRpcClient::Disconnect()
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		HANDLE pipe = Interlocked::ExchangePointer(&_hPipe, NULL);
+		HANDLE pipe = Interlocked::Exchange<HANDLE>(&_hPipe, NULL);
 		if (pipe != NULL) {
 			::CancelIoEx(pipe, NULL);
 			::CloseHandle(pipe);
@@ -274,7 +275,7 @@ namespace Jazz2::UI
 		if (!::ReadFile(client->_hPipe, buffer, sizeof(buffer), &bytesRead, &ov)) {
 			DWORD error = ::GetLastError();
 			if (error == ERROR_BROKEN_PIPE) {
-				HANDLE pipe = Interlocked::ExchangePointer(&client->_hPipe, NULL);
+				HANDLE pipe = Interlocked::Exchange<HANDLE>(&client->_hPipe, NULL);
 				if (pipe != NULL) {
 					::CloseHandle(client->_hPipe);
 				}
@@ -297,7 +298,7 @@ namespace Jazz2::UI
 						switch (opcode) {
 							case Opcodes::Handshake:
 							case Opcodes::Close: {
-								HANDLE pipe = Interlocked::ExchangePointer(&client->_hPipe, NULL);
+								HANDLE pipe = Interlocked::Exchange<HANDLE>(&client->_hPipe, NULL);
 								if (pipe != NULL) {
 									::CloseHandle(client->_hPipe);
 								}
@@ -317,7 +318,7 @@ namespace Jazz2::UI
 					if (!::ReadFile(client->_hPipe, buffer, sizeof(buffer), &bytesRead, &ov)) {
 						DWORD error = ::GetLastError();
 						if (error == ERROR_BROKEN_PIPE) {
-							HANDLE pipe = Interlocked::ExchangePointer(&client->_hPipe, NULL);
+							HANDLE pipe = Interlocked::Exchange<HANDLE>(&client->_hPipe, NULL);
 							if (pipe != NULL) {
 								::CloseHandle(client->_hPipe);
 							}

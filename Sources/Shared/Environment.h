@@ -58,7 +58,7 @@ namespace Death { namespace Environment {
 #endif
 
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
-		ULONGLONG now { };
+		ULONGLONG now = {};
 		::QueryUnbiasedInterruptTime(&now);
 		return now;
 	}

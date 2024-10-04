@@ -264,7 +264,7 @@ namespace nCine
 #else
 			String vertexPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) });
 			String fragmentPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) });
-			uint64_t shaderVersion = (uint64_t)std::max(fs::GetLastModificationTime(vertexPath).GetValue(), fs::GetLastModificationTime(fragmentPath).GetValue());
+			uint64_t shaderVersion = (uint64_t)std::max(fs::GetLastModificationTime(vertexPath).ToUnixMilliseconds(), fs::GetLastModificationTime(fragmentPath).ToUnixMilliseconds());
 #endif
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);

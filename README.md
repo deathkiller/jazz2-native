@@ -39,7 +39,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 * Copy contents of original *Jazz Jackrabbit 2* directory to `‹Game›\Source\`
 * Run `‹Game›\Jazz2.exe`, `‹Game›\Jazz2_avx2.exe` or `‹Game›\Jazz2_sdl2.exe` application
 
-`‹Game›` *is path to Jazz² Resurrection. The game requires **Windows 7** (or newer) and GPU with **OpenGL 3.0** support. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
+`‹Game›` *is path to Jazz² Resurrection. The game requires **Windows 7** (or newer) and GPU with **OpenGL 3.0** support. Game files should **not** be copied to* `Program Files`*. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
 ### Linux
 * Download the game
@@ -55,6 +55,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 <sup>Alternatively, you can use package repository for your Linux distribution:</sup><br>
 [![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-bin)
 [![Flathub](https://img.shields.io/flathub/v/tk.deat.Jazz2Resurrection?label=Flathub&logo=flathub&logoColor=ffffff)](https://flathub.org/apps/tk.deat.Jazz2Resurrection)
+[![Gentoo](https://img.shields.io/badge/Gentoo-grey?logo=gentoo&logoColor=ffffff)](https://packages.gentoo.org/packages/games-arcade/jazz2)
 [![NixOS](https://img.shields.io/badge/NixOS-grey?logo=nixos&logoColor=ffffff)](https://search.nixos.org/packages?channel=unstable&show=jazz2&from=0&size=50&sort=relevance&type=packages&query=jazz2)
 [![OpenSUSE](https://img.shields.io/obs/games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/games/jazz2)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-grey?logo=ubuntu&logoColor=ffffff)](https://xtradeb.net/play/jazz2/)

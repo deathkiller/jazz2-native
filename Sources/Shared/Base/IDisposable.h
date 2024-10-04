@@ -1,12 +1,18 @@
 #pragma once
 
+#include "../CommonBase.h"
+
 namespace Death {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
 		@brief Provides base interface for releasing resources on object destruction
 	*/
-	class IDisposable
+	class
+#if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+		__declspec(novtable)
+#endif		
+		IDisposable
 	{
 	public:
 		IDisposable() {}

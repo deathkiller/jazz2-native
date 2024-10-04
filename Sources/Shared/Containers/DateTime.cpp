@@ -1046,6 +1046,13 @@ namespace Death { namespace Containers {
 #endif
 	}
 
+	DateTime DateTime::FromUnixMilliseconds(std::int64_t value)
+	{
+		DateTime dt;
+		dt._time = value;
+		return dt;
+	}
+
 #if defined(DEATH_TARGET_WINDOWS)
 	DateTime::DateTime(const struct _SYSTEMTIME& st)
 	{
