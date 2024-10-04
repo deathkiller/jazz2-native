@@ -40,7 +40,9 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/PakFile.h
 	${NCINE_SOURCE_DIR}/Shared/IO/Stream.h
+	${NCINE_SOURCE_DIR}/Shared/Threading/Event.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Interlocked.h
+	${NCINE_SOURCE_DIR}/Shared/Threading/Implementation/WaitOnAddress.h
 )
 
 list(APPEND HEADERS

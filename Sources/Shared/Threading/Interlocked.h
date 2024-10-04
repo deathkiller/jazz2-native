@@ -6,7 +6,7 @@
 #	include <intrin.h>
 #endif
 
-namespace Death {
+namespace Death { namespace Threading {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
@@ -19,111 +19,84 @@ namespace Death {
 		~Interlocked() = delete;
 
 		/**
-		 * @brief Increments the value of the specified 32-bit variable as an atomic operation
+		 * @brief Reads the value of the specified 32/64-bit variable as an atomic operation with acquire semantics
+		 * @param source    Variable to be read
+		 * @return          The resulting value
+		 */
+		template<class T>
+		static T ReadAcquire(T volatile* source);
+
+		/**
+		 * @brief Writes the value to the specified 32/64-bit variable as an atomic operation with release semantics
+		 * @param destination    Variable to be written
+		 * @param value          New value
+		 */
+		template<class T>
+		static void WriteRelease(T volatile* destination, T value);
+
+		/**
+		 * @brief Increments the value of the specified 32/64-bit variable as an atomic operation
 		 * @param addend    Variable to be incremented
-		 * @param size      Size of the C string, excluding the null terminator
-		 * @param flags     Flags describing additional string properties
 		 * @return          The resulting incremented value
 		 */
-		template<typename T>
+		template<class T>
 		static T Increment(T volatile* addend);
 
 		/**
-		 * @brief Decrements the value of the specified 32-bit variable as an atomic operation
+		 * @brief Decrements the value of the specified 32/64-bit variable as an atomic operation
 		 * @param addend    Variable to be decremented
 		 * @return          The resulting decremented value
 		 */
-		template<typename T>
+		template<class T>
 		static T Decrement(T volatile* addend);
 
 		/**
-		 * @brief Performs an atomic AND operation on the values of the specified 32-bit variables
+		 * @brief Performs an atomic AND operation on the values of the specified 32/64-bit variables
 		 * @param destination   The first operand and the destination
 		 * @param value         The second operand
 		 */
-		template<typename T>
+		template<class T>
 		static void And(T volatile* destination, T value);
 
 		/**
-		 * @brief Performs an atomic OR operation on the values of the specified 32-bit variables
+		 * @brief Performs an atomic OR operation on the values of the specified 32/64-bit variables
 		 * @param destination   The first operand and the destination
 		 * @param value         The second operand
 		 */
-		template<typename T>
+		template<class T>
 		static void Or(T volatile* destination, T value);
 
 		/**
-		 * @brief Sets a 32-bit variable to the specified value as an atomic operation
+		 * @brief Exchanges a 32/64-bit variable to the specified value as an atomic operation
 		 * @param destination   Value to be exchanged
 		 * @param value         Value to set the destination to
 		 * @return              The previous value of the destination
 		 */
-		template<typename T>
+		template<class T>
 		static T Exchange(T volatile* destination, T value);
 
-		/**
-		 * @brief Sets a pointer variable to the specified value as an atomic operation
-		 * @param destination   Value to be exchanged
-		 * @param value         Value to set the destination to
-		 * @return              The previous value of the destination
-		 */
-		template<typename T>
-		static T ExchangePointer(T volatile* destination, T value);
-
 		/** @overload */
-		template<typename T>
-		static T ExchangePointer(T volatile* destination, std::nullptr_t value);
+		template<class T, class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type>
+		static T Exchange(T volatile* destination, U);
 
 		/**
-		 * @brief Performs an atomic addition of two 32-bit values
+		 * @brief Performs an atomic exchange and addition of two 32/64-bit values
 		 * @param addend    Variable to be added to
 		 * @param value     Value to add
 		 * @return          The previous value of the destination
 		 */
-		template<typename T>
+		template<class T>
 		static T ExchangeAdd(T volatile* addend, T value);
 
 		/**
-		 * @brief Performs an atomic addition of two 64-bit values
-		 * @param addend    Variable to be added to
-		 * @param value     Value to add
-		 * @return          The previous value of the destination
-		 */
-		template<typename T>
-		static T ExchangeAdd64(T volatile* addend, T value);
-
-		/**
-		 * @brief Performs an atomic addition of two pointer values
-		 * @param addend    Variable to be added to
-		 * @param value     Value to add
-		 * @return          The previous value of the destination
-		 */
-		template<typename T>
-		static T ExchangeAddPointer(T volatile* addend, T value);
-
-		/**
-		 * @brief Performs an atomic compare-and-exchange operation on the specified 32-bit variables
+		 * @brief Performs an atomic compare-and-exchange operation on the specified 32/64-bit variables
 		 * @param destination   Value to be exchanged
 		 * @param exchange      Value to set the destination to
 		 * @param comparand     Value to compare the destination to before setting it to the exchange, the destination is set only if the destination is equal to the comparand
 		 * @return              The original value of the destination
 		 */
-		template<typename T>
+		template<class T>
 		static T CompareExchange(T volatile* destination, T exchange, T comparand);
-
-		/**
-		 * @brief Performs an atomic compare-and-exchange operation on the specified pointer variables
-		 * @param destination   Value to be exchanged
-		 * @param exchange      Value to set the destination to
-		 * @param comparand     Value to compare the destination to before setting it to the exchange, the destination is set only if the destination is equal to the comparand
-		 * @return              The original value of the destination
-		 */
-		template<typename T>
-		static T CompareExchangePointer(T volatile* destination, T exchange, T comparand);
-
-		/** @overload */
-		template<typename T>
-		static T CompareExchangePointer(T volatile* destination, T exchange, std::nullptr_t comparand);
 
 	private:
 #if !defined(DEATH_TARGET_MSVC)
@@ -131,12 +104,49 @@ namespace Death {
 #endif
 	};
 
-	template<typename T>
+	template<class T>
+	DEATH_ALWAYS_INLINE T Interlocked::ReadAcquire(T volatile* source)
+	{
+#if defined(DEATH_TARGET_MSVC)
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)::ReadAcquire((LONG*)source);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)::ReadAcquire64((LONG64*)source);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
+#else
+		return __atomic_load_n(source, __ATOMIC_ACQUIRE);
+#endif
+	}
+
+	template<class T>
+	DEATH_ALWAYS_INLINE void Interlocked::WriteRelease(T volatile* destination, T value)
+	{
+#if defined(DEATH_TARGET_MSVC)
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			::WriteRelease((LONG*)destination, (LONG)value);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			::WriteRelease((LONG64*)destination, (LONG64)value);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
+#else
+		__atomic_store_n(destination, value, __ATOMIC_RELEASE);
+#endif
+	}
+
+	template<class T>
 	DEATH_ALWAYS_INLINE T Interlocked::Increment(T volatile* addend)
 	{
 #if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return (T)_InterlockedIncrement((long*)addend);
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedIncrement((LONG*)addend);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedIncrement64((LONG64*)addend);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
 #else
 		T result = __sync_add_and_fetch(addend, 1);
 		InterlockedOperationBarrier();
@@ -144,12 +154,17 @@ namespace Death {
 #endif
 	}
 
-	template<typename T>
+	template<class T>
 	DEATH_ALWAYS_INLINE T Interlocked::Decrement(T volatile* addend)
 	{
 #if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return (T)_InterlockedDecrement((long*)addend);
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedDecrement((LONG*)addend);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedDecrement64((LONG64*)addend);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
 #else
 		T result = __sync_sub_and_fetch(addend, 1);
 		InterlockedOperationBarrier();
@@ -157,12 +172,17 @@ namespace Death {
 #endif
 	}
 
-	template<typename T>
+	template<class T>
 	DEATH_ALWAYS_INLINE T Interlocked::Exchange(T volatile* destination, T value)
 	{
 #if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return (T)_InterlockedExchange((long*)destination, (long)value);
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedExchange((LONG*)destination, (LONG)value);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedExchange64((LONG64*)destination, (LONG64)value);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
 #else
 		T result = __atomic_exchange_n(destination, value, __ATOMIC_ACQ_REL);
 		InterlockedOperationBarrier();
@@ -170,12 +190,35 @@ namespace Death {
 #endif
 	}
 
-	template<typename T>
+	template<class T, class U, class>
+	DEATH_ALWAYS_INLINE T Interlocked::Exchange(T volatile* destination, U)
+	{
+#if defined(DEATH_TARGET_MSVC)
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedExchange((LONG*)destination, {});
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedExchange64((LONG64*)destination, {});
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
+#else
+		T result = __atomic_exchange_n(destination, {}, __ATOMIC_ACQ_REL);
+		InterlockedOperationBarrier();
+		return result;
+#endif
+	}
+
+	template<class T>
 	DEATH_ALWAYS_INLINE T Interlocked::CompareExchange(T volatile* destination, T exchange, T comparand)
 	{
 #if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return (T)_InterlockedCompareExchange((long*)destination, (long)exchange, (long)comparand);
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedCompareExchange((LONG*)destination, (LONG)exchange, (LONG)comparand);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedCompareExchange64((LONG64*)destination, (LONG64)exchange, (LONG64)comparand);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
 #else
 		T result = __sync_val_compare_and_swap(destination, comparand, exchange);
 		InterlockedOperationBarrier();
@@ -183,12 +226,17 @@ namespace Death {
 #endif
 	}
 
-	template<typename T>
+	template<class T>
 	DEATH_ALWAYS_INLINE T Interlocked::ExchangeAdd(T volatile* addend, T value)
 	{
 #if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return (T)_InterlockedExchangeAdd((long*)addend, (long)value);
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedExchangeAdd((LONG*)addend, (LONG)value);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedExchangeAdd64((LONG64*)addend, (LONG64)value);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
 #else
 		T result = __sync_fetch_and_add(addend, value);
 		InterlockedOperationBarrier();
@@ -196,122 +244,37 @@ namespace Death {
 #endif
 	}
 
-	template<typename T>
-	DEATH_ALWAYS_INLINE T Interlocked::ExchangeAdd64(T volatile* addend, T value)
-	{
-#if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(std::int64_t), "Size of T must be the same as size of std::int64_t");
-		return (T)_InterlockedExchangeAdd64((std::int64_t*)addend, (std::int64_t)value);
-#else
-		T result = __sync_fetch_and_add(addend, value);
-		InterlockedOperationBarrier();
-		return result;
-#endif
-	}
-
-	template<typename T>
-	DEATH_ALWAYS_INLINE T Interlocked::ExchangeAddPointer(T volatile* addend, T value)
-	{
-#if defined(DEATH_TARGET_MSVC)
-#	if !defined(DEATH_TARGET_32BIT)
-		static_assert(sizeof(T) == sizeof(std::int64_t), "Size of T must be the same as size of std::int64_t");
-		return (T)_InterlockedExchangeAdd64((std::int64_t*)addend, (std::int64_t)value);
-#	else
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		return (T)_InterlockedExchangeAdd((long*)addend, (long)value);
-#	endif
-#else
-		T result = __sync_fetch_and_add(addend, value);
-		InterlockedOperationBarrier();
-		return result;
-#endif
-	}
-
-	template<typename T>
+	template<class T>
 	DEATH_ALWAYS_INLINE void Interlocked::And(T volatile* destination, T value)
 	{
 #if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		_InterlockedAnd((long*)destination, (long)value);
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedAnd((LONG*)destination, (LONG)value);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedAnd64((LONG64*)destination, (LONG64)value);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
 #else
 		__sync_and_and_fetch(destination, value);
 		InterlockedOperationBarrier();
 #endif
 	}
 
-	template<typename T>
+	template<class T>
 	DEATH_ALWAYS_INLINE void Interlocked::Or(T volatile* destination, T value)
 	{
 #if defined(DEATH_TARGET_MSVC)
-		static_assert(sizeof(T) == sizeof(long), "Size of T must be the same as size of long");
-		_InterlockedOr((long*)destination, (long)value);
+		if constexpr (sizeof(T) == sizeof(LONG)) {
+			return (T)_InterlockedOr((LONG*)destination, (LONG)value);
+		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
+			return (T)_InterlockedOr64((LONG64*)destination, (LONG64)value);
+		} else {
+			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
+		}
 #else
 		__sync_or_and_fetch(destination, value);
 		InterlockedOperationBarrier();
-#endif
-	}
-
-	template<typename T>
-	DEATH_ALWAYS_INLINE T Interlocked::ExchangePointer(T volatile* destination, T value)
-	{
-#if defined(DEATH_TARGET_MSVC)
-#	if !defined(DEATH_TARGET_32BIT)
-		return (T)(std::uintptr_t)_InterlockedExchangePointer((void* volatile*)destination, value);
-#	else
-		return (T)(std::uintptr_t)_InterlockedExchange((long volatile*)(void* volatile*)destination, (long)(void*)value);
-#	endif
-#else
-		T result = (T)(std::uintptr_t)__atomic_exchange_n((void* volatile*)destination, value, __ATOMIC_ACQ_REL);
-		InterlockedOperationBarrier();
-		return result;
-#endif
-	}
-
-	template<typename T>
-	DEATH_ALWAYS_INLINE T Interlocked::ExchangePointer(T volatile* destination, std::nullptr_t value)
-	{
-#if defined(DEATH_TARGET_MSVC)
-#	if !defined(DEATH_TARGET_32BIT)
-		return (T)(std::uintptr_t)_InterlockedExchangePointer((void* volatile*)destination, value);
-#	else
-		return (T)(std::uintptr_t)_InterlockedExchange((long volatile*)(void* volatile*)destination, (long)(void*)value);
-#	endif
-#else
-		T result = (T)(std::uintptr_t)__atomic_exchange_n((void* volatile*)destination, value, __ATOMIC_ACQ_REL);
-		InterlockedOperationBarrier();
-		return result;
-#endif
-	}
-
-	template<typename T>
-	DEATH_ALWAYS_INLINE T Interlocked::CompareExchangePointer(T volatile* destination, T exchange, T comparand)
-	{
-#if defined(DEATH_TARGET_MSVC)
-#	if !defined(DEATH_TARGET_32BIT)
-		return (T)(std::uintptr_t)_InterlockedCompareExchangePointer((void* volatile*)destination, exchange, comparand);
-#	else
-		return (T)(std::uintptr_t)_InterlockedCompareExchange((long volatile*)(void* volatile*)destination, (long)(void*)exchange, (long)(void*)comparand);
-#	endif
-#else
-		T result = (T)(std::uintptr_t)__sync_val_compare_and_swap((void* volatile*)destination, comparand, exchange);
-		InterlockedOperationBarrier();
-		return result;
-#endif
-	}
-
-	template<typename T>
-	DEATH_ALWAYS_INLINE T Interlocked::CompareExchangePointer(T volatile* destination, T exchange, std::nullptr_t comparand)
-	{
-#if defined(DEATH_TARGET_MSVC)
-#	if !defined(DEATH_TARGET_32BIT)
-		return (T)(std::uintptr_t)_InterlockedCompareExchangePointer((void* volatile*)destination, (void*)exchange, (void*)comparand);
-#	else
-		return (T)(std::uintptr_t)_InterlockedCompareExchange((long volatile*)(void* volatile*)destination, (long)(void*)exchange, (long)(void*)comparand);
-#	endif
-#else
-		T result = (T)(std::uintptr_t)__sync_val_compare_and_swap((void* volatile*)destination, (void*)comparand, (void*)exchange);
-		InterlockedOperationBarrier();
-		return result;
 #endif
 	}
 
@@ -323,4 +286,5 @@ namespace Death {
 #	endif
 	}
 #endif
-}
+
+}}

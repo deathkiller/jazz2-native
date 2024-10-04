@@ -93,6 +93,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
 					__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));	\
+					__DEATH_ASSERT_BREAK();								\
 					return returnValue;									\
 				}														\
 			} while(false)
@@ -109,9 +110,8 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #		define __DEATH_DEBUG_ASSERT1(condition)							\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
-					__DEATH_ASSERT_TRACE("Assertion (" #condition ") failed at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
+					__DEATH_ASSERT_TRACE("Assertion (%s) failed at \"%s:%i\"", #condition, __FILE__, __LINE__);	\
 					__DEATH_ASSERT_BREAK();								\
-					std::abort();										\
 				}														\
 			} while(false)
 #		define __DEATH_DEBUG_ASSERT3(condition, message, returnValue)	\
@@ -140,7 +140,6 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 			static_cast<void>((condition) ? 0 : ([&]() {				\
 				__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));		\
 				__DEATH_ASSERT_BREAK();									\
-				std::abort();											\
 			}(), 0))
 #	endif
 #endif
@@ -169,9 +168,8 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	else
 #		define DEATH_ASSERT_UNREACHABLE()								\
 			do {														\
-				__DEATH_ASSERT_TRACE("Reached unreachable code at \"" __FILE__ ":" DEATH_LINE_STRING "\"");	\
+				__DEATH_ASSERT_TRACE("Reached unreachable code at \"%s:%i\"", __FILE__, __LINE__);	\
 				__DEATH_ASSERT_BREAK();									\
-				std::abort();											\
 			} while (false)
 #	endif
 #endif

@@ -14,6 +14,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/PakFile.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/Stream.cpp
+	${NCINE_SOURCE_DIR}/Shared/Threading/Implementation/WaitOnAddress.cpp
 )
 
 list(APPEND SOURCES

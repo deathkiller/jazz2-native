@@ -133,6 +133,9 @@ namespace Death { namespace Containers {
 		/** @brief Returns @ref DateTime that is set to the current date and time on this computer, expressed as the UTC time */
 		static DateTime UtcNow();
 
+		/** @brief Returns @ref DateTime created from number of milliseconds since 00:00, Jan 1 1970 UTC */
+		static DateTime FromUnixMilliseconds(std::int64_t value);
+
 		/** @brief Creates invalid @ref DateTime structure */
 		DateTime() : _time(INT64_MIN) { }
 
@@ -201,7 +204,8 @@ namespace Death { namespace Containers {
 
 		Tm Partitioned(const TimeZone tz = Local) const;
 
-		std::int64_t GetValue() const;
+		/** @brief Returns number of milliseconds since 00:00, Jan 1 1970 UTC */
+		std::int64_t ToUnixMilliseconds() const;
 		time_t GetTicks() const;
 
 		inline DateTime ToTimezone(const TimeZone tz, bool noDST = false) const;
@@ -431,7 +435,7 @@ namespace Death { namespace Containers {
 		Set(year, month, day, hour, minute, second, millisec);
 	}
 
-	inline std::int64_t DateTime::GetValue() const
+	inline std::int64_t DateTime::ToUnixMilliseconds() const
 	{
 		return _time;
 	}
@@ -472,7 +476,7 @@ namespace Death { namespace Containers {
 
 	inline TimeSpan DateTime::operator-(const DateTime& dt) const
 	{
-		return TimeSpan(GetValue() - dt.GetValue());
+		return TimeSpan(ToUnixMilliseconds() - dt.ToUnixMilliseconds());
 	}
 
 	inline bool DateTime::IsInStdRange() const

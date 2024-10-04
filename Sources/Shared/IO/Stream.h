@@ -46,6 +46,10 @@ namespace Death { namespace IO {
 
 		Stream();
 
+		explicit operator bool() {
+			return IsValid();
+		}
+
 		/** @brief Closes the stream and releases all assigned resources */
 		virtual void Dispose() = 0;
 		/** @brief Seeks in an opened stream */

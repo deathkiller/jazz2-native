@@ -226,6 +226,15 @@
     <Filter Include="Header Files\backward">
       <UniqueIdentifier>{78d8395e-85f4-4b64-a565-54001b8dde6e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shared\Threading">
+      <UniqueIdentifier>{1043539e-37bb-46ed-a0ec-cf31f13ad9cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shared\Threading\Implementation">
+      <UniqueIdentifier>{a9afcf08-b35b-492f-9351-be1edd35d7bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Threading\Implementation">
+      <UniqueIdentifier>{89a193bb-8bee-41fe-9308-44e95e8ff9bc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1503,6 +1512,12 @@
     <ClInclude Include="Jazz2\RumbleDescription.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.h">
+      <Filter>Header Files\Shared\Threading\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Event.h">
+      <Filter>Header Files\Shared\Threading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2479,6 +2494,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\RumbleProcessor.cpp">
       <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.cpp">
+      <Filter>Source Files\Shared\Threading\Implementation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

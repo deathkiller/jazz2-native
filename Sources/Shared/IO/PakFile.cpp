@@ -56,7 +56,7 @@ namespace Death { namespace IO {
 			default: return Stream::OutOfRange;
 		}
 
-		if (newPos < static_cast<std::int64_t>(_offset) || newPos > static_cast<std::int64_t>(_offset) + _size) {
+		if (newPos < static_cast<std::int64_t>(_offset) || newPos > static_cast<std::int64_t>(_offset + _size)) {
 			newPos = Stream::OutOfRange;
 		} else {
 			newPos = _underlyingStream.Seek(newPos, SeekOrigin::Begin);

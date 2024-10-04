@@ -306,6 +306,8 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Memory.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\TypeInfo.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\PakFile.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Event.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.h" />
     <ClInclude Include="backward\backward.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
@@ -717,6 +719,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\MemoryStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Stream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\PakFile.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />

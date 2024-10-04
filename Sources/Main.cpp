@@ -236,7 +236,7 @@ void GameEventHandler::OnInitialize()
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
-		Thread::SetCurrentName("Parallel initialization");
+		Thread::SetCurrentName("Parallel Initialization");
 
 		auto handler = static_cast<GameEventHandler*>(arg);
 		ASSERT(handler != nullptr);
@@ -958,7 +958,7 @@ void GameEventHandler::RefreshCache()
 			animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		}
 		std::int64_t animsCached = s->ReadValue<std::int64_t>();
-		std::int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
+		std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
@@ -1045,7 +1045,7 @@ RecreateCache:
 	RefreshCacheLevels();
 
 	LOGI("Cache was recreated");
-	std::int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
+	std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
 	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 	std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();

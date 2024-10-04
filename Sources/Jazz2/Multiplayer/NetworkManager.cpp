@@ -25,6 +25,7 @@
 #include <Threading/Interlocked.h>
 
 using namespace Death;
+using namespace Death::Threading;
 
 namespace Jazz2::Multiplayer
 {
