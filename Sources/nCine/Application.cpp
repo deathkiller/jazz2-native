@@ -119,7 +119,9 @@ using namespace Death::IO;
 
 static constexpr std::int32_t MaxLogEntryLength = 4096;
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <emscripten/emscripten.h>
+#else
 #	include <IO/FileStream.h>
 std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
@@ -1054,8 +1056,8 @@ namespace nCine
 		__hasVirtualTerminal = ::isatty(1) && ::getenv("TERM");
 #	elif defined(DEATH_TARGET_EMSCRIPTEN)
 		char* userAgent = (char*)EM_ASM_PTR({
-			return (typeof navigator != = 'undefined' && navigator != = null &&
-					typeof navigator.userAgent != = 'undefined' && navigator.userAgent != = null
+			return (typeof navigator !== 'undefined' && navigator !== null &&
+					typeof navigator.userAgent !== 'undefined' && navigator.userAgent !== null
 						? stringToNewUTF8(navigator.userAgent) : 0);
 		});
 		if (userAgent != nullptr) {
