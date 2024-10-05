@@ -89,7 +89,7 @@ extern "C"
 #	else
 #		include <backward.h>
 #	endif
-backward::SignalHandling sh;
+backward::ExceptionHandling eh;
 #endif
 
 using namespace Death::Containers::Literals;
@@ -123,13 +123,33 @@ static constexpr std::int32_t MaxLogEntryLength = 4096;
 #	include <IO/FileStream.h>
 std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-extern HANDLE __consoleHandleOut;
-extern SHORT __consoleCursorY;
-extern bool __showLogConsole;
+#	if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+#		define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#	endif
+
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+
+HANDLE __consoleHandleOut;
+SHORT __consoleCursorY;
+bool __showLogConsole = false;
+Array<wchar_t> __consolePrompt;
+
+static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
+{
+	if (consoleHandleOut == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+
+	DWORD dwMode = 0;
+	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
+			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
+}
 #endif
+
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
-extern bool __hasVirtualTerminal;
+bool __hasVirtualTerminal = false;
 #endif
 
 struct TraceDateTime {
@@ -432,79 +452,79 @@ static constexpr std::int32_t AsyncTraceStateReady = 1;
 static constexpr std::int32_t AsyncTraceStateReleasing = 2;
 static constexpr std::int32_t AsyncTraceStateReleased = 3;
 
-static nCine::Thread _asyncTraceThread;
-static AutoResetEvent _asyncTraceWait;
-static std::int32_t _asyncTraceState = AsyncTraceStateUninitialized;
-static std::int32_t _asyncTraceFlush = 0;
-static moodycamel::ConcurrentQueue<TraceItem> _asyncTraceQueuedItems;
+static nCine::Thread __asyncTraceThread;
+static AutoResetEvent __asyncTraceWait;
+static std::int32_t __asyncTraceState = AsyncTraceStateUninitialized;
+static std::int32_t __asyncTraceFlush = 0;
+static moodycamel::ConcurrentQueue<TraceItem> __asyncTraceQueuedItems;
 
 static void OnTraceThread(void* _)
 {
 	nCine::Thread::SetCurrentName("Async Tracing");
 
-	while (_asyncTraceState == AsyncTraceStateReady || _asyncTraceState == AsyncTraceStateReleasing) {
+	while (__asyncTraceState == AsyncTraceStateReady || __asyncTraceState == AsyncTraceStateReleasing) {
 		TraceItem item;
 		bool itemFound = false;
-		while (_asyncTraceQueuedItems.try_dequeue(item)) {
+		while (__asyncTraceQueuedItems.try_dequeue(item)) {
 			WriteTraceItem(item.Level, item.ThreadId, item.Buffer.c_str(),
 				(std::int32_t)item.Buffer.size(), item.LevelOffset, item.MessageOffset);
 			itemFound = true;
 		}
 
-		Interlocked::WriteRelease(&_asyncTraceFlush, 0);
+		Interlocked::WriteRelease(&__asyncTraceFlush, 0);
 
-		if (!itemFound && _asyncTraceState == AsyncTraceStateReleasing) {
+		if (!itemFound && __asyncTraceState == AsyncTraceStateReleasing) {
 			// Queue is empty, so the thread can be stopped
 			break;
 		}
 
-		if (_asyncTraceState == AsyncTraceStateReady) {
-			_asyncTraceWait.Wait();
+		if (__asyncTraceState == AsyncTraceStateReady) {
+			__asyncTraceWait.Wait();
 		}
 	}
 
-	Interlocked::WriteRelease(&_asyncTraceState, AsyncTraceStateReleased);
+	Interlocked::WriteRelease(&__asyncTraceState, AsyncTraceStateReleased);
 }
 
 static void InitializeAsyncTrace()
 {
-	if (Interlocked::CompareExchange(&_asyncTraceState, AsyncTraceStateReady, AsyncTraceStateUninitialized) != AsyncTraceStateUninitialized) {
+	if (Interlocked::CompareExchange(&__asyncTraceState, AsyncTraceStateReady, AsyncTraceStateUninitialized) != AsyncTraceStateUninitialized) {
 		return;
 	}
 
-	_asyncTraceThread.Run(OnTraceThread, nullptr);
+	__asyncTraceThread.Run(OnTraceThread, nullptr);
 }
 
 static void CleanUpAsyncTrace()
 {
-	if (Interlocked::Exchange(&_asyncTraceState, AsyncTraceStateReleasing) != AsyncTraceStateReady) {
+	if (Interlocked::Exchange(&__asyncTraceState, AsyncTraceStateReleasing) != AsyncTraceStateReady) {
 		return;
 	}
 
-	_asyncTraceWait.SetEvent();
-	_asyncTraceThread.Join();
+	__asyncTraceWait.SetEvent();
+	__asyncTraceThread.Join();
 }
 
 static void QueueTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
 {
 	// Block the thread until queue is flushed, limit number of spins to avoid deadlock
 	std::int32_t n = 0;
-	while (_asyncTraceFlush != 0 && n++ < 10000) {
+	while (__asyncTraceFlush != 0 && n++ < 10000) {
 		nCine::Timer::sleep(0);
 	}
 
 	TraceItem item;
 	item.Assign(level, threadId, logEntry, length, levelOffset, messageOffset);
 
-	_asyncTraceQueuedItems.enqueue(std::move(item));
+	__asyncTraceQueuedItems.enqueue(std::move(item));
 
-	_asyncTraceWait.SetEvent();
+	__asyncTraceWait.SetEvent();
 
-	if (level >= TraceLevel::Error && _asyncTraceState == AsyncTraceStateReady) {
+	if (level >= TraceLevel::Error && __asyncTraceState == AsyncTraceStateReady) {
 		// Wait for flush Error/Assert/Fatal messages
-		Interlocked::WriteRelease(&_asyncTraceFlush, 1);
-		if (_asyncTraceState == AsyncTraceStateReady) {
-			while (Interlocked::ReadAcquire(&_asyncTraceFlush) != 0) {
+		Interlocked::WriteRelease(&__asyncTraceFlush, 1);
+		if (__asyncTraceState == AsyncTraceStateReady) {
+			while (Interlocked::ReadAcquire(&__asyncTraceFlush) != 0) {
 				nCine::Timer::sleep(0);
 			}
 		}
@@ -517,8 +537,8 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	char logEntry[MaxLogEntryLength + 1];
 
 	TraceDateTime dateTime = GetTraceDateTime();
-	std::int32_t length = snprintf(logEntry, MaxLogEntryLength, "%02u:%02u:%02u.%03u ", dateTime.Hours, dateTime.Minutes,
-		dateTime.Seconds, dateTime.Milliseconds);
+	std::int32_t length = snprintf(logEntry, MaxLogEntryLength, "%02u:%02u:%02u.%03u ",
+		dateTime.Hours, dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds);
 	std::int32_t levelOffset = length;
 
 	char levelIdentifier;
@@ -619,19 +639,8 @@ namespace nCine
 
 	void Application::PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler)
 	{
-#if defined(DEATH_TRACE_ASYNC)
-		InitializeAsyncTrace();
-#endif
-
-#if defined(WITH_BACKWARD)
-#	if defined(DEATH_TARGET_ANDROID)
-		// Try to save crash info to log file
-		sh.destination() = __logFile->GetHandle();
-#	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
-		if (__hasVirtualTerminal) {
-			sh.color_mode() = backward::ColorMode::always;
-		}
-#	endif
+#if defined(DEATH_TRACE)
+		PreInitTrace();
 #endif
 
 		appEventHandler_ = std::move(appEventHandler);
@@ -645,6 +654,10 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
+
+#if defined(DEATH_TRACE)
+		InitTrace();
+#endif
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (UWP) initializing...");
@@ -942,8 +955,8 @@ namespace nCine
 
 		theServiceLocator().UnregisterAll();
 
-#if defined(DEATH_TRACE_ASYNC)
-		CleanUpAsyncTrace();
+#if defined(DEATH_TRACE)
+		ShutdownTrace();
 #endif
 	}
 
@@ -990,11 +1003,214 @@ namespace nCine
 
 	void Application::AttachTraceTarget(Containers::StringView targetPath)
 	{
+#if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		if (targetPath == ConsoleTarget) {
+			if (!__showLogConsole) {
+				__showLogConsole = true;
+				CreateTraceConsole(NCINE_APP_NAME " [Console]", __hasVirtualTerminal);
+
+				CONSOLE_SCREEN_BUFFER_INFO csbi;
+				__consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+					__consoleCursorY = csbi.dwCursorPosition.Y;
+				} else {
+					__consoleHandleOut = NULL;
+				}
+
+#	if defined(WITH_BACKWARD)
+				if (__hasVirtualTerminal) {
+					eh.color_mode() = backward::ColorMode::always;
+				}
+#	endif
+			}
+			return;
+		}
+#endif
+
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		__logFile = fs::Open(targetPath, FileAccess::Write);
-		if (!__logFile->IsValid()) {
+		if (__logFile = fs::Open(targetPath, FileAccess::Write)) {
+#	if defined(WITH_BACKWARD)
+			// Try to save crash info to log file
+			eh.destination() = static_cast<FileStream*>(__logFile.get())->GetHandle();
+#	endif
+		} else {
 			__logFile = nullptr;
 		}
 #endif
 	}
+
+#if defined(DEATH_TRACE)
+	void Application::PreInitTrace()
+	{
+#	if defined(DEATH_TRACE_ASYNC)
+		InitializeAsyncTrace();
+#	endif
+	}
+
+	void Application::InitTrace()
+	{
+#	if defined(DEATH_TARGET_APPLE)
+		// Xcode's console reports that it is a TTY, but it doesn't support colors, TERM is not defined in this case
+		__hasVirtualTerminal = ::isatty(1) && ::getenv("TERM");
+#	elif defined(DEATH_TARGET_EMSCRIPTEN)
+		char* userAgent = (char*)EM_ASM_PTR({
+			return (typeof navigator != = 'undefined' && navigator != = null &&
+					typeof navigator.userAgent != = 'undefined' && navigator.userAgent != = null
+						? stringToNewUTF8(navigator.userAgent) : 0);
+		});
+		if (userAgent != nullptr) {
+			// Only Chrome supports ANSI escape sequences for now
+			__hasVirtualTerminal = (::strcasestr(userAgent, "chrome") != nullptr);
+			std::free(userAgent);
+		}
+#	elif defined(DEATH_TARGET_UNIX)
+		::setvbuf(stdout, nullptr, _IONBF, 0);
+		::setvbuf(stderr, nullptr, _IONBF, 0);
+		__hasVirtualTerminal = ::isatty(1);
+#	endif
+
+#	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
+		if (__hasVirtualTerminal) {
+			eh.color_mode() = backward::ColorMode::always;
+		}
+#	endif
+	}
+
+	void Application::ShutdownTrace()
+	{
+#	if defined(DEATH_TRACE_ASYNC)
+		CleanUpAsyncTrace();
+#	endif
+#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		if (__showLogConsole) {
+			DestroyTraceConsole();
+		}
+#	endif
+	}
+
+#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+	bool Application::CreateTraceConsole(const StringView& title, bool& hasVirtualTerminal)
+	{
+		FILE* fDummy = nullptr;
+
+		if (::AttachConsole(ATTACH_PARENT_PROCESS)) {
+			HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+			if (consoleHandleOut != INVALID_HANDLE_VALUE) {
+				::freopen_s(&fDummy, "CONOUT$", "w", stdout);
+				::setvbuf(stdout, NULL, _IONBF, 0);
+			}
+
+			HANDLE consoleHandleError = ::GetStdHandle(STD_ERROR_HANDLE);
+			if (consoleHandleError != INVALID_HANDLE_VALUE) {
+				::freopen_s(&fDummy, "CONOUT$", "w", stderr);
+				::setvbuf(stderr, NULL, _IONBF, 0);
+			}
+
+			HANDLE consoleHandleIn = ::GetStdHandle(STD_INPUT_HANDLE);
+			if (consoleHandleIn != INVALID_HANDLE_VALUE) {
+				::freopen_s(&fDummy, "CONIN$", "r", stdin);
+				::setvbuf(stdin, NULL, _IONBF, 0);
+			}
+
+			hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
+
+			// Try to get command prompt to be able to reprint it when the game exits
+			CONSOLE_SCREEN_BUFFER_INFO csbi;
+			if (::GetConsoleScreenBufferInfo(consoleHandleOut, &csbi)) {
+				DWORD dwConsoleColumnWidth = (DWORD)(csbi.srWindow.Right - csbi.srWindow.Left + 1);
+				SHORT xEnd = csbi.dwCursorPosition.X;
+				SHORT yEnd = csbi.dwCursorPosition.Y;
+				if (xEnd != 0 || yEnd != 0) {
+					DWORD dwNumberOfChars;
+					SHORT yBegin = yEnd;
+					if (dwConsoleColumnWidth > 16) {
+						Array<wchar_t> tmp(NoInit, dwConsoleColumnWidth);
+						while (yBegin > 0) {
+							COORD dwReadCoord = { 0, yBegin };
+							if (!::ReadConsoleOutputCharacter(consoleHandleOut, tmp.data(), dwConsoleColumnWidth, dwReadCoord, &dwNumberOfChars)) {
+								break;
+							}
+
+							for (DWORD i = dwNumberOfChars - 8; i < dwNumberOfChars; i++) {
+								wchar_t wchar = tmp[i];
+								if (wchar != L' ') {
+									yBegin--;
+									continue;
+								}
+							}
+
+							if (yBegin < yEnd) {
+								yBegin++;
+							}
+							break;
+						}
+					}
+
+					DWORD promptLength = (yEnd - yBegin) * dwConsoleColumnWidth + xEnd;
+					__consolePrompt = Array<wchar_t>(NoInit, promptLength);
+					COORD dwPromptCoord = { 0, yEnd };
+					if (::ReadConsoleOutputCharacter(consoleHandleOut, __consolePrompt.data(), promptLength, dwPromptCoord, &dwNumberOfChars)) {
+						if (::SetConsoleCursorPosition(consoleHandleOut, dwPromptCoord)) {
+							::FillConsoleOutputCharacter(consoleHandleOut, L' ', promptLength, dwPromptCoord, &dwNumberOfChars);
+						}
+					} else {
+						__consolePrompt = {};
+					}
+				}
+			}
+
+			return true;
+		} else if (::AllocConsole()) {
+			::freopen_s(&fDummy, "CONOUT$", "w", stdout);
+			::freopen_s(&fDummy, "CONOUT$", "w", stderr);
+			::freopen_s(&fDummy, "CONIN$", "r", stdin);
+
+			HANDLE consoleHandleOut = ::CreateFile(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			HANDLE consoleHandleIn = ::CreateFile(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			::SetStdHandle(STD_OUTPUT_HANDLE, consoleHandleOut);
+			::SetStdHandle(STD_ERROR_HANDLE, consoleHandleOut);
+			::SetStdHandle(STD_INPUT_HANDLE, consoleHandleIn);
+
+			hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
+
+			::SetConsoleTitle(Death::Utf8::ToUtf16(title));
+			HWND hWnd = ::GetConsoleWindow();
+			if (hWnd != nullptr) {
+				HINSTANCE inst = ((HINSTANCE)&__ImageBase);
+				HICON windowIcon = (HICON)::LoadImage(inst, L"WINDOW_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTSIZE);
+				HICON windowIconSmall = (HICON)::LoadImage(inst, L"WINDOW_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTSIZE);
+				if (windowIconSmall != NULL) ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)windowIconSmall);
+				if (windowIcon != NULL) ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)windowIcon);
+			}
+
+			return true;
+		} else {
+			hasVirtualTerminal = false;
+		}
+
+		return false;
+	}
+
+	void Application::DestroyTraceConsole()
+	{
+		if (!__consolePrompt.empty()) {
+			HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+			if (consoleHandleOut != INVALID_HANDLE_VALUE) {
+				CONSOLE_SCREEN_BUFFER_INFO csbi;
+				if (::GetConsoleScreenBufferInfo(consoleHandleOut, &csbi)) {
+					DWORD xEnd = csbi.dwCursorPosition.X;
+					DWORD yEnd = csbi.dwCursorPosition.Y;
+					if (xEnd != 0 || yEnd != 0) {
+						DWORD dwNumberOfCharsWritten;
+						::WriteConsoleW(consoleHandleOut, L"\r\n", (DWORD)arraySize(L"\r\n") - 1, &dwNumberOfCharsWritten, NULL);
+						::WriteConsoleW(consoleHandleOut, __consolePrompt.data(), (DWORD)__consolePrompt.size(), &dwNumberOfCharsWritten, NULL);
+					}
+				}
+			}
+		}
+
+		::FreeConsole();
+	}
+#	endif
+#endif
 }

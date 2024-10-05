@@ -19,8 +19,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#ifndef H_6B9572DA_A64B_49E6_B234_051480991C89
-#define H_6B9572DA_A64B_49E6_B234_051480991C89
+#ifndef BACKWARD_INCLUDED
+#define BACKWARD_INCLUDED
 
 #include <CommonBase.h>
 
@@ -28,13 +28,13 @@
 #	define BACKWARD_ATLEAST_CXX17
 #endif
 
-#if !(defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_DARWIN) || defined(BACKWARD_SYSTEM_WINDOWS))
+#if !(defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_DARWIN) || defined(BACKWARD_TARGET_WINDOWS))
 #	if defined(__linux) || defined(__linux__)
-#		define BACKWARD_SYSTEM_LINUX
+#		define BACKWARD_TARGET_LINUX
 #	elif defined(DEATH_TARGET_APPLE)
-#		define BACKWARD_SYSTEM_DARWIN
+#		define BACKWARD_TARGET_DARWIN
 #	elif defined(DEATH_TARGET_WINDOWS)
-#		define BACKWARD_SYSTEM_WINDOWS
+#		define BACKWARD_TARGET_WINDOWS
 #	endif
 #endif
 
@@ -46,16 +46,14 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <limits>
 #include <new>
-#include <sstream>
 #include <streambuf>
 #include <string>
 #include <vector>
 #include <exception>
 #include <iterator>
 
-#if defined(BACKWARD_SYSTEM_LINUX)
+#if defined(BACKWARD_TARGET_LINUX)
 
 // On linux, backtrace can back-trace or "walk" the stack using the following
 // libraries:
@@ -157,9 +155,8 @@
 #include <cxxabi.h>
 #include <fcntl.h>
 #if defined(DEATH_TARGET_ANDROID)
-//		Old Android API levels define _Unwind_Ptr in both link.h and
-// unwind.h 		Rename the one in link.h as we are not going to be using
-// it
+// Old Android API levels define _Unwind_Ptr in both link.h and unwind.h
+// Rename the one in link.h as we are not going to be using it
 #	define _Unwind_Ptr _Unwind_Ptr_Custom
 #	include <link.h>
 #	undef _Unwind_Ptr
@@ -167,8 +164,7 @@
 #	include <link.h>
 #endif
 #if defined(DEATH_TARGET_POWERPC)
-// Linux kernel header required for the struct pt_regs definition
-// to access the NIP (Next Instruction Pointer) register value
+// Linux kernel header required for the struct pt_regs definition to access the NIP (Next Instruction Pointer) register value
 #	include <asm/ptrace.h>
 #endif
 #include <signal.h>
@@ -186,9 +182,8 @@
 #endif
 
 #if BACKWARD_HAS_BFD == 1
-//              NOTE: defining PACKAGE{,_VERSION} is required before including
-//                    bfd.h on some platforms, see also:
-//                    https://sourceware.org/bugzilla/show_bug.cgi?id=14243
+// NOTE: defining PACKAGE{,_VERSION} is required before including bfd.h on some platforms, see also:
+// https://sourceware.org/bugzilla/show_bug.cgi?id=14243
 #	if !defined(PACKAGE)
 #		define PACKAGE
 #	endif
@@ -213,13 +208,12 @@
 #endif
 
 #if (BACKWARD_HAS_BACKTRACE == 1 || BACKWARD_HAS_BACKTRACE_SYMBOL == 1)
-// then we shall rely on backtrace
 #	include <execinfo.h>
 #endif
 
-#endif // defined(BACKWARD_SYSTEM_LINUX)
+#endif
 
-#if defined(BACKWARD_SYSTEM_DARWIN)
+#if defined(BACKWARD_TARGET_DARWIN)
 // On Darwin, backtrace can back-trace or "walk" the stack using the following
 // libraries:
 //
@@ -280,9 +274,9 @@
 #if (BACKWARD_HAS_BACKTRACE == 1 || BACKWARD_HAS_BACKTRACE_SYMBOL == 1)
 #	include <execinfo.h>
 #endif
-#endif // defined(BACKWARD_SYSTEM_DARWIN)
+#endif
 
-#if defined(BACKWARD_SYSTEM_WINDOWS)
+#if defined(BACKWARD_TARGET_WINDOWS)
 
 #include <condition_variable>
 #include <mutex>
@@ -291,7 +285,7 @@
 #include <basetsd.h>
 
 #if defined(DEATH_TARGET_32BIT)
-typedef int ssize_t;
+typedef std::int32_t ssize_t;
 #else
 typedef SSIZE_T ssize_t;
 #endif
@@ -311,8 +305,7 @@ typedef SSIZE_T ssize_t;
 
 // Comment / packing is from stackoverflow:
 // https://stackoverflow.com/questions/6205981/windows-c-stack-trace-from-a-running-app/28276227#28276227
-// Some versions of imagehlp.dll lack the proper packing directives themselves
-// so we need to do it.
+// Some versions of imagehlp.dll lack the proper packing directives themselves, so we need to do it.
 #pragma pack(push, before_imagehlp, 8)
 #define _IMAGEHLP64
 #include <imagehlp.h>
@@ -371,10 +364,10 @@ namespace backward {
 
 namespace backward {
 	namespace details {
-#if defined(BACKWARD_SYSTEM_WINDOWS)
-		const char kBackwardPathDelimiter[] = ";";
+#if defined(BACKWARD_TARGET_WINDOWS)
+		const char BackwardPathDelimiter[] = ";";
 #else
-		const char kBackwardPathDelimiter[] = ":";
+		const char BackwardPathDelimiter[] = ":";
 #endif
 	} // namespace details
 } // namespace backward
@@ -386,11 +379,11 @@ namespace backward {
 		struct darwin_tag;
 		struct windows_tag;
 
-#if defined(BACKWARD_SYSTEM_LINUX)
+#if defined(BACKWARD_TARGET_LINUX)
 		typedef linux_tag current_tag;
-#elif defined(BACKWARD_SYSTEM_DARWIN)
+#elif defined(BACKWARD_TARGET_DARWIN)
 		typedef darwin_tag current_tag;
-#elif defined(BACKWARD_SYSTEM_WINDOWS)
+#elif defined(BACKWARD_TARGET_WINDOWS)
 		typedef windows_tag current_tag;
 #else
 #	error "Unsupported platform"
@@ -398,7 +391,7 @@ namespace backward {
 	} // namespace system_tag
 
 	namespace trace_resolver_tag {
-#if defined(BACKWARD_SYSTEM_LINUX)
+#if defined(BACKWARD_TARGET_LINUX)
 		struct libdw;
 		struct libbfd;
 		struct libdwarf;
@@ -415,7 +408,7 @@ namespace backward {
 #	else
 #		error "You shall not pass, until you know what you want"
 #	endif
-#elif defined(BACKWARD_SYSTEM_DARWIN)
+#elif defined(BACKWARD_TARGET_DARWIN)
 		struct backtrace_symbol;
 
 #	if BACKWARD_HAS_BACKTRACE_SYMBOL == 1
@@ -423,7 +416,7 @@ namespace backward {
 #	else
 #		error "You shall not pass, until you know what you want"
 #	endif
-#elif defined(BACKWARD_SYSTEM_WINDOWS)
+#elif defined(BACKWARD_TARGET_WINDOWS)
 		struct pdb_symbol;
 #	if BACKWARD_HAS_PDB_SYMBOL == 1
 		typedef pdb_symbol current;
@@ -494,14 +487,14 @@ namespace backward {
 				return *this;
 			}
 
-			void reset(T new_val) {
-				handle tmp(new_val);
+			void reset(T newValue) {
+				handle tmp(newValue);
 				swap(tmp);
 			}
 
-			void update(T new_val) {
-				_val = new_val;
-				_empty = !static_cast<bool>(new_val);
+			void update(T newValue) {
+				_val = newValue;
+				_empty = !static_cast<bool>(newValue);
 			}
 
 			operator const dummy* () const {
@@ -559,28 +552,28 @@ namespace backward {
 			}
 		};
 
-#if defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_DARWIN)
+#if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_DARWIN)
 
 		template<>
 		struct demangler_impl<system_tag::current_tag> {
-			demangler_impl() : _demangle_buffer_length(0) {}
+			demangler_impl() : _demangleBufferLength(0) {}
 
-			std::string demangle(const char* funcname) {
+			std::string demangle(const char* funcName) {
 				using namespace details;
-				char* result = abi::__cxa_demangle(funcname, _demangle_buffer.get(), &_demangle_buffer_length, nullptr);
+				char* result = abi::__cxa_demangle(funcName, _demangleBuffer.get(), &_demangleBufferLength, nullptr);
 				if (result != nullptr) {
-					_demangle_buffer.update(result);
+					_demangleBuffer.update(result);
 					return result;
 				}
-				return funcname;
+				return funcName;
 			}
 
 		private:
-			details::handle<char*> _demangle_buffer;
-			std::size_t _demangle_buffer_length;
+			details::handle<char*> _demangleBuffer;
+			std::size_t _demangleBufferLength;
 		};
 
-#endif // BACKWARD_SYSTEM_LINUX || BACKWARD_SYSTEM_DARWIN
+#endif // BACKWARD_TARGET_LINUX || BACKWARD_TARGET_DARWIN
 
 		struct demangler : public demangler_impl<system_tag::current_tag> {};
 
@@ -596,8 +589,8 @@ namespace backward {
 			std::vector<std::string> out;
 			std::size_t last = 0;
 			std::size_t next = 0;
-			std::size_t delimiter_size = sizeof(kBackwardPathDelimiter) - 1;
-			while ((next = s.find(kBackwardPathDelimiter, last)) != std::string::npos) {
+			std::size_t delimiter_size = sizeof(BackwardPathDelimiter) - 1;
+			while ((next = s.find(BackwardPathDelimiter, last)) != std::string::npos) {
 				std::size_t length = next - last;
 				if (length > 0) {
 					out.push_back(s.substr(last, length));
@@ -628,8 +621,8 @@ namespace backward {
 		struct SourceLoc {
 			std::string function;
 			std::string filename;
-			unsigned line;
-			unsigned col;
+			std::int32_t line;
+			std::int32_t col;
 
 			SourceLoc() : line(0), col(0) {}
 
@@ -696,10 +689,10 @@ namespace backward {
 	class StackTraceImplBase {
 	public:
 		StackTraceImplBase()
-			: _thread_id(0), _skip(0), _context(nullptr), _error_addr(nullptr) {}
+			: _threadId(0), _skip(0), _context(nullptr), _errorAddr(nullptr) {}
 
 		std::size_t thread_id() const {
-			return _thread_id;
+			return _threadId;
 		}
 
 		void skip_n_firsts(std::size_t n) {
@@ -707,28 +700,28 @@ namespace backward {
 		}
 
 	protected:
-		std::size_t _thread_id;
+		std::size_t _threadId;
 		std::size_t _skip;
 		void* _context;
-		void* _error_addr;
+		void* _errorAddr;
 
 		void load_thread_info() {
-#if defined(BACKWARD_SYSTEM_LINUX)
+#if defined(BACKWARD_TARGET_LINUX)
 #	if !defined(DEATH_TARGET_ANDROID)
-			_thread_id = static_cast<std::size_t>(syscall(SYS_gettid));
+			_threadId = static_cast<std::size_t>(syscall(SYS_gettid));
 #	else
-			_thread_id = static_cast<std::size_t>(gettid());
+			_threadId = static_cast<std::size_t>(gettid());
 #	endif
-			if (_thread_id == static_cast<std::size_t>(getpid())) {
+			if (_threadId == static_cast<std::size_t>(getpid())) {
 				// If the thread is the main one, let's hide that.
 				// I like to keep little secret sometimes.
-				_thread_id = 0;
+				_threadId = 0;
 			}
-#elif defined(BACKWARD_SYSTEM_DARWIN)
-			_thread_id = reinterpret_cast<std::size_t>(pthread_self());
+#elif defined(BACKWARD_TARGET_DARWIN)
+			_threadId = reinterpret_cast<std::size_t>(pthread_self());
 			if (pthread_main_np() == 1) {
 				// If the thread is the main one, let's hide that.
-				_thread_id = 0;
+				_threadId = 0;
 			}
 #endif
 		}
@@ -741,10 +734,10 @@ namespace backward {
 		}
 
 		void set_error_addr(void* error_addr) {
-			_error_addr = error_addr;
+			_errorAddr = error_addr;
 		}
 		void* error_addr() const {
-			return _error_addr;
+			return _errorAddr;
 		}
 
 		std::size_t skip_n_firsts() const {
@@ -1072,7 +1065,7 @@ namespace backward {
 		}
 	};
 
-#elif defined(BACKWARD_SYSTEM_WINDOWS)
+#elif defined(BACKWARD_TARGET_WINDOWS)
 
 	struct ExceptionContext {
 		CONTEXT Context;
@@ -1125,7 +1118,7 @@ namespace backward {
 				thd_ = ::GetCurrentThread();
 			}
 
-			_thread_id = (std::size_t)::GetThreadId(thd_);
+			_threadId = (std::size_t)::GetThreadId(thd_);
 
 			HANDLE process = ::GetCurrentProcess();
 
@@ -1226,13 +1219,13 @@ namespace backward {
 	public:
 		virtual ~TraceResolverImplBase() {}
 
-		virtual void load_addresses(void* const* addresses, int address_count) {
+		virtual void load_addresses(void* const* addresses, std::int32_t address_count) {
 			(void)addresses;
 			(void)address_count;
 		}
 
 		template <class ST> void load_stacktrace(ST& st) {
-			load_addresses(st.begin(), static_cast<int>(st.size()));
+			load_addresses(st.begin(), static_cast<std::int32_t>(st.size()));
 		}
 
 		virtual ResolvedTrace resolve(ResolvedTrace t) {
@@ -1250,7 +1243,7 @@ namespace backward {
 
 	template <typename TAG> class TraceResolverImpl;
 
-#if defined(BACKWARD_SYSTEM_LINUX)
+#if defined(BACKWARD_TARGET_LINUX)
 
 	class TraceResolverLinuxBase : public TraceResolverImplBase {
 	public:
@@ -1320,7 +1313,7 @@ namespace backward {
 	template<>
 	class TraceResolverLinuxImpl<trace_resolver_tag::backtrace_symbol> : public TraceResolverLinuxBase {
 	public:
-		void load_addresses(void* const* addresses, int address_count) override {
+		void load_addresses(void* const* addresses, std::int32_t address_count) override {
 			if (address_count == 0) {
 				return;
 			}
@@ -1866,11 +1859,11 @@ namespace backward {
 				if (srcfile != nullptr) {
 					trace.source.filename = srcfile;
 				}
-				int line = 0, col = 0;
+				std::int32_t line = 0, col = 0;
 				dwarf_lineno(srcloc, &line);
 				dwarf_linecol(srcloc, &col);
-				trace.source.line = static_cast<unsigned>(line);
-				trace.source.col = static_cast<unsigned>(col);
+				trace.source.line = line;
+				trace.source.col = col;
 			}
 
 			deep_first_search_by_pc(cudie, trace_addr - mod_bias, inliners_search_cb(trace));
@@ -1916,8 +1909,8 @@ namespace backward {
 						Dwarf_Word line = 0, col = 0;
 						dwarf_formudata(dwarf_attr(die, DW_AT_call_line, &attr_mem), &line);
 						dwarf_formudata(dwarf_attr(die, DW_AT_call_column, &attr_mem), &col);
-						sloc.line = static_cast<unsigned>(line);
-						sloc.col = static_cast<unsigned>(col);
+						sloc.line = static_cast<std::int32_t>(line);
+						sloc.col = static_cast<std::int32_t>(col);
 
 						trace.inliners.push_back(sloc);
 						break;
@@ -2061,7 +2054,7 @@ namespace backward {
 			// The loaded object can be yourself btw.
 
 			Dl_info symbol_info;
-			int dladdr_result = 0;
+			std::int32_t dladdr_result = 0;
 #	if defined(__GLIBC__)
 			link_map* link_map;
 			// We request the link map so we can get information about offsets
@@ -2191,17 +2184,17 @@ namespace backward {
 		}
 
 	public:
-		static int close_dwarf(Dwarf_Debug dwarf) {
+		static std::int32_t close_dwarf(Dwarf_Debug dwarf) {
 			return dwarf_finish(dwarf, NULL);
 		}
 
 	private:
 		bool _dwarf_loaded;
 
-		typedef details::handle<int, details::deleter<int, int, &::close>> dwarf_file_t;
-		typedef details::handle<Elf*, details::deleter<int, Elf*, &elf_end>> dwarf_elf_t;
-		typedef details::handle<Dwarf_Debug, details::deleter<int, Dwarf_Debug, &close_dwarf>> dwarf_handle_t;
-		typedef std::map<Dwarf_Addr, int> die_linemap_t;
+		typedef details::handle<std::int32_t, details::deleter<std::int32_t, std::int32_t, &::close>> dwarf_file_t;
+		typedef details::handle<Elf*, details::deleter<std::int32_t, Elf*, &elf_end>> dwarf_elf_t;
+		typedef details::handle<Dwarf_Debug, details::deleter<std::int32_t, Dwarf_Debug, &close_dwarf>> dwarf_handle_t;
+		typedef std::map<Dwarf_Addr, std::int32_t> die_linemap_t;
 		typedef std::map<Dwarf_Off, Dwarf_Off> die_specmap_t;
 
 		struct die_cache_entry {
@@ -2308,8 +2301,8 @@ namespace backward {
 	Elf_Data *elf_data = 0;																	\
 	Elf##ARCH##_Shdr *section_header = 0;													\
 	Elf_Scn *symbol_section = 0;															\
-	std::size_t symbol_count = 0;																\
-	std::size_t symbol_strings = 0;																\
+	std::size_t symbol_count = 0;															\
+	std::size_t symbol_strings = 0;															\
 	Elf##ARCH##_Sym *symbol = 0;															\
 	const char *section_name = 0;															\
 																							\
@@ -2353,8 +2346,8 @@ namespace backward {
 	if (symbol_section && symbol_count && symbol_strings) {									\
 		elf_data = elf_getdata(symbol_section, NULL);										\
 		symbol = reinterpret_cast<Elf##ARCH##_Sym *>(elf_data->d_buf);						\
-		for (std::size_t i = 0; i < symbol_count; ++i) {											\
-			int type = ELF##ARCH##_ST_TYPE(symbol->st_info);								\
+		for (std::size_t i = 0; i < symbol_count; ++i) {									\
+			std::int32_t type = ELF##ARCH##_ST_TYPE(symbol->st_info);						\
 			if (type == STT_FUNC && symbol->st_value > 0) {									\
 				r.symbol_cache[symbol->st_value] = std::string(								\
 				elf_strptr(elf_handle.get(), symbol_strings, symbol->st_name));				\
@@ -2396,7 +2389,7 @@ namespace backward {
 				Dwarf_Error error = DW_DLE_NE;
 				dwarf_handle_t dwarf_handle;
 
-				int dwarf_result = dwarf_elf_init(elf_handle.get(), DW_DLC_READ, NULL, NULL, &dwarf_debug, &error);
+				std::int32_t dwarf_result = dwarf_elf_init(elf_handle.get(), DW_DLC_READ, NULL, NULL, &dwarf_debug, &error);
 
 				// We don't do any special handling for DW_DLV_NO_ENTRY specially.
 				// If we get an error, or the file doesn't have debug information
@@ -2454,11 +2447,11 @@ namespace backward {
 				// Get the source lines for this line context, to be deallocated later
 				if (dwarf_srclines_from_linecontext(de.line_context, &de.line_buffer, &de.line_count, &error) == DW_DLV_OK) {
 					// Add all the addresses to our map
-					for (int i = 0; i < de.line_count; i++) {
+					for (std::int32_t i = 0; i < de.line_count; i++) {
 						if (dwarf_lineaddr(de.line_buffer[i], &line_addr, &error) != DW_DLV_OK) {
 							line_addr = 0;
 						}
-						de.line_section.insert(std::pair<Dwarf_Addr, int>(line_addr, i));
+						de.line_section.insert(std::pair<Dwarf_Addr, std::int32_t>(line_addr, i));
 					}
 				}
 			}
@@ -2502,7 +2495,7 @@ namespace backward {
 						}
 					}
 
-					int result = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
+					std::int32_t result = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
 					if (result == DW_DLV_ERROR) {
 						break;
 					} else if (result == DW_DLV_NO_ENTRY) {
@@ -2527,7 +2520,7 @@ namespace backward {
 			Dwarf_Die found_die = NULL;
 			if (dwarf_attr(die, attr, &attr_mem, &error) == DW_DLV_OK) {
 				Dwarf_Off offset;
-				int result = 0;
+				std::int32_t result = 0;
 				if (global) {
 					result = dwarf_global_formref(attr_mem, &offset, &error);
 				} else {
@@ -2643,7 +2636,7 @@ namespace backward {
 					if (dwarf_get_ranges_a(dwarf, offset, die, &ranges, &ranges_count,
 						&byte_count, &error) == DW_DLV_OK) {
 						has_ranges = ranges_count != 0;
-						for (int i = 0; i < ranges_count; i++) {
+						for (std::int32_t i = 0; i < ranges_count; i++) {
 							if (ranges[i].dwr_addr1 != 0 &&
 								pc >= ranges[i].dwr_addr1 + low_pc &&
 								pc < ranges[i].dwr_addr2 + low_pc) {
@@ -2746,9 +2739,9 @@ namespace backward {
 				// If we couldn't resolve the type just print out the signature
 				std::ostringstream string_stream;
 				string_stream << "<0x" << std::hex << std::setfill('0');
-				for (int i = 0; i < 8; ++i) {
+				for (std::int32_t i = 0; i < 8; ++i) {
 					string_stream << std::setw(2) << std::hex
-						<< (int)(unsigned char)(signature.signature[i]);
+						<< (std::int32_t)(unsigned char)(signature.signature[i]);
 				}
 				string_stream << ">";
 				result = string_stream.str();
@@ -2954,7 +2947,7 @@ namespace backward {
 						}
 					}
 
-					int result = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
+					std::int32_t result = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
 					if (result == DW_DLV_ERROR) {
 						break;
 					} else if (result == DW_DLV_NO_ENTRY) {
@@ -3129,7 +3122,7 @@ namespace backward {
 					}
 				}
 
-				int res = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
+				std::int32_t res = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
 				if (res == DW_DLV_ERROR) {
 					return NULL;
 				} else if (res == DW_DLV_NO_ENTRY) {
@@ -3207,7 +3200,7 @@ namespace backward {
 					cb(current_die, ns);
 				}
 
-				int result = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
+				std::int32_t result = dwarf_siblingof(dwarf, current_die, &sibling_die, &error);
 				if (result == DW_DLV_ERROR) {
 					return false;
 				} else if (result == DW_DLV_NO_ENTRY) {
@@ -3296,8 +3289,7 @@ namespace backward {
 						// Get the DIE at the offset returned by the aranges search.
 						// We set is_info to 1 to specify that the offset is from
 						// the .debug_info section (and not .debug_types)
-						int dwarf_result =
-							dwarf_offdie_b(dwarf, cu_die_offset, 1, &returnDie, &error);
+						std::int32_t dwarf_result = dwarf_offdie_b(dwarf, cu_die_offset, 1, &returnDie, &error);
 
 						found = dwarf_result == DW_DLV_OK;
 					}
@@ -3314,13 +3306,10 @@ namespace backward {
 			Dwarf_Half tag = 0;
 			returnDie = 0;
 
-			while (!found &&
-				   dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-					   &next_cu_header, 0, &error) == DW_DLV_OK) {
-
-				if (returnDie)
+			while (!found && dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0, &next_cu_header, 0, &error) == DW_DLV_OK) {
+				if (returnDie) {
 					dwarf_dealloc(dwarf, returnDie, DW_DLA_DIE);
-
+				}
 				if (dwarf_siblingof(dwarf, 0, &returnDie, &error) == DW_DLV_OK) {
 					if ((dwarf_tag(returnDie, &tag, &error) == DW_DLV_OK) &&
 						tag == DW_TAG_compile_unit) {
@@ -3332,22 +3321,21 @@ namespace backward {
 			}
 
 			if (found) {
-				while (dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-					&next_cu_header, 0, &error) == DW_DLV_OK) {
+				while (dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0, &next_cu_header, 0, &error) == DW_DLV_OK) {
 					// Reset the cu header state. Libdwarf's next_cu_header API
 					// keeps its own iterator per Dwarf_Debug that can't be reset.
 					// We need to keep fetching elements until the end.
 				}
 			}
 
-			if (found)
+			if (found) {
 				return returnDie;
+			}
 
 			// We couldn't find any compilation units with ranges or a high/low pc.
 			// Try again by looking at all DIEs in all compilation units.
 			Dwarf_Die cudie;
-			while (dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-				&next_cu_header, 0, &error) == DW_DLV_OK) {
+			while (dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0, &next_cu_header, 0, &error) == DW_DLV_OK) {
 				if (dwarf_siblingof(dwarf, 0, &cudie, &error) == DW_DLV_OK) {
 					Dwarf_Die die_mem = 0;
 					Dwarf_Die resultDie = find_fundie_by_pc(fobj, cudie, addr, die_mem);
@@ -3360,18 +3348,17 @@ namespace backward {
 			}
 
 			if (found) {
-				while (dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-					&next_cu_header, 0, &error) == DW_DLV_OK) {
+				while (dwarf_next_cu_header_d(dwarf, 1, 0, 0, 0, 0, 0, 0, 0, 0, &next_cu_header, 0, &error) == DW_DLV_OK) {
 					// Reset the cu header state. Libdwarf's next_cu_header API
 					// keeps its own iterator per Dwarf_Debug that can't be reset.
 					// We need to keep fetching elements until the end.
 				}
 			}
 
-			if (found)
+			if (found) {
 				return cudie;
-
-			// We failed.
+			}
+			// We failed
 			return NULL;
 		}
 	};
@@ -3380,16 +3367,16 @@ namespace backward {
 	template<>
 	class TraceResolverImpl<system_tag::linux_tag> : public TraceResolverLinuxImpl<trace_resolver_tag::current> {};
 
-#endif // BACKWARD_SYSTEM_LINUX
+#endif // BACKWARD_TARGET_LINUX
 
-#if defined(BACKWARD_SYSTEM_DARWIN)
+#if defined(BACKWARD_TARGET_DARWIN)
 
 	template<typename STACKTRACE_TAG> class TraceResolverDarwinImpl;
 
 	template<>
 	class TraceResolverDarwinImpl<trace_resolver_tag::backtrace_symbol> : public TraceResolverImplBase {
 	public:
-		void load_addresses(void* const* addresses, int address_count) override {
+		void load_addresses(void* const* addresses, std::int32_t address_count) override {
 			if (address_count == 0) {
 				return;
 			}
@@ -3461,9 +3448,9 @@ namespace backward {
 	class TraceResolverImpl<system_tag::darwin_tag>
 		: public TraceResolverDarwinImpl<trace_resolver_tag::current> {};
 
-#endif // BACKWARD_SYSTEM_DARWIN
+#endif // BACKWARD_TARGET_DARWIN
 
-#if defined(BACKWARD_SYSTEM_WINDOWS)
+#if defined(BACKWARD_TARGET_WINDOWS)
 
 	// Load all symbol info
 	// Based on:
@@ -3478,14 +3465,16 @@ namespace backward {
 
 	class get_mod_info {
 		HANDLE process;
-		static const std::int32_t buffer_length = 4096;
+		static const std::int32_t BufferSize = 4096;
 
 	public:
 		get_mod_info(HANDLE h) : process(h) {}
 
 		module_data operator()(HMODULE module) {
+			using namespace std::string_view_literals;
+
 			module_data ret;
-			char temp[buffer_length];
+			char temp[BufferSize];
 			MODULEINFO mi;
 
 			::GetModuleInformation(process, module, &mi, sizeof(mi));
@@ -3496,8 +3485,8 @@ namespace backward {
 			ret.image_name = temp;
 			::GetModuleBaseNameA(process, module, temp, sizeof(temp));
 			ret.module_name = temp;
-			if (ret.module_name == "KERNEL32.DLL") {
-				ret.module_name = "kernel32.dll";	// This library is usually returned with upper-case name
+			if (ret.module_name == "KERNEL32.DLL"sv) {
+				ret.module_name = "kernel32.dll"sv;	// This library is usually returned with upper-case name
 			}
 			::SymLoadModule64(process, 0, &ret.image_name[0], &ret.module_name[0], (DWORD64)ret.base_address, ret.load_size);
 			return ret;
@@ -3516,21 +3505,27 @@ namespace backward {
 			DWORD symOptions = ::SymGetOptions();
 			symOptions |= SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
 			::SymSetOptions(symOptions);
-			::EnumProcessModules(process, &module_handles[0], static_cast<DWORD>(module_handles.size() * sizeof(HMODULE)), &cbNeeded);
+			::EnumProcessModules(process, &module_handles[0],
+				static_cast<DWORD>(module_handles.size() * sizeof(HMODULE)), &cbNeeded);
 			module_handles.resize(cbNeeded / sizeof(HMODULE));
-			::EnumProcessModules(process, &module_handles[0], static_cast<DWORD>(module_handles.size() * sizeof(HMODULE)), &cbNeeded);
+			::EnumProcessModules(process, &module_handles[0],
+				static_cast<DWORD>(module_handles.size() * sizeof(HMODULE)), &cbNeeded);
 			std::transform(module_handles.begin(), module_handles.end(),
-						   std::back_inserter(modules), get_mod_info(process));
+				std::back_inserter(_modules), get_mod_info(process));
 
-			void* base = modules[0].base_address;
+			void* base = _modules[0].base_address;
 			IMAGE_NT_HEADERS* h = ::ImageNtHeader(base);
-			image_type = h->FileHeader.Machine;
+			_imageType = h->FileHeader.Machine;
 		}
 
-		static const std::int32_t max_sym_len = 255;
+		~TraceResolverImpl() {
+			::SymCleanup(::GetCurrentProcess());
+		}
+
+		static const std::int32_t MaxSymbolLength = 255;
 		struct symbol_t {
 			SYMBOL_INFO sym;
-			char buffer[max_sym_len];
+			char buffer[MaxSymbolLength];
 		} sym;
 
 		DWORD64 displacement;
@@ -3540,7 +3535,7 @@ namespace backward {
 
 			std::memset(&sym, 0, sizeof(sym));
 			sym.sym.SizeOfStruct = sizeof(SYMBOL_INFO);
-			sym.sym.MaxNameLen = max_sym_len;
+			sym.sym.MaxNameLen = MaxSymbolLength;
 
 			char name[256];
 			if (::SymFromAddr(process, (ULONG64)t.addr, &displacement, &sym.sym)) {
@@ -3561,7 +3556,7 @@ namespace backward {
 			t.source.function = name;
 			t.object_function = name;
 
-			for (auto& m : modules) {
+			for (auto& m : _modules) {
 				if ((std::uintptr_t)m.base_address <= (std::uintptr_t)t.addr && (std::uintptr_t)t.addr < (std::uintptr_t)m.base_address + m.load_size) {
 					t.object_filename = m.module_name;
 					t.object_base_address = m.base_address;
@@ -3573,12 +3568,12 @@ namespace backward {
 		}
 
 		DWORD machine_type() const {
-			return image_type;
+			return _imageType;
 		}
 
 	private:
-		DWORD image_type;
-		std::vector<module_data> modules;
+		DWORD _imageType;
+		std::vector<module_data> _modules;
 	};
 
 #endif
@@ -3589,7 +3584,7 @@ namespace backward {
 
 	class SourceFile {
 	public:
-		typedef std::vector<std::pair<unsigned, std::string>> lines_t;
+		typedef std::vector<std::pair<std::int32_t, std::string>> lines_t;
 
 		SourceFile() {}
 		SourceFile(const std::string& path) {
@@ -3609,7 +3604,7 @@ namespace backward {
 						const std::string& prefix = prefixes[i];
 						std::string new_path = prefix;
 						if (prefix[prefix.size() - 1] != '/' && prefix[prefix.size() - 1] != '\\') {
-#if defined(BACKWARD_SYSTEM_WINDOWS)
+#if defined(BACKWARD_TARGET_WINDOWS)
 							new_path += '\\';
 #else
 							new_path += '/';
@@ -3632,15 +3627,15 @@ namespace backward {
 
 				for (std::size_t i = 0; i < prefixes.size(); ++i) {
 					// Double slashes (//) should not be a problem.
-					std::string new_path = prefixes[i];
-#if defined(BACKWARD_SYSTEM_WINDOWS)
-					new_path += '\\';
+					std::string newPath = prefixes[i];
+#if defined(BACKWARD_TARGET_WINDOWS)
+					newPath += '\\';
 #else
-					new_path += '/';
+					newPath += '/';
 #endif
-					new_path += path;
+					newPath += path;
 
-					_file.reset(new std::ifstream(new_path.c_str()));
+					_file.reset(new std::ifstream(newPath.c_str()));
 					if (is_open()) {
 						return;
 					}
@@ -3654,7 +3649,7 @@ namespace backward {
 			return _file->is_open();
 		}
 
-		lines_t& get_lines(unsigned line_start, unsigned line_count, lines_t& lines) {
+		lines_t& get_lines(std::int32_t lineStart, std::int32_t lineCount, lines_t& lines) {
 			// This function make uses of the dumbest algo ever:
 			//	1) seek(0)
 			//	2) read lines one by one and discard until line_start
@@ -3667,9 +3662,9 @@ namespace backward {
 			_file->clear();
 			_file->seekg(0);
 			std::string line;
-			unsigned line_idx;
+			std::int32_t lineIdx;
 
-			for (line_idx = 1; line_idx < line_start; ++line_idx) {
+			for (lineIdx = 1; lineIdx < lineStart; ++lineIdx) {
 				std::getline(*_file, line);
 				if (!*_file) {
 					return lines;
@@ -3686,7 +3681,7 @@ namespace backward {
 			};
 
 			bool started = false;
-			for (; line_idx < line_start + line_count; ++line_idx) {
+			for (; lineIdx < lineStart + lineCount; ++lineIdx) {
 				std::getline(*_file, line);
 				if (!*_file) {
 					return lines;
@@ -3697,16 +3692,16 @@ namespace backward {
 					}
 					started = true;
 				}
-				lines.push_back(make_pair(line_idx, line));
+				lines.push_back(make_pair(lineIdx, line));
 			}
 
 			lines.erase(std::find_if(lines.rbegin(), lines.rend(), not_isempty()).base(), lines.end());
 			return lines;
 		}
 
-		lines_t get_lines(unsigned line_start, unsigned line_count) {
+		lines_t get_lines(std::int32_t lineStart, std::int32_t lineCount) {
 			lines_t lines;
-			return get_lines(line_start, line_count, lines);
+			return get_lines(lineStart, lineCount, lines);
 		}
 
 		// there is no find_if_not in C++98, lets do something crappy to
@@ -3739,8 +3734,8 @@ namespace backward {
 		// Allow adding to paths gotten from BACKWARD_CXX_SOURCE_PREFIXES after loading the
 		// library; this can be useful when the library is loaded when the locations are unknown
 		// Warning: Because this edits the static paths variable, it is *not* intrinsiclly thread safe
-		static void add_paths_to_env_variable_impl(const std::string& to_add) {
-			get_mutable_paths_from_env_variable().push_back(to_add);
+		static void add_paths_to_env_variable_impl(const std::string& toAdd) {
+			get_mutable_paths_from_env_variable().push_back(toAdd);
 		}
 
 	private:
@@ -3748,18 +3743,18 @@ namespace backward {
 
 		static std::vector<std::string> get_paths_from_env_variable_impl() {
 			std::vector<std::string> paths;
-#if defined(DEATH_TARGET_WINDOWS)
-			char* prefixes_str; std::size_t length;
-			if (_dupenv_s(&prefixes_str, &length, "BACKWARD_CXX_SOURCE_PREFIXES") == 0 && prefixes_str != nullptr) {
-				if (prefixes_str[0] != '\0') {
-					paths = details::split_source_prefixes(prefixes_str);
+#if defined(BACKWARD_TARGET_WINDOWS)
+			char* prefixesStr; std::size_t length;
+			if (_dupenv_s(&prefixesStr, &length, "BACKWARD_CXX_SOURCE_PREFIXES") == 0 && prefixesStr != nullptr) {
+				if (prefixesStr[0] != '\0') {
+					paths = details::split_source_prefixes(prefixesStr);
 				}
-				std::free(prefixes_str);
+				std::free(prefixesStr);
 			}
 #else
-			const char* prefixes_str = std::getenv("BACKWARD_CXX_SOURCE_PREFIXES");
-			if (prefixes_str != nullptr && prefixes_str[0] != '\0') {
-				paths = details::split_source_prefixes(prefixes_str);
+			const char* prefixesStr = std::getenv("BACKWARD_CXX_SOURCE_PREFIXES");
+			if (prefixesStr != nullptr && prefixesStr[0] != '\0') {
+				paths = details::split_source_prefixes(prefixesStr);
 			}
 #endif
 			return paths;
@@ -3782,49 +3777,48 @@ namespace backward {
 	public:
 		typedef SourceFile::lines_t lines_t;
 
-		lines_t get_snippet(const std::string& filename, unsigned line_start, unsigned context_size) {
+		lines_t get_snippet(const std::string& filename, std::int32_t lineStart, std::int32_t contextSize) {
 			SourceFile& src_file = get_src_file(filename);
-			unsigned start = line_start - context_size / 2;
-			return src_file.get_lines(start, context_size);
+			std::int32_t start = lineStart - (contextSize / 2);
+			return src_file.get_lines(start, contextSize);
 		}
 
-		lines_t get_combined_snippet(const std::string& filename_a, unsigned line_a, const std::string& filename_b, unsigned line_b, unsigned context_size) {
-			SourceFile& src_file_a = get_src_file(filename_a);
-			SourceFile& src_file_b = get_src_file(filename_b);
+		lines_t get_combined_snippet(const std::string& filenameA, std::int32_t lineA, const std::string& filenameB, std::int32_t lineB, std::int32_t contextSize) {
+			SourceFile& srcFileA = get_src_file(filenameA);
+			SourceFile& srcFileB = get_src_file(filenameB);
 
-			lines_t lines =
-				src_file_a.get_lines(line_a - context_size / 4, context_size / 2);
-			src_file_b.get_lines(line_b - context_size / 4, context_size / 2, lines);
+			lines_t lines = srcFileA.get_lines(lineA - (contextSize / 4), contextSize / 2);
+			srcFileB.get_lines(lineB - (contextSize / 4), contextSize / 2, lines);
 			return lines;
 		}
 
-		lines_t get_coalesced_snippet(const std::string& filename, unsigned line_a, unsigned line_b, unsigned context_size) {
-			SourceFile& src_file = get_src_file(filename);
+		lines_t get_coalesced_snippet(const std::string& filename, std::int32_t lineA, std::int32_t lineB, std::int32_t contextSize) {
+			SourceFile& srcFile = get_src_file(filename);
 
-			unsigned a = std::min(line_a, line_b);
-			unsigned b = std::max(line_a, line_b);
+			std::int32_t a = std::min(lineA, lineB);
+			std::int32_t b = std::max(lineA, lineB);
 
-			if ((b - a) < (context_size / 3)) {
-				return src_file.get_lines((a + b - context_size + 1) / 2, context_size);
+			if ((b - a) < (contextSize / 3)) {
+				return srcFile.get_lines((a + b - contextSize + 1) / 2, contextSize);
 			}
 
-			lines_t lines = src_file.get_lines(a - context_size / 4, context_size / 2);
-			src_file.get_lines(b - context_size / 4, context_size / 2, lines);
+			lines_t lines = srcFile.get_lines(a - contextSize / 4, contextSize / 2);
+			srcFile.get_lines(b - contextSize / 4, contextSize / 2, lines);
 			return lines;
 		}
 
 	private:
 		typedef details::hashtable<std::string, SourceFile>::type src_files_t;
-		src_files_t _src_files;
+		src_files_t _srcFiles;
 
 		SourceFile& get_src_file(const std::string& filename) {
-			src_files_t::iterator it = _src_files.find(filename);
-			if (it != _src_files.end()) {
+			src_files_t::iterator it = _srcFiles.find(filename);
+			if (it != _srcFiles.end()) {
 				return it->second;
 			}
-			SourceFile& new_src_file = _src_files[filename];
-			new_src_file = SourceFile(filename);
-			return new_src_file;
+			SourceFile& newSrcFile = _srcFiles[filename];
+			newSrcFile = SourceFile(filename);
+			return newSrcFile;
 		}
 	};
 
@@ -3838,12 +3832,12 @@ namespace backward {
 
 	class cfile_streambuf : public std::streambuf {
 	public:
-		cfile_streambuf(FILE* _sink) : sink(_sink) {}
+		cfile_streambuf(FILE* sink) : _sink(sink) {}
 		int_type underflow() override {
 			return traits_type::eof();
 		}
 		int_type overflow(int_type ch) override {
-			if (traits_type::not_eof(ch) && fputc(ch, sink) != EOF) {
+			if (traits_type::not_eof(ch) && fputc(ch, _sink) != EOF) {
 				return ch;
 			}
 			return traits_type::eof();
@@ -3851,21 +3845,21 @@ namespace backward {
 
 		std::streamsize xsputn(const char_type* s, std::streamsize count) override {
 			return static_cast<std::streamsize>(
-				fwrite(s, sizeof * s, static_cast<std::size_t>(count), sink));
+				fwrite(s, sizeof * s, static_cast<std::size_t>(count), _sink));
 		}
 
 	private:
 		cfile_streambuf(const cfile_streambuf&) = delete;
 		cfile_streambuf& operator=(const cfile_streambuf&) = delete;
 
-		FILE* sink;
+		FILE* _sink;
 	};
 
-#	if defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_WINDOWS)
+#	if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_WINDOWS)
 
 	namespace Color {
 		enum type {
-			BrightGreen = 92, Yellow = 33, BrightYellow = 93, Purple = 35, Reset = 0, Bold = 1, Dark = 2
+			BrightGreen = 92, Yellow = 33, BrightYellow = 93, Green = 32, Purple = 35, Reset = 0, Bold = 1, Dark = 2
 		};
 	}
 
@@ -3877,14 +3871,14 @@ namespace backward {
 			_enabled = (mode == ColorMode::always);
 		}
 
-		void set_color(Color::type ccode) {
+		void set_color(Color::type code) {
 			if (!_enabled) {
 				return;
 			}
 
 			// Assume that the terminal can handle basic colors
-			_os << "\033[" << static_cast<int>(ccode) << "m";
-			_reset = (ccode != Color::Reset);
+			_os << "\033[" << static_cast<std::int32_t>(code) << "m";
+			_reset = (code != Color::Reset);
 		}
 
 		~Colorize() {
@@ -3899,11 +3893,11 @@ namespace backward {
 		bool _enabled;
 	};
 
-#	else // ndef BACKWARD_SYSTEM_LINUX || BACKWARD_SYSTEM_WINDOWS
+#	else // ndef BACKWARD_TARGET_LINUX || BACKWARD_TARGET_WINDOWS
 
 	namespace Color {
 		enum type {
-			BrightGreen = 0, Yellow = 0, BrightYellow = 0, Purple = 0, Reset = 0, Bold = 0, Dark = 0
+			BrightGreen = 0, Yellow = 0, BrightYellow = 0, Green = 0, Purple = 0, Reset = 0, Bold = 0, Dark = 0
 		};
 	}
 
@@ -3914,54 +3908,109 @@ namespace backward {
 		void set_color(Color::type) {}
 	};
 
-#	endif // BACKWARD_SYSTEM_LINUX || BACKWARD_SYSTEM_WINDOWS
+#	endif // BACKWARD_TARGET_LINUX || BACKWARD_TARGET_WINDOWS
+
+	using path_components = std::vector<std::string>;
+
+	class path_trie {
+	public:
+		explicit path_trie(std::string _root) : _root(std::move(_root)) {};
+
+		void insert(const path_components& path) {
+			insert(path, (std::int32_t)path.size() - 2);
+		}
+
+		path_components disambiguate(const path_components& path) const {
+			using namespace std::string_view_literals;
+
+			path_components result;
+			const path_trie* current = this;
+			result.push_back(current->_root);
+			std::int32_t count = (std::int32_t)(path.size() - 2);
+			for (std::int32_t i = count; i >= 1; i--) {
+				if (current->_downstreamBranches == 1 && i < count - 2) {
+					break;
+				}
+				const std::string& component = path[i];
+				if (component == "Sources"sv) {
+					result.emplace_back("…"sv);
+					break;
+				}
+
+				current = current->_edges.at(component).get();
+				result.push_back(current->_root);
+			}
+			std::reverse(result.begin(), result.end());
+			return result;
+		}
+
+	private:
+		size_t _downstreamBranches = 1;
+		std::string _root;
+		std::unordered_map<std::string, std::unique_ptr<path_trie>> _edges;
+
+		void insert(const path_components& path, std::int32_t i) {
+			if (i < 0) {
+				return;
+			}
+			if (!_edges.count(path[i])) {
+				if (!_edges.empty()) {
+					_downstreamBranches++; // this is to deal with making leaves have count 1
+				}
+				_edges.insert({ path[i], std::make_unique<path_trie>(path[i]) });
+			}
+			_downstreamBranches -= _edges.at(path[i])->_downstreamBranches;
+			_edges.at(path[i])->insert(path, i - 1);
+			_downstreamBranches += _edges.at(path[i])->_downstreamBranches;
+		}
+	};
 
 	class Printer {
 	public:
 		bool snippet;
-		ColorMode::type color_mode;
+		ColorMode::type colorMode;
 		bool address;
 		bool object;
-		int inliner_context_size;
-		int trace_context_size;
+		int inlinerContextSize;
+		int traceContextSize;
 
 		Printer()
-			: snippet(true), color_mode(ColorMode::never), address(false), object(false),
-				inliner_context_size(5), trace_context_size(7) {}
+			: snippet(true), colorMode(ColorMode::never), address(false), object(false),
+				inlinerContextSize(5), traceContextSize(7) {}
 
 		template<typename ST>
-		FILE* print(ST& st, FILE* fp = stderr, int signal = 0) {
+		FILE* print(ST& st, FILE* fp = stderr, std::int32_t signal = 0) {
 			cfile_streambuf obuf(fp);
 			std::ostream os(&obuf);
 			Colorize colorize(os);
-			colorize.activate(color_mode);
+			colorize.activate(colorMode);
 			print_stacktrace(st, os, signal, colorize);
 			return fp;
 		}
 
 		template<typename ST>
-		std::ostream& print(ST& st, std::ostream& os, int signal = 0) {
+		std::ostream& print(ST& st, std::ostream& os, std::int32_t signal = 0) {
 			Colorize colorize(os);
-			colorize.activate(color_mode);
+			colorize.activate(colorMode);
 			print_stacktrace(st, os, signal, colorize);
 			return os;
 		}
 
 		template<typename IT>
-		FILE* print(IT begin, IT end, FILE* fp = stderr, std::size_t thread_id = 0, int signal = 0) {
+		FILE* print(IT begin, IT end, FILE* fp = stderr, std::size_t threadId = 0, std::int32_t signal = 0) {
 			cfile_streambuf obuf(fp);
 			std::ostream os(&obuf);
 			Colorize colorize(os);
-			colorize.activate(color_mode);
-			print_stacktrace(begin, end, os, thread_id, signal, colorize);
+			colorize.activate(colorMode);
+			print_stacktrace(begin, end, os, threadId, signal, colorize);
 			return fp;
 		}
 
 		template<typename IT>
-		std::ostream& print(IT begin, IT end, std::ostream& os, std::size_t thread_id = 0, int signal = 0) {
+		std::ostream& print(IT begin, IT end, std::ostream& os, std::size_t threadId = 0, std::int32_t signal = 0) {
 			Colorize colorize(os);
-			colorize.activate(color_mode);
-			print_stacktrace(begin, end, os, thread_id, signal, colorize);
+			colorize.activate(colorMode);
+			print_stacktrace(begin, end, os, threadId, signal, colorize);
 			return os;
 		}
 
@@ -3973,27 +4022,120 @@ namespace backward {
 		TraceResolver _resolver;
 		SnippetFactory _snippets;
 
+		static std::vector<std::string_view> split(std::string_view s, std::string_view delims) {
+			std::vector<std::string_view> vec;
+			size_t oldPos = 0;
+			size_t pos = 0;
+			while ((pos = s.find_first_of(delims, oldPos)) != std::string::npos) {
+				vec.emplace_back(s.substr(oldPos, pos - oldPos));
+				oldPos = pos + 1;
+			}
+			vec.emplace_back(s.substr(oldPos));
+			return vec;
+		}
+
+		template<typename C>
+		static std::string join(const C& container, const std::string_view delim) {
+			auto iter = std::begin(container);
+			auto end = std::end(container);
+			std::string str;
+			if (std::distance(iter, end) > 0) {
+				str += *iter;
+				while (++iter != end) {
+					str += delim;
+					str += *iter;
+				}
+			}
+			return str;
+		}
+
+		static path_components parse_path(std::string_view path) {
+			using namespace std::string_view_literals;
+			
+			path_components parts;
+			for (auto part : split(path, "/\\"sv)) {
+				if (parts.empty()) {
+					parts.emplace_back(part);
+				} else {
+					if (part.empty()) {
+						// No-op
+					} else if (part == ".") {
+						// No-op
+					} else if (part == "..") {
+						// Cases where we have unresolvable ..'s, e.g. ./../../demo.exe
+						if (parts.back() == "." || parts.back() == "..") {
+							parts.emplace_back(part);
+						} else {
+							parts.pop_back();
+						}
+					} else {
+						parts.emplace_back(part);
+					}
+				}
+			}
+			return parts;
+		}
+
+		static void add_path(const std::string& path, std::unordered_map<std::string, path_components>& parsedPaths, std::unordered_map<std::string, path_trie>& tries) {
+			if (!path.empty() && !parsedPaths.count(path)) {
+				auto parsedPath = parse_path(path);
+				auto& fileName = parsedPath.back();
+				parsedPaths.insert({ path, parsedPath });
+				if (tries.count(fileName) == 0) {
+					tries.insert({ fileName, path_trie(fileName) });
+				}
+				tries.at(fileName).insert(parsedPath);
+			}
+		}
+
 		template<typename ST>
-		void print_stacktrace(ST& st, std::ostream& os, int signal, Colorize& colorize) {
+		void print_stacktrace(ST& st, std::ostream& os, std::int32_t signal, Colorize& colorize) {
+			using namespace std::string_view_literals;
+
 			print_header(os, st.thread_id(), signal, colorize);
 			_resolver.load_stacktrace(st);
+
+			std::unordered_map<std::string, path_components> parsedPaths;
+			std::unordered_map<std::string, path_trie> tries;
+
 			bool failed = false;
-			for (std::size_t trace_idx = 0; trace_idx < st.size(); ++trace_idx) {
-				auto resolvedTrace = _resolver.resolve(st[trace_idx]);
-				print_trace(os, resolvedTrace, colorize);
-				if (resolvedTrace.object_function.empty()) {
+			std::vector<ResolvedTrace> resolvedTrace(st.size());
+			for (std::size_t traceIdx = 0; traceIdx < st.size(); ++traceIdx) {
+				resolvedTrace[traceIdx] = _resolver.resolve(st[traceIdx]);
+				
+				add_path(resolvedTrace[traceIdx].object_filename, parsedPaths, tries);
+				add_path(resolvedTrace[traceIdx].source.filename, parsedPaths, tries);
+
+				if (resolvedTrace[traceIdx].object_function.empty()) {
 					failed = true;
 				}
 			}
 
-#	if defined(DEATH_TARGET_WINDOWS)
+			// Finalize paths
+			std::unordered_map<std::string, std::string> pathMap;
+			for (auto& [raw, parsedPath] : parsedPaths) {
+				std::string newPath = join(tries.at(parsedPath.back()).disambiguate(parsedPath),
+#if defined(BACKWARD_TARGET_WINDOWS)
+					"\\"sv
+#else
+					"/"sv
+#endif
+				);
+				pathMap.insert({ raw, newPath });
+			}
+
+			for (std::size_t traceIdx = 0; traceIdx < st.size(); ++traceIdx) {
+				print_trace(os, resolvedTrace[traceIdx], colorize, pathMap);
+			}
+
+#	if defined(BACKWARD_TARGET_WINDOWS)
 			if (failed) {
 				colorize.set_color(Color::BrightYellow);
 				os << "Make sure corresponding .pdb files are accessible to show full stack trace. ";
 				colorize.set_color(Color::Reset);
 			}
 			colorize.set_color(Color::Yellow);
-			os << "Crash dump file has been saved to ";
+			os << "Memory dump file has been saved to ";
 			colorize.set_color(Color::BrightGreen);
 			os << "\"CrashDumps\"";
 			colorize.set_color(Color::Yellow);
@@ -4003,23 +4145,23 @@ namespace backward {
 		}
 
 		template<typename IT>
-		void print_stacktrace(IT begin, IT end, std::ostream& os, std::size_t thread_id, int signal, Colorize& colorize) {
+		void print_stacktrace(IT begin, IT end, std::ostream& os, std::size_t thread_id, std::int32_t signal, Colorize& colorize) {
 			print_header(os, thread_id, signal, colorize);
 			for (; begin != end; ++begin) {
 				print_trace(os, *begin, colorize);
 			}
 		}
 
-		void print_header(std::ostream& os, std::size_t thread_id, int signal, Colorize& colorize) {
+		void print_header(std::ostream& os, std::size_t threadId, std::int32_t signal, Colorize& colorize) {
 			colorize.set_color(Color::Bold);
 			os << "The application exited unexpectedly";
 			colorize.set_color(Color::Reset);
-			if (thread_id != 0) {
-				os << " in thread " << thread_id;
+			if (threadId != 0) {
+				os << " in thread " << threadId;
 			}
 			if (signal != 0) {
 				os << " due to signal " << signal;
-#	if defined(BACKWARD_SYSTEM_LINUX) && defined(__GLIBC__) && __GLIBC__*100 + __GLIBC_MINOR__ >= 232
+#	if defined(BACKWARD_TARGET_LINUX) && defined(__GLIBC__) && __GLIBC__*100 + __GLIBC_MINOR__ >= 232
 				const char* signalName = sigabbrev_np(signal);
 				if (signalName != nullptr) {
 					os << " (SIG" << signalName << ")";
@@ -4029,23 +4171,25 @@ namespace backward {
 			os << " with following stack trace:\n";
 		}
 
-		void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
+		void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap) {
 			if ((std::uintptr_t)trace.addr == UINTPTR_MAX) {
 				// Skip usually the last frame on Linux
 				return;
 			}
 
-			os << "#" << std::left << std::setw(2) << trace.idx << std::right;
-			bool already_indented = true;
+			os << "#" << std::left << std::setw(2) << (trace.idx + 1) << std::right;
+			bool alreadyIndented = true;
 
 			if (!trace.source.filename.size() || object) {
 				if (!trace.object_filename.empty()) {
 					os << "   Library ";
 					colorize.set_color(Color::BrightGreen);
-					os << "\"" << trace.object_filename;
+					os << "\"" << pathMap.at(trace.object_filename);
 					if (trace.object_base_address != nullptr) {
+						colorize.set_color(Color::Green);
 						os << "!0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
 							<< ((char*)trace.addr - (char*)trace.object_base_address) << std::dec << std::setfill(' ');
+						colorize.set_color(Color::BrightGreen);
 					}
 					os << "\"";
 				} else {
@@ -4062,40 +4206,39 @@ namespace backward {
 					colorize.set_color(Color::Reset);
 				}
 				os << " [0x" << trace.addr << "]\n";
-				already_indented = false;
+				alreadyIndented = false;
 			}
 
-			for (std::size_t inliner_idx = trace.inliners.size(); inliner_idx > 0; --inliner_idx) {
-				if (!already_indented) {
+			for (std::size_t inlinerIdx = trace.inliners.size(); inlinerIdx > 0; --inlinerIdx) {
+				if (!alreadyIndented) {
 					os << "   ";
 				}
-				const ResolvedTrace::SourceLoc& inliner_loc = trace.inliners[inliner_idx - 1];
-				print_source_loc(os, colorize, " | ", inliner_loc);
+				const ResolvedTrace::SourceLoc& inlinerLoc = trace.inliners[inlinerIdx - 1];
+				print_source_loc(os, colorize, pathMap, " │ ", inlinerLoc);
 				if (snippet) {
-					print_snippet(os, "    | ", inliner_loc, colorize, Color::Purple, inliner_context_size);
+					print_snippet(os, "    │ ", inlinerLoc, colorize, Color::Purple, inlinerContextSize);
 				}
-				already_indented = false;
+				alreadyIndented = false;
 			}
 
 			if (trace.source.filename.size()) {
-				if (!already_indented) {
+				if (!alreadyIndented) {
 					os << "   ";
 				}
-				print_source_loc(os, colorize, "   ", trace.source, trace.addr);
+				print_source_loc(os, colorize, pathMap, "   ", trace.source, trace.addr);
 				if (snippet) {
-					print_snippet(os, "      ", trace.source, colorize, Color::Yellow, trace_context_size);
+					print_snippet(os, "      ", trace.source, colorize, Color::Yellow, traceContextSize);
 				}
 			}
 		}
 
-		void print_snippet(std::ostream& os, const char* indent, const ResolvedTrace::SourceLoc& source_loc,
-						   Colorize& colorize, Color::type color_code, int context_size) {
+		void print_snippet(std::ostream& os, const char* indent, const ResolvedTrace::SourceLoc& sourceLoc,
+						   Colorize& colorize, Color::type color_code, std::int32_t contextSize) {
 			typedef SnippetFactory::lines_t lines_t;
 
-			lines_t lines = _snippets.get_snippet(source_loc.filename, source_loc.line, static_cast<unsigned>(context_size));
-
+			lines_t lines = _snippets.get_snippet(sourceLoc.filename, sourceLoc.line, contextSize);
 			for (lines_t::const_iterator it = lines.begin(); it != lines.end(); ++it) {
-				if (it->first == source_loc.line) {
+				if (it->first == sourceLoc.line) {
 					colorize.set_color(color_code);
 					os << indent << ">";
 				} else {
@@ -4107,15 +4250,19 @@ namespace backward {
 			}
 		}
 
-		void print_source_loc(std::ostream& os, Colorize& colorize, const char* indent, const ResolvedTrace::SourceLoc& source_loc, void* addr = nullptr) {
+		void print_source_loc(std::ostream& os, Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap, const char* indent, const ResolvedTrace::SourceLoc& sourceLoc, void* addr = nullptr) {
 			os << indent << "Source ";
 			colorize.set_color(Color::BrightGreen);
-			os << "\"" << source_loc.filename << ":" << std::setw(0) << source_loc.line << "\"";
+			os << "\"" << pathMap.at(sourceLoc.filename);
+			colorize.set_color(Color::Green);
+			os << ":" << std::setw(0) << sourceLoc.line;
+			colorize.set_color(Color::BrightGreen);
+			os << "\"";
 			colorize.set_color(Color::Reset);
-			if (!source_loc.function.empty()) {
+			if (!sourceLoc.function.empty()) {
 				os << ", in ";
 				colorize.set_color(Color::Bold);
-				os << source_loc.function;
+				os << sourceLoc.function;
 				colorize.set_color(Color::Reset);
 			}
 			if (address && addr != nullptr) {
@@ -4127,12 +4274,12 @@ namespace backward {
 
 	/*************** SIGNALS HANDLING ***************/
 
-#if defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_DARWIN)
+#if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_DARWIN)
 
-	class SignalHandling {
+	class ExceptionHandling {
 	public:
-		static std::vector<int> make_default_signals() {
-			const int posix_signals[] = {
+		static std::vector<std::int32_t> make_default_signals() {
+			const std::int32_t posixSignals[] = {
 				// Signals for which the default action is "Core".
 				SIGABRT, // Abort signal from abort(3)
 				SIGBUS,  // Bus error (bad memory access)
@@ -4145,24 +4292,24 @@ namespace backward {
 				SIGTRAP, // Trace/breakpoint trap
 				SIGXCPU, // CPU time limit exceeded (4.2BSD)
 				SIGXFSZ, // File size limit exceeded (4.2BSD)
-#	if defined(BACKWARD_SYSTEM_DARWIN)
+#	if defined(BACKWARD_TARGET_DARWIN)
 				SIGEMT, // emulation instruction executed
 #	endif
 			};
-			return std::vector<int>(posix_signals, posix_signals + sizeof(posix_signals) / sizeof(posix_signals[0]));
+			return std::vector<std::int32_t>(posixSignals, posixSignals + sizeof(posixSignals) / sizeof(posixSignals[0]));
 		}
 
-		SignalHandling() : _loaded(false) {
+		ExceptionHandling() : _loaded(false) {
 			bool success = true;
 
-			const std::vector<int> posix_signals = make_default_signals();
+			const std::vector<std::int32_t> posixSignals = make_default_signals();
 
-			const std::size_t stack_size = 1024 * 1024 * 8;
-			_stack_content.reset(static_cast<char*>(std::malloc(stack_size)));
-			if (_stack_content) {
+			const std::size_t stackSize = 1024 * 1024 * 8;
+			_stackContent.reset(static_cast<char*>(std::malloc(stackSize)));
+			if (_stackContent) {
 				stack_t ss;
-				ss.ss_sp = _stack_content.get();
-				ss.ss_size = stack_size;
+				ss.ss_sp = _stackContent.get();
+				ss.ss_size = stackSize;
 				ss.ss_flags = 0;
 				if (sigaltstack(&ss, nullptr) < 0) {
 					success = false;
@@ -4171,12 +4318,12 @@ namespace backward {
 				success = false;
 			}
 
-			for (std::size_t i = 0; i < posix_signals.size(); ++i) {
+			for (std::size_t i = 0; i < posixSignals.size(); ++i) {
 				struct sigaction action;
 				std::memset(&action, 0, sizeof action);
-				action.sa_flags = static_cast<int>(SA_SIGINFO | SA_ONSTACK | SA_NODEFER | SA_RESETHAND);
+				action.sa_flags = static_cast<std::int32_t>(SA_SIGINFO | SA_ONSTACK | SA_NODEFER | SA_RESETHAND);
 				sigfillset(&action.sa_mask);
-				sigdelset(&action.sa_mask, posix_signals[i]);
+				sigdelset(&action.sa_mask, posixSignals[i]);
 #	if defined(DEATH_TARGET_CLANG)
 #		pragma clang diagnostic push
 #		pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
@@ -4186,7 +4333,7 @@ namespace backward {
 #		pragma clang diagnostic pop
 #	endif
 
-				int r = sigaction(posix_signals[i], &action, nullptr);
+				int r = sigaction(posixSignals[i], &action, nullptr);
 				if (r < 0) {
 					success = false;
 				}
@@ -4213,43 +4360,43 @@ namespace backward {
 			ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
 
 			StackTrace st;
-			void* error_addr = nullptr;
+			void* errorAddr = nullptr;
 #	if defined(REG_RIP)		// 64-bit x86
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
 #	elif defined(REG_EIP)	// 32-bit x86
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
 #	elif defined(__arm__)
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.arm_pc);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.arm_pc);
 #	elif defined(__aarch64__)
 #		if defined(DEATH_TARGET_APPLE)
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__pc);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__pc);
 #		else
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.pc);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.pc);
 #		endif
 #	elif defined(__mips__)
-			error_addr = reinterpret_cast<void*>(
+			errorAddr = reinterpret_cast<void*>(
 				reinterpret_cast<struct sigcontext*>(&uctx->uc_mcontext)->sc_pc);
 #	elif defined(DEATH_TARGET_POWERPC)
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.regs->nip);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.regs->nip);
 #	elif defined(DEATH_TARGET_RISCV)
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.__gregs[REG_PC]);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.__gregs[REG_PC]);
 #	elif defined(__s390x__)
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.psw.addr);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.psw.addr);
 #	elif defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_X86)
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__rip);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__rip);
 #	elif defined(DEATH_TARGET_APPLE)
-			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__eip);
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__eip);
 #	else
 #		warning "Unsupported CPU architecture"
 #	endif
-			if (error_addr != nullptr) {
-				st.load_from(error_addr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
+			if (errorAddr != nullptr) {
+				st.load_from(errorAddr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
 			} else {
 				st.load_here(32, reinterpret_cast<void*>(uctx), info->si_addr);
 			}
 
 			Printer printer;
-			printer.color_mode = color_mode();
+			printer.colorMode = color_mode();
 			printer.address = true;
 
 			FILE* dest = destination();
@@ -4259,7 +4406,7 @@ namespace backward {
 	private:
 		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
 
-		details::handle<char*> _stack_content;
+		details::handle<char*> _stackContent;
 		bool _loaded;
 
 #	if defined(__GNUC__)
@@ -4276,16 +4423,16 @@ namespace backward {
 		}
 	};
 
-#endif // BACKWARD_SYSTEM_LINUX || BACKWARD_SYSTEM_DARWIN
+#endif // BACKWARD_TARGET_LINUX || BACKWARD_TARGET_DARWIN
 
-#if defined(BACKWARD_SYSTEM_WINDOWS)
+#if defined(BACKWARD_TARGET_WINDOWS)
 
-	class SignalHandling {
+	class ExceptionHandling {
 	public:
-		SignalHandling() {
+		ExceptionHandling() {
 			constexpr std::int32_t ExceptionHandlerThreadStackSize = 64 * 1024;
-			reporter_thread_ = ::CreateThread(NULL, ExceptionHandlerThreadStackSize, OnExceptionHandlerThread, this, 0, nullptr);
-			if (reporter_thread_ == NULL) {
+			_reporterThread = ::CreateThread(NULL, ExceptionHandlerThreadStackSize, OnExceptionHandlerThread, this, 0, nullptr);
+			if (_reporterThread == NULL) {
 				return;
 			}
 
@@ -4313,7 +4460,7 @@ namespace backward {
 			return true;
 		}
 
-		~SignalHandling() {
+		~ExceptionHandling() {
 			{
 				std::unique_lock<std::mutex> lk(mtx());
 				crashed() = crash_status::normal_exit;
@@ -4321,12 +4468,12 @@ namespace backward {
 
 			cv().notify_one();
 
-			if (reporter_thread_ != NULL) {
-				if (::WaitForSingleObject(reporter_thread_, 5000) != WAIT_OBJECT_0) {
-					::TerminateThread(reporter_thread_, 1);
+			if (_reporterThread != NULL) {
+				if (::WaitForSingleObject(_reporterThread, 5000) != WAIT_OBJECT_0) {
+					::TerminateThread(_reporterThread, 1);
 				}
-				::CloseHandle(reporter_thread_);
-				reporter_thread_ = NULL;
+				::CloseHandle(_reporterThread);
+				_reporterThread = NULL;
 			}
 		}
 
@@ -4407,7 +4554,7 @@ namespace backward {
 			return handle;
 		}
 
-		HANDLE reporter_thread_;
+		HANDLE _reporterThread;
 
 		static const constexpr std::int32_t signal_skip_recs =
 #	if defined(DEATH_TARGET_CLANG)
@@ -4461,7 +4608,7 @@ namespace backward {
 		}
 
 #	if _MSC_VER >= 1400
-		static inline void __cdecl invalid_parameter_handler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, unsigned int line, std::uintptr_t reserved) {
+		static inline void __cdecl invalid_parameter_handler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, std::uint32_t line, std::uintptr_t reserved) {
 			crash_handler(signal_skip_recs);
 			::exit(ExceptionExitCode);
 		}
@@ -4478,7 +4625,7 @@ namespace backward {
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
-		DEATH_NEVER_INLINE static void crash_handler(int skip, EXCEPTION_POINTERS* info = nullptr) {
+		DEATH_NEVER_INLINE static void crash_handler(std::int32_t skip, EXCEPTION_POINTERS* info = nullptr) {
 			ExceptionContext* context = ctx();
 			if (info == nullptr) {
 #	if (defined(_M_IX86) || defined(__i386__)) && defined(DEATH_TARGET_MSVC)
@@ -4521,18 +4668,18 @@ namespace backward {
 			}
 		}
 
-		static void handle_stacktrace(int skip_frames = 0) {
+		static void handle_stacktrace(std::int32_t skipFrames = 0) {
 			// Printer creates the TraceResolver, which can supply us a machine type for stack walking. Without this,
 			// StackTrace can only guess using some macros. StackTrace also requires that the PDBs are already loaded,
 			// which is done in the constructor of TraceResolver.
 			Printer printer;
-			printer.color_mode = color_mode();
+			printer.colorMode = color_mode();
 
 			StackTrace st;
 			st.set_machine_type(printer.resolver().machine_type());
 			st.set_thread_handle(thread_handle());
-			st.load_here(32 + skip_frames, ctx());
-			st.skip_n_firsts(skip_frames);
+			st.load_here(32 + skipFrames, ctx());
+			st.skip_n_firsts(skipFrames);
 
 			printer.address = true;
 
@@ -4540,18 +4687,22 @@ namespace backward {
 			if (dest != nullptr) {
 				printer.print(st, dest);
 			} else {
-				printer.print(st, std::cerr);
+				// Check if console or any redirection is used
+				HANDLE hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
+				if (::GetFileType(hStdError) != FILE_TYPE_UNKNOWN) {
+					printer.print(st, std::cerr);
+				}
 			}
 		}
 
 		static void enable_crashing_on_crashes() {
-			using _GetPolicy = BOOL(WINAPI*)(LPDWORD lpFlags);
-			using _SetPolicy = BOOL(WINAPI*)(DWORD dwFlags);
+			using _GetPolicyDelegate = BOOL (WINAPI)(LPDWORD lpFlags);
+			using _SetPolicyDelegate = BOOL (WINAPI)(DWORD dwFlags);
 			constexpr DWORD EXCEPTION_SWALLOWING = 0x1;
 
 			HMODULE kernel32 = ::GetModuleHandle(L"kernel32.dll");
-			_GetPolicy pGetPolicy = (_GetPolicy)::GetProcAddress(kernel32, "GetProcessUserModeExceptionPolicy");
-			_SetPolicy pSetPolicy = (_SetPolicy)::GetProcAddress(kernel32, "SetProcessUserModeExceptionPolicy");
+			_GetPolicyDelegate* pGetPolicy = (_GetPolicyDelegate*)::GetProcAddress(kernel32, "GetProcessUserModeExceptionPolicy");
+			_SetPolicyDelegate* pSetPolicy = (_SetPolicyDelegate*)::GetProcAddress(kernel32, "SetProcessUserModeExceptionPolicy");
 			if (pGetPolicy != nullptr && pSetPolicy != nullptr) {
 				DWORD dwFlags;
 				if (pGetPolicy(&dwFlags)) {
@@ -4587,15 +4738,10 @@ namespace backward {
 			::GetLocalTime(&lt);
 
 			wchar_t minidumpPath[MAX_PATH];
-			std::int32_t pathPrefixLength;
-			if (processPathLength > 0) {
-				pathPrefixLength = swprintf_s(minidumpPath, L"%s\\CrashDumps\\", processPath);
-			} else {
-				pathPrefixLength = swprintf_s(minidumpPath, L"CrashDumps\\");
-			}
+			std::int32_t pathPrefixLength = swprintf_s(minidumpPath, L"%s\\CrashDumps\\", processPathLength > 0 ? processPath : L".");
 			::CreateDirectory(minidumpPath, NULL);
 			try_enable_file_compression(minidumpPath);
-			swprintf_s(minidumpPath + pathPrefixLength, countof(minidumpPath) - pathPrefixLength, L"%s (%04i-%02i-%02i %02i%02i%02i).dmp", &processPath[processPathLength], lt.wYear, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
+			swprintf_s(minidumpPath + pathPrefixLength, countof(minidumpPath) - pathPrefixLength, L"%s (%02i-%02i-%02i-%02i-%02i-%02i).dmp", &processPath[processPathLength], lt.wYear % 100, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
 
 			HANDLE dumpFile = ::CreateFile(minidumpPath, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (dumpFile != INVALID_HANDLE_VALUE) {
@@ -4740,8 +4886,8 @@ namespace backward {
 		}
 	};
 
-#endif // BACKWARD_SYSTEM_WINDOWS
+#endif // BACKWARD_TARGET_WINDOWS
 
 } // namespace backward
 
-#endif /* H_GUARD */
+#endif
