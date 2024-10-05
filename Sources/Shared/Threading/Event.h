@@ -4,6 +4,10 @@
 #include "Interlocked.h"
 #include "Implementation/WaitOnAddress.h"
 
+#if defined(DEATH_TARGET_APPLE)
+#	include <pthread.h>
+#endif
+
 namespace Death { namespace Threading {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -25,7 +29,9 @@ namespace Death { namespace Threading {
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
 				_event = ::CreateEvent(nullptr, TRUE, isSignaled, nullptr);
-				DEATH_DEBUG_ASSERT(_event != NULL);
+#elif defined(DEATH_TARGET_APPLE)
+				pthread_mutex_init(&_mutex, nullptr);
+				pthread_cond_init(&_cond, nullptr);
 #endif
 			}
 		}
@@ -35,7 +41,9 @@ namespace Death { namespace Threading {
 			if DEATH_UNLIKELY(!Implementation::IsWaitOnAddressSupported()) {
 #if defined(DEATH_TARGET_WINDOWS)
 				::CloseHandle(_event);
-				_event = NULL;
+#elif defined(DEATH_TARGET_APPLE)
+				pthread_mutex_destroy(&_mutex);
+				pthread_cond_destroy(&_cond);
 #endif
 			}
 		}
@@ -49,10 +57,18 @@ namespace Death { namespace Threading {
 		// Returns the previous state of the event
 		bool ResetEvent() noexcept
 		{
-			LONG result = !!Interlocked::Exchange(&_isSignaled, 0L);
-			if DEATH_UNLIKELY(!Implementation::IsWaitOnAddressSupported()) {
+			bool result;
+			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
+				result = !!Interlocked::Exchange(&_isSignaled, 0L);
+			} else {
 #if defined(DEATH_TARGET_WINDOWS)
+				result = !!Interlocked::Exchange(&_isSignaled, 0L);
 				::ResetEvent(_event);
+#elif defined(DEATH_TARGET_APPLE)
+				pthread_mutex_lock(&_mutex);
+				result = !!_isSignaled;
+				_isSignaled = 0L;
+				pthread_mutex_unlock(&_mutex);
 #endif
 			}
 			return result;
@@ -60,10 +76,10 @@ namespace Death { namespace Threading {
 
 		void SetEvent() noexcept
 		{
-			// FYI: 'WakeByAddress*' invokes a full memory barrier
-			Interlocked::WriteRelease(&_isSignaled, 1L);
-
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
+				// FYI: 'WakeByAddress*' invokes a full memory barrier
+				Interlocked::WriteRelease(&_isSignaled, 1L);
+
 				#pragma warning(suppress: 4127) // Conditional expression is constant
 				if constexpr (Type == EventType::AutoReset) {
 					Implementation::WakeByAddressSingle(_isSignaled);
@@ -72,7 +88,17 @@ namespace Death { namespace Threading {
 				}
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
+				Interlocked::WriteRelease(&_isSignaled, 1L);
 				::SetEvent(_event);
+#elif defined(DEATH_TARGET_APPLE)
+				pthread_mutex_lock(&_mutex);
+				_isSignaled = 1L;
+				if constexpr (Type == EventType::AutoReset) {
+					pthread_cond_signal(&_cond);
+				} else {
+					pthread_cond_broadcast(&_cond);
+				}
+				pthread_mutex_unlock(&_mutex);
 #endif
 			}
 		}
@@ -141,18 +167,46 @@ namespace Death { namespace Threading {
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
 				return (::WaitForSingleObject(_event, timeoutMilliseconds) == WAIT_OBJECT_0);
-#else
-				return false;
+#elif defined(DEATH_TARGET_APPLE)
+				bool result = true;
+				if (timeoutMilliseconds == Implementation::Infinite) {
+					pthread_mutex_lock(&_mutex);
+					while (!_isSignaled) {
+						pthread_cond_wait(&_cond, &_mutex);
+					}
+					pthread_mutex_unlock(&_mutex);
+				} else {
+					struct timespec ts;
+					clock_gettime(CLOCK_REALTIME, &ts);
+					ts.tv_sec += timeoutMilliseconds / 1000;
+					ts.tv_nsec += (timeoutMilliseconds % 1000) * 1000000;
+
+					if (ts.tv_nsec >= 1000000000) {
+						ts.tv_sec += ts.tv_nsec / 1000000000;
+						ts.tv_nsec %= 1000000000;
+					}
+
+					pthread_mutex_lock(&_mutex);
+					while (!_isSignaled) {
+						if (pthread_cond_timedwait(&_cond, &_mutex, &ts) == ETIMEDOUT) {
+							result = false;
+							break;
+						}
+					}
+					pthread_mutex_unlock(&_mutex);
+				}
+				return result;
 #endif
 			}
 		}
 
-		union {
-			LONG _isSignaled;
+		long _isSignaled;
 #if defined(DEATH_TARGET_WINDOWS)
-			HANDLE _event;
+		HANDLE _event;
+#elif defined(DEATH_TARGET_APPLE)
+		pthread_mutex_t _mutex;
+		pthread_cond_t _cond;
 #endif
-		};
 	};
 
 	/** @brief An event object that will atomically revert to an unsignaled state anytime a `Wait()` call succeeds (i.e. returns true). */
