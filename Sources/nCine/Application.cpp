@@ -518,8 +518,6 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	char logEntry[MaxLogEntryLength + 1];
 
 	TraceDateTime dateTime = GetTraceDateTime();
-	FileStream* s = static_cast<FileStream*>(__logFile.get());
-
 	std::int32_t length = snprintf(logEntry, MaxLogEntryLength, "%02u:%02u:%02u.%03u ", dateTime.Hours, dateTime.Minutes,
 		dateTime.Seconds, dateTime.Milliseconds);
 	std::int32_t levelOffset = length;

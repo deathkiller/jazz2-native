@@ -41,6 +41,7 @@ extern "C"
 #	include <linux/futex.h>
 #	include <sys/syscall.h>
 #	include <errno.h>
+#	include <time.h>
 #	include <unistd.h>
 #endif
 
