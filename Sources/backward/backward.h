@@ -4696,13 +4696,13 @@ namespace backward {
 		}
 
 		static void enable_crashing_on_crashes() {
-			using _GetPolicyDelegate = BOOL (WINAPI)(LPDWORD lpFlags);
-			using _SetPolicyDelegate = BOOL (WINAPI)(DWORD dwFlags);
+			using _GetPolicyDelegate = BOOL (WINAPI*)(LPDWORD lpFlags);
+			using _SetPolicyDelegate = BOOL (WINAPI*)(DWORD dwFlags);
 			constexpr DWORD EXCEPTION_SWALLOWING = 0x1;
 
 			HMODULE kernel32 = ::GetModuleHandle(L"kernel32.dll");
-			_GetPolicyDelegate* pGetPolicy = (_GetPolicyDelegate*)::GetProcAddress(kernel32, "GetProcessUserModeExceptionPolicy");
-			_SetPolicyDelegate* pSetPolicy = (_SetPolicyDelegate*)::GetProcAddress(kernel32, "SetProcessUserModeExceptionPolicy");
+			_GetPolicyDelegate pGetPolicy = (_GetPolicyDelegate)::GetProcAddress(kernel32, "GetProcessUserModeExceptionPolicy");
+			_SetPolicyDelegate pSetPolicy = (_SetPolicyDelegate)::GetProcAddress(kernel32, "SetProcessUserModeExceptionPolicy");
 			if (pGetPolicy != nullptr && pSetPolicy != nullptr) {
 				DWORD dwFlags;
 				if (pGetPolicy(&dwFlags)) {
