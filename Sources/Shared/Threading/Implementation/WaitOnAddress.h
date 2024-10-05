@@ -144,18 +144,6 @@ namespace Death { namespace Threading { namespace Implementation {
 		return syscall(__NR_futex, addr, op | FUTEX_PRIVATE_FLAG, val, val2, addr2, val3);
 	}
 
-	inline timespec MillisecondsToTimespec(std::uint32_t timeoutMilliseconds) noexcept
-	{
-		std::uint64_t secs = timeoutMilliseconds / 1000ull;
-		std::uint64_t nsecs = secs * 1000000000ull;
-		std::uint64_t nsecs2 = timeoutMilliseconds * 1000000ull;
-
-		struct timespec ts;
-		ts.tv_sec = (long)secs;
-		ts.tv_nsec = (long)(nsecs2 - nsecs);
-		return ts;
-	}
-
 	template<typename T>
 	int* GetFutexAddress(T* ptr)
 	{
@@ -171,7 +159,11 @@ namespace Death { namespace Threading { namespace Implementation {
 	template<typename T>
 	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
 	{
-		struct timespec ts = MillisecondsToTimespec(timeoutMilliseconds);
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_sec += timeoutMilliseconds / 1000;
+		ts.tv_nsec += (timeoutMilliseconds % 1000) * 1000000;
+
 		long r = FutexOp(GetFutexAddress(&futex), FUTEX_WAIT_BITSET, std::uintptr_t(expectedValue), std::uintptr_t(&ts), nullptr, FUTEX_BITSET_MATCH_ANY);
 		return (r == 0 || errno != ETIMEDOUT);
 	}
