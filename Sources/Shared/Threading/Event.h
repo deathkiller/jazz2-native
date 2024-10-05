@@ -126,7 +126,7 @@ namespace Death { namespace Threading {
 					return false;
 				}
 
-				DWORD newTimeout = static_cast<DWORD>(timeoutMilliseconds - elapsedMilliseconds);
+				std::uint32_t newTimeout = static_cast<std::uint32_t>(timeoutMilliseconds - elapsedMilliseconds);
 				if (!WaitForSignal(newTimeout)) {
 					return false;
 				}
