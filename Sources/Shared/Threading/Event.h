@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Common.h"
+#include "../Environment.h"
 #include "Interlocked.h"
 #include "Implementation/WaitOnAddress.h"
 
