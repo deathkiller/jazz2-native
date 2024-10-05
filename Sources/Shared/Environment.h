@@ -6,6 +6,10 @@
 #	include "Containers/String.h"
 #endif
 
+#if !defined(DEATH_TARGET_WINDOWS)
+#	include <time.h>
+#endif
+
 namespace Death {
 #if defined(DEATH_TARGET_WINDOWS_RT)
 	enum class DeviceType {
@@ -53,18 +57,27 @@ namespace Death { namespace Environment {
 		return WindowsVersion >= 0x0a0000000055f0; // 10.0.22000
 	}
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
 	extern const DeviceType CurrentDeviceType;
+#	endif
 #endif
 
+#if defined(DEATH_TARGET_WINDOWS)
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
 		ULONGLONG now = {};
 		::QueryUnbiasedInterruptTime(&now);
 		return now;
 	}
+#else
+	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
+		struct timespec ts;
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		return (std::uint64_t)ts.tv_sec * 10000000ULL + (ts.tv_nsec / 100ULL);
+	}
+#endif
 
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTimeAsMs() {
 		return QueryUnbiasedInterruptTime() / 10000LL;
 	}
-#endif
+
 }}

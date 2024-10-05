@@ -365,7 +365,6 @@ static void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char*
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	// Allow to attach custom target using Application::AttachTraceTarget()
 	if (__logFile != nullptr) {
-		TraceDateTime dateTime = GetTraceDateTime();
 		FileStream* s = static_cast<FileStream*>(__logFile.get());
 		fprintf(s->GetHandle(), "%s\n", logEntry);
 		if (level >= TraceLevel::Error) {
