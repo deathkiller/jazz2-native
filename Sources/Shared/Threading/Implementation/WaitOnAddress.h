@@ -140,8 +140,7 @@ namespace Death { namespace Threading { namespace Implementation {
 
 	inline long FutexOp(int* addr, int op, int val, std::uintptr_t val2 = 0, int* addr2 = nullptr, int val3 = 0) noexcept
 	{
-		// we use __NR_futex because some libcs (like Android's bionic) don't
-		// provide SYS_futex etc.
+		// We use __NR_futex because some libcs (like Android's bionic) don't provide SYS_futex
 		return syscall(__NR_futex, addr, op | FUTEX_PRIVATE_FLAG, val, val2, addr2, val3);
 	}
 
@@ -160,13 +159,18 @@ namespace Death { namespace Threading { namespace Implementation {
 	template<typename T>
 	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
 	{
-		struct timespec ts;
-		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec += timeoutMilliseconds / 1000;
-		ts.tv_nsec += (timeoutMilliseconds % 1000) * 1000000;
+		if (timeoutMilliseconds == Infinite) {
+			long r = FutexOp(GetFutexAddress(&futex), FUTEX_WAIT, (std::uintptr_t)expectedValue);
+			return (r == 0);
+		} else {
+			struct timespec ts;
+			clock_gettime(CLOCK_REALTIME, &ts);
+			ts.tv_sec += timeoutMilliseconds / 1000;
+			ts.tv_nsec += (timeoutMilliseconds % 1000) * 1000000;
 
-		long r = FutexOp(GetFutexAddress(&futex), FUTEX_WAIT_BITSET, std::uintptr_t(expectedValue), std::uintptr_t(&ts), nullptr, FUTEX_BITSET_MATCH_ANY);
-		return (r == 0 || errno != ETIMEDOUT);
+			long r = FutexOp(GetFutexAddress(&futex), FUTEX_WAIT_BITSET, (std::uintptr_t)expectedValue, (std::uintptr_t)&ts, nullptr, FUTEX_BITSET_MATCH_ANY);
+			return (r == 0 || errno != ETIMEDOUT);
+		}
 	}
 
 	template<typename T>

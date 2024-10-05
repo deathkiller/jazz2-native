@@ -34,164 +34,6 @@ using namespace Death::IO;
 #	error "For DEATH_TARGET_WINDOWS_RT, UwpApplication should be used instead of MainApplication"
 #endif
 
-#if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
-
-#	if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
-#		define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
-#	endif
-
-#	include <Utf8.h>
-
-extern "C" IMAGE_DOS_HEADER __ImageBase;
-
-HANDLE __consoleHandleOut;
-SHORT __consoleCursorY;
-bool __showLogConsole;
-bool __hasVirtualTerminal;
-Array<wchar_t> __consolePrompt;
-
-static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
-{
-	if (consoleHandleOut == INVALID_HANDLE_VALUE) {
-		return false;
-	}
-
-	DWORD dwMode = 0;
-	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
-			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
-}
-
-static bool CreateLogConsole(const StringView& title, bool& hasVirtualTerminal)
-{
-	FILE* fDummy = nullptr;
-
-	if (::AttachConsole(ATTACH_PARENT_PROCESS)) {
-		HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-		if (consoleHandleOut != INVALID_HANDLE_VALUE) {
-			::freopen_s(&fDummy, "CONOUT$", "w", stdout);
-			::setvbuf(stdout, NULL, _IONBF, 0);
-		}
-
-		HANDLE consoleHandleError = ::GetStdHandle(STD_ERROR_HANDLE);
-		if (consoleHandleError != INVALID_HANDLE_VALUE) {
-			::freopen_s(&fDummy, "CONOUT$", "w", stderr);
-			::setvbuf(stderr, NULL, _IONBF, 0);
-		}
-
-		HANDLE consoleHandleIn = ::GetStdHandle(STD_INPUT_HANDLE);
-		if (consoleHandleIn != INVALID_HANDLE_VALUE) {
-			::freopen_s(&fDummy, "CONIN$", "r", stdin);
-			::setvbuf(stdin, NULL, _IONBF, 0);
-		}
-
-		hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
-
-		// Try to get command prompt to be able to reprint it when the game exits
-		CONSOLE_SCREEN_BUFFER_INFO csbi;
-		if (::GetConsoleScreenBufferInfo(consoleHandleOut, &csbi)) {
-			DWORD dwConsoleColumnWidth = (DWORD)(csbi.srWindow.Right - csbi.srWindow.Left + 1);
-			SHORT xEnd = csbi.dwCursorPosition.X;
-			SHORT yEnd = csbi.dwCursorPosition.Y;
-			if (xEnd != 0 || yEnd != 0) {
-				DWORD dwNumberOfChars;
-				SHORT yBegin = yEnd;
-				if (dwConsoleColumnWidth > 16) {
-					Array<wchar_t> tmp(NoInit, dwConsoleColumnWidth);
-					while (yBegin > 0) {
-						COORD dwReadCoord = { 0, yBegin };
-						if (!::ReadConsoleOutputCharacter(consoleHandleOut, tmp.data(), dwConsoleColumnWidth, dwReadCoord, &dwNumberOfChars)) {
-							break;
-						}
-
-						for (DWORD i = dwNumberOfChars - 8; i < dwNumberOfChars; i++) {
-							wchar_t wchar = tmp[i];
-							if (wchar != L' ') {
-								yBegin--;
-								continue;
-							}
-						}
-
-						if (yBegin < yEnd) {
-							yBegin++;
-						}
-						break;
-					}
-				}
-
-				DWORD promptLength = (yEnd - yBegin) * dwConsoleColumnWidth + xEnd;
-				__consolePrompt = Array<wchar_t>(NoInit, promptLength);
-				COORD dwPromptCoord = { 0, yEnd };
-				if (::ReadConsoleOutputCharacter(consoleHandleOut, __consolePrompt.data(), promptLength, dwPromptCoord, &dwNumberOfChars)) {
-					if (::SetConsoleCursorPosition(consoleHandleOut, dwPromptCoord)) {
-						::FillConsoleOutputCharacter(consoleHandleOut, L' ', promptLength, dwPromptCoord, &dwNumberOfChars);
-					}
-				} else {
-					__consolePrompt = {};
-				}
-			}
-		}
-
-		return true;
-	} else if (::AllocConsole()) {
-		::freopen_s(&fDummy, "CONOUT$", "w", stdout);
-		::freopen_s(&fDummy, "CONOUT$", "w", stderr);
-		::freopen_s(&fDummy, "CONIN$", "r", stdin);
-
-		HANDLE consoleHandleOut = ::CreateFile(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		HANDLE consoleHandleIn = ::CreateFile(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		::SetStdHandle(STD_OUTPUT_HANDLE, consoleHandleOut);
-		::SetStdHandle(STD_ERROR_HANDLE, consoleHandleOut);
-		::SetStdHandle(STD_INPUT_HANDLE, consoleHandleIn);
-
-		hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
-
-		::SetConsoleTitle(Death::Utf8::ToUtf16(title));
-		HWND hWnd = ::GetConsoleWindow();
-		if (hWnd != nullptr) {
-			HINSTANCE inst = ((HINSTANCE)&__ImageBase);
-			HICON windowIcon = (HICON)::LoadImage(inst, L"WINDOW_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTSIZE);
-			HICON windowIconSmall = (HICON)::LoadImage(inst, L"WINDOW_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTSIZE);
-			if (windowIconSmall != NULL) ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)windowIconSmall);
-			if (windowIcon != NULL) ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)windowIcon);
-		}
-
-		return true;
-	} else {
-		hasVirtualTerminal = false;
-	}
-
-	return false;
-}
-
-static void DestroyLogConsole()
-{
-	if (!__consolePrompt.empty()) {
-		HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-		if (consoleHandleOut != INVALID_HANDLE_VALUE) {
-			CONSOLE_SCREEN_BUFFER_INFO csbi;
-			if (::GetConsoleScreenBufferInfo(consoleHandleOut, &csbi)) {
-				DWORD xEnd = csbi.dwCursorPosition.X;
-				DWORD yEnd = csbi.dwCursorPosition.Y;
-				if (xEnd != 0 || yEnd != 0) {
-					DWORD dwNumberOfCharsWritten;
-					::WriteConsoleW(consoleHandleOut, L"\r\n", (DWORD)arraySize(L"\r\n") - 1, &dwNumberOfCharsWritten, NULL);
-					::WriteConsoleW(consoleHandleOut, __consolePrompt.data(), (DWORD)__consolePrompt.size(), &dwNumberOfCharsWritten, NULL);
-				}
-			}
-		}
-	}
-
-	::FreeConsole();
-}
-
-#elif defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
-
-#include <unistd.h>
-
-bool __hasVirtualTerminal;
-
-#endif
-
 namespace nCine
 {
 	Application& theApplication()
@@ -241,34 +83,6 @@ namespace nCine
 		timeBeginPeriod(1);
 #endif
 
-#if defined(DEATH_TRACE)
-#	if defined(DEATH_TARGET_APPLE)
-		// Xcode's console reports that it is a TTY, but it doesn't support colors, TERM is not defined in this case
-		__hasVirtualTerminal = isatty(1) && ::getenv("TERM");
-#	elif defined(DEATH_TARGET_EMSCRIPTEN)
-		char* userAgent = (char*)EM_ASM_PTR({
-			return (typeof navigator !== 'undefined' && navigator !== null &&
-					typeof navigator.userAgent !== 'undefined' && navigator.userAgent !== null
-						? stringToNewUTF8(navigator.userAgent) : 0);
-		});
-		if (userAgent != nullptr) {
-			// Only Chrome supports ANSI escape sequences for now
-			__hasVirtualTerminal = (::strcasestr(userAgent, "chrome") != nullptr);
-			free(userAgent);
-		} else {
-			__hasVirtualTerminal = false;
-		}
-#	elif defined(DEATH_TARGET_WINDOWS)
-		// This can be initialized later from AttachTraceTarget()
-		__showLogConsole = false;
-		__hasVirtualTerminal = false;
-#	elif defined(DEATH_TARGET_UNIX)
-		::setvbuf(stdout, nullptr, _IONBF, 0);
-		::setvbuf(stderr, nullptr, _IONBF, 0);
-		__hasVirtualTerminal = isatty(1);
-#	endif
-#endif
-
 		MainApplication& app = static_cast<MainApplication&>(theApplication());
 		app.Init(createAppEventHandler, argc, argv);
 
@@ -294,12 +108,6 @@ namespace nCine
 		socketExit();
 #elif defined(DEATH_TARGET_WINDOWS)
 		timeEndPeriod(1);
-
-#	if defined(DEATH_TRACE)
-		if (__showLogConsole) {
-			DestroyLogConsole();
-		}
-#	endif
 #endif
 		return EXIT_SUCCESS;
 	}
@@ -465,26 +273,4 @@ namespace nCine
 		static_cast<MainApplication&>(theApplication()).ProcessStep();
 	}
 #endif
-
-	void MainApplication::AttachTraceTarget(Containers::StringView targetPath)
-	{
-#if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
-		if (targetPath == ConsoleTarget) {
-			if (!__showLogConsole) {
-				__showLogConsole = true;
-				CreateLogConsole(NCINE_APP_NAME " [Console]", __hasVirtualTerminal);
-
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				__consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
-					__consoleCursorY = csbi.dwCursorPosition.Y;
-				} else {
-					__consoleHandleOut = NULL;
-				}
-			}
-			return;
-		}
-#endif
-		Application::AttachTraceTarget(targetPath);
-	}
 }

@@ -28,38 +28,42 @@ namespace nCine
 	class ImGuiDrawing;
 #endif
 
-	/// Main entry point and handler for nCine applications
+	/** @brief Main entry point and handler for nCine applications */
 	class Application
 	{
 	public:
-		/// Rendering settings that can be changed at run-time
+		/** @brief Rendering settings that can be changed at run-time */
 		struct RenderingSettings
 		{
 			RenderingSettings()
 				: batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(585) { }
 
-			/// True if batching is enabled
+			/** @brief `true` if batching is enabled */
 			bool batchingEnabled;
-			/// True if using indices for vertex batching
+			/** @brief `true` if using indices for vertex batching */
 			bool batchingWithIndices;
-			/// True if node culling is enabled
+			/** @brief `true` if node culling is enabled */
 			bool cullingEnabled;
-			/// Minimum size for a batch to be collected
+			/** @brief Minimum size for a batch to be collected */
 			unsigned int minBatchSize;
-			/// Maximum size for a batch before a forced split
+			/** @brief Maximum size for a batch before a forced split */
 			unsigned int maxBatchSize;
 		};
 
 #if defined(WITH_IMGUI)
-		/// GUI settings (for ImGui) that can be changed at run-time
+		/** @brief GUI settings (for ImGui) that can be changed at run-time */
 		struct GuiSettings
 		{
 			GuiSettings();
 
-			/// ImGui drawable node layer
+			/** @brief ImGui drawable node layer */
 			uint16_t imguiLayer;
-			/// ImGui viewport
-			/*! \note The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen */
+
+			/**
+				@brief ImGui viewport
+			
+				The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen
+			*/
 			Viewport* imguiViewport;
 		};
 #endif
@@ -81,88 +85,71 @@ namespace nCine
 			Count
 		};
 
-		/// Can be used in AttachTraceTarget() to attach to a console (if exists)
+		/** @brief Can be used in AttachTraceTarget() to attach to a console (if exists) */
 		static constexpr char const* ConsoleTarget = "\n";
 
-		/// Returns the configuration used to initialize the application
-		inline const AppConfiguration& GetAppConfiguration() const {
-			return appCfg_;
-		}
-		/// Returns the run-time rendering settings
-		inline RenderingSettings& GetRenderingSettings() {
-			return renderingSettings_;
-		}
+		/** @brief Returns the configuration used to initialize the application */
+		inline const AppConfiguration& GetAppConfiguration() const { return appCfg_; }
+		/** @brief Returns the run-time rendering settings */
+		inline RenderingSettings& GetRenderingSettings() { return renderingSettings_; }
 #if defined(WITH_IMGUI)
-		/// Returns the run-time GUI settings
-		inline GuiSettings& GetGuiSettings() {
-			return guiSettings_;
-		}
-		/// Returns the debug overlay object, if any
-		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() {
-			return (debugOverlay_ != nullptr ? debugOverlay_->settings() : debugOverlayNullSettings_);
-		}
+		/** @brief Returns the run-time GUI settings */
+		inline GuiSettings& GetGuiSettings() { return guiSettings_; }
+		/** @brief Returns the debug overlay object, if any */
+		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() { return (debugOverlay_ != nullptr ? debugOverlay_->settings() : debugOverlayNullSettings_); }
 #endif
 #if defined(NCINE_PROFILING)
-		/// Returns all timings
-		inline const float* GetTimings() const {
-			return timings_;
-		}
+		/** @brief Returns all timings */
+		inline const float* GetTimings() const { return timings_; }
 #endif
 
-		/// Returns the graphics device instance
-		inline IGfxDevice& GetGfxDevice() {
-			return *gfxDevice_;
-		}
-		/// Returns the root of the transformation graph
-		inline SceneNode& GetRootNode() {
-			return *rootNode_;
-		}
-		/// Returns the screen viewport
+		/** @brief Returns the graphics device instance */
+		inline IGfxDevice& GetGfxDevice() { return *gfxDevice_; }
+		/** @brief Returns the root of the transformation graph */
+		inline SceneNode& GetRootNode() { return *rootNode_; }
+		/** @brief Returns the screen viewport */
 		Viewport& GetScreenViewport();
-		/// Returns the input manager instance
-		inline IInputManager& GetInputManager() {
-			return *inputManager_;
-		}
+		/** @brief Returns the input manager instance */
+		inline IInputManager& GetInputManager() { return *inputManager_; }
 
-		/// Returns the total number of frames already rendered
+		/** @brief Returns the total number of frames already rendered */
 		unsigned long int GetFrameCount() const;
-		/// Returns a factor that represents how long the last frame took relative to the desired frame time
+		/** @brief Returns a factor that represents how long the last frame took relative to the desired frame time */
 		float GetTimeMult() const;
-		/// Returns the frame timer interface
+		/** @brief Returns the frame timer interface */
 		const FrameTimer& GetFrameTimer() const;
 
-		/// Returns the drawable screen width as an integer number
+		/** @brief Returns the drawable screen width as an integer number */
 		inline std::int32_t GetWidth() const { return gfxDevice_->drawableWidth(); }
-		/// Returns the drawable screen height as an integer number
+		/** @brief Returns the drawable screen height as an integer number */
 		inline std::int32_t GetHeight() const { return gfxDevice_->drawableHeight(); }
-		/// Returns the drawable screen resolution as a `Vector2i` object
+		/** @brief Returns the drawable screen resolution as a `Vector2i` object */
 		inline Vector2i GetResolution() const { return gfxDevice_->drawableResolution(); }
 
-		/// Resizes the screen viewport, if exists
+		/** @brief Resizes the screen viewport, if exists */
 		void ResizeScreenViewport(std::int32_t width, std::int32_t height);
 
 		bool ShouldSuspend();
 
-		/// Returns the value of the auto-suspension flag
-		/*! If `true` the application will be suspended when it loses focus */
+		/** @brief Returns the value of the auto-suspension flag (the application will be suspended when it loses focus) */
 		inline bool GetAutoSuspension() const {
 			return autoSuspension_;
 		}
-		/// Sets the auto-suspension flag value
+		/** @brief Sets the auto-suspension flag value */
 		inline void SetAutoSuspension(bool autoSuspension) {
 			autoSuspension_ = autoSuspension;
 		}
 
-		/// Raises the quit flag
+		/** @brief Raises the quit flag */
 		inline void Quit() {
 			shouldQuit_ = true;
 		}
-		/// Returns the quit flag value
+		/** @brief Returns the quit flag value */
 		inline bool ShouldQuit() const {
 			return shouldQuit_;
 		}
 
-		/// Returns the focus flag value
+		/** @brief Returns the focus flag value */
 		inline bool HasFocus() const {
 			return hasFocus_;
 		}
@@ -171,7 +158,7 @@ namespace nCine
 			return appCfg_.dataPath();
 		}
 
-		virtual void AttachTraceTarget(Containers::StringView targetPath);
+		void AttachTraceTarget(Containers::StringView targetPath);
 
 	protected:
 		AppConfiguration appCfg_;
@@ -207,19 +194,19 @@ namespace nCine
 		~Application();
 
 		void PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler);
-		/// Must be called before giving control to the application
+		/** @brief Must be called before giving control to the application */
 		void InitCommon();
-		/// A single step of the game loop made to render a frame
+		/** @brief A single step of the game loop made to render a frame */
 		void Step();
-		/// Must be called before exiting to shut down the application
+		/** @brief Must be called before exiting to shut down the application */
 		void ShutdownCommon();
 
-		/// Called when the application gets suspended
+		/** @brief Called when the application gets suspended */
 		void Suspend();
-		/// Called when the application resumes execution
+		/** @brief Called when the application resumes execution */
 		void Resume();
 
-		/// Sets the focus flag
+		/** @brief Sets the focus flag */
 		virtual void SetFocus(bool hasFocus);
 
 	private:
@@ -237,9 +224,18 @@ namespace nCine
 
 #if defined(DEATH_TRACE)
 		friend void ::DEATH_TRACE(TraceLevel level, const char* fmt, ...);
+
+		void PreInitTrace();
+		void InitTrace();
+		void ShutdownTrace();
+
+#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		bool CreateTraceConsole(const StringView& title, bool& hasVirtualTerminal);
+		void DestroyTraceConsole();
+#	endif
 #endif
 	};
 
-	// Meyers' Singleton
 	extern Application& theApplication();
+
 }
