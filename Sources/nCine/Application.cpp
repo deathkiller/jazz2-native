@@ -1093,7 +1093,7 @@ namespace nCine
 	}
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-	bool Application::CreateTraceConsole(const StringView& title, bool& hasVirtualTerminal)
+	bool Application::CreateTraceConsole(StringView title, bool& hasVirtualTerminal)
 	{
 		FILE* fDummy = nullptr;
 

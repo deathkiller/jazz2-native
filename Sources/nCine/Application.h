@@ -18,7 +18,9 @@ using namespace Death;
 
 namespace nCine
 {
+#if defined(DEATH_TRACE)
 	void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
+#endif
 
 	class FrameTimer;
 	class SceneNode;
@@ -232,7 +234,7 @@ namespace nCine
 		void ShutdownTrace();
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		bool CreateTraceConsole(const StringView& title, bool& hasVirtualTerminal);
+		bool CreateTraceConsole(StringView title, bool& hasVirtualTerminal);
 		void DestroyTraceConsole();
 #	endif
 #endif
