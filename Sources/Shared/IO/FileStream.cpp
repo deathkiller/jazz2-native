@@ -16,11 +16,12 @@
 #	include <unistd.h>		// for close()
 #endif
 
+// TODO: Disabled for now as some files need to be locked manually first
 // `_nolock` functions are not supported by VC-LTL msvcrt, `_unlocked` functions are not supported on Android and Apple
-#if (defined(DEATH_TARGET_WINDOWS) && !(defined(_Build_By_LTL) && _LTL_vcruntime_module_type != 2)) \
-	|| (!defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE))
-#	define DEATH_USE_NOLOCK_IN_FILE
-#endif
+//#if (defined(DEATH_TARGET_WINDOWS) && !(defined(_Build_By_LTL) && _LTL_vcruntime_module_type != 2)) \
+//	|| (!defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE))
+//#	define DEATH_USE_NOLOCK_IN_FILE
+//#endif
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -158,14 +159,12 @@ namespace Death { namespace IO {
 		}
 #else
 		if (_handle != nullptr) {
-#	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(DEATH_USE_NOLOCK_IN_FILE)
+#	if defined(DEATH_USE_NOLOCK_IN_FILE)
+#		if defined(DEATH_TARGET_WINDOWS)
 			bytesRead = static_cast<std::int32_t>(::_fread_nolock(buffer, 1, bytes, _handle));
 #		else
-			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
-#		endif
-#	elif defined(DEATH_USE_NOLOCK_IN_FILE)
 			bytesRead = static_cast<std::int32_t>(::fread_unlocked(buffer, 1, bytes, _handle));
+#		endif
 #	else
 			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
 #	endif
@@ -189,14 +188,12 @@ namespace Death { namespace IO {
 		}
 #else
 		if (_handle != nullptr) {
-#	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(DEATH_USE_NOLOCK_IN_FILE)
+#	if defined(DEATH_USE_NOLOCK_IN_FILE)
+#		if defined(DEATH_TARGET_WINDOWS)
 			bytesWritten = static_cast<std::int32_t>(::_fwrite_nolock(buffer, 1, bytes, _handle));
 #		else
-			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
-#		endif
-#	elif defined(DEATH_USE_NOLOCK_IN_FILE)
 			bytesWritten = static_cast<std::int32_t>(::fwrite_unlocked(buffer, 1, bytes, _handle));
+#		endif
 #	else
 			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
 #	endif
@@ -210,7 +207,15 @@ namespace Death { namespace IO {
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		return fdatasync(_fileDescriptor) == 0;
 #else
+#	if defined(DEATH_USE_NOLOCK_IN_FILE)
+#		if defined(DEATH_TARGET_WINDOWS)
+		return _fflush_nolock(_handle) == 0;
+#		else
+		return fflush_unlocked(_handle) == 0;
+#		endif
+#	else
 		return fflush(_handle) == 0;
+#	endif
 #endif
 	}
 

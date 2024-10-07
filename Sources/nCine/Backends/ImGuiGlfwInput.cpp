@@ -99,14 +99,14 @@ namespace nCine
 #	endif
 #endif
 
-		const char* clipboardText(void* userData)
+		const char* clipboardText(ImGuiContext* ctx)
 		{
-			return glfwGetClipboardString(reinterpret_cast<GLFWwindow*>(userData));
+			return glfwGetClipboardString(static_cast<GLFWwindow*>(ImGui::GetPlatformIO().Platform_ClipboardUserData));
 		}
 
-		void setClipboardText(void* userData, const char* text)
+		void setClipboardText(ImGuiContext* ctx, const char* text)
 		{
-			glfwSetClipboardString(reinterpret_cast<GLFWwindow*>(userData), text);
+			glfwSetClipboardString(static_cast<GLFWwindow*>(ImGui::GetPlatformIO().Platform_ClipboardUserData), text);
 		}
 
 		ImGuiKey glfwKeyToImGuiKey(int key)
@@ -369,6 +369,7 @@ namespace nCine
 		ImGui::CreateContext();
 
 		ImGuiIO& io = ImGui::GetIO();
+		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 
 		// Setup backend capabilities flags
 		io.BackendPlatformName = "nCine_GLFW";
@@ -387,9 +388,9 @@ namespace nCine
 		time_ = 0.0;
 		wantUpdateMonitors_ = true;
 
-		io.SetClipboardTextFn = setClipboardText;
-		io.GetClipboardTextFn = clipboardText;
-		io.ClipboardUserData = window_;
+		pio.Platform_SetClipboardTextFn = setClipboardText;
+		pio.Platform_GetClipboardTextFn = clipboardText;
+		pio.Platform_ClipboardUserData = window_;
 
 		// Create mouse cursors
 		// (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,

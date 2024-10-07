@@ -18,6 +18,8 @@ using namespace Death;
 
 namespace nCine
 {
+	void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
+
 	class FrameTimer;
 	class SceneNode;
 	class Viewport;
@@ -223,7 +225,7 @@ namespace nCine
 		friend class Viewport;
 
 #if defined(DEATH_TRACE)
-		friend void ::DEATH_TRACE(TraceLevel level, const char* fmt, ...);
+		friend void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
 
 		void PreInitTrace();
 		void InitTrace();

@@ -308,7 +308,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\PakFile.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Event.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.h" />
-    <ClInclude Include="backward\backward.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Core\Backward.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />

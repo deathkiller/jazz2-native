@@ -28,14 +28,15 @@ namespace Jazz2::Scripting
 			return ImGui::Begin(name.data()); }), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void EndChild()", asFUNCTIONPR(ImGui::EndChild, (), void), asCALL_CDECL);
 
-		engine->RegisterGlobalFunction("vec2 GetContentRegionMax()", asFUNCTION(+[]() -> Vector2f { 
-			return ImGui::GetContentRegionMax(); }), asCALL_CDECL);
-		engine->RegisterGlobalFunction("vec2 GetContentRegionAvail()", asFUNCTION(+[]() -> Vector2f {
-			return ImGui::GetContentRegionAvail(); }), asCALL_CDECL);
-		engine->RegisterGlobalFunction("vec2 GetWindowContentRegionMin()", asFUNCTION(+[]() -> Vector2f {
-			return ImGui::GetWindowContentRegionMin(); }), asCALL_CDECL);
-		engine->RegisterGlobalFunction("vec2 GetWindowContentRegionMax()", asFUNCTION(+[]() -> Vector2f {
-			return ImGui::GetWindowContentRegionMax(); }), asCALL_CDECL);
+		// Deprecated
+		//engine->RegisterGlobalFunction("vec2 GetContentRegionMax()", asFUNCTION(+[]() -> Vector2f { 
+		//	return ImGui::GetContentRegionMax(); }), asCALL_CDECL);
+		//engine->RegisterGlobalFunction("vec2 GetContentRegionAvail()", asFUNCTION(+[]() -> Vector2f {
+		//	return ImGui::GetContentRegionAvail(); }), asCALL_CDECL);
+		//engine->RegisterGlobalFunction("vec2 GetWindowContentRegionMin()", asFUNCTION(+[]() -> Vector2f {
+		//	return ImGui::GetWindowContentRegionMin(); }), asCALL_CDECL);
+		//engine->RegisterGlobalFunction("vec2 GetWindowContentRegionMax()", asFUNCTION(+[]() -> Vector2f {
+		//	return ImGui::GetWindowContentRegionMax(); }), asCALL_CDECL);
 
 		engine->RegisterGlobalFunction("vec2 GetWindowPos()", asFUNCTION(+[]() -> Vector2f {
 			return ImGui::GetWindowPos(); }), asCALL_CDECL);
