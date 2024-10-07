@@ -4281,8 +4281,6 @@ namespace Death { namespace Backward {
 	private:
 		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
 
-		static ExceptionHandling* _current = nullptr;
-
 		Implementation::Handle<char*> _stackContent;
 		bool _loaded;
 
