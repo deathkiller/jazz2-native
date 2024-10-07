@@ -389,7 +389,9 @@ namespace Jazz2::UI
 								if (formatLength == 2) {
 									switch (formatDescPtr[1]) {
 										case 'a': {
-											styleCount[(std::int32_t)StyleIndex::DottedUnderline];
+											if (styleCount[(std::int32_t)StyleIndex::DottedUnderline] > 0) {
+												--styleCount[(std::int32_t)StyleIndex::DottedUnderline];
+											}
 											break;
 										}
 										case 'u': {

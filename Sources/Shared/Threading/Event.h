@@ -29,7 +29,7 @@ namespace Death { namespace Threading {
 				Implementation::InitializeWaitOnAddress();
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
-				_event = ::CreateEvent(nullptr, TRUE, isSignaled, nullptr);
+				_fallbackEvent = ::CreateEvent(nullptr, TRUE, isSignaled, nullptr);
 #elif defined(DEATH_TARGET_APPLE)
 				pthread_mutex_init(&_mutex, nullptr);
 				pthread_cond_init(&_cond, nullptr);
@@ -41,7 +41,7 @@ namespace Death { namespace Threading {
 		{
 			if DEATH_UNLIKELY(!Implementation::IsWaitOnAddressSupported()) {
 #if defined(DEATH_TARGET_WINDOWS)
-				::CloseHandle(_event);
+				::CloseHandle(_fallbackEvent);
 #elif defined(DEATH_TARGET_APPLE)
 				pthread_mutex_destroy(&_mutex);
 				pthread_cond_destroy(&_cond);
@@ -64,12 +64,14 @@ namespace Death { namespace Threading {
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
 				result = !!Interlocked::Exchange(&_isSignaled, 0L);
-				::ResetEvent(_event);
+				::ResetEvent(_fallbackEvent);
 #elif defined(DEATH_TARGET_APPLE)
 				pthread_mutex_lock(&_mutex);
 				result = !!_isSignaled;
 				_isSignaled = 0L;
 				pthread_mutex_unlock(&_mutex);
+#else
+				result = false;
 #endif
 			}
 			return result;
@@ -90,7 +92,7 @@ namespace Death { namespace Threading {
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
 				Interlocked::WriteRelease(&_isSignaled, 1L);
-				::SetEvent(_event);
+				::SetEvent(_fallbackEvent);
 #elif defined(DEATH_TARGET_APPLE)
 				pthread_mutex_lock(&_mutex);
 				_isSignaled = 1L;
@@ -167,7 +169,7 @@ namespace Death { namespace Threading {
 				return Implementation::WaitOnAddress(_isSignaled, 0L, timeoutMilliseconds);
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
-				return (::WaitForSingleObject(_event, timeoutMilliseconds) == WAIT_OBJECT_0);
+				return (::WaitForSingleObject(_fallbackEvent, timeoutMilliseconds) == WAIT_OBJECT_0);
 #elif defined(DEATH_TARGET_APPLE)
 				bool result = true;
 				if (timeoutMilliseconds == Implementation::Infinite) {
@@ -197,13 +199,15 @@ namespace Death { namespace Threading {
 					pthread_mutex_unlock(&_mutex);
 				}
 				return result;
+#else
+				return false;
 #endif
 			}
 		}
 
 		long _isSignaled;
 #if defined(DEATH_TARGET_WINDOWS)
-		HANDLE _event;
+		HANDLE _fallbackEvent;
 #elif defined(DEATH_TARGET_APPLE)
 		pthread_mutex_t _mutex;
 		pthread_cond_t _cond;
