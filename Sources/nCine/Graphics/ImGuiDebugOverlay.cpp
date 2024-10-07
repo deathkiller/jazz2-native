@@ -458,7 +458,7 @@ namespace nCine
 			initTimes[0] = timings[(int)Application::Timings::PreInit] * 1000.0f;
 			initTimes[1] = initTimes[0] + timings[(int)Application::Timings::InitCommon] * 1000.0f;
 			initTimes[2] = initTimes[1] + timings[(int)Application::Timings::AppInit] * 1000.0f;
-			ImGui::PlotHistogram("Init Times", initTimes, 3, 0, nullptr, 0.0f, initTimes[2], ImVec2(0.0f, 100.0f));
+			ImGui::PlotHistogram("##1", initTimes, 3, 0, nullptr, 0.0f, initTimes[2], ImVec2(0.0f, 100.0f));
 
 			ImGui::Text("Pre-Init Time: %.2f ms", timings[(int)Application::Timings::PreInit] * 1000.0f);
 			ImGui::Text("Init Time: %.2f ms", timings[(int)Application::Timings::InitCommon] * 1000.0f);
@@ -1367,7 +1367,7 @@ namespace nCine
 		ImGui::Text("Culled nodes: %u", RenderStatistics::culled());
 		if (plotOverlayValues_) {
 			ImGui::SameLine(180.0f);
-			ImGui::PlotLines("", plotValues_[ValuesType::CulledNodes].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			ImGui::PlotLines("##1", plotValues_[ValuesType::CulledNodes].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 		}
 
 		ImGui::Text("%u/%u VAOs (%u reuses, %u bindings)", vaoPool.size, vaoPool.capacity, vaoPool.reuses, vaoPool.bindings);
@@ -1382,19 +1382,19 @@ namespace nCine
 		ImGui::Text("%.2f/%lu kB in %u VBO(s)", vboBuffers.usedSpace / 1024.0f, vboBuffers.size / 1024, vboBuffers.count);
 		if (plotOverlayValues_) {
 			ImGui::SameLine(180.0f);
-			ImGui::PlotLines("", plotValues_[ValuesType::VboUsed].get(), numValues_, index_, nullptr, 0.0f, vboBuffers.size / 1024.0f);
+			ImGui::PlotLines("##2", plotValues_[ValuesType::VboUsed].get(), numValues_, index_, nullptr, 0.0f, vboBuffers.size / 1024.0f);
 		}
 
 		ImGui::Text("%.2f/%lu kB in %u IBO(s)", iboBuffers.usedSpace / 1024.0f, iboBuffers.size / 1024, iboBuffers.count);
 		if (plotOverlayValues_) {
 			ImGui::SameLine(180.0f);
-			ImGui::PlotLines("", plotValues_[ValuesType::IboUsed].get(), numValues_, index_, nullptr, 0.0f, iboBuffers.size / 1024.0f);
+			ImGui::PlotLines("##3", plotValues_[ValuesType::IboUsed].get(), numValues_, index_, nullptr, 0.0f, iboBuffers.size / 1024.0f);
 		}
 
 		ImGui::Text("%.2f/%lu kB in %u UBO(s)", uboBuffers.usedSpace / 1024.0f, uboBuffers.size / 1024, uboBuffers.count);
 		if (plotOverlayValues_) {
 			ImGui::SameLine(180.0f);
-			ImGui::PlotLines("", plotValues_[ValuesType::UboUsed].get(), numValues_, index_, nullptr, 0.0f, uboBuffers.size / 1024.0f);
+			ImGui::PlotLines("##4", plotValues_[ValuesType::UboUsed].get(), numValues_, index_, nullptr, 0.0f, uboBuffers.size / 1024.0f);
 		}
 
 		ImGui::Text("Viewport chain length: %u", Viewport::chain().size());
@@ -1442,56 +1442,56 @@ namespace nCine
 			ImGui::Text("Sprites: %uV, %uDC (%u Tr), %uI/%uB", spriteCommands.vertices, spriteCommands.commands, spriteCommands.transparents, spriteCommands.instances, spriteCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::SpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##1", plotValues_[ValuesType::SpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Mesh Sprites: %uV, %uDC (%u Tr), %uI/%uB", meshspriteCommands.vertices, meshspriteCommands.commands, meshspriteCommands.transparents, meshspriteCommands.instances, meshspriteCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::MeshSpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##2", plotValues_[ValuesType::MeshSpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Tile Map: %uV, %uDC (%u Tr), %uI/%uB\n", tileMapCommands.vertices, tileMapCommands.commands, tileMapCommands.transparents, tileMapCommands.instances, tileMapCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::TileMapVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##3", plotValues_[ValuesType::TileMapVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Particles: %uV, %uDC (%u Tr), %uI/%uB\n", particleCommands.vertices, particleCommands.commands, particleCommands.transparents, particleCommands.instances, particleCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::ParticleVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##4", plotValues_[ValuesType::ParticleVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Lighting: %uV, %uDC (%u Tr), %uI/%uB\n", lightingCommands.vertices, lightingCommands.commands, lightingCommands.transparents, lightingCommands.instances, lightingCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::LightingVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##5", plotValues_[ValuesType::LightingVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Text: %uV, %uDC (%u Tr), %uI/%uB", textCommands.vertices, textCommands.commands, textCommands.transparents, textCommands.instances, textCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::TextVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##6", plotValues_[ValuesType::TextVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("ImGui: %uV, %uDC (%u Tr), %uI/%u", imguiCommands.vertices, imguiCommands.commands, imguiCommands.transparents, imguiCommands.instances, imguiCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::ImGuiVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##7", plotValues_[ValuesType::ImGuiVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Unspecified: %uV, %uDC (%u Tr), %uI/%u", unspecifiedCommands.vertices, unspecifiedCommands.commands, unspecifiedCommands.transparents, unspecifiedCommands.instances, unspecifiedCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::UnspecifiedVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##8", plotValues_[ValuesType::UnspecifiedVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Separator();
 			ImGui::Text("Total: %uV, %uDC (%u Tr), %uI/%uB", allCommands.vertices, allCommands.commands, allCommands.transparents, allCommands.instances, allCommands.batchSize);
 			if (plotOverlayValues_) {
 				ImGui::SameLine(230.0f);
-				ImGui::PlotLines("", plotValues_[ValuesType::TotalVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("##9", plotValues_[ValuesType::TotalVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 		}
 #endif

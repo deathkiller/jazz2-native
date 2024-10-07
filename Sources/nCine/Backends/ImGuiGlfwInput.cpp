@@ -68,7 +68,7 @@ namespace nCine
 #endif
 
 			ViewportData()
-				: Window(nullptr), WindowOwned(false), IgnoreWindowPosEventFrame(false), IgnoreWindowSizeEventFrame(false)
+				: Window(nullptr), WindowOwned(false), IgnoreWindowPosEventFrame(0), IgnoreWindowSizeEventFrame(0)
 #if defined(DEATH_TARGET_WINDOWS)
 					, PrevWndProc(NULL)
 #endif
@@ -441,6 +441,19 @@ namespace nCine
 		mainViewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(window_);
 #else
 		(void)mainViewport;
+#endif
+
+		// Emscripten: the same application can run on various platforms, so we detect the Apple platform at runtime
+		// to override io.ConfigMacOSXBehaviors from its default (which is always false in Emscripten).
+#if EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3 >= 34020240817
+		if (emscripten::glfw3::IsRuntimePlatformApple()) {
+			ImGui::GetIO().ConfigMacOSXBehaviors = true;
+			// Due to how the browser (poorly) handles the Meta Key, this line essentially disables repeats when used.
+			// This means that Meta + V only registers a single key-press, even if the keys are held.
+			// This is a compromise for dealing with this issue in ImGui since ImGui implements key repeat itself.
+			// See https://github.com/pongasoft/emscripten-glfw/blob/v3.4.0.20240817/docs/Usage.md#the-problem-of-the-super-key
+			emscripten::glfw3::SetSuperPlusKeyTimeouts(10, 10);
+		}
 #endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
@@ -1022,6 +1035,9 @@ namespace nCine
 			// Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
 			float xScale, yScale;
 			glfwGetMonitorContentScale(glfwMonitors[n], &xScale, &yScale);
+			if (xScale == 0.0f)
+				continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
+
 			monitor.DpiScale = xScale;
 #	endif
 			monitor.PlatformHandle = static_cast<void*>(glfwMonitors[n]); // [...] GLFW doc states: "guaranteed to be valid only until the monitor configuration changes"
@@ -1060,7 +1076,7 @@ namespace nCine
 		glfwWindowHint(GLFW_FLOATING, (viewport->Flags & ImGuiViewportFlags_TopMost ? true : false));
 #	endif
 		GLFWwindow* shareWindow = window_;
-		vd->Window = glfwCreateWindow(static_cast<int>(viewport->Size.x), static_cast<int>(viewport->Size.y), "", nullptr, shareWindow);
+		vd->Window = glfwCreateWindow(static_cast<std::int32_t>(viewport->Size.x), static_cast<std::int32_t>(viewport->Size.y), "", nullptr, shareWindow);
 		vd->WindowOwned = true;
 		viewport->PlatformHandle = static_cast<void*>(vd->Window);
 #	if defined(DEATH_TARGET_WINDOWS)
@@ -1069,7 +1085,7 @@ namespace nCine
 #	elif defined(DEATH_TARGET_APPLE)
 		viewport->PlatformHandleRaw = static_cast<void*>(glfwGetCocoaWindow(vd->Window));
 #	endif
-		glfwSetWindowPos(vd->Window, static_cast<int>(viewport->Pos.x), static_cast<int>(viewport->Pos.y));
+		glfwSetWindowPos(vd->Window, static_cast<std::int32_t>(viewport->Pos.x), static_cast<std::int32_t>(viewport->Pos.y));
 
 #	if defined(DEATH_TARGET_WINDOWS)
 		if (windowIconSmall != NULL) ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)windowIconSmall);
@@ -1169,7 +1185,7 @@ namespace nCine
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		vd->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
-		glfwSetWindowPos(vd->Window, static_cast<int>(pos.x), static_cast<int>(pos.y));
+		glfwSetWindowPos(vd->Window, static_cast<std::int32_t>(pos.x), static_cast<std::int32_t>(pos.y));
 	}
 
 	ImVec2 ImGuiGlfwInput::onGetWindowSize(ImGuiViewport* viewport)
@@ -1188,13 +1204,13 @@ namespace nCine
 		// positioned from the upper-left corner. GLFW makes an effort to convert macOS style coordinates, however it
 		// doesn't handle it when changing size. We are manually moving the window in order for changes of size to be based
 		// on the upper-left corner.
-		int x, y, width, height;
+		std::int32_t x, y, width, height;
 		glfwGetWindowPos(vd->Window, &x, &y);
 		glfwGetWindowSize(vd->Window, &width, &height);
 		glfwSetWindowPos(vd->Window, x, y - height + size.y);
 #	endif
 		vd->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
-		glfwSetWindowSize(vd->Window, static_cast<int>(size.x), static_cast<int>(size.y));
+		glfwSetWindowSize(vd->Window, static_cast<std::int32_t>(size.x), static_cast<std::int32_t>(size.y));
 	}
 
 	void ImGuiGlfwInput::onSetWindowTitle(ImGuiViewport* viewport, const char* title)

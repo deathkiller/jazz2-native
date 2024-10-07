@@ -58,14 +58,14 @@
 #define FATAL_MSG(fmt, ...)					\
 	do {									\
 		LOGF(fmt, ##__VA_ARGS__);			\
-		__DEATH_ASSERT_BREAK();				\
+		DEATH_ASSERT_BREAK();				\
 	} while (false)
 
 #define FATAL_ASSERT_MSG(x, fmt, ...)		\
 	do {									\
 		if DEATH_UNLIKELY(!(x)) {			\
 			LOGF(fmt, ##__VA_ARGS__);		\
-			__DEATH_ASSERT_BREAK();			\
+			DEATH_ASSERT_BREAK();			\
 		}									\
 	} while (false)
 
@@ -73,7 +73,7 @@
 	do {									\
 		if DEATH_UNLIKELY(!(x)) {			\
 			LOGF("FATAL_ASSERT(" #x ")");	\
-			__DEATH_ASSERT_BREAK();			\
+			DEATH_ASSERT_BREAK();			\
 		}									\
 	} while (false)
 
@@ -83,7 +83,7 @@
 		do {								\
 			if DEATH_UNLIKELY(!(x)) {		\
 				__DEATH_ASSERT_TRACE(fmt, ##__VA_ARGS__);	\
-				__DEATH_ASSERT_BREAK();		\
+				DEATH_ASSERT_BREAK();		\
 			}								\
 		} while (false)
 
@@ -91,7 +91,7 @@
 		do {								\
 			if DEATH_UNLIKELY(!(x)) {		\
 				__DEATH_ASSERT_TRACE("ASSERT(" #x ")");	\
-				__DEATH_ASSERT_BREAK();		\
+				DEATH_ASSERT_BREAK();		\
 			}								\
 		} while (false)
 #else

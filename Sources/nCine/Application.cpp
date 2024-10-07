@@ -1023,7 +1023,7 @@ namespace nCine
 
 #	if defined(WITH_BACKWARD)
 				if (__hasVirtualTerminal) {
-					__eh.color_mode() = Backward::ColorMode::Always;
+					__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 				}
 #	endif
 			}
@@ -1035,7 +1035,7 @@ namespace nCine
 		if (__logFile = fs::Open(targetPath, FileAccess::Write)) {
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
-			__eh.destination() = static_cast<FileStream*>(__logFile.get())->GetHandle();
+			__eh.Destination = static_cast<FileStream*>(__logFile.get())->GetHandle();
 #	endif
 		} else {
 			__logFile = nullptr;
@@ -1075,7 +1075,7 @@ namespace nCine
 
 #	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
 		if (__hasVirtualTerminal) {
-			__eh.color_mode() = Backward::ColorMode::Always;
+			__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 		}
 #	endif
 	}

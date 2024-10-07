@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common.h"		// for DEATH_HELPER_PICK
+#include "Common.h"		// for DEATH_HELPER_EXPAND/DEATH_HELPER_PICK/DEATH_REMOVE_PARENS
 
 #if !defined(DEATH_NO_ASSERT) && (!defined(DEATH_ASSERT) || !defined(DEATH_DEBUG_ASSERT) || !defined(DEATH_CONSTEXPR_ASSERT) || !defined(DEATH_DEBUG_CONSTEXPR_ASSERT) || !defined(DEATH_ASSERT_UNREACHABLE))
 #	if defined(DEATH_STANDARD_ASSERT)
@@ -57,23 +57,31 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	define LOGF(fmt, ...) do {} while (false)
 #endif
 
-#if defined(DEATH_DEBUG)
-#	if defined(DEATH_TARGET_WINDOWS)
-#		define __DEATH_ASSERT_BREAK() __debugbreak()
+#if !defined(DEATH_ASSERT_BREAK)
+#	if !defined(DEATH_DEBUG)
+#		define DEATH_ASSERT_BREAK() do {} while (false)
+#	elif defined(DEATH_TARGET_WINDOWS)
+#		define DEATH_ASSERT_BREAK() __debugbreak()
 #	else
 #		if defined(__has_builtin)
 #			if __has_builtin(__builtin_debugtrap)
-#				define __DEATH_ASSERT_BREAK() __builtin_debugtrap()
+#				define DEATH_ASSERT_BREAK() __builtin_debugtrap()
 #			elif __has_builtin(__builtin_trap)
-#				define __DEATH_ASSERT_BREAK() __builtin_trap()
+#				define DEATH_ASSERT_BREAK() __builtin_trap()
 #			endif
 #		endif
-#		if !defined(__DEATH_ASSERT_BREAK)
-#			define __DEATH_ASSERT_BREAK() ::abort()
+#		if !defined(DEATH_ASSERT_BREAK)
+#			if defined(DEATH_TARGET_GCC) && (defined(__i386__) || defined(__x86_64__))
+#				define DEATH_ASSERT_BREAK() __asm__ volatile("int3;nop")
+#			elif defined(DEATH_TARGET_GCC) && defined(__thumb__)
+#				define DEATH_ASSERT_BREAK() __asm__ volatile(".inst 0xde01")
+#			elif defined(DEATH_TARGET_GCC) && defined(__arm__) && !defined(__thumb__)
+#				define DEATH_ASSERT_BREAK() __asm__ volatile(".inst 0xe7f001f0")
+#			else
+#				define DEATH_ASSERT_BREAK() ::abort()
+#			endif
 #		endif
 #	endif
-#else
-#	define __DEATH_ASSERT_BREAK() do {} while (false)
 #endif
 
 // Assertions
@@ -93,7 +101,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
 					__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));	\
-					__DEATH_ASSERT_BREAK();								\
+					DEATH_ASSERT_BREAK();								\
 					return returnValue;									\
 				}														\
 			} while(false)
@@ -111,14 +119,14 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
 					__DEATH_ASSERT_TRACE("Assertion (%s) failed at \"%s:%i\"", #condition, __FILE__, __LINE__);	\
-					__DEATH_ASSERT_BREAK();								\
+					DEATH_ASSERT_BREAK();								\
 				}														\
 			} while(false)
 #		define __DEATH_DEBUG_ASSERT3(condition, message, returnValue)	\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
 					__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));	\
-					__DEATH_ASSERT_BREAK();								\
+					DEATH_ASSERT_BREAK();								\
 					return returnValue;									\
 				}														\
 			} while(false)
@@ -139,7 +147,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #		define DEATH_CONSTEXPR_ASSERT(condition, message)				\
 			static_cast<void>((condition) ? 0 : ([&]() {				\
 				__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));		\
-				__DEATH_ASSERT_BREAK();									\
+				DEATH_ASSERT_BREAK();									\
 			}(), 0))
 #	endif
 #endif
@@ -169,7 +177,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #		define DEATH_ASSERT_UNREACHABLE()								\
 			do {														\
 				__DEATH_ASSERT_TRACE("Reached unreachable code at \"%s:%i\"", __FILE__, __LINE__);	\
-				__DEATH_ASSERT_BREAK();									\
+				DEATH_ASSERT_BREAK();									\
 			} while (false)
 #	endif
 #endif
