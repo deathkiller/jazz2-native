@@ -127,7 +127,7 @@ namespace Death { namespace Threading {
 		if constexpr (sizeof(T) == sizeof(LONG)) {
 			::WriteRelease((LONG*)destination, (LONG)value);
 		} else if constexpr (sizeof(T) == sizeof(LONG64)) {
-			::WriteRelease((LONG64*)destination, (LONG64)value);
+			::WriteRelease64((LONG64*)destination, (LONG64)value);
 		} else {
 			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
 		}

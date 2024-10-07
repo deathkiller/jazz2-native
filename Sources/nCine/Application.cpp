@@ -368,11 +368,10 @@ namespace nCine
 
 						StringView prefix = message.prefix(quotesBegin.begin());
 						if (!prefix.empty()) {
-							if (prevState != 1) {
-								AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
-								shouldResetBefore = false;
-								prevState = 1;
-							}
+							AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
+							shouldResetBefore = false;
+							prevState = 1;
+
 							AppendPart(logEntryWithColors, length2, prefix.data(), prefix.size());
 						}
 
@@ -392,12 +391,7 @@ namespace nCine
 					} while (!message.empty());
 
 					if (!message.empty()) {
-						if (prevState != 1) {
-							AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
-							shouldResetBefore = false;
-							prevState = 1;
-						}
-
+						AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
 						AppendPart(logEntryWithColors, length2, message.data(), message.size());
 					} else if (prevState == 2) {
 						// Always reset color after quotes
@@ -473,7 +467,7 @@ namespace nCine
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Allow to attach custom target using Application::AttachTraceTarget()
 		if (__logFile != nullptr) {
-			FileStream* s = static_cast<FileStream*>(__logFile.get());
+			auto* s = static_cast<FileStream*>(__logFile.get());
 			::fprintf(s->GetHandle(), "%s\n", logEntry);
 			if (level >= TraceLevel::Error) {
 				// Flush immediately only Error/Assert/Fatal messages

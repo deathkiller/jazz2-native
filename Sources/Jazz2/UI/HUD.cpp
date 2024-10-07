@@ -1108,8 +1108,6 @@ namespace Jazz2::UI
 
 	void HUD::UpdateWeaponWheel(float timeMult)
 	{
-		auto players = _levelHandler->GetPlayers();
-
 		for (auto& viewport : _levelHandler->_assignedViewports) {
 			Actors::Player* player = viewport->GetTargetPlayer();
 			auto& state = _weaponWheel[player->_playerIndex];
