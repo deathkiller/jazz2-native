@@ -437,37 +437,37 @@ namespace Death { namespace Backward {
 		};
 
 		template<typename T, typename Deleter = deleter<void, void*, &::free>>
-		class handle {
+		class Handle {
 			struct dummy;
 			T _val;
 			bool _empty;
 
-			handle(const handle&) = delete;
-			handle& operator=(const handle&) = delete;
+			Handle(const Handle&) = delete;
+			Handle& operator=(const Handle&) = delete;
 
 		public:
-			~handle() {
+			~Handle() {
 				if (!_empty) {
 					Deleter()(_val);
 				}
 			}
 
-			explicit handle() : _val(), _empty(true) {}
-			explicit handle(T val) : _val(val), _empty(false) {
+			explicit Handle() : _val(), _empty(true) {}
+			explicit Handle(T val) : _val(val), _empty(false) {
 				if (!_val)
 					_empty = true;
 			}
 
-			handle(handle&& from) noexcept : _empty(true) {
+			Handle(Handle&& from) noexcept : _empty(true) {
 				swap(from);
 			}
-			handle& operator=(handle&& from) noexcept {
+			Handle& operator=(Handle&& from) noexcept {
 				swap(from);
 				return *this;
 			}
 
 			void reset(T newValue) {
-				handle tmp(newValue);
+				Handle tmp(newValue);
 				swap(tmp);
 			}
 
@@ -489,7 +489,7 @@ namespace Death { namespace Backward {
 				_empty = true;
 				return _val;
 			}
-			void swap(handle& b) {
+			void swap(Handle& b) {
 				using std::swap;
 				swap(b._val, _val);     // can throw, we are safe here.
 				swap(b._empty, _empty); // should not throw: if you cannot swap two
@@ -548,7 +548,7 @@ namespace Death { namespace Backward {
 			}
 
 		private:
-			details::handle<char*> _demangleBuffer;
+			Implementation::Handle<char*> _demangleBuffer;
 			std::size_t _demangleBufferLength;
 		};
 
@@ -1314,7 +1314,7 @@ namespace Death { namespace Backward {
 		}
 
 	private:
-		details::handle<char**> _symbols;
+		Implementation::Handle<char**> _symbols;
 	};
 
 #endif // BACKWARD_HAS_BACKTRACE_SYMBOL
@@ -1480,8 +1480,8 @@ namespace Death { namespace Backward {
 	private:
 		bool _bfd_loaded;
 
-		typedef details::handle<bfd*, details::deleter<bfd_boolean, bfd*, &bfd_close>> bfd_handle_t;
-		typedef details::handle<asymbol**> bfd_symtab_t;
+		typedef Implementation::Handle<bfd*, details::deleter<bfd_boolean, bfd*, &bfd_close>> bfd_handle_t;
+		typedef Implementation::Handle<asymbol**> bfd_symtab_t;
 
 		struct bfd_fileobject {
 			bfd_handle_t handle;
@@ -1819,8 +1819,8 @@ namespace Death { namespace Backward {
 		}
 
 	private:
-		typedef details::handle<Dwfl*, details::deleter<void, Dwfl*, &dwfl_end>> dwfl_handle_t;
-		details::handle<Dwfl_Callbacks*, details::default_delete<Dwfl_Callbacks*>> _dwfl_cb;
+		typedef Implementation::Handle<Dwfl*, details::deleter<void, Dwfl*, &dwfl_end>> dwfl_handle_t;
+		Implementation::Handle<Dwfl_Callbacks*, details::default_delete<Dwfl_Callbacks*>> _dwfl_cb;
 		dwfl_handle_t _dwfl_handle;
 		bool _dwfl_handle_initialized;
 
@@ -2129,9 +2129,9 @@ namespace Death { namespace Backward {
 	private:
 		bool _dwarf_loaded;
 
-		typedef details::handle<std::int32_t, details::deleter<std::int32_t, std::int32_t, &::close>> dwarf_file_t;
-		typedef details::handle<Elf*, details::deleter<std::int32_t, Elf*, &elf_end>> dwarf_elf_t;
-		typedef details::handle<Dwarf_Debug, details::deleter<std::int32_t, Dwarf_Debug, &close_dwarf>> dwarf_handle_t;
+		typedef Implementation::Handle<std::int32_t, details::deleter<std::int32_t, std::int32_t, &::close>> dwarf_file_t;
+		typedef Implementation::Handle<Elf*, details::deleter<std::int32_t, Elf*, &elf_end>> dwarf_elf_t;
+		typedef Implementation::Handle<Dwarf_Debug, details::deleter<std::int32_t, Dwarf_Debug, &close_dwarf>> dwarf_handle_t;
 		typedef std::map<Dwarf_Addr, std::int32_t> die_linemap_t;
 		typedef std::map<Dwarf_Off, Dwarf_Off> die_specmap_t;
 
@@ -3320,7 +3320,7 @@ namespace Death { namespace Backward {
 		}
 
 	private:
-		details::handle<char**> _symbols;
+		Implementation::Handle<char**> _symbols;
 	};
 
 	template<>
@@ -3617,7 +3617,7 @@ namespace Death { namespace Backward {
 		}
 
 	private:
-		Implementation::handle<std::ifstream*, Implementation::default_delete<std::ifstream*>> _file;
+		Implementation::Handle<std::ifstream*, Implementation::default_delete<std::ifstream*>> _file;
 
 		static std::vector<std::string> GetPathsFromEnvVariableImpl() {
 			std::vector<std::string> paths;
@@ -4265,7 +4265,7 @@ namespace Death { namespace Backward {
 			}
 
 			Printer printer;
-			printer.address = true;
+			printer.Address = true;
 
 			FILE* dest = Destination;
 			if (dest != nullptr && dest != stderr) {
@@ -4283,7 +4283,7 @@ namespace Death { namespace Backward {
 
 		static ExceptionHandling* _current = nullptr;
 
-		Implementation::handle<char*> _stackContent;
+		Implementation::Handle<char*> _stackContent;
 		bool _loaded;
 
 		static ExceptionHandling*& GetSingleton() {
