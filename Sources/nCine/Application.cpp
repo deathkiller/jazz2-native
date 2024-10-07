@@ -84,12 +84,8 @@ extern "C"
 #endif
 
 #if defined(WITH_BACKWARD)
-#	if !defined(CMAKE_BUILD)
-#		include "../backward/backward.h"
-#	else
-#		include <backward.h>
-#	endif
-backward::ExceptionHandling eh;
+#	include <Core/Backward.h>
+Backward::ExceptionHandling __eh;
 #endif
 
 using namespace Death::Containers::Literals;
@@ -123,7 +119,7 @@ static constexpr std::int32_t MaxLogEntryLength = 4096;
 #	include <emscripten/emscripten.h>
 #else
 #	include <IO/FileStream.h>
-std::unique_ptr<Death::IO::Stream> __logFile;
+static std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -133,10 +129,10 @@ std::unique_ptr<Death::IO::Stream> __logFile;
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
-HANDLE __consoleHandleOut;
-SHORT __consoleCursorY;
-bool __showLogConsole = false;
-Array<wchar_t> __consolePrompt;
+static HANDLE __consoleHandleOut;
+static SHORT __consoleCursorY;
+static bool __showLogConsole = false;
+static Array<wchar_t> __consolePrompt;
 
 static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 {
@@ -151,134 +147,174 @@ static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 #endif
 
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
-bool __hasVirtualTerminal = false;
+static bool __hasVirtualTerminal = false;
 #endif
 
-struct TraceDateTime {
-	std::uint32_t Milliseconds;
-	std::uint32_t Seconds;
-	std::uint32_t Minutes;
-	std::uint32_t Hours;
-	std::uint32_t Days;
-	std::uint32_t Months;
-	std::uint32_t Years;
-};
-
-static TraceDateTime GetTraceDateTime()
+namespace nCine
 {
-	TraceDateTime result;
+	struct TraceDateTime {
+		std::uint32_t Milliseconds;
+		std::uint32_t Seconds;
+		std::uint32_t Minutes;
+		std::uint32_t Hours;
+		std::uint32_t Days;
+		std::uint32_t Months;
+		std::uint32_t Years;
+	};
+
+	static TraceDateTime GetTraceDateTime()
+	{
+		TraceDateTime result;
 
 #if defined(DEATH_TARGET_WINDOWS)
-	SYSTEMTIME systemTime;
-	::GetLocalTime(&systemTime);
+		SYSTEMTIME systemTime;
+		::GetLocalTime(&systemTime);
 
-	result.Milliseconds = systemTime.wMilliseconds;
-	result.Seconds = systemTime.wSecond;
-	result.Minutes = systemTime.wMinute;
-	result.Hours = systemTime.wHour;
-	result.Days = systemTime.wDay;
-	result.Months = systemTime.wMonth;
-	result.Years = systemTime.wYear;
+		result.Milliseconds = systemTime.wMilliseconds;
+		result.Seconds = systemTime.wSecond;
+		result.Minutes = systemTime.wMinute;
+		result.Hours = systemTime.wHour;
+		result.Days = systemTime.wDay;
+		result.Months = systemTime.wMonth;
+		result.Years = systemTime.wYear;
 #else
-	struct timespec currentTime;
-	clock_gettime(CLOCK_REALTIME, &currentTime);
+		struct timespec currentTime;
+		clock_gettime(CLOCK_REALTIME, &currentTime);
 
-	time_t seconds = currentTime.tv_sec;
-	struct tm localTime;
-	localtime_r(&seconds, &localTime);
+		time_t seconds = currentTime.tv_sec;
+		struct tm localTime;
+		localtime_r(&seconds, &localTime);
 
-	result.Milliseconds = (currentTime.tv_nsec / 1000000) % 1000;
-	result.Seconds = localTime.tm_sec;
-	result.Minutes = localTime.tm_min;
-	result.Hours = localTime.tm_hour;
-	result.Days = localTime.tm_mday;
-	result.Months = localTime.tm_mon;
-	result.Years = localTime.tm_year;
+		result.Milliseconds = (currentTime.tv_nsec / 1000000) % 1000;
+		result.Seconds = localTime.tm_sec;
+		result.Minutes = localTime.tm_min;
+		result.Hours = localTime.tm_hour;
+		result.Days = localTime.tm_mday;
+		result.Months = localTime.tm_mon;
+		result.Years = localTime.tm_year;
 #endif
 
-	return result;
-}
+		return result;
+	}
 
-static void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
-{
-	char logEntryWithColors[MaxLogEntryLength + 24];
+	void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
+	{
+		char logEntryWithColors[MaxLogEntryLength + 24];
 
 #if defined(DEATH_TARGET_ANDROID)
-	android_LogPriority priority;
-	switch (level) {
-		case TraceLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
-		case TraceLevel::Assert:	// Android doesn't support this priority, use ANDROID_LOG_ERROR instead
-		case TraceLevel::Error:		priority = ANDROID_LOG_ERROR; break;
-		case TraceLevel::Warning:	priority = ANDROID_LOG_WARN; break;
-		case TraceLevel::Info:		priority = ANDROID_LOG_INFO; break;
-		default:					priority = ANDROID_LOG_DEBUG; break;
-	}
-
-	const char* logEntryWithoutLevel = logEntry + messageOffset;
-	std::int32_t result = __android_log_write(priority, NCINE_APP, logEntryWithoutLevel);
-	std::int32_t n = 0;
-	while (result == -11 /*EAGAIN*/ && n < 2) {
-		::usleep(2000); // in microseconds
-		result = __android_log_write(priority, NCINE_APP, logEntryWithoutLevel);
-		n++;
-	}
-#elif defined(DEATH_TARGET_SWITCH)
-	svcOutputDebugString(logEntry + levelOffset, length - levelOffset);
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-	// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
-	std::int32_t length2 = nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 2, logEntry + levelOffset, length - levelOffset);
-	logEntryWithColors[length2++] = '\n';
-	logEntryWithColors[length2] = '\0';
-	::OutputDebugStringA(logEntryWithColors);
-#else
-	static const char Reset[] = "\033[0m";
-	static const char Bold[] = "\033[1m";
-	static const char Faint[] = "\033[2m";
-	static const char DarkGray[] = "\033[90m";
-	static const char BrightRed[] = "\033[91m";
-	static const char BrightYellow[] = "\033[93m";
-	static const char BrightMagenta[] = "\033[95m";
-
-#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
-	if (__showLogConsole) {
-#	endif
-		// Colorize the output
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
-		const bool hasVirtualTerminal = __hasVirtualTerminal;
-#	else
-		constexpr bool hasVirtualTerminal = false;
-#	endif
-
-		std::int32_t logMsgFuncLength = messageOffset + 1;
-		while (true) {
-			if (logEntry[logMsgFuncLength] == '\0') {
-				logMsgFuncLength = -1;
-				break;
-			}
-			if (logEntry[logMsgFuncLength] == '#' && logEntry[logMsgFuncLength + 1] == '>') {
-				logMsgFuncLength += 2;
-				break;
-			}
-			logMsgFuncLength++;
+		android_LogPriority priority;
+		switch (level) {
+			case TraceLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
+			case TraceLevel::Assert:	// Android doesn't support this priority, use ANDROID_LOG_ERROR instead
+			case TraceLevel::Error:		priority = ANDROID_LOG_ERROR; break;
+			case TraceLevel::Warning:	priority = ANDROID_LOG_WARN; break;
+			case TraceLevel::Info:		priority = ANDROID_LOG_INFO; break;
+			default:					priority = ANDROID_LOG_DEBUG; break;
 		}
 
-		std::int32_t length2 = 0;
-		if (logMsgFuncLength > 0) {
+		const char* logEntryWithoutLevel = logEntry + messageOffset;
+		std::int32_t result = __android_log_write(priority, NCINE_APP, logEntryWithoutLevel);
+		std::int32_t n = 0;
+		while (result == -11 /*EAGAIN*/ && n < 2) {
+			::usleep(2000); // in microseconds
+			result = __android_log_write(priority, NCINE_APP, logEntryWithoutLevel);
+			n++;
+		}
+#elif defined(DEATH_TARGET_SWITCH)
+		svcOutputDebugString(logEntry + levelOffset, length - levelOffset);
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
+		std::int32_t length2 = nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 2, logEntry + levelOffset, length - levelOffset);
+		logEntryWithColors[length2++] = '\n';
+		logEntryWithColors[length2] = '\0';
+		::OutputDebugStringA(logEntryWithColors);
+#else
+		static const char Reset[] = "\033[0m";
+		static const char Bold[] = "\033[1m";
+		static const char Faint[] = "\033[2m";
+		static const char DarkGray[] = "\033[90m";
+		static const char BrightRed[] = "\033[91m";
+		static const char BrightYellow[] = "\033[93m";
+		static const char BrightMagenta[] = "\033[95m";
+
+#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
+		if (__showLogConsole) {
+#	endif
+			// Colorize the output
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
+			const bool hasVirtualTerminal = __hasVirtualTerminal;
+#	else
+			constexpr bool hasVirtualTerminal = false;
+#	endif
+
+			std::int32_t logMsgFuncLength = messageOffset + 1;
+			while (true) {
+				if (logEntry[logMsgFuncLength] == '\0') {
+					logMsgFuncLength = -1;
+					break;
+				}
+				if (logEntry[logMsgFuncLength] == '#' && logEntry[logMsgFuncLength + 1] == '>') {
+					logMsgFuncLength += 2;
+					break;
+				}
+				logMsgFuncLength++;
+			}
+
+			std::int32_t length2 = 0;
+			if (logMsgFuncLength > 0) {
+				if (hasVirtualTerminal) {
+					length2 += nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 1, Faint, static_cast<std::int32_t>(arraySize(Faint)) - 1);
+
+					switch (level) {
+						case TraceLevel::Error:
+						case TraceLevel::Fatal:
+							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
+							break;
+						case TraceLevel::Assert:
+							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightMagenta, static_cast<std::int32_t>(arraySize(BrightMagenta)) - 1);
+							break;
+						case TraceLevel::Warning:
+							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
+							break;
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+						case TraceLevel::Debug:
+							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, DarkGray, static_cast<std::int32_t>(arraySize(DarkGray)) - 1);
+							break;
+#	endif
+					}
+				}
+
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, logEntry + messageOffset, logMsgFuncLength - messageOffset);
+			}
+
 			if (hasVirtualTerminal) {
-				length2 += nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 1, Faint, static_cast<std::int32_t>(arraySize(Faint)) - 1);
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+				if (level != TraceLevel::Warning && level != TraceLevel::Debug)
+#	endif
+				{
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
+				}
 
 				switch (level) {
 					case TraceLevel::Error:
 					case TraceLevel::Fatal:
 						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
+						if (level == TraceLevel::Fatal) {
+							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
+						}
 						break;
 					case TraceLevel::Assert:
 						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightMagenta, static_cast<std::int32_t>(arraySize(BrightMagenta)) - 1);
 						break;
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+					case TraceLevel::Info:
+					case TraceLevel::Warning:
+						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
+						break;
+#	else
 					case TraceLevel::Warning:
 						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
 						break;
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
 					case TraceLevel::Debug:
 						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, DarkGray, static_cast<std::int32_t>(arraySize(DarkGray)) - 1);
 						break;
@@ -286,140 +322,103 @@ static void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char*
 				}
 			}
 
-			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, logEntry + messageOffset, logMsgFuncLength - messageOffset);
-		}
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
 
-		if (hasVirtualTerminal) {
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-			if (level != TraceLevel::Warning && level != TraceLevel::Debug)
-#	endif
-			{
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
-			}
-
-			switch (level) {
-				case TraceLevel::Error:
-				case TraceLevel::Fatal:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
-					if (level == TraceLevel::Fatal) {
-						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
-					}
-					break;
-				case TraceLevel::Assert:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightMagenta, static_cast<std::int32_t>(arraySize(BrightMagenta)) - 1);
-					break;
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-				case TraceLevel::Info:
-				case TraceLevel::Warning:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
-					break;
-#	else
-				case TraceLevel::Warning:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
-					break;
-				case TraceLevel::Debug:
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, DarkGray, static_cast<std::int32_t>(arraySize(DarkGray)) - 1);
-					break;
-#	endif
-			}
-		}
-
-		length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
-
-		if (hasVirtualTerminal) {
-			if (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal) {
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
-			}
-		}
-
-		if (length2 >= MaxLogEntryLength - 2) {
-			length2 = MaxLogEntryLength - 2;
-		}
-
-		logEntryWithColors[length2++] = '\n';
-		logEntryWithColors[length2] = '\0';
-
-#	if defined(DEATH_TARGET_WINDOWS)
-		// Try to restore previous cursor position (this doesn't work correctly in Windows Terminal v1.19)
-		if (__consoleHandleOut != NULL) {
-			CONSOLE_SCREEN_BUFFER_INFO csbi;
-			if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
-				if (__consoleCursorY <= csbi.dwCursorPosition.Y) {
-					::SetConsoleCursorPosition(__consoleHandleOut, { 0, __consoleCursorY });
+			if (hasVirtualTerminal) {
+				if (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal) {
+					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
 				}
 			}
-		}
-		if (hasVirtualTerminal && length2 < MaxLogEntryLength) {
-			// Console can be shared with parent process, so clear the rest of the line (using "\x1b[0K" sequence)
-			length2--;
-			logEntryWithColors[length2++] = '\x1b';
-			logEntryWithColors[length2++] = '[';
-			logEntryWithColors[length2++] = '0';
-			logEntryWithColors[length2++] = 'K';
+
+			if (length2 >= MaxLogEntryLength - 2) {
+				length2 = MaxLogEntryLength - 2;
+			}
+
 			logEntryWithColors[length2++] = '\n';
 			logEntryWithColors[length2] = '\0';
-		}
 
-		fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
-
-		// Save the last cursor position for later
-		if (__consoleHandleOut != NULL) {
-			CONSOLE_SCREEN_BUFFER_INFO csbi;
-			if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
-				__consoleCursorY = csbi.dwCursorPosition.Y;
+#	if defined(DEATH_TARGET_WINDOWS)
+			// Try to restore previous cursor position (this doesn't work correctly in Windows Terminal v1.19)
+			if (__consoleHandleOut != NULL) {
+				CONSOLE_SCREEN_BUFFER_INFO csbi;
+				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+					if (__consoleCursorY <= csbi.dwCursorPosition.Y) {
+						::SetConsoleCursorPosition(__consoleHandleOut, { 0, __consoleCursorY });
+					}
+				}
 			}
-		}
+			if (hasVirtualTerminal && length2 < MaxLogEntryLength) {
+				// Console can be shared with parent process, so clear the rest of the line (using "\x1b[0K" sequence)
+				length2--;
+				logEntryWithColors[length2++] = '\x1b';
+				logEntryWithColors[length2++] = '[';
+				logEntryWithColors[length2++] = '0';
+				logEntryWithColors[length2++] = 'K';
+				logEntryWithColors[length2++] = '\n';
+				logEntryWithColors[length2] = '\0';
+			}
+
+			fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
+
+			// Save the last cursor position for later
+			if (__consoleHandleOut != NULL) {
+				CONSOLE_SCREEN_BUFFER_INFO csbi;
+				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+					__consoleCursorY = csbi.dwCursorPosition.Y;
+				}
+			}
 #	else
-		fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
+			fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
 #	endif
 
 #	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
-	} else {
-		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
-		std::int32_t length2 = nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 2, logEntry + levelOffset, length - levelOffset);
-		logEntryWithColors[length2++] = '\n';
-		logEntryWithColors[length2] = '\0';
-		::OutputDebugStringA(logEntryWithColors);
-	}
+		} else {
+			// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
+			std::int32_t length2 = nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 2, logEntry + levelOffset, length - levelOffset);
+			logEntryWithColors[length2++] = '\n';
+			logEntryWithColors[length2] = '\0';
+			::OutputDebugStringA(logEntryWithColors);
+		}
 #	endif
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-	// Allow to attach custom target using Application::AttachTraceTarget()
-	if (__logFile != nullptr) {
-		FileStream* s = static_cast<FileStream*>(__logFile.get());
-		fprintf(s->GetHandle(), "%s\n", logEntry);
-		if (level >= TraceLevel::Error) {
-			// Flush immediately only Error/Assert/Fatal messages
-			s->Flush();
+		// Allow to attach custom target using Application::AttachTraceTarget()
+		if (__logFile != nullptr) {
+			FileStream* s = static_cast<FileStream*>(__logFile.get());
+			fprintf(s->GetHandle(), "%s\n", logEntry);
+			if (level >= TraceLevel::Error) {
+				// Flush immediately only Error/Assert/Fatal messages
+				s->Flush();
+			}
 		}
-	}
 #endif
 
 #if defined(WITH_IMGUI)
-	auto* debugOverlay = nCine::theApplication().debugOverlay_.get();
-	if (debugOverlay != nullptr) {
-		TraceDateTime dateTime = GetTraceDateTime();
-		snprintf(logEntryWithColors, MaxLogEntryLength, "%02u:%02u:%02u.%03u", dateTime.Hours,
-			dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds);
+		auto* debugOverlay = nCine::theApplication().debugOverlay_.get();
+		if (debugOverlay != nullptr) {
+			TraceDateTime dateTime = GetTraceDateTime();
+			snprintf(logEntryWithColors, MaxLogEntryLength, "%02u:%02u:%02u.%03u", dateTime.Hours,
+				dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds);
 
-		debugOverlay->log(level, logEntryWithColors, threadId, StringView(logEntry + messageOffset, length - messageOffset));
-	}
+			debugOverlay->log(level, logEntryWithColors, threadId, StringView(logEntry + messageOffset, length - messageOffset));
+		}
 #endif
 
 #if defined(WITH_TRACY)
-	std::uint32_t colorTracy;
-	switch (level) {
-		case TraceLevel::Fatal:		colorTracy = 0xEC3E40; break;
-		case TraceLevel::Assert:	colorTracy = 0xD651B0; break;
-		case TraceLevel::Error:		colorTracy = 0xD85050; break;
-		case TraceLevel::Warning:	colorTracy = 0xEBC77A; break;
-		case TraceLevel::Info:		colorTracy = 0xD2D2D2; break;
-		default:					colorTracy = 0x969696; break;
-	}
+		std::uint32_t colorTracy;
+		switch (level) {
+			case TraceLevel::Fatal:		colorTracy = 0xEC3E40; break;
+			case TraceLevel::Assert:	colorTracy = 0xD651B0; break;
+			case TraceLevel::Error:		colorTracy = 0xD85050; break;
+			case TraceLevel::Warning:	colorTracy = 0xEBC77A; break;
+			case TraceLevel::Info:		colorTracy = 0xD2D2D2; break;
+			default:					colorTracy = 0x969696; break;
+		}
 
-	TracyMessageC(logEntry + messageOffset, length - messageOffset, colorTracy);
+		TracyMessageC(logEntry + messageOffset, length - messageOffset, colorTracy);
 #endif
+	}
 }
 
 #if defined(DEATH_TRACE_ASYNC)
@@ -429,105 +428,108 @@ static void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char*
 
 using namespace Death::Threading;
 
-struct TraceItem {
-	std::string Buffer;
-	TraceLevel Level;
-	std::uint32_t ThreadId;
-	std::int32_t LevelOffset;
-	std::int32_t MessageOffset;
-
-	void Assign(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
-};
-
-void TraceItem::Assign(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
+namespace nCine
 {
-	Level = level;
-	Buffer.clear();
-	Buffer.append(logEntry, length);
-	ThreadId = threadId;
-	LevelOffset = levelOffset;
-	MessageOffset = messageOffset;
-}
+	struct TraceItem {
+		std::string Buffer;
+		TraceLevel Level;
+		std::uint32_t ThreadId;
+		std::int32_t LevelOffset;
+		std::int32_t MessageOffset;
 
-static constexpr std::int32_t AsyncTraceStateUninitialized = 0;
-static constexpr std::int32_t AsyncTraceStateReady = 1;
-static constexpr std::int32_t AsyncTraceStateReleasing = 2;
-static constexpr std::int32_t AsyncTraceStateReleased = 3;
+		void Assign(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
+	};
 
-static nCine::Thread __asyncTraceThread;
-static AutoResetEvent __asyncTraceWait;
-static std::int32_t __asyncTraceState = AsyncTraceStateUninitialized;
-static std::int32_t __asyncTraceFlush = 0;
-static moodycamel::ConcurrentQueue<TraceItem> __asyncTraceQueuedItems;
+	void TraceItem::Assign(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
+	{
+		Level = level;
+		Buffer.clear();
+		Buffer.append(logEntry, length);
+		ThreadId = threadId;
+		LevelOffset = levelOffset;
+		MessageOffset = messageOffset;
+	}
 
-static void OnTraceThread(void* _)
-{
-	nCine::Thread::SetCurrentName("Async Tracing");
+	static constexpr std::int32_t AsyncTraceStateUninitialized = 0;
+	static constexpr std::int32_t AsyncTraceStateReady = 1;
+	static constexpr std::int32_t AsyncTraceStateReleasing = 2;
+	static constexpr std::int32_t AsyncTraceStateReleased = 3;
 
-	while (__asyncTraceState == AsyncTraceStateReady || __asyncTraceState == AsyncTraceStateReleasing) {
+	static nCine::Thread __asyncTraceThread;
+	static AutoResetEvent __asyncTraceWait;
+	static std::int32_t __asyncTraceState = AsyncTraceStateUninitialized;
+	static std::int32_t __asyncTraceFlush = 0;
+	static moodycamel::ConcurrentQueue<TraceItem> __asyncTraceQueuedItems;
+
+	static void OnTraceThread(void* _)
+	{
+		nCine::Thread::SetCurrentName("Async Tracing");
+
+		while (__asyncTraceState == AsyncTraceStateReady || __asyncTraceState == AsyncTraceStateReleasing) {
+			TraceItem item;
+			bool itemFound = false;
+			while (__asyncTraceQueuedItems.try_dequeue(item)) {
+				WriteTraceItem(item.Level, item.ThreadId, item.Buffer.c_str(),
+					(std::int32_t)item.Buffer.size(), item.LevelOffset, item.MessageOffset);
+				itemFound = true;
+			}
+
+			Interlocked::WriteRelease(&__asyncTraceFlush, 0);
+
+			if (!itemFound && __asyncTraceState == AsyncTraceStateReleasing) {
+				// Queue is empty, so the thread can be stopped
+				break;
+			}
+
+			if (__asyncTraceState == AsyncTraceStateReady) {
+				__asyncTraceWait.Wait();
+			}
+		}
+
+		Interlocked::WriteRelease(&__asyncTraceState, AsyncTraceStateReleased);
+	}
+
+	static void InitializeAsyncTrace()
+	{
+		if (Interlocked::CompareExchange(&__asyncTraceState, AsyncTraceStateReady, AsyncTraceStateUninitialized) != AsyncTraceStateUninitialized) {
+			return;
+		}
+
+		__asyncTraceThread.Run(OnTraceThread, nullptr);
+	}
+
+	static void CleanUpAsyncTrace()
+	{
+		if (Interlocked::Exchange(&__asyncTraceState, AsyncTraceStateReleasing) != AsyncTraceStateReady) {
+			return;
+		}
+
+		__asyncTraceWait.SetEvent();
+		__asyncTraceThread.Join();
+	}
+
+	static void QueueTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
+	{
+		// Block the thread until queue is flushed, limit number of spins to avoid deadlock
+		std::int32_t n = 0;
+		while (__asyncTraceFlush != 0 && n++ < 10000) {
+			nCine::Timer::sleep(0);
+		}
+
 		TraceItem item;
-		bool itemFound = false;
-		while (__asyncTraceQueuedItems.try_dequeue(item)) {
-			WriteTraceItem(item.Level, item.ThreadId, item.Buffer.c_str(),
-				(std::int32_t)item.Buffer.size(), item.LevelOffset, item.MessageOffset);
-			itemFound = true;
-		}
+		item.Assign(level, threadId, logEntry, length, levelOffset, messageOffset);
 
-		Interlocked::WriteRelease(&__asyncTraceFlush, 0);
+		__asyncTraceQueuedItems.enqueue(std::move(item));
 
-		if (!itemFound && __asyncTraceState == AsyncTraceStateReleasing) {
-			// Queue is empty, so the thread can be stopped
-			break;
-		}
+		__asyncTraceWait.SetEvent();
 
-		if (__asyncTraceState == AsyncTraceStateReady) {
-			__asyncTraceWait.Wait();
-		}
-	}
-
-	Interlocked::WriteRelease(&__asyncTraceState, AsyncTraceStateReleased);
-}
-
-static void InitializeAsyncTrace()
-{
-	if (Interlocked::CompareExchange(&__asyncTraceState, AsyncTraceStateReady, AsyncTraceStateUninitialized) != AsyncTraceStateUninitialized) {
-		return;
-	}
-
-	__asyncTraceThread.Run(OnTraceThread, nullptr);
-}
-
-static void CleanUpAsyncTrace()
-{
-	if (Interlocked::Exchange(&__asyncTraceState, AsyncTraceStateReleasing) != AsyncTraceStateReady) {
-		return;
-	}
-
-	__asyncTraceWait.SetEvent();
-	__asyncTraceThread.Join();
-}
-
-static void QueueTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
-{
-	// Block the thread until queue is flushed, limit number of spins to avoid deadlock
-	std::int32_t n = 0;
-	while (__asyncTraceFlush != 0 && n++ < 10000) {
-		nCine::Timer::sleep(0);
-	}
-
-	TraceItem item;
-	item.Assign(level, threadId, logEntry, length, levelOffset, messageOffset);
-
-	__asyncTraceQueuedItems.enqueue(std::move(item));
-
-	__asyncTraceWait.SetEvent();
-
-	if (level >= TraceLevel::Error && __asyncTraceState == AsyncTraceStateReady) {
-		// Wait for flush Error/Assert/Fatal messages
-		Interlocked::WriteRelease(&__asyncTraceFlush, 1);
-		if (__asyncTraceState == AsyncTraceStateReady) {
-			while (Interlocked::ReadAcquire(&__asyncTraceFlush) != 0) {
-				nCine::Timer::sleep(0);
+		if (level >= TraceLevel::Error && __asyncTraceState == AsyncTraceStateReady) {
+			// Wait for flush Error/Assert/Fatal messages
+			Interlocked::WriteRelease(&__asyncTraceFlush, 1);
+			if (__asyncTraceState == AsyncTraceStateReady) {
+				while (Interlocked::ReadAcquire(&__asyncTraceFlush) != 0) {
+					nCine::Timer::sleep(0);
+				}
 			}
 		}
 	}
@@ -538,7 +540,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 {
 	char logEntry[MaxLogEntryLength + 1];
 
-	TraceDateTime dateTime = GetTraceDateTime();
+	nCine::TraceDateTime dateTime = nCine::GetTraceDateTime();
 	std::int32_t length = snprintf(logEntry, MaxLogEntryLength, "%02u:%02u:%02u.%03u ",
 		dateTime.Hours, dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds);
 	std::int32_t levelOffset = length;
@@ -579,9 +581,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	}
 
 #if defined(DEATH_TRACE_ASYNC)
-	QueueTraceItem(level, threadId, logEntry, length, levelOffset, messageOffset);
+	nCine::QueueTraceItem(level, threadId, logEntry, length, levelOffset, messageOffset);
 #else
-	WriteTraceItem(level, threadId, logEntry, length, levelOffset, messageOffset);
+	nCine::WriteTraceItem(level, threadId, logEntry, length, levelOffset, messageOffset);
 #endif
 }
 
@@ -1021,7 +1023,7 @@ namespace nCine
 
 #	if defined(WITH_BACKWARD)
 				if (__hasVirtualTerminal) {
-					eh.color_mode() = backward::ColorMode::always;
+					__eh.color_mode() = Backward::ColorMode::Always;
 				}
 #	endif
 			}
@@ -1033,7 +1035,7 @@ namespace nCine
 		if (__logFile = fs::Open(targetPath, FileAccess::Write)) {
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
-			eh.destination() = static_cast<FileStream*>(__logFile.get())->GetHandle();
+			__eh.destination() = static_cast<FileStream*>(__logFile.get())->GetHandle();
 #	endif
 		} else {
 			__logFile = nullptr;
@@ -1073,7 +1075,7 @@ namespace nCine
 
 #	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
 		if (__hasVirtualTerminal) {
-			eh.color_mode() = backward::ColorMode::always;
+			__eh.color_mode() = Backward::ColorMode::Always;
 		}
 #	endif
 	}

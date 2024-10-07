@@ -223,9 +223,6 @@
     <Filter Include="Header Files\nCine\Base\pdqsort">
       <UniqueIdentifier>{a72d645b-36b7-485e-b3f6-5ec77cbd0ee2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\backward">
-      <UniqueIdentifier>{78d8395e-85f4-4b64-a565-54001b8dde6e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Shared\Threading">
       <UniqueIdentifier>{1043539e-37bb-46ed-a0ec-cf31f13ad9cb}</UniqueIdentifier>
     </Filter>
@@ -234,6 +231,9 @@
     </Filter>
     <Filter Include="Source Files\Shared\Threading\Implementation">
       <UniqueIdentifier>{89a193bb-8bee-41fe-9308-44e95e8ff9bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shared\Core">
+      <UniqueIdentifier>{a0c711bb-1873-48f2-b0ce-164cf83305bf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -1482,9 +1482,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStl.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
-    <ClInclude Include="backward\backward.h">
-      <Filter>Header Files\backward</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\IO\PakFile.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
@@ -1517,6 +1514,9 @@
     </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Event.h">
       <Filter>Header Files\Shared\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Core\Backward.h">
+      <Filter>Header Files\Shared\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
