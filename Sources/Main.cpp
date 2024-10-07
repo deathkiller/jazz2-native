@@ -1730,7 +1730,7 @@ int main(int argc, char** argv)
 {
 	bool logoVisible = false;
 #if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
-	bool hasVirtualTerminal = isatty(1);
+	bool hasVirtualTerminal = ::isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");
 		if (term != nullptr && (strstr(term, "truecolor") || strstr(term, "24bit") ||

@@ -229,8 +229,7 @@ namespace nCine
 #if defined(DEATH_TRACE)
 		friend void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
 
-		void PreInitTrace();
-		void InitTrace();
+		void InitializeTrace();
 		void ShutdownTrace();
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
