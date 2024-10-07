@@ -423,20 +423,20 @@ namespace Death { namespace Backward {
 		};
 
 		template<typename R, typename T, R(*F)(T)>
-		struct deleter {
+		struct Deleter {
 			template <typename U> void operator()(U& ptr) const {
 				(*F)(ptr);
 			}
 		};
 
 		template<typename T>
-		struct default_delete {
+		struct DefaultDelete {
 			void operator()(T& ptr) const {
 				delete ptr;
 			}
 		};
 
-		template<typename T, typename Deleter = deleter<void, void*, &::free>>
+		template<typename T, typename Deleter = Deleter<void, void*, &::free>>
 		class Handle {
 			struct dummy;
 			T _val;
@@ -581,7 +581,7 @@ namespace Death { namespace Backward {
 			return out;
 		}
 
-	} // namespace details
+	} // namespace Implementation
 
 	/*************** A TRACE ***************/
 
@@ -1480,7 +1480,7 @@ namespace Death { namespace Backward {
 	private:
 		bool _bfd_loaded;
 
-		typedef Implementation::Handle<bfd*, details::deleter<bfd_boolean, bfd*, &bfd_close>> bfd_handle_t;
+		typedef Implementation::Handle<bfd*, Implementation::Deleter<bfd_boolean, bfd*, &bfd_close>> bfd_handle_t;
 		typedef Implementation::Handle<asymbol**> bfd_symtab_t;
 
 		struct bfd_fileobject {
@@ -1490,7 +1490,7 @@ namespace Death { namespace Backward {
 			bfd_symtab_t dynamic_symtab;
 		};
 
-		typedef details::hashtable<std::string, bfd_fileobject>::type fobj_bfd_map_t;
+		typedef Implementation::Hashtable<std::string, bfd_fileobject>::type fobj_bfd_map_t;
 		fobj_bfd_map_t _fobj_bfd_map;
 
 		bfd_fileobject* load_object_with_bfd(const std::string& filename_object) {
@@ -1819,8 +1819,8 @@ namespace Death { namespace Backward {
 		}
 
 	private:
-		typedef Implementation::Handle<Dwfl*, details::deleter<void, Dwfl*, &dwfl_end>> dwfl_handle_t;
-		Implementation::Handle<Dwfl_Callbacks*, details::default_delete<Dwfl_Callbacks*>> _dwfl_cb;
+		typedef Implementation::Handle<Dwfl*, Implementation::Deleter<void, Dwfl*, &dwfl_end>> dwfl_handle_t;
+		Implementation::Handle<Dwfl_Callbacks*, Implementation::DefaultDelete<Dwfl_Callbacks*>> _dwfl_cb;
 		dwfl_handle_t _dwfl_handle;
 		bool _dwfl_handle_initialized;
 
@@ -2129,9 +2129,9 @@ namespace Death { namespace Backward {
 	private:
 		bool _dwarf_loaded;
 
-		typedef Implementation::Handle<std::int32_t, details::deleter<std::int32_t, std::int32_t, &::close>> dwarf_file_t;
-		typedef Implementation::Handle<Elf*, details::deleter<std::int32_t, Elf*, &elf_end>> dwarf_elf_t;
-		typedef Implementation::Handle<Dwarf_Debug, details::deleter<std::int32_t, Dwarf_Debug, &close_dwarf>> dwarf_handle_t;
+		typedef Implementation::Handle<std::int32_t, Implementation::Deleter<std::int32_t, std::int32_t, &::close>> dwarf_file_t;
+		typedef Implementation::Handle<Elf*, Implementation::Deleter<std::int32_t, Elf*, &elf_end>> dwarf_elf_t;
+		typedef Implementation::Handle<Dwarf_Debug, Implementation::Deleter<std::int32_t, Dwarf_Debug, &close_dwarf>> dwarf_handle_t;
 		typedef std::map<Dwarf_Addr, std::int32_t> die_linemap_t;
 		typedef std::map<Dwarf_Off, Dwarf_Off> die_specmap_t;
 
@@ -2170,7 +2170,7 @@ namespace Death { namespace Backward {
 			die_cache_entry* current_cu;
 		};
 
-		typedef details::hashtable<std::string, dwarf_fileobject>::type fobj_dwarf_map_t;
+		typedef Implementation::Hashtable<std::string, dwarf_fileobject>::type fobj_dwarf_map_t;
 		fobj_dwarf_map_t _fobj_dwarf_map;
 
 		static bool cstrings_eq(const char* a, const char* b) {
@@ -3617,7 +3617,7 @@ namespace Death { namespace Backward {
 		}
 
 	private:
-		Implementation::Handle<std::ifstream*, Implementation::default_delete<std::ifstream*>> _file;
+		Implementation::Handle<std::ifstream*, Implementation::DefaultDelete<std::ifstream*>> _file;
 
 		static std::vector<std::string> GetPathsFromEnvVariableImpl() {
 			std::vector<std::string> paths;
@@ -3700,16 +3700,17 @@ namespace Death { namespace Backward {
 		}
 	};
 
-	/*************** PRINTER ***************/
-
 	enum class Flags {
 		None = 0,
 		UseStdError = 0x01,
 		ColorizeOutput = 0x02,
 		IncludeSnippet = 0x04,
+		CreateMemoryDump = 0x08
 	};
 
 	DEFINE_ENUM_OPERATORS(Flags);
+
+	/*************** PRINTER ***************/
 
 	class cfile_streambuf : public std::streambuf {
 	public:
@@ -4173,7 +4174,7 @@ namespace Death { namespace Backward {
 		FILE* Destination;
 		Flags FeatureFlags;
 
-		ExceptionHandling(Flags flags = Flags::UseStdError | Flags::IncludeSnippet) : Destination(nullptr), FeatureFlags(flags), _loaded(false) {
+		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags), _loaded(false) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
 				return;
@@ -4293,7 +4294,8 @@ namespace Death { namespace Backward {
 		__attribute__((noreturn))
 #	endif
 		static void SignalHandler(int signo, siginfo_t* info, void* _ctx) {
-			GetSingleton()->HandleSignal(signo, info, _ctx);
+			auto* current = GetSingleton();
+			current->HandleSignal(signo, info, _ctx);
 
 			// Try to forward the signal
 			raise(info->si_signo);
@@ -4312,7 +4314,7 @@ namespace Death { namespace Backward {
 		FILE* Destination;
 		Flags FeatureFlags;
 
-		ExceptionHandling(Flags flags = Flags::UseStdError | Flags::IncludeSnippet) : Destination(nullptr), FeatureFlags(flags) {
+		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
 				return;
@@ -4452,7 +4454,7 @@ namespace Death { namespace Backward {
 #	endif
 			;
 
-		static std::int32_t& SkipRecords() {
+		std::int32_t& SkipRecords() {
 			static std::int32_t data;
 			return data;
 		}
@@ -4469,9 +4471,11 @@ namespace Death { namespace Backward {
 			}
 			if (crashed() == crash_status::crashed) {
 				// For some reason this must be called first, otherwise the dump is not linked to sources correctly
-				WriteMinidumpWithException(::GetThreadId(GetThreadHandle()), GetContext());
-
-				GetSingleton()->HandleStacktrace(SkipRecords());
+				auto* current = GetSingleton();
+				if ((current->FeatureFlags & Flags::CreateMemoryDump) == Flags::CreateMemoryDump) {
+					WriteMinidumpWithException(::GetThreadId(GetThreadHandle()), GetContext());
+				}
+				current->HandleStacktrace(current->SkipRecords());
 			}
 			{
 				std::unique_lock<std::mutex> lk(mtx());

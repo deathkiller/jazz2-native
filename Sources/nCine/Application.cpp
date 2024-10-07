@@ -85,7 +85,7 @@ extern "C"
 
 #if defined(WITH_BACKWARD)
 #	include <Core/Backward.h>
-Backward::ExceptionHandling __eh;
+Backward::ExceptionHandling __eh(Backward::Flags::UseStdError | Backward::Flags::IncludeSnippet | Backward::Flags::CreateMemoryDump);
 #endif
 
 using namespace Death::Containers::Literals;
@@ -94,6 +94,7 @@ using namespace Death::IO;
 #if defined(DEATH_TRACE)
 
 #if defined(DEATH_TARGET_WINDOWS)
+#	include <Environment.h>
 #	include <Utf8.h>
 #elif defined(DEATH_TARGET_ANDROID)
 #	include <stdarg.h>
@@ -115,12 +116,33 @@ using namespace Death::IO;
 
 static constexpr std::int32_t MaxLogEntryLength = 4096;
 
+static const char ColorReset[] = "\x1B[0m";
+static const char ColorBold[] = "\x1B[1m";
+static const char ColorFaint[] = "\x1B[2m";
+static const char ColorDarkGray[] = "\x1B[90m";
+static const char ColorBrightRed[] = "\x1B[91m";
+static const char ColorBrightYellow[] = "\x1B[93m";
+static const char ColorBrightMagenta[] = "\x1B[95m";
+static const char ColorString[] = "\x1B[0;38;2;211;161;129m";
+static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
+
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/emscripten.h>
 #else
 #	include <IO/FileStream.h>
 static std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
+
+enum class ConsoleType {
+	None,
+	Redirect,
+	WinApi,
+	EscapeCodes,
+	EscapeCodes8bit,
+	EscapeCodes24bit
+};
+
+static ConsoleType __consoleType = ConsoleType::None;
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
@@ -131,12 +153,11 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 static HANDLE __consoleHandleOut;
 static SHORT __consoleCursorY;
-static bool __showLogConsole = false;
 static Array<wchar_t> __consolePrompt;
 
 static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 {
-	if (consoleHandleOut == INVALID_HANDLE_VALUE) {
+	if (consoleHandleOut == INVALID_HANDLE_VALUE || !Environment::IsWindows10()) {
 		return false;
 	}
 
@@ -144,10 +165,6 @@ static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
 			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
 }
-#endif
-
-#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
-static bool __hasVirtualTerminal = false;
 #endif
 
 namespace nCine
@@ -162,7 +179,7 @@ namespace nCine
 		std::uint32_t Years;
 	};
 
-	static TraceDateTime GetTraceDateTime()
+	static DEATH_ALWAYS_INLINE TraceDateTime GetTraceDateTime()
 	{
 		TraceDateTime result;
 
@@ -197,6 +214,93 @@ namespace nCine
 		return result;
 	}
 
+	template<std::int32_t N>
+	static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char(&newPart)[N])
+	{
+		length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, newPart, N - 1);
+	}
+
+	static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char* newPart, std::int32_t newPartLength)
+	{
+		length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, newPart, newPartLength);
+	}
+
+	static void AppendMessagePrefixIfAny(char* dest, std::int32_t& length, const char* message, std::int32_t& logMsgFuncLength, TraceLevel level)
+	{
+		std::int32_t messageBegin = logMsgFuncLength;
+
+		while (true) {
+			if (message[logMsgFuncLength] == '\0') {
+				logMsgFuncLength = -1;
+				break;
+			}
+			if (message[logMsgFuncLength] == '#' && message[logMsgFuncLength + 1] == '>') {
+				logMsgFuncLength += 2;
+				break;
+			}
+			logMsgFuncLength++;
+		}
+
+		if (logMsgFuncLength > 0) {
+			if (__consoleType >= ConsoleType::EscapeCodes) {
+				AppendPart(dest, length, ColorFaint);
+
+				switch (level) {
+					case TraceLevel::Error:
+					case TraceLevel::Fatal:
+						AppendPart(dest, length, ColorBrightRed);
+						break;
+					case TraceLevel::Assert:
+						AppendPart(dest, length, ColorBrightMagenta);
+						break;
+					case TraceLevel::Warning:
+						AppendPart(dest, length, ColorBrightYellow);
+						break;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+					case TraceLevel::Debug:
+						AppendPart(dest, length, ColorDarkGray);
+						break;
+#endif
+				}
+			}
+
+			AppendPart(dest, length, message + messageBegin, logMsgFuncLength - messageBegin);
+		}
+	}
+
+	static void AppendMessageColor(char* dest, std::int32_t& length, TraceLevel level, bool resetBefore)
+	{
+		if (resetBefore) {
+			AppendPart(dest, length, ColorReset);
+		}
+
+		switch (level) {
+			case TraceLevel::Error:
+			case TraceLevel::Fatal:
+				AppendPart(dest, length, ColorBrightRed);
+				if (level == TraceLevel::Fatal) {
+					AppendPart(dest, length, ColorBold);
+				}
+				break;
+			case TraceLevel::Assert:
+				length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, ColorBrightMagenta, static_cast<std::int32_t>(arraySize(ColorBrightMagenta)) - 1);
+				break;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			case TraceLevel::Info:
+			case TraceLevel::Warning:
+				AppendPart(dest, length, ColorBold);
+				break;
+#else
+			case TraceLevel::Warning:
+				AppendPart(dest, length, ColorBrightYellow);
+				break;
+			case TraceLevel::Debug:
+				AppendPart(dest, length, ColorDarkGray);
+				break;
+#endif
+		}
+	}
+
 	void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset)
 	{
 		char logEntryWithColors[MaxLogEntryLength + 24];
@@ -224,116 +328,96 @@ namespace nCine
 		svcOutputDebugString(logEntry + levelOffset, length - levelOffset);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
-		std::int32_t length2 = nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 2, logEntry + levelOffset, length - levelOffset);
+		std::int32_t length2 = 0;
+		AppendPart(logEntryWithColors, length2, logEntry + levelOffset, length - levelOffset);
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
 		logEntryWithColors[length2++] = '\n';
 		logEntryWithColors[length2] = '\0';
 		::OutputDebugStringA(logEntryWithColors);
 #else
-		static const char Reset[] = "\033[0m";
-		static const char Bold[] = "\033[1m";
-		static const char Faint[] = "\033[2m";
-		static const char DarkGray[] = "\033[90m";
-		static const char BrightRed[] = "\033[91m";
-		static const char BrightYellow[] = "\033[93m";
-		static const char BrightMagenta[] = "\033[95m";
-
 #	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
-		if (__showLogConsole) {
+		if (__consoleType >= ConsoleType::Redirect) {
 #	endif
 			// Colorize the output
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
-			const bool hasVirtualTerminal = __hasVirtualTerminal;
-#	else
-			constexpr bool hasVirtualTerminal = false;
-#	endif
-
-			std::int32_t logMsgFuncLength = messageOffset + 1;
-			while (true) {
-				if (logEntry[logMsgFuncLength] == '\0') {
-					logMsgFuncLength = -1;
-					break;
-				}
-				if (logEntry[logMsgFuncLength] == '#' && logEntry[logMsgFuncLength + 1] == '>') {
-					logMsgFuncLength += 2;
-					break;
-				}
-				logMsgFuncLength++;
-			}
-
 			std::int32_t length2 = 0;
-			if (logMsgFuncLength > 0) {
-				if (hasVirtualTerminal) {
-					length2 += nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 1, Faint, static_cast<std::int32_t>(arraySize(Faint)) - 1);
+			std::int32_t logMsgFuncLength = messageOffset + 1;
+			AppendMessagePrefixIfAny(logEntryWithColors, length2, logEntry, logMsgFuncLength, level);
 
-					switch (level) {
-						case TraceLevel::Error:
-						case TraceLevel::Fatal:
-							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
-							break;
-						case TraceLevel::Assert:
-							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightMagenta, static_cast<std::int32_t>(arraySize(BrightMagenta)) - 1);
-							break;
-						case TraceLevel::Warning:
-							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
-							break;
+			if (__consoleType >= ConsoleType::EscapeCodes) {
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
-						case TraceLevel::Debug:
-							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, DarkGray, static_cast<std::int32_t>(arraySize(DarkGray)) - 1);
-							break;
-#	endif
-					}
-				}
-
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, logEntry + messageOffset, logMsgFuncLength - messageOffset);
-			}
-
-			if (hasVirtualTerminal) {
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-				if (level != TraceLevel::Warning && level != TraceLevel::Debug)
-#	endif
-				{
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
-				}
-
-				switch (level) {
-					case TraceLevel::Error:
-					case TraceLevel::Fatal:
-						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightRed, static_cast<std::int32_t>(arraySize(BrightRed)) - 1);
-						if (level == TraceLevel::Fatal) {
-							length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
-						}
-						break;
-					case TraceLevel::Assert:
-						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightMagenta, static_cast<std::int32_t>(arraySize(BrightMagenta)) - 1);
-						break;
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-					case TraceLevel::Info:
-					case TraceLevel::Warning:
-						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Bold, static_cast<std::int32_t>(arraySize(Bold)) - 1);
-						break;
+				bool shouldResetBefore = (level != TraceLevel::Warning && level != TraceLevel::Debug);
 #	else
-					case TraceLevel::Warning:
-						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, BrightYellow, static_cast<std::int32_t>(arraySize(BrightYellow)) - 1);
-						break;
-					case TraceLevel::Debug:
-						length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, DarkGray, static_cast<std::int32_t>(arraySize(DarkGray)) - 1);
-						break;
+				bool shouldResetBefore = true;
 #	endif
-				}
-			}
+				bool shouldResetAfter = (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal);
 
-			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
+				if (level < TraceLevel::Error && __consoleType >= ConsoleType::EscapeCodes24bit) {
+					std::int32_t prevState = 0;
+					StringView message = StringView(logEntry + logMsgFuncLength, length - logMsgFuncLength);
+					do {
+						StringView quotesBegin = message.find('"');
+						if (!quotesBegin) {
+							break;
+						}
+						StringView quotesEnd = message.suffix(quotesBegin.end()).find('"');
+						if (!quotesEnd) {
+							break;
+						}
 
-			if (hasVirtualTerminal) {
-				if (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal) {
-					length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxLogEntryLength - length2 - 1, Reset, static_cast<std::int32_t>(arraySize(Reset)) - 1);
+						StringView prefix = message.prefix(quotesBegin.begin());
+						if (!prefix.empty()) {
+							if (prevState != 1) {
+								AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
+								shouldResetBefore = false;
+								prevState = 1;
+							}
+							AppendPart(logEntryWithColors, length2, prefix.data(), prefix.size());
+						}
+
+						if (prevState != 2) {
+							if (level == TraceLevel::Debug) {
+								AppendPart(logEntryWithColors, length2, ColorDimString);
+							} else {
+								AppendPart(logEntryWithColors, length2, ColorString);
+							}
+							prevState = 2;
+						}
+					
+						StringView inner = message.suffix(quotesBegin.begin()).prefix(quotesEnd.end());
+						AppendPart(logEntryWithColors, length2, inner.data(), inner.size());
+
+						message = message.suffix(quotesEnd.end());
+					} while (!message.empty());
+
+					if (!message.empty()) {
+						if (prevState != 1) {
+							AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
+							shouldResetBefore = false;
+							prevState = 1;
+						}
+
+						AppendPart(logEntryWithColors, length2, message.data(), message.size());
+					} else if (prevState == 2) {
+						// Always reset color after quotes
+						shouldResetAfter = true;
+					}
+				} else {
+					AppendMessageColor(logEntryWithColors, length2, level, shouldResetBefore);
+					AppendPart(logEntryWithColors, length2, logEntry + logMsgFuncLength, length - logMsgFuncLength);
 				}
+
+				if (shouldResetAfter) {
+					AppendPart(logEntryWithColors, length2, ColorReset);
+				}
+			} else {
+				AppendPart(logEntryWithColors, length2, logEntry + logMsgFuncLength, length - logMsgFuncLength);
 			}
 
 			if (length2 >= MaxLogEntryLength - 2) {
 				length2 = MaxLogEntryLength - 2;
 			}
-
 			logEntryWithColors[length2++] = '\n';
 			logEntryWithColors[length2] = '\0';
 
@@ -347,7 +431,7 @@ namespace nCine
 					}
 				}
 			}
-			if (hasVirtualTerminal && length2 < MaxLogEntryLength) {
+			if (__consoleType >= ConsoleType::EscapeCodes && length2 < MaxLogEntryLength) {
 				// Console can be shared with parent process, so clear the rest of the line (using "\x1b[0K" sequence)
 				length2--;
 				logEntryWithColors[length2++] = '\x1b';
@@ -358,7 +442,7 @@ namespace nCine
 				logEntryWithColors[length2] = '\0';
 			}
 
-			fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
+			::fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
 
 			// Save the last cursor position for later
 			if (__consoleHandleOut != NULL) {
@@ -368,13 +452,17 @@ namespace nCine
 				}
 			}
 #	else
-			fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
+			::fputs(logEntryWithColors, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
 #	endif
 
 #	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
 		} else {
 			// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
-			std::int32_t length2 = nCine::copyStringFirst(logEntryWithColors, MaxLogEntryLength - 2, logEntry + levelOffset, length - levelOffset);
+			std::int32_t length2 = 0;
+			AppendPart(logEntryWithColors, length2, logEntry + levelOffset, length - levelOffset);
+			if (length2 >= MaxLogEntryLength - 2) {
+				length2 = MaxLogEntryLength - 2;
+			}
 			logEntryWithColors[length2++] = '\n';
 			logEntryWithColors[length2] = '\0';
 			::OutputDebugStringA(logEntryWithColors);
@@ -386,7 +474,7 @@ namespace nCine
 		// Allow to attach custom target using Application::AttachTraceTarget()
 		if (__logFile != nullptr) {
 			FileStream* s = static_cast<FileStream*>(__logFile.get());
-			fprintf(s->GetHandle(), "%s\n", logEntry);
+			::fprintf(s->GetHandle(), "%s\n", logEntry);
 			if (level >= TraceLevel::Error) {
 				// Flush immediately only Error/Assert/Fatal messages
 				s->Flush();
@@ -395,11 +483,23 @@ namespace nCine
 #endif
 
 #if defined(WITH_IMGUI)
-		auto* debugOverlay = nCine::theApplication().debugOverlay_.get();
+		auto* debugOverlay = theApplication().debugOverlay_.get();
 		if (debugOverlay != nullptr) {
-			TraceDateTime dateTime = GetTraceDateTime();
-			snprintf(logEntryWithColors, MaxLogEntryLength, "%02u:%02u:%02u.%03u", dateTime.Hours,
-				dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds);
+			std::int32_t length3 = 0;
+			StringView dateTimeString = StringView(logEntry, messageOffset);
+			if (StringView firstSpace = dateTimeString.find(' ')) {
+				std::size_t dateTimeLength = (firstSpace.begin() - logEntry);
+				if (dateTimeLength == 12) {	// Expected length of date time string
+					AppendPart(logEntryWithColors, length3, logEntry, dateTimeLength);
+				}
+			}
+
+			if (length3 == 0) {
+				// This shouldn't happen, but try to handle also non-standard messages
+				TraceDateTime dateTime = GetTraceDateTime();
+				snprintf(logEntryWithColors, MaxLogEntryLength, "%02u:%02u:%02u.%03u", dateTime.Hours,
+					dateTime.Minutes, dateTime.Seconds, dateTime.Milliseconds);
+			}
 
 			debugOverlay->log(level, logEntryWithColors, threadId, StringView(logEntry + messageOffset, length - messageOffset));
 		}
@@ -644,7 +744,7 @@ namespace nCine
 	void Application::PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler)
 	{
 #if defined(DEATH_TRACE)
-		PreInitTrace();
+		InitializeTrace();
 #endif
 
 		appEventHandler_ = std::move(appEventHandler);
@@ -658,10 +758,6 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
-
-#if defined(DEATH_TRACE)
-		InitTrace();
-#endif
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (UWP) initializing...");
@@ -1009,20 +1105,24 @@ namespace nCine
 	{
 #if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (targetPath == ConsoleTarget) {
-			if (!__showLogConsole) {
-				__showLogConsole = true;
-				CreateTraceConsole(NCINE_APP_NAME " [Console]", __hasVirtualTerminal);
+			if (__consoleType == ConsoleType::None) {
+				bool hasVirtualTerminal = false;
+				if (CreateTraceConsole(NCINE_APP_NAME " [Console]", hasVirtualTerminal)) {
+					__consoleType = (hasVirtualTerminal ? ConsoleType::EscapeCodes24bit : ConsoleType::WinApi);
 
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				__consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
-					__consoleCursorY = csbi.dwCursorPosition.Y;
+					CONSOLE_SCREEN_BUFFER_INFO csbi;
+					__consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+					if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+						__consoleCursorY = csbi.dwCursorPosition.Y;
+					} else {
+						__consoleHandleOut = NULL;
+					}
 				} else {
-					__consoleHandleOut = NULL;
+					__consoleType = ConsoleType::Redirect;
 				}
 
 #	if defined(WITH_BACKWARD)
-				if (__hasVirtualTerminal) {
+				if (__consoleType >= ConsoleType::EscapeCodes) {
 					__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 				}
 #	endif
@@ -1044,19 +1144,13 @@ namespace nCine
 	}
 
 #if defined(DEATH_TRACE)
-	void Application::PreInitTrace()
+	void Application::InitializeTrace()
 	{
 #	if defined(DEATH_TRACE_ASYNC)
 		InitializeAsyncTrace();
 #	endif
-	}
 
-	void Application::InitTrace()
-	{
-#	if defined(DEATH_TARGET_APPLE)
-		// Xcode's console reports that it is a TTY, but it doesn't support colors, TERM is not defined in this case
-		__hasVirtualTerminal = ::isatty(1) && ::getenv("TERM");
-#	elif defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
 		char* userAgent = (char*)EM_ASM_PTR({
 			return (typeof navigator !== 'undefined' && navigator !== null &&
 					typeof navigator.userAgent !== 'undefined' && navigator.userAgent !== null
@@ -1064,17 +1158,44 @@ namespace nCine
 		});
 		if (userAgent != nullptr) {
 			// Only Chrome supports ANSI escape sequences for now
-			__hasVirtualTerminal = (::strcasestr(userAgent, "chrome") != nullptr);
+			__consoleType = (::strcasestr(userAgent, "chrome") != nullptr ? ConsoleType::EscapeCodes : ConsoleType::Redirect);
 			std::free(userAgent);
+		} else {
+			__consoleType = ConsoleType::Redirect;
 		}
-#	elif defined(DEATH_TARGET_UNIX)
+#	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#		if defined(DEATH_TARGET_UNIX)
 		::setvbuf(stdout, nullptr, _IONBF, 0);
 		::setvbuf(stderr, nullptr, _IONBF, 0);
-		__hasVirtualTerminal = ::isatty(1);
+#		endif
+
+		// Xcode's console reports that it is a TTY, but it doesn't support colors, TERM is not defined in this case
+		__consoleType = ConsoleType::Redirect;
+
+		if (::isatty(1)) {
+			StringView COLORTERM = ::getenv("COLORTERM");
+			StringView TERM = ::getenv("TERM");
+
+			if (!COLORTERM.empty()) {
+				if (COLORTERM.contains("truecolor"_s) || COLORTERM.contains("24bit"_s)) {
+					__consoleType = ConsoleType::EscapeCodes24bit;
+				} else if (COLORTERM.contains("256color"_s) || COLORTERM.contains("rxvt-xpm"_s)) {
+					__consoleType = ConsoleType::EscapeCodes8bit;
+				}
+			}
+
+			if (__consoleType < ConsoleType::EscapeCodes8bit && !TERM.empty()) {
+				if (TERM.contains("256color"_s) || TERM.contains("rxvt-xpm"_s)) {
+					__consoleType = ConsoleType::EscapeCodes8bit;
+				} else if (TERM.contains("xterm"_s) || TERM.contains("vt1"_s) || TERM.contains("linux"_s)) {
+					__consoleType = ConsoleType::EscapeCodes;
+				}
+			}
+		}
 #	endif
 
 #	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
-		if (__hasVirtualTerminal) {
+		if (__consoleType >= ConsoleType::EscapeCodes) {
 			__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 		}
 #	endif
@@ -1086,7 +1207,7 @@ namespace nCine
 		CleanUpAsyncTrace();
 #	endif
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		if (__showLogConsole) {
+		if (__consoleType >= ConsoleType::WinApi) {
 			DestroyTraceConsole();
 		}
 #	endif
