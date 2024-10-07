@@ -228,6 +228,7 @@ namespace nCine
 	static void AppendMessagePrefixIfAny(char* dest, std::int32_t& length, const char* message, std::int32_t& logMsgFuncLength, TraceLevel level)
 	{
 		std::int32_t messageBegin = logMsgFuncLength;
+		logMsgFuncLength++;
 
 		while (true) {
 			if (message[logMsgFuncLength] == '\0') {
@@ -265,6 +266,8 @@ namespace nCine
 			}
 
 			AppendPart(dest, length, message + messageBegin, logMsgFuncLength - messageBegin);
+		} else {
+			logMsgFuncLength = messageBegin;
 		}
 	}
 
@@ -342,7 +345,7 @@ namespace nCine
 #	endif
 			// Colorize the output
 			std::int32_t length2 = 0;
-			std::int32_t logMsgFuncLength = messageOffset + 1;
+			std::int32_t logMsgFuncLength = messageOffset;
 			AppendMessagePrefixIfAny(logEntryWithColors, length2, logEntry, logMsgFuncLength, level);
 
 			if (__consoleType >= ConsoleType::EscapeCodes) {
@@ -1185,6 +1188,11 @@ namespace nCine
 					__consoleType = ConsoleType::EscapeCodes;
 				}
 			}
+		}
+#	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+		if (::GetFileType(hStdOut) != FILE_TYPE_UNKNOWN) {
+			__consoleType = ConsoleType::Redirect;
 		}
 #	endif
 
