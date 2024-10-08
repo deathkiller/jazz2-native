@@ -30,7 +30,7 @@ namespace Death { namespace Threading {
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
 				_fallbackEvent = ::CreateEvent(nullptr, TRUE, isSignaled, nullptr);
-#elif defined(DEATH_TARGET_APPLE)
+#elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				pthread_mutex_init(&_mutex, nullptr);
 				pthread_cond_init(&_cond, nullptr);
 #endif
@@ -42,7 +42,7 @@ namespace Death { namespace Threading {
 			if DEATH_UNLIKELY(!Implementation::IsWaitOnAddressSupported()) {
 #if defined(DEATH_TARGET_WINDOWS)
 				::CloseHandle(_fallbackEvent);
-#elif defined(DEATH_TARGET_APPLE)
+#elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				pthread_mutex_destroy(&_mutex);
 				pthread_cond_destroy(&_cond);
 #endif
@@ -65,7 +65,7 @@ namespace Death { namespace Threading {
 #if defined(DEATH_TARGET_WINDOWS)
 				result = !!Interlocked::Exchange(&_isSignaled, 0L);
 				::ResetEvent(_fallbackEvent);
-#elif defined(DEATH_TARGET_APPLE)
+#elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				pthread_mutex_lock(&_mutex);
 				result = !!_isSignaled;
 				_isSignaled = 0L;
@@ -93,7 +93,7 @@ namespace Death { namespace Threading {
 #if defined(DEATH_TARGET_WINDOWS)
 				Interlocked::WriteRelease(&_isSignaled, 1L);
 				::SetEvent(_fallbackEvent);
-#elif defined(DEATH_TARGET_APPLE)
+#elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				pthread_mutex_lock(&_mutex);
 				_isSignaled = 1L;
 				if constexpr (Type == EventType::AutoReset) {
@@ -170,7 +170,7 @@ namespace Death { namespace Threading {
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
 				return (::WaitForSingleObject(_fallbackEvent, timeoutMilliseconds) == WAIT_OBJECT_0);
-#elif defined(DEATH_TARGET_APPLE)
+#elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				bool result = true;
 				if (timeoutMilliseconds == Implementation::Infinite) {
 					pthread_mutex_lock(&_mutex);
@@ -180,7 +180,7 @@ namespace Death { namespace Threading {
 					pthread_mutex_unlock(&_mutex);
 				} else {
 					struct timespec ts;
-					clock_gettime(CLOCK_REALTIME, &ts);
+					clock_gettime(CLOCK_REALTIME, &ts);	// pthread supports only CLOCK_REALTIME here, CLOCK_MONOTONIC was added later
 					ts.tv_sec += timeoutMilliseconds / 1000;
 					ts.tv_nsec += (timeoutMilliseconds % 1000) * 1000000;
 
@@ -208,7 +208,7 @@ namespace Death { namespace Threading {
 		long _isSignaled;
 #if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _fallbackEvent;
-#elif defined(DEATH_TARGET_APPLE)
+#elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 		pthread_mutex_t _mutex;
 		pthread_cond_t _cond;
 #endif
