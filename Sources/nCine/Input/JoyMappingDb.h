@@ -14,7 +14,7 @@
 #	define SDL_JOYSTICK_DINPUT (1)
 #elif defined(DEATH_TARGET_APPLE)
 #	define SDL_PLATFORM_MACOS (1)
-#elif defined(__FreeBSD__) || defined(__OPENBSD__)
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OPENBSD__)
 #	define SDL_PLATFORM_OPENBSD (1)
 #elif defined(DEATH_TARGET_UNIX)
 #	define SDL_JOYSTICK_LINUX (1)

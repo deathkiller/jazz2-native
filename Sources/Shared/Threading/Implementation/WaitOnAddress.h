@@ -37,7 +37,11 @@ extern "C"
 	/* Operation bits [31, 24] contain the generic flags */
 	#define ULF_NO_ERRNO                    0x01000000
 }
-#elif defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
+// https://man.freebsd.org/cgi/man.cgi?query=_umtx_op
+#	include <sys/umtx.h>
+#	include <time.h>
+#elif (defined(__linux__) || defined(__linux)) && !defined(__LSB_VERSION__) && !defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <linux/futex.h>
 #	include <sys/syscall.h>
 #	include <errno.h>
@@ -131,7 +135,73 @@ namespace Death { namespace Threading { namespace Implementation {
 	{
 		return (__ulock_wake != nullptr && __ulock_wait2 != nullptr);
 	}
-#elif defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
+#	define __DEATH_ALWAYS_USE_WAKEONADDRESS
+
+	constexpr std::uint32_t Infinite = ~0;
+
+	inline void InitializeWaitOnAddress()
+	{
+	}
+
+	template <typename T>
+	inline int WaitOnAddressInner(T& futex, T expectedValue, _umtx_time* tmp = nullptr)
+	{
+		// FreeBSD UMTX_OP_WAIT does not apply acquire or release memory barriers
+		int op = UMTX_OP_WAIT_UINT_PRIVATE;
+		if (sizeof(T) > sizeof(std::uint32_t)) {
+			op = UMTX_OP_WAIT;  // No _PRIVATE version
+		}
+		// The timeout is passed in uaddr2, with its size in uaddr
+		void* uaddr = reinterpret_cast<void*>(tmp ? sizeof(*tmp) : 0);
+		void* uaddr2 = tmp;
+		return _umtx_op(&futex, op, (u_long)expectedValue, uaddr, uaddr2);
+	}
+
+	template<typename T>
+	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
+	{
+		if (timeoutMilliseconds == Infinite) {
+			int r = WaitOnAddressInner(futex, expectedValue);
+			return (r == 0);
+		} else {
+			struct _umtx_time tm = {};
+
+			clock_gettime(CLOCK_MONOTONIC, &tm._timeout);
+			tm._timeout.tv_sec += timeoutMilliseconds / 1000;
+			tm._timeout.tv_nsec += (timeoutMilliseconds % 1000) * 1000000;
+
+			if (tm._timeout.tv_nsec >= 1000000000) {
+				tm._timeout.tv_sec += tm._timeout.tv_nsec / 1000000000;
+				tm._timeout.tv_nsec %= 1000000000;
+			}
+
+			tm._flags = UMTX_ABSTIME;
+			tm._clockid = CLOCK_MONOTONIC;
+			int r = WaitOnAddressInner(futex, expectedValue, &tm);
+			return r == 0 || errno != ETIMEDOUT;
+		}
+	}
+
+	template<typename T>
+	inline void WakeByAddressAll(T& futex)
+	{
+		_umtx_op(&futex, UMTX_OP_WAKE_PRIVATE, INT32_MAX, nullptr, nullptr);
+	}
+
+	template<typename T>
+	inline void WakeByAddressSingle(T& futex)
+	{
+		_umtx_op(&futex, UMTX_OP_WAKE_PRIVATE, 1, nullptr, nullptr);
+	}
+
+	inline constexpr bool IsWaitOnAddressSupported()
+	{
+		return true;
+	}
+#elif (defined(__linux__) || defined(__linux)) && !defined(__LSB_VERSION__) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#	define __DEATH_ALWAYS_USE_WAKEONADDRESS
+
 	constexpr std::uint32_t Infinite = ~0;
 
 	inline void InitializeWaitOnAddress()
@@ -164,9 +234,14 @@ namespace Death { namespace Threading { namespace Implementation {
 			return (r == 0);
 		} else {
 			struct timespec ts;
-			clock_gettime(CLOCK_REALTIME, &ts);
+			clock_gettime(CLOCK_MONOTONIC, &ts);
 			ts.tv_sec += timeoutMilliseconds / 1000;
 			ts.tv_nsec += (timeoutMilliseconds % 1000) * 1000000;
+
+			if (ts.tv_nsec >= 1000000000) {
+				ts.tv_sec += ts.tv_nsec / 1000000000;
+				ts.tv_nsec %= 1000000000;
+			}
 
 			long r = FutexOp(GetFutexAddress(&futex), FUTEX_WAIT_BITSET, (std::uintptr_t)expectedValue, (std::uintptr_t)&ts, nullptr, FUTEX_BITSET_MATCH_ANY);
 			return (r == 0 || errno != ETIMEDOUT);
@@ -185,7 +260,7 @@ namespace Death { namespace Threading { namespace Implementation {
 		FutexOp(GetFutexAddress(&futex), FUTEX_WAKE, 1);
 	}
 
-	inline bool IsWaitOnAddressSupported()
+	inline constexpr bool IsWaitOnAddressSupported()
 	{
 		return true;
 	}
@@ -212,7 +287,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	{
 	}
 
-	inline bool IsWaitOnAddressSupported()
+	inline constexpr bool IsWaitOnAddressSupported()
 	{
 		return false;
 	}

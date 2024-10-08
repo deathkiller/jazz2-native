@@ -16,7 +16,7 @@
 #	include <mach/thread_policy.h>
 #endif
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__DragonFly__)
 #	include <pthread_np.h>
 #endif
 
@@ -233,7 +233,7 @@ namespace nCine
 
 	std::uintptr_t Thread::GetCurrentId()
 	{
-#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(__FreeBSD__)
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(__FreeBSD__) || defined(__DragonFly__)
 		return reinterpret_cast<std::uintptr_t>(pthread_self());
 #else
 		return static_cast<std::uintptr_t>(pthread_self());
