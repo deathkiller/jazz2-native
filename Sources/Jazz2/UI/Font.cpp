@@ -16,7 +16,7 @@ namespace Jazz2::UI
 	Font::Font(const StringView path, const std::uint32_t* palette)
 		: _baseSpacing(0)
 	{
-		auto s = fs::Open(path + ".font"_s, FileAccess::Read);
+		auto s = fs::Open(String(path + ".font"_s), FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 8 * 1024 * 1024) {
 			// 8 MB file size limit
