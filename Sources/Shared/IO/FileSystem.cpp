@@ -2379,7 +2379,7 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	std::unique_ptr<Stream> FileSystem::Open(const String& path, FileAccess mode)
+	std::unique_ptr<Stream> FileSystem::Open(const StringView path, FileAccess mode)
 	{
 #if defined(DEATH_TARGET_ANDROID)
 		StringView assetName = AndroidAssetStream::TryGetAssetPath(String::nullTerminatedView(path).data());

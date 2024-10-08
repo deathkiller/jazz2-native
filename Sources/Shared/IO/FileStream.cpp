@@ -16,7 +16,6 @@
 #	include <unistd.h>		// for close()
 #endif
 
-// TODO: Disabled for now as some files need to be locked manually first
 // `_nolock` functions are not supported by VC-LTL msvcrt, `_unlocked` functions are not supported on Android and Apple
 //#if (defined(DEATH_TARGET_WINDOWS) && !(defined(_Build_By_LTL) && _LTL_vcruntime_module_type != 2)) \
 //	|| (!defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE))

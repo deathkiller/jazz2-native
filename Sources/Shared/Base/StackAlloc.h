@@ -6,7 +6,7 @@
 
 #if defined(DEATH_TARGET_MSVC)
 #	include <malloc.h>
-#else
+#elif !defined(__FreeBSD__) && !defined(__DragonFly__) // It's part of <stdlib.h> on FreeBSD
 #	include <alloca.h>
 #endif
 
