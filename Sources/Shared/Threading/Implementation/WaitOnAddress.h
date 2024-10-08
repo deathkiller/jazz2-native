@@ -39,7 +39,9 @@ extern "C"
 }
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
 // https://man.freebsd.org/cgi/man.cgi?query=_umtx_op
+#	include <sys/types.h>
 #	include <sys/umtx.h>
+#	include <errno.h>
 #	include <time.h>
 #elif (defined(__linux__) || defined(__linux)) && !defined(__LSB_VERSION__) && !defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <linux/futex.h>
@@ -179,7 +181,7 @@ namespace Death { namespace Threading { namespace Implementation {
 			tm._flags = UMTX_ABSTIME;
 			tm._clockid = CLOCK_MONOTONIC;
 			int r = WaitOnAddressInner(futex, expectedValue, &tm);
-			return r == 0 || errno != ETIMEDOUT;
+			return (r == 0 || errno != ETIMEDOUT);
 		}
 	}
 

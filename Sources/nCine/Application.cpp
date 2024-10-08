@@ -103,6 +103,7 @@ using namespace Death::IO;
 #	include <android/log.h>
 #else
 #	include <cstdarg>
+#	include <unistd.h>
 #	if defined(DEATH_TARGET_SWITCH)
 #		include <time.h>
 #		include <switch.h>

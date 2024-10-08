@@ -261,7 +261,7 @@ namespace Death { namespace IO {
 #endif
 
 		/** @brief Opens file stream with specified access mode */
-		static std::unique_ptr<Stream> Open(const Containers::String& path, FileAccess mode);
+		static std::unique_ptr<Stream> Open(const Containers::StringView path, FileAccess mode);
 
 #if defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 		/**
