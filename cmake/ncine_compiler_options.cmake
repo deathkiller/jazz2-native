@@ -189,6 +189,16 @@ else() # GCC and LLVM
 	if(NCINE_DYNAMIC_LIBRARY)
 		target_compile_options(${NCINE_APP} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
 	endif()
+	
+	# _mm_clflushopt also requires "-mclflushopt" option on GCC/clang
+	if(CMAKE_OSX_ARCHITECTURES)
+		set(CPU_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+	else()
+		set(CPU_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+	endif()
+	if ("${CPU_ARCH}" STREQUAL "x86_64")
+		target_compile_options(${NCINE_APP} PRIVATE -mclflushopt)
+	endif()
 
 	if(NCINE_WITH_TRACY)
 		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-g -fno-omit-frame-pointer>)
