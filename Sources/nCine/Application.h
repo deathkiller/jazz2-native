@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <Containers/StringView.h>
+#include <Core/ITraceSink.h>
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <CommonWindows.h>
@@ -18,10 +19,6 @@ using namespace Death;
 
 namespace nCine
 {
-#if defined(DEATH_TRACE)
-	void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
-#endif
-
 	class FrameTimer;
 	class SceneNode;
 	class Viewport;
@@ -34,6 +31,9 @@ namespace nCine
 
 	/** @brief Main entry point and handler for nCine applications */
 	class Application
+#if defined(DEATH_TRACE)
+		: public ITraceSink
+#endif
 	{
 	public:
 		/** @brief Rendering settings that can be changed at run-time */
@@ -213,6 +213,12 @@ namespace nCine
 		/** @brief Sets the focus flag */
 		virtual void SetFocus(bool hasFocus);
 
+#if defined(DEATH_TRACE)
+		// ITraceSink interface
+		void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message) override;
+		void OnTraceFlushed() override;
+#endif
+
 	private:
 		Application(const Application&) = delete;
 		Application& operator=(const Application&) = delete;
@@ -227,8 +233,6 @@ namespace nCine
 		friend class Viewport;
 
 #if defined(DEATH_TRACE)
-		friend void WriteTraceItem(TraceLevel level, std::uint32_t threadId, const char* logEntry, std::int32_t length, std::int32_t levelOffset, std::int32_t messageOffset);
-
 		void InitializeTrace();
 		void ShutdownTrace();
 

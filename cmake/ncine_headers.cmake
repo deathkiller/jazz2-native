@@ -31,6 +31,8 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringUtils.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Tags.h
+	${NCINE_SOURCE_DIR}/Shared/Core/ITraceSink.h
+	${NCINE_SOURCE_DIR}/Shared/Core/Logger.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileAccess.h
@@ -42,6 +44,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IO/Stream.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Event.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Interlocked.h
+	${NCINE_SOURCE_DIR}/Shared/Threading/Spinlock.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Implementation/WaitOnAddress.h
 )
 
