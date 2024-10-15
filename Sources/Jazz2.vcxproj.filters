@@ -235,6 +235,9 @@
     <Filter Include="Header Files\Shared\Core">
       <UniqueIdentifier>{a0c711bb-1873-48f2-b0ce-164cf83305bf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shared\Core">
+      <UniqueIdentifier>{7de2dc9b-0c39-47b3-991e-9a71db70648a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1518,6 +1521,15 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Core\Backward.h">
       <Filter>Header Files\Shared\Core</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Core\Logger.h">
+      <Filter>Header Files\Shared\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Core\ITraceSink.h">
+      <Filter>Header Files\Shared\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Spinlock.h">
+      <Filter>Header Files\Shared\Threading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2497,6 +2509,9 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.cpp">
       <Filter>Source Files\Shared\Threading\Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Core\Logger.cpp">
+      <Filter>Source Files\Shared\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

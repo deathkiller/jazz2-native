@@ -4268,15 +4268,16 @@ namespace Death { namespace Backward {
 			Printer printer;
 			printer.Address = true;
 
+			printer.FeatureFlags = FeatureFlags;
+			printer.Print(st, std::cerr, info->si_signo);
+
 			FILE* dest = Destination;
-			if (dest != nullptr && dest != stderr) {
+			bool shouldWriteToDest = (dest != nullptr && dest != stderr && dest != stdout);
+			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
 				printer.Print(st, dest, info->si_signo);
 				::fflush(dest);
 			}
-
-			printer.FeatureFlags = FeatureFlags;
-			printer.Print(st, std::cerr, info->si_signo);
 		}
 
 	private:
@@ -4560,6 +4561,17 @@ namespace Death { namespace Backward {
 			// Printer creates the TraceResolver, which can supply us a machine type for stack walking. Without this,
 			// StackTrace can only guess using some macros. StackTrace also requires that the PDBs are already loaded,
 			// which is done in the constructor of TraceResolver.
+
+			HANDLE hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
+			bool shouldWriteToStdErr = (::GetFileType(hStdError) != FILE_TYPE_UNKNOWN);
+
+			FILE* dest = Destination;
+			bool shouldWriteToDest = (dest != nullptr && dest != stderr && dest != stdout);
+
+			if (!shouldWriteToStdErr && !shouldWriteToDest) {
+				return;
+			}
+
 			Printer printer;
 			printer.Address = true;
 
@@ -4569,18 +4581,15 @@ namespace Death { namespace Backward {
 			st.LoadHere(32 + skipFrames, GetContext());
 			st.SetSkipEntries(skipFrames);
 
-			FILE* dest = Destination;
-			if (dest != nullptr && dest != stderr) {
-				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
-				printer.Print(st, dest);
-				fflush(dest);
-			}
-
-			// Check if console or any redirection is used
-			HANDLE hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
-			if (::GetFileType(hStdError) != FILE_TYPE_UNKNOWN) {
+			if (shouldWriteToStdErr) {
 				printer.FeatureFlags = FeatureFlags;
 				printer.Print(st, std::cerr);
+			}
+
+			if (shouldWriteToDest) {
+				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
+				printer.Print(st, dest);
+				::fflush(dest);
 			}
 		}
 
