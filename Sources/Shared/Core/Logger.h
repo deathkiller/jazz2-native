@@ -14,6 +14,23 @@
 
 #include <chrono>
 
+#if defined(DEATH_TARGET_ANDROID) || defined(__linux__)
+#	include <sys/syscall.h>
+#	include <unistd.h>
+#elif defined(__NetBSD__)
+#	include <lwp.h>
+#	include <unistd.h>
+#elif defined(__FreeBSD__)
+#	include <sys/thr.h>
+#	include <unistd.h>
+#elif defined(__DragonFly__)
+#	include <sys/lwp.h>
+#	include <unistd.h>
+#elif !defined(DEATH_TARGET_WINDOWS)
+#	include <pthread.h>
+#	include <unistd.h>
+#endif
+
 #if defined(DEATH_TRACE_ASYNC)
 #	include "../Containers/StaticArray.h"
 #	include "../Containers/StringStl.h"
@@ -30,33 +47,13 @@
 	// BoundedSPSCQueue includes
 #	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
 #		include <malloc.h>
-#	elif defined(DEATH_TARGET_APPLE)
-#		include <sys/mman.h>
-#		include <unistd.h>
-#	elif defined(DEATH_TARGET_CYGWIN)
-#		include <sys/mman.h>
-#		include <unistd.h>
-#	elif defined(__NetBSD__)
-#		include <lwp.h>
-#		include <sys/mman.h>
-#		include <unistd.h>
-#	elif defined(__FreeBSD__)
-#		include <sys/mman.h>
-#		include <sys/thr.h>
-#		include <unistd.h>
-#	elif defined(__DragonFly__)
-#		include <sys/lwp.h>
-#		include <sys/mman.h>
-#		include <unistd.h>
 #	else
 #		include <sys/mman.h>
-#		include <sys/syscall.h>
-#		include <unistd.h>
 #	endif
 
-	// _mm_clflushopt also requires "-mclflushopt" option on GCC/clang
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
-#		if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+	// _mm_clflushopt also requires "-mclflushopt" option on GCC/clang, and is undefined on clang-cl
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
+#		if defined(DEATH_TARGET_MSVC)
 #			include <intrin.h>
 #		else
 #			if __has_include(<x86gprintrin.h>)
@@ -317,7 +314,7 @@ namespace Death { namespace Trace {
 				_atomicWriterPos.store(0);
 				_atomicReaderPos.store(0);
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
 				// Remove log memory from cache
 				for (std::uint64_t i = 0; i < (2ull * static_cast<std::uint64_t>(_capacity)); i += CacheLineSize) {
 					_mm_clflush(_storage + i);
@@ -365,7 +362,7 @@ namespace Death { namespace Trace {
 				// Set the atomic flag, so the reader can see write
 				_atomicWriterPos.store(_writerPos, std::memory_order_release);
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
 				// Flush writen cache lines
 				flushCacheLines(_lastFlushedWriterPos, _writerPos);
 
@@ -399,7 +396,7 @@ namespace Death { namespace Trace {
 				if (static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) {
 					_atomicReaderPos.store(_readerPos, std::memory_order_release);
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
 					flushCacheLines(_lastFlushedReaderPos, _readerPos);
 #	endif
 				}
@@ -449,7 +446,7 @@ namespace Death { namespace Trace {
 			mutable T _writerPosCache{0};
 			T _lastFlushedReaderPos{0};
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
 			void flushCacheLines(T& last, T offset)
 			{
 				T lastDiff = last - (last & CacheLineMask);
