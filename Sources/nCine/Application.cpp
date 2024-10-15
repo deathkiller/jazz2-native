@@ -890,8 +890,8 @@ namespace nCine
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (__logFile != nullptr) {
 			__logFile->Flush();
-#	endif
 		}
+#	endif
 	}
 #endif
 

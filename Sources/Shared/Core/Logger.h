@@ -36,9 +36,6 @@
 #	elif defined(DEATH_TARGET_CYGWIN)
 #		include <sys/mman.h>
 #		include <unistd.h>
-#	elif defined(__linux__) || defined(DEATH_TARGET_ANDROID)
-#		include <sys/mman.h>
-#		include <sys/syscall.h>
 #	elif defined(__NetBSD__)
 #		include <lwp.h>
 #		include <sys/mman.h>
@@ -53,13 +50,13 @@
 #		include <unistd.h>
 #	else
 #		include <sys/mman.h>
-#		include <sys/stat.h>
+#		include <sys/syscall.h>
 #		include <unistd.h>
 #	endif
 
 	// _mm_clflushopt also requires "-mclflushopt" option on GCC/clang
 #	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
-#		if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
 #			include <intrin.h>
 #		else
 #			if __has_include(<x86gprintrin.h>)
