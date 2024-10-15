@@ -294,7 +294,7 @@ namespace nCine
 		}
 	}
 
-	void WriteLoggerEntry(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message)
+	void WriteTraceEntry(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message)
 	{
 		char logEntryWithColors[MaxLogEntryLength + 24];
 
@@ -882,13 +882,15 @@ namespace nCine
 #if defined(DEATH_TRACE)
 	void Application::OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message)
 	{
-		WriteLoggerEntry(level, timestamp, threadId, message);
+		WriteTraceEntry(level, timestamp, threadId, message);
 	}
 
 	void Application::OnTraceFlushed()
 	{
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (__logFile != nullptr) {
 			__logFile->Flush();
+#	endif
 		}
 	}
 #endif

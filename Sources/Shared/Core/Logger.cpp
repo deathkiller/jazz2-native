@@ -2,6 +2,8 @@
 
 #if defined(DEATH_TRACE)
 
+#include <stdarg.h>
+
 #if defined(DEATH_TRACE_ASYNC)
 #	include <algorithm>
 #endif

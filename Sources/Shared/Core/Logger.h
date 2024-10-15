@@ -28,7 +28,7 @@
 #	include <limits>
 
 	// BoundedSPSCQueue includes
-#	if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
 #		include <malloc.h>
 #	elif defined(DEATH_TARGET_APPLE)
 #		include <sys/mman.h>
@@ -36,8 +36,9 @@
 #	elif defined(DEATH_TARGET_CYGWIN)
 #		include <sys/mman.h>
 #		include <unistd.h>
-#	elif defined(__linux__)
+#	elif defined(__linux__) || defined(DEATH_TARGET_ANDROID)
 #		include <sys/mman.h>
+#		include <sys/syscall.h>
 #	elif defined(__NetBSD__)
 #		include <lwp.h>
 #		include <sys/mman.h>
@@ -56,7 +57,8 @@
 #		include <unistd.h>
 #	endif
 
-#	if defined(DEATH_TARGET_X86)
+	// _mm_clflushopt also requires "-mclflushopt" option on GCC/clang
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
 #		if defined(DEATH_TARGET_WINDOWS)
 #			include <intrin.h>
 #		else
@@ -90,6 +92,8 @@ namespace Death { namespace Trace {
 			return 0; // Not supported
 #	elif defined(DEATH_TARGET_WINDOWS)
 			return static_cast<std::uint32_t>(::GetCurrentThreadId());
+#	elif defined(DEATH_TARGET_ANDROID)
+			return static_cast<std::uint32_t>(::syscall(__NR_gettid));
 #	elif defined(__linux__)
 			return static_cast<std::uint32_t>(::syscall(SYS_gettid));
 #	elif defined(DEATH_TARGET_APPLE)
@@ -316,7 +320,7 @@ namespace Death { namespace Trace {
 				_atomicWriterPos.store(0);
 				_atomicReaderPos.store(0);
 
-#	if defined(DEATH_TARGET_X86)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
 				// Remove log memory from cache
 				for (std::uint64_t i = 0; i < (2ull * static_cast<std::uint64_t>(_capacity)); i += CacheLineSize) {
 					_mm_clflush(_storage + i);
@@ -364,7 +368,7 @@ namespace Death { namespace Trace {
 				// Set the atomic flag, so the reader can see write
 				_atomicWriterPos.store(_writerPos, std::memory_order_release);
 
-#	if defined(DEATH_TARGET_X86)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
 				// Flush writen cache lines
 				flushCacheLines(_lastFlushedWriterPos, _writerPos);
 
@@ -398,7 +402,7 @@ namespace Death { namespace Trace {
 				if (static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) {
 					_atomicReaderPos.store(_readerPos, std::memory_order_release);
 
-#	if defined(DEATH_TARGET_X86)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
 					flushCacheLines(_lastFlushedReaderPos, _readerPos);
 #	endif
 				}
@@ -448,7 +452,7 @@ namespace Death { namespace Trace {
 			mutable T _writerPosCache{0};
 			T _lastFlushedReaderPos{0};
 
-#	if defined(DEATH_TARGET_X86)
+#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT)
 			void flushCacheLines(T& last, T offset)
 			{
 				T lastDiff = last - (last & CacheLineMask);
@@ -473,6 +477,10 @@ namespace Death { namespace Trace {
 			{
 #	if defined(DEATH_TARGET_WINDOWS)
 				void* p = _aligned_malloc(size, alignment);
+				DEATH_DEBUG_ASSERT(p != nullptr);
+				return p;
+#	elif defined(DEATH_TARGET_SWITCH)
+				void* p = ::memalign(alignment, size);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
 #	else
@@ -510,6 +518,8 @@ namespace Death { namespace Trace {
 			{
 #	if defined(DEATH_TARGET_WINDOWS)
 				_aligned_free(ptr);
+#	elif defined(DEATH_TARGET_SWITCH)
+				::free(ptr);
 #	else
 				// Retrieve the size and offset information from the metadata
 				std::size_t offset;
