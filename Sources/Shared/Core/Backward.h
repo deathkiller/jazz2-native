@@ -4077,7 +4077,7 @@ namespace Death { namespace Backward {
 					os << trace.object_function;
 					colorize.SetColor(Color::Reset);
 				}
-				os << " [0x" << trace.addr << "]\n";
+				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << (std::uint64_t)trace.addr << std::dec << std::setfill(' ') << "]\n";
 				alreadyIndented = false;
 			}
 
@@ -4138,7 +4138,7 @@ namespace Death { namespace Backward {
 				colorize.SetColor(Color::Reset);
 			}
 			if (Address && addr != nullptr) {
-				os << " [0x" << addr << "]";
+				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << (std::uint64_t)addr << std::dec << std::setfill(' ') << "]";
 			}
 			os << "\n";
 		}

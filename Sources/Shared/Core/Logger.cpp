@@ -23,21 +23,21 @@ namespace Death { namespace Trace {
 		RdtscClock::RdtscTicks::RdtscTicks()
 			: _nanosecondsPerTick(0.0)
 		{
-			constexpr std::chrono::milliseconds SpinDuration = std::chrono::milliseconds { 10 };
+			constexpr std::chrono::milliseconds SpinDuration = std::chrono::milliseconds{10};
 			constexpr std::int32_t Trials = 13;
 
 			Death::Containers::StaticArray<Trials, double> rates(Death::Containers::ValueInit);
 
 			for (std::size_t i = 0; i < Trials; i++) {
 				auto begTs =
-					std::chrono::nanoseconds { std::chrono::steady_clock::now().time_since_epoch().count() };
+					std::chrono::nanoseconds{std::chrono::steady_clock::now().time_since_epoch().count()};
 				std::uint64_t begTsc = rdtsc();
 
 				std::chrono::nanoseconds elapsedNanoseconds;
 				std::uint64_t endTsc;
 				do {
 					auto endTs =
-						std::chrono::nanoseconds { std::chrono::steady_clock::now().time_since_epoch().count() };
+						std::chrono::nanoseconds{std::chrono::steady_clock::now().time_since_epoch().count()};
 					endTsc = rdtsc();
 
 					elapsedNanoseconds = endTs - begTs;
@@ -117,7 +117,7 @@ namespace Death { namespace Trace {
 			for (std::uint8_t attempt = 0; attempt < MaxAttempts; attempt++) {
 				std::uint64_t beg = rdtsc();
 				// We force convert to nanoseconds because the precision of system_clock::time-point is not portable across platforms.
-				std::int64_t wallTime = std::chrono::nanoseconds { std::chrono::system_clock::now().time_since_epoch() }.count();
+				std::int64_t wallTime = std::chrono::nanoseconds{std::chrono::system_clock::now().time_since_epoch()}.count();
 				std::uint64_t end = rdtsc();
 
 				if DEATH_LIKELY(end - beg <= lag) {
@@ -262,7 +262,7 @@ namespace Death { namespace Trace {
 
 		while (!_workerThreadAlive.load(std::memory_order_seq_cst)) {
 			// Wait for the thread to start
-			std::this_thread::sleep_for(std::chrono::microseconds { 100 });
+			std::this_thread::sleep_for(std::chrono::microseconds{100});
 		}
 #endif
 	}
@@ -698,13 +698,13 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		std::uint64_t timestamp = rdtsc();
 
-		std::atomic<bool> threadFlushed { false };
+		std::atomic<bool> threadFlushed{false};
 		std::atomic<bool>* threadFlushedPtr = &threadFlushed;
 
 		// We do not want to drop the message if a dropping queue is used
 		while (!EnqueueEntry(FlushRequired, timestamp, &threadFlushedPtr, sizeof(threadFlushedPtr))) {
 			if (sleepDurationNs > 0) {
-				std::this_thread::sleep_for(std::chrono::nanoseconds { sleepDurationNs });
+				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
 			} else {
 				std::this_thread::yield();
 			}
@@ -715,7 +715,7 @@ namespace Death { namespace Trace {
 		// The caller thread keeps checking the flag until the backend thread flushes
 		while (!threadFlushed.load()) {
 			if (sleepDurationNs > 0) {
-				std::this_thread::sleep_for(std::chrono::nanoseconds { sleepDurationNs });
+				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
 			} else {
 				std::this_thread::yield();
 			}
@@ -729,7 +729,7 @@ namespace Death { namespace Trace {
 		using namespace Implementation;
 
 		DEATH_THREAD_LOCAL ScopedThreadContext scopedThreadContext
-		{ DefaultQueueType, InitialQueueCapacity, HugePagesEnabled };
+			{DefaultQueueType, InitialQueueCapacity, HugePagesEnabled};
 
 		return scopedThreadContext.GetThreadContext();
 	}
@@ -770,7 +770,7 @@ namespace Death { namespace Trace {
 
 				do {
 					if constexpr (BlockingQueueRetryIntervalNanoseconds > 0) {
-						std::this_thread::sleep_for(std::chrono::nanoseconds { BlockingQueueRetryIntervalNanoseconds });
+						std::this_thread::sleep_for(std::chrono::nanoseconds{BlockingQueueRetryIntervalNanoseconds});
 					}
 
 					// Not enough space to push to queue, keep trying

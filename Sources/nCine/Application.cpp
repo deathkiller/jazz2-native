@@ -124,7 +124,8 @@ static const char ColorDarkGray[] = "\x1B[90m";
 static const char ColorBrightRed[] = "\x1B[91m";
 static const char ColorBrightYellow[] = "\x1B[93m";
 static const char ColorBrightMagenta[] = "\x1B[95m";
-static const char ColorString[] = "\x1B[0;38;2;211;161;129m";
+static const char ColorDarkString[] = "\x1B[0;38;2;211;161;129m";
+static const char ColorLightString[] = "\x1B[0;38;2;145;109;94m";
 static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -144,6 +145,7 @@ enum class ConsoleType {
 };
 
 static ConsoleType __consoleType = ConsoleType::None;
+static bool __consoleDarkMode = true;
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
@@ -165,6 +167,57 @@ static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 	DWORD dwMode = 0;
 	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
 			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
+}
+#elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_SWITCH)
+#	include <termios.h>
+
+static void CheckConsoleDarkMode()
+{
+	// Save the terminal settings
+	termios oldt;
+	::tcgetattr(STDIN_FILENO, &oldt);
+
+	// Set the terminal to raw mode (no buffering or echoing)
+	termios newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	::tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+	// Send the escape sequence
+	::fputs("\x1b]11;?\x07", stdout);
+	::fflush(stdout);
+
+	// Wait for input with a timeout
+	fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(STDIN_FILENO, &readfds);
+
+	struct timeval timeout;
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+	std::int32_t result = ::select(STDIN_FILENO + 1, &readfds, nullptr, nullptr, &timeout);
+
+	if (result > 0) {
+		char buffer[64];
+		ssize_t length = ::read(STDIN_FILENO, buffer, sizeof(buffer));
+		StringView response = StringView(buffer, length);
+		if (!response.empty() && response.hasPrefix("\x1B]11;rgb:"_s)) { // e.g., "\x1B]11;rgb:1e1e/1e1e/1e1e"
+			response = response.exceptPrefix("\x1B]11;rgb:"_s);
+			auto rrggbb = response.split('/');
+			if (rrggbb.size() == 3) {
+				String part = rrggbb[0];
+				std::uint32_t r = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+				part = rrggbb[1];
+				std::uint32_t g = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+				part = rrggbb[2];
+				std::uint32_t b = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+				std::uint32_t luminance = ((13933 * r) + (46871 * g) + (4732 * b)) >> 16;
+				__consoleDarkMode = (luminance < 128);
+			}
+		}
+	}
+
+	// Restore the terminal settings
+	::tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 #endif
 
@@ -276,7 +329,7 @@ namespace nCine
 				}
 				break;
 			case TraceLevel::Assert:
-				length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, ColorBrightMagenta, static_cast<std::int32_t>(arraySize(ColorBrightMagenta)) - 1);
+				AppendPart(dest, length, ColorBrightMagenta);
 				break;
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 			case TraceLevel::Info:
@@ -374,8 +427,10 @@ namespace nCine
 						if (prevState != 2) {
 							if (level == TraceLevel::Debug) {
 								AppendPart(logEntryWithColors, length2, ColorDimString);
+							} else if (__consoleDarkMode) {
+								AppendPart(logEntryWithColors, length2, ColorDarkString);
 							} else {
-								AppendPart(logEntryWithColors, length2, ColorString);
+								AppendPart(logEntryWithColors, length2, ColorLightString);
 							}
 							prevState = 2;
 						}
@@ -985,7 +1040,7 @@ namespace nCine
 		} else {
 			__consoleType = ConsoleType::Redirect;
 		}
-#	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#	elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_SWITCH)
 #		if defined(DEATH_TARGET_UNIX)
 		::setvbuf(stdout, nullptr, _IONBF, 0);
 		::setvbuf(stderr, nullptr, _IONBF, 0);
@@ -1001,6 +1056,7 @@ namespace nCine
 			if (!COLORTERM.empty()) {
 				if (COLORTERM.contains("truecolor"_s) || COLORTERM.contains("24bit"_s)) {
 					__consoleType = ConsoleType::EscapeCodes24bit;
+					CheckConsoleDarkMode();
 				} else if (COLORTERM.contains("256color"_s) || COLORTERM.contains("rxvt-xpm"_s)) {
 					__consoleType = ConsoleType::EscapeCodes8bit;
 				}
@@ -1021,7 +1077,7 @@ namespace nCine
 		}
 #	endif
 
-#	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
+#	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)) && !defined(DEATH_TARGET_SWITCH)
 		if (__consoleType >= ConsoleType::EscapeCodes) {
 			__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 		}
