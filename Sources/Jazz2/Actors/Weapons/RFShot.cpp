@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Weapons
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x1) != 0) {
-			_timeLeft = 35;
+			_timeLeft = 24;
 			state |= (AnimState)1;
 		} else {
 			_timeLeft = 30;
@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		constexpr float baseSpeed = 2.6f;
+		float baseSpeed = ((_upgrades & 0x1) != 0 ? 6.4f : 6.0f);
 		if (isFacingLeft) {
 			_speed.X = std::min(0.0f, speed.X) - cosf(angleRel) * baseSpeed;
 		} else {
@@ -78,10 +78,6 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		constexpr float acceleration = 0.1f;
-		_speed.X += _speed.X * acceleration * timeMult;
-		_speed.Y += _speed.Y * acceleration * timeMult;
-
 		if (_smokeTimer > 0.0f) {
 			_smokeTimer -= timeMult;
 		} else {
@@ -99,12 +95,20 @@ namespace Jazz2::Actors::Weapons
 	void RFShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
 		if (_fired >= 2) {
-			auto& light = lights.emplace_back();
-			light.Pos = _pos;
-			light.Intensity = 0.8f;
-			light.Brightness = 0.8f;
-			light.RadiusNear = 3.0f;
-			light.RadiusFar = 12.0f;
+			auto& light1 = lights.emplace_back();
+			light1.Pos = _pos;
+			light1.Intensity = 0.4f;
+			light1.Brightness = 0.2f;
+			light1.RadiusNear = 0.0f;
+			light1.RadiusFar = 60.0f;
+
+			auto& light2 = lights.emplace_back();
+			light2.Pos = _pos;
+			light2.Intensity = 0.8f;
+			light2.Brightness = 0.8f;
+			light2.RadiusNear = 3.0f;
+			light2.RadiusFar = 14.0f;
+
 		}
 	}
 
@@ -118,7 +122,8 @@ namespace Jazz2::Actors::Weapons
 			return true;
 		});
 
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2),
+			(_upgrades & 0x1) != 0 ? Explosion::Type::RFUpgraded : Explosion::Type::RF);
 
 		PlaySfx("Explode"_s, 0.6f);
 

@@ -26,6 +26,7 @@ namespace Jazz2::Actors
 
 			Pepper,
 			RF,
+			RFUpgraded,
 
 			Generator,
 
@@ -50,5 +51,6 @@ namespace Jazz2::Actors
 		float _lightRadiusNear;
 		float _lightRadiusFar;
 		float _scale;
+		float _time;
 	};
 }

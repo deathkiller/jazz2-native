@@ -2807,7 +2807,7 @@ namespace Jazz2::Actors
 				initialPos,
 				shotParams
 			));
-			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.22f, IsFacingLeft());
+			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.26f, IsFacingLeft());
 			_levelHandler->AddActor(shot1);
 
 			std::shared_ptr<Weapons::RFShot> shot2 = std::make_shared<Weapons::RFShot>();
@@ -2816,7 +2816,7 @@ namespace Jazz2::Actors
 				initialPos,
 				shotParams
 			));
-			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.22f, IsFacingLeft());
+			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.26f, IsFacingLeft());
 			_levelHandler->AddActor(shot2);
 		}
 
