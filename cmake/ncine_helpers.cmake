@@ -288,6 +288,8 @@ function(ncine_apply_compiler_options target)
 		target_compile_definitions(${target} PUBLIC "DEATH_TRACE")
 		if(DEATH_TRACE_ASYNC)
 			target_compile_definitions(${target} PUBLIC "DEATH_TRACE_ASYNC")
+		elseif(NCINE_WITH_THREADS)
+			message(STATUS "Asynchronous processing of event tracing is explicitly disabled")
 		endif()
 	endif()
 
