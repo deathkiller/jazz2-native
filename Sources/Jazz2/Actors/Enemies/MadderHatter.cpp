@@ -2,6 +2,7 @@
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
+#include "../Explosion.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -125,7 +126,14 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(details.Params[0] != 0);
 		_speed.X = (IsFacingLeft() ? -6.0f : 6.0f);
-		_externalForce.Y = -0.4f;
+
+		if (_levelHandler->IsReforged()) {
+			_timeLeft = 60;
+			_externalForce.Y = -0.4f;
+		} else {
+			_timeLeft = 30;
+			SetState(ActorState::ApplyGravitation, false);
+		}
 
 		_health = INT32_MAX;
 
@@ -137,6 +145,12 @@ namespace Jazz2::Actors::Enemies
 
 	void MadderHatter::BulletSpit::OnUpdate(float timeMult)
 	{
+		_timeLeft -= timeMult;
+		if (_timeLeft <= 0.0f) {
+			DecreaseHealth(INT32_MAX);
+			return;
+		}
+
 		EnemyBase::OnUpdate(timeMult);
 
 		float angle = atan2f(_speed.Y, _speed.X);
@@ -155,6 +169,15 @@ namespace Jazz2::Actors::Enemies
 	bool MadderHatter::BulletSpit::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		return false;
+	}
+
+	bool MadderHatter::BulletSpit::OnPerish(ActorBase* collider)
+	{
+		if (!_levelHandler->IsReforged()) {
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
+		}
+
+		return EnemyBase::OnPerish(collider);
 	}
 
 	void MadderHatter::BulletSpit::OnHitFloor(float timeMult)

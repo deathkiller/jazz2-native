@@ -4,6 +4,7 @@
 #include "../../Tiles/TileMap.h"
 #include "../Enemies/EnemyBase.h"
 #include "../Explosion.h"
+#include "../Player.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -60,6 +61,11 @@ namespace Jazz2::Actors::Weapons
 		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::Electro, _strength };
 		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
+		}
+		if (params.TilesDestroyed > 0) {
+			if (auto* player = runtime_cast<Player*>(_owner)) {
+				player->AddScore(params.TilesDestroyed * 50);
+			}
 		}
 		if (params.WeaponStrength <= 0) {
 			DecreaseHealth(INT32_MAX);

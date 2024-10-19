@@ -20,17 +20,18 @@ namespace Jazz2::Actors::Weapons
 		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
-		_strength = 1;
 
 		async_await RequestMetadataAsync("Weapon/Bouncer"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x1) != 0) {
 			_timeLeft = 130;
+			_strength = 2;
 			state |= (AnimState)1;
 			PlaySfx("FireUpgraded"_s, 1.0f, 0.5f);
 		} else {
 			_timeLeft = 90;
+			_strength = 1;
 			PlaySfx("Fire"_s, 1.0f, 0.5f);
 		}
 
@@ -65,6 +66,11 @@ namespace Jazz2::Actors::Weapons
 	{
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Bouncer, _strength };
 		TryStandardMovement(timeMult, params);
+		if (params.TilesDestroyed > 0) {
+			if (auto* player = runtime_cast<Player*>(_owner)) {
+				player->AddScore(params.TilesDestroyed * 50);
+			}
+		}
 		if (params.WeaponStrength <= 0) {
 			DecreaseHealth(INT32_MAX);
 			return;

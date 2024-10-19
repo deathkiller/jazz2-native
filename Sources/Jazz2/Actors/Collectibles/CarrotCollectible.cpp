@@ -38,6 +38,7 @@ namespace Jazz2::Actors::Collectibles
 			CollectibleBase::OnCollect(player);
 		} else {
 			if (player->AddHealth(1)) {
+				player->SetInvulnerability(0.8f * FrameTimer::FramesPerSecond, true);
 				CollectibleBase::OnCollect(player);
 			}
 		}

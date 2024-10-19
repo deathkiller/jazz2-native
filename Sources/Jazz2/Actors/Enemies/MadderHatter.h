@@ -33,9 +33,13 @@ namespace Jazz2::Actors::Enemies
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdate(float timeMult) override;
 			void OnUpdateHitbox() override;
+			bool OnPerish(ActorBase* collider) override;
 			void OnHitFloor(float timeMult) override;
 			void OnHitWall(float timeMult) override;
 			void OnHitCeiling(float timeMult) override;
+
+		private:
+			float _timeLeft;
 		};
 
 		float _attackTime;

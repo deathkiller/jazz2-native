@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Weapons
 		_renderer.setDrawEnabled(false);
 
 #if defined(WITH_AUDIO)
-		_noise = PlaySfx("Fire"_s, 0.8f, 1.2f);
+		_noise = PlaySfx("Fire"_s, 0.5f, 6.0f);
 #endif
 	}
 
@@ -77,6 +77,11 @@ namespace Jazz2::Actors::Weapons
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Blaster, _strength };
 		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
+		}
+		if (params.TilesDestroyed > 0) {
+			if (auto* player = runtime_cast<Player*>(_owner)) {
+				player->AddScore(params.TilesDestroyed * 50);
+			}
 		}
 		if (params.WeaponStrength <= 0) {
 			DecreaseHealth(INT32_MAX);

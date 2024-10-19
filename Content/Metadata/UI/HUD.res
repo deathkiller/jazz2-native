@@ -150,10 +150,14 @@
 			"Path": "Pickup/carrot_full.aura",
 			"States": [ 74 ]
 		},
+		"PickupStopwatch": {
+			"Path": "Pickup/stopwatch.aura",
+			"States": [ 75 ]
+		},
 		
 		"BossHealthBar": {
 			"Path": "UI/boss_health_bar.aura",
-			"States": [ 75 ]
+			"States": [ 76 ]
 		},
 		
 		"WeaponWheel": {

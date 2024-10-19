@@ -12,12 +12,15 @@ namespace Jazz2::Actors::Solid
 		MovingPlatform();
 		~MovingPlatform();
 
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
+		bool OnPerish(ActorBase* collider) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 	private:

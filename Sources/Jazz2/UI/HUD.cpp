@@ -60,7 +60,8 @@ namespace Jazz2::UI
 		static constexpr AnimState PickupCoin = (AnimState)72;
 		static constexpr AnimState PickupFood = (AnimState)73;
 		static constexpr AnimState PickupCarrot = (AnimState)74;
-		static constexpr AnimState BossHealthBar = (AnimState)75;
+		static constexpr AnimState PickupStopwatch = (AnimState)75;
+		static constexpr AnimState BossHealthBar = (AnimState)76;
 		static constexpr AnimState WeaponWheel = (AnimState)80;
 		static constexpr AnimState WeaponWheelInner = (AnimState)81;
 		static constexpr AnimState WeaponWheelDim = (AnimState)82;
@@ -492,6 +493,17 @@ namespace Jazz2::UI
 					DrawHealthCarrots(adjustedView.X + 24.0f, bottom - 20.0f, player->_health);
 				}
 			}
+
+			if (player->_activeShield != ShieldType::None) {
+				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
+
+				DrawElement(PickupStopwatch, -1, adjustedView.X + 68.0f, bottom - 8.0f, MainLayer, Alignment::BottomLeft, Colorf::White, 0.6f, 0.6f);
+
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 84.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
+					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 84.0f, bottom - 8.0f, FontLayer,
+					Alignment::BottomLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+			}
 		} else {
 			if (shouldDrawHealth) {
 				for (std::int32_t i = 0; i < player->_health; i++) {
@@ -515,6 +527,17 @@ namespace Jazz2::UI
 							Alignment::BottomLeft, Font::DefaultColor);
 					}
 				}
+			}
+
+			if (player->_activeShield != ShieldType::None) {
+				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
+
+				DrawElement(PickupStopwatch, -1, view.X + view.W * 0.5f - 30.0f, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
+
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor);
 			}
 		}
 	}

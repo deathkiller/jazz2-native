@@ -35,7 +35,7 @@ namespace Jazz2::Actors::Solid
 	{
 		_weaponType = (WeaponType)details.Params[0];
 
-		SetState(ActorState::TriggersTNT, true);
+		SetState(ActorState::TriggersTNT | ActorState::CanBeFrozen, true);
 		Movable = true;
 
 		switch (_weaponType) {
@@ -86,13 +86,12 @@ namespace Jazz2::Actors::Solid
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 			Player* owner = shotBase->GetOwner();
 			WeaponType weaponType = shotBase->GetWeaponType();
-			if (owner != nullptr && (weaponType == WeaponType::Blaster ||
-				weaponType == WeaponType::RF || weaponType == WeaponType::Seeker ||
-				weaponType == WeaponType::Pepper || weaponType == WeaponType::Electro)) {
+			if (owner != nullptr && shotBase->GetStrength() > 0) {
 				DestroyAndApplyToPlayer(owner);
 				shotBase->DecreaseHealth(INT32_MAX);
-			} else {
-				shotBase->TriggerRicochet(this);
+			} else if (weaponType == WeaponType::Freezer) {
+				_frozenTimeLeft = 10.0f * FrameTimer::FramesPerSecond;
+				shotBase->DecreaseHealth(INT32_MAX);
 			}
 			return true;
 		} else if (auto* tnt = runtime_cast<Weapons::TNT*>(other)) {

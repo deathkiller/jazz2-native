@@ -1,4 +1,5 @@
 ﻿#include "ToasterShot.h"
+#include "../Player.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 
@@ -84,6 +85,11 @@ namespace Jazz2::Actors::Weapons
 
 			if ((_upgrades & 0x1) == 0) {
 				DecreaseHealth(INT32_MAX);
+			}
+		}
+		if (params.TilesDestroyed > 0) {
+			if (auto* player = runtime_cast<Player*>(_owner)) {
+				player->AddScore(params.TilesDestroyed * 50);
 			}
 		}
 
