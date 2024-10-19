@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.4.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1736,12 +1736,12 @@ msgstr "Scripting"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
 msgid "Allow Cheats"
-msgstr ""
+msgstr "Autoriser la triche"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:52
 msgid "Overwrite Episode Completion"
-msgstr ""
+msgstr "Remplacer l'achèvement d'épisode"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
@@ -1767,26 +1767,26 @@ msgstr "Rafraîchir le cache"
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "\f[c:#d86664]Yes\f[/c]"
-msgstr ""
+msgstr "\f[c:#d86664]Oui\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "No"
-msgstr ""
+msgstr "Non"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:147
 msgid "No Cheats Only"
-msgstr ""
+msgstr "Sans triche uniquement"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
 msgid "Higher Score Only"
-msgstr ""
+msgstr "Meilleur score uniquement"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
 msgid "Always"
-msgstr ""
+msgstr "Toujours"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19
