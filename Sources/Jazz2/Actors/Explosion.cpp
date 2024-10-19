@@ -6,7 +6,7 @@
 namespace Jazz2::Actors
 {
 	Explosion::Explosion()
-		: _lightBrightness(0.0f), _lightIntensity(0.0f), _lightRadiusNear(0.0f), _lightRadiusFar(0.0f), _scale(1.0f)
+		: _lightBrightness(0.0f), _lightIntensity(0.0f), _lightRadiusNear(0.0f), _lightRadiusFar(0.0f), _scale(1.0f), _time(0.0f)
 	{
 	}
 
@@ -55,9 +55,15 @@ namespace Jazz2::Actors
 				break;
 			}
 			case Type::RF: {
-				_lightIntensity = 0.8f;
-				_lightBrightness = 0.9f;
+				_lightIntensity = 0.2f;
+				_lightBrightness = 0.2f;
 				_lightRadiusFar = 50.0f * _scale;
+				break;
+			}
+			case Type::RFUpgraded: {
+				_lightIntensity = 0.2f;
+				_lightBrightness = 0.2f;
+				_lightRadiusFar = 18.0f * _scale;
 				break;
 			}
 			case Type::IceShrapnel: {
@@ -92,6 +98,8 @@ namespace Jazz2::Actors
 
 	void Explosion::OnUpdate(float timeMult)
 	{
+		_time += timeMult;
+
 		switch (_type) {
 			case Type::Large: {
 				_lightRadiusFar -= timeMult * _scale * 5.0f;
@@ -102,8 +110,20 @@ namespace Jazz2::Actors
 				break;
 			}
 			case Type::RF: {
-				_lightRadiusFar -= timeMult * _scale * 0.8f;
-				_lightIntensity -= timeMult * 0.02f;
+				float phase1 = _time * 0.16f;
+				float phase2 = (phase1 < fRadAngle270 ? sinf(phase1) : -1.0f);
+				_lightIntensity = 0.2f + phase2;
+				_lightBrightness = 0.2f + phase2;
+				_lightRadiusFar = 50.0f * _scale * (1.0f + phase2);
+				break;
+			}
+			case Type::RFUpgraded: {
+				float phase1 = _time * 0.18f;
+				float phase2 = (phase1 < fRadAngle270 ? sinf(phase1) : -1.0f);
+				_lightIntensity = 0.1f + phase2 * 0.1f;
+				_lightBrightness = 0.2f + phase2 * 0.4f;
+				_lightRadiusNear = (2.0f * _scale) + (phase1 * 1.4f);
+				_lightRadiusFar = (16.0f * _scale) + (phase1 * 5.0f);
 				break;
 			}
 			case Type::IceShrapnel: {
@@ -137,7 +157,21 @@ namespace Jazz2::Actors
 			light1.RadiusFar = _lightRadiusFar;
 		}
 
-		if (_type == Type::Pepper) {
+		if (_type == Type::RFUpgraded) {
+			// RFUpgraded explosion uses ring light
+			float distance = 20.0f + (_time * 6.0f);
+			std::int32_t SegmentCount = (std::int32_t)(distance * 0.5f);
+			for (std::int32_t i = 0; i < SegmentCount; i++) {
+				float angle = i * fTwoPi / SegmentCount;
+
+				auto& light = lights.emplace_back();
+				light.Pos = _pos + Vector2f(cosf(angle) * distance, sinf(angle) * distance);
+				light.Intensity = _lightIntensity;
+				light.Brightness = _lightBrightness;
+				light.RadiusNear = _lightRadiusNear;
+				light.RadiusFar = _lightRadiusFar;
+			}
+		} else if (_type == Type::Pepper) {
 			auto& light2 = lights.emplace_back();
 			light2.Pos = _pos;
 			light2.Intensity = 0.1f;

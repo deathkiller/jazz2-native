@@ -67,28 +67,28 @@
 		"RF": {
 			"Path": "Common/explosion_rf.aura",
 			"FrameRate": 6,
-			"States": [ 12 ]
+			"States": [ 12, 13 ]
 		},
 		"Generator": {
 			"Path": "Common/generator.aura",
-			"States": [ 13 ]
+			"States": [ 14 ]
 		},
 		
 		"IceShrapnel1": {
 			"Path": "Common/ice_break_shrapnel_1.aura",
-			"States": [ 14 ]
+			"States": [ 15 ]
 		},
 		"IceShrapnel2": {
 			"Path": "Common/ice_break_shrapnel_2.aura",
-			"States": [ 15 ]
+			"States": [ 16 ]
 		},
 		"IceShrapnel3": {
 			"Path": "Common/ice_break_shrapnel_3.aura",
-			"States": [ 16 ]
+			"States": [ 17 ]
 		},
 		"IceShrapnel4": {
 			"Path": "Common/ice_break_shrapnel_4.aura",
-			"States": [ 17 ]
+			"States": [ 18 ]
 		}
 	}
 }
