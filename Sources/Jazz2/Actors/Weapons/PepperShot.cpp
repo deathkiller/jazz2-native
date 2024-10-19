@@ -76,11 +76,6 @@ namespace Jazz2::Actors::Weapons
 				player->AddScore(params.TilesDestroyed * 50);
 			}
 		}
-		if (params.TilesDestroyed > 0) {
-			if (auto* player = runtime_cast<Player*>(_owner)) {
-				player->AddScore(params.TilesDestroyed * 50);
-			}
-		}
 		if (params.WeaponStrength <= 0) {
 			DecreaseHealth(INT32_MAX);
 			return;

@@ -1458,13 +1458,13 @@ namespace Jazz2::Actors
 				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush is active
 			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 				other->DecreaseHealth(INT32_MAX, this);
+				handled = true;
 
 				if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
 					removeSpecialMove = true;
 					_speed.Y *= -0.6f;
-					SetState(ActorState::CanJump, true);
+					SetState(ActorState::CanJump, false);
 				}
-				return true;
 			}
 		} else if (auto* enemy = runtime_cast<Enemies::EnemyBase*>(other)) {
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
@@ -1487,8 +1487,8 @@ namespace Jazz2::Actors
 					if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
 						removeSpecialMove = true;
 						_speed.Y *= -0.6f;
-						SetState(ActorState::CanJump, true);
-					} else if (_currentSpecialMove != SpecialMoveType::None && enemy->GetHealth() >= 0) {
+						SetState(ActorState::CanJump, false);
+					} else if (_currentSpecialMove != SpecialMoveType::None && enemy->GetHealth() > 0) {
 						removeSpecialMove = true;
 						_externalForce.X = 0.0f;
 						_externalForce.Y = 0.0f;
@@ -1510,9 +1510,11 @@ namespace Jazz2::Actors
 				}
 			} else if (enemy->CanHurtPlayer()) {
 				if (!IsInvulnerable()) {
-					// Decrease remaining shield time by 5 secs
-					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+					if (_activeShieldTime > 0.0f) {
+						// Decrease remaining shield time by 5 secs
+						if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
+							_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+						}
 						float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
 						SetInvulnerability(invulnerableTime, false);
 						PlayPlayerSfx("HurtSoft"_s);
@@ -1574,7 +1576,19 @@ namespace Jazz2::Actors
 	void Player::OnHitFloor(float timeMult)
 	{
 		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y + 24)) {
-			TakeDamage(1, _speed.X * 0.25f);
+			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
+				if (_activeShieldTime > 0.0f) {
+					// Decrease remaining shield time by 5 secs
+					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
+						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+					}
+					float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
+					SetInvulnerability(invulnerableTime, false);
+					PlayPlayerSfx("HurtSoft"_s);
+				} else {
+					TakeDamage(1, _speed.X * 0.25f);
+				}
+			}
 		} else if (!_inWater && _activeModifier == Modifier::None) {
 			if (_hitFloorTime <= 0.0f && !CanJump()) {
 				_hitFloorTime = 30.0f;
@@ -1605,7 +1619,19 @@ namespace Jazz2::Actors
 	void Player::OnHitCeiling(float timeMult)
 	{
 		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y - 4.0f)) {
-			TakeDamage(1, _speed.X * 0.25f);
+			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
+				if (_activeShieldTime > 0.0f) {
+					// Decrease remaining shield time by 5 secs
+					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
+						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+					}
+					float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
+					SetInvulnerability(invulnerableTime, false);
+					PlayPlayerSfx("HurtSoft"_s);
+				} else {
+					TakeDamage(1, _speed.X * 0.25f);
+				}
+			}
 		}
 	}
 
@@ -1617,7 +1643,19 @@ namespace Jazz2::Actors
 		_keepRunningTime = 0.0f;
 
 		if (_levelHandler->TileMap()->IsTileHurting(_pos.X + (_speed.X > 0.0f ? 1.0f : -1.0f) * 16.0f, _pos.Y)) {
-			TakeDamage(1, _speed.X * 0.25f);
+			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
+				if (_activeShieldTime > 0.0f) {
+					// Decrease remaining shield time by 5 secs
+					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
+						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+					}
+					float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
+					SetInvulnerability(invulnerableTime, false);
+					PlayPlayerSfx("HurtSoft"_s);
+				} else {
+					TakeDamage(1, _speed.X * 0.25f);
+				}
+			}
 		} else {
 			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !CanJump() &&
 				!_inWater && _currentSpecialMove == SpecialMoveType::None && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionUppercutEnd) &&
