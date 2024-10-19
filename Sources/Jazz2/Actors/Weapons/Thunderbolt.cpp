@@ -95,6 +95,11 @@ namespace Jazz2::Actors::Weapons
 		} else if (_strength > 0) {
 			TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::Thunderbolt, _strength };
 			_levelHandler->IsPositionEmpty(this, AABBInner, params);
+			if (params.TilesDestroyed > 0) {
+				if (auto* player = runtime_cast<Player*>(_owner)) {
+					player->AddScore(params.TilesDestroyed * 50);
+				}
+			}
 			if (params.WeaponStrength <= 0) {
 				_hit = true;
 				_strength = 0;

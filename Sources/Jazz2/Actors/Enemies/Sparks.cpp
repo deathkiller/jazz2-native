@@ -46,20 +46,29 @@ namespace Jazz2::Actors::Enemies
 		Vector2f targetPos;
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
-			targetPos = player->GetPos();
-			Vector2f direction = (_pos - targetPos);
-			float length = direction.Length();
-			if (length < 180.0f && targetPos.Y < _levelHandler->WaterLevel()) {
-				if (length > 100.0f) {
-					direction.Normalize();
-					_speed = (direction * DefaultSpeed + _speed) * 0.5f;
+			if (!player->IsInvulnerable()) {
+				targetPos = player->GetPos();
+				Vector2f direction = (targetPos - _pos);
+				float length = direction.Length();
+				if (length < 180.0f && targetPos.Y < _levelHandler->WaterLevel()) {
+					if (length > 100.0f) {
+						direction.Normalize();
+						float maxSpeed = DefaultSpeed;
+						switch (_levelHandler->Difficulty()) {
+							case GameDifficulty::Normal: maxSpeed += 1.0f;
+							case GameDifficulty::Hard: maxSpeed += 2.0f;
+						}
+						_speed.X = lerpByTime(_speed.X, direction.X * maxSpeed, 0.04f, timeMult);
+						_speed.Y = lerpByTime(_speed.Y, direction.Y * maxSpeed, 0.04f, timeMult);
+						SetFacingLeft(_speed.X >= 0.0f);
+					}
+					return;
 				}
-				return;
 			}
 		}
-
-		_speed.X = 0.0f;
-		_speed.Y = 0.0f;
+		
+		_speed.X = lerpByTime(_speed.X, 0.0f, 0.04f, timeMult);
+		_speed.Y = lerpByTime(_speed.Y, 0.0f, 0.04f, timeMult);
 	}
 
 	bool Sparks::OnPerish(ActorBase* collider)

@@ -15,9 +15,14 @@ namespace Jazz2::Actors::Enemies
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
-		bool CanHurtPlayer()
+		bool CanHurtPlayer() const
 		{
 			return (_canHurtPlayer && _frozenTimeLeft <= 0.0f);
+		}
+
+		bool IsFrozen() const
+		{
+			return (_frozenTimeLeft > 0.0f);
 		}
 
 	protected:

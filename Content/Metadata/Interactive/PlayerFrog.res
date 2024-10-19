@@ -123,7 +123,9 @@
 		"Hurt": {
 			"Paths": [ "Frog/noise_4.wav" ]
 		},
-		
+		"HurtSoft": {
+			"Paths": [ "Frog/noise_4.wav" ]
+		},
 		"PickupAmmo": {
 			"Paths": [ "Pickup/ammo.wav" ]
 		},

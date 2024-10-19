@@ -362,6 +362,9 @@
 		"Hurt": {
 			"Paths": [ "Lori/hurt_2.wav", "Lori/hurt_3.wav", "Lori/hurt_5.wav", "Lori/hurt_6.wav", "Lori/hurt_7.wav", "Lori/hurt_8.wav" ]
 		},
+		"HurtSoft": {
+			"Paths": [ "Lori/hurt_1.wav", "Lori/hurt_3.wav", "Lori/hurt_4.wav" ]
+		},
 		"Die": {
 			"Paths": [ "Lori/die.wav" ]
 		},

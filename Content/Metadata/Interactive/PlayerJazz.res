@@ -377,6 +377,9 @@
 		"Hurt": {
 			"Paths": [ "Jazz/hurt_1.wav", "Jazz/hurt_2.wav", "Jazz/hurt_3.wav", "Jazz/hurt_4.wav", "Jazz/hurt_5.wav", "Jazz/hurt_6.wav", "Jazz/hurt_7.wav", "Jazz/hurt_8.wav" ]
 		},
+		"HurtSoft": {
+			"Paths": [ "Jazz/hurt_1.wav", "Jazz/hurt_5.wav", "Jazz/hurt_6.wav", "Jazz/hurt_7.wav", "Jazz/hurt_8.wav" ]
+		},
 		"Die": {
 			"Paths": [ "Common/gunsm1.wav" ]
 		},

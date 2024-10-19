@@ -1156,6 +1156,7 @@ namespace Jazz2::Actors
 			case ShieldType::Fire: {
 				auto* res = _metadata->FindAnimation(ShieldFire);
 				if (res != nullptr) {
+					constexpr float PosMultiplier = 0.003f;
 					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
@@ -1188,11 +1189,13 @@ namespace Jazz2::Actors
 						}
 
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * -0.008f, frames * 0.006f - sinf(frames * 0.006f), -sinf(frames * 0.015f), frames * 0.006f);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f),
+							-sinf(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosX, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1217,7 +1220,9 @@ namespace Jazz2::Actors
 						}
 
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * 0.006f, sinf(frames * 0.006f), sinf(frames * 0.015f), frames * -0.006f);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+							frames * 0.006f, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
+							sinf(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
@@ -1287,6 +1292,7 @@ namespace Jazz2::Actors
 			case ShieldType::Lightning: {
 				auto* res = _metadata->FindAnimation(ShieldLightning);
 				if (res != nullptr) {
+					constexpr float PosMultiplier = 0.001f;
 					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
@@ -1319,7 +1325,9 @@ namespace Jazz2::Actors
 						}
 
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * -0.008f, frames * 0.006f - sinf(frames * 0.006f), -sinf(frames * 0.015f), frames * 0.006f);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
+							-sinf(frames * 0.015f), frames * 0.006f);
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
@@ -1348,7 +1356,9 @@ namespace Jazz2::Actors
 						}
 
 						auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * 0.006f, sinf(frames * 0.006f), sinf(frames * 0.015f), frames * -0.006f);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+							frames * 0.006f + _pos.X * PosMultiplier, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
+							sinf(frames * 0.015f), frames * -0.006f);
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 
@@ -1457,9 +1467,9 @@ namespace Jazz2::Actors
 				return true;
 			}
 		} else if (auto* enemy = runtime_cast<Enemies::EnemyBase*>(other)) {
-			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f && _activeShieldTime <= 0.0f) {
+			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
 				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush or shield is active
-			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || _activeShieldTime > 0.0f) {
+			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || (enemy->IsFrozen() && _speed.Length() >= 9.0f)) {
 				if (!enemy->IsInvulnerable()) {
 					enemy->DecreaseHealth(4, this);
 					handled = true;
@@ -1488,17 +1498,28 @@ namespace Jazz2::Actors
 						}
 					}
 
+					if (_currentSpecialMove == SpecialMoveType::None && _sugarRushLeft <= 0.0f && enemy->IsFrozen()) {
+						_speed = -_speed;
+						if (_speed.Y > -4.0f) {
+							_speed.Y = -4.0f;
+						}
+						SetState(ActorState::CanJump, false);
+					}
+
 					_levelHandler->PlayerExecuteRumble(_playerIndex, "Land"_s);
 				}
-				
-				if (enemy->IsInvulnerable() || (_currentSpecialMove == SpecialMoveType::None && _sugarRushLeft <= 0.0f)) {
+			} else if (enemy->CanHurtPlayer()) {
+				if (!IsInvulnerable()) {
 					// Decrease remaining shield time by 5 secs
 					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+						float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
+						SetInvulnerability(invulnerableTime, false);
+						PlayPlayerSfx("HurtSoft"_s);
+					} else {
+						TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
 					}
 				}
-			} else if (enemy->CanHurtPlayer()) {
-				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
 			}
 		} else if (auto* spring = runtime_cast<Environment::Spring*>(other)) {
 			// Collide only with hitbox here

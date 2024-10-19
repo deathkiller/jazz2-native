@@ -369,6 +369,9 @@
 		"Hurt": {
 			"Paths": [ "Spaz/hurt_1.wav", "Spaz/hurt_2.wav" ]
 		},
+		"HurtSoft": {
+			"Paths": [ "Spaz/oooh.wav" ]
+		},
 		"Die": {
 			"Paths": [ "Spaz/idle_flavor_4.wav" ]
 		},

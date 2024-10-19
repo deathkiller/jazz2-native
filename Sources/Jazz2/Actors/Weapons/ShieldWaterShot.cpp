@@ -66,6 +66,11 @@ namespace Jazz2::Actors::Weapons
 		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
 		}
+		if (params.TilesDestroyed > 0) {
+			if (auto* player = runtime_cast<Player*>(_owner)) {
+				player->AddScore(params.TilesDestroyed * 50);
+			}
+		}
 		if (params.WeaponStrength <= 0) {
 			DecreaseHealth(INT32_MAX);
 			return;

@@ -19,6 +19,6 @@ namespace Jazz2::Actors::Enemies
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr float DefaultSpeed = -2.0f;
+		static constexpr float DefaultSpeed = 2.0f;
 	};
 }

@@ -92,17 +92,21 @@ namespace Jazz2::Actors::Enemies
 
 			if (found) {
 				Vector2f diff = (targetPos - _pos);
-				if (diff.Length() < 280.0f) {
+				float radiusDistance = diff.Length();
+				std::uint32_t distance = (std::uint32_t)std::abs(diff.X);
+				if (distance > 16.0f && radiusDistance < 280.0f) {
 					if (_isWalking) {
 						_speed.X = 0.0f;
 
-						SetTransition((AnimState)1073741825, false, [this, targetPos]() {
+						SetTransition((AnimState)1073741825, false, [this, targetPos, distance]() {
 							SetFacingLeft(targetPos.X < _pos.X);
 
-							SetTransition((AnimState)1073741826, false, [this]() {
+							SetTransition((AnimState)1073741826, false, [this, distance]() {
 								std::shared_ptr<Banana> banana = std::make_shared<Banana>();
-								uint8_t bananaParams[1];
+								uint8_t bananaParams[3];
 								bananaParams[0] = (IsFacingLeft() ? 1 : 0);
+								bananaParams[1] = distance & 0xff;
+								bananaParams[2] = (distance >> 8) & 0xff;
 								banana->OnActivated(ActorActivationDetails(
 									_levelHandler,
 									Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -8 : 8), (std::int32_t)_pos.Y - 8, _renderer.layer() + 2),
@@ -123,10 +127,12 @@ namespace Jazz2::Actors::Enemies
 					} else {
 						SetFacingLeft(targetPos.X < _pos.X);
 
-						SetTransition((AnimState)1073741826, false, [this]() {
+						SetTransition((AnimState)1073741826, false, [this, distance]() {
 							std::shared_ptr<Banana> banana = std::make_shared<Banana>();
-							uint8_t bananaParams[1];
+							uint8_t bananaParams[3];
 							bananaParams[0] = (IsFacingLeft() ? 1 : 0);
+							bananaParams[1] = distance & 0xff;
+							bananaParams[2] = (distance >> 8) & 0xff;
 							banana->OnActivated(ActorActivationDetails(
 								_levelHandler,
 								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 8, _renderer.layer() + 2),
@@ -157,7 +163,8 @@ namespace Jazz2::Actors::Enemies
 		_health = 2;
 		SetFacingLeft(details.Params[0] != 0);
 
-		_speed.X = (IsFacingLeft() ? -8.0f : 8.0f);
+		std::uint32_t distance = details.Params[1] | (details.Params[2] << 8);
+		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * distance / 32;
 		_speed.Y = -3.0f;
 
 		async_await RequestMetadataAsync("Enemy/Monkey"_s);

@@ -2,6 +2,7 @@
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
+#include "../Weapons/ShotBase.h"
 
 #include "../../../nCine/Graphics/RenderQueue.h"
 
@@ -48,7 +49,7 @@ namespace Jazz2::Actors::Solid
 		_lastPos = _originPos;
 
 		IsOneWay = true;
-		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
 
 		switch (_type) {
 			default:
@@ -58,7 +59,10 @@ namespace Jazz2::Actors::Solid
 			case PlatformType::Lab: async_await RequestMetadataAsync("MovingPlatform/Lab"_s); break;
 			case PlatformType::Sonic: async_await RequestMetadataAsync("MovingPlatform/Sonic"_s); break;
 			case PlatformType::Spike: async_await RequestMetadataAsync("MovingPlatform/Spike"_s); break;
-			case PlatformType::SpikeBall: async_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s); break;
+			case PlatformType::SpikeBall:
+				async_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s);
+				_maxHealth = _health = 8;
+				break;
 		}
 
 		SetAnimation((AnimState)0);
@@ -82,22 +86,26 @@ namespace Jazz2::Actors::Solid
 
 	void MovingPlatform::OnUpdate(float timeMult)
 	{
+		UpdateFrozenState(timeMult);
+
 		_lastPos = _pos;
-		_phase -= _speed * timeMult;
-		if (_speed > 0.0f) {
-			if (_phase < -fTwoPi) {
-				_phase += fTwoPi;
+		if (_frozenTimeLeft <= 0.0f) {
+			_phase -= _speed * timeMult;
+			if (_speed > 0.0f) {
+				if (_phase < -fTwoPi) {
+					_phase += fTwoPi;
+				}
+			} else if (_speed < 0.0f) {
+				if (_phase > fTwoPi) {
+					_phase -= fTwoPi;
+				}
 			}
-		} else if (_speed < 0.0f) {
-			if (_phase > fTwoPi) {
-				_phase -= fTwoPi;
+
+			MoveInstantly(GetPhasePosition((std::int32_t)_pieces.size()), MoveType::Absolute | MoveType::Force);
+
+			for (int i = 0; i < _pieces.size(); i++) {
+				_pieces[i].Pos = GetPhasePosition(i);
 			}
-		}
-
-		MoveInstantly(GetPhasePosition((std::int32_t)_pieces.size()), MoveType::Absolute | MoveType::Force);
-
-		for (int i = 0; i < _pieces.size(); i++) {
-			_pieces[i].Pos = GetPhasePosition(i);
 		}
 
 		Vector2f diff = _pos - _lastPos;
@@ -158,6 +166,28 @@ namespace Jazz2::Actors::Solid
 				return true;
 			});
 		}
+	}
+
+	bool MovingPlatform::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (_type == PlatformType::SpikeBall && _health > 0) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+				if (shotBase->GetStrength() > 0) {
+					DecreaseHealth(shotBase->GetStrength(), shotBase);
+					shotBase->DecreaseHealth(INT32_MAX);
+					return true;
+				}
+			}
+		}
+
+		return SolidObjectBase::OnHandleCollision(other);
+	}
+
+	bool MovingPlatform::OnPerish(ActorBase* collider)
+	{
+		CreateParticleDebris();
+
+		return SolidObjectBase::OnPerish(collider);
 	}
 
 	void MovingPlatform::OnUpdateHitbox()
