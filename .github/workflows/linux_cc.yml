@@ -21,14 +21,14 @@ jobs:
         - BuildType: Release
           Platform: aarch64
           Backend: GLFW
-          CC: aarch64-linux-gnu-gcc
-          CXX: aarch64-linux-gnu-g++
+          CC: gcc
+          CXX: g++
           
         - BuildType: Release
           Platform: aarch64
           Backend: SDL2
-          CC: aarch64-linux-gnu-gcc
-          CXX: aarch64-linux-gnu-g++
+          CC: gcc
+          CXX: g++
 
     runs-on: 'ubuntu-latest'
 
@@ -50,12 +50,12 @@ jobs:
 
     - name: 'Configure CMake'
       run: |
-        export CC=${{ matrix.CC }}
-        export CXX=${{ matrix.CXX }}
+        export CC=aarch64-linux-gnu-${{ matrix.CC }}
+        export CXX=aarch64-linux-gnu-${{ matrix.CXX }}
         
         rm -f ./Content/Translations/*.po
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'
       run: |
@@ -67,8 +67,6 @@ jobs:
         cp -f ./_build/jazz2 ./_package/jazz2
         cp -f -r ./Content/ ./_package/Content/
         cp -f ./LICENSE ./_package/LICENSE
-        
-        file ./_package/jazz2
         
         case "${{ matrix.CC }}" in
           gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;
