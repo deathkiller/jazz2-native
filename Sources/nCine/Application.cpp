@@ -354,6 +354,10 @@ namespace nCine
 		char logEntryWithColors[MaxLogEntryLength + 24];
 
 #if defined(DEATH_TARGET_ANDROID)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+
 		android_LogPriority priority;
 		switch (level) {
 			case TraceLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
@@ -364,11 +368,11 @@ namespace nCine
 			default:					priority = ANDROID_LOG_DEBUG; break;
 		}
 
-		std::int32_t result = __android_log_write(priority, NCINE_APP, message.data());
+		std::int32_t result = __android_log_write(priority, NCINE_APP, logEntryWithColors);
 		std::int32_t n = 0;
 		while (result == -11 /*EAGAIN*/ && n < 2) {
-			::usleep(2000); // in microseconds
-			result = __android_log_write(priority, NCINE_APP, message.data());
+			::usleep(2000); // 2ms in microseconds
+			result = __android_log_write(priority, NCINE_APP, logEntryWithColors);
 			n++;
 		}
 #elif defined(DEATH_TARGET_SWITCH)

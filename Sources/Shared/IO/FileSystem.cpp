@@ -380,7 +380,7 @@ namespace Death { namespace IO {
 				var p = UTF8ToString(path, pathLength);
 
 				FS.mkdir(p);
-				FS.mount(IDBFS, { }, p);
+				FS.mount(IDBFS, {}, p);
 
 				FS.syncfs(true, function(error) {
 					callback(error ? 0 : 1);
@@ -476,11 +476,10 @@ namespace Death { namespace IO {
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			if (!nullTerminatedPath.empty()) {
 #	if defined(DEATH_TARGET_ANDROID)
-				const char* assetPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data());
-				if (assetPath != nullptr) {
+				if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 					// It probably supports only files
 					if ((_options & EnumerationOptions::SkipFiles) != EnumerationOptions::SkipFiles) {
-						_assetDir = AndroidAssetStream::OpenDirectory(assetPath);
+						_assetDir = AndroidAssetStream::OpenDirectory(strippedPath);
 						if (_assetDir != nullptr) {
 							std::size_t pathLength = path.size();
 							std::memcpy(_path, path.data(), pathLength);
@@ -730,12 +729,12 @@ namespace Death { namespace IO {
 		char* c = strsep(&p, "/");
 		while (c) {
 			if (d == nullptr) {
-				return { };
+				return {};
 			}
 
 			if (last) {
 				::closedir(d);
-				return { };
+				return {};
 			}
 
 			result[rl] = '/';
@@ -805,7 +804,7 @@ namespace Death { namespace IO {
 
 	String FileSystem::CombinePath(const ArrayView<const StringView> paths)
 	{
-		if (paths.empty()) return { };
+		if (paths.empty()) return {};
 
 		std::size_t count = paths.size();
 		std::size_t resultSize = 0;
@@ -858,7 +857,7 @@ namespace Death { namespace IO {
 
 	StringView FileSystem::GetDirectoryName(const StringView path)
 	{
-		if (path.empty()) return { };
+		if (path.empty()) return {};
 
 		std::size_t pathRootLength = GetPathRootLength(path);
 		std::size_t i = path.size();
@@ -866,7 +865,7 @@ namespace Death { namespace IO {
 		while (i > pathRootLength && (path[i - 1] == '/' || path[i - 1] == '\\')) {
 			i--;
 		}
-		if (i <= pathRootLength) return { };
+		if (i <= pathRootLength) return {};
 		// Try to get the last path separator
 		while (i > pathRootLength && path[--i] != '/' && path[i] != '\\');
 
@@ -875,7 +874,7 @@ namespace Death { namespace IO {
 
 	StringView FileSystem::GetFileName(const StringView path)
 	{
-		if (path.empty()) return { };
+		if (path.empty()) return {};
 
 		std::size_t pathRootLength = GetPathRootLength(path);
 		std::size_t pathLength = path.size();
@@ -883,7 +882,7 @@ namespace Death { namespace IO {
 		while (pathLength > pathRootLength && (path[pathLength - 1] == '/' || path[pathLength - 1] == '\\')) {
 			pathLength--;
 		}
-		if (pathLength <= pathRootLength) return { };
+		if (pathLength <= pathRootLength) return {};
 		std::size_t i = pathLength;
 		// Try to get the last path separator
 		while (i > pathRootLength && path[--i] != '/' && path[i] != '\\');
@@ -897,7 +896,7 @@ namespace Death { namespace IO {
 	StringView FileSystem::GetFileNameWithoutExtension(const StringView path)
 	{
 		StringView fileName = GetFileName(path);
-		if (fileName.empty()) return { };
+		if (fileName.empty()) return {};
 
 		const StringView foundDot = fileName.findLastOr('.', fileName.end());
 		if (foundDot.begin() == fileName.end()) return fileName;
@@ -916,10 +915,10 @@ namespace Death { namespace IO {
 	String FileSystem::GetExtension(const StringView path)
 	{
 		StringView fileName = GetFileName(path);
-		if (fileName.empty()) return { };
+		if (fileName.empty()) return {};
 
 		const StringView foundDot = fileName.findLastOr('.', fileName.end());
-		if (foundDot.begin() == fileName.end()) return { };
+		if (foundDot.begin() == fileName.end()) return {};
 
 		bool initialDots = true;
 		for (char c : fileName.prefix(foundDot.begin())) {
@@ -928,7 +927,7 @@ namespace Death { namespace IO {
 				break;
 			}
 		}
-		if (initialDots) return { };
+		if (initialDots) return {};
 		String result = fileName.suffix(foundDot.begin() + 1);
 
 		// Convert to lower-case
@@ -959,13 +958,13 @@ namespace Death { namespace IO {
 
 	String FileSystem::GetAbsolutePath(const StringView path)
 	{
-		if (path.empty()) return { };
+		if (path.empty()) return {};
 
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
 		DWORD length = ::GetFullPathNameW(Utf8::ToUtf16(path), static_cast<DWORD>(arraySize(buffer)), buffer, nullptr);
 		if (length == 0) {
-			return { };
+			return {};
 		}
 		return Utf8::FromUtf16(buffer, length);
 #elif defined(DEATH_TARGET_SWITCH)
@@ -1046,19 +1045,19 @@ namespace Death { namespace IO {
 				if (errno == ENOENT && p == nullptr) {
 					return String{result, resultLength};
 				}
-				return { };
+				return {};
 			}
 #	if !defined(DEATH_TARGET_SWITCH)
 			// readlink() is missing in libnx
 			if (S_ISLNK(sb.st_mode)) {
 				if (++symlinks > 8) {
 					// Too many symlinks
-					return { };
+					return {};
 				}
 				ssize_t symlinkLength = ::readlink(result, nextToken, sizeof(nextToken) - 1);
 				if (symlinkLength < 0) {
 					// Cannot resolve the symlink
-					return { };
+					return {};
 				}
 				nextToken[symlinkLength] = '\0';
 				if (nextToken[0] == '/') {
@@ -1073,7 +1072,7 @@ namespace Death { namespace IO {
 					if (nextToken[symlinkLength - 1] != '/') {
 						if (static_cast<std::size_t>(symlinkLength) + 1 >= sizeof(nextToken)) {
 							// Path is too long
-							return { };
+							return {};
 						}
 						nextToken[symlinkLength++] = '/';
 					}
@@ -1098,7 +1097,7 @@ namespace Death { namespace IO {
 		char buffer[MaxPathLength];
 		const char* resolvedPath = ::realpath(String::nullTerminatedView(path).data(), buffer);
 		if (resolvedPath == nullptr) {
-			return { };
+			return {};
 		}
 		return buffer;
 #endif
@@ -1117,13 +1116,13 @@ namespace Death { namespace IO {
 		// Get path size (need to set it to 0 to avoid filling nullptr with random data and crashing)
 		std::uint32_t size = 0;
 		if (_NSGetExecutablePath(nullptr, &size) != -1) {
-			return { };
+			return {};
 		}
 
 		// Allocate proper size and get the path. The size includes a null terminator which the String handles on its own, so subtract it
 		String path{NoInit, size - 1};
 		if (_NSGetExecutablePath(path.data(), &size) != 0) {
-			return { };
+			return {};
 		}
 		return path;
 #elif defined(__FreeBSD__)
@@ -1155,7 +1154,7 @@ namespace Death { namespace IO {
 		const std::size_t size = ::GetModuleFileNameW(NULL, path, static_cast<DWORD>(arraySize(path)));
 		return Utf8::FromUtf16(arrayView(path, size));
 #else
-		return { };
+		return {};
 #endif
 	}
 
@@ -1170,7 +1169,7 @@ namespace Death { namespace IO {
 #else
 		char buffer[MaxPathLength];
 		if (::getcwd(buffer, MaxPathLength) == nullptr) {
-			return { };
+			return {};
 		}
 		return buffer;
 #endif
@@ -1191,7 +1190,7 @@ namespace Death { namespace IO {
 	{
 #if defined(DEATH_TARGET_WINDOWS_RT)
 		// This method is not supported on WinRT
-		return { };
+		return {};
 #elif defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
 		::SHGetFolderPathW(HWND_DESKTOP, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, buffer);
@@ -1208,7 +1207,7 @@ namespace Death { namespace IO {
 			return pw->pw_dir;
 		}
 #	endif
-		return { };
+		return {};
 #endif
 	}
 
@@ -1235,14 +1234,14 @@ namespace Death { namespace IO {
 			return CombinePath(home, ".local/share/"_s);
 		}
 
-		return { };
+		return {};
 	}
 #elif defined(DEATH_TARGET_WINDOWS)
 	String FileSystem::GetWindowsDirectory()
 	{
 		wchar_t buffer[MaxPathLength];
 		UINT requiredLength = ::GetSystemWindowsDirectoryW(buffer, static_cast<UINT>(MaxPathLength));
-		if (requiredLength == 0 || requiredLength >= MaxPathLength) return { };
+		if (requiredLength == 0 || requiredLength >= MaxPathLength) return {};
 		return Utf8::FromUtf16(buffer);
 	}
 #endif
@@ -1260,8 +1259,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return AndroidAssetStream::TryOpenDirectory(nullTerminatedPath.data());
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			return AndroidAssetStream::TryOpenDirectory(strippedPath);
 		}
 #	endif
 		struct stat sb;
@@ -1285,8 +1284,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return AndroidAssetStream::TryOpenFile(nullTerminatedPath.data());
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			return AndroidAssetStream::TryOpenFile(strippedPath);
 		}
 #	endif
 		struct stat sb;
@@ -1310,8 +1309,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return AndroidAssetStream::TryOpen(nullTerminatedPath.data());
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			return AndroidAssetStream::TryOpen(strippedPath);
 		}
 #	endif
 		struct stat sb;
@@ -1332,8 +1331,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return AndroidAssetStream::TryOpen(nullTerminatedPath.data());
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			return AndroidAssetStream::TryOpen(strippedPath);
 		}
 #	endif
 		struct stat sb;
@@ -1357,7 +1356,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			// Android assets are not writable
 			return false;
 		}
 #	endif
@@ -1391,8 +1391,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return AndroidAssetStream::TryOpenDirectory(nullTerminatedPath.data());
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			return AndroidAssetStream::TryOpenDirectory(strippedPath);
 		}
 #	endif
 		return (::access(nullTerminatedPath.data(), X_OK) == 0);
@@ -1412,8 +1412,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return AndroidAssetStream::TryOpenFile(nullTerminatedPath.data());
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			return AndroidAssetStream::TryOpenFile(strippedPath);
 		}
 #	endif
 		struct stat sb;
@@ -1437,7 +1437,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			// Android assets are not writable
 			return false;
 		}
 #	endif
@@ -1462,7 +1463,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -1491,7 +1492,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -1553,7 +1554,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -1735,7 +1736,7 @@ namespace Death { namespace IO {
 
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -1813,7 +1814,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -1831,7 +1832,7 @@ namespace Death { namespace IO {
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedOldPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedOldPath) || AndroidAssetStream::TryGetAssetPath(nullTerminatedNewPath)) {
 			return false;
 		}
 #	endif
@@ -1884,7 +1885,7 @@ namespace Death { namespace IO {
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedOldPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedOldPath) || AndroidAssetStream::TryGetAssetPath(nullTerminatedNewPath)) {
 			return false;
 		}
 #	endif
@@ -2034,8 +2035,8 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			return AndroidAssetStream::GetFileSize(nullTerminatedPath.data());
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			return AndroidAssetStream::GetFileSize(strippedPath);
 		}
 #	endif
 		struct stat sb;
@@ -2048,7 +2049,7 @@ namespace Death { namespace IO {
 
 	DateTime FileSystem::GetCreationTime(const StringView path)
 	{
-		if (path.empty()) return { };
+		if (path.empty()) return {};
 
 		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
@@ -2072,7 +2073,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return date;
 		}
 #	endif
@@ -2087,7 +2088,7 @@ namespace Death { namespace IO {
 
 	DateTime FileSystem::GetLastModificationTime(const StringView path)
 	{
-		if (path.empty()) return { };
+		if (path.empty()) return {};
 
 		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
@@ -2111,7 +2112,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return date;
 		}
 #	endif
@@ -2125,7 +2126,7 @@ namespace Death { namespace IO {
 
 	DateTime FileSystem::GetLastAccessTime(const StringView path)
 	{
-		if (path.empty()) return { };
+		if (path.empty()) return {};
 
 		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
@@ -2149,7 +2150,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return date;
 		}
 #	endif
@@ -2178,11 +2179,13 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
-			if (AndroidAssetStream::TryOpenDirectory(nullTerminatedPath.data())) {
-				return (Permission::Read | Permission::Execute);
-			} else if (AndroidAssetStream::TryOpenFile(nullTerminatedPath.data())) {
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+			if (AndroidAssetStream::TryOpenDirectory(strippedPath)) {
+				return Permission::Read | Permission::Execute;
+			} else if (AndroidAssetStream::TryOpenFile(strippedPath)) {
 				return Permission::Read;
+			} else {
+				return Permission::None;
 			}
 		}
 #	endif
@@ -2216,7 +2219,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -2248,7 +2251,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -2280,7 +2283,7 @@ namespace Death { namespace IO {
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
 			return false;
 		}
 #	endif
@@ -2382,9 +2385,8 @@ namespace Death { namespace IO {
 	std::unique_ptr<Stream> FileSystem::Open(const StringView path, FileAccess mode)
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		StringView assetName = AndroidAssetStream::TryGetAssetPath(String::nullTerminatedView(path).data());
-		if (!assetName.empty()) {
-			return std::make_unique<AndroidAssetStream>(assetName, mode);
+		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(path)) {
+			return std::make_unique<AndroidAssetStream>(strippedPath, mode);
 		}
 #endif
 		return std::make_unique<FileStream>(path, mode);
@@ -2419,13 +2421,13 @@ namespace Death { namespace IO {
 				break;
 			default:
 				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
-				return { };
+				return {};
 		}
 
 		const std::int32_t fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
 			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
-			return { };
+			return {};
 		}
 
 		// Explicitly fail if opening directories for reading on Unix to prevent silent errors
@@ -2433,7 +2435,7 @@ namespace Death { namespace IO {
 		if (::fstat(fd, &sb) == 0 && S_ISDIR(sb.st_mode)) {
 			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
 			::close(fd);
-			return { };
+			return {};
 		}
 
 		const off_t currentPos = ::lseek(fd, 0, SEEK_CUR);
@@ -2447,7 +2449,7 @@ namespace Death { namespace IO {
 			data = nullptr;
 		} else if ((data = reinterpret_cast<char*>(::mmap(nullptr, size, prot, MAP_SHARED, fd, 0))) == MAP_FAILED) {
 			::close(fd);
-			return { };
+			return {};
 		}
 
 		return Array<char, MapDeleter>{ data, size, MapDeleter { fd }};
@@ -2468,14 +2470,14 @@ namespace Death { namespace IO {
 				break;
 			default:
 				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
-				return { };
+				return {};
 		}
 
 		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), fileDesiredAccess, shareMode, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (hFile == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
 			LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
-			return { };
+			return {};
 		}
 
 		const std::size_t size = ::GetFileSize(hFile, nullptr);
@@ -2485,14 +2487,14 @@ namespace Death { namespace IO {
 		HANDLE hMap;
 		char* data;
 		if (size == 0) {
-			hMap = { };
+			hMap = {};
 			data = nullptr;
 		} else {
 			if (!(hMap = ::CreateFileMappingW(hFile, nullptr, protect, 0, 0, nullptr))) {
 				DWORD error = ::GetLastError();
 				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
 				::CloseHandle(hFile);
-				return { };
+				return {};
 			}
 
 			if (!(data = reinterpret_cast<char*>(::MapViewOfFile(hMap, mapDesiredAccess, 0, 0, 0)))) {
@@ -2500,11 +2502,11 @@ namespace Death { namespace IO {
 				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
 				::CloseHandle(hMap);
 				::CloseHandle(hFile);
-				return { };
+				return {};
 			}
 		}
 
-		return Containers::Array<char, MapDeleter>{ data, size, MapDeleter { hFile, hMap }};
+		return Containers::Array<char, MapDeleter>{data, size, MapDeleter{hFile, hMap}};
 #	endif
 	}
 #endif
@@ -2538,7 +2540,7 @@ namespace Death { namespace IO {
 		if (!DirectoryExists(_savePath)) {
 			// Trying to create the data directory
 			if (!CreateDirectories(_savePath)) {
-				_savePath = { };
+				_savePath = {};
 			}
 		}
 #elif defined(DEATH_TARGET_APPLE)
