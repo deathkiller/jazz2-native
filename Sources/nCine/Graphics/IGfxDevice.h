@@ -230,11 +230,11 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-		static int emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);
-		static int emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
+		static bool emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);
+		static bool emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
 
 #	if defined(WITH_GLFW)
-		static int emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData);
+		static bool emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData);
 #	endif
 #endif
 	};

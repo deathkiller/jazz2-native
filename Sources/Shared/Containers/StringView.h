@@ -1,6 +1,7 @@
 // Copyright © 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-//             2017, 2018, 2019, 2020, 2021, 2022, 2023
+//             2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024
 //           Vladimír Vondruš <mosra@centrum.cz> and contributors
+// Copyright © 2020-2024 Dan R.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -841,7 +842,7 @@ namespace Death { namespace Containers {
 
 			The returned instance has both @ref StringViewFlags::Global and @ref StringViewFlags::NullTerminated set.
 		*/
-		constexpr StringView operator"" _s(const char* data, std::size_t size) {
+		constexpr StringView operator""_s(const char* data, std::size_t size) {
 			// Using plain bit ops instead of EnumSet to speed up debug builds
 			return StringView{data, size, StringViewFlags(std::size_t(StringViewFlags::Global) | std::size_t(StringViewFlags::NullTerminated))};
 		}

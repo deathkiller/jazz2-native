@@ -17,7 +17,7 @@
 namespace nCine
 {
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-	EM_BOOL IGfxDevice::emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData)
+	bool IGfxDevice::emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData)
 	{
 #	if defined(DEATH_TRACE)
 		double cssWidth = 0.0;
@@ -37,10 +37,10 @@ namespace nCine
 			gfxDevice->setResolutionInternal(static_cast<int>(event->windowInnerWidth * pixelRatio), static_cast<int>(event->windowInnerHeight * pixelRatio));
 #endif
 		}
-		return 1;
+		return true;
 	}
 
-	EM_BOOL IGfxDevice::emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
+	bool IGfxDevice::emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
 	{
 #	if defined(DEATH_TRACE)
 		double cssWidth = 0.0;
@@ -62,18 +62,18 @@ namespace nCine
 #endif
 		}
 
-		return 1;
+		return true;
 	}
 
 #	if defined(WITH_GLFW)
-	EM_BOOL IGfxDevice::emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData)
+	bool IGfxDevice::emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData)
 	{
 		if (eventType == EMSCRIPTEN_EVENT_FOCUS) {
 			theApplication().SetFocus(true);
 		} else if (eventType == EMSCRIPTEN_EVENT_BLUR) {
 			theApplication().SetFocus(false);
 		}
-		return 1;
+		return true;
 	}
 #	endif
 #endif
