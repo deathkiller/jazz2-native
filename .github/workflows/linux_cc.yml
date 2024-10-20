@@ -1,4 +1,4 @@
-name: 'Linux (Cross-compile)'
+name: 'Linux'
 
 on:
   push:
@@ -21,16 +21,14 @@ jobs:
         - BuildType: Release
           Platform: aarch64
           Backend: GLFW
-          Distro: ubuntu_latest
-          CC: gcc
-          CXX: g++
+          CC: aarch64-linux-gnu-gcc
+          CXX: aarch64-linux-gnu-g++
           
         - BuildType: Release
           Platform: aarch64
           Backend: SDL2
-          Distro: ubuntu_latest
-          CC: gcc
-          CXX: g++
+          CC: aarch64-linux-gnu-gcc
+          CXX: aarch64-linux-gnu-g++
 
     runs-on: 'ubuntu-latest'
 
@@ -40,35 +38,26 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Configure CMake and Build'
-      uses: uraimo/run-on-arch-action@v2
-      with:
-        arch: ${{ matrix.Platform }}
-        distro: ${{ matrix.Distro }}
-        githubToken: ${{ github.token }}
-        dockerRunArgs: --volume "${PWD}:/_current"
+    - name: 'Create Build Environment'
+      run: |
+        sudo apt update -y
+        sudo apt install crossbuild-essential-arm64
+        sudo dpkg --add-architecture arm64
+        sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+        sudo apt install -y cmake curl libgl1-mesa-dev:arm64 libopenmpt-dev:arm64 zlib1g:arm64
+
+    - name: 'Configure CMake'
+      run: |
+        export CC=${{ matrix.CC }}
+        export CXX=${{ matrix.CXX }}
         
-        install: |
-          case "${{ matrix.Distro }}" in
-            ubuntu*|jessie|stretch|buster|bullseye)
-              apt-get update -y
-              apt-get install -y cmake curl git g++ libgles2-mesa-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev rpm
-              ;;
-          esac
+        rm -f ./Content/Translations/*.po
         
-        run: |
-          echo "::group::Configure CMake"
-          export CC=${{ matrix.CC }}
-          export CXX=${{ matrix.CXX }}
-          
-          git config --global --add safe.directory '*'
-          cd /_current/
-          rm -f ./Content/Translations/*.po
-          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_DOWNLOAD_DEPENDENCIES=OFF
-          echo "::endgroup::"
-          echo "::group::Build"
-          make -j $(nproc) -C ./_build/
-          echo "::endgroup::"
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
 
     - name: 'Create Package'
       run: |
@@ -77,8 +66,17 @@ jobs:
         cp -f -r ./Content/ ./_package/Content/
         cp -f ./LICENSE ./_package/LICENSE
         
+        file ./_package/jazz2
+        
+        case "${{ matrix.CC }}" in
+          gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;
+          clang ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_Clang" ;;
+          * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_${{ matrix.CC }}" ;;
+        esac
+        echo "artifactPath=$artifactPath" >> $GITHUB_ENV
+        
     - name: 'Upload Package'
       uses: actions/upload-artifact@v4
       with:
-        name: Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}
+        name: ${{ env.artifactPath }}
         path: ./_package/

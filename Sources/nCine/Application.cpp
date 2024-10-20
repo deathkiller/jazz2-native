@@ -260,10 +260,12 @@ namespace nCine
 			default:					levelIdentifier = 'D'; break;
 		}
 
-		length += snprintf(dest + length, MaxLogEntryLength - length - 1, !threadId.empty() ? "[%c]%s}" : "[%c]", levelIdentifier, threadId.data());
+		std::int32_t partLength = snprintf(dest + length, MaxLogEntryLength - length - 1, !threadId.empty() ? "[%c]%s}" : "[%c]", levelIdentifier, threadId.data());
+		length += partLength;
 
-		while (length < 23) {
+		while (partLength < 10) {
 			dest[length++] = ' ';
+			partLength++;
 		}
 		dest[length++] = ' ';
 	}
@@ -516,22 +518,22 @@ namespace nCine
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Allow to attach custom target using Application::AttachTraceTarget()
 		if (__logFile != nullptr) {
-			std::int32_t length2 = 0;
-			AppendDateTime(logEntryWithColors, length2, timestamp);
-			logEntryWithColors[length2++] = ' ';
-			AppendLevel(logEntryWithColors, length2, level, threadId);
-			AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
-			logEntryWithColors[length2++] = '\n';
+			std::int32_t length3 = 0;
+			AppendDateTime(logEntryWithColors, length3, timestamp);
+			logEntryWithColors[length3++] = ' ';
+			AppendLevel(logEntryWithColors, length3, level, threadId);
+			AppendPart(logEntryWithColors, length3, message.data(), (std::int32_t)message.size());
+			logEntryWithColors[length3++] = '\n';
 
-			__logFile->Write(logEntryWithColors, length2);
+			__logFile->Write(logEntryWithColors, length3);
 		}
 #endif
 
 #if defined(WITH_IMGUI)
 		auto* debugOverlay = theApplication().debugOverlay_.get();
 		if (debugOverlay != nullptr) {
-			std::int32_t length2 = 0;
-			AppendDateTime(logEntryWithColors, length2, timestamp);
+			std::int32_t length4 = 0;
+			AppendDateTime(logEntryWithColors, length4, timestamp);
 
 			debugOverlay->log(level, logEntryWithColors, threadId, message);
 		}
