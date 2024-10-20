@@ -228,9 +228,7 @@ namespace nCine
 	bool AndroidInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
-		ASSERT_MSG(joyId < int(MaxNumJoysticks), "joyId is %d and the maximum is %u", joyId, MaxNumJoysticks - 1);
-
-		return (joystickStates_[joyId].deviceId_ != -1);
+		return (joyId < MaxNumJoysticks && joystickStates_[joyId].deviceId_ != -1);
 	}
 
 	const char* AndroidInputManager::joyName(int joyId) const

@@ -170,7 +170,7 @@ namespace nCine
 		}
 
 	private:
-		static constexpr int MaxNumJoysticks = 4;
+		static constexpr int MaxNumJoysticks = 6;
 
 		static ASensorManager* sensorManager_;
 		static const ASensor* accelerometerSensor_;

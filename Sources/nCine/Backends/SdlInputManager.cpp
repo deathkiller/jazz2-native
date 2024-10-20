@@ -253,9 +253,7 @@ namespace nCine
 	bool SdlInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
-		ASSERT_MSG(joyId < std::int32_t(MaxNumJoysticks), "joyId is %d and the maximum is %u", joyId, MaxNumJoysticks - 1);
-
-		return (sdlJoysticks_[joyId] && SDL_JoystickGetAttached(sdlJoysticks_[joyId]));
+		return (joyId < MaxNumJoysticks && sdlJoysticks_[joyId] && SDL_JoystickGetAttached(sdlJoysticks_[joyId]));
 	}
 
 	const char* SdlInputManager::joyName(int joyId) const

@@ -22,8 +22,8 @@ jobs:
 
     runs-on: 'ubuntu-latest'
     container: 
-      #image: devkitpro/devkita64:latest
-      image: devkitpro/devkita64:20240120
+      #image: devkitpro/devkita64:20240120
+      image: devkitpro/devkita64:latest
       options: --user root
 
     steps:

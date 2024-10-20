@@ -161,9 +161,7 @@ namespace nCine
 	bool GlfwInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
-		ASSERT_MSG(GLFW_JOYSTICK_1 + joyId <= GLFW_JOYSTICK_LAST,
-					 "joyId is %d and the maximum is %d", joyId, GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1);
-		return (glfwJoystickPresent(GLFW_JOYSTICK_1 + joyId) != 0);
+		return (GLFW_JOYSTICK_1 + joyId <= GLFW_JOYSTICK_LAST && glfwJoystickPresent(GLFW_JOYSTICK_1 + joyId) != 0);
 	}
 
 	const char* GlfwInputManager::joyName(int joyId) const

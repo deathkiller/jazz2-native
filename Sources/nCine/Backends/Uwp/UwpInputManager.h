@@ -117,6 +117,7 @@ namespace nCine
 
 		bool isJoyPresent(int joyId) const override
 		{
+			ASSERT(joyId >= 0);
 			return (joyId < MaxNumJoysticks && _gamepads[joyId].Connected);
 		}
 		
