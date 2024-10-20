@@ -825,6 +825,11 @@ namespace Death { namespace Trace {
 		_internalLogger.DetachSink(sink);
 	}
 
+	void Flush()
+	{
+		_internalLogger.Flush();
+	}
+
 }}
 
 void DEATH_TRACE(TraceLevel level, const char* fmt, ...)

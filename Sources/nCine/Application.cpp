@@ -1010,7 +1010,7 @@ namespace nCine
 
 #	if defined(WITH_BACKWARD)
 				if (__consoleType >= ConsoleType::EscapeCodes) {
-					//__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
+					__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 				}
 #	endif
 			}
@@ -1022,7 +1022,7 @@ namespace nCine
 		if (__logFile = fs::Open(targetPath, FileAccess::Write)) {
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
-			//__eh.Destination = static_cast<FileStream*>(__logFile.get())->GetHandle();
+			__eh.Destination = static_cast<FileStream*>(__logFile.get())->GetHandle();
 #	endif
 		} else {
 			__logFile = nullptr;
@@ -1094,6 +1094,16 @@ namespace nCine
 
 	void Application::ShutdownTrace()
 	{
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (__logFile != nullptr) {
+			Trace::Flush();
+#		if defined(WITH_BACKWARD)
+			__eh.Destination = nullptr;
+#		endif
+			__logFile = nullptr;
+		}
+#	endif
+
 		Trace::DetachSink(this);
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
