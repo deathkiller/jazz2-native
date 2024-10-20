@@ -45,6 +45,9 @@ namespace Death
 
 		/** @brief Unregisters the sink and uninitializes logger if no sink left */
 		void DetachSink(ITraceSink* sink);
+
+		/** @brief Flushes and waits until all prior items are written to all sinks */
+		void Flush();
 	}
 }
 
