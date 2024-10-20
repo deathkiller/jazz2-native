@@ -163,31 +163,25 @@ namespace Death { namespace IO {
 		_internalDataPath = state->activity->internalDataPath;
 	}
 
-	const char* AndroidAssetStream::TryGetAssetPath(const char* path)
+	Containers::StringView AndroidAssetStream::TryGetAssetPath(const Containers::StringView path)
 	{
-		DEATH_ASSERT(path != nullptr, "path is null", nullptr);
-		if (strncmp(path, Prefix.data(), Prefix.size()) == 0) {
-			// Skip leading path separator character
-			return (path[7] == '/' || path[7] == '\\' ? path + 8 : path + 7);
+		if (path.hasPrefix(Prefix)) {
+			std::size_t prefixLength = Prefix.size();
+			return path.exceptPrefix(prefixLength < path.size() && (path[prefixLength] == '/' || path[prefixLength] == '\\')
+						? prefixLength + 1
+						: prefixLength);
 		}
-		return nullptr;
+		return {};
 	}
 
-	bool AndroidAssetStream::TryOpen(const char* path)
+	bool AndroidAssetStream::TryOpen(const Containers::StringView path)
 	{
-		DEATH_ASSERT(path != nullptr, "path is null", false);
 		return (TryOpenFile(path) || TryOpenDirectory(path));
 	}
 
-	bool AndroidAssetStream::TryOpenFile(const char* path)
+	bool AndroidAssetStream::TryOpenFile(const Containers::StringView path)
 	{
-		DEATH_ASSERT(path != nullptr, "path is null", false);
-		const char* strippedPath = TryGetAssetPath(path);
-		if (strippedPath == nullptr) {
-			return false;
-		}
-
-		AAsset* asset = AAssetManager_open(_assetManager, strippedPath, AASSET_MODE_UNKNOWN);
+		AAsset* asset = AAssetManager_open(_assetManager, path.data(), AASSET_MODE_UNKNOWN);
 		if (asset != nullptr) {
 			AAsset_close(asset);
 			return true;
@@ -196,21 +190,9 @@ namespace Death { namespace IO {
 		return false;
 	}
 
-	bool AndroidAssetStream::TryOpenDirectory(const char* path)
+	bool AndroidAssetStream::TryOpenDirectory(const Containers::StringView path)
 	{
-		DEATH_ASSERT(path != nullptr, "path is null", false);
-		const char* strippedPath = TryGetAssetPath(path);
-		if (strippedPath == nullptr) {
-			return false;
-		}
-
-		AAsset* asset = AAssetManager_open(_assetManager, strippedPath, AASSET_MODE_UNKNOWN);
-		if (asset != nullptr) {
-			AAsset_close(asset);
-			return false;
-		}
-
-		AAssetDir* assetDir = AAssetManager_openDir(_assetManager, strippedPath);
+		AAssetDir* assetDir = AAssetManager_openDir(_assetManager, path.data());
 		if (assetDir != nullptr) {
 			AAssetDir_close(assetDir);
 			return true;
@@ -219,17 +201,10 @@ namespace Death { namespace IO {
 		return false;
 	}
 
-	std::int64_t AndroidAssetStream::GetFileSize(const char* path)
+	std::int64_t AndroidAssetStream::GetFileSize(const Containers::StringView path)
 	{
-		DEATH_ASSERT(path != nullptr, "path is null", 0);
-
 		off64_t assetLength = 0;
-		const char* strippedPath = TryGetAssetPath(path);
-		if (strippedPath == nullptr) {
-			return assetLength;
-		}
-
-		AAsset* asset = AAssetManager_open(_assetManager, strippedPath, AASSET_MODE_UNKNOWN);
+		AAsset* asset = AAssetManager_open(_assetManager, path.data(), AASSET_MODE_UNKNOWN);
 		if (asset != nullptr) {
 			assetLength = AAsset_getLength64(asset);
 			AAsset_close(asset);
@@ -238,10 +213,9 @@ namespace Death { namespace IO {
 		return assetLength;
 	}
 
-	AAssetDir* AndroidAssetStream::OpenDirectory(const char* dirName)
+	AAssetDir* AndroidAssetStream::OpenDirectory(const Containers::StringView path)
 	{
-		DEATH_ASSERT(dirName != nullptr, "dirName is null", nullptr);
-		return AAssetManager_openDir(_assetManager, dirName);
+		return AAssetManager_openDir(_assetManager, path.data());
 	}
 
 	void AndroidAssetStream::CloseDirectory(AAssetDir* assetDir)

@@ -14,7 +14,12 @@ namespace Death
 		class LoggerBackend;
 	}
 
-	/** @brief Interface for sink to be used by logger writing to it */
+	/**
+		@brief Interface for sink to be used by logger writing to it
+		
+		The sink needs to be registered using @ref Trace::AttachSink() and unregistered using @ref Trace::DetachSink().
+		Then all registered sinks are automatically used by `LOGD`/`LOGI`/`LOGW`/`LOGE` calls and asserts.
+	*/
 	class ITraceSink
 	{
 		friend class Trace::LoggerBackend;

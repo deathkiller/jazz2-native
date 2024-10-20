@@ -55,7 +55,7 @@ namespace Death { namespace IO {
 		static void InitializeAssetManager(struct android_app* state);
 
 		/** @brief Returns the path of an Android asset without the prefix */
-		static const char* TryGetAssetPath(const char* path);
+		static Containers::StringView TryGetAssetPath(const Containers::StringView path);
 
 		/** @brief Returns the internal data path for the application */
 		static const char* GetInternalDataPath() {
@@ -63,15 +63,15 @@ namespace Death { namespace IO {
 		}
 
 		/** @brief Checks if an asset path exists as a file or as a directory and can be opened */
-		static bool TryOpen(const char* path);
+		static bool TryOpen(const Containers::StringView path);
 		/** @brief Checks if an asset path exists and can be opened as a file */
-		static bool TryOpenFile(const char* path);
+		static bool TryOpenFile(const Containers::StringView path);
 		/** @brief Checks if an asset path exists and can be opened as a directory */
-		static bool TryOpenDirectory(const char* path);
+		static bool TryOpenDirectory(const Containers::StringView path);
 		/** @brief Returns the total size of the asset data */
-		static std::int64_t GetFileSize(const char* path);
+		static std::int64_t GetFileSize(const Containers::StringView path);
 
-		static AAssetDir* OpenDirectory(const char* dirName);
+		static AAssetDir* OpenDirectory(const Containers::StringView path);
 		static void CloseDirectory(AAssetDir* assetDir);
 		static void RewindDirectory(AAssetDir* assetDir);
 		static const char* GetNextFileName(AAssetDir* assetDir);

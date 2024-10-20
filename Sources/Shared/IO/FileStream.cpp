@@ -208,12 +208,12 @@ namespace Death { namespace IO {
 #else
 #	if defined(DEATH_USE_NOLOCK_IN_FILE)
 #		if defined(DEATH_TARGET_WINDOWS)
-		return _fflush_nolock(_handle) == 0;
+		return ::_fflush_nolock(_handle) == 0;
 #		else
-		return fflush_unlocked(_handle) == 0;
+		return ::fflush_unlocked(_handle) == 0;
 #		endif
 #	else
-		return fflush(_handle) == 0;
+		return ::fflush(_handle) == 0;
 #	endif
 #endif
 	}
