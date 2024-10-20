@@ -52,8 +52,8 @@ jobs:
 
     - name: 'Create Build Environment'
       run: |
-        sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
+        sudo apt update -y
+        sudo apt install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
 
     - if: matrix.CC == 'clang'
       name: 'Configure Clang Compiler'

@@ -34,8 +34,8 @@ jobs:
 
     - name: 'Create Build Environment'
       run: |
-        sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev
+        sudo apt update -y
+        sudo apt install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev
 
     - name: 'Configure CMake'
       run: |
