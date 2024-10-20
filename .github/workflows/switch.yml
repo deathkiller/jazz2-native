@@ -37,6 +37,7 @@ jobs:
         rm -f ./Content/Translations/*.po
         
         git config --global --add safe.directory '*'
+        # DEATH_TRACE_ASYNC is causing crashes on startup, so it's disabled for now
         cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D DEATH_TRACE_ASYNC=OFF
 
     - name: 'Build'
