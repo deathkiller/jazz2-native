@@ -304,7 +304,7 @@ namespace Jazz2::Actors
 		void CheckSuspendState(float timeMult);
 		void OnUpdatePhysics(float timeMult);
 		void OnUpdateTimers(float timeMult);
-		void OnHandleMovement(float timeMult, bool areaWeaponAllowed);
+		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev);
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock);
 		void DoWarpOut(Vector2f pos, WarpFlags flags);
