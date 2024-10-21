@@ -238,6 +238,7 @@ namespace Jazz2::Actors
 			_lastExitType = ExitType::None;
 		}
 
+		bool canJumpPrev = CanJump();
 		OnUpdatePhysics(timeMult);
 
 		UpdateAnimation(timeMult);
@@ -264,7 +265,7 @@ namespace Jazz2::Actors
 		}
 
 		OnUpdateTimers(timeMult);
-		OnHandleMovement(timeMult, areaWeaponAllowed);
+		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev);
 
 		// Handle weapon switching
 		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog) {
@@ -658,7 +659,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::OnHandleMovement(float timeMult, bool areaWeaponAllowed)
+	void Player::OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev)
 	{
 		// Move
 		if (PreferencesCache::ToggleRunAction) {
@@ -779,7 +780,8 @@ namespace Jazz2::Actors
 			// Look-up
 			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Up)) {
 				if (!_wasUpPressed && _dizzyTime <= 0.0f) {
-					if ((CanJump() || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
+					// Check also previous CanJump to avoid animation glitches on Springs
+					if (((canJumpPrev && CanJump()) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 						_wasUpPressed = true;
 
 						SetAnimation(AnimState::Lookup | (_currentAnimation->State & AnimState::Hook));
@@ -804,7 +806,8 @@ namespace Jazz2::Actors
 
 					SetState(ActorState::ApplyGravitation, true);
 				} else if (_dizzyTime <= 0.0f) {
-					if (CanJump()) {
+					// Check also previous CanJump to avoid animation glitches on Springs
+					if (canJumpPrev && CanJump()) {
 						if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 							_wasDownPressed = true;
 							if (_fireFramesLeft > 0.0f) {
@@ -845,7 +848,7 @@ namespace Jazz2::Actors
 					if (_suspendType == SuspendType::None && _jumpTime <= 0.0f) {
 						if (_isLifting && CanJump() && _currentSpecialMove == SpecialMoveType::None) {
 							SetState(ActorState::CanJump, false);
-							SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
+							SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
 							PlayPlayerSfx("Jump"_s);
 							_carryingObject = nullptr;
 
@@ -1772,6 +1775,7 @@ namespace Jazz2::Actors
 				CancelTransition();
 			}
 
+			SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
 			SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
 			_levelHandler->PlayerExecuteRumble(_playerIndex, "Spring"_s);
 			_controllableTimeout = 2.0f;
@@ -1813,6 +1817,7 @@ namespace Jazz2::Actors
 			} else {
 				removeSpecialMove = true;
 				_isSpring = true;
+				SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
 			}
 
 			_levelHandler->PlayerExecuteRumble(_playerIndex, "Spring"_s);
