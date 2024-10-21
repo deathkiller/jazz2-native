@@ -1729,12 +1729,12 @@ msgstr "Scriptaggio"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
 msgid "Allow Cheats"
-msgstr ""
+msgstr "Permetti Trucchi"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:52
 msgid "Overwrite Episode Completion"
-msgstr ""
+msgstr "Sovrascrivi Completamento Episodio"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
@@ -1760,26 +1760,26 @@ msgstr "Rigenera la Cache"
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "\f[c:#d86664]Yes\f[/c]"
-msgstr ""
+msgstr "\f[c:#d86664]Sì\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "No"
-msgstr ""
+msgstr "No"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:147
 msgid "No Cheats Only"
-msgstr ""
+msgstr "Solo senza Trucchi"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
 msgid "Higher Score Only"
-msgstr ""
+msgstr "Solo in caso di Punteggi Alti"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
 msgid "Always"
-msgstr ""
+msgstr "Sempre"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19
