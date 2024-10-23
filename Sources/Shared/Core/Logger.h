@@ -51,8 +51,8 @@
 #		include <sys/mman.h>
 #	endif
 
-	// _mm_clflushopt also requires "-mclflushopt" option on GCC/clang, and is undefined on clang-cl
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
+	// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on clang-cl
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 #		if defined(DEATH_TARGET_MSVC)
 #			include <intrin.h>
 #		else
@@ -155,7 +155,7 @@ namespace Death { namespace Trace {
 			Messages that fail the above check remain in the lock-free queue and they are checked again in the next iteration.
 			The timestamp check is performed with microsecond precision.
 		*/
-		static constexpr std::chrono::microseconds LogTimestampOrderingGracePeriod{1};
+		static constexpr std::chrono::microseconds LogTimestampOrderingGracePeriod{250};
 
 		/** @brief Special value for level to force immediate flushing of all buffers */
 		static constexpr TraceLevel FlushRequired = (TraceLevel)UINT8_MAX;
@@ -314,7 +314,7 @@ namespace Death { namespace Trace {
 				_atomicWriterPos.store(0);
 				_atomicReaderPos.store(0);
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 				// Remove log memory from cache
 				for (std::uint64_t i = 0; i < (2ull * static_cast<std::uint64_t>(_capacity)); i += CacheLineSize) {
 					_mm_clflush(_storage + i);
@@ -362,7 +362,7 @@ namespace Death { namespace Trace {
 				// Set the atomic flag, so the reader can see write
 				_atomicWriterPos.store(_writerPos, std::memory_order_release);
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 				// Flush writen cache lines
 				flushCacheLines(_lastFlushedWriterPos, _writerPos);
 
@@ -396,7 +396,7 @@ namespace Death { namespace Trace {
 				if (static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) {
 					_atomicReaderPos.store(_readerPos, std::memory_order_release);
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 					flushCacheLines(_lastFlushedReaderPos, _readerPos);
 #	endif
 				}
@@ -446,7 +446,7 @@ namespace Death { namespace Trace {
 			mutable T _writerPosCache{0};
 			T _lastFlushedReaderPos{0};
 
-#	if defined(DEATH_TARGET_X86) && !defined(DEATH_TARGET_32BIT) && !defined(DEATH_TARGET_CLANG_CL)
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 			void flushCacheLines(T& last, T offset)
 			{
 				T lastDiff = last - (last & CacheLineMask);

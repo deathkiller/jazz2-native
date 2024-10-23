@@ -241,7 +241,7 @@ namespace nCine
 		auto p = dt.Partitioned();
 
 		length += snprintf(dest + length, MaxLogEntryLength - length - 1,
-			"%02u:%02u:%02u.%03u'%03u", p.Hour, p.Minute, p.Second, p.Millisecond, (std::uint32_t)(timestamp / 1000ULL) % 1000);
+			"%02u:%02u:%02u.%03u", p.Hour, p.Minute, p.Second, p.Millisecond);
 	}
 
 	static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, StringView threadId)
