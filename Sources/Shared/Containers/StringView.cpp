@@ -479,6 +479,7 @@ namespace Death { namespace Containers {
 					// the previous already-searched elements
 					if (i < end) {
 						DEATH_DEBUG_ASSERT(i + 16 > end);
+						i = end - 16;
 						const uint8x16_t chunk = vld1q_u8(reinterpret_cast<const std::uint8_t*>(i));
 						const uint16x8_t eq16 = vreinterpretq_u16_u8(vceqq_u8(chunk, vn1));
 						const uint64x1_t shrn64 = vreinterpret_u64_u8(vshrn_n_u16(eq16, 4));
@@ -575,9 +576,9 @@ namespace Death { namespace Containers {
 
 					// Handle remaining less than four vectors
 					for (; i + 16 <= end; i += 16) {
-						const v128_t chunk = wasm_v128_load(data);
+						const v128_t chunk = wasm_v128_load(i);
 						if (const int mask = wasm_i8x16_bitmask(wasm_i8x16_eq(chunk, vn1)))
-							return data + __builtin_ctz(mask);
+							return i + __builtin_ctz(mask);
 					}
 
 					// Handle remaining less than a vector with an unaligned search, again overlapping back with the previous

@@ -145,11 +145,10 @@
 #	define DEATH_TARGET_MINGW
 #endif
 
-// First checking the GCC/Clang builtin, if available. As a fallback do an architecture-based check, which is mirrored
+// First checking the GCC/Clang built-in, if available. As a fallback do an architecture-based check, which is mirrored
 // from SDL_endian.h. Doing this *properly* would mean we can't decide this at compile time as some architectures allow
 // switching endianness at runtime (and worse, have per-page endianness). So let's pretend we never saw this article:
 // https://en.wikipedia.org/wiki/Endianness#Bi-endianness
-// For extra safety this gets runtime-tested in TargetTest, so when porting to a new platform, make sure you run that test.
 #if defined(__BYTE_ORDER__)
 #	if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #		define DEATH_TARGET_BIG_ENDIAN
@@ -187,7 +186,7 @@
 
 // On MSVC: https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros
 #elif defined(DEATH_TARGET_MSVC)
-// _M_IX86_FP is defined only on 32bit, 64bit has SSE2 always (so we need to detect 64bit instead: https://stackoverflow.com/a/18570487)
+// _M_IX86_FP is defined only on 32-bit, 64-bit has SSE2 always (so we need to detect 64-bit instead: https://stackoverflow.com/a/18570487)
 #	if (defined(_M_IX86_FP) && _M_IX86_FP == 2) || defined(_M_AMD64) || defined(_M_X64)
 #		define DEATH_TARGET_SSE2
 #	endif
@@ -257,8 +256,8 @@
 
 // On GCC, F16C and FMA have its own define, on MSVC FMA is implied by /arch:AVX2 (https://docs.microsoft.com/en-us/cpp/build/reference/arch-x86),
 // no mention of F16C but https://walbourn.github.io/directxmath-f16c-and-fma/ says it's like that so I'll believe that.
-// However, comments below https://stackoverflow.com/a/50829580 say there is a Via processor with AVX2 but no FMA, so then
-// the __AVX2__ check isn't really bulletproof. Use runtime detection where possible, please.
+// However, comments below https://stackoverflow.com/a/50829580 say there is a Via processor with AVX2 but no FMA,
+// so then the __AVX2__ check isn't really bulletproof. Use runtime detection where possible, please.
 #if defined(DEATH_TARGET_GCC)
 #	if defined(__F16C__)
 #		define DEATH_TARGET_AVX_F16C
@@ -283,15 +282,13 @@
 
 // https://stackoverflow.com/a/37056771, confirmed on Android NDK Clang that __ARM_NEON is indeed still set.
 // For MSVC, according to https://docs.microsoft.com/en-us/cpp/intrinsics/arm-intrinsics I would assume that since they
-// use a standard header, they also expose the standard macro name, even though not listed among their predefined macros?
-// Needs testing, though.
+// use a standard header, they also expose the standard macro name, even though not listed among their predefined macros.
 #elif defined(DEATH_TARGET_ARM)
 #	if defined(__ARM_NEON)
 #		define DEATH_TARGET_NEON
-// NEON FMA is available only if __ARM_FEATURE_FMA is defined and some bits of __ARM_NEON_FP as well
-// (ARM C Language Extensions 1.1, §6.5.5: https://developer.arm.com/documentation/ihi0053/b/). On ARM64 NEON is
-// implicitly supported and __ARM_NEON_FP might not be defined (Android Clang defines it but GCC 9 on Ubuntu ARM64 not),
-// so check for __aarch64__ as well.
+// NEON FMA is available only if __ARM_FEATURE_FMA is defined and some bits of __ARM_NEON_FP as well (ARM C Language Extensions
+// 1.1, §6.5.5: https://developer.arm.com/documentation/ihi0053/b/). On ARM64 NEON is implicitly supported and __ARM_NEON_FP
+// might not be defined (Android Clang defines it but GCC 9 on Ubuntu ARM64 not), so check for __aarch64__ as well.
 #		if defined(__ARM_FEATURE_FMA) && (__ARM_NEON_FP || defined(__aarch64__))
 #			define DEATH_TARGET_NEON_FMA
 #		endif
@@ -336,7 +333,7 @@
 	It's the case for @ref DEATH_TARGET_MSVC "MSVC" ([source](https://docs.microsoft.com/en-us/previous-versions/9cx8xs15(v=vs.140))),
 	32-bit @ref DEATH_TARGET_ANDROID "Android" (no reliable source found, sorry), @ref DEATH_TARGET_EMSCRIPTEN "Emscripten"
 	and @ref DEATH_TARGET_APPLE "Mac" (but not @ref DEATH_TARGET_IOS "iOS") with @ref DEATH_TARGET_ARM "ARM" processors.
-	Emscripten is a bit special because it's @cpp long double @ce is *sometimes* 80-bit, but its precision differs from the 80-bit
+	Emscripten is a bit special because it's @cpp long double @ce is sometimes 80-bit, but its precision differs from the 80-bit
 	representation elsewhere, so it's always treated as 64-bit. Note that even though the type size and precision may be the same,
 	these are still two distinct types, similarly to how @cpp int @ce and @cpp signed int @ce behave the same but are treated as different types.
 */
@@ -354,83 +351,164 @@
 #	define DEATH_SOURCE_LOCATION_BUILTINS_SUPPORTED
 #endif
 
-/** @brief Deprecation mark */
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-#	define DEATH_DEPRECATED(message) __attribute((deprecated(message)))
-#elif defined(DEATH_TARGET_MSVC)
-#	define DEATH_DEPRECATED(message) __declspec(deprecated(message))
-#else
-#	define DEATH_DEPRECATED(message)
-#endif
+/**
+	@brief Deprecation mark
 
-/** @brief Unused variable mark */
-#if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10
-#	define DEATH_UNUSED [[maybe_unused]]
-#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
-#	define DEATH_UNUSED __attribute__((__unused__))
-#elif defined(DEATH_TARGET_MSVC)
-#	define DEATH_UNUSED __pragma(warning(suppress:4100))
-#else
-#	define DEATH_UNUSED
-#endif
-
-/** @brief Switch case fall-through */
-#if (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926 && DEATH_CXX_STANDARD >= 201703) || (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 7)
-#	define DEATH_FALLTHROUGH [[fallthrough]];
-#elif defined(DEATH_TARGET_CLANG)
-// Clang unfortunately warns that [[fallthrough]] is a C++17 extension, so we use this instead of attempting to suppress the warning
-#	define DEATH_FALLTHROUGH [[clang::fallthrough]];
-#else
-#	define DEATH_FALLTHROUGH
-#endif
-
-/** @brief Thread-local annotation */
-#if defined(DEATH_TARGET_APPLE) && defined(__has_feature)
-#	if !__has_feature(cxx_thread_local) /* Apple Clang 7.3 says false here */
-#		define DEATH_THREAD_LOCAL __thread
+	Marked function, class or typedef will emit deprecation warning on supported compilers (GCC, Clang, MSVC).
+*/
+#if !defined(DEATH_DEPRECATED)
+#	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#		define DEATH_DEPRECATED(message) __attribute((deprecated(message)))
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_DEPRECATED(message) __declspec(deprecated(message))
+#	else
+#		define DEATH_DEPRECATED(message)
 #	endif
 #endif
-#if !defined(DEATH_THREAD_LOCAL) /* Assume it's supported otherwise */
-#	define DEATH_THREAD_LOCAL thread_local
+
+/**
+	@brief Begin code section with deprecation warnings ignored
+
+	Suppresses compiler warnings when using a deprecated API (GCC, Clang, MSVC). Useful when testing or writing
+	APIs that depend on deprecated functionality. In order to avoid warning suppressions to leak, for every
+	@ref DEATH_IGNORE_DEPRECATED_PUSH there has to be a corresponding @ref DEATH_IGNORE_DEPRECATED_POP.
+*/
+#if !defined(DEATH_IGNORE_DEPRECATED_PUSH)
+#	if defined(DEATH_TARGET_CLANG)
+#		define DEATH_IGNORE_DEPRECATED_PUSH _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"") _Pragma("GCC diagnostic ignored \"-W#pragma-messages\"")
+#	elif defined(DEATH_TARGET_GCC)
+#		define DEATH_IGNORE_DEPRECATED_PUSH _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_IGNORE_DEPRECATED_PUSH __pragma(warning(push)) __pragma(warning(disable: 4996))
+#	else
+#		define DEATH_IGNORE_DEPRECATED_PUSH
+#	endif
 #endif
 
-/** @brief C++14 constexpr annotation (if C++14 or newer standard is enabled and the compiler implements C++14 relaxed constexpr rules) */
-#if DEATH_CXX_STANDARD >= 201402 && !defined(DEATH_MSVC2015_COMPATIBILITY)
-#	define DEATH_CONSTEXPR14 constexpr
-#else
-#	define DEATH_CONSTEXPR14
+/**
+	@brief End code section with deprecation warnings ignored
+
+	See @ref DEATH_IGNORE_DEPRECATED_PUSH for more information.
+*/
+#if !defined(DEATH_IGNORE_DEPRECATED_POP)
+#	if defined(DEATH_TARGET_GCC)
+#		define DEATH_IGNORE_DEPRECATED_POP _Pragma("GCC diagnostic pop")
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_IGNORE_DEPRECATED_POP __pragma(warning(pop))
+#	else
+#		define DEATH_IGNORE_DEPRECATED_POP
+#	endif
 #endif
 
-/** @brief C++20 constexpr annotation (if C++20 or newer standard is enabled and the compiler implements all C++20 constexpr additions) */
-#if __cpp_constexpr >= 201907
-#	define DEATH_CONSTEXPR20 constexpr
-#else
-#	define DEATH_CONSTEXPR20
+/**
+	@brief Unused variable mark
+
+	Putting this before unused variable will suppress compiler warning about it being unused.
+	If possible, use @cpp static_cast<void>(var) @ce or nameless function parameters instead.
+*/
+#if !defined(DEATH_UNUSED)
+#	if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10
+#		define DEATH_UNUSED [[maybe_unused]]
+#	elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
+#		define DEATH_UNUSED __attribute__((__unused__))
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_UNUSED __pragma(warning(suppress:4100))
+#	else
+#		define DEATH_UNUSED
+#	endif
+#endif
+
+/**
+	@brief Switch case fall-through
+
+	Suppresses a warning about a @cpp case @ce fallthrough in a @cpp switch @ce.
+	Expected to be put at a place where a @cpp break; @ce would usually be
+*/
+#if !defined(DEATH_FALLTHROUGH)
+#	if (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926 && DEATH_CXX_STANDARD >= 201703) || (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 7)
+#		define DEATH_FALLTHROUGH [[fallthrough]];
+#	elif defined(DEATH_TARGET_CLANG)
+#		define DEATH_FALLTHROUGH [[clang::fallthrough]];
+#	else
+#		define DEATH_FALLTHROUGH
+#	endif
+#endif
+
+/**
+	@brief Thread-local annotation
+
+	Expands to C++11 @cpp thread_local @ce keyword on all compilers except old
+	Apple Clang, where it's defined as @cpp __thread @ce.
+*/
+#if !defined(DEATH_THREAD_LOCAL)
+#	if defined(DEATH_TARGET_APPLE) && defined(__has_feature)
+#		if !__has_feature(cxx_thread_local) /* Apple Clang 7.3 says false here */
+#			define DEATH_THREAD_LOCAL __thread
+#		endif
+#	endif
+#	if !defined(DEATH_THREAD_LOCAL) /* Assume it's supported otherwise */
+#		define DEATH_THREAD_LOCAL thread_local
+#	endif
+#endif
+
+/**
+	@brief C++14 constexpr annotation
+
+	Expands to @cpp constexpr @ce if C++14 or newer standard is enabled and if the compiler implements C++14
+	relaxed constexpr rules (which includes GCC 5+, Clang 3.5+ and MSVC 2017+).
+*/
+#if !defined(DEATH_CONSTEXPR14)
+#	if DEATH_CXX_STANDARD >= 201402 && !defined(DEATH_MSVC2015_COMPATIBILITY)
+#		define DEATH_CONSTEXPR14 constexpr
+#	else
+#		define DEATH_CONSTEXPR14
+#	endif
+#endif
+
+/**
+	@brief C++20 constexpr annotation
+
+	Expands to @cpp constexpr @ce if C++20 or newer standard is enabled and if the compiler implements
+	all C++20 constexpr language additions such as trivial default initialization (which includes
+	GCC 10+, Clang 10+ and MSVC 2019 19.29+).
+*/
+#if !defined(DEATH_CONSTEXPR20)
+#	if __cpp_constexpr >= 201907
+#		define DEATH_CONSTEXPR20 constexpr
+#	else
+#		define DEATH_CONSTEXPR20
+#	endif
 #endif
 
 /** @brief Always inline a function */
-#if defined(DEATH_TARGET_GCC)
-#	define DEATH_ALWAYS_INLINE __attribute__((always_inline)) inline
-#elif defined(DEATH_TARGET_MSVC)
-#	define DEATH_ALWAYS_INLINE __forceinline
-#else
-#	define DEATH_ALWAYS_INLINE inline
+#if !defined(DEATH_ALWAYS_INLINE)
+#	if defined(DEATH_TARGET_GCC)
+#		define DEATH_ALWAYS_INLINE __attribute__((always_inline)) inline
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_ALWAYS_INLINE __forceinline
+#	else
+#		define DEATH_ALWAYS_INLINE inline
+#	endif
 #endif
 
 /** @brief Never inline a function */
-#if defined(DEATH_TARGET_GCC)
-#	define DEATH_NEVER_INLINE __attribute__((noinline))
-#elif defined(DEATH_TARGET_MSVC)
-#	define DEATH_NEVER_INLINE __declspec(noinline)
-#else
-#	define DEATH_NEVER_INLINE
+#if !defined(DEATH_NEVER_INLINE)
+#	if defined(DEATH_TARGET_GCC)
+#		define DEATH_NEVER_INLINE __attribute__((noinline))
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_NEVER_INLINE __declspec(noinline)
+#	else
+#		define DEATH_NEVER_INLINE
+#	endif
 #endif
 
 /** @brief Hint for compiler that for the lifetime of the pointer, no other pointer will be used to access the object it points to */
-#if defined(__cplusplus)
-#	define DEATH_RESTRICT __restrict
-#else
-#	define DEATH_RESTRICT restrict
+#if !defined(DEATH_RESTRICT)
+#	if defined(__cplusplus)
+#		define DEATH_RESTRICT __restrict
+#	else
+#		define DEATH_RESTRICT restrict
+#	endif
 #endif
 
 /** @brief Hint for compiler to assume a condition */
@@ -454,27 +532,36 @@
 #endif
 
 /** @brief Mark an if condition as likely to happen */
-#if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
-#	define DEATH_LIKELY(...) (__VA_ARGS__) [[likely]]
-#elif defined(DEATH_TARGET_GCC)
-#	define DEATH_LIKELY(...) (__builtin_expect((__VA_ARGS__), 1))
-#else
-#	define DEATH_LIKELY(...) (__VA_ARGS__)
+#if !defined(DEATH_LIKELY)
+#	if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
+#		define DEATH_LIKELY(...) (__VA_ARGS__) [[likely]]
+#	elif defined(DEATH_TARGET_GCC)
+#		define DEATH_LIKELY(...) (__builtin_expect((__VA_ARGS__), 1))
+#	else
+#		define DEATH_LIKELY(...) (__VA_ARGS__)
+#	endif
 #endif
 
 /** @brief Mark an if condition as unlikely to happen */
-#if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
-#	define DEATH_UNLIKELY(...) (__VA_ARGS__) [[unlikely]]
-#elif defined(DEATH_TARGET_GCC)
-#	define DEATH_UNLIKELY(...) (__builtin_expect((__VA_ARGS__), 0))
-#else
-#	define DEATH_UNLIKELY(...) (__VA_ARGS__)
+#if !defined(DEATH_UNLIKELY)
+#	if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
+#		define DEATH_UNLIKELY(...) (__VA_ARGS__) [[unlikely]]
+#	elif defined(DEATH_TARGET_GCC)
+#		define DEATH_UNLIKELY(...) (__builtin_expect((__VA_ARGS__), 0))
+#	else
+#		define DEATH_UNLIKELY(...) (__VA_ARGS__)
+#	endif
 #endif
 
-/** @brief Passthrough */
-#define DEATH_PASSTHROUGH(...) __VA_ARGS__
-/** @brief No-op */
-#define DEATH_NOOP(...)
+/** @brief Passthrough (expands to all arguments passed to it) */
+#if !defined(DEATH_PASSTHROUGH)
+#	define DEATH_PASSTHROUGH(...) __VA_ARGS__
+#endif
+
+/** @brief No-op (eats all arguments passed to it) */
+#if !defined(DEATH_NOOP)
+#	define DEATH_NOOP(...)
+#endif
 
 // Internal macro implementation
 #define __DEATH_PASTE(a, b) a ## b
