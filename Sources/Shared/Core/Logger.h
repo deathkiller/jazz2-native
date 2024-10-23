@@ -51,8 +51,7 @@
 #		include <sys/mman.h>
 #	endif
 
-	// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on clang-cl
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
+#	if defined(DEATH_TARGET_X86)
 #		if defined(DEATH_TARGET_MSVC)
 #			include <intrin.h>
 #		else
@@ -447,6 +446,7 @@ namespace Death { namespace Trace {
 			T _lastFlushedReaderPos{0};
 
 #	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
+			// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on clang-cl
 			void flushCacheLines(T& last, T offset)
 			{
 				T lastDiff = last - (last & CacheLineMask);
