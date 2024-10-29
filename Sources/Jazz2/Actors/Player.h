@@ -115,7 +115,7 @@ namespace Jazz2::Actors
 		bool CanBreakSolidObjects() const;
 		bool CanMoveVertically() const;
 
-		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
+		virtual bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		PlayerCarryOver PrepareLevelCarryOver();
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src);

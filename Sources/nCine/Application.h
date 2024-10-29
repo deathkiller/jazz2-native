@@ -117,7 +117,7 @@ namespace nCine
 		inline IInputManager& GetInputManager() { return *inputManager_; }
 
 		/** @brief Returns the total number of frames already rendered */
-		unsigned long int GetFrameCount() const;
+		std::uint32_t GetFrameCount() const;
 		/** @brief Returns a factor that represents how long the last frame took relative to the desired frame time */
 		float GetTimeMult() const;
 		/** @brief Returns the frame timer interface */

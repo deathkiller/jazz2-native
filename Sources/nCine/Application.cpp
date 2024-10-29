@@ -348,215 +348,6 @@ namespace nCine
 #endif
 		}
 	}
-
-	void WriteTraceEntry(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message)
-	{
-		char logEntryWithColors[MaxLogEntryLength + 24];
-
-#if defined(DEATH_TARGET_ANDROID)
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
-
-		android_LogPriority priority;
-		switch (level) {
-			case TraceLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
-			case TraceLevel::Assert:	// Android doesn't support this priority, use ANDROID_LOG_ERROR instead
-			case TraceLevel::Error:		priority = ANDROID_LOG_ERROR; break;
-			case TraceLevel::Warning:	priority = ANDROID_LOG_WARN; break;
-			case TraceLevel::Info:		priority = ANDROID_LOG_INFO; break;
-			default:					priority = ANDROID_LOG_DEBUG; break;
-		}
-
-		std::int32_t result = __android_log_write(priority, NCINE_APP, logEntryWithColors);
-		std::int32_t n = 0;
-		while (result == -11 /*EAGAIN*/ && n < 2) {
-			::usleep(2000); // 2ms in microseconds
-			result = __android_log_write(priority, NCINE_APP, logEntryWithColors);
-			n++;
-		}
-#elif defined(DEATH_TARGET_SWITCH)
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
-		svcOutputDebugString(logEntryWithColors, length2);
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
-		if (length2 >= MaxLogEntryLength - 2) {
-			length2 = MaxLogEntryLength - 2;
-		}
-		logEntryWithColors[length2++] = '\n';
-		logEntryWithColors[length2] = '\0';
-		::OutputDebugStringA(logEntryWithColors);
-#else
-#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
-		if (__consoleType >= ConsoleType::Redirect) {
-#	endif
-			// Colorize the output
-			std::int32_t length2 = 0;
-			std::int32_t logMsgFuncLength = 0;
-			AppendMessagePrefixIfAny(logEntryWithColors, length2, message.data(), logMsgFuncLength, level);
-
-			if (__consoleType >= ConsoleType::EscapeCodes) {
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-				bool shouldResetBefore = (level != TraceLevel::Warning && level != TraceLevel::Debug);
-#	else
-				bool shouldResetBefore = true;
-#	endif
-				bool shouldResetAfter = (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal);
-
-				if (level < TraceLevel::Error && __consoleType >= ConsoleType::EscapeCodes24bit) {
-					std::int32_t prevState = 0;
-					StringView message2 = StringView(message.data() + logMsgFuncLength, message.size() - logMsgFuncLength);
-					do {
-						StringView quotesBegin = message2.find('"');
-						if (!quotesBegin) {
-							break;
-						}
-						StringView quotesEnd = message2.suffix(quotesBegin.end()).find('"');
-						if (!quotesEnd) {
-							break;
-						}
-
-						StringView prefix = message2.prefix(quotesBegin.begin());
-						if (!prefix.empty()) {
-							AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
-							shouldResetBefore = false;
-							prevState = 1;
-
-							AppendPart(logEntryWithColors, length2, prefix.data(), (std::int32_t)prefix.size());
-						}
-
-						if (prevState != 2) {
-							if (level == TraceLevel::Debug) {
-								AppendPart(logEntryWithColors, length2, ColorDimString);
-							} else if (__consoleDarkMode) {
-								AppendPart(logEntryWithColors, length2, ColorDarkString);
-							} else {
-								AppendPart(logEntryWithColors, length2, ColorLightString);
-							}
-							prevState = 2;
-						}
-
-						StringView inner = message2.suffix(quotesBegin.begin()).prefix(quotesEnd.end());
-						AppendPart(logEntryWithColors, length2, inner.data(), (std::int32_t)inner.size());
-
-						message2 = message2.suffix(quotesEnd.end());
-					} while (!message2.empty());
-
-					if (!message2.empty()) {
-						AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
-						AppendPart(logEntryWithColors, length2, message2.data(), (std::int32_t)message2.size());
-					} else if (prevState == 2) {
-						// Always reset color after quotes
-						shouldResetAfter = true;
-					}
-				} else {
-					AppendMessageColor(logEntryWithColors, length2, level, shouldResetBefore);
-					AppendPart(logEntryWithColors, length2, message.data() + logMsgFuncLength, (std::int32_t)message.size() - logMsgFuncLength);
-				}
-
-				if (shouldResetAfter) {
-					AppendPart(logEntryWithColors, length2, ColorReset);
-				}
-			} else {
-				AppendPart(logEntryWithColors, length2, message.data() + logMsgFuncLength, (std::int32_t)message.size() - logMsgFuncLength);
-			}
-
-			if (length2 >= MaxLogEntryLength - 2) {
-				length2 = MaxLogEntryLength - 2;
-			}
-
-#	if defined(DEATH_TARGET_WINDOWS)
-			// Try to restore previous cursor position (this doesn't work correctly in Windows Terminal v1.19)
-			if (__consoleHandleOut != NULL) {
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
-					if (__consoleCursorY <= csbi.dwCursorPosition.Y) {
-						::SetConsoleCursorPosition(__consoleHandleOut, { 0, __consoleCursorY });
-					}
-				}
-			}
-			if (__consoleType >= ConsoleType::EscapeCodes && length2 < MaxLogEntryLength) {
-				// Console can be shared with parent process, so clear the rest of the line (using "\x1b[0K" sequence)
-				logEntryWithColors[length2++] = '\x1b';
-				logEntryWithColors[length2++] = '[';
-				logEntryWithColors[length2++] = '0';
-				logEntryWithColors[length2++] = 'K';
-			}
-
-			logEntryWithColors[length2++] = '\n';
-			::fwrite(logEntryWithColors, 1, length2, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
-
-			// Save the last cursor position for later
-			if (__consoleHandleOut != NULL) {
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
-					__consoleCursorY = csbi.dwCursorPosition.Y;
-				}
-			}
-#	else
-			logEntryWithColors[length2++] = '\n';
-			::fwrite(logEntryWithColors, 1, length2, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
-#	endif
-
-#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
-		} else {
-			// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
-			std::int32_t length2 = 0;
-			AppendLevel(logEntryWithColors, length2, level, threadId);
-			AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
-			if (length2 >= MaxLogEntryLength - 2) {
-				length2 = MaxLogEntryLength - 2;
-			}
-			logEntryWithColors[length2++] = '\n';
-			logEntryWithColors[length2] = '\0';
-			::OutputDebugStringA(logEntryWithColors);
-		}
-#	endif
-#endif
-
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Allow to attach custom target using Application::AttachTraceTarget()
-		if (__logFile != nullptr) {
-			std::int32_t length3 = 0;
-			AppendDateTime(logEntryWithColors, length3, timestamp);
-			logEntryWithColors[length3++] = ' ';
-			AppendLevel(logEntryWithColors, length3, level, threadId);
-			AppendPart(logEntryWithColors, length3, message.data(), (std::int32_t)message.size());
-			logEntryWithColors[length3++] = '\n';
-
-			__logFile->Write(logEntryWithColors, length3);
-		}
-#endif
-
-#if defined(WITH_IMGUI)
-		auto* debugOverlay = theApplication().debugOverlay_.get();
-		if (debugOverlay != nullptr) {
-			std::int32_t length4 = 0;
-			AppendDateTime(logEntryWithColors, length4, timestamp);
-
-			debugOverlay->log(level, logEntryWithColors, threadId, message);
-		}
-#endif
-
-#if defined(WITH_TRACY)
-		std::uint32_t colorTracy;
-		switch (level) {
-			case TraceLevel::Fatal:		colorTracy = 0xEC3E40; break;
-			case TraceLevel::Assert:	colorTracy = 0xD651B0; break;
-			case TraceLevel::Error:		colorTracy = 0xD85050; break;
-			case TraceLevel::Warning:	colorTracy = 0xEBC77A; break;
-			case TraceLevel::Info:		colorTracy = 0xD2D2D2; break;
-			default:					colorTracy = 0x969696; break;
-		}
-
-		TracyMessageC(message.data(), message.size(), colorTracy);
-#endif
-	}
 }
 #endif
 
@@ -581,7 +372,7 @@ namespace nCine
 		return *screenViewport_;
 	}
 
-	unsigned long int Application::GetFrameCount() const
+	std::uint32_t Application::GetFrameCount() const
 	{
 		return frameTimer_->GetTotalNumberFrames();
 	}
@@ -943,7 +734,211 @@ namespace nCine
 #if defined(DEATH_TRACE)
 	void Application::OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message)
 	{
-		WriteTraceEntry(level, timestamp, threadId, message);
+		char logEntryWithColors[MaxLogEntryLength + 24];
+
+#if defined(DEATH_TARGET_ANDROID)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+
+		android_LogPriority priority;
+		switch (level) {
+			case TraceLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
+			case TraceLevel::Assert:	// Android doesn't support this priority, use ANDROID_LOG_ERROR instead
+			case TraceLevel::Error:		priority = ANDROID_LOG_ERROR; break;
+			case TraceLevel::Warning:	priority = ANDROID_LOG_WARN; break;
+			case TraceLevel::Info:		priority = ANDROID_LOG_INFO; break;
+			default:					priority = ANDROID_LOG_DEBUG; break;
+		}
+
+		std::int32_t result = __android_log_write(priority, NCINE_APP, logEntryWithColors);
+		std::int32_t n = 0;
+		while (result == -11 /*EAGAIN*/ && n < 2) {
+			::usleep(2000); // 2ms in microseconds
+			result = __android_log_write(priority, NCINE_APP, logEntryWithColors);
+			n++;
+		}
+#elif defined(DEATH_TARGET_SWITCH)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+		svcOutputDebugString(logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		logEntryWithColors[length2] = '\0';
+		::OutputDebugStringA(logEntryWithColors);
+#else
+#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
+		if (__consoleType >= ConsoleType::Redirect) {
+#	endif
+			// Colorize the output
+			std::int32_t length2 = 0;
+			std::int32_t logMsgFuncLength = 0;
+			AppendMessagePrefixIfAny(logEntryWithColors, length2, message.data(), logMsgFuncLength, level);
+
+			if (__consoleType >= ConsoleType::EscapeCodes) {
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+				bool shouldResetBefore = (level != TraceLevel::Warning && level != TraceLevel::Debug);
+#	else
+				bool shouldResetBefore = true;
+#	endif
+				bool shouldResetAfter = (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal);
+
+				if (level < TraceLevel::Error && __consoleType >= ConsoleType::EscapeCodes24bit) {
+					std::int32_t prevState = 0;
+					StringView message2 = StringView(message.data() + logMsgFuncLength, message.size() - logMsgFuncLength);
+					do {
+						StringView quotesBegin = message2.find('"');
+						if (!quotesBegin) {
+							break;
+						}
+						StringView quotesEnd = message2.suffix(quotesBegin.end()).find('"');
+						if (!quotesEnd) {
+							break;
+						}
+
+						StringView prefix = message2.prefix(quotesBegin.begin());
+						if (!prefix.empty()) {
+							AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
+							shouldResetBefore = false;
+							prevState = 1;
+
+							AppendPart(logEntryWithColors, length2, prefix.data(), (std::int32_t)prefix.size());
+						}
+
+						if (prevState != 2) {
+							if (level == TraceLevel::Debug) {
+								AppendPart(logEntryWithColors, length2, ColorDimString);
+							} else if (__consoleDarkMode) {
+								AppendPart(logEntryWithColors, length2, ColorDarkString);
+							} else {
+								AppendPart(logEntryWithColors, length2, ColorLightString);
+							}
+							prevState = 2;
+						}
+
+						StringView inner = message2.suffix(quotesBegin.begin()).prefix(quotesEnd.end());
+						AppendPart(logEntryWithColors, length2, inner.data(), (std::int32_t)inner.size());
+
+						message2 = message2.suffix(quotesEnd.end());
+					} while (!message2.empty());
+
+					if (!message2.empty()) {
+						AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
+						AppendPart(logEntryWithColors, length2, message2.data(), (std::int32_t)message2.size());
+					} else if (prevState == 2) {
+						// Always reset color after quotes
+						shouldResetAfter = true;
+					}
+				} else {
+					AppendMessageColor(logEntryWithColors, length2, level, shouldResetBefore);
+					AppendPart(logEntryWithColors, length2, message.data() + logMsgFuncLength, (std::int32_t)message.size() - logMsgFuncLength);
+				}
+
+				if (shouldResetAfter) {
+					AppendPart(logEntryWithColors, length2, ColorReset);
+				}
+			} else {
+				AppendPart(logEntryWithColors, length2, message.data() + logMsgFuncLength, (std::int32_t)message.size() - logMsgFuncLength);
+			}
+
+			if (length2 >= MaxLogEntryLength - 2) {
+				length2 = MaxLogEntryLength - 2;
+			}
+
+#	if defined(DEATH_TARGET_WINDOWS)
+			// Try to restore previous cursor position (this doesn't work correctly in Windows Terminal v1.19)
+			if (__consoleHandleOut != NULL) {
+				CONSOLE_SCREEN_BUFFER_INFO csbi;
+				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+					if (__consoleCursorY <= csbi.dwCursorPosition.Y) {
+						::SetConsoleCursorPosition(__consoleHandleOut, { 0, __consoleCursorY });
+					}
+				}
+			}
+			if (__consoleType >= ConsoleType::EscapeCodes && length2 < MaxLogEntryLength) {
+				// Console can be shared with parent process, so clear the rest of the line (using "\x1b[0K" sequence)
+				logEntryWithColors[length2++] = '\x1b';
+				logEntryWithColors[length2++] = '[';
+				logEntryWithColors[length2++] = '0';
+				logEntryWithColors[length2++] = 'K';
+			}
+
+			logEntryWithColors[length2++] = '\n';
+			::fwrite(logEntryWithColors, 1, length2, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
+
+			// Save the last cursor position for later
+			if (__consoleHandleOut != NULL) {
+				CONSOLE_SCREEN_BUFFER_INFO csbi;
+				if (::GetConsoleScreenBufferInfo(__consoleHandleOut, &csbi)) {
+					__consoleCursorY = csbi.dwCursorPosition.Y;
+				}
+			}
+#	else
+			logEntryWithColors[length2++] = '\n';
+			::fwrite(logEntryWithColors, 1, length2, level == TraceLevel::Error || level == TraceLevel::Fatal ? stderr : stdout);
+#	endif
+
+#	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
+		} else {
+			// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
+			std::int32_t length2 = 0;
+			AppendLevel(logEntryWithColors, length2, level, threadId);
+			AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+			if (length2 >= MaxLogEntryLength - 2) {
+				length2 = MaxLogEntryLength - 2;
+			}
+			logEntryWithColors[length2++] = '\n';
+			logEntryWithColors[length2] = '\0';
+			::OutputDebugStringA(logEntryWithColors);
+		}
+#	endif
+#endif
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// Allow to attach custom target using Application::AttachTraceTarget()
+		if (__logFile != nullptr) {
+			std::int32_t length3 = 0;
+			AppendDateTime(logEntryWithColors, length3, timestamp);
+			logEntryWithColors[length3++] = ' ';
+			AppendLevel(logEntryWithColors, length3, level, threadId);
+			AppendPart(logEntryWithColors, length3, message.data(), (std::int32_t)message.size());
+			logEntryWithColors[length3++] = '\n';
+
+			__logFile->Write(logEntryWithColors, length3);
+		}
+#endif
+
+#if defined(WITH_IMGUI)
+		auto* debugOverlay = theApplication().debugOverlay_.get();
+		if (debugOverlay != nullptr) {
+			std::int32_t length4 = 0;
+			AppendDateTime(logEntryWithColors, length4, timestamp);
+
+			debugOverlay->log(level, logEntryWithColors, threadId, message);
+		}
+#endif
+
+#if defined(WITH_TRACY)
+		std::uint32_t colorTracy;
+		switch (level) {
+			case TraceLevel::Fatal:		colorTracy = 0xEC3E40; break;
+			case TraceLevel::Assert:	colorTracy = 0xD651B0; break;
+			case TraceLevel::Error:		colorTracy = 0xD85050; break;
+			case TraceLevel::Warning:	colorTracy = 0xEBC77A; break;
+			case TraceLevel::Info:		colorTracy = 0xD2D2D2; break;
+			default:					colorTracy = 0x969696; break;
+		}
+
+		TracyMessageC(message.data(), message.size(), colorTracy);
+#endif
 	}
 
 	void Application::OnTraceFlushed()

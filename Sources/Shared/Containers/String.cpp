@@ -23,7 +23,7 @@ namespace Death { namespace Containers {
 
 	String String::nullTerminatedView(StringView view) {
 		if ((view.flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated) {
-			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			String out{view.data(), view.size(), [](char*, std::size_t) {}};
 			out._large.size |= std::size_t(view.flags() & StringViewFlags::Global);
 			return out;
 		}
@@ -32,7 +32,7 @@ namespace Death { namespace Containers {
 
 	String String::nullTerminatedView(AllocatedInitT, StringView view) {
 		if ((view.flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated) {
-			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			String out{view.data(), view.size(), [](char*, std::size_t) {}};
 			out._large.size |= std::size_t(view.flags() & StringViewFlags::Global);
 			return out;
 		}
@@ -41,7 +41,7 @@ namespace Death { namespace Containers {
 
 	String String::nullTerminatedGlobalView(StringView view) {
 		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global)) {
-			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			String out{view.data(), view.size(), [](char*, std::size_t) {}};
 			out._large.size |= std::size_t(StringViewFlags::Global);
 			return out;
 		}
@@ -50,7 +50,7 @@ namespace Death { namespace Containers {
 
 	String String::nullTerminatedGlobalView(AllocatedInitT, StringView view) {
 		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global)) {
-			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			String out{view.data(), view.size(), [](char*, std::size_t) {}};
 			out._large.size |= std::size_t(StringViewFlags::Global);
 			return out;
 		}

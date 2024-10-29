@@ -26,6 +26,10 @@ namespace Jazz2::Actors::Multiplayer
 	void RemotablePlayer::OnUpdate(float timeMult)
 	{
 		Player::OnUpdate(timeMult);
+
+		if (_levelExiting != LevelExitingState::None) {
+			OnLevelChanging(nullptr, ExitType::None);
+		}
 	}
 
 	void RemotablePlayer::OnWaterSplash(const Vector2f& pos, bool inwards)
@@ -52,8 +56,13 @@ namespace Jazz2::Actors::Multiplayer
 		_teamId = value;
 	}
 
-	void RemotablePlayer::WarpIn()
+	void RemotablePlayer::WarpIn(ExitType exitType)
 	{
+		if (exitType != (ExitType)0xFF) {
+			OnLevelChanging(this, exitType);
+			return;
+		}
+
 		EndDamagingMove();
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::ApplyGravitation, false);

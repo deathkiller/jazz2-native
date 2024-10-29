@@ -547,7 +547,7 @@ namespace Death { namespace IO { namespace Http {
 		// RFC 3986, 3.1. Scheme
 		auto i = begin;
 		if (i == end || !IsAlphaChar(*begin)) {
-			return { };
+			return {};
 		}
 
 		for (; i != end && (IsAlphaChar(*i) || IsDigitChar(*i) || *i == '+' || *i == '-' || *i == '.'); ++i) {
@@ -556,13 +556,13 @@ namespace Death { namespace IO { namespace Http {
 		result.Scheme = Containers::String(begin, i - begin);
 
 		if (i == end || *i++ != ':') {
-			return { };
+			return {};
 		}
 		if (i == end || *i++ != '/') {
-			return { };
+			return {};
 		}
 		if (i == end || *i++ != '/') {
-			return { };
+			return {};
 		}
 
 		// RFC 3986, 3.2. Authority
@@ -743,7 +743,7 @@ namespace Death { namespace IO { namespace Http {
 		auto fieldName = std::move(tokenResult.second);
 
 		if (i == end || *i++ != ':') {
-			return { i, { } };
+			return {i, {}};
 		}
 
 		i = SkipWhiteSpaces(i, end);
@@ -753,13 +753,13 @@ namespace Death { namespace IO { namespace Http {
 		auto fieldValue = std::move(valueResult.second);
 
 		if (i == end || *i++ != '\r') {
-			return { i, { } };
+			return {i, {}};
 		}
 		if (i == end || *i++ != '\n') {
-			return { i, { } };
+			return {i, {}};
 		}
 
-		return { i, { std::move(fieldName), std::move(fieldValue) } };
+		return {i, {std::move(fieldName), std::move(fieldValue)}};
 	}
 
 	// RFC 7230, 3.1.2. Status Line
@@ -770,24 +770,24 @@ namespace Death { namespace IO { namespace Http {
 		auto i = httpVersionResult.first;
 
 		if (i == end || *i++ != ' ') {
-			return { i, { } };
+			return {i, {}};
 		}
 
 		const auto statusCodeResult = ParseStatusCode(i, end);
 		i = statusCodeResult.first;
 
 		if (i == end || *i++ != ' ') {
-			return { i, { } };
+			return {i, {}};
 		}
 
 		auto reasonPhraseResult = ParseReasonPhrase(i, end);
 		i = reasonPhraseResult.first;
 
 		if (i == end || *i++ != '\r') {
-			return { i, { } };
+			return {i, {}};
 		}
 		if (i == end || *i++ != '\n') {
-			return { i, { } };
+			return {i, {}};
 		}
 
 		return { i, HttpStatus {
@@ -928,7 +928,7 @@ namespace Death { namespace IO { namespace Http {
 				return { HttpStatus::NotImplemented };
 			}
 
-			addrinfo hints = { };
+			addrinfo hints = {};
 			hints.ai_family = GetAddressFamily(internetProtocol);
 			hints.ai_socktype = SOCK_STREAM;
 
@@ -1017,7 +1017,7 @@ namespace Death { namespace IO { namespace Http {
 							if (fieldValue == "chunked"_s) {
 								chunkedResponse = true;
 							} else {
-								return { };
+								return {};
 							}
 						} else if (fieldName == "content-length"_s) {
 							// RFC 7230, 3.3.2. Content-Length

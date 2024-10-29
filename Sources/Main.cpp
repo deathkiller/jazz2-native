@@ -210,7 +210,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 #endif
 
 #if defined(WITH_IMGUI)
-	config.withDebugOverlay = true;
+	//config.withDebugOverlay = true;
 #endif
 }
 
@@ -499,6 +499,10 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		if (levelInit.LevelName.empty()) {
 			// Next level not specified, so show main menu
 			newHandler = std::make_unique<Menu::MainMenu>(this, false);
+#if defined(WITH_MULTIPLAYER)
+			// TODO: This should show some server console instead of exiting
+			_networkManager = nullptr;
+#endif
 		} else if (levelInit.LevelName == ":end"_s) {
 			// End of episode
 			SaveEpisodeEnd(levelInit);
@@ -519,9 +523,17 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
+#if defined(WITH_MULTIPLAYER)
+					// TODO: This should show some server console instead of exiting
+					_networkManager = nullptr;
+#endif
 				}
 			} else {
 				newHandler = std::make_unique<Menu::MainMenu>(this, false);
+#if defined(WITH_MULTIPLAYER)
+				// TODO: This should show some server console instead of exiting
+				_networkManager = nullptr;
+#endif
 			}
 		} else if (levelInit.LevelName == ":credits"_s) {
 			// End of game
@@ -553,6 +565,10 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
+#if defined(WITH_MULTIPLAYER)
+					// TODO: This should show some server console instead of exiting
+					_networkManager = nullptr;
+#endif
 				}
 			}
 		}
@@ -739,7 +755,14 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client version is not compatible with the server.")); break;
 				case Reason::ServerIsFull: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer capacity is full.\nPlease try it later.")); break;
 				case Reason::ServerNotReady: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer is not in a state where it can process your request.\nPlease try again in a few seconds.")); break;
-				case Reason::ServerStopped: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
+				
+				// TODO: Add multiplayer disconnect reason messages
+				case Reason::ServerStopped:
+				case Reason::ServerStoppedForMaintenance:
+				case Reason::ServerStoppedForReconfiguration:
+				case Reason::ServerStoppedForUpdate:
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
+				
 				case Reason::ConnectionLost: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been lost!\f[/c]\n\n\nPlease try it again and if the problem persists,\ncheck your network connection.")); break;
 				case Reason::ConnectionTimedOut: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe server is not responding for connection request.")); break;
 				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#907050]kicked\f[/c] off the server.\nContact server administrators for more information.")); break;
@@ -779,7 +802,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.WriteVariableUint32(levelName.size());
 				packet.Write(levelName.data(), levelName.size());
 
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 				break;
 			}*/
 		}

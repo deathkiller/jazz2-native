@@ -143,6 +143,11 @@ namespace Jazz2::Multiplayer
 		_lock.Unlock();
 	}
 
+	void NetworkManager::SendToPeer(const Peer& peer, NetworkChannel channel, const MemoryStream& packet)
+	{
+		SendToPeer(peer, channel, packet.GetBuffer(), packet.GetSize());
+	}
+
 	void NetworkManager::SendToAll(NetworkChannel channel, const std::uint8_t* data, std::size_t dataLength)
 	{
 		if (_peers.empty()) {
@@ -171,6 +176,11 @@ namespace Jazz2::Multiplayer
 			enet_host_flush(_host);
 		}
 		_lock.Unlock();
+	}
+
+	void NetworkManager::SendToAll(NetworkChannel channel, const MemoryStream& packet)
+	{
+		SendToAll(channel, packet.GetBuffer(), packet.GetSize());
 	}
 
 	void NetworkManager::KickClient(const Peer& peer, Reason reason)

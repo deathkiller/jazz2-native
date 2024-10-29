@@ -14,6 +14,7 @@ namespace Jazz2::Actors::Multiplayer
 		RemotePlayerOnServer();
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;
 
 		void SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
 

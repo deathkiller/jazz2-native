@@ -2,6 +2,7 @@
 //             2017, 2018, 2019, 2020, 2021, 2022
 //           Vladimír Vondruš <mosra@centrum.cz> and contributors
 // Copyright © 2023 Robert Clausecker <fuz@FreeBSD.org>
+// Copyright © 2020-2024 Dan R.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -315,9 +316,9 @@ namespace Death { namespace Cpu {
 
 	namespace Implementation
 	{
-		// A common type used in all tag constructors to avoid ambiguous calls when using { }
+		// A common type used in all tag constructors to avoid ambiguous calls when using {}
 		struct InitT { };
-		constexpr InitT Init { };
+		constexpr InitT Init{};
 
 		enum: unsigned int { ExtraTagBitOffset = 16 };
 	}
@@ -329,7 +330,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct ScalarT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit ScalarT(Implementation::InitT) {}
 	};
 
@@ -348,7 +349,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse2T : ScalarT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse2T(Implementation::InitT) : ScalarT{Implementation::Init} {}
 	};
 
@@ -360,7 +361,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse3T : Sse2T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse3T(Implementation::InitT) : Sse2T{Implementation::Init} {}
 	};
 
@@ -372,7 +373,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Ssse3T : Sse3T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Ssse3T(Implementation::InitT) : Sse3T{Implementation::Init} {}
 	};
 
@@ -384,7 +385,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse41T : Ssse3T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse41T(Implementation::InitT) : Ssse3T{Implementation::Init} {}
 	};
 
@@ -396,7 +397,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse42T : Sse41T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse42T(Implementation::InitT) : Sse41T{Implementation::Init} {}
 	};
 
@@ -408,7 +409,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct PopcntT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit PopcntT(Implementation::InitT) {}
 	};
 
@@ -420,7 +421,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct LzcntT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit LzcntT(Implementation::InitT) {}
 	};
 
@@ -432,7 +433,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Bmi1T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Bmi1T(Implementation::InitT) {}
 	};
 
@@ -443,7 +444,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Bmi2T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Bmi2T(Implementation::InitT) {}
 	};
 
@@ -455,7 +456,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct AvxT: Sse42T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit AvxT(Implementation::InitT) : Sse42T{Implementation::Init} {}
 	};
 
@@ -467,7 +468,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct AvxF16cT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit AvxF16cT(Implementation::InitT) {}
 	};
 
@@ -479,7 +480,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct AvxFmaT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit AvxFmaT(Implementation::InitT) {}
 	};
 
@@ -491,7 +492,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Avx2T : AvxT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Avx2T(Implementation::InitT) : AvxT{Implementation::Init} {}
 	};
 
@@ -503,7 +504,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Avx512fT : Avx2T {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Avx512fT(Implementation::InitT) : Avx2T{Implementation::Init} {}
 	};
 
@@ -577,7 +578,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct NeonT : ScalarT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit NeonT(Implementation::InitT) : ScalarT{Implementation::Init} {}
 	};
 
@@ -589,7 +590,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct NeonFmaT : NeonT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit NeonFmaT(Implementation::InitT) : NeonT{Implementation::Init} {}
 	};
 
@@ -601,7 +602,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct NeonFp16T : NeonFmaT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit NeonFp16T(Implementation::InitT) : NeonFmaT{Implementation::Init} {}
 	};
 
@@ -628,7 +629,7 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Simd128T: ScalarT {
-		// Explicit constructor to avoid ambiguous calls when using { }
+		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Simd128T(Implementation::InitT): ScalarT{Implementation::Init} { }
 	};
 
@@ -1012,13 +1013,13 @@ namespace Death { namespace Cpu {
 		// for TypeTraits<T>::Index. Heh. Clang 14 warns if I don't cast because bitwise operations between
 		// different enums are deprecated in C++20.
 		template<class T> Priority<(static_cast<unsigned int>(TypeTraits<T>::Index)& ExtraTagMask ? 1 : BitIndex<static_cast<unsigned int>(TypeTraits<T>::Index)& BaseTagMask>::Value * (ExtraTagCount + 1))> constexpr priority(T) {
-			return { };
+			return {};
 		}
 		template<unsigned int value> Priority<(BitIndex<value& BaseTagMask>::Value* (ExtraTagCount + 1) + BitCount<((value& ExtraTagMask) >> ExtraTagBitOffset)>::Value)> constexpr priority(Tags<value>) {
 			static_assert(!((value & BaseTagMask) & ((value & BaseTagMask) - 1)), "more than one base tag used");
 			// GCC 4.8 loudly complains about enum comparison if I don't cast, sigh
 			static_assert(((value & ExtraTagMask) >> ExtraTagBitOffset) < (1 << static_cast<unsigned int>(ExtraTagCount)), "extra tag out of expected bounds");
-			return { };
+			return {};
 		}
 	}
 
@@ -2867,7 +2868,7 @@ namespace Death { namespace Cpu {
 				unsigned int ax, bx, cx, dx;
 			} e;
 			int data[4];
-		} cpuid { };
+		} cpuid{};
 
 		Implementation::cpuid(cpuid.data, 1, 0);
 

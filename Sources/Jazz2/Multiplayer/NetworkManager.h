@@ -11,10 +11,12 @@
 
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
+#include <IO/MemoryStream.h>
 
 struct _ENetHost;
 
 using namespace Death::Containers;
+using namespace Death::IO;
 using namespace nCine;
 
 namespace Jazz2::Multiplayer
@@ -54,7 +56,9 @@ namespace Jazz2::Multiplayer
 		NetworkState GetState() const;
 
 		void SendToPeer(const Peer& peer, NetworkChannel channel, const std::uint8_t* data, std::size_t dataLength);
+		void SendToPeer(const Peer& peer, NetworkChannel channel, const MemoryStream& packet);
 		void SendToAll(NetworkChannel channel, const std::uint8_t* data, std::size_t dataLength);
+		void SendToAll(NetworkChannel channel, const MemoryStream& packet);
 		void KickClient(const Peer& peer, Reason reason);
 
 	private:

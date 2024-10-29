@@ -83,7 +83,7 @@ namespace Death { namespace Containers {
 			}
 
 			// If the substring is larger or no match was found, fail
-			return { };
+			return {};
 		}
 	}
 
@@ -122,7 +122,7 @@ namespace Death { namespace Containers {
 			}
 
 			// If the substring is larger or no match was found, fail
-			return { };
+			return {};
 		}
 
 		namespace
@@ -591,7 +591,7 @@ namespace Death { namespace Containers {
 							return i + __builtin_ctz(mask);
 					}
 
-					return { };
+					return {};
 				};
 			}
 #endif
@@ -619,7 +619,7 @@ namespace Death { namespace Containers {
 			// `*(data - 1)` blows up, so I actually need to.
 			if (data) for (const char* i = data + size - 1; i >= data; --i)
 				if (*i == character) return i;
-			return { };
+			return {};
 		}
 
 		/* I don't want to include <algorithm> just for std::find_first_of() and
@@ -646,7 +646,7 @@ namespace Death { namespace Containers {
 		const char* stringFindAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount) {
 			for (const char* i = data, *end = data + size; i != end; ++i)
 				if (std::memchr(characters, *i, characterCount)) return i;
-			return { };
+			return {};
 		}
 
 		// Variants of the above. Not sure if those even have any vaguely corresponding C lib API. Probably not.
@@ -654,19 +654,19 @@ namespace Death { namespace Containers {
 		const char* stringFindLastAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount) {
 			for (const char* i = data + size; i != data; --i)
 				if (std::memchr(characters, *(i - 1), characterCount)) return i - 1;
-			return { };
+			return {};
 		}
 
 		const char* stringFindNotAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount) {
 			for (const char* i = data, *end = data + size; i != end; ++i)
 				if (!std::memchr(characters, *i, characterCount)) return i;
-			return { };
+			return {};
 		}
 
 		const char* stringFindLastNotAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount) {
 			for (const char* i = data + size; i != data; --i)
 				if (!std::memchr(characters, *(i - 1), characterCount)) return i - 1;
-			return { };
+			return {};
 		}
 
 		namespace

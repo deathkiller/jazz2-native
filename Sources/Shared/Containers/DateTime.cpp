@@ -1147,7 +1147,7 @@ namespace Death { namespace Containers {
 	DateTime::Tm DateTime::Partitioned(const TimeZone tz) const
 	{
 		if (!IsValid()) {
-			return { };
+			return {};
 		}
 
 		time_t time = GetTicks();

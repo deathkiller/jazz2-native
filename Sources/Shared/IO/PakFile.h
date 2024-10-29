@@ -92,7 +92,13 @@ namespace Death { namespace IO {
 		enum class ItemFlags : std::uint32_t {
 			None = 0,
 			Directory = 0x01,
-			ZlibCompressed = 0x02
+			ZlibCompressed = 0x02,
+
+			Lz4Compressed = 0x04,		// Not implemented
+			Lzma2Compressed = 0x08,		// Not implemented
+			Aes256Encrypten = 0x10,		// Not implemented
+
+			Link = 0x80					// Not implemented
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(ItemFlags);

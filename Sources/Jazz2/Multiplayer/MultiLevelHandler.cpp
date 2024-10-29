@@ -58,7 +58,7 @@ namespace Jazz2::Multiplayer
 			_ignorePackets(false)
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 			, _plotIndex(0), _actorsMaxCount(0.0f), _actorsCount{}, _remoteActorsCount{}, _remotingActorsCount{},
-			_mirroredActorsCount{}, _updatePacketMaxSize(0.0f), _updatePacketSize {}, _compressedUpdatePacketSize {}
+			_mirroredActorsCount{}, _updatePacketMaxSize(0.0f), _updatePacketSize{}, _compressedUpdatePacketSize{}
 #endif
 	{
 		_isServer = (networkManager->GetState() == NetworkState::Listening);
@@ -94,7 +94,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableUint32(_levelFileName.size());
 			packet.Write(_levelFileName.data(), _levelFileName.size());
 			// TODO: Send it to only authenticated peers
-			_networkManager->SendToAll(NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+			_networkManager->SendToAll(NetworkChannel::Main, packet);
 		}
 
 		auto& resolver = ContentResolver::Get();
@@ -106,6 +106,7 @@ namespace Jazz2::Multiplayer
 
 	float MultiLevelHandler::GetDefaultAmbientLight() const
 	{
+		// TODO: Remove this override
 		return LevelHandler::GetDefaultAmbientLight();
 	}
 
@@ -128,11 +129,11 @@ namespace Jazz2::Multiplayer
 
 		auto& input = _playerInputs[0];
 		if (input.PressedActions != input.PressedActionsLast) {
-			MemoryStream packet(9);
+			MemoryStream packet(13);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::PlayerKeyPress);
 			packet.WriteVariableUint32(_lastSpawnedActorId);
 			packet.WriteVariableUint64(input.PressedActions);
-			_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
+			_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet);
 		}
 	}
 
@@ -141,9 +142,14 @@ namespace Jazz2::Multiplayer
 		LevelHandler::OnEndFrame();
 
 		float timeMult = theApplication().GetTimeMult();
+		std::uint32_t frameCount = theApplication().GetFrameCount();
 
+		// Update last pressed keys only if it wasn't done this frame yet (because of PlayerKeyPress packet)
 		for (auto& [playerIndex, playerState] : _playerStates) {
-			playerState.PressedKeysLast |= playerState.PressedKeys;
+			if (playerState.UpdatedFrame != frameCount) {
+				playerState.UpdatedFrame = frameCount;
+				playerState.PressedKeysLast = playerState.PressedKeys;
+			}
 		}
 
 		_updateTimeLeft -= timeMult;
@@ -154,9 +160,9 @@ namespace Jazz2::Multiplayer
 				_initialUpdateSent = true;
 
 				if (!_isServer) {
-					MemoryStream packet(5);
+					MemoryStream packet(1);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::LevelReady);
-					_networkManager->SendToPeer(nullptr, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(nullptr, NetworkChannel::Main, packet);
 				}
 			}
 
@@ -174,7 +180,7 @@ namespace Jazz2::Multiplayer
 
 				bool isMirrored = (_isServer
 					? ActorShouldBeMirrored(actor.second.get())
-					: runtime_cast<Actors::Multiplayer::RemoteActor*>(actor.second) == nullptr);
+					: !runtime_cast<Actors::Multiplayer::RemoteActor*>(actor.second));
 
 				if (isMirrored) {
 					_mirroredActorsCount[_plotIndex]++;
@@ -189,7 +195,6 @@ namespace Jazz2::Multiplayer
 				std::uint32_t actorCount = (std::uint32_t)(_players.size() + _remotingActors.size());
 
 				MemoryStream packet(5 + actorCount * 19);
-				//packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::UpdateAllActors);
 				packet.WriteVariableUint32(actorCount);
 
 				for (Actors::Player* player : _players) {
@@ -282,7 +287,7 @@ namespace Jazz2::Multiplayer
 				_compressedUpdatePacketSize[_plotIndex] = packetCompressed.GetSize();
 #endif
 
-				_networkManager->SendToAll(NetworkChannel::UnreliableUpdates, packetCompressed.GetBuffer(), packetCompressed.GetSize());
+				_networkManager->SendToAll(NetworkChannel::UnreliableUpdates, packetCompressed);
 
 				SynchronizePeers();
 			} else {
@@ -323,10 +328,11 @@ namespace Jazz2::Multiplayer
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 					_updatePacketSize[_plotIndex] = packet.GetSize();
+					_compressedUpdatePacketSize[_plotIndex] = _updatePacketSize[_plotIndex];
 					_updatePacketMaxSize = std::max(_updatePacketMaxSize, _updatePacketSize[_plotIndex]);
 #endif
 
-					_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet);
 				}
 			}
 		}
@@ -453,7 +459,7 @@ namespace Jazz2::Multiplayer
 						packet.WriteVariableInt32((std::int32_t)actorPtr->_renderer.layer());
 
 						// TODO: If it fail, it will release the packet which is wrong
-						_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+						_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					}
 				}
 			} else {
@@ -472,7 +478,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32((std::uint32_t)(actorPtr->_currentTransition != nullptr ? actorPtr->_currentTransition->State : actorPtr->_currentAnimation->State));
 
 					// TODO: If it fail, it will release the packet which is wrong
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 				}
 			}
 		}
@@ -508,7 +514,7 @@ namespace Jazz2::Multiplayer
 					packet.Write(identifier.data(), (std::uint32_t)identifier.size());
 
 					// TODO: If it fails, it will release the packet which is wrong
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 				}
 			}
 		}
@@ -531,7 +537,7 @@ namespace Jazz2::Multiplayer
 				packet.Write(identifier.data(), (std::uint32_t)identifier.size());
 
 				// TODO: If it fails, it will release the packet which is wrong
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 			}
 		}
 
@@ -586,7 +592,25 @@ namespace Jazz2::Multiplayer
 
 	bool MultiLevelHandler::HandlePlayerDied(Actors::Player* player)
 	{
+		// TODO: Remove this override
 		return LevelHandler::HandlePlayerDied(player);
+	}
+
+	void MultiLevelHandler::HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			for (const auto& [peer, peerDesc] : _peerDesc) {
+				if (peerDesc.Player == player) {
+					MemoryStream packet(6);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerWarpIn);
+					packet.WriteVariableUint32(player->_playerIndex);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)exitType);
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
+					break;
+				}
+			}
+		}
 	}
 
 	bool MultiLevelHandler::HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY)
@@ -611,7 +635,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::int16_t>((std::int16_t)(force.X * 512.0f));
 					packet.WriteValue<std::int16_t>((std::int16_t)(force.Y * 512.0f));
 					packet.WriteValue<std::uint8_t>(flags);
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -637,10 +661,11 @@ namespace Jazz2::Multiplayer
 
 		for (const auto& [peer, peerDesc] : _peerDesc) {
 			if (peerDesc.Player == player) {
-				MemoryStream packet(5);
+				MemoryStream packet(6);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerWarpIn);
 				packet.WriteVariableUint32(player->_playerIndex);
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				packet.WriteValue<std::uint8_t>(0xFF);	// Only temporary, no level changing
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 				break;
 			}
 		}
@@ -657,7 +682,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteVariableInt32(player->_health);
 					packet.WriteValue<std::int16_t>((std::int16_t)(pushForce * 512.0f));
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -675,7 +700,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
 					packet.WriteValue<std::uint16_t>((std::uint16_t)player->_weaponAmmo[(std::uint8_t)player->_currentWeapon]);
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -693,7 +718,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_weaponUpgrades[(std::uint8_t)player->_currentWeapon]);
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -710,7 +735,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerChangeWeapon);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -740,7 +765,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
 					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
 					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -758,7 +783,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerRefreshCoins);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteVariableInt32(newCount);
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -776,7 +801,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerRefreshGems);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteVariableInt32(newCount);
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
 				}
 			}
@@ -821,7 +846,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableUint32(textLength);
 			packet.Write(value.data(), textLength);
 
-			_networkManager->SendToPeer(nullptr, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+			_networkManager->SendToPeer(nullptr, NetworkChannel::Main, packet);
 		}
 	}
 
@@ -923,7 +948,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableInt32(ty);
 			packet.WriteVariableInt32(amount);
 
-			_networkManager->SendToAll(NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+			_networkManager->SendToAll(NetworkChannel::Main, packet);
 		}
 	}
 
@@ -1015,7 +1040,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint8_t>((std::uint8_t)_gameMode);
 
 			// TODO: If it fail, it will release the packet which is wrong
-			_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+			_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 		}
 
 		return true;
@@ -1051,7 +1076,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32(playerIndex);
 
 					// TODO: If it fails, it will release the packet which is wrong
-					_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet);
 				}
 			}
 			return true;
@@ -1086,7 +1111,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32(_levelFileName.size());
 					packet.Write(_levelFileName.data(), _levelFileName.size());
 
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					return true;
 				}
 				case ClientPacketType::LevelReady: {
@@ -1136,7 +1161,7 @@ namespace Jazz2::Multiplayer
 							packet2.WriteVariableUint32(playerIndex);
 							packet2.WriteVariableUint64(seqNumWarped);
 
-							_networkManager->SendToPeer(peer, NetworkChannel::Main, packet2.GetBuffer(), packet2.GetSize());
+							_networkManager->SendToPeer(peer, NetworkChannel::Main, packet2);
 						}
 					}
 		
@@ -1178,7 +1203,7 @@ namespace Jazz2::Multiplayer
 							packet2.WriteValue<std::int32_t>((std::int32_t)(posY * 512.0f));
 							packet2.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
 							packet2.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
-							_networkManager->SendToPeer(peer, NetworkChannel::Main, packet2.GetBuffer(), packet2.GetSize());
+							_networkManager->SendToPeer(peer, NetworkChannel::Main, packet2);
 						}
 					}*/
 
@@ -1201,7 +1226,11 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 					
-					it->second.PressedKeysLast = it->second.PressedKeys;
+					std::uint32_t frameCount = theApplication().GetFrameCount();
+					if (it->second.UpdatedFrame != frameCount) {
+						it->second.UpdatedFrame = frameCount;
+						it->second.PressedKeysLast = it->second.PressedKeys;
+					}
 					it->second.PressedKeys = packet.ReadVariableUint64();
 
 					//LOGD("Player %i pressed 0x%08x, last state was 0x%08x", playerIndex, it->second.PressedKeys & 0xffffffffu, prevState);
@@ -1577,10 +1606,11 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					LOGD("ServerPacketType::PlayerWarpIn received - playerIndex: %u", playerIndex);
+					ExitType exitType = (ExitType)packet.ReadValue<std::uint8_t>();
+					LOGD("ServerPacketType::PlayerWarpIn received - playerIndex: %u, exitType: 0x%02x", playerIndex, exitType);
 
-					_root->InvokeAsync([this]() {
-						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn();
+					_root->InvokeAsync([this, exitType]() {
+						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn(exitType);
 					});
 					return true;
 				}
@@ -1618,7 +1648,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint8_t>(triggerId);
 			packet.WriteValue<std::uint8_t>(newState);
 
-			_networkManager->SendToAll(NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+			_networkManager->SendToAll(NetworkChannel::Main, packet);
 		}
 	}
 
@@ -1653,7 +1683,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableUint32(actorId);
 
 			// TODO: If it fails, it will release the packet which is wrong
-			_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+			_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 		}
 
 		_remotingActors.erase(it);
@@ -1720,7 +1750,7 @@ namespace Jazz2::Multiplayer
 				MemoryStream packet(20 * 1024);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::SyncTileMap);
 				_tileMap->SerializeResumableToStream(packet);
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 			}
 
 			// Spawn the player also on the remote side
@@ -1740,7 +1770,7 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableInt32((std::int32_t)player->_pos.X);
 				packet.WriteVariableInt32((std::int32_t)player->_pos.Y);
 
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 			}
 
 			for (Actors::Player* otherPlayer : _players) {
@@ -1762,7 +1792,7 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableUint32((std::uint32_t)(otherPlayer->_currentTransition != nullptr ? otherPlayer->_currentTransition->State : otherPlayer->_currentAnimation->State));
 
 				// TODO: If it fail, it will release the packet which is wrong
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 			}
 
 			for (const auto& [remotingActor, remotingActorId] : _remotingActors) {
@@ -1782,7 +1812,7 @@ namespace Jazz2::Multiplayer
 							packet.WriteVariableInt32((std::int32_t)remotingActor->_renderer.layer());
 
 							// TODO: If it fail, it will release the packet which is wrong
-							_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+							_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 						}
 					}
 				} else {
@@ -1800,7 +1830,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32((std::uint32_t)(remotingActor->_currentTransition != nullptr ? remotingActor->_currentTransition->State : remotingActor->_currentAnimation->State));
 
 					// TODO: If it fail, it will release the packet which is wrong
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 				}
 			}
 
@@ -1823,7 +1853,7 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableUint32((std::uint32_t)(player->_currentTransition != nullptr ? player->_currentTransition->State : player->_currentAnimation->State));
 
 				// TODO: If it fails, it will release the packet which is wrong
-				_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet);
 			}
 		}
 	}
@@ -2096,7 +2126,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	MultiLevelHandler::PlayerState::PlayerState(const Vector2f& pos, const Vector2f& speed)
-		: Flags(PlayerFlags::None), PressedKeys(0), PressedKeysLast(0)/*, WarpSeqNum(0), WarpTimeLeft(0.0f)*/
+		: Flags(PlayerFlags::None), PressedKeys(0), PressedKeysLast(0), UpdatedFrame(0)/*, WarpSeqNum(0), WarpTimeLeft(0.0f)*/
 	{
 	}
 }
