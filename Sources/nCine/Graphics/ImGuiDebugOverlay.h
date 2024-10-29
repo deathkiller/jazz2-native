@@ -31,7 +31,7 @@ namespace nCine
 		void updateFrameTimings() override;
 
 #if defined(DEATH_TRACE)
-		void log(TraceLevel level, StringView time, std::uint32_t threadId, StringView message) override;
+		void log(TraceLevel level, StringView time, StringView threadId, StringView message) override;
 #endif
 
 	private:
@@ -76,7 +76,7 @@ namespace nCine
 		{
 			String Time;
 			String Text;
-			std::uint32_t ThreadId;
+			String ThreadId;
 			TraceLevel Level;
 		};
 

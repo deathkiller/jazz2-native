@@ -72,7 +72,21 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotePlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
+		// TODO: Remove this override
 		return PlayerOnServer::OnHandleCollision(other);
+	}
+
+	bool RemotePlayerOnServer::OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType)
+	{
+		LevelExitingState lastState = _levelExiting;
+		bool success = PlayerOnServer::OnLevelChanging(initiator, exitType);
+		
+		if (lastState == LevelExitingState::None) {
+			// Level changing just started, send the request to the player as WarpIn packet
+			static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerLevelChanging(this, exitType);
+		}
+
+		return success;
 	}
 
 	void RemotePlayerOnServer::SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)

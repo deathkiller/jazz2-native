@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Multiplayer
 		std::uint8_t GetTeamId() const;
 		void SetTeamId(std::uint8_t value);
 
-		void WarpIn();
+		void WarpIn(ExitType exitType);
 		void MoveRemotely(const Vector2f& pos, const Vector2f& speed);
 
 	protected:

@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "NetworkManager.h"
+#include "PacketTypes.h"
 #include "../../nCine/Base/Timer.h"
 
 #include <Containers/String.h>
@@ -97,7 +98,7 @@ namespace Jazz2::Multiplayer
 	{
 		MemoryStream packet(9);
 		packet.WriteValue<std::uint64_t>(PacketSignature);
-		packet.WriteValue<std::uint8_t>(1);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryRequest);
 
 		ENetBuffer sendbuf;
 		sendbuf.data = (void*)packet.GetBuffer();
@@ -134,8 +135,8 @@ namespace Jazz2::Multiplayer
 
 		MemoryStream packet(buffer, bytesRead);
 		std::uint64_t signature = packet.ReadValue<std::uint64_t>();
-		std::uint8_t packetType = packet.ReadValue<std::uint8_t>();
-		if (signature != PacketSignature || packetType != 2) {
+		BroadcastPacketType packetType = (BroadcastPacketType)packet.ReadValue<std::uint8_t>();
+		if (signature != PacketSignature || packetType != BroadcastPacketType::DiscoveryResponse) {
 			return false;
 		}
 
@@ -179,8 +180,8 @@ namespace Jazz2::Multiplayer
 
 		MemoryStream packet(buffer, bytesRead);
 		std::uint64_t signature = packet.ReadValue<std::uint64_t>();
-		std::uint8_t packetType = packet.ReadValue<std::uint8_t>();
-		if (signature != PacketSignature || packetType != 1) {
+		BroadcastPacketType packetType = (BroadcastPacketType)packet.ReadValue<std::uint8_t>();
+		if (signature != PacketSignature || packetType != BroadcastPacketType::DiscoveryRequest) {
 			return false;
 		}
 
@@ -201,7 +202,6 @@ namespace Jazz2::Multiplayer
 
 			ServerDesc discoveredServer;
 			if (ProcessResponses(socket, discoveredServer, 0)) {
-				LOGW("TODO Process responses");
 				observer->OnServerFound(std::move(discoveredServer));
 			} else {
 				// No responses, sleep for a while
@@ -233,13 +233,12 @@ namespace Jazz2::Multiplayer
 					if (_this->_lastRequest.secondsSince() > 15) {
 						_this->_lastRequest = TimeStamp::now();
 
-						LOGW("TODO Send responses");
-
 						MemoryStream packet(512);
 						packet.WriteValue<std::uint64_t>(PacketSignature);
-						packet.WriteValue<std::uint8_t>(2);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
 						packet.WriteValue<std::uint16_t>(_this->_actualPort);
 
+						// TODO: Unique identifier
 						//packet.Write(server->GetUniqueIdentifier(), UniqueIdentifierLength);
 						static const std::uint8_t UniqueIdentifier[16] = { 1, 2, 3, 4, 5, 6 };
 						packet.Write(UniqueIdentifier, UniqueIdentifierLength);

@@ -220,7 +220,7 @@ namespace nCine
 	}
 
 #if defined(DEATH_TRACE)
-	void ImGuiDebugOverlay::log(TraceLevel level, StringView time, std::uint32_t threadId, StringView message)
+	void ImGuiDebugOverlay::log(TraceLevel level, StringView time, StringView threadId, StringView message)
 	{
 		logBuffer_.emplace_back(LogMessage{time, message, threadId, level});
 	}
@@ -501,7 +501,7 @@ namespace nCine
 						ImGui::TextUnformatted(message.Time.begin(), message.Time.end());
 
 						ImGui::TableSetColumnIndex(1);
-						ImGui::Text("%i", message.ThreadId);
+						ImGui::TextUnformatted(message.ThreadId.begin(), message.ThreadId.end());
 
 						ImGui::TableSetColumnIndex(2);
 

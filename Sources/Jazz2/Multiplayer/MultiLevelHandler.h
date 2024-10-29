@@ -100,6 +100,7 @@ namespace Jazz2::Multiplayer
 		void ProcessEvents(float timeMult) override;
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
+		void HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType);
 		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY);
 		void HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, WarpFlags flags);
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
@@ -141,6 +142,7 @@ namespace Jazz2::Multiplayer
 			PlayerFlags Flags;
 			std::uint64_t PressedKeys;
 			std::uint64_t PressedKeysLast;
+			std::uint32_t UpdatedFrame;
 			//std::uint64_t WarpSeqNum;
 			//float WarpTimeLeft;
 

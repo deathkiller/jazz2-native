@@ -35,6 +35,10 @@ namespace Death { namespace IO {
 			return _buffer.data();
 		}
 
+		DEATH_ALWAYS_INLINE const std::uint8_t* GetBuffer() const {
+			return _buffer.data();
+		}
+
 		DEATH_ALWAYS_INLINE const std::uint8_t* GetCurrentPointer(std::int32_t bytes) {
 			if (_seekOffset + bytes > _size) {
 				return nullptr;

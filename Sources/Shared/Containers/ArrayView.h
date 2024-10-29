@@ -1,6 +1,7 @@
 // Copyright © 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-//             2017, 2018, 2019, 2020, 2021, 2022, 2023
+//             2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024
 //           Vladimír Vondruš <mosra@centrum.cz> and contributors
+// Copyright © 2020-2024 Dan R.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -554,8 +555,23 @@ namespace Death { namespace Containers {
 		return size_;
 	}
 
-	/** @overload */
+	/**
+		@brief C array size
+
+		Equivalent to @ref std::size() from C++17. See also @ref arraySize(U(T::*)[size_])
+		for querying size of an array member.
+	*/
 	template<std::size_t size_, class T> constexpr std::size_t arraySize(T(&)[size_]) {
+		return size_;
+	}
+
+	/**
+		@brief C array member size
+
+		Variant of @ref arraySize(T(&)[size_]) that works on array members. Note that
+		you have to form a pointer to a member with @cpp & @ce for this to work.
+	*/
+	template<std::size_t size_, class T, class U> constexpr std::size_t arraySize(U(T::*)[size_]) {
 		return size_;
 	}
 

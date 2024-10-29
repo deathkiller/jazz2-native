@@ -6,6 +6,13 @@
 
 namespace Jazz2::Multiplayer
 {
+	enum class BroadcastPacketType
+	{
+		Null,
+		DiscoveryRequest,
+		DiscoveryResponse
+	};
+
 	enum class ClientPacketType
 	{
 		Null,

@@ -35,7 +35,7 @@ namespace Death { namespace Environment {
 	{
 		FILE* fp = ::fopen("/System/Library/CoreServices/SystemVersion.plist", "r");
 		if (fp == nullptr) {
-			return { };
+			return {};
 		}
 
 		Containers::String result;
@@ -80,7 +80,7 @@ namespace Death { namespace Environment {
 		if (fp == nullptr) {
 			fp = ::fopen("/usr/lib/os-release", "r");
 			if (fp == nullptr) {
-				return { };
+				return {};
 			}
 		}
 

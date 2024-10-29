@@ -139,7 +139,7 @@ namespace Death { namespace Utf8 {
 
 	Containers::String FromUtf16(const wchar_t* source, std::int32_t sourceSize)
 	{
-		if (sourceSize == 0) return { };
+		if (sourceSize == 0) return {};
 
 		// WCtoMB counts the trailing \0 into the size, which we have to cut. Containers::String takes
 		// care of allocating extra for the null terminator so we don't need to do that explicitly.

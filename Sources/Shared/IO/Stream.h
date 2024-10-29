@@ -74,7 +74,7 @@ namespace Death { namespace IO {
 		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
 		DEATH_ALWAYS_INLINE T ReadValue()
 		{
-			T buffer = { };
+			T buffer = {};
 			Read(&buffer, sizeof(T));
 			return buffer;
 		}

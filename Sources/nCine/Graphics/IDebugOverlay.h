@@ -35,7 +35,7 @@ namespace nCine
 		virtual void updateFrameTimings() = 0;
 
 #if defined(DEATH_TRACE)
-		virtual void log(TraceLevel level, StringView time, std::uint32_t threadId, StringView message) = 0;
+		virtual void log(TraceLevel level, StringView time, StringView threadId, StringView message) = 0;
 #endif
 
 	protected:
@@ -43,9 +43,7 @@ namespace nCine
 		TimeStamp lastUpdateTime_;
 		float updateTime_;
 
-		/// Deleted copy constructor
 		IDebugOverlay(const IDebugOverlay&) = delete;
-		/// Deleted assignment operator
 		IDebugOverlay& operator=(const IDebugOverlay&) = delete;
 	};
 
