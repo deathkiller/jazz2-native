@@ -173,6 +173,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/AnimState.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.Shaders.h
+	${NCINE_SOURCE_DIR}/Jazz2/Direction.h
 	${NCINE_SOURCE_DIR}/Jazz2/EventType.h
 	${NCINE_SOURCE_DIR}/Jazz2/ExitType.h
 	${NCINE_SOURCE_DIR}/Jazz2/GameDifficulty.h

@@ -251,7 +251,20 @@ namespace Jazz2::Events
 
 	bool EventMap::HasEventByPosition(std::int32_t x, std::int32_t y)
 	{
-		return (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X && _eventLayout[x + y * _layoutSize.X].Event != EventType::Empty);
+		return (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X &&
+			_eventLayout[x + y * _layoutSize.X].Event != EventType::Empty);
+	}
+
+	bool EventMap::IsHurting(float x, float y, Direction dir)
+	{
+		return IsHurting((std::int32_t)x / Tiles::TileSet::DefaultTileSize, (std::int32_t)y / Tiles::TileSet::DefaultTileSize, dir);
+	}
+
+	bool EventMap::IsHurting(std::int32_t x, std::int32_t y, Direction dir)
+	{
+		return (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X &&
+			_eventLayout[x + y * _layoutSize.X].Event == EventType::ModifierHurt &&
+			(_eventLayout[x + y * _layoutSize.X].EventParams[0] & (std::uint8_t)dir) != 0);
 	}
 
 	std::int32_t EventMap::GetWarpByPosition(float x, float y)

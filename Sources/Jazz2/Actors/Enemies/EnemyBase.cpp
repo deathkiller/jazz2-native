@@ -21,7 +21,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Enemies
 {
 	EnemyBase::EnemyBase()
-		: CanCollideWithAmmo(true), _canHurtPlayer(true), _scoreValue(0), _lastHitDir(LastHitDirection::None), _blinkingTimeout(0.0f)
+		: CanCollideWithAmmo(true), _canHurtPlayer(true), _scoreValue(0), _lastHitDir(Direction::None), _blinkingTimeout(0.0f)
 	{
 		SetState(ActorState::TriggersTNT, true);
 	}
@@ -163,9 +163,9 @@ namespace Jazz2::Actors::Enemies
 					}
 
 					if (std::abs(shotSpeed.X) > 0.2f) {
-						_lastHitDir = (shotSpeed.X > 0.0f ? LastHitDirection::Right : LastHitDirection::Left);
+						_lastHitDir = (shotSpeed.X > 0.0f ? Direction::Right : Direction::Left);
 					} else {
-						_lastHitDir = (shotSpeed.Y > 0.0f ? LastHitDirection::Down : LastHitDirection::Up);
+						_lastHitDir = (shotSpeed.Y > 0.0f ? Direction::Down : Direction::Up);
 					}
 					DecreaseHealth(shotBase->GetStrength(), shotBase);
 				}
@@ -183,14 +183,14 @@ namespace Jazz2::Actors::Enemies
 						default: hit = false; break;
 					}
 					if (hit) {
-						_lastHitDir = LastHitDirection::Up;
+						_lastHitDir = Direction::Up;
 						DecreaseHealth(10, pole);
 						return true;
 					}
 				}
 			} else if (auto* pushableBox = runtime_cast<Solid::PushableBox*>(other)) {
 				if (_levelHandler->IsReforged() && pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
-					_lastHitDir = LastHitDirection::Up;
+					_lastHitDir = Direction::Up;
 					DecreaseHealth(10, pushableBox);
 					return true;
 				}
@@ -347,10 +347,10 @@ namespace Jazz2::Actors::Enemies
 
 		Vector2f force;
 		switch (_lastHitDir) {
-			case LastHitDirection::Left: force = Vector2f(-1.4f, 0.0f); break;
-			case LastHitDirection::Right: force = Vector2f(1.4f, 0.0f); break;
-			case LastHitDirection::Up: force = Vector2f(0.0f, -1.4f); break;
-			case LastHitDirection::Down: force = Vector2f(0.0f, 1.4f); break;
+			case Direction::Left: force = Vector2f(-1.4f, 0.0f); break;
+			case Direction::Right: force = Vector2f(1.4f, 0.0f); break;
+			case Direction::Up: force = Vector2f(0.0f, -1.4f); break;
+			case Direction::Down: force = Vector2f(0.0f, 1.4f); break;
 			default: force = Vector2f::Zero; break;
 		}
 

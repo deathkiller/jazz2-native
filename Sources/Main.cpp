@@ -306,7 +306,7 @@ void GameEventHandler::OnInitialize()
 #	endif
 
 #	if defined(WITH_MULTIPLAYER)
-	if (PreferencesCache::InitialState == "/server"_s) {
+	/*if (PreferencesCache::InitialState == "/server"_s) {
 		LOGI("Starting server on port %u...", MultiplayerDefaultPort);
 
 		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
@@ -315,7 +315,7 @@ void GameEventHandler::OnInitialize()
 
 		// TODO: Hardcoded port
 		CreateServer(MultiplayerDefaultPort);
-	} else if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
+	} else*/ if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
 		String address; std::uint16_t port;
 		if (TryParseAddressAndPort(PreferencesCache::InitialState.exceptPrefix(9), address, port)) {
 			if (port == 0) {
@@ -755,14 +755,10 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client version is not compatible with the server.")); break;
 				case Reason::ServerIsFull: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer capacity is full.\nPlease try it later.")); break;
 				case Reason::ServerNotReady: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer is not in a state where it can process your request.\nPlease try again in a few seconds.")); break;
-				
-				// TODO: Add multiplayer disconnect reason messages
-				case Reason::ServerStopped:
-				case Reason::ServerStoppedForMaintenance:
-				case Reason::ServerStoppedForReconfiguration:
-				case Reason::ServerStoppedForUpdate:
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
-				
+				case Reason::ServerStopped: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
+				case Reason::ServerStoppedForMaintenance: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for maintenance.\nPlease try it again later.")); break;
+				case Reason::ServerStoppedForReconfiguration: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for reconfiguration.\nPlease try it again later.")); break;
+				case Reason::ServerStoppedForUpdate: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for update.\nPlease check your client version and try it again in a minute.")); break;
 				case Reason::ConnectionLost: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been lost!\f[/c]\n\n\nPlease try it again and if the problem persists,\ncheck your network connection.")); break;
 				case Reason::ConnectionTimedOut: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe server is not responding for connection request.")); break;
 				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#907050]kicked\f[/c] off the server.\nContact server administrators for more information.")); break;
@@ -820,6 +816,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t levelLength = packet.ReadVariableUint32();
 				String levelName = String(NoInit, levelLength);
 				packet.Read(levelName.data(), levelLength);
+
+				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, episode: %s, level: %s", flags, gameMode, episodeName.data(), levelName.data());
 
 				InvokeAsync([this, flags, gameMode, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;

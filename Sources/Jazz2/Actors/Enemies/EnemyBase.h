@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../ActorBase.h"
+#include "../../Direction.h"
 
 namespace Jazz2::Actors::Enemies
 {
@@ -26,17 +27,9 @@ namespace Jazz2::Actors::Enemies
 		}
 
 	protected:
-		enum class LastHitDirection {
-			None,
-			Left,
-			Right,
-			Up,
-			Down
-		};
-
 		bool _canHurtPlayer;
 		uint32_t _scoreValue;
-		LastHitDirection _lastHitDir;
+		Direction _lastHitDir;
 
 		void OnUpdate(float timeMult) override;
 		void OnHealthChanged(ActorBase* collider) override;

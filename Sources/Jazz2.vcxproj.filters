@@ -1530,6 +1530,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Spinlock.h">
       <Filter>Header Files\Shared\Threading</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Direction.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

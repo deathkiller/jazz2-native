@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Sucker::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		LastHitDirection parentLastHitDir = (LastHitDirection)details.Params[0];
+		Direction parentLastHitDir = (Direction)details.Params[0];
 
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
@@ -29,8 +29,8 @@ namespace Jazz2::Actors::Enemies
 
 		async_await RequestMetadataAsync("Enemy/Sucker"_s);
 
-		if (parentLastHitDir != LastHitDirection::None) {
-			SetFacingLeft(parentLastHitDir == LastHitDirection::Left);
+		if (parentLastHitDir != Direction::None) {
+			SetFacingLeft(parentLastHitDir == Direction::Left);
 
 			_health = 1;
 
@@ -41,8 +41,8 @@ namespace Jazz2::Actors::Enemies
 				SetAnimation(AnimState::Walk);
 				SetState(ActorState::ApplyGravitation, true);
 			});
-			if (parentLastHitDir == LastHitDirection::Left || parentLastHitDir == LastHitDirection::Right) {
-				_speed.X = 3 * (parentLastHitDir == LastHitDirection::Left ? -1 : 1);
+			if (parentLastHitDir == Direction::Left || parentLastHitDir == Direction::Right) {
+				_speed.X = (parentLastHitDir == Direction::Left ? -3.0f : 3.0f);
 			}
 			PlaySfx("Deflate"_s);
 		} else {

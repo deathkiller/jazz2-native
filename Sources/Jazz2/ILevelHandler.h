@@ -93,7 +93,7 @@ namespace Jazz2
 		virtual void SetCheckpoint(Actors::Player* player, const Vector2f& pos) = 0;
 		virtual void RollbackToCheckpoint(Actors::Player* player) = 0;
 		virtual void ActivateSugarRush(Actors::Player* player) = 0;
-		virtual void ShowLevelText(const StringView text) = 0;
+		virtual void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) = 0;
 		virtual StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) = 0;
 		virtual void OverrideLevelText(std::uint32_t textId, const StringView value) = 0;
 		virtual void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) = 0;

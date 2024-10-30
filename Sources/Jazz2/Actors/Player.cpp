@@ -1578,7 +1578,7 @@ namespace Jazz2::Actors
 
 	void Player::OnHitFloor(float timeMult)
 	{
-		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y + 24)) {
+		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y + 24.0f, Direction::Up)) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {
 					// Decrease remaining shield time by 5 secs
@@ -1621,7 +1621,7 @@ namespace Jazz2::Actors
 
 	void Player::OnHitCeiling(float timeMult)
 	{
-		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y - 4.0f)) {
+		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y - 4.0f, Direction::Down)) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {
 					// Decrease remaining shield time by 5 secs
@@ -1645,7 +1645,7 @@ namespace Jazz2::Actors
 		_pushFramesLeft = 2.0f;
 		_keepRunningTime = 0.0f;
 
-		if (_levelHandler->TileMap()->IsTileHurting(_pos.X + (_speed.X > 0.0f ? 1.0f : -1.0f) * 16.0f, _pos.Y)) {
+		if (_levelHandler->EventMap()->IsHurting(_pos.X + (_speed.X > 0.0f ? 16.0f : -16.0f), _pos.Y, (_speed.X > 0.0f ? Direction::Left : Direction::Right))) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {
 					// Decrease remaining shield time by 5 secs
@@ -2399,7 +2399,7 @@ namespace Jazz2::Actors
 							exitType |= ExitType::FastTransition;
 						}
 						StringView nextLevel;
-						if (p[2] != 0 && p[3] != 0) {
+						if (p[2] != 0) {
 							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
 						}
 						_levelHandler->BeginLevelChange(this, exitType, nextLevel);
@@ -2415,7 +2415,7 @@ namespace Jazz2::Actors
 			case EventType::AreaText: { // Text, TextOffset, Vanish
 				std::uint8_t index = p[1];
 				StringView text = _levelHandler->GetLevelText(p[0], index != 0 ? index : -1, '|');
-				_levelHandler->ShowLevelText(text);
+				_levelHandler->ShowLevelText(text, this);
 
 				if (p[2] != 0) {
 					events->StoreTileEvent((std::int32_t)(_pos.X / 32), (std::int32_t)(_pos.Y / 32), EventType::Empty);

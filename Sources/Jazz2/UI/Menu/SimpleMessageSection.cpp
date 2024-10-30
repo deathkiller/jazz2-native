@@ -33,6 +33,7 @@ namespace Jazz2::UI::Menu
 		Recti contentBounds = _root->GetContentBounds();
 		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.5f);
 		float topLine = contentBounds.Y + 31.0f;
+		float bottomLine = contentBounds.Y + contentBounds.H - 50.0f;
 
 		_root->DrawElement(MenuDim, center.X, topLine - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
@@ -41,6 +42,9 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_message, charOffset, center.X, topLine - 30.0f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
+
+		_root->DrawStringShadow(_("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, bottomLine, IMenuContainer::FontLayer,
+			Alignment::Bottom, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 	}
 
 	void SimpleMessageSection::OnDrawOverlay(Canvas* canvas)

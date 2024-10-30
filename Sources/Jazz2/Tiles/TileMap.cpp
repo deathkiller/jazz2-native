@@ -452,32 +452,6 @@ namespace Jazz2::Tiles
 		return false;
 	}
 
-	bool TileMap::IsTileHurting(float x, float y)
-	{
-		// TODO: Implement all JJ2+ parameters (directional hurt events)
-		std::int32_t tx = (std::int32_t)x / TileSet::DefaultTileSize;
-		std::int32_t ty = (std::int32_t)y / TileSet::DefaultTileSize;
-
-		if (tx < 0 || ty < 0 || _sprLayerIndex == -1) {
-			return false;
-		}
-
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		if (tx >= layoutSize.X || ty >= layoutSize.Y) {
-			return false;
-		}
-
-		LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
-		if ((tile.Flags & LayerTileFlags::Hurt) != LayerTileFlags::Hurt) {
-			return false;
-		}
-		// TODO: Some tiles have Hurt event with empty mask
-		//std::int32_t tileId = ResolveTileID(tile);
-		//TileSet* tileSet = ResolveTileSet(tileId);
-		//return (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId));
-		return true;
-	}
-
 	SuspendType TileMap::GetTileSuspendState(float x, float y)
 	{
 		constexpr std::int32_t Tolerance = 4;
@@ -981,9 +955,6 @@ namespace Jazz2::Tiles
 				break;
 			case EventType::ModifierHook:
 				tile.HasSuspendType = SuspendType::Hook;
-				break;
-			case EventType::ModifierHurt:
-				tile.Flags |= LayerTileFlags::Hurt;
 				break;
 			case EventType::SceneryDestruct:
 				SetTileDestructibleEventParams(tile, TileDestructType::Weapon, tileParams[0] | (tileParams[1] << 8));
