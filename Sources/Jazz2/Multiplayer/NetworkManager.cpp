@@ -278,7 +278,7 @@ namespace Jazz2::Multiplayer
 
 		_this->_thread.Detach();
 
-		LOGD("Client thread exited (%u)", (std::uint32_t)reason);
+		LOGD("[MP] Client thread exited (%u)", (std::uint32_t)reason);
 	}
 
 	void NetworkManager::OnServerThread(void* param)
@@ -354,7 +354,7 @@ namespace Jazz2::Multiplayer
 
 		_this->_thread.Detach();
 
-		LOGD("Server thread exited");
+		LOGD("[MP] Server thread exited");
 	}
 }
 

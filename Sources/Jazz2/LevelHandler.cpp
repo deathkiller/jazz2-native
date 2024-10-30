@@ -1238,7 +1238,7 @@ namespace Jazz2
 #endif
 	}
 
-	void LevelHandler::ShowLevelText(const StringView text)
+	void LevelHandler::ShowLevelText(const StringView text, Actors::ActorBase* initiator)
 	{
 		_hud->ShowLevelText(text);
 	}

@@ -158,6 +158,20 @@ namespace Jazz2::Compatibility
 
 			block.ReadRawBytes(tile.Mask, sizeof(tile.Mask));
 		}
+
+		// Try to fix some known bugs in tilesets
+		if (_name == "Castle 1"_s || _name == "Castle 1 Night"_s) {
+			LOGI("Applying \"%s\" tileset mask fix", _name.data());
+			auto& spikesWithEmptyMask = _tiles[189];
+			auto& spikesWithCorrectMask = _tiles[184];
+			std::memcpy(spikesWithEmptyMask.Mask, spikesWithCorrectMask.Mask, sizeof(spikesWithEmptyMask.Mask));
+		} else if (_name == "Inferno Night"_s) {
+			LOGI("Applying \"%s\" tileset mask fix", _name.data());
+			static const std::int32_t SolidTilesWithEmptyMask[] = { 142, 143, 146, 152, 153, 156 };
+			for (std::int32_t tileIdx : SolidTilesWithEmptyMask) {
+				std::memset(_tiles[tileIdx].Mask, 0xFF, sizeof(_tiles[tileIdx].Mask));
+			}
+		}
 	}
 
 	void JJ2Tileset::Convert(const StringView targetPath) const

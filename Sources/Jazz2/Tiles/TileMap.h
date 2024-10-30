@@ -60,8 +60,7 @@ namespace Jazz2::Tiles
 		FlipY = 0x02,
 		Animated = 0x04,
 
-		OneWay = 0x10,
-		Hurt = 0x20
+		OneWay = 0x10
 	};
 
 	DEFINE_ENUM_OPERATORS(LayerTileFlags);
@@ -164,7 +163,6 @@ namespace Jazz2::Tiles
 		bool IsTileEmpty(std::int32_t tx, std::int32_t ty);
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
 		bool CanBeDestroyed(const AABBf& aabb, TileCollisionParams& params);
-		bool IsTileHurting(float x, float y);
 		SuspendType GetTileSuspendState(float x, float y);
 		bool AdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount);
 

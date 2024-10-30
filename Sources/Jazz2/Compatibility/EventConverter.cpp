@@ -1,5 +1,6 @@
 ﻿#include "EventConverter.h"
 #include "JJ2Level.h"
+#include "../Direction.h"
 #include "../Actors/Collectibles/FoodCollectible.h"
 
 using FoodType = Jazz2::Actors::Collectibles::FoodType;
@@ -186,12 +187,24 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::MODIFIER_HOOK, NoParamList(EventType::ModifierHook));
 		Add(JJ2Event::MODIFIER_ONE_WAY, NoParamList(EventType::ModifierOneWay));
 		Add(JJ2Event::MODIFIER_VINE, NoParamList(EventType::ModifierVine));
-		Add(JJ2Event::MODIFIER_HURT, ParamIntToParamList(EventType::ModifierHurt, {{
-			{ JJ2ParamBool, 1 },	// Up (JJ2+)
-			{ JJ2ParamBool, 1 },	// Down (JJ2+)
-			{ JJ2ParamBool, 1 },	// Left (JJ2+)
-			{ JJ2ParamBool, 1 }		// Right (JJ2+)
-		}}));
+		Add(JJ2Event::MODIFIER_HURT, [](JJ2Level* level, std::uint32_t jj2Params) -> ConversionResult {
+			std::uint8_t eventParams[16];
+			ConvertParamInt(jj2Params, {
+				{ JJ2ParamBool, 1 },	// Up (JJ2+)
+				{ JJ2ParamBool, 1 },	// Down (JJ2+)
+				{ JJ2ParamBool, 1 },	// Left (JJ2+)
+				{ JJ2ParamBool, 1 }		// Right (JJ2+)
+			}, eventParams);
+
+			Direction dir = Direction::None;
+			if (eventParams[0]) dir |= Direction::Up;
+			if (eventParams[1]) dir |= Direction::Down;
+			if (eventParams[2]) dir |= Direction::Left;
+			if (eventParams[3]) dir |= Direction::Right;
+			if (dir == Direction::None) dir |= Direction::Up;
+
+			return { EventType::ModifierHurt, { (std::uint8_t)dir } };
+		});
 		Add(JJ2Event::MODIFIER_RICOCHET, NoParamList(EventType::ModifierRicochet));
 		Add(JJ2Event::MODIFIER_H_POLE, NoParamList(EventType::ModifierHPole));
 		Add(JJ2Event::MODIFIER_V_POLE, NoParamList(EventType::ModifierVPole));

@@ -155,7 +155,7 @@ namespace Jazz2::Multiplayer
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
 
-		LOGI("Found server at [%s]:%u (%s)", addressString, discoveredServer.Endpoint.port, discoveredServer.LevelName.data());
+		LOGD("[MP] Found server at [%s]:%u (%s)", addressString, discoveredServer.Endpoint.port, discoveredServer.LevelName.data());
 		return true;
 	}
 
@@ -214,7 +214,7 @@ namespace Jazz2::Multiplayer
 			_this->_socket = ENET_SOCKET_NULL;
 		}
 
-		LOGD("Server discovery thread exited");
+		LOGD("[MP] Server discovery thread exited");
 	}
 
 	void ServerDiscovery::OnServerThread(void* param)
@@ -277,7 +277,7 @@ namespace Jazz2::Multiplayer
 			_this->_socket = ENET_SOCKET_NULL;
 		}
 
-		LOGD("Server discovery thread exited");
+		LOGD("[MP] Server discovery thread exited");
 	}
 }
 

@@ -65,7 +65,7 @@ namespace Jazz2::Multiplayer
 		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void ActivateSugarRush(Actors::Player* player) override;
-		void ShowLevelText(const StringView text) override;
+		void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
 		void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) override;
@@ -171,6 +171,7 @@ namespace Jazz2::Multiplayer
 		void SynchronizePeers();
 		std::uint32_t FindFreeActorId();
 		std::uint8_t FindFreePlayerId();
+		bool IsLocalPlayer(Actors::ActorBase* actor);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 

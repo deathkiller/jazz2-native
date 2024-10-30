@@ -159,6 +159,8 @@ namespace Jazz2::Multiplayer
 			if (!_initialUpdateSent) {
 				_initialUpdateSent = true;
 
+				LOGD("[MP] Level \"%s/%s\" is ready", _episodeName.data(), _levelFileName.data());
+
 				if (!_isServer) {
 					MemoryStream packet(1);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::LevelReady);
@@ -581,6 +583,8 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
+		LOGD("[MP] Changing level to \"%s\" (0x%02x)", nextLevel.data(), exitType);
+
 		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
 	}
 
@@ -823,9 +827,12 @@ namespace Jazz2::Multiplayer
 		LevelHandler::ActivateSugarRush(player);
 	}
 
-	void MultiLevelHandler::ShowLevelText(const StringView text)
+	void MultiLevelHandler::ShowLevelText(const StringView text, Actors::ActorBase* initiator)
 	{
-		LevelHandler::ShowLevelText(text);
+		if (initiator == nullptr || IsLocalPlayer(initiator)) {
+			// Pass through only messages for local players
+			LevelHandler::ShowLevelText(text, initiator);
+		}
 	}
 
 	StringView MultiLevelHandler::GetLevelText(std::uint32_t textId, std::int32_t index, std::uint32_t delimiter)
@@ -936,6 +943,7 @@ namespace Jazz2::Multiplayer
 
 	bool MultiLevelHandler::SerializeResumableToStream(Stream& dest)
 	{
+		// Online multiplayer sessions cannot be resumed
 		return false;
 	}
 
@@ -1095,7 +1103,7 @@ namespace Jazz2::Multiplayer
 			auto packetType = (ClientPacketType)data[0];
 			switch (packetType) {
 				case ClientPacketType::Auth: {
-					LOGD("ClientPacketType::Auth received - peer: %p", peer._enet);
+					LOGD("[MP] ClientPacketType::Auth - peer: %p", peer._enet);
 
 					std::uint8_t flags = 0;
 					if (PreferencesCache::EnableReforgedGameplay) {
@@ -1115,7 +1123,7 @@ namespace Jazz2::Multiplayer
 					return true;
 				}
 				case ClientPacketType::LevelReady: {
-					LOGD("ClientPacketType::LevelReady received - peer: %p", peer._enet);
+					LOGD("[MP] ClientPacketType::LevelReady - peer: %p", peer._enet);
 
 					_peerDesc[peer] = PeerDesc(nullptr, PeerState::LevelLoaded);
 					return true;
@@ -1127,12 +1135,13 @@ namespace Jazz2::Multiplayer
 					auto it = _peerDesc.find(peer);
 					auto it2 = _playerStates.find(playerIndex);
 					if (it == _peerDesc.end() || it2 == _playerStates.end()) {
+						LOGD("[MP] ClientPacketType::PlayerUpdate - invalid playerIndex (%u)", playerIndex);
 						return true;
 					}
 
 					auto player = it->second.Player;
 					if (playerIndex != player->_playerIndex) {
-						LOGW("PlayerUpdate packet received with wrong player index %i instead of %i", playerIndex, player->_playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerUpdate - received playerIndex %u instead of %i", playerIndex, player->_playerIndex);
 						return true;
 					}
 
@@ -1243,13 +1252,15 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::LoadLevel: {
 					// Start to ignore all incoming packets, because they no longer belong to this handler
 					_ignorePackets = true;
+
+					LOGD("[MP] ServerPacketType::LoadLevel");
 					break;
 				}
 				case ServerPacketType::ChangeGameMode: {
 					MemoryStream packet(data + 1, dataLength - 1);
 					MultiplayerGameMode gameMode = (MultiplayerGameMode)packet.ReadValue<std::uint8_t>();
 
-					LOGD("ServerPacketType::ChangeGameMode received - mode: %u", gameMode);
+					LOGD("[MP] ServerPacketType::ChangeGameMode - mode: %u", gameMode);
 
 					_gameMode = gameMode;
 					break;
@@ -1280,7 +1291,7 @@ namespace Jazz2::Multiplayer
 					float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
 					float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
 					std::uint32_t identifierLength = packet.ReadVariableUint32();
-					String identifier = String(NoInit, identifierLength);
+					String identifier(NoInit, identifierLength);
 					packet.Read(identifier.data(), identifierLength);
 
 					// TODO: Use only lock here
@@ -1295,7 +1306,7 @@ namespace Jazz2::Multiplayer
 					String message = String(NoInit, messageLength);
 					packet.Read(message.data(), messageLength);
 
-					LOGD("ServerPacketType::ShowMessage received - text: \"%s\"", message.data());
+					LOGD("[MP] ServerPacketType::ShowMessage - text: \"%s\"", message.data());
 
 					_hud->ShowLevelText(message);
 					break;
@@ -1310,7 +1321,7 @@ namespace Jazz2::Multiplayer
 					std::int32_t posX = packet.ReadVariableInt32();
 					std::int32_t posY = packet.ReadVariableInt32();
 
-					LOGD("ServerPacketType::CreateControllablePlayer received - playerIndex: %u, playerType: %u, health: %u, flags: %u, team: %u, x: %i, y: %i",
+					LOGD("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: %u, playerType: %u, health: %u, flags: %u, team: %u, x: %i, y: %i",
 						playerIndex, playerType, health, flags, teamId, posX, posY);
 
 					_lastSpawnedActorId = playerIndex;
@@ -1348,7 +1359,8 @@ namespace Jazz2::Multiplayer
 					packet.Read(metadataPath.data(), metadataLength);
 					std::uint32_t anim = packet.ReadVariableUint32();
 
-					LOGD("Remote actor %u created on [%i;%i] with metadata \"%s\"", actorId, posX, posY, metadataPath.data());
+					//LOGD("Remote actor %u created on [%i;%i] with metadata \"%s\"", actorId, posX, posY, metadataPath.data());
+					LOGD("[MP] ServerPacketType::CreateRemoteActor - actorId: %u, metadata: \"%s\", x: %i, y: %i", actorId, metadataPath.data(), posX, posY);
 
 					_root->InvokeAsync([this, actorId, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim]() {
 						std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = std::make_shared<Actors::Multiplayer::RemoteActor>();
@@ -1371,7 +1383,8 @@ namespace Jazz2::Multiplayer
 					std::int32_t tileY = packet.ReadVariableInt32();
 					std::int32_t posZ = packet.ReadVariableInt32();
 
-					LOGD("Mirrored actor %u created on [%i;%i] with event %u", actorId, tileX * 32 + 16, tileY * 32 + 16, (std::uint32_t)eventType);
+					//LOGD("Mirrored actor %u created on [%i;%i] with event %u", actorId, tileX * 32 + 16, tileY * 32 + 16, (std::uint32_t)eventType);
+					LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: %u, event: %u, x: %i, y: %i", actorId, (std::uint32_t)eventType, tileX * 32 + 16, tileY * 32 + 16);
 
 					_root->InvokeAsync([this, actorId, eventType, eventParams = std::move(eventParams), actorFlags, tileX, tileY, posZ]() {
 						// TODO: Remove const_cast
@@ -1379,6 +1392,8 @@ namespace Jazz2::Multiplayer
 						if (actor != nullptr) {
 							_remoteActors[actorId] = actor;
 							AddActor(actor);
+						} else {
+							LOGD("[MP] ServerPacketType::CreateMirroredActor - CANNOT CREATE - actorId: %u", actorId);
 						}
 					});
 					return true;
@@ -1387,13 +1402,16 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t actorId = packet.ReadVariableUint32();
 
-					LOGD("Remote actor %u destroyed", actorId);
+					//LOGD("Remote actor %u destroyed", actorId);
+					LOGD("[MP] ServerPacketType::DestroyRemoteActor - actorId: %u", actorId);
 
 					_root->InvokeAsync([this, actorId]() {
 						auto it = _remoteActors.find(actorId);
 						if (it != _remoteActors.end()) {
 							it->second->SetState(Actors::ActorState::IsDestroyed, true);
 							_remoteActors.erase(it);
+						} else {
+							LOGD("[MP] ServerPacketType::DestroyRemoteActor - NOT FOUND - actorId: %u", actorId);
 						}
 					});
 					return true;
@@ -1424,7 +1442,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::SyncTileMap: {
 					MemoryStream packet(data + 1, dataLength - 1);
 
-					LOGD("ServerPacketType::SyncTileMap received");
+					LOGD("[MP] ServerPacketType::SyncTileMap");
 
 					// TODO: No lock here ???
 					TileMap()->InitializeFromStream(packet);
@@ -1435,7 +1453,7 @@ namespace Jazz2::Multiplayer
 					std::uint8_t triggerId = packet.ReadValue<std::uint8_t>();
 					bool newState = (bool)packet.ReadValue<std::uint8_t>();
 
-					LOGD("ServerPacketType::SetTrigger received - id: %u, state: %u", triggerId, newState);
+					LOGD("[MP] ServerPacketType::SetTrigger - id: %u, state: %u", triggerId, newState);
 
 					_root->InvokeAsync([this, triggerId, newState]() {
 						TileMap()->SetTrigger(triggerId, newState);
@@ -1447,6 +1465,9 @@ namespace Jazz2::Multiplayer
 					std::int32_t tx = packet.ReadVariableInt32();
 					std::int32_t ty = packet.ReadVariableInt32();
 					std::int32_t amount = packet.ReadVariableInt32();
+
+					LOGD("[MP] ServerPacketType::AdvanceTileAnimation - tx: %i, ty: %i, amount: %i", tx, ty, amount);
+
 					_root->InvokeAsync([this, tx, ty, amount]() {
 						TileMap()->AdvanceDestructibleTileAnimation(tx, ty, amount);
 					});
@@ -1464,7 +1485,7 @@ namespace Jazz2::Multiplayer
 					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
 					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
 
-					LOGD("ServerPacketType::PlayerMoveInstantly received - playerIndex: %u, x: %f, y: %f, sx: %f, sy: %f",
+					LOGD("[MP] ServerPacketType::PlayerMoveInstantly - playerIndex: %u, x: %f, y: %f, sx: %f, sy: %f",
 						playerIndex, posX, posY, speedX, speedY);
 
 					_root->InvokeAsync([this, posX, posY, speedX, speedY]() {
@@ -1477,7 +1498,7 @@ namespace Jazz2::Multiplayer
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					std::uint64_t seqNum = packet.ReadVariableUint64();
 
-					LOGD("ServerPacketType::PlayerAckWarped received - playerIndex: %u, seqNum: %llu", playerIndex, seqNum);
+					LOGD("[MP] ServerPacketType::PlayerAckWarped - playerIndex: %u, seqNum: %llu", playerIndex, seqNum);
 
 					if (_lastSpawnedActorId == playerIndex && _seqNumWarped == seqNum) {
 						_seqNumWarped = 0;
@@ -1488,13 +1509,13 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGW("ServerPacketType::PlayerChangeWeapon received - malformed packet");
+						LOGD("[MP] ServerPacketType::PlayerChangeWeapon - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 
-					LOGD("ServerPacketType::PlayerChangeWeapon received - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
+					LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
 
 					_players[0]->SetCurrentWeapon((WeaponType)weaponType);
 					return true;
@@ -1503,13 +1524,14 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerRefreshAmmo - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 					std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
 
-					LOGD("ServerPacketType::PlayerRefreshAmmo received - playerIndex: %u, weaponType: %u, weaponAmmo: %u", playerIndex, weaponType, weaponAmmo);
+					LOGD("[MP] ServerPacketType::PlayerRefreshAmmo - playerIndex: %u, weaponType: %u, weaponAmmo: %u", playerIndex, weaponType, weaponAmmo);
 
 					_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
 					return true;
@@ -1518,13 +1540,14 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerRefreshWeaponUpgrades - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 					std::uint8_t weaponUpgrades = packet.ReadValue<std::uint8_t>();
 
-					LOGD("ServerPacketType::PlayerRefreshWeaponUpgrades received - playerIndex: %u, weaponType: %u, weaponUpgrades: %u", playerIndex, weaponType, weaponUpgrades);
+					LOGD("[MP] ServerPacketType::PlayerRefreshWeaponUpgrades - playerIndex: %u, weaponType: %u, weaponUpgrades: %u", playerIndex, weaponType, weaponUpgrades);
 
 					_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
 					return true;
@@ -1533,12 +1556,13 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerRefreshCoins - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
 					std::int32_t newCount = packet.ReadVariableInt32();
 
-					LOGD("ServerPacketType::PlayerRefreshCoins received - playerIndex: %u, newCount: %i, weaponUpgrades: %u", playerIndex, newCount);
+					LOGD("[MP] ServerPacketType::PlayerRefreshCoins - playerIndex: %u, newCount: %i", playerIndex, newCount);
 
 					_players[0]->_coins = newCount;
 					_hud->ShowCoins(newCount);
@@ -1548,12 +1572,13 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerRefreshGems - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
 					std::int32_t newCount = packet.ReadVariableInt32();
 
-					LOGD("ServerPacketType::PlayerRefreshGems received - playerIndex: %u, newCount: %i, weaponUpgrades: %u", playerIndex, newCount);
+					LOGD("[MP] ServerPacketType::PlayerRefreshGems - playerIndex: %u, newCount: %i", playerIndex, newCount);
 
 					_players[0]->_gems = newCount;
 					_hud->ShowGems(newCount);
@@ -1563,13 +1588,14 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerTakeDamage - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
 					std::int32_t health = packet.ReadVariableInt32();
 					float pushForce = packet.ReadValue<std::int16_t>() / 512.0f;
 
-					LOGD("ServerPacketType::PlayerTakeDamage received - playerIndex: %u, health: %i, pushForce: %f", playerIndex, health, pushForce);
+					LOGD("[MP] ServerPacketType::PlayerTakeDamage - playerIndex: %u, health: %i, pushForce: %f", playerIndex, health, pushForce);
 
 					_root->InvokeAsync([this, health, pushForce]() {
 						_players[0]->TakeDamage(_players[0]->_health - health, pushForce);
@@ -1580,6 +1606,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerActivateSpring - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -1602,12 +1629,12 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGW("ServerPacketType::PlayerWarpIn received - malformed packet");
+						LOGD("[MP] ServerPacketType::PlayerWarpIn - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
 					ExitType exitType = (ExitType)packet.ReadValue<std::uint8_t>();
-					LOGD("ServerPacketType::PlayerWarpIn received - playerIndex: %u, exitType: 0x%02x", playerIndex, exitType);
+					LOGD("[MP] ServerPacketType::PlayerWarpIn - playerIndex: %u, exitType: 0x%02x", playerIndex, exitType);
 
 					_root->InvokeAsync([this, exitType]() {
 						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn(exitType);
@@ -1722,7 +1749,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			std::uint8_t playerIndex = FindFreePlayerId();
-			LOGD("Syncing player %u", playerIndex);
+			LOGD("[MP] Syncing player %u", playerIndex);
 
 			std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>();
 			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spaz, (std::uint8_t)playerIndex };
@@ -1897,6 +1924,12 @@ namespace Jazz2::Multiplayer
 		return UINT8_MAX;
 	}
 
+	bool MultiLevelHandler::IsLocalPlayer(Actors::ActorBase* actor)
+	{
+		return (runtime_cast<Actors::Multiplayer::LocalPlayerOnServer*>(actor) ||
+				runtime_cast<Actors::Multiplayer::RemotablePlayer*>(actor));
+	}
+
 	bool MultiLevelHandler::ActorShouldBeMirrored(Actors::ActorBase* actor)
 	{
 		// If actor has no animation, it's probably some special object (usually lights and ambient sounds)
@@ -2053,6 +2086,8 @@ namespace Jazz2::Multiplayer
 		ImGui::Text("%.0f", _remotingActorsCount[_plotIndex]);
 
 		ImGui::Text("Last spawned ID: %u", _lastSpawnedActorId);
+
+		ImGui::Text("Errors: %zu", _debugReport.size());
 
 		ImGui::SeparatorText("Peers");
 
