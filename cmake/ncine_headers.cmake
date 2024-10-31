@@ -18,6 +18,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/Array.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/ArrayView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/DateTime.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/Function.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/GrowableArray.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Pair.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Reference.h

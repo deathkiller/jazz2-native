@@ -7,8 +7,7 @@
 #include "EventConverter.h"
 #include "../WeatherType.h"
 
-#include <functional>
-
+#include <Containers/Function.h>
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -57,7 +56,7 @@ namespace Jazz2::Compatibility
 
 		bool Open(const StringView path, bool strictParser);
 
-		void Convert(const StringView targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView)>& levelTokenConversion = nullptr);
+		void Convert(const StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion = {});
 		void AddLevelTokenTextID(uint8_t textId);
 
 		JJ2Version GetVersion() const {
@@ -162,7 +161,7 @@ namespace Jazz2::Compatibility
 		void LoadLayers(JJ2Block& dictBlock, std::int32_t dictLength, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser);
 
-		static void WriteLevelName(Stream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
+		static void WriteLevelName(Stream& so, MutableStringView value, Function<LevelToken(StringView)>&& levelTokenConversion = {});
 		static bool StringHasSuffixIgnoreCase(const StringView value, const StringView suffix);
 	};
 }

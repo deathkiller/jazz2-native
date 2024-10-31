@@ -108,7 +108,7 @@ namespace Jazz2::Compatibility
 		return true;
 	}
 
-	void JJ2Strings::Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion)
+	void JJ2Strings::Convert(const StringView targetPath, Function<JJ2Level::LevelToken(const StringView)>&& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
@@ -140,7 +140,7 @@ namespace Jazz2::Compatibility
 			}
 
 			String levelName;
-			if (levelTokenConversion != nullptr) {
+			if (levelTokenConversion) {
 				auto token = levelTokenConversion(level.Name);
 				if (!token.Episode.empty()) {
 					levelName = "/"_s.joinWithoutEmptyParts({ token.Episode, token.Level });

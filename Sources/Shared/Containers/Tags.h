@@ -96,41 +96,41 @@ namespace Death { namespace Containers {
 		Use for construction with default initialization. The actual meaning of "default" may vary,
 		see documentation of a particular API using this tag for a detailed behavior description.
 	*/
-	constexpr DefaultInitT DefaultInit { DefaultInitT::Init{} };
+	constexpr DefaultInitT DefaultInit{DefaultInitT::Init{}};
 
 	/**
 		@brief Value initialization tag
 
 		Use for construction using value initialization (built-in types are zeroed out, others are default-constructed).
 	*/
-	constexpr ValueInitT ValueInit { ValueInitT::Init{} };
+	constexpr ValueInitT ValueInit{ValueInitT::Init{}};
 
 	/**
 		@brief No initialization tag
 
 		Use for construction with no initialization at all.
 	*/
-	constexpr NoInitT NoInit { NoInitT::Init{} };
+	constexpr NoInitT NoInit{NoInitT::Init{}};
 
 	/**
 		@brief No creation tag
 
 		Use for construction with initialization, but keeping the instance empty (usually equivalent to a moved-out state).
 	*/
-	constexpr NoCreateT NoCreate { NoCreateT::Init{} };
+	constexpr NoCreateT NoCreate{NoCreateT::Init{}};
 
 	/**
 		@brief Direct initialization tag
 
 		Use for construction with direct initialization.
 	*/
-	constexpr DirectInitT DirectInit { DirectInitT::Init{} };
+	constexpr DirectInitT DirectInit{DirectInitT::Init{}};
 
 	/**
 		@brief In-place initialization tag
 
 		Use for construction in-place.
 	*/
-	constexpr InPlaceInitT InPlaceInit { InPlaceInitT::Init{} };
+	constexpr InPlaceInitT InPlaceInit{InPlaceInitT::Init{}};
 
 }}

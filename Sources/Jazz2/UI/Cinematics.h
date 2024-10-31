@@ -12,8 +12,6 @@
 #include "../../nCine/Audio/AudioStreamPlayer.h"
 #include "../../nCine/Input/InputEvents.h"
 
-#include <functional>
-
 #include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
 
@@ -29,8 +27,7 @@ namespace Jazz2::UI
 
 		static constexpr std::uint8_t SfxListVersion = 1;
 
-		Cinematics(IRootController* root, const StringView path, const std::function<bool(IRootController*, bool)>& callback);
-		Cinematics(IRootController* root, const StringView path, std::function<bool(IRootController*, bool)>&& callback);
+		Cinematics(IRootController* root, const StringView path, Function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;
 
 		void OnBeginFrame() override;
@@ -84,7 +81,7 @@ namespace Jazz2::UI
 		SmallVector<SfxItem> _sfxSamples;
 		SmallVector<SfxPlaylistItem> _sfxPlaylist;
 #endif
-		std::function<bool(IRootController*, bool)> _callback;
+		Function<bool(IRootController*, bool)> _callback;
 		std::uint32_t _width, _height;
 		float _frameDelay, _frameProgress;
 		std::int32_t _frameIndex;

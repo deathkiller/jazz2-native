@@ -4,7 +4,6 @@
 #include "JJ2Event.h"
 #include "../EventType.h"
 
-#include <functional>
 #include <array>
 
 #include "../../nCine/Base/HashMap.h"
@@ -12,6 +11,7 @@
 using namespace nCine;
 
 #include <Containers/ArrayView.h>
+#include <Containers/Function.h>
 #include <Containers/Pair.h>
 
 namespace Jazz2::Compatibility
@@ -31,13 +31,13 @@ namespace Jazz2::Compatibility
 	class EventConverter
 	{
 	public:
-		using ConversionFunction = std::function<ConversionResult(JJ2Level* level, std::uint32_t e)>;
+		using ConversionFunction = Function<ConversionResult(JJ2Level* level, std::uint32_t e)>;
 
 		EventConverter();
 
-		ConversionResult TryConvert(JJ2Level* level, JJ2Event old, std::uint32_t eventParams) const;
-		void Add(JJ2Event originalEvent, const ConversionFunction& converter);
-		void Override(JJ2Event originalEvent, const ConversionFunction& converter);
+		ConversionResult TryConvert(JJ2Level* level, JJ2Event old, std::uint32_t eventParams);
+		void Add(JJ2Event originalEvent, ConversionFunction&& converter);
+		void Override(JJ2Event originalEvent, ConversionFunction&& converter);
 
 		ConversionFunction NoParamList(EventType ev);
 		ConversionFunction ConstantParamList(EventType ev, const std::array<std::uint8_t, 16>& eventParams);

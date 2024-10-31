@@ -13,13 +13,7 @@ namespace Jazz2::UI
 		ASSERT_MSG(_metadata != nullptr, "Cannot load required metadata");
 	}
 
-	LoadingHandler::LoadingHandler(IRootController* root, const std::function<bool(IRootController*)>& callback)
-		: LoadingHandler(root)
-	{
-		_callback = callback;
-	}
-
-	LoadingHandler::LoadingHandler(IRootController* root, std::function<bool(IRootController*)>&& callback)
+	LoadingHandler::LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback)
 		: LoadingHandler(root)
 	{
 		_callback = std::move(callback);
@@ -32,7 +26,7 @@ namespace Jazz2::UI
 
 	void LoadingHandler::OnBeginFrame()
 	{
-		if (_callback != nullptr && _callback(_root)) {
+		if (_callback && _callback(_root)) {
 			_callback = nullptr;
 		}
 	}

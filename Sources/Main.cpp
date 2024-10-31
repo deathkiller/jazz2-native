@@ -104,8 +104,7 @@ public:
 	void OnKeyReleased(const KeyboardEvent& event) override;
 	void OnTouchEvent(const TouchEvent& event) override;
 
-	void InvokeAsync(const std::function<void()>& callback) override;
-	void InvokeAsync(std::function<void()>&& callback) override;
+	void InvokeAsync(Function<void()>&& callback) override;
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
 	bool HasResumableState() const override;
@@ -138,7 +137,7 @@ public:
 private:
 	Flags _flags = Flags::None;
 	std::unique_ptr<IStateHandler> _currentHandler;
-	SmallVector<std::function<void()>> _pendingCallbacks;
+	SmallVector<Function<void()>> _pendingCallbacks;
 	char _newestVersion[20];
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
@@ -462,13 +461,7 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 	_currentHandler->OnTouchEvent(event);
 }
 
-void GameEventHandler::InvokeAsync(const std::function<void()>& callback)
-{
-	_pendingCallbacks.emplace_back(callback);
-	LOGD("Callback queued for async execution");
-}
-
-void GameEventHandler::InvokeAsync(std::function<void()>&& callback)
+void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 {
 	_pendingCallbacks.emplace_back(std::move(callback));
 	LOGD("Callback queued for async execution");
@@ -1183,7 +1176,7 @@ void GameEventHandler::RefreshCacheLevels()
 		{ "ending"_s, { {}, ":credits"_s } }
 	};
 
-	auto LevelTokenConversion = [&knownLevels](const StringView& levelToken) -> Compatibility::JJ2Level::LevelToken {
+	auto LevelTokenConversion = [&knownLevels](StringView levelToken) -> Compatibility::JJ2Level::LevelToken {
 		auto it = knownLevels.find(levelToken);
 		if (it != knownLevels.end()) {
 			if (it->second.second().empty()) {
@@ -1244,7 +1237,7 @@ void GameEventHandler::RefreshCacheLevels()
 				}
 
 				String fullPath = fs::CombinePath(episodesPath, String((episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s));
-				episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
+				episode.Convert(fullPath, std::move(LevelTokenConversion), std::move(EpisodeNameConversion), std::move(EpisodePrevNext));
 			}
 		} else if (extension == "j2l"_s) {
 			// Level
@@ -1426,7 +1419,7 @@ void GameEventHandler::CheckUpdates()
 	char DeviceDesc[128];
 	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, deviceName, arch);
 #elif defined(DEATH_TARGET_APPLE)
-	char DeviceDesc[256] { }; std::int32_t DeviceDescLength;
+	char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
 	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
 		DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
 		DeviceDescLength = std::strlen(DeviceDesc);
@@ -1447,7 +1440,7 @@ void GameEventHandler::CheckUpdates()
 	arch |= 0x100000;
 #	endif
 
-	char DeviceDesc[256] { }; std::int32_t DeviceDescLength;
+	char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
 	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
 		DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
 		DeviceDescLength = std::strlen(DeviceDesc);

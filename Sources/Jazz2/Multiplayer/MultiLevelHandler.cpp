@@ -556,19 +556,19 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::IsPositionEmpty(self, aabb, params, collider);
 	}
 
-	void MultiLevelHandler::FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, const std::function<bool(Actors::ActorBase*)>& callback)
+	void MultiLevelHandler::FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
 	{
-		LevelHandler::FindCollisionActorsByAABB(self, aabb, callback);
+		LevelHandler::FindCollisionActorsByAABB(self, aabb, std::move(callback));
 	}
 
-	void MultiLevelHandler::FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback)
+	void MultiLevelHandler::FindCollisionActorsByRadius(float x, float y, float radius, Function<bool(Actors::ActorBase*)>&& callback)
 	{
-		LevelHandler::FindCollisionActorsByRadius(x, y, radius, callback);
+		LevelHandler::FindCollisionActorsByRadius(x, y, radius, std::move(callback));
 	}
 
-	void MultiLevelHandler::GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback)
+	void MultiLevelHandler::GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
 	{
-		LevelHandler::GetCollidingPlayers(aabb, callback);
+		LevelHandler::GetCollidingPlayers(aabb, std::move(callback));
 	}
 
 	void MultiLevelHandler::BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams)

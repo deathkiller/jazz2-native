@@ -458,7 +458,7 @@ namespace Jazz2::Actors
 			if (_currentTransition != nullptr) {
 				_currentTransition = nullptr;
 
-				if (_currentTransitionCallback != nullptr) {
+				if (_currentTransitionCallback) {
 					auto oldCallback = std::move(_currentTransitionCallback);
 					_currentTransitionCallback = nullptr;
 					oldCallback();
@@ -475,41 +475,17 @@ namespace Jazz2::Actors
 		return true;
 	}
 
-	bool ActorBase::SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback)
+	bool ActorBase::SetTransition(AnimState state, bool cancellable, Function<void()>&& callback)
 	{
 		auto* anim = _metadata->FindAnimation(state);
 		if (anim == nullptr) {
-			if (callback != nullptr) {
+			if (callback) {
 				callback();
 			}
 			return false;
 		}
 
-		if (_currentTransitionCallback != nullptr) {
-			auto oldCallback = std::move(_currentTransitionCallback);
-			_currentTransitionCallback = nullptr;
-			oldCallback();
-		}
-
-		_currentTransition = anim;
-		_currentTransitionCancellable = cancellable;
-		_currentTransitionCallback = callback;
-		RefreshAnimation();
-
-		return true;
-	}
-
-	bool ActorBase::SetTransition(AnimState state, bool cancellable, std::function<void()>&& callback)
-	{
-		auto* anim = _metadata->FindAnimation(state);
-		if (anim == nullptr) {
-			if (callback != nullptr) {
-				callback();
-			}
-			return false;
-		}
-
-		if (_currentTransitionCallback != nullptr) {
+		if (_currentTransitionCallback) {
 			auto oldCallback = std::move(_currentTransitionCallback);
 			_currentTransitionCallback = nullptr;
 			oldCallback();
@@ -526,7 +502,7 @@ namespace Jazz2::Actors
 	void ActorBase::CancelTransition()
 	{
 		if (_currentTransition != nullptr && _currentTransitionCancellable) {
-			if (_currentTransitionCallback != nullptr) {
+			if (_currentTransitionCallback) {
 				auto oldCallback = std::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();
@@ -559,7 +535,7 @@ namespace Jazz2::Actors
 
 			RefreshAnimation();
 
-			if (_currentTransitionCallback != nullptr) {
+			if (_currentTransitionCallback) {
 				auto oldCallback = std::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();

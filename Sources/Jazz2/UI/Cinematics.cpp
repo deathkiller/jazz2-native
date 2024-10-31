@@ -16,14 +16,7 @@
 
 namespace Jazz2::UI
 {
-	Cinematics::Cinematics(IRootController* root, const StringView path, const std::function<bool(IRootController*, bool)>& callback)
-		: _root(root), _callback(callback), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
-			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0)
-	{
-		Initialize(path);
-	}
-
-	Cinematics::Cinematics(IRootController* root, const StringView path, std::function<bool(IRootController*, bool)>&& callback)
+	Cinematics::Cinematics(IRootController* root, const StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0)
 	{
@@ -40,7 +33,7 @@ namespace Jazz2::UI
 		float timeMult = theApplication().GetTimeMult();
 
 		if (_framesLeft <= 0) {
-			if (_callback != nullptr && _callback(_root, _frameDelay != 0.0f)) {
+			if (_callback && _callback(_root, _frameDelay != 0.0f)) {
 				_callback = nullptr;
 			}
 			return;
@@ -57,7 +50,7 @@ namespace Jazz2::UI
 		UpdatePressedActions();
 
 		if ((_pressedActions & ((1 << (std::int32_t)PlayerActions::Fire) | (1 << (16 + (std::int32_t)PlayerActions::Fire)))) == (1 << (std::int32_t)PlayerActions::Fire)) {
-			if (_callback != nullptr && _callback(_root, false)) {
+			if (_callback && _callback(_root, false)) {
 				_callback = nullptr;
 				_framesLeft = 0;
 			}
@@ -102,7 +95,7 @@ namespace Jazz2::UI
 	void Cinematics::OnTouchEvent(const TouchEvent& event)
 	{
 		if (event.type == TouchEventType::Down) {
-			if (_callback != nullptr && _callback(_root, false)) {
+			if (_callback && _callback(_root, false)) {
 				_callback = nullptr;
 				_framesLeft = 0;
 			}

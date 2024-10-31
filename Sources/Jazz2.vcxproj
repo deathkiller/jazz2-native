@@ -312,6 +312,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Core\ITraceSink.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Core\Logger.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Spinlock.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Function.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />

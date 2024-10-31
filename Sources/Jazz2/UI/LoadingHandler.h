@@ -15,8 +15,7 @@ namespace Jazz2::UI
 		static constexpr std::int32_t DefaultHeight = 405;
 
 		LoadingHandler(IRootController* root);
-		LoadingHandler(IRootController* root, const std::function<bool(IRootController*)>& callback);
-		LoadingHandler(IRootController* root, std::function<bool(IRootController*)>&& callback);
+		LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback);
 		~LoadingHandler() override;
 
 		void OnBeginFrame() override;
@@ -39,6 +38,6 @@ namespace Jazz2::UI
 		UI::UpscaleRenderPass _upscalePass;
 		std::unique_ptr<BackgroundCanvas> _canvasBackground;
 		Metadata* _metadata;
-		std::function<bool(IRootController*)> _callback;
+		Function<bool(IRootController*)> _callback;
 	};
 }

@@ -4,7 +4,6 @@
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 
-#include <functional>
 #include <memory>
 #include <string>
 

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-08-19 20:14+0200\n"
+"POT-Creation-Date: 2024-10-30 18:55+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Hexaae\n"
 "Language-Team: Hexaae\n"
@@ -1566,7 +1566,7 @@ msgstr "Debole"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:167
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:169
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Disabled"
@@ -1575,9 +1575,9 @@ msgstr "Disattivata"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:167
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:164
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:169
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Enabled"
 msgstr "Attivata"
@@ -1654,7 +1654,7 @@ msgstr ""
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:97
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:99
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Gameplay"
 msgstr "Giocabilità"
@@ -1727,57 +1727,57 @@ msgid "Scripting"
 msgstr "Scriptaggio"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:53
 msgid "Allow Cheats"
 msgstr "Permetti Trucchi"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:52
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:55
 msgid "Overwrite Episode Completion"
 msgstr "Sovrascrivi Completamento Episodio"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:59
 msgid "Discord Integration"
 msgstr "Integrazione Discord"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:63
 msgid "Razer Chroma™"
 msgstr "Razer Chroma™"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:65
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 msgid "Browse \"Source\" Directory"
 msgstr "Sfoglia cartella \"Source\""
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:70
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:72
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:77
 msgid "Refresh Cache"
 msgstr "Rigenera la Cache"
 
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:139
 msgid "\f[c:#d86664]Yes\f[/c]"
 msgstr "\f[c:#d86664]Sì\f[/c]"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:139
 msgid "No"
 msgstr "No"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:147
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "No Cheats Only"
 msgstr "Solo senza Trucchi"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:146
 msgid "Higher Score Only"
 msgstr "Solo in caso di Punteggi Alti"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:148
 msgid "Always"
 msgstr "Sempre"
 
@@ -2054,6 +2054,10 @@ msgstr "Collegati al server"
 msgid "No servers found, but still searchin'!"
 msgstr "Nessun server trovato, ma sto ancora cercando!"
 
+#: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
+msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
+msgstr ""
+
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
 msgid "Master Volume"
@@ -2107,11 +2111,7 @@ msgstr ""
 msgid "Connecting to %s:%u..."
 msgstr "Connessione con %s:%u..."
 
-#: Sources/Main.cpp:313
-msgid "Creating server..."
-msgstr "Creazione server..."
-
-#: Sources/Main.cpp:520 Sources/Main.cpp:554
+#: Sources/Main.cpp:524 Sources/Main.cpp:566
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2125,7 +2125,7 @@ msgstr ""
 "Assicurarsi che tutti i file necessari\n"
 "siano accessibili e riprovare."
 
-#: Sources/Main.cpp:604
+#: Sources/Main.cpp:620
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2139,7 +2139,7 @@ msgstr ""
 "Assicurarsi che tutti i file necessari\n"
 "siano accessibili e riprovare."
 
-#: Sources/Main.cpp:739
+#: Sources/Main.cpp:755
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2151,7 +2151,7 @@ msgstr ""
 "\n"
 "La tua versione del client non è compatibile con il server."
 
-#: Sources/Main.cpp:740
+#: Sources/Main.cpp:756
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2165,7 +2165,7 @@ msgstr ""
 "Il server è pieno.\n"
 "Prego riprova dopo."
 
-#: Sources/Main.cpp:741
+#: Sources/Main.cpp:757
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2179,7 +2179,7 @@ msgstr ""
 "Il server non è in uno stato idoneo a processare la tua richiesta.\n"
 "Prego, riprova tra alcuni secondi."
 
-#: Sources/Main.cpp:742
+#: Sources/Main.cpp:758
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2193,7 +2193,70 @@ msgstr ""
 "Il server è in chiusura.\n"
 "Prego, riprova più tardi."
 
-#: Sources/Main.cpp:743
+#: Sources/Main.cpp:759
+#, fuzzy
+#| msgid ""
+#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+#| "\n"
+#| "\n"
+#| "Server is shutting down.\n"
+#| "Please try it later."
+msgid ""
+"\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+"\n"
+"\n"
+"Server is shutting down for maintenance.\n"
+"Please try it again later."
+msgstr ""
+"\f[c:#704a4a]La connessione è stata chiusa!\f[/c]\n"
+"\n"
+"\n"
+"Il server è in chiusura.\n"
+"Prego, riprova più tardi."
+
+#: Sources/Main.cpp:760
+#, fuzzy
+#| msgid ""
+#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+#| "\n"
+#| "\n"
+#| "Server is shutting down.\n"
+#| "Please try it later."
+msgid ""
+"\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+"\n"
+"\n"
+"Server is shutting down for reconfiguration.\n"
+"Please try it again later."
+msgstr ""
+"\f[c:#704a4a]La connessione è stata chiusa!\f[/c]\n"
+"\n"
+"\n"
+"Il server è in chiusura.\n"
+"Prego, riprova più tardi."
+
+#: Sources/Main.cpp:761
+#, fuzzy
+#| msgid ""
+#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+#| "\n"
+#| "\n"
+#| "Server is shutting down.\n"
+#| "Please try it later."
+msgid ""
+"\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+"\n"
+"\n"
+"Server is shutting down for update.\n"
+"Please check your client version and try it again in a minute."
+msgstr ""
+"\f[c:#704a4a]La connessione è stata chiusa!\f[/c]\n"
+"\n"
+"\n"
+"Il server è in chiusura.\n"
+"Prego, riprova più tardi."
+
+#: Sources/Main.cpp:762
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2207,7 +2270,7 @@ msgstr ""
 "Prego, riprova e se il problema persiste,\n"
 "controlla la tua connessione di rete."
 
-#: Sources/Main.cpp:744
+#: Sources/Main.cpp:763
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2219,7 +2282,7 @@ msgstr ""
 "\n"
 "Il server is non risponde alle richieste di connessione."
 
-#: Sources/Main.cpp:745
+#: Sources/Main.cpp:764
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2233,7 +2296,7 @@ msgstr ""
 "Sei stato \f[c:#907050]buttato fuori\f[/c] dal server.\n"
 "Contatta gli amministratori per maggiori informazioni."
 
-#: Sources/Main.cpp:746
+#: Sources/Main.cpp:765
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2246,6 +2309,9 @@ msgstr ""
 "\n"
 "Sei stato \f[c:#725040]bannato\f[/c] dal server.\n"
 "Contatta gli amministratori per maggiori informazioni."
+
+#~ msgid "Creating server..."
+#~ msgstr "Creazione server..."
 
 #~ msgid "Error"
 #~ msgstr "Errore"
