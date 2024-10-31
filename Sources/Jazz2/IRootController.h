@@ -3,7 +3,9 @@
 #include "../Common.h"
 #include "LevelInitialization.h"
 
-#include <functional>
+#include <Containers/Function.h>
+
+using namespace Death::Containers;
 
 namespace Jazz2
 {
@@ -31,8 +33,7 @@ namespace Jazz2
 		IRootController(const IRootController&) = delete;
 		IRootController& operator=(const IRootController&) = delete;
 
-		virtual void InvokeAsync(const std::function<void()>& callback) = 0;
-		virtual void InvokeAsync(std::function<void()>&& callback) = 0;
+		virtual void InvokeAsync(Function<void()>&& callback) = 0;
 		virtual void GoToMainMenu(bool afterIntro) = 0;
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 		virtual bool HasResumableState() const = 0;

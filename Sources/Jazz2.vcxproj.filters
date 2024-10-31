@@ -1533,6 +1533,9 @@
     <ClInclude Include="Jazz2\Direction.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Function.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

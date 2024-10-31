@@ -3,7 +3,6 @@
 #include "../../Common.h"
 #include "JJ2Level.h"
 
-#include <functional>
 #include <memory>
 #include <utility>
 
@@ -37,6 +36,6 @@ namespace Jazz2::Compatibility
 
 		bool Open(const StringView path);
 
-		void Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion = nullptr, const std::function<String(JJ2Episode*)>& episodeNameConversion = nullptr, const std::function<Pair<String, String>(JJ2Episode*)>& episodePrevNext = nullptr);
+		void Convert(const StringView targetPath, Function<JJ2Level::LevelToken(StringView)>&& levelTokenConversion = {}, Function<String(JJ2Episode*)>&& episodeNameConversion = {}, Function<Pair<String, String>(JJ2Episode*)>&& episodePrevNext = {});
 	};
 }

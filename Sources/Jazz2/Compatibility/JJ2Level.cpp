@@ -511,7 +511,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::Convert(const StringView targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView)>& levelTokenConversion)
+	void JJ2Level::Convert(const StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
@@ -587,9 +587,9 @@ namespace Jazz2::Compatibility
 			StringUtils::lowercaseInPlace(SecretLevel);
 			StringUtils::lowercaseInPlace(BonusLevel);
 
-			WriteLevelName(co, NextLevel, levelTokenConversion);
-			WriteLevelName(co, SecretLevel, levelTokenConversion);
-			WriteLevelName(co, BonusLevel, levelTokenConversion);
+			WriteLevelName(co, NextLevel, std::move(levelTokenConversion));
+			WriteLevelName(co, SecretLevel, std::move(levelTokenConversion));
+			WriteLevelName(co, BonusLevel, std::move(levelTokenConversion));
 
 			// Default Tileset
 			StringUtils::lowercaseInPlace(Tileset);
@@ -1038,7 +1038,7 @@ namespace Jazz2::Compatibility
 		_levelTokenTextIds.push_back(textId);
 	}
 
-	void JJ2Level::WriteLevelName(Stream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
+	void JJ2Level::WriteLevelName(Stream& so, MutableStringView value, Function<LevelToken(StringView)>&& levelTokenConversion)
 	{
 		if (!value.empty()) {
 			MutableStringView adjustedValue = value;
@@ -1047,7 +1047,7 @@ namespace Jazz2::Compatibility
 				adjustedValue = adjustedValue.exceptSuffix(4);
 			}
 
-			if (levelTokenConversion != nullptr) {
+			if (levelTokenConversion) {
 				LevelToken token = levelTokenConversion(adjustedValue);
 				if (!token.Episode.empty()) {
 					String fullName = token.Episode + '/' + token.Level;

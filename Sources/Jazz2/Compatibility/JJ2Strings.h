@@ -38,7 +38,7 @@ namespace Jazz2::Compatibility
 
 		bool Open(const StringView path);
 
-		void Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion);
+		void Convert(const StringView targetPath, Function<JJ2Level::LevelToken(const StringView)>&& levelTokenConversion);
 
 		static String RecodeString(const StringView text, bool stripFormatting = false, bool escaped = false);
 	};

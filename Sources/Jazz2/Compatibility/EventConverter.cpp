@@ -12,7 +12,7 @@ namespace Jazz2::Compatibility
 		AddDefaultConverters();
 	}
 
-	ConversionResult EventConverter::TryConvert(JJ2Level* level, JJ2Event old, std::uint32_t eventParams) const
+	ConversionResult EventConverter::TryConvert(JJ2Level* level, JJ2Event old, std::uint32_t eventParams)
 	{
 		auto it = _converters.find(old);
 		if (it != _converters.end()) {
@@ -22,18 +22,18 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void EventConverter::Add(JJ2Event originalEvent, const ConversionFunction& converter)
+	void EventConverter::Add(JJ2Event originalEvent, ConversionFunction&& converter)
 	{
 		if (_converters.contains(originalEvent)) {
 			LOGW("Converter for event %u is already defined", (std::uint32_t)originalEvent);
 		}
 
-		_converters[originalEvent] = converter;
+		_converters[originalEvent] = std::move(converter);
 	}
 
-	void EventConverter::Override(JJ2Event originalEvent, const ConversionFunction& converter)
+	void EventConverter::Override(JJ2Event originalEvent, ConversionFunction&& converter)
 	{
-		_converters[originalEvent] = converter;
+		_converters[originalEvent] = std::move(converter);
 	}
 
 	EventConverter::ConversionFunction EventConverter::NoParamList(EventType ev)

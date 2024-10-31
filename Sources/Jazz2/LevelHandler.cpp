@@ -923,13 +923,13 @@ namespace Jazz2
 		return (*collider == nullptr);
 	}
 
-	void LevelHandler::FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, const std::function<bool(Actors::ActorBase*)>& callback)
+	void LevelHandler::FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
 	{
 		struct QueryHelper {
 			const LevelHandler* Handler;
 			const Actors::ActorBase* Self;
 			const AABBf& AABB;
-			const std::function<bool(Actors::ActorBase*)>& Callback;
+			Function<bool(Actors::ActorBase*)>& Callback;
 
 			bool OnCollisionQuery(std::int32_t nodeId) {
 				Actors::ActorBase* actor = (Actors::ActorBase*)Handler->_collisions.GetUserData(nodeId);
@@ -947,7 +947,7 @@ namespace Jazz2
 		_collisions.Query(&helper, aabb);
 	}
 
-	void LevelHandler::FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback)
+	void LevelHandler::FindCollisionActorsByRadius(float x, float y, float radius, Function<bool(Actors::ActorBase*)>&& callback)
 	{
 		AABBf aabb = AABBf(x - radius, y - radius, x + radius, y + radius);
 		float radiusSquared = (radius * radius);
@@ -956,7 +956,7 @@ namespace Jazz2
 			const LevelHandler* Handler;
 			const float x, y;
 			const float RadiusSquared;
-			const std::function<bool(Actors::ActorBase*)>& Callback;
+			Function<bool(Actors::ActorBase*)>& Callback;
 
 			bool OnCollisionQuery(std::int32_t nodeId) {
 				Actors::ActorBase* actor = (Actors::ActorBase*)Handler->_collisions.GetUserData(nodeId);
@@ -986,7 +986,7 @@ namespace Jazz2
 		_collisions.Query(&helper, aabb);
 	}
 
-	void LevelHandler::GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback)
+	void LevelHandler::GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
 	{
 		for (auto& player : _players) {
 			if (aabb.Overlaps(player->AABB)) {

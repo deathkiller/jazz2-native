@@ -12,6 +12,7 @@
 #include "../../nCine/Graphics/SceneNode.h"
 
 #include <Base/TypeInfo.h>
+#include <Containers/Function.h>
 #include <Containers/StringView.h>
 
 // If coroutines are not supported, load resources synchronously
@@ -293,8 +294,7 @@ namespace Jazz2::Actors
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetAnimation(AnimState state, bool skipAnimation = false);
-		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = nullptr);
-		bool SetTransition(AnimState state, bool cancellable, std::function<void()>&& callback);
+		bool SetTransition(AnimState state, bool cancellable, Function<void()>&& callback = {});
 		void CancelTransition();
 		void ForceCancelTransition();
 		virtual void OnAnimationStarted();
@@ -346,7 +346,7 @@ namespace Jazz2::Actors
 		ActorBase& operator=(const ActorBase&) = delete;
 
 		ActorState _state;
-		std::function<void()> _currentTransitionCallback;
+		Function<void()> _currentTransitionCallback;
 
 		bool IsCollidingWithAngled(ActorBase* other);
 		bool IsCollidingWithAngled(const AABBf& aabb);

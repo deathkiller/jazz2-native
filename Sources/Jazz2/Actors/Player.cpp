@@ -2560,18 +2560,7 @@ namespace Jazz2::Actors
 #endif
 	}
 
-	bool Player::SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback)
-	{
-		if (removeControl) {
-			_controllable = false;
-			_controllableTimeout = 0.0f;
-		}
-
-		_currentSpecialMove = specialMove;
-		return SetTransition(state, cancellable, callback);
-	}
-
-	bool Player::SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, std::function<void()>&& callback)
+	bool Player::SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, Function<void()>&& callback)
 	{
 		if (removeControl) {
 			_controllable = false;
