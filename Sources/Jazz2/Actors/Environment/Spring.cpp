@@ -46,7 +46,8 @@ namespace Jazz2::Actors::Environment
 		KeepSpeedX = (details.Params[2] != 0);
 		KeepSpeedY = (details.Params[3] != 0);
 		_delay = details.Params[4];
-		_state = (details.Params[5] != 0 ? State::Frozen : State::Default);
+		bool applyGravitation = (details.Params[5] & 0x01) != 0; // Jazz² Resurrection only
+		_state = ((details.Params[5] & 0x02) != 0 ? State::Frozen : State::Default);
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 
@@ -70,20 +71,19 @@ namespace Jazz2::Actors::Environment
 			case Orientation::Right:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
-				SetState(ActorState::ApplyGravitation, false);
 				break;
 			case Orientation::Top:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute | MoveType::Force);
 				orientationBit = 2;
-				SetState(ActorState::ApplyGravitation, false);
 				break;
 			case Orientation::Left:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
-				SetState(ActorState::ApplyGravitation, false);
 				SetFacingLeft(true);
 				break;
 		}
+
+		SetState(ActorState::ApplyGravitation, applyGravitation);
 
 		// Red starts at 1 in "Object/Spring"
 		SetAnimation((AnimState)(((_type + 1) << 10) | (orientationBit << 12)));

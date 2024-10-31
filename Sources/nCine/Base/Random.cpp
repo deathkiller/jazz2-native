@@ -10,7 +10,7 @@ namespace nCine
 		const std::uint64_t DefaultInitState = 0x853c49e6748fea9bULL;
 		const std::uint64_t DefaultInitSequence = 0xda3e39cb94b95bdbULL;
 
-		std::uint32_t random(std::uint64_t& state, std::uint64_t& increment)
+		std::uint32_t random(std::uint64_t& state, std::uint64_t& increment) noexcept
 		{
 			const std::uint64_t oldState = state;
 			state = oldState * 6364136223846793005ULL + increment;
@@ -19,7 +19,7 @@ namespace nCine
 			return (xorShifted >> rotation) | (xorShifted << ((std::uint32_t)(-(std::int32_t)rotation) & 31));
 		}
 
-		std::uint32_t boundRandom(std::uint64_t& state, std::uint64_t& increment, std::uint32_t bound)
+		std::uint32_t boundRandom(std::uint64_t& state, std::uint64_t& increment, std::uint32_t bound) noexcept
 		{
 			const std::uint32_t threshold = (std::uint32_t)(-(std::int32_t)bound) % bound;
 			while (true) {
@@ -31,24 +31,24 @@ namespace nCine
 		}
 	}
 
-	RandomGenerator& Random()
+	RandomGenerator& Random() noexcept
 	{
 		static RandomGenerator instance;
 		return instance;
 	}
 
-	RandomGenerator::RandomGenerator()
+	RandomGenerator::RandomGenerator() noexcept
 		: RandomGenerator(DefaultInitState, DefaultInitSequence)
 	{
 	}
 
-	RandomGenerator::RandomGenerator(std::uint64_t initState, std::uint64_t initSequence)
+	RandomGenerator::RandomGenerator(std::uint64_t initState, std::uint64_t initSequence) noexcept
 		: _state(0ULL), _increment(0ULL)
 	{
 		Initialize(initState, initSequence);
 	}
 
-	void RandomGenerator::Initialize(std::uint64_t initState, std::uint64_t initSequence)
+	void RandomGenerator::Initialize(std::uint64_t initState, std::uint64_t initSequence) noexcept
 	{
 		_state = 0U;
 		_increment = (initSequence << 1u) | 1u;
@@ -57,12 +57,12 @@ namespace nCine
 		random(_state, _increment);
 	}
 
-	std::uint32_t RandomGenerator::Next()
+	std::uint32_t RandomGenerator::Next() noexcept
 	{
 		return random(_state, _increment);
 	}
 
-	std::uint32_t RandomGenerator::Next(std::uint32_t min, std::uint32_t max)
+	std::uint32_t RandomGenerator::Next(std::uint32_t min, std::uint32_t max) noexcept
 	{
 		if (min == max) {
 			return min;
@@ -71,32 +71,32 @@ namespace nCine
 		}
 	}
 
-	float RandomGenerator::NextFloat()
+	float RandomGenerator::NextFloat() noexcept
 	{
 		return static_cast<float>(ldexp(random(_state, _increment), -32));
 	}
 
-	float RandomGenerator::NextFloat(float min, float max)
+	float RandomGenerator::NextFloat(float min, float max) noexcept
 	{
 		return min + static_cast<float>(ldexp(random(_state, _increment), -32)) * (max - min);
 	}
 
-	bool RandomGenerator::NextBool()
+	bool RandomGenerator::NextBool() noexcept
 	{
 		return (boundRandom(_state, _increment, 2) != 0);
 	}
 
-	std::uint32_t RandomGenerator::Fast(std::uint32_t min, std::uint32_t max)
+	std::uint32_t RandomGenerator::Fast(std::uint32_t min, std::uint32_t max) noexcept
 	{
 		return (min == max ? min : min + random(_state, _increment) % (max - min));
 	}
 
-	float RandomGenerator::FastFloat()
+	float RandomGenerator::FastFloat() noexcept
 	{
 		return static_cast<float>(random(_state, _increment) / static_cast<float>(UINT32_MAX));
 	}
 
-	float RandomGenerator::FastFloat(float min, float max)
+	float RandomGenerator::FastFloat(float min, float max) noexcept
 	{
 		return min + (static_cast<float>(random(_state, _increment)) / static_cast<float>(UINT32_MAX)) * (max - min);
 	}

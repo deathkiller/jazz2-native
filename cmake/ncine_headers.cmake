@@ -183,6 +183,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/IRootController.h
 	${NCINE_SOURCE_DIR}/Jazz2/IStateHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelDescriptor.h
+	${NCINE_SOURCE_DIR}/Jazz2/LevelFlags.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelInitialization.h
 	${NCINE_SOURCE_DIR}/Jazz2/LightEmitter.h

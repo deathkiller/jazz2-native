@@ -1,6 +1,7 @@
 ﻿#include "ContentResolver.h"
 #include "ContentResolver.Shaders.h"
 #include "Compatibility/JJ2Anims.Palettes.h"
+#include "LevelFlags.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
 #if defined(DEATH_DEBUG)
@@ -1160,7 +1161,7 @@ namespace Jazz2
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
 
-		std::uint16_t flags = s->ReadValue<std::uint16_t>();
+		LevelFlags flags = (LevelFlags)s->ReadValue<std::uint16_t>();
 
 		// Read compressed data
 		std::int32_t compressedSize = s->ReadValue<std::int32_t>();
@@ -1205,13 +1206,13 @@ namespace Jazz2
 		std::uint16_t captionTileId = uc.ReadValue<std::uint16_t>();
 
 		PitType pitType;
-		if ((flags & 0x01) == 0x01) {
-			pitType = ((flags & 0x02) == 0x02 ? PitType::InstantDeathPit : PitType::FallForever);
+		if ((flags & LevelFlags::HasPit) == LevelFlags::HasPit) {
+			pitType = ((flags & LevelFlags::HasPitInstantDeath) == LevelFlags::HasPitInstantDeath ? PitType::InstantDeathPit : PitType::FallForever);
 		} else {
 			pitType = PitType::StandOnPlatform;
 		}
 
-		bool hasCustomPalette = ((flags & 0x04) == 0x04);
+		bool hasCustomPalette = ((flags & LevelFlags::UseLevelPalette) == LevelFlags::UseLevelPalette);
 		if (hasCustomPalette) {
 			std::uint32_t newPalette[ColorsPerPalette];
 			uc.Read(newPalette, ColorsPerPalette * sizeof(std::uint32_t));

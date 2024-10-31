@@ -59,8 +59,8 @@ namespace Death { namespace Containers {
 #if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
 			2 * sizeof(void*) / sizeof(std::size_t)
 #else
-			// On MSVC, pointers to members with a virtual base class are the biggest and have 12 bytes on 32bit and 16 on 64bit.
-			// Pointers to incomplete class members are 16 bytes on both 32bit and 64bit, but such scenario is impossible
+			// On MSVC, pointers to members with a virtual base class are the biggest and have 12 bytes on 32-bit and 16 on 64-bit.
+			// Pointers to incomplete class members are 16 bytes on both 32-bit and 64-bit, but such scenario is impossible
 			// to happen here as there's a std::is_base_of check in Function constructor that requires the type to be complete.
 #	if defined(DEATH_TARGET_32BIT)
 			12 / sizeof(std::size_t)

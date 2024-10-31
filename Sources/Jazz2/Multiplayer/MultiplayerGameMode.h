@@ -12,6 +12,7 @@ namespace Jazz2::Multiplayer
 		TeamBattle,
 		CaptureTheFlag,
 		Race,
+		TeamRace,
 		TreasureHunt,
 		Cooperation
 	};

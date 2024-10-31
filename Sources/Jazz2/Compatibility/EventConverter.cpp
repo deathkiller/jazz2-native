@@ -959,7 +959,14 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamBool, 1 }		// Reverse (horzontal only, JJ2+)
 			}, eventParams);
 
-			return { EventType::Spring, { type, (std::uint8_t)(horizontal ? (eventParams[4] != 0 ? 5 : 4) : eventParams[0] * 2), eventParams[1], eventParams[2], eventParams[3], (std::uint8_t)(frozen ? 1 : 0) } };
+			std::uint8_t orientation = (std::uint8_t)(horizontal ? (eventParams[4] != 0 ? 5 : 4) : (eventParams[0] != 0 ? 2 : 0));
+			bool applyGravitation = (orientation == 0);
+
+			std::uint8_t flags = 0;
+			if (applyGravitation) flags |= 0x01;
+			if (frozen) flags |= 0x02;
+
+			return { EventType::Spring, { type, orientation, eventParams[1], eventParams[2], eventParams[3], flags } };
 		};
 	}
 

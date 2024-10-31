@@ -729,6 +729,22 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MultiLevelHandler::HandlePlayerEmitWeaponFlare(Actors::Player* player)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			for (const auto& [peer, peerDesc] : _peerDesc) {
+				if (peerDesc.Player == player) {
+					MemoryStream packet(5);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerEmitWeaponFlare);
+					packet.WriteVariableUint32(player->_playerIndex);
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
+					break;
+				}
+			}
+		}
+	}
+
 	void MultiLevelHandler::HandlePlayerWeaponChanged(Actors::Player* player)
 	{
 		// TODO: Only called by RemotePlayerOnServer
@@ -964,13 +980,21 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::AttachComponents(std::move(descriptor));
 
-		if (!_isServer) {
+		if (_isServer) {
+			// Cache all possible multiplayer spawn points (if it's not coop level)
+			_multiplayerSpawnPoints.clear();
+			_eventMap->ForEachEvent(EventType::LevelStartMultiplayer, [this](const Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
+				_multiplayerSpawnPoints.emplace_back(MultiplayerSpawnPoint{Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), event.EventParams[0]});
+				return true;
+			});
+		} else {
 			Vector2i size = _eventMap->GetSize();
 			for (std::int32_t y = 0; y < size.Y; y++) {
 				for (std::int32_t x = 0; x < size.X; x++) {
 					std::uint8_t* eventParams;
 					switch (_eventMap->GetEventByPosition(x, y, &eventParams)) {
 						case EventType::WarpOrigin:
+						case EventType::ModifierHurt:
 						case EventType::ModifierDeath:
 						case EventType::ModifierLimitCameraView:
 						case EventType::AreaEndOfLevel:
@@ -1003,11 +1027,16 @@ namespace Jazz2::Multiplayer
 				continue;
 			}
 
-			Vector2 spawnPosition = _eventMap->GetSpawnPosition(levelInit.PlayerCarryOvers[i].Type);
-			if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
-				spawnPosition = _eventMap->GetSpawnPosition(PlayerType::Jazz);
+			Vector2f spawnPosition;
+			if (!_multiplayerSpawnPoints.empty()) {
+				spawnPosition = _multiplayerSpawnPoints[Random().Next(0, _multiplayerSpawnPoints.size())].Pos;
+			} else {
+				spawnPosition = _eventMap->GetSpawnPosition(levelInit.PlayerCarryOvers[i].Type);
 				if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
-					continue;
+					spawnPosition = _eventMap->GetSpawnPosition(PlayerType::Jazz);
+					if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
+						continue;
+					}
 				}
 			}
 
@@ -1026,6 +1055,8 @@ namespace Jazz2::Multiplayer
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
+
+		ApplyGameModeToAllPlayers(_gameMode);
 	}
 
 	MultiplayerGameMode MultiLevelHandler::GetGameMode() const
@@ -1041,6 +1072,9 @@ namespace Jazz2::Multiplayer
 
 		_gameMode = value;
 
+		ApplyGameModeToAllPlayers(_gameMode);
+
+		// TODO: Send new teamId to each player
 		// TODO: Reset level and broadcast it to players
 		for (const auto& [peer, peerDesc] : _peerDesc) {
 			MemoryStream packet(2);
@@ -1096,6 +1130,7 @@ namespace Jazz2::Multiplayer
 	bool MultiLevelHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength)
 	{
 		if (_ignorePackets) {
+			// IRootController is probably going to load a new level in a moment, so ignore all packets now
 			return false;
 		}
 
@@ -1505,6 +1540,19 @@ namespace Jazz2::Multiplayer
 					}
 					return true;
 				}
+				case ServerPacketType::PlayerEmitWeaponFlare: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerChangeWeapon - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
+						return true;
+					}
+
+					LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - playerIndex: %u", playerIndex);
+
+					_players[0]->EmitWeaponFlare();
+					return true;
+				}
 				case ServerPacketType::PlayerChangeWeapon: {
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
@@ -1742,10 +1790,15 @@ namespace Jazz2::Multiplayer
 				continue;
 			}
 
-			// TODO: Spawn on the latest checkpoint
-			Vector2 spawnPosition = EventMap()->GetSpawnPosition(PlayerType::Jazz);
-			if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
-				continue;
+			Vector2f spawnPosition;
+			if (!_multiplayerSpawnPoints.empty()) {
+				spawnPosition = _multiplayerSpawnPoints[Random().Next(0, _multiplayerSpawnPoints.size())].Pos;
+			} else {
+				// TODO: Spawn on the last checkpoint
+				spawnPosition = EventMap()->GetSpawnPosition(PlayerType::Jazz);
+				if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
+					continue;
+				}
 			}
 
 			std::uint8_t playerIndex = FindFreePlayerId();
@@ -1770,6 +1823,8 @@ namespace Jazz2::Multiplayer
 			_suppressRemoting = true;
 			AddActor(player);
 			_suppressRemoting = false;
+
+			ApplyGameModeToPlayer(_gameMode, ptr);
 
 			// Synchronize tilemap
 			{
@@ -1928,6 +1983,72 @@ namespace Jazz2::Multiplayer
 	{
 		return (runtime_cast<Actors::Multiplayer::LocalPlayerOnServer*>(actor) ||
 				runtime_cast<Actors::Multiplayer::RemotablePlayer*>(actor));
+	}
+
+	void MultiLevelHandler::ApplyGameModeToAllPlayers(MultiplayerGameMode gameMode)
+	{
+		if (gameMode == MultiplayerGameMode::Cooperation) {
+			// Everyone in single team
+			for (auto* player : _players) {
+				static_cast<Actors::Multiplayer::PlayerOnServer*>(player)->SetTeamId(0);
+			}
+		} else if (gameMode == MultiplayerGameMode::TeamBattle ||
+				   gameMode == MultiplayerGameMode::CaptureTheFlag ||
+				   gameMode == MultiplayerGameMode::TeamRace) {
+			// Create two teams
+			std::int32_t playerCount = (std::int32_t)_players.size();
+			std::int32_t splitIdx = (playerCount + 1) / 2;
+			SmallVector<std::int32_t, 0> teamIds(playerCount);
+			for (std::int32_t i = 0; i < playerCount; i++) {
+				teamIds.emplace_back(i);
+			}
+			Random().Shuffle(arrayView(teamIds));
+
+			for (std::int32_t i = 0; i < playerCount; i++) {
+				std::uint8_t teamId = (teamIds[i] < splitIdx ? 0 : 1);
+				static_cast<Actors::Multiplayer::PlayerOnServer*>(_players[i])->SetTeamId(teamId);
+			}
+		} else {
+			// Each player is in their own team
+			std::int32_t playerCount = (std::int32_t)_players.size();
+			for (std::int32_t i = 0; i < playerCount; i++) {
+				std::int32_t playerIdx = _players[i]->_playerIndex;
+				DEATH_DEBUG_ASSERT(0 <= playerIdx && playerIdx < UINT8_MAX);
+				static_cast<Actors::Multiplayer::PlayerOnServer*>(_players[i])->SetTeamId((std::uint8_t)playerIdx);
+			}
+		}
+	}
+
+	void MultiLevelHandler::ApplyGameModeToPlayer(MultiplayerGameMode gameMode, Actors::Player* player)
+	{
+		if (gameMode == MultiplayerGameMode::Cooperation) {
+			// Everyone in single team
+			static_cast<Actors::Multiplayer::PlayerOnServer*>(player)->SetTeamId(0);
+		} else if (gameMode == MultiplayerGameMode::TeamBattle ||
+				   gameMode == MultiplayerGameMode::CaptureTheFlag ||
+				   gameMode == MultiplayerGameMode::TeamRace) {
+			// Create two teams
+			std::int32_t playerCountsInTeam[2] = {};
+			std::int32_t playerCount = (std::int32_t)_players.size();
+			for (std::int32_t i = 0; i < playerCount; i++) {
+				if (_players[i] != player) {
+					std::uint8_t teamId = static_cast<Actors::Multiplayer::PlayerOnServer*>(_players[i])->GetTeamId();
+					if (teamId < arraySize(playerCountsInTeam)) {
+						playerCountsInTeam[teamId]++;
+					}
+				}
+			}
+			std::uint8_t teamId = (playerCountsInTeam[0] < playerCountsInTeam[1] ? 0
+				: (playerCountsInTeam[0] > playerCountsInTeam[1] ? 1
+					: Random().Next(0, 2)));
+
+			static_cast<Actors::Multiplayer::PlayerOnServer*>(player)->SetTeamId(teamId);
+		} else {
+			// Each player is in their own team
+			std::int32_t playerIdx = player->_playerIndex;
+			DEATH_DEBUG_ASSERT(0 <= playerIdx && playerIdx < UINT8_MAX);
+			static_cast<Actors::Multiplayer::PlayerOnServer*>(player)->SetTeamId((std::uint8_t)playerIdx);
+		}
 	}
 
 	bool MultiLevelHandler::ActorShouldBeMirrored(Actors::ActorBase* actor)

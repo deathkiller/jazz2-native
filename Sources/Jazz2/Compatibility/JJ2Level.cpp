@@ -2,6 +2,7 @@
 #include "JJ2Strings.h"
 #include "EventConverter.h"
 #include "../ContentResolver.h"
+#include "../LevelFlags.h"
 #include "../Tiles/TileMap.h"
 
 #include "../../nCine/Base/Algorithms.h"
@@ -520,6 +521,7 @@ namespace Jazz2::Compatibility
 		so->WriteValue<uint8_t>(ContentResolver::LevelFile);
 
 		// Preprocess events first, so they can change some level properties
+		bool hasMultiplayerSpawnPoints = false;
 		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
 			for (std::int32_t x = 0; x < _layers[3].Width; x++) {
 				auto& tileEvent = _events[x + y * _layers[3].Width];
@@ -541,6 +543,10 @@ namespace Jazz2::Compatibility
 					eventType = tileEvent.EventType;
 					tileEvent.GeneratorDelay = -1;
 					tileEvent.GeneratorFlags = 0;
+
+					if (tileEvent.EventType == JJ2Event::MP_LEVEL_START) {
+						hasMultiplayerSpawnPoints = true;
+					}
 				}
 
 				tileEvent.Converted = eventConverter.TryConvert(this, eventType, tileEvent.TileParams);
@@ -548,32 +554,35 @@ namespace Jazz2::Compatibility
 		}
 
 		// Flags
-		std::uint16_t flags = 0;
+		LevelFlags flags = LevelFlags::None;
 		if (_hasPit) {
-			flags |= 0x01;
+			flags |= LevelFlags::HasPit;
 		}
 		if (_hasPitInstantDeath) {
-			flags |= 0x02;
+			flags |= LevelFlags::HasPitInstantDeath;
 		}
 		if (_useLevelPalette) {
-			flags |= 0x04;
+			flags |= LevelFlags::UseLevelPalette;
 		}
 		if (_isHidden) {
-			flags |= 0x08;
+			flags |= LevelFlags::IsHidden;
 		}
 		if (_isMpLevel) {
-			flags |= 0x10;
+			flags |= LevelFlags::IsMultiplayerLevel;
 			if (_hasLaps) {
-				flags |= 0x20;
+				flags |= LevelFlags::HasLaps;
 			}
 			if (_hasCTF) {
-				flags |= 0x40;
+				flags |= LevelFlags::HasCaptureTheFlag;
 			}
 		}
 		if (_verticalMPSplitscreen) {
-			flags |= 0x80;
+			flags |= LevelFlags::HasVerticalSplitscreen;
 		}
-		so->WriteValue<std::uint16_t>(flags);
+		if (hasMultiplayerSpawnPoints) {
+			flags |= LevelFlags::HasMultiplayerSpawnPoints;
+		}
+		so->WriteValue<std::uint16_t>((std::uint16_t)flags);
 
 		MemoryStream ms(1024 * 1024);
 		{

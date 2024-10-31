@@ -54,17 +54,19 @@ namespace Death { namespace Threading {
 		 * @brief Performs an atomic AND operation on the values of the specified 32/64-bit variables
 		 * @param destination   The first operand and the destination
 		 * @param value         The second operand
+		 * @return              The resulting value
 		 */
 		template<class T>
-		static void And(T volatile* destination, T value);
+		static T And(T volatile* destination, T value);
 
 		/**
 		 * @brief Performs an atomic OR operation on the values of the specified 32/64-bit variables
 		 * @param destination   The first operand and the destination
 		 * @param value         The second operand
+		 * @return              The resulting value
 		 */
 		template<class T>
-		static void Or(T volatile* destination, T value);
+		static T Or(T volatile* destination, T value);
 
 		/**
 		 * @brief Exchanges a 32/64-bit variable to the specified value as an atomic operation
@@ -245,7 +247,7 @@ namespace Death { namespace Threading {
 	}
 
 	template<class T>
-	DEATH_ALWAYS_INLINE void Interlocked::And(T volatile* destination, T value)
+	DEATH_ALWAYS_INLINE T Interlocked::And(T volatile* destination, T value)
 	{
 #if defined(DEATH_TARGET_MSVC)
 		if constexpr (sizeof(T) == sizeof(LONG)) {
@@ -256,13 +258,14 @@ namespace Death { namespace Threading {
 			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
 		}
 #else
-		__sync_and_and_fetch(destination, value);
+		T result = __sync_and_and_fetch(destination, value);
 		InterlockedOperationBarrier();
+		return result;
 #endif
 	}
 
 	template<class T>
-	DEATH_ALWAYS_INLINE void Interlocked::Or(T volatile* destination, T value)
+	DEATH_ALWAYS_INLINE T Interlocked::Or(T volatile* destination, T value)
 	{
 #if defined(DEATH_TARGET_MSVC)
 		if constexpr (sizeof(T) == sizeof(LONG)) {
@@ -273,8 +276,9 @@ namespace Death { namespace Threading {
 			static_assert(sizeof(T) == sizeof(LONG) || sizeof(T) == sizeof(LONG64), "Size of T must be 32-bit or 64-bit");
 		}
 #else
-		__sync_or_and_fetch(destination, value);
+		T result = __sync_or_and_fetch(destination, value);
 		InterlockedOperationBarrier();
+		return result;
 #endif
 	}
 

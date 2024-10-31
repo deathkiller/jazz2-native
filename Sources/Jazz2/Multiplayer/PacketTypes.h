@@ -53,6 +53,7 @@ namespace Jazz2::Multiplayer
 		PlayerAckWarped,			// TODO
 		PlayerActivateForce,		// TODO
 		PlayerAddHealth,			// TODO
+		PlayerEmitWeaponFlare,
 		PlayerChangeWeapon,
 		PlayerRefreshAmmo,
 		PlayerRefreshWeaponUpgrades,

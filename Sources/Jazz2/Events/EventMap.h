@@ -48,7 +48,8 @@ namespace Jazz2::Events
 		const EventTile& GetEventTile(std::int32_t x, std::int32_t y) const;
 		EventType GetEventByPosition(float x, float y, std::uint8_t** eventParams);
 		EventType GetEventByPosition(std::int32_t x, std::int32_t y, std::uint8_t** eventParams);
-		bool HasEventByPosition(std::int32_t x, std::int32_t y);
+		bool HasEventByPosition(std::int32_t x, std::int32_t y) const;
+		void ForEachEvent(EventType eventType, Function<bool(const EventTile&, std::int32_t, std::int32_t)>&& forEachCallback) const;
 		bool IsHurting(float x, float y, Direction dir);
 		bool IsHurting(std::int32_t x, std::int32_t y, Direction dir);
 		std::int32_t GetWarpByPosition(float x, float y);
