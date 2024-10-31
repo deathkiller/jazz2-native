@@ -249,10 +249,22 @@ namespace Jazz2::Events
 		return EventType::Empty;
 	}
 
-	bool EventMap::HasEventByPosition(std::int32_t x, std::int32_t y)
+	bool EventMap::HasEventByPosition(std::int32_t x, std::int32_t y) const
 	{
 		return (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X &&
 			_eventLayout[x + y * _layoutSize.X].Event != EventType::Empty);
+	}
+
+	void EventMap::ForEachEvent(EventType eventType, Function<bool(const EventTile&, std::int32_t, std::int32_t)>&& forEachCallback) const
+	{
+		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
+			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
+				auto& event = _eventLayout[x + y * _layoutSize.X];
+				if (event.Event == eventType && !forEachCallback(event, x, y)) {
+					return;
+				}
+			}
+		}
 	}
 
 	bool EventMap::IsHurting(float x, float y, Direction dir)
@@ -383,18 +395,9 @@ namespace Jazz2::Events
 							break;
 						}
 
-#if MULTIPLAYER && SERVER
-						case EventType::LevelStartMultiplayer: {
-							// TODO: check parameters
-							spawnPositionsForMultiplayer.Add(new Vector2(32 * x + 16, 32 * y + 16 - 8));
-							break;
-						}
-#endif
-
 						case EventType::ModifierOneWay:
 						case EventType::ModifierVine:
 						case EventType::ModifierHook:
-						case EventType::ModifierHurt:
 						case EventType::SceneryDestruct:
 						case EventType::SceneryDestructButtstomp:
 						case EventType::TriggerArea:

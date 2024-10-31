@@ -187,6 +187,13 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
+	void RemotePlayerOnServer::EmitWeaponFlare()
+	{
+		PlayerOnServer::EmitWeaponFlare();
+
+		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerEmitWeaponFlare(this);
+	}
+
 	void RemotePlayerOnServer::SetCurrentWeapon(WeaponType weaponType)
 	{
 		PlayerOnServer::SetCurrentWeapon(weaponType);

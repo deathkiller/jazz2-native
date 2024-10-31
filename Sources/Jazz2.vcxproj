@@ -433,6 +433,7 @@
     <ClInclude Include="Jazz2\IResumable.h" />
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LevelDescriptor.h" />
+    <ClInclude Include="Jazz2\LevelFlags.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="Jazz2\Multiplayer\Backends\enet.h" />
     <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h" />

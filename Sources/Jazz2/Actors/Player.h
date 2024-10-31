@@ -292,6 +292,7 @@ namespace Jazz2::Actors
 		void EndDamagingMove();
 
 		virtual bool FireCurrentWeapon(WeaponType weaponType);
+		virtual void EmitWeaponFlare();
 		virtual void SetCurrentWeapon(WeaponType weaponType);
 
 	private:

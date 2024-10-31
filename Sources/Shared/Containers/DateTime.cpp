@@ -43,7 +43,7 @@ namespace Death { namespace Containers {
 			{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 		};
 
-		static bool IsLeapYear(std::int32_t year)
+		static bool IsLeapYear(std::int32_t year) noexcept
 		{
 			if (year == -1) {
 				year = DateTime::Now().GetYear();
@@ -52,12 +52,12 @@ namespace Death { namespace Containers {
 			return (year % 4 == 0 && ((year % 100) != 0 || (year % 400) == 0));
 		}
 
-		static std::int32_t GetNumberOfDaysInMonth(std::int32_t month, std::int32_t year)
+		static std::int32_t GetNumberOfDaysInMonth(std::int32_t month, std::int32_t year) noexcept
 		{
 			return DaysInMonth[IsLeapYear(year)][month];
 		}
 
-		static std::int32_t GetTruncatedJDN(std::int32_t day, std::int32_t mon, std::int32_t year)
+		static std::int32_t GetTruncatedJDN(std::int32_t day, std::int32_t mon, std::int32_t year) noexcept
 		{
 			// Make the year positive to avoid problems with negative numbers division
 			year += 4800;
@@ -75,7 +75,7 @@ namespace Death { namespace Containers {
 						+ (month * DAYS_PER_5_MONTHS + 2) / 5 + day - JDN_OFFSET;
 		}
 
-		static struct tm* GetLocalTm(const time_t* ticks, struct tm* temp)
+		static struct tm* GetLocalTm(const time_t* ticks, struct tm* temp) noexcept
 		{
 #if defined(DEATH_TARGET_WINDOWS)
 			return (localtime_s(temp, ticks) == 0 ? temp : nullptr);
@@ -91,7 +91,7 @@ namespace Death { namespace Containers {
 #endif
 		}
 
-		static bool IsDST(const DateTime date)
+		static bool IsDST(const DateTime date) noexcept
 		{
 			time_t timet = date.GetTicks();
 			if (timet == (time_t)-1) {
@@ -103,7 +103,7 @@ namespace Death { namespace Containers {
 			return (tm != nullptr && tm->tm_isdst == 1);
 		}
 
-		static std::int32_t GetTimeZone()
+		static std::int32_t GetTimeZone() noexcept
 		{
 			// Struct tm doesn't always have the tm_gmtoff field, define this if it does
 #if defined(DEATH_USE_GMTOFF_IN_TM)
@@ -151,7 +151,7 @@ namespace Death { namespace Containers {
 #endif
 		}
 
-		static const tm* TryGetTm(time_t t, const DateTime::TimeZone tz, struct tm* temp)
+		static const tm* TryGetTm(time_t t, const DateTime::TimeZone tz, struct tm* temp) noexcept
 		{
 			if (tz.IsLocal()) {
 				return Implementation::GetLocalTm(&t, temp);
@@ -179,7 +179,7 @@ namespace Death { namespace Containers {
 		}
 
 		template<class T>
-		static bool GetNumericToken(const T* string, std::size_t length, std::size_t& i, std::size_t width, std::int32_t* number, std::size_t* scannedDigitsCount = nullptr)
+		static bool GetNumericToken(const T* string, std::size_t length, std::size_t& i, std::size_t width, std::int32_t* number, std::size_t* scannedDigitsCount = nullptr) noexcept
 		{
 			std::size_t n = 1;
 			*number = 0;
@@ -203,7 +203,7 @@ namespace Death { namespace Containers {
 		}
 
 		template<class T, class U>
-		std::size_t TranslateFromUnicodeFormat(T* dest, std::size_t destLength, const U* src, std::size_t srcLength)
+		std::size_t TranslateFromUnicodeFormat(T* dest, std::size_t destLength, const U* src, std::size_t srcLength) noexcept
 		{
 			static const char* formatchars =
 				"dghHmMsSy"
@@ -453,7 +453,7 @@ namespace Death { namespace Containers {
 		}
 
 		template<class T>
-		static bool TryParseFormat(DateTime& result, const T* input, std::size_t inputLength, const T* format, std::size_t formatLength, std::size_t* endIndex)
+		static bool TryParseFormat(DateTime& result, const T* input, std::size_t inputLength, const T* format, std::size_t formatLength, std::size_t* endIndex) noexcept
 		{
 			std::int32_t msec = 0, sec = 0, min = 0, hour = 0, wday = -1, yday = 0, day = 0, mon = -1, year = 0, timeZone = 0, num;
 			bool haveWDay = false, haveYDay = false, haveDay = false, haveMon = false, haveYear = false, haveHour = false,
@@ -909,7 +909,7 @@ namespace Death { namespace Containers {
 		}
 	}
 
-	DateTime::TimeZone::TimeZone(DateTime::Tz tz)
+	DateTime::TimeZone::TimeZone(DateTime::Tz tz) noexcept
 	{
 		switch (tz) {
 			case DateTime::Local:
@@ -960,32 +960,32 @@ namespace Death { namespace Containers {
 		}
 	}
 
-	std::int32_t DateTime::TimeZone::GetOffset() const
+	std::int32_t DateTime::TimeZone::GetOffset() const noexcept
 	{
 		// Get the offset using standard library
 		// It returns the difference GMT-local while we want to have the offset _from_ GMT, hence the '-'
 		return (_offset == -1 ? -Implementation::GetTimeZone() : _offset);
 	}
 
-	DateTime::Tm::Tm()
+	DateTime::Tm::Tm() noexcept
 		: Millisecond(0), Second(0), Minute(0), Hour(0), Day(0), DayOfYear(0), Month(0), Year(-1), _dayOfWeek(-1)
 	{
 	}
 
-	DateTime::Tm::Tm(const struct tm& tm, const TimeZone tz)
+	DateTime::Tm::Tm(const struct tm& tm, const TimeZone tz) noexcept
 		: _tz(tz), Millisecond(0), Second((std::int32_t)tm.tm_sec), Minute((std::int32_t)tm.tm_min), Hour((std::int32_t)tm.tm_hour),
 			Day((std::int32_t)tm.tm_mday), DayOfYear((std::int32_t)tm.tm_yday), Month((std::int32_t)tm.tm_mon),
 			Year(1900 + (std::int32_t)tm.tm_year), _dayOfWeek((std::int32_t)tm.tm_wday)
 	{
 	}
 
-	bool DateTime::Tm::IsValid() const
+	bool DateTime::Tm::IsValid() const noexcept
 	{
 		return (Year != -1 && Month >= 0 && Month < 12 && (Day > 0 && Day <= Implementation::GetNumberOfDaysInMonth(Month, Year)) &&
 			(Hour >= 0 && Hour < 24) && (Minute >= 0 && Minute < 60) && (Second >= 0 && Second < 62) && (Millisecond >= 0 && Millisecond < 1000));
 	}
 
-	void DateTime::Tm::AddMonths(std::int32_t monDiff)
+	void DateTime::Tm::AddMonths(std::int32_t monDiff) noexcept
 	{
 		while (monDiff < -Month) {
 			Year--;
@@ -1000,7 +1000,7 @@ namespace Death { namespace Containers {
 		Month += monDiff;
 	}
 
-	void DateTime::Tm::AddDays(std::int32_t dayDiff)
+	void DateTime::Tm::AddDays(std::int32_t dayDiff) noexcept
 	{
 		while (dayDiff + Day < 1) {
 			AddMonths(-1);
@@ -1015,12 +1015,12 @@ namespace Death { namespace Containers {
 		}
 	}
 
-	void DateTime::Tm::ComputeWeekDay()
+	void DateTime::Tm::ComputeWeekDay() noexcept
 	{
 		_dayOfWeek = (Implementation::GetTruncatedJDN(Day, Month, Year) + 2) % 7;
 	}
 
-	DateTime DateTime::Now()
+	DateTime DateTime::Now() noexcept
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		SYSTEMTIME st;
@@ -1032,7 +1032,7 @@ namespace Death { namespace Containers {
 #endif
 	}
 
-	DateTime DateTime::UtcNow()
+	DateTime DateTime::UtcNow() noexcept
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		SYSTEMTIME st;
@@ -1046,20 +1046,13 @@ namespace Death { namespace Containers {
 #endif
 	}
 
-	DateTime DateTime::FromUnixMilliseconds(std::int64_t value)
-	{
-		DateTime dt;
-		dt._time = value;
-		return dt;
-	}
-
 #if defined(DEATH_TARGET_WINDOWS)
-	DateTime::DateTime(const struct _SYSTEMTIME& st)
+	DateTime::DateTime(const struct _SYSTEMTIME& st) noexcept
 	{
 		Set(st.wYear, st.wMonth - 1, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 	}
 
-	DateTime::DateTime(const struct _FILETIME& ft)
+	DateTime::DateTime(const struct _FILETIME& ft) noexcept
 	{
 		ULARGE_INTEGER value;
 		value.LowPart = ft.dwLowDateTime;
@@ -1068,7 +1061,7 @@ namespace Death { namespace Containers {
 	}
 #endif
 
-	DateTime& DateTime::Set(const struct tm& tm)
+	DateTime& DateTime::Set(const struct tm& tm) noexcept
 	{
 		struct tm tm2(tm);
 		time_t timet = mktime(&tm2);
@@ -1106,7 +1099,7 @@ namespace Death { namespace Containers {
 		return Set(timet);
 	}
 
-	DateTime& DateTime::Set(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour, std::int32_t minute, std::int32_t second, std::int32_t millisec)
+	DateTime& DateTime::Set(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour, std::int32_t minute, std::int32_t second, std::int32_t millisec) noexcept
 	{
 		DEATH_ASSERT(month >= 0 && month < 12 && day > 0 && day <= Implementation::GetNumberOfDaysInMonth(month, year) &&
 			hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 61 /* with leap second */ &&
@@ -1144,7 +1137,7 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
-	DateTime::Tm DateTime::Partitioned(const TimeZone tz) const
+	DateTime::Tm DateTime::Partitioned(const TimeZone tz) const noexcept
 	{
 		if (!IsValid()) {
 			return {};
@@ -1221,7 +1214,7 @@ namespace Death { namespace Containers {
 		return tm;
 	}
 
-	DateTime& DateTime::SetYear(std::int32_t year)
+	DateTime& DateTime::SetYear(std::int32_t year) noexcept
 	{
 		if (IsValid()) {
 			Tm tm(Partitioned());
@@ -1231,7 +1224,7 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
-	DateTime& DateTime::SetMonth(std::int32_t month)
+	DateTime& DateTime::SetMonth(std::int32_t month) noexcept
 	{
 		if (IsValid()) {
 			Tm tm(Partitioned());
@@ -1241,17 +1234,17 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
-	DateTime& DateTime::SetDay(std::int32_t mday)
+	DateTime& DateTime::SetDay(std::int32_t day) noexcept
 	{
 		if (IsValid()) {
 			Tm tm(Partitioned());
-			tm.Day = mday;
+			tm.Day = day;
 			Set(tm);
 		}
 		return *this;
 	}
 
-	DateTime& DateTime::SetHour(std::int32_t hour)
+	DateTime& DateTime::SetHour(std::int32_t hour) noexcept
 	{
 		if (IsValid()) {
 			Tm tm(Partitioned());
@@ -1261,27 +1254,27 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
-	DateTime& DateTime::SetMinute(std::int32_t min)
+	DateTime& DateTime::SetMinute(std::int32_t minute) noexcept
 	{
 		if (IsValid()) {
 			Tm tm(Partitioned());
-			tm.Minute = min;
+			tm.Minute = minute;
 			Set(tm);
 		}
 		return *this;
 	}
 
-	DateTime& DateTime::SetSecond(std::int32_t sec)
+	DateTime& DateTime::SetSecond(std::int32_t second) noexcept
 	{
 		if (IsValid()) {
 			Tm tm(Partitioned());
-			tm.Second = sec;
+			tm.Second = second;
 			Set(tm);
 		}
 		return *this;
 	}
 
-	DateTime& DateTime::SetMillisecond(std::int32_t millisecond)
+	DateTime& DateTime::SetMillisecond(std::int32_t millisecond) noexcept
 	{
 		if (IsValid()) {
 			_time -= _time % 1000;
@@ -1290,7 +1283,7 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
-	DateTime& DateTime::ResetTime()
+	DateTime& DateTime::ResetTime() noexcept
 	{
 		Tm tm(Partitioned());
 		if (tm.Hour != 0 || tm.Minute != 0 || tm.Second != 0 || tm.Millisecond != 0) {
@@ -1300,7 +1293,7 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
-	void DateTime::AdjustToTimezone(const TimeZone tz, bool noDST)
+	void DateTime::AdjustToTimezone(const TimeZone tz, bool noDST) noexcept
 	{
 		std::int32_t secDiff = Implementation::GetTimeZone() + tz.GetOffset();
 
@@ -1313,7 +1306,7 @@ namespace Death { namespace Containers {
 		_time += secDiff * 1000;
 	}
 
-	void DateTime::AdjustFromTimezone(const TimeZone tz, bool noDST)
+	void DateTime::AdjustFromTimezone(const TimeZone tz, bool noDST) noexcept
 	{
 		std::int32_t secDiff = Implementation::GetTimeZone() + tz.GetOffset();
 
@@ -1325,7 +1318,7 @@ namespace Death { namespace Containers {
 	}
 
 #if defined(DEATH_TARGET_WINDOWS)
-	struct _SYSTEMTIME DateTime::ToWin32() const
+	struct _SYSTEMTIME DateTime::ToWin32() const noexcept
 	{
 		Tm tm(Partitioned());
 
@@ -1343,7 +1336,7 @@ namespace Death { namespace Containers {
 	}
 #endif
 
-	bool DateTime::TryParse(const StringView input, const StringView format, StringView* endParse)
+	bool DateTime::TryParse(const StringView input, const StringView format, StringView* endParse) noexcept
 	{
 		std::size_t endIndex;
 		if (!Implementation::TryParseFormat(*this, input.data(), input.size(), format.data(), format.size(), &endIndex)) {
@@ -1356,7 +1349,7 @@ namespace Death { namespace Containers {
 	}
 
 #if defined(DEATH_USE_WCHAR)
-	bool DateTime::TryParse(const std::wstring_view input, const std::wstring_view format, std::wstring_view::const_iterator* endParse)
+	bool DateTime::TryParse(const std::wstring_view input, const std::wstring_view format, std::wstring_view::const_iterator* endParse) noexcept
 	{
 		std::size_t endIndex;
 		if (!Implementation::TryParseFormat(*this, input.data(), input.size(), format.data(), format.size(), &endIndex)) {

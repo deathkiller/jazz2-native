@@ -42,6 +42,7 @@ namespace Jazz2::Actors::Multiplayer
 		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;
 		void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade) override;
 		bool FireCurrentWeapon(WeaponType weaponType) override;
+		void EmitWeaponFlare() override;
 		void SetCurrentWeapon(WeaponType weaponType) override;
 	};
 }

@@ -2753,8 +2753,7 @@ namespace Jazz2::Actors
 		_weaponCooldown = cooldownBase - (fastFire * cooldownUpgrade);
 
 		if (emitFlare) {
-			_weaponFlareFrame = (Random().Next() & 0xFFFF);
-			_weaponFlareTime = 6.0f;
+			EmitWeaponFlare();
 		}
 	}
 
@@ -2815,8 +2814,7 @@ namespace Jazz2::Actors
 		}
 
 		_weaponCooldown = 120.0f;
-		_weaponFlareFrame = (Random().Next() & 0xFFFF);
-		_weaponFlareTime = 6.0f;
+		EmitWeaponFlare();
 	}
 
 	void Player::FireWeaponPepper()
@@ -2848,8 +2846,7 @@ namespace Jazz2::Actors
 
 		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		_weaponCooldown = 30.0f - (fastFire * 2.7f);
-		_weaponFlareFrame = (Random().Next() & 0xFFFF);
-		_weaponFlareTime = 6.0f;
+		EmitWeaponFlare();
 	}
 
 	void Player::FireWeaponTNT()
@@ -3000,6 +2997,12 @@ namespace Jazz2::Actors
 		}
 
 		return (weaponType != WeaponType::TNT);
+	}
+
+	void Player::EmitWeaponFlare()
+	{
+		_weaponFlareFrame = (Random().Next() & 0xFFFF);
+		_weaponFlareTime = 6.0f;
 	}
 
 	void Player::SetCurrentWeapon(WeaponType weaponType)

@@ -106,6 +106,7 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);
+		void HandlePlayerEmitWeaponFlare(Actors::Player* player);
 		void HandlePlayerWeaponChanged(Actors::Player* player);
 
 	private:
@@ -150,6 +151,11 @@ namespace Jazz2::Multiplayer
 			PlayerState(const Vector2f& pos, const Vector2f& speed);
 		};
 
+		struct MultiplayerSpawnPoint {
+			Vector2f Pos;
+			std::uint8_t Team;
+		};
+
 		static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
 
@@ -162,6 +168,7 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID
+		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::uint64_t _seqNum; // Client: sequence number of the last update
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
@@ -172,6 +179,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t FindFreeActorId();
 		std::uint8_t FindFreePlayerId();
 		bool IsLocalPlayer(Actors::ActorBase* actor);
+		void ApplyGameModeToAllPlayers(MultiplayerGameMode gameMode);
+		void ApplyGameModeToPlayer(MultiplayerGameMode gameMode, Actors::Player* player);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 
