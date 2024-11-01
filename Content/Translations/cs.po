@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-10-30 18:54+0100\n"
-"PO-Revision-Date: 2024-10-30 18:54+0100\n"
+"POT-Creation-Date: 2024-11-01 11:30+0100\n"
+"PO-Revision-Date: 2024-11-01 11:30+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1897,15 +1897,20 @@ msgstr ""
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
-msgid "Treasure Hunt"
+msgid "Team Race"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
+msgid "Treasure Hunt"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Cooperation"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:44
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:46
 msgid "Select Game Mode"
 msgstr ""
 
@@ -2097,12 +2102,12 @@ msgstr "Těžká"
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Pozice zón dotyku můžete upravit přetažením."
 
-#: Sources/Main.cpp:271 Sources/Main.cpp:326
+#: Sources/Main.cpp:270 Sources/Main.cpp:325
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "Připojování k %s:%u..."
 
-#: Sources/Main.cpp:524 Sources/Main.cpp:566
+#: Sources/Main.cpp:517 Sources/Main.cpp:559
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2116,7 +2121,7 @@ msgstr ""
 "Ujistěte se, že všechny potřebné soubory\n"
 "jsou přístupné, a zkuste to znovu."
 
-#: Sources/Main.cpp:620
+#: Sources/Main.cpp:613
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2130,7 +2135,7 @@ msgstr ""
 "Ujistěte se, že všechny potřebné soubory\n"
 "jsou přístupné, a zkuste to znovu."
 
-#: Sources/Main.cpp:755
+#: Sources/Main.cpp:748
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2138,7 +2143,7 @@ msgid ""
 "Your client version is not compatible with the server."
 msgstr ""
 
-#: Sources/Main.cpp:756
+#: Sources/Main.cpp:749
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2147,7 +2152,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:757
+#: Sources/Main.cpp:750
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2156,7 +2161,7 @@ msgid ""
 "Please try again in a few seconds."
 msgstr ""
 
-#: Sources/Main.cpp:758
+#: Sources/Main.cpp:751
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2165,7 +2170,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:759
+#: Sources/Main.cpp:752
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2174,7 +2179,7 @@ msgid ""
 "Please try it again later."
 msgstr ""
 
-#: Sources/Main.cpp:760
+#: Sources/Main.cpp:753
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2183,7 +2188,7 @@ msgid ""
 "Please try it again later."
 msgstr ""
 
-#: Sources/Main.cpp:761
+#: Sources/Main.cpp:754
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2192,7 +2197,7 @@ msgid ""
 "Please check your client version and try it again in a minute."
 msgstr ""
 
-#: Sources/Main.cpp:762
+#: Sources/Main.cpp:755
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2201,7 +2206,7 @@ msgid ""
 "check your network connection."
 msgstr ""
 
-#: Sources/Main.cpp:763
+#: Sources/Main.cpp:756
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2209,7 +2214,7 @@ msgid ""
 "The server is not responding for connection request."
 msgstr ""
 
-#: Sources/Main.cpp:764
+#: Sources/Main.cpp:757
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2218,7 +2223,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:765
+#: Sources/Main.cpp:758
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"

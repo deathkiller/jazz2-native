@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-10-30 18:55+0100\n"
+"POT-Creation-Date: 2024-11-01 11:31+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Hexaae\n"
 "Language-Team: Hexaae\n"
@@ -1905,15 +1905,20 @@ msgstr "Corsa"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
+msgid "Team Race"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
 msgstr "Caccia al tesoro"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Cooperation"
 msgstr "Cooperazione"
 
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:44
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:46
 msgid "Select Game Mode"
 msgstr "Seleziona modalità di gioco"
 
@@ -2106,12 +2111,12 @@ msgid "You can adjust position of the touch zones by drag and drop."
 msgstr ""
 "È possibile regolare la posizione delle zone touch mediante trascinamento."
 
-#: Sources/Main.cpp:271 Sources/Main.cpp:326
+#: Sources/Main.cpp:270 Sources/Main.cpp:325
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "Connessione con %s:%u..."
 
-#: Sources/Main.cpp:524 Sources/Main.cpp:566
+#: Sources/Main.cpp:517 Sources/Main.cpp:559
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2125,7 +2130,7 @@ msgstr ""
 "Assicurarsi che tutti i file necessari\n"
 "siano accessibili e riprovare."
 
-#: Sources/Main.cpp:620
+#: Sources/Main.cpp:613
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2139,7 +2144,7 @@ msgstr ""
 "Assicurarsi che tutti i file necessari\n"
 "siano accessibili e riprovare."
 
-#: Sources/Main.cpp:755
+#: Sources/Main.cpp:748
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2151,7 +2156,7 @@ msgstr ""
 "\n"
 "La tua versione del client non è compatibile con il server."
 
-#: Sources/Main.cpp:756
+#: Sources/Main.cpp:749
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2165,7 +2170,7 @@ msgstr ""
 "Il server è pieno.\n"
 "Prego riprova dopo."
 
-#: Sources/Main.cpp:757
+#: Sources/Main.cpp:750
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2179,7 +2184,7 @@ msgstr ""
 "Il server non è in uno stato idoneo a processare la tua richiesta.\n"
 "Prego, riprova tra alcuni secondi."
 
-#: Sources/Main.cpp:758
+#: Sources/Main.cpp:751
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2193,7 +2198,7 @@ msgstr ""
 "Il server è in chiusura.\n"
 "Prego, riprova più tardi."
 
-#: Sources/Main.cpp:759
+#: Sources/Main.cpp:752
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2214,7 +2219,7 @@ msgstr ""
 "Il server è in chiusura.\n"
 "Prego, riprova più tardi."
 
-#: Sources/Main.cpp:760
+#: Sources/Main.cpp:753
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2235,7 +2240,7 @@ msgstr ""
 "Il server è in chiusura.\n"
 "Prego, riprova più tardi."
 
-#: Sources/Main.cpp:761
+#: Sources/Main.cpp:754
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2256,7 +2261,7 @@ msgstr ""
 "Il server è in chiusura.\n"
 "Prego, riprova più tardi."
 
-#: Sources/Main.cpp:762
+#: Sources/Main.cpp:755
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2270,7 +2275,7 @@ msgstr ""
 "Prego, riprova e se il problema persiste,\n"
 "controlla la tua connessione di rete."
 
-#: Sources/Main.cpp:763
+#: Sources/Main.cpp:756
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2282,7 +2287,7 @@ msgstr ""
 "\n"
 "Il server is non risponde alle richieste di connessione."
 
-#: Sources/Main.cpp:764
+#: Sources/Main.cpp:757
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2296,7 +2301,7 @@ msgstr ""
 "Sei stato \f[c:#907050]buttato fuori\f[/c] dal server.\n"
 "Contatta gli amministratori per maggiori informazioni."
 
-#: Sources/Main.cpp:765
+#: Sources/Main.cpp:758
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"

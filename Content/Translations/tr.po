@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-10-30 18:56+0100\n"
+"POT-Creation-Date: 2024-11-01 11:33+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Consul\n"
@@ -1893,15 +1893,20 @@ msgstr "Yarış"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
+msgid "Team Race"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
 msgstr "Hazine Avı"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Cooperation"
 msgstr "Eşli Oyun"
 
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:44
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:46
 msgid "Select Game Mode"
 msgstr "Oyun Modu Seç"
 
@@ -2094,12 +2099,12 @@ msgid "You can adjust position of the touch zones by drag and drop."
 msgstr ""
 "Dokunma bölgelerini tutup bırakarak bulundukları pozisyonu ayarlayabilirsin."
 
-#: Sources/Main.cpp:271 Sources/Main.cpp:326
+#: Sources/Main.cpp:270 Sources/Main.cpp:325
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "%s:%u'ya bağlanıyor..."
 
-#: Sources/Main.cpp:524 Sources/Main.cpp:566
+#: Sources/Main.cpp:517 Sources/Main.cpp:559
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2113,7 +2118,7 @@ msgstr ""
 "Gerekli dosyaların erişilebilir\n"
 "olduğundan emin olun ve tekrar deneyin."
 
-#: Sources/Main.cpp:620
+#: Sources/Main.cpp:613
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2127,7 +2132,7 @@ msgstr ""
 "Gerekli dosyaların erişilebilir\n"
 "olduğundan emin olun ve tekrar deneyin."
 
-#: Sources/Main.cpp:755
+#: Sources/Main.cpp:748
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2139,7 +2144,7 @@ msgstr ""
 "\n"
 "Oyun sürümünüz sunucuyla uyumlu değil."
 
-#: Sources/Main.cpp:756
+#: Sources/Main.cpp:749
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2153,7 +2158,7 @@ msgstr ""
 "Kapasite dolu.\n"
 "Lütfen tekrar deneyin."
 
-#: Sources/Main.cpp:757
+#: Sources/Main.cpp:750
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2167,7 +2172,7 @@ msgstr ""
 "Sunucu isteğinizi gerçekleştirebilecek durumda değil.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:758
+#: Sources/Main.cpp:751
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2181,7 +2186,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:759
+#: Sources/Main.cpp:752
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2202,7 +2207,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:760
+#: Sources/Main.cpp:753
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2223,7 +2228,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:761
+#: Sources/Main.cpp:754
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2244,7 +2249,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:762
+#: Sources/Main.cpp:755
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2258,7 +2263,7 @@ msgstr ""
 "Lütfen daha sonra tekrar deneyin. Problem devam ediyorsa,\n"
 "internet bağlantınızı gözden geçirin."
 
-#: Sources/Main.cpp:763
+#: Sources/Main.cpp:756
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2270,7 +2275,7 @@ msgstr ""
 "\n"
 "Sunucu bağlantı isteğine cevap vermiyor."
 
-#: Sources/Main.cpp:764
+#: Sources/Main.cpp:757
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2284,7 +2289,7 @@ msgstr ""
 "Sunucudan \f[c:#907050]atıldınız\f[/c].\n"
 "Daha fazla bilgi için sunucu yöneticileri ile iletişime geçin."
 
-#: Sources/Main.cpp:765
+#: Sources/Main.cpp:758
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
