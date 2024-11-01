@@ -23,6 +23,8 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Select Game Mode section
 		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::Race, _("Race") });
 		// TRANSLATORS: Menu item in Select Game Mode section
+		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::TeamRace, _("Team Race") });
+		// TRANSLATORS: Menu item in Select Game Mode section
 		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::TreasureHunt, _("Treasure Hunt") });
 		// TRANSLATORS: Menu item in Select Game Mode section
 		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::Cooperation, _("Cooperation") });

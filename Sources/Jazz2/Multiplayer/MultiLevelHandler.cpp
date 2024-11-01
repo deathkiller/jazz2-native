@@ -984,7 +984,7 @@ namespace Jazz2::Multiplayer
 			// Cache all possible multiplayer spawn points (if it's not coop level)
 			_multiplayerSpawnPoints.clear();
 			_eventMap->ForEachEvent(EventType::LevelStartMultiplayer, [this](const Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
-				_multiplayerSpawnPoints.emplace_back(MultiplayerSpawnPoint{Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), event.EventParams[0]});
+				_multiplayerSpawnPoints.emplace_back(MultiplayerSpawnPoint { Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), event.EventParams[0] });
 				return true;
 			});
 		} else {
@@ -1029,6 +1029,7 @@ namespace Jazz2::Multiplayer
 
 			Vector2f spawnPosition;
 			if (!_multiplayerSpawnPoints.empty()) {
+				// TODO: Select spawn according to team
 				spawnPosition = _multiplayerSpawnPoints[Random().Next(0, _multiplayerSpawnPoints.size())].Pos;
 			} else {
 				spawnPosition = _eventMap->GetSpawnPosition(levelInit.PlayerCarryOvers[i].Type);
@@ -1792,6 +1793,7 @@ namespace Jazz2::Multiplayer
 
 			Vector2f spawnPosition;
 			if (!_multiplayerSpawnPoints.empty()) {
+				// TODO: Select spawn according to team
 				spawnPosition = _multiplayerSpawnPoints[Random().Next(0, _multiplayerSpawnPoints.size())].Pos;
 			} else {
 				// TODO: Spawn on the last checkpoint
