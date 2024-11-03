@@ -93,22 +93,25 @@ namespace Jazz2::UI::Menu
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
 
+		bool isReadOnly = (item.Item.Type == GameplayEnhancementsItemType::ReforgedGameplay && _isInGame);
 		if (isSelected) {
 			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
 			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
 
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
-				Alignment::Center, item.Item.Type == GameplayEnhancementsItemType::ReforgedGameplay && _isInGame ? Font::TransparentRandomColor : Font::RandomColor,
+				Alignment::Center, isReadOnly ? Font::TransparentRandomColor : Font::RandomColor,
 				size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-			_root->DrawStringShadow("<"_s, charOffset, centerX - 110.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
-				Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-			_root->DrawStringShadow(">"_s, charOffset, centerX + 120.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
-				Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
+			if (!isReadOnly) {
+				_root->DrawStringShadow("<"_s, charOffset, centerX - 110.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
+				_root->DrawStringShadow(">"_s, charOffset, centerX + 120.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
+			}
 		} else {
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
-				Alignment::Center, Font::DefaultColor, 0.9f);
+				Alignment::Center, isReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor, 0.9f);
 		}
 
 		StringView customText;
@@ -128,7 +131,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
-			Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+			Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, isReadOnly ? 0.36f : 0.5f) : (isReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 	}
 
 	void GameplayEnhancementsSection::OnExecuteSelected()

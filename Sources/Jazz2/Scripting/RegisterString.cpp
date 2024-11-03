@@ -13,9 +13,9 @@
 #	include <locale.h>		// setlocale()
 #endif
 
-#define AS_USE_ACCESSORS 1
-
 #include <Containers/StringConcatenable.h>
+
+#define AS_USE_ACCESSORS 1
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;

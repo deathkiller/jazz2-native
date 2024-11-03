@@ -389,12 +389,14 @@ namespace Jazz2
 		if (PreferencesCache::AllowUnsignedScripts) {
 			const StringView foundDot = descriptor.FullPath.findLastOr('.', descriptor.FullPath.end());
 			String scriptPath = (foundDot == descriptor.FullPath.end() ? StringView(descriptor.FullPath) : descriptor.FullPath.prefix(foundDot.begin())) + ".j2as"_s;
-			if (fs::IsReadableFile(scriptPath)) {
+			if (auto scriptPathCaseInsensitive = fs::FindPathCaseInsensitive(scriptPath)) {
+				if (fs::IsReadableFile(scriptPathCaseInsensitive)) {
 #	if defined(WITH_ANGELSCRIPT)
-				_scripts = std::make_unique<Scripting::LevelScriptLoader>(this, scriptPath);
+					_scripts = std::make_unique<Scripting::LevelScriptLoader>(this, scriptPathCaseInsensitive);
 #	else
-				LOGW("Level requires scripting, but scripting support is disabled in this build");
+					LOGW("Level requires scripting, but scripting support is disabled in this build");
 #	endif
+				}
 			}
 		}
 #endif
@@ -686,7 +688,7 @@ namespace Jazz2
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
 									for (auto* player : _players) {
-										player->SetInvulnerability(36000.0f, true);
+										player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
 									}
 								}
 								break;
@@ -1093,8 +1095,14 @@ namespace Jazz2
 		_root->GoToMainMenu(false);
 	}
 
-	bool LevelHandler::HandlePlayerDied(Actors::Player* player)
+	bool LevelHandler::HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider)
 	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			_scripts->OnPlayerDied(player, collider);
+		}
+#endif
+
 		if (_activeBoss != nullptr) {
 			if (_activeBoss->OnPlayerDied()) {
 				_activeBoss = nullptr;

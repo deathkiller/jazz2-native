@@ -43,17 +43,15 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Language, _("Language") });
 #if defined(WITH_ANGELSCRIPT)
-		if (!isInGame) {
-			// TRANSLATORS: Menu item in Options > Gameplay section
-			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true });
-		}
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true, isInGame });
 #endif
-		if (!isInGame) {
-			// TRANSLATORS: Menu item in Options > Gameplay section
-			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowCheats, _("Allow Cheats"), true });
-			// TRANSLATORS: Menu item in Options > Gameplay section
-			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::OverwriteEpisodeEnd, _("Overwrite Episode Completion"), true });
-		}
+
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowCheats, _("Allow Cheats"), true, isInGame });
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::OverwriteEpisodeEnd, _("Overwrite Episode Completion"), true, isInGame });
+
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableDiscordIntegration, _("Discord Integration"), true });
@@ -115,9 +113,9 @@ namespace Jazz2::UI::Menu
 			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.DisplayName) + 3) * 0.5f * size, 4.0f * size, true, true);
 
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
-				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+				Alignment::Center, item.Item.IsReadOnly ? Font::TransparentRandomColor : Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-			if (item.Item.HasBooleanValue) {
+			if (item.Item.HasBooleanValue && !item.Item.IsReadOnly) {
 				_root->DrawStringShadow("<"_s, charOffset, centerX - 70.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
 					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
 				_root->DrawStringShadow(">"_s, charOffset, centerX + 80.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
@@ -125,7 +123,7 @@ namespace Jazz2::UI::Menu
 			}
 		} else {
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
-				Alignment::Center, Font::DefaultColor, 0.9f);
+				Alignment::Center, item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor, 0.9f);
 		}
 
 		if (item.Item.HasBooleanValue) {
@@ -159,21 +157,26 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_ANGELSCRIPT)
 			if (item.Item.Type == GameplayOptionsItemType::AllowUnsignedScripts && enabled) {
 				_root->DrawStringShadow(_("Enabled"), charOffset, centerX + 12.0f, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
-					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 
 				Vector2f textSize = _root->MeasureString(_("Enabled"), 0.8f);
-				_root->DrawElement(Uac, 0, ceil(centerX - textSize.X * 0.5f - 6.0f), item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White);
+				_root->DrawElement(Uac, 0, ceil(centerX - textSize.X * 0.5f - 6.0f), item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10,
+					Alignment::Center, (item.Item.IsReadOnly ? Colorf(1.0f, 1.0f, 1.0f, 0.5f) : Colorf::White));
 			} else
 #endif
 			{
 				_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
-					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 			}
 		}
 	}
 
 	void GameplayOptionsSection::OnExecuteSelected()
 	{
+		if (_items[_selectedIndex].Item.IsReadOnly) {
+			return;
+		}
+
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		switch (_items[_selectedIndex].Item.Type) {

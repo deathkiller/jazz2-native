@@ -268,7 +268,7 @@ namespace Jazz2::Scripting
 							StringView filename = StringView(&scriptContent[pos + 1], len - 2);
 							StringView invalidChar = filename.findAny("\n\r\t");
 							if (invalidChar != nullptr) {
-								String str = "Invalid file name for #include; it contains a line-break or tab: \""_s + filename.prefix(invalidChar.begin()) + "\""_s;
+								String str = "Invalid file name for #include - it contains a line-break or tab: \""_s + filename.prefix(invalidChar.begin()) + "\""_s;
 								_engine->WriteMessage(path.data(), 0, 0, asMSGTYPE_ERROR, str.data());
 							} else {
 								String filenameProcessed = OnProcessInclude(filename, absolutePath);

@@ -58,7 +58,7 @@ namespace Jazz2::Multiplayer
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) override;
 		void HandleGameOver(Actors::Player* player) override;
-		bool HandlePlayerDied(Actors::Player* player) override;
+		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
 		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;

@@ -7,7 +7,7 @@
 namespace nCine
 {
 	/// A sequence of bits to be manipulated with logical operators
-	template <class T>
+	template<class T>
 	class BitSet
 	{
 	public:

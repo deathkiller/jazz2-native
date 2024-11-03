@@ -2,6 +2,7 @@
 #include "StartGameOptionsSection.h"
 #include "MainMenu.h"
 #include "MenuResources.h"
+#include "../../LevelFlags.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
@@ -309,11 +310,14 @@ namespace Jazz2::UI::Menu
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		RETURN_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature");
 
-		std::uint16_t flags = s->ReadValue<std::uint16_t>();
+		LevelFlags flags = (LevelFlags)s->ReadValue<std::uint16_t>();
 
 #if !defined(DEATH_DEBUG)
 		// Don't show hidden levels in Release build if unlock cheat is not active, but show all levels in Debug build
-		if ((flags & /*Hidden*/0x08) != 0 && !PreferencesCache::AllowCheatsUnlock) {
+		if ((flags & LevelFlags::IsHidden) == LevelFlags::IsHidden && !PreferencesCache::AllowCheatsUnlock) {
+			return;
+		}
+		if ((flags & LevelFlags::IsMultiplayerLevel) == LevelFlags::IsMultiplayerLevel) {
 			return;
 		}
 #endif
@@ -331,5 +335,16 @@ namespace Jazz2::UI::Menu
 		auto& level = _items.emplace_back();
 		level.LevelName = fs::GetFileNameWithoutExtension(levelFile);
 		level.DisplayName = std::move(name);
+
+#if defined(DEATH_DEBUG)
+		if ((flags & LevelFlags::IsHidden) == LevelFlags::IsHidden && !PreferencesCache::AllowCheatsUnlock) {
+			level.DisplayName += " [Hidden]"_s;
+		}
+		if ((flags & LevelFlags::IsMultiplayerLevel) == LevelFlags::IsMultiplayerLevel) {
+			level.DisplayName += " [Multiplayer]"_s;
+		} else if ((flags & LevelFlags::HasMultiplayerSpawnPoints) == LevelFlags::HasMultiplayerSpawnPoints) {
+			level.DisplayName += " [MultiSpawnPoints]"_s;
+		}
+#endif
 	}
 }

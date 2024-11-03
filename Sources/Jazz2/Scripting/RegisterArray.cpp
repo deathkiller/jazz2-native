@@ -9,6 +9,8 @@
 
 #include <Containers/StringConcatenable.h>
 
+#define AS_USE_ACCESSORS 1
+
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 

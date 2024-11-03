@@ -10,10 +10,21 @@
 
 #include "../../nCine/Input/InputEvents.h"
 
+#if defined(WITH_ANGELSCRIPT)
+namespace Jazz2::Scripting
+{
+	class jjCANVAS;
+}
+#endif
+
 namespace Jazz2::UI
 {
 	class HUD : public Canvas
 	{
+#if defined(WITH_ANGELSCRIPT)
+		friend class Scripting::jjCANVAS;
+#endif
+
 	public:
 		static constexpr float DpadLeft = 0.02f;
 		static constexpr float DpadBottom = 0.1f;
