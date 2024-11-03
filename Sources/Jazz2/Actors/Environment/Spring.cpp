@@ -43,11 +43,11 @@ namespace Jazz2::Actors::Environment
 	{
 		_type = details.Params[0];
 		_orientation = (Orientation)details.Params[1];
-		KeepSpeedX = (details.Params[2] != 0);
-		KeepSpeedY = (details.Params[3] != 0);
-		_delay = details.Params[4];
-		bool applyGravitation = (details.Params[5] & 0x01) != 0; // Jazz² Resurrection only
-		_state = ((details.Params[5] & 0x02) != 0 ? State::Frozen : State::Default);
+		KeepSpeedX = ((details.Params[2] & 0x04) != 0);
+		KeepSpeedY = ((details.Params[2] & 0x08) != 0);
+		bool applyGravitation = (details.Params[2] & 0x01) != 0; // Jazz² Resurrection only
+		_state = ((details.Params[2] & 0x02) != 0 ? State::Frozen : State::Default);
+		_delay = details.Params[3];
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 
