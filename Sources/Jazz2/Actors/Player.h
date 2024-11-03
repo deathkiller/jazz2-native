@@ -84,11 +84,17 @@ namespace Jazz2::Actors
 			Sidekick
 		};
 
+		enum class InvulnerableType {
+			Transient,
+			Blinking,
+			Shielded
+		};
+
 		Player();
 		~Player();
 
 		std::uint8_t GetPlayerIndex() const {
-			return _playerIndex;
+			return (std::uint8_t)_playerIndex;
 		}
 
 		PlayerType GetPlayerType() const {
@@ -126,7 +132,7 @@ namespace Jazz2::Actors
 		Modifier GetModifier() const;
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
-		void SetInvulnerability(float time, bool withCircleEffect);
+		void SetInvulnerability(float time, InvulnerableType type);
 
 		void AddScore(std::uint32_t amount);
 		bool AddHealth(std::int32_t amount);
@@ -311,7 +317,7 @@ namespace Jazz2::Actors
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed);
 
-		void OnPerishInner();
+		void OnPerishInner(ActorBase* collider);
 
 		void SwitchToNextWeapon();
 		template<typename T, WeaponType weaponType>

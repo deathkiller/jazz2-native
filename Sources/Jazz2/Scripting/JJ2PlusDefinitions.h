@@ -3,6 +3,8 @@
 #if defined(WITH_ANGELSCRIPT)
 
 #include "../../Common.h"
+#include "../../nCine/Primitives/Rect.h"
+#include "../../nCine/Base/Random.h"
 #include "RegisterArray.h"
 
 #include <angelscript.h>
@@ -11,15 +13,22 @@
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;
+using namespace nCine;
 
 namespace Jazz2::Actors
 {
 	class Player;
 }
 
+namespace Jazz2::UI
+{
+	class HUD;
+}
+
 namespace Jazz2::Scripting
 {
 	class LevelScriptLoader;
+	struct PlayerBackingStore;
 
 	enum airjump {
 		airjumpNONE,
@@ -1202,9 +1211,9 @@ namespace Jazz2::Scripting
 			ch_SPECIAL
 		};
 
-		int xAmp;
-		int yAmp;
-		int spacing;
+		std::int32_t xAmp;
+		std::int32_t yAmp;
+		std::int32_t spacing;
 		bool monospace;
 		bool skipInitialHash;
 
@@ -1218,25 +1227,25 @@ namespace Jazz2::Scripting
 		align_ align = align_DEFAULT;
 
 		static jjTEXTAPPEARANCE constructor();
-		static jjTEXTAPPEARANCE constructorMode(uint32_t mode);
+		static jjTEXTAPPEARANCE constructorMode(std::uint32_t mode);
 
-		jjTEXTAPPEARANCE& operator=(uint32_t other);
+		jjTEXTAPPEARANCE& operator=(std::uint32_t other);
 	};
 
 	struct jjPALCOLOR {
-		uint8_t red;
-		uint8_t green;
-		uint8_t blue;
+		std::uint8_t red;
+		std::uint8_t green;
+		std::uint8_t blue;
 
 		static jjPALCOLOR Create();
-		static jjPALCOLOR CreateFromRgb(uint8_t red, uint8_t green, uint8_t blue);
+		static jjPALCOLOR CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue);
 
-		uint8_t getHue();
-		uint8_t getSat();
-		uint8_t getLight();
+		std::uint8_t getHue();
+		std::uint8_t getSat();
+		std::uint8_t getLight();
 
-		void swizzle(uint32_t redc, uint32_t greenc, uint32_t bluec);
-		void setHSL(int hue, uint8_t sat, uint8_t light);
+		void swizzle(std::uint32_t redc, std::uint32_t greenc, std::uint32_t bluec);
+		void setHSL(std::int32_t hue, std::uint8_t sat, std::uint8_t light);
 
 		jjPALCOLOR& operator=(const jjPALCOLOR& other);
 		bool operator==(const jjPALCOLOR& other);
@@ -1254,20 +1263,29 @@ namespace Jazz2::Scripting
 
 		void Release();
 
+		jjPAL& operator=(const jjPAL& o);
+
+		bool operator==(const jjPAL& o);
+
+		jjPALCOLOR& getColor(std::uint8_t idx);
+		const jjPALCOLOR& getConstColor(std::uint8_t idx) const;
+		jjPALCOLOR& setColorEntry(std::uint8_t idx, jjPALCOLOR& value);
+
 		void reset();
 		void apply();
 		bool load(const String& filename);
-		void fill(uint8_t red, uint8_t green, uint8_t blue, float opacity);
-		void fillTint(uint8_t red, uint8_t green, uint8_t blue, uint8_t start, uint8_t length, float opacity);
+		void fill(std::uint8_t red, std::uint8_t green, std::uint8_t blue, float opacity);
+		void fillTint(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t start, std::uint8_t length, float opacity);
 		void fillFromColor(jjPALCOLOR color, float opacity);
-		void fillTintFromColor(jjPALCOLOR color, uint8_t start, uint8_t length, float opacity);
-		void gradient(uint8_t red1, uint8_t green1, uint8_t blue1, uint8_t red2, uint8_t green2, uint8_t blue2, uint8_t start, uint8_t length, float opacity, bool inclusive);
-		void gradientFromColor(jjPALCOLOR color1, jjPALCOLOR color2, uint8_t start, uint8_t length, float opacity, bool inclusive);
-		void copyFrom(uint8_t start, uint8_t length, uint8_t start2, const jjPAL& source, float opacity);
-		uint8_t findNearestColor(jjPALCOLOR color);
+		void fillTintFromColor(jjPALCOLOR color, std::uint8_t start, std::uint8_t length, float opacity);
+		void gradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2, std::uint8_t start, std::uint8_t length, float opacity, bool inclusive);
+		void gradientFromColor(jjPALCOLOR color1, jjPALCOLOR color2, std::uint8_t start, std::uint8_t length, float opacity, bool inclusive);
+		void copyFrom(std::uint8_t start, std::uint8_t length, std::uint8_t start2, const jjPAL& source, float opacity);
+		std::uint8_t findNearestColor(jjPALCOLOR color);
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
+		jjPALCOLOR _palette[256];
 	};
 
 	class jjSTREAM
@@ -1284,64 +1302,91 @@ namespace Jazz2::Scripting
 
 		jjSTREAM& operator=(const jjSTREAM& o);
 
-		uint32_t getSize() const;
+		std::uint32_t getSize() const;
 		bool isEmpty() const;
 		bool save(const String& tilename) const;
 		void clear();
-		bool discard(uint32_t count);
+		bool discard(std::uint32_t count);
 
 		bool write(const String& value);
 		bool write(const jjSTREAM& value);
-		bool get(String& value, uint32_t count);
-		bool get(jjSTREAM& value, uint32_t count);
+		bool get(String& value, std::uint32_t count);
+		bool get(jjSTREAM& value, std::uint32_t count);
 		bool getLine(String& value, const String& delim);
 
 		bool push(bool value);
-		bool push(uint8_t value);
-		bool push(int8_t value);
-		bool push(uint16_t value);
-		bool push(int16_t value);
-		bool push(uint32_t value);
-		bool push(int32_t value);
-		bool push(uint64_t value);
-		bool push(int64_t value);
+		bool push(std::uint8_t value);
+		bool push(std::int8_t value);
+		bool push(std::uint16_t value);
+		bool push(std::int16_t value);
+		bool push(std::uint32_t value);
+		bool push(std::int32_t value);
+		bool push(std::uint64_t value);
+		bool push(std::int64_t value);
 		bool push(float value);
 		bool push(double value);
 		bool push(const String& value);
 		bool push(const jjSTREAM& value);
 
 		bool pop(bool& value);
-		bool pop(uint8_t& value);
-		bool pop(int8_t& value);
-		bool pop(uint16_t& value);
-		bool pop(int16_t& value);
-		bool pop(uint32_t& value);
-		bool pop(int32_t& value);
-		bool pop(uint64_t& value);
-		bool pop(int64_t& value);
+		bool pop(std::uint8_t& value);
+		bool pop(std::int8_t& value);
+		bool pop(std::uint16_t& value);
+		bool pop(std::int16_t& value);
+		bool pop(std::uint32_t& value);
+		bool pop(std::int32_t& value);
+		bool pop(std::uint64_t& value);
+		bool pop(std::int64_t& value);
 		bool pop(float& value);
 		bool pop(double& value);
 		bool pop(String& value);
 		bool pop(jjSTREAM& value);
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
+	};
+
+	class jjRNG
+	{
+	public:
+		jjRNG(std::uint64_t seed);
+		~jjRNG();
+
+		static jjRNG* Create(std::uint64_t seed);
+
+		void AddRef();
+		void Release();
+
+		std::uint64_t operator()();
+
+		jjRNG& operator=(const jjRNG& o);
+
+		bool operator==(const jjRNG& o) const;
+
+		void seed(std::uint64_t value);
+		void discard(std::uint64_t count);
+
+	private:
+		const std::uint64_t DefaultInitSequence = 0xda3e39cb94b95bdbULL;
+
+		std::int32_t _refCount;
+		RandomGenerator _random;
 	};
 
 	struct jjBEHAVIOR
 	{
 		static jjBEHAVIOR* Create(jjBEHAVIOR* self);
-		static jjBEHAVIOR* CreateFromBehavior(uint32_t behavior, jjBEHAVIOR* self);
+		static jjBEHAVIOR* CreateFromBehavior(std::uint32_t behavior, jjBEHAVIOR* self);
 		static void Destroy(jjBEHAVIOR* self);
 
 		jjBEHAVIOR& operator=(const jjBEHAVIOR& other);
-		jjBEHAVIOR& operator=(uint32_t other);
+		jjBEHAVIOR& operator=(std::uint32_t other);
 		jjBEHAVIOR& operator=(asIScriptFunction* other);
 		jjBEHAVIOR& operator=(asIScriptObject* other);
 		bool operator==(const jjBEHAVIOR& other) const;
-		bool operator==(uint32_t other) const;
+		bool operator==(std::uint32_t other) const;
 		bool operator==(const asIScriptFunction* other) const;
-		operator uint32_t();
+		operator std::uint32_t();
 		operator asIScriptFunction* ();
 		operator asIScriptObject* ();
 	};
@@ -1357,7 +1402,7 @@ namespace Jazz2::Scripting
 
 		jjANIMFRAME& operator=(const jjANIMFRAME& o);
 
-		static jjANIMFRAME* get_jjAnimFrames(uint32_t index);
+		static jjANIMFRAME* get_jjAnimFrames(std::uint32_t index);
 
 		int16_t hotSpotX = 0;
 		int16_t hotSpotY = 0;
@@ -1370,16 +1415,16 @@ namespace Jazz2::Scripting
 
 		bool get_transparent() const;
 		bool set_transparent(bool value) const;
-		bool doesCollide(int32_t xPos, int32_t yPos, int32_t direction, const jjANIMFRAME* frame2, int32_t xPos2, int32_t yPos2, int32_t direction2, bool always) const;
+		bool doesCollide(std::int32_t xPos, std::int32_t yPos, std::int32_t direction, const jjANIMFRAME* frame2, std::int32_t xPos2, std::int32_t yPos2, std::int32_t direction2, bool always) const;
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 	};
 
 	class jjANIMATION
 	{
 	public:
-		jjANIMATION(uint32_t index);
+		jjANIMATION(std::uint32_t index);
 		~jjANIMATION();
 
 		void AddRef();
@@ -1388,66 +1433,70 @@ namespace Jazz2::Scripting
 		jjANIMATION& operator=(const jjANIMATION& o);
 
 		bool save(const String& filename, const jjPAL& palette) const;
-		bool load(const String& filename, int32_t hotSpotX, int32_t hotSpotY, int32_t coldSpotYOffset, int32_t firstFrameToOverwrite);
+		bool load(const String& filename, std::int32_t hotSpotX, std::int32_t hotSpotY, std::int32_t coldSpotYOffset, std::int32_t firstFrameToOverwrite);
 
-		static jjANIMATION* get_jjAnimations(uint32_t index);
+		static jjANIMATION* get_jjAnimations(std::uint32_t index);
 
-		uint16_t frameCount = 0;
-		int16_t fps = 0;
+		std::uint16_t frameCount = 0;
+		std::int16_t fps = 0;
 
-		uint32_t get_firstFrame() const;
-		uint32_t set_firstFrame(uint32_t index) const;
+		std::uint32_t get_firstFrame() const;
+		std::uint32_t set_firstFrame(std::uint32_t index) const;
 
-		uint32_t getAnimFirstFrame();
+		std::uint32_t getAnimFirstFrame();
 
 	private:
-		int _refCount;
-		uint32_t _index;
+		std::int32_t _refCount;
+		std::uint32_t _index;
 	};
 
 	class jjANIMSET
 	{
 	public:
-		jjANIMSET(uint32_t index);
+		jjANIMSET(std::uint32_t index);
 		~jjANIMSET();
 
 		void AddRef();
 		void Release();
 
-		static jjANIMSET* get_jjAnimSets(uint32_t index);
+		static jjANIMSET* get_jjAnimSets(std::uint32_t index);
 
-		uint32_t convertAnimSetToUint();
+		std::uint32_t convertAnimSetToUint();
 
-		jjANIMSET* load(uint32_t fileSetID, const String& filename, int32_t firstAnimToOverwrite, int32_t firstFrameToOverwrite);
+		jjANIMSET* load(std::uint32_t fileSetID, const String& filename, int32_t firstAnimToOverwrite, int32_t firstFrameToOverwrite);
 		jjANIMSET* allocate(const CScriptArray& frameCounts);
 
 	private:
-		int _refCount;
-		uint32_t _index;
+		std::int32_t _refCount;
+		std::uint32_t _index;
 	};
 
 	struct jjCANVAS {
+		UI::HUD* Hud;
+		Rectf View;
 
-		void DrawPixel(int32_t xPixel, int32_t yPixel, uint8_t color, uint32_t mode, uint8_t param);
-		void DrawRectangle(int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, uint8_t color, uint32_t mode, uint8_t param);
-		void DrawSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, uint32_t mode, uint8_t param);
-		void DrawCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int8_t direction, uint32_t mode, uint8_t param);
-		void DrawResizedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, uint32_t mode, uint8_t param);
-		void DrawResizedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, float xScale, float yScale, uint32_t mode, uint8_t param);
-		void DrawTransformedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param);
-		void DrawTransformedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param);
-		void DrawSwingingVine(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t length, int32_t curvature, uint32_t mode, uint8_t param);
+		jjCANVAS(UI::HUD* hud, const Rectf& view);
 
-		void ExternalDrawTile(int32_t xPixel, int32_t yPixel, uint16_t tile, uint32_t tileQuadrant);
-		void DrawTextBasicSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param);
-		void DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t mode, uint8_t param);
+		void DrawPixel(std::int32_t xPixel, std::int32_t yPixel, std::uint8_t color, std::uint32_t mode, std::uint8_t param);
+		void DrawRectangle(std::int32_t xPixel, std::int32_t yPixel, std::int32_t width, std::int32_t height, std::uint8_t color, std::uint32_t mode, std::uint8_t param);
+		void DrawSprite(std::int32_t xPixel, std::int32_t yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, int8_t direction, std::uint32_t mode, std::uint8_t param);
+		void DrawCurFrameSprite(std::int32_t xPixel, std::int32_t yPixel, std::uint32_t sprite, int8_t direction, std::uint32_t mode, std::uint8_t param);
+		void DrawResizedSprite(std::int32_t xPixel, std::int32_t yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, std::uint32_t mode, std::uint8_t param);
+		void DrawResizedCurFrameSprite(std::int32_t xPixel, std::int32_t yPixel, std::uint32_t sprite, float xScale, float yScale, std::uint32_t mode, std::uint8_t param);
+		void DrawTransformedSprite(std::int32_t xPixel, std::int32_t yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param);
+		void DrawTransformedCurFrameSprite(std::int32_t xPixel, std::int32_t yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param);
+		void DrawSwingingVine(std::int32_t xPixel, std::int32_t yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, std::uint32_t mode, std::uint8_t param);
 
-		void drawString(int32_t xPixel, int32_t yPixel, const String& text, const jjANIMATION& animation, uint32_t mode, uint8_t param);
+		void ExternalDrawTile(std::int32_t xPixel, std::int32_t yPixel, std::uint16_t tile, std::uint32_t tileQuadrant);
+		void DrawTextBasicSize(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param);
+		void DrawTextExtSize(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t mode, std::uint8_t param);
 
-		void drawStringEx(int32_t xPixel, int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t spriteMode, uint8_t param2);
+		void drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param);
 
-		static void jjDrawString(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, uint32_t mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
-		static void jjDrawStringEx(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t spriteMode, uint8_t param2, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+		void drawStringEx(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2);
+
+		static void jjDrawString(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
+		static void jjDrawStringEx(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 		static int jjGetStringWidth(const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& style);
 	};
 
@@ -1467,23 +1516,23 @@ namespace Jazz2::Scripting
 		void Release();
 
 		bool get_isActive() const;
-		uint32_t get_lightType() const;
-		uint32_t set_lightType(uint32_t value) const;
+		std::uint32_t get_lightType() const;
+		std::uint32_t set_lightType(std::uint32_t value) const;
 
-		jjOBJ* objectHit(jjOBJ* target, uint32_t playerHandling);
-		void blast(int32_t maxDistance, bool blastObjects);
+		jjOBJ* objectHit(jjOBJ* target, std::uint32_t playerHandling);
+		void blast(std::int32_t maxDistance, bool blastObjects);
 
 		jjBEHAVIOR behavior;
 
-		void behave1(uint32_t behavior, bool draw);
+		void behave1(std::uint32_t behavior, bool draw);
 		void behave2(jjBEHAVIOR behavior, bool draw);
 		void behave3(jjVOIDFUNCOBJ behavior, bool draw);
 
-		static int32_t jjAddObject(uint8_t eventID, float xPixel, float yPixel, uint16_t creatorID, uint32_t creatorType, uint32_t behavior);
-		static int32_t jjAddObjectEx(uint8_t eventID, float xPixel, float yPixel, uint16_t creatorID, uint32_t creatorType, jjVOIDFUNCOBJ behavior);
+		static std::int32_t jjAddObject(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, std::uint32_t behavior);
+		static std::int32_t jjAddObjectEx(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, jjVOIDFUNCOBJ behavior);
 
-		static void jjDeleteObject(int32_t objectID);
-		static void jjKillObject(int32_t objectID);
+		static void jjDeleteObject(std::int32_t objectID);
+		static void jjKillObject(std::int32_t objectID);
 
 		float xOrg = 0;
 		float yOrg = 0;
@@ -1493,31 +1542,31 @@ namespace Jazz2::Scripting
 		float ySpeed = 0;
 		float xAcc = 0;
 		float yAcc = 0;
-		int32_t counter = 0;
-		uint32_t curFrame = 0;
+		std::int32_t counter = 0;
+		std::uint32_t curFrame = 0;
 
-		uint32_t determineCurFrame(bool change);
+		std::uint32_t determineCurFrame(bool change);
 
-		int32_t age = 0;
-		int32_t creator = 0;
+		std::int32_t age = 0;
+		std::int32_t creator = 0;
 
-		uint16_t get_creatorID() const;
-		uint16_t set_creatorID(uint16_t value) const;
-		uint32_t get_creatorType() const;
-		uint32_t set_creatorType(uint32_t value) const;
+		std::uint16_t get_creatorID() const;
+		std::uint16_t set_creatorID(std::uint16_t value) const;
+		std::uint32_t get_creatorType() const;
+		std::uint32_t set_creatorType(std::uint32_t value) const;
 
 		int16_t curAnim = 0;
 
-		int16_t determineCurAnim(uint8_t setID, uint8_t animation, bool change);
+		int16_t determineCurAnim(std::uint8_t setID, std::uint8_t animation, bool change);
 
-		uint16_t killAnim = 0;
-		uint8_t freeze = 0;
-		uint8_t lightType = 0;
-		int8_t frameID = 0;
-		int8_t noHit = 0;
+		std::uint16_t killAnim = 0;
+		std::uint8_t freeze = 0;
+		std::uint8_t lightType = 0;
+		std::int8_t frameID = 0;
+		std::int8_t noHit = 0;
 
-		uint32_t get_bulletHandling();
-		uint32_t set_bulletHandling(uint32_t value);
+		std::uint32_t get_bulletHandling();
+		std::uint32_t set_bulletHandling(std::uint32_t value);
 		bool get_ricochet();
 		bool set_ricochet(bool value);
 		bool get_freezable();
@@ -1525,12 +1574,12 @@ namespace Jazz2::Scripting
 		bool get_blastable();
 		bool set_blastable(bool value);
 
-		int8_t energy = 0;
-		int8_t light = 0;
-		uint8_t objType = 0;
+		std::int8_t energy = 0;
+		std::int8_t light = 0;
+		std::uint8_t objType = 0;
 
-		uint32_t get_playerHandling();
-		uint32_t set_playerHandling(uint32_t value);
+		std::uint32_t get_playerHandling();
+		std::uint32_t set_playerHandling(std::uint32_t value);
 		bool get_isTarget();
 		bool set_isTarget(bool value);
 		bool get_triggersTNT();
@@ -1540,66 +1589,106 @@ namespace Jazz2::Scripting
 		bool get_scriptedCollisions();
 		bool set_scriptedCollisions(bool value);
 
-		int8_t state = 0;
-		uint16_t points = 0;
-		uint8_t eventID = 0;
-		int8_t direction = 0;
-		uint8_t justHit = 0;
-		int8_t oldState = 0;
-		int32_t animSpeed = 0;
-		int32_t special = 0;
+		std::int8_t state = 0;
+		std::uint16_t points = 0;
+		std::uint8_t eventID = 0;
+		std::int8_t direction = 0;
+		std::uint8_t justHit = 0;
+		std::int8_t oldState = 0;
+		std::int32_t animSpeed = 0;
+		std::int32_t special = 0;
 
-		int32_t get_var(uint8_t x);
-		int32_t set_var(uint8_t x, int32_t value);
+		std::int32_t get_var(std::uint8_t x);
+		std::int32_t set_var(std::uint8_t x, std::int32_t value);
 
-		uint8_t doesHurt = 0;
-		uint8_t counterEnd = 0;
-		int16_t objectID = 0;
+		std::uint8_t doesHurt = 0;
+		std::uint8_t counterEnd = 0;
+		std::int16_t objectID = 0;
 
-		int32_t draw();
-		int32_t beSolid(bool shouldCheckForStompingLocalPlayers);
-		void bePlatform(float xOld, float yOld, int32_t width, int32_t height);
+		std::int32_t draw();
+		std::int32_t beSolid(bool shouldCheckForStompingLocalPlayers);
+		void bePlatform(float xOld, float yOld, std::int32_t width, std::int32_t height);
 		void clearPlatform();
 		void putOnGround(bool precise);
 		bool ricochet();
-		int32_t unfreeze(int32_t style);
+		std::int32_t unfreeze(std::int32_t style);
 		void deleteObject();
 		void deactivate();
 		void pathMovement();
-		int32_t fireBullet(uint8_t eventID);
-		void particlePixelExplosion(int32_t style);
-		void grantPickup(jjPLAYER* player, int32_t frequency);
+		std::int32_t fireBullet(std::uint8_t eventID);
+		void particlePixelExplosion(std::int32_t style);
+		void grantPickup(jjPLAYER* player, std::int32_t frequency);
 
-		int findNearestPlayer(int maxDistance) const;
-		int findNearestPlayerEx(int maxDistance, int& foundDistance) const;
+		std::int32_t findNearestPlayer(std::int32_t maxDistance) const;
+		std::int32_t findNearestPlayerEx(std::int32_t maxDistance, std::int32_t& foundDistance) const;
 
 		bool doesCollide(const jjOBJ* object, bool always) const;
 		bool doesCollidePlayer(const jjPLAYER* object, bool always) const;
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 	};
 
-	jjOBJ* get_jjObjects(int index);
+	jjOBJ* get_jjObjects(std::int32_t index);
 
-	jjOBJ* get_jjObjectPresets(int8_t id);
+	jjOBJ* get_jjObjectPresets(std::int8_t id);
+
+	class jjPARTICLESTRING
+	{
+	public:
+		String get_text() const;
+		void set_text(String text);
+
+	};
+
+	class jjPARTICLE
+	{
+	public:
+		jjPARTICLE();
+		~jjPARTICLE();
+
+		void AddRef();
+
+		void Release();
+
+		float xPos;
+		float yPos;
+		float xSpeed;
+		float ySpeed;
+
+		std::uint8_t particleType;
+		bool active;
+
+		// GENERIC
+		jjPARTICLESTRING string;
+
+	private:
+		std::int32_t _refCount;
+	};
+
+	jjPARTICLE* GetParticle(std::int32_t index);
+
+	jjPARTICLE* AddParticle(std::int32_t particleType);
 
 	class jjPLAYER
 	{
 	public:
-		jjPLAYER(LevelScriptLoader* levelScripts, int playerIndex);
+		jjPLAYER(LevelScriptLoader* levelScripts, std::int32_t playerIndex);
 		jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player);
 		~jjPLAYER();
 
 		void AddRef();
 		void Release();
 
+		PlayerBackingStore& GetBackingStore();
+		const PlayerBackingStore& GetBackingStore() const;
+
 		jjPLAYER& operator=(const jjPLAYER& o);
 
-		int32_t score = 0;
-		int32_t lastScoreDisplay = 0;
+		std::int32_t score = 0;
+		std::int32_t lastScoreDisplay = 0;
 
-		int32_t setScore(int32_t value);
+		std::int32_t setScore(std::int32_t value);
 
 		float xPos = 0.0f;
 		float yPos = 0.0f;
@@ -1614,61 +1703,64 @@ namespace Jazz2::Scripting
 		float set_ySpeed(float value);
 
 		float jumpStrength = 0.0f;
-		int8_t frozen = 0;
+		std::int8_t frozen = 0;
 
 		void freeze(bool frozen);
-		int32_t get_currTile();
-		bool startSugarRush(int32_t time);
-		int8_t get_health() const;
-		int8_t set_health(int8_t value);
+		std::int32_t get_currTile();
+		bool startSugarRush(std::int32_t time);
+		std::int8_t get_health() const;
+		std::int8_t set_health(std::int8_t value);
 
-		int32_t warpID = 0;
-		int32_t fastfire = 0;
+		std::int32_t warpID = 0;
+		std::int32_t fastfire = 0;
 
-		int8_t get_currWeapon() const;
-		int8_t set_currWeapon(int8_t value);
+		std::int8_t get_currWeapon() const;
+		std::int8_t set_currWeapon(std::int8_t value);
 
-		int32_t lives = 1;
-		int32_t invincibility = 0;
-		int32_t blink = 0;
+		std::int32_t lives = 1;
+		std::int32_t invincibility = 0;
+		std::int32_t blink = 0;
 
-		int32_t extendInvincibility(int32_t duration);
+		std::int32_t extendInvincibility(std::int32_t duration);
 
-		int32_t food = 0;
-		int32_t coins = 0;
+		std::int32_t food = 0;
+		std::int32_t coins = 0;
 
-		bool testForCoins(int32_t numberOfCoins);
-		int32_t get_gems(uint32_t type) const;
-		int32_t set_gems(uint32_t type, int32_t value);
-		bool testForGems(int32_t numberOfGems, uint32_t type);
+		bool testForCoins(std::int32_t numberOfCoins);
+		std::int32_t get_gems(std::uint32_t type) const;
+		std::int32_t set_gems(std::uint32_t type, std::int32_t value);
+		bool testForGems(std::int32_t numberOfGems, std::uint32_t type);
 
-		int32_t shieldType = 0;
-		int32_t shieldTime = 0;
-		int32_t rolling = 0;
-		int32_t bossNumber = 0;
-		int32_t boss = 0;
+		std::int32_t get_shieldType() const;
+		std::int32_t set_shieldType(std::int32_t value);
+		std::int32_t get_shieldTime() const;
+		std::int32_t set_shieldTime(std::int32_t value);
+
+		std::int32_t rolling = 0;
+		std::int32_t bossNumber = 0;
+		std::int32_t boss = 0;
 		bool bossActive = false;
-		int8_t direction = 0;
-		int32_t platform = 0;
-		int32_t flag = 0;
-		int32_t clientID = 0;
-		int8_t playerID = 0;
-		int32_t localPlayerID = 0;
+		std::int8_t direction = 0;
+		std::int32_t platform = 0;
+		std::int32_t flag = 0;
+		std::int32_t clientID = 0;
+		std::int8_t playerID = 0;
+		std::int32_t localPlayerID = 0;
 		bool team = false;
 		bool run = false;
-		int32_t specialJump = 0;
+		std::int32_t specialJump = 0;
 
-		int32_t get_stoned();
-		int32_t set_stoned(int32_t value);
+		std::int32_t get_stoned();
+		std::int32_t set_stoned(std::int32_t value);
 
-		int32_t buttstomp = 0;
-		int32_t helicopter = 0;
-		int32_t helicopterElapsed = 0;
-		int32_t specialMove = 0;
-		int32_t idle = 0;
+		std::int32_t buttstomp = 0;
+		std::int32_t helicopter = 0;
+		std::int32_t helicopterElapsed = 0;
+		std::int32_t specialMove = 0;
+		std::int32_t idle = 0;
 
-		void suckerTube(int32_t xSpeed, int32_t ySpeed, bool center, bool noclip, bool trigSample);
-		void poleSpin(float xSpeed, float ySpeed, uint32_t delay);
+		void suckerTube(std::int32_t xSpeed, std::int32_t ySpeed, bool center, bool noclip, bool trigSample);
+		void poleSpin(float xSpeed, float ySpeed, std::uint32_t delay);
 		void spring(float xSpeed, float ySpeed, bool keepZeroSpeeds, bool sample);
 
 		bool isLocal = true;
@@ -1683,10 +1775,10 @@ namespace Jazz2::Scripting
 		String get_name() const;
 		String get_nameUnformatted() const;
 		bool setName(const String& name);
-		int8_t get_light() const;
-		int8_t set_light(int8_t value);
-		uint32_t get_fur() const;
-		uint32_t set_fur(uint32_t value);
+		std::int8_t get_light() const;
+		std::int8_t set_light(std::int8_t value);
+		std::uint32_t get_fur() const;
+		std::uint32_t set_fur(std::uint32_t value);
 
 		bool get_noFire() const;
 		bool set_noFire(bool value);
@@ -1696,9 +1788,9 @@ namespace Jazz2::Scripting
 		bool set_invisibility(bool value);
 		bool get_noclipMode() const;
 		bool set_noclipMode(bool value);
-		uint8_t get_lighting() const;
-		uint8_t set_lighting(uint8_t value);
-		uint8_t resetLight();
+		std::uint8_t get_lighting() const;
+		std::uint8_t set_lighting(std::uint8_t value);
+		std::uint8_t resetLight();
 
 		bool get_playerKeyLeftPressed();
 		bool get_playerKeyRightPressed();
@@ -1717,94 +1809,94 @@ namespace Jazz2::Scripting
 		void set_playerKeyJumpPressed(bool value);
 		void set_playerKeyRunPressed(bool value);
 
-		bool get_powerup(uint8_t index);
-		bool set_powerup(uint8_t index, bool value);
-		int32_t get_ammo(uint8_t index) const;
-		int32_t set_ammo(uint8_t index, int32_t value);
+		bool get_powerup(std::uint8_t index);
+		bool set_powerup(std::uint8_t index, bool value);
+		std::int32_t get_ammo(std::uint8_t index) const;
+		std::int32_t set_ammo(std::uint8_t index, std::int32_t value);
 
-		bool offsetPosition(int32_t xPixels, int32_t yPixels);
-		bool warpToTile(int32_t xTile, int32_t yTile, bool fast);
-		bool warpToID(uint8_t warpID, bool fast);
+		bool offsetPosition(std::int32_t xPixels, std::int32_t yPixels);
+		bool warpToTile(std::int32_t xTile, std::int32_t yTile, bool fast);
+		bool warpToID(std::uint8_t warpID, bool fast);
 
-		uint32_t morph(bool rabbitsOnly, bool morphEffect);
-		uint32_t morphTo(uint32_t charNew, bool morphEffect);
-		uint32_t revertMorph(bool morphEffect);
-		uint32_t get_charCurr() const;
+		std::uint32_t morph(bool rabbitsOnly, bool morphEffect);
+		std::uint32_t morphTo(std::uint32_t charNew, bool morphEffect);
+		std::uint32_t revertMorph(bool morphEffect);
+		std::uint32_t get_charCurr() const;
 
-		uint32_t charOrig = 0;
+		std::uint32_t charOrig = 0;
 
 		void kill();
-		bool hurt(int8_t damage, bool forceHurt, jjPLAYER* attacker);
+		bool hurt(std::int8_t damage, bool forceHurt, jjPLAYER* attacker);
 
-		uint32_t get_timerState() const;
+		std::uint32_t get_timerState() const;
 		bool get_timerPersists() const;
 		bool set_timerPersists(bool value);
-		uint32_t timerStart(int32_t ticks, bool startPaused);
-		uint32_t timerPause();
-		uint32_t timerResume();
-		uint32_t timerStop();
-		int32_t get_timerTime() const;
-		int32_t set_timerTime(int32_t value);
+		std::uint32_t timerStart(std::int32_t ticks, bool startPaused);
+		std::uint32_t timerPause();
+		std::uint32_t timerResume();
+		std::uint32_t timerStop();
+		std::int32_t get_timerTime() const;
+		std::int32_t set_timerTime(std::int32_t value);
 		void timerFunction(const String& functionName);
 		void timerFunctionPtr(void* function);
 		void timerFunctionFuncPtr(void* function);
 
 		bool activateBoss(bool activate);
-		bool limitXScroll(uint16_t left, uint16_t width);
+		bool limitXScroll(std::uint16_t left, std::uint16_t width);
 		void cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant);
 		void cameraFreezeBF(bool xUnfreeze, float yPixel, bool centered, bool instant);
 		void cameraFreezeFB(float xPixel, bool yUnfreeze, bool centered, bool instant);
 		void cameraFreezeBB(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant);
 		void cameraUnfreeze(bool instant);
-		void showText(const String& text, uint32_t size);
-		void showTextByID(uint32_t textID, uint32_t offset, uint32_t size);
+		void showText(const String& text, std::uint32_t size);
+		void showTextByID(std::uint32_t textID, std::uint32_t offset, std::uint32_t size);
 
-		uint32_t get_fly() const;
-		uint32_t set_fly(uint32_t value);
+		std::uint32_t get_fly() const;
+		std::uint32_t set_fly(std::uint32_t value);
 
-		int32_t fireBulletDirection(uint8_t gun, bool depleteAmmo, bool requireAmmo, uint32_t direction);
-		int32_t fireBulletAngle(uint8_t gun, bool depleteAmmo, bool requireAmmo, float angle);
+		std::int32_t fireBulletDirection(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, std::uint32_t direction);
+		std::int32_t fireBulletAngle(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, float angle);
 
-		int32_t subscreenX = 0;
-		int32_t subscreenY = 0;
+		std::int32_t subscreenX = 0;
+		std::int32_t subscreenY = 0;
 
 		float get_cameraX() const;
 		float get_cameraY() const;
-		int32_t get_deaths() const;
+		std::int32_t get_deaths() const;
 
 		bool get_isJailed() const;
 		bool get_isZombie() const;
-		int32_t get_lrsLives() const;
-		int32_t get_roasts() const;
-		int32_t get_laps() const;
-		int32_t get_lapTimeCurrent() const;
-		int32_t get_lapTimes(uint32_t index) const;
-		int32_t get_lapTimeBest() const;
+		std::int32_t get_lrsLives() const;
+		std::int32_t get_roasts() const;
+		std::int32_t get_laps() const;
+		std::int32_t get_lapTimeCurrent() const;
+		std::int32_t get_lapTimes(std::uint32_t index) const;
+		std::int32_t get_lapTimeBest() const;
 		bool get_isAdmin() const;
-		bool hasPrivilege(const String& privilege, uint32_t moduleID) const;
+		bool hasPrivilege(const String& privilege, std::uint32_t moduleID) const;
 
 		bool doesCollide(const jjOBJ* object, bool always) const;
-		int getObjectHitForce(const jjOBJ& target) const;
-		bool objectHit(jjOBJ* target, int force, uint32_t playerHandling);
+		std::int32_t getObjectHitForce(const jjOBJ& target) const;
+		bool objectHit(jjOBJ* target, std::int32_t force, std::uint32_t playerHandling);
 		bool isEnemy(const jjPLAYER* victim) const;
 
-		uint32_t charCurr = 0;
-		uint16_t curAnim = 0;
-		uint32_t curFrame = 0;
-		uint8_t frameID = 0;
+		std::uint32_t charCurr = 0;
+		std::uint16_t curAnim = 0;
+		std::uint32_t curFrame = 0;
+		std::uint8_t frameID = 0;
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 		LevelScriptLoader* _levelScriptLoader;
 		Actors::Player* _player;
 	};
 
-	int32_t get_jjPlayerCount();
-	int32_t get_jjLocalPlayerCount();
+	std::int32_t get_jjPlayerCount();
+	std::int32_t get_jjLocalPlayerCount();
 
 	jjPLAYER* get_jjP();
-	jjPLAYER* get_jjPlayers(uint8_t index);
-	jjPLAYER* get_jjLocalPlayers(uint8_t index);
+	jjPLAYER* get_jjPlayers(std::uint8_t index);
+	jjPLAYER* get_jjLocalPlayers(std::uint8_t index);
 
 	class jjWEAPON
 	{
@@ -1825,30 +1917,30 @@ namespace Jazz2::Scripting
 		~jjPIXELMAP();
 
 		static jjPIXELMAP* CreateFromTile();
-		static jjPIXELMAP* CreateFromSize(uint32_t width, uint32_t height);
+		static jjPIXELMAP* CreateFromSize(std::uint32_t width, std::uint32_t height);
 		static jjPIXELMAP* CreateFromFrame(const jjANIMFRAME* animFrame);
-		static jjPIXELMAP* CreateFromLayer(uint32_t left, uint32_t top, uint32_t width, uint32_t height, uint32_t layer);
-		static jjPIXELMAP* CreateFromLayerObject(uint32_t left, uint32_t top, uint32_t width, uint32_t height, const jjLAYER* layer);
-		static jjPIXELMAP* CreateFromTexture(uint32_t animFrame);
-		static jjPIXELMAP* CreateFromFilename(const String& filename, const jjPAL* palette, uint8_t threshold);
+		static jjPIXELMAP* CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer);
+		static jjPIXELMAP* CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER* layer);
+		static jjPIXELMAP* CreateFromTexture(std::uint32_t animFrame);
+		static jjPIXELMAP* CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold);
 
 		void AddRef();
 		void Release();
 
 		jjPIXELMAP& operator=(const jjPIXELMAP& o);
 
-		// TODO: return type uint8_t& instead?
-		uint8_t GetPixel(uint32_t x, uint32_t y);
+		// TODO: return type std::uint8_t& instead?
+		std::uint8_t GetPixel(std::uint32_t x, std::uint32_t y);
 
-		uint32_t width = 0;
-		uint32_t height = 0;
+		std::uint32_t width = 0;
+		std::uint32_t height = 0;
 
-		bool saveToTile(uint16_t tileID, bool hFlip) const;
+		bool saveToTile(std::uint16_t tileID, bool hFlip) const;
 		bool saveToFrame(jjANIMFRAME* frame) const;
 		bool saveToFile(const String& filename, const jjPAL& palette) const;
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 	};
 
 	class jjMASKMAP
@@ -1858,7 +1950,7 @@ namespace Jazz2::Scripting
 		~jjMASKMAP();
 
 		static jjMASKMAP* CreateFromBool(bool filled);
-		static jjMASKMAP* CreateFromTile(uint16_t tileID);
+		static jjMASKMAP* CreateFromTile(std::uint16_t tileID);
 
 		void AddRef();
 		void Release();
@@ -1866,12 +1958,12 @@ namespace Jazz2::Scripting
 		jjMASKMAP& operator=(const jjMASKMAP& o);
 
 		// TODO: return type bool& instead?
-		bool GetPixel(uint32_t x, uint32_t y);
+		bool GetPixel(std::uint32_t x, std::uint32_t y);
 
-		bool save(uint16_t tileID, bool hFlip) const;
+		bool save(std::uint16_t tileID, bool hFlip) const;
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 	};
 
 	class jjLAYER
@@ -1880,7 +1972,7 @@ namespace Jazz2::Scripting
 		jjLAYER();
 		~jjLAYER();
 
-		static jjLAYER* CreateFromSize(uint32_t width, uint32_t height, jjLAYER* self);
+		static jjLAYER* CreateFromSize(std::uint32_t width, std::uint32_t height, jjLAYER* self);
 		static jjLAYER* CreateCopy(jjLAYER* other, jjLAYER* self);
 
 		void AddRef();
@@ -1890,10 +1982,10 @@ namespace Jazz2::Scripting
 
 		static jjLAYER* get_jjLayers(int32_t index);
 
-		int32_t width = 0;
-		int32_t widthReal = 0;
-		int32_t widthRounded = 0;
-		int32_t height = 0;
+		std::int32_t width = 0;
+		std::int32_t widthReal = 0;
+		std::int32_t widthRounded = 0;
+		std::int32_t height = 0;
 		float xSpeed = 0;
 		float ySpeed = 0;
 		float xAutoSpeed = 0;
@@ -1905,18 +1997,23 @@ namespace Jazz2::Scripting
 		float xInnerAutoSpeed = 0;
 		float yInnerAutoSpeed = 0;
 
-		uint32_t get_spriteMode() const;
-		uint32_t set_spriteMode(uint32_t value) const;
-		uint8_t get_spriteParam() const;
-		uint8_t set_spriteParam(uint8_t value) const;
+		std::uint32_t get_spriteMode() const;
+		std::uint32_t set_spriteMode(std::uint32_t value) const;
+		std::uint8_t get_spriteParam() const;
+		std::uint8_t set_spriteParam(std::uint8_t value) const;
 
 		void setXSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const;
 		void setYSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const;
 		float getXPosition(const jjPLAYER* play) const;
 		float getYPosition(const jjPLAYER* play) const;
 
-		int32_t rotationAngle = 0;
-		int32_t rotationRadiusMultiplier = 0;
+		std::int32_t GetTextureMode() const;
+		void SetTextureMode(std::int32_t value) const;
+		std::int32_t GetTexture() const;
+		void SetTexture(std::int32_t value) const;
+
+		std::int32_t rotationAngle = 0;
+		std::int32_t rotationRadiusMultiplier = 0;
 		bool tileHeight = false;
 		bool tileWidth = false;
 		bool limitVisibleRegion = false;
@@ -1926,10 +2023,13 @@ namespace Jazz2::Scripting
 		static CScriptArray* jjLayerOrderGet();
 		static bool jjLayerOrderSet(const CScriptArray& order);
 		static CScriptArray* jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, int32_t tileIDAdjustmentFactor);
-		static bool jjTilesFromTileset(const String& filename, uint32_t firstTileID, uint32_t tileCount, const CScriptArray* paletteColorMapping);
+		static bool jjTilesFromTileset(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const CScriptArray* paletteColorMapping);
+
+		std::int32_t SpeedModeX;
+		std::int32_t SpeedModeY;
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 	};
 
 	enum waterInteraction_ {
@@ -1959,25 +2059,32 @@ namespace Jazz2::Scripting
 
 	bool mlleSetup();
 
-	float get_sinTable(uint32_t angle);
-	float get_cosTable(uint32_t angle);
-	uint32_t RandWord32();
-	uint64_t unixTimeSec();
-	uint64_t unixTimeMs();
+	float get_sinTable(std::uint32_t angle);
+	float get_cosTable(std::uint32_t angle);
+	std::uint32_t RandWord32();
+	std::uint64_t unixTimeSec();
+	std::uint64_t unixTimeMs();
 
-	int32_t GetFPS();
+	bool jjRegexIsValid(const String& expression);
+	bool jjRegexMatch(const String& text, const String& expression, bool ignoreCase);
+	bool jjRegexMatchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase);
+	bool jjRegexSearch(const String& text, const String& expression, bool ignoreCase);
+	bool jjRegexSearchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase);
+	String jjRegexReplace(const String& text, const String& expression, const String& replacement, bool ignoreCase);
+
+	std::int32_t GetFPS();
 
 	bool isAdmin();
 
-	int32_t GetDifficulty();
-	int32_t SetDifficulty(int32_t value);
+	std::int32_t GetDifficulty();
+	std::int32_t SetDifficulty(std::int32_t value);
 
 	String getLevelFileName();
 	String getCurrLevelName();
 	void setCurrLevelName(const String& in);
 	String get_jjTilesetFileName();
 
-	int32_t get_gameState();
+	std::int32_t get_gameState();
 
 	// TODO
 
@@ -1989,149 +2096,164 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	int32_t getBorderWidth();
-	int32_t getBorderHeight();
+	std::int32_t getBorderWidth();
+	std::int32_t getBorderHeight();
 	bool getSplitscreenType();
 	bool setSplitscreenType();
 
 	// TODO
 
-	int32_t get_teamScore(int32_t color);
-	int32_t GetMaxHealth();
-	int32_t GetStartHealth();
+	std::int32_t get_teamScore(std::int32_t color);
+	std::int32_t GetMaxHealth();
+	std::int32_t GetStartHealth();
 
 	// TODO
 
-	float get_layerXOffset(uint8_t id);
-	float set_layerXOffset(uint8_t id, float value);
-	float get_layerYOffset(uint8_t id);
-	float set_layerYOffset(uint8_t id, float value);
-	int get_layerWidth(uint8_t id);
-	int get_layerRealWidth(uint8_t id);
-	int get_layerRoundedWidth(uint8_t id);
-	int get_layerHeight(uint8_t id);
-	float get_layerXSpeed(uint8_t id);
-	float set_layerXSpeed(uint8_t id, float value);
-	float get_layerYSpeed(uint8_t id);
-	float set_layerYSpeed(uint8_t id, float value);
-	float get_layerXAutoSpeed(uint8_t id);
-	float set_layerXAutoSpeed(uint8_t id, float value);
-	float get_layerYAutoSpeed(uint8_t id);
-	float set_layerYAutoSpeed(uint8_t id, float value);
-	bool get_layerHasTiles(uint8_t id);
-	bool set_layerHasTiles(uint8_t id, bool value);
-	bool get_layerTileHeight(uint8_t id);
-	bool set_layerTileHeight(uint8_t id, bool value);
-	bool get_layerTileWidth(uint8_t id);
-	bool set_layerTileWidth(uint8_t id, bool value);
-	bool get_layerLimitVisibleRegion(uint8_t id);
-	bool set_layerLimitVisibleRegion(uint8_t id, bool value);
+	float get_layerXOffset(std::uint8_t id);
+	float set_layerXOffset(std::uint8_t id, float value);
+	float get_layerYOffset(std::uint8_t id);
+	float set_layerYOffset(std::uint8_t id, float value);
+	std::int32_t get_layerWidth(std::uint8_t id);
+	std::int32_t get_layerRealWidth(std::uint8_t id);
+	std::int32_t get_layerRoundedWidth(std::uint8_t id);
+	std::int32_t get_layerHeight(std::uint8_t id);
+	float get_layerXSpeed(std::uint8_t id);
+	float set_layerXSpeed(std::uint8_t id, float value);
+	float get_layerYSpeed(std::uint8_t id);
+	float set_layerYSpeed(std::uint8_t id, float value);
+	float get_layerXAutoSpeed(std::uint8_t id);
+	float set_layerXAutoSpeed(std::uint8_t id, float value);
+	float get_layerYAutoSpeed(std::uint8_t id);
+	float set_layerYAutoSpeed(std::uint8_t id, float value);
+	bool get_layerHasTiles(std::uint8_t id);
+	bool set_layerHasTiles(std::uint8_t id, bool value);
+	bool get_layerTileHeight(std::uint8_t id);
+	bool set_layerTileHeight(std::uint8_t id, bool value);
+	bool get_layerTileWidth(std::uint8_t id);
+	bool set_layerTileWidth(std::uint8_t id, bool value);
+	bool get_layerLimitVisibleRegion(std::uint8_t id);
+	bool set_layerLimitVisibleRegion(std::uint8_t id, bool value);
 
-	void setLayerXSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
-	void setLayerYSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
+	void setLayerXSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
+	void setLayerYSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
 
 	// TODO
 
-	void jjDrawPixel(float xPixel, float yPixel, uint8_t color, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawPixel(float xPixel, float yPixel, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawRectangle(float xPixel, float yPixel, int32_t width, int32_t height, uint8_t color, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawRectangle(float xPixel, float yPixel, std::int32_t width, std::int32_t height, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int8_t direction, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawResizedSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawRotatedSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int32_t length, int32_t curvature, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawTile(float xPixel, float yPixel, uint16_t tile, uint32_t tileQuadrant, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawTile(float xPixel, float yPixel, std::uint16_t tile, std::uint32_t tileQuadrant, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawString(float xPixel, float yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawString(float xPixel, float yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	void jjDrawStringEx(float xPixel, float yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, spriteType spriteMode, uint8_t param2, int8_t layerZ, uint8_t layerXY, int8_t playerID);
+	void jjDrawStringEx(float xPixel, float yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, spriteType spriteMode, std::uint8_t param2, int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 
-	int32_t jjGetStringWidth(const String& text, uint32_t size, const jjTEXTAPPEARANCE& style);
+	std::int32_t jjGetStringWidth(const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& style);
 
-	bool isNumberedASFunctionEnabled(uint8_t id);
-	bool setNumberedASFunctionEnabled(uint8_t id, bool value);
-	void reenableAllNumberedASFunctions();
+	void jjSetDarknessColor(jjPALCOLOR color);
+	void jjSetFadeColors(std::uint8_t red, std::uint8_t green, std::uint8_t blue);
+	void jjSetFadeColorsFromPalette(std::uint8_t paletteColorID);
+	void jjSetFadeColorsFromPalcolor(jjPALCOLOR color);
+	jjPALCOLOR jjGetFadeColors();
+	void jjUpdateTexturedBG();
+	std::int32_t get_jjTexturedBGTexture(jjPALCOLOR color);
+	std::int32_t set_jjTexturedBGTexture(std::int32_t texture);
+	std::int32_t get_jjTexturedBGStyle();
+	std::int32_t set_jjTexturedBGStyle(std::int32_t style);
+	bool get_jjTexturedBGUsed(jjPALCOLOR color);
+	bool set_jjTexturedBGUsed(bool used);
+	bool get_jjTexturedBGStars(bool used);
+	bool set_jjTexturedBGStars(bool used);
+	float get_jjTexturedBGFadePositionX();
+	float set_jjTexturedBGFadePositionX(float value);
+	float get_jjTexturedBGFadePositionY();
+	float set_jjTexturedBGFadePositionY(float value);
 
 	float getWaterLevel();
 	float getWaterLevel2();
 	float setWaterLevel(float value, bool instant);
 	float get_waterChangeSpeed();
 	float set_waterChangeSpeed(float value);
-	int32_t get_waterLayer();
-	int32_t set_waterLayer(int32_t value);
-	void setWaterGradient(uint8_t red1, uint8_t green1, uint8_t blue1, uint8_t red2, uint8_t green2, uint8_t blue2);
+	std::int32_t get_waterLayer();
+	std::int32_t set_waterLayer(std::int32_t value);
+	void setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2);
 	// TODO: void setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2)
 	void setWaterGradientToTBG();
 	void resetWaterGradient();
 
-	void triggerRock(uint8_t id);
+	void triggerRock(std::uint8_t id);
 
 	void cycleTo(const String& filename, bool warp, bool fast);
 
-	bool getEnabledTeam(uint8_t team);
+	bool getEnabledTeam(std::uint8_t team);
 
-	bool getKeyDown(uint8_t key);
-	int32_t getCursorX();
-	int32_t getCursorY();
+	bool getKeyDown(std::uint8_t key);
+	std::int32_t getCursorX();
+	std::int32_t getCursorY();
 
-	void playSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency);
-	int32_t playLoopedSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency);
-	void playPrioritySample(int32_t sample);
-	bool isSampleLoaded(int32_t sample);
-	bool loadSample(int32_t sample, const String& filename);
+	void playSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency);
+	std::int32_t playLoopedSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency);
+	void playPrioritySample(std::int32_t sample);
+	bool isSampleLoaded(std::int32_t sample);
+	bool loadSample(std::int32_t sample, const String& filename);
 
 	bool getUseLayer8Speeds();
 	bool setUseLayer8Speeds(bool value);
 
 	// TODO
 
-	int32_t GetEvent(uint16_t tx, uint16_t ty);
-	int32_t GetEventParamWrapper(uint16_t tx, uint16_t ty, int32_t offset, int32_t length);
-	void SetEventByte(uint16_t tx, uint16_t ty, uint8_t newEventId);
-	void SetEventParam(uint16_t tx, uint16_t ty, int8_t offset, int8_t length, int32_t newValue);
-	int8_t GetTileType(uint16_t tile);
-	int8_t SetTileType(uint16_t tile, uint16_t value);
+	std::int32_t GetEvent(std::uint16_t tx, std::uint16_t ty);
+	std::int32_t GetEventParamWrapper(std::uint16_t tx, std::uint16_t ty, std::int32_t offset, std::int32_t length);
+	void SetEventByte(std::uint16_t tx, std::uint16_t ty, std::uint8_t newEventId);
+	void SetEventParam(std::uint16_t tx, std::uint16_t ty, int8_t offset, std::int8_t length, std::int32_t newValue);
+	std::int8_t GetTileType(std::uint16_t tile);
+	std::int8_t SetTileType(std::uint16_t tile, std::uint16_t value);
 
 	// TODO
 
-	uint16_t jjGetStaticTile(uint16_t tileID);
-	uint16_t jjTileGet(uint8_t layer, int32_t xTile, int32_t yTile);
-	uint16_t jjTileSet(uint8_t layer, int32_t xTile, int32_t yTile, uint16_t newTile);
-	void jjGenerateSettableTileArea(uint8_t layer, int32_t xTile, int32_t yTile, int32_t width, int32_t height);
+	std::uint16_t jjGetStaticTile(std::uint16_t tileID);
+	std::uint16_t jjTileGet(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile);
+	std::uint16_t jjTileSet(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile, std::uint16_t newTile);
+	void jjGenerateSettableTileArea(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile, std::int32_t width, std::int32_t height);
 
 	// TODO
 
-	bool jjMaskedPixel(int32_t xPixel, int32_t yPixel);
-	bool jjMaskedPixelLayer(int32_t xPixel, int32_t yPixel, uint8_t layer);
-	bool jjMaskedHLine(int32_t xPixel, int32_t lineLength, int32_t yPixel);
-	bool jjMaskedHLineLayer(int32_t xPixel, int32_t lineLength, int32_t yPixel, uint8_t layer);
-	bool jjMaskedVLine(int32_t xPixel, int32_t yPixel, int32_t lineLength);
-	bool jjMaskedVLineLayer(int32_t xPixel, int32_t yPixel, int32_t lineLength, uint8_t layer);
-	bool jjMaskedTopVLine(int32_t xPixel, int32_t yPixel, int32_t lineLength);
-	bool jjMaskedTopVLineLayer(int32_t xPixel, int32_t yPixel, int32_t lineLength, uint8_t layer);
+	bool jjMaskedPixel(std::int32_t xPixel, std::int32_t yPixel);
+	bool jjMaskedPixelLayer(std::int32_t xPixel, std::int32_t yPixel, std::uint8_t layer);
+	bool jjMaskedHLine(std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel);
+	bool jjMaskedHLineLayer(std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel, std::uint8_t layer);
+	bool jjMaskedVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength);
+	bool jjMaskedVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer);
+	bool jjMaskedTopVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength);
+	bool jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer);
 
 	// TODO
 
-	void jjSetModPosition(int32_t order, int32_t row, bool reset);
-	void jjSlideModChannelVolume(int32_t channel, float volume, int32_t milliseconds);
-	int32_t jjGetModOrder();
-	int32_t jjGetModRow();
-	int32_t jjGetModTempo();
-	void jjSetModTempo(uint8_t speed);
-	int32_t jjGetModSpeed();
-	void jjSetModSpeed(uint8_t speed);
+	void jjSetModPosition(std::int32_t order, std::int32_t row, bool reset);
+	void jjSlideModChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds);
+	std::int32_t jjGetModOrder();
+	std::int32_t jjGetModRow();
+	std::int32_t jjGetModTempo();
+	void jjSetModTempo(std::uint8_t speed);
+	std::int32_t jjGetModSpeed();
+	void jjSetModSpeed(std::uint8_t speed);
 
-	uint32_t getCustomSetID(uint8_t index);
+	std::uint32_t getCustomSetID(std::uint8_t index);
 }
 
 #endif

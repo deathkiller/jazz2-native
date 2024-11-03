@@ -242,7 +242,9 @@ namespace Jazz2::Compatibility
 					colorFrozen = false;
 					colorIndex = 0;
 				}
-			} else if (current == '|') {
+			} 
+			// TODO: '|' is usually also used as separator in AS
+			else if (current == '|') {
 				// Skip one color
 				if (!colorFrozen) {
 					colorIndex++;

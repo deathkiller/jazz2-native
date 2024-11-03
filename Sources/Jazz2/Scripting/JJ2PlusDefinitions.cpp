@@ -7,7 +7,9 @@
 #include "../Actors/ActorBase.h"
 #include "../Actors/Player.h"
 #include "../Compatibility/JJ2Strings.h"
+#include "../UI/HUD.h"
 
+#include "../../nCine/Application.h"
 #include "../../nCine/Base/Random.h"
 
 namespace Jazz2::Scripting
@@ -16,55 +18,53 @@ namespace Jazz2::Scripting
 		auto ctx = asGetActiveContext();
 		if (ctx != nullptr) {
 			const char* sectionName;
-			int lineNumber = ctx->GetLineNumber(0, nullptr, &sectionName);
+			std::int32_t lineNumber = ctx->GetLineNumber(0, nullptr, &sectionName);
 			LOGW("%s (called from \"%s:%i\")", sourceName, sectionName, lineNumber);
 		} else {
 			LOGW("%s", sourceName);
 		}
 	}
 
-#if defined(DEATH_TARGET_GCC)
-#	define noop() Unimplemented(__PRETTY_FUNCTION__)
-#elif defined(DEATH_TARGET_MSVC)
-#	define noop() Unimplemented(__FUNCTION__)
+#if defined(DEATH_TRACE)
+#	define noop() Unimplemented(__DEATH_CURRENT_FUNCTION)
 #else
-#	define noop() Unimplemented(__func__)
+#	define noop() do {} while (false)
 #endif
 
 	jjTEXTAPPEARANCE jjTEXTAPPEARANCE::constructor() {
 		noop(); return { };
 	}
-	jjTEXTAPPEARANCE jjTEXTAPPEARANCE::constructorMode(uint32_t mode) {
+	jjTEXTAPPEARANCE jjTEXTAPPEARANCE::constructorMode(std::uint32_t mode) {
 		noop(); return { };
 	}
 
-	jjTEXTAPPEARANCE& jjTEXTAPPEARANCE::operator=(uint32_t other) {
+	jjTEXTAPPEARANCE& jjTEXTAPPEARANCE::operator=(std::uint32_t other) {
 		noop(); return *this;
 	}
 
 	jjPALCOLOR jjPALCOLOR::Create() {
 		noop(); return { };
 	}
-	jjPALCOLOR jjPALCOLOR::CreateFromRgb(uint8_t red, uint8_t green, uint8_t blue) {
+	jjPALCOLOR jjPALCOLOR::CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue) {
 		noop(); return { red, green, blue };
 	}
 
-	uint8_t jjPALCOLOR::getHue() {
+	std::uint8_t jjPALCOLOR::getHue() {
 		noop(); return 0;
 	}
-	uint8_t jjPALCOLOR::getSat() {
+	std::uint8_t jjPALCOLOR::getSat() {
 		noop(); return 0;
 	}
-	uint8_t jjPALCOLOR::getLight() {
+	std::uint8_t jjPALCOLOR::getLight() {
 		noop(); return 0;
 	}
 
-	void jjPALCOLOR::swizzle(uint32_t redc, uint32_t greenc, uint32_t bluec) {
+	void jjPALCOLOR::swizzle(std::uint32_t redc, std::uint32_t greenc, std::uint32_t bluec) {
 		noop();
 
-		uint8_t r = red;
-		uint8_t g = green;
-		uint8_t b = blue;
+		std::uint8_t r = red;
+		std::uint8_t g = green;
+		std::uint8_t b = blue;
 
 		switch (redc) {
 			case 1: red = g; break;
@@ -79,7 +79,7 @@ namespace Jazz2::Scripting
 			case 1: blue = g; break;
 		}
 	}
-	void jjPALCOLOR::setHSL(int hue, uint8_t sat, uint8_t light) {
+	void jjPALCOLOR::setHSL(std::int32_t hue, std::uint8_t sat, std::uint8_t light) {
 		noop();
 	}
 
@@ -120,6 +120,32 @@ namespace Jazz2::Scripting
 		}
 	}
 
+	jjPAL& jjPAL::operator=(const jjPAL& o) {
+		noop();
+		return *this;
+	}
+
+	bool jjPAL::operator==(const jjPAL& o) {
+		noop();
+		return (this == &o);
+	}
+
+	jjPALCOLOR& jjPAL::getColor(std::uint8_t idx) {
+		noop();
+		return _palette[idx];
+	}
+
+	const jjPALCOLOR& jjPAL::getConstColor(std::uint8_t idx) const {
+		noop();
+		return _palette[idx];
+	}
+
+	jjPALCOLOR& jjPAL::setColorEntry(std::uint8_t idx, jjPALCOLOR& value) {
+		noop();
+		_palette[idx] = value;
+		return _palette[idx];
+	}
+
 	void jjPAL::reset() {
 		noop();
 	}
@@ -130,28 +156,28 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	void jjPAL::fill(uint8_t red, uint8_t green, uint8_t blue, float opacity) {
+	void jjPAL::fill(std::uint8_t red, std::uint8_t green, std::uint8_t blue, float opacity) {
 		noop();
 	}
-	void jjPAL::fillTint(uint8_t red, uint8_t green, uint8_t blue, uint8_t start, uint8_t length, float opacity) {
+	void jjPAL::fillTint(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t start, std::uint8_t length, float opacity) {
 		noop();
 	}
 	void jjPAL::fillFromColor(jjPALCOLOR color, float opacity) {
 		noop();
 	}
-	void jjPAL::fillTintFromColor(jjPALCOLOR color, uint8_t start, uint8_t length, float opacity) {
+	void jjPAL::fillTintFromColor(jjPALCOLOR color, std::uint8_t start, std::uint8_t length, float opacity) {
 		noop();
 	}
-	void jjPAL::gradient(uint8_t red1, uint8_t green1, uint8_t blue1, uint8_t red2, uint8_t green2, uint8_t blue2, uint8_t start, uint8_t length, float opacity, bool inclusive) {
+	void jjPAL::gradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2, std::uint8_t start, std::uint8_t length, float opacity, bool inclusive) {
 		noop();
 	}
-	void jjPAL::gradientFromColor(jjPALCOLOR color1, jjPALCOLOR color2, uint8_t start, uint8_t length, float opacity, bool inclusive) {
+	void jjPAL::gradientFromColor(jjPALCOLOR color1, jjPALCOLOR color2, std::uint8_t start, std::uint8_t length, float opacity, bool inclusive) {
 		noop();
 	}
-	void jjPAL::copyFrom(uint8_t start, uint8_t length, uint8_t start2, const jjPAL& source, float opacity) {
+	void jjPAL::copyFrom(std::uint8_t start, std::uint8_t length, std::uint8_t start2, const jjPAL& source, float opacity) {
 		noop();
 	}
-	uint8_t jjPAL::findNearestColor(jjPALCOLOR color) {
+	std::uint8_t jjPAL::findNearestColor(jjPALCOLOR color) {
 		noop();
 		return 0;
 	}
@@ -203,7 +229,7 @@ namespace Jazz2::Scripting
 		return *this;
 	}
 
-	uint32_t jjSTREAM::getSize() const {
+	std::uint32_t jjSTREAM::getSize() const {
 		noop();
 		return 0;
 	}
@@ -222,7 +248,7 @@ namespace Jazz2::Scripting
 		noop();
 	}
 
-	bool jjSTREAM::discard(uint32_t count) {
+	bool jjSTREAM::discard(std::uint32_t count) {
 		return 0;
 	}
 
@@ -234,11 +260,11 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	bool jjSTREAM::get(String& value, uint32_t count) {
+	bool jjSTREAM::get(String& value, std::uint32_t count) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::get(jjSTREAM& value, uint32_t count) {
+	bool jjSTREAM::get(jjSTREAM& value, std::uint32_t count) {
 		noop();
 		return false;
 	}
@@ -251,35 +277,35 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(uint8_t value) {
+	bool jjSTREAM::push(std::uint8_t value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(int8_t value) {
+	bool jjSTREAM::push(std::int8_t value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(uint16_t value) {
+	bool jjSTREAM::push(std::uint16_t value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(int16_t value) {
+	bool jjSTREAM::push(std::int16_t value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(uint32_t value) {
+	bool jjSTREAM::push(std::uint32_t value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(int32_t value) {
+	bool jjSTREAM::push(std::int32_t value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(uint64_t value) {
+	bool jjSTREAM::push(std::uint64_t value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::push(int64_t value) {
+	bool jjSTREAM::push(std::int64_t value) {
 		noop();
 		return false;
 	}
@@ -304,35 +330,35 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(uint8_t& value) {
+	bool jjSTREAM::pop(std::uint8_t& value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(int8_t& value) {
+	bool jjSTREAM::pop(std::int8_t& value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(uint16_t& value) {
+	bool jjSTREAM::pop(std::uint16_t& value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(int16_t& value) {
+	bool jjSTREAM::pop(std::int16_t& value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(uint32_t& value) {
+	bool jjSTREAM::pop(std::uint32_t& value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(int32_t& value) {
+	bool jjSTREAM::pop(std::int32_t& value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(uint64_t& value) {
+	bool jjSTREAM::pop(std::uint64_t& value) {
 		noop();
 		return false;
 	}
-	bool jjSTREAM::pop(int64_t& value) {
+	bool jjSTREAM::pop(std::int64_t& value) {
 		noop();
 		return false;
 	}
@@ -353,11 +379,51 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
+	jjRNG::jjRNG(std::uint64_t seed) {
+		noop();
+	}
+	jjRNG::~jjRNG() {
+		noop();
+	}
+	jjRNG* jjRNG::Create(std::uint64_t seed) {
+		noop();
+		void* mem = asAllocMem(sizeof(jjRNG));
+		return new(mem) jjRNG(seed);
+	}
+	void jjRNG::AddRef() {
+		_refCount++;
+	}
+	void jjRNG::Release() {
+		if (--_refCount == 0) {
+			this->~jjRNG();
+			asFreeMem(this);
+		}
+	}
+	std::uint64_t jjRNG::operator()() {
+		// Join two 32-bit values to single 64-bit value
+		return _random.Next() | ((std::uint64_t)_random.Next() << 32ull);
+	}
+	jjRNG& jjRNG::operator=(const jjRNG& o) {
+		_random = o._random;
+		return *this;
+	}
+	bool jjRNG::operator==(const jjRNG& o) const {
+		return (this == &o);
+	}
+	void jjRNG::seed(std::uint64_t value) {
+		_random.Initialize(value, DefaultInitSequence);
+	}
+	void jjRNG::discard(std::uint64_t count) {
+		for (std::uint64_t i = 0; i < count; i++) {
+			_random.Next();
+		}
+	}
+
 	jjBEHAVIOR* jjBEHAVIOR::Create(jjBEHAVIOR* self) {
 		noop();
 		return new(self) jjBEHAVIOR();
 	}
-	jjBEHAVIOR* jjBEHAVIOR::CreateFromBehavior(uint32_t behavior, jjBEHAVIOR* self) {
+	jjBEHAVIOR* jjBEHAVIOR::CreateFromBehavior(std::uint32_t behavior, jjBEHAVIOR* self) {
 		noop();
 		return new(self) jjBEHAVIOR();
 	}
@@ -369,7 +435,7 @@ namespace Jazz2::Scripting
 		noop();
 		return *this;
 	}
-	jjBEHAVIOR& jjBEHAVIOR::operator=(uint32_t other) {
+	jjBEHAVIOR& jjBEHAVIOR::operator=(std::uint32_t other) {
 		noop();
 		return *this;
 	}
@@ -385,7 +451,7 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	bool jjBEHAVIOR::operator==(uint32_t other) const {
+	bool jjBEHAVIOR::operator==(std::uint32_t other) const {
 		noop();
 		return false;
 	}
@@ -393,7 +459,7 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	jjBEHAVIOR::operator uint32_t() {
+	jjBEHAVIOR::operator std::uint32_t() {
 		noop();
 		return 0;
 	}
@@ -434,7 +500,7 @@ namespace Jazz2::Scripting
 		return *this;
 	}
 
-	jjANIMFRAME* jjANIMFRAME::get_jjAnimFrames(uint32_t index) {
+	jjANIMFRAME* jjANIMFRAME::get_jjAnimFrames(std::uint32_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -452,12 +518,12 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	bool jjANIMFRAME::doesCollide(int32_t xPos, int32_t yPos, int32_t direction, const jjANIMFRAME* frame2, int32_t xPos2, int32_t yPos2, int32_t direction2, bool always) const {
+	bool jjANIMFRAME::doesCollide(std::int32_t xPos, std::int32_t yPos, std::int32_t direction, const jjANIMFRAME* frame2, std::int32_t xPos2, std::int32_t yPos2, std::int32_t direction2, bool always) const {
 		noop();
 		return false;
 	}
 
-	jjANIMATION::jjANIMATION(uint32_t index) : _refCount(1), _index(index) {
+	jjANIMATION::jjANIMATION(std::uint32_t index) : _refCount(1), _index(index) {
 		noop();
 	}
 	jjANIMATION::~jjANIMATION() {
@@ -489,12 +555,12 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	bool jjANIMATION::load(const String& filename, int32_t hotSpotX, int32_t hotSpotY, int32_t coldSpotYOffset, int32_t firstFrameToOverwrite) {
+	bool jjANIMATION::load(const String& filename, std::int32_t hotSpotX, std::int32_t hotSpotY, std::int32_t coldSpotYOffset, std::int32_t firstFrameToOverwrite) {
 		noop();
 		return false;
 	}
 
-	jjANIMATION* jjANIMATION::get_jjAnimations(uint32_t index) {
+	jjANIMATION* jjANIMATION::get_jjAnimations(std::uint32_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -504,21 +570,21 @@ namespace Jazz2::Scripting
 		return new(mem) jjANIMATION(index);
 	}
 
-	uint32_t jjANIMATION::get_firstFrame() const {
+	std::uint32_t jjANIMATION::get_firstFrame() const {
 		noop();
 		return 0;
 	}
-	uint32_t jjANIMATION::set_firstFrame(uint32_t index) const {
-		noop();
-		return 0;
-	}
-
-	uint32_t jjANIMATION::getAnimFirstFrame() {
+	std::uint32_t jjANIMATION::set_firstFrame(std::uint32_t index) const {
 		noop();
 		return 0;
 	}
 
-	jjANIMSET::jjANIMSET(uint32_t index) : _refCount(1), _index(index) {
+	std::uint32_t jjANIMATION::getAnimFirstFrame() {
+		noop();
+		return 0;
+	}
+
+	jjANIMSET::jjANIMSET(std::uint32_t index) : _refCount(1), _index(index) {
 		noop();
 	}
 	jjANIMSET::~jjANIMSET() {
@@ -538,7 +604,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	jjANIMSET* jjANIMSET::get_jjAnimSets(uint32_t index) {
+	jjANIMSET* jjANIMSET::get_jjAnimSets(std::uint32_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -548,12 +614,12 @@ namespace Jazz2::Scripting
 		return new(mem) jjANIMSET(index);
 	}
 
-	uint32_t jjANIMSET::convertAnimSetToUint() {
+	std::uint32_t jjANIMSET::convertAnimSetToUint() {
 		noop();
 		return _index;
 	}
 
-	jjANIMSET* jjANIMSET::load(uint32_t fileSetID, const String& filename, int32_t firstAnimToOverwrite, int32_t firstFrameToOverwrite) {
+	jjANIMSET* jjANIMSET::load(std::uint32_t fileSetID, const String& filename, std::int32_t firstAnimToOverwrite, std::int32_t firstFrameToOverwrite) {
 		noop();
 		return this;
 	}
@@ -562,63 +628,84 @@ namespace Jazz2::Scripting
 		return this;
 	}
 
-	void jjCANVAS::DrawPixel(int32_t xPixel, int32_t yPixel, uint8_t color, uint32_t mode, uint8_t param) {
+	jjCANVAS::jjCANVAS(UI::HUD* hud, const Rectf& view)
+		: Hud(hud), View(view)
+	{
+	}
+
+	void jjCANVAS::DrawPixel(std::int32_t xPixel, int32_t yPixel, std::uint8_t color, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawRectangle(int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, uint8_t color, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawRectangle(std::int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, std::uint8_t color, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, int8_t direction, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int8_t direction, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int8_t direction, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawResizedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawResizedSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawResizedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, float xScale, float yScale, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawResizedCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawTransformedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawTransformedSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawTransformedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawTransformedCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
-	void jjCANVAS::DrawSwingingVine(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t length, int32_t curvature, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawSwingingVine(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int32_t length, int32_t curvature, std::uint32_t mode, std::uint8_t param) {
 		noop();
 	}
 
-	void jjCANVAS::ExternalDrawTile(int32_t xPixel, int32_t yPixel, uint16_t tile, uint32_t tileQuadrant) {
+	void jjCANVAS::ExternalDrawTile(std::int32_t xPixel, int32_t yPixel, std::uint16_t tile, std::uint32_t tileQuadrant) {
 		noop();
 	}
-	void jjCANVAS::DrawTextBasicSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawTextBasicSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param) {
 		noop();
+		// TODO
+		std::int32_t charOffset = 0;
+		auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
+		Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
+				UI::Alignment::TopLeft, UI::Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 	}
-	void jjCANVAS::DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t mode, uint8_t param) {
+	void jjCANVAS::DrawTextExtSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t mode, std::uint8_t param) {
+		noop();
+		// TODO
+		std::int32_t charOffset = 0;
+		auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
+		Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
+				UI::Alignment::TopLeft, UI::Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	void jjCANVAS::drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param) {
+		noop();
+		// TODO
+		std::int32_t charOffset = 0;
+		auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
+		Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
+				UI::Alignment::TopLeft, UI::Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	void jjCANVAS::drawStringEx(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2) {
 		noop();
 	}
 
-	void jjCANVAS::drawString(int32_t xPixel, int32_t yPixel, const String& text, const jjANIMATION& animation, uint32_t mode, uint8_t param) {
+	void jjCANVAS::jjDrawString(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjCANVAS::drawStringEx(int32_t xPixel, int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t spriteMode, uint8_t param2) {
-		noop();
-	}
-
-	void jjCANVAS::jjDrawString(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, uint32_t mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
-		noop();
-	}
-
-	void jjCANVAS::jjDrawStringEx(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t spriteMode, uint8_t param2, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjCANVAS::jjDrawStringEx(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
 	int jjCANVAS::jjGetStringWidth(const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& style) {
 		noop();
-		return 0;
+		// TODO
+		return text.size() * 12.0f;
 	}
 
 	jjOBJ::jjOBJ() : _refCount(1) {
@@ -645,24 +732,24 @@ namespace Jazz2::Scripting
 		noop();
 		return true;
 	}
-	uint32_t jjOBJ::get_lightType() const {
+	std::uint32_t jjOBJ::get_lightType() const {
 		noop();
 		return 0;
 	}
-	uint32_t jjOBJ::set_lightType(uint32_t value) const {
+	std::uint32_t jjOBJ::set_lightType(std::uint32_t value) const {
 		noop();
 		return 0;
 	}
 
-	jjOBJ* jjOBJ::objectHit(jjOBJ* target, uint32_t playerHandling) {
+	jjOBJ* jjOBJ::objectHit(jjOBJ* target, std::uint32_t playerHandling) {
 		noop();
 		return nullptr;
 	}
-	void jjOBJ::blast(int32_t maxDistance, bool blastObjects) {
+	void jjOBJ::blast(std::int32_t maxDistance, bool blastObjects) {
 		noop();
 	}
 
-	void jjOBJ::behave1(uint32_t behavior, bool draw) {
+	void jjOBJ::behave1(std::uint32_t behavior, bool draw) {
 		noop();
 	}
 	void jjOBJ::behave2(jjBEHAVIOR behavior, bool draw) {
@@ -672,47 +759,47 @@ namespace Jazz2::Scripting
 		noop();
 	}
 
-	int32_t jjOBJ::jjAddObject(uint8_t eventID, float xPixel, float yPixel, uint16_t creatorID, uint32_t creatorType, uint32_t behavior) {
+	std::int32_t jjOBJ::jjAddObject(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, std::uint32_t behavior) {
 		noop();
 		return 0;
 	}
-	int32_t jjOBJ::jjAddObjectEx(uint8_t eventID, float xPixel, float yPixel, uint16_t creatorID, uint32_t creatorType, jjVOIDFUNCOBJ behavior) {
+	std::int32_t jjOBJ::jjAddObjectEx(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, jjVOIDFUNCOBJ behavior) {
 		noop();
 		return 0;
 	}
 
-	void jjOBJ::jjDeleteObject(int32_t objectID) {
+	void jjOBJ::jjDeleteObject(std::int32_t objectID) {
 		noop();
 	}
-	void jjOBJ::jjKillObject(int32_t objectID) {
+	void jjOBJ::jjKillObject(std::int32_t objectID) {
 		noop();
 	}
 
-	uint32_t jjOBJ::determineCurFrame(bool change) {
+	std::uint32_t jjOBJ::determineCurFrame(bool change) {
 		noop(); return 0;
 	}
 
-	uint16_t jjOBJ::get_creatorID() const {
+	std::uint16_t jjOBJ::get_creatorID() const {
 		noop(); return 0;
 	}
-	uint16_t jjOBJ::set_creatorID(uint16_t value) const {
+	std::uint16_t jjOBJ::set_creatorID(std::uint16_t value) const {
 		noop(); return 0;
 	}
-	uint32_t jjOBJ::get_creatorType() const {
+	std::uint32_t jjOBJ::get_creatorType() const {
 		noop(); return 0;
 	}
-	uint32_t jjOBJ::set_creatorType(uint32_t value) const {
-		noop(); return 0;
-	}
-
-	int16_t jjOBJ::determineCurAnim(uint8_t setID, uint8_t animation, bool change) {
+	std::uint32_t jjOBJ::set_creatorType(std::uint32_t value) const {
 		noop(); return 0;
 	}
 
-	uint32_t jjOBJ::get_bulletHandling() {
+	int16_t jjOBJ::determineCurAnim(std::uint8_t setID, std::uint8_t animation, bool change) {
 		noop(); return 0;
 	}
-	uint32_t jjOBJ::set_bulletHandling(uint32_t value) {
+
+	std::uint32_t jjOBJ::get_bulletHandling() {
+		noop(); return 0;
+	}
+	std::uint32_t jjOBJ::set_bulletHandling(std::uint32_t value) {
 		noop(); return 0;
 	}
 	bool jjOBJ::get_ricochet() {
@@ -734,10 +821,10 @@ namespace Jazz2::Scripting
 		noop(); return 0;
 	}
 
-	uint32_t jjOBJ::get_playerHandling() {
+	std::uint32_t jjOBJ::get_playerHandling() {
 		noop(); return false;
 	}
-	uint32_t jjOBJ::set_playerHandling(uint32_t value) {
+	std::uint32_t jjOBJ::set_playerHandling(std::uint32_t value) {
 		noop(); return false;
 	}
 	bool jjOBJ::get_isTarget() {
@@ -765,22 +852,22 @@ namespace Jazz2::Scripting
 		noop(); return false;
 	}
 
-	int32_t jjOBJ::get_var(uint8_t x) {
+	std::int32_t jjOBJ::get_var(std::uint8_t x) {
 		noop(); return 0;
 	}
-	int32_t jjOBJ::set_var(uint8_t x, int32_t value) {
+	std::int32_t jjOBJ::set_var(std::uint8_t x, std::int32_t value) {
 		noop(); return 0;
 	}
 
-	int32_t jjOBJ::draw() {
+	std::int32_t jjOBJ::draw() {
 		noop();
 		return 0;
 	}
-	int32_t jjOBJ::beSolid(bool shouldCheckForStompingLocalPlayers) {
+	std::int32_t jjOBJ::beSolid(bool shouldCheckForStompingLocalPlayers) {
 		noop();
 		return 0;
 	}
-	void jjOBJ::bePlatform(float xOld, float yOld, int32_t width, int32_t height) {
+	void jjOBJ::bePlatform(float xOld, float yOld, std::int32_t width, std::int32_t height) {
 		noop();
 	}
 	void jjOBJ::clearPlatform() {
@@ -793,7 +880,7 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	int32_t jjOBJ::unfreeze(int32_t style) {
+	std::int32_t jjOBJ::unfreeze(std::int32_t style) {
 		noop();
 		return 0;
 	}
@@ -806,22 +893,22 @@ namespace Jazz2::Scripting
 	void jjOBJ::pathMovement() {
 		noop();
 	}
-	int32_t jjOBJ::fireBullet(uint8_t eventID) {
+	int32_t jjOBJ::fireBullet(std::uint8_t eventID) {
 		noop();
 		return 0;
 	}
-	void jjOBJ::particlePixelExplosion(int32_t style) {
+	void jjOBJ::particlePixelExplosion(std::int32_t style) {
 		noop();
 	}
-	void jjOBJ::grantPickup(jjPLAYER* player, int32_t frequency) {
+	void jjOBJ::grantPickup(jjPLAYER* player, std::int32_t frequency) {
 		noop();
 	}
 
-	int jjOBJ::findNearestPlayer(int maxDistance) const {
+	std::int32_t jjOBJ::findNearestPlayer(std::int32_t maxDistance) const {
 		noop();
 		return 0;
 	}
-	int jjOBJ::findNearestPlayerEx(int maxDistance, int& foundDistance) const {
+	std::int32_t jjOBJ::findNearestPlayerEx(std::int32_t maxDistance, std::int32_t& foundDistance) const {
 		noop();
 		return 0;
 	}
@@ -835,7 +922,7 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
-	jjOBJ* get_jjObjects(int index)
+	jjOBJ* get_jjObjects(std::int32_t index)
 	{
 		noop();
 		auto ctx = asGetActiveContext();
@@ -845,7 +932,7 @@ namespace Jazz2::Scripting
 		return new(mem) jjOBJ();
 	}
 
-	jjOBJ* get_jjObjectPresets(int8_t id)
+	jjOBJ* get_jjObjectPresets(std::int8_t id)
 	{
 		noop();
 		auto ctx = asGetActiveContext();
@@ -855,7 +942,50 @@ namespace Jazz2::Scripting
 		return new(mem) jjOBJ();
 	}
 
-	jjPLAYER::jjPLAYER(LevelScriptLoader* levelScripts, int playerIndex) : _levelScriptLoader(levelScripts), _refCount(1) {
+	String jjPARTICLESTRING::get_text() const {
+		noop(); return {};
+	}
+	void jjPARTICLESTRING::set_text(String text) {
+		noop();
+	}
+
+	jjPARTICLE::jjPARTICLE() {
+		noop();
+	}
+	jjPARTICLE::~jjPARTICLE() {
+		noop();
+	}
+
+	void jjPARTICLE::AddRef() {
+		_refCount++;
+	}
+
+	void jjPARTICLE::Release() {
+		if (--_refCount == 0) {
+			this->~jjPARTICLE();
+			asFreeMem(this);
+		}
+	}
+
+	jjPARTICLE* GetParticle(std::int32_t index) {
+		noop();
+		auto ctx = asGetActiveContext();
+		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+		void* mem = asAllocMem(sizeof(jjPARTICLE));
+		return new(mem) jjPARTICLE();
+	}
+
+	jjPARTICLE* AddParticle(std::int32_t particleType) {
+		noop();
+		auto ctx = asGetActiveContext();
+		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+		void* mem = asAllocMem(sizeof(jjPARTICLE));
+		return new(mem) jjPARTICLE();
+	}
+
+	jjPLAYER::jjPLAYER(LevelScriptLoader* levelScripts, std::int32_t playerIndex) : _levelScriptLoader(levelScripts), _refCount(1) {
 		noop();
 		auto& players = levelScripts->GetPlayers();
 		_player = (playerIndex < players.size() ? players[playerIndex] : nullptr);
@@ -880,6 +1010,16 @@ namespace Jazz2::Scripting
 		}
 	}
 
+	PlayerBackingStore& jjPLAYER::GetBackingStore()
+	{
+		return _levelScriptLoader->GetPlayerBackingStore(_player->_playerIndex);
+	}
+
+	const PlayerBackingStore& jjPLAYER::GetBackingStore() const
+	{
+		return _levelScriptLoader->GetPlayerBackingStore(_player->_playerIndex);
+	}
+
 	// Assignment operator
 	jjPLAYER& jjPLAYER::operator=(const jjPLAYER& o)
 	{
@@ -888,7 +1028,7 @@ namespace Jazz2::Scripting
 		return *this;
 	}
 
-	int32_t jjPLAYER::setScore(int32_t value) {
+	std::int32_t jjPLAYER::setScore(std::int32_t value) {
 		noop(); return 0;
 	}
 
@@ -920,45 +1060,46 @@ namespace Jazz2::Scripting
 			_player->_frozenTimeLeft = std::min(1.0f, _player->_frozenTimeLeft);
 		}
 	}
-	int32_t jjPLAYER::get_currTile() {
+	std::int32_t jjPLAYER::get_currTile() {
 		noop();
-		return 0;
+		auto pos = _player->_pos;
+		return ((std::int32_t)pos.X / 32) + ((std::int32_t)pos.Y / 32 * 65536);
 	}
-	bool jjPLAYER::startSugarRush(int32_t time) {
+	bool jjPLAYER::startSugarRush(std::int32_t time) {
 		noop();
 		// TODO: if boss active, return false
 		_player->ActivateSugarRush((float)time * 60.0f / 70.0f);
 		return true;
 	}
-	int8_t jjPLAYER::get_health() const {
+	std::int8_t jjPLAYER::get_health() const {
 		noop();
-		return (int8_t)_player->_health;
+		return (std::int8_t)_player->_health;
 	}
-	int8_t jjPLAYER::set_health(int8_t value) {
+	std::int8_t jjPLAYER::set_health(std::int8_t value) {
 		noop();
 		_player->SetHealth(value);
 		return value;
 	}
 
-	int8_t jjPLAYER::get_currWeapon() const {
+	std::int8_t jjPLAYER::get_currWeapon() const {
 		noop();
-		return (int8_t)_player->_currentWeapon;
+		return (std::int8_t)_player->_currentWeapon;
 	}
-	int8_t jjPLAYER::set_currWeapon(int8_t value) {
+	std::int8_t jjPLAYER::set_currWeapon(std::int8_t value) {
 		noop();
 		if (value < 0 || value >= (int8_t)WeaponType::Count) {
-			return (int8_t)_player->_currentWeapon;
+			return (std::int8_t)_player->_currentWeapon;
 		}
 		_player->_currentWeapon = (WeaponType)value;
 		return value;
 	}
 
-	int32_t jjPLAYER::extendInvincibility(int32_t duration) {
+	std::int32_t jjPLAYER::extendInvincibility(std::int32_t duration) {
 		noop();
 		return 0;
 	}
 
-	bool jjPLAYER::testForCoins(int32_t numberOfCoins) {
+	bool jjPLAYER::testForCoins(std::int32_t numberOfCoins) {
 		noop();
 		if (numberOfCoins > _player->_coins) {
 			return false;
@@ -966,33 +1107,54 @@ namespace Jazz2::Scripting
 		_player->AddCoins(-numberOfCoins);
 		return true;
 	}
-	int32_t jjPLAYER::get_gems(uint32_t type) const {
+	std::int32_t jjPLAYER::get_gems(std::uint32_t type) const {
 		noop();
 		return 0;
 	}
-	int32_t jjPLAYER::set_gems(uint32_t type, int32_t value) {
+	std::int32_t jjPLAYER::set_gems(std::uint32_t type, std::int32_t value) {
 		noop();
 		return 0;
 	}
-	bool jjPLAYER::testForGems(int32_t numberOfGems, uint32_t type) {
+	bool jjPLAYER::testForGems(std::int32_t numberOfGems, std::uint32_t type) {
 		noop();
 		return false;
 	}
 
-	int32_t jjPLAYER::get_stoned() {
+	std::int32_t jjPLAYER::get_shieldType() const {
 		noop();
-		return (int32_t)(_player->_dizzyTime * 70.0f / 60.0f);
+		return (std::int32_t)_player->_activeShield;
 	}
-	int32_t jjPLAYER::set_stoned(int32_t value) {
+	std::int32_t jjPLAYER::set_shieldType(std::int32_t value) {
 		noop();
-		_player->SetDizzyTime(value * 60.0f / 70.0f);
+		if (value >= 0 && value < (std::int32_t)ShieldType::Count) {
+			_player->_activeShield = (ShieldType)value;
+		}
+		return value;
+	}
+	std::int32_t jjPLAYER::get_shieldTime() const {
+		noop();
+		return (std::int32_t)(_player->_activeShieldTime * 70.0f / FrameTimer::FramesPerSecond);
+	}
+	std::int32_t jjPLAYER::set_shieldTime(std::int32_t value) {
+		noop();
+		_player->_activeShieldTime = value * FrameTimer::FramesPerSecond / 70.0f;
 		return value;
 	}
 
-	void jjPLAYER::suckerTube(int32_t xSpeed, int32_t ySpeed, bool center, bool noclip, bool trigSample) {
+	std::int32_t jjPLAYER::get_stoned() {
+		noop();
+		return (std::int32_t)(_player->_dizzyTime * 70.0f / FrameTimer::FramesPerSecond);
+	}
+	std::int32_t jjPLAYER::set_stoned(std::int32_t value) {
+		noop();
+		_player->SetDizzyTime(value * FrameTimer::FramesPerSecond / 70.0f);
+		return value;
+	}
+
+	void jjPLAYER::suckerTube(std::int32_t xSpeed, std::int32_t ySpeed, bool center, bool noclip, bool trigSample) {
 		noop();
 	}
-	void jjPLAYER::poleSpin(float xSpeed, float ySpeed, uint32_t delay) {
+	void jjPLAYER::poleSpin(float xSpeed, float ySpeed, std::uint32_t delay) {
 		noop();
 	}
 	void jjPLAYER::spring(float xSpeed, float ySpeed, bool keepZeroSpeeds, bool sample) {
@@ -1001,22 +1163,27 @@ namespace Jazz2::Scripting
 
 	bool jjPLAYER::get_isConnecting() const {
 		noop();
+		// TODO Whether the player is a client who has not finished joining the current online server yet.
 		return false;
 	}
 	bool jjPLAYER::get_isIdle() const {
 		noop();
+		// TODO: Whether the player is idle and does not appear in the level or player list. Currently this can only ever be true of the server.
 		return false;
 	}
 	bool jjPLAYER::get_isOut() const {
 		noop();
+		// TODO: Equals true if the player has lost all their lives (or joined too late) in an LRS-based gamemode.
 		return false;
 	}
 	bool jjPLAYER::get_isSpectating() const {
 		noop();
+		// TODO: Equals true if the player is spectating normally, i.e. not forced into spectating by being out or an idle server.
 		return false;
 	}
 	bool jjPLAYER::get_isInGame() const {
 		noop();
+		// TODO: Equals true if isActive is true but isConnecting, isIdle, isOut, and isSpectating are all false.
 		return true;
 	}
 
@@ -1032,19 +1199,19 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	int8_t jjPLAYER::get_light() const {
+	std::int8_t jjPLAYER::get_light() const {
 		noop();
 		return 0;
 	}
-	int8_t jjPLAYER::set_light(int8_t value) {
+	std::int8_t jjPLAYER::set_light(std::int8_t value) {
 		noop();
 		return 0;
 	}
-	uint32_t jjPLAYER::get_fur() const {
+	std::uint32_t jjPLAYER::get_fur() const {
 		noop();
 		return 0;
 	}
-	uint32_t jjPLAYER::set_fur(uint32_t value) {
+	std::uint32_t jjPLAYER::set_fur(std::uint32_t value) {
 		noop();
 		return 0;
 	}
@@ -1082,17 +1249,17 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	uint8_t jjPLAYER::get_lighting() const {
+	std::uint8_t jjPLAYER::get_lighting() const {
 		noop();
 		// TODO: Viewports
-		return (uint8_t)(_levelScriptLoader->_levelHandler->GetDefaultAmbientLight() * 64.0f);
+		return (std::uint8_t)(_levelScriptLoader->_levelHandler->GetDefaultAmbientLight() * 64.0f);
 	}
-	uint8_t jjPLAYER::set_lighting(uint8_t value) {
+	std::uint8_t jjPLAYER::set_lighting(std::uint8_t value) {
 		noop();
 		_levelScriptLoader->_levelHandler->SetAmbientLight(nullptr, value / 64.0f);
 		return value;
 	}
-	uint8_t jjPLAYER::resetLight() {
+	std::uint8_t jjPLAYER::resetLight() {
 		noop();
 		return 0;
 	}
@@ -1146,45 +1313,45 @@ namespace Jazz2::Scripting
 		noop();
 	}
 
-	bool jjPLAYER::get_powerup(uint8_t index) {
+	bool jjPLAYER::get_powerup(std::uint8_t index) {
 		noop();
-		if (index < 0 || index >= (int8_t)WeaponType::Count) {
+		if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 			return 0;
 		}
 		return (_player->_weaponUpgrades[index] & 0x01) == 0x01;
 	}
-	bool jjPLAYER::set_powerup(uint8_t index, bool value) {
+	bool jjPLAYER::set_powerup(std::uint8_t index, bool value) {
 		noop();
-		if (index < 0 || index >= (int8_t)WeaponType::Count) {
+		if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 			return 0;
 		}
 		_player->_weaponUpgrades[index] = (value ? 0x01 : 0x00);
 		return value;
 	}
-	int32_t jjPLAYER::get_ammo(uint8_t index) const {
+	std::int32_t jjPLAYER::get_ammo(std::uint8_t index) const {
 		noop();
-		if (index < 0 || index >= (int8_t)WeaponType::Count) {
+		if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 			return 0;
 		}
 		return _player->_weaponAmmo[index];
 	}
-	int32_t jjPLAYER::set_ammo(uint8_t index, int32_t value) {
+	std::int32_t jjPLAYER::set_ammo(std::uint8_t index, std::int32_t value) {
 		noop();
-		if (index < 0 || index >= (int8_t)WeaponType::Count) {
+		if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 			return 0;
 		}
 		_player->_weaponAmmo[index] = value * 256;
 		return value;
 	}
 
-	bool jjPLAYER::offsetPosition(int32_t xPixels, int32_t yPixels) {
+	bool jjPLAYER::offsetPosition(std::int32_t xPixels, std::int32_t yPixels) {
 		noop();
 
 		Vector2f pos = _player->GetPos();
 		_player->WarpToPosition(Vector2f(pos.X + xPixels, pos.Y + yPixels), WarpFlags::Fast);
 		return true;
 	}
-	bool jjPLAYER::warpToTile(int32_t xTile, int32_t yTile, bool fast) {
+	bool jjPLAYER::warpToTile(std::int32_t xTile, std::int32_t yTile, bool fast) {
 		noop();
 
 		_player->WarpToPosition(Vector2f(xTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2,
@@ -1192,7 +1359,7 @@ namespace Jazz2::Scripting
 			fast ? WarpFlags::Fast : WarpFlags::Default);
 		return true;
 	}
-	bool jjPLAYER::warpToID(uint8_t warpID, bool fast) {
+	bool jjPLAYER::warpToID(std::uint8_t warpID, bool fast) {
 		noop();
 
 		auto events = _levelScriptLoader->_levelHandler->EventMap();
@@ -1204,32 +1371,32 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
-	uint32_t jjPLAYER::morph(bool rabbitsOnly, bool morphEffect) {
+	std::uint32_t jjPLAYER::morph(bool rabbitsOnly, bool morphEffect) {
 		noop();
 		return 0;
 	}
-	uint32_t jjPLAYER::morphTo(uint32_t charNew, bool morphEffect) {
+	std::uint32_t jjPLAYER::morphTo(std::uint32_t charNew, bool morphEffect) {
 		noop();
 		// TODO: morphEffect
 		_player->MorphTo((PlayerType)charNew);
-		return (uint32_t)_player->_playerType;
+		return (std::uint32_t)_player->_playerType;
 	}
-	uint32_t jjPLAYER::revertMorph(bool morphEffect) {
+	std::uint32_t jjPLAYER::revertMorph(bool morphEffect) {
 		noop();
 		// TODO: morphEffect
 		_player->MorphRevert();
-		return (uint32_t)_player->_playerType;
+		return (std::uint32_t)_player->_playerType;
 	}
-	uint32_t jjPLAYER::get_charCurr() const {
+	std::uint32_t jjPLAYER::get_charCurr() const {
 		noop();
-		return (uint32_t)_player->_playerType;
+		return (std::uint32_t)_player->_playerType;
 	}
 
 	void jjPLAYER::kill() {
 		noop();
 		_player->DecreaseHealth(INT32_MAX);
 	}
-	bool jjPLAYER::hurt(int8_t damage, bool forceHurt, jjPLAYER* attacker) {
+	bool jjPLAYER::hurt(std::int8_t damage, bool forceHurt, jjPLAYER* attacker) {
 		noop();
 
 		// TODO: forceHurt and return value
@@ -1237,50 +1404,75 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
-	uint32_t jjPLAYER::get_timerState() const {
+	std::uint32_t jjPLAYER::get_timerState() const {
 		noop();
-		return 0;
+		const auto& backingStore = GetBackingStore();
+		return backingStore.TimerState;
 	}
 	bool jjPLAYER::get_timerPersists() const {
 		noop();
-		return false;
+		const auto& backingStore = GetBackingStore();
+		return backingStore.TimerPersists;
 	}
 	bool jjPLAYER::set_timerPersists(bool value) {
 		noop();
-		return false;
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerPersists = value;
+		return value;
 	}
-	uint32_t jjPLAYER::timerStart(int32_t ticks, bool startPaused) {
+	std::uint32_t jjPLAYER::timerStart(std::int32_t ticks, bool startPaused) {
 		noop();
-		return 0;
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerLeft = (float)ticks * FrameTimer::FramesPerSecond / 70;
+		backingStore.TimerState = (startPaused ? 2 : 1);
+		return backingStore.TimerState;
 	}
-	uint32_t jjPLAYER::timerPause() {
+	std::uint32_t jjPLAYER::timerPause() {
 		noop();
-		return 0;
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerState = 2; // PAUSED
+		return backingStore.TimerState;
 	}
-	uint32_t jjPLAYER::timerResume() {
+	std::uint32_t jjPLAYER::timerResume() {
 		noop();
-		return 0;
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerState = 1; // STARTED
+		return backingStore.TimerState;
 	}
-	uint32_t jjPLAYER::timerStop() {
+	std::uint32_t jjPLAYER::timerStop() {
 		noop();
-		return 0;
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerLeft = 0.0f;
+		backingStore.TimerState = 0; // STOPPED
+		return backingStore.TimerState;
 	}
-	int32_t jjPLAYER::get_timerTime() const {
+	std::int32_t jjPLAYER::get_timerTime() const {
 		noop();
-		return 0;
+		const auto& backingStore = GetBackingStore();
+		std::int32_t jjTicksLeft = (std::int32_t)(backingStore.TimerLeft * 70 / FrameTimer::FramesPerSecond);
+		return jjTicksLeft;
 	}
-	int32_t jjPLAYER::set_timerTime(int32_t value) {
+	std::int32_t jjPLAYER::set_timerTime(std::int32_t value) {
 		noop();
-		return 0;
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerLeft = (float)value * FrameTimer::FramesPerSecond / 70;
+		return value;
 	}
 	void jjPLAYER::timerFunction(const String& functionName) {
 		noop();
+		auto& backingStore = GetBackingStore();
+		asIScriptFunction* func = _levelScriptLoader->_module->GetFunctionByName(String::nullTerminatedView(functionName).data());
+		backingStore.TimerCallback = func;
 	}
 	void jjPLAYER::timerFunctionPtr(void* function) {
 		noop();
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerCallback = function;
 	}
 	void jjPLAYER::timerFunctionFuncPtr(void* function) {
 		noop();
+		auto& backingStore = GetBackingStore();
+		backingStore.TimerCallback = function;
 	}
 
 	bool jjPLAYER::activateBoss(bool activate) {
@@ -1290,7 +1482,7 @@ namespace Jazz2::Scripting
 		_levelScriptLoader->_levelHandler->BroadcastTriggeredEvent(_player, EventType::AreaActivateBoss, nullptr);
 		return true;
 	}
-	bool jjPLAYER::limitXScroll(uint16_t left, uint16_t width) {
+	bool jjPLAYER::limitXScroll(std::uint16_t left, std::uint16_t width) {
 		noop();
 
 		// TODO: Viewports
@@ -1312,7 +1504,7 @@ namespace Jazz2::Scripting
 	void jjPLAYER::cameraUnfreeze(bool instant) {
 		noop();
 	}
-	void jjPLAYER::showText(const String& text, uint32_t size) {
+	void jjPLAYER::showText(const String& text, std::uint32_t size) {
 		noop();
 
 		// TODO: size
@@ -1320,7 +1512,7 @@ namespace Jazz2::Scripting
 		auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
 		_levelScriptLoader->_levelHandler->ShowLevelText(recodedText);
 	}
-	void jjPLAYER::showTextByID(uint32_t textID, uint32_t offset, uint32_t size) {
+	void jjPLAYER::showTextByID(std::uint32_t textID, std::uint32_t offset, std::uint32_t size) {
 		noop();
 
 		// TODO: size
@@ -1328,20 +1520,20 @@ namespace Jazz2::Scripting
 		_levelScriptLoader->_levelHandler->ShowLevelText(text);
 	}
 
-	uint32_t jjPLAYER::get_fly() const {
+	std::uint32_t jjPLAYER::get_fly() const {
 		noop();
 		return 0;
 	}
-	uint32_t jjPLAYER::set_fly(uint32_t value) {
+	std::uint32_t jjPLAYER::set_fly(std::uint32_t value) {
 		noop();
 		return 0;
 	}
 
-	int32_t jjPLAYER::fireBulletDirection(uint8_t gun, bool depleteAmmo, bool requireAmmo, uint32_t direction) {
+	std::int32_t jjPLAYER::fireBulletDirection(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, std::uint32_t direction) {
 		noop();
 		return 0;
 	}
-	int32_t jjPLAYER::fireBulletAngle(uint8_t gun, bool depleteAmmo, bool requireAmmo, float angle) {
+	std::int32_t jjPLAYER::fireBulletAngle(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, float angle) {
 		noop();
 		return 0;
 	}
@@ -1354,7 +1546,7 @@ namespace Jazz2::Scripting
 		noop();
 		return 0.0f;
 	}
-	int32_t jjPLAYER::get_deaths() const {
+	std::int32_t jjPLAYER::get_deaths() const {
 		noop();
 		return 0;
 	}
@@ -1367,27 +1559,27 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	int32_t jjPLAYER::get_lrsLives() const {
+	std::int32_t jjPLAYER::get_lrsLives() const {
 		noop();
 		return 0;
 	}
-	int32_t jjPLAYER::get_roasts() const {
+	std::int32_t jjPLAYER::get_roasts() const {
 		noop();
 		return 0;
 	}
-	int32_t jjPLAYER::get_laps() const {
+	std::int32_t jjPLAYER::get_laps() const {
 		noop();
 		return 0;
 	}
-	int32_t jjPLAYER::get_lapTimeCurrent() const {
+	std::int32_t jjPLAYER::get_lapTimeCurrent() const {
 		noop();
 		return 0;
 	}
-	int32_t jjPLAYER::get_lapTimes(uint32_t index) const {
+	std::int32_t jjPLAYER::get_lapTimes(std::uint32_t index) const {
 		noop();
 		return 0;
 	}
-	int32_t jjPLAYER::get_lapTimeBest() const {
+	std::int32_t jjPLAYER::get_lapTimeBest() const {
 		noop();
 		return 0;
 	}
@@ -1395,7 +1587,7 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	bool jjPLAYER::hasPrivilege(const String& privilege, uint32_t moduleID) const {
+	bool jjPLAYER::hasPrivilege(const String& privilege, std::uint32_t moduleID) const {
 		noop();
 		return false;
 	}
@@ -1408,7 +1600,7 @@ namespace Jazz2::Scripting
 		noop();
 		return 0;
 	}
-	bool jjPLAYER::objectHit(jjOBJ* target, int force, uint32_t playerHandling) {
+	bool jjPLAYER::objectHit(jjOBJ* target, std::int32_t force, std::uint32_t playerHandling) {
 		noop();
 		return false;
 	}
@@ -1417,14 +1609,14 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
-	int32_t get_jjPlayerCount() {
+	std::int32_t get_jjPlayerCount() {
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
 		void* mem = asAllocMem(sizeof(jjPLAYER));
 		return owner->GetPlayers().size();
 	}
-	int32_t get_jjLocalPlayerCount() {
+	std::int32_t get_jjLocalPlayerCount() {
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
@@ -1441,7 +1633,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjPLAYER));
 		return new(mem) jjPLAYER(owner, 0);
 	}
-	jjPLAYER* get_jjPlayers(uint8_t index) {
+	jjPLAYER* get_jjPlayers(std::uint8_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1450,7 +1642,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjPLAYER));
 		return new(mem) jjPLAYER(owner, index);
 	}
-	jjPLAYER* get_jjLocalPlayers(uint8_t index) {
+	jjPLAYER* get_jjLocalPlayers(std::uint8_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1476,7 +1668,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
 	}
-	jjPIXELMAP* jjPIXELMAP::CreateFromSize(uint32_t width, uint32_t height) {
+	jjPIXELMAP* jjPIXELMAP::CreateFromSize(std::uint32_t width, std::uint32_t height) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1494,7 +1686,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
 	}
-	jjPIXELMAP* jjPIXELMAP::CreateFromLayer(uint32_t left, uint32_t top, uint32_t width, uint32_t height, uint32_t layer) {
+	jjPIXELMAP* jjPIXELMAP::CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1503,7 +1695,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
 	}
-	jjPIXELMAP* jjPIXELMAP::CreateFromLayerObject(uint32_t left, uint32_t top, uint32_t width, uint32_t height, const jjLAYER* layer) {
+	jjPIXELMAP* jjPIXELMAP::CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER* layer) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1512,7 +1704,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
 	}
-	jjPIXELMAP* jjPIXELMAP::CreateFromTexture(uint32_t animFrame) {
+	jjPIXELMAP* jjPIXELMAP::CreateFromTexture(std::uint32_t animFrame) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1521,7 +1713,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
 	}
-	jjPIXELMAP* jjPIXELMAP::CreateFromFilename(const String& filename, const jjPAL* palette, uint8_t threshold) {
+	jjPIXELMAP* jjPIXELMAP::CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1552,13 +1744,13 @@ namespace Jazz2::Scripting
 		return *this;
 	}
 
-	// TODO: return type uint8_t& instead?
-	uint8_t jjPIXELMAP::GetPixel(uint32_t x, uint32_t y) {
+	// TODO: return type std::uint8_t& instead?
+	std::uint8_t jjPIXELMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
 		noop();
 		return 0;
 	}
 
-	bool jjPIXELMAP::saveToTile(uint16_t tileID, bool hFlip) const {
+	bool jjPIXELMAP::saveToTile(std::uint16_t tileID, bool hFlip) const {
 		noop();
 		return false;
 	}
@@ -1587,7 +1779,7 @@ namespace Jazz2::Scripting
 		void* mem = asAllocMem(sizeof(jjMASKMAP));
 		return new(mem) jjMASKMAP();
 	}
-	jjMASKMAP* jjMASKMAP::CreateFromTile(uint16_t tileID) {
+	jjMASKMAP* jjMASKMAP::CreateFromTile(std::uint16_t tileID) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1618,12 +1810,12 @@ namespace Jazz2::Scripting
 	}
 
 	// TODO: return type bool& instead?
-	bool jjMASKMAP::GetPixel(uint32_t x, uint32_t y) {
+	bool jjMASKMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
 		noop();
 		return false;
 	}
 
-	bool jjMASKMAP::save(uint16_t tileID, bool hFlip) const {
+	bool jjMASKMAP::save(std::uint16_t tileID, bool hFlip) const {
 		noop();
 		return false;
 	}
@@ -1635,7 +1827,7 @@ namespace Jazz2::Scripting
 		noop();
 	}
 
-	jjLAYER* jjLAYER::CreateFromSize(uint32_t width, uint32_t height, jjLAYER* self) {
+	jjLAYER* jjLAYER::CreateFromSize(std::uint32_t width, std::uint32_t height, jjLAYER* self) {
 		noop();
 		return new(self) jjLAYER();
 	}
@@ -1664,7 +1856,7 @@ namespace Jazz2::Scripting
 		return *this;
 	}
 
-	jjLAYER* jjLAYER::get_jjLayers(int32_t index) {
+	jjLAYER* jjLAYER::get_jjLayers(std::int32_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1674,19 +1866,19 @@ namespace Jazz2::Scripting
 		return new(mem) jjLAYER();
 	}
 
-	uint32_t jjLAYER::get_spriteMode() const {
+	std::uint32_t jjLAYER::get_spriteMode() const {
 		noop();
 		return 0;
 	}
-	uint32_t jjLAYER::set_spriteMode(uint32_t value) const {
+	std::uint32_t jjLAYER::set_spriteMode(std::uint32_t value) const {
 		noop();
 		return 0;
 	}
-	uint8_t jjLAYER::get_spriteParam() const {
+	std::uint8_t jjLAYER::get_spriteParam() const {
 		noop();
 		return 0;
 	}
-	uint8_t jjLAYER::set_spriteParam(uint8_t value) const {
+	std::uint8_t jjLAYER::set_spriteParam(std::uint8_t value) const {
 		noop();
 		return 0;
 	}
@@ -1706,6 +1898,21 @@ namespace Jazz2::Scripting
 		return 0;
 	}
 
+	std::int32_t jjLAYER::GetTextureMode() const {
+		noop();
+		return 0;
+	}
+	void jjLAYER::SetTextureMode(std::int32_t value) const {
+		noop();
+	}
+	std::int32_t jjLAYER::GetTexture() const {
+		noop();
+		return 0;
+	}
+	void jjLAYER::SetTexture(std::int32_t value) const {
+		noop();
+	}
+
 	CScriptArray* jjLAYER::jjLayerOrderGet() {
 		noop();
 		auto ctx = asGetActiveContext();
@@ -1717,13 +1924,13 @@ namespace Jazz2::Scripting
 		noop();
 		return false;
 	}
-	CScriptArray* jjLAYER::jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, int32_t tileIDAdjustmentFactor) {
+	CScriptArray* jjLAYER::jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, std::int32_t tileIDAdjustmentFactor) {
 		noop();
 		auto ctx = asGetActiveContext();
 		auto engine = ctx->GetEngine();
 		return CScriptArray::Create(engine->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
 	}
-	bool jjLAYER::jjTilesFromTileset(const String& filename, uint32_t firstTileID, uint32_t tileCount, const CScriptArray* paletteColorMapping) {
+	bool jjLAYER::jjTilesFromTileset(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const CScriptArray* paletteColorMapping) {
 		noop();
 		return false;
 	}
@@ -1732,27 +1939,46 @@ namespace Jazz2::Scripting
 		noop(); return true;
 	}
 
-	float get_sinTable(uint32_t angle) {
+	float get_sinTable(std::uint32_t angle) {
 		noop();
 		return sinf(angle * fTwoPi / 1024.0f);
 	};
-	float get_cosTable(uint32_t angle) {
+	float get_cosTable(std::uint32_t angle) {
 		noop();
 		return cosf(angle * fTwoPi / 1024.0f);
 	};
-	uint32_t RandWord32() {
+	std::uint32_t RandWord32() {
 		noop();
 		return Random().Next();
 	}
-	uint64_t unixTimeSec() {
+	std::uint64_t unixTimeSec() {
 		noop(); return 0;
 	}
-	uint64_t unixTimeMs() {
+	std::uint64_t unixTimeMs() {
 		noop(); return 0;
 	}
 
-	int32_t GetFPS() {
-		noop(); return 0;
+	bool jjRegexIsValid(const String& expression) {
+		noop(); return false;
+	}
+	bool jjRegexMatch(const String& text, const String& expression, bool ignoreCase) {
+		noop(); return false;
+	}
+	bool jjRegexMatchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase) {
+		noop(); return false;
+	}
+	bool jjRegexSearch(const String& text, const String& expression, bool ignoreCase) {
+		noop(); return false;
+	}
+	bool jjRegexSearchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase) {
+		noop(); return false;
+	}
+	String jjRegexReplace(const String& text, const String& expression, const String& replacement, bool ignoreCase) {
+		noop(); return {};
+	}
+
+	std::int32_t GetFPS() {
+		noop(); return (std::int32_t)theApplication().GetFrameTimer().GetAverageFps();
 	}
 
 
@@ -1760,10 +1986,10 @@ namespace Jazz2::Scripting
 		noop(); return false;
 	}
 
-	int32_t GetDifficulty() {
+	std::int32_t GetDifficulty() {
 		noop(); return 0;
 	}
-	int32_t SetDifficulty(int32_t value) {
+	std::int32_t SetDifficulty(std::int32_t value) {
 		noop(); return 0;
 	}
 
@@ -1787,14 +2013,14 @@ namespace Jazz2::Scripting
 		noop(); return "";
 	}
 
-	String LevelScriptLoader::get_jjHelpStrings(uint32_t index) {
+	String LevelScriptLoader::get_jjHelpStrings(std::uint32_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->GetLevelText(index);
 	}
-	void LevelScriptLoader::set_jjHelpStrings(uint32_t index, const String& text) {
+	void LevelScriptLoader::set_jjHelpStrings(std::uint32_t index, const String& text) {
 		noop();
 
 		auto ctx = asGetActiveContext();
@@ -1802,13 +2028,13 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->OverrideLevelText(index, text);
 	}
 
-	int32_t get_gameState() {
+	std::int32_t get_gameState() {
 		noop(); return 0;
 	}
 
 	// TODO
 
-	void LevelScriptLoader::jjAlert(const String& text, bool sendToAll, uint32_t size)
+	void LevelScriptLoader::jjAlert(const String& text, bool sendToAll, std::uint32_t size)
 	{
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
@@ -1832,10 +2058,10 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	int32_t getBorderWidth() {
+	std::int32_t getBorderWidth() {
 		noop(); return 0;
 	}
-	int32_t getBorderHeight() {
+	std::int32_t getBorderHeight() {
 		noop(); return 0;
 	}
 	bool getSplitscreenType() {
@@ -1847,160 +2073,215 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	int32_t get_teamScore(int32_t color) {
+	std::int32_t get_teamScore(std::int32_t color) {
 		noop(); return 0;
 	}
-	int32_t GetMaxHealth() {
+	std::int32_t GetMaxHealth() {
 		noop(); return 0;
 	}
-	int32_t GetStartHealth() {
+	std::int32_t GetStartHealth() {
 		noop(); return 0;
 	}
 
 	// TODO
 
-	float get_layerXOffset(uint8_t id) {
+	float get_layerXOffset(std::uint8_t id) {
 		noop(); return 0;
 	}
-	float set_layerXOffset(uint8_t id, float value) {
+	float set_layerXOffset(std::uint8_t id, float value) {
 		noop(); return 0;
 	}
-	float get_layerYOffset(uint8_t id) {
+	float get_layerYOffset(std::uint8_t id) {
 		noop(); return 0;
 	}
-	float set_layerYOffset(uint8_t id, float value) {
+	float set_layerYOffset(std::uint8_t id, float value) {
 		noop(); return 0;
 	}
-	int get_layerWidth(uint8_t id) {
+	std::int32_t get_layerWidth(std::uint8_t id) {
 		noop(); return 0;
 	}
-	int get_layerRealWidth(uint8_t id) {
+	std::int32_t get_layerRealWidth(std::uint8_t id) {
 		noop(); return 0;
 	}
-	int get_layerRoundedWidth(uint8_t id) {
+	std::int32_t get_layerRoundedWidth(std::uint8_t id) {
 		noop(); return 0;
 	}
-	int get_layerHeight(uint8_t id) {
+	std::int32_t get_layerHeight(std::uint8_t id) {
 		noop(); return 0;
 	}
-	float get_layerXSpeed(uint8_t id) {
+	float get_layerXSpeed(std::uint8_t id) {
 		noop(); return 0;
 	}
-	float set_layerXSpeed(uint8_t id, float value) {
+	float set_layerXSpeed(std::uint8_t id, float value) {
 		noop(); return 0;
 	}
-	float get_layerYSpeed(uint8_t id) {
+	float get_layerYSpeed(std::uint8_t id) {
 		noop(); return 0;
 	}
-	float set_layerYSpeed(uint8_t id, float value) {
+	float set_layerYSpeed(std::uint8_t id, float value) {
 		noop(); return 0;
 	}
-	float get_layerXAutoSpeed(uint8_t id) {
+	float get_layerXAutoSpeed(std::uint8_t id) {
 		noop(); return 0;
 	}
-	float set_layerXAutoSpeed(uint8_t id, float value) {
+	float set_layerXAutoSpeed(std::uint8_t id, float value) {
 		noop(); return 0;
 	}
-	float get_layerYAutoSpeed(uint8_t id) {
+	float get_layerYAutoSpeed(std::uint8_t id) {
 		noop(); return 0;
 	}
-	float set_layerYAutoSpeed(uint8_t id, float value) {
+	float set_layerYAutoSpeed(std::uint8_t id, float value) {
 		noop(); return 0;
 	}
-	bool get_layerHasTiles(uint8_t id) {
+	bool get_layerHasTiles(std::uint8_t id) {
 		noop(); return false;
 	}
-	bool set_layerHasTiles(uint8_t id, bool value) {
+	bool set_layerHasTiles(std::uint8_t id, bool value) {
 		noop(); return false;
 	}
-	bool get_layerTileHeight(uint8_t id) {
+	bool get_layerTileHeight(std::uint8_t id) {
 		noop(); return false;
 	}
-	bool set_layerTileHeight(uint8_t id, bool value) {
+	bool set_layerTileHeight(std::uint8_t id, bool value) {
 		noop(); return false;
 	}
-	bool get_layerTileWidth(uint8_t id) {
+	bool get_layerTileWidth(std::uint8_t id) {
 		noop(); return false;
 	}
-	bool set_layerTileWidth(uint8_t id, bool value) {
+	bool set_layerTileWidth(std::uint8_t id, bool value) {
 		noop(); return false;
 	}
-	bool get_layerLimitVisibleRegion(uint8_t id) {
+	bool get_layerLimitVisibleRegion(std::uint8_t id) {
 		noop(); return false;
 	}
-	bool set_layerLimitVisibleRegion(uint8_t id, bool value) {
+	bool set_layerLimitVisibleRegion(std::uint8_t id, bool value) {
 		noop(); return false;
 	}
 
-	void setLayerXSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
+	void setLayerXSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
 		noop();
 	}
-	void setLayerYSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
+	void setLayerYSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
 		noop();
 	}
 
 	// TODO
 
-	void jjDrawPixel(float xPixel, float yPixel, uint8_t color, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawPixel(float xPixel, float yPixel, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawRectangle(float xPixel, float yPixel, int32_t width, int32_t height, uint8_t color, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawRectangle(float xPixel, float yPixel, std::int32_t width, std::int32_t height, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int8_t direction, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawResizedSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawRotatedSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int32_t length, int32_t curvature, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawTile(float xPixel, float yPixel, uint16_t tile, uint32_t tileQuadrant, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawTile(float xPixel, float yPixel, std::uint16_t tile, std::uint32_t tileQuadrant, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawString(float xPixel, float yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawString(float xPixel, float yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawStringEx(float xPixel, float yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, spriteType spriteMode, uint8_t param2, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+	void jjDrawStringEx(float xPixel, float yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, spriteType spriteMode, std::uint8_t param2, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	int32_t jjGetStringWidth(const String& text, uint32_t size, const jjTEXTAPPEARANCE& style) {
+	std::int32_t jjGetStringWidth(const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& style) {
 		noop(); return 0;
 	}
 
-	bool LevelScriptLoader::get_jjTriggers(uint8_t id) {
+	void jjSetDarknessColor(jjPALCOLOR color) {
+		noop();
+	}
+	void jjSetFadeColors(std::uint8_t red, std::uint8_t green, std::uint8_t blue) {
+		noop();
+	}
+	void jjSetFadeColorsFromPalette(std::uint8_t paletteColorID) {
+		noop();
+	}
+	void jjSetFadeColorsFromPalcolor(jjPALCOLOR color) {
+		noop();
+	}
+	jjPALCOLOR jjGetFadeColors() {
+		noop(); return {};
+	}
+	void jjUpdateTexturedBG() {
+		noop();
+	}
+	std::int32_t get_jjTexturedBGTexture(jjPALCOLOR color) {
+		noop(); return 0;
+	}
+	std::int32_t set_jjTexturedBGTexture(std::int32_t texture) {
+		noop(); return 0;
+	}
+	std::int32_t get_jjTexturedBGStyle() {
+		noop(); return 0;
+	}
+	std::int32_t set_jjTexturedBGStyle(std::int32_t style) {
+		noop(); return 0;
+	}
+	bool get_jjTexturedBGUsed(jjPALCOLOR color) {
+		noop(); return false;
+	}
+	bool set_jjTexturedBGUsed(bool used) {
+		noop(); return false;
+	}
+	bool get_jjTexturedBGStars(bool used) {
+		noop(); return false;
+	}
+	bool set_jjTexturedBGStars(bool used) {
+		noop(); return false;
+	}
+	float get_jjTexturedBGFadePositionX() {
+		noop(); return 0.0f;
+	}
+	float set_jjTexturedBGFadePositionX(float value) {
+		noop(); return 0.0f;
+	}
+	float get_jjTexturedBGFadePositionY() {
+		noop(); return 0.0f;
+	}
+	float set_jjTexturedBGFadePositionY(float value) {
+		noop(); return 0.0f;
+	}
+
+	bool LevelScriptLoader::get_jjTriggers(std::uint8_t id) {
 		//noop();
 
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->GetTrigger(id);
 	}
-	bool LevelScriptLoader::set_jjTriggers(uint8_t id, bool value) {
+	bool LevelScriptLoader::set_jjTriggers(std::uint8_t id, bool value) {
 		//noop();
 
 		auto ctx = asGetActiveContext();
@@ -2008,7 +2289,7 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->SetTrigger(id, value);
 		return value;
 	}
-	bool LevelScriptLoader::jjSwitchTrigger(uint8_t id) {
+	bool LevelScriptLoader::jjSwitchTrigger(std::uint8_t id) {
 		//noop();
 
 		auto ctx = asGetActiveContext();
@@ -2017,14 +2298,27 @@ namespace Jazz2::Scripting
 		return _this->_levelHandler->GetTrigger(id);
 	}
 
-	bool isNumberedASFunctionEnabled(uint8_t id) {
-		noop(); return false;
+	bool LevelScriptLoader::isNumberedASFunctionEnabled(std::uint8_t id) {
+		//noop();
+		
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		return _this->_enabledCallbacks[id];
 	}
-	bool setNumberedASFunctionEnabled(uint8_t id, bool value) {
-		noop(); return false;
+	bool LevelScriptLoader::setNumberedASFunctionEnabled(std::uint8_t id, bool value) {
+		//noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_enabledCallbacks.set(id, value);
+		return value;
 	}
-	void reenableAllNumberedASFunctions() {
-		noop();
+	void LevelScriptLoader::reenableAllNumberedASFunctions() {
+		//noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_enabledCallbacks.setAll();
 	}
 
 	float getWaterLevel() {
@@ -2042,13 +2336,13 @@ namespace Jazz2::Scripting
 	float set_waterChangeSpeed(float value) {
 		noop(); return 0;
 	}
-	int32_t get_waterLayer() {
+	std::int32_t get_waterLayer() {
 		noop(); return 0;
 	}
-	int32_t set_waterLayer(int32_t value) {
+	std::int32_t set_waterLayer(std::int32_t value) {
 		noop(); return 0;
 	}
-	void setWaterGradient(uint8_t red1, uint8_t green1, uint8_t blue1, uint8_t red2, uint8_t green2, uint8_t blue2) {
+	void setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2) {
 		noop();
 	}
 	// TODO: void setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2)
@@ -2059,7 +2353,7 @@ namespace Jazz2::Scripting
 		noop();
 	}
 
-	void triggerRock(uint8_t id) {
+	void triggerRock(std::uint8_t id) {
 		noop();
 	}
 
@@ -2075,20 +2369,20 @@ namespace Jazz2::Scripting
 
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->BeginLevelChange(nullptr, exitType, { });
+		_this->_levelHandler->BeginLevelChange(nullptr, exitType, {});
 	}
 
-	bool getEnabledTeam(uint8_t team) {
+	bool getEnabledTeam(std::uint8_t team) {
 		noop(); return false;
 	}
 
-	bool getKeyDown(uint8_t key) {
+	bool getKeyDown(std::uint8_t key) {
 		noop(); return false;
 	}
-	int32_t getCursorX() {
+	std::int32_t getCursorX() {
 		noop(); return 0;
 	}
-	int32_t getCursorY() {
+	std::int32_t getCursorY() {
 		noop(); return 0;
 	}
 
@@ -2147,19 +2441,19 @@ namespace Jazz2::Scripting
 #endif
 	}
 
-	void playSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) {
+	void playSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency) {
 		noop();
 	}
-	int32_t playLoopedSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) {
+	int32_t playLoopedSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency) {
 		noop(); return 0;
 	}
-	void playPrioritySample(int32_t sample) {
+	void playPrioritySample(std::int32_t sample) {
 		noop();
 	}
-	bool isSampleLoaded(int32_t sample) {
+	bool isSampleLoaded(std::int32_t sample) {
 		noop(); return false;
 	}
-	bool loadSample(int32_t sample, const String& filename) {
+	bool loadSample(std::int32_t sample, const String& filename) {
 		noop(); return false;
 	}
 
@@ -2172,110 +2466,110 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	int32_t GetEvent(uint16_t tx, uint16_t ty) {
+	std::int32_t GetEvent(std::uint16_t tx, std::uint16_t ty) {
 		noop(); return 0;
 	}
-	int32_t GetEventParamWrapper(uint16_t tx, uint16_t ty, int32_t offset, int32_t length) {
+	std::int32_t GetEventParamWrapper(std::uint16_t tx, std::uint16_t ty, std::int32_t offset, std::int32_t length) {
 		noop(); return 0;
 	}
-	void SetEventByte(uint16_t tx, uint16_t ty, uint8_t newEventId) {
+	void SetEventByte(std::uint16_t tx, std::uint16_t ty, std::uint8_t newEventId) {
 		noop();
 	}
-	void SetEventParam(uint16_t tx, uint16_t ty, int8_t offset, int8_t length, int32_t newValue) {
+	void SetEventParam(std::uint16_t tx, std::uint16_t ty, std::int8_t offset, std::int8_t length, std::int32_t newValue) {
 		noop();
 	}
-	int8_t GetTileType(uint16_t tile) {
+	std::int8_t GetTileType(std::uint16_t tile) {
 		noop(); return 0;
 	}
-	int8_t SetTileType(uint16_t tile, uint16_t value) {
+	std::int8_t SetTileType(std::uint16_t tile, std::uint16_t value) {
 		noop(); return 0;
 	}
 
 	// TODO
 
-	uint16_t jjGetStaticTile(uint16_t tileID) {
+	std::uint16_t jjGetStaticTile(std::uint16_t tileID) {
 		noop();
 		return 0;
 	}
-	uint16_t jjTileGet(uint8_t layer, int32_t xTile, int32_t yTile) {
+	std::uint16_t jjTileGet(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile) {
 		noop();
 		return 0;
 	}
-	uint16_t jjTileSet(uint8_t layer, int32_t xTile, int32_t yTile, uint16_t newTile) {
+	std::uint16_t jjTileSet(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile, std::uint16_t newTile) {
 		noop();
 		return 0;
 	}
-	void jjGenerateSettableTileArea(uint8_t layer, int32_t xTile, int32_t yTile, int32_t width, int32_t height) {
+	void jjGenerateSettableTileArea(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile, std::int32_t width, std::int32_t height) {
 		noop();
 	}
 
 	// TODO
 
-	bool jjMaskedPixel(int32_t xPixel, int32_t yPixel) {
+	bool jjMaskedPixel(std::int32_t xPixel, std::int32_t yPixel) {
 		noop();
 		return false;
 	}
-	bool jjMaskedPixelLayer(int32_t xPixel, int32_t yPixel, uint8_t layer) {
+	bool jjMaskedPixelLayer(std::int32_t xPixel, std::int32_t yPixel, std::uint8_t layer) {
 		noop();
 		return false;
 	}
-	bool jjMaskedHLine(int32_t xPixel, int32_t lineLength, int32_t yPixel) {
+	bool jjMaskedHLine(std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel) {
 		noop();
 		return false;
 	}
-	bool jjMaskedHLineLayer(int32_t xPixel, int32_t lineLength, int32_t yPixel, uint8_t layer) {
+	bool jjMaskedHLineLayer(std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel, std::uint8_t layer) {
 		noop();
 		return false;
 	}
-	bool jjMaskedVLine(int32_t xPixel, int32_t yPixel, int32_t lineLength) {
+	bool jjMaskedVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength) {
 		noop();
 		return false;
 	}
-	bool jjMaskedVLineLayer(int32_t xPixel, int32_t yPixel, int32_t lineLength, uint8_t layer) {
+	bool jjMaskedVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer) {
 		noop();
 		return false;
 	}
-	bool jjMaskedTopVLine(int32_t xPixel, int32_t yPixel, int32_t lineLength) {
+	bool jjMaskedTopVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength) {
 		noop();
 		return false;
 	}
-	bool jjMaskedTopVLineLayer(int32_t xPixel, int32_t yPixel, int32_t lineLength, uint8_t layer) {
+	bool jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer) {
 		noop();
 		return false;
 	}
 
 	// TODO
 
-	void jjSetModPosition(int32_t order, int32_t row, bool reset) {
+	void jjSetModPosition(std::int32_t order, std::int32_t row, bool reset) {
 		noop();
 	}
-	void jjSlideModChannelVolume(int32_t channel, float volume, int32_t milliseconds) {
+	void jjSlideModChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds) {
 		noop();
 	}
-	int32_t jjGetModOrder() {
-		noop();
-		return 0;
-	}
-	int32_t jjGetModRow() {
+	std::int32_t jjGetModOrder() {
 		noop();
 		return 0;
 	}
-	int32_t jjGetModTempo() {
+	std::int32_t jjGetModRow() {
 		noop();
 		return 0;
 	}
-	void jjSetModTempo(uint8_t speed) {
-		noop();
-	}
-	int32_t jjGetModSpeed() {
+	std::int32_t jjGetModTempo() {
 		noop();
 		return 0;
 	}
-	void jjSetModSpeed(uint8_t speed) {
+	void jjSetModTempo(std::uint8_t speed) {
+		noop();
+	}
+	std::int32_t jjGetModSpeed() {
+		noop();
+		return 0;
+	}
+	void jjSetModSpeed(std::uint8_t speed) {
 		noop();
 	}
 
-	uint32_t getCustomSetID(uint8_t index) {
+	std::uint32_t getCustomSetID(std::uint8_t index) {
 		noop();
 		return mCOUNT + index;
 	}

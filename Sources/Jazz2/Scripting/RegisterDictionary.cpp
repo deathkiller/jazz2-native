@@ -6,6 +6,8 @@
 
 #include <new>
 
+#define AS_USE_ACCESSORS 1
+
 using namespace Death::Containers::Literals;
 
 namespace Jazz2::Scripting

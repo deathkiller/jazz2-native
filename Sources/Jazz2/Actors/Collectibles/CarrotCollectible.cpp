@@ -34,11 +34,11 @@ namespace Jazz2::Actors::Collectibles
 	{
 		if (_maxCarrot) {
 			player->AddHealth(-1);
-			player->SetInvulnerability(5.0f * FrameTimer::FramesPerSecond, true);
+			player->SetInvulnerability(5.0f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
 			CollectibleBase::OnCollect(player);
 		} else {
 			if (player->AddHealth(1)) {
-				player->SetInvulnerability(0.8f * FrameTimer::FramesPerSecond, true);
+				player->SetInvulnerability(0.8f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
 				CollectibleBase::OnCollect(player);
 			}
 		}

@@ -594,10 +594,10 @@ namespace Jazz2::Multiplayer
 		//LevelHandler::HandleGameOver(player);
 	}
 
-	bool MultiLevelHandler::HandlePlayerDied(Actors::Player* player)
+	bool MultiLevelHandler::HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider)
 	{
 		// TODO: Remove this override
-		return LevelHandler::HandlePlayerDied(player);
+		return LevelHandler::HandlePlayerDied(player, collider);
 	}
 
 	void MultiLevelHandler::HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType)

@@ -20,14 +20,14 @@
 
 #include "../../nCine/Base/Random.h"
 
+// Without namespace for shorter log messages
+static void asScript(String& msg)
+{
+	LOGI("%s", msg.data());
+}
+
 namespace Jazz2::Scripting
 {
-	// Without namespace for shorter log messages
-	static void asScript(String& msg)
-	{
-		LOGI("%s", msg.data());
-	}
-
 	static float asFractionf(float v)
 	{
 		float intPart;
@@ -51,7 +51,8 @@ namespace Jazz2::Scripting
 
 	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath)
 		: _levelHandler(levelHandler), _onLevelUpdate(nullptr), _onLevelUpdateLastFrame(-1), _onDrawAmmo(nullptr),
-			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr)
+			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
+			_enabledCallbacks(NoInit, 256)
 	{
 		// Try to load the script
 		HashMap<String, bool> DefinedSymbols = {
@@ -120,6 +121,9 @@ namespace Jazz2::Scripting
 
 		std::int32_t r = Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
 
+		// Enable all callbacks by default
+		_enabledCallbacks.setAll();
+
 		switch (_scriptContextType) {
 			case ScriptContextType::Legacy:
 				_onLevelUpdate = _module->GetFunctionByDecl("void onMain()");
@@ -141,14 +145,14 @@ namespace Jazz2::Scripting
 	{
 		// Skip MLLE files, because it's handled natively
 		if (includePath.hasPrefix("MLLE-Include-"_s) && includePath.hasSuffix(".asc"_s)) {
-			return { };
+			return {};
 		}
 
 		// TODO: Allow multiple search paths
 		//return ConstructPath(includePath, path);
 
 		auto sourcePath = ContentResolver::Get().GetSourcePath();
-		return fs::CombinePath(sourcePath, includePath);
+		return fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, includePath));
 	}
 
 	void LevelScriptLoader::OnProcessPragma(const StringView& content, ScriptContextType& contextType)
@@ -221,7 +225,7 @@ namespace Jazz2::Scripting
 
 				if (_onLevelUpdate == nullptr && onPlayer == nullptr) {
 					_onLevelUpdateLastFrame = (std::int32_t)_levelHandler->_elapsedFrames;
-					return;
+					break;
 				}
 
 				// Legacy context requires fixed frame count per second
@@ -265,7 +269,7 @@ namespace Jazz2::Scripting
 			case ScriptContextType::Standard: {
 				_onLevelUpdateLastFrame = (int32_t)_levelHandler->_elapsedFrames;
 				if (_onLevelUpdate == nullptr) {
-					return;
+					break;
 				}
 
 				// Standard context supports floating frame rate
@@ -283,12 +287,67 @@ namespace Jazz2::Scripting
 				break;
 			}
 		}
+
+		for (auto* player : _levelHandler->_players) {
+			auto it = _playerBackingStore.find(player->GetPlayerIndex());
+			if (it != _playerBackingStore.end()) {
+				if (it->second.TimerState == 1) { // STARTED
+					it->second.TimerLeft -= timeMult;
+					LOGD("Player timer decremented (%f)", it->second.TimerLeft);
+					if (it->second.TimerLeft <= 0.0f) {
+						it->second.TimerState = 0; // STOPPED
+						asIScriptFunction* func = (asIScriptFunction*)it->second.TimerCallback;
+						if (func == nullptr) {
+							func = _module->GetFunctionByName("onPlayerTimerEnd");
+							if (func == nullptr) {
+								continue;
+							}
+						}
+
+						asIScriptContext* ctx = _engine->RequestContext();
+						ctx->Prepare(func);
+
+						jjPLAYER* playerWrapper = nullptr;
+						std::int32_t typeId = 0;
+						if (func->GetParam(0, &typeId) >= 0) {
+							if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
+								asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
+								if (typeInfo->GetName() == "jjPLAYER"_s) {
+									playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
+									ctx->SetArgObject(0, playerWrapper);
+								}
+							}
+						}
+
+						std::int32_t r = ctx->Execute();
+						if (r == asEXECUTION_EXCEPTION) {
+							LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+						}
+
+						_engine->ReturnContext(ctx);
+
+						if (playerWrapper != nullptr) {
+							playerWrapper->Release();
+						}
+					}
+				}
+			}
+		}
 	}
 
 	void LevelScriptLoader::OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams)
 	{
+		std::uint32_t callbackId = eventParams[0];
+		if (!_enabledCallbacks[callbackId]) {
+			return;
+		}
+
+		if (eventParams[2]) { // Vanish
+			_enabledCallbacks.reset(callbackId);
+		}
+
 		char funcName[32];
-		formatString(funcName, sizeof(funcName), "onFunction%i", eventParams[0]);
+		formatString(funcName, sizeof(funcName), "onFunction%i", callbackId);
 		asIScriptFunction* func = _module->GetFunctionByName(funcName);
 		if (func != nullptr) {
 			asIScriptContext* ctx = _engine->RequestContext();
@@ -301,8 +360,13 @@ namespace Jazz2::Scripting
 				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
 					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
-						playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, _levelHandler->_players[0]);
-						ctx->SetArgObject(0, playerWrapper);
+						if (auto* player = runtime_cast<Actors::Player*>(initiator)) {
+							playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
+							ctx->SetArgObject(0, playerWrapper);
+						} else {
+							// Player is required but wasn't provided
+							return;
+						}
 					}
 					paramIdx++;
 				}
@@ -372,7 +436,7 @@ namespace Jazz2::Scripting
 		LOGW("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
 	}
 
-	bool LevelScriptLoader::OnDraw(UI::HUD* hud, DrawType type)
+	bool LevelScriptLoader::OnDraw(UI::HUD* hud, Actors::Player* player, const Rectf& view, DrawType type)
 	{
 		asIScriptFunction* func;
 		switch (type) {
@@ -390,10 +454,10 @@ namespace Jazz2::Scripting
 			asIScriptContext* ctx = _engine->RequestContext();
 			ctx->Prepare(func);
 
-			jjPLAYER* playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, _levelHandler->_players[0]);
+			jjPLAYER* playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
 			ctx->SetArgObject(0, playerWrapper);
 
-			jjCANVAS* canvasWrapper = new(asAllocMem(sizeof(jjCANVAS))) jjCANVAS(); // TODO
+			jjCANVAS* canvasWrapper = new(asAllocMem(sizeof(jjCANVAS))) jjCANVAS(hud, view); // TODO: Cache this object ???
 			ctx->SetArgObject(1, canvasWrapper);
 
 			std::int32_t r = ctx->Execute();
@@ -407,6 +471,63 @@ namespace Jazz2::Scripting
 		}
 		
 		return overrideDraw;
+	}
+
+	void LevelScriptLoader::OnPlayerDied(Actors::Player* player, Actors::ActorBase* collider)
+	{
+		auto it = _playerBackingStore.find(player->GetPlayerIndex());
+		if (it != _playerBackingStore.end()) {
+			if (!it->second.TimerPersists) {
+				it->second.TimerState = 0; // STOPPED
+			}
+		}
+
+		asIScriptFunction* func = _module->GetFunctionByName("onRoast");
+		if (func != nullptr) {
+			asIScriptContext* ctx = _engine->RequestContext();
+			ctx->Prepare(func);
+
+			jjPLAYER* playerWrapper = nullptr;
+			jjPLAYER* killerWrapper = nullptr;
+			std::int32_t typeId = 0;
+			if (func->GetParam(0, &typeId) >= 0) {
+				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
+					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
+					if (typeInfo->GetName() == "jjPLAYER"_s) {
+						playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
+						ctx->SetArgObject(0, playerWrapper);
+					}
+				}
+			}
+			if (func->GetParam(1, &typeId) >= 0) {
+				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
+					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
+					if (typeInfo->GetName() == "jjPLAYER"_s) {
+						// TODO: Detect weapons properly
+						if (auto* killer = runtime_cast<Actors::Player*>(collider)) {
+							killerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, killer);
+							ctx->SetArgObject(0, killerWrapper);
+						} else {
+							ctx->SetArgObject(0, nullptr);
+						}
+					}
+				}
+			}
+
+			std::int32_t r = ctx->Execute();
+			if (r == asEXECUTION_EXCEPTION) {
+				LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			}
+
+			_engine->ReturnContext(ctx);
+
+			if (playerWrapper != nullptr) {
+				playerWrapper->Release();
+			}
+			if (killerWrapper != nullptr) {
+				killerWrapper->Release();
+			}
+		}
 	}
 
 	void LevelScriptLoader::RegisterBuiltInFunctions(asIScriptEngine* engine)
@@ -460,12 +581,12 @@ namespace Jazz2::Scripting
 		//engine->RegisterGlobalFunction("bool jjIsValidCheat(const string &in text)", asFUNCTION(stringIsCheat), asCALL_CDECL);
 		//engine->RegisterGlobalProperty("const bool jjDebugF10", &F10Debug);
 
-		//engine->RegisterGlobalFunction("bool jjRegexIsValid(const string &in expression)", asFUNCTION(regexIsValid), asCALL_CDECL);
-		//engine->RegisterGlobalFunction("bool jjRegexMatch(const string &in text, const string &in expression, bool ignoreCase = false)", asFUNCTION(regexMatch), asCALL_CDECL);
-		//engine->RegisterGlobalFunction("bool jjRegexMatch(const string &in text, const string &in expression, array<string> &out results, bool ignoreCase = false)", asFUNCTION(regexMatchWithResults), asCALL_CDECL);
-		//engine->RegisterGlobalFunction("bool jjRegexSearch(const string &in text, const string &in expression, bool ignoreCase = false)", asFUNCTION(regexSearch), asCALL_CDECL);
-		//engine->RegisterGlobalFunction("bool jjRegexSearch(const string &in text, const string &in expression, array<string> &out results, bool ignoreCase = false)", asFUNCTION(regexSearchWithResults), asCALL_CDECL);
-		//engine->RegisterGlobalFunction("string jjRegexReplace(const string &in text, const string &in expression, const string &in replacement, bool ignoreCase= false)", asFUNCTION(regexReplace), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjRegexIsValid(const string &in expression)", asFUNCTION(jjRegexIsValid), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjRegexMatch(const string &in text, const string &in expression, bool ignoreCase = false)", asFUNCTION(jjRegexMatch), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjRegexMatch(const string &in text, const string &in expression, array<string> &out results, bool ignoreCase = false)", asFUNCTION(jjRegexMatchWithResults), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjRegexSearch(const string &in text, const string &in expression, bool ignoreCase = false)", asFUNCTION(jjRegexSearch), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjRegexSearch(const string &in text, const string &in expression, array<string> &out results, bool ignoreCase = false)", asFUNCTION(jjRegexSearchWithResults), asCALL_CDECL);
+		engine->RegisterGlobalFunction("string jjRegexReplace(const string &in text, const string &in expression, const string &in replacement, bool ignoreCase= false)", asFUNCTION(jjRegexReplace), asCALL_CDECL);
 
 		engine->RegisterGlobalProperty("const int jjGameTicks", &_onLevelUpdateLastFrame);
 		engine->RegisterGlobalProperty("const uint jjActiveGameTicks", &gameTicksSpentWhileActive);
@@ -617,8 +738,10 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "int get_gems(GEM::Color) const", asMETHOD(jjPLAYER, get_gems), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_gems(GEM::Color, int)", asMETHOD(jjPLAYER, set_gems), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool testForGems(int numberOfGems, GEM::Color type)", asMETHOD(jjPLAYER, testForGems), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "int shieldType", asOFFSET(jjPLAYER, shieldType));
-		engine->RegisterObjectProperty("jjPLAYER", "int shieldTime", asOFFSET(jjPLAYER, shieldTime));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_shieldType() const", asMETHOD(jjPLAYER, get_shieldType), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_shieldType(int)", asMETHOD(jjPLAYER, set_shieldType), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_shieldTime() const", asMETHOD(jjPLAYER, get_shieldTime), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_shieldTime(int)", asMETHOD(jjPLAYER, set_shieldTime), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "int ballTime", asOFFSET(jjPLAYER, rolling));
 		engine->RegisterObjectProperty("jjPLAYER", "int boss", asOFFSET(jjPLAYER, bossNumber));
 		engine->RegisterObjectProperty("jjPLAYER", "bool bossActivated", asOFFSET(jjPLAYER, bossActive));
@@ -921,12 +1044,11 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectBehaviour("jjPAL", asBEHAVE_RELEASE, "void f()", asMETHOD(jjPAL, Release), asCALL_THISCALL);
 		engine->RegisterGlobalProperty("jjPAL jjPalette", &jjPalette);
 		engine->RegisterGlobalProperty("const jjPAL jjBackupPalette", &jjBackupPalette);
-		// TODO
-		/*engine->RegisterObjectMethod("jjPAL", "jjPAL& opAssign(const jjPAL &in)", asMETHOD(Tpalette, operator=), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPAL", "bool opEquals(const jjPAL &in) const", asMETHOD(Tpalette, operator==), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPAL", "jjPALCOLOR& get_color(uint8)", asMETHOD(Tpalette, getColor), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPAL", "const jjPALCOLOR& get_color(uint8) const", asMETHOD(Tpalette, getConstColor), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPAL", "jjPALCOLOR& set_color(uint8, const jjPALCOLOR &in)", asMETHOD(Tpalette, setColorEntry), asCALL_THISCALL);*/
+		engine->RegisterObjectMethod("jjPAL", "jjPAL& opAssign(const jjPAL &in)", asMETHOD(jjPAL, operator=), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPAL", "bool opEquals(const jjPAL &in) const", asMETHOD(jjPAL, operator==), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPAL", "jjPALCOLOR& get_color(uint8)", asMETHOD(jjPAL, getColor), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPAL", "const jjPALCOLOR& get_color(uint8) const", asMETHOD(jjPAL, getConstColor), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPAL", "jjPALCOLOR& set_color(uint8, const jjPALCOLOR &in)", asMETHOD(jjPAL, setColorEntry), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPAL", "void reset()", asMETHOD(jjPAL, reset), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPAL", "void apply() const", asMETHOD(jjPAL, apply), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPAL", "bool load(string &in filename)", asMETHOD(jjPAL, load), asCALL_THISCALL);
@@ -1103,8 +1225,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Style", "REFLECTION", tbgModeREFLECTION);
 		engine->SetDefaultNamespace("");
 
-		// TODO
-		/*engine->RegisterGlobalFunction("void jjSetDarknessColor(jjPALCOLOR color = jjPALCOLOR())", asFUNCTION(jjSetDarknessColor), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjSetDarknessColor(jjPALCOLOR color = jjPALCOLOR())", asFUNCTION(jjSetDarknessColor), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 red, uint8 green, uint8 blue)", asFUNCTION(jjSetFadeColors), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 paletteColorID = 207)", asFUNCTION(jjSetFadeColorsFromPalette), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetFadeColors(jjPALCOLOR color)", asFUNCTION(jjSetFadeColorsFromPalcolor), asCALL_CDECL);
@@ -1118,8 +1239,10 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("bool set_jjTexturedBGUsed(bool)", asFUNCTION(set_jjTexturedBGUsed), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool get_jjTexturedBGStars()", asFUNCTION(get_jjTexturedBGStars), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool set_jjTexturedBGStars(bool)", asFUNCTION(set_jjTexturedBGStars), asCALL_CDECL);
-		engine->RegisterGlobalProperty("float jjTexturedBGFadePositionX", &(BackgroundLayer.WARPHORIZON.FadePosition[0]));
-		engine->RegisterGlobalProperty("float jjTexturedBGFadePositionY", &(BackgroundLayer.WARPHORIZON.FadePosition[1]));*/
+		engine->RegisterGlobalFunction("float get_jjTexturedBGFadePositionX()", asFUNCTION(get_jjTexturedBGFadePositionX), asCALL_CDECL);
+		engine->RegisterGlobalFunction("float set_jjTexturedBGFadePositionX(float value)", asFUNCTION(set_jjTexturedBGFadePositionX), asCALL_CDECL);
+		engine->RegisterGlobalFunction("float get_jjTexturedBGFadePositionY()", asFUNCTION(get_jjTexturedBGFadePositionY), asCALL_CDECL);
+		engine->RegisterGlobalFunction("float set_jjTexturedBGFadePositionY(float value)", asFUNCTION(set_jjTexturedBGFadePositionY), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("SNOWING");
 		engine->RegisterEnum("Type");
@@ -1486,69 +1609,69 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Type", "TILE", particleTILE);
 		engine->SetDefaultNamespace("");
 
-		// TODO
-		/*engine->RegisterObjectType("jjPARTICLE", sizeof(Tparticle), asOBJ_REF | asOBJ_NOCOUNT);
-		engine->RegisterGlobalFunction("jjPARTICLE @get_jjParticles(int)", asFUNCTION(getParticle), asCALL_CDECL);
+		engine->RegisterObjectType("jjPARTICLE", sizeof(jjPARTICLE), asOBJ_REF | asOBJ_NOCOUNT);
+		engine->RegisterGlobalFunction("jjPARTICLE @get_jjParticles(int)", asFUNCTION(GetParticle), asCALL_CDECL);
 		engine->RegisterGlobalFunction("jjPARTICLE @jjAddParticle(PARTICLE::Type type)", asFUNCTION(AddParticle), asCALL_CDECL);
-		REGISTER_FLOAT_PROPERTY("jjPARTICLE", "xPos", Tparticle, xPos);
-		REGISTER_FLOAT_PROPERTY("jjPARTICLE", "yPos", Tparticle, yPos);
-		REGISTER_FLOAT_PROPERTY("jjPARTICLE", "xSpeed", Tparticle, xSpeed);
-		REGISTER_FLOAT_PROPERTY("jjPARTICLE", "ySpeed", Tparticle, ySpeed);
-		engine->RegisterObjectProperty("jjPARTICLE", "uint8 type", asOFFSET(Tparticle, particleType));
-		engine->RegisterObjectProperty("jjPARTICLE", "bool isActive", asOFFSET(Tparticle, active));
-		engine->RegisterObjectType("jjPARTICLEPIXEL", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
+		engine->RegisterObjectProperty("jjPARTICLE", "float xPos", asOFFSET(jjPARTICLE, xPos));
+		engine->RegisterObjectProperty("jjPARTICLE", "float yPos", asOFFSET(jjPARTICLE, yPos));
+		engine->RegisterObjectProperty("jjPARTICLE", "float xSpeed", asOFFSET(jjPARTICLE, xSpeed));
+		engine->RegisterObjectProperty("jjPARTICLE", "float ySpeed", asOFFSET(jjPARTICLE, ySpeed));
+		engine->RegisterObjectProperty("jjPARTICLE", "uint8 type", asOFFSET(jjPARTICLE, particleType));
+		engine->RegisterObjectProperty("jjPARTICLE", "bool isActive", asOFFSET(jjPARTICLE, active));
+		// TODO
+		/*engine->RegisterObjectType("jjPARTICLEPIXEL", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLEPIXEL", "uint8 size", -2);
 		engine->RegisterObjectMethod("jjPARTICLEPIXEL", "uint8 get_color(int) const", asMETHOD(TparticlePIXEL, get_color), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPARTICLEPIXEL", "uint8 set_color(int, uint8)", asMETHOD(TparticlePIXEL, set_color), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEPIXEL pixel", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEPIXEL pixel", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLEFIRE", 9, asOBJ_VALUE | asOBJ_POD);  // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 size", -2);
 		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 color", 0);
 		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 colorStop", 1);
 		engine->RegisterObjectProperty("jjPARTICLEFIRE", "int8 colorDelta", 2);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEFIRE fire", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEFIRE fire", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLESMOKE", 9, asOBJ_VALUE | asOBJ_POD);  // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLESMOKE", "uint8 countdown", 0);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESMOKE smoke", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESMOKE smoke", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLEICETRAIL", 9, asOBJ_VALUE | asOBJ_POD);
 		engine->RegisterObjectProperty("jjPARTICLEICETRAIL", "uint8 color", 0);
 		engine->RegisterObjectProperty("jjPARTICLEICETRAIL", "uint8 colorStop", 1);
 		engine->RegisterObjectProperty("jjPARTICLEICETRAIL", "int8 colorDelta", 2);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEICETRAIL icetrail", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEICETRAIL icetrail", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLESPARK", 9, asOBJ_VALUE | asOBJ_POD);  // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLESPARK", "uint8 color", 0);
 		engine->RegisterObjectProperty("jjPARTICLESPARK", "uint8 colorStop", 1);
 		engine->RegisterObjectProperty("jjPARTICLESPARK", "int8 colorDelta", 2);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESPARK spark", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESPARK spark", asOFFSET(jjPARTICLE, GENERIC));*/
 		engine->RegisterObjectType("jjPARTICLESTRING", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
-		engine->RegisterObjectMethod("jjPARTICLESTRING", "::string get_text() const", asMETHOD(TparticleSCORE, get_text), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPARTICLESTRING", "void set_text(::string)", asMETHOD(TparticleSCORE, set_text), asCALL_THISCALL);
-
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESTRING string", asOFFSET(Tparticle, GENERIC));
-		engine->RegisterObjectType("jjPARTICLESNOW", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
+		engine->RegisterObjectMethod("jjPARTICLESTRING", "::string get_text() const", asMETHOD(jjPARTICLESTRING, get_text), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPARTICLESTRING", "void set_text(::string)", asMETHOD(jjPARTICLESTRING, set_text), asCALL_THISCALL);
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESTRING string", asOFFSET(jjPARTICLE, /*GENERIC*/string));
+		// TODO
+		/*engine->RegisterObjectType("jjPARTICLESNOW", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 frame", 0);
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 countup", 1);
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 countdown", 2);
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint16 frameBase", -7);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESNOW snow", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESNOW snow", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLERAIN", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLERAIN", "uint8 frame", 0);
 		engine->RegisterObjectProperty("jjPARTICLERAIN", "uint16 frameBase", -7);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLERAIN rain", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLERAIN rain", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLELEAF", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 frame", 0);
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 countup", 1);
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "bool noclip", 2);
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 height", 3);
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint16 frameBase", -7);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLELEAF leaf", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLELEAF leaf", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLEFLOWER", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 size", -2);
 		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 color", 0);
 		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 angle", 1);
 		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "int8 angularSpeed", 2);
 		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 petals", 3);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEFLOWER flower", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEFLOWER flower", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLESTAR", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 size", -2);
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 color", 0);
@@ -1557,13 +1680,13 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 frame", 3);
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 colorChangeCounter", 4);
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 colorChangeInterval", 5);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESTAR star", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESTAR star", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLETILE", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLETILE", "uint8 quadrant", 0);
 
 		engine->RegisterObjectMethod("jjPARTICLETILE", "uint16 get_tileID() const", asMETHOD(TparticleTILE, get_AStile), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPARTICLETILE", "uint16 set_tileID(uint16)", asMETHOD(TparticleTILE, set_AStile), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLETILE tile", asOFFSET(Tparticle, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLETILE tile", asOFFSET(jjPARTICLE, GENERIC));
 
 		engine->RegisterObjectType("jjCONTROLPOINT", sizeof(_controlPoint), asOBJ_REF | asOBJ_NOCOUNT);
 		engine->RegisterGlobalFunction("const jjCONTROLPOINT@ get_jjControlPoints(int)", asFUNCTION(getControlPoint), asCALL_CDECL);
@@ -1626,17 +1749,17 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("bool jjTakeScreenshot(const string &in filename = '')", asFUNCTION(requestScreenshot), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjZlibCompress(const jjSTREAM &in input, jjSTREAM &out output)", asFUNCTION(streamCompress), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjZlibUncompress(const jjSTREAM &in input, jjSTREAM &out output, uint size)", asFUNCTION(streamUncompress), asCALL_CDECL);
-		engine->RegisterGlobalFunction("uint jjCRC32(const jjSTREAM &in input, uint crc = 0)", asFUNCTION(streamCRC32), asCALL_CDECL);
+		engine->RegisterGlobalFunction("uint jjCRC32(const jjSTREAM &in input, uint crc = 0)", asFUNCTION(streamCRC32), asCALL_CDECL);*/
 
 		engine->RegisterObjectType("jjRNG", sizeof(jjRNG), asOBJ_REF);
-		engine->RegisterObjectBehaviour("jjRNG", asBEHAVE_FACTORY, "jjRNG@ f(uint64 seed = 5489)", asFUNCTION(jjRNG::factory), asCALL_CDECL);
-		engine->RegisterObjectBehaviour("jjRNG", asBEHAVE_ADDREF, "void f()", asMETHOD(jjRNG, addRef), asCALL_THISCALL);
-		engine->RegisterObjectBehaviour("jjRNG", asBEHAVE_RELEASE, "void f()", asMETHOD(jjRNG, release), asCALL_THISCALL);
+		engine->RegisterObjectBehaviour("jjRNG", asBEHAVE_FACTORY, "jjRNG@ f(uint64 seed = 5489)", asFUNCTION(jjRNG::Create), asCALL_CDECL);
+		engine->RegisterObjectBehaviour("jjRNG", asBEHAVE_ADDREF, "void f()", asMETHOD(jjRNG, AddRef), asCALL_THISCALL);
+		engine->RegisterObjectBehaviour("jjRNG", asBEHAVE_RELEASE, "void f()", asMETHOD(jjRNG, Release), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjRNG", "uint64 opCall()", asMETHOD(jjRNG, operator()), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjRNG", "jjRNG& opAssign(const jjRNG &in)", asMETHOD(jjRNG, operator=), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjRNG", "bool opEquals(const jjRNG &in) const", asMETHOD(jjRNG, operator==), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjRNG", "void seed(uint64 value = 5489)", asMETHOD(jjRNG, seed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjRNG", "void discard(uint64 count = 1)", asMETHOD(jjRNG, discard), asCALL_THISCALL);*/
+		engine->RegisterObjectMethod("jjRNG", "void discard(uint64 count = 1)", asMETHOD(jjRNG, discard), asCALL_THISCALL);
 
 		engine->RegisterInterface("jjPUBLICINTERFACE");
 		engine->RegisterInterfaceMethod("jjPUBLICINTERFACE", "string getVersion() const");
@@ -1827,12 +1950,12 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "bool get_blur() const", asMETHOD(jjLAYER, GetStars), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "bool set_blur(bool)", asMETHOD(jjLAYER, SetStars), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjLAYERREFLECTION", "uint8 tintColor", asOFFSET(jjLAYER, REFLECTION.OverlayColor));
-		engine->RegisterObjectProperty("jjLAYER", "jjLAYERREFLECTION reflection", asOFFSET(jjLAYER, REFLECTION));
+		engine->RegisterObjectProperty("jjLAYER", "jjLAYERREFLECTION reflection", asOFFSET(jjLAYER, REFLECTION));*/
 
 		engine->RegisterObjectMethod("jjLAYER", "TEXTURE::Style get_textureStyle() const", asMETHOD(jjLAYER, GetTextureMode), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjLAYER", "void set_textureStyle(TEXTURE::Style)", asMETHOD(jjLAYER, SetTextureMode), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjLAYER", "TEXTURE::Texture get_texture() const", asMETHOD(jjLAYER, GetTexture), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjLAYER", "void set_texture(TEXTURE::Texture)", asMETHOD(jjLAYER, SetTexture), asCALL_THISCALL);*/
+		engine->RegisterObjectMethod("jjLAYER", "void set_texture(TEXTURE::Texture)", asMETHOD(jjLAYER, SetTexture), asCALL_THISCALL);
 
 		engine->RegisterObjectProperty("jjLAYER", "int rotationAngle", asOFFSET(jjLAYER, rotationAngle));
 		engine->RegisterObjectProperty("jjLAYER", "int rotationRadiusMultiplier", asOFFSET(jjLAYER, rotationRadiusMultiplier));
@@ -1846,20 +1969,20 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("array<jjLAYER@>@ jjLayersFromLevel(const string &in filename, const array<uint> &in layerIDs, int tileIDAdjustmentFactor = 0)", asFUNCTION(jjLAYER::jjLayersFromLevel), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjTilesFromTileset(const string &in filename, uint firstTileID, uint tileCount, const array<uint8>@ paletteColorMapping = null)", asFUNCTION(jjLAYER::jjTilesFromTileset), asCALL_CDECL);
 
-		// TODO
-		/*engine->SetDefaultNamespace("LAYERSPEEDMODEL");
+		engine->SetDefaultNamespace("LAYERSPEEDMODEL");
 		engine->RegisterEnum("LayerSpeedModel");
-		engine->RegisterEnumValue("LayerSpeedModel", "NORMAL", (int)jjLAYER::SpeedMode::Normal);
-		engine->RegisterEnumValue("LayerSpeedModel", "LAYER8", (int)jjLAYER::SpeedMode::Layer8);
-		engine->RegisterEnumValue("LayerSpeedModel", "BOTHSPEEDS", (int)jjLAYER::SpeedMode::BothRelativeAndAutoSpeeds);
-		engine->RegisterEnumValue("LayerSpeedModel", "FROMSTART", (int)jjLAYER::SpeedMode::BothSpeedsButStuckToTopLeftCorner);
-		engine->RegisterEnumValue("LayerSpeedModel", "FITLEVEL", (int)jjLAYER::SpeedMode::FitToLevelAndWindowSize);
-		engine->RegisterEnumValue("LayerSpeedModel", "SPEEDMULTIPLIERS", (int)jjLAYER::SpeedMode::SpeedsAsPercentagesOfWindowSize);
+		engine->RegisterEnumValue("LayerSpeedModel", "NORMAL", 0);
+		engine->RegisterEnumValue("LayerSpeedModel", "LAYER8", 1);
+		engine->RegisterEnumValue("LayerSpeedModel", "BOTHSPEEDS", 2);
+		engine->RegisterEnumValue("LayerSpeedModel", "FROMSTART", 3);
+		engine->RegisterEnumValue("LayerSpeedModel", "FITLEVEL", 4);
+		engine->RegisterEnumValue("LayerSpeedModel", "SPEEDMULTIPLIERS", 5);
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectProperty("jjLAYER", "LAYERSPEEDMODEL::LayerSpeedModel xSpeedModel", asOFFSET(jjLAYER, SpeedModeX));
 		engine->RegisterObjectProperty("jjLAYER", "LAYERSPEEDMODEL::LayerSpeedModel ySpeedModel", asOFFSET(jjLAYER, SpeedModeY));
 
-		engine->SetDefaultNamespace("SURFACE");
+		// TODO
+		/*engine->SetDefaultNamespace("SURFACE");
 		engine->RegisterEnum("Surface");
 		engine->RegisterEnumValue("Surface", "UNTEXTURED", jjLAYER::TextureSurfaceStyles::Untextured);
 		engine->RegisterEnumValue("Surface", "LEGACY", jjLAYER::TextureSurfaceStyles::Legacy);
@@ -3359,6 +3482,13 @@ namespace Jazz2::Scripting
 		return obj2;
 	}
 
+	PlayerBackingStore& LevelScriptLoader::GetPlayerBackingStore(std::int32_t playerIdx)
+	{
+		auto result = _playerBackingStore.try_emplace(playerIdx, PlayerBackingStore{});
+		return result.first->second;
+
+	}
+
 	const SmallVectorImpl<Actors::Player*>& LevelScriptLoader::GetPlayers() const
 	{
 		return _levelHandler->_players;
@@ -3557,6 +3687,11 @@ namespace Jazz2::Scripting
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->SetWeather((WeatherType)weatherType, intensity);
+	}
+
+	PlayerBackingStore::PlayerBackingStore()
+		: TimerCallback(nullptr), TimerState(0), TimerLeft(0.0f), TimerPersists(false)
+	{
 	}
 }
 

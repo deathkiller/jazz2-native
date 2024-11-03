@@ -408,12 +408,10 @@ namespace Jazz2::Actors
 						}
 					}
 				}
-			} else if (_currentTransition == nullptr || _currentTransition->State != AnimState::Hurt) {
-				if (_invulnerableBlinkTime > 0.0f) {
-					_invulnerableBlinkTime -= timeMult;
-				} else {
+			} else if (_invulnerableBlinkTime >= 0.0f && (_currentTransition == nullptr || _currentTransition->State != AnimState::Hurt)) {
+				_invulnerableBlinkTime -= timeMult;
+				if (_invulnerableBlinkTime <= 0.0f) {
 					_renderer.setDrawEnabled(!_renderer.isDrawEnabled());
-
 					_invulnerableBlinkTime = 3.0f;
 				}
 			} else {
@@ -1426,11 +1424,11 @@ namespace Jazz2::Actors
 			SetAnimation(prevState);
 
 			// Morph to original type with animation and then trigger death
-			SetPlayerTransition(AnimState::TransitionFromFrog, false, true, SpecialMoveType::None, [this]() {
-				OnPerishInner();
+			SetPlayerTransition(AnimState::TransitionFromFrog, false, true, SpecialMoveType::None, [this, collider]() {
+				OnPerishInner(collider);
 			});
 		} else {
-			OnPerishInner();
+			OnPerishInner(collider);
 		}
 
 		return false;
@@ -1491,6 +1489,7 @@ namespace Jazz2::Actors
 						removeSpecialMove = true;
 						_speed.Y *= -0.6f;
 						SetState(ActorState::CanJump, false);
+						SetInvulnerability(FrameTimer::FramesPerSecond, InvulnerableType::Transient);
 					} else if (_currentSpecialMove != SpecialMoveType::None && enemy->GetHealth() > 0) {
 						removeSpecialMove = true;
 						_externalForce.X = 0.0f;
@@ -1519,7 +1518,7 @@ namespace Jazz2::Actors
 							_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 						}
 						float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
-						SetInvulnerability(invulnerableTime, false);
+						SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 						PlayPlayerSfx("HurtSoft"_s);
 					} else {
 						TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
@@ -1586,7 +1585,7 @@ namespace Jazz2::Actors
 						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 					}
 					float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
-					SetInvulnerability(invulnerableTime, false);
+					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
 					TakeDamage(1, _speed.X * 0.25f);
@@ -1629,7 +1628,7 @@ namespace Jazz2::Actors
 						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 					}
 					float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
-					SetInvulnerability(invulnerableTime, false);
+					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
 					TakeDamage(1, _speed.X * 0.25f);
@@ -1653,7 +1652,7 @@ namespace Jazz2::Actors
 						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 					}
 					float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
-					SetInvulnerability(invulnerableTime, false);
+					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
 					TakeDamage(1, _speed.X * 0.25f);
@@ -2423,9 +2422,11 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::AreaCallback: { // Function, Param, Vanish
-				_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaCallback, p);
-				if (p[2] != 0) {
-					events->StoreTileEvent((std::int32_t)(_pos.X / 32), (std::int32_t)(_pos.Y / 32), EventType::Empty);
+				// Skip AreaCallbacks if player is currently warping
+				if (_currentTransition == nullptr ||
+					(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpOut &&
+					 _currentTransition->State != AnimState::TransitionWarpInFreefall && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
+					_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaCallback, p);
 				}
 				break;
 			}
@@ -2578,7 +2579,7 @@ namespace Jazz2::Actors
 		return _levelHandler->IsPositionEmpty(this, aabb, params);
 	}
 
-	void Player::OnPerishInner()
+	void Player::OnPerishInner(ActorBase* collider)
 	{
 		_trailLastPos = _pos;
 
@@ -2612,7 +2613,7 @@ namespace Jazz2::Actors
 		SetModifier(Modifier::None);
 		SetShield(ShieldType::None, 0.0f);
 
-		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this]() {
+		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this, collider]() {
 			_speed.X = 0.0f;
 			_speed.Y = 0.0f;
 			_externalForce.X = 0.0f;
@@ -2664,7 +2665,7 @@ namespace Jazz2::Actors
 
 				SetAnimation(AnimState::Idle);
 
-				if (_levelHandler->HandlePlayerDied(this)) {
+				if (_levelHandler->HandlePlayerDied(this, collider)) {
 					// Reset health
 					_health = _maxHealth;
 
@@ -3663,7 +3664,7 @@ namespace Jazz2::Actors
 			});
 
 			float invulnerableTime = (_levelHandler->Difficulty() == GameDifficulty::Multiplayer ? 80.0f : 180.0f);
-			SetInvulnerability(invulnerableTime, false);
+			SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 			PlayPlayerSfx("Hurt"_s);
 			_levelHandler->PlayerExecuteRumble(_playerIndex, "Hurt"_s);
 		} else {
@@ -3676,7 +3677,7 @@ namespace Jazz2::Actors
 		return true;
 	}
 
-	void Player::SetInvulnerability(float time, bool withCircleEffect)
+	void Player::SetInvulnerability(float time, InvulnerableType type)
 	{
 		if (time <= 0.0f) {
 			if (_invulnerableTime > 0.0f) {
@@ -3688,7 +3689,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		if (withCircleEffect) {
+		if (type == InvulnerableType::Shielded) {
 			if (_invulnerableTime > 0.0f) {
 				// If the players is already blinking, show it now
 				_renderer.setDrawEnabled(true);
@@ -3697,6 +3698,7 @@ namespace Jazz2::Actors
 				_shieldSpawnTime = 1.0f;
 			}
 		} else {
+			_invulnerableBlinkTime = (type == InvulnerableType::Transient ? -1.0f : 0.0f);
 			_shieldSpawnTime = ShieldDisabled;
 		}
 

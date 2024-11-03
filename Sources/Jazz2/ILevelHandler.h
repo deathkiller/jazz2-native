@@ -86,7 +86,7 @@ namespace Jazz2
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) = 0;
 		virtual void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) = 0;
 		virtual void HandleGameOver(Actors::Player* player) = 0;
-		virtual bool HandlePlayerDied(Actors::Player* player) = 0;
+		virtual bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) = 0;
 		virtual void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) = 0;
 		virtual void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
 		virtual void HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;

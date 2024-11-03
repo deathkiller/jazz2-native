@@ -30,6 +30,7 @@ namespace Jazz2::UI::Menu
 		GameplayOptionsItemType Type;
 		StringView DisplayName;
 		bool HasBooleanValue;
+		bool IsReadOnly;
 	};
 
 	class GameplayOptionsSection : public ScrollableMenuSection<GameplayOptionsItem>

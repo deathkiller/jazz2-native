@@ -451,8 +451,8 @@ namespace Jazz2::UI
 		}
 
 #if defined(WITH_ANGELSCRIPT)
-		bool shouldDrawHealth = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, Scripting::DrawType::Health));
-		bool shouldDrawLives = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, Scripting::DrawType::Lives));
+		bool shouldDrawHealth = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Health));
+		bool shouldDrawLives = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Lives));
 #else
 		constexpr bool shouldDrawHealth = true;
 		constexpr bool shouldDrawLives = true;
@@ -466,7 +466,8 @@ namespace Jazz2::UI
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 
-		if (PreferencesCache::EnableReforgedHUD) {
+		// If drawing of lives if overriden, fallback to legacy HUD
+		if (PreferencesCache::EnableReforgedHUD && shouldDrawLives) {
 			if (player->_lives > 0) {
 				if (shouldDrawHealth) {
 					DrawHealthCarrots(adjustedView.X + 24.0f, bottom - 30.0f, player->_health);
@@ -619,7 +620,7 @@ namespace Jazz2::UI
 	void HUD::DrawScore(const Rectf& view, Actors::Player* player)
 	{
 #if defined(WITH_ANGELSCRIPT)
-		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, Scripting::DrawType::Score)) {
+		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Score)) {
 			return;
 		}
 #endif
@@ -649,7 +650,7 @@ namespace Jazz2::UI
 	void HUD::DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player)
 	{
 #if defined(WITH_ANGELSCRIPT)
-		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, Scripting::DrawType::WeaponAmmo)) {
+		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, player, adjustedView, Scripting::DrawType::WeaponAmmo)) {
 			return;
 		}
 #endif
