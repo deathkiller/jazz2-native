@@ -15,26 +15,17 @@ namespace Jazz2::Actors::Solid
 	protected:
 		struct ContainerContent {
 			EventType Type;
-			int Count;
-			uint8_t EventParams[16];
+			std::int32_t Count;
+			std::uint8_t EventParams[16];
 
-			ContainerContent(EventType eventType, int count, const uint8_t* eventParams, int eventParamsSize)
-			{
-				Type = eventType;
-				Count = count;
-
-				std::memcpy(EventParams, eventParams, eventParamsSize);
-				if (eventParamsSize < 16) {
-					std::memset(EventParams + eventParamsSize, 0, 16 - eventParamsSize);
-				}
-			}
+			ContainerContent(EventType eventType, std::int32_t count, const std::uint8_t* eventParams, std::int32_t eventParamsSize);
 		};
 
-		SmallVector<ContainerContent, 0> _content;
+		SmallVector<ContainerContent, 1> _content;
 
 		bool OnPerish(ActorBase* collider) override;
 
-		void AddContent(EventType eventType, int count, const uint8_t* eventParams, int eventParamsSize);
+		void AddContent(EventType eventType, std::int32_t count, const std::uint8_t* eventParams, std::int32_t eventParamsSize);
 		void SpawnContent();
 	};
 }
