@@ -23,7 +23,7 @@ namespace Jazz2::Actors::Solid
 		EventType eventType = (EventType)*(uint16_t*)&details.Params[0];
 		int count = details.Params[2];
 		if (eventType != EventType::Empty && count > 0) {
-			AddContent(eventType, count, &details.Params[3], 16 - 4);
+			AddContent(eventType, count, &details.Params[3], 16 - 3);
 		}
 
 		async_await RequestMetadataAsync("Object/Crate/Generic"_s);
