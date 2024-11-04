@@ -853,9 +853,9 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::CRATE_AMMO_SEEKER, GetAmmoCrateConverter(3));
 		Add(JJ2Event::CRATE_AMMO_RF, GetAmmoCrateConverter(4));
 		Add(JJ2Event::CRATE_AMMO_TOASTER, GetAmmoCrateConverter(5));
-		Add(JJ2Event::CRATE_CARROT, ConstantParamList(EventType::Crate, { (std::uint8_t)EventType::Carrot, (std::uint8_t)((std::int32_t)EventType::Carrot >> 8), 1 }));
-		Add(JJ2Event::CRATE_SPRING, ConstantParamList(EventType::Crate, { (std::uint8_t)EventType::Spring, (std::uint8_t)((std::int32_t)EventType::Spring >> 8), 3/*Count*/, 1/*Blue*/, 0/*Up*/, 0x01 }));
-		Add(JJ2Event::CRATE_ONEUP, ConstantParamList(EventType::Crate, { (std::uint8_t)EventType::OneUp, (std::uint8_t)((std::int32_t)EventType::OneUp >> 8), 1 }));
+		Add(JJ2Event::CRATE_CARROT, ConstantParamList(EventType::Crate, { (std::uint8_t)EventType::Carrot, (std::uint8_t)((std::int32_t)EventType::Carrot >> 8), 1/*Count*/ }));
+		Add(JJ2Event::CRATE_SPRING, ConstantParamList(EventType::Crate, { (std::uint8_t)EventType::Spring, (std::uint8_t)((std::int32_t)EventType::Spring >> 8), 1/*Count*/, 1/*Green*/, 0/*Up*/, 0x01 }));
+		Add(JJ2Event::CRATE_ONEUP, ConstantParamList(EventType::Crate, { (std::uint8_t)EventType::OneUp, (std::uint8_t)((std::int32_t)EventType::OneUp >> 8), 1/*Count*/ }));
 		Add(JJ2Event::CRATE_BOMB, [](JJ2Level* level, std::uint32_t jj2Params) -> ConversionResult {
 			std::uint8_t eventParams[16];
 			ConvertParamInt(jj2Params, {
