@@ -170,6 +170,7 @@ static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 }
 #elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_SWITCH)
 #	include <termios.h>
+#	include <sys/select.h>
 
 static void CheckConsoleDarkMode()
 {
