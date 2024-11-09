@@ -77,7 +77,7 @@ namespace Jazz2::Actors
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_shieldSpawnTime(ShieldDisabled),
-		_gems(0), _gemsCheckpoint(0), _gemsPitch(0),
+		_gems{}, _gemsCheckpoint{}, _gemsPitch(0),
 		_gemsTimer(0.0f),
 		_bonusWarpTimer(0.0f),
 		_suspendType(SuspendType::None),
@@ -1540,8 +1540,9 @@ namespace Jazz2::Actors
 					_coins -= cost;
 					bonusWarp->Activate(this);
 
-					// Convert remaing coins to gems
-					_gems += _coins;
+					// Convert remaing coins to gems and equivalent score
+					_gems[0] += _coins;
+					AddScore(_coins * 100);
 					_coins = 0;
 				} else if (_bonusWarpTimer <= 0.0f) {
 					_levelHandler->HandlePlayerCoins(this, _coins, _coins);
@@ -2635,8 +2636,7 @@ namespace Jazz2::Actors
 
 				// Revert coins, gems, ammo and weapon upgrades
 				_coins = _coinsCheckpoint;
-				_gems = _gemsCheckpoint;
-
+				std::memcpy(_gems, _gemsCheckpoint, sizeof(_gems));
 				std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmo));
 				std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgrades));
 
@@ -2846,7 +2846,7 @@ namespace Jazz2::Actors
 		_levelHandler->AddActor(shot2);
 
 		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
-		_weaponCooldown = 30.0f - (fastFire * 2.7f);
+		_weaponCooldown = 30.0f - (fastFire * 2.76f);
 		EmitWeaponFlare();
 	}
 
@@ -2932,7 +2932,7 @@ namespace Jazz2::Actors
 						break;
 					}
 					default: {
-						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.7f, true);
+						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.76f, true);
 						PlayPlayerSfx("WeaponBlaster"_s);
 						break;
 					}
@@ -2940,10 +2940,10 @@ namespace Jazz2::Actors
 				ammoDecrease = 0;
 				break;
 
-			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(30.0f, 2.7f, true); break;
+			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(30.0f, 2.76f, true); break;
 				case WeaponType::Freezer:
 					// TODO: Add upgraded freezer
-					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(30.0f, 2.7f);
+					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(30.0f, 2.76f);
 					break;
 				case WeaponType::Seeker: FireWeapon<Weapons::SeekerShot, WeaponType::Seeker>(120.0f, 0.0f, true); break;
 				case WeaponType::RF: FireWeaponRF(); break;
@@ -2967,7 +2967,7 @@ namespace Jazz2::Actors
 
 				case WeaponType::TNT: FireWeaponTNT(); break;
 				case WeaponType::Pepper: FireWeaponPepper(); break;
-				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(30.0f, 2.7f, true); break;
+				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(30.0f, 2.76f, true); break;
 
 				case WeaponType::Thunderbolt: {
 					if (!FireWeaponThunderbolt()) {
@@ -3269,7 +3269,7 @@ namespace Jazz2::Actors
 		return carryOver;
 	}
 
-	void Player::InitializeFromStream(ILevelHandler* levelHandler, Stream& src)
+	void Player::InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version)
 	{
 		std::uint8_t playerIndex = src.ReadVariableInt32();
 		PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
@@ -3293,8 +3293,15 @@ namespace Jazz2::Actors
 		_foodEaten = src.ReadVariableInt32();
 		_foodEatenCheckpoint = _foodEaten;
 		_score = src.ReadVariableInt32();
-		_gems = src.ReadVariableInt32();
-		_gemsCheckpoint = _gems;
+
+		_gems[0] = src.ReadVariableInt32();
+		if (version >= 3) {
+			// Gem types are split since v2.9.2
+			_gems[1] = src.ReadVariableInt32();
+			_gems[2] = src.ReadVariableInt32();
+			_gems[3] = src.ReadVariableInt32();
+		}
+		std::memcpy(_gemsCheckpoint, _gems, sizeof(_gems));
 
 		levelHandler->SetAmbientLight(this, _checkpointLight);
 
@@ -3325,7 +3332,10 @@ namespace Jazz2::Actors
 		dest.WriteVariableInt32(_coinsCheckpoint);
 		dest.WriteVariableInt32(_foodEatenCheckpoint);
 		dest.WriteVariableInt32(_score);
-		dest.WriteVariableInt32(_gemsCheckpoint);
+		dest.WriteVariableInt32(_gemsCheckpoint[0]);
+		dest.WriteVariableInt32(_gemsCheckpoint[1]);
+		dest.WriteVariableInt32(_gemsCheckpoint[2]);
+		dest.WriteVariableInt32(_gemsCheckpoint[3]);
 		dest.WriteVariableInt32(static_cast<std::int32_t>(arraySize(_weaponAmmoCheckpoint)));
 		dest.WriteVariableInt32((std::int32_t)_currentWeapon);
 		dest.Write(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
@@ -3782,11 +3792,15 @@ namespace Jazz2::Actors
 		_coins += count;
 	}
 
-	void Player::AddGems(std::int32_t count)
+	void Player::AddGems(std::uint8_t gemType, std::int32_t count)
 	{
-		std::int32_t prevGems = _gems;
-		_gems += count;
-		_levelHandler->HandlePlayerGems(this, prevGems, _gems);
+		if (gemType >= arraySize(_gems)) {
+			return;
+		}
+
+		std::int32_t prevGems = _gems[gemType];
+		_gems[gemType] += count;
+		_levelHandler->HandlePlayerGems(this, gemType, prevGems, _gems[gemType]);
 		PlayPlayerSfx("PickupGem"_s, 1.0f, std::min(0.7f + _gemsPitch * 0.05f, 1.3f));
 
 		_gemsTimer = 120.0f;
@@ -4047,8 +4061,7 @@ namespace Jazz2::Actors
 		
 		_foodEatenCheckpoint = _foodEaten;
 		_coinsCheckpoint = _coins;
-		_gemsCheckpoint = _gems;
-
+		std::memcpy(_gemsCheckpoint, _gems, sizeof(_gems));
 		std::memcpy(_weaponAmmoCheckpoint, _weaponAmmo, sizeof(_weaponAmmo));
 		std::memcpy(_weaponUpgradesCheckpoint, _weaponUpgrades, sizeof(_weaponUpgrades));
 	}

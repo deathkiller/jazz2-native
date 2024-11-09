@@ -221,7 +221,7 @@ namespace Jazz2::Scripting
 	{
 		switch (_scriptContextType) {
 			case ScriptContextType::Legacy: {
-				asIScriptFunction* onPlayer = _module->GetFunctionByName("void onPlayer(jjPLAYER@)");
+				asIScriptFunction* onPlayer = _module->GetFunctionByDecl("void onPlayer(jjPLAYER@)");
 
 				if (_onLevelUpdate == nullptr && onPlayer == nullptr) {
 					_onLevelUpdateLastFrame = (std::int32_t)_levelHandler->_elapsedFrames;
@@ -451,6 +451,14 @@ namespace Jazz2::Scripting
 
 		bool overrideDraw = false;
 		if (func != nullptr) {
+			// TODO: Move this somewhere
+			checkedMaxSubVideoWidth = (std::int32_t)view.W;
+			checkedMaxSubVideoHeight = (std::int32_t)view.H;
+			realVideoW = (std::int32_t)view.W;
+			realVideoH = (std::int32_t)view.H;
+			subVideoW = (std::int32_t)view.W;
+			subVideoH = (std::int32_t)view.H;
+
 			asIScriptContext* ctx = _engine->RequestContext();
 			ctx->Prepare(func);
 
@@ -468,6 +476,10 @@ namespace Jazz2::Scripting
 			}
 
 			_engine->ReturnContext(ctx);
+
+			playerWrapper->Release();
+			// TODO
+			asFreeMem(canvasWrapper);
 		}
 		
 		return overrideDraw;
@@ -704,15 +716,23 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Shield", "LASER", 4);
 
 		engine->SetDefaultNamespace("");
-		engine->RegisterObjectProperty("jjPLAYER", "int score", asOFFSET(jjPLAYER, score));
-		engine->RegisterObjectProperty("jjPLAYER", "int scoreDisplayed", asOFFSET(jjPLAYER, lastScoreDisplay));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_score() const", asMETHOD(jjPLAYER, get_score), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_score(int)", asMETHOD(jjPLAYER, set_score), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_scoreDisplayed() const", asMETHOD(jjPLAYER, get_scoreDisplayed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_scoreDisplayed(int)", asMETHOD(jjPLAYER, set_scoreDisplayed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int setScore(int score)", asMETHOD(jjPLAYER, setScore), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "float xPos", asOFFSET(jjPLAYER, xPos));
-		engine->RegisterObjectProperty("jjPLAYER", "float yPos", asOFFSET(jjPLAYER, yPos));
-		engine->RegisterObjectProperty("jjPLAYER", "float xAcc", asOFFSET(jjPLAYER, xAcc));
-		engine->RegisterObjectProperty("jjPLAYER", "float yAcc", asOFFSET(jjPLAYER, yAcc));
-		engine->RegisterObjectProperty("jjPLAYER", "float xOrg", asOFFSET(jjPLAYER, xOrg));
-		engine->RegisterObjectProperty("jjPLAYER", "float yOrg", asOFFSET(jjPLAYER, yOrg));
+		engine->RegisterObjectMethod("jjPLAYER", "float get_xPos() const", asMETHOD(jjPLAYER, get_xPos), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_xPos(float)", asMETHOD(jjPLAYER, set_xPos), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_yPos() const", asMETHOD(jjPLAYER, get_yPos), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_yPos(float)", asMETHOD(jjPLAYER, set_yPos), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_xAcc() const", asMETHOD(jjPLAYER, get_xAcc), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_xAcc(float)", asMETHOD(jjPLAYER, set_xAcc), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_yAcc() const", asMETHOD(jjPLAYER, get_yAcc), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_yAcc(float)", asMETHOD(jjPLAYER, set_yAcc), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_xOrg() const", asMETHOD(jjPLAYER, get_xOrg), asCALL_THISCALL);
+		//engine->RegisterObjectMethod("jjPLAYER", "float set_xOrg(float)", asMETHOD(jjPLAYER, set_xOrg), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_yOrg() const", asMETHOD(jjPLAYER, get_yOrg), asCALL_THISCALL);
+		//engine->RegisterObjectMethod("jjPLAYER", "float set_yOrg(float)", asMETHOD(jjPLAYER, set_yOrg), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float get_xSpeed() const", asMETHOD(jjPLAYER, get_xSpeed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float set_xSpeed(float)", asMETHOD(jjPLAYER, set_xSpeed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float get_ySpeed() const", asMETHOD(jjPLAYER, get_ySpeed), asCALL_THISCALL);
@@ -725,15 +745,21 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "int8 get_health() const", asMETHOD(jjPLAYER, get_health), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int8 set_health(int8)", asMETHOD(jjPLAYER, set_health), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "const int warpID", asOFFSET(jjPLAYER, warpID));
-		engine->RegisterObjectProperty("jjPLAYER", "int fastfire", asOFFSET(jjPLAYER, fastfire));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_fastfire() const", asMETHOD(jjPLAYER, get_fastfire), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_fastfire(int)", asMETHOD(jjPLAYER, set_fastfire), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 get_currWeapon() const", asMETHOD(jjPLAYER, get_currWeapon), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 set_currWeapon(uint8)", asMETHOD(jjPLAYER, set_currWeapon), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "int lives", asOFFSET(jjPLAYER, lives));
-		engine->RegisterObjectProperty("jjPLAYER", "int invincibility", asOFFSET(jjPLAYER, invincibility));
-		engine->RegisterObjectProperty("jjPLAYER", "int blink", asOFFSET(jjPLAYER, blink));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_lives() const", asMETHOD(jjPLAYER, get_lives), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_lives(int)", asMETHOD(jjPLAYER, set_lives), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_invincibility() const", asMETHOD(jjPLAYER, get_invincibility), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_invincibility(int)", asMETHOD(jjPLAYER, set_invincibility), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_blink() const", asMETHOD(jjPLAYER, get_blink), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_blink(int)", asMETHOD(jjPLAYER, set_blink), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int extendInvincibility(int duration)", asMETHOD(jjPLAYER, extendInvincibility), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "int food", asOFFSET(jjPLAYER, food));
-		engine->RegisterObjectProperty("jjPLAYER", "int coins", asOFFSET(jjPLAYER, coins));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_food() const", asMETHOD(jjPLAYER, get_food), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_food(int)", asMETHOD(jjPLAYER, set_food), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_coins() const", asMETHOD(jjPLAYER, get_coins), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_coins(int)", asMETHOD(jjPLAYER, set_coins), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool testForCoins(int numberOfCoins)", asMETHOD(jjPLAYER, testForCoins), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_gems(GEM::Color) const", asMETHOD(jjPLAYER, get_gems), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_gems(GEM::Color, int)", asMETHOD(jjPLAYER, set_gems), asCALL_THISCALL);
@@ -742,17 +768,19 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "int set_shieldType(int)", asMETHOD(jjPLAYER, set_shieldType), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_shieldTime() const", asMETHOD(jjPLAYER, get_shieldTime), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_shieldTime(int)", asMETHOD(jjPLAYER, set_shieldTime), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "int ballTime", asOFFSET(jjPLAYER, rolling));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_ballTime() const", asMETHOD(jjPLAYER, get_rolling), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_ballTime(int)", asMETHOD(jjPLAYER, set_rolling), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "int boss", asOFFSET(jjPLAYER, bossNumber));
 		engine->RegisterObjectProperty("jjPLAYER", "bool bossActivated", asOFFSET(jjPLAYER, bossActive));
 		engine->RegisterObjectProperty("jjPLAYER", "int8 direction", asOFFSET(jjPLAYER, direction));
 		engine->RegisterObjectProperty("jjPLAYER", "int platform", asOFFSET(jjPLAYER, platform));
 		engine->RegisterObjectProperty("jjPLAYER", "const int flag", asOFFSET(jjPLAYER, flag));
 		engine->RegisterObjectProperty("jjPLAYER", "const int clientID", asOFFSET(jjPLAYER, clientID));
-		engine->RegisterObjectProperty("jjPLAYER", "const int8 playerID", asOFFSET(jjPLAYER, playerID));
-		engine->RegisterObjectProperty("jjPLAYER", "const int localPlayerID", asOFFSET(jjPLAYER, localPlayerID));
+		engine->RegisterObjectMethod("jjPLAYER", "int8 get_playerID() const", asMETHOD(jjPLAYER, get_playerID), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_localPlayerID() const", asMETHOD(jjPLAYER, get_localPlayerID), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "const bool teamRed", asOFFSET(jjPLAYER, team));
-		engine->RegisterObjectProperty("jjPLAYER", "bool running", asOFFSET(jjPLAYER, run));
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_running() const", asMETHOD(jjPLAYER, get_running), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_running(bool)", asMETHOD(jjPLAYER, set_running), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "bool alreadyDoubleJumped", asOFFSET(jjPLAYER, specialJump)); // Deprecated
 		engine->RegisterObjectProperty("jjPLAYER", "int doubleJumpCount", asOFFSET(jjPLAYER, specialJump));
 		engine->RegisterObjectMethod("jjPLAYER", "int get_stoned() const", asMETHOD(jjPLAYER, get_stoned), asCALL_THISCALL);

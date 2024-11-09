@@ -56,12 +56,15 @@ namespace Jazz2::UI
 		static constexpr AnimState CharacterLori = (AnimState)62;
 		static constexpr AnimState CharacterFrog = (AnimState)63;
 		static constexpr AnimState Heart = (AnimState)70;
-		static constexpr AnimState PickupGem = (AnimState)71;
-		static constexpr AnimState PickupCoin = (AnimState)72;
-		static constexpr AnimState PickupFood = (AnimState)73;
-		static constexpr AnimState PickupCarrot = (AnimState)74;
-		static constexpr AnimState PickupStopwatch = (AnimState)75;
-		static constexpr AnimState BossHealthBar = (AnimState)76;
+		static constexpr AnimState PickupGemRed = (AnimState)71;
+		static constexpr AnimState PickupGemGreen = (AnimState)72;
+		static constexpr AnimState PickupGemBlue = (AnimState)73;
+		static constexpr AnimState PickupGemPurple = (AnimState)74;
+		static constexpr AnimState PickupCoin = (AnimState)75;
+		static constexpr AnimState PickupFood = (AnimState)76;
+		static constexpr AnimState PickupCarrot = (AnimState)77;
+		static constexpr AnimState PickupStopwatch = (AnimState)78;
+		static constexpr AnimState BossHealthBar = (AnimState)79;
 		static constexpr AnimState WeaponWheel = (AnimState)80;
 		static constexpr AnimState WeaponWheelInner = (AnimState)81;
 		static constexpr AnimState WeaponWheelDim = (AnimState)82;
@@ -391,12 +394,13 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::ShowGems(std::int32_t count)
+	void HUD::ShowGems(std::uint8_t gemType, std::int32_t count)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
 
 		_gems = count;
+		_gemsLastType = gemType;
 
 		if (_gemsTime < 0.0f) {
 			_gemsTime = 0.0f;
@@ -860,10 +864,11 @@ namespace Jazz2::UI
 			alpha = 1.0f;
 		}
 
+		AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + _gemsLastType);
 		float alpha2 = alpha * alpha;
-		DrawElement(PickupGem, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer, Alignment::Right,
+		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer, Alignment::Right,
 			Colorf(0.0f, 0.0f, 0.0f, 0.4f * alpha2), 0.8f, 0.8f);
-		DrawElement(PickupGem, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer, Alignment::Right,
+		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer, Alignment::Right,
 			Colorf(1.0f, 1.0f, 1.0f, 0.8f * alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];

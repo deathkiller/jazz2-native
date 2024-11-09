@@ -118,10 +118,8 @@ namespace Jazz2::Actors::Collectibles
 		DecreaseHealth(INT32_MAX);
 	}
 
-	void CollectibleBase::SetFacingDirection()
+	void CollectibleBase::SetFacingDirection(bool inverse)
 	{
-		if ((((int)(_pos.X + _pos.Y) / 32) & 1) == 0) {
-			SetFacingLeft(true);
-		}
+		SetFacingLeft(((((std::int32_t)(_pos.X + _pos.Y) / 32) & 1) == 0) ^ inverse);
 	}
 }

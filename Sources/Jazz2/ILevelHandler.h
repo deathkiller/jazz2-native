@@ -45,7 +45,7 @@ namespace Jazz2
 		static constexpr std::int32_t PlayerZ = MainPlaneZ + 20;
 
 		virtual bool Initialize(const LevelInitialization& levelInit) = 0;
-		virtual bool Initialize(Stream& src) = 0;
+		virtual bool Initialize(Stream& src, std::uint16_t version) = 0;
 
 		virtual Events::EventSpawner* EventSpawner() = 0;
 		virtual Events::EventMap* EventMap() = 0;
@@ -64,6 +64,7 @@ namespace Jazz2
 		virtual ArrayView<Actors::Player* const> GetPlayers() const = 0;
 
 		virtual float GetDefaultAmbientLight() const = 0;
+		virtual float GetAmbientLight(Actors::Player* player) const = 0;
 		virtual void SetAmbientLight(Actors::Player* player, float value) = 0;
 
 		virtual void AddActor(std::shared_ptr<Actors::ActorBase> actor) = 0;
@@ -89,14 +90,16 @@ namespace Jazz2
 		virtual bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) = 0;
 		virtual void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) = 0;
 		virtual void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
-		virtual void HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
+		virtual void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) = 0;
 		virtual void SetCheckpoint(Actors::Player* player, const Vector2f& pos) = 0;
 		virtual void RollbackToCheckpoint(Actors::Player* player) = 0;
 		virtual void ActivateSugarRush(Actors::Player* player) = 0;
 		virtual void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) = 0;
 		virtual StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) = 0;
 		virtual void OverrideLevelText(std::uint32_t textId, const StringView value) = 0;
+		virtual Vector2f GetCameraPos(Actors::Player* player) const = 0;
 		virtual void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) = 0;
+		virtual void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) = 0;
 		virtual void ShakeCameraView(Actors::Player* player, float duration) = 0;
 		virtual void ShakeCameraViewNear(Vector2f pos, float duration) = 0;
 		virtual bool GetTrigger(std::uint8_t triggerId) = 0;

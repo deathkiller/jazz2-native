@@ -81,7 +81,7 @@ namespace Jazz2
 		~LevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
-		bool Initialize(Stream& src) override;
+		bool Initialize(Stream& src, std::uint16_t version) override;
 
 		Events::EventSpawner* EventSpawner() override;
 		Events::EventMap* EventMap() override;
@@ -100,6 +100,7 @@ namespace Jazz2
 		ArrayView<Actors::Player* const> GetPlayers() const override;
 
 		float GetDefaultAmbientLight() const override;
+		float GetAmbientLight(Actors::Player* player) const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
 
 		void OnBeginFrame() override;
@@ -126,14 +127,16 @@ namespace Jazz2
 		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
 		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
-		void HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
+		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
 		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void ActivateSugarRush(Actors::Player* player) override;
 		void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
+		Vector2f GetCameraPos(Actors::Player* player) const override;
 		void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) override;
+		void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) override;
 		void ShakeCameraView(Actors::Player* player, float duration) override;
 		void ShakeCameraViewNear(Vector2f pos, float duration) override;
 		bool GetTrigger(std::uint8_t triggerId) override;

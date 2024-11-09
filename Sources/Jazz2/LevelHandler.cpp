@@ -163,7 +163,7 @@ namespace Jazz2
 		return true;
 	}
 
-	bool LevelHandler::Initialize(Stream& src)
+	bool LevelHandler::Initialize(Stream& src, std::uint16_t version)
 	{
 		ZoneScopedC(0x4876AF);
 
@@ -211,7 +211,7 @@ namespace Jazz2
 
 		for (std::uint32_t i = 0; i < playerCount; i++) {
 			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
-			player->InitializeFromStream(this, src);
+			player->InitializeFromStream(this, src, version);
 
 			Actors::Player* ptr = player.get();
 			_players.push_back(ptr);
@@ -322,6 +322,16 @@ namespace Jazz2
 	float LevelHandler::GetDefaultAmbientLight() const
 	{
 		return _defaultAmbientLight.W;
+	}
+
+	float LevelHandler::GetAmbientLight(Actors::Player* player) const
+	{
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				return viewport->_ambientLightTarget;
+			}
+		}
+		return 0.0f;
 	}
 
 	void LevelHandler::SetAmbientLight(Actors::Player* player, float value)
@@ -716,7 +726,7 @@ namespace Jazz2
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
 									for (auto* player : _players) {
-										player->AddGems(5);
+										player->AddGems(0, 5);
 									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::B && _cheatsBuffer[3] == (char)KeySym::I && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::D) {
 									_cheatsBufferLength = 0;
@@ -1153,12 +1163,12 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
+	void LevelHandler::HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount)
 	{
 		// Show notification only for local players (which have assigned viewport)
 		for (auto& viewport : _assignedViewports) {
 			if (viewport->_targetPlayer == player) {
-				_hud->ShowGems(newCount);
+				_hud->ShowGems(gemType, newCount);
 				break;
 			}
 		}
@@ -1172,7 +1182,7 @@ namespace Jazz2
 		float ambientLight = _defaultAmbientLight.W;
 		for (auto& viewport : _assignedViewports) {
 			if (viewport->_targetPlayer == player) {
-				viewport->_ambientLightTarget;
+				ambientLight = viewport->_ambientLightTarget;
 				break;
 			}
 		}
@@ -1783,6 +1793,16 @@ namespace Jazz2
 		viewport._camera->setView(viewport._cameraPos, 0.0f, 1.0f);
 	}
 
+	Vector2f LevelHandler::GetCameraPos(Actors::Player* player) const
+	{
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				return viewport->_cameraPos;
+			}
+		}
+		return {};
+	}
+
 	void LevelHandler::LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width)
 	{
 		_levelBounds.X = left;
@@ -1846,6 +1866,15 @@ namespace Jazz2
 						}
 					}
 				}
+			}
+		}
+	}
+
+	void LevelHandler::OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft)
+	{
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetPlayer == player) {
+				viewport->OverrideCamera(x, y, topLeft);
 			}
 		}
 	}

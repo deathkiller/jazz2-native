@@ -4,8 +4,7 @@
 namespace Jazz2::Actors::Collectibles
 {
 	GemCollectible::GemCollectible()
-		:
-		_gemType(0)
+		: _gemType(0)
 	{
 	}
 
@@ -13,28 +12,36 @@ namespace Jazz2::Actors::Collectibles
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);
 
-		_gemType = (uint8_t)(details.Params[0] & 0x03);
+		_gemType = (std::uint8_t)(details.Params[0] & 0x03);
+		bool hasLimitedLifetime = (details.Params[1] & 0x01) == 0x01;
+		bool isFlipped = (details.Params[1] & 0x02) == 0x02;
+
+		if (hasLimitedLifetime) {
+			_timeLeft = 5.0f * FrameTimer::FramesPerSecond;
+		}
 
 		async_await RequestMetadataAsync("Collectible/Gems"_s);
 
+		std::int32_t weightedCount;
 		switch (_gemType) {
 			default:
 			case 0: // Red (+1)
-				_scoreValue = 100;
+				weightedCount = 1;
 				break;
 			case 1: // Green (+5)
-				_scoreValue = 500;
+				weightedCount = 5;
 				break;
 			case 2: // Blue (+10)
-				_scoreValue = 1000;
+				weightedCount = 10;
 				break;
 			case 3: // Purple
-				_scoreValue = 100;
+				weightedCount = 1;
 				break;
 		}
+		_scoreValue = weightedCount * 100;
 
 		SetAnimation((AnimState)_gemType);
-		SetFacingDirection();
+		SetFacingDirection(isFlipped);
 
 		_renderer.setAlphaF(0.7f);
 
@@ -48,24 +55,7 @@ namespace Jazz2::Actors::Collectibles
 
 	void GemCollectible::OnCollect(Player* player)
 	{
-		int value;
-		switch (_gemType) {
-			default:
-			case 0: // Red (+1)
-				value = 1;
-				break;
-			case 1: // Green (+5)
-				value = 5;
-				break;
-			case 2: // Blue (+10)
-				value = 10;
-				break;
-			case 3: // Purple
-				value = 1;
-				break;
-		}
-
-		player->AddGems(value);
+		player->AddGems(_gemType, 1);
 
 		CollectibleBase::OnCollect(player);
 	}

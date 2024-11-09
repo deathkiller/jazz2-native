@@ -810,9 +810,9 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MultiLevelHandler::HandlePlayerGems(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
+	void MultiLevelHandler::HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount)
 	{
-		LevelHandler::HandlePlayerGems(player, prevCount, newCount);
+		LevelHandler::HandlePlayerGems(player, gemType, prevCount, newCount);
 
 		if (_isServer) {
 			for (const auto& [peer, peerDesc] : _peerDesc) {
@@ -820,6 +820,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(9);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerRefreshGems);
 					packet.WriteVariableUint32(player->_playerIndex);
+					packet.WriteValue<std::uint8_t>(gemType);
 					packet.WriteVariableInt32(newCount);
 					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 					break;
@@ -1625,12 +1626,15 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
+					std::uint8_t gemType = packet.ReadValue<std::uint8_t>();
 					std::int32_t newCount = packet.ReadVariableInt32();
 
-					LOGD("[MP] ServerPacketType::PlayerRefreshGems - playerIndex: %u, newCount: %i", playerIndex, newCount);
+					LOGD("[MP] ServerPacketType::PlayerRefreshGems - playerIndex: %u, gemType: %u, newCount: %i", playerIndex, gemType, newCount);
 
-					_players[0]->_gems = newCount;
-					_hud->ShowGems(newCount);
+					if (gemType < arraySize(_players[0]->_gems)) {
+						_players[0]->_gems[gemType] = newCount;
+						_hud->ShowGems(gemType, newCount);
+					}
 					return true;
 				}
 				case ServerPacketType::PlayerTakeDamage: {

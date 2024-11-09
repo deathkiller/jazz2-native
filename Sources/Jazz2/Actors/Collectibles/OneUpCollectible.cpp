@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Collectibles
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);
 
-		_scoreValue = 1000;
+		_scoreValue = 2000;
 
 		async_await RequestMetadataAsync("Collectible/OneUp"_s);
 
