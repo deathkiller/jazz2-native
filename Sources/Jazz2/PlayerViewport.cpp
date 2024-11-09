@@ -218,8 +218,8 @@ namespace Jazz2
 
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer)
 		: _levelHandler(levelHandler), _targetPlayer(targetPlayer),
-		_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-		_cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f)
+			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
+			_cameraOverridePos(NAN, NAN), _cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -356,12 +356,28 @@ namespace Jazz2
 		Vector2i halfView = _view->size() / 2;
 		Vector2f focusPos = _targetPlayer->GetPos();
 
+		bool overridePosX = false, overridePosY = false;
+		if (!std::isnan(_cameraOverridePos.X)) {
+			overridePosX = true;
+			focusPos.X = _cameraOverridePos.X;
+			if (focusPos.X <= 0.0f) {
+				focusPos.X = halfView.X - focusPos.X;
+			}
+		}
+		if (!std::isnan(_cameraOverridePos.Y)) {
+			overridePosY = true;
+			focusPos.Y = _cameraOverridePos.Y;
+			if (focusPos.Y <= 0.0f) {
+				focusPos.Y = halfView.Y - 1.0f - focusPos.Y;
+			}
+		}
+
 		// If player doesn't move but has some speed, it's probably stuck, so reset the speed
 		Vector2f focusSpeed = _targetPlayer->GetSpeed();
-		if (std::abs(_cameraLastPos.X - focusPos.X) < 1.0f) {
+		if (overridePosX || std::abs(_cameraLastPos.X - focusPos.X) < 1.0f) {
 			focusSpeed.X = 0.0f;
 		}
-		if (std::abs(_cameraLastPos.Y - focusPos.Y) < 1.0f) {
+		if (overridePosY || std::abs(_cameraLastPos.Y - focusPos.Y) < 1.0f) {
 			focusSpeed.Y = 0.0f;
 		}
 
@@ -406,7 +422,9 @@ namespace Jazz2
 		}
 
 		// Clamp camera position to level bounds
-		if (_viewBounds.W > halfView.X * 2) {
+		if (overridePosX) {
+			_cameraPos.X = _cameraLastPos.X + _shakeOffset.X;
+		} else if (_viewBounds.W > halfView.X * 2) {
 			_cameraPos.X = std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
 			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.X) < 1.0f) {
 				_cameraPos.X = std::floor(_cameraPos.X);
@@ -414,7 +432,9 @@ namespace Jazz2
 		} else {
 			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
-		if (_viewBounds.H > halfView.Y * 2) {
+		if (overridePosY) {
+			_cameraPos.Y = _cameraLastPos.Y + _shakeOffset.Y;
+		} else if (_viewBounds.H > halfView.Y * 2) {
 			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
 			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.Y) < 1.0f) {
 				_cameraPos.Y = std::floor(_cameraPos.Y);
@@ -430,6 +450,18 @@ namespace Jazz2
 	{
 		if (_shakeDuration < duration) {
 			_shakeDuration = duration;
+		}
+	}
+
+	void PlayerViewport::OverrideCamera(float x, float y, bool topLeft)
+	{
+		if (topLeft) {
+			// Use negative values for top-left alignment
+			_cameraOverridePos.X = -x;
+			_cameraOverridePos.Y = -y;
+		} else {
+			_cameraOverridePos.X = x;
+			_cameraOverridePos.Y = y;
 		}
 	}
 

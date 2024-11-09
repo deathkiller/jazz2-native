@@ -83,7 +83,7 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 #endif
 {
 public:
-	static constexpr std::uint16_t StateVersion = 2;
+	static constexpr std::uint16_t StateVersion = 3;
 	static constexpr char StateFileName[] = "Jazz2.resume";
 
 #if defined(WITH_MULTIPLAYER)
@@ -603,7 +603,7 @@ void GameEventHandler::ResumeSavedState()
 
 			DeflateStream uc(*s);
 			auto levelHandler = std::make_unique<LevelHandler>(this);
-			if (levelHandler->Initialize(uc)) {
+			if (levelHandler->Initialize(uc, version)) {
 				SetStateHandler(std::move(levelHandler));
 				return;
 			}

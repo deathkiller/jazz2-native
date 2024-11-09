@@ -379,7 +379,7 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
-	jjRNG::jjRNG(std::uint64_t seed) {
+	jjRNG::jjRNG(std::uint64_t seed) : _refCount(1) {
 		noop();
 	}
 	jjRNG::~jjRNG() {
@@ -667,18 +667,45 @@ namespace Jazz2::Scripting
 	void jjCANVAS::DrawTextBasicSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param) {
 		noop();
 		// TODO
+		float scale;
+		switch (size) {
+			default:
+			case 0:	// MEDIUM
+				scale = 1.0f;
+			case 1:	// SMALL
+				scale = 0.8f;
+			case 2:	// LARGE
+				scale = 2.0f;
+		}
+
 		std::int32_t charOffset = 0;
 		auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
 		Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
-				UI::Alignment::TopLeft, UI::Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+				UI::Alignment::TopLeft, UI::Font::DefaultColor, scale, 0.0f, 0.0f, 0.0f, 0.0f);
 	}
 	void jjCANVAS::DrawTextExtSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t mode, std::uint8_t param) {
 		noop();
 		// TODO
+		Colorf color = UI::Font::DefaultColor;
+		if (mode == spriteType_BLENDNORMAL) {
+			color.A = param / 255.0f;
+		}
+
+		float scale;
+		switch (size) {
+			default:
+			case 0:	// MEDIUM
+				scale = 1.0f;
+			case 1:	// SMALL
+				scale = 0.8f;
+			case 2:	// LARGE
+				scale = 2.0f;
+		}
+
 		std::int32_t charOffset = 0;
 		auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
 		Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
-				UI::Alignment::TopLeft, UI::Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+				UI::Alignment::TopLeft, color, scale, 0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 	void jjCANVAS::drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param) {
@@ -949,7 +976,7 @@ namespace Jazz2::Scripting
 		noop();
 	}
 
-	jjPARTICLE::jjPARTICLE() {
+	jjPARTICLE::jjPARTICLE() : _refCount(1) {
 		noop();
 	}
 	jjPARTICLE::~jjPARTICLE() {
@@ -969,6 +996,7 @@ namespace Jazz2::Scripting
 
 	jjPARTICLE* GetParticle(std::int32_t index) {
 		noop();
+		// TODO
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
@@ -1020,7 +1048,6 @@ namespace Jazz2::Scripting
 		return _levelScriptLoader->GetPlayerBackingStore(_player->_playerIndex);
 	}
 
-	// Assignment operator
 	jjPLAYER& jjPLAYER::operator=(const jjPLAYER& o)
 	{
 		// Copy only the content, not the script proxy class
@@ -1028,10 +1055,87 @@ namespace Jazz2::Scripting
 		return *this;
 	}
 
-	std::int32_t jjPLAYER::setScore(std::int32_t value) {
-		noop(); return 0;
+	std::int32_t jjPLAYER::get_score() const {
+		noop();
+		return _player->_score;
+	}
+	std::int32_t jjPLAYER::set_score(std::int32_t value) {
+		noop();
+		_player->_score = value;
+		return _player->_score;
+	}
+	std::int32_t jjPLAYER::get_scoreDisplayed() const {
+		noop();
+		return _player->_score;
+	}
+	std::int32_t jjPLAYER::set_scoreDisplayed(std::int32_t value) {
+		noop();
+		_player->_score = value;
+		return _player->_score;
 	}
 
+	std::int32_t jjPLAYER::setScore(std::int32_t value) {
+		noop();
+		_player->_score = value;
+		return _player->_score;
+	}
+
+	float jjPLAYER::get_xPos() const {
+		noop();
+		return _player->_pos.X;
+	}
+	float jjPLAYER::set_xPos(float value) {
+		noop();
+		_player->_pos.X = value;
+		return _player->_pos.X;
+	}
+	float jjPLAYER::get_yPos() const {
+		noop();
+		return _player->_pos.Y;
+	}
+	float jjPLAYER::set_yPos(float value) {
+		noop();
+		_player->_pos.Y = value;
+		return _player->_pos.Y;
+	}
+	float jjPLAYER::get_xAcc() const {
+		noop();
+		return _player->_externalForce.X;
+	}
+	float jjPLAYER::set_xAcc(float value) {
+		noop();
+		_player->_externalForce.X = value;
+		return _player->_externalForce.X;
+	}
+	float jjPLAYER::get_yAcc() const {
+		noop();
+		return _player->_externalForce.Y;
+	}
+	float jjPLAYER::set_yAcc(float value) {
+		noop();
+		_player->_externalForce.Y = value;
+		return _player->_externalForce.Y;
+	}
+	float jjPLAYER::get_xOrg() const {
+		noop();
+		// TODO
+		return _player->_pos.X;
+	}
+	float jjPLAYER::set_xOrg(float value) {
+		noop();
+		// TODO
+		return _player->_pos.X;
+	}
+	float jjPLAYER::get_yOrg() const {
+		noop();
+		// TODO
+		return _player->_pos.Y;
+	}
+	float jjPLAYER::set_yOrg(float value) {
+		noop();
+		// TODO
+		return _player->_pos.Y;
+	}
 	float jjPLAYER::get_xSpeed() {
 		noop();
 		return _player->_speed.X;
@@ -1056,8 +1160,8 @@ namespace Jazz2::Scripting
 		if (frozen) {
 			_player->_frozenTimeLeft = 180.0f;
 			_player->_renderer.AnimPaused = true;
-		} else {
-			_player->_frozenTimeLeft = std::min(1.0f, _player->_frozenTimeLeft);
+		} else if (_player->_frozenTimeLeft > 0.01f) {
+			_player->_frozenTimeLeft = 0.01f;
 		}
 	}
 	std::int32_t jjPLAYER::get_currTile() {
@@ -1081,6 +1185,16 @@ namespace Jazz2::Scripting
 		return value;
 	}
 
+	std::int32_t jjPLAYER::get_fastfire() const {
+		noop();
+		return (_player->_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+	}
+	std::int32_t jjPLAYER::set_fastfire(std::int32_t value) {
+		noop(); 
+		_player->_weaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_player->_weaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (value << 1));
+		return value;
+	}
+
 	std::int8_t jjPLAYER::get_currWeapon() const {
 		noop();
 		return (std::int8_t)_player->_currentWeapon;
@@ -1094,9 +1208,51 @@ namespace Jazz2::Scripting
 		return value;
 	}
 
+	std::int32_t jjPLAYER::get_lives() const {
+		noop();
+		return _player->_lives;
+	}
+	std::int32_t jjPLAYER::set_lives(std::int32_t value) {
+		noop();
+		_player->_lives = value;
+		return _player->_lives;
+	}
+
+	std::int32_t jjPLAYER::get_invincibility() const {
+		noop(); return 0;
+	}
+	std::int32_t jjPLAYER::set_invincibility(std::int32_t value) {
+		noop(); return 0;
+	}
+
+	std::int32_t jjPLAYER::get_blink() const {
+		noop(); return 0;
+	}
+	std::int32_t jjPLAYER::set_blink(std::int32_t value) {
+		noop(); return 0;
+	}
+
 	std::int32_t jjPLAYER::extendInvincibility(std::int32_t duration) {
 		noop();
 		return 0;
+	}
+
+	std::int32_t jjPLAYER::get_food() const {
+		noop(); return _player->_foodEaten;
+	}
+	std::int32_t jjPLAYER::set_food(std::int32_t value) {
+		noop();
+		_player->_foodEaten = value;
+		return _player->_foodEaten;
+	}
+	std::int32_t jjPLAYER::get_coins() const {
+		noop();
+		return _player->_coins;
+	}
+	std::int32_t jjPLAYER::set_coins(std::int32_t value) {
+		noop();
+		_player->_coins = value;
+		return _player->_coins;
 	}
 
 	bool jjPLAYER::testForCoins(std::int32_t numberOfCoins) {
@@ -1109,14 +1265,25 @@ namespace Jazz2::Scripting
 	}
 	std::int32_t jjPLAYER::get_gems(std::uint32_t type) const {
 		noop();
-		return 0;
+		return (type < arraySize(_player->_gems) ? _player->_gems[type] : 0);
 	}
 	std::int32_t jjPLAYER::set_gems(std::uint32_t type, std::int32_t value) {
 		noop();
-		return 0;
+		if (type < arraySize(_player->_gems)) {
+			_player->_gems[type] = value;
+		}
+		return (type < arraySize(_player->_gems) ? _player->_gems[type] : 0);
 	}
 	bool jjPLAYER::testForGems(std::int32_t numberOfGems, std::uint32_t type) {
 		noop();
+		std::uint8_t currentCount = (type < arraySize(_player->_gems) ? _player->_gems[type] : 0);
+		if (numberOfGems <= currentCount) {
+			if (numberOfGems > 0) {
+				_player->_gems[type] -= numberOfGems;
+			}
+			return true;
+		}
+		// TODO: Show warning message
 		return false;
 	}
 
@@ -1139,6 +1306,48 @@ namespace Jazz2::Scripting
 		noop();
 		_player->_activeShieldTime = value * FrameTimer::FramesPerSecond / 70.0f;
 		return value;
+	}
+
+	std::int32_t jjPLAYER::get_rolling() const {
+		noop();
+		return (std::int32_t)(_player->_inTubeTime * 70.0f / FrameTimer::FramesPerSecond);
+	}
+	std::int32_t jjPLAYER::set_rolling(std::int32_t value) {
+		noop(); 
+		
+		if (value > 0) {
+			if (_player->_inTubeTime <= 0) {
+				_player->EndDamagingMove();
+				_player->SetAnimation(AnimState::Dash | AnimState::Jump);
+				_player->_controllable = false;
+				_player->SetState(Actors::ActorState::CanJump | Actors::ActorState::ApplyGravitation, false);
+			}
+			_player->_inTubeTime = value * FrameTimer::FramesPerSecond / 70.0f;
+		} else {
+			if (_player->_inTubeTime > 0) {
+				_player->_controllable = true;
+				_player->SetState(Actors::ActorState::ApplyGravitation | Actors::ActorState::CollideWithTileset, true);
+				_player->_inTubeTime = 0.0f;
+			}
+		}
+		
+		return value;
+	}
+
+	std::int8_t jjPLAYER::get_playerID() const {
+		noop(); return (std::int8_t)_player->_playerIndex;
+	}
+	std::int32_t jjPLAYER::get_localPlayerID() const {
+		noop(); return _player->_playerIndex;
+	}
+
+	bool jjPLAYER::get_running() const {
+		noop(); return _player->_isRunPressed;
+	}
+	bool jjPLAYER::set_running(bool value) {
+		noop();
+		_player->_isRunPressed = value;
+		return _player->_isRunPressed;
 	}
 
 	std::int32_t jjPLAYER::get_stoned() {
@@ -1189,11 +1398,11 @@ namespace Jazz2::Scripting
 
 	String jjPLAYER::get_name() const {
 		noop();
-		return { };
+		return {};
 	}
 	String jjPLAYER::get_nameUnformatted() const {
 		noop();
-		return { };
+		return {};
 	}
 	bool jjPLAYER::setName(const String& name) {
 		noop();
@@ -1252,11 +1461,11 @@ namespace Jazz2::Scripting
 	std::uint8_t jjPLAYER::get_lighting() const {
 		noop();
 		// TODO: Viewports
-		return (std::uint8_t)(_levelScriptLoader->_levelHandler->GetDefaultAmbientLight() * 64.0f);
+		return (std::uint8_t)(_levelScriptLoader->_levelHandler->GetAmbientLight(_player) * 64.0f);
 	}
 	std::uint8_t jjPLAYER::set_lighting(std::uint8_t value) {
 		noop();
-		_levelScriptLoader->_levelHandler->SetAmbientLight(nullptr, value / 64.0f);
+		_levelScriptLoader->_levelHandler->SetAmbientLight(_player, value / 64.0f);
 		return value;
 	}
 	std::uint8_t jjPLAYER::resetLight() {
@@ -1265,28 +1474,36 @@ namespace Jazz2::Scripting
 	}
 
 	bool jjPLAYER::get_playerKeyLeftPressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::Left);
 	}
 	bool jjPLAYER::get_playerKeyRightPressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::Right);
 	}
 	bool jjPLAYER::get_playerKeyUpPressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::Up);
 	}
 	bool jjPLAYER::get_playerKeyDownPressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::Down);
 	}
 	bool jjPLAYER::get_playerKeyFirePressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::Fire);
 	}
 	bool jjPLAYER::get_playerKeySelectPressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::ChangeWeapon);
 	}
 	bool jjPLAYER::get_playerKeyJumpPressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::Jump);
 	}
 	bool jjPLAYER::get_playerKeyRunPressed() {
-		noop(); return false;
+		noop();
+		return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerActions::Run);
 	}
 	void jjPLAYER::set_playerKeyLeftPressed(bool value) {
 		noop();
@@ -1485,24 +1702,33 @@ namespace Jazz2::Scripting
 	bool jjPLAYER::limitXScroll(std::uint16_t left, std::uint16_t width) {
 		noop();
 
-		// TODO: Viewports
-		_levelScriptLoader->_levelHandler->LimitCameraView(nullptr, left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
+		_levelScriptLoader->_levelHandler->LimitCameraView(_player, left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
 		return true;
 	}
 	void jjPLAYER::cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant) {
 		noop();
+		// TODO: instant
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xPixel, yPixel, !centered);
 	}
 	void jjPLAYER::cameraFreezeBF(bool xUnfreeze, float yPixel, bool centered, bool instant) {
 		noop();
+		// TODO: instant
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, NAN, yPixel, !centered);
 	}
 	void jjPLAYER::cameraFreezeFB(float xPixel, bool yUnfreeze, bool centered, bool instant) {
 		noop();
+		// TODO: instant
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xPixel, NAN, !centered);
 	}
 	void jjPLAYER::cameraFreezeBB(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant) {
 		noop();
+		// TODO: instant, centered
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, NAN, NAN, false);
 	}
 	void jjPLAYER::cameraUnfreeze(bool instant) {
 		noop();
+		// TODO: instant
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, NAN, NAN, false);
 	}
 	void jjPLAYER::showText(const String& text, std::uint32_t size) {
 		noop();
@@ -1540,11 +1766,11 @@ namespace Jazz2::Scripting
 
 	float jjPLAYER::get_cameraX() const {
 		noop();
-		return 0.0f;
+		return _levelScriptLoader->_levelHandler->GetCameraPos(_player).X;
 	}
 	float jjPLAYER::get_cameraY() const {
 		noop();
-		return 0.0f;
+		return _levelScriptLoader->_levelHandler->GetCameraPos(_player).Y;
 	}
 	std::int32_t jjPLAYER::get_deaths() const {
 		noop();

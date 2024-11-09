@@ -754,9 +754,9 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::GEM_BLUE, ConstantParamList(EventType::Gem, { 2 }));
 		Add(JJ2Event::GEM_PURPLE, ConstantParamList(EventType::Gem, { 3 }));
 
-		Add(JJ2Event::GEM_RED_RECT, ConstantParamList(EventType::Gem, { 0 }));
-		Add(JJ2Event::GEM_GREEN_RECT, ConstantParamList(EventType::Gem, { 1 }));
-		Add(JJ2Event::GEM_BLUE_RECT, ConstantParamList(EventType::Gem, { 2 }));
+		Add(JJ2Event::GEM_RED_RECT, ConstantParamList(EventType::Gem, { 0, 2 }));
+		Add(JJ2Event::GEM_GREEN_RECT, ConstantParamList(EventType::Gem, { 1, 2 }));
+		Add(JJ2Event::GEM_BLUE_RECT, ConstantParamList(EventType::Gem, { 2, 2 }));
 
 		Add(JJ2Event::GEM_SUPER, NoParamList(EventType::GemGiant));
 		Add(JJ2Event::GEM_RING, [](JJ2Level* level, std::uint32_t jj2Params) -> ConversionResult {

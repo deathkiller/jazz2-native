@@ -1685,18 +1685,25 @@ namespace Jazz2::Scripting
 
 		jjPLAYER& operator=(const jjPLAYER& o);
 
-		std::int32_t score = 0;
-		std::int32_t lastScoreDisplay = 0;
+		std::int32_t get_score() const;
+		std::int32_t set_score(std::int32_t value);
+		std::int32_t get_scoreDisplayed() const;
+		std::int32_t set_scoreDisplayed(std::int32_t value);
 
 		std::int32_t setScore(std::int32_t value);
 
-		float xPos = 0.0f;
-		float yPos = 0.0f;
-		float xAcc = 0.0f;
-		float yAcc = 0.0f;
-		float xOrg = 0.0f;
-		float yOrg = 0.0f;
-
+		float get_xPos() const;
+		float set_xPos(float value);
+		float get_yPos() const;
+		float set_yPos(float value);
+		float get_xAcc() const;
+		float set_xAcc(float value);
+		float get_yAcc() const;
+		float set_yAcc(float value);
+		float get_xOrg() const;
+		float set_xOrg(float value);
+		float get_yOrg() const;
+		float set_yOrg(float value);
 		float get_xSpeed();
 		float set_xSpeed(float value);
 		float get_ySpeed();
@@ -1712,20 +1719,22 @@ namespace Jazz2::Scripting
 		std::int8_t set_health(std::int8_t value);
 
 		std::int32_t warpID = 0;
-		std::int32_t fastfire = 0;
 
+		std::int32_t get_fastfire() const;
+		std::int32_t set_fastfire(std::int32_t value);
 		std::int8_t get_currWeapon() const;
 		std::int8_t set_currWeapon(std::int8_t value);
-
-		std::int32_t lives = 1;
-		std::int32_t invincibility = 0;
-		std::int32_t blink = 0;
-
+		std::int32_t get_lives() const;
+		std::int32_t set_lives(std::int32_t value);
+		std::int32_t get_invincibility() const;
+		std::int32_t set_invincibility(std::int32_t value);
+		std::int32_t get_blink() const;
+		std::int32_t set_blink(std::int32_t value);
 		std::int32_t extendInvincibility(std::int32_t duration);
-
-		std::int32_t food = 0;
-		std::int32_t coins = 0;
-
+		std::int32_t get_food() const;
+		std::int32_t set_food(std::int32_t value);
+		std::int32_t get_coins() const;
+		std::int32_t set_coins(std::int32_t value);
 		bool testForCoins(std::int32_t numberOfCoins);
 		std::int32_t get_gems(std::uint32_t type) const;
 		std::int32_t set_gems(std::uint32_t type, std::int32_t value);
@@ -1735,8 +1744,9 @@ namespace Jazz2::Scripting
 		std::int32_t set_shieldType(std::int32_t value);
 		std::int32_t get_shieldTime() const;
 		std::int32_t set_shieldTime(std::int32_t value);
+		std::int32_t get_rolling() const;
+		std::int32_t set_rolling(std::int32_t value);
 
-		std::int32_t rolling = 0;
 		std::int32_t bossNumber = 0;
 		std::int32_t boss = 0;
 		bool bossActive = false;
@@ -1744,10 +1754,15 @@ namespace Jazz2::Scripting
 		std::int32_t platform = 0;
 		std::int32_t flag = 0;
 		std::int32_t clientID = 0;
-		std::int8_t playerID = 0;
-		std::int32_t localPlayerID = 0;
+
+		std::int8_t get_playerID() const;
+		std::int32_t get_localPlayerID() const;
+
 		bool team = false;
-		bool run = false;
+
+		bool get_running() const;
+		bool set_running(bool value);
+
 		std::int32_t specialJump = 0;
 
 		std::int32_t get_stoned();

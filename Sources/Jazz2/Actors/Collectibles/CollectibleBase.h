@@ -37,10 +37,13 @@ namespace Jazz2::Actors::Collectibles
 
 		virtual void OnCollect(Player* player);
 
-		void SetFacingDirection();
+		void SetFacingDirection(bool inverse = false);
+
+	protected:
+		float _timeLeft;
 
 	private:
-		float _phase, _timeLeft;
+		float _phase;
 		float _startingY;
 		SmallVector<IlluminateLight, 0> _illuminateLights;
 	};

@@ -124,7 +124,7 @@ namespace Jazz2::Actors
 		virtual bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		PlayerCarryOver PrepareLevelCarryOver();
-		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src);
+		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version);
 		void SerializeResumableToStream(Stream& dest);
 
 		virtual void WarpToPosition(const Vector2f& pos, WarpFlags flags);
@@ -139,7 +139,7 @@ namespace Jazz2::Actors
 		bool AddLives(std::int32_t count);
 		void AddCoins(std::int32_t count);
 		void AddCoinsInternal(std::int32_t count);
-		void AddGems(std::int32_t count);
+		void AddGems(std::uint8_t gemType, std::int32_t count);
 		void ConsumeFood(bool isDrinkable);
 		void ActivateSugarRush(float duration);
 		virtual bool AddAmmo(WeaponType weaponType, std::int16_t count);
@@ -237,7 +237,9 @@ namespace Jazz2::Actors
 
 		float _sugarRushLeft, _sugarRushStarsTime;
 		float _shieldSpawnTime;
-		std::int32_t _gems, _gemsCheckpoint, _gemsPitch;
+		std::int32_t _gems[4];
+		std::int32_t _gemsCheckpoint[4];
+		std::int32_t _gemsPitch;
 		float _gemsTimer;
 		float _bonusWarpTimer;
 

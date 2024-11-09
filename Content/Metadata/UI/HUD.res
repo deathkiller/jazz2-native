@@ -133,31 +133,46 @@
 			"Path": "UI/heart.aura",
 			"States": [ 70 ]
 		},
-		"PickupGem": {
+		"PickupGemRed": {
 			"Path": "Pickup/gem.aura",
 			"PaletteOffset": 128,
 			"States": [ 71 ]
 		},
+		"PickupGemGreen": {
+			"Path": "Pickup/gem.aura",
+			"PaletteOffset": 256,
+			"States": [ 72 ]
+		},
+		"PickupGemBlue": {
+			"Path": "Pickup/gem.aura",
+			"PaletteOffset": 384,
+			"States": [ 73 ]
+		},
+		"PickupGemPurple": {
+			"Path": "Pickup/gem.aura",
+			"PaletteOffset": 512,
+			"States": [ 74 ]
+		},
 		"PickupCoin": {
 			"Path": "Pickup/coin_silver.aura",
-			"States": [ 72 ]
+			"States": [ 75 ]
 		},
 		"PickupFood": {
 			"Path": "Pickup/food_pizza.aura",
-			"States": [ 73 ]
+			"States": [ 76 ]
 		},
 		"PickupCarrot": {
 			"Path": "Pickup/carrot_full.aura",
-			"States": [ 74 ]
+			"States": [ 77 ]
 		},
 		"PickupStopwatch": {
 			"Path": "Pickup/stopwatch.aura",
-			"States": [ 75 ]
+			"States": [ 78 ]
 		},
 		
 		"BossHealthBar": {
 			"Path": "UI/boss_health_bar.aura",
-			"States": [ 76 ]
+			"States": [ 79 ]
 		},
 		
 		"WeaponWheel": {

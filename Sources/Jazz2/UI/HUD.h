@@ -43,7 +43,7 @@ namespace Jazz2::UI
 		void ShowLevelText(const StringView text);
 		void DrawViewportSeparators();
 		void ShowCoins(std::int32_t count);
-		void ShowGems(std::int32_t count);
+		void ShowGems(std::uint8_t gemType, std::int32_t count);
 
 		void BeginFadeIn();
 		void BeginFadeOut(float delay = 0.0f);
@@ -121,6 +121,7 @@ namespace Jazz2::UI
 		std::int32_t _gems;
 		float _coinsTime;
 		float _gemsTime;
+		std::uint8_t _gemsLastType;
 		float _activeBossTime;
 		float _rgbAmbientLight;
 		float _rgbHealthLast;

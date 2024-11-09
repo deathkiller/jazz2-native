@@ -102,6 +102,7 @@ namespace Jazz2
 		Rectf _viewBounds;
 		Vector2f _cameraPos;
 		Vector2f _cameraLastPos;
+		Vector2f _cameraOverridePos;
 		Vector2f _cameraDistanceFactor;
 		Vector2f _cameraResponsiveness;
 		float _shakeDuration;
@@ -120,6 +121,7 @@ namespace Jazz2
 		void OnEndFrame();
 		void UpdateCamera(float timeMult);
 		void ShakeCameraView(float duration);
+		void OverrideCamera(float x, float y, bool topLeft = false);
 		void WarpCameraToTarget(bool fast);
 	};
 }
