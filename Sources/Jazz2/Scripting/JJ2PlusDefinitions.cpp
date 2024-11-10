@@ -1704,22 +1704,22 @@ namespace Jazz2::Scripting
 	void jjPLAYER::cameraFreezeBF(bool xUnfreeze, float yPixel, bool centered, bool instant) {
 		noop();
 		// TODO: instant
-		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, NAN, yPixel, !centered);
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, INFINITY, yPixel, !centered);
 	}
 	void jjPLAYER::cameraFreezeFB(float xPixel, bool yUnfreeze, bool centered, bool instant) {
 		noop();
 		// TODO: instant
-		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xPixel, NAN, !centered);
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xPixel, INFINITY, !centered);
 	}
 	void jjPLAYER::cameraFreezeBB(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant) {
 		noop();
 		// TODO: instant, centered
-		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, NAN, NAN, false);
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, INFINITY, INFINITY, false);
 	}
 	void jjPLAYER::cameraUnfreeze(bool instant) {
 		noop();
 		// TODO: instant
-		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, NAN, NAN, false);
+		_levelScriptLoader->_levelHandler->OverrideCameraView(_player, INFINITY, INFINITY, false);
 	}
 	void jjPLAYER::showText(const String& text, std::uint32_t size) {
 		noop();

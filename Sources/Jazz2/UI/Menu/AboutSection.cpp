@@ -56,11 +56,7 @@
 #endif
 
 #if defined(WITH_AUDIO)
-#	if defined(DEATH_TARGET_ANDROID)
-#		define _i7 "\nOpenSL│ES\nOpenAL \f[c:#707070]· \f[h:80]https://github.com/kcat/openal-soft\f[/h]\f[/c]"
-#	else
-#		define _i7 "\nOpenAL \f[c:#707070]· \f[h:80]https://github.com/kcat/openal-soft\f[/h]\f[/c]"
-#	endif
+#	define _i7 "\nOpenAL \f[c:#707070]· \f[h:80]https://github.com/kcat/openal-soft\f[/h]\f[/c]"
 #else
 #	define _i7 ""
 #endif

@@ -49,6 +49,7 @@ namespace Jazz2::UI::Menu
 		float _animation;
 		float _transitionTime;
 		bool _shouldStart;
+		bool _alreadyStarted;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		String _sourcePath;
 #endif

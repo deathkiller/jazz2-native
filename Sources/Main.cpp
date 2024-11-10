@@ -1742,8 +1742,9 @@ int PrintVersion(bool logoVisible)
 
 int main(int argc, char** argv)
 {
+#if !defined(DEATH_TARGET_SWITCH)
 	bool logoVisible = false;
-#if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#	if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 	bool hasVirtualTerminal = ::isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");
@@ -1753,14 +1754,15 @@ int main(int argc, char** argv)
 			logoVisible = true;
 		}
 	}
-#endif
-#if defined(DEATH_TARGET_UNIX)
+#	endif
+#	if defined(DEATH_TARGET_UNIX)
 	for (std::size_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--version") == 0) {
 			// Just print current version below the logo and quit
 			return PrintVersion(logoVisible);
 		}
 	}
+#	endif
 #endif
 
 	return MainApplication::Run([]() -> std::unique_ptr<IAppEventHandler> {

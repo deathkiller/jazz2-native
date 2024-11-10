@@ -145,7 +145,9 @@ enum class ConsoleType {
 };
 
 static ConsoleType __consoleType = ConsoleType::None;
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 static bool __consoleDarkMode = true;
+#endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
