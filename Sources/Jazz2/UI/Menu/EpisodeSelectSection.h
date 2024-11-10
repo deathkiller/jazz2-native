@@ -35,6 +35,8 @@ namespace Jazz2::UI::Menu
 	private:
 		float _expandedAnimation;
 		float _transitionTime;
+		std::int32_t _transitionFromEpisode;
+		float _transitionFromEpisodeTime;
 		bool _multiplayer;
 		bool _expanded;
 		bool _shouldStart;

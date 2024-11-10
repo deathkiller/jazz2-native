@@ -16,7 +16,8 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	EpisodeSelectSection::EpisodeSelectSection(bool multiplayer)
-		: _multiplayer(multiplayer), _expandedAnimation(0.0f), _expanded(false), _shouldStart(false)
+		: _multiplayer(multiplayer), _expandedAnimation(0.0f), _transitionFromEpisode(-1), _transitionFromEpisodeTime(0.0f),
+			_expanded(false), _shouldStart(false)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -42,6 +43,12 @@ namespace Jazz2::UI::Menu
 
 		if (_expanded && _expandedAnimation < 1.0f) {
 			_expandedAnimation = std::min(_expandedAnimation + timeMult * 0.016f, 1.0f);
+		}
+		if (_transitionFromEpisode != -1) {
+			_transitionFromEpisodeTime = lerpByTime(_transitionFromEpisodeTime, 0.0f, 0.07f, timeMult);
+			if (std::abs(_transitionFromEpisodeTime) < 0.01f) {
+				_transitionFromEpisode = -1;
+			}
 		}
 
 		if (!_shouldStart) {
@@ -69,6 +76,8 @@ namespace Jazz2::UI::Menu
 					if (_root->ActionHit(PlayerActions::Up)) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_animation = 0.0f;
+						_transitionFromEpisode = _selectedIndex;
+						_transitionFromEpisodeTime = -1.0f;
 
 						_expanded = false;
 						_expandedAnimation = 0.0f;
@@ -82,6 +91,8 @@ namespace Jazz2::UI::Menu
 					} else if (_root->ActionHit(PlayerActions::Down)) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_animation = 0.0f;
+						_transitionFromEpisode = _selectedIndex;
+						_transitionFromEpisodeTime = 1.0f;
 
 						_expanded = false;
 						_expandedAnimation = 0.0f;
@@ -236,6 +247,26 @@ namespace Jazz2::UI::Menu
 	void EpisodeSelectSection::OnDrawClipped(Canvas* canvas)
 	{
 		if (!_items.empty()) {
+			bool inTransition = false;
+			if (_transitionFromEpisode != -1 && _transitionFromEpisode != _selectedIndex) {
+				auto& item = _items[_transitionFromEpisode];
+				if (item.Item.Description.BackgroundImage != nullptr) {
+					Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
+					Vector2i backgroundSize = item.Item.Description.BackgroundImage->size();
+
+					float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
+					float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
+					if (expandedAnimation3 > 0.0f) {
+						backgroundSize += expandedAnimation3 * 100;
+					}
+					
+					inTransition = true;
+					_root->DrawSolid(center.X, center.Y, IMenuContainer::BackgroundLayer - 10, Alignment::Center, Vector2f(backgroundSize.X + 2.0f, backgroundSize.Y + 2.0f), Colorf(1.0f, 1.0f, 1.0f, 0.26f));
+					float alpha = 0.4f - expandedAnimation3 * 0.1f;
+					_root->DrawTexture(*item.Item.Description.BackgroundImage, center.X, center.Y, IMenuContainer::BackgroundLayer - 1, Alignment::Center, Vector2f(backgroundSize.X, backgroundSize.Y), Colorf(alpha, alpha, alpha, 1.0f));
+				}
+			}
+
 			auto& item = _items[_selectedIndex];
 			if (item.Item.Description.BackgroundImage != nullptr) {
 				Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
@@ -247,9 +278,16 @@ namespace Jazz2::UI::Menu
 					backgroundSize += expandedAnimation3 * 100;
 				}
 
-				_root->DrawSolid(center.X, center.Y, IMenuContainer::BackgroundLayer - 10, Alignment::Center, Vector2f(backgroundSize.X + 2.0f, backgroundSize.Y + 2.0f), Colorf(1.0f, 1.0f, 1.0f, 0.26f));
+				float transitionOffset = 0.0f, transitionAlpha = 1.0f;
+				if (!inTransition) {
+					_root->DrawSolid(center.X, center.Y, IMenuContainer::BackgroundLayer - 10, Alignment::Center, Vector2f(backgroundSize.X + 2.0f, backgroundSize.Y + 2.0f), Colorf(1.0f, 1.0f, 1.0f, 0.26f));
+				} else {
+					transitionOffset = 50.0f * _transitionFromEpisodeTime;
+					transitionAlpha = 1.0f - 0.5 * std::abs(_transitionFromEpisodeTime);
+				}
+				
 				float alpha = 0.4f - expandedAnimation3 * 0.1f;
-				_root->DrawTexture(*item.Item.Description.BackgroundImage, center.X, center.Y, IMenuContainer::BackgroundLayer, Alignment::Center, Vector2f(backgroundSize.X, backgroundSize.Y), Colorf(alpha, alpha, alpha, 1.0f));
+				_root->DrawTexture(*item.Item.Description.BackgroundImage, center.X, center.Y + transitionOffset, IMenuContainer::BackgroundLayer, Alignment::Center, Vector2f(backgroundSize.X, backgroundSize.Y), Colorf(alpha, alpha, alpha, transitionAlpha));
 			}
 		}
 

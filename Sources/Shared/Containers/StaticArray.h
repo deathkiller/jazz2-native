@@ -220,14 +220,14 @@ namespace Death { namespace Containers {
 		 * implicitly value-initialize it.
 		 */
 #if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
-		template<std::size_t size> constexpr explicit StaticArray(InPlaceInitT, const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
+		template<std::size_t size> constexpr /*implicit*/ StaticArray(InPlaceInitT, const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #else
 		/* GCC 4.8 isn't able to figure out the size on its own. Which means
 		   there we use the type-provided size and lose the check for element
 		   count, but at least it compiles. */
-		constexpr explicit StaticArray(InPlaceInitT, const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
+		constexpr /*implicit*/ StaticArray(InPlaceInitT, const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
 #endif
 
 #if !defined(DEATH_MSVC2017_COMPATIBILITY)
@@ -243,14 +243,14 @@ namespace Death { namespace Containers {
 		*      compilers don't support moving arrays.
 		*/
 #	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
-		template<std::size_t size> constexpr explicit StaticArray(InPlaceInitT, T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
+		template<std::size_t size> constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #	else
 		/* GCC 4.8 isn't able to figure out the size on its own. Which means
 		   there we use the type-provided size and lose the check for element
 		   count, but at least it compiles. */
-		constexpr explicit StaticArray(InPlaceInitT, T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+		constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
 #	endif
 #endif
 
@@ -259,7 +259,7 @@ namespace Death { namespace Containers {
 		 *
 		 * Alias to @ref StaticArray(ValueInitT).
 		 */
-		constexpr explicit StaticArray() : Implementation::StaticArrayDataFor<size_, T>{ValueInit} {}
+		constexpr /*implicit*/ StaticArray() : Implementation::StaticArrayDataFor<size_, T>{ValueInit} {}
 
 		/**
 		 * @brief Construct an in-place-initialized array
@@ -276,14 +276,14 @@ namespace Death { namespace Containers {
 		 * Alias to @ref StaticArray(InPlaceInitT, const T(&)[size]).
 		 */
 #if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
-		template<std::size_t size> constexpr explicit StaticArray(const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
+		template<std::size_t size> constexpr /*implicit*/ StaticArray(const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #else
 		/* GCC 4.8 isn't able to figure out the size on its own. Which means
 		   there we use the type-provided size and lose the check for element
 		   count, but at least it compiles. */
-		constexpr explicit StaticArray(const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
+		constexpr /*implicit*/ StaticArray(const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
 #endif
 
 #if !defined(DEATH_MSVC2017_COMPATIBILITY)
@@ -297,14 +297,14 @@ namespace Death { namespace Containers {
 		*      compilers don't support moving arrays.
 		*/
 #	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
-		template<std::size_t size> constexpr explicit StaticArray(T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
+		template<std::size_t size> constexpr /*implicit*/ StaticArray(T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #	else
 		/* GCC 4.8 isn't able to figure out the size on its own. Which means
 		   there we use the type-provided size and lose the check for element
 		   count, but at least it compiles. */
-		constexpr explicit StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+		constexpr /*implicit*/ StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
 #	endif
 #endif
 

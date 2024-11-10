@@ -9,7 +9,7 @@
 
 #include <Containers/StringConcatenable.h>
 
-//#define AS_USE_ACCESSORS 1
+#define AS_USE_ACCESSORS 1
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
@@ -264,6 +264,8 @@ namespace Jazz2::Scripting
 		// TODO: It should be "int findByRef(const T&in value, uint startAt = 0) const"
 		r = engine->RegisterObjectMethod("array<T>", "int findByRef(uint startAt, const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, FindByRef, (asUINT, void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "bool opEquals(const array<T>&in) const", asMETHOD(CScriptArray, operator==), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		
+		r = engine->RegisterObjectMethod("array<T>", "bool isEmpty() const", asMETHOD(CScriptArray, IsEmpty), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "bool empty() const", asMETHOD(CScriptArray, IsEmpty), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// Sort with callback for comparison

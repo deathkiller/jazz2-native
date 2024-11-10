@@ -28,7 +28,6 @@ namespace Jazz2::UI
 namespace Jazz2::Scripting
 {
 	class LevelScriptLoader;
-	struct PlayerBackingStore;
 
 	enum airjump {
 		airjumpNONE,
@@ -1226,8 +1225,8 @@ namespace Jazz2::Scripting
 		ch_ tilde = ch_HIDE;
 		align_ align = align_DEFAULT;
 
-		static jjTEXTAPPEARANCE constructor();
-		static jjTEXTAPPEARANCE constructorMode(std::uint32_t mode);
+		static void constructor(void* self);
+		static void constructorMode(std::uint32_t mode, void* self);
 
 		jjTEXTAPPEARANCE& operator=(std::uint32_t other);
 	};
@@ -1237,8 +1236,8 @@ namespace Jazz2::Scripting
 		std::uint8_t green;
 		std::uint8_t blue;
 
-		static jjPALCOLOR Create();
-		static jjPALCOLOR CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue);
+		static void Create(void* self);
+		static void CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue, void* self);
 
 		std::uint8_t getHue();
 		std::uint8_t getSat();
@@ -1630,15 +1629,93 @@ namespace Jazz2::Scripting
 	};
 
 	jjOBJ* get_jjObjects(std::int32_t index);
-
 	jjOBJ* get_jjObjectPresets(std::int8_t id);
 
-	class jjPARTICLESTRING
+	void jjAddParticleTileExplosion(std::uint16_t xTile, std::uint16_t yTile, std::uint16_t tile, bool collapseSceneryStyle);
+	void jjAddParticlePixelExplosion(float xPixel, float yPixel, int curFrame, int direction, int mode);
+
+	struct jjPARTICLEPIXEL
 	{
-	public:
+		std::uint8_t size;
+
+		std::uint8_t get_color(std::int32_t i) const;
+		std::uint8_t set_color(std::int32_t i, std::uint8_t value);
+	};
+
+	struct jjPARTICLEFIRE
+	{
+		std::uint8_t size;
+		std::uint8_t color;
+		std::uint8_t colorStop;
+		std::int8_t colorDelta;
+	};
+
+	struct jjPARTICLESMOKE
+	{
+		std::uint8_t countdown;
+	};
+
+	struct jjPARTICLEICETRAIL
+	{
+		std::uint8_t color;
+		std::uint8_t colorStop;
+		std::int8_t colorDelta;
+	};
+
+	struct jjPARTICLESPARK
+	{
+		std::uint8_t color;
+		std::uint8_t colorStop;
+		std::int8_t colorDelta;
+	};
+
+	struct jjPARTICLESTRING
+	{
 		String get_text() const;
 		void set_text(String text);
+	};
 
+	struct jjPARTICLESNOW
+	{
+		std::uint8_t frame;
+		std::uint8_t countup;
+		std::uint8_t countdown;
+		std::uint16_t frameBase;
+	};
+
+	struct jjPARTICLERAIN
+	{
+		std::uint8_t frame;
+		std::uint16_t frameBase;
+	};
+
+	struct jjPARTICLEFLOWER
+	{
+		std::uint8_t size;
+		std::uint8_t color;
+		std::uint8_t angle;
+		std::int8_t angularSpeed;
+		std::uint8_t petals;
+	};
+
+	struct jjPARTICLESTAR
+	{
+		std::uint8_t size;
+		std::uint8_t color;
+		std::uint8_t angle;
+		std::int8_t angularSpeed;
+		std::uint8_t frame;
+		std::uint8_t colorChangeCounter;
+		std::uint8_t colorChangeInterval;
+	};
+
+	struct jjPARTICLELEAF
+	{
+		std::uint8_t frame;
+		std::uint8_t countup;
+		bool noclip;
+		std::uint8_t height;
+		std::uint16_t frameBase;
 	};
 
 	class jjPARTICLE
@@ -1659,8 +1736,20 @@ namespace Jazz2::Scripting
 		std::uint8_t particleType;
 		bool active;
 
-		// GENERIC
-		jjPARTICLESTRING string;
+		union {
+			jjPARTICLEPIXEL pixel;
+			jjPARTICLEFIRE fire;
+			jjPARTICLESMOKE smoke;
+			jjPARTICLEICETRAIL trail;
+			jjPARTICLESPARK spark;
+			jjPARTICLESTRING string;
+			jjPARTICLESNOW snow;
+			jjPARTICLERAIN rain;
+			jjPARTICLEFLOWER flower;
+			jjPARTICLESTAR star;
+			jjPARTICLELEAF leaf;
+		} GENERIC;
+
 
 	private:
 		std::int32_t _refCount;
@@ -1672,16 +1761,11 @@ namespace Jazz2::Scripting
 
 	class jjPLAYER
 	{
+		friend class LevelScriptLoader;
+
 	public:
-		jjPLAYER(LevelScriptLoader* levelScripts, std::int32_t playerIndex);
 		jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player);
 		~jjPLAYER();
-
-		void AddRef();
-		void Release();
-
-		PlayerBackingStore& GetBackingStore();
-		const PlayerBackingStore& GetBackingStore() const;
 
 		jjPLAYER& operator=(const jjPLAYER& o);
 
@@ -1794,6 +1878,8 @@ namespace Jazz2::Scripting
 		std::int8_t set_light(std::int8_t value);
 		std::uint32_t get_fur() const;
 		std::uint32_t set_fur(std::uint32_t value);
+		void getFur(std::uint8_t& a, std::uint8_t& b, std::uint8_t& c, std::uint8_t& d) const;
+		void setFur(std::uint8_t a, std::uint8_t b, std::uint8_t c, std::uint8_t d);
 
 		bool get_noFire() const;
 		bool set_noFire(bool value);
@@ -1901,9 +1987,13 @@ namespace Jazz2::Scripting
 		std::uint8_t frameID = 0;
 
 	private:
-		std::int32_t _refCount;
 		LevelScriptLoader* _levelScriptLoader;
 		Actors::Player* _player;
+
+		void* _timerCallback;
+		std::uint32_t _timerState;
+		float _timerLeft;
+		bool _timerPersists;
 	};
 
 	std::int32_t get_jjPlayerCount();
@@ -1987,8 +2077,8 @@ namespace Jazz2::Scripting
 		jjLAYER();
 		~jjLAYER();
 
-		static jjLAYER* CreateFromSize(std::uint32_t width, std::uint32_t height, jjLAYER* self);
-		static jjLAYER* CreateCopy(jjLAYER* other, jjLAYER* self);
+		static jjLAYER* CreateFromSize(std::uint32_t width, std::uint32_t height);
+		static jjLAYER* CreateCopy(jjLAYER* other);
 
 		void AddRef();
 		void Release();
@@ -2039,6 +2129,11 @@ namespace Jazz2::Scripting
 		static bool jjLayerOrderSet(const CScriptArray& order);
 		static CScriptArray* jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, int32_t tileIDAdjustmentFactor);
 		static bool jjTilesFromTileset(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const CScriptArray* paletteColorMapping);
+
+		std::uint16_t tileGet(int xTile, int yTile);
+		std::uint16_t tileSet(int xTile, int yTile, std::uint16_t newTile);
+		void generateSettableTileArea(int xTile, int yTile, int width, int height);
+		void generateSettableTileAreaAll();
 
 		std::int32_t SpeedModeX;
 		std::int32_t SpeedModeY;
@@ -2091,9 +2186,6 @@ namespace Jazz2::Scripting
 
 	bool isAdmin();
 
-	std::int32_t GetDifficulty();
-	std::int32_t SetDifficulty(std::int32_t value);
-
 	String getLevelFileName();
 	String getCurrLevelName();
 	void setCurrLevelName(const String& in);
@@ -2121,36 +2213,6 @@ namespace Jazz2::Scripting
 	std::int32_t get_teamScore(std::int32_t color);
 	std::int32_t GetMaxHealth();
 	std::int32_t GetStartHealth();
-
-	// TODO
-
-	float get_layerXOffset(std::uint8_t id);
-	float set_layerXOffset(std::uint8_t id, float value);
-	float get_layerYOffset(std::uint8_t id);
-	float set_layerYOffset(std::uint8_t id, float value);
-	std::int32_t get_layerWidth(std::uint8_t id);
-	std::int32_t get_layerRealWidth(std::uint8_t id);
-	std::int32_t get_layerRoundedWidth(std::uint8_t id);
-	std::int32_t get_layerHeight(std::uint8_t id);
-	float get_layerXSpeed(std::uint8_t id);
-	float set_layerXSpeed(std::uint8_t id, float value);
-	float get_layerYSpeed(std::uint8_t id);
-	float set_layerYSpeed(std::uint8_t id, float value);
-	float get_layerXAutoSpeed(std::uint8_t id);
-	float set_layerXAutoSpeed(std::uint8_t id, float value);
-	float get_layerYAutoSpeed(std::uint8_t id);
-	float set_layerYAutoSpeed(std::uint8_t id, float value);
-	bool get_layerHasTiles(std::uint8_t id);
-	bool set_layerHasTiles(std::uint8_t id, bool value);
-	bool get_layerTileHeight(std::uint8_t id);
-	bool set_layerTileHeight(std::uint8_t id, bool value);
-	bool get_layerTileWidth(std::uint8_t id);
-	bool set_layerTileWidth(std::uint8_t id, bool value);
-	bool get_layerLimitVisibleRegion(std::uint8_t id);
-	bool set_layerLimitVisibleRegion(std::uint8_t id, bool value);
-
-	void setLayerXSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
-	void setLayerYSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
 
 	// TODO
 
@@ -2198,22 +2260,6 @@ namespace Jazz2::Scripting
 	float set_jjTexturedBGFadePositionX(float value);
 	float get_jjTexturedBGFadePositionY();
 	float set_jjTexturedBGFadePositionY(float value);
-
-	float getWaterLevel();
-	float getWaterLevel2();
-	float setWaterLevel(float value, bool instant);
-	float get_waterChangeSpeed();
-	float set_waterChangeSpeed(float value);
-	std::int32_t get_waterLayer();
-	std::int32_t set_waterLayer(std::int32_t value);
-	void setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2);
-	// TODO: void setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2)
-	void setWaterGradientToTBG();
-	void resetWaterGradient();
-
-	void triggerRock(std::uint8_t id);
-
-	void cycleTo(const String& filename, bool warp, bool fast);
 
 	bool getEnabledTeam(std::uint8_t team);
 

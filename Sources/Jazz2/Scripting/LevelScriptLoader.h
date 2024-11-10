@@ -26,16 +26,6 @@ namespace Jazz2::Scripting
 		GameModeHUD
 	};
 
-	struct PlayerBackingStore
-	{
-		void* TimerCallback;
-		std::uint32_t TimerState;
-		float TimerLeft;
-		bool TimerPersists;
-
-		PlayerBackingStore();
-	};
-
 	class LevelScriptLoader : public ScriptLoader
 	{
 		friend class jjPLAYER;
@@ -44,6 +34,9 @@ namespace Jazz2::Scripting
 		LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath);
 
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const;
+
+		jjPLAYER* GetPlayerBackingStore(Actors::Player* player);
+		jjPLAYER* GetPlayerBackingStore(std::int32_t playerIndex);
 
 		void OnLevelLoad();
 		void OnLevelBegin();
@@ -69,7 +62,7 @@ namespace Jazz2::Scripting
 		asIScriptFunction* _onDrawGameModeHUD;
 		HashMap<std::int32_t, asITypeInfo*> _eventTypeToTypeInfo;
 		BitArray _enabledCallbacks;
-		HashMap<std::int32_t, PlayerBackingStore> _playerBackingStore;
+		HashMap<std::uint8_t, std::unique_ptr<jjPLAYER>> _playerBackingStore;
 
 		// Global scripting variables
 		static constexpr std::int32_t FLAG_HFLIPPED_TILE = 0x1000;
@@ -137,13 +130,9 @@ namespace Jazz2::Scripting
 
 		Actors::ActorBase* CreateActorInstance(const StringView& typeName);
 
-		PlayerBackingStore& GetPlayerBackingStore(std::int32_t playerIdx);
-
 		static void RegisterBuiltInFunctions(asIScriptEngine* engine);
 		void RegisterLegacyFunctions(asIScriptEngine* engine);
 		void RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module);
-
-		void OnException(asIScriptContext* ctx);
 
 		static std::uint8_t asGetDifficulty();
 		static bool asIsReforged();
@@ -169,12 +158,43 @@ namespace Jazz2::Scripting
 
 		static std::int32_t jjGameTicks();
 
+		static std::int32_t GetDifficulty();
+		static std::int32_t SetDifficulty(std::int32_t value);
+
 		static String get_jjMusicFileName();
 
 		static String get_jjHelpStrings(std::uint32_t index);
 		static void set_jjHelpStrings(std::uint32_t index, const String& text);
 
 		static void jjAlert(const String& text, bool sendToAll, std::uint32_t size);
+
+		static float get_layerXOffset(std::uint8_t id);
+		static float set_layerXOffset(std::uint8_t id, float value);
+		static float get_layerYOffset(std::uint8_t id);
+		static float set_layerYOffset(std::uint8_t id, float value);
+		static std::int32_t get_layerWidth(std::uint8_t id);
+		static std::int32_t get_layerRealWidth(std::uint8_t id);
+		static std::int32_t get_layerRoundedWidth(std::uint8_t id);
+		static std::int32_t get_layerHeight(std::uint8_t id);
+		static float get_layerXSpeed(std::uint8_t id);
+		static float set_layerXSpeed(std::uint8_t id, float value);
+		static float get_layerYSpeed(std::uint8_t id);
+		static float set_layerYSpeed(std::uint8_t id, float value);
+		static float get_layerXAutoSpeed(std::uint8_t id);
+		static float set_layerXAutoSpeed(std::uint8_t id, float value);
+		static float get_layerYAutoSpeed(std::uint8_t id);
+		static float set_layerYAutoSpeed(std::uint8_t id, float value);
+		static bool get_layerHasTiles(std::uint8_t id);
+		static bool set_layerHasTiles(std::uint8_t id, bool value);
+		static bool get_layerTileHeight(std::uint8_t id);
+		static bool set_layerTileHeight(std::uint8_t id, bool value);
+		static bool get_layerTileWidth(std::uint8_t id);
+		static bool set_layerTileWidth(std::uint8_t id, bool value);
+		static bool get_layerLimitVisibleRegion(std::uint8_t id);
+		static bool set_layerLimitVisibleRegion(std::uint8_t id, bool value);
+
+		static void setLayerXSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
+		static void setLayerYSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed);
 
 		static bool get_jjTriggers(std::uint8_t id);
 		static bool set_jjTriggers(std::uint8_t id, bool value);
@@ -184,6 +204,19 @@ namespace Jazz2::Scripting
 		static bool setNumberedASFunctionEnabled(std::uint8_t id, bool value);
 		static void reenableAllNumberedASFunctions();
 
+		static float getWaterLevel();
+		static float getWaterLevel2();
+		static float setWaterLevel(float value, bool instant);
+		static float get_waterChangeSpeed();
+		static float set_waterChangeSpeed(float value);
+		static std::int32_t get_waterLayer();
+		static std::int32_t set_waterLayer(std::int32_t value);
+		static void setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2);
+		static void setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2);
+		static void setWaterGradientToTBG();
+		static void resetWaterGradient();
+		static void triggerRock(std::uint8_t id);
+		static void cycleTo(const String& filename, bool warp, bool fast);
 		static void jjNxt(bool warp, bool fast);
 		static bool jjMusicLoad(const String& filename, bool forceReload, bool temporary);
 		static void jjMusicStop();

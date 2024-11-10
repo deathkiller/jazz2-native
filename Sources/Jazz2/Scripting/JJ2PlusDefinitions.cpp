@@ -12,6 +12,11 @@
 #include "../../nCine/Application.h"
 #include "../../nCine/Base/Random.h"
 
+#include <regex>
+
+#include <Containers/DateTime.h>
+#include <Containers/StringStl.h>
+
 namespace Jazz2::Scripting
 {
 	static void Unimplemented(const char* sourceName) {
@@ -31,22 +36,26 @@ namespace Jazz2::Scripting
 #	define noop() do {} while (false)
 #endif
 
-	jjTEXTAPPEARANCE jjTEXTAPPEARANCE::constructor() {
-		noop(); return { };
+	void jjTEXTAPPEARANCE::constructor(void* self) {
+		noop();
+		new(self) jjTEXTAPPEARANCE {};
 	}
-	jjTEXTAPPEARANCE jjTEXTAPPEARANCE::constructorMode(std::uint32_t mode) {
-		noop(); return { };
+	void jjTEXTAPPEARANCE::constructorMode(std::uint32_t mode, void* self) {
+		noop();
+		new(self) jjTEXTAPPEARANCE{};
 	}
 
 	jjTEXTAPPEARANCE& jjTEXTAPPEARANCE::operator=(std::uint32_t other) {
 		noop(); return *this;
 	}
 
-	jjPALCOLOR jjPALCOLOR::Create() {
-		noop(); return { };
+	void jjPALCOLOR::Create(void* self) {
+		noop();
+		new(self) jjPALCOLOR{};
 	}
-	jjPALCOLOR jjPALCOLOR::CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue) {
-		noop(); return { red, green, blue };
+	void jjPALCOLOR::CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue, void* self) {
+		noop();
+		new(self) jjPALCOLOR{red, green, blue};
 	}
 
 	std::uint8_t jjPALCOLOR::getHue() {
@@ -675,7 +684,7 @@ namespace Jazz2::Scripting
 			case 1:	// SMALL
 				scale = 0.8f;
 			case 2:	// LARGE
-				scale = 2.0f;
+				scale = 1.6f;
 		}
 
 		std::int32_t charOffset = 0;
@@ -699,7 +708,7 @@ namespace Jazz2::Scripting
 			case 1:	// SMALL
 				scale = 0.8f;
 			case 2:	// LARGE
-				scale = 2.0f;
+				scale = 1.6f;
 		}
 
 		std::int32_t charOffset = 0;
@@ -969,6 +978,20 @@ namespace Jazz2::Scripting
 		return new(mem) jjOBJ();
 	}
 
+	void jjAddParticleTileExplosion(std::uint16_t xTile, std::uint16_t yTile, std::uint16_t tile, bool collapseSceneryStyle) {
+		noop();
+	}
+	void jjAddParticlePixelExplosion(float xPixel, float yPixel, int curFrame, int direction, int mode) {
+		noop();
+	}
+
+	std::uint8_t jjPARTICLEPIXEL::get_color(std::int32_t i) const {
+		noop(); return 0;
+	}
+	std::uint8_t jjPARTICLEPIXEL::set_color(std::int32_t i, std::uint8_t value) {
+		noop(); return 0;
+	}
+
 	String jjPARTICLESTRING::get_text() const {
 		noop(); return {};
 	}
@@ -1013,39 +1036,13 @@ namespace Jazz2::Scripting
 		return new(mem) jjPARTICLE();
 	}
 
-	jjPLAYER::jjPLAYER(LevelScriptLoader* levelScripts, std::int32_t playerIndex) : _levelScriptLoader(levelScripts), _refCount(1) {
-		noop();
-		auto& players = levelScripts->GetPlayers();
-		_player = (playerIndex < players.size() ? players[playerIndex] : nullptr);
-	}
-	jjPLAYER::jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player) : _levelScriptLoader(levelScripts), _refCount(1), _player(player) {
+	jjPLAYER::jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player)
+		: _levelScriptLoader(levelScripts), _player(player), _timerCallback(nullptr),
+			_timerState(0), _timerLeft(0.0f), _timerPersists(false) {
 		noop();
 	}
 	jjPLAYER::~jjPLAYER() {
 		noop();
-	}
-
-	void jjPLAYER::AddRef()
-	{
-		_refCount++;
-	}
-
-	void jjPLAYER::Release()
-	{
-		if (--_refCount == 0) {
-			this->~jjPLAYER();
-			asFreeMem(this);
-		}
-	}
-
-	PlayerBackingStore& jjPLAYER::GetBackingStore()
-	{
-		return _levelScriptLoader->GetPlayerBackingStore(_player->_playerIndex);
-	}
-
-	const PlayerBackingStore& jjPLAYER::GetBackingStore() const
-	{
-		return _levelScriptLoader->GetPlayerBackingStore(_player->_playerIndex);
 	}
 
 	jjPLAYER& jjPLAYER::operator=(const jjPLAYER& o)
@@ -1424,6 +1421,12 @@ namespace Jazz2::Scripting
 		noop();
 		return 0;
 	}
+	void jjPLAYER::getFur(std::uint8_t& a, std::uint8_t& b, std::uint8_t& c, std::uint8_t& d) const {
+		noop();
+	}
+	void jjPLAYER::setFur(std::uint8_t a, std::uint8_t b, std::uint8_t c, std::uint8_t d) {
+		noop();
+	}
 
 	bool jjPLAYER::get_noFire() const {
 		noop();
@@ -1623,73 +1626,61 @@ namespace Jazz2::Scripting
 
 	std::uint32_t jjPLAYER::get_timerState() const {
 		noop();
-		const auto& backingStore = GetBackingStore();
-		return backingStore.TimerState;
+		return _timerState;
 	}
 	bool jjPLAYER::get_timerPersists() const {
 		noop();
-		const auto& backingStore = GetBackingStore();
-		return backingStore.TimerPersists;
+		return _timerPersists;
 	}
 	bool jjPLAYER::set_timerPersists(bool value) {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerPersists = value;
+		_timerPersists = value;
 		return value;
 	}
 	std::uint32_t jjPLAYER::timerStart(std::int32_t ticks, bool startPaused) {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerLeft = (float)ticks * FrameTimer::FramesPerSecond / 70;
-		backingStore.TimerState = (startPaused ? 2 : 1);
-		return backingStore.TimerState;
+		_timerLeft = (float)ticks * FrameTimer::FramesPerSecond / 70;
+		_timerState = (startPaused ? 2 : 1);
+		return _timerState;
 	}
 	std::uint32_t jjPLAYER::timerPause() {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerState = 2; // PAUSED
-		return backingStore.TimerState;
+		_timerState = 2; // PAUSED
+		return _timerState;
 	}
 	std::uint32_t jjPLAYER::timerResume() {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerState = 1; // STARTED
-		return backingStore.TimerState;
+		_timerState = 1; // STARTED
+		return _timerState;
 	}
 	std::uint32_t jjPLAYER::timerStop() {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerLeft = 0.0f;
-		backingStore.TimerState = 0; // STOPPED
-		return backingStore.TimerState;
+		_timerLeft = 0.0f;
+		_timerState = 0; // STOPPED
+		return _timerState;
 	}
 	std::int32_t jjPLAYER::get_timerTime() const {
 		noop();
-		const auto& backingStore = GetBackingStore();
-		std::int32_t jjTicksLeft = (std::int32_t)(backingStore.TimerLeft * 70 / FrameTimer::FramesPerSecond);
+		std::int32_t jjTicksLeft = (std::int32_t)(_timerLeft * 70 / FrameTimer::FramesPerSecond);
 		return jjTicksLeft;
 	}
 	std::int32_t jjPLAYER::set_timerTime(std::int32_t value) {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerLeft = (float)value * FrameTimer::FramesPerSecond / 70;
+		_timerLeft = (float)value * FrameTimer::FramesPerSecond / 70;
 		return value;
 	}
 	void jjPLAYER::timerFunction(const String& functionName) {
 		noop();
-		auto& backingStore = GetBackingStore();
 		asIScriptFunction* func = _levelScriptLoader->_module->GetFunctionByName(String::nullTerminatedView(functionName).data());
-		backingStore.TimerCallback = func;
+		_timerCallback = func;
 	}
 	void jjPLAYER::timerFunctionPtr(void* function) {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerCallback = function;
+		_timerCallback = function;
 	}
 	void jjPLAYER::timerFunctionFuncPtr(void* function) {
 		noop();
-		auto& backingStore = GetBackingStore();
-		backingStore.TimerCallback = function;
+		_timerCallback = function;
 	}
 
 	bool jjPLAYER::activateBoss(bool activate) {
@@ -1836,17 +1827,15 @@ namespace Jazz2::Scripting
 	}
 
 	std::int32_t get_jjPlayerCount() {
+		// TODO
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
-
-		void* mem = asAllocMem(sizeof(jjPLAYER));
 		return owner->GetPlayers().size();
 	}
 	std::int32_t get_jjLocalPlayerCount() {
+		// TODO
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
-
-		void* mem = asAllocMem(sizeof(jjPLAYER));
 		return owner->GetPlayers().size();
 	}
 
@@ -1855,27 +1844,21 @@ namespace Jazz2::Scripting
 
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
-
-		void* mem = asAllocMem(sizeof(jjPLAYER));
-		return new(mem) jjPLAYER(owner, 0);
+		return owner->GetPlayerBackingStore(0);
 	}
 	jjPLAYER* get_jjPlayers(std::uint8_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
-
-		void* mem = asAllocMem(sizeof(jjPLAYER));
-		return new(mem) jjPLAYER(owner, index);
+		return owner->GetPlayerBackingStore(index);
 	}
 	jjPLAYER* get_jjLocalPlayers(std::uint8_t index) {
 		noop();
 
 		auto ctx = asGetActiveContext();
 		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
-
-		void* mem = asAllocMem(sizeof(jjPLAYER));
-		return new(mem) jjPLAYER(owner, index);
+		return owner->GetPlayerBackingStore(index);
 	}
 
 	jjPIXELMAP::jjPIXELMAP() : _refCount(1) {
@@ -2053,13 +2036,17 @@ namespace Jazz2::Scripting
 		noop();
 	}
 
-	jjLAYER* jjLAYER::CreateFromSize(std::uint32_t width, std::uint32_t height, jjLAYER* self) {
+	jjLAYER* jjLAYER::CreateFromSize(std::uint32_t width, std::uint32_t height) {
 		noop();
-		return new(self) jjLAYER();
+
+		void* mem = asAllocMem(sizeof(jjLAYER));
+		return new(mem) jjLAYER();
 	}
-	jjLAYER* jjLAYER::CreateCopy(jjLAYER* other, jjLAYER* self) {
+	jjLAYER* jjLAYER::CreateCopy(jjLAYER* other) {
 		noop();
-		return new(self) jjLAYER();
+
+		void* mem = asAllocMem(sizeof(jjLAYER));
+		return new(mem) jjLAYER();
 	}
 
 	void jjLAYER::AddRef()
@@ -2161,8 +2148,24 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
+	std::uint16_t jjLAYER::tileGet(int xTile, int yTile) {
+		noop();
+		return 0;
+	}
+	std::uint16_t jjLAYER::tileSet(int xTile, int yTile, std::uint16_t newTile) {
+		noop();
+		return 0;
+	}
+	void jjLAYER::generateSettableTileArea(int xTile, int yTile, int width, int height) {
+		noop();
+	}
+	void jjLAYER::generateSettableTileAreaAll() {
+		noop();
+	}
+
 	bool mlleSetup() {
-		noop(); return true;
+		noop();
+		return true;
 	}
 
 	float get_sinTable(std::uint32_t angle) {
@@ -2178,45 +2181,138 @@ namespace Jazz2::Scripting
 		return Random().Next();
 	}
 	std::uint64_t unixTimeSec() {
-		noop(); return 0;
+		noop();
+		return Containers::DateTime::Now().ToUnixMilliseconds();
 	}
 	std::uint64_t unixTimeMs() {
-		noop(); return 0;
+		noop();
+		return Containers::DateTime::Now().ToUnixMilliseconds() / 1000;
 	}
 
 	bool jjRegexIsValid(const String& expression) {
-		noop(); return false;
+		noop();
+
+		try {
+			std::regex r(expression.begin(), expression.end());
+			return true;
+		} catch (std::regex_error& e) {
+			return false;
+		}
 	}
 	bool jjRegexMatch(const String& text, const String& expression, bool ignoreCase) {
-		noop(); return false;
+		noop();
+		
+		try {
+			auto flags = std::regex_constants::ECMAScript;
+			if (ignoreCase) {
+				flags |= std::regex_constants::icase;
+			}
+			std::regex r(expression.begin(), expression.end(), flags);
+			return std::regex_match(text.begin(), text.end(), r);
+		} catch (std::regex_error& e) {
+			LOGE("Failed to process regular expression: %s", e.what());
+			return false;
+		}
 	}
 	bool jjRegexMatchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase) {
-		noop(); return false;
+		noop();
+
+		try {
+			auto flags = std::regex_constants::ECMAScript;
+			if (ignoreCase) {
+				flags |= std::regex_constants::icase;
+			}
+			std::match_results<const char*> m;
+			std::regex r(expression.begin(), expression.end(), flags);
+			bool success = std::regex_match(text.begin(), text.end(), m, r);
+			// TODO: Results
+			return success;
+		} catch (std::regex_error& e) {
+			LOGE("Failed to process regular expression: %s", e.what());
+			return false;
+		}
 	}
 	bool jjRegexSearch(const String& text, const String& expression, bool ignoreCase) {
-		noop(); return false;
+		noop();
+
+		try {
+			auto flags = std::regex_constants::ECMAScript;
+			if (ignoreCase) {
+				flags |= std::regex_constants::icase;
+			}
+			std::regex r(expression.begin(), expression.end(), flags);
+			return std::regex_search(text.begin(), text.end(), r);
+		} catch (std::regex_error& e) {
+			LOGE("Failed to process regular expression: %s", e.what());
+			return false;
+		}
 	}
 	bool jjRegexSearchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase) {
-		noop(); return false;
+		noop();
+
+		try {
+			auto flags = std::regex_constants::ECMAScript;
+			if (ignoreCase) {
+				flags |= std::regex_constants::icase;
+			}
+			std::match_results<const char*> m;
+			std::regex r(expression.begin(), expression.end(), flags);
+			bool success = std::regex_search(text.begin(), text.end(), m, r);
+			// TODO: Results
+			return success;
+		} catch (std::regex_error& e) {
+			LOGE("Failed to process regular expression: %s", e.what());
+			return false;
+		}
 	}
 	String jjRegexReplace(const String& text, const String& expression, const String& replacement, bool ignoreCase) {
-		noop(); return {};
+		noop();
+
+		try {
+			auto flags = std::regex_constants::ECMAScript;
+			if (ignoreCase) {
+				flags |= std::regex_constants::icase;
+			}
+			std::regex r(expression.begin(), expression.end(), flags);
+			std::string textStr = text;
+			std::string replacementStr = replacement;
+			return std::regex_replace(textStr, r, replacementStr);
+		} catch (std::regex_error& e) {
+			LOGE("Failed to process regular expression: %s", e.what());
+			return text;
+		}
 	}
 
 	std::int32_t GetFPS() {
-		noop(); return (std::int32_t)theApplication().GetFrameTimer().GetAverageFps();
+		noop();
+		return (std::int32_t)theApplication().GetFrameTimer().GetAverageFps();
 	}
-
 
 	bool isAdmin() {
 		noop(); return false;
 	}
 
-	std::int32_t GetDifficulty() {
-		noop(); return 0;
+	std::int32_t LevelScriptLoader::GetDifficulty() {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		switch (_this->_levelHandler->_difficulty) {
+			case GameDifficulty::Easy: return 0;
+			default:
+			case GameDifficulty::Normal: return 1;
+			case GameDifficulty::Hard: return 2;
+		}
 	}
-	std::int32_t SetDifficulty(std::int32_t value) {
-		noop(); return 0;
+	std::int32_t LevelScriptLoader::SetDifficulty(std::int32_t value) {
+		noop();
+
+		if (value >= 0 && value <= 2) {
+			auto ctx = asGetActiveContext();
+			auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+			_this->_levelHandler->_difficulty = (GameDifficulty)value;
+		}
+		return value;
 	}
 
 	String getLevelFileName() {
@@ -2311,84 +2407,276 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	float get_layerXOffset(std::uint8_t id) {
-		noop(); return 0;
+	float LevelScriptLoader::get_layerXOffset(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.OffsetX : 0);
 	}
-	float set_layerXOffset(std::uint8_t id, float value) {
-		noop(); return 0;
+	float LevelScriptLoader::set_layerXOffset(std::uint8_t id, float value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.OffsetX = value;
+			return value;
+		} else {
+			return 0.0f;
+		}
 	}
-	float get_layerYOffset(std::uint8_t id) {
-		noop(); return 0;
+	float LevelScriptLoader::get_layerYOffset(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.OffsetY : 0);
 	}
-	float set_layerYOffset(std::uint8_t id, float value) {
-		noop(); return 0;
+	float LevelScriptLoader::set_layerYOffset(std::uint8_t id, float value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.OffsetY = value;
+			return value;
+		} else {
+			return 0.0f;
+		}
 	}
-	std::int32_t get_layerWidth(std::uint8_t id) {
-		noop(); return 0;
+	std::int32_t LevelScriptLoader::get_layerWidth(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].LayoutSize.X : 0);
 	}
-	std::int32_t get_layerRealWidth(std::uint8_t id) {
-		noop(); return 0;
+	std::int32_t LevelScriptLoader::get_layerRealWidth(std::uint8_t id) {
+		noop();
+		return get_layerWidth(id);
 	}
-	std::int32_t get_layerRoundedWidth(std::uint8_t id) {
-		noop(); return 0;
+	std::int32_t LevelScriptLoader::get_layerRoundedWidth(std::uint8_t id) {
+		noop();
+		return (get_layerWidth(id) + 3) / 4;
 	}
-	std::int32_t get_layerHeight(std::uint8_t id) {
-		noop(); return 0;
+	std::int32_t LevelScriptLoader::get_layerHeight(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].LayoutSize.Y : 0);
 	}
-	float get_layerXSpeed(std::uint8_t id) {
-		noop(); return 0;
+	float LevelScriptLoader::get_layerXSpeed(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.SpeedX : 0.0f);
 	}
-	float set_layerXSpeed(std::uint8_t id, float value) {
-		noop(); return 0;
+	float LevelScriptLoader::set_layerXSpeed(std::uint8_t id, float value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.SpeedX = value;
+			return value;
+		} else {
+			return 0.0f;
+		}
 	}
-	float get_layerYSpeed(std::uint8_t id) {
-		noop(); return 0;
+	float LevelScriptLoader::get_layerYSpeed(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.SpeedY : 0.0f);
 	}
-	float set_layerYSpeed(std::uint8_t id, float value) {
-		noop(); return 0;
+	float LevelScriptLoader::set_layerYSpeed(std::uint8_t id, float value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.SpeedY = value;
+			return value;
+		} else {
+			return 0.0f;
+		}
 	}
-	float get_layerXAutoSpeed(std::uint8_t id) {
-		noop(); return 0;
+	float LevelScriptLoader::get_layerXAutoSpeed(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.AutoSpeedX : 0.0f);
 	}
-	float set_layerXAutoSpeed(std::uint8_t id, float value) {
-		noop(); return 0;
+	float LevelScriptLoader::set_layerXAutoSpeed(std::uint8_t id, float value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.AutoSpeedX = value;
+			return value;
+		} else {
+			return 0.0f;
+		}
 	}
-	float get_layerYAutoSpeed(std::uint8_t id) {
-		noop(); return 0;
+	float LevelScriptLoader::get_layerYAutoSpeed(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.AutoSpeedY : 0.0f);
 	}
-	float set_layerYAutoSpeed(std::uint8_t id, float value) {
-		noop(); return 0;
+	float LevelScriptLoader::set_layerYAutoSpeed(std::uint8_t id, float value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.AutoSpeedY = value;
+			return value;
+		} else {
+			return 0.0f;
+		}
 	}
-	bool get_layerHasTiles(std::uint8_t id) {
-		noop(); return false;
+	bool LevelScriptLoader::get_layerHasTiles(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() && tileMap->_layers[id].Visible);
 	}
-	bool set_layerHasTiles(std::uint8_t id, bool value) {
-		noop(); return false;
+	bool LevelScriptLoader::set_layerHasTiles(std::uint8_t id, bool value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Visible = value;
+			return value;
+		} else {
+			return false;
+		}
 	}
-	bool get_layerTileHeight(std::uint8_t id) {
-		noop(); return false;
+	bool LevelScriptLoader::get_layerTileHeight(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() && tileMap->_layers[id].Description.RepeatY);
 	}
-	bool set_layerTileHeight(std::uint8_t id, bool value) {
-		noop(); return false;
+	bool LevelScriptLoader::set_layerTileHeight(std::uint8_t id, bool value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.RepeatY = value;
+			return value;
+		} else {
+			return false;
+		}
 	}
-	bool get_layerTileWidth(std::uint8_t id) {
-		noop(); return false;
+	bool LevelScriptLoader::get_layerTileWidth(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() && tileMap->_layers[id].Description.RepeatX);
 	}
-	bool set_layerTileWidth(std::uint8_t id, bool value) {
-		noop(); return false;
+	bool LevelScriptLoader::set_layerTileWidth(std::uint8_t id, bool value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.RepeatX = value;
+			return value;
+		} else {
+			return false;
+		}
 	}
-	bool get_layerLimitVisibleRegion(std::uint8_t id) {
-		noop(); return false;
+	bool LevelScriptLoader::get_layerLimitVisibleRegion(std::uint8_t id) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		return (id < tileMap->_layers.size() && tileMap->_layers[id].Description.UseInherentOffset);
 	}
-	bool set_layerLimitVisibleRegion(std::uint8_t id, bool value) {
-		noop(); return false;
+	bool LevelScriptLoader::set_layerLimitVisibleRegion(std::uint8_t id, bool value) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			tileMap->_layers[id].Description.UseInherentOffset = value;
+			return value;
+		} else {
+			return false;
+		}
 	}
 
-	void setLayerXSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
+	void LevelScriptLoader::setLayerXSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
 		noop();
+
+		// TODO: Shortcut global functions for setXSpeed and setYSpeed on the same-indexed jjLayers objects.
+		// TODO: Changes the X or Y speed.Unlike the basic properties like xSpeed and yAutoSpeed,
+		// these functions will ensure that the layer remains in the same position it was before its speeds were changed.
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			if (newSpeedIsAnAutoSpeed) {
+				tileMap->_layers[id].Description.AutoSpeedX = newspeed;
+			} else {
+				tileMap->_layers[id].Description.SpeedX = newspeed;
+			}
+		}
 	}
-	void setLayerYSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
+	void LevelScriptLoader::setLayerYSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
 		noop();
+
+		// TODO: Shortcut global functions for setXSpeed and setYSpeed on the same-indexed jjLayers objects.
+		// TODO: Changes the X or Y speed.Unlike the basic properties like xSpeed and yAutoSpeed,
+		// these functions will ensure that the layer remains in the same position it was before its speeds were changed.
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->_tileMap.get();
+		if (id < tileMap->_layers.size()) {
+			if (newSpeedIsAnAutoSpeed) {
+				tileMap->_layers[id].Description.AutoSpeedY = newspeed;
+			} else {
+				tileMap->_layers[id].Description.SpeedY = newspeed;
+			}
+		}
 	}
 
 	// TODO
@@ -2547,43 +2835,66 @@ namespace Jazz2::Scripting
 		_this->_enabledCallbacks.setAll();
 	}
 
-	float getWaterLevel() {
+	float LevelScriptLoader::getWaterLevel() {
+		noop();
+
+		// TODO
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		return _this->_levelHandler->_waterLevel;
+	}
+	float LevelScriptLoader::getWaterLevel2() {
+		noop();
+
+		// TODO
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		return _this->_levelHandler->_waterLevel;
+	}
+	float LevelScriptLoader::setWaterLevel(float value, bool instant) {
+		noop();
+
+		// TODO: instant
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_levelHandler->_waterLevel = value;
+		return value;
+	}
+	float LevelScriptLoader::get_waterChangeSpeed() {
 		noop(); return 0;
 	}
-	float getWaterLevel2() {
+	float LevelScriptLoader::set_waterChangeSpeed(float value) {
 		noop(); return 0;
 	}
-	float setWaterLevel(float value, bool instant) {
+	std::int32_t LevelScriptLoader::get_waterLayer() {
 		noop(); return 0;
 	}
-	float get_waterChangeSpeed() {
+	std::int32_t LevelScriptLoader::set_waterLayer(std::int32_t value) {
 		noop(); return 0;
 	}
-	float set_waterChangeSpeed(float value) {
-		noop(); return 0;
-	}
-	std::int32_t get_waterLayer() {
-		noop(); return 0;
-	}
-	std::int32_t set_waterLayer(std::int32_t value) {
-		noop(); return 0;
-	}
-	void setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2) {
+	void LevelScriptLoader::setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2) {
 		noop();
 	}
-	// TODO: void setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2)
-	void setWaterGradientToTBG() {
+	void LevelScriptLoader::setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2) {
 		noop();
 	}
-	void resetWaterGradient() {
+	void LevelScriptLoader::setWaterGradientToTBG() {
+		noop();
+	}
+	void LevelScriptLoader::resetWaterGradient() {
 		noop();
 	}
 
-	void triggerRock(std::uint8_t id) {
+	void LevelScriptLoader::triggerRock(std::uint8_t id) {
 		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		std::uint8_t eventParams[] = { id };
+		_this->_levelHandler->BroadcastTriggeredEvent(nullptr, EventType::RollingRockTrigger, eventParams);
 	}
 
-	void cycleTo(const String& filename, bool warp, bool fast) {
+	void LevelScriptLoader::cycleTo(const String& filename, bool warp, bool fast) {
 		noop();
 	}
 	void LevelScriptLoader::jjNxt(bool warp, bool fast)

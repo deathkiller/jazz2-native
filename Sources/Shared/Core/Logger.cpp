@@ -207,7 +207,6 @@ namespace Death { namespace Trace {
 
 		_threadContexts.erase(threadContextIt);
 
-		// Decrement the counter since we found something to
 		_invalidThreadContextCount.fetch_sub(1, std::memory_order_relaxed);
 	}
 #endif

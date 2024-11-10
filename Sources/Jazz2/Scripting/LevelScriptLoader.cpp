@@ -20,6 +20,18 @@
 
 #include "../../nCine/Base/Random.h"
 
+#if defined(DEATH_TRACE)
+#	define AS_LOG_EXCEPTION(ctx)																						\
+		do {																											\
+			std::int32_t column = 0; const char* sectionName = nullptr;													\
+			std::int32_t line = ctx->GetExceptionLineNumber(&column, &sectionName);										\
+			LOGE("%s:%i(%i) ‡ An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",			\
+				sectionName, line, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());	\
+		} while (false)
+#else
+#	define AS_LOG_EXCEPTION(ctx) do {} while (false)
+#endif
+
 // Without namespace for shorter log messages
 static void asScript(String& msg)
 {
@@ -175,7 +187,7 @@ namespace Jazz2::Scripting
 		ctx->Prepare(func);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			OnException(ctx);
+			AS_LOG_EXCEPTION(ctx);
 		}
 
 		_engine->ReturnContext(ctx);
@@ -193,7 +205,7 @@ namespace Jazz2::Scripting
 		ctx->Prepare(func);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			OnException(ctx);
+			AS_LOG_EXCEPTION(ctx);
 		}
 
 		_engine->ReturnContext(ctx);
@@ -211,7 +223,7 @@ namespace Jazz2::Scripting
 		ctx->Prepare(func);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			OnException(ctx);
+			AS_LOG_EXCEPTION(ctx);
 		}
 
 		_engine->ReturnContext(ctx);
@@ -238,26 +250,24 @@ namespace Jazz2::Scripting
 						ctx->Prepare(_onLevelUpdate);
 						std::int32_t r = ctx->Execute();
 						if (r == asEXECUTION_EXCEPTION) {
-							OnException(ctx);
+							AS_LOG_EXCEPTION(ctx);
 							// Don't call the method again if an exception occurs
-							_onLevelUpdate = nullptr;
+							//_onLevelUpdate = nullptr;
 						}
 					}
 					if (onPlayer != nullptr) {
 						for (auto* player : _levelHandler->_players) {
 							ctx->Prepare(onPlayer);
 
-							jjPLAYER* playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
-							ctx->SetArgObject(0, playerWrapper);
+							jjPLAYER* p = GetPlayerBackingStore(player);
+							ctx->SetArgObject(0, p);
 
 							std::int32_t r = ctx->Execute();
 							if (r == asEXECUTION_EXCEPTION) {
-								OnException(ctx);
+								AS_LOG_EXCEPTION(ctx);
 								// Don't call the method again if an exception occurs
 								//_onLevelUpdate = nullptr;
 							}
-
-							playerWrapper->Release();
 						}
 					}
 					_onLevelUpdateLastFrame++;
@@ -278,7 +288,7 @@ namespace Jazz2::Scripting
 				ctx->SetArgFloat(0, timeMult);
 				std::int32_t r = ctx->Execute();
 				if (r == asEXECUTION_EXCEPTION) {
-					LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+					AS_LOG_EXCEPTION(ctx);
 					// Don't call the method again if an exception occurs
 					_onLevelUpdate = nullptr;
 				}
@@ -291,12 +301,12 @@ namespace Jazz2::Scripting
 		for (auto* player : _levelHandler->_players) {
 			auto it = _playerBackingStore.find(player->GetPlayerIndex());
 			if (it != _playerBackingStore.end()) {
-				if (it->second.TimerState == 1) { // STARTED
-					it->second.TimerLeft -= timeMult;
-					LOGD("Player timer decremented (%f)", it->second.TimerLeft);
-					if (it->second.TimerLeft <= 0.0f) {
-						it->second.TimerState = 0; // STOPPED
-						asIScriptFunction* func = (asIScriptFunction*)it->second.TimerCallback;
+				if (it->second->_timerState == 1) { // STARTED
+					it->second->_timerLeft -= timeMult;
+					LOGD("Player timer decremented (%f)", it->second->_timerLeft);
+					if (it->second->_timerLeft <= 0.0f) {
+						it->second->_timerState = 0; // STOPPED
+						asIScriptFunction* func = (asIScriptFunction*)it->second->_timerCallback;
 						if (func == nullptr) {
 							func = _module->GetFunctionByName("onPlayerTimerEnd");
 							if (func == nullptr) {
@@ -307,28 +317,23 @@ namespace Jazz2::Scripting
 						asIScriptContext* ctx = _engine->RequestContext();
 						ctx->Prepare(func);
 
-						jjPLAYER* playerWrapper = nullptr;
 						std::int32_t typeId = 0;
 						if (func->GetParam(0, &typeId) >= 0) {
 							if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
 								asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
 								if (typeInfo->GetName() == "jjPLAYER"_s) {
-									playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
-									ctx->SetArgObject(0, playerWrapper);
+									jjPLAYER* p = GetPlayerBackingStore(player);
+									ctx->SetArgObject(0, p);
 								}
 							}
 						}
 
 						std::int32_t r = ctx->Execute();
 						if (r == asEXECUTION_EXCEPTION) {
-							LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+							AS_LOG_EXCEPTION(ctx);
 						}
 
 						_engine->ReturnContext(ctx);
-
-						if (playerWrapper != nullptr) {
-							playerWrapper->Release();
-						}
 					}
 				}
 			}
@@ -353,7 +358,6 @@ namespace Jazz2::Scripting
 			asIScriptContext* ctx = _engine->RequestContext();
 			ctx->Prepare(func);
 
-			jjPLAYER* playerWrapper = nullptr;
 			std::int32_t paramIdx = 0;
 			std::int32_t typeId = 0;
 			if (func->GetParam(paramIdx, &typeId) >= 0) {
@@ -361,8 +365,8 @@ namespace Jazz2::Scripting
 					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
 						if (auto* player = runtime_cast<Actors::Player*>(initiator)) {
-							playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
-							ctx->SetArgObject(0, playerWrapper);
+							jjPLAYER* p = GetPlayerBackingStore(player);
+							ctx->SetArgObject(0, p);
 						} else {
 							// Player is required but wasn't provided
 							return;
@@ -380,58 +384,12 @@ namespace Jazz2::Scripting
 
 			std::int32_t r = ctx->Execute();
 			if (r == asEXECUTION_EXCEPTION) {
-				LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
-			}
-
-			_engine->ReturnContext(ctx);
-
-			if (playerWrapper != nullptr) {
-				playerWrapper->Release();
-			}
-			return;
-		}
-
-		/*
-		// If known player is the initiator, try to call specific variant of the function
-		if (auto* player = runtime_cast<Actors::Player*>(initiator)) {
-			formatString(funcName, sizeof(funcName), "void onFunction%i(Player@, uint8)", eventParams[0]);
-			func = _module->GetFunctionByDecl(funcName);
-			if (func != nullptr) {
-				asIScriptContext* ctx = _engine->RequestContext();
-
-				void* mem = asAllocMem(sizeof(jjPLAYER));
-				jjPLAYER* playerWrapper = new(mem) jjPLAYER(this, player);
-
-				ctx->Prepare(func);
-				ctx->SetArgObject(0, playerWrapper);
-				ctx->SetArgByte(1, eventParams[1]);
-				int r = ctx->Execute();
-				if (r == asEXECUTION_EXCEPTION) {
-					LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
-				}
-
-				_engine->ReturnContext(ctx);
-
-				playerWrapper->Release();
-				return;
-			}
-		}
-
-		// Try to call parameter-less variant
-		formatString(funcName, sizeof(funcName), "void onFunction%i()", eventParams[0]);
-		func = _module->GetFunctionByDecl(funcName);
-		if (func != nullptr) {
-			asIScriptContext* ctx = _engine->RequestContext();
-
-			ctx->Prepare(func);
-			int r = ctx->Execute();
-			if (r == asEXECUTION_EXCEPTION) {
-				LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+				AS_LOG_EXCEPTION(ctx);
 			}
 
 			_engine->ReturnContext(ctx);
 			return;
-		}*/
+		}
 
 		LOGW("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
 	}
@@ -462,8 +420,8 @@ namespace Jazz2::Scripting
 			asIScriptContext* ctx = _engine->RequestContext();
 			ctx->Prepare(func);
 
-			jjPLAYER* playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
-			ctx->SetArgObject(0, playerWrapper);
+			jjPLAYER* p = GetPlayerBackingStore(player);
+			ctx->SetArgObject(0, p);
 
 			jjCANVAS* canvasWrapper = new(asAllocMem(sizeof(jjCANVAS))) jjCANVAS(hud, view); // TODO: Cache this object ???
 			ctx->SetArgObject(1, canvasWrapper);
@@ -472,12 +430,11 @@ namespace Jazz2::Scripting
 			if (r == asEXECUTION_FINISHED) {
 				overrideDraw = (ctx->GetReturnByte() != 0);
 			} else if (r == asEXECUTION_EXCEPTION) {
-				OnException(ctx);
+				AS_LOG_EXCEPTION(ctx);
 			}
 
 			_engine->ReturnContext(ctx);
 
-			playerWrapper->Release();
 			// TODO
 			asFreeMem(canvasWrapper);
 		}
@@ -489,8 +446,8 @@ namespace Jazz2::Scripting
 	{
 		auto it = _playerBackingStore.find(player->GetPlayerIndex());
 		if (it != _playerBackingStore.end()) {
-			if (!it->second.TimerPersists) {
-				it->second.TimerState = 0; // STOPPED
+			if (!it->second->_timerPersists) {
+				it->second->_timerState = 0; // STOPPED
 			}
 		}
 
@@ -499,15 +456,13 @@ namespace Jazz2::Scripting
 			asIScriptContext* ctx = _engine->RequestContext();
 			ctx->Prepare(func);
 
-			jjPLAYER* playerWrapper = nullptr;
-			jjPLAYER* killerWrapper = nullptr;
 			std::int32_t typeId = 0;
 			if (func->GetParam(0, &typeId) >= 0) {
 				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
 					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
-						playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
-						ctx->SetArgObject(0, playerWrapper);
+						jjPLAYER* p = GetPlayerBackingStore(player);
+						ctx->SetArgObject(0, p);
 					}
 				}
 			}
@@ -517,8 +472,8 @@ namespace Jazz2::Scripting
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
 						// TODO: Detect weapons properly
 						if (auto* killer = runtime_cast<Actors::Player*>(collider)) {
-							killerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, killer);
-							ctx->SetArgObject(0, killerWrapper);
+							jjPLAYER* p = GetPlayerBackingStore(killer);
+							ctx->SetArgObject(0, p);
 						} else {
 							ctx->SetArgObject(0, nullptr);
 						}
@@ -528,17 +483,10 @@ namespace Jazz2::Scripting
 
 			std::int32_t r = ctx->Execute();
 			if (r == asEXECUTION_EXCEPTION) {
-				LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+				AS_LOG_EXCEPTION(ctx);
 			}
 
 			_engine->ReturnContext(ctx);
-
-			if (playerWrapper != nullptr) {
-				playerWrapper->Release();
-			}
-			if (killerWrapper != nullptr) {
-				killerWrapper->Release();
-			}
 		}
 	}
 
@@ -582,7 +530,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::RegisterLegacyFunctions(asIScriptEngine* engine)
 	{
-		// JJ2+ Declarations (provided by JJ2+ team)
+		// JJ2+ Declarations (provided by JJ2+ team on 2023/01/06)
 		engine->SetDefaultNamespace("");
 		engine->RegisterGlobalFunction("float jjSin(uint angle)", asFUNCTION(get_sinTable), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float jjCos(uint angle)", asFUNCTION(get_cosTable), asCALL_CDECL);
@@ -660,9 +608,7 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalProperty("const GAME::Connection jjGameConnection", &partyMode);
 
 		// TODO
-		engine->RegisterObjectType("jjPLAYER", sizeof(jjPLAYER), asOBJ_REF /*| asOBJ_NOCOUNT*/);
-		engine->RegisterObjectBehaviour("jjPLAYER", asBEHAVE_ADDREF, "void f()", asMETHOD(jjPLAYER, AddRef), asCALL_THISCALL);
-		engine->RegisterObjectBehaviour("jjPLAYER", asBEHAVE_RELEASE, "void f()", asMETHOD(jjPLAYER, Release), asCALL_THISCALL);
+		engine->RegisterObjectType("jjPLAYER", sizeof(jjPLAYER), asOBJ_REF | asOBJ_NOCOUNT);
 		engine->RegisterGlobalFunction("const int get_jjPlayerCount()", asFUNCTION(get_jjPlayerCount), asCALL_CDECL);
 		engine->RegisterGlobalFunction("const int get_jjLocalPlayerCount()", asFUNCTION(get_jjLocalPlayerCount), asCALL_CDECL);
 		engine->RegisterGlobalFunction("jjPLAYER@ get_jjP()", asFUNCTION(get_jjP), asCALL_CDECL); // Deprecated
@@ -809,9 +755,8 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "int8 set_light(int8)", asMETHOD(jjPLAYER, set_light), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "uint32 get_fur() const", asMETHOD(jjPLAYER, get_fur), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "uint32 set_fur(uint32)", asMETHOD(jjPLAYER, set_fur), asCALL_THISCALL);
-		// TODO
-		/*engine->RegisterObjectMethod("jjPLAYER", "void furGet(uint8 &out a, uint8 &out b, uint8 &out c, uint8 &out d) const", asFUNCTION(getFur), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void furSet(uint8 a, uint8 b, uint8 c, uint8 d)", asFUNCTION(setFur), asCALL_THISCALL);*/
+		engine->RegisterObjectMethod("jjPLAYER", "void furGet(uint8 &out a, uint8 &out b, uint8 &out c, uint8 &out d) const", asMETHOD(jjPLAYER, getFur), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void furSet(uint8 a, uint8 b, uint8 c, uint8 d)", asMETHOD(jjPLAYER, setFur), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_noFire() const", asMETHOD(jjPLAYER, get_noFire), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_noFire(bool)", asMETHOD(jjPLAYER, set_noFire), asCALL_THISCALL);
@@ -1313,8 +1258,7 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("int get_jjWaterLayer()", asFUNCTION(get_waterLayer), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int set_jjWaterLayer(int)", asFUNCTION(set_waterLayer), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetWaterGradient(uint8 red1, uint8 green1, uint8 blue1, uint8 red2, uint8 green2, uint8 blue2)", asFUNCTION(setWaterGradient), asCALL_CDECL);
-		// TODO
-		//engine->RegisterGlobalFunction("void jjSetWaterGradient(jjPALCOLOR color1, jjPALCOLOR color2)", asFUNCTION(setWaterGradientFromColors), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjSetWaterGradient(jjPALCOLOR color1, jjPALCOLOR color2)", asFUNCTION(setWaterGradientFromColors), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetWaterGradient()", asFUNCTION(setWaterGradientToTBG), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjResetWaterGradient()", asFUNCTION(resetWaterGradient), asCALL_CDECL);
 
@@ -1616,9 +1560,8 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjOBJ", "bool doesCollide(const jjOBJ@ object, bool always = false) const", asMETHOD(jjOBJ, doesCollide), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjOBJ", "bool doesCollide(const jjPLAYER@ player, bool always = false) const", asMETHOD(jjOBJ, doesCollidePlayer), asCALL_THISCALL);
 
-		// TODO
-		/*engine->RegisterGlobalFunction("void jjAddParticleTileExplosion(uint16 xTile, uint16 yTile, uint16 tile, bool collapseSceneryStyle)", asFUNCTION(ExternalAddParticleTile), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjAddParticlePixelExplosion(float xPixel, float yPixel, int curFrame, int direction, int mode)", asFUNCTION(addParticlePixelExplosion), asCALL_CDECL);*/
+		engine->RegisterGlobalFunction("void jjAddParticleTileExplosion(uint16 xTile, uint16 yTile, uint16 tile, bool collapseSceneryStyle)", asFUNCTION(jjAddParticleTileExplosion), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjAddParticlePixelExplosion(float xPixel, float yPixel, int curFrame, int direction, int mode)", asFUNCTION(jjAddParticlePixelExplosion), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("PARTICLE");
 		engine->RegisterEnum("Type");
@@ -1646,17 +1589,17 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjPARTICLE", "float ySpeed", asOFFSET(jjPARTICLE, ySpeed));
 		engine->RegisterObjectProperty("jjPARTICLE", "uint8 type", asOFFSET(jjPARTICLE, particleType));
 		engine->RegisterObjectProperty("jjPARTICLE", "bool isActive", asOFFSET(jjPARTICLE, active));
-		// TODO
-		/*engine->RegisterObjectType("jjPARTICLEPIXEL", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
-		engine->RegisterObjectProperty("jjPARTICLEPIXEL", "uint8 size", -2);
-		engine->RegisterObjectMethod("jjPARTICLEPIXEL", "uint8 get_color(int) const", asMETHOD(TparticlePIXEL, get_color), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPARTICLEPIXEL", "uint8 set_color(int, uint8)", asMETHOD(TparticlePIXEL, set_color), asCALL_THISCALL);
+		
+		engine->RegisterObjectType("jjPARTICLEPIXEL", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
+		engine->RegisterObjectProperty("jjPARTICLEPIXEL", "uint8 size", 0);
+		engine->RegisterObjectMethod("jjPARTICLEPIXEL", "uint8 get_color(int) const", asMETHOD(jjPARTICLEPIXEL, get_color), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPARTICLEPIXEL", "uint8 set_color(int, uint8)", asMETHOD(jjPARTICLEPIXEL, set_color), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEPIXEL pixel", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLEFIRE", 9, asOBJ_VALUE | asOBJ_POD);  // Private/deprecated
-		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 size", -2);
-		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 color", 0);
-		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 colorStop", 1);
-		engine->RegisterObjectProperty("jjPARTICLEFIRE", "int8 colorDelta", 2);
+		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 size", 0);
+		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 color", 1);
+		engine->RegisterObjectProperty("jjPARTICLEFIRE", "uint8 colorStop", 2);
+		engine->RegisterObjectProperty("jjPARTICLEFIRE", "int8 colorDelta", 3);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEFIRE fire", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLESMOKE", 9, asOBJ_VALUE | asOBJ_POD);  // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLESMOKE", "uint8 countdown", 0);
@@ -1670,48 +1613,47 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjPARTICLESPARK", "uint8 color", 0);
 		engine->RegisterObjectProperty("jjPARTICLESPARK", "uint8 colorStop", 1);
 		engine->RegisterObjectProperty("jjPARTICLESPARK", "int8 colorDelta", 2);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESPARK spark", asOFFSET(jjPARTICLE, GENERIC));*/
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESPARK spark", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLESTRING", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectMethod("jjPARTICLESTRING", "::string get_text() const", asMETHOD(jjPARTICLESTRING, get_text), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPARTICLESTRING", "void set_text(::string)", asMETHOD(jjPARTICLESTRING, set_text), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESTRING string", asOFFSET(jjPARTICLE, /*GENERIC*/string));
-		// TODO
-		/*engine->RegisterObjectType("jjPARTICLESNOW", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESTRING string", asOFFSET(jjPARTICLE, GENERIC));
+		engine->RegisterObjectType("jjPARTICLESNOW", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 frame", 0);
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 countup", 1);
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 countdown", 2);
-		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint16 frameBase", -7);
+		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint16 frameBase", 3);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESNOW snow", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLERAIN", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLERAIN", "uint8 frame", 0);
-		engine->RegisterObjectProperty("jjPARTICLERAIN", "uint16 frameBase", -7);
+		engine->RegisterObjectProperty("jjPARTICLERAIN", "uint16 frameBase", 1);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLERAIN rain", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLELEAF", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 frame", 0);
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 countup", 1);
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "bool noclip", 2);
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 height", 3);
-		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint16 frameBase", -7);
+		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint16 frameBase", 4);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLELEAF leaf", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLEFLOWER", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
-		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 size", -2);
-		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 color", 0);
-		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 angle", 1);
-		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "int8 angularSpeed", 2);
-		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 petals", 3);
+		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 size", 0);
+		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 color", 1);
+		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 angle", 2);
+		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "int8 angularSpeed", 3);
+		engine->RegisterObjectProperty("jjPARTICLEFLOWER", "uint8 petals", 4);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLEFLOWER flower", asOFFSET(jjPARTICLE, GENERIC));
 		engine->RegisterObjectType("jjPARTICLESTAR", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
-		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 size", -2);
-		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 color", 0);
-		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 angle", 1);
-		engine->RegisterObjectProperty("jjPARTICLESTAR", "int8 angularSpeed", 2);
-		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 frame", 3);
-		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 colorChangeCounter", 4);
-		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 colorChangeInterval", 5);
+		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 size", 0);
+		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 color", 1);
+		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 angle", 2);
+		engine->RegisterObjectProperty("jjPARTICLESTAR", "int8 angularSpeed", 3);
+		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 frame", 4);
+		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 colorChangeCounter", 5);
+		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 colorChangeInterval", 6);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESTAR star", asOFFSET(jjPARTICLE, GENERIC));
-		engine->RegisterObjectType("jjPARTICLETILE", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
+		// TODO
+		/*engine->RegisterObjectType("jjPARTICLETILE", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		engine->RegisterObjectProperty("jjPARTICLETILE", "uint8 quadrant", 0);
-
 		engine->RegisterObjectMethod("jjPARTICLETILE", "uint16 get_tileID() const", asMETHOD(TparticleTILE, get_AStile), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPARTICLETILE", "uint16 set_tileID(uint16)", asMETHOD(TparticleTILE, set_AStile), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLETILE tile", asOFFSET(jjPARTICLE, GENERIC));
@@ -2037,10 +1979,10 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("uint16 jjTileGet(uint8 layer, int xTile, int yTile)", asFUNCTION(jjTileGet), asCALL_CDECL);
 		engine->RegisterGlobalFunction("uint16 jjTileSet(uint8 layer, int xTile, int yTile, uint16 newTile)", asFUNCTION(jjTileSet), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjGenerateSettableTileArea(uint8 layer, int xTile, int yTile, int width, int height)", asFUNCTION(jjGenerateSettableTileArea), asCALL_CDECL);
-		/*engine->RegisterObjectMethod("jjLAYER", "uint16 tileGet(int xTile, int yTile) const", asFUNCTION(getTileAtInLayer), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjLAYER", "uint16 tileSet(int xTile, int yTile, uint16 newTile)", asFUNCTION(setTileAtInLayer), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjLAYER", "void generateSettableTileArea(int xTile, int yTile, int width, int height)", asFUNCTION(generateSettableTileAreaInLayer), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjLAYER", "void generateSettableTileArea()", asFUNCTION(generateSettableLayer), asCALL_CDECL_OBJFIRST);*/
+		engine->RegisterObjectMethod("jjLAYER", "uint16 tileGet(int xTile, int yTile) const", asMETHOD(jjLAYER, tileGet), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "uint16 tileSet(int xTile, int yTile, uint16 newTile)", asMETHOD(jjLAYER, tileSet), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "void generateSettableTileArea(int xTile, int yTile, int width, int height)", asMETHOD(jjLAYER, generateSettableTileArea), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "void generateSettableTileArea()", asMETHOD(jjLAYER, generateSettableTileAreaAll), asCALL_THISCALL);
 
 		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel)", asFUNCTION(jjMaskedPixel), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel, uint8 layer)", asFUNCTION(jjMaskedPixelLayer), asCALL_CDECL);
@@ -3479,11 +3421,37 @@ namespace Jazz2::Scripting
 		ScriptPlayerWrapper::RegisterFactory(engine);
 	}
 
-	void LevelScriptLoader::OnException(asIScriptContext* ctx)
+	jjPLAYER* LevelScriptLoader::GetPlayerBackingStore(Actors::Player* player)
 	{
-		int column; const char* sectionName;
-		int lineNumber = ctx->GetExceptionLineNumber(&column, &sectionName);
-		DEATH_TRACE(TraceLevel::Error, "%s (%i, %i): An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", sectionName, lineNumber, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+		auto it = _playerBackingStore.find(player->GetPlayerIndex());
+		if (it != _playerBackingStore.end()) {
+			return it->second.get();
+		}
+
+		auto [result, success] = _playerBackingStore.emplace(player->GetPlayerIndex(), std::make_unique<jjPLAYER>(this, player));
+		DEATH_DEBUG_ASSERT(success);
+		return result->second.get();
+	}
+
+	jjPLAYER* LevelScriptLoader::GetPlayerBackingStore(std::int32_t playerIndex)
+	{
+		std::uint8_t playerIndex8 = (std::uint8_t)playerIndex;
+		auto it = _playerBackingStore.find(playerIndex8);
+		if (it != _playerBackingStore.end()) {
+			return it->second.get();
+		}
+
+		auto& players = _levelHandler->_players;
+		auto** pp = std::find_if(players.begin(), players.end(), [playerIndex8](Actors::Player* p) {
+			return (p->GetPlayerIndex() == playerIndex8);
+		});
+		if (pp == players.end()) {
+			return nullptr;
+		}
+
+		auto [result, success] = _playerBackingStore.emplace(playerIndex8, std::make_unique<jjPLAYER>(this, *pp));
+		DEATH_DEBUG_ASSERT(success);
+		return result->second.get();
 	}
 
 	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(const StringView& typeName)
@@ -3508,13 +3476,6 @@ namespace Jazz2::Scripting
 		obj->Release();
 
 		return obj2;
-	}
-
-	PlayerBackingStore& LevelScriptLoader::GetPlayerBackingStore(std::int32_t playerIdx)
-	{
-		auto result = _playerBackingStore.try_emplace(playerIdx, PlayerBackingStore{});
-		return result.first->second;
-
 	}
 
 	const SmallVectorImpl<Actors::Player*>& LevelScriptLoader::GetPlayers() const
@@ -3715,11 +3676,6 @@ namespace Jazz2::Scripting
 		auto ctx = asGetActiveContext();
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->SetWeather((WeatherType)weatherType, intensity);
-	}
-
-	PlayerBackingStore::PlayerBackingStore()
-		: TimerCallback(nullptr), TimerState(0), TimerLeft(0.0f), TimerPersists(false)
-	{
 	}
 }
 
