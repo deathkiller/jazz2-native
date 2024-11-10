@@ -102,7 +102,6 @@ namespace Jazz2
 		Rectf _viewBounds;
 		Vector2f _cameraPos;
 		Vector2f _cameraLastPos;
-		Vector2f _cameraOverridePos;
 		Vector2f _cameraDistanceFactor;
 		Vector2f _cameraResponsiveness;
 		float _shakeDuration;

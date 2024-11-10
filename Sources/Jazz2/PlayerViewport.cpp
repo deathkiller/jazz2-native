@@ -219,7 +219,7 @@ namespace Jazz2
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer)
 		: _levelHandler(levelHandler), _targetPlayer(targetPlayer),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_cameraOverridePos(INFINITY, INFINITY), _cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f)
+			_cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -357,7 +357,8 @@ namespace Jazz2
 		Vector2f focusPos = _targetPlayer->GetPos();
 
 		bool overridePosX = false, overridePosY = false;
-		if (!std::isinf(_cameraOverridePos.X)) {
+		// TODO: Not working correctly on some platforms
+		/*if (!std::isinf(_cameraOverridePos.X)) {
 			overridePosX = true;
 			focusPos.X = _cameraOverridePos.X;
 			if (focusPos.X <= 0.0f) {
@@ -370,7 +371,7 @@ namespace Jazz2
 			if (focusPos.Y <= 0.0f) {
 				focusPos.Y = halfView.Y - 1.0f - focusPos.Y;
 			}
-		}
+		}*/
 
 		// If player doesn't move but has some speed, it's probably stuck, so reset the speed
 		Vector2f focusSpeed = _targetPlayer->GetSpeed();
@@ -455,14 +456,15 @@ namespace Jazz2
 
 	void PlayerViewport::OverrideCamera(float x, float y, bool topLeft)
 	{
-		if (topLeft) {
+		// TODO: Not working correctly on some platforms
+		/*if (topLeft) {
 			// Use negative values for top-left alignment
 			_cameraOverridePos.X = -x;
 			_cameraOverridePos.Y = -y;
 		} else {
 			_cameraOverridePos.X = x;
 			_cameraOverridePos.Y = y;
-		}
+		}*/
 	}
 
 	void PlayerViewport::WarpCameraToTarget(bool fast)
