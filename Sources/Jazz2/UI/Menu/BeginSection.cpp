@@ -34,7 +34,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	BeginSection::BeginSection()
-		: _selectedIndex(0), _animation(0.0f), _shouldStart(false)
+		: _selectedIndex(0), _animation(0.0f), _shouldStart(false), _alreadyStarted(false)
 	{
 	}
 
@@ -417,7 +417,11 @@ namespace Jazz2::UI::Menu
 #if !defined(SHAREWARE_DEMO_ONLY)
 		switch (_items[_selectedIndex].Type) {
 			case Item::Continue:
-				_root->ResumeSavedState();
+				if (!_alreadyStarted) {
+					_root->ResumeSavedState();
+					// Start it only once to avoid infinite loops in case deserialization fails (e.g., incompatible versions)
+					_alreadyStarted = true;
+				}
 				break;
 		}
 #endif

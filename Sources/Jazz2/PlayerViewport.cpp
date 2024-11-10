@@ -219,7 +219,7 @@ namespace Jazz2
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer)
 		: _levelHandler(levelHandler), _targetPlayer(targetPlayer),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_cameraOverridePos(NAN, NAN), _cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f)
+			_cameraOverridePos(INFINITY, INFINITY), _cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -357,14 +357,14 @@ namespace Jazz2
 		Vector2f focusPos = _targetPlayer->GetPos();
 
 		bool overridePosX = false, overridePosY = false;
-		if (!std::isnan(_cameraOverridePos.X)) {
+		if (!std::isinf(_cameraOverridePos.X)) {
 			overridePosX = true;
 			focusPos.X = _cameraOverridePos.X;
 			if (focusPos.X <= 0.0f) {
 				focusPos.X = halfView.X - focusPos.X;
 			}
 		}
-		if (!std::isnan(_cameraOverridePos.Y)) {
+		if (!std::isinf(_cameraOverridePos.Y)) {
 			overridePosY = true;
 			focusPos.Y = _cameraOverridePos.Y;
 			if (focusPos.Y <= 0.0f) {

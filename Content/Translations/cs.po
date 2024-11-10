@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-11-01 11:30+0100\n"
-"PO-Revision-Date: 2024-11-01 11:30+0100\n"
+"PO-Revision-Date: 2024-11-10 12:09+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1470,7 +1470,7 @@ msgstr "Ukončit"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:193
 msgid "Access to external storage has been granted!"
-msgstr "Přístup k externímu úložišti byl povolen!"
+msgstr "Přístup k externímu uložišti byl povolen!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:195
 msgid ""
