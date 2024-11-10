@@ -16,6 +16,13 @@ using namespace Death::IO;
 namespace Jazz2
 {
 	class LevelHandler;
+
+#if defined(WITH_ANGELSCRIPT)
+	namespace Scripting
+	{
+		class LevelScriptLoader;
+	}
+#endif
 }
 
 namespace Jazz2::Tiles
@@ -102,6 +109,10 @@ namespace Jazz2::Tiles
 
 	class TileMap : public SceneNode
 	{
+#if defined(WITH_ANGELSCRIPT)
+		friend class Scripting::LevelScriptLoader;
+#endif
+
 	public:
 		static constexpr std::int32_t TriggerCount = 32;
 		static constexpr std::int32_t AnimatedTileMask = 0x80000000;

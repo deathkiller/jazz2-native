@@ -561,6 +561,40 @@ namespace Jazz2::Scripting
 					} else if (scriptContent[pos] == '}') {
 						level--;
 					}
+				} else if (t == asTC_IDENTIFIER) {
+					// Convert all length() function calls to virtual properties for JJ2+ backward compatibility
+					auto identifier = MutableStringView(&scriptContent[pos], len);
+					if (identifier == "length"_s) {
+						int pos1 = pos + len;
+						int pos2 = pos1;
+						asUINT len2 = 0;
+						asETokenClass t2 = asTC_UNKNOWN;
+						while (pos2 < scriptSize) {
+							t2 = _engine->ParseToken(&scriptContent[pos2], scriptSize - pos2, &len2);
+							if (t2 != asTC_COMMENT && t2 != asTC_WHITESPACE) {
+								break;
+							}
+							pos2 += len2;
+						}
+						if (t2 == asTC_KEYWORD && scriptContent[pos2] == '(') {
+							int pos3 = pos2 + len2;
+							asUINT len3 = 0;
+							asETokenClass t3 = asTC_UNKNOWN;
+							while (pos3 < scriptSize) {
+								t3 = _engine->ParseToken(&scriptContent[pos3], scriptSize - pos3, &len3);
+								if (t3 != asTC_COMMENT && t3 != asTC_WHITESPACE) {
+									break;
+								}
+								pos3 += len3;
+							}
+							if (t3 == asTC_KEYWORD && scriptContent[pos3] == ')') {
+								pos3 += len3;
+								std::memset(&scriptContent[pos + len], ' ', pos3 - pos1);
+								pos = pos3;
+								continue;
+							}
+						}
+					}
 				}
 
 				pos += len;
@@ -944,10 +978,17 @@ namespace Jazz2::Scripting
 
 	void ScriptLoader::Message(const asSMessageInfo& msg)
 	{
+		TraceLevel level;
 		switch (msg.type) {
-			case asMSGTYPE_ERROR: DEATH_TRACE(TraceLevel::Error, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			case asMSGTYPE_WARNING: DEATH_TRACE(TraceLevel::Warning, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			default: DEATH_TRACE(TraceLevel::Info, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			case asMSGTYPE_ERROR: level = TraceLevel::Error; break;
+			case asMSGTYPE_WARNING: level = TraceLevel::Warning; break;
+			default: level = TraceLevel::Info; break;
+		}
+
+		if (msg.section != nullptr && msg.section[0] != '\0') {
+			DEATH_TRACE(level, "%s:%i(%i): %s", msg.section, msg.row, msg.col, msg.message);
+		} else {
+			DEATH_TRACE(level, "%s", msg.message);
 		}
 	}
 }

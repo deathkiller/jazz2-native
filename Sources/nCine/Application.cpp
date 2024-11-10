@@ -281,8 +281,9 @@ namespace nCine
 				logMsgFuncLength = -1;
 				break;
 			}
-			if (message[logMsgFuncLength] == '#' && message[logMsgFuncLength + 1] == '>') {
-				logMsgFuncLength += 2;
+
+			if (std::memcmp(&message[logMsgFuncLength], " ‡ ", sizeof(" ‡ ") - 1) == 0) {
+				logMsgFuncLength += (std::int32_t)sizeof(" ‡ ") - 1;
 				break;
 			}
 			logMsgFuncLength++;

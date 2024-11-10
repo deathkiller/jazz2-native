@@ -6,7 +6,7 @@
 
 #include <new>
 
-//#define AS_USE_ACCESSORS 1
+#define AS_USE_ACCESSORS 1
 
 using namespace Death::Containers::Literals;
 

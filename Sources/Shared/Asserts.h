@@ -41,14 +41,14 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	endif
 
 #	if defined(DEATH_DEBUG)
-#		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
-#	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
-#	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
-#	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
-#	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #else
 #	define LOGD(fmt, ...) do {} while (false)
 #	define LOGI(fmt, ...) do {} while (false)
@@ -86,7 +86,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
 // Assertions
 #if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE)
-#	define __DEATH_ASSERT_BASE(fmt, ...) DEATH_TRACE(TraceLevel::Assert, "%s #> " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define __DEATH_ASSERT_BASE(fmt, ...) DEATH_TRACE(TraceLevel::Assert, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #	define __DEATH_ASSERT_TRACE(...) DEATH_HELPER_EXPAND(__DEATH_ASSERT_BASE(__VA_ARGS__))
 #endif
 
