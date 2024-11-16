@@ -278,8 +278,10 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS)
 		return ::FlushFileBuffers(_fileHandle);
-#else
+#elif defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
 		return ::fdatasync(_fileDescriptor) == 0;
+#else
+		return ::fsync(_fileDescriptor) == 0;
 #endif
 	}
 
