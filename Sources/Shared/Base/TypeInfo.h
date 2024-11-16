@@ -56,43 +56,43 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	};
 
 	template<std::size_t N>
-	constexpr TypeInfoSkip CreateTypeInfoSkip(std::size_t sizeAtBegin, std::size_t sizeAtEnd, bool moreAtRuntime, const char(&untilRuntime)[N]) {
+	static constexpr TypeInfoSkip CreateTypeInfoSkip(std::size_t sizeAtBegin, std::size_t sizeAtEnd, bool moreAtRuntime, const char(&untilRuntime)[N]) {
 		return TypeInfoSkip{sizeAtBegin, sizeAtEnd, untilRuntime, moreAtRuntime ? N - 1 : 0};
 	}
 
 	template<std::size_t N>
-	constexpr TypeInfoSkip CreateTypeInfoSkip(std::size_t sizeAtBegin, std::size_t sizeAtEnd, const char(&untilRuntime)[N]) {
+	static constexpr TypeInfoSkip CreateTypeInfoSkip(std::size_t sizeAtBegin, std::size_t sizeAtEnd, const char(&untilRuntime)[N]) {
 		return TypeInfoSkip{sizeAtBegin, sizeAtEnd, untilRuntime, N - 1};
 	}
 
 #if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
 	// const char *__cdecl __ti<A>::n(void) noexcept
-	constexpr TypeInfoSkip skip() noexcept {
+	static constexpr TypeInfoSkip skip() noexcept {
 		return CreateTypeInfoSkip(25, 19, "");
 	}
 #elif defined(DEATH_TARGET_CLANG)
 	// static const char *__ti<A>::n() [T = A]
-	constexpr TypeInfoSkip skip() noexcept {
+	static constexpr TypeInfoSkip skip() noexcept {
 		return CreateTypeInfoSkip(24, 1, "T = ");
 	}
 #elif defined(DEATH_TARGET_GCC) && DEATH_CXX_STANDARD >= 201402
 	// static constexpr const char* __ti<T>::n() [with T = A]
-	constexpr TypeInfoSkip skip() noexcept {
+	static constexpr TypeInfoSkip skip() noexcept {
 		return CreateTypeInfoSkip(52, 1, "");
 	}
 #elif defined(DEATH_TARGET_GCC)
 	// static const char* __ti<T>::n() [with T = A]
-	constexpr TypeInfoSkip skip() noexcept {
+	static constexpr TypeInfoSkip skip() noexcept {
 		return CreateTypeInfoSkip(42, 1, "");
 	}
 #else
-	constexpr TypeInfoSkip skip() noexcept {
+	static constexpr TypeInfoSkip skip() noexcept {
 		return CreateTypeInfoSkip(0, 0, "");
 	}
 #endif
 
 #if defined(DEATH_HAS_BUILTIN_CONSTANT)
-	DEATH_CONSTEXPR14 DEATH_ALWAYS_INLINE bool IsConstantString(const char* str) noexcept {
+	static DEATH_CONSTEXPR14 DEATH_ALWAYS_INLINE bool IsConstantString(const char* str) noexcept {
 		while (DEATH_HAS_BUILTIN_CONSTANT(*str)) {
 			if (*str == '\0') {
 				return true;
@@ -104,7 +104,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 #endif
 
 	template<class ForwardIterator1, class ForwardIterator2>
-	DEATH_CONSTEXPR14 inline ForwardIterator1 constexpr_search(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2, ForwardIterator2 last2) noexcept {
+	static DEATH_CONSTEXPR14 inline ForwardIterator1 constexpr_search(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2, ForwardIterator2 last2) noexcept {
 		if (first2 == last2) {
 			return first1;  // Specified in C++11
 		}
@@ -122,14 +122,14 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		return last1;
 	}
 
-	DEATH_CONSTEXPR14 inline std::int32_t constexpr_strcmp_loop(const char* v1, const char* v2) noexcept {
+	static DEATH_CONSTEXPR14 inline std::int32_t constexpr_strcmp_loop(const char* v1, const char* v2) noexcept {
 		while (*v1 != '\0' && *v1 == *v2) {
 			++v1; ++v2;
 		}
 		return static_cast<std::int32_t>(*v1) - *v2;
 	}
 
-	DEATH_CONSTEXPR14 inline std::int32_t constexpr_strcmp(const char* v1, const char* v2) noexcept {
+	static DEATH_CONSTEXPR14 inline std::int32_t constexpr_strcmp(const char* v1, const char* v2) noexcept {
 #if DEATH_CXX_STANDARD >= 201402 && defined(DEATH_HAS_BUILTIN_CONSTANT) && defined(DEATH_HAS_BUILTIN_STRCMP)
 		if (IsConstantString(v1) && IsConstantString(v2)) {
 			return constexpr_strcmp_loop(v1, v2);
@@ -143,7 +143,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}
 
 	template<std::size_t ArrayLength>
-	DEATH_CONSTEXPR14 inline const char* SkipBeginningRuntime(const char* begin) noexcept {
+	static DEATH_CONSTEXPR14 inline const char* SkipBeginningRuntime(const char* begin) noexcept {
 		const char* const it = constexpr_search(
 			begin, begin + ArrayLength,
 			skip().UntilRuntime, skip().UntilRuntime + skip().UntilRuntimeLength);
@@ -151,7 +151,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}
 
 	template<std::size_t ArrayLength>
-	DEATH_CONSTEXPR14 inline const char* SkipBeginning(const char* begin) noexcept {
+	static DEATH_CONSTEXPR14 inline const char* SkipBeginning(const char* begin) noexcept {
 		static_assert(ArrayLength > skip().SizeAtBegin + skip().SizeAtEnd, "runtime_cast<T>() is misconfigured for your compiler");
 
 		return (skip().UntilRuntimeLength
@@ -184,22 +184,22 @@ struct __ti
 namespace Death { namespace TypeInfo { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	using TypeId = const char*;
+	using TypeHandle = const void*;
 
 	struct Helpers
 	{
 		template<class T>
-		static DEATH_CONSTEXPR14 inline TypeId ConstructTypeId() noexcept {
+		static DEATH_CONSTEXPR14 inline TypeHandle ConstructTypeHandle() noexcept {
 			return __ti<T>::n();
 		}
 
 		template<class T>
-		static constexpr TypeId GetTypeId(const T*) noexcept {
-			return ConstructTypeId<T>();
+		static constexpr TypeHandle GetTypeHandle(const T*) noexcept {
+			return ConstructTypeHandle<T>();
 		}
 
 		/*template<class T>
-		Containers::Pair<const char*, std::size_t> GetTypeName() noexcept {
+		static Containers::Pair<const char*, std::size_t> GetTypeName() noexcept {
 			constexpr const char* name = __ti<T>::n();
 			std::size_t length = std::strlen(name + skip().SizeAtEnd);
 			while (name[length - 1] == ' ') length--; // MSVC sometimes adds trailing whitespaces
@@ -221,7 +221,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			if (u == nullptr)
 				return nullptr;
 			return const_cast<T*>(static_cast<const T*>(
-				u->__FindInstance(ConstructTypeId<T>())
+				u->__FindInstance(ConstructTypeHandle<T>())
 			));
 		}
 
@@ -229,16 +229,16 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		static const T* RuntimeCast(const U* u, std::integral_constant<bool, false>) noexcept {
 			if (u == nullptr)
 				return nullptr;
-			return static_cast<const T*>(u->__FindInstance(ConstructTypeId<T>()));
+			return static_cast<const T*>(u->__FindInstance(ConstructTypeHandle<T>()));
 		}
 
 		template<class Self>
-		static constexpr const void* FindInstance(TypeId, const Self*) noexcept {
+		static constexpr const void* FindInstance(TypeHandle, const Self*) noexcept {
 			return nullptr;
 		}
 
 		template<class Base, class ...OtherBases, class Self>
-		static const void* FindInstance(TypeId t, const Self* self) noexcept {
+		static const void* FindInstance(TypeHandle t, const Self* self) noexcept {
 			if (const void* ptr = self->Base::__FindInstance(t)) {
 				return ptr;
 			}
@@ -252,8 +252,8 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	__DEATH_WARNING_PUSH																				\
 	__DEATH_NO_OVERRIDE_WARNING																			\
 	friend struct Death::TypeInfo::Implementation::Helpers;												\
-	virtual const void* __FindInstance(Death::TypeInfo::Implementation::TypeId t) const noexcept {		\
-		if (t == Death::TypeInfo::Implementation::Helpers::GetTypeId(this))								\
+	virtual const void* __FindInstance(Death::TypeInfo::Implementation::TypeHandle t) const noexcept {	\
+		if (t == Death::TypeInfo::Implementation::Helpers::GetTypeHandle(this))							\
 			return this;																				\
 		return Death::TypeInfo::Implementation::Helpers::FindInstance<__VA_ARGS__>(t, this);			\
 	}																									\

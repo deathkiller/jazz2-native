@@ -28,7 +28,7 @@
 
 #include "Common.h"
 
-// Because can't use inline assembly when targeting 64bit on MSVC, and because <intrin.h> and <immintrin.h> is just
+// Because can't use inline assembly when targeting 64-bit on MSVC, and because <intrin.h> and <immintrin.h> is just
 // too damn heavy to be included in a header. Declarations copied verbatim. Clang-cl doesn't like this (undefined
 // reference to __cpuidex), so using the GCC/Clang codepath on it instead.
 #if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL) && defined(DEATH_TARGET_X86)
@@ -1489,7 +1489,7 @@ namespace Death { namespace Cpu {
 	*/
 	constexpr Features compiledFeatures() {
 		// Clang 14 warns if zero (an int) isn't first because bitwise operations between different enums are deprecated in C++20.
-		return Features { 0
+		return Features{0
 #if defined(DEATH_TARGET_X86)
 #	if defined(DEATH_TARGET_SSE2)
 			| TypeTraits<Sse2T>::Index
@@ -2959,14 +2959,14 @@ namespace Death { namespace Cpu {
 			if (caps & (1 << 16) /*HWCAP_VFPv4*/) out |= TypeTraits<NeonFmaT>::Index;
 #	else
 			// On ARM64 NEON and NEON FMA is implicit. For extra security make use of the DEATH_TARGET_ defines (which should be always there).
-			out |=
+			out |= 0
 #		if defined(DEATH_TARGET_NEON)
-				TypeTraits<NeonT>::Index |
+				| TypeTraits<NeonT>::Index
 #		endif
 #		if defined(DEATH_TARGET_NEON_FMA)
-				TypeTraits<NeonFmaT>::Index |
+				| TypeTraits<NeonFmaT>::Index
 #		endif
-				0;
+				;
 			// The HWCAP flags are extremely cryptic. The only vague confirmation is in a *commit message* to the kernel hwcaps file, FFS.
 			// The HWCAP_FPHP seems to correspond to scalar FP16, so the other should be the vector one?
 			// https://github.com/torvalds/linux/blame/master/arch/arm64/include/uapi/asm/hwcap.h

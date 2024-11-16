@@ -1,11 +1,11 @@
 #include "DeflateStream.h"
 #include "../Asserts.h"
 
-#if !defined(WITH_ZLIB)
-#	pragma message("Death::IO::DeflateStream requires `zlib` library")
+#if !defined(WITH_ZLIB) && !defined(WITH_MINIZ)
+#	pragma message("Death::IO::DeflateStream requires `zlib` or `miniz` library")
 #else
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
+#if defined(WITH_ZLIB) && defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	if defined(_M_X64)
 #		pragma comment(lib, "../Libs/Windows/x64/zlib.lib")
 #	elif defined(_M_IX86)
@@ -75,7 +75,7 @@ namespace Death { namespace IO {
 	{
 		switch (origin) {
 			case SeekOrigin::Current: {
-				DEATH_ASSERT(offset >= 0, "Cannot seek to negative values", Stream::OutOfRange);
+				DEATH_ASSERT(offset >= 0, "Can't seek to negative values", Stream::OutOfRange);
 
 				char buffer[4096];
 				while (offset > 0) {
@@ -99,23 +99,33 @@ namespace Death { namespace IO {
 		return static_cast<std::int64_t>(_strm.total_out);
 	}
 
-	std::int32_t DeflateStream::Read(void* buffer, std::int32_t bytes)
+	std::int64_t DeflateStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		std::uint8_t* typedBuffer = static_cast<std::uint8_t*>(buffer);
-		std::int32_t bytesRead = ReadInternal(typedBuffer, bytes);
-		std::int32_t bytesReadTotal = bytesRead;
-		while (bytesRead > 0 && bytesRead < bytes) {
-			typedBuffer += bytesRead;
-			bytes -= bytesRead;
-			bytesRead = ReadInternal(typedBuffer, bytes);
-			if (bytesRead > 0) {
-				bytesReadTotal += bytesRead;
-			}
+		if (bytesToRead <= 0) {
+			return 0;
 		}
+
+		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
+		std::uint8_t* typedBuffer = static_cast<std::uint8_t*>(destination);
+		std::int64_t bytesReadTotal = 0;
+
+		do {
+			// ReadInternal() can read only up to DeflateStream::BufferSize bytes
+			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+			std::int32_t bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
+			if DEATH_UNLIKELY(bytesRead < 0) {
+				return bytesRead;
+			} else if DEATH_UNLIKELY(bytesRead == 0) {
+				break;
+			}
+			bytesReadTotal += bytesRead;
+			bytesToRead -= bytesRead;
+		} while (bytesToRead > 0);
+
 		return bytesReadTotal;
 	}
 
-	std::int32_t DeflateStream::Write(const void* buffer, std::int32_t bytes)
+	std::int64_t DeflateStream::Write(const void* source, std::int64_t bytesToWrite)
 	{
 		// Not supported
 		return Stream::Invalid;
@@ -216,12 +226,12 @@ namespace Death { namespace IO {
 			CeaseReading();
 			_state = State::Failed;
 			LOGE("Failed to inflate compressed stream with error %i", res);
-			return -1;
+			return Stream::Invalid;
 		}
 		size -= _strm.avail_out;
 
 		if (res == Z_STREAM_END && !CeaseReading()) {
-			return -1;
+			return Stream::Invalid;
 		}
 
 		return size;
@@ -294,23 +304,39 @@ namespace Death { namespace IO {
 		return Stream::NotSeekable;
 	}
 
-	std::int32_t DeflateWriter::Read(void* buffer, std::int32_t bytes)
+	std::int64_t DeflateWriter::Read(void* destination, std::int64_t bytesToRead)
 	{
 		// Not supported
 		return Stream::Invalid;
 	}
 
-	std::int32_t DeflateWriter::Write(const void* buffer, std::int32_t bytes)
+	std::int64_t DeflateWriter::Write(const void* source, std::int64_t bytesToWrite)
 	{
-		if (bytes <= 0) {
+		if (bytesToWrite <= 0) {
 			return 0;
 		}
 		if (_state != State::Created && _state != State::Initialized) {
 			return Stream::Invalid;
 		}
 
+		DEATH_ASSERT(source != nullptr, "source is null", 0);
+		const std::uint8_t* typedBuffer = static_cast<const std::uint8_t*>(source);
+		std::int64_t bytesWrittenTotal = 0;
 		_state = State::Initialized;
-		return WriteInternal(buffer, bytes, false);
+
+		do {
+			std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? bytesToWrite : INT32_MAX);
+			std::int32_t bytesWritten = WriteInternal(&typedBuffer[bytesWrittenTotal], partialBytesToWrite, false);
+			if DEATH_UNLIKELY(bytesWritten < 0) {
+				return bytesWritten;
+			} else if DEATH_UNLIKELY(bytesWritten == 0) {
+				break;
+			}
+			bytesWrittenTotal += bytesWritten;
+			bytesToWrite -= bytesWritten;
+		} while (bytesToWrite > 0);
+
+		return bytesWrittenTotal;
 	}
 
 	bool DeflateWriter::Flush()
@@ -328,10 +354,10 @@ namespace Death { namespace IO {
 		return Stream::NotSeekable;
 	}
 
-	std::int32_t DeflateWriter::WriteInternal(const void* buffer, std::int32_t bytes, bool finish)
+	std::int32_t DeflateWriter::WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish)
 	{
 		_strm.next_in = (unsigned char*)buffer;
-		_strm.avail_in = bytes;
+		_strm.avail_in = bytesToWrite;
 
 		while (_strm.avail_in > 0 || finish) {
 			std::int32_t error;
@@ -357,7 +383,7 @@ namespace Death { namespace IO {
 			}
 		}
 
-		return bytes - (std::int32_t)_strm.avail_in;
+		return bytesToWrite - (std::int32_t)_strm.avail_in;
 	}
 
 	std::int64_t DeflateWriter::GetMaxDeflatedSize(std::int64_t uncompressedSize)

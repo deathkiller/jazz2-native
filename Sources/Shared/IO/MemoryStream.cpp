@@ -7,7 +7,7 @@ namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	MemoryStream::MemoryStream(std::int64_t initialCapacity)
-		: _seekOffset(0), _mode(AccessMode::Growable)
+		: _pos(0), _mode(AccessMode::Growable)
 	{
 		_size = 0;
 
@@ -17,21 +17,31 @@ namespace Death { namespace IO {
 	}
 
 	MemoryStream::MemoryStream(void* bufferPtr, std::int64_t bufferSize)
-		: _buffer(static_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::Writable)
+		: _buffer(static_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _pos(0), _mode(AccessMode::Writable)
 	{
 		_size = bufferSize;
 	}
 
 	MemoryStream::MemoryStream(const void* bufferPtr, std::int64_t bufferSize)
-		: _buffer(const_cast<std::uint8_t*>(static_cast<const std::uint8_t*>(bufferPtr)), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _seekOffset(0), _mode(AccessMode::ReadOnly)
+		: _buffer(const_cast<std::uint8_t*>(static_cast<const std::uint8_t*>(bufferPtr)), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _pos(0), _mode(AccessMode::ReadOnly)
 	{
 		_size = bufferSize;
+	}
+
+	MemoryStream::MemoryStream(Containers::ArrayView<const char> buffer)
+		: MemoryStream(buffer.data(), static_cast<std::int64_t>(buffer.size()))
+	{
+	}
+
+	MemoryStream::MemoryStream(Containers::ArrayView<const std::uint8_t> buffer)
+		: MemoryStream(buffer.data(), static_cast<std::int64_t>(buffer.size()))
+	{
 	}
 
 	void MemoryStream::Dispose()
 	{
 		_size = Stream::Invalid;
-		_seekOffset = 0;
+		_pos = 0;
 		_mode = AccessMode::None;
 	}
 
@@ -40,7 +50,7 @@ namespace Death { namespace IO {
 		std::int64_t newPos;
 		switch (origin) {
 			case SeekOrigin::Begin: newPos = offset; break;
-			case SeekOrigin::Current: newPos = _seekOffset + offset; break;
+			case SeekOrigin::Current: newPos = _pos + offset; break;
 			case SeekOrigin::End: newPos = _size + offset; break;
 			default: return Stream::OutOfRange;
 		}
@@ -48,48 +58,48 @@ namespace Death { namespace IO {
 		if (newPos < 0 || newPos > _size) {
 			newPos = Stream::OutOfRange;
 		} else {
-			_seekOffset = newPos;
+			_pos = newPos;
 		}
 		return newPos;
 	}
 
 	std::int64_t MemoryStream::GetPosition() const
 	{
-		return _seekOffset;
+		return _pos;
 	}
 
-	std::int32_t MemoryStream::Read(void* buffer, std::int32_t bytes)
+	std::int64_t MemoryStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
+		std::int64_t bytesRead = 0;
+		if (bytesToRead > 0 && _mode != AccessMode::None) {
+			DEATH_ASSERT(destination != nullptr, "destination is null", 0);
 
-		std::int32_t bytesRead = 0;
-
-		if (bytes > 0 && _mode != AccessMode::None) {
-			bytesRead = (_seekOffset + bytes > _size ? static_cast<std::int32_t>(_size - _seekOffset) : bytes);
-			std::memcpy(buffer, _buffer.data() + _seekOffset, bytesRead);
-			_seekOffset += bytesRead;
+			bytesRead = (_size < _pos + bytesToRead ? (_size - _pos) : bytesToRead);
+			if (bytesRead > 0) {
+				std::memcpy(destination, &_buffer[_pos], bytesRead);
+				_pos += bytesRead;
+			}
 		}
-
 		return bytesRead;
 	}
 
-	std::int32_t MemoryStream::Write(const void* buffer, std::int32_t bytes)
+	std::int64_t MemoryStream::Write(const void* source, std::int64_t bytesToWrite)
 	{
-		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
+		DEATH_ASSERT(source != nullptr, "source is null", 0);
 
-		std::int32_t bytesWritten = 0;
-
-		if (bytes > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
-			if (_mode == AccessMode::Growable && _size < _seekOffset + bytes) {
-				_size = _seekOffset + bytes;
+		std::int64_t bytesWritten = 0;
+		if (bytesToWrite > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
+			if (_mode == AccessMode::Growable && _size < _pos + bytesToWrite) {
+				_size = _pos + bytesToWrite;
 				Containers::arrayResize(_buffer, Containers::NoInit, _size);
 			}
 
-			bytesWritten = (_seekOffset + bytes > _size ? static_cast<std::int32_t>(_size - _seekOffset) : bytes);
-			std::memcpy(_buffer.data() + _seekOffset, buffer, bytesWritten);
-			_seekOffset += bytesWritten;
+			bytesWritten = (_pos + bytesToWrite > _size ? (_size - _pos) : bytesToWrite);
+			if (bytesWritten > 0) {
+				std::memcpy(&_buffer[_pos], source, bytesWritten);
+				_pos += bytesWritten;
+			}
 		}
-
 		return bytesWritten;
 	}
 
@@ -112,30 +122,34 @@ namespace Death { namespace IO {
 	void MemoryStream::ReserveCapacity(std::int64_t bytes)
 	{
 		if (_mode == AccessMode::Growable) {
-			Containers::arrayReserve(_buffer, _seekOffset + bytes);
+			Containers::arrayReserve(_buffer, _pos + bytes);
 		}
 	}
 
-	std::int32_t MemoryStream::FetchFromStream(Stream& s, std::int32_t bytes)
+	std::int64_t MemoryStream::FetchFromStream(Stream& s, std::int64_t bytesToRead)
 	{
-		std::int32_t bytesFetched = 0;
-
-		if (bytes > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
-			if (_size < _seekOffset + bytes) {
-				_size = _seekOffset + bytes;
-				Containers::arrayResize(_buffer, Containers::NoInit, _size);
+		std::int64_t bytesReadTotal = 0;
+		if (bytesToRead > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
+			if (_size < _pos + bytesToRead) {
+				if (_mode == AccessMode::Growable) {
+					_size = _pos + bytesToRead;
+					Containers::arrayResize(_buffer, Containers::NoInit, _size);
+				} else {
+					bytesToRead = static_cast<std::int32_t>(_size - _pos);
+				}
 			}
 
-			std::int32_t bytesToRead = (_seekOffset + bytes > _size ? static_cast<std::int32_t>(_size - _seekOffset) : bytes);
 			while (bytesToRead > 0) {
-				std::int32_t bytesRead = s.Read(_buffer.data() + _seekOffset, bytesToRead);
-				bytesFetched += bytesRead;
+				std::int64_t bytesRead = s.Read(&_buffer[_pos], bytesToRead);
+				if DEATH_UNLIKELY(bytesRead <= 0) {
+					break;
+				}
+				_pos += bytesRead;
+				bytesReadTotal += bytesRead;
 				bytesToRead -= bytesRead;
 			}
-			_seekOffset += bytesFetched;
 		}
-
-		return bytesFetched;
+		return bytesReadTotal;
 	}
 
 }}

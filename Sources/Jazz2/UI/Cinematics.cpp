@@ -245,7 +245,7 @@ namespace Jazz2::UI
 			std::int32_t x = 0;
 			while ((c = ReadValue<std::uint8_t>(0)) != 0x80) {
 				if (c < 0x80) {
-					int32_t u;
+					std::int32_t u;
 					if (c == 0x00) {
 						u = ReadValue<std::uint16_t>(0);
 					} else {

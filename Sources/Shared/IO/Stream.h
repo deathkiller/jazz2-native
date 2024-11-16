@@ -24,9 +24,9 @@ namespace Death { namespace IO {
 		@brief Specifies the position in a stream to use for seeking
 	*/
 	enum class SeekOrigin {
-		Begin = SEEK_SET,
-		Current = SEEK_CUR,
-		End = SEEK_END
+		Begin,
+		Current,
+		End
 	};
 
 	/**
@@ -57,9 +57,9 @@ namespace Death { namespace IO {
 		/** @brief Tells the seek position of an opened stream */
 		virtual std::int64_t GetPosition() const = 0;
 		/** @brief Reads a certain amount of bytes from the stream to a buffer */
-		virtual std::int32_t Read(void* buffer, std::int32_t bytes) = 0;
+		virtual std::int64_t Read(void* destination, std::int64_t bytesToRead) = 0;
 		/** @brief Writes a certain amount of bytes from a buffer to the stream */
-		virtual std::int32_t Write(const void* buffer, std::int32_t bytes) = 0;
+		virtual std::int64_t Write(const void* source, std::int64_t bytesToWrite) = 0;
 		/** @brief Clears all buffers for this stream and causes any buffered data to be written to the underlying device */
 		virtual bool Flush() = 0;
 		/** @brief Returns true if the stream has been sucessfully opened */
@@ -90,10 +90,10 @@ namespace Death { namespace IO {
 		std::uint32_t ReadVariableUint32();
 		std::uint64_t ReadVariableUint64();
 
-		std::int32_t WriteVariableInt32(std::int32_t value);
-		std::int32_t WriteVariableInt64(std::int64_t value);
-		std::int32_t WriteVariableUint32(std::uint32_t value);
-		std::int32_t WriteVariableUint64(std::uint64_t value);
+		std::int64_t WriteVariableInt32(std::int32_t value);
+		std::int64_t WriteVariableInt64(std::int64_t value);
+		std::int64_t WriteVariableUint32(std::uint32_t value);
+		std::int64_t WriteVariableUint64(std::uint64_t value);
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromBE(std::uint16_t value)

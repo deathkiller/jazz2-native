@@ -52,12 +52,6 @@ namespace nCine
 		socketInitializeDefault();
 		nxlinkStdio();
 		romfsInit();
-
-		// Initialize the default gamepad
-		padConfigureInput(1, HidNpadStyleSet_NpadStandard);
-		PadState pad;
-		padInitializeDefault(&pad);
-		hidInitializeTouchScreen();
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t workingDir[fs::MaxPathLength];

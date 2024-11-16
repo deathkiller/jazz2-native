@@ -16,12 +16,6 @@
 #	include <unistd.h>		// for close()
 #endif
 
-// `_nolock` functions are not supported by VC-LTL msvcrt, `_unlocked` functions are not supported on Android and Apple
-//#if (defined(DEATH_TARGET_WINDOWS) && !(defined(_Build_By_LTL) && _LTL_vcruntime_module_type != 2)) \
-//	|| (!defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE))
-//#	define DEATH_USE_NOLOCK_IN_FILE
-//#endif
-
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -41,17 +35,18 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	FileStream::FileStream(const Containers::StringView path, FileAccess mode)
+	FileStream::FileStream(const Containers::StringView path, FileAccess mode, std::int32_t bufferSize)
 		: FileStream(Containers::String{path}, mode)
 	{
 	}
 
-	FileStream::FileStream(Containers::String&& path, FileAccess mode)
-		: _path(std::move(path)), _size(Stream::Invalid),
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-			_fileDescriptor(-1)
+	FileStream::FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize)
+		: _path(std::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferLength(bufferSize),
+#if defined(DEATH_TARGET_WINDOWS)
+			_fileHandle(NULL)
+
 #else
-			_handle(nullptr)
+			_fileDescriptor(-1)
 #endif
 	{
 		Open(mode);
@@ -64,24 +59,25 @@ namespace Death { namespace IO {
 
 	void FileStream::Dispose()
 	{
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		if (_fileDescriptor >= 0) {
-			const std::int32_t retValue = ::close(_fileDescriptor);
-			if (retValue < 0) {
-				LOGW("Cannot close the file \"%s\"", _path.data());
-			} else {
+		FlushWriteBuffer();
+
+#if defined(DEATH_TARGET_WINDOWS)
+		if (_fileHandle != NULL) {
+			if (::CloseHandle(_fileHandle)) {
 				LOGI("File \"%s\" closed", _path.data());
-				_fileDescriptor = -1;
+				_fileHandle = NULL;
+			} else {
+				LOGW("Can't close the file \"%s\"", _path.data());
 			}
 		}
 #else
-		if (_handle != nullptr) {
-			const std::int32_t retValue = ::fclose(_handle);
-			if (retValue == EOF) {
-				LOGW("Cannot close the file \"%s\"", _path.data());
-			} else {
+		if (_fileDescriptor >= 0) {
+			const std::int32_t retValue = ::close(_fileDescriptor);
+			if (retValue >= 0) {
 				LOGI("File \"%s\" closed", _path.data());
-				_handle = nullptr;
+				_fileDescriptor = -1;
+			} else {
+				LOGW("Can't close the file \"%s\"", _path.data());
 			}
 		}
 #endif
@@ -89,147 +85,218 @@ namespace Death { namespace IO {
 
 	std::int64_t FileStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		std::int64_t newPos = Stream::Invalid;
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		if (_fileDescriptor >= 0) {
-			newPos = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
+		if (_writePos > 0) {
+			FlushWriteBuffer();
+		} else if (origin == SeekOrigin::Current) {
+			offset -= (_readLength - _readPos);
 		}
-#else
-		if (_handle != nullptr) {
-			// ::fseek return 0 on success
-#	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(DEATH_USE_NOLOCK_IN_FILE)
-			if (::_fseeki64_nolock(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
-				newPos = ::_ftelli64_nolock(_handle);
-			}
-#		else
-			if (::_fseeki64(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
-				newPos = ::_ftelli64(_handle);
-			}
-#		endif
-#	else
-			if (::fseeko(_handle, offset, static_cast<std::int32_t>(origin)) == 0) {
-				newPos = ::ftello(_handle);
-			}
-#	endif
-			else {
-				newPos = Stream::OutOfRange;
+		_readPos = 0;
+		_readLength = 0;
+
+		std::int64_t oldPos = _filePos + (_readPos - _readLength);
+		std::int64_t pos = SeekInternal(offset, origin);
+		if (pos < 0) {
+			return pos;
+		}
+
+		if (_readLength > 0) {
+			if (oldPos == pos) {
+				if (_readPos > 0) {
+					std::memcpy(&_buffer[0], &_buffer[_readPos], _readLength - _readPos);
+					_readLength -= _readPos;
+					_readPos = 0;
+				}
+				if (_readLength > 0) {
+					SeekInternal(_readLength, SeekOrigin::Current);
+				}
+			} else if (oldPos - _readPos < pos && pos < oldPos + _readLength - _readPos) {
+				std::int64_t diff = (pos - oldPos);
+				std::memcpy(&_buffer[0], &_buffer[_readPos + diff], _readLength - (_readPos + diff));
+				_readLength -= (_readPos + diff);
+				_readPos = 0;
+				if (_readLength > 0) {
+					SeekInternal(_readLength, SeekOrigin::Current);
+				}
+			} else {
+				_readPos = 0;
+				_readLength = 0;
 			}
 		}
-#endif
-		return newPos;
+		return pos;
 	}
 
 	std::int64_t FileStream::GetPosition() const
 	{
-		std::int64_t pos = Stream::Invalid;
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		if (_fileDescriptor >= 0) {
-			pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
-		}
-#else
-		if (_handle != nullptr) {
-#	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(DEATH_USE_NOLOCK_IN_FILE)
-			pos = ::_ftelli64_nolock(_handle);
-#		else
-			pos = ::_ftelli64(_handle);
-#		endif
-#	else
-			pos = ::ftello(_handle);
-#	endif
-		}
-#endif
-		return pos;
+		return (_filePos - _readLength) + _readPos + _writePos;
 	}
 
-	std::int32_t FileStream::Read(void* buffer, std::int32_t bytes)
+	std::int64_t FileStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
-
-		if (bytes <= 0) {
+		if (bytesToRead <= 0) {
 			return 0;
 		}
 
-		std::int32_t bytesRead = 0;
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		if (_fileDescriptor >= 0) {
-			bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, buffer, bytes));
+		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
+		std::uint8_t* typedBuffer = static_cast<std::uint8_t*>(destination);
+
+		bool isBlocked = false;
+		std::int64_t n = (_readLength - _readPos);
+		if (n == 0) {
+			if (_writePos > 0) {
+				FlushWriteBuffer();
+			}
+			if (bytesToRead >= _bufferLength) {
+				_readPos = 0;
+				_readLength = 0;
+
+				do {
+					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+					std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
+					if DEATH_UNLIKELY(bytesRead < 0) {
+						return bytesRead;
+					} else if DEATH_UNLIKELY(bytesRead == 0) {
+						break;
+					}
+					n += bytesRead;
+					bytesToRead -= bytesRead;
+				} while (bytesToRead > 0);
+
+				return n;
+			}
+
+			InitializeBuffer();
+			n = ReadInternal(&_buffer[0], _bufferLength);
+			if (n == 0) {
+				return 0;
+			}
+			isBlocked = (n < _bufferLength);
+			_readPos = 0;
+			_readLength = n;
 		}
-#else
-		if (_handle != nullptr) {
-#	if defined(DEATH_USE_NOLOCK_IN_FILE)
-#		if defined(DEATH_TARGET_WINDOWS)
-			bytesRead = static_cast<std::int32_t>(::_fread_nolock(buffer, 1, bytes, _handle));
-#		else
-			bytesRead = static_cast<std::int32_t>(::fread_unlocked(buffer, 1, bytes, _handle));
-#		endif
-#	else
-			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
-#	endif
+
+		if (bytesToRead < n) {
+			n = bytesToRead;
 		}
-#endif
-		return bytesRead;
+
+		std::memcpy(typedBuffer, &_buffer[_readPos], n);
+		_readPos += n;
+
+		bytesToRead -= n;
+		if (bytesToRead > 0 && !isBlocked) {
+			DEATH_DEBUG_ASSERT(_readPos == _readLength);
+			_readPos = 0;
+			_readLength = 0;
+
+			do {
+				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+				std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
+				if DEATH_UNLIKELY(bytesRead < 0) {
+					return bytesRead;
+				} else if DEATH_UNLIKELY(bytesRead == 0) {
+					break;
+				}
+				n += bytesRead;
+				bytesToRead -= bytesRead;
+			} while (bytesToRead > 0);
+		}
+
+		return n;
 	}
 
-	std::int32_t FileStream::Write(const void* buffer, std::int32_t bytes)
+	std::int64_t FileStream::Write(const void* source, std::int64_t bytesToWrite)
 	{
-		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
-
-		if (bytes <= 0) {
+		if (bytesToWrite <= 0) {
 			return 0;
 		}
 
-		std::int32_t bytesWritten = 0;
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		if (_fileDescriptor >= 0) {
-			bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, buffer, bytes));
+		DEATH_ASSERT(source != nullptr, "source is null", 0);
+		const std::uint8_t* typedBuffer = static_cast<const std::uint8_t*>(source);
+		std::int64_t bytesWrittenTotal = 0;
+
+		if (_writePos == 0) {
+			if (_readPos < _readLength) {
+				FlushReadBuffer();
+			}
+			_readPos = 0;
+			_readLength = 0;
 		}
-#else
-		if (_handle != nullptr) {
-#	if defined(DEATH_USE_NOLOCK_IN_FILE)
-#		if defined(DEATH_TARGET_WINDOWS)
-			bytesWritten = static_cast<std::int32_t>(::_fwrite_nolock(buffer, 1, bytes, _handle));
-#		else
-			bytesWritten = static_cast<std::int32_t>(::fwrite_unlocked(buffer, 1, bytes, _handle));
-#		endif
-#	else
-			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
-#	endif
+
+		if (_writePos > 0) {
+			std::int32_t bufferBytesLeft = (_bufferLength - _writePos);
+			if (bufferBytesLeft > 0) {
+				if (bytesToWrite <= bufferBytesLeft) {
+					std::memcpy(&_buffer[_writePos], typedBuffer, bytesToWrite);
+					_writePos += bytesToWrite;
+					return bytesToWrite;
+				} else {
+					std::memcpy(&_buffer[_writePos], typedBuffer, bufferBytesLeft);
+					_writePos += bufferBytesLeft;
+					typedBuffer += bufferBytesLeft;
+					bytesWrittenTotal += bufferBytesLeft;
+					bytesToWrite -= bufferBytesLeft;
+				}
+			}
+
+			WriteInternal(&_buffer[0], _writePos);
+			_writePos = 0;
 		}
-#endif
-		return bytesWritten;
+
+		if (bytesToWrite >= _bufferLength) {
+			while DEATH_UNLIKELY(bytesToWrite > INT32_MAX) {
+				std::int32_t moreBytesRead = WriteInternal(typedBuffer, INT32_MAX);
+				if DEATH_UNLIKELY(moreBytesRead <= 0) {
+					return bytesWrittenTotal;
+				}
+				typedBuffer += moreBytesRead;
+				bytesWrittenTotal += moreBytesRead;
+				bytesToWrite -= moreBytesRead;
+			}
+			if DEATH_LIKELY(bytesToWrite > 0) {
+				std::int32_t moreBytesRead = WriteInternal(typedBuffer, bytesToWrite);
+				bytesWrittenTotal += moreBytesRead;
+			}
+			return bytesWrittenTotal;
+		}
+
+		// Copy remaining bytes into buffer, it will be written to the file later
+		InitializeBuffer();
+		std::memcpy(&_buffer[_writePos], typedBuffer, bytesToWrite);
+		_writePos = bytesToWrite;
+		bytesWrittenTotal += bytesToWrite;
+		return bytesWrittenTotal;
 	}
 
 	bool FileStream::Flush()
 	{
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		return fdatasync(_fileDescriptor) == 0;
+		if (_writePos > 0) {
+			FlushWriteBuffer();
+		} else if (_readPos < _readLength) {
+			FlushReadBuffer();
+		}
+
+#if defined(DEATH_TARGET_WINDOWS)
+		return ::FlushFileBuffers(_fileHandle);
 #else
-#	if defined(DEATH_USE_NOLOCK_IN_FILE)
-#		if defined(DEATH_TARGET_WINDOWS)
-		return ::_fflush_nolock(_handle) == 0;
-#		else
-		return ::fflush_unlocked(_handle) == 0;
-#		endif
-#	else
-		return ::fflush(_handle) == 0;
-#	endif
+		return ::fdatasync(_fileDescriptor) == 0;
 #endif
 	}
 
 	bool FileStream::IsValid()
 	{
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		return (_fileDescriptor >= 0);
+#if defined(DEATH_TARGET_WINDOWS)
+		return (_fileHandle != NULL);
 #else
-		return (_handle != nullptr);
+		return (_fileDescriptor >= 0);
 #endif
 	}
 
 	std::int64_t FileStream::GetSize() const
 	{
-		return _size;
+		std::int64_t size = _size;
+		if DEATH_UNLIKELY(_writePos > 0 && _filePos + _writePos > _size) {
+			size = _filePos + _writePos;
+		}
+		return size;
 	}
 
 	Containers::StringView FileStream::GetPath() const
@@ -237,9 +304,75 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
+	void FileStream::InitializeBuffer()
+	{
+		if DEATH_UNLIKELY(_buffer == nullptr) {
+			_buffer = std::make_unique<char[]>(_bufferLength);
+		}
+	}
+
+	void FileStream::FlushReadBuffer()
+	{
+		std::int64_t rewind = (_readPos - _readLength);
+		if (rewind != 0) {
+			SeekInternal(rewind, SeekOrigin::Current);
+		}
+		_readPos = 0;
+		_readLength = 0;
+	}
+
+	void FileStream::FlushWriteBuffer()
+	{
+		if (_writePos > 0) {
+			WriteInternal(&_buffer[0], _writePos);
+			_writePos = 0;
+		}
+	}
+
 	void FileStream::Open(FileAccess mode)
 	{
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
+#if defined(DEATH_TARGET_WINDOWS)
+		DWORD desireAccess, creationDisposition;
+		const char* modeInternal;
+		DWORD shareMode;
+		switch (mode & ~FileAccess::Exclusive) {
+			case FileAccess::Read:
+				desireAccess = GENERIC_READ;
+				creationDisposition = OPEN_EXISTING;
+				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE);
+				break;
+			case FileAccess::Write:
+				desireAccess = GENERIC_WRITE;
+				creationDisposition = CREATE_ALWAYS;
+				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
+				break;
+			case FileAccess::ReadWrite:
+				desireAccess = GENERIC_READ | GENERIC_WRITE;
+				creationDisposition = /*OPEN_ALWAYS*/OPEN_EXISTING;		// NOTE: File must already exist (for consistency with other platforms)
+				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
+				break;
+			default:
+				LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
+				return;
+		}
+
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		_fileHandle = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, NULL);
+#	else
+		_fileHandle = ::CreateFile(Utf8::ToUtf16(_path), desireAccess, shareMode, NULL, creationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+#	endif
+		if (_fileHandle == NULL || _fileHandle == INVALID_HANDLE_VALUE) {
+			DWORD error = ::GetLastError();
+			LOGE("Can't open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+			_fileHandle = NULL;
+			return;
+		}
+
+		LARGE_INTEGER fileSize;
+		if (::GetFileSizeEx(_fileHandle, &fileSize)) {
+			_size = fileSize.QuadPart;
+		}
+#else
 		std::int32_t openFlag;
 		switch (mode & ~FileAccess::Exclusive) {
 			case FileAccess::Read:
@@ -252,129 +385,106 @@ namespace Death { namespace IO {
 				openFlag = O_RDWR;
 				break;
 			default:
-				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
+				LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
 		_fileDescriptor = ::open(_path.data(), openFlag);
 		if (_fileDescriptor < 0) {
-			LOGE("Cannot open file \"%s\" - failed with error %i", _path.data(), errno);
+			LOGE("Can't open file \"%s\" - failed with error %i", _path.data(), errno);
 			return;
 		}
+
+		std::int64_t size = ::lseek(_fileDescriptor, 0, SEEK_END);
+		if (size >= 0) {
+			_size = size;
+			::lseek(_fileDescriptor, 0, SEEK_SET);
+		}
+#endif
 
 		switch (mode & ~FileAccess::Exclusive) {
 			default: LOGI("File \"%s\" opened", _path.data()); break;
 			case FileAccess::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
 			case FileAccess::ReadWrite: LOGI("File \"%s\" opened for read+write", _path.data()); break;
 		}
+	}
 
-		// Try to get file size
-		_size = ::lseek(_fileDescriptor, 0, SEEK_END);
-		::lseek(_fileDescriptor, 0, SEEK_SET);
+	std::int64_t FileStream::SeekInternal(std::int64_t offset, SeekOrigin origin)
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		LARGE_INTEGER distanceToMove;
+		distanceToMove.QuadPart = offset;
+
+		LARGE_INTEGER newPos;
+		if (!::SetFilePointerEx(_fileHandle, distanceToMove, &newPos, (DWORD)origin)) {
+			DWORD error = ::GetLastError();
+			if (error != ERROR_BROKEN_PIPE) {
+				LOGE("Can't change position in file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+			}
+			return Stream::OutOfRange;
+		}
+
+		_filePos = newPos.QuadPart;
+		return newPos.QuadPart;
 #else
-#	if defined(DEATH_TARGET_WINDOWS_RT)
-		DWORD desireAccess, creationDisposition;
-		std::int32_t openFlag;
-		const char* modeInternal;
-		DWORD shareMode;
-		switch (mode & ~FileAccess::Exclusive) {
-			case FileAccess::Read:
-				desireAccess = GENERIC_READ;
-				creationDisposition = OPEN_EXISTING;
-				openFlag = _O_RDONLY | _O_BINARY;
-				modeInternal = "rb";
-				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE);
-				break;
-			case FileAccess::Write:
-				desireAccess = GENERIC_WRITE;
-				creationDisposition = CREATE_ALWAYS;
-				openFlag = _O_WRONLY | _O_BINARY;
-				modeInternal = "wb";
-				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
-				break;
-			case FileAccess::ReadWrite:
-				desireAccess = GENERIC_READ | GENERIC_WRITE;
-				creationDisposition = /*OPEN_ALWAYS*/OPEN_EXISTING;		// NOTE: File must already exist (for consistency with other platforms)
-				openFlag = _O_RDWR | _O_BINARY;
-				modeInternal = "r+b";
-				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
-				break;
-			default:
-				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
-				return;
+		std::int64_t newPos = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
+		if (newPos == -1) {
+			return Stream::OutOfRange;
 		}
+		_filePos = newPos;
+		return newPos;
+#endif
+	}
 
-		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, nullptr);
-		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
+	std::int32_t FileStream::ReadInternal(void* buffer, std::int32_t bytes)
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		DWORD bytesRead;
+		if (!::ReadFile(_fileHandle, buffer, bytes, &bytesRead, NULL)) {
+			bytesRead = 0;
+
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
-			return;
-		}
-		// Automatically transfers ownership of the Win32 file handle to the file descriptor
-		std::int32_t fd = _open_osfhandle(reinterpret_cast<std::intptr_t>(hFile), openFlag);
-		_handle = _fdopen(fd, modeInternal);
-		if (_handle == nullptr) {
-			LOGE("Cannot open file \"%s\" - failed with internal error", _path.data());
-			return;
-		}
-#	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-		const wchar_t* modeInternal;
-		std::int32_t shareMode;
-		switch (mode & ~FileAccess::Exclusive) {
-			case FileAccess::Read: modeInternal = L"rb"; shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? _SH_DENYRW : _SH_DENYNO); break;
-			case FileAccess::Write: modeInternal = L"wb"; shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
-			case FileAccess::ReadWrite: modeInternal = L"r+b"; shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? _SH_DENYRW : _SH_DENYWR); break;
-			default:
-				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
-				return;
+			if (error != ERROR_BROKEN_PIPE) {
+				LOGE("Can't read from file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+			}
 		}
 
-		_handle = _wfsopen(Utf8::ToUtf16(_path), modeInternal, shareMode);
-		if (_handle == nullptr) {
+		_filePos += static_cast<std::int32_t>(bytesRead);
+		return static_cast<std::int32_t>(bytesRead);
+#else
+		std::int32_t bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, buffer, bytes));
+		if (bytesRead < 0) {
+			LOGE("Can't read from file \"%s\" - failed with error %i", _path.data(), errno);
+			return 0;
+		}
+		_filePos += bytesRead;
+		return bytesRead;
+#endif
+	}
+
+	std::int32_t FileStream::WriteInternal(const void* buffer, std::int32_t bytes)
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		DWORD bytesWritten;
+		if (!::WriteFile(_fileHandle, buffer, bytes, &bytesWritten, NULL)) {
+			bytesWritten = 0;
+
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
-			return;
-		}
-#	else
-		const char* modeInternal;
-		switch (mode & ~FileAccess::Exclusive) {
-			case FileAccess::Read: modeInternal = "rb"; break;
-			case FileAccess::Write: modeInternal = "wb"; break;
-			case FileAccess::ReadWrite: modeInternal = "r+b"; break;	// NOTE: File must already exist
-			default:
-				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
-				return;
+			if (error != ERROR_NO_DATA) {
+				LOGE("Can't write to file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+			}
 		}
 
-		_handle = ::fopen(_path.data(), modeInternal);
-		if (_handle == nullptr) {
-			LOGE("Cannot open file \"%s\" - failed with error %i", _path.data(), errno);
-			return;
+		_filePos += static_cast<std::int32_t>(bytesWritten);
+		return static_cast<std::int32_t>(bytesWritten);
+#else
+		std::int32_t bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, buffer, bytes));
+		if (bytesWritten < 0) {
+			LOGE("Can't write to file \"%s\" - failed with error %i", _path.data(), errno);
+			return 0;
 		}
-#	endif
-
-		switch (mode & ~FileAccess::Exclusive) {
-			default: LOGI("File \"%s\" opened", _path.data()); break;
-			case FileAccess::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
-			case FileAccess::ReadWrite: LOGI("File \"%s\" opened for read+write", _path.data()); break;
-		}
-
-		// Try to get file size
-#	if defined(DEATH_TARGET_WINDOWS)
-#		if defined(DEATH_USE_NOLOCK_IN_FILE)
-		::_fseeki64_nolock(_handle, 0, SEEK_END);
-		_size = ::_ftelli64_nolock(_handle);
-		::_fseeki64_nolock(_handle, 0, SEEK_SET);
-#		else
-		::_fseeki64(_handle, 0, SEEK_END);
-		_size = ::_ftelli64(_handle);
-		::_fseeki64(_handle, 0, SEEK_SET);
-#		endif
-#	else
-		::fseeko(_handle, 0, SEEK_END);
-		_size = ::ftello(_handle);
-		::fseeko(_handle, 0, SEEK_SET);
-#	endif
+		_filePos += bytesWritten;
+		return bytesWritten;
 #endif
 	}
 

@@ -62,23 +62,23 @@ namespace Death { namespace Cpu {
 #		if defined(DEATH_TARGET_32BIT)
 		// Apple says I should use hw.optional.AdvSIMD instead tho
 		if (appleSysctlByName("hw.optional.neon")) out |= TypeTraits<NeonT>::Index;
-		// On 32bit I have no idea how to query FMA / vfpv4 support, so that'll only be implied if FP16 is available as well.
-		// Since I don't think there are many 32bit iOS devices left, that's not worth bothering with.
+		// On 32-bit I have no idea how to query FMA / vfpv4 support, so that'll only be implied if FP16 is available as well.
+		// Since I don't think there are many 32-bit iOS devices left, that's not worth bothering with.
 #		else
-		// To avoid string operations, on 64bit I just assume NEON and FMA being present, like in the Linux case.
+		// To avoid string operations, on 64-bit I just assume NEON and FMA being present, like in the Linux case.
 		// Again, for extra security make use of the DEATH_TARGET_ defines (which should be always there on ARM64)
-		out |=
+		out |= 0
 #			if defined(DEATH_TARGET_NEON)
-			TypeTraits<NeonT>::Index |
+			| TypeTraits<NeonT>::Index
 #			endif
 #			if defined(DEATH_TARGET_NEON_FMA)
-			TypeTraits<NeonFmaT>::Index |
+			| TypeTraits<NeonFmaT>::Index
 #			endif
-			0;
+			;
 #		endif
 		// Apple says I should use hw.optional.arm.FEAT_FP16 instead though
 		if (appleSysctlByName("hw.optional.neon_fp16")) {
-			// As noted above, if FP16 is available on 32bit, bite the bullet and assume FMA is there as well
+			// As noted above, if FP16 is available on 32-bit, bite the bullet and assume FMA is there as well
 #		if defined(DEATH_TARGET_32BIT)
 			out |= TypeTraits<NeonFmaT>::Index;
 #		endif

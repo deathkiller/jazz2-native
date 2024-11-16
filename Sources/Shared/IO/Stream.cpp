@@ -84,19 +84,19 @@ namespace Death { namespace IO {
 		return result;
 	}
 
-	std::int32_t Stream::WriteVariableInt32(std::int32_t value)
+	std::int64_t Stream::WriteVariableInt32(std::int32_t value)
 	{
 		std::uint32_t n = (std::uint32_t)(value << 1) ^ (std::uint32_t)(value >> 31);
 		return WriteVariableUint32(n);
 	}
 
-	std::int32_t Stream::WriteVariableInt64(std::int64_t value)
+	std::int64_t Stream::WriteVariableInt64(std::int64_t value)
 	{
 		std::uint64_t n = (std::uint64_t)(value << 1) ^ (std::uint64_t)(value >> 63);
 		return WriteVariableUint64(n);
 	}
 
-	std::int32_t Stream::WriteVariableUint32(std::uint32_t value)
+	std::int64_t Stream::WriteVariableUint32(std::uint32_t value)
 	{
 		std::int32_t bytesWritten = 1;
 		std::uint32_t valueLeft = value;
@@ -109,7 +109,7 @@ namespace Death { namespace IO {
 		return bytesWritten;
 	}
 
-	std::int32_t Stream::WriteVariableUint64(std::uint64_t value)
+	std::int64_t Stream::WriteVariableUint64(std::uint64_t value)
 	{
 		std::int32_t bytesWritten = 1;
 		std::uint64_t valueLeft = value;
