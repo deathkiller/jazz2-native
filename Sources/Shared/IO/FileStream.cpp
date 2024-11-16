@@ -4,6 +4,8 @@
 #include "../Asserts.h"
 #include "../Utf8.h"
 
+#include <cstring>
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 #	include <io.h>
 #	if defined(DEATH_TARGET_WINDOWS_RT)
