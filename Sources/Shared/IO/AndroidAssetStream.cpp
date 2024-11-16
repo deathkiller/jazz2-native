@@ -133,7 +133,7 @@ namespace Death { namespace IO {
 		if (_asset != nullptr) {
 			do {
 				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
-				std::int32_t bytesRead = AAsset_read(&typedBuffer[bytesReadTotal], partialBytesToRead);
+				std::int32_t bytesRead = AAsset_read(_asset, &typedBuffer[bytesReadTotal], partialBytesToRead);
 				if DEATH_UNLIKELY(bytesRead < 0) {
 					return bytesRead;
 				} else if DEATH_UNLIKELY(bytesRead == 0) {
