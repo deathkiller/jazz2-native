@@ -22,8 +22,8 @@ namespace Death { namespace IO {
 		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
-		std::int32_t Read(void* buffer, std::int32_t bytes) override;
-		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
+		std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
+		std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
@@ -73,24 +73,24 @@ namespace Death { namespace IO {
 		return _pos;
 	}
 
-	std::int32_t BoundedStream::Read(void* buffer, std::int32_t bytes)
+	std::int64_t BoundedStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
-
-		if (bytes <= 0) {
+		if (bytesToRead <= 0) {
 			return 0;
 		}
 
-		if (bytes > _size - _pos) {
-			bytes = static_cast<std::int32_t>(_size - _pos);
+		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
+
+		if (bytesToRead > _size - _pos) {
+			bytesToRead = _size - _pos;
 		}
 
-		std::int32_t bytesRead = _underlyingStream.Read(buffer, bytes);
+		std::int64_t bytesRead = _underlyingStream.Read(destination, bytesToRead);
 		_pos += bytesRead;
 		return bytesRead;
 	}
 
-	std::int32_t BoundedStream::Write(const void* buffer, std::int32_t bytes)
+	std::int64_t BoundedStream::Write(const void* source, std::int64_t bytesToWrite)
 	{
 		// Not supported
 		return Stream::Invalid;
@@ -112,7 +112,7 @@ namespace Death { namespace IO {
 		return _size;
 	}
 
-#if defined(WITH_ZLIB)
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 
 	class ZlibCompressedBoundedStream : public Stream
 	{
@@ -125,8 +125,8 @@ namespace Death { namespace IO {
 		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
-		std::int32_t Read(void* buffer, std::int32_t bytes) override;
-		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
+		std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
+		std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
@@ -160,12 +160,12 @@ namespace Death { namespace IO {
 		return _deflateStream.GetPosition();
 	}
 
-	std::int32_t ZlibCompressedBoundedStream::Read(void* buffer, std::int32_t bytes)
+	std::int64_t ZlibCompressedBoundedStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		return _deflateStream.Read(buffer, bytes);
+		return _deflateStream.Read(destination, bytesToRead);
 	}
 
-	std::int32_t ZlibCompressedBoundedStream::Write(const void* buffer, std::int32_t bytes)
+	std::int64_t ZlibCompressedBoundedStream::Write(const void* source, std::int64_t bytesToWrite)
 	{
 		// Not supported
 		return Stream::Invalid;
@@ -307,7 +307,7 @@ namespace Death { namespace IO {
 		}
 
 		if ((foundItem->Flags & ItemFlags::ZlibCompressed) == ItemFlags::ZlibCompressed) {
-#if defined(WITH_ZLIB)
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 			return std::make_unique<ZlibCompressedBoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
 			LOGE("File \"%s\" was compressed using an unsupported compression method", String::nullTerminatedView(path).data());
@@ -566,7 +566,7 @@ namespace Death { namespace IO {
 		std::int64_t offset = _outputStream->GetPosition();
 		std::int64_t uncompressedSize, size;
 
-#if defined(WITH_ZLIB)
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 		if (compress) {
 			DeflateWriter dw(*_outputStream);
 			uncompressedSize = stream.CopyTo(dw);

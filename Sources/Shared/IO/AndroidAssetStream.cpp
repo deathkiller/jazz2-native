@@ -39,11 +39,11 @@ namespace Death { namespace IO {
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
 			const std::int32_t retValue = ::close(_fileDescriptor);
-			if (retValue < 0) {
-				LOGW("Cannot close the file \"%s\"", _path.data());
-			} else {
+			if (retValue >= 0) {
 				LOGI("File \"%s\" closed", _path.data());
 				_fileDescriptor = -1;
+			} else {
+				LOGW("Can't close the file \"%s\"", _path.data());
 			}
 		}
 #else
@@ -98,35 +98,56 @@ namespace Death { namespace IO {
 		return pos;
 	}
 
-	std::int32_t AndroidAssetStream::Read(void* buffer, std::int32_t bytes)
+	std::int64_t AndroidAssetStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		DEATH_ASSERT(buffer != nullptr, "buffer is null", 0);
-
-		if (bytes <= 0) {
+		if (bytesToRead <= 0) {
 			return 0;
 		}
 
-		std::int32_t bytesRead = 0;
+		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
+		std::uint8_t* typedBuffer = static_cast<std::uint8_t*>(destination);
+
+		std::int64_t bytesReadTotal = 0;
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-			std::int32_t bytesToRead = bytes;
 			const std::int64_t pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
-			if (pos >= _startOffset + _size) {
+			if (_startOffset + _size <= pos) {
 				bytesToRead = 0; // Simulating EOF
-			} else if (pos + bytes > _startOffset + _size) {
+			} else if (_startOffset + _size < pos + bytesToRead) {
 				bytesToRead = (_startOffset + _size) - pos;
 			}
-			bytesRead = ::read(_fileDescriptor, buffer, bytesToRead);
+
+			while (bytesToRead > 0) {
+				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+				std::int32_t bytesRead = ::read(&typedBuffer[bytesReadTotal], partialBytesToRead);
+				if DEATH_UNLIKELY(bytesRead < 0) {
+					return bytesRead;
+				} else if DEATH_UNLIKELY(bytesRead == 0) {
+					break;
+				}
+				bytesReadTotal += bytesRead;
+				bytesToRead -= bytesRead;
+			}
 		}
 #else
 		if (_asset != nullptr) {
-			bytesRead = AAsset_read(_asset, buffer, bytes);
+			do {
+				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+				std::int32_t bytesRead = AAsset_read(&typedBuffer[bytesReadTotal], partialBytesToRead);
+				if DEATH_UNLIKELY(bytesRead < 0) {
+					return bytesRead;
+				} else if DEATH_UNLIKELY(bytesRead == 0) {
+					break;
+				}
+				bytesReadTotal += bytesRead;
+				bytesToRead -= bytesRead;
+			} while (bytesToRead > 0);
 		}
 #endif
-		return bytesRead;
+		return bytesReadTotal;
 	}
 
-	std::int32_t AndroidAssetStream::Write(const void* buffer, std::int32_t bytes)
+	std::int64_t AndroidAssetStream::Write(const void* source, std::int64_t bytesToWrite)
 	{
 		// Not supported
 		return Stream::Invalid;
@@ -237,7 +258,7 @@ namespace Death { namespace IO {
 	{
 		FileAccess maskedMode = mode & ~FileAccess::Exclusive;
 		if (maskedMode != FileAccess::Read) {
-			LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
+			LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
 			return;
 		}
 
@@ -245,7 +266,7 @@ namespace Death { namespace IO {
 		// An asset file can only be read
 		AAsset* asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (asset == nullptr) {
-			LOGE("Cannot open file \"%s\"", _path.data());
+			LOGE("Can't open file \"%s\"", _path.data());
 			return;
 		}
 
@@ -260,7 +281,7 @@ namespace Death { namespace IO {
 		asset = nullptr;
 
 		if (_fileDescriptor < 0) {
-			LOGE("Cannot open file \"%s\"", _path.data());
+			LOGE("Can't open file \"%s\"", _path.data());
 			return;
 		}
 
@@ -269,7 +290,7 @@ namespace Death { namespace IO {
 		// An asset file can only be read
 		_asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (_asset == nullptr) {
-			LOGE("Cannot open file \"%s\"", _path.data());
+			LOGE("Can't open file \"%s\"", _path.data());
 			return;
 		}
 

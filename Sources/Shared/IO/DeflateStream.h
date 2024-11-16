@@ -3,17 +3,30 @@
 #include "../Common.h"
 #include "Stream.h"
 
-#if defined(WITH_ZLIB)
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 
-#if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("zlib/zlib.h")
-#		define __HAS_LOCAL_ZLIB
+#if defined(WITH_MINIZ)
+#	if !defined(CMAKE_BUILD) && defined(__has_include)
+#		if __has_include("miniz/miniz.h")
+#			define __HAS_LOCAL_MINIZ
+#		endif
 #	endif
-#endif
-#ifdef __HAS_LOCAL_ZLIB
-#	include "zlib/zlib.h"
+#	ifdef __HAS_LOCAL_MINIZ
+#		include "miniz/miniz.h"
+#	else
+#		include <miniz.h>
+#	endif
 #else
-#	include <zlib.h>
+#	if !defined(CMAKE_BUILD) && defined(__has_include)
+#		if __has_include("zlib/zlib.h")
+#			define __HAS_LOCAL_ZLIB
+#		endif
+#	endif
+#	ifdef __HAS_LOCAL_ZLIB
+#		include "zlib/zlib.h"
+#	else
+#		include <zlib.h>
+#	endif
 #endif
 
 namespace Death { namespace IO {
@@ -39,8 +52,8 @@ namespace Death { namespace IO {
 		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
-		std::int32_t Read(void* buffer, std::int32_t bytes) override;
-		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
+		std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
+		std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
@@ -89,8 +102,8 @@ namespace Death { namespace IO {
 		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
-		std::int32_t Read(void* buffer, std::int32_t bytes) override;
-		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
+		std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
+		std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
@@ -116,7 +129,7 @@ namespace Death { namespace IO {
 		State _state;
 		unsigned char _buffer[BufferSize];
 
-		std::int32_t WriteInternal(const void* buffer, std::int32_t bytes, bool finish);
+		std::int32_t WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish);
 	};
 }}
 

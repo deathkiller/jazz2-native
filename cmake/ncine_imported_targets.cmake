@@ -141,7 +141,7 @@ if(NCINE_WITH_THREADS)
 	find_package(Threads)
 endif()
 
-if(MSVC OR MINGW OR MSYS)
+if(WIN32)
 	set(EXTERNAL_MSVC_DIR "${NCINE_LIBS}/Windows/" CACHE PATH "Set the path to the MSVC libraries directory")
 	if(NOT IS_DIRECTORY ${EXTERNAL_MSVC_DIR})
 		message(STATUS "MSVC libraries directory not found at: ${EXTERNAL_MSVC_DIR}")
@@ -172,7 +172,7 @@ if(MSVC OR MINGW OR MSYS)
 	
 		set(MSVC_WINRT_LIBDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/")
 		set(MSVC_WINRT_BINDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
-	elseif(WIN32)
+	else()
 		# Try to find VC-LTL library (if not disabled)
 		if(DEATH_WITH_VC_LTL AND MSVC)
 			if(NOT VC_LTL_Root)
@@ -351,7 +351,7 @@ if(ANDROID)
 			set(ANGELSCRIPT_FOUND 1)
 		endif()
 	endif()
-elseif(MSVC OR MINGW OR MSYS)
+elseif(WIN32)
 	if(EXISTS "${MSVC_LIBDIR}/zlib.lib" AND EXISTS "${MSVC_BINDIR}/zlib.dll")
 		add_library(ZLIB::ZLIB SHARED IMPORTED)
 		set_target_properties(ZLIB::ZLIB PROPERTIES
@@ -511,81 +511,6 @@ elseif(MSVC OR MINGW OR MSYS)
 			set(ANGELSCRIPT_FOUND 1)
 		endif()
 	endif()
-#elseif(MINGW OR MSYS)
-#	function(set_msys_dll PREFIX DLL_NAME)
-#		set(LIB_NAME "${DLL_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
-#		set(DLL_LIBRARY "$ENV{MINGW_PREFIX}/bin/${LIB_NAME}")
-#		if(EXISTS ${DLL_LIBRARY} AND NOT IS_DIRECTORY ${DLL_LIBRARY})
-#			set(${PREFIX}_DLL_LIBRARY ${DLL_LIBRARY} PARENT_SCOPE)
-#		else()
-#			message(WARNING "Could not find: ${DLL_LIBRARY}")
-#		endif()
-#	endfunction()
-#
-#	if(GLFW_FOUND)
-#		set_msys_dll(GLFW glfw3)
-#		add_library(GLFW::GLFW SHARED IMPORTED)
-#		set_target_properties(GLFW::GLFW PROPERTIES
-#			IMPORTED_IMPLIB "${GLFW_LIBRARY}"
-#			IMPORTED_LOCATION "${GLFW_DLL_LIBRARY}"
-#			INTERFACE_COMPILE_DEFINITIONS "GLFW_NO_GLU"
-#			INTERFACE_INCLUDE_DIRECTORIES "${GLFW_INCLUDE_DIR}")
-#	endif()
-#
-#	if(SDL2_FOUND)
-#		foreach(LIBRARY ${SDL2_LIBRARY})
-#			string(REGEX MATCH "\.a$" FOUND_STATIC_LIB ${LIBRARY})
-#			if(NOT FOUND_STATIC_LIB STREQUAL "" AND NOT ${LIBRARY} STREQUAL ${SDL2MAIN_LIBRARY})
-#				set(SDL2_IMPORT_LIBRARY ${LIBRARY})
-#				break()
-#			endif()
-#		endforeach()
-#
-#		set_msys_dll(SDL2 SDL2)
-#		add_library(SDL2::SDL2 SHARED IMPORTED)
-#		set_target_properties(SDL2::SDL2 PROPERTIES
-#			IMPORTED_IMPLIB "${SDL2_IMPORT_LIBRARY}"
-#			IMPORTED_LOCATION "${SDL2_DLL_LIBRARY}"
-#			INTERFACE_INCLUDE_DIRECTORIES "${SDL2_INCLUDE_DIR}")
-#	endif()
-#
-#	if(WEBP_FOUND)
-#		set_msys_dll(WEBP libwebp-7)
-#		add_library(WebP::WebP SHARED IMPORTED)
-#		set_target_properties(WebP::WebP PROPERTIES
-#			IMPORTED_IMPLIB "${WEBP_LIBRARY}"
-#			IMPORTED_LOCATION "${WEBP_DLL_LIBRARY}"
-#			INTERFACE_INCLUDE_DIRECTORIES "${WEBP_INCLUDE_DIR}")
-#	endif()
-#
-#	if(OPENAL_FOUND)
-#		set_msys_dll(OPENAL libopenal-1)
-#		add_library(OpenAL::OpenAL SHARED IMPORTED)
-#		set_target_properties(OpenAL::OpenAL PROPERTIES
-#			IMPORTED_IMPLIB "${OPENAL_LIBRARY}"
-#			IMPORTED_LOCATION "${OPENAL_DLL_LIBRARY}"
-#			IMPORTED_LOCATION "${OPENAL_LIB_PATH}/${OPENAL_LIB_NAME}.dll"
-#			INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
-#
-#		if(VORBIS_FOUND)
-#			set_msys_dll(VORBISFILE libvorbisfile-3)
-#			add_library(Vorbis::Vorbisfile SHARED IMPORTED)
-#			set_target_properties(Vorbis::Vorbisfile PROPERTIES
-#				IMPORTED_IMPLIB "${VORBISFILE_LIBRARY}"
-#				IMPORTED_LOCATION "${VORBISFILE_DLL_LIBRARY}"
-#				INTERFACE_INCLUDE_DIRECTORIES "${VORBIS_INCLUDE_DIR}"
-#				INTERFACE_LINK_LIBRARIES "${VORBIS_LIBRARY};${OGG_LIBRARY}")
-#		endif()
-#	endif()
-#
-#	if(LUA_FOUND)
-#		set_msys_dll(LUA lua54)
-#		add_library(Lua::Lua SHARED IMPORTED)
-#		set_target_properties(Lua::Lua PROPERTIES
-#			IMPORTED_IMPLIB "${LUA_LIBRARY}"
-#			IMPORTED_LOCATION "${LUA_DLL_LIBRARY}"
-#			INTERFACE_INCLUDE_DIRECTORIES "${LUA_INCLUDE_DIR}")
-#	endif()
 elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	function(split_extra_libraries PREFIX LIBRARIES)
 		foreach(LIBRARY ${LIBRARIES})

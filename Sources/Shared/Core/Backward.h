@@ -23,6 +23,7 @@
 #define BACKWARD_INCLUDED
 
 #include "../CommonBase.h"
+#include "../IO/Stream.h"
 
 #if DEATH_CXX_STANDARD >= 201703L
 #	define BACKWARD_ATLEAST_CXX17
@@ -3714,27 +3715,26 @@ namespace Death { namespace Backward {
 
 	class cfile_streambuf : public std::streambuf {
 	public:
-		cfile_streambuf(FILE* sink) : _sink(sink) {}
+		cfile_streambuf(IO::Stream* sink) : _sink(sink) {}
 		int_type underflow() override {
 			return traits_type::eof();
 		}
 		int_type overflow(int_type ch) override {
-			if (traits_type::not_eof(ch) && fputc(ch, _sink) != EOF) {
+			if (traits_type::not_eof(ch) && _sink->Write(&ch, sizeof(ch) > 0)) {
 				return ch;
 			}
 			return traits_type::eof();
 		}
 
 		std::streamsize xsputn(const char_type* s, std::streamsize count) override {
-			return static_cast<std::streamsize>(
-				fwrite(s, sizeof * s, static_cast<std::size_t>(count), _sink));
+			return static_cast<std::streamsize>(_sink->Write(s, sizeof(*s) * static_cast<std::int64_t>(count)));
 		}
 
 	private:
 		cfile_streambuf(const cfile_streambuf&) = delete;
 		cfile_streambuf& operator=(const cfile_streambuf&) = delete;
 
-		FILE* _sink;
+		IO::Stream* _sink;
 	};
 
 #	if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_WINDOWS)
@@ -3855,8 +3855,8 @@ namespace Death { namespace Backward {
 			: FeatureFlags(Flags::None), Address(false), Object(false), InlinerContextSize(5), TraceContextSize(7) {}
 
 		template<typename ST>
-		void Print(ST& st, FILE* fp = stderr, std::int32_t signal = 0) {
-			cfile_streambuf obuf(fp);
+		void Print(ST& st, IO::Stream* s, std::int32_t signal = 0) {
+			cfile_streambuf obuf(s);
 			std::ostream os(&obuf);
 			Colorize colorize(os);
 			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
@@ -3869,22 +3869,6 @@ namespace Death { namespace Backward {
 			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
 			PrintStacktrace(st, os, signal, colorize);
 		}
-
-		//template<typename IT>
-		//void Print(IT begin, IT end, FILE* fp = stderr, std::size_t threadId = 0, std::int32_t signal = 0) {
-		//	cfile_streambuf obuf(fp);
-		//	std::ostream os(&obuf);
-		//	Colorize colorize(os);
-		//	colorize.activate(colorMode);
-		//	print_stacktrace(begin, end, os, threadId, signal, colorize);
-		//}
-
-		//template<typename IT>
-		//void Print(IT begin, IT end, std::ostream& os, std::size_t threadId = 0, std::int32_t signal = 0) {
-		//	Colorize colorize(os);
-		//	colorize.activate(colorMode);
-		//	print_stacktrace(begin, end, os, threadId, signal, colorize);
-		//}
 
 		TraceResolver const& GetResolver() const {
 			return _resolver;
@@ -4171,7 +4155,7 @@ namespace Death { namespace Backward {
 			return std::vector<std::int32_t>(posixSignals, posixSignals + sizeof(posixSignals) / sizeof(posixSignals[0]));
 		}
 
-		FILE* Destination;
+		IO::Stream* Destination;
 		Flags FeatureFlags;
 
 		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags), _loaded(false) {
@@ -4271,12 +4255,12 @@ namespace Death { namespace Backward {
 			printer.FeatureFlags = FeatureFlags;
 			printer.Print(st, std::cerr, info->si_signo);
 
-			FILE* dest = Destination;
-			bool shouldWriteToDest = (dest != nullptr && dest != stderr && dest != stdout);
+			IO::Stream* dest = Destination;
+			bool shouldWriteToDest = (dest != nullptr);
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
 				printer.Print(st, dest, info->si_signo);
-				::fflush(dest);
+				dest->Flush();
 			}
 		}
 
@@ -4312,7 +4296,7 @@ namespace Death { namespace Backward {
 
 	class ExceptionHandling {
 	public:
-		FILE* Destination;
+		IO::Stream* Destination;
 		Flags FeatureFlags;
 
 		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags) {
@@ -4565,8 +4549,8 @@ namespace Death { namespace Backward {
 			HANDLE hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
 			bool shouldWriteToStdErr = (::GetFileType(hStdError) != FILE_TYPE_UNKNOWN);
 
-			FILE* dest = Destination;
-			bool shouldWriteToDest = (dest != nullptr && dest != stderr && dest != stdout);
+			IO::Stream* dest = Destination;
+			bool shouldWriteToDest = (dest != nullptr);
 
 			if (!shouldWriteToStdErr && !shouldWriteToDest) {
 				return;
@@ -4589,7 +4573,7 @@ namespace Death { namespace Backward {
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
 				printer.Print(st, dest);
-				::fflush(dest);
+				dest->Flush();
 			}
 		}
 

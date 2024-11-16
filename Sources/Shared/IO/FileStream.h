@@ -13,8 +13,8 @@ namespace Death { namespace IO {
 	class FileStream : public Stream
 	{
 	public:
-		FileStream(const Containers::StringView path, FileAccess mode);
-		FileStream(Containers::String&& path, FileAccess mode);
+		FileStream(const Containers::StringView path, FileAccess mode, std::int32_t bufferSize = 8192);
+		FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize = 8192);
 		~FileStream() override;
 
 		FileStream(const FileStream&) = delete;
@@ -23,8 +23,8 @@ namespace Death { namespace IO {
 		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
 		std::int64_t GetPosition() const override;
-		std::int32_t Read(void* buffer, std::int32_t bytes) override;
-		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
+		std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
+		std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
@@ -32,27 +32,40 @@ namespace Death { namespace IO {
 		/** @brief Returns file path */
 		Containers::StringView GetPath() const;
 
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		/** @brief Returns file descriptor */
-		DEATH_ALWAYS_INLINE std::int32_t GetFileDescriptor() const {
-			return _fileDescriptor;
+#if defined(DEATH_TARGET_WINDOWS)
+		/** @brief Returns native file handle */
+		DEATH_ALWAYS_INLINE void* GetHandle() const {
+			return _fileHandle;
 		}
 #else
-		/** @brief Returns file stream pointer */
-		DEATH_ALWAYS_INLINE FILE* GetHandle() const {
-			return _handle;
+		/** @brief Returns native file descriptor */
+		DEATH_ALWAYS_INLINE std::int32_t GetFileDescriptor() const {
+			return _fileDescriptor;
 		}
 #endif
 
 	private:
 		Containers::String _path;
 		std::int64_t _size;
-#if defined(DEATH_USE_FILE_DESCRIPTORS)
-		std::int32_t _fileDescriptor;
+		std::int64_t _filePos;
+#if defined(DEATH_TARGET_WINDOWS)
+		void* _fileHandle;
 #else
-		FILE* _handle;
+		std::int32_t _fileDescriptor;
 #endif
+		std::int32_t _readPos;
+		std::int32_t _readLength;
+		std::int32_t _writePos;
+		std::int32_t _bufferLength;
+		std::unique_ptr<char[]> _buffer;
+
+		void InitializeBuffer();
+		void FlushReadBuffer();
+		void FlushWriteBuffer();
 
 		void Open(FileAccess mode);
+		std::int64_t SeekInternal(std::int64_t offset, SeekOrigin origin);
+		std::int32_t ReadInternal(void* buffer, std::int32_t bytes);
+		std::int32_t WriteInternal(const void* buffer, std::int32_t bytes);
 	};
 }}

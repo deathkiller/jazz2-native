@@ -133,6 +133,11 @@ static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
 #else
 #	include <IO/FileStream.h>
 static std::unique_ptr<Death::IO::Stream> __logFile;
+
+#	if !defined(DEATH_TRACE_ASYNC)
+#		include <Threading/Spinlock.h>
+static Death::Threading::Spinlock __logFileLock;
+#	endif
 #endif
 
 enum class ConsoleType {
@@ -916,7 +921,14 @@ namespace nCine
 			AppendPart(logEntryWithColors, length3, message.data(), (std::int32_t)message.size());
 			logEntryWithColors[length3++] = '\n';
 
+#	if !defined(DEATH_TRACE_ASYNC)
+			// File needs to be locked, because messages can arrive from different threads
+			__logFileLock.lock();
 			__logFile->Write(logEntryWithColors, length3);
+			__logFileLock.unlock();
+#	else
+			__logFile->Write(logEntryWithColors, length3);
+#	endif
 		}
 #endif
 
@@ -1021,10 +1033,13 @@ namespace nCine
 		if (__logFile = fs::Open(targetPath, FileAccess::Write)) {
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
-			__eh.Destination = static_cast<FileStream*>(__logFile.get())->GetHandle();
+			__eh.Destination = __logFile.get();
 #	endif
 		} else {
 			__logFile = nullptr;
+#	if defined(WITH_BACKWARD)
+			__eh.Destination = nullptr;
+#	endif
 		}
 #endif
 	}
