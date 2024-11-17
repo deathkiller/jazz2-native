@@ -368,6 +368,7 @@ namespace Jazz2::Actors
 				}
 			} else {
 				// Actor is going up - only apply gravity
+				SetState(ActorState::CanJump, false);
 				_speed.Y += currentGravity * timeMult;
 			}
 
