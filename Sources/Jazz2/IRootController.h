@@ -33,7 +33,7 @@ namespace Jazz2
 		IRootController(const IRootController&) = delete;
 		IRootController& operator=(const IRootController&) = delete;
 
-		virtual void InvokeAsync(Function<void()>&& callback) = 0;
+		virtual void InvokeAsync(Function<void()>&& callback, const char* sourceFunc = nullptr) = 0;
 		virtual void GoToMainMenu(bool afterIntro) = 0;
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 		virtual bool HasResumableState() const = 0;

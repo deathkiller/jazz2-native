@@ -280,29 +280,24 @@ namespace Jazz2::Actors
 						OnHitWall(timeMult);
 					}
 				}
-
-				// Run all floor-related hooks, such as the player's check for hurting positions
-				OnHitFloor(timeMult);
 			} else {
 				// Airborne movement is handled here
 				// First, attempt to move directly based on the current speed values
 				if (!MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
 					// First, attempt to move horizontally as much as possible
 					float maxDiff = std::abs(effectiveSpeedX);
-					std::int32_t sign = (effectiveSpeedX > 0.0f ? 1 : -1);
 					float xDiff = maxDiff;
 					for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
-						if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
+						if (MoveInstantly(Vector2f(std::copysign(xDiff, effectiveSpeedX), 0.0f), MoveType::Relative, params)) {
 							break;
 						}
 					}
 
 					// Then, try the same vertically
 					maxDiff = std::abs(effectiveSpeedY);
-					sign = (effectiveSpeedY > 0.0f ? 1 : -1);
 					float yDiff = maxDiff;
 					for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
-						float yDiffSigned = (yDiff * sign);
+						float yDiffSigned = std::copysign(yDiff, effectiveSpeedY);
 						if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
 							// Add horizontal tolerance
 							MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
@@ -311,23 +306,18 @@ namespace Jazz2::Actors
 						}
 					}
 
-					// Place us to the ground only if no horizontal movement was
-					// involved (this prevents speeds resetting if the actor
-					// collides with a wall from the side while in the air)
-					if (yDiff < std::abs(effectiveSpeedY)) {
-						if (effectiveSpeedY > 0.0f) {
-							_speed.Y = -(currentElasticity * effectiveSpeedY / timeMult);
-
-							OnHitFloor(timeMult);
-
-							if (_speed.Y > -CollisionCheckStep) {
-								_speed.Y = 0.0f;
-								SetState(ActorState::CanJump, true);
-							}
-						} else {
+					if (effectiveSpeedY < 0.0f) {
+						if (-yDiff > effectiveSpeedY) {
+							// Reset speed and also internal force, mainly because of player jump
 							_speed.Y = 0.0f;
+							if (_internalForceY < 0.0f) {
+								_internalForceY = 0.0f;
+							}
 							OnHitCeiling(timeMult);
 						}
+					} else if (effectiveSpeedY > 0.0f && yDiff < effectiveSpeedY && currentGravity <= 0.0f) {
+						// If there is no gravity and actor is touching floor, the callback wouldn't be called otherwise
+						OnHitFloor(timeMult);
 					}
 
 					// If the actor didn't move all the way horizontally, it hit a wall (or was already touching it)
@@ -355,15 +345,30 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// Set the actor as airborne if there seems to be enough space below it
+		// Handle gravity and collision with floor
 		if (currentGravity > 0.0f) {
-			AABBf aabb = AABBInner;
-			aabb.B += CollisionCheckStep;
-			if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
+			if (_speed.Y >= 0.0f) {
+				// Actor is going down
+				AABBf aabb = AABBInner;
+				aabb.B += CollisionCheckStep;
+				if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
+					// There is still some space below - only apply gravity
+					SetState(ActorState::CanJump, false);
+					_speed.Y += currentGravity * timeMult;
+				} else {
+					// Actor is on the floor
+					OnHitFloor(timeMult);
+					if (currentElasticity != 0.0f) {
+						SetState(ActorState::CanJump, false);
+						_speed.Y = -(currentElasticity * effectiveSpeedY / timeMult);
+					} else {
+						SetState(ActorState::CanJump, true);
+						_speed.Y = 0.0f;
+					}
+				}
+			} else {
+				// Actor is going up - only apply gravity
 				_speed.Y += currentGravity * timeMult;
-				SetState(ActorState::CanJump, false);
-			} else if (std::abs(effectiveSpeedY) <= std::numeric_limits<float>::epsilon()) {
-				SetState(ActorState::CanJump, true);
 			}
 
 			_externalForce.Y = std::min(_externalForce.Y + currentGravity * 0.33f * timeMult, 0.0f);

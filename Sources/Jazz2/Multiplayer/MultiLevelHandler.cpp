@@ -1318,7 +1318,7 @@ namespace Jazz2::Multiplayer
 							// TODO: gain, pitch, ...
 							it->second->PlaySfx(identifier, gain, pitch);
 						}
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					break;
 				}
 				case ServerPacketType::PlayCommonSfx: {
@@ -1334,7 +1334,7 @@ namespace Jazz2::Multiplayer
 					// TODO: Use only lock here
 					_root->InvokeAsync([this, posX, posY, gain, pitch, identifier = std::move(identifier)]() {
 						PlayCommonSfx(identifier, Vector3f((float)posX, (float)posY, 0.0f), gain, pitch);
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					break;
 				}
 				case ServerPacketType::ShowMessage: {
@@ -1381,7 +1381,7 @@ namespace Jazz2::Multiplayer
 						// TODO: Needed to initialize newly assigned viewport, because it called asynchronously, not from handler initialization
 						Vector2i res = theApplication().GetResolution();
 						OnInitializeViewport(res.X, res.Y);
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::CreateRemoteActor: {
@@ -1406,7 +1406,7 @@ namespace Jazz2::Multiplayer
 
 						_remoteActors[actorId] = remoteActor;
 						AddActor(std::static_pointer_cast<Actors::ActorBase>(remoteActor));
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::CreateMirroredActor: {
@@ -1432,7 +1432,7 @@ namespace Jazz2::Multiplayer
 						} else {
 							LOGD("[MP] ServerPacketType::CreateMirroredActor - CANNOT CREATE - actorId: %u", actorId);
 						}
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::DestroyRemoteActor: {
@@ -1450,7 +1450,7 @@ namespace Jazz2::Multiplayer
 						} else {
 							LOGD("[MP] ServerPacketType::DestroyRemoteActor - NOT FOUND - actorId: %u", actorId);
 						}
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::UpdateAllActors: {
@@ -1494,7 +1494,7 @@ namespace Jazz2::Multiplayer
 
 					_root->InvokeAsync([this, triggerId, newState]() {
 						TileMap()->SetTrigger(triggerId, newState);
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::AdvanceTileAnimation: {
@@ -1507,7 +1507,7 @@ namespace Jazz2::Multiplayer
 
 					_root->InvokeAsync([this, tx, ty, amount]() {
 						TileMap()->AdvanceDestructibleTileAnimation(tx, ty, amount);
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::PlayerMoveInstantly: {
@@ -1527,7 +1527,7 @@ namespace Jazz2::Multiplayer
 
 					_root->InvokeAsync([this, posX, posY, speedX, speedY]() {
 						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY));
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::PlayerAckWarped: {
@@ -1652,7 +1652,7 @@ namespace Jazz2::Multiplayer
 
 					_root->InvokeAsync([this, health, pushForce]() {
 						_players[0]->TakeDamage(_players[0]->_health - health, pushForce);
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::PlayerActivateSpring: {
@@ -1675,7 +1675,7 @@ namespace Jazz2::Multiplayer
 							_players[0]->_controllable = true;
 							_players[0]->EndDamagingMove();
 						}
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::PlayerWarpIn: {
@@ -1691,7 +1691,7 @@ namespace Jazz2::Multiplayer
 
 					_root->InvokeAsync([this, exitType]() {
 						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn(exitType);
-					});
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 			}
