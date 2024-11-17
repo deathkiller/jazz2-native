@@ -268,10 +268,13 @@ namespace Jazz2::Tiles
 						return false;
 					}
 				} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
-					std::int32_t amount = 1;
-					if (AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
-						params.TilesDestroyed++;
-						goto RecheckTile;
+					if ((params.DestructType & TileDestructType::VerticalMove) != TileDestructType::VerticalMove ||
+						(x * TileSet::DefaultTileSize <= (hx1 + 8) && (hx2 - 8) <= (x + 1) * TileSet::DefaultTileSize)) {
+						std::int32_t amount = 1;
+						if (AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+							params.TilesDestroyed++;
+							goto RecheckTile;
+						}
 					}
 				} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
 					std::int32_t amount = 1;
@@ -386,8 +389,11 @@ namespace Jazz2::Tiles
 						return true;
 					}
 				} else if ((tile.DestructType & TileDestructType::Special) == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
-					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
-						return true;
+					if ((params.DestructType & TileDestructType::VerticalMove) != TileDestructType::VerticalMove ||
+						(x * TileSet::DefaultTileSize <= (hx1 + 8) && (hx2 - 8) <= (x + 1) * TileSet::DefaultTileSize)) {
+						if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
+							return true;
+						}
 					}
 				} else if ((tile.DestructType & TileDestructType::Speed) == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
 					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) && tile.TileParams <= params.Speed) {

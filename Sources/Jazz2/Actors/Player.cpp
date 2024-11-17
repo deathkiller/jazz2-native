@@ -315,8 +315,10 @@ namespace Jazz2::Actors
 
 		// Custom implementation of `ActorBase::OnUpdate(timeMult)`
 		TileCollisionParams params = { TileDestructType::Collapse, _speed.Y >= 0.0f };
-		if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
+		if (_currentSpecialMove == SpecialMoveType::Sidekick || _sugarRushLeft > 0.0f) {
 			params.DestructType |= TileDestructType::Special;
+		} else if (_currentSpecialMove == SpecialMoveType::Buttstomp || _currentSpecialMove == SpecialMoveType::Uppercut) {
+			params.DestructType |= TileDestructType::Special | TileDestructType::VerticalMove;
 		}
 		if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon() || std::abs(_speed.Y) > std::numeric_limits<float>::epsilon() || _sugarRushLeft > 0.0f) {
 			params.DestructType |= TileDestructType::Speed;
@@ -814,7 +816,7 @@ namespace Jazz2::Actors
 								SetAnimation(AnimState::Crouch);
 							}
 						}
-					} else if (!_wasDownPressed && _playerType != PlayerType::Frog) {
+					} else if (!CanJump() && !_wasDownPressed && _playerType != PlayerType::Frog) {
 						_wasDownPressed = true;
 
 						_speed.X = 0.0f;
@@ -972,14 +974,12 @@ namespace Jazz2::Actors
 						if (_copterFramesLeft > 0.0f) {
 							_copterFramesLeft = 70.0f;
 						}
-					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down)) {
+					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down) && _jumpTime <= 0.0f) {
 						SetState(ActorState::CanJump, false);
 						_isFreefall = false;
 						SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
-						if (_jumpTime <= 0.0f) {
-							PlayPlayerSfx("Jump"_s);
-						}
-						_jumpTime = 12.0f;
+						PlayPlayerSfx("Jump"_s);
+						_jumpTime = 10.0f;
 						_carryingObject = nullptr;
 
 						// Gravitation is sometimes off because of active copter, turn it on again
@@ -1593,6 +1593,13 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (!_inWater && _activeModifier == Modifier::None) {
+			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
+				_copterFramesLeft = 0.0f;
+				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
+				if (!_isAttachedToPole) {
+					SetState(ActorState::ApplyGravitation, true);
+				}
+			}
 			if (_hitFloorTime <= 0.0f && !CanJump()) {
 				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);

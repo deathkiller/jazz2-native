@@ -31,14 +31,14 @@ namespace Jazz2::Scripting
 	}
 
 #if defined(DEATH_TRACE)
-#	define noop() Unimplemented(__DEATH_CURRENT_FUNCTION)
+#	define noop() Unimplemented(NCINE_CURRENT_FUNCTION)
 #else
 #	define noop() do {} while (false)
 #endif
 
 	void jjTEXTAPPEARANCE::constructor(void* self) {
 		noop();
-		new(self) jjTEXTAPPEARANCE {};
+		new(self) jjTEXTAPPEARANCE{};
 	}
 	void jjTEXTAPPEARANCE::constructorMode(std::uint32_t mode, void* self) {
 		noop();

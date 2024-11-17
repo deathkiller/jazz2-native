@@ -14,7 +14,8 @@ namespace Jazz2::Tiles
 		Special = 0x08,
 		Trigger = 0x10,
 
-		IgnoreSolidTiles = 0x20
+		IgnoreSolidTiles = 0x20,
+		VerticalMove = 0x40,
 	};
 
 	DEFINE_ENUM_OPERATORS(TileDestructType);

@@ -104,7 +104,7 @@ public:
 	void OnKeyReleased(const KeyboardEvent& event) override;
 	void OnTouchEvent(const TouchEvent& event) override;
 
-	void InvokeAsync(Function<void()>&& callback) override;
+	void InvokeAsync(Function<void()>&& callback, const char* sourceFunc = nullptr) override;
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
 	bool HasResumableState() const override;
@@ -292,7 +292,7 @@ void GameEventHandler::OnInitialize()
 					}
 					return false;
 				}));
-			});
+			}, NCINE_CURRENT_FUNCTION);
 		}
 
 		return true;
@@ -461,10 +461,10 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 	_currentHandler->OnTouchEvent(event);
 }
 
-void GameEventHandler::InvokeAsync(Function<void()>&& callback)
+void GameEventHandler::InvokeAsync(Function<void()>&& callback, const char* sourceFunc)
 {
 	_pendingCallbacks.emplace_back(std::move(callback));
-	LOGD("Callback queued for async execution");
+	LOGD("Callback queued for async execution from %s", sourceFunc);
 }
 
 void GameEventHandler::GoToMainMenu(bool afterIntro)
@@ -480,7 +480,7 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 		} else {
 			SetStateHandler(std::make_unique<Menu::MainMenu>(this, afterIntro));
 		}
-	});
+	}, NCINE_CURRENT_FUNCTION);
 }
 
 void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
@@ -569,7 +569,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		if (newHandler != nullptr) {
 			SetStateHandler(std::move(newHandler));
 		}
-	});
+	}, NCINE_CURRENT_FUNCTION);
 }
 
 bool GameEventHandler::HasResumableState() const
@@ -612,7 +612,7 @@ void GameEventHandler::ResumeSavedState()
 		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot resume saved state!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 		SetStateHandler(std::move(mainMenu));
-	});
+	}, NCINE_CURRENT_FUNCTION);
 }
 
 bool GameEventHandler::SaveCurrentStateIfAny()
@@ -697,7 +697,7 @@ bool GameEventHandler::CreateServer(LevelInitialization&& levelInit, std::uint16
 		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
 		levelHandler->Initialize(levelInit);
 		SetStateHandler(std::move(levelHandler));
-	});
+	}, NCINE_CURRENT_FUNCTION);
 
 	return true;
 }
@@ -757,7 +757,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#907050]kicked\f[/c] off the server.\nContact server administrators for more information.")); break;
 				case Reason::Banned: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#725040]banned\f[/c] off the server.\nContact server administrators for more information.")); break;
 			}
-		});
+		}, NCINE_CURRENT_FUNCTION);
 	}
 }
 
@@ -819,7 +819,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					levelHandler->SetGameMode(gameMode);
 					levelHandler->Initialize(levelInit);
 					SetStateHandler(std::move(levelHandler));
-				});
+				}, NCINE_CURRENT_FUNCTION);
 				break;
 			}
 		}
@@ -1636,18 +1636,34 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 bool GameEventHandler::TryParseAddressAndPort(const StringView input, String& address, std::uint16_t& port)
 {
 	auto portSep = input.findLast(':');
-	if (portSep == nullptr) {
-		return false;
-	}
+	if (portSep) {
+		auto portString = input.suffix(portSep.begin() + 1);
+		if (portString.contains(']')) {
+			// Probably only IPv6 address (or some garbage)
+			address = input;
+			port = 0;
+			return true;
+		} else {
+			// Address (or hostname) and port
+			address = input.prefix(portSep.begin());
+			if (address.empty()) {
+				return false;
+			}
 
-	address = String(input.prefix(portSep.begin()));
-	if (address.empty()) {
-		return false;
-	}
+			auto portString = input.suffix(portSep.begin() + 1);
+			port = (std::uint16_t)stou32(portString.data(), portString.size());
+			return true;
+		}
+	} else {
+		// Address (or hostname) only
+		if (input.empty()) {
+			return false;
+		}
 
-	auto portString = input.suffix(portSep.begin() + 1);
-	port = (std::uint16_t)stou32(portString.data(), portString.size());
-	return true;
+		address = input;
+		port = 0;
+		return true;
+	}
 }
 
 void GameEventHandler::ExtractPakFile(const StringView pakFile, const StringView targetPath)

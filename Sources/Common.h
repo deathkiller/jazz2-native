@@ -44,6 +44,12 @@
 #	define NCINE_HAS_WINDOWS
 #endif
 
+#if defined(__DEATH_CURRENT_FUNCTION)
+#	define NCINE_CURRENT_FUNCTION __DEATH_CURRENT_FUNCTION
+#else
+#	define NCINE_CURRENT_FUNCTION ""
+#endif
+
 // Return assert macros
 #define RETURN_MSG(fmt, ...) do { LOGE(fmt, ##__VA_ARGS__); return; } while (false)
 #define RETURN_ASSERT_MSG(x, fmt, ...) do { if DEATH_UNLIKELY(!(x)) { LOGE(fmt, ##__VA_ARGS__); return; } } while (false)
