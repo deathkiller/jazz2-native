@@ -415,6 +415,17 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void RemapControlsSection::OnBackPressed()
+	{
+		if (_waitForInput) {
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_waitForInput = false;
+			return;
+		}
+
+		ScrollableMenuSection::OnBackPressed();
+	}
+
 	void RemapControlsSection::OnExecuteSelected()
 	{
 		if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {

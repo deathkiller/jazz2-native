@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-11-01 11:30+0100\n"
-"PO-Revision-Date: 2024-11-10 12:09+0100\n"
+"PO-Revision-Date: 2024-11-17 20:10+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1722,7 +1722,7 @@ msgstr "Skripty"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:53
 msgid "Allow Cheats"
-msgstr "Povolit podvody"
+msgstr "Povolit podvádění (cheaty)"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:55
@@ -1762,12 +1762,12 @@ msgstr "Ne"
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "No Cheats Only"
-msgstr "Pouze bez podvodů"
+msgstr "Pouze bez podvádění"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:146
 msgid "Higher Score Only"
-msgstr "Pouze vyšší skóre"
+msgstr "Pouze při vyšším skóre"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:148

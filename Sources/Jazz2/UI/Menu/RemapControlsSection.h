@@ -39,6 +39,7 @@ namespace Jazz2::UI::Menu
 		void OnHandleInput() override;
 		void OnExecuteSelected() override;
 		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
+		void OnBackPressed() override;
 
 		void RefreshPreviousState();
 		bool HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment);
