@@ -30,6 +30,20 @@ namespace Jazz2::UI::Menu
 			AddEpisode(item);
 		}
 
+		std::int32_t maxPosition = 0;
+		for (const ListViewItem& item : _items) {
+			if (maxPosition < item.Item.Description.Position) {
+				maxPosition = item.Item.Description.Position;
+			}
+		}
+
+		// Move all episodes with Position = 0 to the end of the list
+		for (ListViewItem& item : _items) {
+			if (item.Item.Description.Position == 0) {
+				item.Item.Description.Position = ++maxPosition;
+			}
+		}
+
 		sort(_items.begin(), _items.end(), [](const ListViewItem& a, const ListViewItem& b) -> bool {
 			return (a.Item.Description.Position < b.Item.Description.Position);
 		});
