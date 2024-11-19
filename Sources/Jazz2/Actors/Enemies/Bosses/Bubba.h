@@ -19,14 +19,17 @@ namespace Jazz2::Actors::Bosses
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
+		void OnHitWall(float timeMult) override;
 
 	private:
-		static constexpr int StateTransition = -1;
-		static constexpr int StateWaiting = 0;
-		static constexpr int StateJumping = 1;
-		static constexpr int StateFalling = 2;
-		static constexpr int StateTornado = 3;
-		static constexpr int StateDying = 4;
+		enum class State {
+			Transition = -1,
+			Waiting = 0,
+			Jumping = 1,
+			Falling = 2,
+			Tornado = 3,
+			Dying = 4
+		};
 
 		class Fireball : public EnemyBase
 		{
@@ -44,9 +47,10 @@ namespace Jazz2::Actors::Bosses
 			float _timeLeft;
 		};
 
-		int _state;
+		State _state;
 		float _stateTime;
-		uint8_t _endText;
+		float _tornadoCooldown;
+		std::uint8_t _endText;
 		std::shared_ptr<AudioBufferPlayer> _tornadoNoise;
 
 		void FollowNearestPlayer();

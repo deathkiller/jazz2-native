@@ -87,6 +87,7 @@ namespace Jazz2::Actors::Environment
 
 		// Red starts at 1 in "Object/Spring"
 		SetAnimation((AnimState)(((_type + 1) << 10) | (orientationBit << 12)));
+		_renderer.setLayer(_renderer.layer() - 8);
 
 		if (_orientation == Orientation::Right || _orientation == Orientation::Left) {
 			// Horizontal springs all seem to have the same strength.

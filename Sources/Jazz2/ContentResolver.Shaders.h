@@ -2,7 +2,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr std::uint64_t Version = 4;
+	constexpr std::uint64_t Version = 5;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -531,18 +531,18 @@ float addStarField(vec2 samplePosition, float threshold) {
 void main() {
 	// Distance to center of screen from top or bottom (1: center of screen, 0: edge of screen)
 	float distance = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance, 2.0);
+	float horizonDepth = pow(distance, 1.4);
 
 	float yShift = (vTexCoords.y > 0.5 ? 1.0 : 0.0);
 	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
 
 	vec2 texturePos = vec2(
 		(uShift.x / 256.0) + (vTexCoords.x - 0.5   ) * (0.5 + (1.5 * horizonDepth)) * correction,
-		(uShift.y / 256.0) + (vTexCoords.y - yShift) * 2.0 * distance
+		(uShift.y / 256.0) + (vTexCoords.y - yShift) * 1.4 * distance
 	);
 
 	vec4 texColor = texture(uTexture, texturePos);
-	float horizonOpacity = clamp(pow(distance, 1.8) - 0.4, 0.0, 1.0);
+	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
 	
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 	if (uHorizonColor.w > 0.0) {
