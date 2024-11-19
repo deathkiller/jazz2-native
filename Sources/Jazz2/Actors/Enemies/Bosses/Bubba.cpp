@@ -10,7 +10,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	Bubba::Bubba()
-		: _state(StateWaiting), _stateTime(0.0f), _endText(0)
+		: _state(State::Waiting), _stateTime(0.0f), _tornadoCooldown(120.0f), _endText(0)
 	{
 	}
 
@@ -43,6 +43,10 @@ namespace Jazz2::Actors::Bosses
 	{
 		BossBase::OnUpdate(timeMult);
 
+		if (_tornadoCooldown > 0.0f) {
+			_tornadoCooldown -= timeMult;
+		}
+
 		// Process level bounds
 		Recti levelBounds = _levelHandler->LevelBounds();
 		if (_pos.X < levelBounds.X) {
@@ -56,24 +60,24 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		switch (_state) {
-			case StateJumping: {
-				if (_speed.Y > 0.0f) {
-					_state = StateFalling;
+			case State::Jumping: {
+				if (_speed.Y >= 0.0f) {
+					_state = State::Falling;
 					SetAnimation(AnimState::Fall);
 				}
 				break;
 			}
 
-			case StateFalling: {
+			case State::Falling: {
 				if (GetState(ActorState::CanJump)) {
 					_speed.Y = 0.0f;
 					_speed.X = 0.0f;
 
-					_state = StateTransition;
+					_state = State::Transition;
 					SetTransition(AnimState::TransitionFallToIdle, false, [this]() {
 						float rand = Random().NextFloat();
 						bool spewFileball = (rand < 0.35f);
-						bool tornado = (rand < 0.65f);
+						bool tornado = (rand < 0.65f && _tornadoCooldown <= 0.0f);
 						if (spewFileball) {
 							PlaySfx("Sneeze"_s);
 
@@ -104,13 +108,31 @@ namespace Jazz2::Actors::Bosses
 				break;
 			}
 
-			case StateTornado: {
+			case State::Tornado: {
 				if (_stateTime <= 0.0f) {
-					_state = StateTransition;
+					float cooldownMin, cooldownMax;
+					switch (_levelHandler->Difficulty()) {
+						case GameDifficulty::Easy:
+							cooldownMin = 600.0f;
+							cooldownMax = 1200.0f;
+							break;
+						default:
+						case GameDifficulty::Normal:
+							cooldownMin = 300.0f;
+							cooldownMax = 600.0f;
+							break;
+						case GameDifficulty::Hard:
+							cooldownMin = 60.0f;
+							cooldownMax = 480.0f;
+							break;
+					}
+
+					_tornadoCooldown = Random().NextFloat(cooldownMin, cooldownMax);
+					_state = State::Transition;
 					SetTransition((AnimState)1073741832, false, [this]() {
 						SetState(ActorState::CollideWithTilesetReduced | ActorState::ApplyGravitation, true);
 
-						_state = StateFalling;
+						_state = State::Falling;
 
 						if (_tornadoNoise != nullptr) {
 							_tornadoNoise->stop();
@@ -123,7 +145,7 @@ namespace Jazz2::Actors::Bosses
 				break;
 			}
 
-			case StateDying: {
+			case State::Dying: {
 				float time = (_renderer.AnimTime / _renderer.AnimDuration);
 				_renderer.setColor(Colorf(1.0f, 1.0f, 1.0f, 1.0f - (time * time * time * time)));
 				break;
@@ -160,7 +182,7 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithTilesetReduced | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		_state = StateDying;
+		_state = State::Dying;
 		SetTransition(AnimState::TransitionDeath, false, [this, collider]() {
 			BossBase::OnPerish(collider);
 		});
@@ -168,29 +190,48 @@ namespace Jazz2::Actors::Bosses
 		return false;
 	}
 
+	void Bubba::OnHitWall(float timeMult)
+	{
+		if (_state == State::Tornado && _stateTime > 1.0f) {
+			_stateTime = 1.0f;
+		}
+	}
+
 	void Bubba::FollowNearestPlayer()
 	{
 		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+		bool isFacingLeft = false;
 
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
-				targetPos = newPos;
-				found = true;
+		float randomValue = Random().NextFloat();
+
+		if (randomValue < 0.1f) {
+			found = true;
+			isFacingLeft = true;
+		} else if (randomValue > 0.9f) {
+			found = true;
+			isFacingLeft = false;
+		} else {
+			Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+			auto players = _levelHandler->GetPlayers();
+			for (auto* player : players) {
+				Vector2f newPos = player->GetPos();
+				if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
+					targetPos = newPos;
+					found = true;
+				}
 			}
+			isFacingLeft = (targetPos.X < _pos.X);
 		}
 
 		if (found) {
-			_state = StateJumping;
+			_state = State::Jumping;
 			_stateTime = 26;
 
-			SetFacingLeft(targetPos.X < _pos.X);
+			SetFacingLeft(isFacingLeft);
 
-			_speed.X = (IsFacingLeft() ? -1.3f : 1.3f);
-
-			_internalForceY = -1.27f;
+			_speed.X = (isFacingLeft ? -1.3f : 1.3f);
+			_speed.Y = -5.5f;
+			_internalForceY = -0.8f;
 
 			PlaySfx("Jump"_s);
 
@@ -214,7 +255,7 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		if (found) {
-			_state = StateTornado;
+			_state = State::Tornado;
 			_stateTime = 60.0f;
 
 			SetState(ActorState::CollideWithTilesetReduced | ActorState::ApplyGravitation, false);
@@ -288,7 +329,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bubba::Fireball::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
 
 		return EnemyBase::OnPerish(collider);
 	}

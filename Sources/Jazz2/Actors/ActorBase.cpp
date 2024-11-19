@@ -294,6 +294,7 @@ namespace Jazz2::Actors
 					}
 
 					// Then, try the same vertically
+					bool hitCalled = false;
 					maxDiff = std::abs(effectiveSpeedY);
 					float yDiff = maxDiff;
 					for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
@@ -314,10 +315,12 @@ namespace Jazz2::Actors
 								_internalForceY = 0.0f;
 							}
 							OnHitCeiling(timeMult);
+							hitCalled = true;
 						}
 					} else if (effectiveSpeedY > 0.0f && yDiff < effectiveSpeedY && currentGravity <= 0.0f) {
 						// If there is no gravity and actor is touching floor, the callback wouldn't be called otherwise
 						OnHitFloor(timeMult);
+						hitCalled = true;
 					}
 
 					// If the actor didn't move all the way horizontally, it hit a wall (or was already touching it)
@@ -328,7 +331,7 @@ namespace Jazz2::Actors
 						}
 
 						// Don't call OnHitWall() if OnHitFloor() or OnHitCeiling() was called this step
-						if (yDiff >= std::abs(effectiveSpeedY)) {
+						if (!hitCalled) {
 							OnHitWall(timeMult);
 						}
 					}

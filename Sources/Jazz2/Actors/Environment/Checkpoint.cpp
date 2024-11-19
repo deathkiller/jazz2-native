@@ -41,6 +41,7 @@ namespace Jazz2::Actors::Environment
 				break;
 		}
 
+		_renderer.setLayer(_renderer.layer() - 40);
 		SetAnimation((AnimState)(_activated ? 1 : 0));
 
 		if (GetState(ActorState::ApplyGravitation)) {
