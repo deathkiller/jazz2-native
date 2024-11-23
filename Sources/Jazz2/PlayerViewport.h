@@ -122,5 +122,14 @@ namespace Jazz2
 		void ShakeCameraView(float duration);
 		void OverrideCamera(float x, float y, bool topLeft = false);
 		void WarpCameraToTarget(bool fast);
+
+	private:
+		static constexpr float ResponsivenessChange = 0.04f;
+		static constexpr float ResponsivenessMin = 0.3f;
+		static constexpr float ResponsivenessMax = 1.2f;
+		static constexpr float SlowRatioX = 0.3f;
+		static constexpr float SlowRatioY = 0.3f;
+		static constexpr float FastRatioX = 0.2f;
+		static constexpr float FastRatioY = 0.04f;
 	};
 }

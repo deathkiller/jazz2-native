@@ -219,7 +219,7 @@ namespace Jazz2
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer)
 		: _levelHandler(levelHandler), _targetPlayer(targetPlayer),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f)
+			_cameraResponsiveness(ResponsivenessMax, ResponsivenessMax), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -323,13 +323,6 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		constexpr float ResponsivenessChange = 0.04f;
-		constexpr float ResponsivenessMin = 0.3f;
-		constexpr float SlowRatioX = 0.3f;
-		constexpr float SlowRatioY = 0.3f;
-		constexpr float FastRatioX = 0.2f;
-		constexpr float FastRatioY = 0.04f;
-
 		// Ambient Light Transition
 		if (_ambientLight.W != _ambientLightTarget) {
 			float step = timeMult * 0.012f;
@@ -385,27 +378,27 @@ namespace Jazz2
 		Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
 
 		// Camera responsiveness (smoothing unexpected movements)
-		if (focusVelocity.X < 1.0f) {
+		if (focusVelocity.X <= 3.0f) {
 			if (_cameraResponsiveness.X > ResponsivenessMin) {
 				_cameraResponsiveness.X = std::max(_cameraResponsiveness.X - ResponsivenessChange * timeMult, ResponsivenessMin);
 			}
 		} else {
-			if (_cameraResponsiveness.X < 1.0f) {
-				_cameraResponsiveness.X = std::min(_cameraResponsiveness.X + ResponsivenessChange * timeMult, 1.0f);
+			if (_cameraResponsiveness.X < ResponsivenessMax) {
+				_cameraResponsiveness.X = std::min(_cameraResponsiveness.X + ResponsivenessChange * timeMult, ResponsivenessMax);
 			}
 		}
-		if (focusVelocity.Y < 1.0f) {
+		if (focusVelocity.Y <= 3.0f) {
 			if (_cameraResponsiveness.Y > ResponsivenessMin) {
 				_cameraResponsiveness.Y = std::max(_cameraResponsiveness.Y - ResponsivenessChange * timeMult, ResponsivenessMin);
 			}
 		} else {
-			if (_cameraResponsiveness.Y < 1.0f) {
-				_cameraResponsiveness.Y = std::min(_cameraResponsiveness.Y + ResponsivenessChange * timeMult, 1.0f);
+			if (_cameraResponsiveness.Y < ResponsivenessMax) {
+				_cameraResponsiveness.Y = std::min(_cameraResponsiveness.Y + ResponsivenessChange * timeMult, ResponsivenessMax);
 			}
 		}
 
-		_cameraLastPos.X = lerpByTime(_cameraLastPos.X, focusPos.X, _cameraResponsiveness.X, timeMult);
-		_cameraLastPos.Y = lerpByTime(_cameraLastPos.Y, focusPos.Y, _cameraResponsiveness.Y, timeMult);
+		_cameraLastPos.X = lerpByTime(_cameraLastPos.X, focusPos.X, std::min(_cameraResponsiveness.X, 1.0f), timeMult);
+		_cameraLastPos.Y = lerpByTime(_cameraLastPos.Y, focusPos.Y, std::min(_cameraResponsiveness.Y, 1.0f), timeMult);
 
 		_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, focusSpeed.X * 8.0f, (focusVelocity.X < 2.0f ? SlowRatioX : FastRatioX), timeMult);
 		_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, focusSpeed.Y * 5.0f, (focusVelocity.Y < 2.0f ? SlowRatioY : FastRatioY), timeMult);
@@ -474,7 +467,7 @@ namespace Jazz2
 			_cameraPos = focusPos;
 			_cameraLastPos = _cameraPos;
 			_cameraDistanceFactor = Vector2f(0.0f, 0.0f);
-			_cameraResponsiveness = Vector2f(1.0f, 1.0f);
+			_cameraResponsiveness = Vector2f(ResponsivenessMax, ResponsivenessMax);
 		} else {
 			Vector2f diff = _cameraLastPos - _cameraPos;
 			_cameraPos = focusPos;

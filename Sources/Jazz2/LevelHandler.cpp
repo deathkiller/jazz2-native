@@ -935,7 +935,7 @@ namespace Jazz2
 		return (*collider == nullptr);
 	}
 
-	void LevelHandler::FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
+	void LevelHandler::FindCollisionActorsByAABB(const Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
 	{
 		struct QueryHelper {
 			const LevelHandler* Handler;

@@ -2,6 +2,7 @@
 #include "../../../ILevelHandler.h"
 #include "../../Player.h"
 #include "../../Explosion.h"
+#include "../../Weapons/ShotBase.h"
 
 #include "../../../../nCine/Base/Random.h"
 
@@ -9,14 +10,35 @@
 
 namespace Jazz2::Actors::Bosses
 {
+	static constexpr AnimState ShootStart = (AnimState)10;
+	static constexpr AnimState ShootInProgress = (AnimState)11;
+	static constexpr AnimState ShootEnd = (AnimState)12;
+	static constexpr AnimState ShootEnd2 = (AnimState)13;
+	static constexpr AnimState CrouchStart = (AnimState)14;			// TODO: Unused
+	static constexpr AnimState CrouchInProgress = (AnimState)15;	// TODO: Unused
+	static constexpr AnimState CrouchEnd = (AnimState)16;			// TODO: Unused
+	static constexpr AnimState JumpStart = (AnimState)17;			// TODO: Unused
+	static constexpr AnimState JumpInProgress = (AnimState)18;		// TODO: Unused
+	static constexpr AnimState JumpEnd = (AnimState)19;				// TODO: Unused
+	static constexpr AnimState JumpEnd2 = (AnimState)20;			// TODO: Unused
+	static constexpr AnimState DisarmedStart = (AnimState)22;
+	static constexpr AnimState DisarmedGunDecor = (AnimState)23;
+	static constexpr AnimState DisorientedStart = (AnimState)24;
+	static constexpr AnimState Disoriented = (AnimState)25;
+	static constexpr AnimState DisorientedWarpOut = (AnimState)26;
+	static constexpr AnimState DevanBullet = (AnimState)27;
+
+	static constexpr AnimState DemonFly = (AnimState)30;
+	static constexpr AnimState DemonTransformStart = (AnimState)31;
+	static constexpr AnimState DemonTransformEnd = (AnimState)32;
+	static constexpr AnimState DemonTurn = (AnimState)33;
+	static constexpr AnimState DemonSpewFireball = (AnimState)34;
+	static constexpr AnimState DemonSpewFireballEnd = (AnimState)35;
+	static constexpr AnimState DemonFireball = (AnimState)36;
+
 	Devan::Devan()
-		:
-		_state(StateWaiting),
-		_stateTime(0.0f),
-		_endText(0),
-		_shots(0),
-		_isDemon(false),
-		_isDead(false)
+		: _state(State::Waiting), _stateTime(0.0f), _crouchCooldown(60.0f), _endText(0), _shots(0), _isDemon(false),
+			_isDead(false)
 	{
 	}
 
@@ -45,7 +67,7 @@ namespace Jazz2::Actors::Bosses
 	{
 		SetHealthByDifficulty(140 * 2);
 
-		_state = StateWarpingIn;
+		_state = State::WarpingIn;
 		_stateTime = 120.0f;
 		_attackTime = 90.0f;
 		_anglePhase = 0.0f;
@@ -74,7 +96,7 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		switch (_state) {
-			case StateWarpingIn: {
+			case State::WarpingIn: {
 				if (_stateTime <= 0.0f) {
 					bool found = false;
 					Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
@@ -94,9 +116,9 @@ namespace Jazz2::Actors::Bosses
 
 					_renderer.setDrawEnabled(true);
 
-					_state = StateTransition;
+					_state = State::Transition;
 					SetTransition(AnimState::TransitionWarpIn, false, [this]() {
-						_state = StateIdling;
+						_state = State::Idling;
 						_stateTime = 80.0f;
 
 						SetState(ActorState::IsInvulnerable, false);
@@ -107,43 +129,51 @@ namespace Jazz2::Actors::Bosses
 				break;
 			}
 
-			case StateIdling: {
+			case State::Idling: {
 				if (_stateTime <= 0.0f) {
-					FollowNearestPlayer(StateRunning1, Random().NextFloat(60.0f, 120.0f));
+					FollowNearestPlayer(State::Running1, Random().NextFloat(60.0f, 120.0f));
 				}
 
 				break;
 			}
 
-			case StateRunning1: {
-				if (_stateTime <= 0.0f) {
-					if (_health < _maxHealth / 2) {
-						_isDemon = true;
-						_speed.X = 0.0f;
-						_speed.Y = 0.0f;
+			case State::Running1: {
+				if (_crouchCooldown <= 0.0 && ShouldCrouch()) {
+					Crouch();
+				} else if (_health < _maxHealth / 2) {
+					_isDemon = true;
+					_speed.X = 0.0f;
+					_speed.Y = 0.0f;
 
-						SetState(ActorState::IsInvulnerable, true);
-						SetState(ActorState::CanBeFrozen, false);
+					SetState(ActorState::IsInvulnerable, true);
+					SetState(ActorState::CanBeFrozen, false);
 
-						_state = StateTransition;
-						// DEMON_FLY
-						SetAnimation((AnimState)669);
-						// DEMON_TRANSFORM_START
-						SetTransition((AnimState)670, false, [this]() {
+					std::shared_ptr<DisarmedGun> gun = std::make_shared<DisarmedGun>();
+					std::uint8_t gunParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
+					gun->OnActivated(ActorActivationDetails(
+						_levelHandler,
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 12 : -12), (std::int32_t)_pos.Y - 8, _renderer.layer() + 40),
+						gunParams
+					));
+					_levelHandler->AddActor(gun);
+
+					_state = State::Transition;
+					SetTransition(DisarmedStart, false, [this]() {
+						SetAnimation(DemonFly);
+						SetTransition(DemonTransformStart, false, [this]() {
 							SetState(ActorState::ApplyGravitation | ActorState::IsInvulnerable, false);
-							_state = StateDemonFlying;
+							_state = State::DemonFlying;
 
 							_lastPos = _pos;
 							_targetPos = _lastPos + Vector2f(0.0f, -200.0f);
 						});
+					});
+				} else if (_stateTime <= 0.0f) {
+					if (Random().NextFloat() < 0.5f) {
+						FollowNearestPlayer(State::Running1, Random().NextFloat(60, 120));
 					} else {
-						if (Random().NextFloat() < 0.5f) {
-							FollowNearestPlayer(StateRunning1, Random().NextFloat(60, 120));
-						} else {
-							FollowNearestPlayer(StateRunning2, Random().NextFloat(10, 30));
-						}
+						FollowNearestPlayer(State::Running2, Random().NextFloat(10, 30));
 					}
-
 				} else {
 					if (!CanMoveToPosition(_speed.X, 0)) {
 						SetFacingLeft(!IsFacingLeft());
@@ -153,13 +183,13 @@ namespace Jazz2::Actors::Bosses
 				break;
 			}
 
-			case StateRunning2: {
+			case State::Running2: {
 				if (_stateTime <= 0.0f) {
 					_speed.X = 0.0f;
 
-					_state = StateTransition;
+					_state = State::Transition;
 					SetTransition(AnimState::TransitionRunToIdle, false, [this]() {
-						SetTransition((AnimState)15, false, [this]() {
+						SetTransition(ShootStart, false, [this]() {
 							_shots = Random().Next(1, 8);
 							Shoot();
 						});
@@ -168,9 +198,28 @@ namespace Jazz2::Actors::Bosses
 				break;
 			}
 
-			case StateDemonFlying: {
+			case State::Crouch: {
+				if (_stateTime <= 0.0f) {
+					_state = State::Transition;
+
+					switch (_levelHandler->Difficulty()) {
+						case GameDifficulty::Easy: _crouchCooldown = Random().NextFloat(360.0f, 600.0f); break;
+						default:
+						case GameDifficulty::Normal: _crouchCooldown = Random().NextFloat(180.0f, 360.0f); break;
+						case GameDifficulty::Hard: _crouchCooldown = Random().NextFloat(100.0f, 240.0f); break;
+					}
+
+					SetState(ActorState::SkipPerPixelCollisions, false);
+					SetTransition(CrouchEnd, false, [this]() {
+						FollowNearestPlayer(State::Running1, Random().NextFloat(60.0f, 150.0f));
+					});
+				}
+				break;
+			}
+
+			case State::DemonFlying: {
 				if (_attackTime <= 0.0f) {
-					_state = StateDemonSpewingFireball;
+					_state = State::DemonSpewingFireball;
 				} else {
 					_attackTime -= timeMult;
 					FollowNearestPlayerDemon(timeMult);
@@ -178,9 +227,9 @@ namespace Jazz2::Actors::Bosses
 				break;
 			}
 
-			case StateDemonSpewingFireball: {
-				_state = StateTransition;
-				SetTransition((AnimState)673, false, [this]() {
+			case State::DemonSpewingFireball: {
+				_state = State::Transition;
+				SetTransition(DemonSpewFireball, false, [this]() {
 					PlaySfx("SpitFireball"_s);
 
 					std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
@@ -192,8 +241,8 @@ namespace Jazz2::Actors::Bosses
 					));
 					_levelHandler->AddActor(fireball);
 
-					SetTransition((AnimState)674, false, [this]() {
-						_state = StateDemonFlying;
+					SetTransition(DemonSpewFireballEnd, false, [this]() {
+						_state = State::DemonFlying;
 
 						_attackTime = Random().NextFloat(100.0f, 240.0f);
 					});
@@ -201,17 +250,13 @@ namespace Jazz2::Actors::Bosses
 				break;
 			}
 
-			case StateFalling: {
+			case State::Falling: {
 				if (GetState(ActorState::CanJump)) {
-					_state = StateTransition;
-					// DISORIENTED_START
-					SetTransition((AnimState)666, false, [this]() {
-						// DISORIENTED
-						SetTransition((AnimState)667, false, [this]() {
-							// DISORIENTED
-							SetTransition((AnimState)667, false, [this]() {
-								// DISORIENTED_WARP_OUT
-								SetTransition((AnimState)6670, false, [this]() {
+					_state = State::Transition;
+					SetTransition(DisorientedStart, false, [this]() {
+						SetTransition(Disoriented, false, [this]() {
+							SetTransition(Disoriented, false, [this]() {
+								SetTransition(DisorientedWarpOut, false, [this]() {
 									BossBase::OnPerish(nullptr);
 								});
 							});
@@ -223,6 +268,17 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		_stateTime -= timeMult;
+		_crouchCooldown -= timeMult;
+	}
+
+	void Devan::OnUpdateHitbox()
+	{
+		BossBase::OnUpdateHitbox();
+
+		if (_state == State::Crouch) {
+			// Smaller hitbox when Devan is crouching
+			AABBInner.T = AABBInner.B - 16.0f;
+		}
 	}
 
 	bool Devan::OnPerish(ActorBase* collider)
@@ -241,19 +297,19 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::ApplyGravitation, false);
 
-		_state = StateTransition;
-		SetTransition((AnimState)671, false, [this]() {
+		_state = State::Transition;
+		SetTransition(DemonTransformEnd, false, [this]() {
 			SetState(ActorState::ApplyGravitation, true);
 
 			_isDemon = false;
-			_state = StateFalling;
+			_state = State::Falling;
 			SetAnimation(AnimState::Freefall);
 		});
 
 		return false;
 	}
 
-	void Devan::FollowNearestPlayer(int newState, float time)
+	void Devan::FollowNearestPlayer(State newState, float time)
 	{
 		bool found = false;
 		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
@@ -272,10 +328,8 @@ namespace Jazz2::Actors::Bosses
 			_stateTime = time;
 
 			SetFacingLeft(targetPos.X < _pos.X);
-
 			_speed.X = (IsFacingLeft() ? -4.0f : 4.0f);
 
-			//PlaySound("RUN");
 			SetAnimation(AnimState::Run);
 		}
 	}
@@ -307,9 +361,8 @@ namespace Jazz2::Actors::Bosses
 
 			bool willFaceLeft = (speed.X < 0.0f);
 			if (IsFacingLeft() != willFaceLeft) {
-				SetTransition(AnimState::TransitionTurn, false, [this, willFaceLeft]() {
-					SetFacingLeft(willFaceLeft);
-				});
+				SetFacingLeft(willFaceLeft);
+				SetTransition(DemonTurn, false);
 			}
 
 			MoveInstantly(_lastPos + Vector2f(0.0f, sinf(_anglePhase) * 30.0f), MoveType::Absolute | MoveType::Force);
@@ -320,9 +373,9 @@ namespace Jazz2::Actors::Bosses
 	{
 		PlaySfx("Shoot"_s);
 
-		SetTransition((AnimState)16, false, [this]() {
+		SetTransition(ShootInProgress, false, [this]() {
 			std::shared_ptr<Bullet> bullet = std::make_shared<Bullet>();
-			uint8_t fireballParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
+			std::uint8_t fireballParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
 			bullet->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -24 : 24), (std::int32_t)_pos.Y + 2, _renderer.layer() + 2),
@@ -332,7 +385,7 @@ namespace Jazz2::Actors::Bosses
 
 			_shots--;
 
-			SetTransition((AnimState)17, false, [this]() {
+			SetTransition(ShootEnd, false, [this]() {
 				if (_shots > 0) {
 					Shoot();
 				} else {
@@ -344,9 +397,90 @@ namespace Jazz2::Actors::Bosses
 
 	void Devan::Run()
 	{
-		SetTransition((AnimState)18, false, [this]() {
-			FollowNearestPlayer(StateRunning1, Random().NextFloat(60.0f, 150.0f));
+		SetTransition(ShootEnd2, false, [this]() {
+			FollowNearestPlayer(State::Running1, Random().NextFloat(60.0f, 150.0f));
 		});
+	}
+
+	void Devan::Crouch()
+	{
+		_speed.X = 0.0f;
+		_state = State::Crouch;
+
+		switch (_levelHandler->Difficulty()) {
+			case GameDifficulty::Easy: _stateTime = Random().NextFloat(100.0f, 240.0f); break;
+			default:
+			case GameDifficulty::Normal: _stateTime = Random().NextFloat(60.0f, 120.0f); break;
+			case GameDifficulty::Hard: _stateTime = Random().NextFloat(30.0f, 80.0f); break;
+		}
+
+		SetState(ActorState::SkipPerPixelCollisions, true);
+
+		SetAnimation(CrouchInProgress);
+		SetTransition(CrouchStart, false);
+	}
+
+	bool Devan::ShouldCrouch() const
+	{
+		constexpr float Distance = 64.0f;
+
+		bool shouldCrouch = false;
+		AABBf crouchAabb = AABB;
+		crouchAabb.L -= Distance;
+		crouchAabb.R += Distance;
+
+		_levelHandler->FindCollisionActorsByAABB(this, crouchAabb, [this, &shouldCrouch](ActorBase* actor) {
+			if (auto* shot = runtime_cast<Weapons::ShotBase*>(actor)) {
+				float xSpeed = shot->GetSpeed().X;
+				float x = shot->GetPos().X;
+				float xSelf = _pos.X;
+				// Check if the shot is moving towards the boss
+				if (std::abs(xSpeed) > 0.0f && std::signbit(xSelf - x) == std::signbit(xSpeed)) {
+					shouldCrouch = true;
+					return false;
+				}
+			}
+			return true;
+		});
+
+		return shouldCrouch;
+	}
+
+	Devan::DisarmedGun::DisarmedGun()
+	{
+	}
+
+	Task<bool> Devan::DisarmedGun::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		SetFacingLeft(details.Params[0] != 0);
+		_speed.X = (IsFacingLeft() ? 6.0f : -6.0f);
+		_elasticity = 0.4f;
+
+		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithOtherActors, false);
+
+		_health = INT32_MAX;
+
+		async_await RequestMetadataAsync("Boss/Devan"_s);
+		SetAnimation(DisarmedGunDecor);
+
+		async_return true;
+	}
+
+	void Devan::DisarmedGun::OnUpdate(float timeMult)
+	{
+		ActorBase::OnUpdate(timeMult);
+
+		_speed.X = lerpByTime(_speed.X, 0.0f, 0.08f, timeMult);
+	}
+
+	void Devan::DisarmedGun::OnUpdateHitbox()
+	{
+		UpdateHitbox(4.0f, 4.0f);
+	}
+
+	Devan::Bullet::Bullet()
+	{
 	}
 
 	Task<bool> Devan::Bullet::OnActivatedAsync(const ActorActivationDetails& details)
@@ -361,7 +495,7 @@ namespace Jazz2::Actors::Bosses
 		_health = INT32_MAX;
 
 		async_await RequestMetadataAsync("Boss/Devan"_s);
-		SetAnimation((AnimState)668);
+		SetAnimation(DevanBullet);
 
 		async_return true;
 	}
@@ -383,7 +517,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Devan::Bullet::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
 
 		return EnemyBase::OnPerish(collider);
 	}
@@ -406,6 +540,10 @@ namespace Jazz2::Actors::Bosses
 		DecreaseHealth(INT32_MAX);
 	}
 
+	Devan::Fireball::Fireball()
+	{
+	}
+
 	Task<bool> Devan::Fireball::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetFacingLeft(details.Params[0] != 0);
@@ -419,7 +557,7 @@ namespace Jazz2::Actors::Bosses
 		_health = INT32_MAX;
 
 		async_await RequestMetadataAsync("Boss/Devan"_s);
-		SetAnimation((AnimState)675);
+		SetAnimation(DemonFireball);
 
 		async_return true;
 	}
@@ -441,7 +579,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Devan::Fireball::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
 
 		PlaySfx("Flap"_s);
 
