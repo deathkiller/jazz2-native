@@ -11,7 +11,7 @@
 		"Run": {
 			"Path": "Devan/run.aura",
 			"States": [ 2 ]
-		},
+		},	
 		"WarpIn": {
 			"Path": "Devan/warp_in.aura",
 			"States": [ 1073741843 ]
@@ -20,6 +20,7 @@
 			"Path": "Devan/warp_out.aura",
 			"States": [ 1073741844 ]
 		},
+		
 		"RunEnd": {
 			"Path": "Devan/run_end.aura",
 			"FrameRate": 20,
@@ -29,93 +30,143 @@
 			"Path": "Devan/shoot.aura",
 			"FrameCount": 3,
 			"FrameRate": 20,
-			"States": [ 15 ]
+			"States": [ 10 ]
 		},
-		"Shoot": {
+		"ShootInProgress": {
 			"Path": "Devan/shoot.aura",
 			"FrameOffset": 3,
 			"FrameCount": 3,
-			"FrameRate": 30,
-			"States": [ 16 ]
+			"FrameRate": 40,
+			"States": [ 11 ]
 		},
 		"ShootEnd": {
 			"Path": "Devan/shoot.aura",
 			"FrameOffset": 6,
 			"FrameCount": 1,
-			"FrameRate": 40,
-			"States": [ 17 ]
+			"FrameRate": 50,
+			"States": [ 12 ]
 		},
 		"ShootEnd2": {
 			"Path": "Devan/shoot.aura",
 			"FrameOffset": 7,
 			"FrameRate": 28,
-			"States": [ 18 ]
+			"States": [ 13 ]
+		},
+		"CrouchStart": {
+			"Path": "Devan/crouch.aura",
+			"FrameCount": 4,
+			"FrameRate": 20,
+			"States": [ 14 ]
+		},
+		"CrouchInProgress": {
+			"Path": "Devan/crouch.aura",
+			"FrameOffset": 4,
+			"FrameCount": 1,
+			"States": [ 15 ]
+		},
+		"CrouchEnd": {
+			"Path": "Devan/crouch.aura",
+			"FrameOffset": 5,
+			"FrameCount": 4,
+			"FrameRate": 20,
+			"States": [ 16 ]
 		},
 		
-		"JumpEnd": {
-			"Path": "Devan/jump_end.aura",
-			"States": [ 1073741826 ]
+		"JumpStart": {
+			"Path": "Devan/jump.aura",
+			"FrameCount": 14,
+			"FrameRate": 20,
+			"States": [ 17 ]
 		},
+		"JumpInProgress": {
+			"Path": "Devan/jump.aura",
+			"FrameOffset": 14,
+			"FrameCount": 1,
+			"States": [ 18 ]
+		},
+		"JumpEnd": {
+			"Path": "Devan/jump.aura",
+			"FrameOffset": 15,
+			"FrameCount": 11,
+			"FrameRate": 20,
+			"States": [ 19 ]
+		},
+		"JumpEnd2": {
+			"Path": "Devan/jump_end.aura",
+			"States": [ 20 ]
+		},
+		
 		"Freefall": {
 			"Path": "Devan/freefall.aura",
 			"FrameRate": 30,
 			"States": [ 65536 ]
 		},
+			
+		"DisarmedStart": {
+			"Path": "Devan/disarmed.aura",
+			"States": [ 22 ]
+		},
+		"DisarmedGunDecor": {
+			"Path": "Devan/disarmed_gun.aura",
+			"Flags": 1,
+			"FrameRate": 6,
+			"States": [ 23 ]
+		},
 
 		"DisorientedStart": {
 			"Path": "Devan/disoriented_start.aura",
 			"FrameRate": 30,
-			"States": [ 666 ]
+			"States": [ 24 ]
 		},
 		"Disoriented": {
 			"Path": "Devan/disoriented.aura",
-			"States": [ 667 ]
+			"States": [ 25 ]
 		},
 		"DisorientedWarpOut": {
 			"Path": "Devan/disoriented_warp_out.aura",
-			"States": [ 6670 ]
+			"States": [ 26 ]
 		},
 
-		"Bullet": {
+		"DevanBullet": {
 			"Path": "Devan/bullet.aura",
-			"States": [ 668 ]
+			"States": [ 27 ]
 		},
 		
 		"DemonFly": {
 			"Path": "Devan/demon_fly.aura",
 			"FrameRate": 5,
-			"States": [ 669 ]
+			"States": [ 30 ]
 		},
 		"DemonTransformStart": {
 			"Path": "Devan/demon_transform_start.aura",
 			"FrameRate": 2,
-			"States": [ 670 ]
+			"States": [ 31 ]
 		},
 		"DemonTransformEnd": {
 			"Path": "Devan/demon_transform_end.aura",
 			"FrameRate": 4,
-			"States": [ 671 ]
+			"States": [ 32 ]
 		},
 		"DemonTurn": {
 			"Path": "Devan/demon_turn.aura",
-			"FrameRate": 20,
-			"States": [ 1073741840 ]
+			"FrameRate": 16,
+			"States": [ 33 ]
 		},
 		"DemonSpewFireball": {
 			"Path": "Devan/demon_spew_fireball.aura",
 			"FrameCount": 9,
-			"States": [ 673 ]
+			"States": [ 34 ]
 		},
 		"DemonSpewFireballEnd": {
 			"Path": "Devan/demon_spew_fireball.aura",
 			"FrameOffset": 9,
 			"FrameRate": 20,
-			"States": [ 674 ]
+			"States": [ 35 ]
 		},
 		
 		"DemonFireball": {
 			"Path": "Devan/demon_fireball.aura",
-			"States": [ 675 ]
+			"States": [ 36 ]
 		}
 	},
 

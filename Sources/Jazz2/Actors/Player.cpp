@@ -987,7 +987,7 @@ namespace Jazz2::Actors
 						SetState(ActorState::IsSolidObject, false);
 
 						if (_levelHandler->IsReforged()) {
-							_speed.Y = -3.55f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+							_speed.Y = -3.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 							_internalForceY = -1.02f - 0.07f * (1.0f - timeMult);
 							if (_playerType == PlayerType::Lori) {
 								_speed.Y *= 1.3f;
@@ -2079,8 +2079,8 @@ namespace Jazz2::Actors
 					_levelHandler->EventMap()->StoreTileEvent(tx, ty, EventType::Empty);
 
 					for (std::int32_t i = 0; i < 8; i++) {
-						float fx = Random().NextFloat(-16.0f, 16.0f);
-						float fy = Random().NextFloat(-12.0f, 0.2f);
+						float fx = Random().NextFloat(-12.0f, 12.0f);
+						float fy = Random().NextFloat(-4.0f, 0.2f);
 
 						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
 						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorState::None, Vector3i((std::int32_t)(_pos.X + fx * 2.0f), (std::int32_t)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));

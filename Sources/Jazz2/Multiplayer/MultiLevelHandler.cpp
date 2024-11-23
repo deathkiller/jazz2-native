@@ -556,7 +556,7 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::IsPositionEmpty(self, aabb, params, collider);
 	}
 
-	void MultiLevelHandler::FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
+	void MultiLevelHandler::FindCollisionActorsByAABB(const Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
 	{
 		LevelHandler::FindCollisionActorsByAABB(self, aabb, std::move(callback));
 	}

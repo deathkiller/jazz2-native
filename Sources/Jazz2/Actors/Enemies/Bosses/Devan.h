@@ -17,21 +17,39 @@ namespace Jazz2::Actors::Bosses
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnActivatedBoss() override;
 		void OnUpdate(float timeMult) override;
+		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr int StateTransition = -1;
-		static constexpr int StateWaiting = 0;
-		static constexpr int StateWarpingIn = 1;
-		static constexpr int StateIdling = 2;
-		static constexpr int StateRunning1 = 3;
-		static constexpr int StateRunning2 = 4;
-		static constexpr int StateDemonFlying = 5;
-		static constexpr int StateDemonSpewingFireball = 6;
-		static constexpr int StateFalling = 7;
+		enum class State {
+			Transition = -1,
+			Waiting = 0,
+			WarpingIn,
+			Idling,
+			Running1,
+			Running2,
+			Crouch,
+			DemonFlying,
+			DemonSpewingFireball,
+			Falling
+		};
+
+		class DisarmedGun : public ActorBase
+		{
+		public:
+			DisarmedGun();
+
+		protected:
+			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+			void OnUpdate(float timeMult) override;
+			void OnUpdateHitbox() override;
+		};
 
 		class Bullet : public EnemyBase
 		{
+		public:
+			Bullet();
+
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdateHitbox() override;
@@ -44,6 +62,9 @@ namespace Jazz2::Actors::Bosses
 
 		class Fireball : public EnemyBase
 		{
+		public:
+			Fireball();
+
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdateHitbox() override;
@@ -57,18 +78,21 @@ namespace Jazz2::Actors::Bosses
 			float _timeLeft;
 		};
 
-		int _state;
+		State _state;
 		float _stateTime;
 		float _attackTime;
 		float _anglePhase;
-		int _shots;
+		float _crouchCooldown;
+		std::int32_t _shots;
 		bool _isDemon, _isDead;
 		Vector2f _lastPos, _targetPos, _lastSpeed;
-		uint8_t _endText;
+		std::uint8_t _endText;
 
-		void FollowNearestPlayer(int newState, float time);
+		void FollowNearestPlayer(State newState, float time);
 		void FollowNearestPlayerDemon(float timeMult);
 		void Shoot();
 		void Run();
+		void Crouch();
+		bool ShouldCrouch() const;
 	};
 }
