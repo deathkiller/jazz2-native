@@ -15,8 +15,13 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2::Actors::Enemies
 {
+	static constexpr AnimState WithdrawStart = (AnimState)20;
+	static constexpr AnimState WithdrawStartFast = (AnimState)21;
+	static constexpr AnimState WithdrawInProgress = (AnimState)22;
+	static constexpr AnimState WithdrawEnd = (AnimState)23;
+
 	Turtle::Turtle()
-		: _isTurning(false), _isWithdrawn(false), _isAttacking(false)
+		: _isAttacking(false), _isTurning(false), _isWithdrawn(false), _isDodging(false), _dodgeCooldown(0.0f)
 	{
 	}
 
@@ -71,9 +76,32 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (GetState(ActorState::CanJump)) {
+		if (GetState(ActorState::CanJump) && _currentTransition == nullptr) {
+			if (ShouldDodge()) {
+				if (!_isDodging) {
+					_isDodging = true;
+					_dodgeCooldown = Random().Next(80.0f, 160.0f);
+					_canHurtPlayer = false;
+					_speed.X = 0;
+					SetAnimation(WithdrawInProgress);
+					SetTransition(WithdrawStartFast, false);
+					PlaySfx("Withdraw"_s, 0.2f);
+				}
+			} else if (_isDodging) {
+				_dodgeCooldown -= timeMult;
+				if (_dodgeCooldown <= 0.0f) {
+					_isDodging = false;
+					SetAnimation(AnimState::Walk);
+					SetTransition(WithdrawEnd, false, [this]() {
+						_canHurtPlayer = true;
+						_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+					});
+					PlaySfx("WithdrawEnd"_s, 0.2f);
+				}
+			}
+
 			if (std::abs(_speed.X) > 0.0f && !CanMoveToPosition(_speed.X * 4, 0)) {
-				SetTransition(AnimState::TransitionWithdraw, false, [this]() {
+				SetTransition(WithdrawStart, false, [this]() {
 					HandleTurn(true);
 				});
 				_isTurning = true;
@@ -160,7 +188,7 @@ namespace Jazz2::Actors::Enemies
 		if (_isTurning) {
 			if (isFirstPhase) {
 				SetFacingLeft(!IsFacingLeft());
-				SetTransition(AnimState::TransitionWithdrawEnd, false, [this]() {
+				SetTransition(WithdrawEnd, false, [this]() {
 				   HandleTurn(false);
 				});
 				PlaySfx("WithdrawEnd"_s, 0.2f);
@@ -187,5 +215,34 @@ namespace Jazz2::Actors::Enemies
 			// TODO: Bad timing
 			PlaySfx("Attack2"_s);
 		});
+	}
+
+	bool Turtle::ShouldDodge() const
+	{
+		constexpr float Distance = 96.0f;
+
+		bool shouldWithdraw = false;
+		if (_levelHandler->Difficulty() != GameDifficulty::Easy) {
+			AABBf withdrawAabb = AABB;
+			withdrawAabb.T = withdrawAabb.B - 30.0f;
+			withdrawAabb.L -= Distance;
+			withdrawAabb.R += Distance;
+
+			_levelHandler->FindCollisionActorsByAABB(this, withdrawAabb, [this, &shouldWithdraw](ActorBase* actor) {
+				if (auto* shot = runtime_cast<Weapons::ShotBase*>(actor)) {
+					float xSpeed = shot->GetSpeed().X;
+					float x = shot->GetPos().X;
+					float xSelf = _pos.X;
+					// Check if the shot is moving towards the boss
+					if (std::abs(xSpeed) > 0.0f && std::signbit(xSelf - x) == std::signbit(xSpeed)) {
+						shouldWithdraw = true;
+						return false;
+					}
+				}
+				return true;
+			});
+		}
+
+		return shouldWithdraw;
 	}
 }

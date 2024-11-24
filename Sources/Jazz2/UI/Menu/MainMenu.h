@@ -48,6 +48,7 @@ namespace Jazz2::UI::Menu
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;
+		void OnTextInput(const TextInputEvent& event) override;
 		void OnTouchEvent(const nCine::TouchEvent& event) override;
 
 		MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;

@@ -26,6 +26,7 @@ namespace Jazz2::UI::Menu
 #else
 			PlayCustomLevels,
 #endif
+			Highscores,
 			Options,
 			About,
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)

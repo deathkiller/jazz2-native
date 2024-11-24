@@ -414,13 +414,7 @@ namespace Jazz2
 
 	void LevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
 	{
-		std::int32_t playerCount = 0;
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(levelInit.PlayerCarryOvers)); i++) {
-			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
-				continue;
-			}
-			playerCount++;
-		}
+		std::int32_t playerCount = levelInit.GetPlayerCount();
 
 		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(levelInit.PlayerCarryOvers)); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
@@ -1101,8 +1095,10 @@ namespace Jazz2
 
 	void LevelHandler::HandleGameOver(Actors::Player* player)
 	{
-		// TODO: Implement Game Over screen
-		_root->GoToMainMenu(false);
+		LevelInitialization levelInit;
+		PrepareNextLevelInitialization(levelInit);
+		levelInit.LevelName = ":gameover"_s;
+		_root->ChangeLevel(std::move(levelInit));
 	}
 
 	bool LevelHandler::HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider)

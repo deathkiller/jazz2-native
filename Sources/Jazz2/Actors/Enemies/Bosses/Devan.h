@@ -43,6 +43,9 @@ namespace Jazz2::Actors::Bosses
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdate(float timeMult) override;
 			void OnUpdateHitbox() override;
+
+		private:
+			float _timeLeft;
 		};
 
 		class Bullet : public EnemyBase

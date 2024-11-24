@@ -28,6 +28,7 @@
 #include "Jazz2/UI/ControlScheme.h"
 #include "Jazz2/UI/LoadingHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
+#include "Jazz2/UI/Menu/HighscoresSection.h"
 #include "Jazz2/UI/Menu/LoadingSection.h"
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
@@ -102,6 +103,7 @@ public:
 
 	void OnKeyPressed(const KeyboardEvent& event) override;
 	void OnKeyReleased(const KeyboardEvent& event) override;
+	void OnTextInput(const TextInputEvent& event) override;
 	void OnTouchEvent(const TouchEvent& event) override;
 
 	void InvokeAsync(Function<void()>&& callback, const char* sourceFunc = nullptr) override;
@@ -151,6 +153,7 @@ private:
 	void CheckUpdates();
 #endif
 	bool SetLevelHandler(const LevelInitialization& levelInit);
+	void HandleEndOfGame(const LevelInitialization& levelInit, bool playerDied);
 	void RemoveResumableStateIfAny();
 #if defined(DEATH_TARGET_ANDROID)
 	void ApplyActivityIcon();
@@ -456,6 +459,11 @@ void GameEventHandler::OnKeyReleased(const KeyboardEvent& event)
 	_currentHandler->OnKeyReleased(event);
 }
 
+void GameEventHandler::OnTextInput(const TextInputEvent& event)
+{
+	_currentHandler->OnTextInput(event);
+}
+
 void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 {
 	_currentHandler->OnTouchEvent(event);
@@ -522,7 +530,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #endif
 				}
 			} else {
-				newHandler = std::make_unique<Menu::MainMenu>(this, false);
+				HandleEndOfGame(levelInit, false);
 #if defined(WITH_MULTIPLAYER)
 				// TODO: This should show some server console instead of exiting
 				_networkManager = nullptr;
@@ -532,10 +540,16 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			// End of game
 			SaveEpisodeEnd(levelInit);
 
-			newHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
-				root->GoToMainMenu(false);
+			newHandler = std::make_unique<Cinematics>(this, "ending"_s, [levelInit = std::move(levelInit)](IRootController* root, bool endOfStream) mutable {
+				auto* _this = static_cast<GameEventHandler*>(root);
+				_this->InvokeAsync([_this, levelInit = std::move(levelInit)]() {
+					_this->HandleEndOfGame(levelInit, false);
+				});
 				return true;
 			});
+		} else if (levelInit.LevelName == ":gameover"_s) {
+			// Player died
+			HandleEndOfGame(levelInit, true);
 		} else {
 			SaveEpisodeContinue(levelInit);
 
@@ -586,8 +600,7 @@ void GameEventHandler::ResumeSavedState()
 		LOGI("Resuming saved state...");
 
 		auto configDir = PreferencesCache::GetDirectory();
-		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read);
-		if (s->IsValid()) {
+		if (auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read)) {
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValue<std::uint16_t>();
@@ -622,16 +635,17 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
 		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
 			auto configDir = PreferencesCache::GetDirectory();
-			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
-			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-			s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
-			s->WriteValue<std::uint16_t>(StateVersion);
+			if (auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write)) {
+				s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+				s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
+				s->WriteValue<std::uint16_t>(StateVersion);
 
-			DeflateWriter co(*s);
-			if (!levelHandler->SerializeResumableToStream(co)) {
-				LOGE("Failed to save current state");
+				DeflateWriter co(*s);
+				if (!levelHandler->SerializeResumableToStream(co)) {
+					LOGE("Failed to save current state");
+				}
+				return true;
 			}
-			return true;
 		}
 	}
 
@@ -1529,13 +1543,29 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 	return true;
 }
 
+void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, bool playerDied)
+{
+	const PlayerCarryOver* firstPlayer;
+	std::size_t playerCount = levelInit.GetPlayerCount(&firstPlayer);
+
+	auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+	if (playerCount == 1 && levelInit.Difficulty != GameDifficulty::Multiplayer) {
+		std::int32_t seriesIndex = Menu::HighscoresSection::TryGetSeriesIndex(levelInit.LastEpisodeName, playerDied);
+		if (seriesIndex >= 0) {
+			mainMenu->SwitchToSection<Menu::HighscoresSection>(seriesIndex, levelInit.Difficulty, levelInit.IsReforged, levelInit.CheatsUsed, *firstPlayer);
+		}
+	}
+
+	SetStateHandler(std::move(mainMenu));
+}
+
 void GameEventHandler::WriteCacheDescriptor(const StringView path, std::uint64_t currentVersion, std::int64_t animsModified)
 {
 	auto so = fs::Open(path, FileAccess::Write);
 	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 	so->WriteValue<std::uint8_t>(ContentResolver::CacheIndexFile);
 	so->WriteValue<std::uint16_t>(Compatibility::JJ2Anims::CacheVersion);
-	so->WriteValue<std::uint8_t>(0x00);				// Flags
+	so->WriteValue<std::uint8_t>(0x00);					// Flags
 	so->WriteValue<std::int64_t>(animsModified);
 	so->WriteValue<std::uint16_t>((std::uint16_t)EventType::Count);
 	so->WriteValue<std::uint64_t>(currentVersion);
@@ -1547,14 +1577,8 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 		return;
 	}
 
-	std::size_t playerCount = 0;
-	const PlayerCarryOver* firstPlayer = nullptr;
-	for (std::size_t i = 0; i < arraySize(levelInit.PlayerCarryOvers); i++) {
-		if (levelInit.PlayerCarryOvers[i].Type != PlayerType::None) {
-			firstPlayer = &levelInit.PlayerCarryOvers[i];
-			playerCount++;
-		}
-	}
+	const PlayerCarryOver* firstPlayer;
+	std::size_t playerCount = levelInit.GetPlayerCount(&firstPlayer);
 
 	PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
 
@@ -1580,6 +1604,7 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 
 			episodeEnd->Lives = firstPlayer->Lives;
 			episodeEnd->Score = firstPlayer->Score;
+			std::memcpy(episodeEnd->Gems, firstPlayer->Gems, sizeof(firstPlayer->Gems));
 			std::memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
 			std::memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
 		}
@@ -1601,14 +1626,8 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 		return;
 	}
 
-	std::size_t playerCount = 0;
-	const PlayerCarryOver* firstPlayer = nullptr;
-	for (std::size_t i = 0; i < arraySize(levelInit.PlayerCarryOvers); i++) {
-		if (levelInit.PlayerCarryOvers[i].Type != PlayerType::None) {
-			firstPlayer = &levelInit.PlayerCarryOvers[i];
-			playerCount++;
-		}
-	}
+	const PlayerCarryOver* firstPlayer;
+	std::size_t playerCount = levelInit.GetPlayerCount(&firstPlayer);
 
 	// Don't save continue in multiplayer
 	if (playerCount == 1) {
@@ -1622,6 +1641,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 		episodeContinue->State.DifficultyAndPlayerType = ((std::int32_t)levelInit.Difficulty & 0x0f) | (((std::int32_t)firstPlayer->Type & 0x0f) << 4);
 		episodeContinue->State.Lives = firstPlayer->Lives;
 		episodeContinue->State.Score = firstPlayer->Score;
+		std::memcpy(episodeContinue->State.Gems, firstPlayer->Gems, sizeof(firstPlayer->Gems));
 		std::memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
 		std::memcpy(episodeContinue->State.WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
 

@@ -164,6 +164,13 @@ DEATH_ALWAYS_INLINE int WINAPI GetObject(HGDIOBJ h, int c, LPVOID pv) {
 }
 #endif
 
+#if defined(GetUserName)
+#	undef GetUserName
+DEATH_ALWAYS_INLINE BOOL WINAPI GetUserName(LPWSTR lpBuffer, LPDWORD pcbBuffer) {
+	return ::GetUserNameW(lpBuffer, pcbBuffer);
+}
+#endif
+
 #if defined(GetWindowsDirectory)
 #	undef GetWindowsDirectory
 DEATH_ALWAYS_INLINE UINT WINAPI GetWindowsDirectory(LPWSTR lpBuffer, UINT uSize) {

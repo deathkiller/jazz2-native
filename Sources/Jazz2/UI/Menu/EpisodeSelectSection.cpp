@@ -428,8 +428,9 @@ namespace Jazz2::UI::Menu
 		auto& firstPlayer = levelInit.PlayerCarryOvers[0];
 		firstPlayer.Lives = episodeContinue->State.Lives;
 		firstPlayer.Score = episodeContinue->State.Score;
-		std::memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(levelInit.PlayerCarryOvers[0].Ammo));
-		std::memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(levelInit.PlayerCarryOvers[0].WeaponUpgrades));
+		std::memcpy(firstPlayer.Gems, episodeContinue->State.Gems, sizeof(firstPlayer.Gems));
+		std::memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(firstPlayer.Ammo));
+		std::memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
 
 		_root->ChangeLevel(std::move(levelInit));
 	}

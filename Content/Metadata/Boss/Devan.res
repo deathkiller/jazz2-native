@@ -108,8 +108,6 @@
 		},
 		"DisarmedGunDecor": {
 			"Path": "Devan/disarmed_gun.aura",
-			"Flags": 1,
-			"FrameRate": 6,
 			"States": [ 23 ]
 		},
 

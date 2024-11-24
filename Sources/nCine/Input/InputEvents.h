@@ -109,7 +109,6 @@ namespace nCine
 		}
 	};
 
-#if defined(DEATH_TARGET_ANDROID)
 	/// Information about an accelerometer event
 	class AccelerometerEvent
 	{
@@ -119,7 +118,6 @@ namespace nCine
 
 		float x, y, z;
 	};
-#endif
 
 	/// Information about mouse state
 	class MouseState
@@ -191,9 +189,11 @@ namespace nCine
 	{
 	public:
 		/// Unicode code point encoded in UTF-8
-		char text[5];
+		char text[4];
+		int length;
 
 		TextInputEvent()
+			: length(0)
 		{
 			text[0] = '\0';
 		}

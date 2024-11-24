@@ -438,16 +438,17 @@ namespace nCine
 				break;
 		}
 
-		// TODO: Text input
-		/*if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN &&
+		if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN &&
 			(AKeyEvent_getMetaState(event) & AMETA_CTRL_ON) == 0) {
 			AndroidJniClass_KeyEvent keyEvent(AInputEvent_getType(event), keyCode);
 			if (keyEvent.isPrintingKey()) {
 				const int unicodeKey = keyEvent.getUnicodeChar(AKeyEvent_getMetaState(event));
-				nctl::Utf8::codePointToUtf8(unicodeKey, textInputEvent_.text, nullptr);
-				inputEventHandler_->OnTextInput(textInputEvent_);
+				textInputEvent_.length = Utf8::FromCodePoint(unicodeKey, textInputEvent_.text);
+				if (textInputEvent_.length > 0) {
+					inputEventHandler_->OnTextInput(textInputEvent_);
+				}
 			}
-		}*/
+		}
 
 		return true;
 	}

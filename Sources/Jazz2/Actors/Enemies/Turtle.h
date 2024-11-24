@@ -26,8 +26,11 @@ namespace Jazz2::Actors::Enemies
 		bool _isAttacking;
 		bool _isTurning;
 		bool _isWithdrawn;
+		bool _isDodging;
+		float _dodgeCooldown;
 
 		void HandleTurn(bool isFirstPhase);
 		void Attack();
+		bool ShouldDodge() const;
 	};
 }

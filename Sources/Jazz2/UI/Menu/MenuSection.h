@@ -32,8 +32,9 @@ namespace Jazz2::UI::Menu
 
 		virtual void OnUpdate(float timeMult) = 0;
 		virtual void OnDraw(Canvas* canvas) = 0;
-		virtual void OnDrawClipped(Canvas* canvas) { }
-		virtual void OnDrawOverlay(Canvas* canvas) { }
+		virtual void OnDrawClipped(Canvas* canvas) {}
+		virtual void OnDrawOverlay(Canvas* canvas) {}
+		virtual void OnTextInput(const nCine::TextInputEvent& event) {}
 		virtual void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) = 0;
 
 		virtual bool IsGamepadNavigationEnabled() const {

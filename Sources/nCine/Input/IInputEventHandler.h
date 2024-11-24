@@ -19,12 +19,13 @@ namespace nCine
 		inline virtual void OnKeyReleased(const KeyboardEvent& event) { }
 		/// Callback function called every time a text input is generated
 		inline virtual void OnTextInput(const TextInputEvent& event) { }
+
 		/// Callback function called every time a touch event is made
 		inline virtual void OnTouchEvent(const TouchEvent& event) { }
-#if defined(DEATH_TARGET_ANDROID)
+
 		/// Callback function called at fixed time with the updated reading from the accelerometer sensor
 		inline virtual void OnAcceleration(const AccelerometerEvent& event) { }
-#endif
+
 		/// Callback function called every time a mouse button is pressed
 		inline virtual void OnMouseDown(const MouseEvent& event) { }
 		/// Callback function called every time a mouse button is released

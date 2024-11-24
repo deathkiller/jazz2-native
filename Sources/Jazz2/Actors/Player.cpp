@@ -77,7 +77,7 @@ namespace Jazz2::Actors
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_shieldSpawnTime(ShieldDisabled),
-		_gems{}, _gemsCheckpoint{}, _gemsPitch(0),
+		_gems{}, _gemsCheckpoint{}, _gemsTotal{}, _gemsPitch(0),
 		_gemsTimer(0.0f),
 		_bonusWarpTimer(0.0f),
 		_suspendType(SuspendType::None),
@@ -2080,7 +2080,7 @@ namespace Jazz2::Actors
 
 					for (std::int32_t i = 0; i < 8; i++) {
 						float fx = Random().NextFloat(-12.0f, 12.0f);
-						float fy = Random().NextFloat(-4.0f, 0.2f);
+						float fy = Random().NextFloat(-2.0f, 0.2f);
 
 						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
 						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorState::None, Vector3i((std::int32_t)(_pos.X + fx * 2.0f), (std::int32_t)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
@@ -3229,6 +3229,7 @@ namespace Jazz2::Actors
 		_foodEatenCheckpoint = _foodEaten;
 		_currentWeapon = carryOver.CurrentWeapon;
 
+		std::memcpy(_gemsTotal, carryOver.Gems, sizeof(_gemsTotal));
 		std::memcpy(_weaponAmmo, carryOver.Ammo, sizeof(_weaponAmmo));
 		std::memcpy(_weaponAmmoCheckpoint, carryOver.Ammo, sizeof(_weaponAmmoCheckpoint));
 		std::memcpy(_weaponUpgrades, carryOver.WeaponUpgrades, sizeof(_weaponUpgrades));
@@ -3270,6 +3271,10 @@ namespace Jazz2::Actors
 		carryOver.FoodEaten = (_foodEaten > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_foodEaten);
 		carryOver.CurrentWeapon = _currentWeapon;
 
+		for (std::size_t i = 0; i < arraySize(carryOver.Gems); i++) {
+			carryOver.Gems[i] = _gemsTotal[i] + _gems[i];
+		}
+
 		std::memcpy(carryOver.Ammo, _weaponAmmo, sizeof(_weaponAmmo));
 		std::memcpy(carryOver.WeaponUpgrades, _weaponUpgrades, sizeof(_weaponUpgrades));
 
@@ -3303,10 +3308,15 @@ namespace Jazz2::Actors
 
 		_gems[0] = src.ReadVariableInt32();
 		if (version >= 3) {
-			// Gem types are split since v2.9.2
+			// Gem types are split since v3.0.0
 			_gems[1] = src.ReadVariableInt32();
 			_gems[2] = src.ReadVariableInt32();
 			_gems[3] = src.ReadVariableInt32();
+
+			_gemsTotal[0] = src.ReadVariableInt32();
+			_gemsTotal[1] = src.ReadVariableInt32();
+			_gemsTotal[2] = src.ReadVariableInt32();
+			_gemsTotal[3] = src.ReadVariableInt32();
 		}
 		std::memcpy(_gemsCheckpoint, _gems, sizeof(_gems));
 
@@ -3343,6 +3353,10 @@ namespace Jazz2::Actors
 		dest.WriteVariableInt32(_gemsCheckpoint[1]);
 		dest.WriteVariableInt32(_gemsCheckpoint[2]);
 		dest.WriteVariableInt32(_gemsCheckpoint[3]);
+		dest.WriteVariableInt32(_gemsTotal[0]);
+		dest.WriteVariableInt32(_gemsTotal[1]);
+		dest.WriteVariableInt32(_gemsTotal[2]);
+		dest.WriteVariableInt32(_gemsTotal[3]);
 		dest.WriteVariableInt32(static_cast<std::int32_t>(arraySize(_weaponAmmoCheckpoint)));
 		dest.WriteVariableInt32((std::int32_t)_currentWeapon);
 		dest.Write(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));

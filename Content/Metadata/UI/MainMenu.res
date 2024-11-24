@@ -53,6 +53,27 @@
 			"Path": "UI/storage.aura",
 			"States": [ 21 ]
 		},
+		
+		"PickupGemRed": {
+			"Path": "Pickup/gem.aura",
+			"PaletteOffset": 128,
+			"States": [ 30 ]
+		},
+		"PickupGemGreen": {
+			"Path": "Pickup/gem.aura",
+			"PaletteOffset": 256,
+			"States": [ 31 ]
+		},
+		"PickupGemBlue": {
+			"Path": "Pickup/gem.aura",
+			"PaletteOffset": 384,
+			"States": [ 32 ]
+		},
+		"PickupGemPurple": {
+			"Path": "Pickup/gem.aura",
+			"PaletteOffset": 512,
+			"States": [ 33 ]
+		},
 
 		"GamepadA": {
 			"Path": "UI/gamepad_a.aura",
