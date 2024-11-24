@@ -64,7 +64,7 @@ namespace Death { namespace Utf8 {
 
 		// If the previous byte is a continuation byte, go back until it isn't, but only up to three
 		// bytes -- any longer sequence of continuation bytes would be invalid anyway
-		const std::size_t iMax = std::min(std::size_t{4}, cursor);
+		const std::size_t iMax = (cursor < std::size_t{4} ? cursor : std::size_t{4});
 		std::size_t i = 1;
 		while (i != iMax && (text[cursor - i] & 0xc0) == 0x80)
 			++i;

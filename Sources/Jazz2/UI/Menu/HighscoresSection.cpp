@@ -497,7 +497,9 @@ namespace Jazz2::UI::Menu
 	{
 		// TODO: Discord integration
 
-#if defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_ANDROID)
+		// TODO: Get user name on Android
+#elif defined(DEATH_TARGET_SWITCH)
 		AccountUid uid;
 		AccountProfile profile;
 		if (R_SUCCEEDED(accountInitialize(AccountServiceType_Application))) {
@@ -515,6 +517,8 @@ namespace Jazz2::UI::Menu
 				return userName;
 			}
 		}
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		// TODO: Get user name on UWP/Xbox
 #elif defined(DEATH_TARGET_WINDOWS)
 		wchar_t userName[64];
 		DWORD userNameLength = (DWORD)arraySize(userName);
