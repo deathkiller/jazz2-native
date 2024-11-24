@@ -170,7 +170,7 @@ namespace Jazz2::UI::Menu
 	void BeginSection::OnDraw(Canvas* canvas)
 	{
 		Recti contentBounds = _root->GetContentBounds();
-		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.2f * (1.0f - 0.048f * (std::int32_t)_items.size()));
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.22f * (1.0f - 0.048f * (std::int32_t)_items.size()));
 		if (contentBounds.H < 230) {
 			center.Y *= 0.85f;
 		}

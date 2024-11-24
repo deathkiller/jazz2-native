@@ -38,7 +38,7 @@ namespace Death { namespace IO {
 #endif
 
 	FileStream::FileStream(const Containers::StringView path, FileAccess mode, std::int32_t bufferSize)
-		: FileStream(Containers::String{path}, mode)
+		: FileStream(Containers::String{path}, mode, bufferSize)
 	{
 	}
 
@@ -352,7 +352,7 @@ namespace Death { namespace IO {
 				break;
 			case FileAccess::ReadWrite:
 				desireAccess = GENERIC_READ | GENERIC_WRITE;
-				creationDisposition = /*OPEN_ALWAYS*/OPEN_EXISTING;		// NOTE: File must already exist (for consistency with other platforms)
+				creationDisposition = /*OPEN_ALWAYS*/OPEN_EXISTING;	// NOTE: File must already exist
 				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
 				break;
 			default:
@@ -377,23 +377,24 @@ namespace Death { namespace IO {
 			_size = fileSize.QuadPart;
 		}
 #else
-		std::int32_t openFlag;
+		int openFlag;
 		switch (mode & ~FileAccess::Exclusive) {
 			case FileAccess::Read:
 				openFlag = O_RDONLY;
 				break;
 			case FileAccess::Write:
-				openFlag = O_WRONLY;
+				openFlag = O_WRONLY | O_CREAT | O_TRUNC;
 				break;
 			case FileAccess::ReadWrite:
-				openFlag = O_RDWR;
+				openFlag = O_RDWR;	// NOTE: File must already exist
 				break;
 			default:
 				LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
-		_fileDescriptor = ::open(_path.data(), openFlag);
+		int defaultPermissions = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH); // 0666
+		_fileDescriptor = ::open(_path.data(), openFlag, defaultPermissions);
 		if (_fileDescriptor < 0) {
 			LOGE("Can't open file \"%s\" - failed with error %i", _path.data(), errno);
 			return;
