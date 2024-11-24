@@ -2,6 +2,7 @@
 #include "MenuResources.h"
 #include "EpisodeSelectSection.h"
 #include "StartGameOptionsSection.h"
+#include "HighscoresSection.h"
 #include "OptionsSection.h"
 #include "AboutSection.h"
 #include "MainMenu.h"
@@ -81,7 +82,8 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Levels") });
 #	endif
 #endif
-
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(ItemData { Item::Highscores, _("Highscores") });
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(ItemData { Item::Options, _("Options") });
 		// TRANSLATORS: Menu item in main menu
@@ -394,6 +396,12 @@ namespace Jazz2::UI::Menu
 				}
 				break;
 #endif
+			case Item::Highscores:
+				if (isPlayable) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					_root->SwitchToSection<HighscoresSection>();
+				}
+				break;
 			case Item::Options:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);

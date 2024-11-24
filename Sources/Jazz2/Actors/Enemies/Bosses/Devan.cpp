@@ -233,7 +233,7 @@ namespace Jazz2::Actors::Bosses
 					PlaySfx("SpitFireball"_s);
 
 					std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
-					uint8_t fireballParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
+					std::uint8_t fireballParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
 					fireball->OnActivated(ActorActivationDetails(
 						_levelHandler,
 						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 14, _renderer.layer() + 2),
@@ -349,24 +349,37 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		if (found) {
+			bool willFaceLeft = (foundPos.X < _pos.X);
+
+			float xOffset, yOffset, speedMult;
+			if (_levelHandler->Difficulty() == GameDifficulty::Easy) {
+				xOffset = 100.0f;
+				yOffset = 70.0f;
+				speedMult = 0.01f;
+			} else {
+				xOffset = 70.0f;
+				yOffset = 30.0f;
+				speedMult = 0.005f;
+			}
+
 			_targetPos = foundPos;
-			_targetPos.Y -= 70.0f;
+			_targetPos.X += (willFaceLeft ? xOffset : -xOffset);
+			_targetPos.Y -= yOffset;
 
-			_anglePhase += timeMult * 0.04f;
-
-			Vector2f speed = ((_targetPos - _lastPos) / 70.0f + _lastSpeed * 1.4f) / 2.4f;
+			Vector2f speed = ((_targetPos - _lastPos) * speedMult + _lastSpeed * 1.4f) / 2.4f;
 			_lastPos.X += speed.X;
 			_lastPos.Y += speed.Y;
 			_lastSpeed = speed;
 
-			bool willFaceLeft = (speed.X < 0.0f);
 			if (IsFacingLeft() != willFaceLeft) {
 				SetFacingLeft(willFaceLeft);
 				SetTransition(DemonTurn, false);
 			}
-
-			MoveInstantly(_lastPos + Vector2f(0.0f, sinf(_anglePhase) * 30.0f), MoveType::Absolute | MoveType::Force);
 		}
+
+		_anglePhase += timeMult * 0.02f;
+
+		MoveInstantly(_lastPos + Vector2f(0.0f, sinf(_anglePhase) * 22.0f), MoveType::Absolute | MoveType::Force);
 	}
 
 	void Devan::Shoot()
@@ -453,13 +466,14 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> Devan::DisarmedGun::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetFacingLeft(details.Params[0] != 0);
-		_speed.X = (IsFacingLeft() ? 6.0f : -6.0f);
-		_elasticity = 0.4f;
+		_speed.X = (IsFacingLeft() ? 3.5f : -3.5f);
+		_speed.Y = -2.0f;
 
 		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
-		SetState(ActorState::CanBeFrozen | ActorState::CollideWithOtherActors, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::CollideWithTileset, false);
 
 		_health = INT32_MAX;
+		_timeLeft = 10.0f * FrameTimer::FramesPerSecond;
 
 		async_await RequestMetadataAsync("Boss/Devan"_s);
 		SetAnimation(DisarmedGunDecor);
@@ -471,12 +485,14 @@ namespace Jazz2::Actors::Bosses
 	{
 		ActorBase::OnUpdate(timeMult);
 
-		_speed.X = lerpByTime(_speed.X, 0.0f, 0.08f, timeMult);
+		_timeLeft -= timeMult;
+		if (_timeLeft <= 0.0f) {
+			DecreaseHealth(INT32_MAX);
+		}
 	}
 
 	void Devan::DisarmedGun::OnUpdateHitbox()
 	{
-		UpdateHitbox(4.0f, 4.0f);
 	}
 
 	Devan::Bullet::Bullet()
@@ -548,7 +564,7 @@ namespace Jazz2::Actors::Bosses
 	{
 		SetFacingLeft(details.Params[0] != 0);
 		_speed.X = (IsFacingLeft() ? -5.0f : 5.0f);
-		_speed.Y = 5.0f;
+		_speed.Y = 3.5f;
 		_timeLeft = 50.0f;
 
 		SetState(ActorState::IsInvulnerable, true);

@@ -43,6 +43,15 @@ namespace Death { namespace Utf8 {
 		return PrevChar(Containers::ArrayView<const char>{text, size - 1}, cursor);
 	}
 
+	/**
+		@brief Convert a UTF-32 character to UTF-8
+		@param[in]  character   UTF-32 character to convert
+		@param[out] result      Where to put the UTF-8 result
+
+		Returns length of the encoding (1, 2, 3 or 4). If @p character is outside of the UTF-32 range, returns @cpp 0 @ce.
+	*/
+	std::size_t FromCodePoint(char32_t character, Containers::StaticArrayView<4, char> result);
+
 #if defined(DEATH_TARGET_WINDOWS)
 
 	/**

@@ -8,6 +8,8 @@
 #include <cstring>	// for memset() and memcpy()
 #include <cmath>	// for fabsf()
 
+#include <Utf8.h>
+
 #if defined(WITH_IMGUI)
 #	include "ImGuiGlfwInput.h"
 #endif
@@ -345,10 +347,11 @@ namespace nCine
 			return;
 		}
 
-		// TODO: text input
 		// Current GLFW version does not return an UTF-8 string (https://github.com/glfw/glfw/issues/837)
-		//nctl::Utf8::codePointToUtf8(c, textInputEvent_.text, nullptr);
-		//inputEventHandler_->OnTextInput(textInputEvent_);
+		textInputEvent_.length = Utf8::FromCodePoint(c, textInputEvent_.text);
+		if (textInputEvent_.length > 0) {
+			inputEventHandler_->OnTextInput(textInputEvent_);
+		}
 	}
 
 	void GlfwInputManager::cursorPosCallback(GLFWwindow* window, double x, double y)

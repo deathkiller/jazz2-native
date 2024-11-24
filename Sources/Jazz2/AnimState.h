@@ -58,8 +58,8 @@ namespace Jazz2
 		TransitionPoleVSlow = 0x4000000E,
 		TransitionDeath = 0x4000000F,
 		TransitionTurn = 0x40000010,
-		TransitionWithdraw = 0x40000011,
-		TransitionWithdrawEnd = 0x40000012,
+		//0x40000011
+		//0x40000012
 		TransitionWarpIn = 0x40000013,
 		TransitionWarpOut = 0x40000014,
 		//0x40000015

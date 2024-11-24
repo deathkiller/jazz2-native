@@ -188,6 +188,14 @@ namespace Jazz2::UI::Menu
 		_pressedKeys.reset((std::size_t)event.sym);
 	}
 
+	void MainMenu::OnTextInput(const TextInputEvent& event)
+	{
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			lastSection->OnTextInput(event);
+		}
+	}
+
 	void MainMenu::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		if (!_sections.empty()) {

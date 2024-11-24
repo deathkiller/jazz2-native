@@ -436,8 +436,9 @@ namespace Jazz2::UI::Menu
 					firstPlayer.Lives = previousEpisodeEnd->Lives;
 				}
 				firstPlayer.Score = previousEpisodeEnd->Score;
-				std::memcpy(firstPlayer.Ammo, previousEpisodeEnd->Ammo, sizeof(levelInit.PlayerCarryOvers[0].Ammo));
-				std::memcpy(firstPlayer.WeaponUpgrades, previousEpisodeEnd->WeaponUpgrades, sizeof(levelInit.PlayerCarryOvers[0].WeaponUpgrades));
+				std::memcpy(firstPlayer.Gems, previousEpisodeEnd->Gems, sizeof(firstPlayer.Gems));
+				std::memcpy(firstPlayer.Ammo, previousEpisodeEnd->Ammo, sizeof(firstPlayer.Ammo));
+				std::memcpy(firstPlayer.WeaponUpgrades, previousEpisodeEnd->WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
 			} else {
 				// Set CheatsUsed to true if the previous episode is not completed
 				levelInit.CheatsUsed = true;

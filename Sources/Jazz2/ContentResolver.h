@@ -45,6 +45,7 @@ namespace Jazz2
 		static constexpr std::uint8_t ConfigFile = 4;
 		static constexpr std::uint8_t StateFile = 5;
 		static constexpr std::uint8_t SfxListFile = 6;
+		static constexpr std::uint8_t HighscoresFile = 7;
 
 		static constexpr std::int32_t PaletteCount = 256;
 		static constexpr std::int32_t ColorsPerPalette = 256;

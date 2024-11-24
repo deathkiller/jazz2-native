@@ -289,7 +289,7 @@ namespace Jazz2
 						String episodeName = String(NoInit, nameLength);
 						uc.Read(episodeName.data(), nameLength);
 
-						EpisodeContinuationState state = { };
+						EpisodeContinuationState state = {};
 						if (episodeEndSize == sizeof(EpisodeContinuationState)) {
 							uc.Read(&state, sizeof(EpisodeContinuationState));
 						} else {
@@ -311,7 +311,7 @@ namespace Jazz2
 						uc.Read(episodeName.data(), nameLength);
 
 						if (episodeContinueSize == sizeof(EpisodeContinuationState)) {
-							EpisodeContinuationStateWithLevel stateWithLevel = { };
+							EpisodeContinuationStateWithLevel stateWithLevel = {};
 							nameLength = uc.ReadValue<std::uint8_t>();
 							stateWithLevel.LevelName = String(NoInit, nameLength);
 							uc.Read(stateWithLevel.LevelName.data(), nameLength);

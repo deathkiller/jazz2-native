@@ -23,6 +23,7 @@ namespace Jazz2
 		std::uint8_t Lives;
 		std::uint8_t FoodEaten;
 		std::int32_t Score;
+		std::int32_t Gems[4];
 		std::uint16_t Ammo[WeaponCount];
 		std::uint8_t WeaponUpgrades[WeaponCount];
 	};
@@ -127,6 +128,25 @@ namespace Jazz2
 			LastEpisodeName = std::move(move.LastEpisodeName);
 
 			std::memcpy(PlayerCarryOvers, move.PlayerCarryOvers, sizeof(PlayerCarryOvers));
+		}
+
+		std::int32_t GetPlayerCount(const PlayerCarryOver** firstPlayer = nullptr) const
+		{
+			if (firstPlayer != nullptr) {
+				*firstPlayer = nullptr;
+			}
+
+			std::int32_t playerCount = 0;
+			for (std::int32_t i = playerCount; i < MaxPlayerCount; i++) {
+				if (PlayerCarryOvers[i].Type != PlayerType::None) {
+					playerCount++;
+					if (firstPlayer != nullptr && *firstPlayer == nullptr) {
+						*firstPlayer = &PlayerCarryOvers[i];
+					}
+				}
+			}
+
+			return playerCount;
 		}
 	};
 }

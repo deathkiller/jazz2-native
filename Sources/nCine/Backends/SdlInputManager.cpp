@@ -138,7 +138,7 @@ namespace nCine
 				keyboardEvent_.mod = SdlKeys::keyModMaskToEnumMask(event.key.keysym.mod);
 				break;
 			case SDL_TEXTINPUT: {
-				copyStringFirst(textInputEvent_.text, event.text.text, 4);
+				textInputEvent_.length = copyStringFirst(textInputEvent_.text, event.text.text, 4);
 				break;
 			}
 			case SDL_MOUSEBUTTONDOWN:

@@ -239,6 +239,7 @@ namespace Jazz2::Actors
 		float _shieldSpawnTime;
 		std::int32_t _gems[4];
 		std::int32_t _gemsCheckpoint[4];
+		std::int32_t _gemsTotal[4];
 		std::int32_t _gemsPitch;
 		float _gemsTimer;
 		float _bonusWarpTimer;

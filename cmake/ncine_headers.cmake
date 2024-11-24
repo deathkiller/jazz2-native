@@ -360,6 +360,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayEnhancementsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GraphicsOptionsSection.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/HighscoresSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/IMenuContainer.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ImportSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.h
