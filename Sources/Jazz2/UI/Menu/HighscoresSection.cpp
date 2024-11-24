@@ -505,7 +505,7 @@ namespace Jazz2::UI::Menu
 				AccountProfileBase profileBase;
 				AccountUserData userData;
 				accountProfileGet(&profile, &userData, &profileBase);
-				String userName = profileBase.name;
+				String userName = profileBase.nickname;
 				accountProfileClose(&profile);
 			}
 			accountExit();
