@@ -59,9 +59,6 @@ namespace Jazz2::UI::Menu
 		if (waitingForInput) {
 			UpdatePressedActions();
 
-			auto& input = theApplication().GetInputManager();
-			auto& keyState = input.keyboardState();
-
 			if (_root->ActionHit(PlayerActions::Menu)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
@@ -312,15 +309,15 @@ namespace Jazz2::UI::Menu
 		auto& baseGame = _series[(std::int32_t)SeriesName::BaseGame];
 		if (baseGame.Items.empty()) {
 			baseGame.Items.emplace_back(HighscoreItem { "Dan"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 16, 600000, { 400, 40, 10, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 12, 500000, { 360, 35, 8, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 10, 400000, { 320, 30, 8, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 12, 500000, { 300, 35, 8, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 10, 400000, { 260, 30, 8, 0 } });
 			baseGame.Items.emplace_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 4, 300000, { 200, 25, 6, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 200000, { 160, 20, 5, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "William"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 100000, { 120, 16, 5, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 50000, { 80, 12, 4, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 40000, { 60, 10, 4, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "James"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 30000, { 40, 8, 2, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Oliver"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 20000, { 20, 4, 2, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 200000, { 120, 20, 5, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "William"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 100000, { 80, 16, 5, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 50000, { 40, 10, 4, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 40000, { 20, 8, 4, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "James"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 30000, { 12, 4, 2, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Oliver"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 20000, { 6, 2, 0, 0 } });
 		}
 
 		auto& sharewareDemo = _series[(std::int32_t)SeriesName::SharewareDemo];
@@ -332,9 +329,9 @@ namespace Jazz2::UI::Menu
 			sharewareDemo.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 30000, { 30, 1, 0, 0 } });
 			sharewareDemo.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 25, 1, 0, 0 } });
 			sharewareDemo.Items.emplace_back(HighscoreItem { "Matthew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 20000, { 20, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 15000, { 15, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Violet"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 10000, { 10, 0, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Patrick"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 5000, { 5, 0, 0, 0 } });
+			sharewareDemo.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 15000, { 12, 1, 0, 0 } });
+			sharewareDemo.Items.emplace_back(HighscoreItem { "Violet"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 10000, { 6, 0, 0, 0 } });
+			sharewareDemo.Items.emplace_back(HighscoreItem { "Patrick"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 5000, { 2, 0, 0, 0 } });
 		}
 
 		auto& theSecretFiles = _series[(std::int32_t)SeriesName::TheSecretFiles];
@@ -345,10 +342,10 @@ namespace Jazz2::UI::Menu
 			theSecretFiles.Items.emplace_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 2, 250000, { 180, 35, 10, 0 } });
 			theSecretFiles.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 200000, { 140, 30, 8, 0 } });
 			theSecretFiles.Items.emplace_back(HighscoreItem { "Christopher"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 150000, { 100, 25, 6, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 100000, { 80, 20, 4, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Victoria"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 50000, { 40, 12, 2, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 25000, { 20, 8, 0, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Alexander"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 10000, { 10, 2, 0, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 100000, { 60, 18, 4, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Victoria"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 50000, { 30, 12, 2, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 25000, { 16, 6, 0, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Alexander"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 10000, { 8, 2, 0, 0 } });
 		}
 
 	}
@@ -533,7 +530,11 @@ namespace Jazz2::UI::Menu
 #elif defined(DEATH_TARGET_UNIX)
 		struct passwd* pw = ::getpwuid(::getuid());
 		if (pw != nullptr) {
-			StringView userName = pw->pw_name;
+			StringView userName = pw->pw_gecos;	// Display name
+			if (!userName.empty()) {
+				return userName;
+			}
+			userName = pw->pw_name;	// Plain name
 			if (!userName.empty()) {
 				return userName;
 			}

@@ -9,6 +9,9 @@
 #include <android/sensor.h>
 #include <cstring> // for memset()
 
+#include <Utf8.h>
+
+using namespace Death;
 using namespace Death::Containers::Literals;
 
 namespace nCine
