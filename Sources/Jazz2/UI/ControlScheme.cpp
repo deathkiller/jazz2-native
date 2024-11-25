@@ -190,10 +190,12 @@ namespace Jazz2::UI
 		return result;
 	}
 
-	std::uint32_t ControlScheme::FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool allowGamepads)
+	std::uint32_t ControlScheme::FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags)
 	{
 		std::uint32_t pressedActions = 0;
 		std::size_t joyStateCount = joyStates.size();
+		bool allowGamepads = (flags & NavigationFlags::AllowGamepads) == NavigationFlags::AllowGamepads;
+		bool allowKeyboard = (flags & NavigationFlags::AllowKeyboard) == NavigationFlags::AllowKeyboard;
 
 		for (std::int32_t j = 0; j < MaxSupportedPlayers; j++) {
 			const auto* mappings = &_mappings[j * (std::int32_t)PlayerActions::Count];
@@ -239,7 +241,7 @@ namespace Jazz2::UI
 								}
 							}
 						}
-					} else {
+					} else if (allowKeyboard) {
 						// Keyboard
 						if (pressedKeys[target.Data]) {
 							pressedActions |= (1 << (std::uint32_t)i);
@@ -255,21 +257,23 @@ namespace Jazz2::UI
 			pressedActions |= (1 << (std::uint32_t)PlayerActions::Fire);
 		}
 
-		// Also allow Return (Enter) as confirm key
-		if (pressedKeys[(std::uint32_t)KeySym::RETURN] || pressedKeys[(std::uint32_t)KeySym::KP_ENTER]) {
-			pressedActions |= (1 << (std::int32_t)PlayerActions::Fire);
+		if (allowKeyboard) {
+			// Also allow Return (Enter) as confirm key
+			if (pressedKeys[(std::uint32_t)KeySym::RETURN] || pressedKeys[(std::uint32_t)KeySym::KP_ENTER]) {
+				pressedActions |= (1 << (std::int32_t)PlayerActions::Fire);
+			}
+			// Use ChangeWeapon action as delete key
+			if (pressedKeys[(std::uint32_t)KeySym::Delete]) {
+				pressedActions |= (1 << (std::int32_t)PlayerActions::ChangeWeapon);
+			}
 		}
+
 #if defined(DEATH_TARGET_ANDROID)
 		// Allow native Android back button as menu key
 		if (PreferencesCache::UseNativeBackButton && pressedKeys[(std::uint32_t)KeySym::BACK]) {
 			pressedActions |= (1 << (std::int32_t)PlayerActions::Menu);
 		}
 #endif
-		// Use ChangeWeapon action as delete key
-		if (pressedKeys[(std::uint32_t)KeySym::Delete]) {
-			pressedActions |= (1 << (std::int32_t)PlayerActions::ChangeWeapon);
-		}
-
 		return pressedActions;
 	}
 

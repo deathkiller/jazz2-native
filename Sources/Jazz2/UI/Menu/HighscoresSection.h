@@ -40,6 +40,7 @@ namespace Jazz2::UI::Menu
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnTextInput(const nCine::TextInputEvent& event) override;
+		NavigationFlags GetNavigationFlags() const override;
 
 		static std::int32_t TryGetSeriesIndex(StringView episodeName, bool playerDied);
 
@@ -57,7 +58,8 @@ namespace Jazz2::UI::Menu
 			Right,
 			Backspace,
 			Delete,
-			Enter
+			Enter,
+			Escape
 		};
 
 		static constexpr std::int32_t MaxItems = 10;
@@ -75,6 +77,7 @@ namespace Jazz2::UI::Menu
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 		void OnHandleInput() override;
+		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 		void OnExecuteSelected() override;
 		void OnBackPressed() override;
 

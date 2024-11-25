@@ -16,9 +16,8 @@ namespace Jazz2::UI::Menu
 		void OnDraw(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
-		bool IsGamepadNavigationEnabled() const override
-		{
-			return false;
+		NavigationFlags GetNavigationFlags() const override {
+			return NavigationFlags::AllowKeyboard;
 		}
 
 	private:

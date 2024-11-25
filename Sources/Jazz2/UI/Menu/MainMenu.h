@@ -188,6 +188,7 @@ namespace Jazz2::UI::Menu
 		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;
 		BitArray _pressedKeys;
 		std::uint32_t _pressedActions;
+		NavigationFlags _lastNavigationFlags;
 		float _touchButtonsTimer;
 
 		void PlayMenuMusic();

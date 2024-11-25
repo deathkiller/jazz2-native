@@ -600,7 +600,8 @@ void GameEventHandler::ResumeSavedState()
 		LOGI("Resuming saved state...");
 
 		auto configDir = PreferencesCache::GetDirectory();
-		if (auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read)) {
+		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read);
+		if (*s) {
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValue<std::uint16_t>();
@@ -635,7 +636,8 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
 		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
 			auto configDir = PreferencesCache::GetDirectory();
-			if (auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write)) {
+			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
+			if (*s) {
 				s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 				s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
 				s->WriteValue<std::uint16_t>(StateVersion);

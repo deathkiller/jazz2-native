@@ -16,7 +16,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	InGameMenu::InGameMenu(LevelHandler* root)
-		: _root(root), _pressedActions(0), _touchButtonsTimer(0.0f)
+		: _root(root), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll), _touchButtonsTimer(0.0f)
 	{
 		_canvasBackground = std::make_unique<MenuBackgroundCanvas>(this);
 		_canvasClipped = std::make_unique<MenuClippedCanvas>(this);
@@ -498,12 +498,17 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		bool allowGamepads = true;
+		NavigationFlags flags = NavigationFlags::AllowAll;
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
-			allowGamepads = lastSection->IsGamepadNavigationEnabled();
+			flags = lastSection->GetNavigationFlags();
 		}
 
-		_pressedActions |= ControlScheme::FetchNativation(_root->_pressedKeys, ArrayView(joyStates, joyStatesCount), allowGamepads);
+		_pressedActions |= ControlScheme::FetchNativation(_root->_pressedKeys, ArrayView(joyStates, joyStatesCount), flags);
+		if (_lastNavigationFlags != flags) {
+			_lastNavigationFlags = flags;
+			_pressedActions &= 0xffff;
+			_pressedActions |= (_pressedActions << 16);
+		}
 	}
 }

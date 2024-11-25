@@ -124,6 +124,7 @@ namespace Jazz2::UI::Menu
 
 		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;
 		std::uint32_t _pressedActions;
+		NavigationFlags _lastNavigationFlags;
 		float _touchButtonsTimer;
 
 		void UpdateContentBounds(Vector2i viewSize);
