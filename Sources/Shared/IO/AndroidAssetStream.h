@@ -58,11 +58,11 @@ namespace Death { namespace IO {
 		static Containers::StringView TryGetAssetPath(const Containers::StringView path);
 
 		/** @brief Returns path to the application's internal data directory */
-		static const char* GetInternalDataPath() const;
+		static const char* GetInternalDataPath();
 		/** @brief Returns path to the application's external (removable/mountable) data directory */
-		static const char* GetExternalDataPath() const;
+		static const char* GetExternalDataPath();
 		/** @brief Returns path to the directory containing the application's OBB files */
-		static const char* GetObbPath() const;
+		static const char* GetObbPath();
 
 		/** @brief Checks if an asset path exists as a file or as a directory and can be opened */
 		static bool TryOpen(const Containers::StringView path);
@@ -79,7 +79,7 @@ namespace Death { namespace IO {
 		static const char* GetNextFileName(AAssetDir* assetDir);
 
 	private:
-		static GameActivity* _nativeActivity;
+		static ANativeActivity* _nativeActivity;
 
 		Containers::String _path;
 		std::int64_t _size;

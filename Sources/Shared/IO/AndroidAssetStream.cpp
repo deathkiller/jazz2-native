@@ -9,7 +9,7 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	GameActivity* AndroidAssetStream::_nativeActivity = nullptr;
+	ANativeActivity* AndroidAssetStream::_nativeActivity = nullptr;
 
 	AndroidAssetStream::AndroidAssetStream(const Containers::StringView path, FileAccess mode)
 		: AndroidAssetStream(Containers::String{path}, mode)
@@ -193,17 +193,17 @@ namespace Death { namespace IO {
 		return {};
 	}
 
-	const char* AndroidAssetStream::GetInternalDataPath() const
+	const char* AndroidAssetStream::GetInternalDataPath()
 	{
 		return _nativeActivity->internalDataPath;
 	}
 
-	const char* AndroidAssetStream::GetExternalDataPath() const
+	const char* AndroidAssetStream::GetExternalDataPath()
 	{
 		return _nativeActivity->externalDataPath;
 	}
 
-	const char* AndroidAssetStream::GetObbPath() const
+	const char* AndroidAssetStream::GetObbPath()
 	{
 		return _nativeActivity->obbPath;
 	}
