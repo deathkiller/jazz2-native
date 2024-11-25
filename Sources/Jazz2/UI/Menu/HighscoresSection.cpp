@@ -23,7 +23,6 @@ namespace Jazz2::UI::Menu
 		DeserializeFromFile();
 		FillDefaultsIfEmpty();
 		RefreshList();
-		_waitForInput = true;
 	}
 
 	HighscoresSection::HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, const PlayerCarryOver& itemToAdd)
