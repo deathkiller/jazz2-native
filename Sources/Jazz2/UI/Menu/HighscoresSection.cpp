@@ -61,6 +61,13 @@ namespace Jazz2::UI::Menu
 		if (waitingForInput) {
 			UpdatePressedActions();
 
+#if defined(DEATH_TARGET_ANDROID)
+			if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				auto& app = static_cast<AndroidApplication&>(theApplication());
+				app.ToggleSoftInput();
+			} else
+#endif
 			if (_root->ActionHit(PlayerActions::Menu) || _root->ActionHit(PlayerActions::Run) || IsTextActionHit(TextAction::Escape)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
@@ -75,7 +82,7 @@ namespace Jazz2::UI::Menu
 					_waitForInput = false;
 					SerializeToFile();
 				}
-			} else if (_root->ActionHit(PlayerActions::ChangeWeapon) || IsTextActionHit(TextAction::Backspace)) {
+			} else if (IsTextActionHit(TextAction::Backspace)) {
 				auto& selectedItem = _items[_selectedIndex];
 				if (_textCursor > 0) {
 					auto [_, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
@@ -306,8 +313,10 @@ namespace Jazz2::UI::Menu
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 #if defined(DEATH_TARGET_ANDROID)
 				if (x < 0.2f && y < 80.0f) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					auto& app = static_cast<AndroidApplication&>(theApplication());
 					app.ToggleSoftInput();
+					return;
 				} else
 #endif
 				if (y >= 80.0f && std::abs(x - 0.5f) > 0.35f) {
