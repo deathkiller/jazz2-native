@@ -17,8 +17,8 @@
 #include "../nCine/Base/Random.h"
 
 #if defined(DEATH_TARGET_ANDROID)
-#	include "../nCine/Backends/Android/AndroidApplication.h"
 #	include "../nCine/Backends/Android/AndroidJniHelper.h"
+#	include <IO/AndroidAssetStream.h>
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include <Environment.h>
 #endif
@@ -192,8 +192,7 @@ namespace Jazz2
 				}
 			}
 		} else {
-			auto& app = static_cast<AndroidApplication&>(theApplication());
-			StringView dataPath = app.GetExternalDataPath();
+			StringView dataPath = AndroidAssetStream::GetExternalDataPath();
 			_sourcePath = fs::CombinePath(dataPath, "Source/"_s);
 			_cachePath = fs::CombinePath(dataPath, "Cache/"_s);
 		}

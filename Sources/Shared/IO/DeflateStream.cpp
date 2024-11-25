@@ -79,8 +79,8 @@ namespace Death { namespace IO {
 
 				char buffer[4096];
 				while (offset > 0) {
-					std::int32_t size = (offset > sizeof(buffer) ? sizeof(buffer) : static_cast<std::int32_t>(offset));
-					std::int32_t bytesRead = Read(buffer, size);
+					std::int64_t size = (offset > sizeof(buffer) ? sizeof(buffer) : offset);
+					std::int64_t bytesRead = Read(buffer, size);
 					if (bytesRead <= 0) {
 						return bytesRead;
 					}
@@ -111,7 +111,7 @@ namespace Death { namespace IO {
 
 		do {
 			// ReadInternal() can read only up to DeflateStream::BufferSize bytes
-			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
 			std::int32_t bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
 			if DEATH_UNLIKELY(bytesRead < 0) {
 				return bytesRead;
@@ -207,7 +207,7 @@ namespace Death { namespace IO {
 				bytesRead = sizeof(_buffer);
 			}
 
-			bytesRead = _inputStream->Read(_buffer, bytesRead);
+			bytesRead = (std::int32_t)_inputStream->Read(_buffer, bytesRead);
 			if (bytesRead <= 0) {
 				return 0;
 			}
@@ -325,7 +325,7 @@ namespace Death { namespace IO {
 		_state = State::Initialized;
 
 		do {
-			std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? bytesToWrite : INT32_MAX);
+			std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? (std::int32_t)bytesToWrite : INT32_MAX);
 			std::int32_t bytesWritten = WriteInternal(&typedBuffer[bytesWrittenTotal], partialBytesToWrite, false);
 			if DEATH_UNLIKELY(bytesWritten < 0) {
 				return bytesWritten;

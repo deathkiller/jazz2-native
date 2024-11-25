@@ -9,8 +9,7 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	AAssetManager* AndroidAssetStream::_assetManager = nullptr;
-	const char* AndroidAssetStream::_internalDataPath = nullptr;
+	GameActivity* AndroidAssetStream::_nativeActivity = nullptr;
 
 	AndroidAssetStream::AndroidAssetStream(const Containers::StringView path, FileAccess mode)
 		: AndroidAssetStream(Containers::String{path}, mode)
@@ -180,8 +179,7 @@ namespace Death { namespace IO {
 
 	void AndroidAssetStream::InitializeAssetManager(struct android_app* state)
 	{
-		_assetManager = state->activity->assetManager;
-		_internalDataPath = state->activity->internalDataPath;
+		_nativeActivity = state->activity;
 	}
 
 	Containers::StringView AndroidAssetStream::TryGetAssetPath(const Containers::StringView path)
@@ -195,6 +193,21 @@ namespace Death { namespace IO {
 		return {};
 	}
 
+	const char* AndroidAssetStream::GetInternalDataPath() const
+	{
+		return _nativeActivity->internalDataPath;
+	}
+
+	const char* AndroidAssetStream::GetExternalDataPath() const
+	{
+		return _nativeActivity->externalDataPath;
+	}
+
+	const char* AndroidAssetStream::GetObbPath() const
+	{
+		return _nativeActivity->obbPath;
+	}
+
 	bool AndroidAssetStream::TryOpen(const Containers::StringView path)
 	{
 		return (TryOpenFile(path) || TryOpenDirectory(path));
@@ -202,7 +215,7 @@ namespace Death { namespace IO {
 
 	bool AndroidAssetStream::TryOpenFile(const Containers::StringView path)
 	{
-		AAsset* asset = AAssetManager_open(_assetManager, path.data(), AASSET_MODE_UNKNOWN);
+		AAsset* asset = AAssetManager_open(_nativeActivity->assetManager, path.data(), AASSET_MODE_UNKNOWN);
 		if (asset != nullptr) {
 			AAsset_close(asset);
 			return true;
@@ -213,7 +226,7 @@ namespace Death { namespace IO {
 
 	bool AndroidAssetStream::TryOpenDirectory(const Containers::StringView path)
 	{
-		AAssetDir* assetDir = AAssetManager_openDir(_assetManager, path.data());
+		AAssetDir* assetDir = AAssetManager_openDir(_nativeActivity->assetManager, path.data());
 		if (assetDir != nullptr) {
 			AAssetDir_close(assetDir);
 			return true;
@@ -225,7 +238,7 @@ namespace Death { namespace IO {
 	std::int64_t AndroidAssetStream::GetFileSize(const Containers::StringView path)
 	{
 		off64_t assetLength = 0;
-		AAsset* asset = AAssetManager_open(_assetManager, path.data(), AASSET_MODE_UNKNOWN);
+		AAsset* asset = AAssetManager_open(_nativeActivity->assetManager, path.data(), AASSET_MODE_UNKNOWN);
 		if (asset != nullptr) {
 			assetLength = AAsset_getLength64(asset);
 			AAsset_close(asset);
@@ -236,7 +249,7 @@ namespace Death { namespace IO {
 
 	AAssetDir* AndroidAssetStream::OpenDirectory(const Containers::StringView path)
 	{
-		return AAssetManager_openDir(_assetManager, path.data());
+		return AAssetManager_openDir(_nativeActivity->assetManager, path.data());
 	}
 
 	void AndroidAssetStream::CloseDirectory(AAssetDir* assetDir)
@@ -264,7 +277,7 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		// An asset file can only be read
-		AAsset* asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_RANDOM);
+		AAsset* asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (asset == nullptr) {
 			LOGE("Can't open file \"%s\"", _path.data());
 			return;
@@ -288,7 +301,7 @@ namespace Death { namespace IO {
 		LOGI("File \"%s\" opened", _path.data());
 #else
 		// An asset file can only be read
-		_asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_RANDOM);
+		_asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (_asset == nullptr) {
 			LOGE("Can't open file \"%s\"", _path.data());
 			return;

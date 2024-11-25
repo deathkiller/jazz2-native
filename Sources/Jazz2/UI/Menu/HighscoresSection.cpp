@@ -7,7 +7,9 @@
 #include <Containers/StringConcatenable.h>
 #include <IO/DeflateStream.h>
 
-#if defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../nCine/Backends/Android/AndroidApplication.h"
+#elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
@@ -135,6 +137,12 @@ namespace Jazz2::UI::Menu
 			Alignment::Right, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
 		_root->DrawStringShadow(">"_s, charOffset, centerX + 80.0f + 100.0f, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Right, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
+
+#if defined(DEATH_TARGET_ANDROID)
+		if (_waitForInput) {
+			_root->DrawElement(ShowKeyboard, -1, 36.0f, 30.0f, IMenuContainer::MainLayer + 200, Alignment::TopLeft, Colorf::White);
+		}
+#endif
 	}
 
 	void HighscoresSection::OnTextInput(const nCine::TextInputEvent& event)
@@ -296,6 +304,12 @@ namespace Jazz2::UI::Menu
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+#if defined(DEATH_TARGET_ANDROID)
+				if (x < 0.2f && y < 80.0f) {
+					auto& app = static_cast<AndroidApplication&>(theApplication());
+					app.ToggleSoftInput();
+				} else
+#endif
 				if (y >= 80.0f && std::abs(x - 0.5f) > 0.35f) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_animation = 0.0f;

@@ -27,13 +27,6 @@ namespace nCine
 			return packageName_.data();
 		}
 
-		/// Returns the path to the internal data directory from the native activity
-		const char* GetInternalDataPath() const;
-		/// Returns the path to the external data directory from the native activity
-		const char* GetExternalDataPath() const;
-		/// Returns the path to the OBB directory from the native activity
-		const char* GetObbPath() const;
-
 		/// Toggles the software keyboard
 		void ToggleSoftInput();
 

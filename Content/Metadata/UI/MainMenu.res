@@ -53,6 +53,10 @@
 			"Path": "UI/storage.aura",
 			"States": [ 21 ]
 		},
+		"ShowKeyboard": {
+			"Path": "UI/touch_keyboard.aura",
+			"States": [ 22 ]
+		},
 		
 		"PickupGemRed": {
 			"Path": "Pickup/gem.aura",

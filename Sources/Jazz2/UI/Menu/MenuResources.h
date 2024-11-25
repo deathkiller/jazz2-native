@@ -18,6 +18,7 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState MenuDifficultyLori = (AnimState)13;
 	static constexpr AnimState Uac = (AnimState)20;
 	static constexpr AnimState Storage = (AnimState)21;
+	static constexpr AnimState ShowKeyboard = (AnimState)22;
 
 	static constexpr AnimState PickupGemRed = (AnimState)30;
 	static constexpr AnimState PickupGemGreen = (AnimState)31;
