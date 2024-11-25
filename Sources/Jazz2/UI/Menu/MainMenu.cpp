@@ -24,7 +24,8 @@ namespace Jazz2::UI::Menu
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)
 		: _root(root), _activeCanvas(ActiveCanvas::Background), _transitionWhite(afterIntro ? 1.0f : 0.0f),
 			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
-			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0), _touchButtonsTimer(0.0f)
+			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll),
+			_touchButtonsTimer(0.0f)
 	{
 		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
@@ -605,13 +606,18 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		bool allowGamepads = true;
+		NavigationFlags flags = NavigationFlags::AllowAll;
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
-			allowGamepads = lastSection->IsGamepadNavigationEnabled();
+			flags = lastSection->GetNavigationFlags();
 		}
 
-		_pressedActions |= ControlScheme::FetchNativation(_pressedKeys, ArrayView(joyStates, joyStatesCount), allowGamepads);
+		_pressedActions |= ControlScheme::FetchNativation(_pressedKeys, ArrayView(joyStates, joyStatesCount), flags);
+		if (_lastNavigationFlags != flags) {
+			_lastNavigationFlags = flags;
+			_pressedActions &= 0xffff;
+			_pressedActions |= (_pressedActions << 16);
+		}
 	}
 
 	void MainMenu::UpdateRichPresence()

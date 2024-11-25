@@ -1030,7 +1030,8 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (__logFile = fs::Open(targetPath, FileAccess::Write)) {
+		__logFile = fs::Open(targetPath, FileAccess::Write);
+		if (*__logFile) {
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
 			__eh.Destination = __logFile.get();

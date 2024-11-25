@@ -2,6 +2,7 @@
 
 #include "IMenuContainer.h"
 #include "../Canvas.h"
+#include "../ControlScheme.h"
 #include "../../../Common.h"
 
 #include "../../../nCine/Primitives/Vector2.h"
@@ -37,8 +38,8 @@ namespace Jazz2::UI::Menu
 		virtual void OnTextInput(const nCine::TextInputEvent& event) {}
 		virtual void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) = 0;
 
-		virtual bool IsGamepadNavigationEnabled() const {
-			return true;
+		virtual NavigationFlags GetNavigationFlags() const {
+			return NavigationFlags::AllowAll;
 		}
 
 	protected:

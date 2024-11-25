@@ -23,6 +23,7 @@ namespace Jazz2::UI::Menu
 		DeserializeFromFile();
 		FillDefaultsIfEmpty();
 		RefreshList();
+		_waitForInput = true;
 	}
 
 	HighscoresSection::HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, const PlayerCarryOver& itemToAdd)
@@ -59,22 +60,21 @@ namespace Jazz2::UI::Menu
 		if (waitingForInput) {
 			UpdatePressedActions();
 
-			if (_root->ActionHit(PlayerActions::Menu)) {
+			if (_root->ActionHit(PlayerActions::Menu) || _root->ActionHit(PlayerActions::Run) || IsTextActionHit(TextAction::Escape)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				auto& selectedItem = _items[_selectedIndex];
 				if (!selectedItem.Item->PlayerName.empty()) {
-					// TODO
 					SerializeToFile();
 				}
-			} else if (IsTextActionHit(TextAction::Enter)) {			
+			} else if (_root->ActionHit(PlayerActions::Fire) || IsTextActionHit(TextAction::Enter)) {
 				auto& selectedItem = _items[_selectedIndex];
 				if (!selectedItem.Item->PlayerName.empty()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_waitForInput = false;
 					SerializeToFile();
 				}
-			} else if (IsTextActionHit(TextAction::Backspace)) {
+			} else if (_root->ActionHit(PlayerActions::ChangeWeapon) || IsTextActionHit(TextAction::Backspace)) {
 				auto& selectedItem = _items[_selectedIndex];
 				if (_textCursor > 0) {
 					auto [_, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
@@ -152,6 +152,11 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	NavigationFlags HighscoresSection::GetNavigationFlags() const
+	{
+		return (_waitForInput ? NavigationFlags::AllowGamepads : NavigationFlags::AllowAll);
+	}
+
 	std::int32_t HighscoresSection::TryGetSeriesIndex(StringView episodeName, bool playerDied)
 	{
 		if (episodeName == "monk"_s || (playerDied && (episodeName == "prince"_s || episodeName == "rescue"_s || episodeName == "flash"_s))) {
@@ -218,7 +223,7 @@ namespace Jazz2::UI::Menu
 		if (isSelected && _waitForInput) {
 			Vector2f textToCursorSize = _root->MeasureString(item.Item->PlayerName.prefix(_textCursor), 0.8f);
 			_root->DrawSolid(nameX + textToCursorSize.X + 1.0f, item.Y - 1.0f, IMenuContainer::MainLayer - 80, Alignment::Center, Vector2f(1.0f, 12.0f),
-				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 2.0f, 0.0f, 0.8f)), true);
+				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 		}
 	}
 
@@ -283,6 +288,45 @@ namespace Jazz2::UI::Menu
 				OnSelectionChanged(_items[_selectedIndex]);
 			}
 		}
+	}
+
+	void HighscoresSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	{
+		if (event.type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (pointerIndex != -1) {
+				float x = event.pointers[pointerIndex].x;
+				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				if (y >= 80.0f && std::abs(x - 0.5f) > 0.35f) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					_animation = 0.0f;
+
+					if (x < 0.5f) {
+						_selectedSeries--;
+						if (_selectedSeries < 0) {
+							_selectedSeries = (std::int32_t)SeriesName::Count - 1;
+						}
+					} else {
+						_selectedSeries++;
+						if (_selectedSeries >= (std::int32_t)SeriesName::Count) {
+							_selectedSeries = 0;
+						}
+					}
+
+					RefreshList();
+					if (!_items.empty()) {
+						if (_selectedIndex >= _items.size()) {
+							_selectedIndex = _items.size() - 1;
+						}
+						EnsureVisibleSelected();
+						OnSelectionChanged(_items[_selectedIndex]);
+					}
+					return;
+				}
+			}
+		}
+
+		ScrollableMenuSection::OnTouchEvent(event, viewSize);
 	}
 
 	void HighscoresSection::OnExecuteSelected()
@@ -353,7 +397,8 @@ namespace Jazz2::UI::Menu
 	void HighscoresSection::DeserializeFromFile()
 	{
 		auto configDir = PreferencesCache::GetDirectory();
-		if (auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Read)) {
+		auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Read);
+		if (*s) {
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValue<std::uint16_t>();
@@ -396,7 +441,8 @@ namespace Jazz2::UI::Menu
 	void HighscoresSection::SerializeToFile()
 	{
 		auto configDir = PreferencesCache::GetDirectory();
-		if (auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Write)) {
+		auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Write);
+		if (*s) {
 			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 			s->WriteValue<std::uint8_t>(ContentResolver::HighscoresFile);
 			s->WriteValue<std::uint16_t>(FileVersion);
@@ -476,7 +522,7 @@ namespace Jazz2::UI::Menu
 
 		_pressedActions = (_pressedActions << 16);
 
-		const KeySym KeyToTextAction[] = { KeySym::LEFT, KeySym::RIGHT, KeySym::BACKSPACE, KeySym::Delete, KeySym::RETURN };
+		const KeySym KeyToTextAction[] = { KeySym::LEFT, KeySym::RIGHT, KeySym::BACKSPACE, KeySym::Delete, KeySym::RETURN, KeySym::ESCAPE };
 
 		for (std::int32_t i = 0; i < (std::int32_t)arraySize(KeyToTextAction); i++) {
 			if (keyState.isKeyDown(KeyToTextAction[i])) {

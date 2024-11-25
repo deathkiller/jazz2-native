@@ -18,6 +18,16 @@ namespace Jazz2::UI
 		class RemapControlsSection;
 	}
 
+	enum class NavigationFlags
+	{
+		None = 0,
+		AllowKeyboard = 0x01,
+		AllowGamepads = 0x02,
+		AllowAll = AllowKeyboard | AllowGamepads
+	};
+
+	DEFINE_ENUM_OPERATORS(NavigationFlags);
+
 	struct MappingTarget
 	{
 		std::uint32_t Data;
@@ -52,7 +62,7 @@ namespace Jazz2::UI
 		static void Reset();
 
 		static ProcessedInput FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons = true);
-		static std::uint32_t FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool allowGamepads = true);
+		static std::uint32_t FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags = NavigationFlags::AllowAll);
 
 		static ArrayView<ControlSchemeMapping> GetAllMappings();
 		static ArrayView<ControlSchemeMapping> GetMappings(std::int32_t playerIdx);
