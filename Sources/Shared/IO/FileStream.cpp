@@ -114,7 +114,7 @@ namespace Death { namespace IO {
 			} else if (oldPos - _readPos < pos && pos < oldPos + _readLength - _readPos) {
 				std::int64_t diff = (pos - oldPos);
 				std::memcpy(&_buffer[0], &_buffer[_readPos + diff], _readLength - (_readPos + diff));
-				_readLength -= (_readPos + diff);
+				_readLength -= (std::int32_t)(_readPos + diff);
 				_readPos = 0;
 				if (_readLength > 0) {
 					SeekInternal(_readLength, SeekOrigin::Current);
@@ -152,7 +152,7 @@ namespace Death { namespace IO {
 				_readLength = 0;
 
 				do {
-					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
 					std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
 					if DEATH_UNLIKELY(bytesRead < 0) {
 						return bytesRead;
@@ -173,7 +173,7 @@ namespace Death { namespace IO {
 			}
 			isBlocked = (n < _bufferLength);
 			_readPos = 0;
-			_readLength = n;
+			_readLength = (std::int32_t)n;
 		}
 
 		if (bytesToRead < n) {
@@ -181,7 +181,7 @@ namespace Death { namespace IO {
 		}
 
 		std::memcpy(typedBuffer, &_buffer[_readPos], n);
-		_readPos += n;
+		_readPos += (std::int32_t)n;
 
 		bytesToRead -= n;
 		if (bytesToRead > 0 && !isBlocked) {
@@ -190,7 +190,7 @@ namespace Death { namespace IO {
 			_readLength = 0;
 
 			do {
-				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
+				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
 				std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
 				if DEATH_UNLIKELY(bytesRead < 0) {
 					return bytesRead;
@@ -228,7 +228,7 @@ namespace Death { namespace IO {
 			if (bufferBytesLeft > 0) {
 				if (bytesToWrite <= bufferBytesLeft) {
 					std::memcpy(&_buffer[_writePos], typedBuffer, bytesToWrite);
-					_writePos += bytesToWrite;
+					_writePos += (std::int32_t)bytesToWrite;
 					return bytesToWrite;
 				} else {
 					std::memcpy(&_buffer[_writePos], typedBuffer, bufferBytesLeft);
@@ -254,7 +254,7 @@ namespace Death { namespace IO {
 				bytesToWrite -= moreBytesRead;
 			}
 			if DEATH_LIKELY(bytesToWrite > 0) {
-				std::int32_t moreBytesRead = WriteInternal(typedBuffer, bytesToWrite);
+				std::int32_t moreBytesRead = WriteInternal(typedBuffer, (std::int32_t)bytesToWrite);
 				bytesWrittenTotal += moreBytesRead;
 			}
 			return bytesWrittenTotal;
@@ -263,7 +263,7 @@ namespace Death { namespace IO {
 		// Copy remaining bytes into buffer, it will be written to the file later
 		InitializeBuffer();
 		std::memcpy(&_buffer[_writePos], typedBuffer, bytesToWrite);
-		_writePos = bytesToWrite;
+		_writePos = (std::int32_t)bytesToWrite;
 		bytesWrittenTotal += bytesToWrite;
 		return bytesWrittenTotal;
 	}
@@ -336,9 +336,7 @@ namespace Death { namespace IO {
 	void FileStream::Open(FileAccess mode)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		DWORD desireAccess, creationDisposition;
-		const char* modeInternal;
-		DWORD shareMode;
+		DWORD desireAccess, creationDisposition, shareMode;
 		switch (mode & ~FileAccess::Exclusive) {
 			case FileAccess::Read:
 				desireAccess = GENERIC_READ;

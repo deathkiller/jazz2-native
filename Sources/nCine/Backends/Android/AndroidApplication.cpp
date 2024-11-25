@@ -189,21 +189,6 @@ namespace nCine
 		}
 	}
 
-	const char* AndroidApplication::GetInternalDataPath() const
-	{
-		return state_->activity->internalDataPath;
-	}
-
-	const char* AndroidApplication::GetExternalDataPath() const
-	{
-		return state_->activity->externalDataPath;
-	}
-
-	const char* AndroidApplication::GetObbPath() const
-	{
-		return state_->activity->obbPath;
-	}
-
 	void AndroidApplication::ToggleSoftInput()
 	{
 		if (isInitialized_) {

@@ -19,12 +19,12 @@ namespace Death { namespace IO {
 		std::int64_t bytesWrittenTotal = 0;
 
 		while (true) {
-			std::int32_t bytesRead = Read(buffer, BufferSize);
+			std::int64_t bytesRead = Read(buffer, BufferSize);
 			if (bytesRead <= 0) {
 				break;
 			}
 
-			std::int32_t bytesWritten = targetStream.Write(buffer, bytesRead);
+			std::int64_t bytesWritten = targetStream.Write(buffer, bytesRead);
 			bytesWrittenTotal += bytesWritten;
 			if (bytesWritten < bytesRead) {
 				break;
