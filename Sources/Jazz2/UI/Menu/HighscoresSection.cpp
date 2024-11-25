@@ -8,7 +8,7 @@
 #include <IO/DeflateStream.h>
 
 #if defined(DEATH_TARGET_ANDROID)
-#	include "../../nCine/Backends/Android/AndroidApplication.h"
+#	include "../../../nCine/Backends/Android/AndroidApplication.h"
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
 #elif defined(DEATH_TARGET_UNIX)
