@@ -99,7 +99,8 @@ if(NCINE_VERSION_FROM_GIT)
 				# The head ref or source branch of the pull request in a workflow run on GitHub
 				set(_pullRequestHeadRef "$ENV{GITHUB_HEAD_REF}")
 				if(_pullRequestHeadRef AND NOT ${_pullRequestHeadRef} STREQUAL "master" AND NOT ${_pullRequestHeadRef} STREQUAL "main")
-					set(NCINE_VERSION_PATCH "${NCINE_VERSION_PATCH}|${_pullRequestHeadRef}")
+					string(REPLACE "/" "_" _pullRequestHeadRef ${_pullRequestHeadRef})
+					set(NCINE_VERSION_PATCH "${NCINE_VERSION_PATCH}-${_pullRequestHeadRef}")
 				endif()
 			else()
 				# The last commit is tagged, use it as version
