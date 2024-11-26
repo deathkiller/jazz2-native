@@ -25,12 +25,7 @@ extern "C"
 
 		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
 		if (androidApp.IsInitialized()) {
-			JNIEnv* oldEnv = nc::AndroidJniHelper::jniEnv;
-			nc::AndroidJniHelper::jniEnv = env;
-
 			nc::AndroidInputManager::dispatchKeyEventMultipleFromJni(chars);
-
-			nc::AndroidJniHelper::jniEnv = oldEnv;
 		}
 	}
 }

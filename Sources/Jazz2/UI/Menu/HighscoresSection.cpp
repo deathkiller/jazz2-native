@@ -116,7 +116,7 @@ namespace Jazz2::UI::Menu
 
 #if defined(DEATH_TARGET_ANDROID)
 		if (_waitForInput) {
-			_root->DrawElement(ShowKeyboard, -1, 36.0f, 30.0f, IMenuContainer::MainLayer + 200, Alignment::TopLeft, Colorf::White);
+			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer + 200, Alignment::TopLeft, Colorf::White);
 		}
 #endif
 	}

@@ -24,8 +24,11 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
-		if(event.getAction() == KeyEvent.ACTION_MULTIPLE) {
+		System.err.println("dispatchKeyEvent: " + event.getAction());
+		if (event.getAction() == KeyEvent.ACTION_MULTIPLE) {
+			System.err.println("dispatchKeyEvent MULTIPLE START");
 			nativeKeyEventMultiple(event.getCharacters());
+			System.err.println("dispatchKeyEvent MULTIPLE END: " + event.getCharacters());
 		}
 
 		return super.dispatchKeyEvent(event);
