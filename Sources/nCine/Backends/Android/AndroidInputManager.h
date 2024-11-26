@@ -131,6 +131,8 @@ namespace nCine
 	/// The class for parsing and dispatching Android input events
 	class AndroidInputManager : public IInputManager
 	{
+		friend class AndroidApplication;
+
 	public:
 		explicit AndroidInputManager(struct android_app* state);
 		~AndroidInputManager() override;
@@ -222,9 +224,6 @@ namespace nCine
 		static int findJoyId(int deviceId);
 		static bool isDeviceConnected(int deviceId);
 		static void deviceInfo(int deviceId, int joyId);
-
-		/// To update joystick connections in `AndroidApplication::androidMain()`
-		friend class AndroidApplication;
 	};
 
 }

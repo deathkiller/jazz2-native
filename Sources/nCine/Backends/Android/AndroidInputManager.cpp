@@ -419,7 +419,7 @@ namespace nCine
 		}
 
 		keyboardEvent_.scancode = AKeyEvent_getScanCode(event);
-		keyboardEvent_.sym = AndroidKeys::keySymValueToEnum(AKeyEvent_getKeyCode(event));
+		keyboardEvent_.sym = AndroidKeys::keySymValueToEnum(keyCode);
 		keyboardEvent_.mod = AndroidKeys::keyModMaskToEnumMask(AKeyEvent_getMetaState(event));
 
 		const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
@@ -428,15 +428,18 @@ namespace nCine
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 1;
 				}
+				LOGW("ANDROIDKEY DOWN: %i | %i | %i", keyCode, keyboardEvent_.sym, keyboardEvent_.mod);
 				inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_UP:
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 0;
 				}
+				LOGW("ANDROIDKEY DOWN: %i | %i | %i", keyCode, keyboardEvent_.sym, keyboardEvent_.mod);
 				inputEventHandler_->OnKeyReleased(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
+				LOGW("ANDROIDKEY MULTIPLE: %i | %i | %i", keyCode, keyboardEvent_.sym, keyboardEvent_.mod);
 				inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				break;
 		}
@@ -450,6 +453,10 @@ namespace nCine
 				if (textInputEvent_.length > 0) {
 					inputEventHandler_->OnTextInput(textInputEvent_);
 				}
+				LOGW("ANDROIDKEY TEXT 1: %i | %i | %s", keyCode, unicodeKey, String(textInputEvent_.text, textInputEvent_.length).data());
+			} else {
+				const int unicodeKey = keyEvent.getUnicodeChar(AKeyEvent_getMetaState(event));
+				LOGW("ANDROIDKEY TEXT 2: %i | %i", keyCode, unicodeKey);
 			}
 		}
 
