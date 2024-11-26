@@ -292,7 +292,7 @@ namespace nCine
 		char buffer[PROP_VALUE_MAX];
 		int length = __system_property_get("ro.product.brand", buffer);
 		if (length <= 0) {
-			return { };
+			return {};
 		}
 		return String(buffer);
 	}
@@ -302,7 +302,7 @@ namespace nCine
 		char buffer[PROP_VALUE_MAX];
 		int length = __system_property_get("ro.product.manufacturer", buffer);
 		if (length <= 0) {
-			return { };
+			return {};
 		}
 		return String(buffer);
 	}
@@ -312,7 +312,7 @@ namespace nCine
 		char buffer[PROP_VALUE_MAX];
 		int length = __system_property_get("ro.product.model", buffer);
 		if (length <= 0) {
-			return { };
+			return {};
 		}
 		return String(buffer);
 	}
@@ -342,7 +342,7 @@ namespace nCine
 	int AndroidJniClass_InputDevice::getDeviceIds(int* destination, int maxSize)
 	{
 		jintArray arrDeviceIds = static_cast<jintArray>(AndroidJniHelper::jniEnv->CallStaticObjectMethod(javaClass_, midGetDeviceIds_));
-		const jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrDeviceIds);
+		int length = (int)AndroidJniHelper::jniEnv->GetArrayLength(arrDeviceIds);
 
 		jint* intsDeviceIds = AndroidJniHelper::jniEnv->GetIntArrayElements(arrDeviceIds, nullptr);
 		for (int i = 0; i < length && i < maxSize; i++) {
@@ -351,41 +351,42 @@ namespace nCine
 		AndroidJniHelper::jniEnv->ReleaseIntArrayElements(arrDeviceIds, intsDeviceIds, 0);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrDeviceIds);
 
-		return int(length);
+		return length;
 	}
 
 	int AndroidJniClass_InputDevice::getName(char* destination, int maxStringSize) const
 	{
 		jstring strDeviceName = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetName_));
-		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strDeviceName);
+		int length;
 
 		if (strDeviceName) {
 			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceName, 0);
-			copyStringFirst(destination, maxStringSize, deviceName);
-			destination[maxStringSize - 1] = '\0';
+			length = copyStringFirst(destination, maxStringSize, deviceName);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceName, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceName);
 		} else {
-			copyStringFirst(destination, maxStringSize, static_cast<const char*>("Unknown"));
+			length = copyStringFirst(destination, maxStringSize, "Unknown");
 		}
-		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
+
+		return length;
 	}
 
 	int AndroidJniClass_InputDevice::getDescriptor(char* destination, int maxStringSize) const
 	{
 		jstring strDeviceDescriptor = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetDescriptor_));
-		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strDeviceDescriptor);
+		int length;
 
 		if (strDeviceDescriptor) {
 			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceDescriptor, 0);
-			copyStringFirst(destination, maxStringSize, deviceName);
-			destination[maxStringSize - 1] = '\0';
+			length = copyStringFirst(destination, maxStringSize, deviceName);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceDescriptor, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceDescriptor);
 		} else if (maxStringSize > 0) {
 			destination[0] = '\0';
+			length = 0;
 		}
-		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
+
+		return length;
 	}
 
 	int AndroidJniClass_InputDevice::getProductId() const
@@ -487,14 +488,22 @@ namespace nCine
 	{
 		javaClass_ = findClass("android/view/KeyEvent");
 		midConstructor_ = getMethodID(javaClass_, "<init>", "(II)V");
+		midConstructor2_ = getMethodID(javaClass_, "<init>", "(JJIIIIIIII)V");
 		midGetUnicodeCharMetaState_ = getMethodID(javaClass_, "getUnicodeChar", "(I)I");
 		midGetUnicodeChar_ = getMethodID(javaClass_, "getUnicodeChar", "()I");
+		midGetCharacters_ = getMethodID(javaClass_, "getCharacters", "()Ljava/lang/String;");
 		midIsPrintingKey_ = getMethodID(javaClass_, "isPrintingKey", "()Z");
 	}
 
 	AndroidJniClass_KeyEvent::AndroidJniClass_KeyEvent(int action, int code)
 	{
 		jobject javaObject = AndroidJniHelper::jniEnv->NewObject(javaClass_, midConstructor_, action, code);
+		javaObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(javaObject);
+	}
+
+	AndroidJniClass_KeyEvent::AndroidJniClass_KeyEvent(long long int downTime, long long int eventTime, int action, int code, int repeat, int metaState, int deviceId, int scancode, int flags, int source)
+	{
+		jobject javaObject = AndroidJniHelper::jniEnv->NewObject(javaClass_, midConstructor2_, downTime, eventTime, action, code, repeat, metaState, deviceId, scancode, flags, source);
 		javaObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(javaObject);
 	}
 
@@ -505,6 +514,24 @@ namespace nCine
 		} else {
 			return AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetUnicodeChar_);
 		}
+	}
+
+	int AndroidJniClass_Display::getCharacters(char* destination, int maxStringSize) const
+	{
+		jstring strCharacters = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetCharacters_));
+		int length;
+
+		if (strCharacters) {
+			const char* characters = AndroidJniHelper::jniEnv->GetStringUTFChars(strCharacters, 0);
+			length = std::min((std::int32_t)strlen(characters), maxStringSize);
+			std::memcpy(destination, characters, length);
+			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strCharacters, characters);
+			AndroidJniHelper::jniEnv->DeleteLocalRef(strCharacters);
+		} else {
+			length = 0;
+		}
+
+		return length;
 	}
 
 	bool AndroidJniClass_KeyEvent::isPrintingKey() const
@@ -571,24 +598,24 @@ namespace nCine
 	int AndroidJniClass_Display::getName(char* destination, int maxStringSize) const
 	{
 		jstring strDisplayName = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetName_));
-		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strDisplayName);
+		int length;
 
 		if (strDisplayName) {
 			const char* displayName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDisplayName, 0);
-			copyStringFirst(destination, maxStringSize, displayName);
-			destination[maxStringSize - 1] = '\0';
+			length = copyStringFirst(destination, maxStringSize, displayName);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDisplayName, displayName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDisplayName);
 		} else {
-			copyStringFirst(destination, maxStringSize, static_cast<const char*>("Unknown"));
+			length = copyStringFirst(destination, maxStringSize, "Unknown");
 		}
-		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
+
+		return length;
 	}
 
 	int AndroidJniClass_Display::getSupportedModes(AndroidJniClass_DisplayMode* destination, int maxSize) const
 	{
 		jobjectArray arrModes = static_cast<jobjectArray>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetSupportedModes_));
-		const jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrModes);
+		int length = (int)AndroidJniHelper::jniEnv->GetArrayLength(arrModes);
 
 		for (int i = 0; i < length && i < maxSize; i++) {
 			jobject modeObject = AndroidJniHelper::jniEnv->GetObjectArrayElement(arrModes, i);
@@ -598,7 +625,7 @@ namespace nCine
 		}
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrModes);
 
-		return int(length);
+		return length;
 	}
 
 	// ------------------- AndroidJniWrap_Activity -------------------
@@ -627,11 +654,11 @@ namespace nCine
 	String AndroidJniWrap_Activity::getPreferredLanguage()
 	{
 		jstring strLanguage = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetPreferredLanguage_));
-		if (strLanguage == nullptr) {
-			return { };
+		if (!strLanguage) {
+			return {};
 		}
 
-		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strLanguage);
+		jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strLanguage);
 		const char* language = AndroidJniHelper::jniEnv->GetStringUTFChars(strLanguage, 0);
 		String result = String(NoInit, length);
 		std::memcpy(result.data(), language, length);
@@ -749,7 +776,7 @@ namespace nCine
 	int AndroidJniWrap_DisplayManager::getNumDisplays()
 	{
 		jobjectArray arrDisplays = static_cast<jobjectArray>(AndroidJniHelper::jniEnv->CallObjectMethod(displayManagerObject_, midGetDisplays_));
-		const jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrDisplays);
+		jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrDisplays);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrDisplays);
 
 		return int(length);
@@ -758,7 +785,7 @@ namespace nCine
 	int AndroidJniWrap_DisplayManager::getDisplays(AndroidJniClass_Display* destination, int maxSize)
 	{
 		jobjectArray arrDisplays = static_cast<jobjectArray>(AndroidJniHelper::jniEnv->CallObjectMethod(displayManagerObject_, midGetDisplays_));
-		const jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrDisplays);
+		int length = (int)AndroidJniHelper::jniEnv->GetArrayLength(arrDisplays);
 
 		for (int i = 0; i < length && i < maxSize; i++) {
 			jobject displayObject = AndroidJniHelper::jniEnv->GetObjectArrayElement(arrDisplays, i);
@@ -768,7 +795,7 @@ namespace nCine
 		}
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrDisplays);
 
-		return int(length);
+		return length;
 	}
 	
 	// --------------------- AndroidJniWrap_Secure ---------------------
@@ -800,7 +827,7 @@ namespace nCine
 			return;
 		}
 		
-		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strAndroidId);
+		jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strAndroidId);
 		const char* androidId = AndroidJniHelper::jniEnv->GetStringUTFChars(strAndroidId, 0);
 		androidId_ = String(NoInit, length);
 		std::memcpy(androidId_.data(), androidId, length);

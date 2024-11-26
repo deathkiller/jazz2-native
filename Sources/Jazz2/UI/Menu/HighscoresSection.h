@@ -69,6 +69,7 @@ namespace Jazz2::UI::Menu
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 		void OnHandleInput() override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
+		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
 		void OnExecuteSelected() override;
 		void OnBackPressed() override;
 

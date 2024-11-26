@@ -383,6 +383,13 @@ namespace Jazz2::UI::Menu
 		ScrollableMenuSection::OnTouchEvent(event, viewSize);
 	}
 
+	void HighscoresSection::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	{
+		if (!_waitForInput) {
+			ScrollableMenuSection::OnTouchUp(newIndex, viewSize, touchPos);
+		}
+	}
+
 	void HighscoresSection::OnExecuteSelected()
 	{
 	}

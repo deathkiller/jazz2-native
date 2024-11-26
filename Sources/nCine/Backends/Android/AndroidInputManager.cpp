@@ -14,22 +14,6 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 
-extern "C"
-{
-	namespace nc = nCine;
-
-	/** @brief Called by `jnicall_functions.cpp` */
-	void nativeKeyEventMultiple(JNIEnv* env, jclass clazz, const char* chars)
-	{
-		LOGW("ANDROIDKEY TEXT DISPATCH START");
-
-		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
-		if (androidApp.IsInitialized()) {
-			nc::AndroidInputManager::dispatchKeyEventMultipleFromJni(chars);
-		}
-	}
-}
-
 namespace nCine
 {
 	const std::int32_t IInputManager::MaxNumJoysticks = 4;
@@ -244,24 +228,6 @@ namespace nCine
 		return isEventHandled;
 	}
 
-	void AndroidInputManager::dispatchKeyEventMultipleFromJni(const char* chars)
-	{
-		// Early out if there is no input event handler
-		if (inputEventHandler_ == nullptr) {
-			return;
-		}
-
-		textInputEvent_.length = strlen(chars);
-		if (textInputEvent_.length > sizeof(textInputEvent_.text)) {
-			textInputEvent_.length = sizeof(textInputEvent_.text);
-		}
-		std::memcpy(textInputEvent_.text, chars, textInputEvent_.length);
-		LOGW("ANDROIDKEY TEXT DISPATCH: %i | %s", textInputEvent_.length, String(textInputEvent_.text, textInputEvent_.length).data());
-		if (textInputEvent_.length > 0) {
-			inputEventHandler_->OnTextInput(textInputEvent_);
-		}
-	}
-
 	bool AndroidInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
@@ -448,16 +414,19 @@ namespace nCine
 		const int keyCode = AKeyEvent_getKeyCode(event);
 
 		// Hardware volume keys are not handled by the engine
-		if (keyCode == AKEYCODE_VOLUME_UP || keyCode == AKEYCODE_VOLUME_DOWN) {
+		if (keyCode == AKEYCODE_VOLUME_UP || keyCode == AKEYCODE_VOLUME_DOWN || keyCode == AKEYCODE_POWER) {
 			return false;
 		}
 
+		int metaState = AKeyEvent_getMetaState(event);
+
 		keyboardEvent_.scancode = AKeyEvent_getScanCode(event);
 		keyboardEvent_.sym = AndroidKeys::keySymValueToEnum(keyCode);
-		keyboardEvent_.mod = AndroidKeys::keyModMaskToEnumMask(AKeyEvent_getMetaState(event));
+		keyboardEvent_.mod = AndroidKeys::keyModMaskToEnumMask(metaState);
 
 		const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
-		switch (AKeyEvent_getAction(event)) {
+		const int action = AKeyEvent_getAction(event);
+		switch (action) {
 			case AKEY_EVENT_ACTION_DOWN:
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 1;
@@ -469,31 +438,42 @@ namespace nCine
 					keyboardState_.keys_[keySym] = 0;
 				}
 				inputEventHandler_->OnKeyReleased(keyboardEvent_);
+
+				if ((metaState & AMETA_CTRL_ON) == 0) {
+					AndroidJniClass_KeyEvent keyEvent(AInputEvent_getType(event), keyCode);
+					if (keyEvent.isPrintingKey() || keyCode == AKEYCODE_SPACE) {
+						const int unicodeKey = keyEvent.getUnicodeChar(metaState);
+						textInputEvent_.length = Utf8::FromCodePoint(unicodeKey, textInputEvent_.text);
+						if (textInputEvent_.length > 0) {
+							inputEventHandler_->OnTextInput(textInputEvent_);
+						}
+						LOGW("ANDROIDKEY TEXT 1: %i | %i | %s", keyCode, unicodeKey, String(textInputEvent_.text, textInputEvent_.length).data());
+					} else {
+						const int unicodeKey = keyEvent.getUnicodeChar(metaState);
+						LOGW("ANDROIDKEY TEXT 2: %i | %i", keyCode, unicodeKey);
+					}
+				}
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				} else {
-					// Unicode characters are dispatched from `MainActivityBase.nativeKeyEventMultiple()` because of MainActivity limitations,
-					// see https://issuetracker.google.com/issues/36950127
+					// Unicode input from software keyboard
+					long long int downTime = AKeyEvent_getDownTime(event);
+					long long int eventTime = AKeyEvent_getEventTime(event);
+					int repeatCount = AKeyEvent_getRepeatCount(event);
+					int deviceID = AInputEvent_getDeviceId(event);
+					int flags = AKeyEvent_getFlags(event);
+					int source = AInputEvent_getSource(event);
+
+					AndroidJniClass_KeyEvent keyEvent(downTime, eventTime, action, keyCode, repeatCount, metaState, deviceID, keyboardEvent_.scancode, flags, source);
+					textInputEvent_.length = keyEvent.getCharacters(textInputEvent_.text, sizeof(textInputEvent_.text));
+					LOGW("ANDROIDKEY MULTI CHARS: %i | %s", textInputEvent_.length, String(textInputEvent_.text, textInputEvent_.length).data());
+					if (textInputEvent_.length > 0) {
+						inputEventHandler_->OnTextInput(textInputEvent_);
+					}
 				}
 				break;
-		}
-
-		if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN &&
-			(AKeyEvent_getMetaState(event) & AMETA_CTRL_ON) == 0) {
-			AndroidJniClass_KeyEvent keyEvent(AInputEvent_getType(event), keyCode);
-			if (keyEvent.isPrintingKey()) {
-				const int unicodeKey = keyEvent.getUnicodeChar(AKeyEvent_getMetaState(event));
-				textInputEvent_.length = Utf8::FromCodePoint(unicodeKey, textInputEvent_.text);
-				if (textInputEvent_.length > 0) {
-					inputEventHandler_->OnTextInput(textInputEvent_);
-				}
-				LOGW("ANDROIDKEY TEXT 1: %i | %i | %s", keyCode, unicodeKey, String(textInputEvent_.text, textInputEvent_.length).data());
-			} else {
-				const int unicodeKey = keyEvent.getUnicodeChar(AKeyEvent_getMetaState(event));
-				LOGW("ANDROIDKEY TEXT 2: %i | %i", keyCode, unicodeKey);
-			}
 		}
 
 		return true;

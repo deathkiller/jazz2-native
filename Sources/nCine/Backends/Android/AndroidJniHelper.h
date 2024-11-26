@@ -147,17 +147,20 @@ namespace nCine
 		static void init();
 
 		AndroidJniClass_KeyEvent(int action, int code);
+		AndroidJniClass_KeyEvent(long long int downTime, long long int eventTime, int action, int code, int repeat, int metaState, int deviceId, int scancode, int flags, int source);
+
 		int getUnicodeChar(int metaState) const;
-		inline int getUnicodeChar() const {
-			return getUnicodeChar(0);
-		}
+		inline int getUnicodeChar() const { return getUnicodeChar(0); }
+		int getCharacters(char* destination, int maxStringSize) const;
 		bool isPrintingKey() const;
 
 	private:
 		static jclass javaClass_;
 		static jmethodID midConstructor_;
+		static jmethodID midConstructor2_;
 		static jmethodID midGetUnicodeCharMetaState_;
 		static jmethodID midGetUnicodeChar_;
+		static jmethodID midGetCharacters_;
 		static jmethodID midIsPrintingKey_;
 	};
 	
