@@ -1,0 +1,9 @@
+package @NCINE_REVERSE_DNS@;
+
+import @NCINE_REVERSE_DNS@.MainActivityBase;
+
+public class MainActivityTV extends MainActivityBase {
+
+	// No extra functionality for Android TV
+
+}

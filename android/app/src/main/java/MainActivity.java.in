@@ -14,8 +14,9 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import @NCINE_REVERSE_DNS@.Keep;
+import @NCINE_REVERSE_DNS@.MainActivityBase;
 
-public class LoadLibraries extends NativeActivity implements DisplayManager.DisplayListener {
+public class MainActivity extends MainActivityBase {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -44,10 +45,6 @@ public class LoadLibraries extends NativeActivity implements DisplayManager.Disp
 		if (SDK_INT >= android.os.Build.VERSION_CODES.P) {
 			getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 		}
-		
-		// Register a display listener to update the monitors array
-		DisplayManager dm = getSystemService(DisplayManager.class);
-		dm.registerDisplayListener(this, null);
 	}
 
 	@Override
@@ -81,56 +78,9 @@ public class LoadLibraries extends NativeActivity implements DisplayManager.Disp
 	public void onDisplayRemoved(int displayId) {
 		nativeUpdateMonitors();
 	}
-
-	@Keep
-	public String getPreferredLanguage() {
-		try {
-			java.util.Locale currentLocale;
-			if (android.os.Build.VERSION.SDK_INT < 24) {
-				currentLocale = getResources().getConfiguration().locale;
-			} else {
-				currentLocale = getResources().getConfiguration().getLocales().get(0);
-			}
-			return currentLocale.getLanguage() + "-" + currentLocale.getCountry();
-		} catch (Exception ignored) {
-			return null;
-		}
-	}
-
-	@Keep
-	public boolean hasExternalStoragePermission() {
-		if (android.os.Build.VERSION.SDK_INT < 30) {
-			return false;
-		}
-		
-		try {
-			return Environment.isExternalStorageManager();
-		} catch (Exception ignored) {
-			return false;
-		}
-	}
-
-	@Keep
-	public void requestExternalStoragePermission() {
-		if (android.os.Build.VERSION.SDK_INT < 30) {
-			return;
-		}
-	
-		try {
-			Uri uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID);
-			Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
-			startActivity(intent);
-		} catch (Exception ignored) {
-			try {
-				Intent intent = new Intent();
-				intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-				startActivity(intent);
-			} catch (Exception ignored2) {
-			}
-		}
-	}
 	
 	@Keep
+	@Override
 	public void setActivityEnabled(String activityName, boolean enable) {
 		getPackageManager().setComponentEnabledSetting(
 			new ComponentName(this, BuildConfig.APPLICATION_ID + activityName), 
@@ -153,20 +103,6 @@ public class LoadLibraries extends NativeActivity implements DisplayManager.Disp
 		WindowInsetsController controller = getWindow().getInsetsController();
 		controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
 		controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-	}
-
-	// Calls `EglGfxDevice::updateMonitorsFromJni()`
-	private native void nativeUpdateMonitors();
-
-	static {
-		@JAVA_SYSTEM_LOADLIBRARY_OPENAL@
-		@JAVA_SYSTEM_LOADLIBRARY_NCINE@
-		// It needs to be explicitly loaded for `jnicall_functions` to work (despite `android.app.lib_name`)
-		try {
-			System.loadLibrary("game");
-		} catch (UnsatisfiedLinkError e) {
-			System.err.println("Caught UnsatisfiedLinkError: " + e.getMessage());
-		}
 	}
 
 }

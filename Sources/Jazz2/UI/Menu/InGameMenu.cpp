@@ -79,6 +79,22 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void InGameMenu::OnKeyPressed(const nCine::KeyboardEvent& event)
+	{
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			lastSection->OnKeyPressed(event);
+		}
+	}
+
+	void InGameMenu::OnKeyReleased(const nCine::KeyboardEvent& event)
+	{
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			lastSection->OnKeyReleased(event);
+		}
+	}
+
 	void InGameMenu::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		if (!_sections.empty()) {

@@ -1,6 +1,7 @@
 package @NCINE_REVERSE_DNS@;
 
 import android.app.NativeActivity;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
@@ -9,9 +10,12 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.view.WindowManager;
 import @NCINE_REVERSE_DNS@.Keep;
 
-public class LoadLibrariesTV extends NativeActivity implements DisplayManager.DisplayListener {
+public abstract class MainActivityBase extends NativeActivity implements DisplayManager.DisplayListener {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -20,6 +24,15 @@ public class LoadLibrariesTV extends NativeActivity implements DisplayManager.Di
 		// Register a display listener to update the monitors array
 		DisplayManager dm = getSystemService(DisplayManager.class);
 		dm.registerDisplayListener(this, null);
+	}
+
+	@Override
+	public boolean dispatchKeyEvent(KeyEvent event) {
+		if(event.getAction() == KeyEvent.ACTION_MULTIPLE) {
+			nativeKeyEventMultiple(event.getCharacters());
+		}
+
+		return super.dispatchKeyEvent(event);
 	}
 
 	@Override
@@ -84,9 +97,14 @@ public class LoadLibrariesTV extends NativeActivity implements DisplayManager.Di
 	
 	@Keep
 	public void setActivityEnabled(String activityName, boolean enable) {
-		// Not supported on Android TV to avoid duplicating activities
+		// Supported only in MainActivity to avoid duplicating activities
 	}
-	
+
+	// Calls `EglGfxDevice::updateMonitorsFromJni()`
+	protected native void nativeUpdateMonitors();
+
+	protected native void nativeKeyEventMultiple(String chars);  
+
 	static {
 		@JAVA_SYSTEM_LOADLIBRARY_OPENAL@
 		@JAVA_SYSTEM_LOADLIBRARY_NCINE@

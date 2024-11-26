@@ -35,6 +35,8 @@ namespace Jazz2::UI::Menu
 		virtual void OnDraw(Canvas* canvas) = 0;
 		virtual void OnDrawClipped(Canvas* canvas) {}
 		virtual void OnDrawOverlay(Canvas* canvas) {}
+		virtual void OnKeyPressed(const nCine::KeyboardEvent& event) {}
+		virtual void OnKeyReleased(const nCine::KeyboardEvent& event) {}
 		virtual void OnTextInput(const nCine::TextInputEvent& event) {}
 		virtual void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) = 0;
 

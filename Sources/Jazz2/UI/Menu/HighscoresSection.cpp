@@ -20,7 +20,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	HighscoresSection::HighscoresSection()
-		: _selectedSeries(0), _textCursor(0), _carretAnim(0.0f), _pressedActions(UINT32_MAX), _waitForInput(false)
+		: _selectedSeries(0), _textCursor(0), _carretAnim(0.0f), _waitForInput(false)
 	{
 		DeserializeFromFile();
 		FillDefaultsIfEmpty();
@@ -59,8 +59,6 @@ namespace Jazz2::UI::Menu
 		ScrollableMenuSection::OnUpdate(timeMult);
 
 		if (waitingForInput) {
-			UpdatePressedActions();
-
 #if defined(DEATH_TARGET_ANDROID)
 			if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -68,48 +66,19 @@ namespace Jazz2::UI::Menu
 				app.ToggleSoftInput();
 			} else
 #endif
-			if (_root->ActionHit(PlayerActions::Menu) || _root->ActionHit(PlayerActions::Run) || IsTextActionHit(TextAction::Escape)) {
+			if (_root->ActionHit(PlayerActions::Menu) || _root->ActionHit(PlayerActions::Run)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				auto& selectedItem = _items[_selectedIndex];
 				if (!selectedItem.Item->PlayerName.empty()) {
 					SerializeToFile();
 				}
-			} else if (_root->ActionHit(PlayerActions::Fire) || IsTextActionHit(TextAction::Enter)) {
+			} else if (_root->ActionHit(PlayerActions::Fire)) {
 				auto& selectedItem = _items[_selectedIndex];
 				if (!selectedItem.Item->PlayerName.empty()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_waitForInput = false;
 					SerializeToFile();
-				}
-			} else if (IsTextActionHit(TextAction::Backspace)) {
-				auto& selectedItem = _items[_selectedIndex];
-				if (_textCursor > 0) {
-					auto [_, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
-					selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(prevPos) + selectedItem.Item->PlayerName.exceptPrefix(_textCursor);
-					_textCursor = prevPos;
-					_carretAnim = 0.0f;
-				}
-			} else if (IsTextActionHit(TextAction::Delete)) {
-				auto& selectedItem = _items[_selectedIndex];
-				if (_textCursor < selectedItem.Item->PlayerName.size()) {
-					auto [_, nextPos] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);
-					selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(_textCursor) + selectedItem.Item->PlayerName.exceptPrefix(nextPos);
-					_carretAnim = 0.0f;
-				}
-			} else if (IsTextActionHit(TextAction::Left)) {
-				auto& selectedItem = _items[_selectedIndex];
-				if (_textCursor > 0) {
-					auto [c, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
-					_textCursor = prevPos;
-					_carretAnim = 0.0f;
-				}
-			} else if (IsTextActionHit(TextAction::Right)) {
-				auto& selectedItem = _items[_selectedIndex];
-				if (_textCursor < selectedItem.Item->PlayerName.size()) {
-					auto [ c, nextPos ] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);
-					_textCursor = nextPos;
-					_carretAnim = 0.0f;
 				}
 			}
 
@@ -150,6 +119,69 @@ namespace Jazz2::UI::Menu
 			_root->DrawElement(ShowKeyboard, -1, 36.0f, 30.0f, IMenuContainer::MainLayer + 200, Alignment::TopLeft, Colorf::White);
 		}
 #endif
+	}
+
+	void HighscoresSection::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if (_waitForInput) {
+			switch (event.sym) {
+				case KeySym::ESCAPE: {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					_waitForInput = false;
+					auto& selectedItem = _items[_selectedIndex];
+					if (!selectedItem.Item->PlayerName.empty()) {
+						SerializeToFile();
+					}
+					break;
+				}
+				case KeySym::RETURN: {
+					auto& selectedItem = _items[_selectedIndex];
+					if (!selectedItem.Item->PlayerName.empty()) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_waitForInput = false;
+						SerializeToFile();
+					}
+					break;
+				}
+				case KeySym::BACKSPACE: {
+					auto& selectedItem = _items[_selectedIndex];
+					if (_textCursor > 0) {
+						auto [_, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
+						selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(prevPos) + selectedItem.Item->PlayerName.exceptPrefix(_textCursor);
+						_textCursor = prevPos;
+						_carretAnim = 0.0f;
+					}
+					break;
+				}
+				case KeySym::Delete: {
+					auto& selectedItem = _items[_selectedIndex];
+					if (_textCursor < selectedItem.Item->PlayerName.size()) {
+						auto [_, nextPos] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);
+						selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(_textCursor) + selectedItem.Item->PlayerName.exceptPrefix(nextPos);
+						_carretAnim = 0.0f;
+					}
+					break;
+				}
+				case KeySym::LEFT: {
+					auto& selectedItem = _items[_selectedIndex];
+					if (_textCursor > 0) {
+						auto [c, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
+						_textCursor = prevPos;
+						_carretAnim = 0.0f;
+					}
+					break;
+				}
+				case KeySym::RIGHT: {
+					auto& selectedItem = _items[_selectedIndex];
+					if (_textCursor < selectedItem.Item->PlayerName.size()) {
+						auto [c, nextPos] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);
+						_textCursor = nextPos;
+						_carretAnim = 0.0f;
+					}
+					break;
+				}
+			}
+		}
 	}
 
 	void HighscoresSection::OnTextInput(const nCine::TextInputEvent& event)
@@ -535,27 +567,6 @@ namespace Jazz2::UI::Menu
 		for (auto& entry : entries) {
 			_items.emplace_back(&entry);
 		}
-	}
-
-	void HighscoresSection::UpdatePressedActions()
-	{
-		auto& input = theApplication().GetInputManager();
-		auto& keyState = input.keyboardState();
-
-		_pressedActions = (_pressedActions << 16);
-
-		const KeySym KeyToTextAction[] = { KeySym::LEFT, KeySym::RIGHT, KeySym::BACKSPACE, KeySym::Delete, KeySym::RETURN, KeySym::ESCAPE };
-
-		for (std::int32_t i = 0; i < (std::int32_t)arraySize(KeyToTextAction); i++) {
-			if (keyState.isKeyDown(KeyToTextAction[i])) {
-				_pressedActions |= (1 << i);
-			}
-		}
-	}
-
-	bool HighscoresSection::IsTextActionHit(TextAction action)
-	{
-		return ((_pressedActions & ((1 << (std::int32_t)action) | (1 << (16 + (std::int32_t)action)))) == (1 << (std::int32_t)action));
 	}
 
 	String HighscoresSection::TryGetDefaultName()

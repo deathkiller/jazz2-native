@@ -8,7 +8,7 @@
 	<application android:label="@string/app_name" android:isGame="true" android:appCategory="game"
 		android:hasCode="true" android:allowBackup="false" android:description="@string/app_desc"
 		android:icon="@mipmap/ic_launcher" android:banner="@mipmap/ic_foreground">
-		<activity android:name=".LoadLibraries" android:label="@string/app_name"
+		<activity android:name=".MainActivity" android:label="@string/app_name"
 			android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
 			android:exported="true" android:screenOrientation="userLandscape"
 			android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize">
@@ -33,7 +33,7 @@
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity-alias>
-		<activity android:name=".LoadLibrariesTV" android:label="@string/app_name"
+		<activity android:name=".MainActivityTV" android:label="@string/app_name"
 			android:exported="true" android:screenOrientation="userLandscape"
 			android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize">
 			<meta-data android:name="android.app.lib_name" android:value="game" />

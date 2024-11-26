@@ -182,11 +182,21 @@ namespace Jazz2::UI::Menu
 	void MainMenu::OnKeyPressed(const KeyboardEvent& event)
 	{
 		_pressedKeys.set((std::size_t)event.sym);
+
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			lastSection->OnKeyPressed(event);
+		}
 	}
 
 	void MainMenu::OnKeyReleased(const KeyboardEvent& event)
 	{
 		_pressedKeys.reset((std::size_t)event.sym);
+
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			lastSection->OnKeyReleased(event);
+		}
 	}
 
 	void MainMenu::OnTextInput(const TextInputEvent& event)

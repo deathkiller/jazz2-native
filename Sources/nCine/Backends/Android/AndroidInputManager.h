@@ -157,6 +157,8 @@ namespace nCine
 		/// Parses an Android input event
 		static bool parseEvent(const AInputEvent* event);
 
+		static void dispatchKeyEventMultipleFromJni(const char* chars);
+
 		bool isJoyPresent(int joyId) const override;
 		const char* joyName(int joyId) const override;
 		const JoystickGuid joyGuid(int joyId) const override;

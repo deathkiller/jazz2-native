@@ -3,8 +3,17 @@
 extern "C"
 {
 	extern void nativeUpdateMonitors(JNIEnv* env, jclass clazz);
-	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_LoadLibraries_nativeUpdateMonitors(JNIEnv* env, jclass clazz)
+	extern void nativeKeyEventMultiple(JNIEnv* env, jclass clazz, const char* chars);
+	
+	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeUpdateMonitors(JNIEnv* env, jclass clazz)
 	{
 		nativeUpdateMonitors(env, clazz);
 	}
+	
+	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeKeyEventMultiple(JNIEnv* env, jclass clazz, jstring chars)
+	{
+		const char* utf8Chars = env->GetStringUTFChars(chars, 0);
+		nativeKeyEventMultiple(env, clazz, utf8Chars);
+		env->ReleaseStringUTFChars(chars, utf8Chars);
+    }
 }

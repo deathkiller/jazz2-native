@@ -14,6 +14,27 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 
+extern "C"
+{
+	namespace nc = nCine;
+
+	/** @brief Called by `jnicall_functions.cpp` */
+	void nativeKeyEventMultiple(JNIEnv* env, jclass clazz, const char* chars)
+	{
+		LOGW("ANDROIDKEY TEXT DISPATCH START");
+
+		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
+		if (androidApp.IsInitialized()) {
+			JNIEnv* oldEnv = nc::AndroidJniHelper::jniEnv;
+			nc::AndroidJniHelper::jniEnv = env;
+
+			nc::AndroidInputManager::dispatchKeyEventMultipleFromJni(chars);
+
+			nc::AndroidJniHelper::jniEnv = oldEnv;
+		}
+	}
+}
+
 namespace nCine
 {
 	const std::int32_t IInputManager::MaxNumJoysticks = 4;
@@ -228,6 +249,20 @@ namespace nCine
 		return isEventHandled;
 	}
 
+	void AndroidInputManager::dispatchKeyEventMultipleFromJni(const char* chars)
+	{
+		// Early out if there is no input event handler
+		if (inputEventHandler_ == nullptr) {
+			return false;
+		}
+
+		textInputEvent_.length = copyStringFirst(textInputEvent_.text, sizeof(textInputEvent_.text), chars);
+		LOGW("ANDROIDKEY TEXT DISPATCH: %i | %s", textInputEvent_.length, String(textInputEvent_.text, textInputEvent_.length).data());
+		if (textInputEvent_.length > 0) {
+			inputEventHandler_->OnTextInput(textInputEvent_);
+		}
+	}
+
 	bool AndroidInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
@@ -428,19 +463,21 @@ namespace nCine
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 1;
 				}
-				LOGW("ANDROIDKEY DOWN: %i | %i | %i", keyCode, keyboardEvent_.sym, keyboardEvent_.mod);
 				inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_UP:
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 0;
 				}
-				LOGW("ANDROIDKEY DOWN: %i | %i | %i", keyCode, keyboardEvent_.sym, keyboardEvent_.mod);
 				inputEventHandler_->OnKeyReleased(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
-				LOGW("ANDROIDKEY MULTIPLE: %i | %i | %i", keyCode, keyboardEvent_.sym, keyboardEvent_.mod);
-				inputEventHandler_->OnKeyPressed(keyboardEvent_);
+				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
+					inputEventHandler_->OnKeyPressed(keyboardEvent_);
+				} else {
+					// Unicode characters are dispatched from `MainActivityBase.nativeKeyEventMultiple()` because of MainActivity limitations,
+					// see https://issuetracker.google.com/issues/36950127
+				}
 				break;
 		}
 
