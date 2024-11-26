@@ -256,7 +256,11 @@ namespace nCine
 			return;
 		}
 
-		textInputEvent_.length = copyStringFirst(textInputEvent_.text, sizeof(textInputEvent_.text), chars);
+		textInputEvent_.length = strlen(chars);
+		if (textInputEvent_.length > sizeof(textInputEvent_.text)) {
+			textInputEvent_.length = sizeof(textInputEvent_.text);
+		}
+		std::memcpy(textInputEvent_.text, chars, textInputEvent_.length);
 		LOGW("ANDROIDKEY TEXT DISPATCH: %i | %s", textInputEvent_.length, String(textInputEvent_.text, textInputEvent_.length).data());
 		if (textInputEvent_.length > 0) {
 			inputEventHandler_->OnTextInput(textInputEvent_);
