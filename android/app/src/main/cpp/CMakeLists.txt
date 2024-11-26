@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.15)
 project(nCine-Android-${ANDROID_ABI})
 
 # Check if we can use IFUNC for CPU dispatch. This part is already in `ncine_options.cmake`, but we need to check it also against Android NDK toolchain.
