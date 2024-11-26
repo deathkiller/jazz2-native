@@ -34,14 +34,14 @@ if(NCINE_VERSION_FROM_GIT)
 			OUTPUT_STRIP_TRAILING_WHITESPACE
 		)
 
-		execute_process(
-			COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-			RESULT_VARIABLE GIT_FAIL
-			OUTPUT_VARIABLE GIT_BRANCH_NAME
-			ERROR_QUIET
-			OUTPUT_STRIP_TRAILING_WHITESPACE
-		)
+		#execute_process(
+		#	COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+		#	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		#	RESULT_VARIABLE GIT_FAIL
+		#	OUTPUT_VARIABLE GIT_BRANCH_NAME
+		#	ERROR_QUIET
+		#	OUTPUT_STRIP_TRAILING_WHITESPACE
+		#)
 
 		execute_process(
 			COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0 HEAD
@@ -96,8 +96,10 @@ if(NCINE_VERSION_FROM_GIT)
 					endif()
 				endif()
 				
-				if(GIT_BRANCH_NAME AND NOT ${GIT_BRANCH_NAME} STREQUAL "master" AND NOT ${GIT_BRANCH_NAME} STREQUAL "main")
-					set(NCINE_VERSION_PATCH "${NCINE_VERSION_PATCH}/${GIT_BRANCH_NAME}")
+				# The head ref or source branch of the pull request in a workflow run on GitHub
+				set(_pullRequestHeadRef "$ENV{GITHUB_HEAD_REF}")
+				if(_pullRequestHeadRef AND NOT ${_pullRequestHeadRef} STREQUAL "master" AND NOT ${_pullRequestHeadRef} STREQUAL "main")
+					set(NCINE_VERSION_PATCH "${NCINE_VERSION_PATCH}|${_pullRequestHeadRef}")
 				endif()
 			else()
 				# The last commit is tagged, use it as version
