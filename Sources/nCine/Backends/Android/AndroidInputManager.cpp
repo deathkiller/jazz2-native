@@ -253,7 +253,7 @@ namespace nCine
 	{
 		// Early out if there is no input event handler
 		if (inputEventHandler_ == nullptr) {
-			return false;
+			return;
 		}
 
 		textInputEvent_.length = copyStringFirst(textInputEvent_.text, sizeof(textInputEvent_.text), chars);
