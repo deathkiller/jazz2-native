@@ -516,7 +516,7 @@ namespace nCine
 		}
 	}
 
-	int AndroidJniClass_Display::getCharacters(char* destination, int maxStringSize) const
+	int AndroidJniClass_KeyEvent::getCharacters(char* destination, int maxStringSize) const
 	{
 		jstring strCharacters = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetCharacters_));
 		int length;
