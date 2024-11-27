@@ -447,17 +447,15 @@ namespace nCine
 						if (textInputEvent_.length > 0) {
 							inputEventHandler_->OnTextInput(textInputEvent_);
 						}
-						LOGW("ANDROIDKEY TEXT 1: %i | %i | %s", keyCode, unicodeKey, String(textInputEvent_.text, textInputEvent_.length).data());
-					} else {
-						const int unicodeKey = keyEvent.getUnicodeChar(metaState);
-						LOGW("ANDROIDKEY TEXT 2: %i | %i", keyCode, unicodeKey);
 					}
 				}
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					inputEventHandler_->OnKeyPressed(keyboardEvent_);
-				} else if ((metaState & AMETA_CTRL_ON) == 0) {
+				}
+				// TODO: This section doesn't work with software keyboards
+				/*else if ((metaState & AMETA_CTRL_ON) == 0) {
 					// Unicode input from software keyboard
 					long long int downTime = AKeyEvent_getDownTime(event);
 					long long int eventTime = AKeyEvent_getEventTime(event);
@@ -468,7 +466,6 @@ namespace nCine
 
 					AndroidJniClass_KeyEvent keyEvent(downTime, eventTime, action, keyCode, repeatCount, metaState, deviceID, keyboardEvent_.scancode, flags, source);
 					textInputEvent_.length = keyEvent.getCharacters(textInputEvent_.text, sizeof(textInputEvent_.text));
-					LOGW("ANDROIDKEY MULTI CHARS: %i | %s", textInputEvent_.length, String(textInputEvent_.text, textInputEvent_.length).data());
 					if (textInputEvent_.length > 0) {
 						inputEventHandler_->OnTextInput(textInputEvent_);
 					} else if (keyEvent.isPrintingKey() || keyCode == AKEYCODE_SPACE) {
@@ -477,9 +474,8 @@ namespace nCine
 						if (textInputEvent_.length > 0) {
 							inputEventHandler_->OnTextInput(textInputEvent_);
 						}
-						LOGW("ANDROIDKEY MULTI CHARS TEXT: %i | %i | %s", keyCode, unicodeKey, String(textInputEvent_.text, textInputEvent_.length).data());
 					}
-				}
+				}*/
 				break;
 		}
 

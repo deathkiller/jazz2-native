@@ -506,7 +506,6 @@ namespace nCine
 	AndroidJniClass_KeyEvent::AndroidJniClass_KeyEvent(long long int downTime, long long int eventTime, int action, int code, int repeat, int metaState, int deviceId, int scancode, int flags, int source)
 	{
 		jobject javaObject = AndroidJniHelper::jniEnv->NewObject(javaClass_, midConstructor2_, downTime, eventTime, action, code, repeat, metaState, deviceId, scancode, flags, source);
-		LOGW("ANDROIDKEY NEW: %p | %i | %i | %i | %i", javaObject, code, scancode, metaState, flags);
 		javaObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(javaObject);
 	}
 
@@ -526,14 +525,12 @@ namespace nCine
 
 		if (strCharacters) {
 			const char* characters = AndroidJniHelper::jniEnv->GetStringUTFChars(strCharacters, 0);
-			LOGW("ANDROIDKEY getCharacters: %s", characters);
 			length = std::min((std::int32_t)strlen(characters), maxStringSize);
 			std::memcpy(destination, characters, length);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strCharacters, characters);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strCharacters);
 		} else {
 			length = 0;
-			LOGW("ANDROIDKEY getCharacters NONE");
 		}
 
 		return length;
