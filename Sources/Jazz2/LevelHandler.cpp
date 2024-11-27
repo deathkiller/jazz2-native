@@ -108,10 +108,12 @@ namespace Jazz2
 #endif
 
 	LevelHandler::LevelHandler(IRootController* root)
-		: _root(root), _lightingShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr), _combineWithWaterShader(nullptr),
-			_eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
-			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
-			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _overrideActions(0)
+		: _root(root), _lightingShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr),
+			_combineWithWaterShader(nullptr), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false),
+			_cheatsUsed(false), _checkpointCreated(false), _cheatsBufferLength(0), _nextLevelType(ExitType::None),
+			_nextLevelTime(0.0f), _elapsedMillisecondsBegin(0), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
+			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)KeySym::COUNT),
+			_overrideActions(0)
 	{
 	}
 
@@ -135,6 +137,7 @@ namespace Jazz2
 		_difficulty = levelInit.Difficulty;
 		_isReforged = levelInit.IsReforged;
 		_cheatsUsed = levelInit.CheatsUsed;
+		_elapsedMillisecondsBegin = levelInit.ElapsedMilliseconds;
 
 		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
@@ -180,6 +183,9 @@ namespace Jazz2
 		_difficulty = (GameDifficulty)src.ReadValue<std::uint8_t>();
 		_isReforged = (flags & 0x01) != 0;
 		_cheatsUsed = (flags & 0x02) != 0;
+		if (version >= 3) {
+			_elapsedMillisecondsBegin = src.ReadVariableUint64();
+		}
 		_checkpointFrames = src.ReadValue<float>();
 
 		auto& resolver = ContentResolver::Get();
@@ -1394,6 +1400,7 @@ namespace Jazz2
 		dest.Write(_levelFileName.data(), (std::uint32_t)_levelFileName.size());
 
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_difficulty);
+		dest.WriteVariableUint64(_elapsedMillisecondsBegin);
 		dest.WriteValue<float>(_checkpointFrames);
 		dest.WriteValue<float>(_waterLevel);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
@@ -1548,6 +1555,7 @@ namespace Jazz2
 		levelInit.CheatsUsed = _cheatsUsed;
 		levelInit.LastExitType = _nextLevelType;
 		levelInit.LastEpisodeName = _episodeName;
+		levelInit.ElapsedMilliseconds = _elapsedMillisecondsBegin + (std::uint64_t)(_elapsedFrames * FrameTimer::SecondsPerFrame * 1000.0f);
 
 		for (std::int32_t i = 0; i < _players.size(); i++) {
 			levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();

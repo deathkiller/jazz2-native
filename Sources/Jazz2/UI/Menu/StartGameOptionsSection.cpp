@@ -430,6 +430,7 @@ namespace Jazz2::UI::Menu
 					(previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) != EpisodeContinuationFlags::IsCompleted) {
 					levelInit.CheatsUsed = true;
 				}
+				levelInit.ElapsedMilliseconds = previousEpisodeEnd->ElapsedMilliseconds;
 
 				auto& firstPlayer = levelInit.PlayerCarryOvers[0];
 				if (previousEpisodeEnd->Lives > 0) {

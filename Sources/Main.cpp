@@ -1554,7 +1554,8 @@ void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, boo
 	if (playerCount == 1 && levelInit.Difficulty != GameDifficulty::Multiplayer) {
 		std::int32_t seriesIndex = Menu::HighscoresSection::TryGetSeriesIndex(levelInit.LastEpisodeName, playerDied);
 		if (seriesIndex >= 0) {
-			mainMenu->SwitchToSection<Menu::HighscoresSection>(seriesIndex, levelInit.Difficulty, levelInit.IsReforged, levelInit.CheatsUsed, *firstPlayer);
+			mainMenu->SwitchToSection<Menu::HighscoresSection>(seriesIndex, levelInit.Difficulty,
+				levelInit.IsReforged, levelInit.CheatsUsed, levelInit.ElapsedMilliseconds, *firstPlayer);
 		}
 	}
 
@@ -1606,6 +1607,7 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 
 			episodeEnd->Lives = firstPlayer->Lives;
 			episodeEnd->Score = firstPlayer->Score;
+			episodeEnd->ElapsedMilliseconds = levelInit.ElapsedMilliseconds;
 			std::memcpy(episodeEnd->Gems, firstPlayer->Gems, sizeof(firstPlayer->Gems));
 			std::memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
 			std::memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
@@ -1643,6 +1645,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 		episodeContinue->State.DifficultyAndPlayerType = ((std::int32_t)levelInit.Difficulty & 0x0f) | (((std::int32_t)firstPlayer->Type & 0x0f) << 4);
 		episodeContinue->State.Lives = firstPlayer->Lives;
 		episodeContinue->State.Score = firstPlayer->Score;
+		episodeContinue->State.ElapsedMilliseconds = levelInit.ElapsedMilliseconds;
 		std::memcpy(episodeContinue->State.Gems, firstPlayer->Gems, sizeof(firstPlayer->Gems));
 		std::memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
 		std::memcpy(episodeContinue->State.WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));

@@ -57,6 +57,10 @@
 			"Path": "UI/touch_keyboard.aura",
 			"States": [ 22 ]
 		},
+		"Rip": {
+			"Path": "UI/rip.aura",
+			"States": [ 23 ]
+		},
 		
 		"PickupGemRed": {
 			"Path": "Pickup/gem.aura",
@@ -78,7 +82,11 @@
 			"PaletteOffset": 512,
 			"States": [ 33 ]
 		},
-
+		"PickupStopwatch": {
+			"Path": "Pickup/stopwatch.aura",
+			"States": [ 34 ]
+		},
+		
 		"GamepadA": {
 			"Path": "UI/gamepad_a.aura",
 			"States": [ 40 ]

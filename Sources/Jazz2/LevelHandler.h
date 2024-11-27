@@ -218,6 +218,7 @@ namespace Jazz2
 
 		Vector2i _viewSize;
 		Rectf _viewBoundsTarget;
+		std::int64_t _elapsedMillisecondsBegin;
 		float _elapsedFrames;
 		float _checkpointFrames;
 		float _waterLevel;
