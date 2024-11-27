@@ -13,15 +13,15 @@
 using namespace Death::IO;
 
 /// Processes the next application command
-void androidHandleCommand(struct android_app* state, int32_t cmd)
+void androidHandleCommand(struct android_app* state, std::int32_t cmd)
 {
 	nCine::AndroidApplication::ProcessCommand(state, cmd);
 }
 
 /// Parses the next input event
-int32_t androidHandleInput(struct android_app* state, AInputEvent* event)
+std::int32_t androidHandleInput(struct android_app* state, AInputEvent* event)
 {
-	return static_cast<int32_t>(nCine::AndroidInputManager::parseEvent(event));
+	return static_cast<std::int32_t>(nCine::AndroidInputManager::parseEvent(event));
 }
 
 namespace nCine
@@ -71,7 +71,7 @@ namespace nCine
 		exit(0);
 	}
 
-	void AndroidApplication::ProcessCommand(struct android_app* state, int32_t cmd)
+	void AndroidApplication::ProcessCommand(struct android_app* state, std::int32_t cmd)
 	{
 		static EglGfxDevice* eglGfxDevice = nullptr;
 		// A flag to avoid resuming if the application has not been suspended first

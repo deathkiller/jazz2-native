@@ -68,16 +68,6 @@ endif()
 
 target_include_directories(${NCINE_APP} PRIVATE ${CMAKE_ANDROID_NDK}/sources/android/native_app_glue)
 target_include_directories(ncine_main PRIVATE ${CMAKE_ANDROID_NDK}/sources/android/native_app_glue)
-#if(NCINE_WITH_IMGUI)
-#	target_include_directories(${NCINE_APP}
-#		INTERFACE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>
-#		PRIVATE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}/ncine>)
-#endif()
-#if(NCINE_WITH_NUKLEAR)
-#	target_include_directories(${NCINE_APP}
-#		INTERFACE $<BUILD_INTERFACE:${NUKLEAR_INCLUDE_ONLY_DIR}>
-#		PRIVATE $<BUILD_INTERFACE:${NUKLEAR_INCLUDE_ONLY_DIR}/ncine>)
-#endif()
 if(NCINE_WITH_TRACY)
 	target_include_directories(${NCINE_APP}
 		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
@@ -92,10 +82,6 @@ add_library(game SHARED ${ANDROID_NDK}/sources/android/native_app_glue/android_n
 set(JNICALL_FUNCTIONS_LINKER_OPTIONS -Wl,--whole-archive jnicall_functions -Wl,--no-whole-archive)
 target_link_libraries(game PRIVATE ${ANDROID_LIBRARY} ${LOG_LIBRARY} ${JNICALL_FUNCTIONS_LINKER_OPTIONS} ncine_main ${NCINE_APP})
 target_include_directories(game PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
-if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
-	get_filename_component(PARENT_GENERATED_INCLUDE_DIR ${GENERATED_INCLUDE_DIR} DIRECTORY)
-	target_include_directories(game PRIVATE ${PARENT_GENERATED_INCLUDE_DIR}) # for ncine_config.h
-endif()
 #if(NOT NCINE_DYNAMIC_LIBRARY)
 #	target_include_directories(game PRIVATE ${NCINE_ROOT}/include/ncine)
 #endif()

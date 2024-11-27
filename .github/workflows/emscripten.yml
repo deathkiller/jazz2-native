@@ -3,7 +3,7 @@ name: 'Emscripten'
 on:
   push:
     branches:
-      - '*'
+      - 'master'
   pull_request:
     types: [ opened, synchronize ]
   workflow_dispatch:

@@ -3,7 +3,8 @@
 extern "C"
 {
 	extern void nativeUpdateMonitors(JNIEnv* env, jclass clazz);
-	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_LoadLibraries_nativeUpdateMonitors(JNIEnv* env, jclass clazz)
+	
+	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeUpdateMonitors(JNIEnv* env, jclass clazz)
 	{
 		nativeUpdateMonitors(env, clazz);
 	}

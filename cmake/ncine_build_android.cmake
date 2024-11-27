@@ -140,15 +140,18 @@ if(NCINE_DYNAMIC_LIBRARY)
 	string(REPLACE "JAVA_NATIVE_LIBRARY_NAME" ${NCINE_APP} JAVA_SYSTEM_LOADLIBRARY_NCINE ${JAVA_SYSTEM_LOADLIBRARY})
 endif()
 
-set(LOAD_LIBRARIES_JAVA_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/java/io/github/ncine/LoadLibraries.java.in)
-set(LOAD_LIBRARIES_JAVA ${CMAKE_BINARY_DIR}/android/app/src/main/java/io/github/ncine/LoadLibraries.java)
-configure_file(${LOAD_LIBRARIES_JAVA_IN} ${LOAD_LIBRARIES_JAVA} @ONLY)
-set(LOAD_LIBRARIES_TV_JAVA_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/java/io/github/ncine/LoadLibrariesTV.java.in)
-set(LOAD_LIBRARIES_TV_JAVA ${CMAKE_BINARY_DIR}/android/app/src/main/java/io/github/ncine/LoadLibrariesTV.java)
-configure_file(${LOAD_LIBRARIES_TV_JAVA_IN} ${LOAD_LIBRARIES_TV_JAVA} @ONLY)
-set(KEEP_JAVA_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/java/io/github/ncine/Keep.java.in)
-set(KEEP_JAVA ${CMAKE_BINARY_DIR}/android/app/src/main/java/io/github/ncine/Keep.java)
-configure_file(${KEEP_JAVA_IN} ${KEEP_JAVA} @ONLY)
+set(JAVA_FILES
+	Keep.java
+	MainActivity.java
+	MainActivityBase.java
+	MainActivityTV.java)
+
+foreach(FILE ${JAVA_FILES})
+	configure_file(
+		${CMAKE_SOURCE_DIR}/android/app/src/main/java/${FILE}.in
+		${CMAKE_BINARY_DIR}/android/app/src/main/java/${FILE}
+		@ONLY)
+endforeach()
 
 string(REPLACE "." "_" JNICALL_PACKAGE ${NCINE_REVERSE_DNS})
 string(TOLOWER ${JNICALL_PACKAGE} JNICALL_PACKAGE)

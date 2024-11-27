@@ -16,7 +16,7 @@ extern "C"
 {
 	namespace nc = nCine;
 
-	/// Called by `jnicall_functions.cpp`
+	/** @brief Called by `jnicall_functions.cpp` */
 	void nativeUpdateMonitors(JNIEnv* env, jclass clazz)
 	{
 		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
