@@ -667,109 +667,113 @@ namespace Jazz2
 	{
 		_pressedKeys.set((std::size_t)event.sym);
 
-		// Cheats
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
-			if (event.sym >= KeySym::A && event.sym <= KeySym::Z) {
-				if (event.sym == KeySym::J && _cheatsBufferLength >= 2) {
-					_cheatsBufferLength = 0;
-					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
-				} else if (_cheatsBufferLength < static_cast<std::int32_t>(arraySize(_cheatsBuffer))) {
-					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
+		if (_pauseMenu != nullptr) {
+			_pauseMenu->OnKeyReleased(event);
+		} else {
+			// Cheats
+			if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+				if (event.sym >= KeySym::A && event.sym <= KeySym::Z) {
+					if (event.sym == KeySym::J && _cheatsBufferLength >= 2) {
+						_cheatsBufferLength = 0;
+						_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
+					} else if (_cheatsBufferLength < static_cast<std::int32_t>(arraySize(_cheatsBuffer))) {
+						_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
 
-					if (_cheatsBufferLength >= 3 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
-						switch (_cheatsBufferLength) {
-							case 3:
-								if (_cheatsBuffer[2] == (char)KeySym::K) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										player->TakeDamage(INT32_MAX);
-									}
-								}
-								break;
-							case 5:
-								if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::D) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
-									}
-								}
-								break;
-							case 6:
-								if (_cheatsBuffer[2] == (char)KeySym::N && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::X && _cheatsBuffer[5] == (char)KeySym::T) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
-								} else if ((_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::N && _cheatsBuffer[5] == (char)KeySym::S) ||
-										   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
-											player->AddAmmo((WeaponType)i, 99);
+						if (_cheatsBufferLength >= 3 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
+							switch (_cheatsBufferLength) {
+								case 3:
+									if (_cheatsBuffer[2] == (char)KeySym::K) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											player->TakeDamage(INT32_MAX);
 										}
 									}
-								} else if (_cheatsBuffer[2] == (char)KeySym::R && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::S && _cheatsBuffer[5] == (char)KeySym::H) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										player->ActivateSugarRush(1300.0f);
-									}
-								} else if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::S) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										player->AddGems(0, 5);
-									}
-								} else if (_cheatsBuffer[2] == (char)KeySym::B && _cheatsBuffer[3] == (char)KeySym::I && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::D) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										player->SpawnBird(0, player->GetPos());
-									}
-								}
-								break;
-							case 7:
-								if (_cheatsBuffer[2] == (char)KeySym::P && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::W && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::R) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
-											player->AddWeaponUpgrade((WeaponType)i, 0x01);
+									break;
+								case 5:
+									if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::D) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
 										}
 									}
-								} else if (_cheatsBuffer[2] == (char)KeySym::C && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::N && _cheatsBuffer[6] == (char)KeySym::S) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									// Coins are synchronized automatically
-									_players[0]->AddCoins(5);
-								} else if (_cheatsBuffer[2] == (char)KeySym::M && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::P && _cheatsBuffer[6] == (char)KeySym::H) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
+									break;
+								case 6:
+									if (_cheatsBuffer[2] == (char)KeySym::N && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::X && _cheatsBuffer[5] == (char)KeySym::T) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
+									} else if ((_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::N && _cheatsBuffer[5] == (char)KeySym::S) ||
+											   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+												player->AddAmmo((WeaponType)i, 99);
+											}
+										}
+									} else if (_cheatsBuffer[2] == (char)KeySym::R && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::S && _cheatsBuffer[5] == (char)KeySym::H) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											player->ActivateSugarRush(1300.0f);
+										}
+									} else if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::S) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											player->AddGems(0, 5);
+										}
+									} else if (_cheatsBuffer[2] == (char)KeySym::B && _cheatsBuffer[3] == (char)KeySym::I && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::D) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											player->SpawnBird(0, player->GetPos());
+										}
+									}
+									break;
+								case 7:
+									if (_cheatsBuffer[2] == (char)KeySym::P && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::W && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::R) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+												player->AddWeaponUpgrade((WeaponType)i, 0x01);
+											}
+										}
+									} else if (_cheatsBuffer[2] == (char)KeySym::C && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::N && _cheatsBuffer[6] == (char)KeySym::S) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										// Coins are synchronized automatically
+										_players[0]->AddCoins(5);
+									} else if (_cheatsBuffer[2] == (char)KeySym::M && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::P && _cheatsBuffer[6] == (char)KeySym::H) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
 
-									PlayerType newType;
-									switch (_players[0]->GetPlayerType()) {
-										case PlayerType::Jazz: newType = PlayerType::Spaz; break;
-										case PlayerType::Spaz: newType = PlayerType::Lori; break;
-										default: newType = PlayerType::Jazz; break;
-									}
+										PlayerType newType;
+										switch (_players[0]->GetPlayerType()) {
+											case PlayerType::Jazz: newType = PlayerType::Spaz; break;
+											case PlayerType::Spaz: newType = PlayerType::Lori; break;
+											default: newType = PlayerType::Jazz; break;
+										}
 
-									if (!_players[0]->MorphTo(newType)) {
-										_players[0]->MorphTo(PlayerType::Jazz);
+										if (!_players[0]->MorphTo(newType)) {
+											_players[0]->MorphTo(PlayerType::Jazz);
+										}
 									}
-								}
-								break;
-							case 8:
-								if (_cheatsBuffer[2] == (char)KeySym::S && _cheatsBuffer[3] == (char)KeySym::H && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::L && _cheatsBuffer[7] == (char)KeySym::D) {
-									_cheatsBufferLength = 0;
-									_cheatsUsed = true;
-									for (auto* player : _players) {
-										ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
-										player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
+									break;
+								case 8:
+									if (_cheatsBuffer[2] == (char)KeySym::S && _cheatsBuffer[3] == (char)KeySym::H && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::L && _cheatsBuffer[7] == (char)KeySym::D) {
+										_cheatsBufferLength = 0;
+										_cheatsUsed = true;
+										for (auto* player : _players) {
+											ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
+											player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
+										}
 									}
-								}
-								break;
+									break;
+							}
 						}
 					}
 				}
@@ -780,6 +784,10 @@ namespace Jazz2
 	void LevelHandler::OnKeyReleased(const KeyboardEvent& event)
 	{
 		_pressedKeys.reset((std::size_t)event.sym);
+
+		if (_pauseMenu != nullptr) {
+			_pauseMenu->OnKeyReleased(event);
+		}
 	}
 
 	void LevelHandler::OnTouchEvent(const  TouchEvent& event)

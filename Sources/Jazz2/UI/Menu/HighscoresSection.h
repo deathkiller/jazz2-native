@@ -39,6 +39,7 @@ namespace Jazz2::UI::Menu
 
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
+		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
 		void OnTextInput(const nCine::TextInputEvent& event) override;
 		NavigationFlags GetNavigationFlags() const override;
 
@@ -53,15 +54,6 @@ namespace Jazz2::UI::Menu
 			Count
 		};
 
-		enum class TextAction {
-			Left,
-			Right,
-			Backspace,
-			Delete,
-			Enter,
-			Escape
-		};
-
 		static constexpr std::int32_t MaxItems = 10;
 		static constexpr std::int32_t MaxNameLength = 24;
 		static constexpr StringView FileName = "Highscores.list"_s;
@@ -71,13 +63,13 @@ namespace Jazz2::UI::Menu
 		std::int32_t _selectedSeries;
 		std::size_t _textCursor;
 		float _carretAnim;
-		std::uint32_t _pressedActions;
 		bool _waitForInput;
 
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 		void OnHandleInput() override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
+		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
 		void OnExecuteSelected() override;
 		void OnBackPressed() override;
 
@@ -86,8 +78,6 @@ namespace Jazz2::UI::Menu
 		void SerializeToFile();
 		void AddItemAndFocus(HighscoreItem&& item);
 		void RefreshList();
-		void UpdatePressedActions();
-		bool IsTextActionHit(TextAction action);
 
 		static String TryGetDefaultName();
 	};

@@ -25,6 +25,8 @@ namespace Jazz2::UI::Menu
 		InGameMenu(LevelHandler* root);
 		~InGameMenu();
 
+		void OnKeyPressed(const nCine::KeyboardEvent& event);
+		void OnKeyReleased(const nCine::KeyboardEvent& event);
 		void OnTouchEvent(const nCine::TouchEvent& event);
 		void OnInitializeViewport(std::int32_t width, std::int32_t height);
 
