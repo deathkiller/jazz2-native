@@ -457,7 +457,7 @@ namespace nCine
 			case AKEY_EVENT_ACTION_MULTIPLE:
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					inputEventHandler_->OnKeyPressed(keyboardEvent_);
-				} else {
+				} else if ((metaState & AMETA_CTRL_ON) == 0) {
 					// Unicode input from software keyboard
 					long long int downTime = AKeyEvent_getDownTime(event);
 					long long int eventTime = AKeyEvent_getEventTime(event);
@@ -471,6 +471,13 @@ namespace nCine
 					LOGW("ANDROIDKEY MULTI CHARS: %i | %s", textInputEvent_.length, String(textInputEvent_.text, textInputEvent_.length).data());
 					if (textInputEvent_.length > 0) {
 						inputEventHandler_->OnTextInput(textInputEvent_);
+					} else if (keyEvent.isPrintingKey() || keyCode == AKEYCODE_SPACE) {
+						const int unicodeKey = keyEvent.getUnicodeChar(metaState);
+						textInputEvent_.length = Utf8::FromCodePoint(unicodeKey, textInputEvent_.text);
+						if (textInputEvent_.length > 0) {
+							inputEventHandler_->OnTextInput(textInputEvent_);
+						}
+						LOGW("ANDROIDKEY MULTI CHARS TEXT: %i | %i | %s", keyCode, unicodeKey, String(textInputEvent_.text, textInputEvent_.length).data());
 					}
 				}
 				break;
