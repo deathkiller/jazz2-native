@@ -35,7 +35,7 @@ namespace Jazz2::UI::Menu
 	{
 	public:
 		HighscoresSection();
-		HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, const PlayerCarryOver& itemToAdd);
+		HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, std::uint64_t elapsedMilliseconds, const PlayerCarryOver& itemToAdd);
 
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;

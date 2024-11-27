@@ -2693,6 +2693,7 @@ namespace Jazz2::Actors
 					// TODO: Turn off collisions
 				}
 			} else {
+				_lives = 0;
 				_renderer.setDrawEnabled(false);
 
 				_levelHandler->HandleGameOver(this);

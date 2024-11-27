@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-11-24 21:21+0100\n"
+"POT-Creation-Date: 2024-11-27 20:10+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Eduardo Karasinski <edukara@gmail.com>\n"
 "Language-Team: edukara\n"
@@ -1856,11 +1856,11 @@ msgstr ""
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:129
-msgid "Base Game"
+#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:105
+msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:135
+#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:115
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
 msgstr ""
@@ -2137,7 +2137,7 @@ msgstr ""
 "Tenha certeza de que todos os arquivos necessários\n"
 "estão acessíveis e tente novamente."
 
-#: Sources/Main.cpp:626
+#: Sources/Main.cpp:627
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2146,7 +2146,7 @@ msgid ""
 "are accessible and try it again."
 msgstr ""
 
-#: Sources/Main.cpp:762
+#: Sources/Main.cpp:764
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2154,7 +2154,7 @@ msgid ""
 "Your client version is not compatible with the server."
 msgstr ""
 
-#: Sources/Main.cpp:763
+#: Sources/Main.cpp:765
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2163,7 +2163,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:764
+#: Sources/Main.cpp:766
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2172,7 +2172,7 @@ msgid ""
 "Please try again in a few seconds."
 msgstr ""
 
-#: Sources/Main.cpp:765
+#: Sources/Main.cpp:767
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2181,7 +2181,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:766
+#: Sources/Main.cpp:768
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2190,7 +2190,7 @@ msgid ""
 "Please try it again later."
 msgstr ""
 
-#: Sources/Main.cpp:767
+#: Sources/Main.cpp:769
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2199,7 +2199,7 @@ msgid ""
 "Please try it again later."
 msgstr ""
 
-#: Sources/Main.cpp:768
+#: Sources/Main.cpp:770
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2208,7 +2208,7 @@ msgid ""
 "Please check your client version and try it again in a minute."
 msgstr ""
 
-#: Sources/Main.cpp:769
+#: Sources/Main.cpp:771
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2217,7 +2217,7 @@ msgid ""
 "check your network connection."
 msgstr ""
 
-#: Sources/Main.cpp:770
+#: Sources/Main.cpp:772
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2225,7 +2225,7 @@ msgid ""
 "The server is not responding for connection request."
 msgstr ""
 
-#: Sources/Main.cpp:771
+#: Sources/Main.cpp:773
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2234,7 +2234,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:772
+#: Sources/Main.cpp:774
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"

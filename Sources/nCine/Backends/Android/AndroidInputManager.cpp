@@ -432,12 +432,6 @@ namespace nCine
 					keyboardState_.keys_[keySym] = 1;
 				}
 				inputEventHandler_->OnKeyPressed(keyboardEvent_);
-				break;
-			case AKEY_EVENT_ACTION_UP:
-				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
-					keyboardState_.keys_[keySym] = 0;
-				}
-				inputEventHandler_->OnKeyReleased(keyboardEvent_);
 
 				if ((metaState & AMETA_CTRL_ON) == 0) {
 					AndroidJniClass_KeyEvent keyEvent(AInputEvent_getType(event), keyCode);
@@ -450,11 +444,18 @@ namespace nCine
 					}
 				}
 				break;
+			case AKEY_EVENT_ACTION_UP:
+				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
+					keyboardState_.keys_[keySym] = 0;
+				}
+				inputEventHandler_->OnKeyReleased(keyboardEvent_);
+				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
+				// AKEY_EVENT_ACTION_MULTIPLE should be deprecated, but it seems it's still used even on Android 13
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				}
-				// TODO: This section doesn't work with software keyboards
+				// TODO: This section doesn't work anyway with software keyboards (https://stackoverflow.com/q/21124051)
 				/*else if ((metaState & AMETA_CTRL_ON) == 0) {
 					// Unicode input from software keyboard
 					long long int downTime = AKeyEvent_getDownTime(event);

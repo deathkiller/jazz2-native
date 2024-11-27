@@ -15,7 +15,8 @@ using namespace Death::Containers;
 
 namespace Jazz2
 {
-	struct PlayerCarryOver {
+	struct PlayerCarryOver
+	{
 		static constexpr std::int32_t WeaponCount = (std::int32_t)WeaponType::Count;
 
 		PlayerType Type;
@@ -28,7 +29,8 @@ namespace Jazz2
 		std::uint8_t WeaponUpgrades[WeaponCount];
 	};
 
-	struct LevelInitialization {
+	struct LevelInitialization
+	{
 		static constexpr std::int32_t MaxPlayerCount = 4;
 		static constexpr std::int32_t DefaultLives = 3;
 
@@ -39,16 +41,17 @@ namespace Jazz2
 		GameDifficulty Difficulty;
 		bool IsReforged, CheatsUsed;
 		ExitType LastExitType;
+		std::uint64_t ElapsedMilliseconds;
 
 		PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
 
 		LevelInitialization()
-			: PlayerCarryOvers{}
+			: ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 		}
 
-		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged)
-			: PlayerCarryOvers{}
+		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged)
+			: ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;
@@ -63,8 +66,8 @@ namespace Jazz2
 			}
 		}
 
-		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
-			: PlayerCarryOvers{}
+		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
+			: ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;
@@ -82,8 +85,8 @@ namespace Jazz2
 			}
 		}
 
-		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
-			: PlayerCarryOvers{}
+		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
+			: ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;
@@ -113,6 +116,7 @@ namespace Jazz2
 			CheatsUsed = copy.CheatsUsed;
 			LastExitType = copy.LastExitType;
 			LastEpisodeName = copy.LastEpisodeName;
+			ElapsedMilliseconds = copy.ElapsedMilliseconds;
 
 			std::memcpy(PlayerCarryOvers, copy.PlayerCarryOvers, sizeof(PlayerCarryOvers));
 		}
@@ -126,6 +130,7 @@ namespace Jazz2
 			CheatsUsed = move.CheatsUsed;
 			LastExitType = move.LastExitType;
 			LastEpisodeName = std::move(move.LastEpisodeName);
+			ElapsedMilliseconds = move.ElapsedMilliseconds;
 
 			std::memcpy(PlayerCarryOvers, move.PlayerCarryOvers, sizeof(PlayerCarryOvers));
 		}

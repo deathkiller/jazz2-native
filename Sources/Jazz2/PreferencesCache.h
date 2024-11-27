@@ -74,6 +74,7 @@ namespace Jazz2
 		std::uint8_t Unused1;
 		std::int32_t Score;
 		std::uint16_t Unused2;
+		std::uint64_t ElapsedMilliseconds;
 		std::int32_t Gems[4];
 		std::uint16_t Ammo[(std::int32_t)WeaponType::Count];
 		std::uint8_t WeaponUpgrades[(std::int32_t)WeaponType::Count];

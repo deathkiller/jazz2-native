@@ -27,7 +27,7 @@ namespace Jazz2::UI::Menu
 		RefreshList();
 	}
 
-	HighscoresSection::HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, const PlayerCarryOver& itemToAdd)
+	HighscoresSection::HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, std::uint64_t elapsedMilliseconds, const PlayerCarryOver& itemToAdd)
 		: HighscoresSection()
 	{
 		if (seriesIndex >= 0 && seriesIndex < (std::int32_t)SeriesName::Count) {
@@ -47,7 +47,7 @@ namespace Jazz2::UI::Menu
 			// TODO: PlayerId is unused
 			// TODO: ElapsedMilliseconds is unused
 			AddItemAndFocus(HighscoreItem { std::move(name), 0, flags, itemToAdd.Type, difficulty, itemToAdd.Lives, itemToAdd.Score,
-				{ itemToAdd.Gems[0], itemToAdd.Gems[1], itemToAdd.Gems[2], itemToAdd.Gems[3] }, DateTime::UtcNow().ToUnixMilliseconds() });
+				{ itemToAdd.Gems[0], itemToAdd.Gems[1], itemToAdd.Gems[2], itemToAdd.Gems[3] }, DateTime::UtcNow().ToUnixMilliseconds(), elapsedMilliseconds });
 		}
 	}
 
@@ -98,16 +98,23 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		StringView episodeName;
-		switch ((SeriesName)_selectedSeries) {
-			case SeriesName::BaseGame: episodeName = _("Base Game"); break;
-			case SeriesName::SharewareDemo: episodeName = "Shareware Demo"_s; break;
-			case SeriesName::TheSecretFiles: episodeName = "The Secret Files"_s; break;
-		}
-
 		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_f("Highscores for \f[c:#d0705d]%s\f[/c]", episodeName.data()), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+		SeriesName selectedSeries = (SeriesName)_selectedSeries;
+		if (selectedSeries == SeriesName::BaseGame) {
+			_root->DrawStringShadow(_("Highscores for \f[c:#d0705d]Base game\f[/c]"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		} else {
+			const char* episodeName;
+			switch ((SeriesName)_selectedSeries) {
+				case SeriesName::SharewareDemo: episodeName = "Shareware Demo"; break;
+				case SeriesName::TheSecretFiles: episodeName = "The Secret Files"; break;
+				default: episodeName = "Unknown"; break;
+			}
+
+			_root->DrawStringShadow(_f("Highscores for \f[c:#d0705d]%s\f[/c]", episodeName), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		}
 
 		_root->DrawStringShadow("<"_s, charOffset, centerX - 70.0f - 100.0f, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Right, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
@@ -224,47 +231,50 @@ namespace Jazz2::UI::Menu
 	void HighscoresSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
-		float nameX = centerX * 0.3f;
-		char stringBuffer[16];
+		float nameX = centerX * 0.36f;
+		char stringBuffer[64];
 
 		if (isSelected) {
 			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer - 200, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
 		}
 
-		formatString(stringBuffer, sizeof(stringBuffer), "%i.", (std::int32_t)(&item - &_items[0] + 1));
-		_root->DrawStringShadow(stringBuffer, charOffset, nameX - 16.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
-			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
+		std::int32_t pos = (std::int32_t)(&item - &_items[0] + 1);
+		if (pos <= MaxItems) {
+			formatString(stringBuffer, sizeof(stringBuffer), "%i.", pos);
+			_root->DrawStringShadow(stringBuffer, charOffset, nameX - 16.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+				(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+		}
 
 		_root->DrawStringShadow(item.Item->PlayerName, charOffset, nameX, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
 			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
 
+		if (item.Item->Lives <= 0) {
+			Vector2f nameSize = _root->MeasureString(item.Item->PlayerName, 0.8f);
+			_root->DrawElement(RestInPeace, -1, nameX + nameSize.X + 12.0f, item.Y - 2.0f, IMenuContainer::MainLayer - 100, Alignment::Left, Colorf::White, 1.0f, 1.0f);
+		}
+
 		u32tos(item.Item->Score, stringBuffer);
-		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 0.98f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
-			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
+		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.06f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
 
-		_root->DrawElement(PickupGemRed, -1, centerX * 1.1f - 2.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
+		_root->DrawElement(PickupGemRed, -1, centerX * 1.18f - 6.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
 
-		u32tos(item.Item->Gems[0], stringBuffer);
-		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.1f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
+		formatString(stringBuffer, sizeof(stringBuffer), "%i · %i · %i · %i", item.Item->Gems[0], item.Item->Gems[1], item.Item->Gems[2], item.Item->Gems[3]);
+		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.18f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
+			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f,0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 
-		_root->DrawElement(PickupGemGreen, -1, centerX * 1.3f - 2.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
+		std::int64_t elapsedSeconds = (item.Item->ElapsedMilliseconds / 1000);
+		if (elapsedSeconds > 0) {
+			_root->DrawElement(PickupStopwatch, -1, centerX * 1.58f - 6.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf::White, 0.55f, 0.55f);
 
-		u32tos(item.Item->Gems[1], stringBuffer);
-		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.3f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
-
-		_root->DrawElement(PickupGemBlue, -1, centerX * 1.5f - 2.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
-
-		u32tos(item.Item->Gems[2], stringBuffer);
-		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.5f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
-
-		_root->DrawElement(PickupGemPurple, -1, centerX * 1.7f - 2.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
-
-		u32tos(item.Item->Gems[3], stringBuffer);
-		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.7f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
+			std::int32_t elapsedHours = (elapsedSeconds / 3600);
+			std::int32_t elapsedMinutes = (elapsedSeconds / 60);
+			elapsedSeconds -= (elapsedMinutes * 60);
+			elapsedMinutes -= (elapsedHours * 60);
+			formatString(stringBuffer, sizeof(stringBuffer), "%i:%02i:%02i", elapsedHours, elapsedMinutes, elapsedSeconds);
+			_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.72f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+				(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+		}
 
 		if (isSelected && _waitForInput) {
 			Vector2f textToCursorSize = _root->MeasureString(item.Item->PlayerName.prefix(_textCursor), 0.8f);
@@ -417,12 +427,12 @@ namespace Jazz2::UI::Menu
 			baseGame.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 12, 500000, { 300, 35, 8, 0 } });
 			baseGame.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 10, 400000, { 260, 30, 8, 0 } });
 			baseGame.Items.emplace_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 4, 300000, { 200, 25, 6, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 200000, { 120, 20, 5, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "William"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 100000, { 80, 16, 5, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 50000, { 40, 10, 4, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 40000, { 20, 8, 4, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "James"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 30000, { 12, 4, 2, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Oliver"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 20000, { 6, 2, 0, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 200000, { 120, 20, 5, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "William"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 100000, { 80, 16, 5, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 50000, { 40, 10, 4, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 40000, { 20, 8, 4, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "James"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 30000, { 12, 4, 2, 0 } });
+			baseGame.Items.emplace_back(HighscoreItem { "Oliver"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 14000, { 6, 2, 0, 0 } });
 		}
 
 		auto& sharewareDemo = _series[(std::int32_t)SeriesName::SharewareDemo];
@@ -433,10 +443,10 @@ namespace Jazz2::UI::Menu
 			sharewareDemo.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 2, 35000, { 35, 1, 1, 0 } });
 			sharewareDemo.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 30000, { 30, 1, 0, 0 } });
 			sharewareDemo.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 25, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Matthew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 20000, { 20, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 15000, { 12, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Violet"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 10000, { 6, 0, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Patrick"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 5000, { 2, 0, 0, 0 } });
+			sharewareDemo.Items.emplace_back(HighscoreItem { "Matthew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 20000, { 20, 1, 0, 0 } });
+			sharewareDemo.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 15000, { 12, 1, 0, 0 } });
+			sharewareDemo.Items.emplace_back(HighscoreItem { "Violet"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 10000, { 6, 0, 0, 0 } });
+			sharewareDemo.Items.emplace_back(HighscoreItem { "Patrick"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 5000, { 2, 0, 0, 0 } });
 		}
 
 		auto& theSecretFiles = _series[(std::int32_t)SeriesName::TheSecretFiles];
@@ -447,10 +457,10 @@ namespace Jazz2::UI::Menu
 			theSecretFiles.Items.emplace_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 2, 250000, { 180, 35, 10, 0 } });
 			theSecretFiles.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 200000, { 140, 30, 8, 0 } });
 			theSecretFiles.Items.emplace_back(HighscoreItem { "Christopher"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 150000, { 100, 25, 6, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 100000, { 60, 18, 4, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Victoria"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 0, 50000, { 30, 12, 2, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 0, 25000, { 16, 6, 0, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Alexander"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 0, 10000, { 8, 2, 0, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 100000, { 60, 18, 4, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Victoria"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 50000, { 30, 12, 2, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 16, 6, 0, 0 } });
+			theSecretFiles.Items.emplace_back(HighscoreItem { "Alexander"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 10000, { 8, 2, 0, 0 } });
 		}
 
 	}
