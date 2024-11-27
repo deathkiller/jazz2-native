@@ -31,9 +31,11 @@ namespace nCine
 	jmethodID AndroidJniClass_MotionRange::midGetMin_ = nullptr;
 	jmethodID AndroidJniClass_MotionRange::midGetRange_ = nullptr;
 	jclass AndroidJniClass_KeyEvent::javaClass_ = nullptr;
+	jmethodID AndroidJniClass_KeyEvent::midConstructor2_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midConstructor_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midGetUnicodeCharMetaState_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midGetUnicodeChar_ = nullptr;
+	jmethodID AndroidJniClass_KeyEvent::midGetCharacters_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midIsPrintingKey_ = nullptr;
 	jclass AndroidJniClass_Display::javaClass_ = nullptr;
 	jmethodID AndroidJniClass_Display::midGetMode_ = nullptr;
