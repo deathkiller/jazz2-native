@@ -27,7 +27,7 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });
 		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::ToggleRunAction, _("Toggle Run"), true });
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnableAltGamepad, _("Gamepad Button Labels"), true });
+		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::GamepadButtonLabels, _("Gamepad Button Labels"), true });
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnableGamepadRumble, _("Gamepad Rumble"), true });
 #endif
@@ -105,7 +105,15 @@ namespace Jazz2::UI::Menu
 			bool enabled;
 			switch (item.Item.Type) {
 				case ControlsOptionsItemType::ToggleRunAction: enabled = PreferencesCache::ToggleRunAction; break;
-				case ControlsOptionsItemType::EnableAltGamepad: enabled = PreferencesCache::GamepadButtonLabels != GamepadType::Xbox; customText = (enabled ? "PlayStation™"_s : "Xbox"_s); break;
+				case ControlsOptionsItemType::GamepadButtonLabels:
+					switch (PreferencesCache::GamepadButtonLabels) {
+						default:
+						case GamepadType::Xbox: customText = "Xbox"_s; break;
+						case GamepadType::PlayStation: customText = "PlayStation™"_s; break;
+						case GamepadType::Steam: customText = "Steam Deck"_s; break;
+						case GamepadType::Switch: customText = "Switch"_s; break;
+					}
+					break;
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 				case ControlsOptionsItemType::EnableGamepadRumble:
 					customText = (PreferencesCache::GamepadRumble == 2
@@ -140,11 +148,13 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
-			case ControlsOptionsItemType::EnableAltGamepad:
-				if (PreferencesCache::GamepadButtonLabels != GamepadType::Xbox) {
-					PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
-				} else {
-					PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation;
+			case ControlsOptionsItemType::GamepadButtonLabels:
+				switch (PreferencesCache::GamepadButtonLabels) {
+					default:
+					case GamepadType::Xbox: PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation; break;
+					case GamepadType::PlayStation: PreferencesCache::GamepadButtonLabels = GamepadType::Steam; break;
+					case GamepadType::Steam: PreferencesCache::GamepadButtonLabels = GamepadType::Switch; break;
+					case GamepadType::Switch: PreferencesCache::GamepadButtonLabels = GamepadType::Xbox; break;
 				}
 				_isDirty = true;
 				_animation = 0.0f;

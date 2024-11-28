@@ -47,7 +47,11 @@ namespace Jazz2
 #endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
 	bool PreferencesCache::ToggleRunAction = false;
+#if defined(DEATH_TARGET_SWITCH)
+	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
+#else
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
+#endif
 	std::uint8_t PreferencesCache::GamepadRumble = 1;
 	bool PreferencesCache::UseNativeBackButton = false;
 	bool PreferencesCache::EnableDiscordIntegration = false;
@@ -335,6 +339,19 @@ namespace Jazz2
 				// Create "Source" directory on the first launch
 				auto& resolver = ContentResolver::Get();
 				fs::CreateDirectories(resolver.GetSourcePath());
+
+#	if defined(DEATH_TARGET_UNIX)
+				StringView isSteamDeck = ::getenv("SteamDeck");
+				if (isSteamDeck == "1"_s) {
+					GamepadButtonLabels = GamepadType::Steam;
+				}
+#	elif defined(DEATH_TARGET_WINDOWS)
+				wchar_t envSteamDeck[2] = {};
+				DWORD envLength = ::GetEnvironmentVariable(L"SteamDeck", envSteamDeck, 2);
+				if (envLength == 1 && envSteamDeck[0] == L'1') {
+					GamepadButtonLabels = GamepadType::Steam;
+				}
+#	endif
 #endif
 			}
 		}

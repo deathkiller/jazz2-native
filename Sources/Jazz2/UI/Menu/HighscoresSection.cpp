@@ -45,7 +45,6 @@ namespace Jazz2::UI::Menu
 			if (cheatsUsed) flags |= HighscoreFlags::CheatsUsed;
 
 			// TODO: PlayerId is unused
-			// TODO: ElapsedMilliseconds is unused
 			AddItemAndFocus(HighscoreItem { std::move(name), 0, flags, itemToAdd.Type, difficulty, itemToAdd.Lives, itemToAdd.Score,
 				{ itemToAdd.Gems[0], itemToAdd.Gems[1], itemToAdd.Gems[2], itemToAdd.Gems[3] }, DateTime::UtcNow().ToUnixMilliseconds(), elapsedMilliseconds });
 		}
