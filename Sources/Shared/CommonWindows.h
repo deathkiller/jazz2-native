@@ -150,6 +150,13 @@ DEATH_ALWAYS_INLINE int WINAPI GetClassName(HWND hWnd, LPWSTR lpClassName, int n
 }
 #endif
 
+#if defined(GetEnvironmentVariable)
+#	undef GetEnvironmentVariable
+DEATH_ALWAYS_INLINE DWORD WINAPI GetEnvironmentVariable(LPCWSTR lpName, LPWSTR lpBuffer, DWORD nSize) {
+	return ::GetEnvironmentVariableW(lpName, lpBuffer, nSize);
+}
+#endif
+
 #if defined(GetMessage)
 #	undef GetMessage
 DEATH_ALWAYS_INLINE int WINAPI GetMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax) {

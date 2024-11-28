@@ -340,7 +340,7 @@ namespace Jazz2
 				auto& resolver = ContentResolver::Get();
 				fs::CreateDirectories(resolver.GetSourcePath());
 
-#	if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH)
 				StringView isSteamDeck = ::getenv("SteamDeck");
 				if (isSteamDeck == "1"_s) {
 					GamepadButtonLabels = GamepadType::Steam;
