@@ -8,7 +8,7 @@ namespace Jazz2::UI::Menu
 		RemapControls,
 		TouchControls,
 		ToggleRunAction,
-		EnableAltGamepad,
+		GamepadButtonLabels,
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 		EnableGamepadRumble,
 #endif

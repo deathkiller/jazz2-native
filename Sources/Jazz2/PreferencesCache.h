@@ -33,6 +33,7 @@ namespace Jazz2
 	enum class GamepadType : std::uint8_t {
 		Xbox,
 		PlayStation,
+		Steam,
 		Switch
 	};
 
