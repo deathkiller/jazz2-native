@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 "
 "|| n%100>14) ? 1 : 2);\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.4.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1464,7 +1464,7 @@ msgstr "Poziomy społeczności"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
 msgid "Highscores"
-msgstr ""
+msgstr "Tabela wyników"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
@@ -1870,12 +1870,12 @@ msgstr "Włączono \f[c:#d0705d](Eksperymentalne)\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:105
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr ""
+msgstr "Tabela wyników dla \f[c:#d0705d]gry podstawowej\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:115
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
-msgstr ""
+msgstr "Tabela wyników dla  \f[c:#d0705d]%s\f[/c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
@@ -1925,7 +1925,7 @@ msgstr "Wyścig"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
-msgstr ""
+msgstr "Wyścig drużynowy"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
@@ -2049,7 +2049,7 @@ msgstr "Brak / Idealne piksele"
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:29
 msgid "CRT Scanlines"
-msgstr "Linie CRT"
+msgstr "Linie skanu CRT"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:31
@@ -2080,7 +2080,7 @@ msgstr "Póki co nie znaleziono żadnych serwerów, ale ciągle szukam!"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
-msgstr ""
+msgstr "Naciśnij \f[c:#d0705d]Strzał\f[/c], aby kontynuować"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
@@ -2219,13 +2219,6 @@ msgstr ""
 "Spróbuj ponownie później."
 
 #: Sources/Main.cpp:768
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2236,17 +2229,10 @@ msgstr ""
 "\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest zamykany.\n"
+"Serwer jest zamykany z powodu prac technicznych.\n"
 "Spróbuj ponownie później."
 
 #: Sources/Main.cpp:769
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2257,17 +2243,10 @@ msgstr ""
 "\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest zamykany.\n"
+"Serwer jest zamykany z powodu ponownej konfiguracji.\n"
 "Spróbuj ponownie później."
 
 #: Sources/Main.cpp:770
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2278,8 +2257,8 @@ msgstr ""
 "\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest zamykany.\n"
-"Spróbuj ponownie później."
+"Serwer jest zamykany z powodu aktualizacji.\n"
+"Sprawdź wersję swojego klienta i spróbuj ponownie później."
 
 #: Sources/Main.cpp:771
 msgid ""
