@@ -10,10 +10,13 @@ namespace Death { namespace IO {
 	*/
 	enum struct FileAccess {
 		None = 0,
+
 		Read = 0x01,
 		Write = 0x02,
 		ReadWrite = Read | Write,
-		Exclusive = 0x08
+
+		Exclusive = 0x10,
+		InheritHandle = 0x20
 	};
 
 	DEFINE_ENUM_OPERATORS(FileAccess);

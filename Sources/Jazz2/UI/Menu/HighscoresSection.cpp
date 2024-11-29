@@ -20,7 +20,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	HighscoresSection::HighscoresSection()
-		: _selectedSeries(0), _textCursor(0), _carretAnim(0.0f), _waitForInput(false)
+		: _selectedSeries(0), _notValidPos(-1), _notValidSeries(-1), _textCursor(0), _carretAnim(0.0f), _waitForInput(false)
 	{
 		DeserializeFromFile();
 		FillDefaultsIfEmpty();
@@ -32,7 +32,6 @@ namespace Jazz2::UI::Menu
 	{
 		if (seriesIndex >= 0 && seriesIndex < (std::int32_t)SeriesName::Count) {
 			_selectedSeries = seriesIndex;
-			_waitForInput = true;
 
 			String name = TryGetDefaultName();
 			if (name.size() > MaxNameLength) {
@@ -80,6 +79,8 @@ namespace Jazz2::UI::Menu
 					SerializeToFile();
 				}
 			}
+
+			EnsureVisibleSelected();
 
 			_carretAnim += timeMult;
 		}
@@ -238,14 +239,28 @@ namespace Jazz2::UI::Menu
 		}
 
 		std::int32_t pos = (std::int32_t)(&item - &_items[0] + 1);
-		if (pos <= MaxItems) {
+		bool isNotValid = (_notValidPos == pos && _notValidSeries == _selectedSeries);
+		if (_notValidPos > 0 && _notValidPos < pos && _notValidSeries == _selectedSeries) {
+			pos--;
+		}
+		if (!isNotValid && pos <= MaxItems) {
 			formatString(stringBuffer, sizeof(stringBuffer), "%i.", pos);
 			_root->DrawStringShadow(stringBuffer, charOffset, nameX - 16.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
 				(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 		}
 
-		_root->DrawStringShadow(item.Item->PlayerName, charOffset, nameX, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
+		bool cheatsUsed = (item.Item->Flags & HighscoreFlags::CheatsUsed) == HighscoreFlags::CheatsUsed;
+
+		Colorf nameColor;
+		if (isSelected && _waitForInput) {
+			nameColor = Colorf(0.62f, 0.44f, 0.34f, 0.5f);
+		} else if (isSelected) {
+			nameColor = (cheatsUsed ? Colorf(0.6f, 0.43f, 0.43f, 0.5f) : Colorf(0.48f, 0.48f, 0.48f, 0.5f));
+		} else {
+			nameColor = (cheatsUsed ? Colorf(0.48f, 0.38f, 0.34f, 0.5f) : Font::DefaultColor);
+		}
+
+		_root->DrawStringShadow(item.Item->PlayerName, charOffset, nameX, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left, nameColor, 0.8f);
 
 		if (item.Item->Lives <= 0) {
 			Vector2f nameSize = _root->MeasureString(item.Item->PlayerName, 0.8f);
@@ -510,6 +525,11 @@ namespace Jazz2::UI::Menu
 
 	void HighscoresSection::SerializeToFile()
 	{
+		if (_notValidPos >= 0) {
+			// Don't save list with invalid items
+			return;
+		}
+
 		auto configDir = PreferencesCache::GetDirectory();
 		auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Write);
 		if (*s) {
@@ -563,15 +583,21 @@ namespace Jazz2::UI::Menu
 		auto* newItem = items.insert(nearestItem, std::move(item));
 		std::int32_t index = (std::int32_t)(newItem - &items[0]);
 
-		// Keep limited number of items
-		while (items.size() > MaxItems && newItem != &items.back()) {
-			items.pop_back();
+		if ((item.Flags & HighscoreFlags::CheatsUsed) == HighscoreFlags::CheatsUsed && PreferencesCache::OverwriteEpisodeEnd != EpisodeEndOverwriteMode::Always) {
+			_notValidPos = index + 1;
+			_notValidSeries = _selectedSeries;
+		} else {
+			// Keep limited number of items
+			while (items.size() > MaxItems && newItem != &items.back()) {
+				items.pop_back();
+			}
+
+			_textCursor = newItem->PlayerName.size();
+			_waitForInput = true;
 		}
 
 		RefreshList();
-
 		_selectedIndex = index;
-		_textCursor = newItem->PlayerName.size();
 	}
 
 	void HighscoresSection::RefreshList()
