@@ -1294,11 +1294,11 @@ void GameEventHandler::RefreshCacheLevels()
 		}
 #if defined(DEATH_DEBUG)
 		/*else if (extension == "j2s"_s) {
-			// Episode
+			// Translations
 			Compatibility::JJ2Strings strings;
 			strings.Open(item);
 
-			String fullPath = fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, strings.Name + ".h"_s });
+			String fullPath = fs::CombinePath({ resolver.GetCachePath(), "ExtractedTranslations"_s, String(strings.Name + ".h"_s) });
 			fs::CreateDirectories(fs::GetDirectoryName(fullPath));
 			strings.Convert(fullPath, LevelTokenConversion);
 		}*/

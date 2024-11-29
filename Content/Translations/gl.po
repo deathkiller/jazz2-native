@@ -1,16 +1,15 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-11-27 20:10+0100\n"
+"POT-Creation-Date: 2024-11-29 09:13+0100\n"
 "PO-Revision-Date: \n"
-"Last-Translator: \n"
-"Language-Team: Patrxgt & Klodizaur\n"
-"Language: pl\n"
+"Last-Translator: enfeitizador <fedellar@enfeitizador.es>\n"
+"Language-Team: enfeitizador\n"
+"Language: gl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 "
-"|| n%100>14) ? 1 : 2);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.5\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
@@ -25,7 +24,7 @@ msgid ""
 "Spaz ate the dopefish."
 msgstr ""
 "\n"
-"Spaz zjadł dopefisha."
+"Spaz comeu o Dopefish."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:2
 msgctxt "flash/01_diam1"
@@ -34,7 +33,7 @@ msgid ""
 "Find the gopher."
 msgstr ""
 "\n"
-"Znajdź susła."
+"Atopa o esquío."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:3
 msgctxt "flash/01_diam1"
@@ -43,7 +42,7 @@ msgid ""
 "Dragons live in burbank."
 msgstr ""
 "\n"
-"Smoki żyją w Burbank."
+"Os dragóns viven en Burbank."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:4
 msgctxt "flash/01_diam1"
@@ -53,8 +52,8 @@ msgid ""
 "Hoo Hah!"
 msgstr ""
 "\n"
-"Mark nosi kalesony.\n"
-"Hu ha!"
+"Mark leva calzóns slip. \n"
+"Hoo Hah!"
 
 #: .fake/Translations/flash/01_diam1.j2l.h:5
 msgctxt "flash/01_diam1"
@@ -64,8 +63,8 @@ msgid ""
 "Always has!"
 msgstr ""
 "\n"
-"Nick od zawsze kochał \n"
-"wszystko, co błyszczy!"
+"Nick ama o brillante. \n"
+"Desde sempre!"
 
 #: .fake/Translations/flash/02_diam3.j2l.h:1
 msgctxt "flash/02_diam3"
@@ -74,7 +73,7 @@ msgid ""
 "Send Tim new socks."
 msgstr ""
 "\n"
-"Wyślij Timowi nowe skarpety."
+"Mándalle a Tim calcetíns novos."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:2
 msgctxt "flash/02_diam3"
@@ -83,7 +82,7 @@ msgid ""
 "Send Nigel a green card."
 msgstr ""
 "\n"
-"Wyślij Nigelowi zieloną kartę."
+"Mándalle a Nigel unha tarxeta verde."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:3
 msgctxt "flash/02_diam3"
@@ -92,7 +91,7 @@ msgid ""
 "Beware of chainsaw schmalz."
 msgstr ""
 "\n"
-"Nie rób smalcu piłą łańcuchową."
+"Coidado coa parvada da motoserra."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:4
 msgctxt "flash/02_diam3"
@@ -101,7 +100,7 @@ msgid ""
 "Dont give mark a burrito."
 msgstr ""
 "\n"
-"Nie dawajcie Markowi burito."
+"Non lle deas a Mark un burrito."
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:1
 msgctxt "flash/05_medivo1"
@@ -110,7 +109,7 @@ msgid ""
 "Beware of falling enemies."
 msgstr ""
 "\n"
-"Uważaj na spadających wrogów."
+"Coidado cos inimigos que caen."
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:2
 msgctxt "flash/05_medivo1"
@@ -119,7 +118,7 @@ msgid ""
 "Craig is still a doofus!"
 msgstr ""
 "\n"
-"Craig to nadal przygłup!"
+"Craig segue a ser un idiota!"
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:3
 msgctxt "flash/05_medivo1"
@@ -128,7 +127,7 @@ msgid ""
 "Secret Level Time!!!"
 msgstr ""
 "\n"
-"Pora na Sekretny Poziom!!!"
+"Tempo do nivel secreto!!!"
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:1
 msgctxt "flash/bonus_garglair"
@@ -138,8 +137,8 @@ msgid ""
 "To Clear Your Path"
 msgstr ""
 "\n"
-"Skocz tyłkiem na srebrną skrzynkę,\n"
-"aby oczyścić sobie drogę"
+"Esmaga co traseiro unha caixa de prata\n"
+"para limpar o camiño"
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:2
 msgctxt "flash/bonus_garglair"
@@ -148,7 +147,7 @@ msgid ""
 "Crates can also make platforms appear..."
 msgstr ""
 "\n"
-"Skrzynie mogą także ujawnić platformy..."
+"As caixas tamén fan aparecer plataformas..."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:3
 msgctxt "flash/bonus_garglair"
@@ -157,7 +156,7 @@ msgid ""
 "Melt the Spring..."
 msgstr ""
 "\n"
-"Odmroź sprężynę..."
+"Derrete o resorte..."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:4
 msgctxt "flash/bonus_garglair"
@@ -166,7 +165,7 @@ msgid ""
 "Leh is a Camper"
 msgstr ""
 "\n"
-"Leh jest kamperem"
+"Leh é un campista"
 
 #: .fake/Translations/monk/01_jung1.j2l.h:1
 msgctxt "monk/01_jung1"
@@ -176,8 +175,8 @@ msgid ""
 "give you a headache."
 msgstr ""
 "\n"
-"Spadające kamienie mogą\n"
-"przyprawić cię o ból głowy."
+"As pedras que caen \n"
+"poden darche xaquecas."
 
 #: .fake/Translations/monk/01_jung1.j2l.h:2
 msgctxt "monk/01_jung1"
@@ -187,8 +186,8 @@ msgid ""
 "well against bugs."
 msgstr ""
 "\n"
-"Miotacz ognia jest\n"
-"dobry na robaki."
+"O lanzachamas é o tal\n"
+"contra os bechos."
 
 #: .fake/Translations/monk/03_hell.j2l.h:1
 msgctxt "monk/03_hell"
@@ -197,7 +196,7 @@ msgid ""
 "Long live the ice level."
 msgstr ""
 "\n"
-"Niech żyje poziom lodowy."
+"Longa vida ao nivel de xeo."
 
 #: .fake/Translations/monk/03_hell.j2l.h:2
 msgctxt "monk/03_hell"
@@ -206,7 +205,7 @@ msgid ""
 "Goodnight, bubba!"
 msgstr ""
 "\n"
-"To jeszcze nie koniec!"
+"Boa noite, Bubba!"
 
 #: .fake/Translations/monk/06_damn2.j2l.h:2
 msgctxt "monk/06_damn2"
@@ -216,8 +215,8 @@ msgid ""
 "This is NOT over!"
 msgstr ""
 "\n"
-"Co do cholery? Aaaa! No nie! \n"
-"Ten poziom jest niedokończony!"
+"Que cousa? Aaaah! Non!  \n"
+"Isto NON rematou!"
 
 #: .fake/Translations/prince/01_castle1.j2l.h:1
 msgctxt "prince/01_castle1"
@@ -227,8 +226,8 @@ msgid ""
 " you can go even faster."
 msgstr ""
 "\n"
-"Okręcanie się na słupkach\n"
-"pozwala ci zwiększyć swoją prędkość."
+"Os mastros fante xirar para que\n"
+" poidas ir máis rápido."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:2
 msgctxt "prince/01_castle1"
@@ -237,7 +236,7 @@ msgid ""
 "You found a secret area."
 msgstr ""
 "\n"
-"Znalazłeś sekretną okolicę."
+"Atopaches unha área secreta."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:3
 msgctxt "prince/01_castle1"
@@ -246,7 +245,7 @@ msgid ""
 "Secret Treasure Room."
 msgstr ""
 "\n"
-"Tajny Pokój Skarbów"
+"Cuarto do tesouro secreto."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:4
 msgctxt "prince/01_castle1"
@@ -255,7 +254,7 @@ msgid ""
 "Nothing to see here."
 msgstr ""
 "\n"
-"Nie ma tu nic ciekawego."
+"Nada que ver aquí."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:5
 msgctxt "prince/01_castle1"
@@ -265,8 +264,8 @@ msgid ""
 "bonus warp devices."
 msgstr ""
 "\n"
-"Zbieraj monety.\n"
-"A nuż odblokujesz jakiś bonus."
+"Recolle moedas para activar \n"
+"dispositivos de fiestras extra."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:1
 msgctxt "prince/02_castle1n"
@@ -275,7 +274,7 @@ msgid ""
 "Cheese is green on tuesday."
 msgstr ""
 "\n"
-"We wtorki ser zielenieje."
+"O queixo é verde o martes."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:2
 msgctxt "prince/02_castle1n"
@@ -284,7 +283,7 @@ msgid ""
 "Craig is king doofus."
 msgstr ""
 "\n"
-"Craig jest królem przygłupów."
+"Craig é o rei parvo."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:3
 msgctxt "prince/02_castle1n"
@@ -294,8 +293,8 @@ msgid ""
 "shoot her off her ledge."
 msgstr ""
 "\n"
-"Aby pokonać królową\n"
-"musisz zrzucić ją z platformy."
+"Para derrotar á raíña \n"
+"tíraa do seu rebordo."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:4
 msgctxt "prince/02_castle1n"
@@ -305,8 +304,8 @@ msgid ""
 "Now go get Devan Shell!"
 msgstr ""
 "\n"
-"Dobra robota!\n"
-"Teraz idź skopać skorupę Devanowi!"
+"Bo traballo! \n"
+"Agora colle a Devan Shell!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:5
 msgctxt "prince/02_castle1n"
@@ -316,8 +315,8 @@ msgid ""
 "blocks, press down and jump!"
 msgstr ""
 "\n"
-"Aby przebić się przez te bloki,\n"
-"wciśnij przyciski ruchu w dół i skoku!"
+"Para pasar a través destes\n"
+"bloques, preme abaixo e salto!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:6
 msgctxt "prince/02_castle1n"
@@ -327,8 +326,8 @@ msgid ""
 "these blocks to break them!"
 msgstr ""
 "\n"
-"Wciśnij przycisk ruchu w dół i skoku\n"
-"pod tymi blokami, aby je zniszczyć!"
+"Preme abaixo e salta baixo \n"
+"nestes bloques para rompelos!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:7
 msgctxt "prince/02_castle1n"
@@ -338,8 +337,8 @@ msgid ""
 "to open key blocks!"
 msgstr ""
 "\n"
-"Skocz tyłkiem na metalową skrzynię,\n"
-"aby otworzyć bloki-klucze!"
+"Esmaga co traseiro a caixa de metal \n"
+"para abrir os bloques chave!"
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:1
 msgctxt "prince/03_carrot1"
@@ -348,7 +347,7 @@ msgid ""
 "Stomp your booty to exit."
 msgstr ""
 "\n"
-"Stąpnij zadkiem, aby wyjść."
+"Esmaga o teu botín para saír."
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:2
 msgctxt "prince/03_carrot1"
@@ -357,7 +356,7 @@ msgid ""
 "This spring is frozen."
 msgstr ""
 "\n"
-"Ta sprężyna jest zamrożona."
+"O resorte está conxelado."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:1
 msgctxt "prince/04_carrot1n"
@@ -366,7 +365,7 @@ msgid ""
 "Super dooper secret."
 msgstr ""
 "\n"
-"Super duper sekret."
+"Secreto súper xenial."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:2
 msgctxt "prince/04_carrot1n"
@@ -376,8 +375,8 @@ msgid ""
 "special ammo for a short time."
 msgstr ""
 "\n"
-"Tarcze dają ci nieskończoną \n"
-"ilość specjalnej amunicji na krótki czas."
+"Os escudos danche munición \n"
+"especial ilimitada por un tempo."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:4
 msgctxt "prince/04_carrot1n"
@@ -387,8 +386,8 @@ msgid ""
 "the life of a shield."
 msgstr ""
 "\n"
-"Stopery mogą przedłużyć \n"
-"działanie tarczy."
+"Os cronómetros engaden tempo á\n"
+"vida dun escudo."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:5
 msgctxt "prince/04_carrot1n"
@@ -397,8 +396,7 @@ msgid ""
 "This schwartzenguard is toast!"
 msgstr ""
 "\n"
-"Niech ci ziemia \n"
-"ciężką będzie, bydlaku!"
+"Este Schwartzenguard está torrado!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:1
 msgctxt "prince/06_labrat2"
@@ -410,8 +408,8 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"Nie dasz rady mnie pokonać, Jazz!\n"
-"Przygotuj się na spotkanie z moim superbotem!"
+"Non me poderás gañar, Jazz!\n"
+"Prepárate a enfrontar o súper robot!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:2
 msgctxt "prince/06_labrat2"
@@ -422,7 +420,7 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"Oj! Pora stąd spadać!"
+"Ai! Lisco de aquí!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:3
 msgctxt "prince/06_labrat2"
@@ -432,8 +430,8 @@ msgid ""
 "Run into them at full speed!"
 msgstr ""
 "\n"
-"To bloki prędkości.\n"
-"Wbiegnij w nie najszybciej, jak się da!"
+"Estes son bloques de velocidade.\n"
+"Corre cara eles o máis que poidas!"
 
 #: .fake/Translations/prince/trainer.j2l.h:1
 msgctxt "prince/trainer"
@@ -443,8 +441,8 @@ msgid ""
 " This is a training level."
 msgstr ""
 "\n"
-"Witaj w Jazz Jackrabbit 2. \n"
-"To jest poziom treningowy."
+"Benvida a Jazz Jackrabbit 2. \n"
+" Este é un nivel de adestramento."
 
 #: .fake/Translations/prince/trainer.j2l.h:2
 msgctxt "prince/trainer"
@@ -454,8 +452,8 @@ msgid ""
 "points and surprises."
 msgstr ""
 "\n"
-"Zbieraj dobra, aby\n"
-"zdobyć punkty i niespodzianki."
+"Recolle obxectos para\n"
+"puntos e sorpresas."
 
 #: .fake/Translations/prince/trainer.j2l.h:3
 msgctxt "prince/trainer"
@@ -465,8 +463,8 @@ msgid ""
 "again to do a special move."
 msgstr ""
 "\n"
-"Po skoku, wciśnij skok jeszcze raz\n"
-"aby wykonać specjalny ruch!"
+"Despois de saltar, preme saltar de\n"
+"novo para facer un movemento especial."
 
 #: .fake/Translations/prince/trainer.j2l.h:4
 msgctxt "prince/trainer"
@@ -475,7 +473,7 @@ msgid ""
 "Some walls can be shot."
 msgstr ""
 "\n"
-"Niektóre ściany możesz rozstrzelać."
+"Pódese disparar a algunhas paredes."
 
 #: .fake/Translations/prince/trainer.j2l.h:5
 msgctxt "prince/trainer"
@@ -485,9 +483,8 @@ msgid ""
 "to stomp with your butt."
 msgstr ""
 "\n"
-"Kiedy jesteś w powietrzu, \n"
-"wciśnij przycisk ruchu w dół, \n"
-"żeby rąbnąć swoim tyłkiem."
+"Cando estás no aire, preme abaixo\n"
+"para pegar duro co teu traseiro."
 
 #: .fake/Translations/prince/trainer.j2l.h:6
 msgctxt "prince/trainer"
@@ -497,8 +494,8 @@ msgid ""
 " Check the walls."
 msgstr ""
 "\n"
-"Mnóstwo tu sekretów. \n"
-" Sprawdzaj ściany."
+"Os secretos abundan no Jazz 2. \n"
+" Comproba as paredes."
 
 #: .fake/Translations/prince/trainer.j2l.h:7
 msgctxt "prince/trainer"
@@ -508,8 +505,8 @@ msgid ""
 "look for secrets."
 msgstr ""
 "\n"
-"Dobra robota.\n"
-"Zawsze szukaj sekretów."
+"Bo traballo. Lembra buscar\n"
+"polos secretos."
 
 #: .fake/Translations/prince/trainer.j2l.h:8
 msgctxt "prince/trainer"
@@ -519,8 +516,8 @@ msgid ""
 "an extra life."
 msgstr ""
 "\n"
-"Zbieraj klejnoty, \n"
-"aby dostać ekstra życie."
+"Recolle xemas para \n"
+"unha vida adicional."
 
 #: .fake/Translations/prince/trainer.j2l.h:9
 msgctxt "prince/trainer"
@@ -530,8 +527,8 @@ msgid ""
 "as one gem."
 msgstr ""
 "\n"
-"Czerwone klejnoty\n"
-"liczą się za jeden."
+"As xemas vermellas contan\n"
+"como unha xema."
 
 #: .fake/Translations/prince/trainer.j2l.h:10
 msgctxt "prince/trainer"
@@ -541,8 +538,8 @@ msgid ""
 "as five gems."
 msgstr ""
 "\n"
-"Zielone klejnoty\n"
-"liczą się za pięć."
+"As xemas verdes contan\n"
+"como cinco xemas."
 
 #: .fake/Translations/prince/trainer.j2l.h:11
 msgctxt "prince/trainer"
@@ -552,8 +549,8 @@ msgid ""
 "as ten gems."
 msgstr ""
 "\n"
-"Niebieskie klejnoty\n"
-"liczą się za dziesięć."
+"As xemas azuis contan\n"
+"como dez xemas."
 
 #: .fake/Translations/prince/trainer.j2l.h:12
 msgctxt "prince/trainer"
@@ -562,7 +559,7 @@ msgid ""
 "Carrots give you health."
 msgstr ""
 "\n"
-"Marchewka daje ci zdrowie."
+"As cenorias danche saúde."
 
 #: .fake/Translations/prince/trainer.j2l.h:13
 msgctxt "prince/trainer"
@@ -572,9 +569,8 @@ msgid ""
 "spot if you lose a life."
 msgstr ""
 "\n"
-"Punkt kontrolny zapisze\n"
-"twój postęp, który zostanie\n"
-"przywrócony, jeśli stracisz życie."
+"Os puntos de control gardan\n"
+"o progreso se perdes unha vida."
 
 #: .fake/Translations/prince/trainer.j2l.h:14
 msgctxt "prince/trainer"
@@ -584,8 +580,8 @@ msgid ""
 "unlock bonus rooms."
 msgstr ""
 "\n"
-"Zbieraj monety,\n"
-"aby odblokować bonusowe pomieszczenia."
+"Recolle moedas para\n"
+"desbloquear cuartos de bonos."
 
 #: .fake/Translations/prince/trainer.j2l.h:15
 msgctxt "prince/trainer"
@@ -595,8 +591,8 @@ msgid ""
 "It hurts."
 msgstr ""
 "\n"
-"Strzeż się ostrych rzeczy.\n"
-"Nadzianie się na nie potrafi zaboleć."
+"Coidado coas cousas aguzadas.\n"
+"Mancan."
 
 #: .fake/Translations/prince/trainer.j2l.h:16
 msgctxt "prince/trainer"
@@ -606,8 +602,8 @@ msgid ""
 " Good luck and have fun."
 msgstr ""
 "\n"
-"Jesteś gotowy do gry.\n"
-" Baw się dobrze!"
+"Agora estás a punto para xogar.\n"
+" Boa sorte e divírtete."
 
 #: .fake/Translations/rescue/01_colon1.j2l.h:1
 msgctxt "rescue/01_colon1"
@@ -616,7 +612,7 @@ msgid ""
 "Buttstomp the manhole cover!"
 msgstr ""
 "\n"
-"Skocz tyłkiem na pokrywę włazu!"
+"Pégalle duro á tampa da arqueta!"
 
 #: .fake/Translations/rescue/03_psych1.j2l.h:1
 msgctxt "rescue/03_psych1"
@@ -626,8 +622,8 @@ msgid ""
 "make you dizzy."
 msgstr ""
 "\n"
-"Dymowe pierścienie \n"
-"mogą cię oszołomić!"
+"Os aneis de fume \n"
+"vante marear."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:1
 msgctxt "secretf/01_easter1"
@@ -637,8 +633,8 @@ msgid ""
 "so go up and around!"
 msgstr ""
 "\n"
-"Jeśli nie da się dołem\n"
-"to idź górą i na około!"
+"Non podes baterlle\n"
+"así que sube e xira!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:2
 msgctxt "secretf/01_easter1"
@@ -648,8 +644,8 @@ msgid ""
 "with itchy trigger fingers."
 msgstr ""
 "\n"
-"Nie ma nagrody dla tych,\n"
-"których swędzą paluszki."
+"Non hai recompensa para eses\n"
+"con ronchas nos dedos do gatillo."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:3
 msgctxt "secretf/01_easter1"
@@ -658,8 +654,7 @@ msgid ""
 "Todays Forcast: Strong Winds!"
 msgstr ""
 "\n"
-"Prognoza na dziś: \n"
-"Uwaga na mocne wiatry!"
+"Prognóstico de hoxe: Fortes refachos!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:4
 msgctxt "secretf/01_easter1"
@@ -669,8 +664,8 @@ msgid ""
 "to clear your path."
 msgstr ""
 "\n"
-"Znajdź skrzynkę\n"
-"aby oczyścić sobie drogę."
+"Atopa a caixa\n"
+"para despexar o camiño."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:5
 msgctxt "secretf/01_easter1"
@@ -681,7 +676,7 @@ msgid ""
 "The Secret Files!"
 msgstr ""
 "\n"
-"Witamy w\n"
+"Benvida a\n"
 "Jazz Jackrabbit 2:\n"
 "The Secret Files!"
 
@@ -695,9 +690,10 @@ msgid ""
 "to stand on."
 msgstr ""
 "\n"
-"Tylko Spaz może dostać się\n"
-"do pomieszczenia na górze po lewej.\n"
-"Ale musi mieć na czym stanąć."
+"Só Spaz pode chegar ao\n"
+"cuarto de arriba á esquerda.\n"
+"Quizais necesite algo onde\n"
+"pousarse."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:7
 msgctxt "secretf/01_easter1"
@@ -707,8 +703,8 @@ msgid ""
 "You've veen warned. :)"
 msgstr ""
 "\n"
-"Nie wygrywaj z Nigelem w bilard.\n"
-"Zostałeś ostrzeżony. :)"
+"Non lle gañes a Nigel ao billar.\n"
+"Advertíuseche, xa sabes. :)"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:16
 msgctxt "secretf/01_easter1"
@@ -716,8 +712,8 @@ msgid ""
 "Eating too many chocolate\n"
 "eggs can make you sick :p"
 msgstr ""
-"Im więcej czekoladowych jajek zjesz,\n"
-"tym szybciej zapoznasz się z panem próchnicą :p"
+"Rillar moitos ovos de\n"
+"chocolate farate enfermar :p"
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:1
 msgctxt "secretf/02_easter2"
@@ -726,7 +722,7 @@ msgid ""
 "Sloping Tunnel Entrance"
 msgstr ""
 "\n"
-"Wjazd do tunelu"
+"Entrada ao túnel inclinado"
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:2
 msgctxt "secretf/02_easter2"
@@ -736,8 +732,8 @@ msgid ""
 "find the access warp."
 msgstr ""
 "\n"
-"Aby dostać się do tunelu nad tobą\n"
-"musisz poszukać dostępu."
+"Para acceder aos túneles de arriba\n"
+"atopa a fiestra de acceso."
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:3
 msgctxt "secretf/02_easter2"
@@ -747,8 +743,8 @@ msgid ""
 "One route leads to battle."
 msgstr ""
 "\n"
-"Jedna droga prowadzi do bogactwa.\n"
-"Druga droga prowadzi do wojny."
+"Unha ruta leva á riqueza.\n"
+"Unha ruta leva á batalla."
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:1
 msgctxt "secretf/03_easter3"
@@ -758,8 +754,8 @@ msgid ""
 "can get to the goodies!"
 msgstr ""
 "\n"
-"Tylko biegli w podwójnych skokach\n"
-"mogą dobrać się do dóbr!"
+"Só aqueles que fan o dobre salto\n"
+"conseguirán os obxectos!"
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:2
 msgctxt "secretf/03_easter3"
@@ -769,8 +765,8 @@ msgid ""
 "your climbing blocks appear"
 msgstr ""
 "\n"
-"Znajdź skrzynię, aby \n"
-"pojawił się blok do wspinaczki"
+"Atopa a caixa para facer\n"
+"que aparezan os bloques a escalar"
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:3
 msgctxt "secretf/03_easter3"
@@ -780,8 +776,8 @@ msgid ""
 "free's some enemies :)"
 msgstr ""
 "\n"
-"Rozwalenie tej skrzyni\n"
-"uwolni też kilku wrogów. :)"
+"Esmagando esta caixa tamén\n"
+"libera algúns inimigos :)"
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:1
 msgctxt "secretf/04_haunted1"
@@ -790,7 +786,7 @@ msgid ""
 "Enter the house with caution....."
 msgstr ""
 "\n"
-"Uważaj przy wchodzeniu do domu....."
+"Entra na casa con cautela....."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:3
 msgctxt "secretf/04_haunted1"
@@ -799,8 +795,7 @@ msgid ""
 "Silver Crates can't be broken underwater..."
 msgstr ""
 "\n"
-"Srebrne skrzynki nie dadzą się\n"
-"rozwalić pod wodą..."
+"As caixas de prata non se poden romper baixo a auga..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:4
 msgctxt "secretf/04_haunted1"
@@ -809,7 +804,7 @@ msgid ""
 "Water Level control crate above."
 msgstr ""
 "\n"
-"Skrzynia kontrolująca poziom wody znajduje się nad tobą."
+"Caixa de control do nivel de auga enriba."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:5
 msgctxt "secretf/04_haunted1"
@@ -818,7 +813,7 @@ msgid ""
 "Stomping crates can be good and bad..."
 msgstr ""
 "\n"
-"Rozwalanie skrzyń ma swoje plusy i minusy..."
+"Esmagar caixas pode ser bo ou malo..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:7
 msgctxt "secretf/04_haunted1"
@@ -827,8 +822,7 @@ msgid ""
 "But you need a way to get up there..."
 msgstr ""
 "\n"
-"Ale musisz znaleźć sposób,\n"
-" by się tam dostać..."
+"Pero necesitas unha maneira de chegar arriba..."
 
 #: .fake/Translations/secretf/06_haunted3.j2l.h:16
 msgctxt "secretf/06_haunted3"
@@ -839,7 +833,7 @@ msgid ""
 msgstr ""
 "\n"
 "Michelle,\n"
-"Zawsze będę cię kochał :)"
+"amareite sempre e por sempre :)"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:1
 msgctxt "secretf/07_town1"
@@ -848,7 +842,7 @@ msgid ""
 "Take to the roof tops!"
 msgstr ""
 "\n"
-"Dawaj po dachach!"
+"Sube aos tellados!"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:2
 msgctxt "secretf/07_town1"
@@ -858,8 +852,8 @@ msgid ""
 "those who stomp..."
 msgstr ""
 "\n"
-"Niebo wynagrodzi tych,\n"
-"którzy tupią..."
+"Os ceos por riba han recompensar\n"
+"aqueles que esmaguen..."
 
 #: .fake/Translations/secretf/07_town1.j2l.h:3
 msgctxt "secretf/07_town1"
@@ -869,8 +863,8 @@ msgid ""
 "right as you possibly can..."
 msgstr ""
 "\n"
-"Skocz w prawo na tyle daleko\n"
-"na ile się da..."
+"Salta o máis cara á\n"
+"dereita que sexas quen..."
 
 #: .fake/Translations/secretf/07_town1.j2l.h:4
 msgctxt "secretf/07_town1"
@@ -879,7 +873,7 @@ msgid ""
 "Didn't make the jump huh? :)"
 msgstr ""
 "\n"
-"Czyżby skok ci nie wyszedł? :)"
+"E non fixéchelo salto, meu? :)"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:5
 msgctxt "secretf/07_town1"
@@ -888,7 +882,7 @@ msgid ""
 "Well Done!"
 msgstr ""
 "\n"
-"Świetnie ci idzie!"
+"Ben feito!"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:6
 msgctxt "secretf/07_town1"
@@ -899,9 +893,9 @@ msgid ""
 "For Spaz, Press Jump Twice!"
 msgstr ""
 "\n"
-"Użyj specjalnych ruchów, aby wznieść się w górę!\n"
-"Jazz - przysiad i skok.\n"
-"Spaz - dwa razy skok!"
+"Usa os movementos especiais para chegar aos condutos!\n"
+"Para Jazz, preme agachar e saltar.\n"
+"Para Spaz, preme saltar dúas veces!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:1
 msgctxt "secretf/08_town2"
@@ -910,7 +904,7 @@ msgid ""
 "Find the crate and the gems are yours!"
 msgstr ""
 "\n"
-"Znajdź skrzynkę, a klejnoty będą twoje!"
+"Atopa a caixa e as xemas son túas!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:2
 msgctxt "secretf/08_town2"
@@ -919,7 +913,7 @@ msgid ""
 "Springs Don't Work When Frozen..."
 msgstr ""
 "\n"
-"Sprężyny nie działają, kiedy są zamrożone..."
+"Os resortes non funciona conxelados..."
 
 #: .fake/Translations/secretf/08_town2.j2l.h:3
 msgctxt "secretf/08_town2"
@@ -928,7 +922,7 @@ msgid ""
 "Collecting 20 coins is more rewarding..."
 msgstr ""
 "\n"
-"Za zebranie 20 monet czeka cię większa nagroda..."
+"Recoller 20 moedas é máis gratificante..."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:1
 msgctxt "secretf/09_town3"
@@ -937,7 +931,7 @@ msgid ""
 "Find the crate to clear the blocks...."
 msgstr ""
 "\n"
-"Znajdź skrzynię, pomoże ci pozbyć się bloków..."
+"Atopa a caixa para limpar estes bloques...."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:2
 msgctxt "secretf/09_town3"
@@ -947,8 +941,8 @@ msgid ""
 "be very dangerous."
 msgstr ""
 "\n"
-"UWAGA! Stada kruków\n"
-"mogą być bardzo niebezpieczne!"
+"COIDADO! As mandas de corvos poden\n"
+"ser moi perigosas."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:3
 msgctxt "secretf/09_town3"
@@ -958,8 +952,8 @@ msgid ""
 "look to the tallest building."
 msgstr ""
 "\n"
-"Aby usunąć bloki, rozejrzyj\n"
-"się za największym budynkiem."
+"Para quitar os bloques\n"
+"mira o edificio máis alto."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:4
 msgctxt "secretf/09_town3"
@@ -968,7 +962,7 @@ msgid ""
 "Choose a cover and stomp away!"
 msgstr ""
 "\n"
-"Wybierz osłonę i zmykaj!"
+"Escolle unha cuberta e esmaga forte!"
 
 #: .fake/Translations/secretf/09_town3.j2l.h:5
 msgctxt "secretf/09_town3"
@@ -977,7 +971,7 @@ msgid ""
 "Hi GeoBunny :)"
 msgstr ""
 "\n"
-"Cześć GeoKróliczku :)"
+"Ola GeoBunny :)"
 
 #: .fake/Translations/secretf/09_town3.j2l.h:6
 msgctxt "secretf/09_town3"
@@ -988,8 +982,9 @@ msgid ""
 "password: BUNNYLOVER\n"
 msgstr ""
 "\n"
-"Wejdź na www.project2.com\n"
-"i użyj hasła: BUNNYLOVER\n"
+"Vai a www.project2.com\n"
+"e usa o\n"
+"contrasinal: BUNNYLOVER\n"
 
 #: .fake/Translations/share/01_share1.j2l.h:1
 msgctxt "share/01_share1"
@@ -998,7 +993,7 @@ msgid ""
 "Shoot these blocks!"
 msgstr ""
 "\n"
-"Rozwal te bloki!"
+"Dispara a eses bloques!"
 
 #: .fake/Translations/share/01_share1.j2l.h:2
 msgctxt "share/01_share1"
@@ -1008,9 +1003,8 @@ msgid ""
 "to stomp with your butt."
 msgstr ""
 "\n"
-"Kiedy jesteś w powietrzu, wciśnij\n"
-"przycisk ruchu w dół żeby rąbnąć o ziemię\n"
-"swoimi czterema literami."
+"Cando estás no aire, preme abaixo\n"
+"para esmagar co teu traseiro."
 
 #: .fake/Translations/share/01_share1.j2l.h:3
 msgctxt "share/01_share1"
@@ -1020,8 +1014,8 @@ msgid ""
 "the secret metal crate."
 msgstr ""
 "\n"
-"Aby przejść tę część uderz\n"
-"w sekretną, metalową skrzynkę."
+"Para pasar esta área, esmaga\n"
+"a caixa secreta de metal."
 
 #: .fake/Translations/share/01_share1.j2l.h:4
 msgctxt "share/01_share1"
@@ -1031,8 +1025,8 @@ msgid ""
 "through this secret warp!"
 msgstr ""
 "\n"
-"Potrzebujesz 20-stu monet,\n"
-"aby wejść w ten sekretny portal!"
+"Necesitas vinte moedas para pasar \n"
+"a través desta fiestra secreta!"
 
 #: .fake/Translations/share/01_share1.j2l.h:5
 msgctxt "share/01_share1"
@@ -1042,8 +1036,8 @@ msgid ""
 "warps that appear later."
 msgstr ""
 "\n"
-"Monety dają ci dostęp\n"
-"do tajemnych portali."
+"As moedas danche acceso a \n"
+"fiestras que aparecen despois."
 
 #: .fake/Translations/share/01_share1.j2l.h:6
 msgctxt "share/01_share1"
@@ -1053,8 +1047,8 @@ msgid ""
 "you might find a surprise!"
 msgstr ""
 "\n"
-"Walnij z zadka we właściwe miejsce, \n"
-"to może znajdziesz niespodziankę!"
+"Esmaga no lugar correcto e\n"
+"quizais haches unha sorpresa!"
 
 #: .fake/Translations/share/01_share1.j2l.h:7
 msgctxt "share/01_share1"
@@ -1064,9 +1058,8 @@ msgid ""
 "bombs or baddies!"
 msgstr ""
 "\n"
-"Niektóre skrzynki\n"
-"mogą skrywać w sobie\n"
-"bomby i przeciwników!"
+"Algunhas caixas conteñen\n"
+"bombas ou malotes!"
 
 #: .fake/Translations/share/02_share2.j2l.h:1
 msgctxt "share/02_share2"
@@ -1076,8 +1069,8 @@ msgid ""
 "through this secret warp!"
 msgstr ""
 "\n"
-"Potrzebujesz 20-stu monet,\n"
-"aby wejść w ten sekretny portal!"
+"Necesitas vinte moedas para pasar \n"
+"a través desta fiestra secreta!"
 
 #: .fake/Translations/share/02_share2.j2l.h:2
 msgctxt "share/02_share2"
@@ -1087,8 +1080,8 @@ msgid ""
 "against nasty bugs."
 msgstr ""
 "\n"
-"Miotacz ognia jest dobry \n"
-"na uporczywe robale."
+"O lanzachamas vai ben \n"
+"contra vermes noxentos."
 
 #: .fake/Translations/share/02_share2.j2l.h:3
 msgctxt "share/02_share2"
@@ -1098,8 +1091,8 @@ msgid ""
 "you very dizzy!"
 msgstr ""
 "\n"
-"Dymowe pierścienie \n"
-"mogą cię oszołomić!"
+"Os aneis de fumes farán\n"
+"que te marees!"
 
 #: .fake/Translations/share/03_share3.j2l.h:1
 msgctxt "share/03_share3"
@@ -1109,8 +1102,8 @@ msgid ""
 "turn you into a frog."
 msgstr ""
 "\n"
-"Strzeż się wiedźmy!\n"
-"Może zamienić cię w żabę!"
+"Coidado coa bruxa! Pódete\n"
+"converter nunha rá."
 
 #: .fake/Translations/share/03_share3.j2l.h:2
 msgctxt "share/03_share3"
@@ -1120,8 +1113,8 @@ msgid ""
 "Eva Earlong can help!"
 msgstr ""
 "\n"
-"Jeśli zostałeś zamieniony w żabę,\n"
-" poproś o pomoc Długouchą Ewę!"
+"Se te convertes nunha ra\n"
+"Eva Earlong pode axudar!"
 
 #: .fake/Translations/share/03_share3.j2l.h:3
 msgctxt "share/03_share3"
@@ -1133,11 +1126,10 @@ msgid ""
 "for M O R E!"
 msgstr ""
 "\n"
-"Udało ci się!\n"
-"To już koniec wersji shareware.\n"
-"Sprawdź informacje o kupnie,\n"
-" aby dostać W I Ę C E J poziomów\n"
-"w swoje puszyste łapki!"
+"Fixéchelo! Este é o final\n"
+" da versión de demostración.\n"
+"Agora bota un ollo á folla de pedido\n"
+"para M Á I S!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:1
 msgctxt "xmas99/01_xmas1"
@@ -1146,7 +1138,7 @@ msgid ""
 "Watch out for the spikes below!"
 msgstr ""
 "\n"
-"Uważaj na kolce pod tobą!"
+"Coidado cos picos de abaixo!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:2
 msgctxt "xmas99/01_xmas1"
@@ -1157,8 +1149,9 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"Możesz skoczyć tyłkiem\n"
-"na słabsze części ścieżki!"
+"Podes esmagar por medio\n"
+"de algúns puntos febles\n"
+"nos camiños!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:3
 msgctxt "xmas99/01_xmas1"
@@ -1169,9 +1162,9 @@ msgid ""
 "certain weapon."
 msgstr ""
 "\n"
-"Niektóre bloki mogą\n"
-"być zniszczone tylko przy\n"
-"pomocy określonej broni."
+"Algúns bloques só se\n"
+"poden romper cunha\n"
+"arma específica."
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:4
 msgctxt "xmas99/01_xmas1"
@@ -1180,7 +1173,7 @@ msgid ""
 "Welcome to Christmas Chronicles!"
 msgstr ""
 "\n"
-"Witamy w Christmas Chronicles!"
+"Benvida a Christmas Chronicles!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:5
 msgctxt "xmas99/01_xmas1"
@@ -1192,9 +1185,9 @@ msgid ""
 "Project 2 Interactive!"
 msgstr ""
 "\n"
-"Pozdrowienia świąteczne od\n"
+"Saúdos estacionais de\n"
 "Epic MegaGames\n"
-"Orange Games oraz\n"
+"Orange Games e\n"
 "Project 2 Interactive!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:1
@@ -1205,8 +1198,8 @@ msgid ""
 "of some of the trees!"
 msgstr ""
 "\n"
-"Możesz stanąć na czubkach\n"
-"niektórych drzew!"
+"Podes parar encima de\n"
+"algunhas das árbores!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:2
 msgctxt "xmas99/02_xmas2"
@@ -1217,8 +1210,9 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"Możesz skoczyć tyłkiem\n"
-"na słabsze części ścieżki!"
+"Podes esmagar por medio\n"
+"de algúns puntos febles\n"
+"nos camiños!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:3
 msgctxt "xmas99/02_xmas2"
@@ -1228,8 +1222,8 @@ msgid ""
 "can be rewarding."
 msgstr ""
 "\n"
-"Uderzanie bloków nad tobą\n"
-"może zostać ci wynagrodzone."
+"Bater nos bloques encima túa\n"
+"pode ser beneficioso."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:6
 msgctxt "xmas99/02_xmas2"
@@ -1238,7 +1232,7 @@ msgid ""
 "Gem Trail Entry Crate."
 msgstr ""
 "\n"
-"Skrzynia prowadząca do Szlaku Klejnotów."
+"Caixón de entrada ao sendeiro de xemas."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:7
 msgctxt "xmas99/02_xmas2"
@@ -1249,10 +1243,9 @@ msgid ""
 "and stomp the Entry Crate."
 msgstr ""
 "\n"
-"Wejście do Szlaku Klejnotów.\n"
-"Wspinaj się na wierzchołki drzew, \n"
-"aby znaleźć i walnąć zadkiem\n"
-"w skrzynię wejściową."
+"Entrada ao sendeiro de xemas.\n"
+"Rube ás copas das árbores para atopar\n"
+"e esmagar a caixa de entrada."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:14
 msgctxt "xmas99/02_xmas2"
@@ -1265,7 +1258,7 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"Hej, Świnko!\n"
+"Ola, Piggy!\n"
 "\n"
 "- Poopy"
 
@@ -1282,9 +1275,9 @@ msgstr ""
 "\n"
 "\n"
 "Michelle:\n"
-"Zmieniłaś moje życie na wiele różnych sposobów\n"
-"W podzięce dedykuję tobie ten projekt.\n"
-"Kocham cię najbardziej na świecie."
+"Cambiaches a miña vida de moitas formas\n"
+"Adícote este proxecto.\n"
+"Quérote moito."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:16
 msgctxt "xmas99/02_xmas2"
@@ -1299,9 +1292,9 @@ msgstr ""
 "\n"
 "\n"
 "Kassi Nicole:\n"
-"Mógłbym powiedzieć o tobie tyle rzeczy\n"
-"Lecz me słowa zawsze prowadzą do tej samej konkluzji\n"
-"Kocham cię, jak ja bardzo cię kocham!"
+"Quixera dicirche un millón de cousas\n"
+"pero as miñas palabras levan ao mesmo fin\n"
+"Quérote, quérote."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:1
 msgctxt "xmas99/03_xmas3"
@@ -1310,8 +1303,7 @@ msgid ""
 "Please use your TNT wisely."
 msgstr ""
 "\n"
-"Proszę, używaj TNT z głową, \n"
-"bo inaczej możesz ją stracić."
+"Usa a túa TNT sabiamente."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:2
 msgctxt "xmas99/03_xmas3"
@@ -1320,7 +1312,7 @@ msgid ""
 "Don't lose your grip!"
 msgstr ""
 "\n"
-"Tylko nie puszczaj!"
+"Non perdas o control!"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:3
 msgctxt "xmas99/03_xmas3"
@@ -1330,8 +1322,8 @@ msgid ""
 "Please drive carefully."
 msgstr ""
 "\n"
-"Witamy w Norkowicach\n"
-"Proszę, jedź ostrożnie."
+"Benvida a Burrowsville\n"
+"Conduce con coidado."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:4
 msgctxt "xmas99/03_xmas3"
@@ -1341,8 +1333,8 @@ msgid ""
 "look too safe..."
 msgstr ""
 "\n"
-"Ten most nie wygląda\n"
-"na zbyt stabilny..."
+"Esa ponte non se ve\n"
+"moi segura..."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:5
 msgctxt "xmas99/03_xmas3"
@@ -1352,8 +1344,8 @@ msgid ""
 "Springs RULE! :)"
 msgstr ""
 "\n"
-"Robert i Craig:\n"
-"Sprężyny RZĄDZĄ! :)"
+"Robert e Craig:\n"
+"Os resortes MOLAN! :)"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:6
 msgctxt "xmas99/03_xmas3"
@@ -1363,8 +1355,8 @@ msgid ""
 "Please visit again."
 msgstr ""
 "\n"
-"Opuszczasz Norkowice\n"
-"Zapraszamy ponownie."
+"Agora abandonas Burrowsville\n"
+"Por favor, visítanos de novo."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:7
 msgctxt "xmas99/03_xmas3"
@@ -1375,8 +1367,8 @@ msgid ""
 "www.project2.com"
 msgstr ""
 "\n"
-"Hasło: xmasbunny\n"
-"Proszę, odwiedź\n"
+"Contrasinal: xmasbunny\n"
+"Por favor, visita\n"
 "www.project2.com"
 
 #. TRANSLATORS: Header text in About section
@@ -1387,33 +1379,31 @@ msgid ""
 "'98, The Secret Files and Christmas Chronicles). Also, it partially supports "
 "some features of JJ2+ extension."
 msgstr ""
-"Reimplementacja gry \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] wydanej w 1998 "
-"roku. Wspiera różne wersje gry (Demo, Holiday Hare '98, The Secret Files i "
-"Christmas Chronicles) oraz (częściowo) niektóre funkcje fanowskiego "
-"rozszerzenia JJ2+."
+"Re-implementación do xogo \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] publicado no "
+"1998. Admite varias versións do xogo (Shareware Demo, Holiday Hare '98, The "
+"Secret Files e Christmas Chronicles). Tamén admite parcialmente algunhas "
+"características da extensión JJ2+."
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:132
 #, c-format
 msgid "For more information, visit the official website: %s"
-msgstr ""
-"Po więcej informacji, odwiedź naszą oficjalną stronę internetową:\n"
-"%s"
+msgstr "Para máis información, visita a páxina web oficial: %s"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:134
 msgid "Developers"
-msgstr "Autorzy"
+msgstr "Desenvolvedores"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:136
 msgid "Contributors"
-msgstr "Współautorzy"
+msgstr "Colaboradores"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
 msgid "Translators"
-msgstr "Tłumacze"
+msgstr "Tradutores"
 
 #. TRANSLATORS: Footer text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:140
@@ -1421,8 +1411,8 @@ msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
 msgstr ""
-"Ten projekt używa zmodyfikowanego silnika \f[c:#9e7056]nCine\f[/c] oraz "
-"następujących bibliotek:"
+"Este proxecto usa o motor de xogo \f[c:#9e7056]nCine\f[c] modificado e as "
+"seguintes librarías:"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:59
@@ -1430,28 +1420,28 @@ msgstr ""
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:148
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:150
 msgid "Play Story"
-msgstr "Tryb fabularny"
+msgstr "Xogar historia"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:62
 msgid "Play Shareware Demo"
-msgstr "Graj w demo"
+msgstr "Xogar Shareware Demo"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:67
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:66
 msgid "Import Episodes"
-msgstr "Importuj epizod"
+msgstr "Importar episodios"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:72
 msgid "Continue"
-msgstr "Kontynuuj"
+msgstr "Continuar"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:79
 msgid "Play Custom Game"
-msgstr "Gry społeczności"
+msgstr "Xogar partida personalizada"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
@@ -1459,12 +1449,12 @@ msgstr "Gry społeczności"
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:126
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
-msgstr "Poziomy społeczności"
+msgstr "Xogar niveis personalizados"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
 msgid "Highscores"
-msgstr "Tabela wyników"
+msgstr "Máximas puntuacións"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
@@ -1474,116 +1464,117 @@ msgstr "Tabela wyników"
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:41
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
 msgid "Options"
-msgstr "Opcje"
+msgstr "Opcións"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
 msgid "About"
-msgstr "O grze"
+msgstr "Acerca de"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:93
 msgid "Quit"
-msgstr "Wyjdź"
+msgstr "Saír"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:195
 msgid "Access to external storage has been granted!"
-msgstr "Dostęp do pamięci zewnętrznej został udzielony!"
+msgstr "Acceso ao almacenamento externo garantido!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:197
 msgid ""
 "\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
 "#337233] files correctly."
 msgstr ""
-"\f[c:#337233]Zresetuj grę, aby prawidłowo załadować pliki \f[c:#9e7056]Jazz "
-"Jackrabbit 2\f[c:#337233]."
+"\f[c:#337233]Restabelece o xogo para ler os ficheiros do \f[c:#9e7056]Jazz "
+"Jackrabbit 2\f[c:#337233] correctamente."
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:202
 msgid ""
 "\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
 "#704a4a] files!"
 msgstr ""
-"\f[c:#704a4a]Ta gra wymaga oryginalnych plików \f[c:#9e7056]Jazz Jackrabbit "
-"2\f[c:#704a4a]!"
+"\f[c:#704a4a]Este xogo require ficheiros do \f[c:#9e7056]Jazz Jackrabbit "
+"2\f[c:#704a4a] orixinal!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:204
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
-msgstr "Upewnij się, że pliki Jazz Jackrabbit 2 znajdują się w:"
+msgstr ""
+"Asegura que os ficheiros do Jazz Jackrabbit 2 estean no seguinte camiño:"
 
 #. TRANSLATORS: Menu item in main menu (Android 11+ only)
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:212
 msgid "Allow access to external storage"
-msgstr "Zezwól na dostęp do pamięci zewnętrznej"
+msgstr "Permite o acceso ao almacenamento externo"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
 #, c-format
 msgid "Remap Controls for Player %i"
-msgstr "Skonfiguruj sterowanie gracza %i"
+msgstr "Reasignar controis para participante %i"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:174
 msgid "Remap Controls"
-msgstr "Skonfiguruj sterowanie"
+msgstr "Reconfigurar controis"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:45
 msgid "Touch Controls"
-msgstr "Sterowanie dotykowe"
+msgstr "Controis táctiles"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:29
 msgid "Toggle Run"
-msgstr "Przełączanie biegu"
+msgstr "Alternar correr"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
 msgid "Gamepad Button Labels"
-msgstr "Oznaczenia przycisków kontrolera"
+msgstr "Etiquetas dos botóns do mando"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
 msgid "Gamepad Rumble"
-msgstr "Wibracje kontrolera"
+msgstr "Vibración do mando"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:36
 msgid "Native Back Button"
-msgstr "Natywny przycisk \"Wstecz\""
+msgstr "Botón atrás nativo"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:38
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
 msgid "Input Diagnostics"
-msgstr "Diagnostyka sterowania"
+msgstr "Diagnoses de entrada"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:71
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
 msgid "Controls"
-msgstr "Sterowanie"
+msgstr "Controis"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:121
 msgid "Strong"
-msgstr "Mocne"
+msgstr "Forte"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:124
 msgid "Weak"
-msgstr "Słabe"
+msgstr "Feble"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:117
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:134
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:168
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Disabled"
-msgstr "Wyłączono"
+msgstr "Desactivado"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:134
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
@@ -1591,90 +1582,90 @@ msgstr "Wyłączono"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:168
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
 msgid "Enabled"
-msgstr "Włączono"
+msgstr "Activado"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:31
 msgid "Character"
-msgstr "Bohater"
+msgstr "Personaxe"
 
 #. TRANSLATORS: Menu item to select game mode
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:33
 msgid "Game Mode"
-msgstr "Tryb gry"
+msgstr "Modo de xogo"
 
 #. TRANSLATORS: Menu item to create server with selected settings
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:35
 msgid "Create Server"
-msgstr "Utwórz serwer"
+msgstr "Crear servidor"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:139
 msgid "No custom level found!"
-msgstr "Nie znaleziono żadnych poziomów społeczności!"
+msgstr "Non se atopa nivel personalizado!"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:148
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:21
 msgid "Play Story in Cooperation"
-msgstr "Graj w kooperacji"
+msgstr "Xogar historia en cooperativo"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:160
 msgid "No episode found!"
-msgstr "Nie znaleziono żadnych epizodów!"
+msgstr "Non se atopa episodio!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:206
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:207
 msgid "Restart episode"
-msgstr "Zresetuj epizod"
+msgstr "Restabelecer episodio"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:229
 #, c-format
 msgid "You must complete \"%s\" first!"
-msgstr "Najpierw musisz ukończyć \"%s\"!"
+msgstr "Tes que completar \"%s\" antes!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:233
 msgid "Episode is locked!"
-msgstr "Ten epizod jest zablokowany!"
+msgstr "Episodio bloqueado!"
 
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
 msgid "Legacy"
-msgstr "Klasyczny"
+msgstr "Legado"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
 msgid "I want to play the game the way it used to be."
-msgstr "Chcę zagrać w grę jak za starych, dobrych czasów."
+msgstr "Quero xogar ao xogo como se debería facer."
 
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "Reforged"
-msgstr "Odnowiony"
+msgstr "Reforxado"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "I want to play the game with something new."
-msgstr "Chcę zagrać w grę z jakimiś nowościami."
+msgstr "Quero xogar ao xogo con algo novo."
 
 #. TRANSLATORS: Header in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:54
 msgid "Welcome to \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementation!"
-msgstr "Witaj w reimplementacji \f[c:#9e7056]Jazz Jackrabbit 2\f[/c]!"
+msgstr "Benvida a \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] re-implementado!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:97
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Gameplay"
-msgstr "Rozgrywka"
+msgstr "Axustes do xogo"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:70
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:42
 msgid "Enhancements"
-msgstr "Ulepszenia"
+msgstr "Melloras"
 
 #. TRANSLATORS: Subheader in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
@@ -1685,72 +1676,71 @@ msgid ""
 "#707070]%s\f[/c] > \f[c:#707070]%s\f[/c].\n"
 "For more information, visit %s and  Discord!"
 msgstr ""
-"Możesz wybrać preferowany przez siebie styl rozgrywki.\n"
-"To ustawienie może zostać zmienione,\n"
-"kiedy tylko ci się spodoba w \f[c:#707070]%s\f[/c] > \f[c:#707070]%s\f[/c] > "
-"\f[c:#707070]%s\f[/c].\n"
-"Po więcej informacji, odwiedź %s oraz serwer  Discord!"
+"Podes escoller o teu estilo de xogo preferido.\n"
+"Esta opción pode cambiarse en calquera momento en \f[c:#707070]%s\f[/c] > "
+"\f[c:#707070]%s\f[/c] > \f[c:#707070]%s\f[/c].\n"
+"Para máis información, visita %s e  Discord!"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
 msgid "Reforged Gameplay"
-msgstr "Odnowiona rozgrywka"
+msgstr "Xogabilidade reforxada"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:18
 msgid "Reforged HUD"
-msgstr "Odniowiony interfejs w grze"
+msgstr "HUD reforxado"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:20
 msgid "Reforged Main Menu"
-msgstr "Odnowione menu główne"
+msgstr "Menú principal reforxado"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:22
 msgid "Ledge Climbing"
-msgstr "Wspinanie na krawędzie"
+msgstr "Escalada de saíntes"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:24
 msgid "Weapon Wheel"
-msgstr "Koło broni"
+msgstr "Roda de armas"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
 msgid "You can enable enhancements that were added to this remake."
-msgstr "Możesz włączyć ulepszenia, które zostały dodane do tej rekreacji."
+msgstr "Podes activar as melloras engadidas a este remake."
 
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:127
 msgid "Enabled With Ammo Count"
-msgstr "Włączono + Wyświetlanie ilości amunicji"
+msgstr "Activado con reconto de munición"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:44
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:42
 msgid "Language"
-msgstr "Język"
+msgstr "Idioma"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:47
 msgid "Scripting"
-msgstr "Skrypty"
+msgstr "Secuencia de comandos"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:51
 msgid "Allow Cheats"
-msgstr "Zezwól na kody oszustw"
+msgstr "Permitir trucos"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:53
 msgid "Overwrite Episode Completion"
-msgstr "Nadpisz stan ukończenia epizodu"
+msgstr "Sobrescribir episodio completado"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
 msgid "Discord Integration"
-msgstr "Integracja z platformą Discord"
+msgstr "Integración co Discord"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
@@ -1760,381 +1750,380 @@ msgstr "Razer Chroma™"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:65
 msgid "Browse \"Source\" Directory"
-msgstr "Przeglądaj katalog z danymi gry"
+msgstr "Explorar directorio \"Source\""
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:70
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:77
 msgid "Refresh Cache"
-msgstr "Odśwież pamięć podręczną"
+msgstr "Recargar caché"
 
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:137
 msgid "\f[c:#d86664]Yes\f[/c]"
-msgstr "\f[c:#d86664]Tak\f[/c]"
+msgstr "\f[c:#d86664]Si\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:137
 msgid "No"
-msgstr "Nie"
+msgstr "Non"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:141
 msgid "No Cheats Only"
-msgstr "Tylko bez cheatów"
+msgstr "Só sen trucos"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:144
 msgid "Higher Score Only"
-msgstr "Tylko wyższy wynik"
+msgstr "Só puntuación máis alta"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:146
 msgid "Always"
-msgstr "Zawsze"
+msgstr "Sempre"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19
 msgid "Rescale Mode"
-msgstr "Tryb skalowania"
+msgstr "Modo de escalado"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
 msgid "Fullscreen"
-msgstr "Pełny ekran"
+msgstr "A toda pantalla"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:31
 msgid "Antialiasing"
-msgstr "Wygładzanie krawędzi"
+msgstr "Suavizado"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:33
 msgid "Water Quality"
-msgstr "Jakość wody"
+msgstr "Calidade da auga"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
 msgid "Show Player Trails"
-msgstr "Pokazuj ślady gracza"
+msgstr "Amosar rastro do xogador"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
 msgid "Preferred Splitscreen"
-msgstr "Dzielenie ekranu"
+msgstr "Pantalla partida preferida"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
 msgid "Prefer Zoom Out"
-msgstr "Preferuj oddalenie kamery"
+msgstr "Afastamento preferido"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
 msgid "Keep Aspect Ratio In Cinematics"
-msgstr "Zachowaj proporcje w przerywnikach"
+msgstr "Manter proporción do aspecto nas cinemáticas"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
 msgid "Unaligned Viewport"
-msgstr "Zmiennoprzecinkowa precyzja"
+msgstr "Xanela gráfica sen aliñar"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
 msgid "Performance Metrics"
-msgstr "Statystyki wydajności"
+msgstr "Métricas de rendemento"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:78
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
 msgid "Graphics"
-msgstr "Grafika"
+msgstr "Gráficos"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 msgid "Low"
-msgstr "Niski"
+msgstr "Baixo"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 msgid "High"
-msgstr "Wysoki"
+msgstr "Alto"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Vertical"
-msgstr "Pionowe"
+msgstr "Vertical"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:120
 msgid "Horizontal"
-msgstr "Poziome"
+msgstr "Horizontal"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:123
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
-msgstr "Włączono \f[c:#d0705d](Eksperymentalne)\f[/c]"
+msgstr "Activado \f[c:#d0705d](experimental)\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:105
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr "Tabela wyników dla \f[c:#d0705d]gry podstawowej\f[/c]"
+msgstr "Mellores puntuacións para \f[c:#d0705d]xogo base\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:115
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
-msgstr "Tabela wyników dla \f[c:#d0705d]%s\f[/c]"
+msgstr "Mellores puntuacións para \f[c:#d0705d]%s\f[/c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
 msgid "Select files of your original game to unlock additional episodes"
-msgstr "Wybierz pliki oryginalnej gry, aby odblokować dodatkowe epizody"
+msgstr ""
+"Selecciona ficheiros do xogo orixinal para desbloquear episodios adicionais"
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:76
 msgid "Processing of selected files..."
-msgstr "Przetwarzanie wybranych plików..."
+msgstr "Procesando os ficheiros seleccionados..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:79
 msgid "Waiting for files..."
-msgstr "Oczekiwanie na pliki..."
+msgstr "Agardando por ficheiros..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:85
 msgid "No files were selected!"
-msgstr "Nie wybrano żadnych plików!"
+msgstr "Non se seleccionaron ficheiros!"
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:90
 msgid "No new episodes were imported!"
-msgstr "Nie zaimportowano żadnych nowych odcinków!"
+msgstr "Non se importaron novos episodios!"
 
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:87
 msgid "No gamepads are detected!"
-msgstr "Nie wykryto żadnych kontrolerów!"
+msgstr "Non se detectan mandos!"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
 msgid "Battle"
-msgstr "Bitwa"
+msgstr "Batalla"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
 msgid "Team Battle"
-msgstr "Bitwa drużynowa"
+msgstr "Batalla en equipo"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Capture The Flag"
-msgstr "Zdobądź flagę"
+msgstr "Capturar a bandeira"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
-msgstr "Wyścig"
+msgstr "Carreira"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
-msgstr "Wyścig drużynowy"
+msgstr "Carreira en equipo"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
-msgstr "Poszukiwanie skarbów"
+msgstr "Busca do tesouro"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Cooperation"
-msgstr "Współpraca"
+msgstr "Cooperativo"
 
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:46
 msgid "Select Game Mode"
-msgstr "Wybierz tryb gry"
+msgstr "Selecciona modo de xogo"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:106
 msgid "Sounds"
-msgstr "Dźwięki"
+msgstr "Sons"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
 msgid "Resume"
-msgstr "Wznów"
+msgstr "Retomar"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:17
 msgid "Save & Exit"
-msgstr "Zapisz i wyjdź"
+msgstr "Gardar e saír"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:23
 msgid "Create Custom Server"
-msgstr "Utwórz własny serwer"
+msgstr "Crear servidor propio"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:25
 msgid "Connect To Server"
-msgstr "Połącz z serwerem"
+msgstr "Conectar ao servidor"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:80
 msgid "Processing of files in \f[c:#9e7056]\"Source\"\f[/c] directory..."
-msgstr "Przetwarzanie plików z katalogu \f[c:#9e7056]\"Źródło\"\f[/c]"
+msgstr "Procesando ficheiros no directorio \f[c:0x9e7056]\"Source\"\f[c]..."
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:83
 msgid "Newly added levels and episodes will be available soon."
-msgstr "Nowo dodane poziomy i epizody będą za niedługo dostępne."
+msgstr "Os novos niveis e episodios engadidos estarán dispoñíbeis axiña."
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:17
 msgid "Left"
-msgstr "Lewo"
+msgstr "Esquerda"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:19
 msgid "Right"
-msgstr "Prawo"
+msgstr "Dereita"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:21
 msgid "Up"
-msgstr "Góra"
+msgstr "Arriba"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:23
 msgid "Down"
-msgstr "Dół"
+msgstr "Abaixo"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
 msgid "Fire"
-msgstr "Strzał"
+msgstr "Disparar"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
 msgid "Jump"
-msgstr "Skok"
+msgstr "Saltar"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:29
 msgid "Run"
-msgstr "Bieg"
+msgstr "Correr"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
 msgid "Change Weapon"
-msgstr "Zmień broń"
+msgstr "Cambiar arma"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:33
 msgid "Back"
-msgstr "Wstecz"
+msgstr "Atrás"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 #, c-format
 msgid "Weapon %i"
-msgstr "Broń %i"
+msgstr "Arma %i"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:182
 msgid "Press any key or button to assign"
-msgstr "Naciśnij dowolny przycisk, aby przypisać"
+msgstr "Preme una tecla ou botón para asignar"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
 msgid "or"
-msgstr "lub"
+msgstr "ou"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:194
 msgid "to remove assignment"
-msgstr "aby usunąć przypisanie"
+msgstr "para quitar asignación"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "None / Pixel-perfect"
-msgstr "Brak / Idealne piksele"
+msgstr "Nada / Píxel perfecto"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:29
 msgid "CRT Scanlines"
-msgstr "Linie skanu CRT"
+msgstr "CRT liñas de escaneado"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:31
 msgid "CRT Shadow Mask"
-msgstr "Maska cienia CRT"
+msgstr "CRT máscara de sombra"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:33
 msgid "CRT Aperture Grille"
-msgstr "Kratka przysłony CRT"
+msgstr "CRT grella de apertura"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:35
 msgid "Monochrome"
-msgstr "Monochromia"
+msgstr "Monocromático"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:53
 msgid "Select Rescale Mode"
-msgstr "Wybierz tryb skalowania"
+msgstr "Selecciona modo de escalado"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:108
 msgid "Connect to Server"
-msgstr "Dołącz do serwera"
+msgstr "Conectar ao servidor"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:121
 msgid "No servers found, but still searchin'!"
-msgstr "Póki co nie znaleziono żadnych serwerów, ale ciągle szukam!"
+msgstr "Non se atoparon servidores, pero seguimos a busca!"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
-msgstr "Naciśnij \f[c:#d0705d]Strzał\f[/c], aby kontynuować"
+msgstr "Preme \f[c:#d0705d]Disparo\f[/c] para seguir"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
 msgid "Master Volume"
-msgstr "Głośność ogólna"
+msgstr "Volume xeral"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:17
 msgid "SFX Volume"
-msgstr "Głośność efektów dźwiękowych"
+msgstr "Volume efectos"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:19
 msgid "Music Volume"
-msgstr "Głośność muzyki"
+msgstr "Volume música"
 
 #. TRANSLATORS: Menu item to select number of players
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:18
 msgid "Number of Local Players"
-msgstr "Liczba graczy lokalnych"
+msgstr "Número de participantes locais"
 
 #. TRANSLATORS: Menu item to select difficulty
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:20
 msgid "Difficulty"
-msgstr "Poziom trudności"
+msgstr "Dificultade"
 
 #. TRANSLATORS: Menu item to start selected episode/level
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:22
 msgid "Start"
-msgstr "Start"
+msgstr "Comezar"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Easy"
-msgstr "Łatwy"
+msgstr "Fácil"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Medium"
-msgstr "Średni"
+msgstr "Medio"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:294
 msgid "Hard"
-msgstr "Trudny"
+msgstr "Difícil"
 
 #. TRANSLATORS: Header in Options > Controls > Touch Controls section
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:49
 msgid "You can adjust position of the touch zones by drag and drop."
-msgstr ""
-"Możesz dostosować położenie miejsc dotykowych poprzez przeciągnięcie i "
-"puszczenie."
+msgstr "Podes axustar a posición das zonas de toque por esvarar e soltar."
 
 #: Sources/Main.cpp:273 Sources/Main.cpp:328
 #, c-format
 msgid "Connecting to %s:%u..."
-msgstr "Łączenie z %s:%u..."
+msgstr "Conectando a %s:%u..."
 
 #: Sources/Main.cpp:525 Sources/Main.cpp:573
 msgid ""
@@ -2144,11 +2133,11 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
-"\f[c:#704a4a]Nie można załadować tego poziomu!\f[/c]\n"
+"\f[c:#704a4a]Non se pode cargar o nivel especificado!\f[/c]\n"
 "\n"
 "\n"
-"Upewnij się, że wszystkie potrzebne pliki\n"
-"są na swoim miejscu i spróbuj ponownie."
+"Asegura que todo ficheiro necesario\n"
+"sexa accesíbel e proba de novo."
 
 #: Sources/Main.cpp:627
 msgid ""
@@ -2158,11 +2147,11 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
-"\f[c:#704a4a]Nie można wznowić zapisanego stanu gry!\f[/c]\n"
+"\f[c:#704a4a]Non se pode retomar o progreso!\f[/c]\n"
 "\n"
 "\n"
-"Upewnij się, że wszystkie niezbędne pliki\n"
-"są na swoim miejscu i spróbuj ponownie."
+"Asegura que todo ficheiro necesario\n"
+"sexa accesíbel e proba de novo."
 
 #: Sources/Main.cpp:764
 msgid ""
@@ -2171,10 +2160,10 @@ msgid ""
 "\n"
 "Your client version is not compatible with the server."
 msgstr ""
-"\f[c:#704a4a]Nie można połączyć z serwerem!\f[/c]\n"
+"\f[c:#704a4a]Non se pode conectar co servidor!\f[/c]\n"
 "\n"
 "\n"
-"Wersja klienta nie jest kompatybilna z serwerem."
+"A túa versión do cliente non é compatíbel coa do servidor."
 
 #: Sources/Main.cpp:765
 msgid ""
@@ -2184,11 +2173,11 @@ msgid ""
 "Server capacity is full.\n"
 "Please try it later."
 msgstr ""
-"\f[c:#704a4a]Nie można połączyć z serwerem!\f[/c]\n"
+"\f[c:#704a4a]Non se pode conectar co servidor!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest pełny.\n"
-"Spróbuj ponownie później."
+"O servidor está completo.\n"
+"Proba máis tarde."
 
 #: Sources/Main.cpp:766
 msgid ""
@@ -2198,11 +2187,11 @@ msgid ""
 "Server is not in a state where it can process your request.\n"
 "Please try again in a few seconds."
 msgstr ""
-"\f[c:#704a4a]Nie można połączyć z serwerem!\f[/c]\n"
+"\f[c:#704a4a]Non se pode conectar co servidor!\f[/c]\n"
 "\n"
 "\n"
-"Serwer nie jest w stanie przetworzyć żądania.\n"
-"Spróbuj ponownie za kilka sekund."
+"O servidor non está nun estado que poida procesar a túa solicitude.\n"
+"Proba de novo dentro dun pouco."
 
 #: Sources/Main.cpp:767
 msgid ""
@@ -2212,11 +2201,11 @@ msgid ""
 "Server is shutting down.\n"
 "Please try it later."
 msgstr ""
-"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\f[c:#704a4a]Non se pode conectar co servidor!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest zamykany.\n"
-"Spróbuj ponownie później."
+"O servidor está completo.\n"
+"Proba máis tarde."
 
 #: Sources/Main.cpp:768
 msgid ""
@@ -2226,11 +2215,11 @@ msgid ""
 "Server is shutting down for maintenance.\n"
 "Please try it again later."
 msgstr ""
-"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\f[c:#704a4a]Pechouse a conexión!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest zamykany z powodu prac technicznych.\n"
-"Spróbuj ponownie później."
+"O servidor estase apagando para mantemento.\n"
+"Proba máis tarde."
 
 #: Sources/Main.cpp:769
 msgid ""
@@ -2240,11 +2229,11 @@ msgid ""
 "Server is shutting down for reconfiguration.\n"
 "Please try it again later."
 msgstr ""
-"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\f[c:#704a4a]Pechouse a conexión!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest zamykany z powodu ponownej konfiguracji.\n"
-"Spróbuj ponownie później."
+"O servidor estase apagando para configurarse.\n"
+"Proba máis tarde."
 
 #: Sources/Main.cpp:770
 msgid ""
@@ -2254,11 +2243,11 @@ msgid ""
 "Server is shutting down for update.\n"
 "Please check your client version and try it again in a minute."
 msgstr ""
-"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\f[c:#704a4a]Pechouse a conexión!\f[/c]\n"
 "\n"
 "\n"
-"Serwer jest zamykany z powodu aktualizacji.\n"
-"Sprawdź wersję swojego klienta i spróbuj ponownie później."
+"O servidor estase apagando para unha actualización.\n"
+"Comproba a túa versión de cliente e proba nun minuto."
 
 #: Sources/Main.cpp:771
 msgid ""
@@ -2268,11 +2257,11 @@ msgid ""
 "Please try it again and if the problem persists,\n"
 "check your network connection."
 msgstr ""
-"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\f[c:#704a4a]Perdeuse a conexión!\f[/c]\n"
 "\n"
 "\n"
-"Spróbuj ponownie i sprawdź, czy problem nadal występuje.\n"
-"Sprawdź swoje połączenie sieciowe."
+"Proba de novo e se o problema continúa,\n"
+"revisa a túa conexión á rede."
 
 #: Sources/Main.cpp:772
 msgid ""
@@ -2281,10 +2270,10 @@ msgid ""
 "\n"
 "The server is not responding for connection request."
 msgstr ""
-"\f[c:#704a4a]Nie można połączyć z serwerem!\f[/c]\n"
+"\f[c:#704a4a]Non se pode conectar co servidor!\f[/c]\n"
 "\n"
 "\n"
-"Serwer nie odpowiada na żądanie połączenia."
+"A túa versión do cliente non é compatíbel coa do servidor."
 
 #: Sources/Main.cpp:773
 msgid ""
@@ -2294,11 +2283,11 @@ msgid ""
 "You have been \f[c:#907050]kicked\f[/c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
-"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\f[c:#704a4a]Pechouse a conexión!\f[/c]\n"
 "\n"
 "\n"
-"Zostałeś/aś \f[c:#907050]wykopany/a\f[/c] z serwera.\n"
-"Skontaktuj się z administratorem serwera po więcej informacji."
+"Fuches \f[c:#907050]expulsado\f[/c] do servidor.\n"
+"Contacta coa administración do servidor para máis información."
 
 #: Sources/Main.cpp:774
 msgid ""
@@ -2308,14 +2297,17 @@ msgid ""
 "You have been \f[c:#725040]banned\f[/c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
-"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\f[c:#704a4a]Pechouse a conexión!\f[/c]\n"
 "\n"
 "\n"
-"Zostałeś/aś \f[c:#907050]skazany/a na banicję\f[/c] z serwera.\n"
-"Skontaktuj się z administratorem serwera po więcej informacji."
+"Fuches \f[c:#725040]baneado\f[/c] do servidor.\n"
+"Contacta coa administración do servidor para máis información."
 
 #~ msgid "Creating server..."
-#~ msgstr "Tworzenie serwera..."
+#~ msgstr "Creando servidor..."
 
 #~ msgid "Error"
-#~ msgstr "Błąd"
+#~ msgstr "Erro"
+
+#~ msgid "Created By"
+#~ msgstr "Creado por"

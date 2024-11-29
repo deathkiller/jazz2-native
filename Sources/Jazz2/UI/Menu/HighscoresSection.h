@@ -61,6 +61,8 @@ namespace Jazz2::UI::Menu
 
 		HighscoreSeries _series[(std::int32_t)SeriesName::Count];
 		std::int32_t _selectedSeries;
+		std::int32_t _notValidPos;
+		std::int32_t _notValidSeries;
 		std::size_t _textCursor;
 		float _carretAnim;
 		bool _waitForInput;

@@ -45,7 +45,7 @@ namespace Death { namespace IO {
 	FileStream::FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize)
 		: _path(std::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferLength(bufferSize),
 #if defined(DEATH_TARGET_WINDOWS)
-			_fileHandle(NULL)
+			_fileHandle(INVALID_HANDLE_VALUE)
 
 #else
 			_fileDescriptor(-1)
@@ -64,10 +64,10 @@ namespace Death { namespace IO {
 		FlushWriteBuffer();
 
 #if defined(DEATH_TARGET_WINDOWS)
-		if (_fileHandle != NULL) {
+		if (_fileHandle != INVALID_HANDLE_VALUE) {
 			if (::CloseHandle(_fileHandle)) {
 				LOGI("File \"%s\" closed", _path.data());
-				_fileHandle = NULL;
+				_fileHandle = INVALID_HANDLE_VALUE;
 			} else {
 				LOGW("Can't close the file \"%s\"", _path.data());
 			}
@@ -288,7 +288,7 @@ namespace Death { namespace IO {
 	bool FileStream::IsValid()
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		return (_fileHandle != NULL);
+		return (_fileHandle != INVALID_HANDLE_VALUE);
 #else
 		return (_fileDescriptor >= 0);
 #endif
@@ -337,7 +337,7 @@ namespace Death { namespace IO {
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD desireAccess, creationDisposition, shareMode;
-		switch (mode & ~FileAccess::Exclusive) {
+		switch (mode & FileAccess::ReadWrite) {
 			case FileAccess::Read:
 				desireAccess = GENERIC_READ;
 				creationDisposition = OPEN_EXISTING;
@@ -351,22 +351,26 @@ namespace Death { namespace IO {
 			case FileAccess::ReadWrite:
 				desireAccess = GENERIC_READ | GENERIC_WRITE;
 				creationDisposition = /*OPEN_ALWAYS*/OPEN_EXISTING;	// NOTE: File must already exist
-				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ);
+				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE);
 				break;
 			default:
 				LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
+		SECURITY_ATTRIBUTES securityAttribs = { sizeof(SECURITY_ATTRIBUTES) };
+		securityAttribs.bInheritHandle = (mode & FileAccess::InheritHandle) == FileAccess::InheritHandle;
+
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		_fileHandle = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, NULL);
+		CREATEFILE2_EXTENDED_PARAMETERS params = { sizeof(CREATEFILE2_EXTENDED_PARAMETERS), FILE_ATTRIBUTE_NORMAL };
+		params.lpSecurityAttributes = &securityAttribs;
+		_fileHandle = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, &params);
 #	else
-		_fileHandle = ::CreateFile(Utf8::ToUtf16(_path), desireAccess, shareMode, NULL, creationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+		_fileHandle = ::CreateFile(Utf8::ToUtf16(_path), desireAccess, shareMode, &securityAttribs, creationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
 #	endif
-		if (_fileHandle == NULL || _fileHandle == INVALID_HANDLE_VALUE) {
+		if (_fileHandle == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
 			LOGE("Can't open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
-			_fileHandle = NULL;
 			return;
 		}
 
@@ -375,24 +379,27 @@ namespace Death { namespace IO {
 			_size = fileSize.QuadPart;
 		}
 #else
-		int openFlag;
-		switch (mode & ~FileAccess::Exclusive) {
+		int openFlags;
+		switch (mode & FileAccess::ReadWrite) {
 			case FileAccess::Read:
-				openFlag = O_RDONLY;
+				openFlags = O_RDONLY;
 				break;
 			case FileAccess::Write:
-				openFlag = O_WRONLY | O_CREAT | O_TRUNC;
+				openFlags = O_WRONLY | O_CREAT | O_TRUNC;
 				break;
 			case FileAccess::ReadWrite:
-				openFlag = O_RDWR;	// NOTE: File must already exist
+				openFlags = O_RDWR;	// NOTE: File must already exist
 				break;
 			default:
 				LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
+		if ((mode & FileAccess::InheritHandle) != FileAccess::InheritHandle) {
+			openFlags |= O_CLOEXEC;
+		}
 
 		int defaultPermissions = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH); // 0666
-		_fileDescriptor = ::open(_path.data(), openFlag, defaultPermissions);
+		_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);
 		if (_fileDescriptor < 0) {
 			LOGE("Can't open file \"%s\" - failed with error %i", _path.data(), errno);
 			return;
@@ -405,7 +412,7 @@ namespace Death { namespace IO {
 		}
 #endif
 
-		switch (mode & ~FileAccess::Exclusive) {
+		switch (mode & FileAccess::ReadWrite) {
 			default: LOGI("File \"%s\" opened", _path.data()); break;
 			case FileAccess::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
 			case FileAccess::ReadWrite: LOGI("File \"%s\" opened for read+write", _path.data()); break;

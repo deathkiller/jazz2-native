@@ -301,7 +301,12 @@ namespace Jazz2::UI::Menu
 
 		StringView langName = I18n::GetLanguageName(language);
 
-		std::int32_t lineLength = formatString(result, resultLength, "\f[c:#707070]%s\f[/c]  \f[h:86](%s)\f[/h]\n", desc.data(), langName.data());
+		std::int32_t lineLength;
+		if (langName) {
+			lineLength = formatString(result, resultLength, "\f[c:#707070]%s\f[/c]  \f[h:86](%s)\f[/h]\n", desc.data(), langName.data());
+		} else {
+			lineLength = formatString(result, resultLength, "\f[c:#707070]%s\f[/c]\n", desc.data());
+		}
 		result += lineLength;
 		resultLength -= lineLength;
 	}

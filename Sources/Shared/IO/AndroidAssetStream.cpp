@@ -269,7 +269,7 @@ namespace Death { namespace IO {
 
 	void AndroidAssetStream::Open(FileAccess mode)
 	{
-		FileAccess maskedMode = mode & ~FileAccess::Exclusive;
+		FileAccess maskedMode = mode & FileAccess::ReadWrite;
 		if (maskedMode != FileAccess::Read) {
 			LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
 			return;

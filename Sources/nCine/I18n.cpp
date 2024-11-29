@@ -44,6 +44,7 @@ namespace nCine
 		{ "et", "Eesti"_s },
 		{ "fi", "Suomi"_s },
 		{ "fr", "Français"_s },
+		{ "gl", "Galego"_s },
 		{ "gr", "Greek"_s },
 		{ "hr", "Hrvatski"_s },
 		{ "hu", "Magyar"_s },
