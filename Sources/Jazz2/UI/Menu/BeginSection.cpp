@@ -83,8 +83,8 @@ namespace Jazz2::UI::Menu
 			// TRANSLATORS: Menu item in main menu
 			_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Levels") });
 #	endif
-#endif
 		}
+#endif
 
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(ItemData { Item::Highscores, _("Highscores") });

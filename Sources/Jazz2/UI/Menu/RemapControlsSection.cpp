@@ -185,7 +185,7 @@ namespace Jazz2::UI::Menu
 			auto& mapping = ControlScheme::GetMappings(_playerIndex)[_selectedIndex];
 			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (std::int32_t)PlayerActions::Menu && _selectedColumn == 0)) {
 				char stringBuffer[64];
-				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:#d0705d]%s\f[/c] %s", _("Change Weapon").data(), _("│").data());
+				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:#d0705d]%s\f[/c] │", _("Change Weapon").data());
 
 				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 15.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);

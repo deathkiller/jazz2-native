@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-11-29 09:13+0100\n"
+"POT-Creation-Date: 2024-11-30 15:48+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: enfeitizador <fedellar@enfeitizador.es>\n"
 "Language-Team: enfeitizador\n"
@@ -1439,27 +1439,27 @@ msgid "Continue"
 msgstr "Continuar"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:79
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:81
 msgid "Play Custom Game"
 msgstr "Xogar partida personalizada"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:82
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:84
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:126
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
 msgstr "Xogar niveis personalizados"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
 msgid "Highscores"
 msgstr "Máximas puntuacións"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:88
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:92
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:41
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
@@ -1467,20 +1467,20 @@ msgid "Options"
 msgstr "Opcións"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:94
 msgid "About"
 msgstr "Acerca de"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:93
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:97
 msgid "Quit"
 msgstr "Saír"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:195
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:209
 msgid "Access to external storage has been granted!"
 msgstr "Acceso ao almacenamento externo garantido!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:197
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:211
 msgid ""
 "\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
 "#337233] files correctly."
@@ -1488,7 +1488,7 @@ msgstr ""
 "\f[c:#337233]Restabelece o xogo para ler os ficheiros do \f[c:#9e7056]Jazz "
 "Jackrabbit 2\f[c:#337233] correctamente."
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:202
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:216
 msgid ""
 "\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
 "#704a4a] files!"
@@ -1496,13 +1496,13 @@ msgstr ""
 "\f[c:#704a4a]Este xogo require ficheiros do \f[c:#9e7056]Jazz Jackrabbit "
 "2\f[c:#704a4a] orixinal!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:204
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:218
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
 "Asegura que os ficheiros do Jazz Jackrabbit 2 estean no seguinte camiño:"
 
 #. TRANSLATORS: Menu item in main menu (Android 11+ only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:212
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:226
 msgid "Allow access to external storage"
 msgstr "Permite o acceso ao almacenamento externo"
 
@@ -1760,8 +1760,8 @@ msgstr "Recargar caché"
 
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:137
-msgid "\f[c:#d86664]Yes\f[/c]"
-msgstr "\f[c:#d86664]Si\f[/c]"
+msgid "Yes"
+msgstr "Si"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:137
 msgid "No"
@@ -2023,12 +2023,8 @@ msgstr "Arma %i"
 msgid "Press any key or button to assign"
 msgstr "Preme una tecla ou botón para asignar"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
-msgid "or"
-msgstr "ou"
-
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:194
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:199
 msgid "to remove assignment"
 msgstr "para quitar asignación"
 
@@ -2302,6 +2298,9 @@ msgstr ""
 "\n"
 "Fuches \f[c:#725040]baneado\f[/c] do servidor.\n"
 "Contacta coa administración do servidor para máis información."
+
+#~ msgid "or"
+#~ msgstr "ou"
 
 #~ msgid "Creating server..."
 #~ msgstr "Creando servidor..."
