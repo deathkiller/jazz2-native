@@ -3,12 +3,9 @@
 #include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 #include "../ControlScheme.h"
+#include "../DiscordRpcClient.h"
 #include "BeginSection.h"
 #include "FirstRunSection.h"
-
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-#	include "../DiscordRpcClient.h"
-#endif
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
@@ -96,6 +93,11 @@ namespace Jazz2::UI::Menu
 		}
 		
 		SwitchToSection<BeginSection>();
+	}
+
+	Vector2i MainMenu::GetViewSize() const
+	{
+		return _upscalePass.GetViewSize();
 	}
 
 	void MainMenu::OnBeginFrame()
@@ -233,7 +235,8 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 
-		float titleY = _owner->_contentBounds.Y - (ViewSize.Y > 330 ? 30.0f : (ViewSize.Y >= 300 ? 50.0f : 12.0f));
+		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
+		//titleY = _owner->_contentBounds.Y - (/*ViewSize.Y > 330 ? 30.0f :*/ (ViewSize.Y >= 300 ? 50.0f : 12.0f));
 		float logoBaseScale = (ViewSize.Y >= 300 ? 1.0f : 0.85f);
 		float logoScale = logoBaseScale + (1.0f - _owner->_logoTransition) * 7.0f;
 		float logoTextScale = logoBaseScale + (1.0f - _owner->_logoTransition) * 2.0f;
@@ -632,7 +635,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::UpdateRichPresence()
 	{
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
 		if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Get().IsSupported()) {
 			return;
 		}

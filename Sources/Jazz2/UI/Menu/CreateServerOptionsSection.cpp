@@ -212,12 +212,12 @@ namespace Jazz2::UI::Menu
 		    } else if (i == 1) {
 				StringView gameModeString;
 				switch (_gameMode) {
-					case MultiplayerGameMode::Battle: gameModeString = "Battle"_s; break;
-					case MultiplayerGameMode::TeamBattle: gameModeString = "Team Battle"_s; break;
-					case MultiplayerGameMode::CaptureTheFlag: gameModeString = "Capture The Flag"_s; break;
-					case MultiplayerGameMode::Race: gameModeString = "Race"_s; break;
-					case MultiplayerGameMode::TreasureHunt: gameModeString = "Treasure Hunt"_s; break;
-					case MultiplayerGameMode::Cooperation: gameModeString = "Cooperation"_s; break;
+					case MultiplayerGameMode::Battle: gameModeString = _("Battle"); break;
+					case MultiplayerGameMode::TeamBattle: gameModeString = _("Team Battle"); break;
+					case MultiplayerGameMode::CaptureTheFlag: gameModeString = _("Capture The Flag"); break;
+					case MultiplayerGameMode::Race: gameModeString = _("Race"); break;
+					case MultiplayerGameMode::TreasureHunt: gameModeString = _("Treasure Hunt"); break;
+					case MultiplayerGameMode::Cooperation: gameModeString = _("Cooperation"); break;
 				}
 
 				_root->DrawStringShadow(gameModeString, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,

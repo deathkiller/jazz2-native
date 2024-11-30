@@ -43,6 +43,8 @@ namespace Jazz2::UI::Menu
 
 		void Reset();
 
+		Vector2i GetViewSize() const override;
+
 		void OnBeginFrame() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 
@@ -64,10 +66,6 @@ namespace Jazz2::UI::Menu
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
 		bool ActionPressed(PlayerActions action) override;
 		bool ActionHit(PlayerActions action) override;
-
-		Vector2i GetViewSize() const override {
-			return _canvasBackground->ViewSize;
-		}
 
 		Recti GetContentBounds() const override {
 			return _contentBounds;

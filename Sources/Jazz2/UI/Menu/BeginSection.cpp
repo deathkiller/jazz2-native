@@ -183,7 +183,7 @@ namespace Jazz2::UI::Menu
 		_skipSecondItem = canGrantPermission && !permissionGranted;
 
 		std::int32_t itemCount = (std::int32_t)_items.size();
-		float baseReduction = (canvas->ViewSize.Y >= 300 ? -32.0f : -20.0f);
+		float baseReduction = (canvas->ViewSize.Y >= 300 ? 10.0f : 24.0f);
 
 		if (!_isPlayable) {
 			itemCount += 2;
@@ -191,21 +191,18 @@ namespace Jazz2::UI::Menu
 		}
 
 		Recti contentBounds = _root->GetContentBounds();
-		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + baseReduction + contentBounds.H * 0.3f * (1.0f - 0.048f * itemCount));
-		if (contentBounds.H < 230) {
-			center.Y *= 0.85f;
-		}
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + baseReduction + (0.2f * (float)canvas->ViewSize.Y / itemCount));
 
 		std::int32_t charOffset = 0;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (!_isPlayable) {
-			if (_selectedIndex == 0) {
-				_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 30.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
-			}
-
 #	if defined(DEATH_TARGET_ANDROID)
 			if (permissionGranted) {
+				if (_selectedIndex == 0) {
+					_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 14.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
+				}
+
 				_root->DrawStringShadow(_("Access to external storage has been granted!"), charOffset, center.X, center.Y * 0.96f - 20.0f, IMenuContainer::FontLayer,
 					Alignment::Bottom, Colorf(0.2f, 0.45f, 0.2f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 				_root->DrawStringShadow(_("\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#337233] files correctly."), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
@@ -213,6 +210,10 @@ namespace Jazz2::UI::Menu
 			} else
 #	endif
 			{
+				if (_selectedIndex == 0) {
+					_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 26.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
+				}
+
 				_root->DrawStringShadow(_("\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#704a4a] files!"), charOffset, center.X, center.Y - 40.0f, IMenuContainer::FontLayer,
 					Alignment::Bottom, Font::DefaultColor, 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 				_root->DrawStringShadow(_("Make sure Jazz Jackrabbit 2 files are present in following path:"), charOffset, center.X, center.Y - 20.0f, IMenuContainer::FontLayer,
@@ -274,7 +275,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += (contentBounds.H >= 260 ? 36.0f : 28.0f) + 32.0f * (1.0f - 0.15f * itemCount);
+			center.Y += 6.0f + (0.54f * (float)canvas->ViewSize.Y / itemCount);
 		}
 	}
 

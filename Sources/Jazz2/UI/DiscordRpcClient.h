@@ -2,9 +2,11 @@
 
 #include "../../Common.h"
 
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
 
 #include "../../nCine/Threading/Thread.h"
+
+#include <atomic>
 
 #include <CommonWindows.h>
 #include <Containers/String.h>
@@ -34,6 +36,8 @@ namespace Jazz2::UI
 		bool Connect(const StringView clientId);
 		void Disconnect();
 		bool IsSupported() const;
+		std::uint64_t GetUserId() const;
+		StringView GetUserDisplayName() const;
 		bool SetRichPresence(const RichPresence& richPresence);
 
 		static DiscordRpcClient& Get();
@@ -50,18 +54,21 @@ namespace Jazz2::UI
 			Pong
 		};
 
-#if defined(DEATH_TARGET_WINDOWS)
-		HANDLE _hPipe;
+#	if defined(DEATH_TARGET_WINDOWS)
+		std::atomic<HANDLE> _hPipe;
 		HANDLE _hEventRead;
 		HANDLE _hEventWrite;
 		String _pendingFrame;
-#else
-		std::int32_t _sockFd;
-#endif
+#	else
+		std::atomic_int32_t _sockFd;
+#	endif
 		Thread _thread;
 		std::int32_t _nonce;
 		String _clientId;
+		std::uint64_t _userId;
+		String _userDisplayName;
 
+		void ProcessInboundFrame(const char* json, std::size_t length, std::size_t allocated);
 		bool WriteFrame(Opcodes opcode, const char* buffer, std::uint32_t bufferSize);
 
 		static void OnBackgroundThread(void* args);

@@ -28,6 +28,11 @@ namespace Jazz2::UI
 		_canvas->setParent(nullptr);
 	}
 
+	Vector2i Cinematics::GetViewSize() const
+	{
+		return _upscalePass.GetViewSize();
+	}
+
 	void Cinematics::OnBeginFrame()
 	{
 		float timeMult = theApplication().GetTimeMult();

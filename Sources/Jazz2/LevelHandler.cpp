@@ -1,12 +1,9 @@
 ﻿#include "LevelHandler.h"
 #include "PlayerViewport.h"
 #include "PreferencesCache.h"
+#include "UI/DiscordRpcClient.h"
 #include "UI/HUD.h"
 #include "../Common.h"
-
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-#	include "UI/DiscordRpcClient.h"
-#endif
 
 #if defined(WITH_ANGELSCRIPT)
 #	include "Scripting/LevelScriptLoader.h"
@@ -450,6 +447,11 @@ namespace Jazz2
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
+	}
+
+	Vector2i LevelHandler::GetViewSize() const
+	{
+		return _viewSize;
 	}
 
 	void LevelHandler::OnBeginFrame()
@@ -1446,11 +1448,6 @@ namespace Jazz2
 		}
 	}
 
-	Vector2i LevelHandler::GetViewSize() const
-	{
-		return _viewSize;
-	}
-
 	void LevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)
 	{
 		// Nothing to do here
@@ -2021,7 +2018,7 @@ namespace Jazz2
 
 	void LevelHandler::UpdateRichPresence()
 	{
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
 		if (!PreferencesCache::EnableDiscordIntegration || !UI::DiscordRpcClient::Get().IsSupported()) {
 			return;
 		}

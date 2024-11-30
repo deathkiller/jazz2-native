@@ -3,6 +3,8 @@
 #include "../../CommonWindows.h"
 #include "../../Asserts.h"
 
+#include <atomic>
+
 #if defined(DEATH_TARGET_WINDOWS)
 #	include "../../Environment.h"
 #elif defined(DEATH_TARGET_APPLE)
@@ -54,6 +56,16 @@ extern "C"
 namespace Death { namespace Threading { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	template <typename T>
+	struct RemoveAtomic {
+		using type = T;
+	};
+
+	template <typename T>
+	struct RemoveAtomic<std::atomic<T>> {
+		using type = T;
+	};
+
 #if defined(DEATH_TARGET_WINDOWS)
 	using WaitOnAddressDelegate = decltype(::WaitOnAddress);
 	using WakeByAddressAllDelegate = decltype(::WakeByAddressAll);
@@ -68,7 +80,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	void InitializeWaitOnAddress();
 
 	template<typename T>
-	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
+	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
 		BOOL waitResult = _waitOnAddress(&futex, &expectedValue, sizeof(T), timeoutMilliseconds);
 		DEATH_DEBUG_ASSERT(waitResult || ::GetLastError() == ERROR_TIMEOUT);
@@ -113,7 +125,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	}
 
 	template<typename T>
-	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
+	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
 		// Source code inspection shows __ulock_wait2 uses nanoseconds for timeout
 		std::uint64_t timeoutNanoseconds = (timeoutMilliseconds == Infinite ? UINT64_MAX : (timeoutMilliseconds * 1000000ull));
@@ -147,7 +159,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	}
 
 	template <typename T>
-	inline int WaitOnAddressInner(T& futex, T expectedValue, _umtx_time* tmp = nullptr)
+	inline int WaitOnAddressInner(T& futex, typename RemoveAtomic<T>::type expectedValue, _umtx_time* tmp = nullptr)
 	{
 		// FreeBSD UMTX_OP_WAIT does not apply acquire or release memory barriers
 		int op = UMTX_OP_WAIT_UINT_PRIVATE;
@@ -161,7 +173,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	}
 
 	template<typename T>
-	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
+	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
 		if (timeoutMilliseconds == Infinite) {
 			int r = WaitOnAddressInner(futex, expectedValue);
@@ -229,7 +241,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	}
 
 	template<typename T>
-	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
+	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
 		if (timeoutMilliseconds == Infinite) {
 			long r = FutexOp(GetFutexAddress(&futex), FUTEX_WAIT, (std::uintptr_t)expectedValue);
@@ -274,7 +286,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	}
 
 	template<typename T>
-	inline bool WaitOnAddress(T& futex, T expectedValue, std::uint32_t timeoutMilliseconds)
+	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
 		return false;
 	}

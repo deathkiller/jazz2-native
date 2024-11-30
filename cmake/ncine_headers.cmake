@@ -44,7 +44,6 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IO/PakFile.h
 	${NCINE_SOURCE_DIR}/Shared/IO/Stream.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Event.h
-	${NCINE_SOURCE_DIR}/Shared/Threading/Interlocked.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Spinlock.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Implementation/WaitOnAddress.h
 )
@@ -158,7 +157,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector2.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector3.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector4.h
-	${NCINE_SOURCE_DIR}/nCine/Threading/Atomic.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadCommand.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadPool.h
 )

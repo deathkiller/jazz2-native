@@ -103,6 +103,8 @@ namespace Jazz2
 		float GetAmbientLight(Actors::Player* player) const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
 
+		Vector2i GetViewSize() const override;
+
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
@@ -156,8 +158,6 @@ namespace Jazz2
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override { }
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;
-
-		Vector2i GetViewSize() const;
 
 		virtual void AttachComponents(LevelDescriptor&& descriptor);
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);

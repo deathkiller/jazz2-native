@@ -660,7 +660,6 @@
     <ClInclude Include="nCine\Primitives\Vector4.h" />
     <ClInclude Include="nCine\Backends\Qt5Widget.h" />
     <ClInclude Include="nCine\ServiceLocator.h" />
-    <ClInclude Include="nCine\Threading\Atomic.h" />
     <ClInclude Include="nCine\Threading\IThreadCommand.h" />
     <ClInclude Include="nCine\Threading\IThreadPool.h" />
     <ClInclude Include="nCine\Threading\Thread.h" />
@@ -702,7 +701,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StaticArray.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Interlocked.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SequenceHelpers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringUtils.h" />
@@ -1011,7 +1009,6 @@
     <ClCompile Include="nCine\Threading\PosixThread.cpp" />
     <ClCompile Include="nCine\Threading\PosixThreadSync.cpp" />
     <ClCompile Include="nCine\Threading\ThreadPool.cpp" />
-    <ClCompile Include="nCine\Threading\WindowsAtomic.cpp" />
     <ClCompile Include="nCine\Threading\WindowsThread.cpp" />
     <ClCompile Include="nCine\Threading\WindowsThreadSync.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\AmmoCollectible.cpp" />

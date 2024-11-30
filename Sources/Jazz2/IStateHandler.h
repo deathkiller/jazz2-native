@@ -2,6 +2,7 @@
 
 #include "../Common.h"
 #include "../nCine/Input/InputEvents.h"
+#include "../nCine/Primitives/Vector2.h"
 
 namespace Jazz2
 {
@@ -13,6 +14,8 @@ namespace Jazz2
 
 		IStateHandler(const IStateHandler&) = delete;
 		IStateHandler& operator=(const IStateHandler&) = delete;
+
+		virtual nCine::Vector2i GetViewSize() const { return {}; }
 
 		virtual void OnBeginFrame() {}
 		virtual void OnEndFrame() {}

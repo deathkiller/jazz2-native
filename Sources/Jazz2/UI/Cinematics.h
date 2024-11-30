@@ -30,6 +30,8 @@ namespace Jazz2::UI
 		Cinematics(IRootController* root, const StringView path, Function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;
 
+		Vector2i GetViewSize() const override;
+
 		void OnBeginFrame() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 

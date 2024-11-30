@@ -21,15 +21,15 @@
 #undef far
 */
 
+#include <atomic>
+
 #include <Containers/String.h>
-#include <Threading/Interlocked.h>
 
 using namespace Death;
-using namespace Death::Threading;
 
 namespace Jazz2::Multiplayer
 {
-	std::int32_t NetworkManager::_initializeCount = 0;
+	static std::atomic_int32_t _initializeCount{0};
 
 	NetworkManager::NetworkManager()
 		: _host(nullptr), _state(NetworkState::None), _handler(nullptr)
@@ -190,7 +190,7 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::InitializeBackend()
 	{
-		if (Interlocked::Increment(&_initializeCount) == 1) {
+		if (++_initializeCount == 1) {
 			std::int32_t error = enet_initialize();
 			RETURN_ASSERT_MSG(error == 0, "enet_initialize() failed with error %i", error);
 		}
@@ -198,7 +198,7 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::ReleaseBackend()
 	{
-		if (Interlocked::Decrement(&_initializeCount) == 0) {
+		if (--_initializeCount == 0) {
 			enet_deinitialize();
 		}
 	}

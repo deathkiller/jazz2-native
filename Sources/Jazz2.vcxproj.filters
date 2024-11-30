@@ -1356,9 +1356,6 @@
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h">
       <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Interlocked.h">
-      <Filter>Header Files\Shared\Threading</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\LoadingSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
