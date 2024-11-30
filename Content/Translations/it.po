@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-11-27 20:09+0100\n"
+"POT-Creation-Date: 2024-11-30 10:17+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Hexaae\n"
 "Language-Team: Hexaae\n"
@@ -1456,7 +1456,7 @@ msgstr "Gioco Personalizzato"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
 msgid "Highscores"
-msgstr ""
+msgstr "Punteggi record"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
@@ -1558,17 +1558,17 @@ msgid "Controls"
 msgstr "Controlli"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:121
 msgid "Strong"
 msgstr "Forte"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:124
 msgid "Weak"
 msgstr "Debole"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:117
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:134
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:168
@@ -1577,7 +1577,7 @@ msgstr "Debole"
 msgid "Disabled"
 msgstr "Disattivata"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:134
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
@@ -1864,12 +1864,12 @@ msgstr "Abilitata \f[c:#d0705d](Sperimentale)\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:105
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr ""
+msgstr "Punteggi record per \f[c:#d0705d]Gioco base\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:115
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
-msgstr ""
+msgstr "Punteggi record per \f[c:#d0705d]%s\f[/c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
@@ -1915,12 +1915,12 @@ msgstr "Acchiappa la bandiera"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
-msgstr "Corsa"
+msgstr "Gara"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
-msgstr ""
+msgstr "Gara a squadre"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
@@ -2075,7 +2075,7 @@ msgstr "Nessun server trovato, ma sto ancora cercando!"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
-msgstr ""
+msgstr "Premi \f[c:#d0705d]Fuoco\f[/c] per continuare"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
@@ -2213,13 +2213,6 @@ msgstr ""
 "Prego, riprova più tardi."
 
 #: Sources/Main.cpp:768
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2230,17 +2223,10 @@ msgstr ""
 "\f[c:#704a4a]La connessione è stata chiusa!\f[/c]\n"
 "\n"
 "\n"
-"Il server è in chiusura.\n"
+"Il server è in chiusura per manutenzione.\n"
 "Prego, riprova più tardi."
 
 #: Sources/Main.cpp:769
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2251,17 +2237,10 @@ msgstr ""
 "\f[c:#704a4a]La connessione è stata chiusa!\f[/c]\n"
 "\n"
 "\n"
-"Il server è in chiusura.\n"
+"Il server è in chiusura per manutenzione.\n"
 "Prego, riprova più tardi."
 
 #: Sources/Main.cpp:770
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2272,7 +2251,7 @@ msgstr ""
 "\f[c:#704a4a]La connessione è stata chiusa!\f[/c]\n"
 "\n"
 "\n"
-"Il server è in chiusura.\n"
+"Il server è in chiusura per manutenzione.\n"
 "Prego, riprova più tardi."
 
 #: Sources/Main.cpp:771
