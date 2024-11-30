@@ -6,9 +6,11 @@
 
 #include "../../Common.h"
 
-#include <unistd.h>		// for sysconf()
-#include <sched.h>		// for sched_yield()
+#include <atomic>
 #include <cstring>
+#include <pthread.h>
+#include <sched.h>		// for sched_yield()
+#include <unistd.h>		// for sysconf()
 #include <utility>
 
 #if defined(DEATH_TARGET_APPLE)
@@ -75,6 +77,14 @@ namespace nCine
 
 #endif
 
+	struct Thread::SharedBlock
+	{
+		std::atomic_int32_t _refCount;
+		pthread_t _handle;
+		ThreadFuncDelegate _threadFunc;
+		void* _threadArg;
+	};
+
 	Thread::Thread()
 		: _sharedBlock(nullptr)
 	{
@@ -94,6 +104,30 @@ namespace nCine
 	Thread::~Thread()
 	{
 		Detach();
+	}
+
+	Thread::Thread(const Thread& other)
+	{
+		// Copy constructor
+		_sharedBlock = other._sharedBlock;
+
+		if (_sharedBlock != nullptr) {
+			++_sharedBlock->_refCount;
+		}
+	}
+
+	Thread& Thread::operator=(const Thread& other)
+	{
+		Detach();
+
+		// Copy assignment
+		_sharedBlock = other._sharedBlock;
+
+		if (_sharedBlock != nullptr) {
+			++_sharedBlock->_refCount;
+		}
+
+		return *this;
 	}
 
 	std::uint32_t Thread::GetProcessorCount()
@@ -259,27 +293,28 @@ namespace nCine
 
 		return (pthread_cancel(_sharedBlock->_handle) == 0);
 	}
+#endif
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 	ThreadAffinityMask Thread::GetAffinityMask() const
 	{
 		ThreadAffinityMask affinityMask;
 
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
-			LOGW("Cannot get the affinity for a thread that has not been created yet");
+			LOGW("Can't get the affinity for a thread that has not been created yet");
 			return affinityMask;
 		}
 
-#		if defined(DEATH_TARGET_APPLE)
+#	if defined(DEATH_TARGET_APPLE)
 		thread_affinity_policy_data_t threadAffinityPolicy;
 		thread_port_t threadPort = pthread_mach_thread_np(_sharedBlock->_handle);
 		mach_msg_type_number_t policyCount = THREAD_AFFINITY_POLICY_COUNT;
 		boolean_t getDefault = FALSE;
 		thread_policy_get(threadPort, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&threadAffinityPolicy), &policyCount, &getDefault);
 		affinityMask.affinityTag_ = threadAffinityPolicy.affinity_tag;
-#		else
+#	else
 		pthread_getaffinity_np(_sharedBlock->_handle, sizeof(cpu_set_t), &affinityMask.cpuSet_);
-#		endif
+#	endif
 
 		return affinityMask;
 	}
@@ -287,19 +322,18 @@ namespace nCine
 	void Thread::SetAffinityMask(ThreadAffinityMask affinityMask)
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
-			LOGW("Cannot set the affinity mask for a not yet created thread");
+			LOGW("Can't set the affinity mask for a not yet created thread");
 			return;
 		}
 
-#		if defined(DEATH_TARGET_APPLE)
+#	if defined(DEATH_TARGET_APPLE)
 		thread_affinity_policy_data_t threadAffinityPolicy = { affinityMask.affinityTag_ };
 		thread_port_t threadPort = pthread_mach_thread_np(_sharedBlock->_handle);
 		thread_policy_set(threadPort, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&threadAffinityPolicy), THREAD_AFFINITY_POLICY_COUNT);
-#		else
+#	else
 		pthread_setaffinity_np(_sharedBlock->_handle, sizeof(cpu_set_t), &affinityMask.cpuSet_);
-#		endif
-	}
 #	endif
+	}
 #endif
 
 	void* Thread::WrapperFunction(void* arg)
