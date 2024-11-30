@@ -58,39 +58,41 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState GamepadPsBack = (AnimState)67;
 	static constexpr AnimState GamepadPsStart = (AnimState)68;
 	static constexpr AnimState GamepadPsLeftShoulder = (AnimState)69;
-	static constexpr AnimState GamepadPsRightShoulder = (AnimState)70;
-	static constexpr AnimState GamepadPsMisc1 = (AnimState)71;
-	static constexpr AnimState GamepadPsTouchpad = (AnimState)72;
+	static constexpr AnimState GamepadPsLeftTrigger = (AnimState)70;
+	static constexpr AnimState GamepadPsRightShoulder = (AnimState)71;
+	static constexpr AnimState GamepadPsRightTrigger = (AnimState)72;
+	static constexpr AnimState GamepadPsMisc1 = (AnimState)73;
+	static constexpr AnimState GamepadPsTouchpad = (AnimState)74;
 
-	static constexpr AnimState GamepadSwitchA = (AnimState)73;
-	static constexpr AnimState GamepadSwitchB = (AnimState)74;
-	static constexpr AnimState GamepadSwitchX = (AnimState)75;
-	static constexpr AnimState GamepadSwitchY = (AnimState)76;
-	static constexpr AnimState GamepadSwitchDPadLeft = (AnimState)77;
-	static constexpr AnimState GamepadSwitchDPadRight = (AnimState)78;
-	static constexpr AnimState GamepadSwitchDPadUp = (AnimState)79;
-	static constexpr AnimState GamepadSwitchDPadDown = (AnimState)80;
-	static constexpr AnimState GamepadSwitchGuide = (AnimState)81;
-	static constexpr AnimState GamepadSwitchBack = (AnimState)82;
-	static constexpr AnimState GamepadSwitchStart = (AnimState)83;
-	static constexpr AnimState GamepadSwitchLeftTrigger = (AnimState)84;
-	static constexpr AnimState GamepadSwitchRightTrigger = (AnimState)85;
-	static constexpr AnimState GamepadSwitchMisc1 = (AnimState)86;
+	static constexpr AnimState GamepadSwitchA = (AnimState)75;
+	static constexpr AnimState GamepadSwitchB = (AnimState)76;
+	static constexpr AnimState GamepadSwitchX = (AnimState)77;
+	static constexpr AnimState GamepadSwitchY = (AnimState)78;
+	static constexpr AnimState GamepadSwitchDPadLeft = (AnimState)79;
+	static constexpr AnimState GamepadSwitchDPadRight = (AnimState)80;
+	static constexpr AnimState GamepadSwitchDPadUp = (AnimState)81;
+	static constexpr AnimState GamepadSwitchDPadDown = (AnimState)82;
+	static constexpr AnimState GamepadSwitchGuide = (AnimState)83;
+	static constexpr AnimState GamepadSwitchBack = (AnimState)84;
+	static constexpr AnimState GamepadSwitchStart = (AnimState)85;
+	static constexpr AnimState GamepadSwitchLeftTrigger = (AnimState)86;
+	static constexpr AnimState GamepadSwitchRightTrigger = (AnimState)87;
+	static constexpr AnimState GamepadSwitchMisc1 = (AnimState)88;
 
-	static constexpr AnimState GamepadSteamA = (AnimState)87;
-	static constexpr AnimState GamepadSteamB = (AnimState)88;
-	static constexpr AnimState GamepadSteamX = (AnimState)89;
-	static constexpr AnimState GamepadSteamY = (AnimState)90;
-	static constexpr AnimState GamepadSteamDPadLeft = (AnimState)91;
-	static constexpr AnimState GamepadSteamDPadRight = (AnimState)92;
-	static constexpr AnimState GamepadSteamDPadUp = (AnimState)93;
-	static constexpr AnimState GamepadSteamDPadDown = (AnimState)94;
-	static constexpr AnimState GamepadSteamGuide = (AnimState)95;
-	static constexpr AnimState GamepadSteamBack = (AnimState)96;
-	static constexpr AnimState GamepadSteamStart = (AnimState)97;
-	static constexpr AnimState GamepadSteamLeftShoulder = (AnimState)98;
-	static constexpr AnimState GamepadSteamRightShoulder = (AnimState)99;
-	static constexpr AnimState GamepadSteamMisc1 = (AnimState)100;
+	static constexpr AnimState GamepadSteamA = (AnimState)89;
+	static constexpr AnimState GamepadSteamB = (AnimState)90;
+	static constexpr AnimState GamepadSteamX = (AnimState)91;
+	static constexpr AnimState GamepadSteamY = (AnimState)92;
+	static constexpr AnimState GamepadSteamDPadLeft = (AnimState)93;
+	static constexpr AnimState GamepadSteamDPadRight = (AnimState)94;
+	static constexpr AnimState GamepadSteamDPadUp = (AnimState)95;
+	static constexpr AnimState GamepadSteamDPadDown = (AnimState)96;
+	static constexpr AnimState GamepadSteamGuide = (AnimState)97;
+	static constexpr AnimState GamepadSteamBack = (AnimState)98;
+	static constexpr AnimState GamepadSteamStart = (AnimState)99;
+	static constexpr AnimState GamepadSteamLeftShoulder = (AnimState)100;
+	static constexpr AnimState GamepadSteamRightShoulder = (AnimState)101;
+	static constexpr AnimState GamepadSteamMisc1 = (AnimState)102;
 
 	static constexpr AnimState Menu16 = (AnimState)110;
 	static constexpr AnimState Menu32 = (AnimState)111;
@@ -105,8 +107,30 @@ namespace Jazz2::UI::Menu::Resources
 			case AxisName::LeftY: axisName = "Y"_s; return GamepadXboxLeftStick; break;
 			case AxisName::RightX: axisName = "X"_s; return GamepadXboxRightStick; break;
 			case AxisName::RightY: axisName = "Y"_s; return GamepadXboxRightStick; break;
-			case AxisName::LeftTrigger: return (PreferencesCache::GamepadButtonLabels == GamepadType::Switch ? GamepadSwitchLeftTrigger : GamepadXboxLeftTrigger); break;
-			case AxisName::RightTrigger: return (PreferencesCache::GamepadButtonLabels == GamepadType::Switch ? GamepadSwitchRightTrigger : GamepadXboxRightTrigger); break;
+
+			case AxisName::LeftTrigger:
+				switch (PreferencesCache::GamepadButtonLabels) {
+					default:
+					case GamepadType::Xbox:
+						return GamepadXboxLeftTrigger;
+					case GamepadType::PlayStation:
+					case GamepadType::Steam:
+						return GamepadPsLeftTrigger;
+					case GamepadType::Switch:
+						return GamepadSwitchLeftTrigger;
+				}
+			case AxisName::RightTrigger:
+				switch (PreferencesCache::GamepadButtonLabels) {
+					default:
+					case GamepadType::Xbox:
+						return GamepadXboxRightTrigger;
+					case GamepadType::PlayStation:
+					case GamepadType::Steam:
+						return GamepadPsRightTrigger;
+					case GamepadType::Switch:
+						return GamepadSwitchRightTrigger;
+				}
+
 			default: return AnimState::Default; break;
 		}
 	}

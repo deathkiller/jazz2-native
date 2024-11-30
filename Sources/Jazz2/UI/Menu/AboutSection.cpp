@@ -233,8 +233,10 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
+		float padding = (contentBounds.W > 450.0f ? 60.0f : 20.0f);
+
 		int32_t charOffset = 0;
-		_textBlock.Draw(canvas, Rectf(contentBounds.X + 60.0f, topLine + viewHeight - roundf(_scrollOffset), contentBounds.W - 120.0f, 1000000.0f),
+		_textBlock.Draw(canvas, Rectf(contentBounds.X + padding, topLine + viewHeight - roundf(_scrollOffset), contentBounds.W - padding * 2.0f, 1000000.0f),
 			IMenuContainer::FontLayer, charOffset, 0.7f, 1.0f, 1.0f);
 
 		if (_scrollOffset > viewHeight - 6.0f) {

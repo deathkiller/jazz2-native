@@ -208,131 +208,139 @@
 			"Path": "UI/gamepad/ps_lb.aura",
 			"States": [ 69 ]
 		},
+		"GamepadPsLeftTrigger": {
+			"Path": "UI/gamepad/ps_lt.aura",
+			"States": [ 70 ]
+		},
 		"GamepadPsRightShoulder": {
 			"Path": "UI/gamepad/ps_rb.aura",
-			"States": [ 70 ]
+			"States": [ 71 ]
+		},
+		"GamepadPsRightTrigger": {
+			"Path": "UI/gamepad/ps_rt.aura",
+			"States": [ 72 ]
 		},
 		"GamepadPsMisc1": {
 			"Path": "UI/gamepad/ps_misc1.aura",
-			"States": [ 71 ]
+			"States": [ 73 ]
 		},
 		"GamepadPsTouchpad": {
 			"Path": "UI/gamepad/ps_touchpad.aura",
-			"States": [ 72 ]
+			"States": [ 74 ]
 		},
 		
 		"GamepadSwitchA": {
 			"Path": "UI/gamepad/switch_a.aura",
-			"States": [ 73 ]
+			"States": [ 75 ]
 		},
 		"GamepadSwitchB": {
 			"Path": "UI/gamepad/switch_b.aura",
-			"States": [ 74 ]
+			"States": [ 76 ]
 		},
 		"GamepadSwitchX": {
 			"Path": "UI/gamepad/switch_x.aura",
-			"States": [ 75 ]
+			"States": [ 77 ]
 		},
 		"GamepadSwitchY": {
 			"Path": "UI/gamepad/switch_y.aura",
-			"States": [ 76 ]
+			"States": [ 78 ]
 		},
 		"GamepadSwitchDPadLeft": {
 			"Path": "UI/gamepad/switch_left.aura",
-			"States": [ 77 ]
+			"States": [ 79 ]
 		},
 		"GamepadSwitchDPadRight": {
 			"Path": "UI/gamepad/switch_right.aura",
-			"States": [ 78 ]
+			"States": [ 80 ]
 		},
 		"GamepadSwitchDPadUp": {
 			"Path": "UI/gamepad/switch_up.aura",
-			"States": [ 79 ]
+			"States": [ 81 ]
 		},
 		"GamepadSwitchDPadDown": {
 			"Path": "UI/gamepad/switch_down.aura",
-			"States": [ 80 ]
+			"States": [ 82 ]
 		},
 		"GamepadSwitchGuide": {
 			"Path": "UI/gamepad/switch_guide.aura",
-			"States": [ 81 ]
+			"States": [ 83 ]
 		},
 		"GamepadSwitchBack": {
 			"Path": "UI/gamepad/switch_back.aura",
-			"States": [ 82 ]
+			"States": [ 84 ]
 		},
 		"GamepadSwitchStart": {
 			"Path": "UI/gamepad/switch_start.aura",
-			"States": [ 83 ]
+			"States": [ 85 ]
 		},
 		"GamepadSwitchLeftTrigger": {
 			"Path": "UI/gamepad/switch_lt.aura",
-			"States": [ 84 ]
+			"States": [ 86 ]
 		},
 		"GamepadSwitchRightTrigger": {
 			"Path": "UI/gamepad/switch_rt.aura",
-			"States": [ 85 ]
+			"States": [ 87 ]
 		},
 		"GamepadSwitchMisc1": {
 			"Path": "UI/gamepad/switch_misc1.aura",
-			"States": [ 86 ]
+			"States": [ 88 ]
 		},
 				
 		"GamepadSteamA": {
 			"Path": "UI/gamepad/steam_a.aura",
-			"States": [ 87 ]
+			"States": [ 89 ]
 		},
 		"GamepadSteamB": {
 			"Path": "UI/gamepad/steam_b.aura",
-			"States": [ 88 ]
+			"States": [ 90 ]
 		},
 		"GamepadSteamX": {
 			"Path": "UI/gamepad/steam_x.aura",
-			"States": [ 89 ]
+			"States": [ 91 ]
 		},
 		"GamepadSteamY": {
 			"Path": "UI/gamepad/steam_y.aura",
-			"States": [ 90 ]
+			"States": [ 92 ]
 		},
 		"GamepadSteamDPadLeft": {
 			"Path": "UI/gamepad/steam_left.aura",
-			"States": [ 91 ]
+			"States": [ 93 ]
 		},
 		"GamepadSteamDPadRight": {
 			"Path": "UI/gamepad/steam_right.aura",
-			"States": [ 92 ]
+			"States": [ 94 ]
 		},
 		"GamepadSteamDPadUp": {
 			"Path": "UI/gamepad/steam_up.aura",
-			"States": [ 93 ]
+			"States": [ 95 ]
 		},
 		"GamepadSteamDPadDown": {
 			"Path": "UI/gamepad/steam_down.aura",
-			"States": [ 94 ]
+			"States": [ 96 ]
 		},
 		"GamepadSteamGuide": {
 			"Path": "UI/gamepad/steam_guide.aura",
-			"States": [ 95 ]
+			"States": [ 97 ]
 		},
 		"GamepadSteamBack": {
 			"Path": "UI/gamepad/steam_back.aura",
-			"States": [ 96 ]
+			"States": [ 98 ]
 		},
 		"GamepadSteamStart": {
 			"Path": "UI/gamepad/steam_start.aura",
-			"States": [ 97 ]
+			"States": [ 99 ]
 		},
 		"GamepadSteamLeftShoulder": {
 			"Path": "UI/gamepad/steam_lb.aura",
-			"States": [ 98 ]
+			"States": [ 100 ]
 		},
 		"GamepadSteamRightShoulder": {
 			"Path": "UI/gamepad/steam_rb.aura",
-			"States": [ 99 ]
+			"States": [ 101 ]
 		},
 		"GamepadSteamMisc1": {
 			"Path": "UI/gamepad/steam_misc1.aura",
-			"States": [ 100 ]
+			"States": [ 102 ]
 		},
 		
 		"Menu16": {
