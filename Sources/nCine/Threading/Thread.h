@@ -6,6 +6,8 @@
 
 #if defined(DEATH_TARGET_APPLE)
 #	include <mach/mach_init.h>
+#elif !defined(DEATH_TARGET_WINDOWS)
+#	include <pthread.h>
 #endif
 
 namespace nCine
