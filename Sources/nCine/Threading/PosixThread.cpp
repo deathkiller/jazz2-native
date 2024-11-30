@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <pthread.h>
 #include <sched.h>		// for sched_yield()
 #include <unistd.h>		// for sysconf()
 #include <utility>
