@@ -7,7 +7,10 @@
 #include "../../Common.h"
 #include "../tracy.h"
 
+#include <atomic>
 #include <utility>
+#include <process.h>
+#include <processthreadsapi.h>
 
 #include <Utf8.h>
 
@@ -82,6 +85,14 @@ namespace nCine
 		return ((affinityMask_ >> cpuNum) & 1LL) != 0;
 	}
 
+	struct Thread::SharedBlock
+	{
+		std::atomic_int32_t _refCount;
+		HANDLE _handle;
+		ThreadFuncDelegate _threadFunc;
+		void* _threadArg;
+	};
+
 	Thread::Thread()
 		: _sharedBlock(nullptr)
 	{
@@ -101,6 +112,30 @@ namespace nCine
 	Thread::~Thread()
 	{
 		Detach();
+	}
+
+	Thread::Thread(const Thread& other)
+	{
+		// Copy constructor
+		_sharedBlock = other._sharedBlock;
+
+		if (_sharedBlock != nullptr) {
+			++_sharedBlock->_refCount;
+		}
+	}
+
+	Thread& Thread::operator=(const Thread& other)
+	{
+		Detach();
+
+		// Copy assignment
+		_sharedBlock = other._sharedBlock;
+
+		if (_sharedBlock != nullptr) {
+			++_sharedBlock->_refCount;
+		}
+
+		return *this;
 	}
 
 	std::uint32_t Thread::GetProcessorCount()
@@ -141,9 +176,7 @@ namespace nCine
 			return;
 		}
 
-		// This returns the value before decrementing
-		int32_t refCount = _sharedBlock->_refCount.fetchSub(1);
-		if (refCount == 1) {
+		if (--_sharedBlock->_refCount == 0) {
 			::CloseHandle(_sharedBlock->_handle);
 			delete _sharedBlock;
 		}
@@ -212,7 +245,7 @@ namespace nCine
 			affinityMask.affinityMask_ = ::SetThreadAffinityMask(_sharedBlock->_handle, ~0);
 			::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask.affinityMask_);
 		} else {
-			LOGW("Cannot get the affinity for a thread that has not been created yet");
+			LOGW("Can't get the affinity for a thread that has not been created yet");
 		}
 
 		return affinityMask;
@@ -223,7 +256,7 @@ namespace nCine
 		if (_sharedBlock != nullptr)
 			::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask.affinityMask_);
 		else {
-			LOGW("Cannot set the affinity mask for a not yet created thread");
+			LOGW("Can't set the affinity mask for a not yet created thread");
 		}
 	}
 

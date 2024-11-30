@@ -1,15 +1,8 @@
 #pragma once
 
-#include "Atomic.h"
-
 #include <CommonWindows.h>
 
-#if defined(DEATH_TARGET_WINDOWS)
-#	include <process.h>
-#	include <processthreadsapi.h>
-#else
-#	include <pthread.h>
-#endif
+#if defined(WITH_THREADS)
 
 #if defined(DEATH_TARGET_APPLE)
 #	include <mach/mach_init.h>
@@ -70,29 +63,8 @@ namespace nCine
 
 		~Thread();
 
-		Thread(const Thread& other)
-		{
-			// Copy constructor
-			_sharedBlock = other._sharedBlock;
-
-			if (_sharedBlock != nullptr) {
-				_sharedBlock->_refCount.fetchAdd(1);
-			}
-		}
-
-		Thread& operator=(const Thread& other)
-		{
-			Detach();
-
-			// Copy assignment
-			_sharedBlock = other._sharedBlock;
-
-			if (_sharedBlock != nullptr) {
-				_sharedBlock->_refCount.fetchAdd(1);
-			}
-
-			return *this;
-		}
+		Thread(const Thread& other);
+		Thread& operator=(const Thread& other);
 
 		Thread(Thread&& other) noexcept
 		{
@@ -145,27 +117,17 @@ namespace nCine
 #if !defined(DEATH_TARGET_ANDROID)
 		/** @brief Tries to cancel or terminate the thread (depending on operating system) */
 		bool Abort();
+#endif
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 		/** @brief Gets the thread affinity mask */
 		ThreadAffinityMask GetAffinityMask() const;
 		/** @brief Sets the thread affinity mask*/ 
 		void SetAffinityMask(ThreadAffinityMask affinityMask);
-#	endif
 #endif
 
 	private:
-		struct SharedBlock
-		{
-			Atomic32 _refCount;
-#if defined(DEATH_TARGET_WINDOWS)
-			HANDLE _handle;
-#else
-			pthread_t _handle;
-#endif
-			ThreadFuncDelegate _threadFunc;
-			void* _threadArg;
-		};
+		struct SharedBlock;
 
 		Thread(SharedBlock* sharedBlock);
 
@@ -182,3 +144,5 @@ namespace nCine
 #endif
 	};
 }
+
+#endif
