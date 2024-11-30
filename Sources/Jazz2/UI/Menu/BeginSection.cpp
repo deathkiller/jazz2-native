@@ -35,7 +35,8 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	BeginSection::BeginSection()
-		: _selectedIndex(0), _animation(0.0f), _shouldStart(false), _alreadyStarted(false)
+		: _selectedIndex(0), _animation(0.0f), _isPlayable(true), _skipSecondItem(false),
+			_shouldStart(false), _alreadyStarted(false)
 	{
 	}
 
@@ -43,10 +44,9 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-		bool isPlayable = true;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
-			isPlayable = ((mainMenu->_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
+			_isPlayable = ((mainMenu->_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 		}
 #endif
 
@@ -67,21 +67,25 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(ItemData { Item::Import, _("Import Episodes") });
 #	endif
 #else
-		if (isPlayable && root->HasResumableState()) {
+		if (_isPlayable && root->HasResumableState()) {
 			// TRANSLATORS: Menu item in main menu
 			_items.emplace_back(ItemData { Item::Continue, _("Continue") });
 		}
 
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Story") });
+
+		if (_isPlayable) {
 #	if defined(WITH_MULTIPLAYER)
-		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Game") });
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Game") });
 #	else
-		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Levels") });
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Levels") });
 #	endif
 #endif
+		}
+
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(ItemData { Item::Highscores, _("Highscores") });
 		// TRANSLATORS: Menu item in main menu
@@ -94,7 +98,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (!isPlayable) {
+		if (!_isPlayable) {
 			auto& resolver = ContentResolver::Get();
 			_sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
 			if (_sourcePath.empty()) {
@@ -137,11 +141,10 @@ namespace Jazz2::UI::Menu
 			} else if (_root->ActionHit(PlayerActions::Up)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
-			SkipDisabledOnUp:
 				if (_selectedIndex > 0) {
 					_selectedIndex--;
-					if (_items[_selectedIndex].Y <= DisabledItem) {
-						goto SkipDisabledOnUp;
+					if (_skipSecondItem && _selectedIndex == 1) {
+						_selectedIndex--;
 					}
 				} else {
 					_selectedIndex = (std::int32_t)_items.size() - 1;
@@ -149,11 +152,10 @@ namespace Jazz2::UI::Menu
 			} else if (_root->ActionHit(PlayerActions::Down)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
-			SkipDisabledOnDown:
 				if (_selectedIndex < (std::int32_t)_items.size() - 1) {
 					_selectedIndex++;
-					if (_items[_selectedIndex].Y <= DisabledItem) {
-						goto SkipDisabledOnDown;
+					if (_skipSecondItem && _selectedIndex == 1) {
+						_selectedIndex++;
 					}
 				} else {
 					_selectedIndex = 0;
@@ -169,8 +171,27 @@ namespace Jazz2::UI::Menu
 
 	void BeginSection::OnDraw(Canvas* canvas)
 	{
+		bool canGrantPermission = false;
+		bool permissionGranted = false;
+#if defined(DEATH_TARGET_ANDROID)
+		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
+			IRootController::Flags flags = mainMenu->_root->GetFlags();
+			canGrantPermission = AndroidJniHelper::SdkVersion() >= 30 && (flags & IRootController::Flags::HasExternalStoragePermission) != IRootController::Flags::HasExternalStoragePermission;
+			permissionGranted = (flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume;
+		}
+#endif
+		_skipSecondItem = canGrantPermission && !permissionGranted;
+
+		std::int32_t itemCount = (std::int32_t)_items.size();
+		float baseReduction = (canvas->ViewSize.Y >= 300 ? -32.0f : -20.0f);
+
+		if (!_isPlayable) {
+			itemCount += 2;
+			baseReduction += (canvas->ViewSize.Y >= 252 ? 50.0f : 60.0f);
+		}
+
 		Recti contentBounds = _root->GetContentBounds();
-		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.22f * (1.0f - 0.048f * (std::int32_t)_items.size()));
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + baseReduction + contentBounds.H * 0.3f * (1.0f - 0.048f * itemCount));
 		if (contentBounds.H < 230) {
 			center.Y *= 0.85f;
 		}
@@ -178,57 +199,49 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		bool isPlayable = true;
-		bool hideSecondItem = false;
-
-		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
-			IRootController::Flags flags = mainMenu->_root->GetFlags();
-			if ((flags & IRootController::Flags::IsPlayable) != IRootController::Flags::IsPlayable) {
-				isPlayable = false;
-
-				if (_selectedIndex == 0) {
-					_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 8.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.12f), 26.0f, 12.0f, true, true);
-				}
+		if (!_isPlayable) {
+			if (_selectedIndex == 0) {
+				_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 30.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
+			}
 
 #	if defined(DEATH_TARGET_ANDROID)
-				if ((flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume) {
-					_root->DrawStringShadow(_("Access to external storage has been granted!"), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
-						Alignment::Bottom, Colorf(0.2f, 0.45f, 0.2f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
-					_root->DrawStringShadow(_("\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#337233] files correctly."), charOffset, center.X, center.Y * 0.96f + 10.0f, IMenuContainer::FontLayer,
-						Alignment::Center, Font::DefaultColor, 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
-				} else
+			if (permissionGranted) {
+				_root->DrawStringShadow(_("Access to external storage has been granted!"), charOffset, center.X, center.Y * 0.96f - 20.0f, IMenuContainer::FontLayer,
+					Alignment::Bottom, Colorf(0.2f, 0.45f, 0.2f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+				_root->DrawStringShadow(_("\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#337233] files correctly."), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+			} else
 #	endif
-				{
-					_root->DrawStringShadow(_("\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#704a4a] files!"), charOffset, center.X, center.Y * 0.96f - 10.0f, IMenuContainer::FontLayer,
-						Alignment::Bottom, Font::DefaultColor, 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
-					_root->DrawStringShadow(_("Make sure Jazz Jackrabbit 2 files are present in following path:"), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
-						Alignment::Center, Colorf(0.44f, 0.29f, 0.29f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
-					_root->DrawStringShadow(_sourcePath.data(), charOffset, center.X, center.Y * 0.96f + 10.0f, IMenuContainer::FontLayer,
-						Alignment::Top, Colorf(0.44f, 0.44f, 0.44f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+			{
+				_root->DrawStringShadow(_("\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#704a4a] files!"), charOffset, center.X, center.Y - 40.0f, IMenuContainer::FontLayer,
+					Alignment::Bottom, Font::DefaultColor, 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+				_root->DrawStringShadow(_("Make sure Jazz Jackrabbit 2 files are present in following path:"), charOffset, center.X, center.Y - 20.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Colorf(0.44f, 0.29f, 0.29f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+				_root->DrawStringShadow(_sourcePath.data(), charOffset, center.X, center.Y - 10.0f, IMenuContainer::FontLayer,
+					Alignment::Top, Colorf(0.44f, 0.44f, 0.44f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 
 #	if defined(DEATH_TARGET_ANDROID)
-					if (AndroidJniHelper::SdkVersion() >= 30 && (flags & IRootController::Flags::HasExternalStoragePermission) != IRootController::Flags::HasExternalStoragePermission) {
-						// TRANSLATORS: Menu item in main menu (Android 11+ only)
-						auto grantPermissionText = _("Allow access to external storage");
-						if (_selectedIndex == 0) {
-							float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
-							_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(grantPermissionText) + 1) * 0.5f * size, 4.0f * size, true, true);
-							_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + 48.0f, IMenuContainer::FontLayer,
-								Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.8f);
+				if (canGrantPermission) {
+					// TRANSLATORS: Menu item in main menu (Android 11+ only)
+					auto grantPermissionText = _("Allow access to external storage");
+					float grantPermissionY = (contentBounds.H >= 260 ? 40.0f : 30.0f);
+					if (_selectedIndex == 0) {
+						float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+						_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f + grantPermissionY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(grantPermissionText) + 1) * 0.5f * size, 4.0f * size, true, true);
+						_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + grantPermissionY, IMenuContainer::FontLayer,
+							Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.8f);
 
-							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, size, 0.8f);
-							_root->DrawElement(Uac, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f + round(sinf(canvas->AnimTime * 4.6f * fPi)), IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
-						} else {
-							_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + 48.0f, IMenuContainer::FontLayer,
-								Alignment::Center, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.84f);
+						Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, size, 0.8f);
+						_root->DrawElement(Uac, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + grantPermissionY + round(sinf(canvas->AnimTime * 4.6f * fPi)), IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
+					} else {
+						_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + grantPermissionY, IMenuContainer::FontLayer,
+							Alignment::Center, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.84f);
 
-							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, 0.9f, 0.84f);
-							_root->DrawElement(Uac, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
-						}
-						hideSecondItem = true;
+						Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, 0.9f, 0.84f);
+						_root->DrawElement(Uac, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + grantPermissionY, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
 					}
-#	endif
 				}
+#	endif
 			}
 		}
 #endif
@@ -237,17 +250,14 @@ namespace Jazz2::UI::Menu
 			_items[i].Y = center.Y;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-			if (_items[i].Type <= Item::Options && !isPlayable) {
-				if (i != 0 && (!hideSecondItem || i != 1)) {
+			if (_items[i].Type <= Item::Options && !_isPlayable) {
+				if (i != 0 && (i != 1 || !_skipSecondItem)) {
 					if (_selectedIndex == i) {
 						_root->DrawElement(MenuGlow, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f, 4.0f, true, true);
 					}
 
 					_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
-				} else if (i == 1) {
-					// Disable the second item if it's hidden
-					_items[i].Y = DisabledItem;
 				}
 			}
 			else
@@ -264,7 +274,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += (contentBounds.H >= 250 ? 34.0f : 26.0f) + 32.0f * (1.0f - 0.15f * (int32_t)_items.size());
+			center.Y += (contentBounds.H >= 260 ? 36.0f : 28.0f) + 32.0f * (1.0f - 0.15f * itemCount);
 		}
 	}
 
@@ -301,16 +311,8 @@ namespace Jazz2::UI::Menu
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
-				bool isPlayable = true;
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-				if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
-					IRootController::Flags flags = mainMenu->_root->GetFlags();
-					isPlayable = ((flags & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
-				}
-#endif
-
 				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
-					float itemHeight = (!isPlayable && i == 0 ? 60.0f : 22.0f);
+					float itemHeight = (!_isPlayable && i == 0 ? 60.0f : 22.0f);
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < itemHeight) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
@@ -328,25 +330,17 @@ namespace Jazz2::UI::Menu
 
 	void BeginSection::ExecuteSelected()
 	{
-		bool isPlayable = true;
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
-			IRootController::Flags flags = mainMenu->_root->GetFlags();
-			isPlayable = ((flags & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
-		}
-#endif
-
 		switch (_items[_selectedIndex].Type) {
 #if !defined(SHAREWARE_DEMO_ONLY)
 			case Item::Continue:
-				if (isPlayable) {
+				if (_isPlayable) {
 					_shouldStart = true;
 					_transitionTime = 1.0f;
 				}
 				break;
 #endif
 			case Item::PlayEpisodes:
-				if (isPlayable) {
+				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #if defined(SHAREWARE_DEMO_ONLY)
 					if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
@@ -386,24 +380,24 @@ namespace Jazz2::UI::Menu
 				break;
 #else
 			case Item::PlayCustomLevels:
-				if (isPlayable) {
+				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
-#if defined(WITH_MULTIPLAYER)
+#	if defined(WITH_MULTIPLAYER)
 					_root->SwitchToSection<PlayCustomSection>();
-#else
+#	else
 					_root->SwitchToSection<CustomLevelSelectSection>();
-#endif
+#	endif
 				}
 				break;
 #endif
 			case Item::Highscores:
-				if (isPlayable) {
+				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<HighscoresSection>();
 				}
 				break;
 			case Item::Options:
-				if (isPlayable) {
+				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<OptionsSection>();
 				}

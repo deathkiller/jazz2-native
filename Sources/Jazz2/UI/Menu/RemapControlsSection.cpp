@@ -185,11 +185,16 @@ namespace Jazz2::UI::Menu
 			auto& mapping = ControlScheme::GetMappings(_playerIndex)[_selectedIndex];
 			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (std::int32_t)PlayerActions::Menu && _selectedColumn == 0)) {
 				char stringBuffer[64];
-				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:#d0705d]%s\f[/c] %s ", _("Change Weapon").data(), _("or").data());
+				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:#d0705d]%s\f[/c] %s", _("Change Weapon").data(), _("│").data());
 
-				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 10.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 15.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
-				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+
+				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f + 2.0f,
+					IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
+				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f,
+					IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+				
 				// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 				_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -232,6 +237,7 @@ namespace Jazz2::UI::Menu
 					StringView axisName;
 					AnimState axisAnim = GetResourceForAxisName((AxisName)(data & ControlScheme::ButtonMask), axisName);
 					if (axisAnim != AnimState::Default) {
+						_root->DrawElement(axisAnim, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y + 2.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f));
 						_root->DrawElement(axisAnim, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
 						for (std::int32_t i = 0; i < joyIdx + 1; i++) {
@@ -256,6 +262,7 @@ namespace Jazz2::UI::Menu
 				} else {
 					AnimState buttonName = GetResourceForButtonName((ButtonName)(data & ControlScheme::ButtonMask));
 					if (buttonName != AnimState::Default) {
+						_root->DrawElement(buttonName, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y + 2.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f));
 						_root->DrawElement(buttonName, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
 						for (int32_t i = 0; i < joyIdx + 1; i++) {

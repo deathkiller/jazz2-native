@@ -43,12 +43,12 @@ namespace Jazz2::UI::Menu
 			ItemData(Item type, StringView name) : Type(type), Name(name), Y(0.0f) { }
 		};
 
-		static constexpr float DisabledItem = -1024.0f;
-
 		SmallVector<ItemData, (std::int32_t)Item::Count> _items;
 		std::int32_t _selectedIndex;
 		float _animation;
 		float _transitionTime;
+		bool _isPlayable;
+		bool _skipSecondItem;
 		bool _shouldStart;
 		bool _alreadyStarted;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

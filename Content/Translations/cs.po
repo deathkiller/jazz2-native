@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-11-27 20:07+0100\n"
-"PO-Revision-Date: 2024-11-27 20:09+0100\n"
+"PO-Revision-Date: 2024-11-30 15:37+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1732,7 +1732,7 @@ msgstr "Povolit podvádění (cheaty)"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:53
 msgid "Overwrite Episode Completion"
-msgstr "Přepsat dokončení epizody"
+msgstr "Přepisovat dokončení epizody"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57

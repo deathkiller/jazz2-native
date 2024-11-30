@@ -134,7 +134,7 @@ namespace Jazz2::UI::Menu
 				case GameplayOptionsItemType::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
 #endif
 				// TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
-				case GameplayOptionsItemType::AllowCheats: enabled = PreferencesCache::AllowCheats; customText = (enabled ? _("\f[c:#d86664]Yes\f[/c]") : _("No")); break;
+				case GameplayOptionsItemType::AllowCheats: enabled = PreferencesCache::AllowCheats; customText = (enabled ? _("Yes") : _("No")); break;
 				case GameplayOptionsItemType::OverwriteEpisodeEnd:
 					customText = (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::NoCheatsOnly
 						// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
