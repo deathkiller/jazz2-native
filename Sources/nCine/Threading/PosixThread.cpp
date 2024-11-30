@@ -182,8 +182,7 @@ namespace nCine
 		}
 
 		// This returns the value before decrementing
-		int32_t refCount = _sharedBlock->_refCount.fetchSub(1);
-		if (refCount == 1) {
+		if (--_sharedBlock->_refCount == 0) {
 			if (_sharedBlock->_handle != 0) {
 				pthread_detach(_sharedBlock->_handle);
 			}
