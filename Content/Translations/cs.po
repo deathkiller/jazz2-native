@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-11-30 15:44+0100\n"
-"PO-Revision-Date: 2024-11-30 15:46+0100\n"
+"PO-Revision-Date: 2024-11-30 23:12+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1737,7 +1737,7 @@ msgstr "Přepisovat dokončení epizody"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
 msgid "Discord Integration"
-msgstr "Integrace Discordu"
+msgstr "Integrace aplikace Discord"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
@@ -1902,7 +1902,7 @@ msgstr "Týmová bitva"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Capture The Flag"
-msgstr ""
+msgstr "Boj o vlajku"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
@@ -1917,7 +1917,7 @@ msgstr "Týmový závod"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
-msgstr ""
+msgstr "Lovci pokladů"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30

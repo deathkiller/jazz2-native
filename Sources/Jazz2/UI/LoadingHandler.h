@@ -18,6 +18,8 @@ namespace Jazz2::UI
 		LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback);
 		~LoadingHandler() override;
 
+		Vector2i GetViewSize() const override;
+
 		void OnBeginFrame() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 

@@ -73,8 +73,6 @@ namespace Jazz2::Multiplayer
 		Mutex _lock;
 		std::unique_ptr<ServerDiscovery> _discovery;
 
-		static std::int32_t _initializeCount;
-
 		static void InitializeBackend();
 		static void ReleaseBackend();
 

@@ -24,6 +24,11 @@ namespace Jazz2::UI
 		_canvasBackground->setParent(nullptr);
 	}
 
+	Vector2i LoadingHandler::GetViewSize() const
+	{
+		return _upscalePass.GetViewSize();
+	}
+
 	void LoadingHandler::OnBeginFrame()
 	{
 		if (_callback && _callback(_root)) {

@@ -2,7 +2,6 @@
 
 #include "IMenuContainer.h"
 #include "MenuSection.h"
-#include "../../IStateHandler.h"
 #include "../../LevelHandler.h"
 #include "../Canvas.h"
 #include "../../ContentResolver.h"

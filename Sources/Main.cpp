@@ -26,6 +26,7 @@
 #include "Jazz2/PreferencesCache.h"
 #include "Jazz2/UI/Cinematics.h"
 #include "Jazz2/UI/ControlScheme.h"
+#include "Jazz2/UI/DiscordRpcClient.h"
 #include "Jazz2/UI/LoadingHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 #include "Jazz2/UI/Menu/HighscoresSection.h"
@@ -50,10 +51,6 @@ using namespace Jazz2::Multiplayer;
 
 #if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 #	include "TermLogo.h"
-#endif
-
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-#	include "Jazz2/UI/DiscordRpcClient.h"
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
@@ -340,8 +337,13 @@ void GameEventHandler::OnInitialize()
 	}));
 #endif
 
+	Vector2i viewSize;
+	if (_currentHandler != nullptr) {
+		viewSize = _currentHandler->GetViewSize();
+	}
+
 	Vector2i res = theApplication().GetResolution();
-	LOGI("Rendering resolution: %ix%i", res.X, res.Y);
+	LOGI("Rendering resolution: %ix%i (%ix%i)", res.X, res.Y, viewSize.X, viewSize.Y);
 }
 
 void GameEventHandler::OnBeginFrame()
@@ -369,15 +371,17 @@ void GameEventHandler::OnResizeWindow(std::int32_t width, std::int32_t height)
 	// Resolution was changed, all viewports have to be recreated
 	Viewport::chain().clear();
 
+	Vector2i viewSize;
 	if (_currentHandler != nullptr) {
 		_currentHandler->OnInitializeViewport(width, height);
+		viewSize = _currentHandler->GetViewSize();
 	}
 
 #if defined(NCINE_HAS_WINDOWS)
 	PreferencesCache::EnableFullscreen = theApplication().GetGfxDevice().isFullscreen();
 #endif
 
-	LOGI("Rendering resolution: %ix%i", width, height);
+	LOGI("Rendering resolution: %ix%i (%ix%i)", width, height, viewSize.X, viewSize.Y);
 }
 
 void GameEventHandler::OnShutdown()

@@ -55,6 +55,13 @@ DEATH_ALWAYS_INLINE BOOL WINAPI CreateDirectory(LPCWSTR lpPathName, LPSECURITY_A
 }
 #endif
 
+#if defined(CreateEvent)
+#	undef CreateEvent
+DEATH_ALWAYS_INLINE HANDLE WINAPI CreateEvent(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCWSTR lpName) {
+	return ::CreateEventW(lpEventAttributes, bManualReset, bInitialState, lpName);
+}
+#endif
+
 #if defined(CreateFile)
 #	undef CreateFile
 DEATH_ALWAYS_INLINE HANDLE WINAPI CreateFile(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {

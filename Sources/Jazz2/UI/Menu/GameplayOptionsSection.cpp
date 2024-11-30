@@ -4,12 +4,9 @@
 #include "GameplayEnhancementsSection.h"
 #include "LanguageSelectSection.h"
 #include "RefreshCacheSection.h"
+#include "../DiscordRpcClient.h"
 #include "../RgbLights.h"
 #include "../../PreferencesCache.h"
-
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-#	include "../DiscordRpcClient.h"
-#endif
 
 #include <Utf8.h>
 
@@ -206,7 +203,7 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 			}
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
 			case GameplayOptionsItemType::EnableDiscordIntegration: {
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
 				if (!PreferencesCache::EnableDiscordIntegration) {

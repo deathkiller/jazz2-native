@@ -2,8 +2,9 @@
 
 #include "../Common.h"
 #include "../Environment.h"
-#include "Interlocked.h"
 #include "Implementation/WaitOnAddress.h"
+
+#include <atomic>
 
 #if defined(DEATH_TARGET_APPLE)
 #	include <pthread.h>
@@ -23,7 +24,7 @@ namespace Death { namespace Threading {
 	{
 	public:
 		Event(bool isSignaled = false) noexcept
-			: _isSignaled(isSignaled ? 1L : 0L)
+			: _isSignaled(isSignaled ? 1 : 0)
 		{
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
 				Implementation::InitializeWaitOnAddress();
@@ -60,10 +61,10 @@ namespace Death { namespace Threading {
 		{
 			bool result;
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
-				result = !!Interlocked::Exchange(&_isSignaled, 0L);
+				result = !!_isSignaled.exchange(0);
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
-				result = !!Interlocked::Exchange(&_isSignaled, 0L);
+				result = !!_isSignaled.exchange(0);
 				::ResetEvent(_fallbackEvent);
 #elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				pthread_mutex_lock(&_mutex);
@@ -81,7 +82,7 @@ namespace Death { namespace Threading {
 		{
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
 				// FYI: 'WakeByAddress*' invokes a full memory barrier
-				Interlocked::WriteRelease(&_isSignaled, 1L);
+				_isSignaled.store(1, std::memory_order_release);
 
 				#pragma warning(suppress: 4127) // Conditional expression is constant
 				if constexpr (Type == EventType::AutoReset) {
@@ -91,11 +92,11 @@ namespace Death { namespace Threading {
 				}
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
-				Interlocked::WriteRelease(&_isSignaled, 1L);
+				_isSignaled.store(1, std::memory_order_release);
 				::SetEvent(_fallbackEvent);
 #elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				pthread_mutex_lock(&_mutex);
-				_isSignaled = 1L;
+				_isSignaled.store(1, std::memory_order_relaxed);
 				if constexpr (Type == EventType::AutoReset) {
 					pthread_cond_signal(&_cond);
 				} else {
@@ -110,7 +111,7 @@ namespace Death { namespace Threading {
 		// Note: Unlike Win32 auto-reset event objects, this will not reset the event
 		bool IsSignaled() const noexcept
 		{
-			return !!Interlocked::ReadAcquire(&_isSignaled);
+			return !!_isSignaled.load(std::memory_order_acquire);
 		}
 
 		bool Wait(std::uint32_t timeoutMilliseconds) noexcept
@@ -166,7 +167,7 @@ namespace Death { namespace Threading {
 		bool WaitForSignal(std::uint32_t timeoutMilliseconds) noexcept
 		{
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
-				return Implementation::WaitOnAddress(_isSignaled, 0L, timeoutMilliseconds);
+				return Implementation::WaitOnAddress(_isSignaled, 0, timeoutMilliseconds);
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
 				return (::WaitForSingleObject(_fallbackEvent, timeoutMilliseconds) == WAIT_OBJECT_0);
@@ -205,7 +206,7 @@ namespace Death { namespace Threading {
 			}
 		}
 
-		long _isSignaled;
+		std::atomic_int32_t _isSignaled;
 #if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _fallbackEvent;
 #elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)

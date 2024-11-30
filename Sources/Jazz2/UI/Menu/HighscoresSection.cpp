@@ -1,5 +1,6 @@
 ﻿#include "HighscoresSection.h"
 #include "MenuResources.h"
+#include "../DiscordRpcClient.h"
 
 #include "../../../nCine/Application.h"
 
@@ -33,7 +34,17 @@ namespace Jazz2::UI::Menu
 		if (seriesIndex >= 0 && seriesIndex < (std::int32_t)SeriesName::Count) {
 			_selectedSeries = seriesIndex;
 
-			String name = TryGetDefaultName();
+			String name;
+			std::uint64_t id = 0;
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
+			if (PreferencesCache::EnableDiscordIntegration && DiscordRpcClient::Get().IsSupported()) {
+				name = DiscordRpcClient::Get().GetUserDisplayName();
+				id = DiscordRpcClient::Get().GetUserId();
+			}
+#endif
+			if (name.empty()) {
+				name = TryGetDefaultName();
+			}
 			if (name.size() > MaxNameLength) {
 				auto [_, prevChar] = Utf8::PrevChar(name, MaxNameLength);
 				name = name.prefix(prevChar);
@@ -44,7 +55,7 @@ namespace Jazz2::UI::Menu
 			if (cheatsUsed) flags |= HighscoreFlags::CheatsUsed;
 
 			// TODO: PlayerId is unused
-			AddItemAndFocus(HighscoreItem { std::move(name), 0, flags, itemToAdd.Type, difficulty, itemToAdd.Lives, itemToAdd.Score,
+			AddItemAndFocus(HighscoreItem { std::move(name), id, flags, itemToAdd.Type, difficulty, itemToAdd.Lives, itemToAdd.Score,
 				{ itemToAdd.Gems[0], itemToAdd.Gems[1], itemToAdd.Gems[2], itemToAdd.Gems[3] }, DateTime::UtcNow().ToUnixMilliseconds(), elapsedMilliseconds });
 		}
 	}
