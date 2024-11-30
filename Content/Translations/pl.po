@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-11-27 20:10+0100\n"
+"POT-Creation-Date: 2024-11-30 15:51+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Patrxgt & Klodizaur\n"
@@ -1449,27 +1449,27 @@ msgid "Continue"
 msgstr "Kontynuuj"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:79
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:81
 msgid "Play Custom Game"
 msgstr "Gry społeczności"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:82
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:84
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:126
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
 msgstr "Poziomy społeczności"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:86
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
 msgid "Highscores"
 msgstr "Tabela wyników"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:88
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:92
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:41
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
@@ -1477,20 +1477,20 @@ msgid "Options"
 msgstr "Opcje"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:94
 msgid "About"
 msgstr "O grze"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:93
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:97
 msgid "Quit"
 msgstr "Wyjdź"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:195
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:209
 msgid "Access to external storage has been granted!"
 msgstr "Dostęp do pamięci zewnętrznej został udzielony!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:197
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:211
 msgid ""
 "\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
 "#337233] files correctly."
@@ -1498,7 +1498,7 @@ msgstr ""
 "\f[c:#337233]Zresetuj grę, aby prawidłowo załadować pliki \f[c:#9e7056]Jazz "
 "Jackrabbit 2\f[c:#337233]."
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:202
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:216
 msgid ""
 "\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
 "#704a4a] files!"
@@ -1506,12 +1506,12 @@ msgstr ""
 "\f[c:#704a4a]Ta gra wymaga oryginalnych plików \f[c:#9e7056]Jazz Jackrabbit "
 "2\f[c:#704a4a]!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:204
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:218
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr "Upewnij się, że pliki Jazz Jackrabbit 2 znajdują się w:"
 
 #. TRANSLATORS: Menu item in main menu (Android 11+ only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:212
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:226
 msgid "Allow access to external storage"
 msgstr "Zezwól na dostęp do pamięci zewnętrznej"
 
@@ -1564,17 +1564,17 @@ msgid "Controls"
 msgstr "Sterowanie"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:121
 msgid "Strong"
 msgstr "Mocne"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:124
 msgid "Weak"
 msgstr "Słabe"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:117
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:134
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:168
@@ -1583,7 +1583,7 @@ msgstr "Słabe"
 msgid "Disabled"
 msgstr "Wyłączono"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:134
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
@@ -1770,8 +1770,8 @@ msgstr "Odśwież pamięć podręczną"
 
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:137
-msgid "\f[c:#d86664]Yes\f[/c]"
-msgstr "\f[c:#d86664]Tak\f[/c]"
+msgid "Yes"
+msgstr "Tak"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:137
 msgid "No"
@@ -2032,12 +2032,8 @@ msgstr "Broń %i"
 msgid "Press any key or button to assign"
 msgstr "Naciśnij dowolny przycisk, aby przypisać"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
-msgid "or"
-msgstr "lub"
-
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:194
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:199
 msgid "to remove assignment"
 msgstr "aby usunąć przypisanie"
 
@@ -2313,6 +2309,9 @@ msgstr ""
 "\n"
 "Zostałeś/aś \f[c:#907050]skazany/a na banicję\f[/c] z serwera.\n"
 "Skontaktuj się z administratorem serwera po więcej informacji."
+
+#~ msgid "or"
+#~ msgstr "lub"
 
 #~ msgid "Creating server..."
 #~ msgstr "Tworzenie serwera..."
