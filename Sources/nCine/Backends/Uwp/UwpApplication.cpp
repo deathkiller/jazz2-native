@@ -126,7 +126,6 @@ namespace nCine
 		profileStartTime_ = TimeStamp::now();
 #endif
 		//wasSuspended_ = shouldSuspend();
-		appEventHandler_ = _createAppEventHandler();
 
 		// If we have a phone contract, hide the status bar
 		if (winrtWF::Metadata::ApiInformation::IsApiContractPresent(L"Windows.Phone.PhoneContract", 1, 0)) {
@@ -138,8 +137,7 @@ namespace nCine
 		// TODO: Parse arguments from Uri
 		//appCfg_.argc_ = argc;
 		//appCfg_.argv_ = argv;
-		appEventHandler_->OnPreInitialize(appCfg_);
-		LOGI("IAppEventHandler::OnPreInitialize() invoked");
+		PreInitCommon(_createAppEventHandler());
 
 		winrtWUC::CoreWindow window = winrtWUC::CoreWindow::GetForCurrentThread();
 
