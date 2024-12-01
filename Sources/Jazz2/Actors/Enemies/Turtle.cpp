@@ -101,12 +101,12 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			if (std::abs(_speed.X) > 0.0f && !CanMoveToPosition(_speed.X * 4, 0)) {
-				SetTransition(WithdrawStart, false, [this]() {
-					HandleTurn(true);
-				});
 				_isTurning = true;
 				_canHurtPlayer = false;
 				_speed.X = 0;
+				SetTransition(WithdrawStart, false, [this]() {
+					HandleTurn(true);
+				});
 				PlaySfx("Withdraw"_s, 0.2f);
 			}
 		}

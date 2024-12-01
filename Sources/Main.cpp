@@ -276,7 +276,7 @@ void GameEventHandler::OnInitialize()
 	}
 #	endif
 
-	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
+	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
 			root->GoToMainMenu(endOfStream);
 		} else if (!endOfStream) {
