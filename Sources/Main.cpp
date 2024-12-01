@@ -166,7 +166,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
 
-#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#if defined(DEATH_TARGET_APPLE) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH)) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	// Allow `/extract-pak` only on PC platforms
 	if (config.argc() >= 3) {
 		for (std::int32_t i = 0; i < config.argc() - 2; i++) {
@@ -174,7 +174,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			if (arg == "/extract-pak"_s) {
 #	if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
 				// Always attach to console in this case
-				theApplication().AttachTraceTarget(MainApplication::ConsoleTarget);
+				theApplication().AttachTraceTarget(Application::ConsoleTarget);
 #	endif
 				auto pakFile = config.argv(i + 1);
 				if (fs::FileExists(pakFile)) {
