@@ -190,14 +190,13 @@ namespace Death { namespace IO {
 
 	std::int32_t DeflateStream::ReadInternal(void* ptr, std::int32_t size)
 	{
-		if (size <= 0) {
-			return 0;
-		}
-
 		if (_state == State::Created) {
 			InitializeInternal();
 		}
-		if (_state == State::Unknown || _state >= State::Finished) {
+		if (size <= 0 || _state == State::Finished) {
+			return 0;
+		}
+		if (_state == State::Unknown || _state >= State::Failed) {
 			return Stream::Invalid;
 		}
 
@@ -243,7 +242,10 @@ namespace Death { namespace IO {
 			return true;
 		}
 
-		_inputStream->Seek(_inputSize >= 0 ? _inputSize : -static_cast<std::int32_t>(_strm.avail_in), SeekOrigin::Current);
+		std::int64_t seekToEnd = (_inputSize >= 0 ? _inputSize : -static_cast<std::int64_t>(_strm.avail_in));
+		if (seekToEnd != 0) {
+			_inputStream->Seek(seekToEnd, SeekOrigin::Current);
+		}
 
 		std::int32_t error = inflateEnd((z_stream*)&_strm);
 		if (error != Z_OK) {

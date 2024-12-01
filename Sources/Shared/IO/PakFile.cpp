@@ -32,11 +32,10 @@ namespace Death { namespace IO {
 		FileStream _underlyingStream;
 		std::uint64_t _offset;
 		std::uint64_t _size;
-		std::int64_t _pos;
 	};
 
 	BoundedStream::BoundedStream(const String& path, std::uint64_t offset, std::uint32_t size)
-		: _underlyingStream(path, FileAccess::Read), _offset(offset), _size(size), _pos(0)
+		: _underlyingStream(path, FileAccess::Read), _offset(offset), _size(size)
 	{
 		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
 	}
@@ -51,7 +50,7 @@ namespace Death { namespace IO {
 		std::int64_t newPos;
 		switch (origin) {
 			case SeekOrigin::Begin: newPos = _offset + offset; break;
-			case SeekOrigin::Current: newPos = _pos + offset; break;
+			case SeekOrigin::Current: newPos = _underlyingStream.GetPosition() + offset; break;
 			case SeekOrigin::End: newPos = _offset + _size + offset; break;
 			default: return Stream::OutOfRange;
 		}
@@ -62,15 +61,14 @@ namespace Death { namespace IO {
 			newPos = _underlyingStream.Seek(newPos, SeekOrigin::Begin);
 			if (newPos >= static_cast<std::int64_t>(_offset)) {
 				newPos -= _offset;
-				_pos = newPos;
 			}
 		}
-		return static_cast<std::int64_t>(newPos);
+		return newPos;
 	}
 
 	std::int64_t BoundedStream::GetPosition() const
 	{
-		return _pos;
+		return _underlyingStream.GetPosition() - static_cast<std::int64_t>(_offset);
 	}
 
 	std::int64_t BoundedStream::Read(void* destination, std::int64_t bytesToRead)
@@ -81,13 +79,12 @@ namespace Death { namespace IO {
 
 		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
 
-		if (bytesToRead > _size - _pos) {
-			bytesToRead = _size - _pos;
+		std::int64_t pos = _underlyingStream.GetPosition() - _offset;
+		if (bytesToRead > _size - pos) {
+			bytesToRead = _size - pos;
 		}
 
-		std::int64_t bytesRead = _underlyingStream.Read(destination, bytesToRead);
-		_pos += bytesRead;
-		return bytesRead;
+		return _underlyingStream.Read(destination, bytesToRead);
 	}
 
 	std::int64_t BoundedStream::Write(const void* source, std::int64_t bytesToWrite)
@@ -140,7 +137,6 @@ namespace Death { namespace IO {
 	ZlibCompressedBoundedStream::ZlibCompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
 		: _underlyingStream(path, offset, compressedSize), _uncompressedSize(uncompressedSize)
 	{
-		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
 		_deflateStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
 	}
 
