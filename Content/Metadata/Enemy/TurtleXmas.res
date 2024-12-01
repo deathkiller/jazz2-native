@@ -9,15 +9,26 @@
 			"FrameRate": 4,
 			"States": [ 0, 1, 2, 8, 9, 10 ]
 		},
-		"Withdraw": {
+		"WithdrawStart": {
 			"Path": "Turtle/xmas_turn_start.aura",
 			"FrameRate": 7,
-			"States": [ 1073741841 ]
+			"States": [ 20 ]
+		},
+		"WithdrawStartFast": {
+			"Path": "Turtle/xmas_turn_start.aura",
+			"FrameRate": 20,
+			"States": [ 21 ]
+		},
+		"WithdrawInProgress": {
+			"Path": "Turtle/xmas_turn_start.aura",
+			"FrameOffset": 6,
+			"FrameCount": 1,
+			"States": [ 22 ]
 		},
 		"WithdrawEnd": {
 			"Path": "Turtle/xmas_turn_end.aura",
 			"FrameRate": 7,
-			"States": [ 1073741842 ]
+			"States": [ 23 ]
 		},
 		"Attack": {
 			"Path": "Turtle/xmas_attack.aura",
