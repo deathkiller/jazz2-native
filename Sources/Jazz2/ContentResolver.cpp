@@ -252,7 +252,7 @@ namespace Jazz2
 			String PathTemplate1 = "\\\\?\\X:\\Games\\Jazz² Resurrection\\"_s;
 			String PathTemplate2 = "\\\\?\\X:\\Games\\Jazz2 Resurrection\\"_s;
 
-			for (char letter = 'D'; letter <= 'F'; letter++) {
+			for (char letter = 'D'; letter <= 'G'; letter++) {
 				PathTemplate1[4] = letter;
 				_sourcePath = fs::CombinePath(PathTemplate1, "Source\\"_s);
 				if (fs::DirectoryExists(_sourcePath)) {
