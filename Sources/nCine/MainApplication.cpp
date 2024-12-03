@@ -106,6 +106,16 @@ namespace nCine
 		return EXIT_SUCCESS;
 	}
 
+	void MainApplication::Quit()
+	{
+		Application::Quit();
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		// `window.close()` usually works only in PWA/standalone environment
+		emscripten_run_script("window.close();");
+#endif
+	}
+
 	void MainApplication::Init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		ZoneScopedC(0x81A861);

@@ -145,9 +145,8 @@ namespace nCine
 		}
 
 		/** @brief Raises the quit flag */
-		inline void Quit() {
-			shouldQuit_ = true;
-		}
+		virtual void Quit();
+
 		/** @brief Returns the quit flag value */
 		inline bool ShouldQuit() const {
 			return shouldQuit_;

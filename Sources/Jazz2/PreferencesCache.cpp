@@ -17,6 +17,9 @@ using namespace nCine;
 namespace Jazz2
 {
 	bool PreferencesCache::FirstRun = false;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+	bool PreferencesCache::IsStandalone = false;
+#endif
 #if defined(WITH_MULTIPLAYER)
 	String PreferencesCache::InitialState;
 #endif
@@ -393,6 +396,11 @@ namespace Jazz2
 			} else if (arg == "/reset-controls"_s) {
 				UI::ControlScheme::Reset();
 			}
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+			else if (arg == "/standalone"_s) {
+				IsStandalone = true;
+			}
+#	endif
 #	if defined(WITH_MULTIPLAYER)
 			else if (InitialState.empty() && (arg == "/server"_s || arg.hasPrefix("/connect:"_s))) {
 				InitialState = arg;

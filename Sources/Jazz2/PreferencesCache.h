@@ -95,6 +95,9 @@ namespace Jazz2
 		static constexpr std::int32_t UseVsync = -1;
 
 		static bool FirstRun;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		static bool IsStandalone;
+#endif
 #if defined(WITH_MULTIPLAYER)
 		static String InitialState;
 #endif

@@ -319,7 +319,7 @@ namespace nCine
 			theApplication().SetAutoSuspension(!disableAutoSuspension);
 			/*ImGui::SameLine();
 			if (ImGui::Button("Quit")) {
-				theApplication().quit();
+				theApplication().Quit();
 			}*/
 
 			guiConfigureGui();

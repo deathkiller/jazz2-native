@@ -412,6 +412,11 @@ namespace nCine
 		return ((!hasFocus_ && autoSuspension_) || isSuspended_);
 	}
 
+	void Application::Quit()
+	{
+		shouldQuit_ = true;
+	}
+
 	void Application::PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler)
 	{
 #if defined(DEATH_TRACE)
