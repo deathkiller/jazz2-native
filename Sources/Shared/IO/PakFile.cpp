@@ -1,4 +1,5 @@
 #include "PakFile.h"
+#include "BoundedFileStream.h"
 #include "DeflateStream.h"
 #include "FileSystem.h"
 #include "../Containers/GrowableArray.h"
@@ -10,104 +11,6 @@ using namespace Death::Containers;
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
-
-	class BoundedStream : public Stream
-	{
-	public:
-		BoundedStream(const String& path, std::uint64_t offset, std::uint32_t size);
-
-		BoundedStream(const BoundedStream&) = delete;
-		BoundedStream& operator=(const BoundedStream&) = delete;
-
-		void Dispose() override;
-		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
-		std::int64_t GetPosition() const override;
-		std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
-		std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
-		bool Flush() override;
-		bool IsValid() override;
-		std::int64_t GetSize() const override;
-
-	private:
-		FileStream _underlyingStream;
-		std::uint64_t _offset;
-		std::uint64_t _size;
-	};
-
-	BoundedStream::BoundedStream(const String& path, std::uint64_t offset, std::uint32_t size)
-		: _underlyingStream(path, FileAccess::Read), _offset(offset), _size(size)
-	{
-		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
-	}
-
-	void BoundedStream::Dispose()
-	{
-		_underlyingStream.Dispose();
-	}
-
-	std::int64_t BoundedStream::Seek(std::int64_t offset, SeekOrigin origin)
-	{
-		std::int64_t newPos;
-		switch (origin) {
-			case SeekOrigin::Begin: newPos = _offset + offset; break;
-			case SeekOrigin::Current: newPos = _underlyingStream.GetPosition() + offset; break;
-			case SeekOrigin::End: newPos = _offset + _size + offset; break;
-			default: return Stream::OutOfRange;
-		}
-
-		if (newPos < static_cast<std::int64_t>(_offset) || newPos > static_cast<std::int64_t>(_offset + _size)) {
-			newPos = Stream::OutOfRange;
-		} else {
-			newPos = _underlyingStream.Seek(newPos, SeekOrigin::Begin);
-			if (newPos >= static_cast<std::int64_t>(_offset)) {
-				newPos -= _offset;
-			}
-		}
-		return newPos;
-	}
-
-	std::int64_t BoundedStream::GetPosition() const
-	{
-		return _underlyingStream.GetPosition() - static_cast<std::int64_t>(_offset);
-	}
-
-	std::int64_t BoundedStream::Read(void* destination, std::int64_t bytesToRead)
-	{
-		if (bytesToRead <= 0) {
-			return 0;
-		}
-
-		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
-
-		std::int64_t pos = _underlyingStream.GetPosition() - _offset;
-		if (bytesToRead > _size - pos) {
-			bytesToRead = _size - pos;
-		}
-
-		return _underlyingStream.Read(destination, bytesToRead);
-	}
-
-	std::int64_t BoundedStream::Write(const void* source, std::int64_t bytesToWrite)
-	{
-		// Not supported
-		return Stream::Invalid;
-	}
-
-	bool BoundedStream::Flush()
-	{
-		// Not supported
-		return true;
-	}
-
-	bool BoundedStream::IsValid()
-	{
-		return _underlyingStream.IsValid();
-	}
-
-	std::int64_t BoundedStream::GetSize() const
-	{
-		return _size;
-	}
 
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 
@@ -129,7 +32,7 @@ namespace Death { namespace IO {
 		std::int64_t GetSize() const override;
 
 	private:
-		BoundedStream _underlyingStream;
+		BoundedFileStream _underlyingStream;
 		DeflateStream _deflateStream;
 		std::int64_t _uncompressedSize;
 	};
@@ -311,7 +214,7 @@ namespace Death { namespace IO {
 #endif
 		}
 
-		return std::make_unique<BoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize);
+		return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize);
 	}
 
 	PakFile::Item* PakFile::FindItem(StringView path)

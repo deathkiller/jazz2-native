@@ -1287,9 +1287,6 @@
     <ClInclude Include="simdjson\simdjson.h">
       <Filter>Header Files\simdjson</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Threading\Atomic.h">
-      <Filter>Header Files\nCine\Threading</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\IO\HttpRequest.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
@@ -1538,6 +1535,9 @@
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\HighscoresSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.h">
+      <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2384,9 +2384,6 @@
     <ClCompile Include="simdjson\simdjson.cpp">
       <Filter>Source Files\simdjson</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Threading\WindowsAtomic.cpp">
-      <Filter>Source Files\nCine\Threading</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\Graphics\BinaryShaderCache.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
@@ -2524,6 +2521,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\HighscoresSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

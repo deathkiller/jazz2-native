@@ -709,6 +709,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\FileAccess.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\IDisposable.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\StackAlloc.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.h" />
     <ClInclude Include="simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>
@@ -1038,6 +1039,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\DeflateStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.cpp" />
     <ClCompile Include="simdjson\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>

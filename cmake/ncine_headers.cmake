@@ -35,6 +35,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Core/ITraceSink.h
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileAccess.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.h

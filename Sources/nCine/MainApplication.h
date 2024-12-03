@@ -20,6 +20,8 @@ namespace nCine
 		/** @brief Entry point method to be called in the `main()`/`wWinMain()` function */ 
 		static int Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
 
+		void Quit() override;
+
 	private:
 		bool wasSuspended_;
 
