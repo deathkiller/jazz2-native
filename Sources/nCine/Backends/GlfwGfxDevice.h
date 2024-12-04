@@ -44,9 +44,7 @@ namespace nCine
 
 		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
 
-		inline void update() override {
-			glfwSwapBuffers(windowHandle_);
-		}
+		void update() override;
 
 		void setWindowPosition(int x, int y) override;
 		void setWindowSize(int width, int height) override;

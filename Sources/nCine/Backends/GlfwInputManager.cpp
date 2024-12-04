@@ -250,7 +250,7 @@ namespace nCine
 				case Cursor::HiddenLocked: glfwSetInputMode(GlfwGfxDevice::windowHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED); break;
 			}
 
-#if GLFW_VERSION_COMBINED >= 3300
+#if GLFW_VERSION_COMBINED >= 3300 && !defined(DEATH_TARGET_EMSCRIPTEN)
 			// Enable raw mouse motion (if supported) when disabling the cursor
 			const bool enableRawMouseMotion = (cursor == Cursor::HiddenLocked && glfwRawMouseMotionSupported() == GLFW_TRUE);
 			glfwSetInputMode(GlfwGfxDevice::windowHandle(), GLFW_RAW_MOUSE_MOTION, enableRawMouseMotion ? GLFW_TRUE : GLFW_FALSE);
@@ -401,31 +401,46 @@ namespace nCine
 		joyConnectionEvent_.joyId = joyId;
 
 		if (event == GLFW_CONNECTED) {
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
+			// `contrib.glfw3` is polling gamepads asynchronously, number of buttons/axes is usually 0 here, so skip these checks instead
+#	if defined(DEATH_TRACE)
+#		if GLFW_VERSION_COMBINED >= 3300
+			// It seems `glfwGetJoystickGUID` can cause crash if the gamepad is quickly disconnected
+			const char* guid = glfwGetJoystickGUID(joy);
+#		else
+			const char* guid = "default";
+#		endif
+			LOGI("Gamepad %d \"%s\" [%s] has been connected", joyId, glfwGetJoystickName(joy), guid);
+#	endif
+#else
 			int numButtons = -1;
 			int numAxes = -1;
 			int numHats = -1;
 			glfwGetJoystickButtons(joy, &numButtons);
 			glfwGetJoystickAxes(joy, &numAxes);
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && GLFW_VERSION_COMBINED >= 3300
+#	if GLFW_VERSION_COMBINED >= 3300
 			glfwGetJoystickHats(joy, &numHats);
-#else
+#	else
 			numHats = 0;
-#endif
+#	endif
+
 			if (numButtons <= 0 && numAxes <= 0 && numHats <= 0) {
 				LOGI("Gamepad %d has been connected, but reports no axes/buttons/hats - skipping", joyId);
 				return;
 			}
 
-#if defined(DEATH_TRACE)
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && GLFW_VERSION_COMBINED >= 3300
+#	if defined(DEATH_TRACE)
+#		if GLFW_VERSION_COMBINED >= 3300
 			// It seems `glfwGetJoystickGUID` can cause crash if the gamepad is quickly disconnected
 			const char* guid = glfwGetJoystickGUID(joy);
-#	else
+#		else
 			const char* guid = "default";
-#	endif
+#		endif
 			LOGI("Gamepad %d \"%s\" [%s] has been connected - %d axes, %d buttons, %d hats",
 			       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
+#	endif
 #endif
+
 			updateJoystickStates();
 			
 			if (inputEventHandler_ != nullptr) {

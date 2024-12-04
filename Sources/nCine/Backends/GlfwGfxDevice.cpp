@@ -4,6 +4,10 @@
 #include "GlfwInputManager.h"
 #include "../Graphics/ITextureLoader.h"
 
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
+#	include "GLFW/emscripten_glfw3.h"
+#endif
+
 #define GLFW_VERSION_COMBINED (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)
 
 namespace nCine
@@ -14,7 +18,7 @@ namespace nCine
 	int GlfwGfxDevice::fsModeIndex_ = -1;
 
 	GlfwGfxDevice::GlfwGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
-		: IGfxDevice(windowMode, glContextInfo, displayMode)
+			: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
 		initGraphics();
 		updateMonitors();
@@ -38,18 +42,24 @@ namespace nCine
 		// The windows goes in full screen on the same monitor
 		fsMonitorIndex_ = windowMonitorIndex();
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		GLFWmonitor* monitor = monitorPointers_[fsMonitorIndex_];
 		const GLFWvidmode* currentMode = glfwGetVideoMode(monitorPointers_[fsMonitorIndex_]);
+#endif
 
 		bool wasFullscreen = isFullscreen_;
 		isFullscreen_ = fullscreen;
 
 		if (fullscreen) {
 #if defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
+			emscripten_glfw_request_fullscreen(nullptr, false, false);
+#	else
 			// On Emscripten, requesting full screen on GLFW is done by changing the window size to the screen size
 			EmscriptenFullscreenChangeEvent fsce;
 			emscripten_get_fullscreen_status(&fsce);
 			glfwSetWindowSize(windowHandle_, fsce.screenWidth, fsce.screenHeight);
+#	endif
 #else
 			int width = (monitor != nullptr ? currentMode->width : width_);
 			int height = (monitor != nullptr ? currentMode->height : height_);
@@ -87,7 +97,7 @@ namespace nCine
 			glfwSetWindowMonitor(windowHandle_, nullptr, 0, 0, width_, height_, GLFW_DONT_CARE);
 			if (wasFullscreen) {
 				glfwSetWindowPos(windowHandle_, monitors_[fsMonitorIndex_].position.X + (currentMode->width - width_) / 2,
-					monitors_[fsMonitorIndex_].position.Y + (currentMode->height - height_) / 2);
+								 monitors_[fsMonitorIndex_].position.Y + (currentMode->height - height_) / 2);
 			}
 #endif
 		}
@@ -101,6 +111,13 @@ namespace nCine
 		}
 	}
 
+	void GlfwGfxDevice::update()
+	{
+#if !defined(DEATH_TARGET_EMSCRIPTEN) // Buffers are swapped implicitly in WebGL
+		glfwSwapBuffers(windowHandle_);
+#endif
+	}
+
 	void GlfwGfxDevice::setResolutionInternal(int width, int height)
 	{
 		glfwSetWindowSize(windowHandle_, width, height);
@@ -110,6 +127,7 @@ namespace nCine
 
 	void GlfwGfxDevice::setWindowIcon(const StringView& windowIconFilename)
 	{
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		std::unique_ptr<ITextureLoader> image = ITextureLoader::createFromFile(windowIconFilename);
 		GLFWimage glfwImage;
 		glfwImage.width = image->width();
@@ -117,6 +135,7 @@ namespace nCine
 		glfwImage.pixels = const_cast<unsigned char*>(image->pixels());
 
 		glfwSetWindowIcon(windowHandle_, 1, &glfwImage);
+#endif
 	}
 
 	const Vector2i GlfwGfxDevice::windowPosition() const
@@ -158,7 +177,7 @@ namespace nCine
 
 	void GlfwGfxDevice::flashWindow() const
 	{
-#if GLFW_VERSION_COMBINED >= 3300
+#if GLFW_VERSION_COMBINED >= 3300 && !defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwRequestWindowAttention(windowHandle_);
 #endif
 	}
@@ -287,7 +306,7 @@ namespace nCine
 		glfwWindowHint(GLFW_STENCIL_BITS, static_cast<int>(displayMode_.stencilBits()));
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-		glfwWindowHint(GLFW_FOCUSED, 1);
+		glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
 #elif defined(WITH_OPENGLES)
 		glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
@@ -312,7 +331,7 @@ namespace nCine
 
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
-		
+
 #if GLFW_VERSION_COMBINED < 3400
 		//const bool ignoreBothWindowPosition = (windowMode.windowPositionX == AppConfiguration::WindowPositionIgnore &&
 		//										windowMode.windowPositionY == AppConfiguration::WindowPositionIgnore);

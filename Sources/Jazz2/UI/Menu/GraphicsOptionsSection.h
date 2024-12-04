@@ -6,6 +6,7 @@ namespace Jazz2::UI::Menu
 {
 	enum class GraphicsOptionsItemType {
 		RescaleMode,
+		Resolution,
 #if defined(NCINE_HAS_WINDOWS)
 		Fullscreen,
 #endif

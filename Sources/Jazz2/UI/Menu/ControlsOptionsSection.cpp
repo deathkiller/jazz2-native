@@ -36,6 +36,7 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::UseNativeBackButton, _("Native Back Button"), true });
 #endif
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::InputDiagnostics, _("Input Diagnostics") });
+		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::ResetToDefault, _("Reset To Default") });
 	}
 
 	ControlsOptionsSection::~ControlsOptionsSection()
@@ -176,6 +177,7 @@ namespace Jazz2::UI::Menu
 				break;
 #endif
 			case ControlsOptionsItemType::InputDiagnostics: _root->SwitchToSection<InputDiagnosticsSection>(); break;
+			case ControlsOptionsItemType::ResetToDefault: ControlScheme::Reset(); break;
 		}
 	}
 }

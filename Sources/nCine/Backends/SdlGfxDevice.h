@@ -30,9 +30,7 @@ namespace nCine
 
 		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
 
-		inline void update() override {
-			SDL_GL_SwapWindow(windowHandle_);
-		}
+		void update() override;
 
 		inline void setWindowPosition(int x, int y) override { SDL_SetWindowPosition(windowHandle_, x, y); }
 
