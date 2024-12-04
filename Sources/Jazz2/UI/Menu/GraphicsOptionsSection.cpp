@@ -17,6 +17,8 @@ namespace Jazz2::UI::Menu
 	{
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::RescaleMode, _("Rescale Mode") });
+		// TRANSLATORS: Menu item in Options > Graphics section
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Resolution, _("Resolution") });
 #if defined(NCINE_HAS_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		// Xbox is always fullscreen
@@ -81,7 +83,7 @@ namespace Jazz2::UI::Menu
 
 	void GraphicsOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		item.Height = (item.Item.HasBooleanValue ? 52 : ItemHeight);
+		item.Height = (item.Item.HasBooleanValue || item.Item.Type == GraphicsOptionsItemType::Resolution ? 52 : ItemHeight);
 	}
 
 	void GraphicsOptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
@@ -107,7 +109,13 @@ namespace Jazz2::UI::Menu
 				Alignment::Center, Font::DefaultColor, 0.9f);
 		}
 
-		if (item.Item.HasBooleanValue) {
+		if (item.Item.Type == GraphicsOptionsItemType::Resolution) {
+			Vector2i res = theApplication().GetGfxDevice().drawableResolution();
+			char customText[64];
+			formatString(customText, sizeof(customText), "%ix%i", res.X, res.Y);
+			_root->DrawStringShadow(customText, charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+		} else if (item.Item.HasBooleanValue) {
 			StringView customText;
 			bool enabled = false;
 			switch (item.Item.Type) {

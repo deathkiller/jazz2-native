@@ -15,7 +15,8 @@ namespace Jazz2::UI::Menu
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 		UseNativeBackButton,
 #endif
-		InputDiagnostics
+		InputDiagnostics,
+		ResetToDefault
 	};
 
 	struct ControlsOptionsItem {

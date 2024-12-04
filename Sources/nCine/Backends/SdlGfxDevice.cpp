@@ -72,6 +72,11 @@ namespace nCine
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 	}
 
+	void SdlGfxDevice::update()
+	{
+		SDL_GL_SwapWindow(windowHandle_);
+	}
+
 	void SdlGfxDevice::setResolutionInternal(int width, int height)
 	{
 		width_ = width;

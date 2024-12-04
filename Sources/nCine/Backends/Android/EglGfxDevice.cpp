@@ -64,7 +64,12 @@ namespace nCine
 		surface_ = EGL_NO_SURFACE;
 	}
 
-	const IGfxDevice::VideoMode &EglGfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	void EglGfxDevice::update()
+	{
+		eglSwapBuffers(display_, surface_);
+	}
+
+	const IGfxDevice::VideoMode& EglGfxDevice::currentVideoMode(unsigned int monitorIndex) const
 	{
 		if (monitorIndex >= numMonitors_) {
 			monitorIndex = 0;
