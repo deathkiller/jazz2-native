@@ -9,7 +9,7 @@
 
 #include <IO/EmscriptenFileStream.h>
 
-using Death::IO;
+using namespace Death::IO;
 
 namespace Jazz2::UI::Menu
 {
