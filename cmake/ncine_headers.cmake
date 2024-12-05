@@ -37,6 +37,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileAccess.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.h

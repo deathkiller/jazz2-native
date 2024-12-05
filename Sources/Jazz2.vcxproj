@@ -313,6 +313,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Core\Logger.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Spinlock.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Function.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -647,7 +648,6 @@
     <ClInclude Include="nCine\Input\Keys.h" />
     <ClInclude Include="nCine\Backends\Qt5InputManager.h" />
     <ClInclude Include="nCine\Backends\SdlInputManager.h" />
-    <ClInclude Include="nCine\IO\EmscriptenLocalFile.h" />
     <ClInclude Include="nCine\MainApplication.h" />
     <ClInclude Include="nCine\Primitives\AABB.h" />
     <ClInclude Include="nCine\Primitives\Color.h" />
@@ -727,6 +727,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\PakFile.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Core\Logger.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />
@@ -1001,7 +1002,6 @@
     <ClCompile Include="nCine\Backends\Qt5Keys.cpp" />
     <ClCompile Include="nCine\Backends\SdlInputManager.cpp" />
     <ClCompile Include="nCine\Backends\SdlKeys.cpp" />
-    <ClCompile Include="nCine\IO\EmscriptenLocalFile.cpp" />
     <ClCompile Include="nCine\MainApplication.cpp" />
     <ClCompile Include="nCine\Primitives\Color.cpp" />
     <ClCompile Include="nCine\Primitives\Colorf.cpp" />

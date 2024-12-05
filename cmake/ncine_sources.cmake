@@ -11,6 +11,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.cpp

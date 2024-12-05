@@ -6,7 +6,6 @@
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Base/Algorithms.h"
-#include "../../../nCine/IO/EmscriptenLocalFile.h"
 
 using namespace Jazz2::UI::Menu::Resources;
 
@@ -21,10 +20,7 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-		_state = State::Loading;
-		_fileCount = 0;
-		_timeout = 600.0f;
-		EmscriptenLocalFile::Load(".j2l"_s, true, FileDataCallback, FileCountCallback, this);
+		ShowPicker();
 	}
 
 	void ImportSection::OnUpdate(float timeMult)
@@ -32,7 +28,7 @@ namespace Jazz2::UI::Menu
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
-		if (_state == State::Loading && _fileCount <= 0) {
+		if (_state == State::Loading && !_picker.IsCancelSupported()) {
 			if (_timeout > 0.0f) {
 				_timeout -= timeMult;
 			} else {
@@ -40,7 +36,12 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerActions::Fire)) {
+			if (_state > State::Loading) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				ShowPicker();
+			}
+		} else if (_root->ActionHit(PlayerActions::Menu)) {
 			if (_state != State::Loading) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->LeaveSection();
@@ -73,7 +74,7 @@ namespace Jazz2::UI::Menu
 		switch (_state) {
 			case State::Loading:
 				if (_fileCount > 0) {
-					_root->DrawStringShadow(_("Processing of selected files..."), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_fn("Processing of %i file...", "Processing of %i files...", _fileCount, _fileCount), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
 					_root->DrawStringShadow(_("Waiting for files..."), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
@@ -105,39 +106,52 @@ namespace Jazz2::UI::Menu
 						_root->LeaveSection();
 					}
 					return;
+				} else if (y > 120.0f && _state > State::Loading) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					ShowPicker();
+					return;
 				}
 			}
 		}
 	}
 
-	void ImportSection::FileDataCallback(void* context, std::unique_ptr<char[]> data, std::size_t length, StringView name)
+	void ImportSection::OnFilesReceived(ArrayView<EmscriptenFileStream> files)
 	{
-		auto* _this = static_cast<ImportSection*>(context);
-		_this->_fileCount--;
+		_fileCount = (std::int32_t)files.size();
+		if (_fileCount <= 0) {
+			_state = State::NothingSelected;
+		}
 
-		std::int32_t offset = 180;	// Skip header
-		if (data != nullptr && length >= 262 && fs::GetExtension(name) == "j2l"_s && *(std::uint32_t*)&data[offset] == 0x4C56454C) {
-			offset += 4 + 4;
-			std::int32_t nameLength = 0;
-			while (data[offset + nameLength] != '\0' && nameLength < 32) {
-				nameLength++;
+		for (auto& file : files) {
+			if (file.GetSize() >= 262 && fs::GetExtension(file.GetName()) == "j2l"_s) {
+				file.Seek(180, SeekOrigin::Current); // Skip header
+
+				std::uint32_t magic = file.ReadValue<std::uint32_t>();
+				if (magic == 0x4C56454C /*LEVL*/) {
+					file.Seek(4, SeekOrigin::Current);
+
+					char name[32 + 1];
+					name[32] = '\0';
+					file.Read(name, 32);
+
+					LOGD("Found level: %s", name);
+					_foundLevels.emplace(name, true);
+				}
 			}
-
-			_this->_foundLevels.emplace(String(&data[offset], nameLength), true);
 		}
 
-		if (_this->_fileCount <= 0) {
-			_this->CheckFoundLevels();
-		}
+		CheckFoundLevels();
 	}
 
-	void ImportSection::FileCountCallback(void* context, std::int32_t fileCount)
+	void ImportSection::ShowPicker()
 	{
-		auto* _this = static_cast<ImportSection*>(context);
-		_this->_fileCount = fileCount;
-		if (fileCount <= 0) {
-			_this->_state = State::NothingSelected;
-		}
+		_state = State::Loading;
+		_fileCount = 0;
+		_timeout = 10.0f * FrameTimer::FramesPerSecond;
+
+		// Directories are not supported by mobile browsers yet
+		//_picker.FetchDirectoryAsync({ *this, &ImportSection::OnFilesReceived });
+		_picker.FetchFilesAsync(".j2l"_s, true, { *this, &ImportSection::OnFilesReceived });
 	}
 
 	void ImportSection::CheckFoundLevels()
@@ -172,8 +186,8 @@ namespace Jazz2::UI::Menu
 	bool ImportSection::HasAllLevels(ArrayView<const StringView> levelNames)
 	{
 		bool hasAll = true;
-		for (std::size_t i = 0; i < levelNames.size(); i++) {
-			if (_foundLevels.find(String::nullTerminatedView(levelNames[i])) == _foundLevels.end()) {
+		for (auto levelName : levelNames) {
+			if (_foundLevels.find(String::nullTerminatedView(levelName)) == _foundLevels.end()) {
 				hasAll = false;
 				break;
 			}
