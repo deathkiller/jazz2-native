@@ -86,13 +86,13 @@ namespace nCine
 		}
 #endif
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		emscripten_set_main_loop(MainApplication::EmscriptenStep, 0, 1);
+		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
+#else
 		while (!app.shouldQuit_) {
 			app.ProcessStep();
 		}
-#else
-		emscripten_set_main_loop(MainApplication::EmscriptenStep, 0, 1);
-		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
 #endif
 
 		app.ShutdownCommon();
@@ -112,7 +112,9 @@ namespace nCine
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		// `window.close()` usually works only in PWA/standalone environment
-		emscripten_run_script("window.close();");
+		EM_ASM({
+			window.close();
+		});
 #endif
 	}
 

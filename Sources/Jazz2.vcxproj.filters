@@ -64,9 +64,6 @@
     <Filter Include="Header Files\Jazz2\Tiles">
       <UniqueIdentifier>{a9240185-7aca-468b-87ea-256d73bf2a24}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\nCine\IO">
-      <UniqueIdentifier>{feaaf225-0942-42ed-8f21-5708ce4e0720}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Jazz2\Actors\Environment">
       <UniqueIdentifier>{14077be7-3ef9-4d98-a3a1-bf9f6e6ace47}</UniqueIdentifier>
     </Filter>
@@ -201,9 +198,6 @@
     </Filter>
     <Filter Include="Source Files\nCine\Input">
       <UniqueIdentifier>{9f55d519-1d20-4371-8846-4414bdb959cc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\nCine\IO">
-      <UniqueIdentifier>{7b8ea11d-1a7c-415b-b266-2cce5ac3a140}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\nCine\Primitives">
       <UniqueIdentifier>{dfcbe8c2-0d95-4ba7-b5b7-60a9b2cc028c}</UniqueIdentifier>
@@ -623,9 +617,6 @@
     </ClInclude>
     <ClInclude Include="nCine\Base\BitArray.h">
       <Filter>Header Files\nCine\Base</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\IO\EmscriptenLocalFile.h">
-      <Filter>Header Files\nCine\IO</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Environment\Spring.h">
       <Filter>Header Files\Jazz2\Actors\Environment</Filter>
@@ -1539,6 +1530,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1678,9 +1672,6 @@
     </ClCompile>
     <ClCompile Include="nCine\Primitives\Colorf.cpp">
       <Filter>Source Files\nCine\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\IO\EmscriptenLocalFile.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\Geometry.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
@@ -2523,6 +2514,9 @@
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.cpp">
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
   </ItemGroup>

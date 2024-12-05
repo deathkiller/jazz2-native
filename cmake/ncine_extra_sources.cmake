@@ -4,11 +4,6 @@ if(ATOMIC_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE Atomic::Atomic)
 endif()
 
-if(EMSCRIPTEN)
-	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/IO/EmscriptenLocalFile.h)
-	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/IO/EmscriptenLocalFile.cpp)
-endif()
-
 if(TARGET Backward)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_BACKWARD")
 	target_link_libraries(${NCINE_APP} PRIVATE Backward)

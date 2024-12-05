@@ -5,8 +5,11 @@
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 
 #include "MenuSection.h"
-
 #include "../../../nCine/Base/HashMap.h"
+
+#include <IO/EmscriptenFileStream.h>
+
+using Death::IO;
 
 namespace Jazz2::UI::Menu
 {
@@ -37,10 +40,11 @@ namespace Jazz2::UI::Menu
 		std::int32_t _fileCount;
 		float _timeout;
 		HashMap<String, bool> _foundLevels;
+		EmscriptenFilePicker _picker;
 
-		static void FileDataCallback(void* context, std::unique_ptr<char[]> data, std::size_t length, StringView name);
-		static void FileCountCallback(void* context, std::int32_t fileCount);
+		void OnFilesReceived(ArrayView<EmscriptenFileStream> files);
 
+		void ShowPicker();
 		void CheckFoundLevels();
 		bool HasAllLevels(ArrayView<const StringView> levelNames);
 	};
