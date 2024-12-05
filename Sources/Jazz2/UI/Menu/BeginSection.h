@@ -29,9 +29,7 @@ namespace Jazz2::UI::Menu
 			Highscores,
 			Options,
 			About,
-#if !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 			Quit,
-#endif
 			Count
 		};
 
