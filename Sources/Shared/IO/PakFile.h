@@ -11,6 +11,13 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	enum class PakPreferredCompression
+	{
+		None,
+		Deflate,
+		Lz4
+	};
+
 	class PakFile
 	{
 		friend class PakWriter;
@@ -92,10 +99,12 @@ namespace Death { namespace IO {
 			None = 0,
 			Directory = 0x01,
 			ZlibCompressed = 0x02,
+			Lz4Compressed = 0x04,
 
-			Lz4Compressed = 0x04,		// Not implemented
 			Lzma2Compressed = 0x08,		// Not implemented
-			Aes256Encrypten = 0x10,		// Not implemented
+			ZstdCompressed = 0x10,		// Not implemented
+
+			Aes256Encrypten = 0x40,		// Not implemented
 
 			Link = 0x80					// Not implemented
 		};
@@ -137,7 +146,7 @@ namespace Death { namespace IO {
 
 		bool IsValid() const;
 
-		bool AddFile(Stream& stream, Containers::StringView path, bool compress = false);
+		bool AddFile(Stream& stream, Containers::StringView path, PakPreferredCompression preferredCompression = PakPreferredCompression::None);
 		void Finalize();
 
 	private:

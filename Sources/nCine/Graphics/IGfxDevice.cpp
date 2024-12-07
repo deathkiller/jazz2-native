@@ -29,13 +29,13 @@ namespace nCine
 
 		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
 			IGfxDevice* gfxDevice = static_cast<IGfxDevice*>(userData);
-#if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
+#	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
 			// `contrib.glfw3` should handle HiDPI automatically
 			gfxDevice->setResolutionInternal(static_cast<int>(event->windowInnerWidth), static_cast<int>(event->windowInnerHeight));
-#else
+#	else
 			float pixelRatio = emscripten_get_device_pixel_ratio();
 			gfxDevice->setResolutionInternal(static_cast<int>(event->windowInnerWidth * pixelRatio), static_cast<int>(event->windowInnerHeight * pixelRatio));
-#endif
+#	endif
 		}
 		return true;
 	}
@@ -53,13 +53,13 @@ namespace nCine
 		gfxDevice->isFullscreen_ = event->isFullscreen;
 
 		if (event->elementWidth > 0 && event->elementHeight > 0) {
-#if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
+#	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
 			// `contrib.glfw3` should handle HiDPI automatically
 			gfxDevice->setResolutionInternal(static_cast<int>(event->elementWidth), static_cast<int>(event->elementHeight));
-#else
+#	else
 			float pixelRatio = emscripten_get_device_pixel_ratio();
 			gfxDevice->setResolutionInternal(static_cast<int>(event->elementWidth * pixelRatio), static_cast<int>(event->elementHeight * pixelRatio));
-#endif
+#	endif
 		}
 
 		return true;

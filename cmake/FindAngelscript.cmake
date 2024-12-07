@@ -1,8 +1,8 @@
 include(ncine_helpers)
 
-if(NOT TARGET Angelscript::Angelscript)
+if(NOT TARGET Angelscript)
 	if(NCINE_DOWNLOAD_DEPENDENCIES)
-		# Try to build `libopenmpt` from source
+		# Try to build `Angelscript` from source
 		#set(ANGELSCRIPT_URL "https://www.angelcode.com/angelscript/sdk/files/angelscript_2.36.1.zip")
 		set(ANGELSCRIPT_URL "https://github.com/codecat/angelscript-mirror/archive/refs/heads/master.tar.gz")
 		message(STATUS "Downloading dependencies from \"${ANGELSCRIPT_URL}\"...")
@@ -140,8 +140,12 @@ if(NOT TARGET Angelscript::Angelscript)
 		endif()
 
 		target_sources(Angelscript PRIVATE ${ANGELSCRIPT_SOURCES} ${ANGELSCRIPT_HEADERS})
-		target_include_directories(Angelscript PRIVATE "${ANGELSCRIPT_INCLUDE_DIR}" " ${ANGELSCRIPT_DIR}/source")
+		target_include_directories(Angelscript PRIVATE "${ANGELSCRIPT_INCLUDE_DIR}" "${ANGELSCRIPT_DIR}/source")
 
+		if(NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE OR CMAKE_POSITION_INDEPENDENT_CODE)
+			set_target_properties(Angelscript PROPERTIES POSITION_INDEPENDENT_CODE ON)
+		endif()
+		
 		set(ANGELSCRIPT_FOUND TRUE)
 		set(ANGELSCRIPT_STATIC TRUE)
 		mark_as_advanced(ANGELSCRIPT_STATIC)

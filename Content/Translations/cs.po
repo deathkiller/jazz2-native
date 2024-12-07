@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-12-05 16:30+0100\n"
-"PO-Revision-Date: 2024-12-05 16:31+0100\n"
+"PO-Revision-Date: 2024-12-07 15:24+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1451,7 +1451,7 @@ msgstr "Hrát vlastní úrovně"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
 msgid "Highscores"
-msgstr "Nejvyšší skóre"
+msgstr "Síň slávy"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
@@ -1902,12 +1902,12 @@ msgstr "Povoleno \f[c:#d0705d](Experimentální)\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:116
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr "Nejvyšší skóre pro \f[c:#d0705d]Základní hru\f[/c]"
+msgstr "Síň slávy pro \f[c:#d0705d]Základní hru\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:126
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
-msgstr "Nejvyšší skóre pro \f[c:#d0705d]%s\f[/c]"
+msgstr "Síň slávy pro \f[c:#d0705d]%s\f[/c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:71

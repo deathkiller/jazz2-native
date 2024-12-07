@@ -198,7 +198,7 @@ namespace nCine
 #endif
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.Fonts->SetTexID(nullptr);
+		io.Fonts->SetTexID(0);
 		io.BackendRendererName = nullptr;
 		io.BackendRendererUserData = nullptr;
 		io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;

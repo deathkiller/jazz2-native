@@ -928,7 +928,7 @@ namespace Death { namespace IO {
 			}
 		}
 		if (initialDots) return {};
-		String result = fileName.suffix(foundDot.begin() + 1);
+		String result = fileName.suffix(foundDot.end());
 
 		// Convert to lower-case
 		for (char& c : result) {
