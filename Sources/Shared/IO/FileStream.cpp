@@ -92,8 +92,6 @@ namespace Death { namespace IO {
 		} else if (origin == SeekOrigin::Current) {
 			offset -= (_readLength - _readPos);
 		}
-		_readPos = 0;
-		_readLength = 0;
 
 		std::int64_t oldPos = _filePos + (_readPos - _readLength);
 		std::int64_t pos = SeekInternal(offset, origin);
@@ -103,27 +101,28 @@ namespace Death { namespace IO {
 
 		if (_readLength > 0) {
 			if (oldPos == pos) {
-				if (_readPos > 0) {
-					std::memcpy(&_buffer[0], &_buffer[_readPos], _readLength - _readPos);
-					_readLength -= _readPos;
+				// Seek after the buffered part, so the position is still correct
+				if (SeekInternal(_readLength - _readPos, SeekOrigin::Current) < 0) {
+					// This shouldn't fail, but if it does, invalidate the buffer
 					_readPos = 0;
+					_readLength = 0;
 				}
-				if (_readLength > 0) {
-					SeekInternal(_readLength, SeekOrigin::Current);
-				}
-			} else if (oldPos - _readPos < pos && pos < oldPos + _readLength - _readPos) {
+			} else if (oldPos - _readPos <= pos && pos < oldPos + _readLength - _readPos) {
+				// Some part of the buffer is still valid
 				std::int64_t diff = (pos - oldPos);
-				std::memcpy(&_buffer[0], &_buffer[_readPos + diff], _readLength - (_readPos + diff));
-				_readLength -= (std::int32_t)(_readPos + diff);
-				_readPos = 0;
-				if (_readLength > 0) {
-					SeekInternal(_readLength, SeekOrigin::Current);
+				_readPos += diff;
+				// Seek after the buffered part, so the position is still correct
+				if (SeekInternal(_readLength - _readPos, SeekOrigin::Current) < 0) {
+					// This shouldn't fail, but if it does, invalidate the buffer
+					_readPos = 0;
+					_readLength = 0;
 				}
 			} else {
 				_readPos = 0;
 				_readLength = 0;
 			}
 		}
+
 		return pos;
 	}
 
@@ -446,11 +445,11 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	std::int32_t FileStream::ReadInternal(void* buffer, std::int32_t bytes)
+	std::int32_t FileStream::ReadInternal(void* destination, std::int32_t bytesToRead)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD bytesRead;
-		if (!::ReadFile(_fileHandle, buffer, bytes, &bytesRead, NULL)) {
+		if (!::ReadFile(_fileHandle, destination, bytesToRead, &bytesRead, NULL)) {
 			bytesRead = 0;
 
 			DWORD error = ::GetLastError();
@@ -462,7 +461,7 @@ namespace Death { namespace IO {
 		_filePos += static_cast<std::int32_t>(bytesRead);
 		return static_cast<std::int32_t>(bytesRead);
 #else
-		std::int32_t bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, buffer, bytes));
+		std::int32_t bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, destination, bytesToRead));
 		if (bytesRead < 0) {
 			LOGE("Can't read from file \"%s\" - failed with error %i", _path.data(), errno);
 			return 0;
@@ -472,11 +471,11 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	std::int32_t FileStream::WriteInternal(const void* buffer, std::int32_t bytes)
+	std::int32_t FileStream::WriteInternal(const void* source, std::int32_t bytesToWrite)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD bytesWritten;
-		if (!::WriteFile(_fileHandle, buffer, bytes, &bytesWritten, NULL)) {
+		if (!::WriteFile(_fileHandle, source, bytesToWrite, &bytesWritten, NULL)) {
 			bytesWritten = 0;
 
 			DWORD error = ::GetLastError();
@@ -488,7 +487,7 @@ namespace Death { namespace IO {
 		_filePos += static_cast<std::int32_t>(bytesWritten);
 		return static_cast<std::int32_t>(bytesWritten);
 #else
-		std::int32_t bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, buffer, bytes));
+		std::int32_t bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, source, bytesToWrite));
 		if (bytesWritten < 0) {
 			LOGE("Can't write to file \"%s\" - failed with error %i", _path.data(), errno);
 			return 0;

@@ -34,12 +34,12 @@ namespace Death { namespace IO {
 		if (_readLength > 0) {
 			if (oldPos == pos) {
 				// Seek after the buffered part, so the position is still correct
-				if (SeekInternal(_readLength, SeekOrigin::Current) < 0) {
+				if (SeekInternal(_readLength - _readPos, SeekOrigin::Current) < 0) {
 					// This shouldn't fail, but if it does, invalidate the buffer
 					_readPos = 0;
 					_readLength = 0;
 				}
-			} else if (oldPos - _readPos < pos && pos < oldPos + _readLength - _readPos) {
+			} else if (oldPos - _readPos <= pos && pos < oldPos + _readLength - _readPos) {
 				// Some part of the buffer is still valid
 				std::int32_t diff = static_cast<std::int32_t>(pos - oldPos);
 				_readPos += diff;

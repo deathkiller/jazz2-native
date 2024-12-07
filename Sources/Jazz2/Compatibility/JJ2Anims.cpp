@@ -519,7 +519,7 @@ namespace Jazz2::Compatibility
 			}
 
 			so.Seek(0, SeekOrigin::Begin);
-			bool success = pakWriter.AddFile(so, filename, true);
+			bool success = pakWriter.AddFile(so, filename, PakPreferredCompression::Deflate);
 			ASSERT_MSG(success, "Cannot add file to .pak container");
 		}
 	}

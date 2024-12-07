@@ -65,7 +65,7 @@ namespace Death { namespace IO {
 
 		void Open(FileAccess mode);
 		std::int64_t SeekInternal(std::int64_t offset, SeekOrigin origin);
-		std::int32_t ReadInternal(void* buffer, std::int32_t bytes);
-		std::int32_t WriteInternal(const void* buffer, std::int32_t bytes);
+		std::int32_t ReadInternal(void* destination, std::int32_t bytesToRead);
+		std::int32_t WriteInternal(const void* source, std::int32_t bytesToWrite);
 	};
 }}

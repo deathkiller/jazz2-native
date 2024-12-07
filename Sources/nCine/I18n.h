@@ -21,8 +21,6 @@ namespace nCine
 	class I18n
 	{
 	public:
-		struct ExpressionToken;
-
 		static constexpr char ContextSeparator = 0x04;
 
 		I18n();
@@ -32,16 +30,16 @@ namespace nCine
 		I18n& operator=(const I18n&) = delete;
 
 		/** @brief Load a catalog from file in gettext MO format, previously loaded catalog will be unloaded */
-		bool LoadFromFile(const StringView path);
+		bool LoadFromFile(StringView path);
 		/** @brief Load a catalog from stream in gettext MO format, previously loaded catalog will be unloaded */
 		bool LoadFromFile(const std::unique_ptr<Stream>& fileHandle);
 		/** @brief Unload all loaded catalogs */
 		void Unload();
 
 		/** @brief Looks up raw translation by @p msgid */
-		const char* LookupTranslation(const char* msgid, std::uint32_t* resultLength);
+		StringView LookupTranslation(const char* msgid);
 		/** @brief Looks up plural variant of translation returned by @ref LookupTranslation()  */
-		const char* LookupPlural(std::int32_t n, const char* translation, std::uint32_t translationLength);
+		StringView LookupPlural(std::int32_t n, StringView translation);
 
 		/** @brief Returns description of currently loaded catalog */
 		StringView GetTranslationDescription();
@@ -50,13 +48,14 @@ namespace nCine
 		static I18n& Get();
 		/** @brief Returns list of user's preferred languages */
 		static Array<String> GetPreferredLanguages();
-		/** @brief Returns localized name of language by ID */
+		/** @brief Returns localized name of language by ID (ISO 639-1) */
 		static StringView GetLanguageName(const StringView langId);
-		/** @brief Returns language ID without any regional/territorial specifiers */
+		/** @brief Returns language ID (ISO 639-1) without any regional/territorial specifiers */
 		static StringView TryRemoveLanguageSpecifiers(const StringView langId);
 
 	private:
 		struct StringDesc;
+		struct ExpressionToken;
 		class Evaluator;
 
 		std::unique_ptr<char[]> _file;
@@ -68,32 +67,32 @@ namespace nCine
 		const std::uint32_t* _hashTable;
 		const ExpressionToken* _pluralExpression;
 
-		static const ExpressionToken* ExtractPluralExpression(const char* nullEntry);
+		static const ExpressionToken* ExtractPluralExpression(StringView nullEntry);
 	};
 
 	/** @brief Translates text in singular form using primary translation catalog */
 	inline StringView _(const char* text)
 	{
-		std::uint32_t resultLength;
-		const char* result = I18n::Get().LookupTranslation(text, &resultLength);
-		return StringView(result != nullptr ? result : text);
+		I18n& i18n = I18n::Get();
+		StringView result = i18n.LookupTranslation(text);
+		return (result ? result : StringView(text));
 	}
 	
 	/** @brief Translates text in singular form using primary translation catalog and specified @p context */
 	inline StringView _x(StringView context, const char* text)
 	{
-		std::uint32_t resultLength;
-		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(text) }).data(), &resultLength);
-		return (result != nullptr ? result : text);
+		I18n& i18n = I18n::Get();
+		StringView textView = text;
+		StringView result = i18n.LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, textView }).data());
+		return (result ? result : textView);
 	}
 
 	/** @brief Translates text in singular or plural form using primary translation catalog */
 	inline StringView _n(const char* singular, const char* plural, std::int32_t n)
 	{
-		std::uint32_t resultLength;
-		const char* result = I18n::Get().LookupTranslation(singular, &resultLength);
-		if (result != nullptr) {
-			return I18n::Get().LookupPlural(n, result, resultLength);
+		I18n& i18n = I18n::Get();
+		if (StringView result = i18n.LookupTranslation(singular)) {
+			return i18n.LookupPlural(n, result);
 		}
 		return (n == 1 ? singular : plural);
 	}
@@ -101,10 +100,10 @@ namespace nCine
 	/** @brief Translates text in singular or plural form using primary translation catalog and specified @p context */
 	inline StringView _nx(StringView context, const char* singular, const char* plural, std::int32_t n)
 	{
-		std::uint32_t resultLength;
-		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(singular) }).data(), &resultLength);
-		if (result != nullptr) {
-			return I18n::Get().LookupPlural(n, result, resultLength);
+		I18n& i18n = I18n::Get();
+		StringView singularView = singular;
+		if (StringView result = i18n.LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, singularView }).data())) {
+			return i18n.LookupPlural(n, result);
 		}
 		return (n == 1 ? singular : plural);
 	}

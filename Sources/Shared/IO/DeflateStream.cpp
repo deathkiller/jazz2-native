@@ -211,7 +211,9 @@ namespace Death { namespace IO {
 				return 0;
 			}
 
-			_inputSize -= bytesRead;
+			if (_inputSize > 0) {
+				_inputSize -= bytesRead;
+			}
 
 			_strm.next_in = _buffer;
 			_strm.avail_in = static_cast<std::uint32_t>(bytesRead);
@@ -253,7 +255,7 @@ namespace Death { namespace IO {
 		}
 
 		_state = State::Finished;
-		_size = static_cast<std::int32_t>(_strm.total_out);
+		_size = static_cast<std::int64_t>(_strm.total_out);
 		return (error == Z_OK);
 	}
 

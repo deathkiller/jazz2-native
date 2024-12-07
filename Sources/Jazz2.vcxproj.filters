@@ -1533,6 +1533,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Lz4Stream.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2517,6 +2520,9 @@
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Lz4Stream.cpp">
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
   </ItemGroup>

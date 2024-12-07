@@ -314,6 +314,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Spinlock.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Function.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Lz4Stream.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -728,6 +729,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Core\Logger.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Lz4Stream.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />

@@ -94,250 +94,100 @@ namespace nCine
 		std::uint32_t Offset;
 	};
 
+	enum class ExpressionTokenType
+	{
+		Unknown,
+		Value,
+		Variable,
+
+		Add,
+		Subtract,
+		Multiply,
+		Divide,
+		Remainder,
+
+		And,
+		Or,
+
+		Equals,
+		NotEquals,
+		Less,
+		EqualsOrLess,
+		EqualsOrGreater,
+		Greater,
+
+		Ternary
+	};
+
 	struct I18n::ExpressionToken
 	{
-		virtual ~ExpressionToken() { };
-		virtual std::int32_t operator()(std::int32_t n) const = 0;
-	};
+		ExpressionTokenType Type;
+		std::int32_t Value;
+		ExpressionToken* Comparison;
+		ExpressionToken* Left;
+		ExpressionToken* Right;
 
-	struct ValueToken : public I18n::ExpressionToken
-	{
-		ValueToken(std::int32_t value)
-			: _value(value)
+		ExpressionToken(ExpressionTokenType type)
+			: Type(type), Value(0), Comparison(nullptr), Left(nullptr), Right(nullptr)
 		{
 		}
 
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return _value;
-		}
-
-	protected:
-		std::int32_t _value;
-	};
-
-	struct VariableToken : public I18n::ExpressionToken
-	{
-		VariableToken()
+		ExpressionToken(ExpressionTokenType type, std::int32_t value)
+			: Type(type), Value(value), Comparison(nullptr), Left(nullptr), Right(nullptr)
 		{
 		}
 
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return n;
-		}
-	};
-
-	struct BinaryExpressionToken : public I18n::ExpressionToken
-	{
-		BinaryExpressionToken(ExpressionToken* left, ExpressionToken* right)
-			: _left(left), _right(right)
+		ExpressionToken(ExpressionTokenType type, ExpressionToken* left, ExpressionToken* right)
+			: Type(type), Value(0), Comparison(nullptr), Left(left), Right(right)
 		{
 		}
 
-		~BinaryExpressionToken()
-		{
-			delete _left;
-			delete _right;
-		}
-
-	protected:
-		I18n::ExpressionToken* _left;
-		I18n::ExpressionToken* _right;
-	};
-
-	struct MultiplyToken : public BinaryExpressionToken
-	{
-		MultiplyToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
+		ExpressionToken(ExpressionTokenType type, ExpressionToken* comparison, ExpressionToken* left, ExpressionToken* right)
+			: Type(type), Value(0), Comparison(comparison), Left(left), Right(right)
 		{
 		}
 
-		std::int32_t operator()(std::int32_t n) const override
+		~ExpressionToken()
 		{
-			return (*this->_left)(n) * (*this->_right)(n);
-		}
-	};
-
-	struct DivideToken : public BinaryExpressionToken
-	{
-		DivideToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) / (*this->_right)(n);
-		}
-	};
-
-	struct RemainderToken : public BinaryExpressionToken
-	{
-		RemainderToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
+			if (Comparison != nullptr) {
+				delete Comparison;
+			}
+			if (Left != nullptr) {
+				delete Left;
+			}
+			if (Right != nullptr) {
+				delete Right;
+			}
 		}
 
-		std::int32_t operator()(std::int32_t n) const override
+		std::int32_t operator()(std::int32_t n) const noexcept
 		{
-			return (*this->_left)(n) % (*this->_right)(n);
-		}
-	};
+			switch (Type) {
+				default:
+				case ExpressionTokenType::Unknown: return INT32_MIN;
 
-	struct AddToken : public BinaryExpressionToken
-	{
-		AddToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
+				case ExpressionTokenType::Value: return Value;
+				case ExpressionTokenType::Variable: return n;
 
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) + (*this->_right)(n);
-		}
-	};
+				case ExpressionTokenType::Add: return (*Left)(n) + (*Right)(n);
+				case ExpressionTokenType::Subtract: return (*Left)(n) - (*Right)(n);
+				case ExpressionTokenType::Multiply: return (*Left)(n) * (*Right)(n);
+				case ExpressionTokenType::Divide: return (*Left)(n) / (*Right)(n);
+				case ExpressionTokenType::Remainder: return (*Left)(n) % (*Right)(n);
 
-	struct SubtractToken : public BinaryExpressionToken
-	{
-		SubtractToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
+				case ExpressionTokenType::And: return (*Left)(n) != 0 && (*Right)(n) != 0;
+				case ExpressionTokenType::Or: return (*Left)(n) != 0 || (*Right)(n) != 0;
 
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) - (*this->_right)(n);
-		}
-	};
+				case ExpressionTokenType::Equals: return (*Left)(n) == (*Right)(n);
+				case ExpressionTokenType::NotEquals: return (*Left)(n) != (*Right)(n);
+				case ExpressionTokenType::Less: return (*Left)(n) < (*Right)(n);
+				case ExpressionTokenType::EqualsOrLess: return (*Left)(n) <= (*Right)(n);
+				case ExpressionTokenType::EqualsOrGreater: return (*Left)(n) >= (*Right)(n);
+				case ExpressionTokenType::Greater: return (*Left)(n) > (*Right)(n);
 
-	struct LogicalAndToken : public BinaryExpressionToken
-	{
-		LogicalAndToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
+				case ExpressionTokenType::Ternary: return (*Comparison)(n) ? (*Left)(n) : (*Right)(n);
+			}
 		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) != 0 && (*this->_right)(n) != 0;
-		}
-	};
-
-	struct LogicalOrToken : public BinaryExpressionToken
-	{
-		LogicalOrToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) != 0 || (*this->_right)(n) != 0;
-		}
-	};
-
-	struct CompareEqualsToken : public BinaryExpressionToken
-	{
-		CompareEqualsToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) == (*this->_right)(n);
-		}
-	};
-
-	struct CompareNotEqualsToken : public BinaryExpressionToken
-	{
-		CompareNotEqualsToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) != (*this->_right)(n);
-		}
-	};
-
-	struct CompareLessToken : public BinaryExpressionToken
-	{
-		CompareLessToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) < (*this->_right)(n);
-		}
-	};
-
-	struct CompareEqualsOrLessToken : public BinaryExpressionToken
-	{
-		CompareEqualsOrLessToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) <= (*this->_right)(n);
-		}
-	};
-
-	struct CompareEqualsOrGreaterToken : public BinaryExpressionToken
-	{
-		CompareEqualsOrGreaterToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) >= (*this->_right)(n);
-		}
-	};
-
-	struct CompareGreaterToken : public BinaryExpressionToken
-	{
-		CompareGreaterToken(ExpressionToken* left, ExpressionToken* right)
-			: BinaryExpressionToken(left, right)
-		{
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_left)(n) > (*this->_right)(n);
-		}
-	};
-
-	struct TernaryExpressionToken : public I18n::ExpressionToken
-	{
-		TernaryExpressionToken(ExpressionToken* comparison, ExpressionToken* left, ExpressionToken* right)
-			: _comparison(comparison), _left(left), _right(right)
-		{
-		}
-
-		~TernaryExpressionToken()
-		{
-			delete _comparison;
-			delete _left;
-			delete _right;
-		}
-
-		std::int32_t operator()(std::int32_t n) const override
-		{
-			return (*this->_comparison)(n) ? (*this->_left)(n) : (*this->_right)(n);
-		}
-
-	protected:
-		I18n::ExpressionToken* _comparison;
-		I18n::ExpressionToken* _left;
-		I18n::ExpressionToken* _right;
 	};
 
 	class I18n::Evaluator
@@ -353,7 +203,22 @@ namespace nCine
 		static ExpressionToken* ParseComparison(const char*& s);
 		static ExpressionToken* ParseCondition(const char*& s);
 		static ExpressionToken* ParseTernary(const char*& s);
+
+		static bool ContainsUnknownToken(ExpressionToken* token);
 	};
+
+	const I18n::ExpressionToken* I18n::Evaluator::Parse(const char* s)
+	{
+		I18n::ExpressionToken* result = ParseTernary(s);
+		while (*s == ' ') {
+			s++;
+		}
+		if ((*s != '\0' && *s != ';' && *s != '\r' && *s != '\n') || ContainsUnknownToken(result)) {
+			delete result;
+			return nullptr;
+		}
+		return result;
+	}
 
 	I18n::ExpressionToken* I18n::Evaluator::ParseNumber(const char*& s, bool negative)
 	{
@@ -365,7 +230,7 @@ namespace nCine
 			value = -value;
 		}
 
-		return new ValueToken(value);
+		return new ExpressionToken(ExpressionTokenType::Value, value);
 	}
 
 	I18n::ExpressionToken* I18n::Evaluator::ParseAtom(const char*& s)
@@ -385,10 +250,11 @@ namespace nCine
 				return atom;
 			}
 			// Unbalanced brackets
-			return new ValueToken(0);
+			return new ExpressionToken(ExpressionTokenType::Unknown);
 		} else if (*s == 'n') {
 			s++;
-			return new VariableToken();
+			// Variable
+			return new ExpressionToken(ExpressionTokenType::Variable);
 		} else if (std::isdigit(*s)) {
 			return ParseNumber(s, false);
 		} else if (*s == '-' && std::isdigit(*(s + 1))) {
@@ -397,7 +263,7 @@ namespace nCine
 		}
 
 		// Unexpected character
-		return new ValueToken(0);
+		return new ExpressionToken(ExpressionTokenType::Unknown);
 	}
 
 	I18n::ExpressionToken* I18n::Evaluator::ParseFactors(const char*& s)
@@ -406,18 +272,15 @@ namespace nCine
 		while (*s != '\0') {
 			if (*s == '*') {
 				s++;
-				I18n::ExpressionToken* right = ParseAtom(s);
-				left = new MultiplyToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Multiply, left, ParseAtom(s));
 				continue;
 			} else if (*s == '/') {
 				s++;
-				I18n::ExpressionToken* right = ParseAtom(s);
-				left = new DivideToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Divide, left, ParseAtom(s));
 				continue;
 			} else if (*s == '%') {
 				s++;
-				I18n::ExpressionToken* right = ParseAtom(s);
-				left = new RemainderToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Remainder, left, ParseAtom(s));
 				continue;
 			} else if (*s == ' ') {
 				s++;
@@ -434,13 +297,11 @@ namespace nCine
 		while (*s != '\0') {
 			if (*s == '+') {
 				s++;
-				I18n::ExpressionToken* right = ParseFactors(s);
-				left = new AddToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Add, left, ParseFactors(s));
 				continue;
 			} else if (*s == '-') {
 				s++;
-				I18n::ExpressionToken* right = ParseFactors(s);
-				left = new SubtractToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Subtract, left, ParseFactors(s));
 				continue;
 			} else if (*s == ' ') {
 				s++;
@@ -457,33 +318,27 @@ namespace nCine
 		while (*s != '\0') {
 			if (*s == '=' && *(s + 1) == '=') {
 				s += 2;
-				I18n::ExpressionToken* right = ParseSummands(s);
-				left = new CompareEqualsToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Equals, left, ParseSummands(s));
 				continue;
 			} else if (*s == '!' && *(s + 1) == '=') {
 				s += 2;
-				I18n::ExpressionToken* right = ParseSummands(s);
-				left = new CompareNotEqualsToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::NotEquals, left, ParseSummands(s));
 				continue;
 			} else if (*s == '<' && *(s + 1) == '=') {
 				s += 2;
-				I18n::ExpressionToken* right = ParseSummands(s);
-				left = new CompareEqualsOrLessToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::EqualsOrLess, left, ParseSummands(s));
 				continue;
 			} else if (*s == '>' && *(s + 1) == '=') {
 				s += 2;
-				I18n::ExpressionToken* right = ParseSummands(s);
-				left = new CompareEqualsOrGreaterToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::EqualsOrGreater, left, ParseSummands(s));
 				continue;
 			} else if (*s == '<') {
 				s++;
-				I18n::ExpressionToken* right = ParseSummands(s);
-				left = new CompareLessToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Less, left, ParseSummands(s));
 				continue;
 			} else if (*s == '>') {
 				s++;
-				I18n::ExpressionToken* right = ParseSummands(s);
-				left = new CompareGreaterToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Greater, left, ParseSummands(s));
 				continue;
 			} else if (*s == ' ') {
 				s++;
@@ -500,13 +355,11 @@ namespace nCine
 		while (*s != '\0') {
 			if (*s == '&' && *(s + 1) == '&') {
 				s += 2;
-				I18n::ExpressionToken* right = ParseComparison(s);
-				left = new LogicalAndToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::And, left, ParseComparison(s));
 				continue;
 			} else if (*s == '|' && *(s + 1) == '|') {
 				s += 2;
-				I18n::ExpressionToken* right = ParseComparison(s);
-				left = new LogicalOrToken(left, right);
+				left = new ExpressionToken(ExpressionTokenType::Or, left, ParseComparison(s));
 				continue;
 			} else if (*s == ' ') {
 				s++;
@@ -532,24 +385,38 @@ namespace nCine
 			s++;
 		}
 		if (*s != ':') {
+			// Syntax error, ternary is not complete
+			delete left;
+			comparison->Type = ExpressionTokenType::Unknown;
 			return comparison;
 		}
 		s++;
-		I18n::ExpressionToken* right = ParseTernary(s);
-		return new TernaryExpressionToken(comparison, left, right);
+		return new ExpressionToken(ExpressionTokenType::Ternary, comparison, left, ParseTernary(s));
 	}
 
-	const I18n::ExpressionToken* I18n::Evaluator::Parse(const char* s)
+	bool I18n::Evaluator::ContainsUnknownToken(ExpressionToken* token)
 	{
-		I18n::ExpressionToken* result = ParseTernary(s);
-		while (*s == ' ') {
-			s++;
+		Array<ExpressionToken*> queue;
+		arrayReserve(queue, 32);
+		arrayAppend(queue, token);
+
+		std::size_t i = 0;
+		while (i < arraySize(queue)) {
+			auto* token = queue[i++];
+			if (token->Type == ExpressionTokenType::Unknown) {
+				return true;
+			}
+			if (token->Comparison != nullptr) {
+				arrayAppend(queue, token->Comparison);
+			}
+			if (token->Left != nullptr) {
+				arrayAppend(queue, token->Left);
+			}
+			if (token->Right != nullptr) {
+				arrayAppend(queue, token->Right);
+			}
 		}
-		if (*s != '\0' && *s != ';' && *s != '\r' && *s != '\n') {
-			delete result;
-			return nullptr;
-		}
-		return result;
+		return false;
 	}
 
 	I18n& I18n::Get()
@@ -571,7 +438,7 @@ namespace nCine
 		}
 	}
 
-	bool I18n::LoadFromFile(const StringView path)
+	bool I18n::LoadFromFile(StringView path)
 	{
 		return LoadFromFile(fs::Open(path, FileAccess::Read));
 	}
@@ -612,8 +479,7 @@ namespace nCine
 			delete _pluralExpression;
 		}
 
-		std::uint32_t entryLength;
-		const char* nullEntry = LookupTranslation("", &entryLength);
+		StringView nullEntry = LookupTranslation("");
 		_pluralExpression = ExtractPluralExpression(nullEntry);
 
 		return true;
@@ -635,10 +501,10 @@ namespace nCine
 		}
 	}
 
-	const char* I18n::LookupTranslation(const char* msgid, std::uint32_t* resultLength)
+	StringView I18n::LookupTranslation(const char* msgid)
 	{
 		if (_hashTable != nullptr) {
-			// Use the hashing table
+			// Use the hash table for faster lookups
 			constexpr std::uint32_t HashWordBits = 32;
 
 			const char* str = msgid;
@@ -662,7 +528,7 @@ namespace nCine
 				std::uint32_t nstr = _hashTable[idx];
 				if (nstr == 0) {
 					// Hash table entry is empty
-					return nullptr;
+					return {};
 				}
 				nstr--;
 
@@ -670,10 +536,9 @@ namespace nCine
 				// We compare the lengths with `>=`, not `==`, because plural entries are represented by strings with an embedded NULL.
 				if (nstr < _stringCount && _origTable[nstr].Length >= len && (std::strcmp(msgid, _file.get() + _origTable[nstr].Offset) == 0)) {
 					if (_transTable[nstr].Offset >= _fileSize) {
-						return nullptr;
+						return {};
 					}
-					*resultLength = _transTable[nstr].Length;
-					return (char*)(_file.get() + _transTable[nstr].Offset);
+					return StringView(&_file[_transTable[nstr].Offset], _transTable[nstr].Length);
 				}
 
 				if (idx >= _hashSize - incr) {
@@ -689,7 +554,7 @@ namespace nCine
 			while (bottom < top) {
 				std::size_t idx = (bottom + top) / 2;
 				if (_origTable[idx].Offset >= _fileSize) {
-					return nullptr;
+					return {};
 				}
 				std::int32_t cmpVal = std::strcmp(msgid, (_file.get() + _origTable[idx].Offset));
 				if (cmpVal < 0) {
@@ -698,47 +563,45 @@ namespace nCine
 					bottom = idx + 1;
 				} else {
 					if (_transTable[idx].Offset >= _fileSize) {
-						return nullptr;
+						return {};
 					}
-					*resultLength = _transTable[idx].Length;
-					return (char*)(_file.get() + _transTable[idx].Offset);
+					return StringView(&_file[_transTable[idx].Offset], _transTable[idx].Length);
 				}
 			}
 		}
 
-		return nullptr;
+		return {};
 	}
 
-	const char* I18n::LookupPlural(std::int32_t n, const char* translation, uint32_t translationLength)
+	StringView I18n::LookupPlural(std::int32_t n, StringView translation)
 	{
 		std::int32_t index = (*_pluralExpression)(n);
 
-		const char* p = translation;
-		while (index-- > 0) {
-			p = strchr(p, '\0');
-			p++;
-			if (p >= translation + translationLength) {
-				return translation;
+		while (true) {
+			StringView sep = translation.findOr('\0', translation.end());
+			if (index == 0) {
+				return translation.prefix(sep.begin());
 			}
+			if (sep.begin() == translation.end()) {
+				return {};
+			}
+			translation = translation.suffix(sep.end());
+			index--;
 		}
-		return p;
 	}
 
 	StringView I18n::GetTranslationDescription()
 	{
-		std::uint32_t entryLength;
-		const char* nullEntry = LookupTranslation("", &entryLength);
+		StringView nullEntry = LookupTranslation("");
 		if (nullEntry != nullptr) {
-			StringView translationInfo = StringView(nullEntry, entryLength);
-			StringView languageTeamBegin = translationInfo.find("Language-Team:"_s);
-			if (languageTeamBegin != nullptr) {
-				languageTeamBegin = translationInfo.suffix(languageTeamBegin.end());
-				StringView languageTeamEnd = languageTeamBegin.findOr('\n', translationInfo.end());
-				return translationInfo.slice(languageTeamBegin.begin(), languageTeamEnd.begin()).trimmed();
+			if (StringView languageTeamBegin = nullEntry.find("Language-Team:"_s)) {
+				languageTeamBegin = nullEntry.suffix(languageTeamBegin.end());
+				StringView languageTeamEnd = languageTeamBegin.findOr('\n', nullEntry.end());
+				return nullEntry.slice(languageTeamBegin.begin(), languageTeamEnd.begin()).trimmed();
 			}
 		}
 
-		return { };
+		return {};
 	}
 
 	Array<String> I18n::GetPreferredLanguages()
@@ -842,7 +705,7 @@ namespace nCine
 			}
 		}
 
-		return { };
+		return {};
 	}
 
 	StringView I18n::TryRemoveLanguageSpecifiers(const StringView langId)
@@ -851,28 +714,28 @@ namespace nCine
 		return (suffix != nullptr ? langId.prefix(suffix.begin()) : langId);
 	}
 
-	const I18n::ExpressionToken* I18n::ExtractPluralExpression(const char* nullEntry)
+	const I18n::ExpressionToken* I18n::ExtractPluralExpression(StringView nullEntry)
 	{
-		if (nullEntry != nullptr) {
-			const char* plural = strstr(nullEntry, "plural=");
-			if (plural != nullptr) {
-				plural += arraySize("plural=") - 1;
-				const ExpressionToken* parsedExpression = Evaluator::Parse(plural);
-				if (parsedExpression != nullptr) {
+		if (nullEntry) {
+			if (StringView pluralBegin = nullEntry.find("plural="_s)) {
+				pluralBegin = nullEntry.suffix(pluralBegin.end());
+				if (const ExpressionToken* parsedExpression = Evaluator::Parse(pluralBegin.data())) {
 					return parsedExpression;
 				}
 			}
 		}
 
-		// Use default rule (n != 1)
-		return new CompareNotEqualsToken(new VariableToken(), new ValueToken(1));
+		// Use default rule: (n != 1)
+		return new ExpressionToken(ExpressionTokenType::NotEquals,
+			new ExpressionToken(ExpressionTokenType::Variable),
+			new ExpressionToken(ExpressionTokenType::Value, 1));
 	}
 
 	String _f(const char* text, ...)
 	{
-		std::uint32_t resultLength;
-		const char* translated = I18n::Get().LookupTranslation(text, &resultLength);
-		const char* format = (translated != nullptr ? translated : text);
+		I18n& i18n = I18n::Get();
+		StringView translated = i18n.LookupTranslation(text);
+		const char* format = (translated ? translated.data() : text);
 
 		va_list args;
 		va_start(args, text);
@@ -896,11 +759,11 @@ namespace nCine
 
 	String _fn(const char* singular, const char* plural, std::int32_t n, ...)
 	{
-		std::uint32_t resultLength;
-		const char* translated = I18n::Get().LookupTranslation(singular, &resultLength);
+		I18n& i18n = I18n::Get();
+		StringView translated = i18n.LookupTranslation(singular);
 		const char* format;
 		if (translated != nullptr) {
-			format = I18n::Get().LookupPlural(n, translated, resultLength);
+			format = i18n.LookupPlural(n, translated).data();
 		} else {
 			format = (n == 1 ? singular : plural);
 		}

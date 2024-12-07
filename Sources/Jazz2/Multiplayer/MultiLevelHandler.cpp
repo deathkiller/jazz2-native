@@ -2214,8 +2214,6 @@ namespace Jazz2::Multiplayer
 
 		ImGui::Text("Last spawned ID: %u", _lastSpawnedActorId);
 
-		ImGui::Text("Errors: %zu", _debugReport.size());
-
 		ImGui::SeparatorText("Peers");
 
 		ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner | ImGuiTableFlags_NoPadOuterX;
