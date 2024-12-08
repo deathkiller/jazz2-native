@@ -600,12 +600,17 @@ namespace Death { namespace IO {
 					goto Retry;
 #	endif
 				std::size_t charsLeft = sizeof(_path) - (_fileNamePart - _path) - 1;
-				std::size_t fileLength = strlen(entry->d_name);
-				if (fileLength > charsLeft) {
+#	if defined(__FreeBSD__)
+				std::size_t fileNameLength = entry->d_namlen;
+#	else
+				std::size_t fileNameLength = strlen(entry->d_name);
+#	endif
+				if (fileNameLength > charsLeft) {
 					// Path is too long, skip this file
 					goto Retry;
 				}
-				strcpy(_fileNamePart, entry->d_name);
+				std::memcpy(_fileNamePart, entry->d_name, fileNameLength);
+				_fileNamePart[fileNameLength] = '\0';
 			} else {
 				_path[0] = '\0';
 			}
@@ -744,8 +749,13 @@ namespace Death { namespace IO {
 			struct dirent* entry = ::readdir(d);
 			while (entry != nullptr) {
 				if (::strcasecmp(c, entry->d_name) == 0) {
-					strcpy(&result[rl], entry->d_name);
-					rl += strlen(entry->d_name);
+#	if defined(__FreeBSD__)
+					std::size_t fileNameLength = entry->d_namlen;
+#	else
+					std::size_t fileNameLength = std::strlen(entry->d_name);
+#	endif
+					std::memcpy(&result[rl], entry->d_name, fileNameLength);
+					rl += fileNameLength;
 
 					::closedir(d);
 					d = ::opendir(result.data());

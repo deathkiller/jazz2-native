@@ -141,6 +141,10 @@ namespace Death { namespace IO {
 		}
 #else
 		static Containers::String FindPathCaseInsensitive(const Containers::StringView path);
+
+		DEATH_ALWAYS_INLINE static Containers::String FindPathCaseInsensitive(Containers::String&& path) {
+			return FindPathCaseInsensitive(StringView{path});
+		}
 #endif
 
 		/** @brief Combines together specified path components */

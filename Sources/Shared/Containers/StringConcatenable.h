@@ -140,11 +140,7 @@ namespace Death { namespace Containers {
 		typedef String ConvertTo;
 
 		static std::size_t size(const char a[N]) {
-			std::size_t n = N;
-			while (n > 0 && a[n - 1] == '\0') {
-				n--;
-			}
-			return n;
+			return strnlen(a, N);
 		}
 		static inline void appendTo(const char a[N], char*& out) {
 			while (*a != '\0') {
@@ -169,9 +165,6 @@ namespace Death { namespace Containers {
 			return std::strlen(a);
 		}
 		static inline void appendTo(const char* a, char*& out) {
-			if (a == nullptr) {
-				return;
-			}
 			while (*a != '\0') {
 				*out++ = *a++;
 			}

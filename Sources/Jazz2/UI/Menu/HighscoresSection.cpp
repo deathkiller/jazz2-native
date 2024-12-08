@@ -14,6 +14,7 @@
 #	include <switch.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
+#	include <unistd.h>
 #endif
 
 using namespace Death::IO::Compression;
