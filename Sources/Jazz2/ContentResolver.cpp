@@ -227,17 +227,17 @@ namespace Jazz2
 			auto localStorage = fs::GetLocalStorage();
 			if (!localStorage.empty()) {
 				// Use "$XDG_DATA_HOME/Jazz² Resurrection/" if exists (for backward compatibility), otherwise "$XDG_DATA_HOME/{NCINE_LINUX_PACKAGE}/"
-				_sourcePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Source/"_s);
-				if (fs::DirectoryExists(_sourcePath)) {
-					_cachePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Cache/"_s);
-				} else {
+				_cachePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Cache/"_s);
+				if (!fs::DirectoryExists(_cachePath)) {
 					auto appData = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE);
-					_sourcePath = fs::CombinePath(appData, "Source/"_s);
 					_cachePath = fs::CombinePath(appData, "Cache/"_s);
 				}
 			} else {
-				_sourcePath = "Source/"_s;
 				_cachePath = "Cache/"_s;
+			}
+			_sourcePath = "/usr/share/" NCINE_LINUX_PACKAGE "/Source/";
+			if (!fs::DirectoryExists(_sourcePath)) {
+				_sourcePath = fs::CombinePath(fs::GetDirectoryName(_cachePath), "Source/"_s);
 			}
 		} else {
 			// Fallback to relative paths
