@@ -431,7 +431,7 @@ namespace Jazz2::Compatibility
 				i32tos(i / 8, numberBuffer);
 
 				StringView foundDot = path.findLastOr('.', path.end());
-				String extraLayersPath = fs::FindPathCaseInsensitive(String(path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s));
+				String extraLayersPath = fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s);
 
 				JJ2Level extraLayersFile;
 				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
