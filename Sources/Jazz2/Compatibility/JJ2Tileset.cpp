@@ -2,11 +2,12 @@
 #include "JJ2Anims.h"
 #include "JJ2Block.h"
 
-#include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 using namespace Death::IO;
+using namespace Death::IO::Compression;
 
 namespace Jazz2::Compatibility
 {

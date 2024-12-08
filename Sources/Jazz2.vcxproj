@@ -314,7 +314,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Spinlock.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Function.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\IO\Lz4Stream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -702,7 +704,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StaticArray.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SequenceHelpers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringUtils.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringConcatenable.h" />
@@ -729,7 +730,9 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Core\Logger.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.cpp" />
-    <ClCompile Include="$(ExtensionLibraryPath)\IO\Lz4Stream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />
@@ -1039,7 +1042,6 @@
     <ClCompile Include="Jazz2\Tiles\TileSet.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp" />
-    <ClCompile Include="$(ExtensionLibraryPath)\IO\DeflateStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.cpp" />
     <ClCompile Include="simdjson\simdjson.cpp" />

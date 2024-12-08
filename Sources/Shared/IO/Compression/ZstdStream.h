@@ -1,38 +1,38 @@
 #pragma once
 
-#include "../Common.h"
-#include "Stream.h"
+#include "../../Common.h"
+#include "../Stream.h"
 
-#if defined(WITH_LZ4)
+#if defined(WITH_ZSTD)
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("lz4/lz4frame.h")
-#		define __HAS_LOCAL_LZ4
+#	if __has_include("zstd/zstd.h")
+#		define __HAS_LOCAL_ZSTD
 #	endif
 #endif
-#ifdef __HAS_LOCAL_LZ4
-#	include "lz4/lz4frame.h"
+#ifdef __HAS_LOCAL_ZSTD
+#	include "zstd/zstd.h"
 #else
-#	include <lz4frame.h>
+#	include <zstd.h>
 #endif
 
-namespace Death { namespace IO {
+namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Read-only streaming of compressed data using the LZ4 compression algorithm
+		@brief Read-only streaming of compressed data using the Zstandard compression algorithm
 	*/
-	class Lz4Stream : public Stream
+	class ZstdStream : public Stream
 	{
 	public:
-		Lz4Stream();
-		Lz4Stream(Stream& inputStream, std::int32_t inputSize = -1);
-		~Lz4Stream();
+		ZstdStream();
+		ZstdStream(Stream& inputStream, std::int32_t inputSize = -1);
+		~ZstdStream();
 
-		Lz4Stream(const Lz4Stream&) = delete;
-		Lz4Stream(Lz4Stream&& other) noexcept;
-		Lz4Stream& operator=(const Lz4Stream&) = delete;
-		Lz4Stream& operator=(Lz4Stream&& other) noexcept;
+		ZstdStream(const ZstdStream&) = delete;
+		ZstdStream(ZstdStream&& other) noexcept;
+		ZstdStream& operator=(const ZstdStream&) = delete;
+		ZstdStream& operator=(ZstdStream&& other) noexcept;
 
 		void Open(Stream& inputStream, std::int32_t inputSize = -1);
 
@@ -56,39 +56,36 @@ namespace Death { namespace IO {
 			Failed
 		};
 
-		static constexpr std::int32_t ChunkSize = 16384;
-
 		Stream* _inputStream;
-		LZ4F_dctx* _ctx;
+		ZSTD_DStream* _strm;
 		std::int64_t _size;
 		std::int32_t _inputSize;
 		State _state;
 
-		char _inBuffer[ChunkSize];
-		std::int32_t _inPos;
-		std::int32_t _inLength;
-
-		std::unique_ptr<char[]> _outBuffer;
-		std::int32_t _outCapacity;
-		std::int32_t _outPos;
+		std::unique_ptr<char[]> _buffer;
+		std::int32_t _inBufferPos;
+		std::int32_t _inBufferLength;
+		std::int32_t _inBufferCapacity;
+		std::int32_t _outBufferPos;
 		std::int32_t _outPosTotal;
-		std::int32_t _outLength;
+		std::int32_t _outBufferLength;
+		std::int32_t _outBufferCapacity;
 
 		void InitializeInternal();
 		std::int32_t ReadInternal(void* ptr, std::int32_t size);
 	};
 
 	/**
-		@brief Write-only streaming to compress written data by using the Deflate algorithm
+		@brief Write-only streaming to compress written data by using the Zstandard compression algorithm
 	*/
-	class Lz4Writer : public Stream
+	class ZstdWriter : public Stream
 	{
 	public:
-		Lz4Writer(Stream& outputStream, std::int32_t compressionLevel = 0);
-		~Lz4Writer();
+		ZstdWriter(Stream& outputStream, std::int32_t compressionLevel = 0);
+		~ZstdWriter();
 
-		Lz4Writer(const Lz4Writer&) = delete;
-		Lz4Writer& operator=(const Lz4Writer&) = delete;
+		ZstdWriter(const ZstdWriter&) = delete;
+		ZstdWriter& operator=(const ZstdWriter&) = delete;
 
 		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
@@ -107,20 +104,19 @@ namespace Death { namespace IO {
 			Failed
 		};
 
-		static constexpr std::int32_t ChunkSize = 16384;
-
 		Stream* _outputStream;
-		LZ4F_cctx* _ctx;
+		ZSTD_CStream* _strm;
 		State _state;
 
-		char _buffer[ChunkSize];
-
-		std::unique_ptr<char[]> _outBuffer;
-		std::int32_t _outCapacity;
-		std::int32_t _outLength;
+		std::unique_ptr<char[]> _buffer;
+		std::int32_t _inBufferCapacity;
+		std::int32_t _outBufferPos;
+		std::int32_t _outBufferLength;
+		std::int32_t _outBufferCapacity;
 
 		std::int32_t WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish);
 	};
-}}
+
+}}}
 
 #endif

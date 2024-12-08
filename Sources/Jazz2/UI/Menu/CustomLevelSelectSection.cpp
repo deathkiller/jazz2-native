@@ -10,10 +10,11 @@
 #	include "CreateServerOptionsSection.h"
 #endif
 
-#include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 using namespace Death::IO;
+using namespace Death::IO::Compression;
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu

@@ -16,7 +16,7 @@ if(NOT TARGET Lz4)
 
 		ncine_add_dependency(Lz4 STATIC)
 
-		set(LZ4_DIR "${lz4git_SOURCE_DIR}/lib/")
+		set(LZ4_DIR "${lz4git_SOURCE_DIR}/lib")
 		set(LZ4_INCLUDE_DIR "${LZ4_DIR}")
 		set_target_properties(Lz4 PROPERTIES
 			INTERFACE_INCLUDE_DIRECTORIES ${LZ4_INCLUDE_DIR})
@@ -37,12 +37,9 @@ if(NOT TARGET Lz4)
 			${LZ4_DIR}/xxhash.c
 		)
 
+		ncine_assign_source_group(PATH_PREFIX ${LZ4_DIR} FILES ${LZ4_HEADERS} ${LZ4_SOURCES} SKIP_EXTERNAL)
 		target_sources(Lz4 PRIVATE ${LZ4_SOURCES} ${LZ4_HEADERS})
 		target_include_directories(Lz4 PRIVATE ${LZ4_INCLUDE_DIR})
-
-		if(NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE OR CMAKE_POSITION_INDEPENDENT_CODE)
-			set_target_properties(Lz4 PROPERTIES POSITION_INDEPENDENT_CODE ON)
-		endif()
 
 		set(LZ4_FOUND TRUE)
 		set(LZ4_STATIC TRUE)

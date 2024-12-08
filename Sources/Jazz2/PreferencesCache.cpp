@@ -6,12 +6,13 @@
 
 #include <Containers/StringConcatenable.h>
 #include <Environment.h>
-#include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+using namespace Death::IO::Compression;
 using namespace nCine;
 
 namespace Jazz2

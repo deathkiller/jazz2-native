@@ -30,6 +30,7 @@ project(Jazz2
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 get_filename_component(PARENT_SOURCE_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if(NOT CMAKE_GENERATOR_PLATFORM OR "${CMAKE_GENERATOR_PLATFORM}" STREQUAL "${CMAKE_SYSTEM_PROCESSOR}")
 	if(EMSCRIPTEN)
@@ -62,17 +63,16 @@ else()
 endif()
 	
 include(ncine_options)
+include(ncine_get_version)
+include(ncine_imported_targets)
+include(ncine_imgui)
+include(ncine_tracy)
 
 if(NOT IS_DIRECTORY ${NCINE_DATA_DIR})
 	message(WARNING "Content directory not found at: ${NCINE_DATA_DIR}")
 else()
 	message(STATUS "Content directory: ${NCINE_DATA_DIR}")
 endif()
-
-include(ncine_get_version)
-include(ncine_imported_targets)
-include(ncine_imgui)
-include(ncine_tracy)
 	
 if(NCINE_BUILD_ANDROID)
 	include(ncine_generated_sources)
@@ -81,6 +81,7 @@ if(NCINE_BUILD_ANDROID)
 endif()
 
 add_executable(${NCINE_APP})
+
 if(WINDOWS_PHONE OR WINDOWS_STORE)
 	message(STATUS "Compiling for Windows RT")
 else()
@@ -109,30 +110,7 @@ include(ncine_extra_sources)
 include(ncine_generated_sources)
 
 # Organize main project files into folders
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(PATH_PREFIX ${NCINE_SOURCE_DIR})
-foreach(FILE ${HEADERS} ${SOURCES}) 
-	get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
-	string(LENGTH "${PATH_PREFIX}" PATH_PREFIX_LENGTH)
-	string(SUBSTRING "${PARENT_DIR}" 0 ${PATH_PREFIX_LENGTH} PATH_START)
-	if(PATH_START STREQUAL "${PATH_PREFIX}")
-		string(SUBSTRING "${PARENT_DIR}" ${PATH_PREFIX_LENGTH} -1 GROUP)
-		string(REPLACE "/" "\\" GROUP "${GROUP}")
-
-		# Group into "Source Files" and "Header Files"
-		if("${FILE}" MATCHES ".*\\.cpp")
-			set(GROUP "Source Files${GROUP}")
-		elseif("${FILE}" MATCHES ".*\\.h")
-			set(GROUP "Header Files${GROUP}")
-		endif()
-	else()
-		# Path doesn't have common prefix, put it into "Dependencies"
-		set(GROUP "Dependencies")
-	endif()
-
-	source_group("${GROUP}" FILES "${FILE}")
-endforeach()
-
+ncine_assign_source_group(PATH_PREFIX ${NCINE_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 foreach(SOURCE_FILE IN LISTS SHADER_FILES)
 	source_group("Shaders" FILES ${SOURCE_FILE})
 endforeach()

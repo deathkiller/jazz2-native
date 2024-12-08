@@ -17,8 +17,8 @@ if(NOT TARGET Angelscript)
 
 		ncine_add_dependency(Angelscript STATIC)
 
-		set(ANGELSCRIPT_DIR "${angelscriptgit_SOURCE_DIR}/sdk/angelscript/")
-		set(ANGELSCRIPT_INCLUDE_DIR "${ANGELSCRIPT_DIR}/include/")
+		set(ANGELSCRIPT_DIR "${angelscriptgit_SOURCE_DIR}/sdk/angelscript")
+		set(ANGELSCRIPT_INCLUDE_DIR "${ANGELSCRIPT_DIR}/include")
 		set_target_properties(Angelscript PROPERTIES
 			INTERFACE_INCLUDE_DIRECTORIES ${ANGELSCRIPT_INCLUDE_DIR})
 		target_link_libraries(Angelscript Threads::Threads)
@@ -139,12 +139,9 @@ if(NOT TARGET Angelscript)
 			endif()
 		endif()
 
+		ncine_assign_source_group(PATH_PREFIX "${ANGELSCRIPT_DIR}/source" FILES ${ANGELSCRIPT_SOURCES} ${ANGELSCRIPT_HEADERS} SKIP_EXTERNAL)
 		target_sources(Angelscript PRIVATE ${ANGELSCRIPT_SOURCES} ${ANGELSCRIPT_HEADERS})
 		target_include_directories(Angelscript PRIVATE "${ANGELSCRIPT_INCLUDE_DIR}" "${ANGELSCRIPT_DIR}/source")
-
-		if(NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE OR CMAKE_POSITION_INDEPENDENT_CODE)
-			set_target_properties(Angelscript PROPERTIES POSITION_INDEPENDENT_CODE ON)
-		endif()
 		
 		set(ANGELSCRIPT_FOUND TRUE)
 		set(ANGELSCRIPT_STATIC TRUE)

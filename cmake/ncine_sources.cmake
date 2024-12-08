@@ -10,14 +10,15 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.cpp
-	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.cpp
-	${NCINE_SOURCE_DIR}/Shared/IO/Lz4Stream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/PakFile.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/Stream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/Compression/DeflateStream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/Compression/Lz4Stream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/Compression/ZstdStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/Threading/Implementation/WaitOnAddress.cpp
 )
 

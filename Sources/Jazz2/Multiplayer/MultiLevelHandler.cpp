@@ -46,8 +46,9 @@
 #include <Utf8.h>
 #include <Containers/StaticArray.h>
 #include <IO/MemoryStream.h>
-#include <IO/DeflateStream.h>
+#include <IO/Compression/DeflateStream.h>
 
+using namespace Death::IO::Compression;
 using namespace nCine;
 
 namespace Jazz2::Multiplayer

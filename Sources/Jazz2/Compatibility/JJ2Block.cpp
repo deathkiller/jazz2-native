@@ -2,7 +2,9 @@
 
 #include <cstring>
 
-#include <IO/DeflateStream.h>
+#include <IO/Compression/DeflateStream.h>
+
+using namespace Death::IO::Compression;
 
 namespace Jazz2::Compatibility
 {

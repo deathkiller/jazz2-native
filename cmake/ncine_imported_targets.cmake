@@ -92,6 +92,10 @@ if(NCINE_WITH_LZ4)
 	find_package(Lz4)
 endif()
 
+if(NCINE_WITH_ZSTD)
+	find_package(Zstd)
+endif()
+
 if(NCINE_WITH_ANGELSCRIPT)
 	find_package(Angelscript)
 endif()

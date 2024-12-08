@@ -232,6 +232,12 @@
     <Filter Include="Source Files\Shared\Core">
       <UniqueIdentifier>{7de2dc9b-0c39-47b3-991e-9a71db70648a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shared\IO\Compression">
+      <UniqueIdentifier>{e87f0049-c3b9-47e3-98f4-c5a7f7817396}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shared\IO\Compression">
+      <UniqueIdentifier>{fbd151b2-7efb-45b9-a98b-582cf95d2a3b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1413,9 +1419,6 @@
     <ClInclude Include="Jazz2\UI\LoadingHandler.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h">
-      <Filter>Header Files\Shared\IO</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SequenceHelpers.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
@@ -1533,8 +1536,14 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\IO\Lz4Stream.h">
-      <Filter>Header Files\Shared\IO</Filter>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.h">
+      <Filter>Header Files\Shared\IO\Compression</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.h">
+      <Filter>Header Files\Shared\IO\Compression</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.h">
+      <Filter>Header Files\Shared\IO\Compression</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2456,9 +2465,6 @@
     <ClCompile Include="Jazz2\UI\LoadingHandler.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
-    <ClCompile Include="$(ExtensionLibraryPath)\IO\DeflateStream.cpp">
-      <Filter>Source Files\Shared\IO</Filter>
-    </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp">
       <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
@@ -2522,8 +2528,14 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\EmscriptenFileStream.cpp">
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
-    <ClCompile Include="$(ExtensionLibraryPath)\IO\Lz4Stream.cpp">
-      <Filter>Source Files\Shared\IO</Filter>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.cpp">
+      <Filter>Source Files\Shared\IO\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.cpp">
+      <Filter>Source Files\Shared\IO\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.cpp">
+      <Filter>Source Files\Shared\IO\Compression</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

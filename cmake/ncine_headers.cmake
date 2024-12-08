@@ -36,16 +36,17 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.h
-	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileAccess.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.h
 	${NCINE_SOURCE_DIR}/Shared/IO/HttpRequest.h
-	${NCINE_SOURCE_DIR}/Shared/IO/Lz4Stream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/PakFile.h
 	${NCINE_SOURCE_DIR}/Shared/IO/Stream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/Compression/DeflateStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/Compression/Lz4Stream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/Compression/ZstdStream.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Event.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Spinlock.h
 	${NCINE_SOURCE_DIR}/Shared/Threading/Implementation/WaitOnAddress.h

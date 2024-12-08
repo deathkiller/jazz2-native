@@ -15,7 +15,8 @@ namespace Death { namespace IO {
 	{
 		None,
 		Deflate,
-		Lz4
+		Lz4,
+		Zstd
 	};
 
 	class PakFile
@@ -100,10 +101,9 @@ namespace Death { namespace IO {
 			Directory = 0x01,
 			ZlibCompressed = 0x02,
 			Lz4Compressed = 0x04,
+			ZstdCompressed = 0x08,
 
-			Lzma2Compressed = 0x08,		// Not implemented
-			ZstdCompressed = 0x10,		// Not implemented
-
+			Lzma2Compressed = 0x10,		// Not implemented
 			Aes256Encrypten = 0x40,		// Not implemented
 
 			Link = 0x80					// Not implemented
@@ -131,6 +131,8 @@ namespace Death { namespace IO {
 		void ReadIndex(std::unique_ptr<Stream>& s, Item* parentItem);
 
 		Item* FindItem(Containers::StringView path);
+
+		static DEATH_ALWAYS_INLINE bool HasCompressedSize(ItemFlags itemFlags);
 	};
 
 	class PakWriter

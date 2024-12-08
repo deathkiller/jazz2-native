@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Common.h"
-#include "Stream.h"
+#include "../../Common.h"
+#include "../Stream.h"
 
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 
@@ -29,7 +29,7 @@
 #	endif
 #endif
 
-namespace Death { namespace IO {
+namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
@@ -131,6 +131,7 @@ namespace Death { namespace IO {
 
 		std::int32_t WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish);
 	};
-}}
+
+}}}
 
 #endif

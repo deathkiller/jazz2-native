@@ -1,8 +1,9 @@
 #include "PakFile.h"
 #include "BoundedFileStream.h"
-#include "DeflateStream.h"
-#include "Lz4Stream.h"
 #include "FileSystem.h"
+#include "Compression/DeflateStream.h"
+#include "Compression/Lz4Stream.h"
+#include "Compression/ZstdStream.h"
 #include "../Containers/GrowableArray.h"
 #include "../Containers/StringConcatenable.h"
 
@@ -13,15 +14,18 @@ using namespace Death::Containers;
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ) || defined(WITH_LZ4) || defined(WITH_ZSTD)
 
-	class ZlibCompressedBoundedStream : public Stream
+	using namespace Death::IO::Compression;
+
+	template<class T>
+	class CompressedBoundedStream : public Stream
 	{
 	public:
-		ZlibCompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
+		CompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
 
-		ZlibCompressedBoundedStream(const ZlibCompressedBoundedStream&) = delete;
-		ZlibCompressedBoundedStream& operator=(const ZlibCompressedBoundedStream&) = delete;
+		CompressedBoundedStream(const CompressedBoundedStream&) = delete;
+		CompressedBoundedStream& operator=(const CompressedBoundedStream&) = delete;
 
 		void Dispose() override;
 		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
@@ -34,131 +38,64 @@ namespace Death { namespace IO {
 
 	private:
 		BoundedFileStream _underlyingStream;
-		DeflateStream _deflateStream;
+		T _compressedStream;
 		std::int64_t _uncompressedSize;
 	};
 
-	ZlibCompressedBoundedStream::ZlibCompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
+	template<class T>
+	CompressedBoundedStream<T>::CompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
 		: _underlyingStream(path, offset, compressedSize), _uncompressedSize(uncompressedSize)
 	{
-		_deflateStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
+		_compressedStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
 	}
 
-	void ZlibCompressedBoundedStream::Dispose()
+	template<class T>
+	void CompressedBoundedStream<T>::Dispose()
 	{
-		_deflateStream.Dispose();
+		_compressedStream.Dispose();
 		_underlyingStream.Dispose();
 	}
 
-	std::int64_t ZlibCompressedBoundedStream::Seek(std::int64_t offset, SeekOrigin origin)
+	template<class T>
+	std::int64_t CompressedBoundedStream<T>::Seek(std::int64_t offset, SeekOrigin origin)
 	{
-		return _deflateStream.Seek(offset, origin);
+		return _compressedStream.Seek(offset, origin);
 	}
 
-	std::int64_t ZlibCompressedBoundedStream::GetPosition() const
+	template<class T>
+	std::int64_t CompressedBoundedStream<T>::GetPosition() const
 	{
-		return _deflateStream.GetPosition();
+		return _compressedStream.GetPosition();
 	}
 
-	std::int64_t ZlibCompressedBoundedStream::Read(void* destination, std::int64_t bytesToRead)
+	template<class T>
+	std::int64_t CompressedBoundedStream<T>::Read(void* destination, std::int64_t bytesToRead)
 	{
-		return _deflateStream.Read(destination, bytesToRead);
+		return _compressedStream.Read(destination, bytesToRead);
 	}
 
-	std::int64_t ZlibCompressedBoundedStream::Write(const void* source, std::int64_t bytesToWrite)
+	template<class T>
+	std::int64_t CompressedBoundedStream<T>::Write(const void* source, std::int64_t bytesToWrite)
 	{
 		// Not supported
 		return Stream::Invalid;
 	}
 
-	bool ZlibCompressedBoundedStream::Flush()
+	template<class T>
+	bool CompressedBoundedStream<T>::Flush()
 	{
 		// Not supported
 		return true;
 	}
 
-	bool ZlibCompressedBoundedStream::IsValid()
+	template<class T>
+	bool CompressedBoundedStream<T>::IsValid()
 	{
-		return _underlyingStream.IsValid() && _deflateStream.IsValid();
+		return _underlyingStream.IsValid() && _compressedStream.IsValid();
 	}
 
-	std::int64_t ZlibCompressedBoundedStream::GetSize() const
-	{
-		return _uncompressedSize;
-	}
-
-#endif
-
-#if defined(WITH_LZ4)
-
-	class Lz4CompressedBoundedStream : public Stream
-	{
-	public:
-		Lz4CompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
-
-		Lz4CompressedBoundedStream(const Lz4CompressedBoundedStream&) = delete;
-		Lz4CompressedBoundedStream& operator=(const Lz4CompressedBoundedStream&) = delete;
-
-		void Dispose() override;
-		std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
-		std::int64_t GetPosition() const override;
-		std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
-		std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
-		bool Flush() override;
-		bool IsValid() override;
-		std::int64_t GetSize() const override;
-
-	private:
-		BoundedFileStream _underlyingStream;
-		Lz4Stream _lz4Stream;
-		std::int64_t _uncompressedSize;
-	};
-
-	Lz4CompressedBoundedStream::Lz4CompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
-		: _underlyingStream(path, offset, compressedSize), _uncompressedSize(uncompressedSize)
-	{
-		_lz4Stream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
-	}
-
-	void Lz4CompressedBoundedStream::Dispose()
-	{
-		_lz4Stream.Dispose();
-		_underlyingStream.Dispose();
-	}
-
-	std::int64_t Lz4CompressedBoundedStream::Seek(std::int64_t offset, SeekOrigin origin)
-	{
-		return _lz4Stream.Seek(offset, origin);
-	}
-
-	std::int64_t Lz4CompressedBoundedStream::GetPosition() const
-	{
-		return _lz4Stream.GetPosition();
-	}
-
-	std::int64_t Lz4CompressedBoundedStream::Read(void* destination, std::int64_t bytesToRead)
-	{
-		return _lz4Stream.Read(destination, bytesToRead);
-	}
-
-	std::int64_t Lz4CompressedBoundedStream::Write(const void* source, std::int64_t bytesToWrite)
-	{
-		// Not supported
-		return Stream::Invalid;
-	}
-
-	bool Lz4CompressedBoundedStream::Flush()
-	{
-		// Not supported
-		return true;
-	}
-
-	bool Lz4CompressedBoundedStream::IsValid()
-	{
-		return _underlyingStream.IsValid() && _lz4Stream.IsValid();
-	}
-
-	std::int64_t Lz4CompressedBoundedStream::GetSize() const
+	template<class T>
+	std::int64_t CompressedBoundedStream<T>::GetSize() const
 	{
 		return _uncompressedSize;
 	}
@@ -244,7 +181,7 @@ namespace Death { namespace IO {
 			if ((item.Flags & ItemFlags::Directory) != ItemFlags::Directory) {
 				item.UncompressedSize = s->ReadVariableUint32();
 
-				if ((item.Flags & (ItemFlags::ZlibCompressed | ItemFlags::Lz4Compressed | ItemFlags::Lzma2Compressed)) != ItemFlags::None) {
+				if (HasCompressedSize(item.Flags)) {
 					item.Size = s->ReadVariableUint32();
 				}
 			}
@@ -284,7 +221,7 @@ namespace Death { namespace IO {
 
 		if ((foundItem->Flags & ItemFlags::ZlibCompressed) == ItemFlags::ZlibCompressed) {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-			return std::make_unique<ZlibCompressedBoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
+			return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
 			LOGE("File \"%s\" was compressed using an unsupported compression method (Deflate)", String::nullTerminatedView(path).data());
 			return nullptr;
@@ -293,9 +230,18 @@ namespace Death { namespace IO {
 
 		if ((foundItem->Flags & ItemFlags::Lz4Compressed) == ItemFlags::Lz4Compressed) {
 #if defined(WITH_LZ4)
-			return std::make_unique<Lz4CompressedBoundedStream>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
+			return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
 			LOGE("File \"%s\" was compressed using an unsupported compression method (LZ4)", String::nullTerminatedView(path).data());
+			return nullptr;
+#endif
+		}
+
+		if ((foundItem->Flags & ItemFlags::ZstdCompressed) == ItemFlags::ZstdCompressed) {
+#if defined(WITH_ZSTD)
+			return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
+#else
+			LOGE("File \"%s\" was compressed using an unsupported compression method (Zstd)", String::nullTerminatedView(path).data());
 			return nullptr;
 #endif
 		}
@@ -335,6 +281,12 @@ namespace Death { namespace IO {
 			path = path.suffix(separator.end());
 			items = &foundItem->ChildItems;
 		}
+	}
+
+	bool PakFile::HasCompressedSize(ItemFlags itemFlags)
+	{
+		return ((itemFlags & (PakFile::ItemFlags::ZlibCompressed | PakFile::ItemFlags::Lz4Compressed |
+			PakFile::ItemFlags::Lzma2Compressed | PakFile::ItemFlags::ZstdCompressed)) != PakFile::ItemFlags::None);
 	}
 
 	class PakFile::Directory::Impl
@@ -571,6 +523,16 @@ namespace Death { namespace IO {
 			flags |= PakFile::ItemFlags::Lz4Compressed;
 		} else
 #endif
+#if defined(WITH_ZSTD)
+		if (preferredCompression == PakPreferredCompression::Zstd) {
+			ZstdWriter dw(*_outputStream);
+			uncompressedSize = stream.CopyTo(dw);
+			dw.Dispose();
+			size = _outputStream->GetPosition() - offset;
+			DEATH_DEBUG_ASSERT(size > 0);
+			flags |= PakFile::ItemFlags::ZstdCompressed;
+		} else
+#endif
 		{
 			uncompressedSize = stream.CopyTo(*_outputStream);
 			size = 0;
@@ -713,7 +675,7 @@ namespace Death { namespace IO {
 		if ((item.Flags & PakFile::ItemFlags::Directory) != PakFile::ItemFlags::Directory) {
 			_outputStream->WriteVariableUint32(item.UncompressedSize);
 
-			if ((item.Flags & (PakFile::ItemFlags::ZlibCompressed | PakFile::ItemFlags::Lz4Compressed | PakFile::ItemFlags::Lzma2Compressed)) != PakFile::ItemFlags::None) {
+			if (PakFile::HasCompressedSize(item.Flags)) {
 				_outputStream->WriteVariableUint32(item.Size);
 			}
 		}

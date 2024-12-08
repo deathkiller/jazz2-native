@@ -484,6 +484,11 @@ if(LZ4_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE Lz4)
 endif()
 
+if(ZSTD_FOUND)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ZSTD")
+	target_link_libraries(${NCINE_APP} PRIVATE Zstd)
+endif()
+
 if(NCINE_BUILD_ANDROID)
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidApplication.h
