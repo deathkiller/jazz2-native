@@ -25,12 +25,13 @@
 
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStlView.h>
-#include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 #define SIMDJSON_EXCEPTIONS 0
 #include "../simdjson/simdjson.h"
 
+using namespace Death::IO::Compression;
 using namespace simdjson;
 
 template<class T>

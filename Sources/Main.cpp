@@ -60,9 +60,9 @@ using namespace Jazz2::Multiplayer;
 #include <Containers/StringConcatenable.h>
 #include <Cpu.h>
 #include <Environment.h>
-#include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
 #include <IO/PakFile.h>
+#include <IO/Compression/DeflateStream.h>
 
 #if !defined(DEATH_DEBUG)
 #	include <IO/HttpRequest.h>

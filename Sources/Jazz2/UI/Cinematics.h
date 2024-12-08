@@ -12,10 +12,11 @@
 #include "../../nCine/Audio/AudioStreamPlayer.h"
 #include "../../nCine/Input/InputEvents.h"
 
-#include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 using namespace Death::IO;
+using namespace Death::IO::Compression;
 
 namespace Jazz2::UI
 {

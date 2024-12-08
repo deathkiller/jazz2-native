@@ -1,11 +1,12 @@
 #include "TextureLoaderPng.h"
 
 #include <Containers/SmallVector.h>
-#include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 using namespace Death::Containers;
 using namespace Death::IO;
+using namespace Death::IO::Compression;
 
 namespace nCine
 {

@@ -262,7 +262,7 @@ function(ncine_normalize_optimizations)
 endfunction()
 
 function(ncine_apply_compiler_options target)
-	cmake_parse_arguments(PARSE_ARGV 1 ARGS "ALLOW_EXCEPTIONS" "" "")
+	cmake_parse_arguments(PARSE_ARGV 2 ARGS "ALLOW_EXCEPTIONS" "" "")
 
 	get_target_property(target_type ${target} TYPE)
 	set(target_is_executable FALSE)
@@ -528,7 +528,38 @@ function(ncine_apply_compiler_options target)
 endfunction()
 
 function(ncine_add_dependency target target_type)
-	set(CMAKE_FOLDER "Dependencies")
 	add_library(${target} ${target_type})
+	set_target_properties(${target} PROPERTIES FOLDER "Dependencies")
 	ncine_apply_compiler_options(${ARGV})
+endfunction()
+
+function(ncine_assign_source_group)
+	cmake_parse_arguments(PARSE_ARGV 0 ARGS "SKIP_EXTERNAL" "PATH_PREFIX" "FILES")
+
+	foreach(FILE ${ARGS_FILES}) 
+		get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
+		string(LENGTH "${ARGS_PATH_PREFIX}" ARGS_PATH_PREFIX_LENGTH)
+		string(SUBSTRING "${PARENT_DIR}" 0 ${ARGS_PATH_PREFIX_LENGTH} PATH_START)
+		if(PATH_START STREQUAL "${ARGS_PATH_PREFIX}")
+			string(SUBSTRING "${PARENT_DIR}" ${ARGS_PATH_PREFIX_LENGTH} -1 GROUP)
+			#string(REPLACE "/" "\\" GROUP "${GROUP}")
+			string(REPLACE "\\" "/" GROUP "${GROUP}")
+
+			# Group into "Source Files" and "Header Files"
+			if("${FILE}" MATCHES ".*\\.(c|cpp|asm|s)$")
+				set(GROUP "/Source Files${GROUP}/")
+			elseif("${FILE}" MATCHES ".*\\.h$")
+				set(GROUP "/Header Files${GROUP}/")
+			else()
+				set(GROUP "/")
+			endif()
+		elseif(ARGS_SKIP_EXTERNAL)
+			set(GROUP "/")
+		else()
+			# Path doesn't have common prefix, put it into "Dependencies"
+			set(GROUP "/Dependencies/")
+		endif()
+
+		source_group("${GROUP}" FILES "${FILE}")
+	endforeach()
 endfunction()

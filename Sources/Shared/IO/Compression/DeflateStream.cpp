@@ -1,5 +1,5 @@
 #include "DeflateStream.h"
-#include "../Asserts.h"
+#include "../../Asserts.h"
 
 #if !defined(WITH_ZLIB) && !defined(WITH_MINIZ)
 #	pragma message("Death::IO::DeflateStream requires `zlib` or `miniz` library")
@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <cstring>
 
-namespace Death { namespace IO {
+namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	DeflateStream::DeflateStream()
@@ -397,6 +397,6 @@ namespace Death { namespace IO {
 		return uncompressedSize + (5 * maxBlocks) + 1 + 8;
 	}
 
-}}
+}}}
 
 #endif

@@ -12,7 +12,7 @@
 #include "../../nCine/Base/FrameTimer.h"
 
 #include <Containers/StringConcatenable.h>
-#include <IO/DeflateStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 namespace Jazz2::UI
 {

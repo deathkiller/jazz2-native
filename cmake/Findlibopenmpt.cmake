@@ -102,6 +102,7 @@ if(NOT TARGET libopenmpt::libopenmpt AND (NCINE_DOWNLOAD_DEPENDENCIES OR NCINE_C
 		"${libopenmptgit_SOURCE_DIR}/libopenmpt/libopenmpt_impl.cpp"
 		"${libopenmptgit_SOURCE_DIR}/libopenmpt/libopenmpt_ext_impl.cpp")
 
+	ncine_assign_source_group(PATH_PREFIX ${libopenmptgit_SOURCE_DIR} FILES ${LIBOPENMPT_SOURCES} SKIP_EXTERNAL)
 	target_sources(Libopenmpt PRIVATE ${LIBOPENMPT_SOURCES})
 	target_include_directories(Libopenmpt PRIVATE "${libopenmptgit_SOURCE_DIR}" "${libopenmptgit_SOURCE_DIR}/common" "${libopenmptgit_SOURCE_DIR}/src" "${ZLIB_INCLUDE_DIRS}")
 

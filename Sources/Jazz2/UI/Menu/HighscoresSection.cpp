@@ -6,7 +6,7 @@
 
 #include <Utf8.h>
 #include <Containers/StringConcatenable.h>
-#include <IO/DeflateStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
@@ -16,6 +16,7 @@
 #	include <pwd.h>
 #endif
 
+using namespace Death::IO::Compression;
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
