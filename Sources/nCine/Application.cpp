@@ -1004,6 +1004,12 @@ namespace nCine
 		LOGI("IAppEventHandler::OnResume() invoked");
 	}
 
+	bool Application::OpenUrl(StringView url)
+	{
+		// Not implemented in base class
+		return false;
+	}
+
 	void Application::AttachTraceTarget(Containers::StringView targetPath)
 	{
 #if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)

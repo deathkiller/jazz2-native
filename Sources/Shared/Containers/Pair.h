@@ -202,7 +202,7 @@ namespace Death { namespace Containers {
 		/** @brief First element */
 		DEATH_CONSTEXPR14 F& first() & { return _first; }
 		/** @overload */
-		/* Not F&& because that'd cause nasty dangling reference issues in common code*/
+		/* Not F&& because that'd cause nasty dangling reference issues in common code */
 		DEATH_CONSTEXPR14 F first() && { return std::move(_first); }
 		/** @overload */
 		constexpr const F& first() const & { return _first; }
@@ -210,7 +210,7 @@ namespace Death { namespace Containers {
 		/** @brief Second element */
 		DEATH_CONSTEXPR14 S& second() & { return _second; }
 		/** @overload */
-		/* Not S&& because that'd cause nasty dangling reference issues in common code. */
+		/* Not S&& because that'd cause nasty dangling reference issues in common code */
 		DEATH_CONSTEXPR14 S second() && { return std::move(_second); }
 		/** @overload */
 		constexpr const S& second() const & { return _second; }

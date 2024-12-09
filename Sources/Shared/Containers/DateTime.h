@@ -106,7 +106,7 @@ namespace Death { namespace Containers {
 			std::int32_t Millisecond, Second, Minute, Hour, Day, DayOfYear, Month, Year;
 
 			Tm() noexcept;
-			Tm(const struct tm& tm, const TimeZone tz) noexcept;
+			Tm(const struct tm& tm, TimeZone tz) noexcept;
 
 			bool IsValid() const noexcept;
 
@@ -211,25 +211,25 @@ namespace Death { namespace Containers {
 
 		explicit operator bool() const noexcept { return IsValid(); }
 
-		Tm Partitioned(const TimeZone tz = Local) const noexcept;
+		Tm Partitioned(TimeZone tz = Local) const noexcept;
 
 		/** @brief Returns number of milliseconds since 00:00, Jan 1 1970 UTC */
 		constexpr std::int64_t ToUnixMilliseconds() const noexcept;
 		constexpr time_t GetTicks() const noexcept;
 
-		inline DateTime ToTimezone(const TimeZone tz, bool noDST = false) const noexcept;
-		inline DateTime FromTimezone(const TimeZone tz, bool noDST = false) const noexcept;
+		inline DateTime ToTimezone(TimeZone tz, bool noDST = false) const noexcept;
+		inline DateTime FromTimezone(TimeZone tz, bool noDST = false) const noexcept;
 
-		void AdjustToTimezone(const TimeZone tz, bool noDST = false) noexcept;
-		void AdjustFromTimezone(const TimeZone tz, bool noDST = false) noexcept;
+		void AdjustToTimezone(TimeZone tz, bool noDST = false) noexcept;
+		void AdjustFromTimezone(TimeZone tz, bool noDST = false) noexcept;
 
 #if defined(DEATH_TARGET_WINDOWS)
 		struct _SYSTEMTIME ToWin32() const noexcept;
 #endif
 
-		bool TryParse(const StringView input, const StringView format, StringView* endParse = nullptr) noexcept;
+		bool TryParse(StringView input, StringView format, StringView* endParse = nullptr) noexcept;
 #if defined(DEATH_USE_WCHAR)
-		bool TryParse(const std::wstring_view input, const std::wstring_view format, std::wstring_view::const_iterator* endParse = nullptr) noexcept;
+		bool TryParse(std::wstring_view input, std::wstring_view format, std::wstring_view::const_iterator* endParse = nullptr) noexcept;
 #endif
 
 		constexpr DateTime& operator+=(const TimeSpan& ts) noexcept;
@@ -458,14 +458,14 @@ namespace Death { namespace Containers {
 		return (time_t)(_time / 1000);
 	}
 
-	inline DateTime DateTime::ToTimezone(const DateTime::TimeZone tz, bool noDST) const noexcept
+	inline DateTime DateTime::ToTimezone(DateTime::TimeZone tz, bool noDST) const noexcept
 	{
 		DateTime dt(*this);
 		dt.AdjustToTimezone(tz, noDST);
 		return dt;
 	}
 
-	inline DateTime DateTime::FromTimezone(const DateTime::TimeZone tz, bool noDST) const noexcept
+	inline DateTime DateTime::FromTimezone(DateTime::TimeZone tz, bool noDST) const noexcept
 	{
 		DateTime dt(*this);
 		dt.AdjustFromTimezone(tz, noDST);

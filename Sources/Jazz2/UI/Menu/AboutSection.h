@@ -24,7 +24,10 @@ namespace Jazz2::UI::Menu
 		static constexpr float MaxScrollRate = 8.0f;
 
 		FormattedTextBlock _textBlock;
+		FormattedTextBlock _textBlockHeaderOnly;
+		Vector2i _touchStart;
 		Vector2i _touchLast;
+		float _touchTime;
 		float _scrollOffset;
 		float _scrollRate;
 		bool _autoScroll;

@@ -188,6 +188,11 @@ namespace nCine
 			}
 		}
 	}
+	
+	bool AndroidApplication::OpenUrl(StringView url)
+	{
+		return AndroidJniWrap_Activity::openUrl(url);
+	}
 
 	void AndroidApplication::ToggleSoftInput()
 	{

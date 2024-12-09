@@ -41,6 +41,8 @@ namespace nCine
 		void Load(const winrt::hstring& entryPoint);
 		void Run();
 		void Uninitialize();
+
+		bool OpenUrl(StringView url) override;
 	
 	private:
 		void OnActivated(const winrtWAC::CoreApplicationView& applicationView, const winrtWAA::IActivatedEventArgs& args);

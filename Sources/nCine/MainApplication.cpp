@@ -118,6 +118,26 @@ namespace nCine
 #endif
 	}
 
+	bool MainApplication::OpenUrl(StringView url)
+	{
+		if (url.empty()) {
+			return false;
+		}
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		EM_ASM({
+			var url = UTF8ToString($0, $1);
+			if (url) window.open(url, '_blank');
+		}, url.data(), url.size());
+		return true;
+#elif defined(WITH_GLFW)
+		// TODO: Not implemented in GLFW
+		return false;
+#elif defined(WITH_SDL)
+		return SDL_OpenURL(String::nullTerminatedView(url).data()) == 0;
+#endif
+	}
+
 	void MainApplication::Init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		ZoneScopedC(0x81A861);
