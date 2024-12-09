@@ -120,22 +120,22 @@ namespace nCine
 
 	bool MainApplication::OpenUrl(StringView url)
 	{
-		if (url.empty()) {
-			return false;
+		if (!url.empty()) {
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			EM_ASM({
+				var url = UTF8ToString($0, $1);
+				if (url) window.open(url, '_blank');
+			}, url.data(), url.size());
+			return true;
+#elif defined(WITH_SDL)
+#	if SDL_VERSION_ATLEAST(2, 0, 14)
+			return SDL_OpenURL(String::nullTerminatedView(url).data()) == 0;
+#	endif
+#endif
 		}
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-		EM_ASM({
-			var url = UTF8ToString($0, $1);
-			if (url) window.open(url, '_blank');
-		}, url.data(), url.size());
-		return true;
-#elif defined(WITH_SDL) && SDL_VERSION_ATLEAST(2, 0, 14)
-		return SDL_OpenURL(String::nullTerminatedView(url).data()) == 0;
-#else
 		// TODO: Not implemented in GLFW
 		return false;
-#endif
 	}
 
 	void MainApplication::Init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
