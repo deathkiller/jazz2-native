@@ -118,7 +118,8 @@ namespace nCine
 
 		try {
 			auto urlW = Utf8::ToUtf16(url);
-			auto asyncOp = winrt::Windows::System::Launcher::LaunchUriAsync(winrt::Windows::Foundation::Uri{winrt::hstring{urlW.data(), urlW.size()}});
+			auto asyncOp = winrt::Windows::System::Launcher::LaunchUriAsync(winrt::Windows::Foundation::Uri{
+				winrt::hstring{urlW.data(), static_cast<winrt::hstring::size_type>(urlW.size())}});
 			auto result = asyncOp.get(); // Wait for the operation to complete
 			return result;
 		} catch (...) {
