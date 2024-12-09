@@ -130,11 +130,11 @@ namespace nCine
 			if (url) window.open(url, '_blank');
 		}, url.data(), url.size());
 		return true;
-#elif defined(WITH_GLFW)
+#elif defined(WITH_SDL) && SDL_VERSION_ATLEAST(2, 0, 14)
+		return SDL_OpenURL(String::nullTerminatedView(url).data()) == 0;
+#else
 		// TODO: Not implemented in GLFW
 		return false;
-#elif defined(WITH_SDL)
-		return SDL_OpenURL(String::nullTerminatedView(url).data()) == 0;
 #endif
 	}
 
