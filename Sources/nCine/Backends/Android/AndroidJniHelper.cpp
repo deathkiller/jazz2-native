@@ -384,8 +384,10 @@ namespace nCine
 			length = copyStringFirst(destination, maxStringSize, deviceName);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceDescriptor, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceDescriptor);
-		} else if (maxStringSize > 0) {
-			destination[0] = '\0';
+		} else {
+			if (maxStringSize > 0) {
+				destination[0] = '\0';
+			}
 			length = 0;
 		}
 
@@ -718,7 +720,7 @@ namespace nCine
 			return false;
 		}
 
-		jboolean result = static_cast<jboolean>(AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midOpenUrl_, strUrl));
+		jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(activityObject_, midOpenUrl_, strUrl);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strUrl);
 		return result;
 	}
