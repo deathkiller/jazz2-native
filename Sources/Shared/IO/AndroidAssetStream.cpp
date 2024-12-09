@@ -11,7 +11,7 @@ namespace Death { namespace IO {
 
 	ANativeActivity* AndroidAssetStream::_nativeActivity = nullptr;
 
-	AndroidAssetStream::AndroidAssetStream(const Containers::StringView path, FileAccess mode)
+	AndroidAssetStream::AndroidAssetStream(Containers::StringView path, FileAccess mode)
 		: AndroidAssetStream(Containers::String{path}, mode)
 	{
 	}

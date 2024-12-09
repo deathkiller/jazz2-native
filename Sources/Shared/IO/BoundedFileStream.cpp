@@ -3,7 +3,7 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	BoundedFileStream::BoundedFileStream(const Containers::StringView path, std::uint64_t offset, std::uint32_t size)
+	BoundedFileStream::BoundedFileStream(Containers::StringView path, std::uint64_t offset, std::uint32_t size)
 		: BoundedFileStream(Containers::String{path}, offset, size)
 	{
 	}
