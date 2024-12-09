@@ -87,6 +87,18 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		// Supported only in MainActivity to avoid duplicating activities
 	}
 
+	@Keep
+	public bool openUrl(String url) {
+		try {
+			Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+			startActivity(browserIntent);
+			return true;
+		} catch (Exception e) {
+			System.err.println("Caught exception in openUrl(): " + e.getMessage());
+			return false;
+		}
+	}
+
 	// Calls `EglGfxDevice::updateMonitorsFromJni()`
 	protected native void nativeUpdateMonitors();
 

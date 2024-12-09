@@ -52,6 +52,7 @@ namespace nCine
 	jmethodID AndroidJniWrap_Activity::midHasExternalStoragePermission_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midRequestExternalStoragePermission_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midSetActivityEnabled_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midOpenUrl_ = nullptr;
 
 	jobject AndroidJniWrap_InputMethodManager::inputMethodManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midToggleSoftInput_ = nullptr;
@@ -643,6 +644,8 @@ namespace nCine
 		midHasExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "hasExternalStoragePermission", "()Z");
 		midRequestExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "requestExternalStoragePermission", "()V");
 		midSetActivityEnabled_ = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
+		midSetActivityEnabled_ = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
+		midOpenUrl_ = AndroidJniClass::getMethodID(nativeActivityClass, "openUrl", "(Ljava/lang/String;)Z");
 	}
 
 	void AndroidJniWrap_Activity::finishAndRemoveTask()
@@ -701,6 +704,23 @@ namespace nCine
 		jboolean boolEnable = enable;
 		AndroidJniHelper::jniEnv->CallVoidMethod(activityObject_, midSetActivityEnabled_, strName, boolEnable);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strName);
+	}
+
+	bool AndroidJniWrap_Activity::openUrl(StringView url)
+	{
+		if (midOpenUrl_ == nullptr || url.empty()) {
+			return false;
+		}
+
+		auto nullTerminatedUrl = String::nullTerminatedView(url);
+		jstring strUrl = AndroidJniHelper::jniEnv->NewStringUTF(nullTerminatedUrl.data());
+		if (strUrl == nullptr) {
+			return false;
+		}
+
+		jboolean result = static_cast<jboolean>(AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midOpenUrl_, strUrl));
+		AndroidJniHelper::jniEnv->DeleteLocalRef(strUrl);
+		return result;
 	}
 	
 	// ------------------- AndroidJniWrap_InputMethodManager -------------------

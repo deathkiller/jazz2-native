@@ -8,6 +8,7 @@
 #include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
+#include <winrt/Windows.System.h>
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.ViewManagement.h>
 #include <winrt/Windows.Graphics.Display.h>
@@ -107,6 +108,21 @@ namespace nCine
 	void UwpApplication::Uninitialize()
 	{
 		ShutdownCommon();
+	}
+
+	bool UwpApplication::OpenUrl(StringView url)
+	{
+		if (url.empty()) {
+			return false;
+		}
+
+		try {
+			auto asyncOp = winrt::Windows::System::Launcher::LaunchUriAsync(winrt::Windows::Foundation::Uri{Utf8::ToUtf16(url)});
+			auto result = asyncOp.get(); // Wait for the operation to complete
+			return result;
+		} catch (...) {
+			return false;
+		}
 	}
 
 	void UwpApplication::OnActivated(const winrtWAC::CoreApplicationView& applicationView, const winrtWAA::IActivatedEventArgs& args)

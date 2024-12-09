@@ -27,6 +27,8 @@ namespace nCine
 			return packageName_.data();
 		}
 
+		bool OpenUrl(StringView url) override;
+
 		/// Toggles the software keyboard
 		void ToggleSoftInput();
 

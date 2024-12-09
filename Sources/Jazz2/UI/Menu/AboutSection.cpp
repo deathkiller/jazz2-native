@@ -1,5 +1,6 @@
 ﻿#include "AboutSection.h"
 #include "MenuResources.h"
+#include "../../../nCine/Application.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	define _i1 "\nWebGL"
@@ -118,7 +119,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	AboutSection::AboutSection()
-		: _scrollOffset(0.0f), _scrollRate(0.0f), _autoScroll(true), _rewind(false)
+		: _touchTime(0.0f), _scrollOffset(0.0f), _scrollRate(0.0f), _autoScroll(true), _rewind(false)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -129,7 +130,7 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Header text in About section
 		auto headerText = _("Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and Christmas Chronicles). Also, it partially supports some features of JJ2+ extension.");
 		// TRANSLATORS: Link to website under header text in About section
-		auto websiteText = _f("For more information, visit the official website: %s", "\f[c:#707070]https://deat.tk/jazz2/\f[/c]");
+		auto websiteText = _("For more information, visit the official website:");
 		// TRANSLATORS: Label in About section
 		auto developersText = _("Developers");
 		// TRANSLATORS: Label in About section
@@ -140,7 +141,7 @@ namespace Jazz2::UI::Menu
 		auto footerText = _("This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and following libraries:");
 
 		std::int32_t headerLength = formatString(textPtr, textSize, 
-			"%s\n%s\n\n\n"
+			"%s\n%s\n\f[w:80]\f[c:#707070]https://deat.tk/jazz2/\f[/c]\f[/w]\n\n\n"
 			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#d0705d]Dan R.\f[/c]\n\n\n"
 			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#707070]\f[w:80]JJ\f[h:86]2\f[/h]\f[/w]⁺\f[w:50] \f[/w]Team\f[/c]\n\f[c:#707070]arkamar\f[/c]  \f[h:86](Gentoo maintainer)\f[/h]\n\f[c:#707070]Bioxxdevil\f[/c]\n\f[c:#707070]JWP\f[/c]  \f[h:86](xtradeb maintainer)\f[/h]\n\f[c:#707070]Kreeblah\f[/c]  \f[h:86](Homebrew maintainer)\f[/h]\n\f[c:#707070]nat\f[/c]  \f[h:86](NixOS maintainer)\f[/h]\n\f[c:#707070]roox\f[/c]  \f[h:86](OpenSUSE maintainer)\f[/h]\n\f[c:#707070]tunip3\f[/c]\n\f[c:#707070]x_Dub_CZ\f[/c]\n\f[c:#707070]Xandu\f[/c]\n\n\n"
 			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n",
@@ -164,7 +165,14 @@ namespace Jazz2::UI::Menu
 		_textBlock.SetMultiline(true);
 		_textBlock.SetWrapping(true);
 		_textBlock.SetFont(resolver.GetFont(FontType::Small));
-		_textBlock.SetText(StringView(text));
+		_textBlock.SetText(StringView{text});
+
+		_textBlockHeaderOnly.SetAlignment(Alignment::Center);
+		_textBlockHeaderOnly.SetScale(0.8f);
+		_textBlockHeaderOnly.SetMultiline(true);
+		_textBlockHeaderOnly.SetWrapping(true);
+		_textBlockHeaderOnly.SetFont(resolver.GetFont(FontType::Small));
+		_textBlockHeaderOnly.SetText(headerText);
 	}
 
 	Recti AboutSection::GetClipRectangle(const Recti& contentBounds)
@@ -174,7 +182,14 @@ namespace Jazz2::UI::Menu
 
 	void AboutSection::OnUpdate(float timeMult)
 	{
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerActions::Fire)) {
+			// Approximation of scroll offsets, needs to be changed when header is changed
+			if (_scrollOffset > 40.0f && _scrollOffset < 400.0f) {
+				if (theApplication().OpenUrl("https://deat.tk/jazz2/"_s)) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+				}
+			}
+		} else if (_root->ActionHit(PlayerActions::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 		} else if (_root->ActionPressed(PlayerActions::Up)) {
@@ -196,6 +211,8 @@ namespace Jazz2::UI::Menu
 				_scrollOffset += (_rewind ? (AutoScrollRate * -40.0f) : AutoScrollRate) * timeMult;
 			}
 		}
+
+		_touchTime += timeMult;
 	}
 
 	void AboutSection::OnDraw(Canvas* canvas)
@@ -235,6 +252,10 @@ namespace Jazz2::UI::Menu
 
 		float padding = (contentBounds.W > 450.0f ? 60.0f : 20.0f);
 
+		Vector2f headerSize = _textBlockHeaderOnly.MeasureSize(Vector2f(contentBounds.W - padding * 2.0f, 1000000.0f));
+		_root->DrawElement(MenuGlow, 0, centerX, topLine + viewHeight + headerSize.Y + 14.0f - roundf(_scrollOffset),
+			IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f), 10.0f, 5.0f, true, true);
+
 		int32_t charOffset = 0;
 		_textBlock.Draw(canvas, Rectf(contentBounds.X + padding, topLine + viewHeight - roundf(_scrollOffset), contentBounds.W - padding * 2.0f, 1000000.0f),
 			IMenuContainer::FontLayer, charOffset, 0.7f, 1.0f, 1.0f);
@@ -260,18 +281,37 @@ namespace Jazz2::UI::Menu
 						return;
 					}
 
-					_touchLast = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), y);
+					_touchStart = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), y);
+					_touchLast = _touchStart;
+					_touchTime = 0.0f;
 					_autoScroll = false;
 				}
 				break;
 			}
 			case TouchEventType::Move: {
-				if (_touchLast != Vector2i::Zero) {
+				if (_touchStart != Vector2i::Zero) {
 					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
 						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
 						_scrollOffset += _touchLast.Y - touchMove.Y;
 						_touchLast = touchMove;
+					}
+				}
+				break;
+			}
+			case TouchEventType::Up: {
+				bool alreadyMoved = (_touchStart == Vector2i::Zero || (_touchStart - _touchLast).SqrLength() > 100 || _touchTime > FrameTimer::FramesPerSecond);
+				_touchStart = Vector2i::Zero;
+				if (alreadyMoved) {
+					return;
+				}
+
+				if (_touchLast.Y > 120.0f) {
+					// Approximation of scroll offsets, needs to be changed when header is changed
+					if (_scrollOffset > 40.0f && _scrollOffset < 400.0f) {
+						if (theApplication().OpenUrl("https://deat.tk/jazz2/"_s)) {
+							_root->PlaySfx("MenuSelect"_s, 0.5f);
+						}
 					}
 				}
 				break;

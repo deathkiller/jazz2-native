@@ -22,6 +22,8 @@ namespace nCine
 
 		void Quit() override;
 
+		bool OpenUrl(StringView url) override;
+
 	private:
 		bool wasSuspended_;
 

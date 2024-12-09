@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-12-05 16:33+0100\n"
+"POT-Creation-Date: 2024-12-09 11:58+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: 1NSH4N3 & Akfiz\n"
@@ -1375,7 +1375,7 @@ msgstr ""
 "www.project2.com"
 
 #. TRANSLATORS: Header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:130
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
 msgid ""
 "Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released "
 "in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare "
@@ -1388,28 +1388,27 @@ msgstr ""
 "unele caracteristici ale extensiei JJ2+."
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:132
-#, c-format
-msgid "For more information, visit the official website: %s"
-msgstr "Pentru mai multe informații, vizitați site-ul oficial: %s"
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
+msgid "For more information, visit the official website:"
+msgstr "Pentru mai multe informații, vizitați site-ul oficial:"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:134
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
 msgid "Developers"
 msgstr "Dezvoltatori"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:136
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:137
 msgid "Contributors"
 msgstr "Contribuitori"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:139
 msgid "Translators"
 msgstr "Traducatori"
 
 #. TRANSLATORS: Footer text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:140
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:141
 msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
@@ -1449,7 +1448,7 @@ msgstr "Joacă un joc personalizat"
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:84
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:126
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:127
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
 msgstr "Joacă Niveluri Customizate"
@@ -1642,7 +1641,7 @@ msgstr "Vânătoare de Comori"
 msgid "Cooperation"
 msgstr "Cooperare"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:139
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
 msgid "No custom level found!"
 msgstr "Nu s-a găsit niciun nivel customizat!"
 
@@ -1906,11 +1905,11 @@ msgstr "Orizontal"
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Activat \f[c:#d0705d](Experimental)\f[/c]"
 
-#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:116
+#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:126
+#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:128
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
 msgstr ""

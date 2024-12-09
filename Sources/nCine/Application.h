@@ -161,6 +161,8 @@ namespace nCine
 			return appCfg_.dataPath();
 		}
 
+		virtual bool OpenUrl(StringView url);
+
 		void AttachTraceTarget(Containers::StringView targetPath);
 
 	protected:
