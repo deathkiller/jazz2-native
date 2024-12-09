@@ -22,7 +22,7 @@ namespace Death { namespace IO {
 	class CompressedBoundedStream : public Stream
 	{
 	public:
-		CompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
+		CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
 
 		CompressedBoundedStream(const CompressedBoundedStream&) = delete;
 		CompressedBoundedStream& operator=(const CompressedBoundedStream&) = delete;
@@ -43,7 +43,7 @@ namespace Death { namespace IO {
 	};
 
 	template<class T>
-	CompressedBoundedStream<T>::CompressedBoundedStream(const String& path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
+	CompressedBoundedStream<T>::CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
 		: _underlyingStream(path, offset, compressedSize), _uncompressedSize(uncompressedSize)
 	{
 		_compressedStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
@@ -102,7 +102,7 @@ namespace Death { namespace IO {
 
 #endif
 
-	PakFile::PakFile(const StringView path)
+	PakFile::PakFile(StringView path)
 	{
 		std::unique_ptr<Stream> s = std::make_unique<FileStream>(path, FileAccess::Read);
 		DEATH_ASSERT(s->GetSize() > 24, "Invalid .pak file", );
@@ -196,19 +196,19 @@ namespace Death { namespace IO {
 		}
 	}
 
-	bool PakFile::FileExists(const StringView path)
+	bool PakFile::FileExists(StringView path)
 	{
 		Item* foundItem = FindItem(path);
 		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) != ItemFlags::Directory);
 	}
 
-	bool PakFile::DirectoryExists(const StringView path)
+	bool PakFile::DirectoryExists(StringView path)
 	{
 		Item* foundItem = FindItem(path);
 		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) == ItemFlags::Directory);
 	}
 
-	std::unique_ptr<Stream> PakFile::OpenFile(const StringView path)
+	std::unique_ptr<Stream> PakFile::OpenFile(StringView path)
 	{
 		if (path.empty() || path[path.size() - 1] == '/' || path[path.size() - 1] == '\\') {
 			return nullptr;
@@ -396,7 +396,7 @@ namespace Death { namespace IO {
 	{
 	}
 
-	PakFile::Directory::Directory(PakFile& pakFile, const StringView path, FileSystem::EnumerationOptions options)
+	PakFile::Directory::Directory(PakFile& pakFile, StringView path, FileSystem::EnumerationOptions options)
 		: _impl(std::make_shared<Impl>(pakFile, path, options))
 	{
 	}
@@ -453,7 +453,7 @@ namespace Death { namespace IO {
 		return !(*this == other);
 	}
 
-	PakFile::Directory::Proxy::Proxy(const StringView path)
+	PakFile::Directory::Proxy::Proxy(StringView path)
 		: _path(path)
 	{
 	}
@@ -463,7 +463,7 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-	PakWriter::PakWriter(const StringView path)
+	PakWriter::PakWriter(StringView path)
 		: _finalized(false)
 	{
 		_outputStream = std::make_unique<FileStream>(path, FileAccess::Write);

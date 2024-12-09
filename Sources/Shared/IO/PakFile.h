@@ -24,7 +24,7 @@ namespace Death { namespace IO {
 		friend class PakWriter;
 
 	public:
-		explicit PakFile(const Containers::StringView path);
+		explicit PakFile(Containers::StringView path);
 
 		PakFile(const PakFile&) = delete;
 		PakFile& operator=(const PakFile&) = delete;
@@ -33,10 +33,10 @@ namespace Death { namespace IO {
 		Containers::StringView GetPath() const;
 		bool IsValid() const;
 
-		bool FileExists(const Containers::StringView path);
-		bool DirectoryExists(const Containers::StringView path);
+		bool FileExists(Containers::StringView path);
+		bool DirectoryExists(Containers::StringView path);
 
-		std::unique_ptr<Stream> OpenFile(const Containers::StringView path);
+		std::unique_ptr<Stream> OpenFile(Containers::StringView path);
 
 		/** @brief The class that handles directory traversal, should be used as iterator */
 		class Directory
@@ -47,10 +47,10 @@ namespace Death { namespace IO {
 				friend class Directory;
 
 			public:
-				Containers::StringView operator*() const& noexcept;
+				Containers::StringView operator*() const & noexcept;
 
 			private:
-				explicit Proxy(const Containers::StringView path);
+				explicit Proxy(Containers::StringView path);
 
 				Containers::String _path;
 			};
@@ -62,7 +62,7 @@ namespace Death { namespace IO {
 			using value_type = Containers::StringView;
 
 			Directory() noexcept;
-			Directory(PakFile& pakFile, const Containers::StringView path, FileSystem::EnumerationOptions options = FileSystem::EnumerationOptions::None);
+			Directory(PakFile& pakFile, Containers::StringView path, FileSystem::EnumerationOptions options = FileSystem::EnumerationOptions::None);
 			~Directory();
 
 			Directory(const Directory& other);
@@ -140,7 +140,7 @@ namespace Death { namespace IO {
 	public:
 		Containers::String MountPoint;
 
-		explicit PakWriter(const Containers::StringView path);
+		explicit PakWriter(Containers::StringView path);
 		~PakWriter();
 
 		PakWriter(const PakWriter&) = delete;

@@ -37,7 +37,7 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	FileStream::FileStream(const Containers::StringView path, FileAccess mode, std::int32_t bufferSize)
+	FileStream::FileStream(Containers::StringView path, FileAccess mode, std::int32_t bufferSize)
 		: FileStream(Containers::String{path}, mode, bufferSize)
 	{
 	}

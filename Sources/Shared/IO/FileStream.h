@@ -13,7 +13,7 @@ namespace Death { namespace IO {
 	class FileStream : public Stream
 	{
 	public:
-		FileStream(const Containers::StringView path, FileAccess mode, std::int32_t bufferSize = 8192);
+		FileStream(Containers::StringView path, FileAccess mode, std::int32_t bufferSize = 8192);
 		FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize = 8192);
 		~FileStream() override;
 

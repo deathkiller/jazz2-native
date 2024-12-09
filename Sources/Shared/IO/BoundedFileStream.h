@@ -8,7 +8,7 @@ namespace Death { namespace IO {
 	class BoundedFileStream : public Stream
 	{
 	public:
-		BoundedFileStream(const Containers::StringView path, std::uint64_t offset, std::uint32_t size);
+		BoundedFileStream(Containers::StringView path, std::uint64_t offset, std::uint32_t size);
 		BoundedFileStream(Containers::String&& path, std::uint64_t offset, std::uint32_t size);
 
 		BoundedFileStream(const BoundedFileStream&) = delete;
