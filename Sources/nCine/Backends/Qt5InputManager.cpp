@@ -266,7 +266,7 @@ namespace nCine
 			keyboardEvent_.scancode = static_cast<int>(event->nativeScanCode());
 			keyboardEvent_.sym = Qt5Keys::keySymValueToEnum(event->key());
 			keyboardEvent_.mod = Qt5Keys::keyModMaskToEnumMask(event->modifiers());
-			if (keyboardEvent_.sym != KeySym::UNKNOWN) {
+			if (keyboardEvent_.sym != Keys::Unknown) {
 				const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
 				keyboardState_.keys_[keySym] = 1;
 			}
@@ -285,7 +285,7 @@ namespace nCine
 			keyboardEvent_.scancode = static_cast<int>(event->nativeScanCode());
 			keyboardEvent_.sym = Qt5Keys::keySymValueToEnum(event->key());
 			keyboardEvent_.mod = Qt5Keys::keyModMaskToEnumMask(event->modifiers());
-			if (keyboardEvent_.sym != KeySym::UNKNOWN) {
+			if (keyboardEvent_.sym != Keys::Unknown) {
 				const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
 				keyboardState_.keys_[keySym] = 0;
 			}

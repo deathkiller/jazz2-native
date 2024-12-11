@@ -112,7 +112,6 @@ namespace Jazz2::UI
 		
 		LevelHandler* _levelHandler;
 		Metadata* _metadata;
-		std::shared_ptr<Actors::Player> _attachedPlayer;
 		Font* _smallFont;
 
 		String _levelText;
@@ -159,6 +158,6 @@ namespace Jazz2::UI
 
 		void UpdateRgbLights(float timeMult, PlayerViewport* viewport);
 		static Color ApplyRgbGradientAlpha(Color color, std::int32_t x, std::int32_t y, float animProgress, float ambientLight);
-		static AuraLight KeyToAuraLight(KeySym key);
+		static AuraLight KeyToAuraLight(Keys key);
 	};
 }

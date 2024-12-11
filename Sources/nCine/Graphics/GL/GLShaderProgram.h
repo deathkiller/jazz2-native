@@ -95,9 +95,9 @@ namespace nCine
 		}
 
 		bool attachShaderFromFile(GLenum type, StringView filename);
-		bool attachShaderFromString(GLenum type, const char* string);
-		bool attachShaderFromStrings(GLenum type, const char** strings);
-		bool attachShaderFromStringsAndFile(GLenum type, const char** strings, StringView filename);
+		bool attachShaderFromString(GLenum type, StringView string);
+		bool attachShaderFromStrings(GLenum type, ArrayView<const StringView> strings);
+		bool attachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename);
 		bool link(Introspection introspection);
 		void use();
 		bool validate();

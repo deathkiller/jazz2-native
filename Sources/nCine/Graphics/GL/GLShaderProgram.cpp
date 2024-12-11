@@ -101,18 +101,17 @@ namespace nCine
 		return attachShaderFromStringsAndFile(type, nullptr, filename);
 	}
 	
-	bool GLShaderProgram::attachShaderFromString(GLenum type, const char* string)
+	bool GLShaderProgram::attachShaderFromString(GLenum type, StringView string)
 	{
-		const char* strings[2] = { string, nullptr };
-		return attachShaderFromStringsAndFile(type, strings, { });
+		return attachShaderFromStringsAndFile(type, arrayView({ string }), {});
 	}
 	
-	bool GLShaderProgram::attachShaderFromStrings(GLenum type, const char** strings)
+	bool GLShaderProgram::attachShaderFromStrings(GLenum type, ArrayView<const StringView> strings)
 	{
-		return attachShaderFromStringsAndFile(type, strings, { });
+		return attachShaderFromStringsAndFile(type, strings, {});
 	}
 	
-	bool GLShaderProgram::attachShaderFromStringsAndFile(GLenum type, const char** strings, StringView filename)
+	bool GLShaderProgram::attachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename)
 	{
 		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type);
 		shader->loadFromStringsAndFile(strings, filename);

@@ -18,7 +18,7 @@ namespace Jazz2::UI
 {
 	Cinematics::Cinematics(IRootController* root, const StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
-			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0)
+			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0)
 	{
 		Initialize(path);
 	}

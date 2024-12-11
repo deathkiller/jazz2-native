@@ -24,9 +24,9 @@ namespace nCine
 	class GlfwKeys
 	{
 	public:
-		static KeySym keySymValueToEnum(int keysym);
+		static Keys keySymValueToEnum(int keysym);
 		static int keyModMaskToEnumMask(int keymod);
-		static int enumToKeySymValue(KeySym keysym);
+		static int enumToKeysValue(Keys keysym);
 	};
 
 	/// Information about GLFW mouse state
@@ -97,9 +97,9 @@ namespace nCine
 	class GlfwKeyboardState : public KeyboardState
 	{
 	public:
-		inline bool isKeyDown(KeySym key) const override
+		inline bool isKeyDown(Keys key) const override
 		{
-			const int glfwKey = GlfwKeys::enumToKeySymValue(key);
+			const int glfwKey = GlfwKeys::enumToKeysValue(key);
 			if (glfwKey == GLFW_KEY_UNKNOWN)
 				return false;
 			else
@@ -225,9 +225,9 @@ namespace nCine
 		static EM_BOOL emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* event, void* userData);
 #endif
 
-		static KeySym keySymValueToEnum(int keysym);
+		static Keys keySymValueToEnum(int keysym);
 		static KeyMod keyModValueToEnum(int keymod);
-		static int enumToKeySymValue(KeySym keysym);
+		static int enumToKeysValue(Keys keysym);
 
 		friend class GlfwGfxDevice; // for setWindowPosition()
 	};

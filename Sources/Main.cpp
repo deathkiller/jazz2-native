@@ -437,7 +437,7 @@ void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 #if defined(NCINE_HAS_WINDOWS)
 	// Allow F11 and Alt+Enter to switch fullscreen
 	// TODO: Don't override F11 in web browser with newer version of `contrib.glfw3`
-	if (event.sym == KeySym::F11 || (event.sym == KeySym::RETURN && (event.mod & KeyMod::MASK) == KeyMod::LALT)) {
+	if (event.sym == Keys::F11 || (event.sym == Keys::Return && (event.mod & KeyMod::Mask) == KeyMod::LAlt)) {
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		// Xbox is always fullscreen
 		if (Environment::CurrentDeviceType == DeviceType::Xbox) {

@@ -1,5 +1,4 @@
 ﻿#include "HUD.h"
-#include "ControlScheme.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 #include "../Actors/Enemies/Bosses/BossBase.h"
@@ -512,6 +511,7 @@ namespace Jazz2::UI
 		} else {
 			if (shouldDrawHealth) {
 				for (std::int32_t i = 0; i < player->_health; i++) {
+					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f + 1.6f, ShadowLayer, Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
 					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f, MainLayer, Alignment::TopRight, Colorf::White);
 				}
 			}
@@ -535,10 +535,9 @@ namespace Jazz2::UI
 			}
 
 			if (player->_activeShield != ShieldType::None) {
-				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
-
 				DrawElement(PickupStopwatch, -1, view.X + view.W * 0.5f - 30.0f, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
+				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f, FontLayer,
@@ -1424,116 +1423,116 @@ namespace Jazz2::UI
 		return Color(std::clamp((std::uint32_t)(color.R * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.G * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.B * alpha), 0u, 255u));
 	}
 
-	AuraLight HUD::KeyToAuraLight(KeySym key)
+	AuraLight HUD::KeyToAuraLight(Keys key)
 	{
 		switch (key) {
-			case KeySym::BACKSPACE: return AuraLight::Backspace;
-			case KeySym::TAB: return AuraLight::Tab;
-			case KeySym::RETURN: return AuraLight::Enter;
-			case KeySym::ESCAPE: return AuraLight::Esc;
-			case KeySym::SPACE: return AuraLight::Space;
-			//case KeySym::QUOTE: return AuraLight::Quote;
-			//case KeySym::PLUS: return AuraLight:: + ;
-			case KeySym::COMMA: return AuraLight::Comma;
-			case KeySym::MINUS: return AuraLight::Minus;
-			case KeySym::PERIOD: return AuraLight::Period;
-			case KeySym::SLASH: return AuraLight::Slash;
-			case KeySym::N0: return AuraLight::Zero;
-			case KeySym::N1: return AuraLight::One;
-			case KeySym::N2: return AuraLight::Two;
-			case KeySym::N3: return AuraLight::Three;
-			case KeySym::N4: return AuraLight::Four;
-			case KeySym::N5: return AuraLight::Five;
-			case KeySym::N6: return AuraLight::Six;
-			case KeySym::N7: return AuraLight::Seven;
-			case KeySym::N8: return AuraLight::Eight;
-			case KeySym::N9: return AuraLight::Nine;
-			case KeySym::SEMICOLON: return AuraLight::Semicolon;
-			case KeySym::LEFTBRACKET: return AuraLight::OpenBracket;
-			case KeySym::BACKSLASH: return AuraLight::Backslash;
-			case KeySym::RIGHTBRACKET: return AuraLight::CloseBracket;
-			//case KeySym::BACKQUOTE: return AuraLight::Backquote;
+			case Keys::Backspace: return AuraLight::Backspace;
+			case Keys::Tab: return AuraLight::Tab;
+			case Keys::Return: return AuraLight::Enter;
+			case Keys::Escape: return AuraLight::Esc;
+			case Keys::Space: return AuraLight::Space;
+			//case Keys::Quote: return AuraLight::Quote;
+			//case Keys::Plus: return AuraLight::Plus;
+			case Keys::Comma: return AuraLight::Comma;
+			case Keys::Minus: return AuraLight::Minus;
+			case Keys::Period: return AuraLight::Period;
+			case Keys::Slash: return AuraLight::Slash;
+			case Keys::D0: return AuraLight::Zero;
+			case Keys::D1: return AuraLight::One;
+			case Keys::D2: return AuraLight::Two;
+			case Keys::D3: return AuraLight::Three;
+			case Keys::D4: return AuraLight::Four;
+			case Keys::D5: return AuraLight::Five;
+			case Keys::D6: return AuraLight::Six;
+			case Keys::D7: return AuraLight::Seven;
+			case Keys::D8: return AuraLight::Eight;
+			case Keys::D9: return AuraLight::Nine;
+			case Keys::Semicolon: return AuraLight::Semicolon;
+			case Keys::LeftBracket: return AuraLight::OpenBracket;
+			case Keys::Backslash: return AuraLight::Backslash;
+			case Keys::RightBracket: return AuraLight::CloseBracket;
+			case Keys::Backquote: return AuraLight::Tilde;
 
-			case KeySym::A: return AuraLight::A;
-			case KeySym::B: return AuraLight::B;
-			case KeySym::C: return AuraLight::C;
-			case KeySym::D: return AuraLight::D;
-			case KeySym::E: return AuraLight::E;
-			case KeySym::F: return AuraLight::F;
-			case KeySym::G: return AuraLight::G;
-			case KeySym::H: return AuraLight::H;
-			case KeySym::I: return AuraLight::I;
-			case KeySym::J: return AuraLight::J;
-			case KeySym::K: return AuraLight::K;
-			case KeySym::L: return AuraLight::L;
-			case KeySym::M: return AuraLight::M;
-			case KeySym::N: return AuraLight::N;
-			case KeySym::O: return AuraLight::O;
-			case KeySym::P: return AuraLight::P;
-			case KeySym::Q: return AuraLight::Q;
-			case KeySym::R: return AuraLight::R;
-			case KeySym::S: return AuraLight::S;
-			case KeySym::T: return AuraLight::T;
-			case KeySym::U: return AuraLight::U;
-			case KeySym::V: return AuraLight::V;
-			case KeySym::W: return AuraLight::W;
-			case KeySym::X: return AuraLight::X;
-			case KeySym::Y: return AuraLight::Y;
-			case KeySym::Z: return AuraLight::Z;
-			case KeySym::Delete: return AuraLight::Delete;
+			case Keys::A: return AuraLight::A;
+			case Keys::B: return AuraLight::B;
+			case Keys::C: return AuraLight::C;
+			case Keys::D: return AuraLight::D;
+			case Keys::E: return AuraLight::E;
+			case Keys::F: return AuraLight::F;
+			case Keys::G: return AuraLight::G;
+			case Keys::H: return AuraLight::H;
+			case Keys::I: return AuraLight::I;
+			case Keys::J: return AuraLight::J;
+			case Keys::K: return AuraLight::K;
+			case Keys::L: return AuraLight::L;
+			case Keys::M: return AuraLight::M;
+			case Keys::N: return AuraLight::N;
+			case Keys::O: return AuraLight::O;
+			case Keys::P: return AuraLight::P;
+			case Keys::Q: return AuraLight::Q;
+			case Keys::R: return AuraLight::R;
+			case Keys::S: return AuraLight::S;
+			case Keys::T: return AuraLight::T;
+			case Keys::U: return AuraLight::U;
+			case Keys::V: return AuraLight::V;
+			case Keys::W: return AuraLight::W;
+			case Keys::X: return AuraLight::X;
+			case Keys::Y: return AuraLight::Y;
+			case Keys::Z: return AuraLight::Z;
+			case Keys::Delete: return AuraLight::Delete;
 
-			case KeySym::KP0: return AuraLight::NumZero;
-			case KeySym::KP1: return AuraLight::NumOne;
-			case KeySym::KP2: return AuraLight::NumTwo;
-			case KeySym::KP3: return AuraLight::NumThree;
-			case KeySym::KP4: return AuraLight::NumFour;
-			case KeySym::KP5: return AuraLight::NumFive;
-			case KeySym::KP6: return AuraLight::NumSix;
-			case KeySym::KP7: return AuraLight::NumSeven;
-			case KeySym::KP8: return AuraLight::NumEight;
-			case KeySym::KP9: return AuraLight::NumNine;
-			case KeySym::KP_PERIOD: return AuraLight::NumPeriod;
-			case KeySym::KP_DIVIDE: return AuraLight::NumSlash;
-			case KeySym::KP_MULTIPLY: return AuraLight::NumAsterisk;
-			case KeySym::KP_MINUS: return AuraLight::NumMinus;
-			case KeySym::KP_PLUS: return AuraLight::NumPlus;
-			case KeySym::KP_ENTER: return AuraLight::NumEnter;
-			case KeySym::KP_EQUALS: return AuraLight::NumEnter;
+			case Keys::NumPad0: return AuraLight::NumZero;
+			case Keys::NumPad1: return AuraLight::NumOne;
+			case Keys::NumPad2: return AuraLight::NumTwo;
+			case Keys::NumPad3: return AuraLight::NumThree;
+			case Keys::NumPad4: return AuraLight::NumFour;
+			case Keys::NumPad5: return AuraLight::NumFive;
+			case Keys::NumPad6: return AuraLight::NumSix;
+			case Keys::NumPad7: return AuraLight::NumSeven;
+			case Keys::NumPad8: return AuraLight::NumEight;
+			case Keys::NumPad9: return AuraLight::NumNine;
+			case Keys::NumPadPeriod: return AuraLight::NumPeriod;
+			case Keys::NumPadDivide: return AuraLight::NumSlash;
+			case Keys::NumPadMultiply: return AuraLight::NumAsterisk;
+			case Keys::NumPadMinus: return AuraLight::NumMinus;
+			case Keys::NumPadPlus: return AuraLight::NumPlus;
+			case Keys::NumPadEnter: return AuraLight::NumEnter;
+			case Keys::NumPadEquals: return AuraLight::NumEnter;
 
-			case KeySym::UP: return AuraLight::ArrowUp;
-			case KeySym::DOWN: return AuraLight::ArrowDown;
-			case KeySym::RIGHT: return AuraLight::ArrowRight;
-			case KeySym::LEFT: return AuraLight::ArrowLeft;
-			case KeySym::INSERT: return AuraLight::Insert;
-			case KeySym::HOME: return AuraLight::Home;
-			case KeySym::END: return AuraLight::End;
-			case KeySym::PAGEUP: return AuraLight::PageUp;
-			case KeySym::PAGEDOWN: return AuraLight::PageDown;
+			case Keys::Up: return AuraLight::ArrowUp;
+			case Keys::Down: return AuraLight::ArrowDown;
+			case Keys::Right: return AuraLight::ArrowRight;
+			case Keys::Left: return AuraLight::ArrowLeft;
+			case Keys::Insert: return AuraLight::Insert;
+			case Keys::Home: return AuraLight::Home;
+			case Keys::End: return AuraLight::End;
+			case Keys::PageUp: return AuraLight::PageUp;
+			case Keys::PageDown: return AuraLight::PageDown;
 
-			case KeySym::F1: return AuraLight::F1;
-			case KeySym::F2: return AuraLight::F2;
-			case KeySym::F3: return AuraLight::F3;
-			case KeySym::F4: return AuraLight::F4;
-			case KeySym::F5: return AuraLight::F5;
-			case KeySym::F6: return AuraLight::F6;
-			case KeySym::F7: return AuraLight::F7;
-			case KeySym::F8: return AuraLight::F8;
-			case KeySym::F9: return AuraLight::F9;
-			case KeySym::F10: return AuraLight::F10;
-			case KeySym::F11: return AuraLight::F11;
-			case KeySym::F12: return AuraLight::F12;
+			case Keys::F1: return AuraLight::F1;
+			case Keys::F2: return AuraLight::F2;
+			case Keys::F3: return AuraLight::F3;
+			case Keys::F4: return AuraLight::F4;
+			case Keys::F5: return AuraLight::F5;
+			case Keys::F6: return AuraLight::F6;
+			case Keys::F7: return AuraLight::F7;
+			case Keys::F8: return AuraLight::F8;
+			case Keys::F9: return AuraLight::F9;
+			case Keys::F10: return AuraLight::F10;
+			case Keys::F11: return AuraLight::F11;
+			case Keys::F12: return AuraLight::F12;
 
-			case KeySym::NUM_LOCK: return AuraLight::NumLock;
-			case KeySym::CAPS_LOCK: return AuraLight::CapsLock;
-			case KeySym::SCROLL_LOCK: return AuraLight::ScrollLock;
-			case KeySym::RSHIFT: return AuraLight::RightShift;
-			case KeySym::LSHIFT: return AuraLight::LeftShift;
-			case KeySym::RCTRL: return AuraLight::RightCtrl;
-			case KeySym::LCTRL: return AuraLight::LeftCtrl;
-			case KeySym::RALT: return AuraLight::RightAlt;
-			case KeySym::LALT: return AuraLight::LeftAlt;
-			case KeySym::PAUSE: return AuraLight::PauseBreak;
-			case KeySym::MENU: return AuraLight::Menu;
+			case Keys::NumLock: return AuraLight::NumLock;
+			case Keys::CapsLock: return AuraLight::CapsLock;
+			case Keys::ScrollLock: return AuraLight::ScrollLock;
+			case Keys::RShift: return AuraLight::RightShift;
+			case Keys::LShift: return AuraLight::LeftShift;
+			case Keys::RCtrl: return AuraLight::RightCtrl;
+			case Keys::LCtrl: return AuraLight::LeftCtrl;
+			case Keys::RAlt: return AuraLight::RightAlt;
+			case Keys::LAlt: return AuraLight::LeftAlt;
+			case Keys::Pause: return AuraLight::PauseBreak;
+			case Keys::Menu: return AuraLight::Menu;
 
 			default: return AuraLight::Unknown;
 		}

@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (_attackTime <= 0.0f) {
-			_speed.X = (IsFacingLeft() ? -1 : 1);
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f);
 			SetAnimation(AnimState::Walk);
 
 			if (_noiseCooldown <= 0.0f) {

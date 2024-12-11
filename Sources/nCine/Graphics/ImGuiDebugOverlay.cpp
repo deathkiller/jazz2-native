@@ -823,8 +823,8 @@ namespace nCine
 			/*if (ImGui::TreeNode("Keyboard")) {
 				nctl::String pressedKeys;
 				const KeyboardState& keyState = input.keyboardState();
-				for (unsigned int i = 0; i < static_cast<int>(KeySym::COUNT); i++) {
-					if (keyState.isKeyDown(static_cast<KeySym>(i)))
+				for (unsigned int i = 0; i < static_cast<int>(Keys::COUNT); i++) {
+					if (keyState.isKeyDown(static_cast<Keys>(i)))
 						pressedKeys.formatAppend("%d ", i);
 				}
 				ImGui::Text("Keys pressed: %s", pressedKeys.data());

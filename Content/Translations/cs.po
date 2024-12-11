@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-12-09 11:48+0100\n"
-"PO-Revision-Date: 2024-12-09 11:48+0100\n"
+"POT-Creation-Date: 2024-12-10 22:17+0100\n"
+"PO-Revision-Date: 2024-12-10 22:18+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1504,14 +1504,14 @@ msgstr "Povolit přístup k externímu uložišti"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:173
 #, c-format
 msgid "Remap Controls for Player %i"
 msgstr "Přenastavit ovládání pro hráče %i"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:174
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
 msgid "Remap Controls"
 msgstr "Přenastavit ovládání"
 
@@ -1569,8 +1569,8 @@ msgstr "Slabé"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:134
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Disabled"
 msgstr "Zakázáno"
 
@@ -1580,7 +1580,7 @@ msgstr "Zakázáno"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Enabled"
 msgstr "Povoleno"
 
@@ -1840,62 +1840,67 @@ msgstr "Antialiasing"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
+msgid "Background Dithering"
+msgstr "Dithering na pozadí"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
 msgid "Water Quality"
 msgstr "Kvalita vody"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
 msgid "Show Player Trails"
 msgstr "Zobrazit stopy hráčů"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
 msgid "Preferred Splitscreen"
 msgstr "Preferované rozdělení obrazovky"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
 msgid "Prefer Zoom Out"
 msgstr "Preferovat oddálení"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Zachovat poměr stran u filmů"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
 msgid "Unaligned Viewport"
 msgstr "Nezarovnaný pohled"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:49
 msgid "Performance Metrics"
 msgstr "Metrika výkonu"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:80
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:82
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
 msgid "Graphics"
 msgstr "Grafika"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:129
 msgid "Low"
 msgstr "Nízká"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:129
 msgid "High"
 msgstr "Vysoká"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
 msgid "Vertical"
 msgstr "Vertikální"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
 msgid "Horizontal"
 msgstr "Horizontální"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:134
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Povoleno \f[c:#d0705d](Experimentální)\f[/c]"
 
@@ -2017,7 +2022,7 @@ msgstr "Běh"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:190
 msgid "Change Weapon"
 msgstr "Změnit zbraň"
 
@@ -2027,18 +2032,23 @@ msgid "Back"
 msgstr "Zpět"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:35
+msgid "Toggle Console"
+msgstr "Zobrazit konzoli"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:39
 #, c-format
 msgid "Weapon %i"
 msgstr "Zbraň %i"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:182
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:184
 msgid "Press any key or button to assign"
 msgstr "Stiskněte tlačítko nebo klávesu pro přiřazení"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:199
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:201
 msgid "to remove assignment"
 msgstr "pro odstranění přiřazení"
 

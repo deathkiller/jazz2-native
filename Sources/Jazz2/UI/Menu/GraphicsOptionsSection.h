@@ -11,6 +11,7 @@ namespace Jazz2::UI::Menu
 		Fullscreen,
 #endif
 		Antialiasing,
+		BackgroundDithering,
 		LowWaterQuality,
 		ShowPlayerTrails,
 		PreferVerticalSplitscreen,

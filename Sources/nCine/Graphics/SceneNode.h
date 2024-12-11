@@ -278,9 +278,6 @@ namespace nCine
 			AabbBit = 4
 		};
 
-		bool updateEnabled_;
-		bool drawEnabled_;
-
 		/// A pointer to the parent node
 		SceneNode* parent_;
 		/// The array of child nodes
@@ -289,13 +286,24 @@ namespace nCine
 		/*! \note The index is cached here to make siblings reordering methods faster */
 		unsigned int childOrderIndex_;
 
+		bool updateEnabled_;
+		bool drawEnabled_;
 		/// When enabled the visit order is used to resolve the drawing order of same layer nodes
 		/*! \note This flag cannot be changed by the user, it is derived from the parent and this node states */
 		bool withVisitOrder_;
+
+		/// A flag indicating whether the destructor should also delete all children
+		bool shouldDeleteChildrenOnDestruction_;
+
 		/// The visit order state of this node
 		enum VisitOrderState visitOrderState_;
 		/// The visit order index of this node
 		uint16_t visitOrderIndex_;
+
+		/// The node rendering layer
+		/*! Even if the base scene node is not always drawable, it carries
+		 *  layer information to easily pass that information to its children. */
+		uint16_t layer_;
 
 		/// The node relative position
 		Vector2f position_;
@@ -312,11 +320,6 @@ namespace nCine
 		 *  color information to easily pass that information to its children. */
 		Colorf color_;
 
-		/// The node rendering layer
-		/*! Even if the base scene node is not always drawable, it carries
-		 *  layer information to easily pass that information to its children. */
-		uint16_t layer_;
-
 		/// Absolute position as calculated by the `transform()` function
 		Vector2f absPosition_;
 		/// Absolute horizontal and vertical scale factors as calculated by the `transform()` function
@@ -330,16 +333,13 @@ namespace nCine
 		/// Absolute node rendering layer as calculated by the `transform()` function
 		uint16_t absLayer_;
 
+		/// Bitset that stores the various dirty states bits
+		BitSet<std::uint8_t> dirtyBits_;
+
 		/// World transformation matrix (calculated from local and parent's world)
 		Matrix4x4f worldMatrix_;
 		/// Local transformation matrix
 		Matrix4x4f localMatrix_;
-
-		/// A flag indicating whether the destructor should also delete all children
-		bool shouldDeleteChildrenOnDestruction_;
-
-		/// Bitset that stores the various dirty states bits
-		BitSet<uint8_t> dirtyBits_;
 
 		/// The last frame any viewport updated this node
 		unsigned long int lastFrameUpdated_;

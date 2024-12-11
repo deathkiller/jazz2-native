@@ -145,7 +145,7 @@ namespace Jazz2::UI::Menu
 	{
 		if (_waitForInput) {
 			switch (event.sym) {
-				case KeySym::ESCAPE: {
+				case Keys::Escape: {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_waitForInput = false;
 					auto& selectedItem = _items[_selectedIndex];
@@ -154,7 +154,7 @@ namespace Jazz2::UI::Menu
 					}
 					break;
 				}
-				case KeySym::RETURN: {
+				case Keys::Return: {
 					auto& selectedItem = _items[_selectedIndex];
 					if (!selectedItem.Item->PlayerName.empty()) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -163,7 +163,7 @@ namespace Jazz2::UI::Menu
 					}
 					break;
 				}
-				case KeySym::BACKSPACE: {
+				case Keys::Backspace: {
 					auto& selectedItem = _items[_selectedIndex];
 					if (_textCursor > 0) {
 						auto [_, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
@@ -173,7 +173,7 @@ namespace Jazz2::UI::Menu
 					}
 					break;
 				}
-				case KeySym::Delete: {
+				case Keys::Delete: {
 					auto& selectedItem = _items[_selectedIndex];
 					if (_textCursor < selectedItem.Item->PlayerName.size()) {
 						auto [_, nextPos] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);
@@ -182,7 +182,7 @@ namespace Jazz2::UI::Menu
 					}
 					break;
 				}
-				case KeySym::LEFT: {
+				case Keys::Left: {
 					auto& selectedItem = _items[_selectedIndex];
 					if (_textCursor > 0) {
 						auto [c, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
@@ -191,7 +191,7 @@ namespace Jazz2::UI::Menu
 					}
 					break;
 				}
-				case KeySym::RIGHT: {
+				case Keys::Right: {
 					auto& selectedItem = _items[_selectedIndex];
 					if (_textCursor < selectedItem.Item->PlayerName.size()) {
 						auto [c, nextPos] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);

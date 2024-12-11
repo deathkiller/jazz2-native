@@ -35,6 +35,7 @@ namespace Jazz2
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::PreferZoomOut = false;
+	bool PreferencesCache::BackgroundDithering = true;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;
@@ -197,6 +198,7 @@ namespace Jazz2
 					UnalignedViewport = ((boolOptions & BoolOptions::UnalignedViewport) == BoolOptions::UnalignedViewport);
 					PreferVerticalSplitscreen = ((boolOptions & BoolOptions::PreferVerticalSplitscreen) == BoolOptions::PreferVerticalSplitscreen);
 					PreferZoomOut = ((boolOptions & BoolOptions::PreferZoomOut) == BoolOptions::PreferZoomOut);
+					BackgroundDithering = ((boolOptions & BoolOptions::BackgroundDithering) == BoolOptions::BackgroundDithering);
 					EnableReforgedGameplay = ((boolOptions & BoolOptions::EnableReforgedGameplay) == BoolOptions::EnableReforgedGameplay);
 					EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 					WeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel ? WeaponWheelStyle::Enabled : WeaponWheelStyle::Disabled);
@@ -258,12 +260,13 @@ namespace Jazz2
 					if (version >= 4) {
 						auto mappings = UI::ControlScheme::GetAllMappings();
 
-						std::uint8_t playerCount = uc.ReadValue<std::uint8_t>();
-						std::uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
+						bool shouldResetBecauseOfOldVersion = (version < 8);
+						std::uint32_t playerCount = uc.ReadValue<std::uint8_t>();
+						std::uint32_t controlMappingCount = uc.ReadValue<std::uint8_t>();
 						for (std::uint32_t i = 0; i < playerCount; i++) {
 							for (std::uint32_t j = 0; j < controlMappingCount; j++) {
 								std::uint8_t targetCount = uc.ReadValue<std::uint8_t>();
-								if (i < UI::ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerActions::Count) {
+								if (!shouldResetBecauseOfOldVersion && i < UI::ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerActions::Count) {
 									auto& mapping = mappings[i * (std::uint32_t)PlayerActions::Count + j];
 									mapping.Targets.clear();
 
@@ -280,7 +283,7 @@ namespace Jazz2
 						// Reset primary Menu action, because it's hardcoded
 						auto& menuMapping = mappings[(std::uint32_t)PlayerActions::Menu];
 						if (menuMapping.Targets.empty()) {
-							mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(UI::ControlScheme::CreateTarget(KeySym::ESCAPE));
+							mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(UI::ControlScheme::CreateTarget(Keys::Escape));
 						}
 					} else {
 						// Skip old control mapping definitions
@@ -438,6 +441,7 @@ namespace Jazz2
 		if (UnalignedViewport) boolOptions |= BoolOptions::UnalignedViewport;
 		if (PreferVerticalSplitscreen) boolOptions |= BoolOptions::PreferVerticalSplitscreen;
 		if (PreferZoomOut) boolOptions |= BoolOptions::PreferZoomOut;
+		if (BackgroundDithering) boolOptions |= BoolOptions::BackgroundDithering;
 		if (EnableReforgedGameplay) boolOptions |= BoolOptions::EnableReforgedGameplay;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (WeaponWheel != WeaponWheelStyle::Disabled) boolOptions |= BoolOptions::EnableWeaponWheel;

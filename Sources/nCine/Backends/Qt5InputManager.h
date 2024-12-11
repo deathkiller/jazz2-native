@@ -23,7 +23,7 @@ namespace nCine
 	class Qt5Keys
 	{
 	public:
-		static KeySym keySymValueToEnum(int keysym);
+		static Keys keySymValueToEnum(int keysym);
 		static int keyModMaskToEnumMask(Qt::KeyboardModifiers keymod);
 	};
 
@@ -104,16 +104,16 @@ namespace nCine
 				keys_[i] = 0;
 		}
 
-		inline bool isKeyDown(KeySym key) const override
+		inline bool isKeyDown(Keys key) const override
 		{
-			if (key == KeySym::UNKNOWN)
+			if (key == Keys::Unknown)
 				return false;
 			else
 				return keys_[static_cast<unsigned int>(key)] != 0;
 		}
 
 	private:
-		static const unsigned int NumKeys = static_cast<unsigned int>(KeySym::COUNT);
+		static const unsigned int NumKeys = static_cast<unsigned int>(Keys::COUNT);
 		unsigned char keys_[NumKeys];
 
 		friend class Qt5InputManager;

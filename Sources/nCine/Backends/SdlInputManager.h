@@ -27,10 +27,10 @@ namespace nCine
 	class SdlKeys
 	{
 	  public:
-		static KeySym keySymValueToEnum(int keysym);
+		static Keys keySymValueToEnum(int keysym);
 		static int keyModMaskToEnumMask(int keymod);
-		static int enumToKeySymValue(KeySym keysym);
-		static int enumToScancode(KeySym keysym);
+		static int enumToKeysValue(Keys keysym);
+		static int enumToScancode(Keys keysym);
 	};
 
 	/// Information about SDL mouse state
@@ -86,7 +86,7 @@ namespace nCine
 	  public:
 		SdlKeyboardState() { keyState_ = SDL_GetKeyboardState(nullptr); }
 
-		inline bool isKeyDown(KeySym key) const override
+		inline bool isKeyDown(Keys key) const override
 		{
 			const int sdlKey = SdlKeys::enumToScancode(key);
 			if (sdlKey == SDL_SCANCODE_UNKNOWN)

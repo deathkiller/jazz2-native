@@ -3,6 +3,7 @@
 #include "PreferencesCache.h"
 #include "UI/DiscordRpcClient.h"
 #include "UI/HUD.h"
+#include "UI/InGameConsole.h"
 #include "../Common.h"
 
 #if defined(WITH_ANGELSCRIPT)
@@ -107,9 +108,9 @@ namespace Jazz2
 	LevelHandler::LevelHandler(IRootController* root)
 		: _root(root), _lightingShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr),
 			_combineWithWaterShader(nullptr), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false),
-			_cheatsUsed(false), _checkpointCreated(false), _cheatsBufferLength(0), _nextLevelType(ExitType::None),
+			_cheatsUsed(false), _checkpointCreated(false), _nextLevelType(ExitType::None),
 			_nextLevelTime(0.0f), _elapsedMillisecondsBegin(0), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
-			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)KeySym::COUNT),
+			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)Keys::Count),
 			_overrideActions(0)
 	{
 	}
@@ -121,6 +122,7 @@ namespace Jazz2
 			viewport->_combineRenderer->setParent(nullptr);
 		}
 		_hud->setParent(nullptr);
+		_console->setParent(nullptr);
 
 		TracyPlot("Actors", 0LL);
 	}
@@ -240,6 +242,7 @@ namespace Jazz2
 		resolver.PreloadMetadataAsync("Common/Explosions"_s);
 
 		_hud = std::make_unique<UI::HUD>(this);
+		_console = std::make_unique<UI::InGameConsole>(this);
 
 		_eventMap->PreloadEventsAsync();
 
@@ -463,8 +466,17 @@ namespace Jazz2
 		if (_pauseMenu == nullptr) {
 			UpdatePressedActions();
 
-			if (PlayerActionHit(0, PlayerActions::Menu) && _nextLevelType == ExitType::None) {
-				PauseGame();
+			if (PlayerActionHit(0, PlayerActions::Menu)) {
+				if (!_console->parent() && _nextLevelType == ExitType::None) {
+					PauseGame();
+				}
+			} else if (PlayerActionHit(0, PlayerActions::Console)) {
+				if (_console->parent()) {
+					_console->setParent(nullptr);
+				} else {
+					_console->setParent(_upscalePass.GetNode());
+					_console->OnAttached();
+				}
 			}
 #if defined(DEATH_DEBUG)
 			if (PreferencesCache::AllowCheats && PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
@@ -677,115 +689,8 @@ namespace Jazz2
 
 		if (_pauseMenu != nullptr) {
 			_pauseMenu->OnKeyReleased(event);
-		} else {
-			// Cheats
-			if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
-				if (event.sym >= KeySym::A && event.sym <= KeySym::Z) {
-					if (event.sym == KeySym::J && _cheatsBufferLength >= 2) {
-						_cheatsBufferLength = 0;
-						_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
-					} else if (_cheatsBufferLength < static_cast<std::int32_t>(arraySize(_cheatsBuffer))) {
-						_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
-
-						if (_cheatsBufferLength >= 3 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
-							switch (_cheatsBufferLength) {
-								case 3:
-									if (_cheatsBuffer[2] == (char)KeySym::K) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											player->TakeDamage(INT32_MAX);
-										}
-									}
-									break;
-								case 5:
-									if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::D) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
-										}
-									}
-									break;
-								case 6:
-									if (_cheatsBuffer[2] == (char)KeySym::N && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::X && _cheatsBuffer[5] == (char)KeySym::T) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
-									} else if ((_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::N && _cheatsBuffer[5] == (char)KeySym::S) ||
-											   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
-												player->AddAmmo((WeaponType)i, 99);
-											}
-										}
-									} else if (_cheatsBuffer[2] == (char)KeySym::R && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::S && _cheatsBuffer[5] == (char)KeySym::H) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											player->ActivateSugarRush(1300.0f);
-										}
-									} else if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::S) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											player->AddGems(0, 5);
-										}
-									} else if (_cheatsBuffer[2] == (char)KeySym::B && _cheatsBuffer[3] == (char)KeySym::I && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::D) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											player->SpawnBird(0, player->GetPos());
-										}
-									}
-									break;
-								case 7:
-									if (_cheatsBuffer[2] == (char)KeySym::P && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::W && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::R) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
-												player->AddWeaponUpgrade((WeaponType)i, 0x01);
-											}
-										}
-									} else if (_cheatsBuffer[2] == (char)KeySym::C && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::N && _cheatsBuffer[6] == (char)KeySym::S) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										// Coins are synchronized automatically
-										_players[0]->AddCoins(5);
-									} else if (_cheatsBuffer[2] == (char)KeySym::M && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::P && _cheatsBuffer[6] == (char)KeySym::H) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-
-										PlayerType newType;
-										switch (_players[0]->GetPlayerType()) {
-											case PlayerType::Jazz: newType = PlayerType::Spaz; break;
-											case PlayerType::Spaz: newType = PlayerType::Lori; break;
-											default: newType = PlayerType::Jazz; break;
-										}
-
-										if (!_players[0]->MorphTo(newType)) {
-											_players[0]->MorphTo(PlayerType::Jazz);
-										}
-									}
-									break;
-								case 8:
-									if (_cheatsBuffer[2] == (char)KeySym::S && _cheatsBuffer[3] == (char)KeySym::H && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::L && _cheatsBuffer[7] == (char)KeySym::D) {
-										_cheatsBufferLength = 0;
-										_cheatsUsed = true;
-										for (auto* player : _players) {
-											ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
-											player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
-										}
-									}
-									break;
-							}
-						}
-					}
-				}
-			}
+		} else if (_console->parent()) {
+			_console->OnKeyPressed(event);
 		}
 	}
 
@@ -795,6 +700,13 @@ namespace Jazz2
 
 		if (_pauseMenu != nullptr) {
 			_pauseMenu->OnKeyReleased(event);
+		}
+	}
+
+	void LevelHandler::OnTextInput(const TextInputEvent& event)
+	{
+		if (_console->parent()) {
+			_console->OnTextInput(event);
 		}
 	}
 
@@ -1328,12 +1240,20 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
+		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+			return false;
+		}
+
 		bool isGamepad;
 		return PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
 
 	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
+		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+			return false;
+		}
+
 		isGamepad = false;
 		auto& input = _playerInputs[index];
 		if ((input.PressedActions & (1ull << (std::int32_t)action)) != 0) {
@@ -1346,12 +1266,20 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
+		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+			return false;
+		}
+
 		bool isGamepad;
 		return PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
 
 	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
+		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+			return false;
+		}
+
 		isGamepad = false;
 		auto& input = _playerInputs[index];
 		if ((input.PressedActions & (1ull << (std::int32_t)action)) != 0 && (input.PressedActionsLast & (1ull << (std::int32_t)action)) == 0) {
@@ -1364,12 +1292,20 @@ namespace Jazz2
 
 	float LevelHandler::PlayerHorizontalMovement(std::int32_t index)
 	{
+		if (_console->parent()) {
+			return 0.0f;
+		}
+
 		auto& input = _playerInputs[index];
 		return (input.Frozen ? input.FrozenMovement.X : input.RequiredMovement.X);
 	}
 
 	float LevelHandler::PlayerVerticalMovement(std::int32_t index)
 	{
+		if (_console->parent()) {
+			return 0.0f;
+		}
+
 		auto& input = _playerInputs[index];
 		return (input.Frozen ? input.FrozenMovement.Y : input.RequiredMovement.Y);
 	}
@@ -2216,6 +2152,148 @@ namespace Jazz2
 		for (auto& input : _playerInputs) {
 			input.PressedActions |= (1ull << (std::int32_t)PlayerActions::Menu);
 			input.PressedActionsLast |= (1ull << (std::int32_t)PlayerActions::Menu);
+		}
+	}
+
+	void LevelHandler::CheatKill()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				player->TakeDamage(INT32_MAX);
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatGod()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatNext()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatGuns()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+					player->AddAmmo((WeaponType)i, 99);
+				}
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatRush()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				player->ActivateSugarRush(1300.0f);
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatGems()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				player->AddGems(0, 5);
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatBird()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				player->SpawnBird(0, player->GetPos());
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatPower()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+					player->AddWeaponUpgrade((WeaponType)i, 0x01);
+				}
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatCoins()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			// Coins are synchronized automatically
+			_players[0]->AddCoins(5);
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatMorph()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+
+			PlayerType newType;
+			switch (_players[0]->GetPlayerType()) {
+				case PlayerType::Jazz: newType = PlayerType::Spaz; break;
+				case PlayerType::Spaz: newType = PlayerType::Lori; break;
+				default: newType = PlayerType::Jazz; break;
+			}
+
+			if (!_players[0]->MorphTo(newType)) {
+				_players[0]->MorphTo(PlayerType::Jazz);
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+		}
+	}
+
+	void LevelHandler::CheatShield()
+	{
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
+				player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
+			}
+		} else {
+			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
 		}
 	}
 

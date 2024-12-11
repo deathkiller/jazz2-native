@@ -11,7 +11,7 @@ namespace Jazz2::UI::Menu
 {
 	RemapControlsSection::RemapControlsSection(std::int32_t playerIndex)
 		: _selectedColumn(0), _playerIndex(playerIndex), _isDirty(false), _waitForInput(false), _timeout(0.0f),
-			_hintAnimation(0.0f), _keysPressedLast(ValueInit, (std::size_t)KeySym::COUNT)
+			_hintAnimation(0.0f), _keysPressedLast(ValueInit, (std::size_t)Keys::Count)
 	{
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 		_items.emplace_back(RemapControlsItem { PlayerActions::Left, _("Left") });
@@ -31,6 +31,8 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(RemapControlsItem { PlayerActions::ChangeWeapon, _("Change Weapon") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 		_items.emplace_back(RemapControlsItem { PlayerActions::Menu, _("Back") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Console, _("Toggle Console") });
 
 		for (std::int32_t i = 0; i <= (std::int32_t)PlayerActions::SwitchToThunderbolt - (std::int32_t)PlayerActions::SwitchToBlaster; i++) {
 			// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
@@ -61,7 +63,7 @@ namespace Jazz2::UI::Menu
 			auto& input = theApplication().GetInputManager();
 			auto& keyState = input.keyboardState();
 
-			if (keyState.isKeyDown(KeySym::ESCAPE) || _timeout <= 0.0f) {
+			if (keyState.isKeyDown(Keys::Escape) || _timeout <= 0.0f) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				return;
@@ -119,12 +121,12 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			for (std::int32_t key = 0; key < (std::int32_t)KeySym::COUNT && waitingForInput; key++) {
-				bool isPressed = keyState.isKeyDown((KeySym)key);
+			for (std::int32_t key = 0; key < (std::int32_t)Keys::Count && waitingForInput; key++) {
+				bool isPressed = keyState.isKeyDown((Keys)key);
 				if (isPressed != _keysPressedLast[key]) {
 					_keysPressedLast.set(key, isPressed);
 					if (isPressed) {
-						newTarget = ControlScheme::CreateTarget((KeySym)key);
+						newTarget = ControlScheme::CreateTarget((Keys)key);
 						std::int32_t collidingAction, collidingAssignment;
 						if (!HasCollision(newTarget, collidingAction, collidingAssignment)) {
 							waitingForInput = false;
@@ -275,7 +277,7 @@ namespace Jazz2::UI::Menu
 					}
 				}
 			} else {
-				KeySym key = (KeySym)(data & ControlScheme::ButtonMask);
+				Keys key = (Keys)(data & ControlScheme::ButtonMask);
 				value = KeyToName(key);
 			}
 
@@ -455,8 +457,8 @@ namespace Jazz2::UI::Menu
 
 		_keysPressedLast.resetAll();
 
-		for (std::int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
-			if (keyState.isKeyDown((KeySym)key)) {
+		for (std::int32_t key = 0; key < (int32_t)Keys::Count; key++) {
+			if (keyState.isKeyDown((Keys)key)) {
 				_keysPressedLast.set(key);
 			}
 		}
@@ -487,124 +489,124 @@ namespace Jazz2::UI::Menu
 		return false;
 	}
 
-	StringView RemapControlsSection::KeyToName(KeySym key)
+	StringView RemapControlsSection::KeyToName(Keys key)
 	{
 		switch (key) {
-			case KeySym::BACKSPACE: return "Backspace"_s;
-			case KeySym::TAB: return "Tab"_s;
-			case KeySym::RETURN: return "Enter"_s;
-			case KeySym::ESCAPE: return "Escape"_s;
-			case KeySym::SPACE: return "Space"_s;
-			case KeySym::QUOTE: return "Quote"_s;
-			case KeySym::PLUS: return "+"_s;
-			case KeySym::COMMA: return ","_s;
-			case KeySym::MINUS: return "-"_s;
-			case KeySym::PERIOD: return "."_s;
-			case KeySym::SLASH: return "/"_s;
-			case KeySym::N0: return "0"_s;
-			case KeySym::N1: return "1"_s;
-			case KeySym::N2: return "2"_s;
-			case KeySym::N3: return "3"_s;
-			case KeySym::N4: return "4"_s;
-			case KeySym::N5: return "5"_s;
-			case KeySym::N6: return "6"_s;
-			case KeySym::N7: return "7"_s;
-			case KeySym::N8: return "8"_s;
-			case KeySym::N9: return "9"_s;
-			case KeySym::SEMICOLON: return ";"_s;
-			case KeySym::LEFTBRACKET: return "["_s;
-			case KeySym::BACKSLASH: return "\\"_s;
-			case KeySym::RIGHTBRACKET: return "]"_s;
-			case KeySym::BACKQUOTE: return "Backquote"_s;
+			case Keys::Backspace: return "Backspace"_s;
+			case Keys::Tab: return "Tab"_s;
+			case Keys::Return: return "Enter"_s;
+			case Keys::Escape: return "Escape"_s;
+			case Keys::Space: return "Space"_s;
+			case Keys::Quote: return "'"_s;
+			case Keys::Plus: return "+"_s;
+			case Keys::Comma: return ","_s;
+			case Keys::Minus: return "-"_s;
+			case Keys::Period: return "."_s;
+			case Keys::Slash: return "/"_s;
+			case Keys::D0: return "0"_s;
+			case Keys::D1: return "1"_s;
+			case Keys::D2: return "2"_s;
+			case Keys::D3: return "3"_s;
+			case Keys::D4: return "4"_s;
+			case Keys::D5: return "5"_s;
+			case Keys::D6: return "6"_s;
+			case Keys::D7: return "7"_s;
+			case Keys::D8: return "8"_s;
+			case Keys::D9: return "9"_s;
+			case Keys::Semicolon: return ";"_s;
+			case Keys::LeftBracket: return "["_s;
+			case Keys::Backslash: return "\\"_s;
+			case Keys::RightBracket: return "]"_s;
+			case Keys::Backquote: return "`"_s;
 
-			case KeySym::A: return "A"_s;
-			case KeySym::B: return "B"_s;
-			case KeySym::C: return "C"_s;
-			case KeySym::D: return "D"_s;
-			case KeySym::E: return "E"_s;
-			case KeySym::F: return "F"_s;
-			case KeySym::G: return "G"_s;
-			case KeySym::H: return "H"_s;
-			case KeySym::I: return "I"_s;
-			case KeySym::J: return "J"_s;
-			case KeySym::K: return "K"_s;
-			case KeySym::L: return "L"_s;
-			case KeySym::M: return "M"_s;
-			case KeySym::N: return "N"_s;
-			case KeySym::O: return "O"_s;
-			case KeySym::P: return "P"_s;
-			case KeySym::Q: return "Q"_s;
-			case KeySym::R: return "R"_s;
-			case KeySym::S: return "S"_s;
-			case KeySym::T: return "T"_s;
-			case KeySym::U: return "U"_s;
-			case KeySym::V: return "V"_s;
-			case KeySym::W: return "W"_s;
-			case KeySym::X: return "X"_s;
-			case KeySym::Y: return "Y"_s;
-			case KeySym::Z: return "Z"_s;
-			case KeySym::Delete: return "Del"_s;
+			case Keys::A: return "A"_s;
+			case Keys::B: return "B"_s;
+			case Keys::C: return "C"_s;
+			case Keys::D: return "D"_s;
+			case Keys::E: return "E"_s;
+			case Keys::F: return "F"_s;
+			case Keys::G: return "G"_s;
+			case Keys::H: return "H"_s;
+			case Keys::I: return "I"_s;
+			case Keys::J: return "J"_s;
+			case Keys::K: return "K"_s;
+			case Keys::L: return "L"_s;
+			case Keys::M: return "M"_s;
+			case Keys::N: return "N"_s;
+			case Keys::O: return "O"_s;
+			case Keys::P: return "P"_s;
+			case Keys::Q: return "Q"_s;
+			case Keys::R: return "R"_s;
+			case Keys::S: return "S"_s;
+			case Keys::T: return "T"_s;
+			case Keys::U: return "U"_s;
+			case Keys::V: return "V"_s;
+			case Keys::W: return "W"_s;
+			case Keys::X: return "X"_s;
+			case Keys::Y: return "Y"_s;
+			case Keys::Z: return "Z"_s;
+			case Keys::Delete: return "Del"_s;
 
-			case KeySym::KP0: return "0 (N)"_s;
-			case KeySym::KP1: return "1 (N)"_s;
-			case KeySym::KP2: return "2 (N)"_s;
-			case KeySym::KP3: return "3 (N)"_s;
-			case KeySym::KP4: return "4 (N)"_s;
-			case KeySym::KP5: return "5 (N)"_s;
-			case KeySym::KP6: return "6 (N)"_s;
-			case KeySym::KP7: return "7 (N)"_s;
-			case KeySym::KP8: return "8 (N)"_s;
-			case KeySym::KP9: return "9 (N)"_s;
-			case KeySym::KP_PERIOD: return ". [N]"_s;
-			case KeySym::KP_DIVIDE: return "/ [N]"_s;
-			case KeySym::KP_MULTIPLY: return "* [N]"_s;
-			case KeySym::KP_MINUS: return "- [N]"_s;
-			case KeySym::KP_PLUS: return "+ [N]"_s;
-			case KeySym::KP_ENTER: return "Enter [N]"_s;
-			case KeySym::KP_EQUALS: return "= [N]"_s;
+			case Keys::NumPad0: return "0 (N)"_s;
+			case Keys::NumPad1: return "1 (N)"_s;
+			case Keys::NumPad2: return "2 (N)"_s;
+			case Keys::NumPad3: return "3 (N)"_s;
+			case Keys::NumPad4: return "4 (N)"_s;
+			case Keys::NumPad5: return "5 (N)"_s;
+			case Keys::NumPad6: return "6 (N)"_s;
+			case Keys::NumPad7: return "7 (N)"_s;
+			case Keys::NumPad8: return "8 (N)"_s;
+			case Keys::NumPad9: return "9 (N)"_s;
+			case Keys::NumPadPeriod: return ". [N]"_s;
+			case Keys::NumPadDivide: return "/ [N]"_s;
+			case Keys::NumPadMultiply: return "* [N]"_s;
+			case Keys::NumPadMinus: return "- [N]"_s;
+			case Keys::NumPadPlus: return "+ [N]"_s;
+			case Keys::NumPadEnter: return "Enter [N]"_s;
+			case Keys::NumPadEquals: return "= [N]"_s;
 
-			case KeySym::UP: return "Up"_s;
-			case KeySym::DOWN: return "Down"_s;
-			case KeySym::RIGHT: return "Right"_s;
-			case KeySym::LEFT: return "Left"_s;
-			case KeySym::INSERT: return "Ins"_s;
-			case KeySym::HOME: return "Home"_s;
-			case KeySym::END: return "End"_s;
-			case KeySym::PAGEUP: return "PgUp"_s;
-			case KeySym::PAGEDOWN: return "PgDn"_s;
+			case Keys::Up: return "Up"_s;
+			case Keys::Down: return "Down"_s;
+			case Keys::Right: return "Right"_s;
+			case Keys::Left: return "Left"_s;
+			case Keys::Insert: return "Ins"_s;
+			case Keys::Home: return "Home"_s;
+			case Keys::End: return "End"_s;
+			case Keys::PageUp: return "PgUp"_s;
+			case Keys::PageDown: return "PgDn"_s;
 
-			case KeySym::F1: return "F1"_s;
-			case KeySym::F2: return "F2"_s;
-			case KeySym::F3: return "F3"_s;
-			case KeySym::F4: return "F4"_s;
-			case KeySym::F5: return "F5"_s;
-			case KeySym::F6: return "F6"_s;
-			case KeySym::F7: return "F7"_s;
-			case KeySym::F8: return "F8"_s;
-			case KeySym::F9: return "F9"_s;
-			case KeySym::F10: return "F10"_s;
-			case KeySym::F11: return "F11"_s;
-			case KeySym::F12: return "F12"_s;
-			case KeySym::F13: return "F13"_s;
-			case KeySym::F14: return "F14"_s;
-			case KeySym::F15: return "F15"_s;
+			case Keys::F1: return "F1"_s;
+			case Keys::F2: return "F2"_s;
+			case Keys::F3: return "F3"_s;
+			case Keys::F4: return "F4"_s;
+			case Keys::F5: return "F5"_s;
+			case Keys::F6: return "F6"_s;
+			case Keys::F7: return "F7"_s;
+			case Keys::F8: return "F8"_s;
+			case Keys::F9: return "F9"_s;
+			case Keys::F10: return "F10"_s;
+			case Keys::F11: return "F11"_s;
+			case Keys::F12: return "F12"_s;
+			case Keys::F13: return "F13"_s;
+			case Keys::F14: return "F14"_s;
+			case Keys::F15: return "F15"_s;
 
-			case KeySym::NUM_LOCK: return "Num Lock"_s;
-			case KeySym::CAPS_LOCK: return "Caps Lock"_s;
-			case KeySym::SCROLL_LOCK: return "Scroll Lock"_s;
-			case KeySym::RSHIFT: return "R. Shift"_s;
-			case KeySym::LSHIFT: return "Shift"_s;
-			case KeySym::RCTRL: return "R. Ctrl"_s;
-			case KeySym::LCTRL: return "Ctrl"_s;
-			case KeySym::RALT: return "R. Alt"_s;
-			case KeySym::LALT: return "Alt"_s;
-			//case KeySym::RSUPER: return "R. Super"_s;
-			//case KeySym::LSUPER: return "Super"_s;
-			//case KeySym::PRINTSCREEN: return "PrtSc"_s;
-			case KeySym::PAUSE: return "Pause"_s;
-			case KeySym::MENU: return "Menu"_s;
+			case Keys::NumLock: return "Num Lock"_s;
+			case Keys::CapsLock: return "Caps Lock"_s;
+			case Keys::ScrollLock: return "Scroll Lock"_s;
+			case Keys::RShift: return "R. Shift"_s;
+			case Keys::LShift: return "Shift"_s;
+			case Keys::RCtrl: return "R. Ctrl"_s;
+			case Keys::LCtrl: return "Ctrl"_s;
+			case Keys::RAlt: return "R. Alt"_s;
+			case Keys::LAlt: return "Alt"_s;
+			//case Keys::RSuper: return "R. Super"_s;
+			//case Keys::LSuper: return "Super"_s;
+			//case Keys::PrintScreen: return "PrtSc"_s;
+			case Keys::Pause: return "Pause"_s;
+			case Keys::Menu: return "Menu"_s;
 
-			default: return nullptr;
+			default: return {};
 		}
 	}
 }

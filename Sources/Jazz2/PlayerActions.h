@@ -13,6 +13,7 @@ namespace Jazz2
 		Run,
 		ChangeWeapon,
 		Menu,
+		Console,
 
 		SwitchToBlaster,
 		SwitchToBouncer,

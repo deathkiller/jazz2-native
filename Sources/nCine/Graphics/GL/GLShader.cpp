@@ -42,7 +42,7 @@ namespace nCine
 		glHandle_ = glCreateShader(type);
 	}
 
-	GLShader::GLShader(GLenum type, const StringView& filename)
+	GLShader::GLShader(GLenum type, StringView filename)
 		: GLShader(type)
 	{
 		loadFromFile(filename);
@@ -53,39 +53,33 @@ namespace nCine
 		glDeleteShader(glHandle_);
 	}
 
-	bool GLShader::loadFromString(const char* string)
+	bool GLShader::loadFromString(StringView string)
 	{
-		const char* strings[2] = { string, nullptr };
-		return loadFromStringsAndFile(strings, { });
+		return loadFromStringsAndFile(arrayView({ string }), {});
 	}
 	
-	bool GLShader::loadFromStringAndFile(const char* string, const StringView& filename)
+	bool GLShader::loadFromStringAndFile(StringView string, const StringView& filename)
 	{
-		const char* strings[2] = { string, nullptr };
-		return loadFromStringsAndFile(strings, filename);
+		return loadFromStringsAndFile(arrayView({ string }), filename);
 	}
 
-	bool GLShader::loadFromStringsAndFile(const char** strings, const StringView& filename)
+	bool GLShader::loadFromStringsAndFile(ArrayView<const StringView> strings, const StringView& filename)
 	{
-		const bool noStrings = (strings == nullptr || strings[0] == nullptr);
-		if (noStrings && filename.empty()) {
+		if (strings.empty() && filename.empty()) {
 			return false;
 		}
 		
-		SmallVector<const char*, 6> sourceStrings;
-		SmallVector<GLint, 6> sourceLengths;
+		SmallVector<const char*, 10> sourceStrings;
+		SmallVector<GLint, 10> sourceLengths;
 
 		sourceStrings.push_back(CommonShaderVersion.data());
 		sourceLengths.push_back(static_cast<GLint>(CommonShaderVersion.size()));
 		sourceStrings.push_back(CommonShaderDefines.data());
 		sourceLengths.push_back(static_cast<GLint>(CommonShaderDefines.size()));
 
-		if (!noStrings) {
-			for (uint32_t i = 0; strings[i] != nullptr; i++) {
-				sourceStrings.push_back(strings[i]);
-				const unsigned long sourceLength = strnlen(strings[i], MaxShaderSourceLength);
-				sourceLengths.push_back(sourceLength);
-			}
+		for (auto string : strings) {
+			sourceStrings.push_back(string.data());
+			sourceLengths.push_back(static_cast<GLint>(string.size()));
 		}
 
 		String fileSource;
@@ -96,7 +90,7 @@ namespace nCine
 			}
 			
 			const GLint fileLength = static_cast<int>(fileHandle->GetSize());
-			fileSource = String(NoInit, fileLength);
+			fileSource = String{NoInit, static_cast<std::size_t>(fileLength)};
 			fileHandle->Read(fileSource.data(), fileLength);
 			
 			sourceStrings.push_back(fileSource.data());
@@ -105,14 +99,14 @@ namespace nCine
 			setObjectLabel(filename.data());
 		}
 
-		size_t count = sourceStrings.size();
+		std::size_t count = sourceStrings.size();
 		glShaderSource(glHandle_, count, sourceStrings.data(), sourceLengths.data());
 		return (count > 1);
 	}
 	
-	bool GLShader::loadFromFile(const StringView& filename)
+	bool GLShader::loadFromFile(StringView filename)
 	{
-		return loadFromStringsAndFile(nullptr, filename);
+		return loadFromStringsAndFile({}, filename);
 	}
 
 	bool GLShader::compile(ErrorChecking errorChecking, bool logOnErrors)

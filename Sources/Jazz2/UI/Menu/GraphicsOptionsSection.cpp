@@ -32,6 +32,8 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Antialiasing, _("Antialiasing"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::BackgroundDithering, _("Background Dithering"), true });
+		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::LowWaterQuality, _("Water Quality"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPlayerTrails, _("Show Player Trails"), true });
@@ -123,6 +125,7 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
+				case GraphicsOptionsItemType::BackgroundDithering: enabled = PreferencesCache::BackgroundDithering; break;
 				case GraphicsOptionsItemType::LowWaterQuality: enabled = PreferencesCache::LowWaterQuality; customText = (enabled ? _("Low") : _("High")); break;
 				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
 				case GraphicsOptionsItemType::PreferVerticalSplitscreen: enabled = PreferencesCache::PreferVerticalSplitscreen; customText = (enabled ? _("Vertical") : _("Horizontal"));  break;
@@ -177,6 +180,13 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 			}
+			case GraphicsOptionsItemType::BackgroundDithering:
+				PreferencesCache::BackgroundDithering = !PreferencesCache::BackgroundDithering;
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
+				_isDirty = true;
+				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				break;
 			case GraphicsOptionsItemType::LowWaterQuality:
 				PreferencesCache::LowWaterQuality = !PreferencesCache::LowWaterQuality;
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
