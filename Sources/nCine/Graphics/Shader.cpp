@@ -484,7 +484,7 @@ namespace nCine
 		if (batchSize > 0) {
 			char sourceString[48];
 			std::int32_t length = formatString(sourceString, sizeof(sourceString), DefineFormatString, BatchSizeDefine, batchSize);
-			StringView vertexStrings[1] = { StringView(sourceString, length) };
+			StringView vertexStrings[2] = { StringView(sourceString, length), ResetLineString };
 			return glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
 		} else {
 			return glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
@@ -527,8 +527,8 @@ namespace nCine
 
 		if (batchSize > 0) {
 			char sourceString[48];
-			std::int32_t length = formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
-			StringView vertexStrings[2] = { StringView(sourceString, length), vertexShader };
+			std::int32_t length = formatString(sourceString, sizeof(sourceString), DefineFormatString, BatchSizeDefine, batchSize);
+			StringView vertexStrings[3] = { StringView(sourceString, length), ResetLineString, vertexShader };
 			return glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, {});
 		} else {
 			return glShaderProgram_->attachShaderFromString(GL_VERTEX_SHADER, vertexShader);
