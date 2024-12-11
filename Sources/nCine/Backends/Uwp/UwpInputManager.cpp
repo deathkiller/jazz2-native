@@ -198,7 +198,7 @@ namespace nCine
 
 			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
 			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
-			if (keyboardEvent_.sym >= KeySym::COUNT) {
+			if (keyboardEvent_.sym >= Keys::Count) {
 				return;
 			}
 
@@ -241,7 +241,7 @@ namespace nCine
 
 			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
 			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
-			if (keyboardEvent_.sym >= KeySym::COUNT) {
+			if (keyboardEvent_.sym >= Keys::Count) {
 				return;
 			}
 
@@ -340,126 +340,126 @@ namespace nCine
 	KeySym UwpInputManager::keySymValueToEnum(winrtWS::VirtualKey virtualKey)
 	{
 		switch (virtualKey) {
-			case winrtWS::VirtualKey::Back:				return KeySym::Backspace;
-			case winrtWS::VirtualKey::Tab:				return KeySym::Tab;
-			case winrtWS::VirtualKey::Enter:			return KeySym::Return;
-			case winrtWS::VirtualKey::Escape:			return KeySym::Escape;
-			case winrtWS::VirtualKey::Space:			return KeySym::Space;
-			case (winrtWS::VirtualKey)VK_OEM_7:			return KeySym::Quote;
-			case (winrtWS::VirtualKey)VK_OEM_PLUS:		return KeySym::Plus;
-			case (winrtWS::VirtualKey)VK_OEM_COMMA:		return KeySym::Comma;
-			case (winrtWS::VirtualKey)VK_OEM_MINUS:		return KeySym::Minus;
-			case (winrtWS::VirtualKey)VK_OEM_PERIOD:	return KeySym::Period;
-			case (winrtWS::VirtualKey)VK_OEM_2:			return KeySym::Slash;
-			case winrtWS::VirtualKey::Number0:			return KeySym::D0;
-			case winrtWS::VirtualKey::Number1:			return KeySym::D1;
-			case winrtWS::VirtualKey::Number2:			return KeySym::D2;
-			case winrtWS::VirtualKey::Number3:			return KeySym::D3;
-			case winrtWS::VirtualKey::Number4:			return KeySym::D4;
-			case winrtWS::VirtualKey::Number5:			return KeySym::D5;
-			case winrtWS::VirtualKey::Number6:			return KeySym::D6;
-			case winrtWS::VirtualKey::Number7:			return KeySym::D7;
-			case winrtWS::VirtualKey::Number8:			return KeySym::D8;
-			case winrtWS::VirtualKey::Number9:			return KeySym::D9;
-			case (winrtWS::VirtualKey)VK_OEM_1:			return KeySym::Semicolon;
+			case winrtWS::VirtualKey::Back:				return Keys::Backspace;
+			case winrtWS::VirtualKey::Tab:				return Keys::Tab;
+			case winrtWS::VirtualKey::Enter:			return Keys::Return;
+			case winrtWS::VirtualKey::Escape:			return Keys::Escape;
+			case winrtWS::VirtualKey::Space:			return Keys::Space;
+			case (winrtWS::VirtualKey)VK_OEM_7:			return Keys::Quote;
+			case (winrtWS::VirtualKey)VK_OEM_PLUS:		return Keys::Plus;
+			case (winrtWS::VirtualKey)VK_OEM_COMMA:		return Keys::Comma;
+			case (winrtWS::VirtualKey)VK_OEM_MINUS:		return Keys::Minus;
+			case (winrtWS::VirtualKey)VK_OEM_PERIOD:	return Keys::Period;
+			case (winrtWS::VirtualKey)VK_OEM_2:			return Keys::Slash;
+			case winrtWS::VirtualKey::Number0:			return Keys::D0;
+			case winrtWS::VirtualKey::Number1:			return Keys::D1;
+			case winrtWS::VirtualKey::Number2:			return Keys::D2;
+			case winrtWS::VirtualKey::Number3:			return Keys::D3;
+			case winrtWS::VirtualKey::Number4:			return Keys::D4;
+			case winrtWS::VirtualKey::Number5:			return Keys::D5;
+			case winrtWS::VirtualKey::Number6:			return Keys::D6;
+			case winrtWS::VirtualKey::Number7:			return Keys::D7;
+			case winrtWS::VirtualKey::Number8:			return Keys::D8;
+			case winrtWS::VirtualKey::Number9:			return Keys::D9;
+			case (winrtWS::VirtualKey)VK_OEM_1:			return Keys::Semicolon;
 
-			case (winrtWS::VirtualKey)VK_OEM_4:			return KeySym::LeftBracket;
-			case (winrtWS::VirtualKey)VK_OEM_5:			return KeySym::Backslash;
-			case (winrtWS::VirtualKey)VK_OEM_6:			return KeySym::RightBracket;
-			case (winrtWS::VirtualKey)VK_OEM_3:			return KeySym::Backquote;
-			case winrtWS::VirtualKey::A:				return KeySym::A;
-			case winrtWS::VirtualKey::B:				return KeySym::B;
-			case winrtWS::VirtualKey::C:				return KeySym::C;
-			case winrtWS::VirtualKey::D:				return KeySym::D;
-			case winrtWS::VirtualKey::E:				return KeySym::E;
-			case winrtWS::VirtualKey::F:				return KeySym::F;
-			case winrtWS::VirtualKey::G:				return KeySym::G;
-			case winrtWS::VirtualKey::H:				return KeySym::H;
-			case winrtWS::VirtualKey::I:				return KeySym::I;
-			case winrtWS::VirtualKey::J:				return KeySym::J;
-			case winrtWS::VirtualKey::K:				return KeySym::K;
-			case winrtWS::VirtualKey::L:				return KeySym::L;
-			case winrtWS::VirtualKey::M:				return KeySym::M;
-			case winrtWS::VirtualKey::N:				return KeySym::N;
-			case winrtWS::VirtualKey::O:				return KeySym::O;
-			case winrtWS::VirtualKey::P:				return KeySym::P;
-			case winrtWS::VirtualKey::Q:				return KeySym::Q;
-			case winrtWS::VirtualKey::R:				return KeySym::R;
-			case winrtWS::VirtualKey::S:				return KeySym::S;
-			case winrtWS::VirtualKey::T:				return KeySym::T;
-			case winrtWS::VirtualKey::U:				return KeySym::U;
-			case winrtWS::VirtualKey::V:				return KeySym::V;
-			case winrtWS::VirtualKey::W:				return KeySym::W;
-			case winrtWS::VirtualKey::X:				return KeySym::X;
-			case winrtWS::VirtualKey::Y:				return KeySym::Y;
-			case winrtWS::VirtualKey::Z:				return KeySym::Z;
-			case winrtWS::VirtualKey::Delete:			return KeySym::Delete;
+			case (winrtWS::VirtualKey)VK_OEM_4:			return Keys::LeftBracket;
+			case (winrtWS::VirtualKey)VK_OEM_5:			return Keys::Backslash;
+			case (winrtWS::VirtualKey)VK_OEM_6:			return Keys::RightBracket;
+			case (winrtWS::VirtualKey)VK_OEM_3:			return Keys::Backquote;
+			case winrtWS::VirtualKey::A:				return Keys::A;
+			case winrtWS::VirtualKey::B:				return Keys::B;
+			case winrtWS::VirtualKey::C:				return Keys::C;
+			case winrtWS::VirtualKey::D:				return Keys::D;
+			case winrtWS::VirtualKey::E:				return Keys::E;
+			case winrtWS::VirtualKey::F:				return Keys::F;
+			case winrtWS::VirtualKey::G:				return Keys::G;
+			case winrtWS::VirtualKey::H:				return Keys::H;
+			case winrtWS::VirtualKey::I:				return Keys::I;
+			case winrtWS::VirtualKey::J:				return Keys::J;
+			case winrtWS::VirtualKey::K:				return Keys::K;
+			case winrtWS::VirtualKey::L:				return Keys::L;
+			case winrtWS::VirtualKey::M:				return Keys::M;
+			case winrtWS::VirtualKey::N:				return Keys::N;
+			case winrtWS::VirtualKey::O:				return Keys::O;
+			case winrtWS::VirtualKey::P:				return Keys::P;
+			case winrtWS::VirtualKey::Q:				return Keys::Q;
+			case winrtWS::VirtualKey::R:				return Keys::R;
+			case winrtWS::VirtualKey::S:				return Keys::S;
+			case winrtWS::VirtualKey::T:				return Keys::T;
+			case winrtWS::VirtualKey::U:				return Keys::U;
+			case winrtWS::VirtualKey::V:				return Keys::V;
+			case winrtWS::VirtualKey::W:				return Keys::W;
+			case winrtWS::VirtualKey::X:				return Keys::X;
+			case winrtWS::VirtualKey::Y:				return Keys::Y;
+			case winrtWS::VirtualKey::Z:				return Keys::Z;
+			case winrtWS::VirtualKey::Delete:			return Keys::Delete;
 
-			case winrtWS::VirtualKey::NumberPad0:		return KeySym::NumPad0;
-			case winrtWS::VirtualKey::NumberPad1:		return KeySym::NumPad1;
-			case winrtWS::VirtualKey::NumberPad2:		return KeySym::NumPad2;
-			case winrtWS::VirtualKey::NumberPad3:		return KeySym::NumPad3;
-			case winrtWS::VirtualKey::NumberPad4:		return KeySym::NumPad4;
-			case winrtWS::VirtualKey::NumberPad5:		return KeySym::NumPad5;
-			case winrtWS::VirtualKey::NumberPad6:		return KeySym::NumPad6;
-			case winrtWS::VirtualKey::NumberPad7:		return KeySym::NumPad7;
-			case winrtWS::VirtualKey::NumberPad8:		return KeySym::NumPad8;
-			case winrtWS::VirtualKey::NumberPad9:		return KeySym::NumPad9;
-			case winrtWS::VirtualKey::Decimal:			return KeySym::NumPadPeriod;
-			case winrtWS::VirtualKey::Divide:			return KeySym::NumPadDivide;
-			case winrtWS::VirtualKey::Multiply:			return KeySym::NumPadMultiply;
-			case winrtWS::VirtualKey::Subtract:			return KeySym::NumPadMinus;
-			case winrtWS::VirtualKey::Add:				return KeySym::NumPadPlus;
-			//case (winrtWS::VirtualKey)VK_RETURN:		return KeySym::NumPadEnter;
-			//case winrtWS::VirtualKey::GLFW_KEY_KP_EQUAL:	return KeySym::NumPadEquals;
+			case winrtWS::VirtualKey::NumberPad0:		return Keys::NumPad0;
+			case winrtWS::VirtualKey::NumberPad1:		return Keys::NumPad1;
+			case winrtWS::VirtualKey::NumberPad2:		return Keys::NumPad2;
+			case winrtWS::VirtualKey::NumberPad3:		return Keys::NumPad3;
+			case winrtWS::VirtualKey::NumberPad4:		return Keys::NumPad4;
+			case winrtWS::VirtualKey::NumberPad5:		return Keys::NumPad5;
+			case winrtWS::VirtualKey::NumberPad6:		return Keys::NumPad6;
+			case winrtWS::VirtualKey::NumberPad7:		return Keys::NumPad7;
+			case winrtWS::VirtualKey::NumberPad8:		return Keys::NumPad8;
+			case winrtWS::VirtualKey::NumberPad9:		return Keys::NumPad9;
+			case winrtWS::VirtualKey::Decimal:			return Keys::NumPadPeriod;
+			case winrtWS::VirtualKey::Divide:			return Keys::NumPadDivide;
+			case winrtWS::VirtualKey::Multiply:			return Keys::NumPadMultiply;
+			case winrtWS::VirtualKey::Subtract:			return Keys::NumPadMinus;
+			case winrtWS::VirtualKey::Add:				return Keys::NumPadPlus;
+			//case (winrtWS::VirtualKey)VK_RETURN:		return Keys::NumPadEnter;
+			//case winrtWS::VirtualKey::GLFW_KEY_KP_EQUAL:	return Keys::NumPadEquals;
 
-			case winrtWS::VirtualKey::Up:				return KeySym::Up;
-			case winrtWS::VirtualKey::Down:				return KeySym::Down;
-			case winrtWS::VirtualKey::Right:			return KeySym::Right;
-			case winrtWS::VirtualKey::Left:				return KeySym::Left;
-			case winrtWS::VirtualKey::Insert:			return KeySym::Insert;
-			case winrtWS::VirtualKey::Home:				return KeySym::Home;
-			case winrtWS::VirtualKey::End:				return KeySym::End;
-			case winrtWS::VirtualKey::PageUp:			return KeySym::PageUp;
-			case winrtWS::VirtualKey::PageDown:			return KeySym::PageDown;
+			case winrtWS::VirtualKey::Up:				return Keys::Up;
+			case winrtWS::VirtualKey::Down:				return Keys::Down;
+			case winrtWS::VirtualKey::Right:			return Keys::Right;
+			case winrtWS::VirtualKey::Left:				return Keys::Left;
+			case winrtWS::VirtualKey::Insert:			return Keys::Insert;
+			case winrtWS::VirtualKey::Home:				return Keys::Home;
+			case winrtWS::VirtualKey::End:				return Keys::End;
+			case winrtWS::VirtualKey::PageUp:			return Keys::PageUp;
+			case winrtWS::VirtualKey::PageDown:			return Keys::PageDown;
 
-			case winrtWS::VirtualKey::F1:				return KeySym::F1;
-			case winrtWS::VirtualKey::F2:				return KeySym::F2;
-			case winrtWS::VirtualKey::F3:				return KeySym::F3;
-			case winrtWS::VirtualKey::F4:				return KeySym::F4;
-			case winrtWS::VirtualKey::F5:				return KeySym::F5;
-			case winrtWS::VirtualKey::F6:				return KeySym::F6;
-			case winrtWS::VirtualKey::F7:				return KeySym::F7;
-			case winrtWS::VirtualKey::F8:				return KeySym::F8;
-			case winrtWS::VirtualKey::F9:				return KeySym::F9;
-			case winrtWS::VirtualKey::F10:				return KeySym::F10;
-			case winrtWS::VirtualKey::F11:				return KeySym::F11;
-			case winrtWS::VirtualKey::F12:				return KeySym::F12;
-			case winrtWS::VirtualKey::F13:				return KeySym::F13;
-			case winrtWS::VirtualKey::F14:				return KeySym::F14;
-			case winrtWS::VirtualKey::F15:				return KeySym::F15;
+			case winrtWS::VirtualKey::F1:				return Keys::F1;
+			case winrtWS::VirtualKey::F2:				return Keys::F2;
+			case winrtWS::VirtualKey::F3:				return Keys::F3;
+			case winrtWS::VirtualKey::F4:				return Keys::F4;
+			case winrtWS::VirtualKey::F5:				return Keys::F5;
+			case winrtWS::VirtualKey::F6:				return Keys::F6;
+			case winrtWS::VirtualKey::F7:				return Keys::F7;
+			case winrtWS::VirtualKey::F8:				return Keys::F8;
+			case winrtWS::VirtualKey::F9:				return Keys::F9;
+			case winrtWS::VirtualKey::F10:				return Keys::F10;
+			case winrtWS::VirtualKey::F11:				return Keys::F11;
+			case winrtWS::VirtualKey::F12:				return Keys::F12;
+			case winrtWS::VirtualKey::F13:				return Keys::F13;
+			case winrtWS::VirtualKey::F14:				return Keys::F14;
+			case winrtWS::VirtualKey::F15:				return Keys::F15;
 
-			case winrtWS::VirtualKey::NumberKeyLock:	return KeySym::NumLock;
-			case winrtWS::VirtualKey::CapitalLock:		return KeySym::CapsLock;
-			case winrtWS::VirtualKey::Scroll:			return KeySym::ScrollLock;
-			case winrtWS::VirtualKey::RightShift:		return KeySym::RShift;
-			case winrtWS::VirtualKey::LeftShift:		return KeySym::LShift;
-			case winrtWS::VirtualKey::RightControl:		return KeySym::RCtrl;
-			case winrtWS::VirtualKey::LeftControl:		return KeySym::LCtrl;
-			case winrtWS::VirtualKey::RightMenu:		return KeySym::RAlt;
+			case winrtWS::VirtualKey::NumberKeyLock:	return Keys::NumLock;
+			case winrtWS::VirtualKey::CapitalLock:		return Keys::CapsLock;
+			case winrtWS::VirtualKey::Scroll:			return Keys::ScrollLock;
+			case winrtWS::VirtualKey::RightShift:		return Keys::RShift;
+			case winrtWS::VirtualKey::LeftShift:		return Keys::LShift;
+			case winrtWS::VirtualKey::RightControl:		return Keys::RCtrl;
+			case winrtWS::VirtualKey::LeftControl:		return Keys::LCtrl;
+			case winrtWS::VirtualKey::RightMenu:		return Keys::RAlt;
 			case winrtWS::VirtualKey::Menu:
-			case winrtWS::VirtualKey::LeftMenu:			return KeySym::LAlt;
-			case winrtWS::VirtualKey::RightWindows:		return KeySym::RSuper;
-			case winrtWS::VirtualKey::LeftWindows:		return KeySym::LSuper;
+			case winrtWS::VirtualKey::LeftMenu:			return Keys::LAlt;
+			case winrtWS::VirtualKey::RightWindows:		return Keys::RSuper;
+			case winrtWS::VirtualKey::LeftWindows:		return Keys::LSuper;
 
-			case winrtWS::VirtualKey::Print:			return KeySym::PrintScreen;
-			case winrtWS::VirtualKey::Pause:			return KeySym::Pause;
-			case winrtWS::VirtualKey::Application:		return KeySym::Menu;
+			case winrtWS::VirtualKey::Print:			return Keys::PrintScreen;
+			case winrtWS::VirtualKey::Pause:			return Keys::Pause;
+			case winrtWS::VirtualKey::Application:		return Keys::Menu;
 
-			case winrtWS::VirtualKey::ModeChange:		return KeySym::Mode;
-			case winrtWS::VirtualKey::Help:				return KeySym::Help;
+			case winrtWS::VirtualKey::ModeChange:		return Keys::Mode;
+			case winrtWS::VirtualKey::Help:				return Keys::Help;
 
-			default:									return KeySym::Unknown;
+			default:									return Keys::Unknown;
 		}
 	}
 
