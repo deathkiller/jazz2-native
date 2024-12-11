@@ -111,8 +111,8 @@ namespace Jazz2
 		GenericGraphicResource* RequestGraphicsAura(const StringView path, std::uint16_t paletteOffset);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 		
-		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
-		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
+		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
+		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
 		
 		void RecreateGemPalettes();
 #if defined(DEATH_DEBUG)

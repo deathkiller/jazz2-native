@@ -21,7 +21,7 @@ namespace Jazz2::UI::Menu
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)
 		: _root(root), _activeCanvas(ActiveCanvas::Background), _transitionWhite(afterIntro ? 1.0f : 0.0f),
 			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
-			_pressedKeys(ValueInit, (std::size_t)KeySym::COUNT), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll),
+			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll),
 			_touchButtonsTimer(0.0f)
 	{
 		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
@@ -1063,9 +1063,11 @@ namespace Jazz2::UI::Menu
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
 			}
+		}
 
-			// Prepare output render command
-			_outputRenderCommand.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackground));
+		// Prepare output render command
+		bool shaderChanged = _outputRenderCommand.material().setShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
+		if (shaderChanged) {
 			_outputRenderCommand.material().reserveUniformsDataMemory();
 			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 

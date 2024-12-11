@@ -51,6 +51,7 @@ namespace Jazz2
 	namespace UI
 	{
 		class HUD;
+		class InGameConsole;
 	}
 
 	namespace UI::Menu
@@ -70,6 +71,7 @@ namespace Jazz2
 		friend class Scripting::LevelScriptLoader;
 #endif
 		friend class UI::HUD;
+		friend class UI::InGameConsole;
 		friend class UI::Menu::InGameMenu;
 
 	public:
@@ -111,6 +113,7 @@ namespace Jazz2
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;
+		void OnTextInput(const TextInputEvent& event) override;
 		void OnTouchEvent(const TouchEvent& event) override;
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
@@ -207,8 +210,6 @@ namespace Jazz2
 		Recti _levelBounds;
 		bool _isReforged, _cheatsUsed;
 		bool _checkpointCreated;
-		char _cheatsBuffer[9];
-		std::uint32_t _cheatsBufferLength;
 		SmallVector<String, 0> _levelTexts;
 
 		Events::EventSpawner _eventSpawner;
@@ -230,6 +231,7 @@ namespace Jazz2
 #endif
 		Metadata* _commonResources;
 		std::unique_ptr<UI::HUD> _hud;
+		std::unique_ptr<UI::InGameConsole> _console;
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<Actors::Bosses::BossBase> _activeBoss;
 
@@ -260,6 +262,18 @@ namespace Jazz2
 
 		void PauseGame();
 		void ResumeGame();
+
+		void CheatKill();
+		void CheatGod();
+		void CheatNext();
+		void CheatGuns();
+		void CheatRush();
+		void CheatGems();
+		void CheatBird();
+		void CheatPower();
+		void CheatCoins();
+		void CheatMorph();
+		void CheatShield();
 		
 #if defined(WITH_IMGUI)
 		ImVec2 WorldPosToScreenSpace(const Vector2f pos);

@@ -166,7 +166,7 @@ namespace nCine
 	{
 	public:
 		/// Returns 'true' if the specified key is down
-		virtual bool isKeyDown(KeySym key) const = 0;
+		virtual bool isKeyDown(Keys key) const = 0;
 	};
 
 	/// Information about a keyboard event
@@ -176,12 +176,12 @@ namespace nCine
 		/// Key scan code
 		int scancode;
 		/// Key symbol code
-		KeySym sym;
+		Keys sym;
 		/// Key modifiers mask
 		int mod;
 
 		KeyboardEvent()
-			: scancode(0), sym(KeySym::UNKNOWN), mod(0) {}
+			: scancode(0), sym(Keys::Unknown), mod(0) {}
 	};
 
 	/// Information about a text input event

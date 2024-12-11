@@ -142,7 +142,9 @@ namespace Jazz2
 		CombineWithWaterLow,
 
 		TexturedBackground,
+		TexturedBackgroundDither,
 		TexturedBackgroundCircle,
+		TexturedBackgroundCircleDither,
 
 		Colorized,
 		BatchedColorized,

@@ -481,6 +481,7 @@
     <ClInclude Include="Jazz2\UI\Font.h" />
     <ClInclude Include="Jazz2\UI\FormattedTextBlock.h" />
     <ClInclude Include="Jazz2\UI\HUD.h" />
+    <ClInclude Include="Jazz2\UI\InGameConsole.h" />
     <ClInclude Include="Jazz2\UI\LoadingHandler.h" />
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h" />
@@ -867,6 +868,7 @@
     <ClCompile Include="Jazz2\UI\Font.cpp" />
     <ClCompile Include="Jazz2\UI\FormattedTextBlock.cpp" />
     <ClCompile Include="Jazz2\UI\HUD.cpp" />
+    <ClCompile Include="Jazz2\UI\InGameConsole.cpp" />
     <ClCompile Include="Jazz2\UI\LoadingHandler.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp" />

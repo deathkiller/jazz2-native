@@ -17,68 +17,69 @@ namespace Jazz2::UI
 
 		// Set default mappings for 1st player
 		auto first = GetMappings(0);
-		first[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(KeySym::LEFT));
+		first[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(Keys::Left));
 		first[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(0, ButtonName::Left));
 		first[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(0, AxisName::LeftX, true));
-		first[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(KeySym::RIGHT));
+		first[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(Keys::Right));
 		first[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(0, ButtonName::Right));
 		first[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(0, AxisName::LeftX));
-		first[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(KeySym::UP));
+		first[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(Keys::Up));
 		first[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(0, ButtonName::Up));
 		first[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(0, AxisName::LeftY, true));
-		first[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(KeySym::DOWN));
+		first[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(Keys::Down));
 		first[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(0, ButtonName::Down));
 		first[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(0, AxisName::LeftY));
 
-		first[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(KeySym::SPACE));
+		first[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(Keys::Space));
 		first[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(0, ButtonName::X));
 		first[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(0, AxisName::RightTrigger));
-		first[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::V));
+		first[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(Keys::V));
 		first[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(0, ButtonName::A));
-		first[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(KeySym::C));
+		first[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(Keys::C));
 		first[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(0, ButtonName::B));
 		first[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(0, AxisName::LeftTrigger));
-		first[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::X));
+		first[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(Keys::X));
 		first[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(0, ButtonName::Y));
-		first[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(KeySym::ESCAPE));
+		first[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(Keys::Escape));
 		first[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(0, ButtonName::Start));
+		first[(std::int32_t)PlayerActions::Console].Targets.emplace_back(CreateTarget(Keys::Backquote));
 
-		first[(std::int32_t)PlayerActions::SwitchToBlaster].Targets.emplace_back(CreateTarget(KeySym::N1));
-		first[(std::int32_t)PlayerActions::SwitchToBouncer].Targets.emplace_back(CreateTarget(KeySym::N2));
-		first[(std::int32_t)PlayerActions::SwitchToFreezer].Targets.emplace_back(CreateTarget(KeySym::N3));
-		first[(std::int32_t)PlayerActions::SwitchToSeeker].Targets.emplace_back(CreateTarget(KeySym::N4));
-		first[(std::int32_t)PlayerActions::SwitchToRF].Targets.emplace_back(CreateTarget(KeySym::N5));
-		first[(std::int32_t)PlayerActions::SwitchToToaster].Targets.emplace_back(CreateTarget(KeySym::N6));
-		first[(std::int32_t)PlayerActions::SwitchToTNT].Targets.emplace_back(CreateTarget(KeySym::N7));
-		first[(std::int32_t)PlayerActions::SwitchToPepper].Targets.emplace_back(CreateTarget(KeySym::N8));
-		first[(std::int32_t)PlayerActions::SwitchToElectro].Targets.emplace_back(CreateTarget(KeySym::N9));
-		first[(std::int32_t)PlayerActions::SwitchToThunderbolt].Targets.emplace_back(CreateTarget(KeySym::N0));
+		first[(std::int32_t)PlayerActions::SwitchToBlaster].Targets.emplace_back(CreateTarget(Keys::D1));
+		first[(std::int32_t)PlayerActions::SwitchToBouncer].Targets.emplace_back(CreateTarget(Keys::D2));
+		first[(std::int32_t)PlayerActions::SwitchToFreezer].Targets.emplace_back(CreateTarget(Keys::D3));
+		first[(std::int32_t)PlayerActions::SwitchToSeeker].Targets.emplace_back(CreateTarget(Keys::D4));
+		first[(std::int32_t)PlayerActions::SwitchToRF].Targets.emplace_back(CreateTarget(Keys::D5));
+		first[(std::int32_t)PlayerActions::SwitchToToaster].Targets.emplace_back(CreateTarget(Keys::D6));
+		first[(std::int32_t)PlayerActions::SwitchToTNT].Targets.emplace_back(CreateTarget(Keys::D7));
+		first[(std::int32_t)PlayerActions::SwitchToPepper].Targets.emplace_back(CreateTarget(Keys::D8));
+		first[(std::int32_t)PlayerActions::SwitchToElectro].Targets.emplace_back(CreateTarget(Keys::D9));
+		first[(std::int32_t)PlayerActions::SwitchToThunderbolt].Targets.emplace_back(CreateTarget(Keys::D0));
 
 		// Set default mappings for 2nd player
 		if (MaxSupportedPlayers >= 2) {
 			auto second = GetMappings(1);
-			second[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(KeySym::A));
+			second[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(Keys::A));
 			second[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(1, ButtonName::Left));
 			second[(std::int32_t)PlayerActions::Left].Targets.emplace_back(CreateTarget(1, AxisName::LeftX, true));
-			second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(KeySym::D));
+			second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(Keys::D));
 			second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(1, ButtonName::Right));
 			second[(std::int32_t)PlayerActions::Right].Targets.emplace_back(CreateTarget(1, AxisName::LeftX));
-			second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(KeySym::W));
+			second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(Keys::W));
 			second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(1, ButtonName::Up));
 			second[(std::int32_t)PlayerActions::Up].Targets.emplace_back(CreateTarget(1, AxisName::LeftY, true));
-			second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(KeySym::S));
+			second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(Keys::S));
 			second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(1, ButtonName::Down));
 			second[(std::int32_t)PlayerActions::Down].Targets.emplace_back(CreateTarget(1, AxisName::LeftY));
 
-			second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(KeySym::R));
+			second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(Keys::R));
 			second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(1, ButtonName::X));
 			second[(std::int32_t)PlayerActions::Fire].Targets.emplace_back(CreateTarget(1, AxisName::RightTrigger));
-			second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(KeySym::F));
+			second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(Keys::F));
 			second[(std::int32_t)PlayerActions::Jump].Targets.emplace_back(CreateTarget(1, ButtonName::A));
-			second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(KeySym::G));
+			second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(Keys::G));
 			second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(1, ButtonName::B));
 			second[(std::int32_t)PlayerActions::Run].Targets.emplace_back(CreateTarget(1, AxisName::LeftTrigger));
-			second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(KeySym::T));
+			second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(Keys::T));
 			second[(std::int32_t)PlayerActions::ChangeWeapon].Targets.emplace_back(CreateTarget(1, ButtonName::Y));
 			second[(std::int32_t)PlayerActions::Menu].Targets.emplace_back(CreateTarget(1, ButtonName::Start));
 		}
@@ -183,7 +184,7 @@ namespace Jazz2::UI
 
 #if defined(DEATH_TARGET_ANDROID)
 		// Allow native Android back button as menu key
-		if (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK]) {
+		if (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)Keys::Back]) {
 			result.PressedActions |= (1 << (int32_t)PlayerActions::Menu);
 		}
 #endif
@@ -259,18 +260,18 @@ namespace Jazz2::UI
 
 		if (allowKeyboard) {
 			// Also allow Return (Enter) as confirm key
-			if (pressedKeys[(std::uint32_t)KeySym::RETURN] || pressedKeys[(std::uint32_t)KeySym::KP_ENTER]) {
+			if (pressedKeys[(std::uint32_t)Keys::Return] || pressedKeys[(std::uint32_t)Keys::NumPadEnter]) {
 				pressedActions |= (1 << (std::int32_t)PlayerActions::Fire);
 			}
 			// Use ChangeWeapon action as delete key
-			if (pressedKeys[(std::uint32_t)KeySym::Delete]) {
+			if (pressedKeys[(std::uint32_t)Keys::Delete]) {
 				pressedActions |= (1 << (std::int32_t)PlayerActions::ChangeWeapon);
 			}
 		}
 
 #if defined(DEATH_TARGET_ANDROID)
 		// Allow native Android back button as menu key
-		if (PreferencesCache::UseNativeBackButton && pressedKeys[(std::uint32_t)KeySym::BACK]) {
+		if (PreferencesCache::UseNativeBackButton && pressedKeys[(std::uint32_t)Keys::Back]) {
 			pressedActions |= (1 << (std::int32_t)PlayerActions::Menu);
 		}
 #endif
@@ -301,7 +302,7 @@ namespace Jazz2::UI
 		return -1;
 	}
 
-	MappingTarget ControlScheme::CreateTarget(KeySym key)
+	MappingTarget ControlScheme::CreateTarget(Keys key)
 	{
 		return { (std::uint32_t)key };
 	}

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-12-09 11:48+0100\n"
+"POT-Creation-Date: 2024-12-10 22:18+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: enfeitizador <fedellar@enfeitizador.es>\n"
 "Language-Team: enfeitizador\n"
@@ -1508,14 +1508,14 @@ msgstr "Permitir acceso al almacenamiento externo"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:173
 #, c-format
 msgid "Remap Controls for Player %i"
 msgstr "Reasignar controles para participante %i"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:174
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
 msgid "Remap Controls"
 msgstr "Reasignar controles"
 
@@ -1573,8 +1573,8 @@ msgstr "Débil"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:134
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Disabled"
 msgstr "Deshabilitado"
 
@@ -1584,7 +1584,7 @@ msgstr "Deshabilitado"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Enabled"
 msgstr "Habilitado"
 
@@ -1844,62 +1844,67 @@ msgstr "Antiplegamiento"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
+msgid "Background Dithering"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
 msgid "Water Quality"
 msgstr "Calidad del agua"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
 msgid "Show Player Trails"
 msgstr "Mostrar rastros del jugador"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
 msgid "Preferred Splitscreen"
 msgstr "Pantalla partida preferida"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
 msgid "Prefer Zoom Out"
 msgstr "Alejamiento preferido"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Mantener relación de aspecto en cinemáticas"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
 msgid "Unaligned Viewport"
 msgstr "Ventana gráfica no alineada"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:49
 msgid "Performance Metrics"
 msgstr "Métricas de rendimiento"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:80
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:82
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:19
 msgid "Graphics"
 msgstr "Gráficos"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:129
 msgid "Low"
 msgstr "Bajo"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:126
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:129
 msgid "High"
 msgstr "Alto"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
 msgid "Vertical"
 msgstr "Vertical"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
 msgid "Horizontal"
 msgstr "Horizontal"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:131
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:134
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Habilitado \f[c:#d0705d](Experimental)\f[/c]"
 
@@ -2023,7 +2028,7 @@ msgstr "Correr"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:190
 msgid "Change Weapon"
 msgstr "Cambiar arma"
 
@@ -2033,18 +2038,23 @@ msgid "Back"
 msgstr "Volver"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:35
+msgid "Toggle Console"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:39
 #, c-format
 msgid "Weapon %i"
 msgstr "Arma %i"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:182
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:184
 msgid "Press any key or button to assign"
 msgstr "Pulsa cualquier tecla o botón para asignar"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:199
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:201
 msgid "to remove assignment"
 msgstr "para eliminar la asignación"
 

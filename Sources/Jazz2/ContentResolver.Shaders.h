@@ -2,7 +2,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr std::uint64_t Version = 5;
+	constexpr std::uint64_t Version = 6;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -542,6 +542,12 @@ void main() {
 	);
 
 	vec4 texColor = texture(uTexture, texturePos);
+
+#ifdef DITHER
+	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
+#endif
+
 	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
 	
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -635,6 +641,12 @@ void main() {
 	);
 
 	vec4 texColor = texture(uTexture, texturePos);
+
+#ifdef DITHER
+	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
+#endif
+
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
 	
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);

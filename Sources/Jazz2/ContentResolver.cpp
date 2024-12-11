@@ -1447,7 +1447,9 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", Shaders::CombineVs, Shaders::CombineWithWaterLowFs);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundDither] = CompileShader("TexturedBackgroundDither", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs, Shader::Introspection::Enabled, { "DITHER"_s });
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircleDither] = CompileShader("TexturedBackgroundCircleDither", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs, Shader::Introspection::Enabled, { "DITHER"_s });
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized] = CompileShader("Colorized", Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizedFs, Shader::Introspection::NoUniformsInBlocks);
@@ -1494,7 +1496,7 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Transition] = CompileShader("Transition", Shaders::TransitionVs, Shaders::TransitionFs);
 	}
 
-	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection)
+	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
 	{
 		std::unique_ptr shader = std::make_unique<Shader>();
 		if (shader->loadFromCache(shaderName, Shaders::Version, introspection)) {
@@ -1504,10 +1506,10 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		const std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
-		const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
+		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
 
 		std::int32_t batchSize;
 		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
@@ -1519,7 +1521,7 @@ namespace Jazz2
 			batchSize = GLShaderProgram::DefaultBatchSize;
 		}
 
-		shader->loadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize);
+		shader->loadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
@@ -1532,7 +1534,7 @@ namespace Jazz2
 				
 				bool hasLinked = false;
 				while (batchSize > 0) {
-					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
+					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
 					if (hasLinked) {
 						break;
 					}
@@ -1552,7 +1554,7 @@ namespace Jazz2
 		return shader;
 	}
 	
-	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection)
+	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
 	{
 		std::unique_ptr shader = std::make_unique<Shader>();
 		if (shader->loadFromCache(shaderName, Shaders::Version, introspection)) {
@@ -1562,10 +1564,10 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		const std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
-		const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
+		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
 
 		std::int32_t batchSize;
 		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
@@ -1577,7 +1579,7 @@ namespace Jazz2
 			batchSize = GLShaderProgram::DefaultBatchSize;
 		}
 
-		shader->loadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize);
+		shader->loadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
@@ -1590,7 +1592,7 @@ namespace Jazz2
 
 				bool hasLinked = false;
 				while (batchSize > 0) {
-					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
+					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
 					if (hasLinked) {
 						break;
 					}

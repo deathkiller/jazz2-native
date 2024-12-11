@@ -796,8 +796,8 @@ namespace Jazz2::Tiles
 		bool shaderChanged;
 		switch (type) {
 			case LayerRendererType::Tinted: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Tinted)); break;
-			case LayerRendererType::Sky: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackground)); break;
-			case LayerRendererType::Circle: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundCircle)); break;
+			case LayerRendererType::Sky: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)); break;
+			case LayerRendererType::Circle: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundCircleDither : PrecompiledShader::TexturedBackgroundCircle)); break;
 			default: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::Sprite); break;
 		}
 		if (shaderChanged) {

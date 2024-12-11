@@ -251,20 +251,20 @@ namespace nCine
 		};
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		const int maxUniformBlockSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		int maxUniformBlockSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		char sourceString[64];
-		const char* vertexStrings[3] = { nullptr, nullptr, nullptr };
+		StringView vertexStrings[3];
 
-		for (unsigned int i = 0; i < static_cast<unsigned int>(arraySize(shadersToLoad)); i++) {
+		for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(arraySize(shadersToLoad)); i++) {
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
 
 #if defined(WITH_EMBEDDED_SHADERS)
-			constexpr uint64_t shaderVersion = EmbeddedShadersVersion;
+			constexpr std::uint64_t shaderVersion = EmbeddedShadersVersion;
 #else
 			String vertexPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) });
 			String fragmentPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) });
-			uint64_t shaderVersion = (uint64_t)std::max(fs::GetLastModificationTime(vertexPath).ToUnixMilliseconds(), fs::GetLastModificationTime(fragmentPath).ToUnixMilliseconds());
+			std::uint64_t shaderVersion = (std::uint64_t)std::max(fs::GetLastModificationTime(vertexPath).ToUnixMilliseconds(), fs::GetLastModificationTime(fragmentPath).ToUnixMilliseconds());
 #endif
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
@@ -275,39 +275,38 @@ namespace nCine
 
 			// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
 			bool compileTwice = false;
+			std::int32_t stringsCount = 0;
 
-			vertexStrings[0] = nullptr;
-			vertexStrings[1] = nullptr;
 			if (appCfg.fixedBatchSize > 0 && shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks) {
 				// If fixed batch size is used, it's compiled only once with specified batch size
 				shaderToLoad.shaderProgram->setBatchSize(appCfg.fixedBatchSize);
 
-				formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, appCfg.fixedBatchSize);
-				vertexStrings[0] = sourceString;
+				std::int32_t length = formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, appCfg.fixedBatchSize);
+				vertexStrings[stringsCount++] = StringView(sourceString, length);
 #if defined(WITH_EMBEDDED_SHADERS)
-				vertexStrings[1] = shaderToLoad.vertexShader;
+				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
 #endif
 			} else if (shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks && maxUniformBlockSize < 64 * 1024) {
 				compileTwice = true;
 
 				// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
-				formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, 1);
-				vertexStrings[0] = sourceString;
+				std::int32_t length = formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, 1);
+				vertexStrings[stringsCount++] = StringView(sourceString, length);
 #if defined(WITH_EMBEDDED_SHADERS)
-				vertexStrings[1] = shaderToLoad.vertexShader;
+				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
 #endif
 			} else {
 #if defined(WITH_EMBEDDED_SHADERS)
-				vertexStrings[0] = shaderToLoad.vertexShader;
+				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
 #endif
 			}
 			
 #if defined(WITH_EMBEDDED_SHADERS)
-			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
-			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
+			bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));
+			bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
-			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
-			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
+			bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount), vertexPath);
+			bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
 #endif
 			ASSERT(vertexCompiled);
 			ASSERT(fragmentCompiled);
@@ -315,13 +314,13 @@ namespace nCine
 			shaderToLoad.shaderProgram->setObjectLabel(shaderToLoad.shaderName);
 
 			if (compileTwice) {
-				const bool hasLinked = shaderToLoad.shaderProgram->link(GLShaderProgram::Introspection::Enabled);
+				bool hasLinked = shaderToLoad.shaderProgram->link(GLShaderProgram::Introspection::Enabled);
 				FATAL_ASSERT(hasLinked);
 
 				GLShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
 				GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
 				if (block != nullptr) {
-					int batchSize = maxUniformBlockSize / block->size();
+					std::int32_t batchSize = maxUniformBlockSize / block->size();
 					LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName,
 						block->size() - block->alignAmount(), block->alignAmount(), batchSize);
 
@@ -329,14 +328,15 @@ namespace nCine
 					while (batchSize > 0) {
 						shaderToLoad.shaderProgram->reset();
 						shaderToLoad.shaderProgram->setBatchSize(batchSize);
-						formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
+						std::int32_t length = formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
+						vertexStrings[0] = StringView(sourceString, length);
 
 #if defined(WITH_EMBEDDED_SHADERS)
-						const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
-						const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
+						bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));
+						bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
-						const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
-						const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
+						bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount), vertexPath);
+						bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
 #endif
 						if (vertexFinalCompiled && fragmentFinalCompiled) {
 							hasLinkedFinal = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
@@ -352,7 +352,7 @@ namespace nCine
 					FATAL_ASSERT_MSG(hasLinkedFinal, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
 				}
 			} else {
-				const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
+				bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
 				FATAL_ASSERT_MSG(hasLinked, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
 			}
 

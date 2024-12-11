@@ -43,6 +43,6 @@ namespace Jazz2::UI::Menu
 
 		void RefreshPreviousState();
 		bool HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment);
-		static StringView KeyToName(KeySym key);
+		static StringView KeyToName(Keys key);
 	};
 }

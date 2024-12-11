@@ -114,6 +114,7 @@ namespace Jazz2
 		static bool UnalignedViewport;
 		static bool PreferVerticalSplitscreen;
 		static bool PreferZoomOut;
+		static bool BackgroundDithering;
 
 		// Gameplay
 		static bool EnableReforgedGameplay;
@@ -185,12 +186,13 @@ namespace Jazz2
 			EnableReforgedHUD = 0x100000,
 			EnableReforgedMainMenu = 0x200000,
 			ToggleRunAction = 0x400000,
-			AllowCheats = 0x1000000
+			AllowCheats = 0x1000000,
+			BackgroundDithering = 0x2000000
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 7;
+		static constexpr std::uint8_t FileVersion = 8;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

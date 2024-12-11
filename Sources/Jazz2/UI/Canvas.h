@@ -29,8 +29,8 @@ namespace Jazz2::UI
 		void DrawRenderCommand(RenderCommand* command);
 
 	private:
-		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		std::int32_t _renderCommandsCount;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		RenderQueue* _currentRenderQueue;
 	};
 }
