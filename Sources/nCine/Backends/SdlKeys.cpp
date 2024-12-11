@@ -19,7 +19,7 @@ namespace nCine
 			case SDLK_EXCLAIM:			return Keys::Exclaim;
 			case SDLK_QUOTEDBL:			return Keys::QuoteDbl;
 			case SDLK_HASH:				return Keys::Hash;
-			case SDLK_DOLLAR:			return Keys::Collar;
+			case SDLK_DOLLAR:			return Keys::Dollar;
 			case SDLK_AMPERSAND:		return Keys::Ampersand;
 			case SDLK_QUOTE:			return Keys::Quote;
 			case SDLK_LEFTPAREN:		return Keys::LeftParen;
