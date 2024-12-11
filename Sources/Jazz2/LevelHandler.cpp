@@ -2163,7 +2163,7 @@ namespace Jazz2
 				player->TakeDamage(INT32_MAX);
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2175,7 +2175,7 @@ namespace Jazz2
 				player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2185,7 +2185,7 @@ namespace Jazz2
 			_cheatsUsed = true;
 			BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2199,7 +2199,7 @@ namespace Jazz2
 				}
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2211,7 +2211,7 @@ namespace Jazz2
 				player->ActivateSugarRush(1300.0f);
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2223,7 +2223,7 @@ namespace Jazz2
 				player->AddGems(0, 5);
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2235,7 +2235,7 @@ namespace Jazz2
 				player->SpawnBird(0, player->GetPos());
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2249,7 +2249,7 @@ namespace Jazz2
 				}
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2260,7 +2260,7 @@ namespace Jazz2
 			// Coins are synchronized automatically
 			_players[0]->AddCoins(5);
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2280,7 +2280,7 @@ namespace Jazz2
 				_players[0]->MorphTo(PlayerType::Jazz);
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 
@@ -2293,7 +2293,7 @@ namespace Jazz2
 				player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
 			}
 		} else {
-			_console->WriteLine(TraceLevel::Error, "Cheats are not allowed in current context"_s);
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
 	}
 

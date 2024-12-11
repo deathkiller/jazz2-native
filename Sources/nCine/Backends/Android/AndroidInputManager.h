@@ -19,7 +19,7 @@ namespace nCine
 	class AndroidKeys
 	{
 	public:
-		static KeySym keySymValueToEnum(int keysym);
+		static Keys keySymValueToEnum(int keysym);
 		static int keyModMaskToEnumMask(int keymod);
 	};
 
