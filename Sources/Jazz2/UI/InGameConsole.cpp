@@ -51,7 +51,7 @@ namespace Jazz2::UI
 			switch (line.Level) {
 				default: color = Font::DefaultColor; break;
 
-				case TraceLevel::Unknown: {
+				case MessageLevel::Unknown: {
 					color = Font::DefaultColor;
 
 					std::int32_t charOffset = 0, charOffsetShadow = 0;
@@ -63,8 +63,8 @@ namespace Jazz2::UI
 					break;
 				}
 
-				case TraceLevel::Fatal: color = Colorf(0.48f, 0.38f, 0.34f, 0.5f); break;
-				case TraceLevel::Error: color = Colorf(0.6f, 0.41f, 0.40f, 0.5f); break;
+				case MessageLevel::Fatal: color = Colorf(0.48f, 0.38f, 0.34f, 0.5f); break;
+				case MessageLevel::Error: color = Colorf(0.6f, 0.41f, 0.40f, 0.5f); break;
 			}
 
 			std::int32_t charOffset = 0, charOffsetShadow = 0;
@@ -112,7 +112,8 @@ namespace Jazz2::UI
 				setParent(nullptr);
 				break;
 			}
-			case Keys::Return: {
+			case Keys::Return:
+			case Keys::NumPadEnter: {
 				ProcessCurrentLine();
 				break;
 			}
@@ -182,8 +183,18 @@ namespace Jazz2::UI
 		}
 	}
 
-	void InGameConsole::WriteLine(TraceLevel level, String line)
+	void InGameConsole::WriteLine(MessageLevel level, String line)
 	{
+#if defined(DEATH_TRACE)
+		switch (level) {
+			default: DEATH_TRACE(TraceLevel::Info, "[<] %s", line.data()); break;
+			case MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, "[>] %s", line.data()); break;
+			case MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, "[<] %s", line.data()); break;
+			case MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, "[<] %s", line.data()); break;
+			case MessageLevel::Assert: DEATH_TRACE(TraceLevel::Assert, "[<] %s", line.data()); break;
+			case MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, "[<] %s", line.data()); break;
+		}
+#endif
 		_log.emplace_back(level, std::move(line));
 	}
 
@@ -198,9 +209,9 @@ namespace Jazz2::UI
 		if (line == "clear"_s || line == "cls"_s) {
 			_log.clear();
 		} else {
-			WriteLine(TraceLevel::Unknown, line);
+			WriteLine(MessageLevel::Echo, line);
 			if (line == "help"_s) {
-				WriteLine(TraceLevel::Info, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
+				WriteLine(MessageLevel::Info, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
 			} else if (line == "jjk"_s || line == "jjkill"_s) {
 				_levelHandler->CheatKill();
 			} else if (line == "jjgod"_s) {
@@ -224,7 +235,7 @@ namespace Jazz2::UI
 			} else if (line == "jjshield"_s) {
 				_levelHandler->CheatShield();
 			} else {
-				WriteLine(TraceLevel::Error, "Unknown command"_s);
+				WriteLine(MessageLevel::Error, _("Unknown command"));
 			}
 		}
 
@@ -233,7 +244,7 @@ namespace Jazz2::UI
 		_carretAnim = 0.0f;
 	}
 
-	InGameConsole::LogLine::LogLine(TraceLevel level, String&& message)
+	InGameConsole::LogLine::LogLine(MessageLevel level, String&& message)
 		: Level(level), Message(std::move(message))
 	{
 	}

@@ -8,6 +8,18 @@
 
 namespace Jazz2::UI
 {
+	enum class MessageLevel
+	{
+		Unknown,
+		Echo,
+		Debug,
+		Info,
+		Warning,
+		Error,
+		Assert,
+		Fatal
+	};
+
 	class InGameConsole : public Canvas
 	{
 	public:
@@ -21,14 +33,14 @@ namespace Jazz2::UI
 		void OnKeyPressed(const KeyboardEvent& event);
 		void OnTextInput(const TextInputEvent& event);
 
-		void WriteLine(TraceLevel level, String line);
+		void WriteLine(MessageLevel level, String line);
 
 	private:
 		struct LogLine {
-			TraceLevel Level;
+			MessageLevel Level;
 			String Message;
 
-			LogLine(TraceLevel level, String&& message);
+			LogLine(MessageLevel level, String&& message);
 		};
 
 		static constexpr std::uint16_t MainLayer = 100;
