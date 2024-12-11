@@ -445,7 +445,7 @@ namespace nCine
 				}
 				break;
 			case AKEY_EVENT_ACTION_UP:
-				if (keyboardEvent_.sym != Keys:Unknown) {
+				if (keyboardEvent_.sym != Keys::Unknown) {
 					keyboardState_.keys_[keySym] = 0;
 				}
 				inputEventHandler_->OnKeyReleased(keyboardEvent_);
