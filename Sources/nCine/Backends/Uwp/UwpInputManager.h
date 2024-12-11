@@ -170,7 +170,7 @@ namespace nCine
 		static UwpGamepadInfo _gamepads[MaxNumJoysticks];
 		static ReadWriteLock _gamepadsSync;
 
-		static KeySym keySymValueToEnum(winrtWS::VirtualKey virtualKey);
+		static Keys keySymValueToEnum(winrtWS::VirtualKey virtualKey);
 
 		void OnKey(const winrtWUC::CoreWindow& sender, const winrtWUC::KeyEventArgs& args);
 		void OnAcceleratorKeyActivated(const winrtWUC::CoreDispatcher& sender, const winrtWUC::AcceleratorKeyEventArgs& args);
