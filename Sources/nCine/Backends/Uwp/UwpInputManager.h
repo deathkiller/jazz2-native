@@ -57,12 +57,12 @@ namespace nCine
 			std::memset(_pressedKeys, 0, sizeof(_pressedKeys));
 		}
 
-		inline bool isKeyDown(KeySym key) const override {
-			return (key >= (KeySym)0 && key < KeySym::COUNT ? _pressedKeys[(int)key] : false);
+		inline bool isKeyDown(Keys key) const override {
+			return (key >= (Keys)0 && key < Keys::Count ? _pressedKeys[(int)key] : false);
 		}
 
 	private:
-		bool _pressedKeys[(int)KeySym::COUNT];
+		bool _pressedKeys[(int)Keys::Count];
 	};
 
 	class UwpJoystickState : public JoystickState

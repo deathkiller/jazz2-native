@@ -428,7 +428,7 @@ namespace nCine
 		const int action = AKeyEvent_getAction(event);
 		switch (action) {
 			case AKEY_EVENT_ACTION_DOWN:
-				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
+				if (keyboardEvent_.sym != Keys::Unknown) {
 					keyboardState_.keys_[keySym] = 1;
 				}
 				inputEventHandler_->OnKeyPressed(keyboardEvent_);
@@ -445,14 +445,14 @@ namespace nCine
 				}
 				break;
 			case AKEY_EVENT_ACTION_UP:
-				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
+				if (keyboardEvent_.sym != Keys:Unknown) {
 					keyboardState_.keys_[keySym] = 0;
 				}
 				inputEventHandler_->OnKeyReleased(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
 				// AKEY_EVENT_ACTION_MULTIPLE should be deprecated, but it seems it's still used even on Android 13
-				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
+				if (keyboardEvent_.sym != Keys::Unknown) {
 					inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				}
 				// TODO: This section doesn't work anyway with software keyboards (https://stackoverflow.com/q/21124051)
