@@ -337,7 +337,7 @@ namespace nCine
 		_gamepadsSync.ExitWriteLock();
 	}
 
-	KeySym UwpInputManager::keySymValueToEnum(winrtWS::VirtualKey virtualKey)
+	Keys UwpInputManager::keySymValueToEnum(winrtWS::VirtualKey virtualKey)
 	{
 		switch (virtualKey) {
 			case winrtWS::VirtualKey::Back:				return Keys::Backspace;
