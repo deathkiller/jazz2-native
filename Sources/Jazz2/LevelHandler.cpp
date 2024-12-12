@@ -146,11 +146,15 @@ namespace Jazz2
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
+		_console = std::make_unique<UI::InGameConsole>(this);
+
 		LevelDescriptor descriptor;
 		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor)) {
 			LOGE("Cannot load level \"%s/%s\"", _episodeName.data(), _levelFileName.data());
 			return false;
 		}
+
+		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"%s\" initialized", descriptor.DisplayName.data()));
 
 		AttachComponents(std::move(descriptor));
 		SpawnPlayers(levelInit);		
@@ -195,11 +199,15 @@ namespace Jazz2
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
+		_console = std::make_unique<UI::InGameConsole>(this);
+
 		LevelDescriptor descriptor;
 		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor)) {
 			LOGE("Cannot load level \"%s/%s\"", _episodeName.data(), _levelFileName.data());
 			return false;
 		}
+
+		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"%s\" initialized", descriptor.DisplayName.data()));
 
 		AttachComponents(std::move(descriptor));
 
@@ -242,12 +250,13 @@ namespace Jazz2
 		resolver.PreloadMetadataAsync("Common/Explosions"_s);
 
 		_hud = std::make_unique<UI::HUD>(this);
-		_console = std::make_unique<UI::InGameConsole>(this);
 
 		_eventMap->PreloadEventsAsync();
 
 		InitializeRumbleEffects();
 		UpdateRichPresence();
+
+		_console->OnInitialized();
 
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
@@ -467,15 +476,14 @@ namespace Jazz2
 			UpdatePressedActions();
 
 			if (PlayerActionHit(0, PlayerActions::Menu)) {
-				if (!_console->parent() && _nextLevelType == ExitType::None) {
+				if (!_console->IsVisible() && _nextLevelType == ExitType::None) {
 					PauseGame();
 				}
 			} else if (PlayerActionHit(0, PlayerActions::Console)) {
-				if (_console->parent()) {
-					_console->setParent(nullptr);
+				if (_console->IsVisible()) {
+					_console->Hide();
 				} else {
-					_console->setParent(_upscalePass.GetNode());
-					_console->OnAttached();
+					_console->Show();
 				}
 			}
 #if defined(DEATH_DEBUG)
@@ -639,6 +647,9 @@ namespace Jazz2
 			if (_hud != nullptr) {
 				_hud->setParent(_upscalePass.GetNode());
 			}
+			if (_console != nullptr) {
+				_console->setParent(_upscalePass.GetNode());
+			}
 		}
 
 		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
@@ -689,7 +700,7 @@ namespace Jazz2
 
 		if (_pauseMenu != nullptr) {
 			_pauseMenu->OnKeyReleased(event);
-		} else if (_console->parent()) {
+		} else if (_console->IsVisible()) {
 			_console->OnKeyPressed(event);
 		}
 	}
@@ -705,7 +716,7 @@ namespace Jazz2
 
 	void LevelHandler::OnTextInput(const TextInputEvent& event)
 	{
-		if (_console->parent()) {
+		if (_console->IsVisible()) {
 			_console->OnTextInput(event);
 		}
 	}
@@ -1240,7 +1251,7 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
-		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
 			return false;
 		}
 
@@ -1250,7 +1261,7 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
-		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
 			return false;
 		}
 
@@ -1266,7 +1277,7 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
-		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
 			return false;
 		}
 
@@ -1276,7 +1287,7 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
-		if (_console->parent() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
 			return false;
 		}
 
@@ -1292,7 +1303,7 @@ namespace Jazz2
 
 	float LevelHandler::PlayerHorizontalMovement(std::int32_t index)
 	{
-		if (_console->parent()) {
+		if (_console->IsVisible()) {
 			return 0.0f;
 		}
 
@@ -1302,7 +1313,7 @@ namespace Jazz2
 
 	float LevelHandler::PlayerVerticalMovement(std::int32_t index)
 	{
-		if (_console->parent()) {
+		if (_console->IsVisible()) {
 			return 0.0f;
 		}
 

@@ -10,16 +10,32 @@
 
 namespace Jazz2::UI
 {
-	InGameConsole::InGameConsole(LevelHandler* levelHandler)
-		: _levelHandler(levelHandler), _currentLine{}, _textCursor(0), _carretAnim(0.0f)
-	{
-		auto& resolver = ContentResolver::Get();
+	struct LogLine {
+		MessageLevel Level;
+		float TimeLeft;
+		String Message;
 
-		_smallFont = resolver.GetFont(FontType::Small);
+		LogLine(MessageLevel level, String&& message);
+	};
+
+	static SmallVector<LogLine, 0> _logHistory;
+	static SmallVector<String, 0> _commandHistory;
+
+	InGameConsole::InGameConsole(LevelHandler* levelHandler)
+		: _levelHandler(levelHandler), _currentLine{}, _textCursor(0), _carretAnim(0.0f), _isVisible(false)
+	{
+		PruneLogHistory();
+		_historyIndex = _commandHistory.size();
 	}
 
 	InGameConsole::~InGameConsole()
 	{
+	}
+
+	void InGameConsole::OnInitialized()
+	{
+		auto& resolver = ContentResolver::Get();
+		_smallFont = resolver.GetFont(FontType::Small);
 	}
 
 	void InGameConsole::OnUpdate(float timeMult)
@@ -27,6 +43,14 @@ namespace Jazz2::UI
 		Canvas::OnUpdate(timeMult);
 
 		_carretAnim += timeMult;
+
+		for (std::int32_t i = _logHistory.size() - 1; i >= 0; i--) {
+			auto& line = _logHistory[i];
+			if (line.TimeLeft <= 0.0f) {
+				break;
+			}
+			line.TimeLeft -= timeMult;
+		}
 	}
 
 	bool InGameConsole::OnDraw(RenderQueue& renderQueue)
@@ -36,80 +60,83 @@ namespace Jazz2::UI
 		ViewSize = _levelHandler->GetViewSize();
 		Vector2f currentLinePos = Vector2f(46.0f, ViewSize.Y - 60.0f);
 
-		DrawSolid(Vector2f(0.0f, 0.0f), 20, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
+		if (_isVisible) {
+			DrawSolid(Vector2f(0.0f, 0.0f), 20, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
+
+			Colorf color = (_currentLine[0] == '/' ? Colorf(0.38f, 0.48f, 0.69f, 0.5f) : Colorf(0.62f, 0.44f, 0.34f, 0.5f));
+
+			// Current line
+			std::int32_t charOffset = 0, charOffsetShadow = 0;
+			_smallFont->DrawString(this, ">"_s, charOffsetShadow, currentLinePos.X - 16.0f + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
+			_smallFont->DrawString(this, ">"_s, charOffset, currentLinePos.X - 16.0f, currentLinePos.Y, FontLayer + 200,
+				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
+
+			StringView currentLine = _currentLine;
+			_smallFont->DrawString(this, currentLine, charOffsetShadow, currentLinePos.X + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
+			_smallFont->DrawString(this, currentLine, charOffset, currentLinePos.X, currentLinePos.Y, FontLayer + 200,
+				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
+
+			// Carret
+			Vector2f textToCursorSize = _smallFont->MeasureString(StringView{_currentLine, _textCursor}, 0.8f);
+			DrawSolid(Vector2f(currentLinePos.X + textToCursorSize.X + 1.0f, currentLinePos.Y - 7.0f), FontLayer + 220, Vector2f(1.0f, 12.0f),
+				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+		}
 
 		// History
 		Vector2f historyLinePos = currentLinePos;
 		historyLinePos.Y -= 20.0f;
-		for (std::int32_t i = _log.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = _logHistory.size() - 1; i >= 0; i--) {
 			if (historyLinePos.Y < 30.0f) {
 				break;
 			}
 
-			auto& line = _log[i];
+			auto& line = _logHistory[i];
+			if (line.Level == MessageLevel::Debug && !_isVisible) {
+				continue;
+			}
+			float alpha = (_isVisible ? 1.0f : std::min(line.TimeLeft * 0.06f, 1.0f));
+			if (alpha <= 0.0f) {
+				break;
+			}
+
 			Colorf color;
 			switch (line.Level) {
-				default: color = Font::DefaultColor; break;
+				default: color = Font::DefaultColor; color.A *= alpha; break;
 
-				case MessageLevel::Unknown: {
-					color = Font::DefaultColor;
+				case MessageLevel::Echo: {
+					color = Font::DefaultColor; color.A *= alpha;
 
 					std::int32_t charOffset = 0, charOffsetShadow = 0;
-					_smallFont->DrawString(this, "·"_s, charOffsetShadow, historyLinePos.X - 15.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 200,
-								Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
-					_smallFont->DrawString(this, "·"_s, charOffset, historyLinePos.X - 15.0f, historyLinePos.Y, FontLayer + 200,
+					_smallFont->DrawString(this, "›"_s, charOffsetShadow, historyLinePos.X - 13.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 200,
+								Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
+					_smallFont->DrawString(this, "›"_s, charOffset, historyLinePos.X - 13.0f, historyLinePos.Y, FontLayer + 200,
 						Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
-
 					break;
 				}
-
-				case MessageLevel::Fatal: color = Colorf(0.48f, 0.38f, 0.34f, 0.5f); break;
-				case MessageLevel::Error: color = Colorf(0.6f, 0.41f, 0.40f, 0.5f); break;
+				case MessageLevel::Debug: color = Colorf(0.36f, 0.44f, 0.35f, 0.5f * sqrtf(alpha)); break;
+				case MessageLevel::Error: color = Colorf(0.6f, 0.41f, 0.40f, 0.5f * sqrtf(alpha)); break;
+				case MessageLevel::Fatal: color = Colorf(0.48f, 0.38f, 0.34f, 0.5f * sqrtf(alpha)); break;
 			}
 
 			std::int32_t charOffset = 0, charOffsetShadow = 0;
 			_smallFont->DrawString(this, line.Message, charOffsetShadow, historyLinePos.X, historyLinePos.Y + 2.0f, FontShadowLayer + 200,
-						Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
+						Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
 			_smallFont->DrawString(this, line.Message, charOffset, historyLinePos.X, historyLinePos.Y, FontLayer + 200,
 				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 
 			historyLinePos.Y -= 16.0f;
 		}
 
-		// Current line
-		std::int32_t charOffset = 0, charOffsetShadow = 0;
-		_smallFont->DrawString(this, ">"_s, charOffsetShadow, currentLinePos.X - 16.0f + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
-		_smallFont->DrawString(this, ">"_s, charOffset, currentLinePos.X - 16.0f, currentLinePos.Y, FontLayer + 200,
-			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f);
-		
-		StringView currentLine = _currentLine;
-		_smallFont->DrawString(this, currentLine, charOffsetShadow, currentLinePos.X + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
-		_smallFont->DrawString(this, currentLine, charOffset, currentLinePos.X, currentLinePos.Y, FontLayer + 200,
-			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f);
-
-		Vector2f textToCursorSize = _smallFont->MeasureString(StringView{_currentLine, _textCursor}, 0.8f);
-		DrawSolid(Vector2f(currentLinePos.X + textToCursorSize.X + 1.0f, currentLinePos.Y - 7.0f), FontLayer + 220, Vector2f(1.0f, 12.0f),
-			Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
-
 		return true;
-	}
-
-	void InGameConsole::OnAttached()
-	{
-		_currentLine[0] = '\0';
-		_textCursor = 0;
-		_carretAnim = 0.0f;
-
-		AnimTime = 0.0f;
 	}
 
 	void InGameConsole::OnKeyPressed(const KeyboardEvent& event)
 	{
 		switch (event.sym) {
 			case Keys::Escape: {
-				setParent(nullptr);
+				Hide();
 				break;
 			}
 			case Keys::Return:
@@ -166,6 +193,14 @@ namespace Jazz2::UI
 				}
 				break;
 			}
+			case Keys::Up: {
+				GetPreviousCommandFromHistory();
+				break;
+			}
+			case Keys::Down: {
+				GetNextCommandFromHistory();
+				break;
+			}
 		}
 	}
 
@@ -183,11 +218,32 @@ namespace Jazz2::UI
 		}
 	}
 
+	bool InGameConsole::IsVisible() const
+	{
+		return _isVisible;
+	}
+
+	void InGameConsole::Show()
+	{
+		_isVisible = true;
+
+		_currentLine[0] = '\0';
+		_textCursor = 0;
+		_carretAnim = 0.0f;
+
+		AnimTime = 0.0f;
+	}
+
+	void InGameConsole::Hide()
+	{
+		_isVisible = false;
+	}
+
 	void InGameConsole::WriteLine(MessageLevel level, String line)
 	{
 #if defined(DEATH_TRACE)
 		switch (level) {
-			default: DEATH_TRACE(TraceLevel::Info, "[<] %s", line.data()); break;
+			//default: DEATH_TRACE(TraceLevel::Info, "[<] %s", line.data()); break;
 			case MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, "[>] %s", line.data()); break;
 			case MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, "[<] %s", line.data()); break;
 			case MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, "[<] %s", line.data()); break;
@@ -195,7 +251,7 @@ namespace Jazz2::UI
 			case MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, "[<] %s", line.data()); break;
 		}
 #endif
-		_log.emplace_back(level, std::move(line));
+		_logHistory.emplace_back(level, std::move(line));
 	}
 
 	void InGameConsole::ProcessCurrentLine()
@@ -206,11 +262,16 @@ namespace Jazz2::UI
 		}
 
 		StringView line = _currentLine;
-		if (line == "clear"_s || line == "cls"_s) {
-			_log.clear();
+		if (_commandHistory.empty() || _commandHistory.back() != line) {
+			_commandHistory.emplace_back(line);
+		}
+		_historyIndex = _commandHistory.size();
+
+		if (line == "/clear"_s || line == "/cls"_s) {
+			_logHistory.clear();
 		} else {
 			WriteLine(MessageLevel::Echo, line);
-			if (line == "help"_s) {
+			if (line == "/help"_s) {
 				WriteLine(MessageLevel::Info, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
 			} else if (line == "jjk"_s || line == "jjkill"_s) {
 				_levelHandler->CheatKill();
@@ -244,8 +305,42 @@ namespace Jazz2::UI
 		_carretAnim = 0.0f;
 	}
 
-	InGameConsole::LogLine::LogLine(MessageLevel level, String&& message)
-		: Level(level), Message(std::move(message))
+	void InGameConsole::PruneLogHistory()
+	{
+		constexpr std::int32_t MaxHistoryLines = 16;
+
+		if (_logHistory.size() > MaxHistoryLines) {
+			_logHistory.erase(&_logHistory[0], &_logHistory[_logHistory.size() - MaxHistoryLines]);
+		}
+	}
+
+	void InGameConsole::GetPreviousCommandFromHistory()
+	{
+		if (_historyIndex > 0) {
+			_historyIndex--;
+			std::memcpy(_currentLine, _commandHistory[_historyIndex].data(), _commandHistory[_historyIndex].size() + 1);
+			_textCursor = _commandHistory[_historyIndex].size();
+			_carretAnim = 0.0f;
+		}
+	}
+
+	void InGameConsole::GetNextCommandFromHistory()
+	{
+		if (_historyIndex < _commandHistory.size()) {
+			_historyIndex++;
+			if (_historyIndex == _commandHistory.size()) {
+				_currentLine[0] = '\0';
+				_textCursor = 0;
+			} else {
+				std::memcpy(_currentLine, _commandHistory[_historyIndex].data(), _commandHistory[_historyIndex].size() + 1);
+				_textCursor = _commandHistory[_historyIndex].size();
+			}
+			_carretAnim = 0.0f;
+		}
+	}
+
+	LogLine::LogLine(MessageLevel level, String&& message)
+		: Level(level), TimeLeft(5.0f * FrameTimer::FramesPerSecond), Message(std::move(message))
 	{
 	}
 }

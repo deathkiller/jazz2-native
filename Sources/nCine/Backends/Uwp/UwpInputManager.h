@@ -164,6 +164,7 @@ namespace nCine
 		static UwpMouseState mouseState_;
 		static UwpKeyboardState keyboardState_;
 		static KeyboardEvent keyboardEvent_;
+		static TextInputEvent textInputEvent_;
 		static UwpJoystickState nullJoystickState_;
 		static JoyConnectionEvent joyConnectionEvent_;
 
@@ -173,6 +174,7 @@ namespace nCine
 		static Keys keySymValueToEnum(winrtWS::VirtualKey virtualKey);
 
 		void OnKey(const winrtWUC::CoreWindow& sender, const winrtWUC::KeyEventArgs& args);
+		void OnCharacterReceived(const winrtWUC::CoreWindow& sender, const winrtWUC::CharacterReceivedEventArgs& args);
 		void OnAcceleratorKeyActivated(const winrtWUC::CoreDispatcher& sender, const winrtWUC::AcceleratorKeyEventArgs& args);
 		void OnGamepadAdded(const winrtWF::IInspectable& sender, const winrtWGI::Gamepad& gamepad);
 		void OnGamepadRemoved(const winrtWF::IInspectable& sender, const winrtWGI::Gamepad& gamepad);
