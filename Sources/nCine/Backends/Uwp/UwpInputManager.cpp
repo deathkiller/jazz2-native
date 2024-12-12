@@ -6,6 +6,7 @@
 #include <winrt/Windows.Foundation.Collections.h>
 
 #include <Environment.h>
+#include <Utf8.h>
 
 using namespace Death;
 
@@ -16,6 +17,7 @@ namespace nCine
 	UwpMouseState UwpInputManager::mouseState_;
 	UwpKeyboardState UwpInputManager::keyboardState_;
 	KeyboardEvent UwpInputManager::keyboardEvent_;
+	TextInputEvent UwpInputManager::textInputEvent_;
 	UwpJoystickState UwpInputManager::nullJoystickState_;
 	JoyButtonEvent UwpJoystickState::joyButtonEvent_;
 	JoyHatEvent UwpJoystickState::joyHatEvent_;
@@ -35,6 +37,7 @@ namespace nCine
 
 		window.KeyDown({ this, &UwpInputManager::OnKey });
 		window.KeyUp({ this, &UwpInputManager::OnKey });
+		window.CharacterReceived({ this, &UwpInputManager::OnCharacterReceived });
 		window.Dispatcher().AcceleratorKeyActivated({ this, &UwpInputManager::OnAcceleratorKeyActivated });
 
 		winrtWGI::Gamepad::GamepadAdded({ this, &UwpInputManager::OnGamepadAdded });
@@ -232,6 +235,21 @@ namespace nCine
 		}
 	}
 
+	void UwpInputManager::OnCharacterReceived(const winrtWUC::CoreWindow& sender, const winrtWUC::CharacterReceivedEventArgs& args)
+	{
+		if (inputEventHandler_ != nullptr) {
+			args.Handled(true);
+
+			std::uint32_t keyCode = args.KeyCode();
+			DEATH_ASSERT(keyCode <= UINT16_MAX, ("Received character %u has invalid value", keyCode), );
+			wchar_t utf16character = static_cast<wchar_t>(keyCode);
+			textInputEvent_.length = Utf8::FromUtf16(textInputEvent_.text, &utf16character, 1);
+			if (textInputEvent_.length > 0) {
+				inputEventHandler_->OnTextInput(textInputEvent_);
+			}
+		}
+	}
+
 	void UwpInputManager::OnAcceleratorKeyActivated(const winrtWUC::CoreDispatcher& sender, const winrtWUC::AcceleratorKeyEventArgs& args)
 	{
 		// AcceleratorKeyActivated event is required to handle Alt keys, 
@@ -264,7 +282,8 @@ namespace nCine
 				mod |= KeyMod::Mode;
 			keyboardEvent_.mod = mod;
 
-			bool isPressed = (args.EventType() == winrtWUC::CoreAcceleratorKeyEventType::KeyDown || args.EventType() == winrtWUC::CoreAcceleratorKeyEventType::SystemKeyDown);
+			auto eventType = args.EventType();
+			bool isPressed = (eventType == winrtWUC::CoreAcceleratorKeyEventType::KeyDown || eventType == winrtWUC::CoreAcceleratorKeyEventType::SystemKeyDown);
 			if (isPressed != keyboardState_._pressedKeys[(std::int32_t)keyboardEvent_.sym]) {
 				keyboardState_._pressedKeys[(std::int32_t)keyboardEvent_.sym] = isPressed;
 				if (isPressed) {

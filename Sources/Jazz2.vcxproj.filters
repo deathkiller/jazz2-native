@@ -1545,6 +1545,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.h">
       <Filter>Header Files\Shared\IO\Compression</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\InGameConsole.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2536,6 +2539,9 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.cpp">
       <Filter>Source Files\Shared\IO\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\InGameConsole.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

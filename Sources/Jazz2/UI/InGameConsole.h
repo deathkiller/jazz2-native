@@ -26,23 +26,18 @@ namespace Jazz2::UI
 		InGameConsole(LevelHandler* levelHandler);
 		~InGameConsole();
 
+		void OnInitialized();
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
-
-		void OnAttached();
 		void OnKeyPressed(const KeyboardEvent& event);
 		void OnTextInput(const TextInputEvent& event);
 
+		bool IsVisible() const;
+		void Show();
+		void Hide();
 		void WriteLine(MessageLevel level, String line);
 
 	private:
-		struct LogLine {
-			MessageLevel Level;
-			String Message;
-
-			LogLine(MessageLevel level, String&& message);
-		};
-
 		static constexpr std::uint16_t MainLayer = 100;
 		static constexpr std::uint16_t ShadowLayer = 80;
 		static constexpr std::uint16_t FontLayer = 200;
@@ -55,8 +50,12 @@ namespace Jazz2::UI
 		char _currentLine[MaxLineLength];
 		std::size_t _textCursor;
 		float _carretAnim;
-		SmallVector<LogLine, 0> _log;
+		std::int32_t _historyIndex;
+		bool _isVisible;
 
 		void ProcessCurrentLine();
+		void PruneLogHistory();
+		void GetPreviousCommandFromHistory();
+		void GetNextCommandFromHistory();
 	};
 }
