@@ -40,6 +40,7 @@ namespace Jazz2::Multiplayer
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
+		bool OnConsoleCommand(StringView line) override;
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;

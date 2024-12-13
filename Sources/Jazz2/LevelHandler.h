@@ -71,7 +71,6 @@ namespace Jazz2
 		friend class Scripting::LevelScriptLoader;
 #endif
 		friend class UI::HUD;
-		friend class UI::InGameConsole;
 		friend class UI::Menu::InGameMenu;
 
 	public:
@@ -110,6 +109,7 @@ namespace Jazz2
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
+		virtual bool OnConsoleCommand(StringView line);
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;
@@ -263,17 +263,17 @@ namespace Jazz2
 		void PauseGame();
 		void ResumeGame();
 
-		void CheatKill();
-		void CheatGod();
-		void CheatNext();
-		void CheatGuns();
-		void CheatRush();
-		void CheatGems();
-		void CheatBird();
-		void CheatPower();
-		void CheatCoins();
-		void CheatMorph();
-		void CheatShield();
+		bool CheatKill();
+		bool CheatGod();
+		bool CheatNext();
+		bool CheatGuns();
+		bool CheatRush();
+		bool CheatGems();
+		bool CheatBird();
+		bool CheatPower();
+		bool CheatCoins();
+		bool CheatMorph();
+		bool CheatShield();
 		
 #if defined(WITH_IMGUI)
 		ImVec2 WorldPosToScreenSpace(const Vector2f pos);

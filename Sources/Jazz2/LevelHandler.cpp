@@ -694,6 +694,38 @@ namespace Jazz2
 		}
 	}
 
+	bool LevelHandler::OnConsoleCommand(StringView line)
+	{
+		if (line == "/help"_s) {
+			_console->WriteLine(UI::MessageLevel::Info, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
+			return true;
+		} else if (line == "jjk"_s || line == "jjkill"_s) {
+			return CheatKill();
+		} else if (line == "jjgod"_s) {
+			return CheatGod();
+		} else if (line == "jjnext"_s) {
+			return CheatNext();
+		} else if (line == "jjguns"_s || line == "jjammo"_s) {
+			return CheatGuns();
+		} else if (line == "jjrush"_s) {
+			return CheatRush();
+		} else if (line == "jjgems"_s) {
+			return CheatGems();
+		} else if (line == "jjbird"_s) {
+			return CheatBird();
+		} else if (line == "jjpower"_s) {
+			return CheatPower();
+		} else if (line == "jjcoins"_s) {
+			return CheatCoins();
+		} else if (line == "jjmorph"_s) {
+			return CheatMorph();
+		} else if (line == "jjshield"_s) {
+			return CheatShield();
+		} else {
+			return false;
+		}
+	}
+
 	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)
 	{
 		_pressedKeys.set((std::size_t)event.sym);
@@ -2166,7 +2198,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::CheatKill()
+	bool LevelHandler::CheatKill()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2176,9 +2208,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatGod()
+	bool LevelHandler::CheatGod()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2188,9 +2221,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatNext()
+	bool LevelHandler::CheatNext()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2198,9 +2232,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatGuns()
+	bool LevelHandler::CheatGuns()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2212,9 +2247,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatRush()
+	bool LevelHandler::CheatRush()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2224,9 +2260,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatGems()
+	bool LevelHandler::CheatGems()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2236,9 +2273,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatBird()
+	bool LevelHandler::CheatBird()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2248,9 +2286,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatPower()
+	bool LevelHandler::CheatPower()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2262,9 +2301,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatCoins()
+	bool LevelHandler::CheatCoins()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2273,9 +2313,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatMorph()
+	bool LevelHandler::CheatMorph()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2293,9 +2334,10 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
-	void LevelHandler::CheatShield()
+	bool LevelHandler::CheatShield()
 	{
 		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
 			_cheatsUsed = true;
@@ -2306,6 +2348,7 @@ namespace Jazz2
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
+		return true;
 	}
 
 #if defined(WITH_IMGUI)

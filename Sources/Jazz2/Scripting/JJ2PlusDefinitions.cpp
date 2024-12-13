@@ -8,6 +8,7 @@
 #include "../Actors/Player.h"
 #include "../Compatibility/JJ2Strings.h"
 #include "../UI/HUD.h"
+#include "../UI/InGameConsole.h"
 
 #include "../../nCine/Application.h"
 #include "../../nCine/Base/Random.h"
@@ -2362,19 +2363,29 @@ namespace Jazz2::Scripting
 		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->ShowLevelText(text);
 	}
-	void jjPrint(const String& text, bool timestamp) {
+	void LevelScriptLoader::jjPrint(const String& text, bool timestamp) {
 		LOGW("%s", text.data());
 	}
-	void jjDebug(const String& text, bool timestamp) {
+	void LevelScriptLoader::jjDebug(const String& text, bool timestamp) {
 		LOGD("%s", text.data());
 	}
-	void jjChat(const String& text, bool teamchat) {
+	void LevelScriptLoader::jjChat(const String& text, bool teamchat) {
 		LOGW("%s", text.data());
+
+		// TODO: teamchat
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Info, text);
 	}
-	void jjConsole(const String& text, bool sendToAll) {
+	void LevelScriptLoader::jjConsole(const String& text, bool sendToAll) {
 		LOGW("%s", text.data());
+
+		// TODO: sendToAll
+		auto ctx = asGetActiveContext();
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Important, text);
 	}
-	void jjSpy(const String& text) {
+	void LevelScriptLoader::jjSpy(const String& text) {
 		LOGD("%s", text.data());
 	}
 

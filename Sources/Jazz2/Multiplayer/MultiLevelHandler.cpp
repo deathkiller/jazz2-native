@@ -6,6 +6,7 @@
 #include "../PreferencesCache.h"
 #include "../UI/ControlScheme.h"
 #include "../UI/HUD.h"
+#include "../UI/InGameConsole.h"
 #include "../../Common.h"
 
 #if defined(WITH_ANGELSCRIPT)
@@ -417,6 +418,41 @@ namespace Jazz2::Multiplayer
 	void MultiLevelHandler::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
 		LevelHandler::OnInitializeViewport(width, height);
+	}
+
+	bool MultiLevelHandler::OnConsoleCommand(StringView line)
+	{
+		if (LevelHandler::OnConsoleCommand(line)) {
+			return true;
+		}
+
+		if (_isServer) {
+			for (const auto& [otherPeer, otherPeerDesc] : _peerDesc) {
+				if (otherPeerDesc.State == PeerState::Unknown) {
+					continue;
+				}
+
+				MemoryStream packet(6 + line.size());
+				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::ChatMessage);
+				packet.WriteVariableUint32(0); // TODO: Player index
+				packet.WriteValue<std::uint8_t>(0); // Reserved
+				packet.WriteVariableUint32((std::uint32_t)line.size());
+				packet.Write(line.data(), (std::uint32_t)line.size());
+
+				// TODO: If it fail, it will release the packet which is wrong
+				_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet);
+			}
+		} else {
+			MemoryStream packet(6 + line.size());
+			packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::ChatMessage);
+			packet.WriteVariableUint32(_lastSpawnedActorId);
+			packet.WriteValue<std::uint8_t>(0); // Reserved
+			packet.WriteVariableUint32((std::uint32_t)line.size());
+			packet.Write(line.data(), (std::uint32_t)line.size());
+			_networkManager->SendToPeer(nullptr, NetworkChannel::Main, packet);
+		}
+
+		return true;
 	}
 
 	void MultiLevelHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -1166,6 +1202,55 @@ namespace Jazz2::Multiplayer
 					_peerDesc[peer] = PeerDesc(nullptr, PeerState::LevelLoaded);
 					return true;
 				}
+				case ClientPacketType::ChatMessage: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+
+					auto it = _peerDesc.find(peer);
+					auto it2 = _playerStates.find(playerIndex);
+					if (it == _peerDesc.end() || it2 == _playerStates.end()) {
+						LOGD("[MP] ClientPacketType::ChatMessage - invalid playerIndex (%u)", playerIndex);
+						return true;
+					}
+
+					auto player = it->second.Player;
+					if (playerIndex != player->_playerIndex) {
+						LOGD("[MP] ClientPacketType::ChatMessage - received playerIndex %u instead of %i", playerIndex, player->_playerIndex);
+						return true;
+					}
+
+					std::uint8_t reserved = packet.ReadValue<std::uint8_t>();
+
+					std::uint32_t messageLength = packet.ReadVariableUint32();
+					if (messageLength == 0 && messageLength > 1024) {
+						LOGD("[MP] ClientPacketType::ChatMessage - length out of bounds (%u)", messageLength);
+						return true;
+					}
+
+					String message{NoInit, messageLength};
+					packet.Read(message.data(), messageLength);
+
+					for (const auto& [otherPeer, otherPeerDesc] : _peerDesc) {
+						if (otherPeer == peer || otherPeerDesc.State == PeerState::Unknown) {
+							continue;
+						}
+
+						MemoryStream packet(6 + message.size());
+						packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::ChatMessage);
+						packet.WriteVariableUint32(playerIndex);
+						packet.WriteValue<std::uint8_t>(0); // Reserved
+						packet.WriteVariableUint32((std::uint32_t)message.size());
+						packet.Write(message.data(), (std::uint32_t)message.size());
+
+						// TODO: If it fail, it will release the packet which is wrong
+						_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet);
+					}
+
+					_root->InvokeAsync([this, peer, message = std::move(message)]() {
+						_console->WriteLine(UI::MessageLevel::Info, std::move(message));
+					}, NCINE_CURRENT_FUNCTION);
+					return true;
+				}
 				case ClientPacketType::PlayerUpdate: {
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
@@ -1338,15 +1423,34 @@ namespace Jazz2::Multiplayer
 					}, NCINE_CURRENT_FUNCTION);
 					break;
 				}
-				case ServerPacketType::ShowMessage: {
+				case ServerPacketType::ShowAlert: {
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t messageLength = packet.ReadVariableUint32();
 					String message = String(NoInit, messageLength);
 					packet.Read(message.data(), messageLength);
 
-					LOGD("[MP] ServerPacketType::ShowMessage - text: \"%s\"", message.data());
+					LOGD("[MP] ServerPacketType::ShowAlert - text: \"%s\"", message.data());
 
 					_hud->ShowLevelText(message);
+					break;
+				}
+				case ServerPacketType::ChatMessage: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					std::uint8_t reserved = packet.ReadValue<std::uint8_t>();
+
+					std::uint32_t messageLength = packet.ReadVariableUint32();
+					if (messageLength == 0 && messageLength > 1024) {
+						LOGD("[MP] ServerPacketType::ChatMessage - length out of bounds (%u)", messageLength);
+						return true;
+					}
+
+					String message{NoInit, messageLength};
+					packet.Read(message.data(), messageLength);
+
+					_root->InvokeAsync([this, message = std::move(message)]() mutable {
+						_console->WriteLine(UI::MessageLevel::Info, std::move(message));
+					}, NCINE_CURRENT_FUNCTION);
 					break;
 				}
 				case ServerPacketType::CreateControllablePlayer: {

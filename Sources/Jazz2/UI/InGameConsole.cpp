@@ -271,31 +271,7 @@ namespace Jazz2::UI
 			_logHistory.clear();
 		} else {
 			WriteLine(MessageLevel::Echo, line);
-			if (line == "/help"_s) {
-				WriteLine(MessageLevel::Info, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
-			} else if (line == "jjk"_s || line == "jjkill"_s) {
-				_levelHandler->CheatKill();
-			} else if (line == "jjgod"_s) {
-				_levelHandler->CheatGod();
-			} else if (line == "jjnext"_s) {
-				_levelHandler->CheatNext();
-			} else if (line == "jjguns"_s || line == "jjammo"_s) {
-				_levelHandler->CheatGuns();
-			} else if (line == "jjrush"_s) {
-				_levelHandler->CheatRush();
-			} else if (line == "jjgems"_s) {
-				_levelHandler->CheatGems();
-			} else if (line == "jjbird"_s) {
-				_levelHandler->CheatBird();
-			} else if (line == "jjpower"_s) {
-				_levelHandler->CheatPower();
-			} else if (line == "jjcoins"_s) {
-				_levelHandler->CheatCoins();
-			} else if (line == "jjmorph"_s) {
-				_levelHandler->CheatMorph();
-			} else if (line == "jjshield"_s) {
-				_levelHandler->CheatShield();
-			} else {
+			if (!_levelHandler->OnConsoleCommand(line)) {
 				WriteLine(MessageLevel::Error, _("Unknown command"));
 			}
 		}

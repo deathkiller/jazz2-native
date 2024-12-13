@@ -64,7 +64,7 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 			_cachedSounds(192),
 #endif
-			_palettes {}
+			_palettes{}
 	{
 		InitializePaths();
 	}
@@ -714,16 +714,12 @@ namespace Jazz2
 
 				if (needsMask) {
 					graphics->Mask = std::make_unique<std::uint8_t[]>(w * h);
-
 					for (std::int32_t i = 0; i < w * h; i++) {
 						// Save original alpha value for collision checking
 						graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
-						if (palette != nullptr) {
-							std::uint32_t color = palette[pixels[i] & 0xff];
-							pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
-						}
 					}
-				} else if (palette != nullptr) {
+				}
+				if (palette != nullptr) {
 					for (std::int32_t i = 0; i < w * h; i++) {
 						std::uint32_t color = palette[pixels[i] & 0xff];
 						pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
@@ -827,16 +823,12 @@ namespace Jazz2
 
 		if (needsMask) {
 			graphics->Mask = std::make_unique<std::uint8_t[]>(width * height);
-
 			for (std::uint32_t i = 0; i < width * height; i++) {
 				// Save original alpha value for collision checking
 				graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
-				if (palette != nullptr) {
-					std::uint32_t color = palette[pixels[i] & 0xff];
-					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
-				}
 			}
-		} else if (palette != nullptr) {
+		}
+		if (palette != nullptr) {
 			for (std::uint32_t i = 0; i < width * height; i++) {
 				std::uint32_t color = palette[pixels[i] & 0xff];
 				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);

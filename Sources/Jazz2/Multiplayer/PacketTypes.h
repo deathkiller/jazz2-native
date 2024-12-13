@@ -21,6 +21,7 @@ namespace Jazz2::Multiplayer
 
 		Auth,
 		LevelReady,
+		ChatMessage,
 
 		PlayerUpdate,
 		PlayerKeyPress
@@ -36,8 +37,9 @@ namespace Jazz2::Multiplayer
 		ChangeGameMode,
 		PlaySfx,
 		PlayCommonSfx,
-		ShowMessage,				// TODO
+		ShowAlert,					// TODO
 		OverrideLevelText,			// TODO
+		ChatMessage,
 		SyncTileMap,
 		SetTrigger,
 		AdvanceTileAnimation,
