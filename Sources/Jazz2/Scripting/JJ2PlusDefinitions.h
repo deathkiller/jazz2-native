@@ -2195,14 +2195,6 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	void jjPrint(const String& text, bool timestamp);
-	void jjDebug(const String& text, bool timestamp);
-	void jjChat(const String& text, bool teamchat);
-	void jjConsole(const String& text, bool sendToAll);
-	void jjSpy(const String& text);
-
-	// TODO
-
 	std::int32_t getBorderWidth();
 	std::int32_t getBorderHeight();
 	bool getSplitscreenType();

@@ -14,6 +14,7 @@ namespace Jazz2::UI
 		Echo,
 		Debug,
 		Info,
+		Important,
 		Warning,
 		Error,
 		Assert,

@@ -167,6 +167,11 @@ namespace Jazz2::Scripting
 		static void set_jjHelpStrings(std::uint32_t index, const String& text);
 
 		static void jjAlert(const String& text, bool sendToAll, std::uint32_t size);
+		static void jjPrint(const String& text, bool timestamp);
+		static void jjDebug(const String& text, bool timestamp);
+		static void jjChat(const String& text, bool teamchat);
+		static void jjConsole(const String& text, bool sendToAll);
+		static void jjSpy(const String& text);
 
 		static float get_layerXOffset(std::uint8_t id);
 		static float set_layerXOffset(std::uint8_t id, float value);
