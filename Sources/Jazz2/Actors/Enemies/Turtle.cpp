@@ -114,7 +114,7 @@ namespace Jazz2::Actors::Enemies
 		if (_isAttacking) {
 			// Turtles attack only with animation, so check collisions every frame
 			SetState(ActorState::IsDirty, true);
-		} else if (!_isTurning && !_isWithdrawn) {
+		} else if (!_isTurning && !_isWithdrawn && !_isDodging && !_currentTransition) {
 			AABBf aabb = AABBInner + Vector2f(_speed.X * 32, 0);
 			TileCollisionParams params = { TileDestructType::None, false };
 			if (_levelHandler->TileMap()->IsTileEmpty(aabb, params)) {
