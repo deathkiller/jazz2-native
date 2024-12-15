@@ -1461,7 +1461,7 @@ msgstr "Jouer des niveaux personnalisés"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
 msgid "Highscores"
-msgstr ""
+msgstr "Meilleurs scores"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
@@ -1558,7 +1558,7 @@ msgstr "Diagnostic des entrées"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:39
 msgid "Reset To Default"
-msgstr ""
+msgstr "Réinitialiser par défaut"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:72
@@ -1840,7 +1840,7 @@ msgstr "Mode de rendu"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:21
 msgid "Resolution"
-msgstr ""
+msgstr "Résolution"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:29
@@ -1855,7 +1855,7 @@ msgstr "Antialiasing"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
 msgid "Background Dithering"
-msgstr ""
+msgstr "Tramage en arrière-plan"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
@@ -1920,12 +1920,12 @@ msgstr "Activé \f[c:#d0705d](Expérimental)\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr ""
+msgstr "Meilleurs scores pour \f[c:#d0705d]le jeu de base\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:128
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
-msgstr ""
+msgstr "Meilleurs scores pour \f[c:#d0705d]%s\f[/c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:71
@@ -1938,8 +1938,8 @@ msgstr ""
 #, c-format
 msgid "Processing of %i file..."
 msgid_plural "Processing of %i files..."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Traitement de %i fichier..."
+msgstr[1] "Traitement de %i fichiers..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:80
 msgid "Waiting for files..."
@@ -1960,7 +1960,7 @@ msgstr "Aucune manette trouvée !"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
-msgstr ""
+msgstr "Course par équipe"
 
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:46
 msgid "Select Game Mode"
@@ -2050,7 +2050,7 @@ msgstr "Retour"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:35
 msgid "Toggle Console"
-msgstr ""
+msgstr "Affichage de la console"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:39
@@ -2107,7 +2107,7 @@ msgstr "Aucun serveur trouvé, mais la recherche continue !"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
-msgstr ""
+msgstr "Appuyez sur \f[c:#d0705d]Feu\f[/c] pour continuer"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
@@ -2245,13 +2245,6 @@ msgstr ""
 "Essayez à nouveau plus tard."
 
 #: Sources/Main.cpp:773
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2262,17 +2255,10 @@ msgstr ""
 "\f[c:#704a4a]La connexion a été interrompue !\f[/c]\n"
 "\n"
 "\n"
-"Le serveur s'arrête.\n"
+"Le serveur s'arrête pour maintenance.\n"
 "Essayez à nouveau plus tard."
 
 #: Sources/Main.cpp:774
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2283,17 +2269,10 @@ msgstr ""
 "\f[c:#704a4a]La connexion a été interrompue !\f[/c]\n"
 "\n"
 "\n"
-"Le serveur s'arrête.\n"
+"Le serveur s'arrête pour reconfiguration.\n"
 "Essayez à nouveau plus tard."
 
 #: Sources/Main.cpp:775
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2304,8 +2283,8 @@ msgstr ""
 "\f[c:#704a4a]La connexion a été interrompue !\f[/c]\n"
 "\n"
 "\n"
-"Le serveur s'arrête.\n"
-"Essayez à nouveau plus tard."
+"Le serveur s'arrête pour mise à jour.\n"
+"Vérifiez la version de votre client et essayez à nouveau dans une minute."
 
 #: Sources/Main.cpp:776
 msgid ""
