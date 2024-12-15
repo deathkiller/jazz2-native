@@ -43,6 +43,8 @@ namespace Jazz2::Multiplayer
 		friend class ServerDiscovery;
 
 	public:
+		static constexpr std::size_t MaxPeerCount = 128;
+
 		NetworkManager();
 		~NetworkManager();
 
@@ -62,7 +64,6 @@ namespace Jazz2::Multiplayer
 		void KickClient(const Peer& peer, Reason reason);
 
 	private:
-		static constexpr std::size_t MaxPeerCount = 64;
 		static constexpr std::uint32_t ProcessingIntervalMs = 4;
 
 		_ENetHost* _host;

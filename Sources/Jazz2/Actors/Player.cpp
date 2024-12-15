@@ -2688,9 +2688,11 @@ namespace Jazz2::Actors
 					_levelHandler->RollbackToCheckpoint(this);
 				} else {
 					// Respawn is delayed
+					_controllable = false;
 					_renderer.setDrawEnabled(false);
 
-					// TODO: Turn off collisions
+					SetState(ActorState::IsInvulnerable, true);
+					SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors, false);
 				}
 			} else {
 				_lives = 0;
@@ -3362,6 +3364,22 @@ namespace Jazz2::Actors
 		dest.WriteVariableInt32((std::int32_t)_currentWeapon);
 		dest.Write(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
 		dest.Write(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+	}
+
+	void Player::Respawn(const Vector2f& pos)
+	{
+		if ((GetState() & (ActorState::IsInvulnerable | ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors)) != ActorState::IsInvulnerable) {
+			return;
+		}
+
+		_health = _maxHealth;
+
+		MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+
+		_controllable = true;
+		_renderer.setDrawEnabled(true);
+		SetState(ActorState::IsInvulnerable, false);
+		SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors, true);
 	}
 
 	void Player::WarpToPosition(const Vector2f& pos, WarpFlags flags)

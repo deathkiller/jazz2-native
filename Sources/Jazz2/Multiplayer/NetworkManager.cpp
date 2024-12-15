@@ -54,7 +54,7 @@ namespace Jazz2::Multiplayer
 
 		_state = NetworkState::Connecting;
 
-		ENetAddress addr = { };
+		ENetAddress addr = {};
 		enet_address_set_host(&addr, String::nullTerminatedView(address).data());
 		addr.port = port;
 
@@ -80,7 +80,7 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		ENetAddress addr = { };
+		ENetAddress addr = {};
 		addr.host = ENET_HOST_ANY;
 		addr.port = port;
 

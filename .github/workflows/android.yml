@@ -73,11 +73,17 @@ jobs:
           * ) exit 1 ;;
         esac
         
-        echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
         mkdir ./_package/
         $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2.apk"
-        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2.apk"
         cp -f ./LICENSE ./_package/LICENSE
+        
+        if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+          echo 'Pull requests are not signed!'
+        else
+          echo 'Signing APK file...'
+          echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2.apk"
+        fi
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v4

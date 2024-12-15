@@ -51,6 +51,7 @@ namespace Jazz2::Multiplayer
 		DestroyRemoteActor,
 		UpdateAllActors,
 
+		PlayerRespawn,
 		PlayerMoveInstantly,
 		PlayerAckWarped,			// TODO
 		PlayerActivateForce,		// TODO
