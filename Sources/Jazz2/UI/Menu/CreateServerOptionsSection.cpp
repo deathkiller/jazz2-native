@@ -336,6 +336,7 @@ namespace Jazz2::UI::Menu
 
 	void CreateServerOptionsSection::OnAfterTransition()
 	{
+		// TODO: _gameMode is ignored
 		PlayerType players[] = { (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit(_episodeName, StringView(_levelName), GameDifficulty::Multiplayer,
 			PreferencesCache::EnableReforgedGameplay, false, players);

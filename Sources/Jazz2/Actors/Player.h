@@ -127,6 +127,7 @@ namespace Jazz2::Actors
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version);
 		void SerializeResumableToStream(Stream& dest);
 
+		void Respawn(const Vector2f& pos);
 		virtual void WarpToPosition(const Vector2f& pos, WarpFlags flags);
 		void WarpToCheckpoint();
 		Modifier GetModifier() const;

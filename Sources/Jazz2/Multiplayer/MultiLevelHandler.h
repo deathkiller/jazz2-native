@@ -162,9 +162,10 @@ namespace Jazz2::Multiplayer
 
 		NetworkManager* _networkManager;
 		MultiplayerGameMode _gameMode;
-		bool _isServer;
 		float _updateTimeLeft;
+		bool _isServer;
 		bool _initialUpdateSent;
+		bool _enableSpawning;
 		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer description
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
@@ -184,6 +185,7 @@ namespace Jazz2::Multiplayer
 		void ApplyGameModeToPlayer(MultiplayerGameMode gameMode, Actors::Player* player);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
+		static StringView GameModeToString(MultiplayerGameMode mode);
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		static constexpr std::int32_t PlotValueCount = 512;

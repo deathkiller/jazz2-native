@@ -233,37 +233,40 @@ namespace Jazz2::Multiplayer
 					if (_this->_lastRequest.secondsSince() > 15) {
 						_this->_lastRequest = TimeStamp::now();
 
-						MemoryStream packet(512);
-						packet.WriteValue<std::uint64_t>(PacketSignature);
-						packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
-						packet.WriteValue<std::uint16_t>(_this->_actualPort);
+						// If server name is empty, it's private and shouldn't respond to discovery messages
+						auto name = _this->_server->GetServerName();
+						if (!name.empty()) {
+							MemoryStream packet(512);
+							packet.WriteValue<std::uint64_t>(PacketSignature);
+							packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
+							packet.WriteValue<std::uint16_t>(_this->_actualPort);
 
-						// TODO: Unique identifier
-						//packet.Write(server->GetUniqueIdentifier(), UniqueIdentifierLength);
-						static const std::uint8_t UniqueIdentifier[16] = { 1, 2, 3, 4, 5, 6 };
-						packet.Write(UniqueIdentifier, UniqueIdentifierLength);
+							// TODO: Unique identifier
+							//packet.Write(server->GetUniqueIdentifier(), UniqueIdentifierLength);
+							static const std::uint8_t UniqueIdentifier[16] = { 1, 2, 3, 4, 5, 6 };
+							packet.Write(UniqueIdentifier, UniqueIdentifierLength);
 
-						// TODO: auto name = server->GetName();
-						auto name = String("Test server");
-						packet.WriteValue<std::uint8_t>((std::uint8_t)name.size());
-						packet.Write(name.data(), (std::uint8_t)name.size());
 
-						packet.WriteVariableUint32(0); // TODO: GameModeAndFlags
-						//packet.WriteVariableUint32(server->GetCurrentPlayers());
-						packet.WriteVariableUint32(7); // TODO: CurrentPlayers
-						//packet.WriteVariableUint32(server->GetMaxPlayers());
-						packet.WriteVariableUint32(32); // TODO: MaxPlayers
+							packet.WriteValue<std::uint8_t>((std::uint8_t)name.size());
+							packet.Write(name.data(), (std::uint8_t)name.size());
 
-						// TODO: Current level
-						auto levelName = String("unknown/unknown");
-						packet.WriteValue<std::uint8_t>((std::uint8_t)levelName.size());
-						packet.Write(levelName.data(), (std::uint8_t)levelName.size());
+							packet.WriteVariableUint32(0); // TODO: GameModeAndFlags
+							//packet.WriteVariableUint32(server->GetCurrentPlayers());
+							packet.WriteVariableUint32(7); // TODO: CurrentPlayers
+							//packet.WriteVariableUint32(server->GetMaxPlayers());
+							packet.WriteVariableUint32((std::uint32_t)NetworkManager::MaxPeerCount); // TODO: MaxPlayers
 
-						ENetBuffer sendbuf;
-						sendbuf.data = (void*)packet.GetBuffer();
-						sendbuf.dataLength = packet.GetSize();
-						if (enet_socket_send(socket, &_this->_address, &sendbuf, 1) != (std::int32_t)sendbuf.dataLength) {
-							LOGE("Failed to send discovery response");
+							// TODO: Current level
+							auto levelName = String("unknown/unknown");
+							packet.WriteValue<std::uint8_t>((std::uint8_t)levelName.size());
+							packet.Write(levelName.data(), (std::uint8_t)levelName.size());
+
+							ENetBuffer sendbuf;
+							sendbuf.data = (void*)packet.GetBuffer();
+							sendbuf.dataLength = packet.GetSize();
+							if (enet_socket_send(socket, &_this->_address, &sendbuf, 1) != (std::int32_t)sendbuf.dataLength) {
+								LOGE("Failed to send discovery response");
+							}
 						}
 					}
 				}

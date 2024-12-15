@@ -80,7 +80,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		LevelExitingState lastState = _levelExiting;
 		bool success = PlayerOnServer::OnLevelChanging(initiator, exitType);
-		
+
 		if (lastState == LevelExitingState::None) {
 			// Level changing just started, send the request to the player as WarpIn packet
 			static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerLevelChanging(this, exitType);
@@ -91,6 +91,11 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemotePlayerOnServer::SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
 	{
+		if (_health <= 0) {
+			// Don't sync dead players to avoid cheating
+			return;
+		}
+
 		Clock& c = nCine::clock();
 		std::int64_t now = c.now() * 1000 / c.frequency();
 

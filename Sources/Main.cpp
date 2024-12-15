@@ -114,6 +114,9 @@ public:
 	bool ConnectToServer(const StringView address, std::uint16_t port) override;
 	bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
 
+	StringView GetServerName() const override;
+	void SetServerName(StringView value) override;
+
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
 	void OnPeerDisconnected(const Peer& peer, Reason reason) override;
 	void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength) override;
@@ -140,6 +143,7 @@ private:
 	char _newestVersion[20];
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
+	String _serverName;
 #endif
 
 	void OnBeforeInitialize();
@@ -710,6 +714,10 @@ bool GameEventHandler::CreateServer(LevelInitialization&& levelInit, std::uint16
 		_networkManager = std::make_unique<NetworkManager>();
 	}
 
+	if (_serverName.empty()) {
+		_serverName = "Unnamed server"_s;
+	}
+
 	if (!_networkManager->CreateServer(this, port)) {
 		return false;
 	}
@@ -721,6 +729,16 @@ bool GameEventHandler::CreateServer(LevelInitialization&& levelInit, std::uint16
 	}, NCINE_CURRENT_FUNCTION);
 
 	return true;
+}
+
+StringView GameEventHandler::GetServerName() const
+{
+	return _serverName;
+}
+
+void GameEventHandler::SetServerName(StringView value)
+{
+	_serverName = value;
 }
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)

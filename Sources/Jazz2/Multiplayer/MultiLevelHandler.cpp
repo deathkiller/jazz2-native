@@ -46,6 +46,8 @@
 
 #include <Utf8.h>
 #include <Containers/StaticArray.h>
+#include <Containers/StringConcatenable.h>
+#include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 
@@ -56,7 +58,7 @@ namespace Jazz2::Multiplayer
 {
 	MultiLevelHandler::MultiLevelHandler(IRootController* root, NetworkManager* networkManager)
 		: LevelHandler(root), _gameMode(MultiplayerGameMode::Unknown), _networkManager(networkManager), _updateTimeLeft(1.0f),
-			_initialUpdateSent(false), _lastSpawnedActorId(-1), _seqNum(0), _seqNumWarped(0), _suppressRemoting(false),
+			_initialUpdateSent(false), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0), _seqNumWarped(0), _suppressRemoting(false),
 			_ignorePackets(false)
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 			, _plotIndex(0), _actorsMaxCount(0.0f), _actorsCount{}, _remoteActorsCount{}, _remotingActorsCount{},
@@ -427,6 +429,103 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (_isServer) {
+			if (line.hasPrefix('/')) {
+				if (line.hasPrefix("/ban "_s)) {
+					// TODO: Implement /ban
+				} else if (line == "/info"_s) {
+					char infoBuffer[128];
+					formatString(infoBuffer, sizeof(infoBuffer), "Current level: %s/%s (\f[w:80]\f[c:#707070]%s\f[/c]\f[/w])", _episodeName.data(), _levelFileName.data(), GameModeToString(_gameMode).data());
+					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
+					formatString(infoBuffer, sizeof(infoBuffer), "Players: \f[w:80]\f[c:#707070]%zu\f[/c]\f[/w]/%zu", _peerDesc.size() + 1, NetworkManager::MaxPeerCount);
+					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
+					formatString(infoBuffer, sizeof(infoBuffer), "Server load: %i ms", (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
+					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
+					return true;
+				} else if (line.hasPrefix("/kick "_s)) {
+					// TODO: Implement /kick
+				} else if (line.hasPrefix("/set "_s)) {
+					auto [variableName, _, value] = line.exceptPrefix("/set "_s).trimmedPrefix().partition(' ');
+					if (variableName == "mode"_s) {
+						auto gameModeString = StringUtils::lowercase(value.trimmed());
+
+						MultiplayerGameMode gameMode;
+						if (gameModeString == "battle"_s || gameModeString == "b"_s) {
+							gameMode = MultiplayerGameMode::Battle;
+						} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
+							gameMode = MultiplayerGameMode::TeamBattle;
+						} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
+							gameMode = MultiplayerGameMode::CaptureTheFlag;
+						} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
+							gameMode = MultiplayerGameMode::Race;
+						} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
+							gameMode = MultiplayerGameMode::TeamRace;
+						} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
+							gameMode = MultiplayerGameMode::TreasureHunt;
+						} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
+							gameMode = MultiplayerGameMode::Cooperation;
+						} else {
+							return false;
+						}
+
+						if (SetGameMode(gameMode)) {
+							char infoBuffer[128];
+							formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", GameModeToString(_gameMode).data());
+							_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
+							return true;
+						}
+					} else if (variableName == "level"_s) {
+						// TODO: Implement /set level
+					} else if (variableName == "name"_s) {
+						auto name = value.trimmed();
+						_root->SetServerName(name);
+
+						name = _root->GetServerName();
+						char infoBuffer[128];
+						if (!name.empty()) {
+							formatString(infoBuffer, sizeof(infoBuffer), "Server name set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", String::nullTerminatedView(name).data());
+						} else {
+							formatString(infoBuffer, sizeof(infoBuffer), "Server visibility to \f[w:80]\f[c:#707070]hidden\f[/c]\f[/w]");
+						}
+						_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
+						return true;
+					} else if (variableName == "spawning"_s) {
+						auto boolValue = StringUtils::lowercase(value.trimmed());
+						if (boolValue == "false"_s || boolValue == "off"_s || boolValue == "0"_s) {
+							_enableSpawning = false;
+						} else if (boolValue == "true"_s || boolValue == "on"_s || boolValue == "1"_s) {
+							_enableSpawning = true;
+						} else {
+							return false;
+						}
+
+						char infoBuffer[128];
+						formatString(infoBuffer, sizeof(infoBuffer), "Spawning set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", _enableSpawning ? "Enabled" : "Disabled");
+						_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
+						return true;
+					}
+				} else if (line.hasPrefix("/alert "_s)) {
+					StringView message = line.exceptPrefix("/alert "_s).trimmed();
+					if (!message.empty()) {
+						for (const auto& [otherPeer, otherPeerDesc] : _peerDesc) {
+							if (otherPeerDesc.State == PeerState::Unknown) {
+								continue;
+							}
+
+							MemoryStream packet(5 + message.size());
+							packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::ShowAlert);
+							packet.WriteVariableUint32((std::uint32_t)message.size());
+							packet.Write(message.data(), (std::uint32_t)message.size());
+
+							// TODO: If it fail, it will release the packet which is wrong
+							_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet);
+						}
+					}
+				}
+
+				return false;
+			}
+
+			// Chat message
 			for (const auto& [otherPeer, otherPeerDesc] : _peerDesc) {
 				if (otherPeerDesc.State == PeerState::Unknown) {
 					continue;
@@ -443,6 +542,12 @@ namespace Jazz2::Multiplayer
 				_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet);
 			}
 		} else {
+			if (line.hasPrefix('/')) {
+				// Command are allowed only on server
+				return false;
+			}
+
+			// Chat message
 			MemoryStream packet(6 + line.size());
 			packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::ChatMessage);
 			packet.WriteVariableUint32(_lastSpawnedActorId);
@@ -633,8 +738,31 @@ namespace Jazz2::Multiplayer
 
 	bool MultiLevelHandler::HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider)
 	{
-		// TODO: Remove this override
-		return LevelHandler::HandlePlayerDied(player, collider);
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			_scripts->OnPlayerDied(player, collider);
+		}
+#endif
+
+		// TODO
+		//return LevelHandler::HandlePlayerDied(player, collider);
+
+		if (_isServer && _enableSpawning) {
+			for (const auto& [peer, peerDesc] : _peerDesc) {
+				if (peerDesc.Player == player) {
+					MemoryStream packet(13);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerRespawn);
+					packet.WriteVariableUint32(player->_playerIndex);
+					packet.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.X * 512.0f));
+					packet.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.Y * 512.0f));
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
+					break;
+				}
+			}
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	void MultiLevelHandler::HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType)
@@ -1615,6 +1743,21 @@ namespace Jazz2::Multiplayer
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
+				case ServerPacketType::PlayerRespawn: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerRespawn - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
+						return true;
+					}
+
+					LOGD("[MP] ServerPacketType::PlayerRespawn - playerIndex: %u", playerIndex);
+
+					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+					_players[0]->Respawn(Vector2f(posX, posY));
+					return true;
+				}
 				case ServerPacketType::PlayerMoveInstantly: {
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
@@ -1651,7 +1794,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data + 1, dataLength - 1);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerChangeWeapon - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -2174,6 +2317,20 @@ namespace Jazz2::Multiplayer
 				runtime_cast<Actors::Environment::SwingingVine*>(actor) || runtime_cast<Actors::Solid::Bridge*>(actor) ||
 				runtime_cast<Actors::Solid::MovingPlatform*>(actor) || runtime_cast<Actors::Solid::PinballBumper*>(actor) ||
 				runtime_cast<Actors::Solid::PinballPaddle*>(actor) || runtime_cast<Actors::Solid::SpikeBall*>(actor));
+	}
+
+	StringView MultiLevelHandler::GameModeToString(MultiplayerGameMode mode)
+	{
+		switch (mode) {
+			case MultiplayerGameMode::Battle: return _("Battle");
+			case MultiplayerGameMode::TeamBattle: return _("Team Battle");
+			case MultiplayerGameMode::CaptureTheFlag: return _("Capture The Flag");
+			case MultiplayerGameMode::Race: return _("Race");
+			case MultiplayerGameMode::TeamRace: return _("Team Race");
+			case MultiplayerGameMode::TreasureHunt: return _("Treasure Hunt");
+			case MultiplayerGameMode::Cooperation: return _("Cooperation");
+			default: return _("Unknown");
+		}
 	}
 
 	/*void MultiLevelHandler::UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult)
