@@ -208,7 +208,7 @@ namespace Jazz2
 #	elif defined(NCINE_OVERRIDE_CONTENT_PATH)
 		_contentPath = NCINE_OVERRIDE_CONTENT_PATH;
 #	else
-		_contentPath = "/usr/share/" NCINE_LINUX_PACKAGE "/Content/";
+		_contentPath = INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/";
 #	endif
 #	if defined(NCINE_PACKAGED_CONTENT_PATH)
 		// If Content is packaged with binaries, always use standard XDG paths for everything else
@@ -235,7 +235,7 @@ namespace Jazz2
 			} else {
 				_cachePath = "Cache/"_s;
 			}
-			_sourcePath = "/usr/share/" NCINE_LINUX_PACKAGE "/Source/";
+			_sourcePath = INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Source/";
 			if (!fs::DirectoryExists(_sourcePath)) {
 				_sourcePath = fs::CombinePath(fs::GetDirectoryName(_cachePath), "Source/"_s);
 			}
