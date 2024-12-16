@@ -275,6 +275,7 @@ function(ncine_apply_compiler_options target)
 	target_compile_features(${target} PUBLIC cxx_std_17)
 	set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 	target_compile_definitions(${target} PUBLIC "CMAKE_BUILD")
+	target_compile_definitions(${target} PRIVATE "INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\"")
 
 	if(DEATH_DEBUG)
 		target_compile_definitions(${target} PUBLIC "DEATH_DEBUG")
