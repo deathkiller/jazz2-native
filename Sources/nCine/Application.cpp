@@ -175,7 +175,7 @@ static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
 			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
 }
-#elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_SWITCH)
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include <termios.h>
 #	include <sys/select.h>
 
@@ -1072,7 +1072,7 @@ namespace nCine
 		} else {
 			__consoleType = ConsoleType::Redirect;
 		}
-#	elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_SWITCH)
+#	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #		if defined(DEATH_TARGET_UNIX)
 		::setvbuf(stdout, nullptr, _IONBF, 0);
 		::setvbuf(stderr, nullptr, _IONBF, 0);
@@ -1109,7 +1109,7 @@ namespace nCine
 		}
 #	endif
 
-#	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)) && !defined(DEATH_TARGET_SWITCH)
+#	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN))
 		if (__consoleType >= ConsoleType::EscapeCodes) {
 			__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 		}

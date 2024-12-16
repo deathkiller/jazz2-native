@@ -2,7 +2,7 @@
 
 #include "../../Common.h"
 
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 
 #include "../../nCine/Threading/Thread.h"
 

@@ -45,7 +45,7 @@ namespace Jazz2
 #endif
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || !defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
 	bool PreferencesCache::EnableRgbLights = false;
 #else
 	bool PreferencesCache::EnableRgbLights = true;
@@ -347,7 +347,7 @@ namespace Jazz2
 				auto& resolver = ContentResolver::Get();
 				fs::CreateDirectories(resolver.GetSourcePath());
 
-#	if defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH)
+#	if defined(DEATH_TARGET_UNIX)
 				StringView isSteamDeck = ::getenv("SteamDeck");
 				if (isSteamDeck == "1"_s) {
 					GamepadButtonLabels = GamepadType::Steam;

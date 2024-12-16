@@ -33,6 +33,10 @@
 
 #include <stdlib.h>
 
+#if !defined(NCINE_INSTALL_PREFIX) && defined(DEATH_TARGET_UNIX)
+#	define NCINE_INSTALL_PREFIX "/usr/local"
+#endif
+
 // Check platform-specific capabilities
 #if defined(WITH_SDL) || defined(DEATH_TARGET_WINDOWS_RT)
 #	define NCINE_HAS_GAMEPAD_RUMBLE

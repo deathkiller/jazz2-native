@@ -10,6 +10,10 @@ target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_VERSION=\"${NCINE_VERSION}
 string(TIMESTAMP NCINE_BUILD_YEAR "%Y") 
 target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_BUILD_YEAR=\"${NCINE_BUILD_YEAR}\"")
 
+if(UNIX)
+	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\"")
+endif()
+
 if(NCINE_OVERRIDE_CONTENT_PATH)
 	message(STATUS "Using overriden `Content` path: ${NCINE_OVERRIDE_CONTENT_PATH}")
 	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_OVERRIDE_CONTENT_PATH=\"${NCINE_OVERRIDE_CONTENT_PATH}\"")
@@ -22,16 +26,6 @@ elseif(NCINE_LINUX_PACKAGE)
 	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_LINUX_PACKAGE=\"${NCINE_LINUX_PACKAGE}\"")
 	if(NCINE_PACKAGED_CONTENT_PATH)
 		target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_PACKAGED_CONTENT_PATH")
-	endif()
-endif()
-
-if(DEATH_CPU_USE_RUNTIME_DISPATCH)
-	target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_CPU_USE_RUNTIME_DISPATCH")
-	if(DEATH_CPU_USE_IFUNC)
-		target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_CPU_USE_IFUNC")
-		message(STATUS "Using GNU IFUNC for CPU-dependent functionality")
-	else()
-		message(STATUS "Using runtime dispatch for CPU-dependent functionality")
 	endif()
 endif()
 

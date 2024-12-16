@@ -1997,7 +1997,7 @@ namespace Jazz2
 
 	void LevelHandler::UpdateRichPresence()
 	{
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		if (!PreferencesCache::EnableDiscordIntegration || !UI::DiscordRpcClient::Get().IsSupported()) {
 			return;
 		}

@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 
 			String name;
 			std::uint64_t id = 0;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			if (PreferencesCache::EnableDiscordIntegration && DiscordRpcClient::Get().IsSupported()) {
 				name = DiscordRpcClient::Get().GetUserDisplayName();
 				id = DiscordRpcClient::Get().GetUserId();

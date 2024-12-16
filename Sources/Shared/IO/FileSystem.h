@@ -131,17 +131,26 @@ namespace Death { namespace IO {
 		~FileSystem() = delete;
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
-		// Windows is already case in-sensitive by default
+		/**
+		 * @brief Returns path with correct case on case-sensitive platforms (or nothing if path not found)
+		 * 
+		 * Windows is already case-insensitive by default, so no validation is performed.
+		 */
 		DEATH_ALWAYS_INLINE static Containers::StringView FindPathCaseInsensitive(Containers::StringView path) {
 			return path;
 		}
 
+		/** @overload */
 		DEATH_ALWAYS_INLINE static Containers::String FindPathCaseInsensitive(Containers::String&& path) {
 			return path;
 		}
 #else
+		/**
+		 * @brief Returns path with correct case on case-sensitive platforms (or nothing if path not found)
+		 */
 		static Containers::String FindPathCaseInsensitive(Containers::StringView path);
 
+		/** @overload */
 		DEATH_ALWAYS_INLINE static Containers::String FindPathCaseInsensitive(Containers::String&& path) {
 			return FindPathCaseInsensitive(Containers::StringView{path});
 		}

@@ -159,18 +159,18 @@ private:
 #if defined(DEATH_TARGET_ANDROID)
 	void ApplyActivityIcon();
 #endif
-	static void WriteCacheDescriptor(const StringView path, std::uint64_t currentVersion, std::int64_t animsModified);
+	static void WriteCacheDescriptor(StringView path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
-	static bool TryParseAddressAndPort(const StringView input, String& address, std::uint16_t& port);
-	static void ExtractPakFile(const StringView pakFile, const StringView targetPath);
+	static bool TryParseAddressAndPort(StringView input, String& address, std::uint16_t& port);
+	static void ExtractPakFile(StringView pakFile, StringView targetPath);
 };
 
 void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
 
-#if defined(DEATH_TARGET_APPLE) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH)) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	// Allow `/extract-pak` only on PC platforms
 	if (config.argc() >= 3) {
 		for (std::int32_t i = 0; i < config.argc() - 2; i++) {
@@ -1585,7 +1585,7 @@ void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, boo
 	SetStateHandler(std::move(mainMenu));
 }
 
-void GameEventHandler::WriteCacheDescriptor(const StringView path, std::uint64_t currentVersion, std::int64_t animsModified)
+void GameEventHandler::WriteCacheDescriptor(StringView path, std::uint64_t currentVersion, std::int64_t animsModified)
 {
 	auto so = fs::Open(path, FileAccess::Write);
 	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
@@ -1681,7 +1681,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 	}
 }
 
-bool GameEventHandler::TryParseAddressAndPort(const StringView input, String& address, std::uint16_t& port)
+bool GameEventHandler::TryParseAddressAndPort(StringView input, String& address, std::uint16_t& port)
 {
 	auto portSep = input.findLast(':');
 	if (portSep) {
@@ -1714,7 +1714,7 @@ bool GameEventHandler::TryParseAddressAndPort(const StringView input, String& ad
 	}
 }
 
-void GameEventHandler::ExtractPakFile(const StringView pakFile, const StringView targetPath)
+void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 {
 	PakFile pak(pakFile);
 	if (!pak.IsValid()) {
