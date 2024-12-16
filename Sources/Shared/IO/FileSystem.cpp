@@ -706,78 +706,95 @@ namespace Death { namespace IO {
 #if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH)
 	String FileSystem::FindPathCaseInsensitive(StringView path)
 	{
-		if (Exists(path)) {
+		if (path.empty() || Exists(path)) {
 			return path;
 		}
 
-		std::size_t l = path.size();
-		char* p = (char*)alloca(l + 1);
-		strncpy(p, path.data(), l);
-		p[l] = '\0';
-		std::size_t rl = 0;
-		bool isAbsolute = (p[0] == '/' || p[0] == '\\');
+		DIR* d = nullptr;
+		String result = path;
+		MutableStringView partialResult = result;
+		char* nextPartBegin;
 
-		String result(NoInit, path.size() + (isAbsolute ? 0 : 2));
+		while (MutableStringView separator = partialResult.findLast('/')) {
+			if DEATH_UNLIKELY(separator.begin() == result.begin()) {
+				// Nothing left, only first slash of absolute path
+				break;
+			}
 
-		DIR* d;
-		if (isAbsolute) {
-			d = ::opendir("/");
-			p = p + 1;
-		} else {
-			d = ::opendir(".");
-			result[0] = '.';
-			result[1] = '\0';
-			rl = 1;
+			partialResult = partialResult.prefix(separator.begin());
+			separator[0] = '\0';
+			d = ::opendir(result.data());
+			separator[0] = '/';
+			if (d != nullptr) {
+				nextPartBegin = separator.end();
+				break;
+			}
 		}
 
-		bool last = false;
-		char* c = strsep(&p, "/");
-		while (c) {
-			if (d == nullptr) {
-				return {};
+		if (d == nullptr) {
+			if (result[0] == '/' || result[0] == '\\') {
+				d = ::opendir("/");
+				nextPartBegin = result.begin() + 1;
+			} else {
+				d = ::opendir(".");
+				nextPartBegin = result.begin();
 			}
 
-			if (last) {
-				::closedir(d);
+			if DEATH_UNLIKELY(d == nullptr) {
 				return {};
 			}
+		}
 
-			result[rl] = '/';
-			rl += 1;
-			result[rl] = '\0';
+		while (true) {
+			partialResult = result.suffix(nextPartBegin);
+			MutableStringView nextSeparator = partialResult.findOr('/', result.end());
+			if DEATH_UNLIKELY(nextSeparator.begin() == nextPartBegin) {
+				// Skip empty parts
+				nextPartBegin = nextSeparator.end();
+				continue;
+			}
+
+			bool hasNextSeparator = (nextSeparator.begin() != result.end());
+			if DEATH_LIKELY(hasNextSeparator) {
+				nextSeparator[0] = '\0';
+			}
 
 			struct dirent* entry = ::readdir(d);
 			while (entry != nullptr) {
-				if (::strcasecmp(c, entry->d_name) == 0) {
+				if (::strcasecmp(partialResult.begin(), entry->d_name) == 0) {
 #	if defined(__FreeBSD__)
 					std::size_t fileNameLength = entry->d_namlen;
 #	else
 					std::size_t fileNameLength = std::strlen(entry->d_name);
 #	endif
-					std::memcpy(&result[rl], entry->d_name, fileNameLength);
-					rl += fileNameLength;
-
+					DEATH_DEBUG_ASSERT(partialResult.begin() + fileNameLength == nextSeparator.begin());
+					std::memcpy(partialResult.begin(), entry->d_name, fileNameLength);
 					::closedir(d);
+
+					nextPartBegin = nextSeparator.end();
+					if (!hasNextSeparator || nextPartBegin == result.end()) {
+						if (hasNextSeparator) {
+							nextSeparator[0] = '/';
+						}
+						return result;
+					}
+
 					d = ::opendir(result.data());
+					if DEATH_UNLIKELY(d == nullptr) {
+						return {};
+					}
+					nextSeparator[0] = '/';
 					break;
 				}
 
 				entry = ::readdir(d);
 			}
 
-			if (entry == nullptr) {
-				strcpy(&result[rl], c);
-				rl += strlen(c);
-				last = true;
+			if DEATH_UNLIKELY(entry == nullptr) {
+				::closedir(d);
+				return {};
 			}
-
-			c = strsep(&p, "/");
 		}
-
-		if (d != nullptr) {
-			::closedir(d);
-		}
-		return result;
 	}
 #endif
 
@@ -2597,4 +2614,5 @@ namespace Death { namespace IO {
 		}
 #endif
 	}
+
 }}

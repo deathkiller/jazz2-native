@@ -203,7 +203,7 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 			}
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_SWITCH))
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			case GameplayOptionsItemType::EnableDiscordIntegration: {
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
 				if (!PreferencesCache::EnableDiscordIntegration) {

@@ -208,7 +208,7 @@ namespace Jazz2
 #	elif defined(NCINE_OVERRIDE_CONTENT_PATH)
 		_contentPath = NCINE_OVERRIDE_CONTENT_PATH;
 #	else
-		_contentPath = INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/";
+		_contentPath = NCINE_INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/";
 #	endif
 #	if defined(NCINE_PACKAGED_CONTENT_PATH)
 		// If Content is packaged with binaries, always use standard XDG paths for everything else
@@ -235,9 +235,16 @@ namespace Jazz2
 			} else {
 				_cachePath = "Cache/"_s;
 			}
-			_sourcePath = INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Source/";
-			if (!fs::DirectoryExists(_sourcePath)) {
-				_sourcePath = fs::CombinePath(fs::GetDirectoryName(_cachePath), "Source/"_s);
+
+			// Prefer system-wide Source only if it exists and local one doesn't exist
+			_sourcePath = fs::CombinePath(fs::GetDirectoryName(_cachePath), "Source/"_s);
+			if (!fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "Anims.j2a"_s)) &&
+				!fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "AnimsSw.j2a"_s))) {
+				auto systemWideSource = NCINE_INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Source/";
+				if (fs::FindPathCaseInsensitive(fs::CombinePath(systemWideSource, "Anims.j2a"_s)) ||
+					fs::FindPathCaseInsensitive(fs::CombinePath(systemWideSource, "AnimsSw.j2a"_s))) {
+					_sourcePath = systemWideSource;
+				}
 			}
 		} else {
 			// Fallback to relative paths

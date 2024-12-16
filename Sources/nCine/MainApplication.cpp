@@ -66,7 +66,8 @@ namespace nCine
 				workingDirLength = (DWORD)(lastSlash - workingDir);
 				*lastSlash = '\0';
 				if (!::SetCurrentDirectoryW(workingDir)) {
-					LOGE("Failed to change working directory with error 0x%08x", ::GetLastError());
+					// LOGE cannot be used until tracing is initialized
+					//LOGE("Failed to change working directory with error 0x%08x", ::GetLastError());
 					workingDirLength = 0;
 				}
 			} else {
@@ -82,7 +83,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		if (workingDirLength > 0) {
-			LOGI("Current working directory: %s", Utf8::FromUtf16(workingDir, workingDirLength).data());
+			LOGI("Using working directory: %s", Utf8::FromUtf16(workingDir, workingDirLength).data());
 		}
 #endif
 

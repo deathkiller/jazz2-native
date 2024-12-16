@@ -274,23 +274,34 @@ function(ncine_apply_compiler_options target)
 
 	target_compile_features(${target} PUBLIC cxx_std_17)
 	set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
-	target_compile_definitions(${target} PUBLIC "CMAKE_BUILD")
-	target_compile_definitions(${target} PRIVATE "INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\"")
+	target_compile_definitions(${target} PRIVATE "CMAKE_BUILD")
 
 	if(DEATH_DEBUG)
-		target_compile_definitions(${target} PUBLIC "DEATH_DEBUG")
+		target_compile_definitions(${target} PRIVATE "DEATH_DEBUG")
 	else()
-		target_compile_definitions(${target} PUBLIC $<$<CONFIG:Debug>:DEATH_DEBUG>)
+		target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:DEATH_DEBUG>)
 	endif()
 	if(DEATH_TRACE)
 		if(target_is_executable)
 			message(STATUS "Runtime event tracing is enabled")
 		endif()
-		target_compile_definitions(${target} PUBLIC "DEATH_TRACE")
+		target_compile_definitions(${target} PRIVATE "DEATH_TRACE")
 		if(DEATH_TRACE_ASYNC)
-			target_compile_definitions(${target} PUBLIC "DEATH_TRACE_ASYNC")
+			target_compile_definitions(${target} PRIVATE "DEATH_TRACE_ASYNC")
 		elseif(NCINE_WITH_THREADS AND target_is_executable)
 			message(STATUS "Asynchronous processing of event tracing is explicitly disabled")
+		endif()
+	endif()
+
+	if(DEATH_CPU_USE_RUNTIME_DISPATCH)
+		target_compile_definitions(${target} PUBLIC "DEATH_CPU_USE_RUNTIME_DISPATCH")
+		if(DEATH_CPU_USE_IFUNC)
+			target_compile_definitions(${target} PUBLIC "DEATH_CPU_USE_IFUNC")
+			if(target_is_executable)
+				message(STATUS "Using GNU IFUNC for CPU-dependent functionality")
+			endif()
+		elseif(target_is_executable)
+			message(STATUS "Using runtime dispatch for CPU-dependent functionality")
 		endif()
 	endif()
 
@@ -383,10 +394,10 @@ function(ncine_apply_compiler_options target)
 		endif()
 
 		# Suppress linker warning about templates
-		target_compile_options(${target} PUBLIC "/wd4251")
+		target_compile_options(${target} PRIVATE "/wd4251")
 		# Suppress warnings about "conversion from '<bigger int type>' to '<smaller int type>'",
 		# "conversion from 'size_t' to '<smaller int type>', possible loss of data"
-		target_compile_options(${target} PUBLIC "/wd4244" "/wd4267")
+		target_compile_options(${target} PRIVATE "/wd4244" "/wd4267")
 
 		# Adjust incremental linking
 		#target_link_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/INCREMENTAL,/INCREMENTAL:NO>)
@@ -407,7 +418,7 @@ function(ncine_apply_compiler_options target)
 		#endif()
 
 		if(MINGW OR MSYS)
-			target_link_options(${target} PUBLIC "-municode")
+			target_link_options(${target} PRIVATE "-municode")
 		endif()
 
 		if(NCINE_ARCH_EXTENSIONS AND UNIX AND NOT APPLE AND NOT ANDROID AND NOT NINTENDO_SWITCH)
@@ -419,8 +430,8 @@ function(ncine_apply_compiler_options target)
 	
 		# Only in Debug - preserve debug information, it's probably added automatically on other platforms
 		if(EMSCRIPTEN)
-			target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-g>)
-			target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-g>)
+			target_compile_options(${target} PRIVATE $<$<CONFIG:Debug>:-g>)
+			target_link_options(${target} PRIVATE $<$<CONFIG:Debug>:-g>)
 		endif()
 
 		# Only in Debug
