@@ -236,7 +236,7 @@ namespace Jazz2
 				_cachePath = "Cache/"_s;
 			}
 
-			// Prefer system-wide Source only if it exists and local one doesn't exist
+			// Prefer system-wide Source only if it exists and the local one doesn't exist
 			_sourcePath = fs::CombinePath(fs::GetDirectoryName(_cachePath), "Source/"_s);
 			if (!fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "Anims.j2a"_s)) &&
 				!fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "AnimsSw.j2a"_s))) {
