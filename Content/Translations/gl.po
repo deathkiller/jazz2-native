@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-12-10 22:18+0100\n"
+"POT-Creation-Date: 2024-12-22 15:36+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: enfeitizador <fedellar@enfeitizador.es>\n"
 "Language-Team: enfeitizador\n"
@@ -1371,6 +1371,82 @@ msgstr ""
 "Por favor, visita\n"
 "www.project2.com"
 
+#: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
+#, c-format
+msgid "Level \"%s\" initialized"
+msgstr ""
+
+#. TRANSLATORS: Link to website under header text in About section
+#: Sources/Jazz2/LevelHandler.cpp:700
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
+msgid "For more information, visit the official website:"
+msgstr "Para máis información, visita a páxina web oficial:"
+
+#: Sources/Jazz2/LevelHandler.cpp:2209 Sources/Jazz2/LevelHandler.cpp:2222
+#: Sources/Jazz2/LevelHandler.cpp:2233 Sources/Jazz2/LevelHandler.cpp:2248
+#: Sources/Jazz2/LevelHandler.cpp:2261 Sources/Jazz2/LevelHandler.cpp:2274
+#: Sources/Jazz2/LevelHandler.cpp:2287 Sources/Jazz2/LevelHandler.cpp:2302
+#: Sources/Jazz2/LevelHandler.cpp:2314 Sources/Jazz2/LevelHandler.cpp:2335
+#: Sources/Jazz2/LevelHandler.cpp:2349
+msgid "Cheats are not allowed in current context"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2325
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:215
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
+msgid "Battle"
+msgstr "Batalla"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2326
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
+msgid "Team Battle"
+msgstr "Batalla en equipo"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2327
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
+msgid "Capture The Flag"
+msgstr "Capturar a bandeira"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2328
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
+msgid "Race"
+msgstr "Carreira"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2329
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
+msgid "Team Race"
+msgstr "Carreira en equipo"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2330
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
+msgid "Treasure Hunt"
+msgstr "Busca do tesouro"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2331
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
+msgid "Cooperation"
+msgstr "Cooperativo"
+
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2332
+msgid "Unknown"
+msgstr ""
+
+#: Sources/Jazz2/UI/InGameConsole.cpp:275
+msgid "Unknown command"
+msgstr ""
+
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
 msgid ""
@@ -1383,11 +1459,6 @@ msgstr ""
 "1998. Admite varias versións do xogo (Shareware Demo, Holiday Hare '98, The "
 "Secret Files e Christmas Chronicles). Tamén admite parcialmente algunhas "
 "características da extensión JJ2+."
-
-#. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
-msgid "For more information, visit the official website:"
-msgstr "Para máis información, visita a páxina web oficial:"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
@@ -1506,69 +1577,73 @@ msgid "Allow access to external storage"
 msgstr "Permite o acceso ao almacenamento externo"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:173
 #, c-format
 msgid "Remap Controls for Player %i"
 msgstr "Reasignar controis para participante %i"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
 msgid "Remap Controls"
 msgstr "Reconfigurar controis"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:29
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:45
 msgid "Touch Controls"
 msgstr "Controis táctiles"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:29
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:31
 msgid "Toggle Run"
 msgstr "Alternar correr"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
 msgid "Gamepad Button Labels"
 msgstr "Etiquetas dos botóns do mando"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:34
 msgid "Gamepad Rumble"
 msgstr "Vibración do mando"
 
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
+msgid "Extended PlayStation™ Support"
+msgstr ""
+
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:36
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
 msgid "Native Back Button"
 msgstr "Botón atrás nativo"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:38
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:43
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
 msgid "Input Diagnostics"
 msgstr "Diagnoses de entrada"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:39
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:44
 msgid "Reset To Default"
 msgstr "Restabelecer ao por defecto"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:72
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:77
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
 msgid "Controls"
 msgstr "Controis"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:127
 msgid "Strong"
 msgstr "Forte"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:130
 msgid "Weak"
 msgstr "Feble"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:131
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:143
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
@@ -1577,7 +1652,7 @@ msgstr "Feble"
 msgid "Disabled"
 msgstr "Desactivado"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:143
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
@@ -1601,42 +1676,6 @@ msgstr "Modo de xogo"
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:35
 msgid "Create Server"
 msgstr "Crear servidor"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:215
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
-msgid "Battle"
-msgstr "Batalla"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
-msgid "Team Battle"
-msgstr "Batalla en equipo"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
-msgid "Capture The Flag"
-msgstr "Capturar a bandeira"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
-msgid "Race"
-msgstr "Carreira"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
-msgid "Treasure Hunt"
-msgstr "Busca do tesouro"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
-msgid "Cooperation"
-msgstr "Cooperativo"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
 msgid "No custom level found!"
@@ -1945,11 +1984,6 @@ msgstr "Non se importaron novos episodios!"
 msgid "No gamepads are detected!"
 msgstr "Non se detectan mandos!"
 
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
-msgid "Team Race"
-msgstr "Carreira en equipo"
-
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:46
 msgid "Select Game Mode"
 msgstr "Selecciona modo de xogo"
@@ -2143,12 +2177,12 @@ msgstr "Difícil"
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Podes axustar a posición das zonas de toque por esvarar e soltar."
 
-#: Sources/Main.cpp:270 Sources/Main.cpp:325
+#: Sources/Main.cpp:278 Sources/Main.cpp:333
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "Conectando a %s:%u..."
 
-#: Sources/Main.cpp:530 Sources/Main.cpp:578
+#: Sources/Main.cpp:538 Sources/Main.cpp:586
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2162,7 +2196,7 @@ msgstr ""
 "Asegura que todo ficheiro necesario\n"
 "sexa accesíbel e proba de novo."
 
-#: Sources/Main.cpp:632
+#: Sources/Main.cpp:640
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2176,7 +2210,7 @@ msgstr ""
 "Asegura que todo ficheiro necesario\n"
 "sexa accesíbel e proba de novo."
 
-#: Sources/Main.cpp:769
+#: Sources/Main.cpp:791
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2188,7 +2222,7 @@ msgstr ""
 "\n"
 "A túa versión do cliente non é compatíbel coa do servidor."
 
-#: Sources/Main.cpp:770
+#: Sources/Main.cpp:792
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2202,7 +2236,7 @@ msgstr ""
 "O servidor está completo.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:771
+#: Sources/Main.cpp:793
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2216,7 +2250,7 @@ msgstr ""
 "O servidor non está nun estado que poida procesar a túa solicitude.\n"
 "Proba de novo dentro dun pouco."
 
-#: Sources/Main.cpp:772
+#: Sources/Main.cpp:794
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2230,7 +2264,7 @@ msgstr ""
 "O servidor está completo.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:773
+#: Sources/Main.cpp:795
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2244,7 +2278,7 @@ msgstr ""
 "O servidor estase apagando para mantemento.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:774
+#: Sources/Main.cpp:796
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2258,7 +2292,7 @@ msgstr ""
 "O servidor estase apagando para configurarse.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:775
+#: Sources/Main.cpp:797
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2272,7 +2306,7 @@ msgstr ""
 "O servidor estase apagando para unha actualización.\n"
 "Comproba a túa versión de cliente e proba nun minuto."
 
-#: Sources/Main.cpp:776
+#: Sources/Main.cpp:798
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2286,7 +2320,7 @@ msgstr ""
 "Proba de novo e se o problema continúa,\n"
 "revisa a túa conexión á rede."
 
-#: Sources/Main.cpp:777
+#: Sources/Main.cpp:799
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2298,7 +2332,7 @@ msgstr ""
 "\n"
 "A túa versión do cliente non é compatíbel coa do servidor."
 
-#: Sources/Main.cpp:778
+#: Sources/Main.cpp:800
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2312,7 +2346,7 @@ msgstr ""
 "Fuches \f[c:#907050]expulsado\f[/c] do servidor.\n"
 "Contacta coa administración do servidor para máis información."
 
-#: Sources/Main.cpp:779
+#: Sources/Main.cpp:801
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"

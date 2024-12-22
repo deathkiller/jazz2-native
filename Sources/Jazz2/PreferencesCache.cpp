@@ -51,14 +51,6 @@ namespace Jazz2
 	bool PreferencesCache::EnableRgbLights = true;
 #endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
-	bool PreferencesCache::ToggleRunAction = false;
-#if defined(DEATH_TARGET_SWITCH)
-	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
-#else
-	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
-#endif
-	std::uint8_t PreferencesCache::GamepadRumble = 1;
-	bool PreferencesCache::UseNativeBackButton = false;
 	bool PreferencesCache::EnableDiscordIntegration = false;
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::ResumeOnStart = false;
@@ -66,13 +58,22 @@ namespace Jazz2
 	bool PreferencesCache::AllowCheatsLives = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
 	EpisodeEndOverwriteMode PreferencesCache::OverwriteEpisodeEnd = EpisodeEndOverwriteMode::Always;
-	Vector2f PreferencesCache::TouchLeftPadding;
-	Vector2f PreferencesCache::TouchRightPadding;
-	char PreferencesCache::Language[6] { };
+	char PreferencesCache::Language[6]{};
 	bool PreferencesCache::BypassCache = false;
 	float PreferencesCache::MasterVolume = 0.7f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
+	bool PreferencesCache::ToggleRunAction = false;
+#if defined(DEATH_TARGET_SWITCH)
+	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
+#else
+	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
+#endif
+	std::uint8_t PreferencesCache::GamepadRumble = 1;
+	bool PreferencesCache::PlayStationExtendedSupport = false;
+	bool PreferencesCache::UseNativeBackButton = false;
+	Vector2f PreferencesCache::TouchLeftPadding;
+	Vector2f PreferencesCache::TouchRightPadding;
 
 	String PreferencesCache::_configPath;
 	HashMap<String, EpisodeContinuationState> PreferencesCache::_episodeEnd;
@@ -253,6 +254,7 @@ namespace Jazz2
 
 					if (version >= 7) {
 						AllowCheats = ((boolOptions & BoolOptions::AllowCheats) == BoolOptions::AllowCheats);
+						PlayStationExtendedSupport = ((boolOptions & BoolOptions::PlayStationExtendedSupport) == BoolOptions::PlayStationExtendedSupport);
 						OverwriteEpisodeEnd = (EpisodeEndOverwriteMode)uc.ReadValue<std::uint8_t>();
 					}
 
@@ -457,6 +459,7 @@ namespace Jazz2
 		if (EnableReforgedHUD) boolOptions |= BoolOptions::EnableReforgedHUD;
 		if (EnableReforgedMainMenu) boolOptions |= BoolOptions::EnableReforgedMainMenu;
 		if (AllowCheats) boolOptions |= BoolOptions::AllowCheats;
+		if (PlayStationExtendedSupport) boolOptions |= BoolOptions::PlayStationExtendedSupport;
 		co.WriteValue<std::uint64_t>((std::uint64_t)boolOptions);
 
 		if (Language[0] != '\0') {

@@ -212,6 +212,10 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 	config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
 #endif
 
+	if (PreferencesCache::PlayStationExtendedSupport) {
+		theApplication().EnablePlayStationExtendedSupport(true);
+	}
+
 #if defined(WITH_IMGUI)
 	//config.withDebugOverlay = true;
 #endif

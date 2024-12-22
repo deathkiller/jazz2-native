@@ -22,6 +22,7 @@ namespace nCine
 
 		void Quit() override;
 
+		bool EnablePlayStationExtendedSupport(bool enable) override;
 		bool OpenUrl(StringView url) override;
 
 	private:

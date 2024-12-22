@@ -161,6 +161,7 @@ namespace nCine
 			return appCfg_.dataPath();
 		}
 
+		virtual bool EnablePlayStationExtendedSupport(bool enable);
 		virtual bool OpenUrl(StringView url);
 
 		void AttachTraceTarget(Containers::StringView targetPath);

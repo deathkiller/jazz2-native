@@ -128,10 +128,6 @@ namespace Jazz2
 		static WeaponWheelStyle WeaponWheel;
 		static bool EnableRgbLights;
 		static bool AllowUnsignedScripts;
-		static bool ToggleRunAction;
-		static GamepadType GamepadButtonLabels;
-		static std::uint8_t GamepadRumble;
-		static bool UseNativeBackButton;
 		static bool EnableDiscordIntegration;
 		static bool TutorialCompleted;
 		static bool ResumeOnStart;
@@ -139,8 +135,6 @@ namespace Jazz2
 		static bool AllowCheatsLives;
 		static bool AllowCheatsUnlock;
 		static EpisodeEndOverwriteMode OverwriteEpisodeEnd;
-		static Vector2f TouchLeftPadding;
-		static Vector2f TouchRightPadding;
 		static char Language[6];
 		static bool BypassCache;
 
@@ -148,6 +142,15 @@ namespace Jazz2
 		static float MasterVolume;
 		static float SfxVolume;
 		static float MusicVolume;
+
+		// Controls
+		static bool ToggleRunAction;
+		static GamepadType GamepadButtonLabels;
+		static std::uint8_t GamepadRumble;
+		static bool PlayStationExtendedSupport;
+		static bool UseNativeBackButton;
+		static Vector2f TouchLeftPadding;
+		static Vector2f TouchRightPadding;
 
 		static void Initialize(const AppConfiguration& config);
 		static void Save();
@@ -187,7 +190,9 @@ namespace Jazz2
 			EnableReforgedMainMenu = 0x200000,
 			ToggleRunAction = 0x400000,
 			AllowCheats = 0x1000000,
-			BackgroundDithering = 0x2000000
+			BackgroundDithering = 0x2000000,
+
+			PlayStationExtendedSupport = 0x4000000,
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);

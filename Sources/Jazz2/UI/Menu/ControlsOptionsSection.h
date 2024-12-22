@@ -12,6 +12,9 @@ namespace Jazz2::UI::Menu
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 		EnableGamepadRumble,
 #endif
+#if defined(WITH_SDL)
+		EnablePlayStationExtendedSupport,
+#endif
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 		UseNativeBackButton,
 #endif
