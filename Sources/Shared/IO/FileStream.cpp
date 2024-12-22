@@ -109,7 +109,7 @@ namespace Death { namespace IO {
 				}
 			} else if (oldPos - _readPos <= pos && pos < oldPos + _readLength - _readPos) {
 				// Some part of the buffer is still valid
-				std::int64_t diff = (pos - oldPos);
+				std::int32_t diff = static_cast<std::int32_t>(pos - oldPos);
 				_readPos += diff;
 				// Seek after the buffered part, so the position is still correct
 				if (SeekInternal(_readLength - _readPos, SeekOrigin::Current) < 0) {
