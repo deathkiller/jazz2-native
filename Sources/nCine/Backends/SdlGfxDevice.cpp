@@ -161,6 +161,8 @@ namespace nCine
 
 	void SdlGfxDevice::initGraphics(bool enableWindowScaling)
 	{
+		SDL_SetHint(SDL_HINT_APP_NAME, NCINE_APP_NAME);
+
 #if SDL_VERSION_ATLEAST(2, 24, 0) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
 		// Scaling is handled automatically by SDL (since v2.24.0)
 		if (enableWindowScaling) {

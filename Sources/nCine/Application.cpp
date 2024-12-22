@@ -1004,6 +1004,12 @@ namespace nCine
 		LOGI("IAppEventHandler::OnResume() invoked");
 	}
 
+	bool Application::EnablePlayStationExtendedSupport(bool enable)
+	{
+		// Not implemented in base class
+		return false;
+	}
+
 	bool Application::OpenUrl(StringView url)
 	{
 		// Not implemented in base class

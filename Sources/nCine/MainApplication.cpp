@@ -119,6 +119,18 @@ namespace nCine
 #endif
 	}
 
+	bool MainApplication::EnablePlayStationExtendedSupport(bool enable)
+	{
+#if defined(WITH_SDL)
+		SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, enable ? "1" : "0");
+		// SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE inherits value from SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE
+		//SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, enable ? "1" : "0");
+		return true;
+#else
+		return false;
+#endif
+	}
+
 	bool MainApplication::OpenUrl(StringView url)
 	{
 		if (!url.empty()) {

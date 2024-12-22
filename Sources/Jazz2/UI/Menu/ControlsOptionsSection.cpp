@@ -5,6 +5,8 @@
 #include "InputDiagnosticsSection.h"
 #include "../../PreferencesCache.h"
 
+#include "../../../nCine/Application.h"
+
 #include <Utf8.h>
 
 using namespace Jazz2::UI::Menu::Resources;
@@ -30,6 +32,9 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::GamepadButtonLabels, _("Gamepad Button Labels"), true });
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnableGamepadRumble, _("Gamepad Rumble"), true });
+#endif
+#if defined(WITH_SDL)
+		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnablePlayStationExtendedSupport, _("Extended PlayStation™ Support"), true });
 #endif
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 		// TRANSLATORS: Menu item in Options > Controls section (Android only)
@@ -126,6 +131,9 @@ namespace Jazz2::UI::Menu
 							: _("Disabled")));
 					break;
 #endif
+#if defined(WITH_SDL)
+				case ControlsOptionsItemType::EnablePlayStationExtendedSupport: enabled = PreferencesCache::PlayStationExtendedSupport; break;
+#endif
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 				case ControlsOptionsItemType::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
 #endif
@@ -165,6 +173,14 @@ namespace Jazz2::UI::Menu
 				PreferencesCache::GamepadRumble = (PreferencesCache::GamepadRumble == 1
 					? 2
 					: (PreferencesCache::GamepadRumble == 2 ? 0 : 1));
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+#endif
+#if defined(WITH_SDL)
+			case ControlsOptionsItemType::EnablePlayStationExtendedSupport:
+				PreferencesCache::PlayStationExtendedSupport = !PreferencesCache::PlayStationExtendedSupport;
+				theApplication().EnablePlayStationExtendedSupport(PreferencesCache::PlayStationExtendedSupport);
 				_isDirty = true;
 				_animation = 0.0f;
 				break;

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-12-10 22:19+0100\n"
+"POT-Creation-Date: 2024-12-22 15:37+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Consul\n"
@@ -1365,6 +1365,82 @@ msgstr ""
 "Lütfen www.project2.com\n"
 "adresini ziyaret edin"
 
+#: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
+#, c-format
+msgid "Level \"%s\" initialized"
+msgstr ""
+
+#. TRANSLATORS: Link to website under header text in About section
+#: Sources/Jazz2/LevelHandler.cpp:700
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
+msgid "For more information, visit the official website:"
+msgstr ""
+
+#: Sources/Jazz2/LevelHandler.cpp:2209 Sources/Jazz2/LevelHandler.cpp:2222
+#: Sources/Jazz2/LevelHandler.cpp:2233 Sources/Jazz2/LevelHandler.cpp:2248
+#: Sources/Jazz2/LevelHandler.cpp:2261 Sources/Jazz2/LevelHandler.cpp:2274
+#: Sources/Jazz2/LevelHandler.cpp:2287 Sources/Jazz2/LevelHandler.cpp:2302
+#: Sources/Jazz2/LevelHandler.cpp:2314 Sources/Jazz2/LevelHandler.cpp:2335
+#: Sources/Jazz2/LevelHandler.cpp:2349
+msgid "Cheats are not allowed in current context"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2325
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:215
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
+msgid "Battle"
+msgstr "Savaş"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2326
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
+msgid "Team Battle"
+msgstr "Takım Savaşı"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2327
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
+msgid "Capture The Flag"
+msgstr "Bayrak Kapmaca"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2328
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
+msgid "Race"
+msgstr "Yarış"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2329
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
+msgid "Team Race"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2330
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
+msgid "Treasure Hunt"
+msgstr "Hazine Avı"
+
+#. TRANSLATORS: Menu item in Select Game Mode section
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2331
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
+#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
+msgid "Cooperation"
+msgstr "Eşli Oyun"
+
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2332
+msgid "Unknown"
+msgstr ""
+
+#: Sources/Jazz2/UI/InGameConsole.cpp:275
+msgid "Unknown command"
+msgstr ""
+
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
 msgid ""
@@ -1377,11 +1453,6 @@ msgstr ""
 "düzenlenmiş halidir. Oyunun farklı versiyonlarını destekler (Shareware Demo, "
 "Holiday Hare '98, The Secret Files ve Christmas Chronicles). Aynı zamanda, "
 "JJ2+ eklentisinin bir bölümünün bazı özelliklerini destekler."
-
-#. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
-msgid "For more information, visit the official website:"
-msgstr ""
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
@@ -1499,69 +1570,73 @@ msgid "Allow access to external storage"
 msgstr "Harici depolama erişimine izin ver"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:20
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:173
 #, c-format
 msgid "Remap Controls for Player %i"
 msgstr "Oyuncu %i İçin Kontrolleri Değiştir"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:24
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
 msgid "Remap Controls"
 msgstr "Kontrolleri Değiştir"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:29
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:45
 msgid "Touch Controls"
 msgstr "Dokunmatik Kontrol Ayarları"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:29
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:31
 msgid "Toggle Run"
 msgstr "Sürekli Koşma"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
 msgid "Gamepad Button Labels"
 msgstr "Gamepad Tuşu İkonları"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:34
 msgid "Gamepad Rumble"
 msgstr "Gamepad Titreşim Seviyesi"
 
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
+msgid "Extended PlayStation™ Support"
+msgstr ""
+
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:36
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
 msgid "Native Back Button"
 msgstr "Geri Tuşu"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:38
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:43
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:72
 msgid "Input Diagnostics"
 msgstr "Giriş Tanılama"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:39
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:44
 msgid "Reset To Default"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:72
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:77
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
 msgid "Controls"
 msgstr "Kontrol Ayarları"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:127
 msgid "Strong"
 msgstr "Güçlü"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:130
 msgid "Weak"
 msgstr "Zayıf"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:131
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:143
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
@@ -1570,7 +1645,7 @@ msgstr "Zayıf"
 msgid "Disabled"
 msgstr "Kapalı"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:143
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
@@ -1594,42 +1669,6 @@ msgstr "Oyun Modu"
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:35
 msgid "Create Server"
 msgstr "Sunucu Yarat"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:215
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
-msgid "Battle"
-msgstr "Savaş"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
-msgid "Team Battle"
-msgstr "Takım Savaşı"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
-msgid "Capture The Flag"
-msgstr "Bayrak Kapmaca"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
-msgid "Race"
-msgstr "Yarış"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
-msgid "Treasure Hunt"
-msgstr "Hazine Avı"
-
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
-msgid "Cooperation"
-msgstr "Eşli Oyun"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
 msgid "No custom level found!"
@@ -1937,11 +1976,6 @@ msgstr "Hiçbir yeni bölüm içeriye alınmadı!"
 msgid "No gamepads are detected!"
 msgstr "Oyun kolu algılanmadı!"
 
-#. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
-msgid "Team Race"
-msgstr ""
-
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:46
 msgid "Select Game Mode"
 msgstr "Oyun Modu Seç"
@@ -2136,12 +2170,12 @@ msgid "You can adjust position of the touch zones by drag and drop."
 msgstr ""
 "Dokunma bölgelerini tutup bırakarak bulundukları pozisyonu ayarlayabilirsin."
 
-#: Sources/Main.cpp:270 Sources/Main.cpp:325
+#: Sources/Main.cpp:278 Sources/Main.cpp:333
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "%s:%u'ya bağlanıyor..."
 
-#: Sources/Main.cpp:530 Sources/Main.cpp:578
+#: Sources/Main.cpp:538 Sources/Main.cpp:586
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2155,7 +2189,7 @@ msgstr ""
 "Gerekli dosyaların erişilebilir\n"
 "olduğundan emin olun ve tekrar deneyin."
 
-#: Sources/Main.cpp:632
+#: Sources/Main.cpp:640
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2169,7 +2203,7 @@ msgstr ""
 "Gerekli dosyaların erişilebilir\n"
 "olduğundan emin olun ve tekrar deneyin."
 
-#: Sources/Main.cpp:769
+#: Sources/Main.cpp:791
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2181,7 +2215,7 @@ msgstr ""
 "\n"
 "Oyun sürümünüz sunucuyla uyumlu değil."
 
-#: Sources/Main.cpp:770
+#: Sources/Main.cpp:792
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2195,7 +2229,7 @@ msgstr ""
 "Kapasite dolu.\n"
 "Lütfen tekrar deneyin."
 
-#: Sources/Main.cpp:771
+#: Sources/Main.cpp:793
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2209,7 +2243,7 @@ msgstr ""
 "Sunucu isteğinizi gerçekleştirebilecek durumda değil.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:772
+#: Sources/Main.cpp:794
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2223,7 +2257,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:773
+#: Sources/Main.cpp:795
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2244,7 +2278,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:774
+#: Sources/Main.cpp:796
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2265,7 +2299,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:775
+#: Sources/Main.cpp:797
 #, fuzzy
 #| msgid ""
 #| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
@@ -2286,7 +2320,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:776
+#: Sources/Main.cpp:798
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2300,7 +2334,7 @@ msgstr ""
 "Lütfen daha sonra tekrar deneyin. Problem devam ediyorsa,\n"
 "internet bağlantınızı gözden geçirin."
 
-#: Sources/Main.cpp:777
+#: Sources/Main.cpp:799
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2312,7 +2346,7 @@ msgstr ""
 "\n"
 "Sunucu bağlantı isteğine cevap vermiyor."
 
-#: Sources/Main.cpp:778
+#: Sources/Main.cpp:800
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2326,7 +2360,7 @@ msgstr ""
 "Sunucudan \f[c:#907050]atıldınız\f[/c].\n"
 "Daha fazla bilgi için sunucu yöneticileri ile iletişime geçin."
 
-#: Sources/Main.cpp:779
+#: Sources/Main.cpp:801
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
