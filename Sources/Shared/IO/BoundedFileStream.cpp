@@ -54,8 +54,8 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
 
 		std::int64_t pos = _underlyingStream.GetPosition() - _offset;
-		if (bytesToRead > _size - pos) {
-			bytesToRead = _size - pos;
+		if (bytesToRead > static_cast<std::int64_t>(_size) - pos) {
+			bytesToRead = static_cast<std::int64_t>(_size) - pos;
 		}
 
 		return _underlyingStream.Read(destination, bytesToRead);
