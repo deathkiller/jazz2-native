@@ -250,6 +250,13 @@ namespace nCine
 		}
 	}
 
+	StringView SdlInputManager::getKeyName(Keys key) const
+	{
+		// TODO
+		//return SDL_GetKeyName(SdlKeys::enumToKeysValue(key));
+		return IInputManager::getKeyName(key);
+	}
+
 	bool SdlInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);

@@ -39,6 +39,7 @@ namespace nCine
 		{ "cs", "Čeština"_s },
 		{ "da", "Dansk"_s },
 		{ "de", "Deutsch"_s },
+		{ "el", "Ελληνική"_s },
 		{ "en", "English"_s },
 		{ "es", "Español"_s },
 		{ "et", "Eesti"_s },
@@ -46,6 +47,7 @@ namespace nCine
 		{ "fr", "Français"_s },
 		{ "gl", "Galego"_s },
 		{ "gr", "Greek"_s },
+		{ "he", "Hebrew"_s },	// TODO
 		{ "hr", "Hrvatski"_s },
 		{ "hu", "Magyar"_s },
 		{ "it", "Italiano"_s },

@@ -24,18 +24,19 @@ namespace Jazz2::UI::Menu
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 
-	private:
+	protected:
 		std::int32_t _selectedColumn;
 		std::int32_t _playerIndex;
 		float _timeout;
 		float _hintAnimation;
-		BitArray _keysPressedLast;
 		JoyMappedState _joyStatesLast[ControlScheme::MaxConnectedGamepads];
 		bool _isDirty;
 		bool _waitForInput;
+		bool _waitForInputPrev;
 
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
+		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnHandleInput() override;
 		void OnExecuteSelected() override;
 		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
@@ -43,6 +44,5 @@ namespace Jazz2::UI::Menu
 
 		void RefreshPreviousState();
 		bool HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment);
-		static StringView KeyToName(Keys key);
 	};
 }

@@ -38,7 +38,7 @@ extern "C" {
 }
 #endif
 
-/**
+/** @file
 	@brief Compile-time and runtime CPU instruction set detection and dispatch
 
 	This namespace provides *tags* for x86, ARM and WebAssembly instruction sets,
@@ -300,6 +300,7 @@ extern "C" {
 	function declaration to make it possible to unify them under a single wrapper
 	macro in case a practical use case needs to handle more than one variant.
 */
+
 namespace Death { namespace Cpu {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
