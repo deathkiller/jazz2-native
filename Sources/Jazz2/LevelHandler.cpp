@@ -731,7 +731,7 @@ namespace Jazz2
 		_pressedKeys.set((std::size_t)event.sym);
 
 		if (_pauseMenu != nullptr) {
-			_pauseMenu->OnKeyReleased(event);
+			_pauseMenu->OnKeyPressed(event);
 		} else if (_console->IsVisible()) {
 			_console->OnKeyPressed(event);
 		}

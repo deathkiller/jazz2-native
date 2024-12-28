@@ -26,7 +26,7 @@ namespace nCine
 	/// Utility functions to convert between engine key enumerations and SDL ones
 	class SdlKeys
 	{
-	  public:
+	public:
 		static Keys keySymValueToEnum(int keysym);
 		static int keyModMaskToEnumMask(int keymod);
 		static int enumToKeysValue(Keys keysym);
@@ -36,7 +36,7 @@ namespace nCine
 	/// Information about SDL mouse state
 	class SdlMouseState : public MouseState
 	{
-	  public:
+	public:
 		SdlMouseState()
 			: buttons_(0) {}
 
@@ -46,7 +46,7 @@ namespace nCine
 		inline bool isFourthButtonDown() const override { return (buttons_ & SDL_BUTTON_X1MASK) != 0; }
 		inline bool isFifthButtonDown() const override { return (buttons_ & SDL_BUTTON_X2MASK) != 0; }
 
-	  private:
+	private:
 		unsigned int buttons_;
 
 		friend class SdlInputManager;
@@ -55,7 +55,7 @@ namespace nCine
 	/// Information about an SDL mouse event
 	class SdlMouseEvent : public MouseEvent
 	{
-	  public:
+	public:
 		SdlMouseEvent()
 			: button_(0) {}
 
@@ -65,7 +65,7 @@ namespace nCine
 		inline bool isFourthButton() const override { return button_ == SDL_BUTTON_X1; }
 		inline bool isFifthButton() const override { return button_ == SDL_BUTTON_X2; }
 
-	  private:
+	private:
 		unsigned char button_;
 
 		friend class SdlInputManager;
@@ -74,7 +74,7 @@ namespace nCine
 	/// Information about an SDL scroll event
 	class SdlScrollEvent : public ScrollEvent
 	{
-	  public:
+	public:
 		SdlScrollEvent() {}
 
 		friend class SdlInputManager;
@@ -83,28 +83,32 @@ namespace nCine
 	/// Information about SDL keyboard state
 	class SdlKeyboardState : public KeyboardState
 	{
-	  public:
-		SdlKeyboardState() { keyState_ = SDL_GetKeyboardState(nullptr); }
+	public:
+		SdlKeyboardState()
+		{
+			keyState_ = SDL_GetKeyboardState(nullptr);
+		}
 
 		inline bool isKeyDown(Keys key) const override
 		{
-			const int sdlKey = SdlKeys::enumToScancode(key);
-			if (sdlKey == SDL_SCANCODE_UNKNOWN)
+			const std::int32_t sdlKey = SdlKeys::enumToScancode(key);
+			if (sdlKey == SDL_SCANCODE_UNKNOWN) {
 				return false;
-			else
-				return keyState_[SdlKeys::enumToScancode(key)] != 0;
+			} else {
+				return keyState_[sdlKey] != 0;
+			}
 		}
 
 		friend class SdlInputManager;
 
-	  private:
+	private:
 		const unsigned char *keyState_;
 	};
 
 	/// Information about SDL joystick state
 	class SdlJoystickState : public JoystickState
 	{
-	  public:
+	public:
 		SdlJoystickState()
 			: sdlJoystick_(nullptr) {}
 
@@ -114,7 +118,7 @@ namespace nCine
 		unsigned char hatState(int hatId) const override;
 		float axisValue(int axisId) const override;
 
-	  private:
+	private:
 		SDL_Joystick *sdlJoystick_;
 
 		friend class SdlInputManager;
@@ -132,13 +136,14 @@ namespace nCine
 		static bool shouldQuitOnRequest();
 		static void parseEvent(const SDL_Event &event);
 
-		inline const MouseState &mouseState() const override
+		inline const MouseState& mouseState() const override
 		{
 			mouseState_.buttons_ = SDL_GetMouseState(&mouseState_.x, &mouseState_.y);
 			return mouseState_;
 		}
 
-		inline const KeyboardState &keyboardState() const override { return keyboardState_; }
+		inline const KeyboardState& keyboardState() const override { return keyboardState_; }
+		StringView getKeyName(Keys key) const override;
 
 		bool isJoyPresent(int joyId) const override;
 		const char *joyName(int joyId) const override;

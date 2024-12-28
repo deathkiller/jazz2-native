@@ -78,6 +78,8 @@ namespace nCine
 		/// Returns current keyboard state
 		virtual const KeyboardState& keyboardState() const = 0;
 
+		virtual StringView getKeyName(Keys key) const;
+
 		/// Returns true if the specified joystick is connected
 		virtual bool isJoyPresent(int joyId) const = 0;
 		/// Returns the name of the specified joystick
