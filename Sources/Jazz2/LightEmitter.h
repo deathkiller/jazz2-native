@@ -6,12 +6,7 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	enum class LightTypeType
-	{
-		Solid,
-		WithNoise
-	};
-	
+	/** @brief Light emitter */
 	struct LightEmitter
 	{
 		Vector2f Pos;
@@ -19,6 +14,5 @@ namespace Jazz2
 		float Brightness;
 		float RadiusNear;
 		float RadiusFar;
-		LightTypeType Type;
 	};
 }

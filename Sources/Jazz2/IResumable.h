@@ -8,6 +8,7 @@ using namespace Death::IO;
 
 namespace Jazz2
 {
+	/** @brief Base interface of a resumable objects */
 	class IResumable
 	{
 	public:

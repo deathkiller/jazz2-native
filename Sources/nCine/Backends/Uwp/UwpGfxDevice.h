@@ -26,10 +26,13 @@ namespace winrtWUC = winrt::Windows::UI::Core;
 namespace winrtWUP = winrt::Windows::UI::Popups;
 namespace winrtWUV = winrt::Windows::UI::ViewManagement;
 
-namespace nCine::Backends
+namespace nCine
 {
 	class UwpApplication;
+}
 
+namespace nCine::Backends
+{
 	class UwpGfxDevice : public IGfxDevice
 	{
 		friend class UwpApplication;

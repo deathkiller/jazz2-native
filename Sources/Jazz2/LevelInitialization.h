@@ -15,6 +15,7 @@ using namespace Death::Containers;
 
 namespace Jazz2
 {
+	/** @brief Player carry over between levels */
 	struct PlayerCarryOver
 	{
 		static constexpr std::int32_t WeaponCount = (std::int32_t)WeaponType::Count;
@@ -29,6 +30,7 @@ namespace Jazz2
 		std::uint8_t WeaponUpgrades[WeaponCount];
 	};
 
+	/** @brief Level initialization */
 	struct LevelInitialization
 	{
 		static constexpr std::int32_t MaxPlayerCount = 4;

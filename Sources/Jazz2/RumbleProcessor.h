@@ -6,6 +6,7 @@ namespace Jazz2
 {
 	class JoyMapping;
 
+	/** @brief Gamepad rumble processor */
 	class RumbleProcessor
 	{
 	public:
