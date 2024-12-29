@@ -25,6 +25,7 @@ namespace Jazz2::UI::Menu
 	class CreateServerOptionsSection;
 #endif
 
+	/** @brief Main menu */
 	class MainMenu : public IStateHandler, public IMenuContainer
 	{
 		friend class BeginSection;

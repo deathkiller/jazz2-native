@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Game difficulty */
 	enum class GameDifficulty : std::uint8_t
 	{
 		Default,

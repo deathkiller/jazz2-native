@@ -93,6 +93,7 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(MetadataFlags);
 
+	/** @brief Contains assets for specific object type */
 	struct Metadata
 	{
 		String Path;

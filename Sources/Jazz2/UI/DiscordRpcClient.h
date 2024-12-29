@@ -17,6 +17,7 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
+	/** @brief Allows interactions with running Discord client */
 	class DiscordRpcClient
 	{
 	public:

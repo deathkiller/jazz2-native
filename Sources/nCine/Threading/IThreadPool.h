@@ -6,7 +6,7 @@
 
 namespace nCine
 {
-	/// Thread pool interface class
+	/// Thread pool interface
 	class IThreadPool
 	{
 	public:

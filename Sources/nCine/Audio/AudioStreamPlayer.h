@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// Audio stream player class
+	/// Audio stream player
 	class AudioStreamPlayer : public IAudioPlayer
 	{
 		DEATH_RUNTIME_OBJECT(IAudioPlayer);

@@ -24,6 +24,7 @@ namespace Jazz2::UI::Menu
 
 	DEFINE_ENUM_OPERATORS(ChangedPreferencesType);
 
+	/** @brief Base interface of a menu container */
 	class IMenuContainer
 	{
 	public:

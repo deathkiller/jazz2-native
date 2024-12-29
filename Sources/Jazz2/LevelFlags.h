@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Level flags, supports a bitwise combination of its member values */
 	enum class LevelFlags : std::uint16_t
 	{
 		None = 0,

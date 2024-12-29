@@ -21,6 +21,7 @@ namespace Jazz2::UI
 		Fatal
 	};
 
+	/** @brief In-game console */
 	class InGameConsole : public Canvas
 	{
 	public:

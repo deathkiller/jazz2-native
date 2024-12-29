@@ -10,6 +10,7 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
+	/** @brief Bitmap font */
 	class Font
 	{
 	public:

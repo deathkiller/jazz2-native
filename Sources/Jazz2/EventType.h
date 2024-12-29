@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Event type */
 	enum class EventType : std::uint16_t
 	{
 		Empty = 0,

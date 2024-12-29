@@ -19,6 +19,7 @@ namespace Jazz2::Scripting
 
 namespace Jazz2::UI
 {
+	/** @brief Player HUD */
 	class HUD : public Canvas
 	{
 #if defined(WITH_ANGELSCRIPT)

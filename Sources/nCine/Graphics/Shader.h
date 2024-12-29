@@ -8,7 +8,7 @@
 
 namespace nCine
 {
-	/// Shader class
+	/// Shader
 	class Shader : public Object
 	{
 	public:

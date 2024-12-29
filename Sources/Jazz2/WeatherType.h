@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Weather type, supports a bitwise combination of its member values */
 	enum class WeatherType : std::uint8_t
 	{
 		None,

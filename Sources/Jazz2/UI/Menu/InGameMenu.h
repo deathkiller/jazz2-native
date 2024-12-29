@@ -15,6 +15,7 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief In-game menu */
 	class InGameMenu : public IMenuContainer
 	{
 	public:

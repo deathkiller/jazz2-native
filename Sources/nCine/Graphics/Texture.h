@@ -39,7 +39,7 @@ namespace nCine
 		Repeat
 	};
 
-	/// Texture class
+	/// Texture
 	class Texture : public Object
 	{
 	public:
