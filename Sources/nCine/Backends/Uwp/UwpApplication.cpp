@@ -18,6 +18,7 @@
 
 using namespace Death;
 using namespace Death::IO;
+using namespace nCine::Backends;
 
 namespace nCine
 {

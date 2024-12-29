@@ -124,7 +124,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		/*implicit*/ Array(std::nullptr_t = nullptr) noexcept;
 #else
-		// To avoid ambiguity either when calling Array{0} or in certain cases of passing 0 to overloads that take either an Array or std::size_t
+		/* To avoid ambiguity either when calling Array{0} or in certain cases of passing 0 to overloads that take either an Array or std::size_t */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> /*implicit*/ Array(U) noexcept : _data{nullptr}, _size{0}, _deleter{} {}
 
 		/*implicit*/ Array() noexcept : _data(nullptr), _size(0), _deleter{} {}
@@ -352,8 +352,9 @@ namespace Death { namespace Containers {
 		/** @overload */
 		const T& operator[](std::size_t i) const;
 #else
-		// Has to be done this way because otherwise it causes ambiguity with a builtin operator[] for pointers if an int or ssize_t is used due to the implicit pointer conversion
+		/* Has to be done this way because otherwise it causes ambiguity with a builtin operator[] for pointers if an int or ssize_t is used due to the implicit pointer conversion */
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> T& operator[](U i);
+		/** @overload */
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> const T& operator[](U i) const;
 #endif
 
@@ -637,7 +638,7 @@ namespace Death { namespace Containers {
 	template<class T, class D> Array<T, D>::Array(InPlaceInitT, const ArrayView<const T> list) : Array{NoInit, list.size()} {
 		std::size_t i = 0;
 		for (const T& item : list)
-			// Can't use {}, see the GCC 4.8-specific overload for details
+			/* Can't use {}, see the GCC 4.8-specific overload for details */
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
 			Implementation::construct(_data[i++], item);
 #else

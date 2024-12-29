@@ -1,6 +1,6 @@
 #include "GLUniformCache.h"
 #include "GLUniform.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 #include <cstring> // for memcpy()
 

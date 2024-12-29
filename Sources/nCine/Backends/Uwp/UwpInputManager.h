@@ -16,7 +16,7 @@ namespace winrtWGI = winrt::Windows::Gaming::Input;
 namespace winrtWS = winrt::Windows::System;
 namespace winrtWUC = winrt::Windows::UI::Core;
 
-namespace nCine
+namespace nCine::Backends
 {
 	class UwpMouseState : public MouseState
 	{

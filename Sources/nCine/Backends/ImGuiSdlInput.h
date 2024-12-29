@@ -9,7 +9,7 @@ union SDL_Event;
 struct SDL_Cursor;
 typedef struct _SDL_GameController SDL_GameController;
 
-namespace nCine
+namespace nCine::Backends
 {
 	/// The class that handles SDL2 input for ImGui
 	class ImGuiSdlInput

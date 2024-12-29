@@ -16,8 +16,11 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-	const std::int32_t IInputManager::MaxNumJoysticks = 4;
+	const int IInputManager::MaxNumJoysticks = 4;
+}
 
+namespace nCine::Backends
+{
 	ASensorManager* AndroidInputManager::sensorManager_ = nullptr;
 	const ASensor* AndroidInputManager::accelerometerSensor_ = nullptr;
 	ASensorEventQueue* AndroidInputManager::sensorEventQueue_ = nullptr;

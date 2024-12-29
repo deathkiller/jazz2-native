@@ -12,7 +12,7 @@
 #	include <emscripten/html5.h>
 #endif
 
-namespace nCine
+namespace nCine::Backends
 {
 	SDL_Window* SdlGfxDevice::windowHandle_ = nullptr;
 

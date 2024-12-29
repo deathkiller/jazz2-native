@@ -18,7 +18,7 @@
 #endif
 #define SDL_HAS_VULKAN SDL_VERSION_ATLEAST(2, 0, 6)
 
-namespace nCine
+namespace nCine::Backends
 {
 	namespace
 	{

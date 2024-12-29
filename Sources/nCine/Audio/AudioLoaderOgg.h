@@ -2,7 +2,7 @@
 
 #include "AudioReaderOgg.h"
 
-#if defined(WITH_VORBIS)
+#if defined(WITH_VORBIS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "IAudioLoader.h"
 

@@ -2,7 +2,7 @@
 
 #include "Qt5InputManager.h"
 
-namespace nCine
+namespace nCine::Backends
 {
 	Keys Qt5Keys::keySymValueToEnum(int keysym)
 	{

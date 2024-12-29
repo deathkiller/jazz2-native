@@ -1,11 +1,11 @@
 ﻿#pragma once
 
-#if defined(WITH_MULTIPLAYER)
+#if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "ConnectionResult.h"
 #include "Peer.h"
 #include "Reason.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <Containers/StringView.h>
 

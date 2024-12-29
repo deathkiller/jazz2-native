@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#if defined(WITH_ANGELSCRIPT)
+#if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Actors/Player.h"
 

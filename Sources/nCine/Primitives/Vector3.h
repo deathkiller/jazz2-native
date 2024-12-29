@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Vector2.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <cmath>
 

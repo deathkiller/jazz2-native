@@ -1,6 +1,6 @@
 #include "AndroidJniHelper.h"
 #include "AndroidApplication.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 #include "../../Base/Algorithms.h"
 #include "../../Base/Timer.h"
 
@@ -9,7 +9,7 @@
 
 #include <sys/system_properties.h>
 
-namespace nCine
+namespace nCine::Backends
 {
 	JavaVM* AndroidJniHelper::javaVM_ = nullptr;
 	JNIEnv* AndroidJniHelper::jniEnv = nullptr;

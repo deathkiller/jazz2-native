@@ -2,7 +2,7 @@
 
 #include "SdlInputManager.h"
 
-namespace nCine
+namespace nCine::Backends
 {
 	Keys SdlKeys::keySymValueToEnum(int keysym)
 	{

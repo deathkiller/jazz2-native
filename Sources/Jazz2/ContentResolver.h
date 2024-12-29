@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 #include "AnimState.h"
 #include "GameDifficulty.h"
 #include "LevelDescriptor.h"

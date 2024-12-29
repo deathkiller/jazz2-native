@@ -3,7 +3,7 @@
 #include "IMenuContainer.h"
 #include "../Canvas.h"
 #include "../ControlScheme.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 #include "../../../nCine/Primitives/Vector2.h"
 #include "../../../nCine/Input/IInputManager.h"

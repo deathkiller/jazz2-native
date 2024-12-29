@@ -63,6 +63,7 @@ namespace nCine
 #endif
 	};
 
+	/// Returns application instance
 	Application& theApplication();
 
 }

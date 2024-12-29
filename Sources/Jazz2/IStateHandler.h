@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 #include "../nCine/Input/InputEvents.h"
 #include "../nCine/Primitives/Vector2.h"
 

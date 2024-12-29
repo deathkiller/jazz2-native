@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../Common.h"
+#include "../../Main.h"
 
-#if defined(WITH_QOI)
+#if defined(WITH_QOI) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "ITextureLoader.h"
 

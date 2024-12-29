@@ -19,6 +19,9 @@ namespace Death { namespace IO {
 		Zstd
 	};
 
+	/**
+		@brief Provides read-only access to contents of `.pak` file
+	*/
 	class PakFile
 	{
 		friend class PakWriter;
@@ -95,7 +98,7 @@ namespace Death { namespace IO {
 			std::shared_ptr<Impl> _impl;
 		};
 
-	protected:
+	private:
 		enum class ItemFlags : std::uint32_t {
 			None = 0,
 			Directory = 0x01,
@@ -135,6 +138,9 @@ namespace Death { namespace IO {
 		static DEATH_ALWAYS_INLINE bool HasCompressedSize(ItemFlags itemFlags);
 	};
 
+	/**
+		@brief Allows to create a `.pak` file
+	*/
 	class PakWriter
 	{
 	public:

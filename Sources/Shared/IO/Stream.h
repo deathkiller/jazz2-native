@@ -44,8 +44,6 @@ namespace Death { namespace IO {
 			NotSeekable = -3
 		};
 
-		Stream();
-
 		explicit operator bool() {
 			return IsValid();
 		}
@@ -71,6 +69,7 @@ namespace Death { namespace IO {
 		/** @brief Reads the bytes from the current stream and writes them to the target stream */
 		std::int64_t CopyTo(Stream& targetStream);
 
+		/** @brief Reads a trivial value from the stream */
 		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
 		DEATH_ALWAYS_INLINE T ReadValue()
 		{
@@ -79,20 +78,29 @@ namespace Death { namespace IO {
 			return buffer;
 		}
 
+		/** @brief Writes a trivial value to the stream */
 		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
 		DEATH_ALWAYS_INLINE void WriteValue(const T& value)
 		{
 			Write(&value, sizeof(T));
 		}
 
+		/** @brief Reads a 32-bit integer value from the stream using variable-length quantity encoding */
 		std::int32_t ReadVariableInt32();
+		/** @brief Reads a 64-bit integer value from the stream using variable-length quantity encoding */
 		std::int64_t ReadVariableInt64();
+		/** @brief Reads a 32-bit unsigned integer value from the stream using variable-length quantity encoding */
 		std::uint32_t ReadVariableUint32();
+		/** @brief Reads a 64-bit unsigned integer value from the stream using variable-length quantity encoding */
 		std::uint64_t ReadVariableUint64();
 
+		/** @brief Writes a 32-bit integer value to the stream using variable-length quantity encoding */
 		std::int64_t WriteVariableInt32(std::int32_t value);
+		/** @brief Writes a 64-bit integer value to the stream using variable-length quantity encoding */
 		std::int64_t WriteVariableInt64(std::int64_t value);
+		/** @brief Writes a 32-bit unsigned integer value to the stream using variable-length quantity encoding */
 		std::int64_t WriteVariableUint32(std::uint32_t value);
+		/** @brief Writes a 64-bit unsigned integer value to the stream using variable-length quantity encoding */
 		std::int64_t WriteVariableUint64(std::uint64_t value);
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)

@@ -2,7 +2,7 @@
 
 #include "RegisterImGuiBindings.h"
 #include "RegisterArray.h"
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../../nCine/Primitives/Vector2.h"
 
 #include <cstring>

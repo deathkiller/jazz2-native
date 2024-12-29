@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../Common.h"
+#include "../../Main.h"
 
-#if defined(WITH_OPENMPT)
+#if defined(WITH_OPENMPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "IAudioReader.h"
 

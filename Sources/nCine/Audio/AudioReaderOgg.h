@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../Common.h"
+#include "../../Main.h"
 
-#if defined(WITH_VORBIS)
+#if defined(WITH_VORBIS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "IAudioReader.h"
 

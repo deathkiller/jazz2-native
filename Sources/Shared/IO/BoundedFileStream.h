@@ -5,6 +5,9 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/**
+		@brief Provides only specified portion of the stream from any seekable input stream
+	*/
 	class BoundedFileStream : public Stream
 	{
 	public:

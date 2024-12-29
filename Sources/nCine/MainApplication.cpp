@@ -1,6 +1,6 @@
 #include "MainApplication.h"
 #include "IAppEventHandler.h"
-#include "../Common.h"
+#include "../Main.h"
 
 #include <IO/FileSystem.h>
 
@@ -29,6 +29,7 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+using namespace nCine::Backends;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 #	error "For DEATH_TARGET_WINDOWS_RT, UwpApplication should be used instead of MainApplication"

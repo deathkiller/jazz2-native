@@ -1,4 +1,4 @@
-﻿#include "Common.h"
+﻿#include "Main.h"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"

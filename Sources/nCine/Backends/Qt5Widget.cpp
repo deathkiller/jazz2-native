@@ -11,7 +11,7 @@
 #include <QCoreApplication>
 #include <QResizeEvent>
 
-namespace nCine
+namespace nCine::Backends
 {
 	Qt5Widget::Qt5Widget(QWidget* parent, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv)
 		: QOpenGLWidget(parent), application_(static_cast<MainApplication&>(theApplication())),

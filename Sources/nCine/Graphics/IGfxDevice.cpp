@@ -1,7 +1,7 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../CommonHeaders.h"
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "IGfxDevice.h"
 #include "../Primitives/Colorf.h"
 #include "GL/GLDepthTest.h"

@@ -4,7 +4,7 @@
 
 #if !defined(DEATH_TARGET_WINDOWS)
 
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <atomic>
 #include <cstring>

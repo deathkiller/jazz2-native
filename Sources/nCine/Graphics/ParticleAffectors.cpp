@@ -1,6 +1,6 @@
 #include "ParticleAffectors.h"
 #include "Particle.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

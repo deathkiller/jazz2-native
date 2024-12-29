@@ -3,7 +3,7 @@
 #include "../../Common.h"
 #include "../Stream.h"
 
-#if defined(WITH_LZ4)
+#if defined(WITH_LZ4) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("lz4/lz4frame.h")
@@ -20,7 +20,7 @@ namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Read-only streaming of compressed data using the LZ4 compression algorithm
+		@brief Provides read-only streaming of compressed data using the LZ4 compression algorithm
 	*/
 	class Lz4Stream : public Stream
 	{
@@ -79,7 +79,7 @@ namespace Death { namespace IO { namespace Compression {
 	};
 
 	/**
-		@brief Write-only streaming to compress written data by using the LZ4 compression algorithm
+		@brief Provides write-only streaming to compress written data by using the LZ4 compression algorithm
 	*/
 	class Lz4Writer : public Stream
 	{

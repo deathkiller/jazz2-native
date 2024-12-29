@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 
 #include <IO/Stream.h>
 

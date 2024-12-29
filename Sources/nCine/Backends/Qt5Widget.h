@@ -2,7 +2,7 @@
 
 #if defined(WITH_QT5)
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include <QOpenGLWidget>
 
 #if defined(DEATH_TARGET_WINDOWS) && defined(ERROR)
@@ -17,7 +17,7 @@ namespace nCine
 
 class QWindow;
 
-namespace nCine
+namespace nCine::Backends
 {
 	/// The Qt5 nCine widget
 	class Qt5Widget : public QOpenGLWidget

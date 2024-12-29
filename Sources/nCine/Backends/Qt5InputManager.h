@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(WITH_QT5)
+#if defined(WITH_QT5) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include <qevent.h>
 #include "../Input/IInputManager.h"
@@ -15,7 +15,7 @@ class QMouseEvent;
 class QTouchEvent;
 class QWheelEvent;
 
-namespace nCine
+namespace nCine::Backends
 {
 	class Qt5Widget;
 

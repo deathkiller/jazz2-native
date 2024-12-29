@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 #include "AnimationLoopMode.h"
 #include "AnimState.h"
 #include "../nCine/Audio/AudioBuffer.h"

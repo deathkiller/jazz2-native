@@ -1,5 +1,5 @@
 #include "AppConfiguration.h"
-#include "../Common.h"
+#include "../Main.h"
 
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>

@@ -86,7 +86,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr /*implicit*/ BasicStringView(std::nullptr_t = nullptr) noexcept;
 #else
-		// To avoid ambiguity in certain cases of passing 0 to overloads that take either a StringView or std::size_t
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a StringView or std::size_t */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ BasicStringView(U) noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
 
 		constexpr /*implicit*/ BasicStringView() noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}

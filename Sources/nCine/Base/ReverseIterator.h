@@ -5,7 +5,7 @@
 namespace nCine
 {
 	/// A generic reverse iterator
-	template <class Iterator>
+	template<class Iterator>
 	class ReverseIterator
 	{
 	public:
@@ -121,7 +121,7 @@ namespace nCine
 	};
 
 	/// Iterator traits structure specialization for `ReverseIterator` class
-	template <class Iterator>
+	template<class Iterator>
 	struct IteratorTraits<ReverseIterator<Iterator>>
 	{
 		/// Type of the values deferenced by the iterator
@@ -136,13 +136,13 @@ namespace nCine
 		}
 	};
 
-	template <class Iterator>
+	template<class Iterator>
 	inline typename ReverseIterator<Iterator>::Reference ReverseIterator<Iterator>::operator*() const
 	{
 		return *it_;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator++()
 	{
 		--it_;
@@ -150,7 +150,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator++(int)
 	{
 		// Create an unmodified copy to return
@@ -161,7 +161,7 @@ namespace nCine
 		return iterator;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator--()
 	{
 		++it_;
@@ -169,7 +169,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator--(int)
 	{
 		// Create an unmodified copy to return
@@ -180,7 +180,7 @@ namespace nCine
 		return iterator;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator+=(int n)
 	{
 		it_ -= n;
@@ -188,7 +188,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator-=(int n)
 	{
 		it_ += n;
@@ -196,7 +196,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator+(int n) const
 	{
 		ReverseIterator<Iterator> iterator = *this;
@@ -205,7 +205,7 @@ namespace nCine
 		return iterator;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator-(int n) const
 	{
 		ReverseIterator<Iterator> iterator = *this;
@@ -214,13 +214,13 @@ namespace nCine
 		return iterator;
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	inline typename ReverseIterator<Iterator>::Reference ReverseIterator<Iterator>::operator[](int n) const
 	{
 		return *(it_ - n);
 	}
 
-	template <class Iterator>
+	template<class Iterator>
 	inline Iterator ReverseIterator<Iterator>::base() const
 	{
 		return it_;

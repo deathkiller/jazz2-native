@@ -14,7 +14,10 @@ namespace nCine
 {
 	class AndroidApplication;
 	class Timer;
+}
 
+namespace nCine::Backends
+{
 	/// Utility functions to convert between engine key enumerations and Android ones
 	class AndroidKeys
 	{

@@ -8,7 +8,7 @@ namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Streaming from/to a file on a local filesystem
+		@brief Allows streaming from/to a file on a local filesystem
 	*/
 	class FileStream : public Stream
 	{

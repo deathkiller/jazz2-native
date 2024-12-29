@@ -10,7 +10,7 @@
 
 #define GLFW_VERSION_COMBINED (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)
 
-namespace nCine
+namespace nCine::Backends
 {
 	GLFWwindow* GlfwGfxDevice::windowHandle_ = nullptr;
 	GLFWmonitor* GlfwGfxDevice::monitorPointers_[MaxMonitors];

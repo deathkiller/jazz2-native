@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 #include "LevelInitialization.h"
 
 #include <Containers/Function.h>

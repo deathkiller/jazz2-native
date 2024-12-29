@@ -53,7 +53,7 @@
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 #endif
 
-namespace nCine
+namespace nCine::Backends
 {
 	namespace
 	{

@@ -1,11 +1,11 @@
 ﻿#pragma once
 
-#if defined(WITH_MULTIPLAYER)
+#if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "Peer.h"
 #include "Reason.h"
 #include "ServerDiscovery.h"
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../../nCine/Threading/Thread.h"
 #include "../../nCine/Threading/ThreadSync.h"
 

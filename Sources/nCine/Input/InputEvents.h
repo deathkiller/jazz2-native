@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Keys.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

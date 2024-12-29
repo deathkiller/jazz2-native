@@ -3,7 +3,7 @@
 #include "GLUniformCache.h"
 #include "../RenderResources.h"
 #include "../../Base/StaticHashMapIterator.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 namespace nCine
 {

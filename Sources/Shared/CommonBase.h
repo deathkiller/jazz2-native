@@ -47,6 +47,7 @@
 #	error DEATH_TARGET_X86 / _ARM / _POWERPC / _RISCV defined on Emscripten
 #endif
 
+/** @brief Whether the library is built for a 32-bit target */
 // 64-bit WebAssembly macro was tested by passing -m64 to emcc
 #if !defined(__x86_64) && !defined(_M_X64) && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(__powerpc64__) && !defined(__wasm64__)
 #	define DEATH_TARGET_32BIT
@@ -145,6 +146,7 @@
 #	define DEATH_TARGET_MINGW
 #endif
 
+/** @brief Whether the platform defaults to big-endian (such as HP/PA RISC, Motorola 68k, Big-Endian MIPS, PowerPC and SPARC) */
 // First checking the GCC/Clang built-in, if available. As a fallback do an architecture-based check, which is mirrored
 // from SDL_endian.h. Doing this *properly* would mean we can't decide this at compile time as some architectures allow
 // switching endianness at runtime (and worse, have per-page endianness). So let's pretend we never saw this article:
@@ -159,7 +161,7 @@
 	defined(__m68k__) || defined(mc68000) || defined(_M_M68K) || \
 	(defined(__MIPS__) && defined(__MIPSEB__)) || \
 	defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) || \
-	defined(__sparc__)
+	defined(__sparc__) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_TARGET_BIG_ENDIAN
 #endif
 
@@ -337,7 +339,7 @@
 	representation elsewhere, so it's always treated as 64-bit. Note that even though the type size and precision may be the same,
 	these are still two distinct types, similarly to how @cpp int @ce and @cpp signed int @ce behave the same but are treated as different types.
 */
-#if defined(DEATH_TARGET_MSVC) || (defined(DEATH_TARGET_ANDROID) && !__LP64__) || defined(DEATH_TARGET_EMSCRIPTEN) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS) && defined(DEATH_TARGET_ARM))
+#if defined(DEATH_TARGET_MSVC) || (defined(DEATH_TARGET_ANDROID) && !__LP64__) || defined(DEATH_TARGET_EMSCRIPTEN) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS) && defined(DEATH_TARGET_ARM)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_LONG_DOUBLE_SAME_AS_DOUBLE
 #endif
 
@@ -347,7 +349,7 @@
 	Defined if compiler-specific builtins used to implement the C++20 std::source_location feature are available.
 	Defined on GCC at least since version 4.8, Clang 9+ and MSVC 2019 16.6 and newer; on all three they're present also in the C++11 mode.
 */
-#if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)) || (defined(DEATH_TARGET_CLANG) && ((defined(__apple_build_version__) && __clang_major__ >= 12) || (!defined(__apple_build_version__) && __clang_major__ >= 9))) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)
+#if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)) || (defined(DEATH_TARGET_CLANG) && ((defined(__apple_build_version__) && __clang_major__ >= 12) || (!defined(__apple_build_version__) && __clang_major__ >= 9))) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_SOURCE_LOCATION_BUILTINS_SUPPORTED
 #endif
 
@@ -563,10 +565,12 @@
 #	define DEATH_NOOP(...)
 #endif
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 // Internal macro implementation
 #define __DEATH_PASTE(a, b) a ## b
 #define __DEATH_HELPER_STR(x) #x
 #define __DEATH_LINE_STRING_IMPLEMENTATION(...) __DEATH_HELPER_STR(__VA_ARGS__)
+#endif
 
 /** @brief Paste two tokens together */
 #define DEATH_PASTE(a, b) __DEATH_PASTE(a, b)

@@ -8,7 +8,7 @@
 #include "IGfxCapabilities.h"
 #include "../Application.h"
 #include "../ServiceLocator.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <cstddef>	// for offsetof()
 #include <cstring>

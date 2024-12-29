@@ -26,7 +26,7 @@ namespace winrtWUC = winrt::Windows::UI::Core;
 namespace winrtWUP = winrt::Windows::UI::Popups;
 namespace winrtWUV = winrt::Windows::UI::ViewManagement;
 
-namespace nCine
+namespace nCine::Backends
 {
 	class UwpApplication;
 

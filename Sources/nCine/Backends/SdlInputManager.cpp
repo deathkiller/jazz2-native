@@ -22,7 +22,10 @@
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = 16;
+}
 
+namespace nCine::Backends
+{
 	SDL_Window* SdlInputManager::windowHandle_ = nullptr;
 
 	TouchEvent SdlInputManager::touchEvent_;

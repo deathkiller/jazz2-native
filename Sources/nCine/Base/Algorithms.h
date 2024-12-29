@@ -19,6 +19,7 @@ namespace nCine
 	{
 		static constexpr bool value = false;
 	};
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<>
 	struct isIntegral<bool>
 	{
@@ -74,6 +75,7 @@ namespace nCine
 	{
 		static constexpr bool value = true;
 	};
+#endif
 
 	template<class T>
 	inline bool IsLess(const T &a, const T &b)
@@ -155,25 +157,7 @@ namespace nCine
 		return last;
 	}
 
-	/// A container for functions to destruct objects and arrays of objects
-	template<bool value>
-	struct destructHelpers
-	{
-		template<class T>
-		inline static void destructObject(T* ptr)
-		{
-			ptr->~T();
-		}
-
-		template<class T>
-		inline static void destructArray(T* ptr, std::uint32_t numElements)
-		{
-			for (std::uint32_t i = 0; i < numElements; i++)
-				ptr[numElements - i - 1].~T();
-		}
-	};
-
-	namespace detail
+	namespace Implementation
 	{
 		template<class T>
 		struct typeIdentity
@@ -185,12 +169,45 @@ namespace nCine
 		auto tryAddRValueReference(int)->typeIdentity<T&&>;
 		template<class T>
 		auto tryAddRValueReference(...)->typeIdentity<T>;
-	}
 
-	template<class T>
-	struct addRValueReference : decltype(detail::tryAddRValueReference<T>(0)) {};
-	template<class T>
-	typename addRValueReference<T>::type declVal();
+		template<class T>
+		struct addRValueReference : decltype(tryAddRValueReference<T>(0)) {};
+		template<class T>
+		typename addRValueReference<T>::type declVal();
+
+		/// A container for functions to destruct objects and arrays of objects
+		template<bool value>
+		struct destructHelpers
+		{
+			template<class T>
+			inline static void destructObject(T* ptr)
+			{
+				ptr->~T();
+			}
+
+			template<class T>
+			inline static void destructArray(T* ptr, std::uint32_t numElements)
+			{
+				for (std::uint32_t i = 0; i < numElements; i++) {
+					ptr[numElements - i - 1].~T();
+				}
+			}
+		};
+
+		template<>
+		struct destructHelpers<true>
+		{
+			template<class T>
+			inline static void destructObject(T* ptr)
+			{
+			}
+
+			template<class T>
+			inline static void destructArray(T* ptr, unsigned int numElements)
+			{
+			}
+		};
+	}
 
 	/// Specialization for trivially destructible types
 	template<class T, typename = void>
@@ -198,11 +215,13 @@ namespace nCine
 	{
 		static constexpr bool value = false;
 	};
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<class T>
-	struct isDestructible<T, decltype(declVal<T&>().~T())>
+	struct isDestructible<T, decltype(Implementation::declVal<T&>().~T())>
 	{
 		static constexpr bool value = (true && !__is_union(T));
 	};
+#endif
 
 	// Use `__has_trivial_destructor()` only on GCC
 #if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
@@ -225,30 +244,16 @@ namespace nCine
 	};
 #endif
 
-	template<>
-	struct destructHelpers<true>
-	{
-		template<class T>
-		inline static void destructObject(T* ptr)
-		{
-		}
-
-		template<class T>
-		inline static void destructArray(T* ptr, unsigned int numElements)
-		{
-		}
-	};
-
 	template<class T>
 	void destructObject(T* ptr)
 	{
-		destructHelpers<isTriviallyDestructible<T>::value>::destructObject(ptr);
+		Implementation::destructHelpers<isTriviallyDestructible<T>::value>::destructObject(ptr);
 	}
 
 	template<class T>
 	void destructArray(T* ptr, std::uint32_t numElements)
 	{
-		destructHelpers<isTriviallyDestructible<T>::value>::destructArray(ptr, numElements);
+		Implementation::destructHelpers<isTriviallyDestructible<T>::value>::destructArray(ptr, numElements);
 	}
 
 	inline float lerp(float a, float b, float ratio)

@@ -4,7 +4,7 @@
 #include "GL/GLVertexArrayObject.h"
 #include "GL/GLDebug.h"
 #include "../Base/Algorithms.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

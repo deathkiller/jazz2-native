@@ -2,7 +2,7 @@
 
 #include "AudioReaderMpt.h"
 
-#if defined(WITH_OPENMPT)
+#if defined(WITH_OPENMPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "IAudioLoader.h"
 

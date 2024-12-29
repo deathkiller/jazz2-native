@@ -31,6 +31,7 @@
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+using namespace nCine::Backends;
 
 #if defined(DEATH_TRACE_GL_ERRORS)
 #	define GL_CALL(op)													\

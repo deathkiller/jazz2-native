@@ -1,5 +1,5 @@
 #include "Random.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <cmath> // for ldexp()
 

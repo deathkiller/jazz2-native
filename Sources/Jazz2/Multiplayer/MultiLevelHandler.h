@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#if defined(WITH_MULTIPLAYER)
+#if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../LevelHandler.h"
 #include "MultiplayerGameMode.h"

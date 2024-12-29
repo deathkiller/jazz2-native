@@ -3,7 +3,7 @@
 #include "Vector3.h"
 #include "Vector4.h"
 #include "../CommonConstants.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

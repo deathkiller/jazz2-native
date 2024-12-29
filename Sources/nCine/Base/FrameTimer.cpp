@@ -1,5 +1,5 @@
 #include "FrameTimer.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <algorithm>
 

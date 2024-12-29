@@ -2,7 +2,7 @@
 #include "GLBufferObject.h"
 #include "../IGfxCapabilities.h"
 #include "../../ServiceLocator.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 namespace nCine
 {

@@ -7,17 +7,17 @@ struct AInputEvent;
 
 namespace nCine
 {
-	/// Main entry point and handler for nCine Android applications
+	/// Main entry point and handler for Android applications
 	class AndroidApplication : public Application
 	{
 	public:
-		/// Entry point method to be called in the `android_main()` function
+		/// Entry point method to be called in the @cpp android_main() @ce function
 		static void Run(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
 		/// Processes an Android application command
 		static void ProcessCommand(struct android_app* state, int32_t cmd);
 
-		/// Returns true if the application has already called `init()`
+		/// Returns true if the application has already called @cpp Init() @ce
 		inline bool IsInitialized() const {
 			return isInitialized_;
 		}
@@ -60,7 +60,7 @@ namespace nCine
 		friend Application& theApplication();
 	};
 
-	/// Meyers' Singleton
+	/// Returns application instance
 	Application& theApplication();
 
 }

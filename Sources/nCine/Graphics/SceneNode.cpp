@@ -1,6 +1,6 @@
 #include "SceneNode.h"
 #include "../Application.h"
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../tracy.h"
 
 namespace nCine

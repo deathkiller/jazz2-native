@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#if defined(WITH_ANGELSCRIPT)
+#if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../../nCine/Base/HashMap.h"
 
 #include <angelscript.h>

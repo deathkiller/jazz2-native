@@ -1,7 +1,7 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "RegisterRef.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <cstring>
 #include <new>

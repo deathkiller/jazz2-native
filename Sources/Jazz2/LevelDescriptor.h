@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 #include "WeatherType.h"
 
 #include "../nCine/Primitives/Vector4.h"

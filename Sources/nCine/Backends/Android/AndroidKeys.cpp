@@ -1,7 +1,8 @@
 #include "AndroidInputManager.h"
+
 #include <android/input.h>
 
-namespace nCine
+namespace nCine::Backends
 {
 	Keys AndroidKeys::keySymValueToEnum(int keysym)
 	{

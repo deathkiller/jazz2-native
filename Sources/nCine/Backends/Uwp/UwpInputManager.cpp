@@ -13,7 +13,10 @@ using namespace Death;
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = 8;
+}
 
+namespace nCine::Backends
+{
 	UwpMouseState UwpInputManager::mouseState_;
 	UwpKeyboardState UwpInputManager::keyboardState_;
 	KeyboardEvent UwpInputManager::keyboardEvent_;

@@ -1,5 +1,5 @@
 #include "ITextureLoader.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include "TextureLoaderDds.h"
 #include "TextureLoaderPvr.h"

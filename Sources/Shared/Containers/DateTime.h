@@ -154,16 +154,16 @@ namespace Death { namespace Containers {
 		inline DateTime(const Tm& tm) noexcept;
 
 		/** 
-			@brief Creates @ref DateTime structure from individual parts
-		
-			@param year Years
-			@param month Months after the year (0-11)
-			@param day Days after the month (1-31)
-			@param hour Hours after the day (0-23)
-			@param minute Minutes after the hour (0-59)
-			@param second Seconds after the minute (0-59*)
-			@param millisec Milliseconds after the second (0-999)
-		*/
+		 * @brief Creates @ref DateTime structure from individual parts
+		 *
+		 * @param year Years
+		 * @param month Months after the year (0-11)
+		 * @param day Days after the month (1-31)
+		 * @param hour Hours after the day (0-23)
+		 * @param minute Minutes after the hour (0-59)
+		 * @param second Seconds after the minute (0-59*)
+		 * @param millisec Milliseconds after the second (0-999)
+		 */
 		inline DateTime(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t millisec = 0) noexcept;
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -185,16 +185,16 @@ namespace Death { namespace Containers {
 		DateTime& Set(const struct tm& tm) noexcept;
 
 		/**
-			@brief Sets @ref DateTime structure from individual parts
-
-			@param year Years
-			@param month Months after the year (0-11)
-			@param day Days after the month (1-31)
-			@param hour Hours after the day (0-23)
-			@param minute Minutes after the hour (0-59)
-			@param second Seconds after the minute (0-59*)
-			@param millisec Milliseconds after the second (0-999)
-		*/
+		 * @brief Sets @ref DateTime structure from individual parts
+		 *
+		 * @param year Years
+		 * @param month Months after the year (0-11)
+		 * @param day Days after the month (1-31)
+		 * @param hour Hours after the day (0-23)
+		 * @param minute Minutes after the hour (0-59)
+		 * @param second Seconds after the minute (0-59*)
+		 * @param millisec Milliseconds after the second (0-999)
+		 */
 		DateTime& Set(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t millisec = 0) noexcept;
 
 		DateTime& SetYear(std::int32_t year) noexcept;

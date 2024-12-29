@@ -1,8 +1,8 @@
 #pragma once
 
-#if defined(WITH_GLFW)
+#if defined(WITH_GLFW) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../../Common.h"
+#include "../../Main.h"
 
 #if defined(WITH_GLEW)
 #	define GLEW_NO_GLU
@@ -26,7 +26,7 @@
 #include "../Graphics/IGfxDevice.h"
 #include "../Graphics/DisplayMode.h"
 
-namespace nCine
+namespace nCine::Backends
 {
 	/// The GLFW based graphics device
 	class GlfwGfxDevice : public IGfxDevice

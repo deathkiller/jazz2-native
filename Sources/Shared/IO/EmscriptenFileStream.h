@@ -2,7 +2,7 @@
 
 #include "../Common.h"
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include <emscripten/val.h>
 
@@ -14,6 +14,11 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/**
+		@brief Provides access to a file selected by the user in the browser
+
+		@partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
+	*/
 	class EmscriptenFileStream : public Stream
 	{
 	public:
@@ -46,6 +51,11 @@ namespace Death { namespace IO {
 		std::int32_t ReadInternal(std::uint8_t* destination, std::int32_t bytesToRead);
 	};
 
+	/**
+		@brief Allows a user to pick files in the browser
+
+		@partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
+	*/
 	class EmscriptenFilePicker
 	{
 	public:
@@ -58,9 +68,11 @@ namespace Death { namespace IO {
 
 		static void SaveFileAsync(Containers::ArrayView<char> bytesToSave, Containers::StringView filenameHint = {});
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		/* Internal JavaScript callbacks */
 		static void jsReadFiles(emscripten::val event);
 		static void jsCancelReadFiles(emscripten::val event);
+#endif
 
 	private:
 		Containers::SmallVector<EmscriptenFileStream> _files;

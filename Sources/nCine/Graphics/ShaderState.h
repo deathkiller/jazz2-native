@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../Primitives/Vector4.h"
 #include "../Primitives/Colorf.h"
 
