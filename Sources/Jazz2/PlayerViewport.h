@@ -78,6 +78,7 @@ namespace Jazz2
 		Rectf _bounds;
 	};
 
+	/** @brief Player viewport */
 	class PlayerViewport
 	{
 	public:

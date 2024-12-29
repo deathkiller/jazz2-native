@@ -19,7 +19,7 @@ namespace Death { namespace Threading {
 		ManualReset,
 	};
 
-	/** @brief A generic event object */
+	/** @brief An event object */
 	template<EventType Type>
 	class Event
 	{

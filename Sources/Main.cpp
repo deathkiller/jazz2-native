@@ -428,7 +428,7 @@ void GameEventHandler::OnSuspend()
 void GameEventHandler::OnResume()
 {
 #if defined(DEATH_TARGET_ANDROID)
-	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+	if (Backends::AndroidJniWrap_Activity::hasExternalStoragePermission()) {
 		_flags |= Flags::HasExternalStoragePermissionOnResume;
 	} else {
 		_flags &= ~Flags::HasExternalStoragePermissionOnResume;
@@ -689,12 +689,12 @@ void GameEventHandler::ApplyActivityIcon()
 	// These calls will kill the app in a second, so it should be called only on exit
 	if (PreferencesCache::EnableReforgedMainMenu) {
 		LOGI("Changed activity icon to \"Reforged\"");
-		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, true);
-		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, false);
+		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, true);
+		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, false);
 	} else {
 		LOGI("Changed activity icon to \"Legacy\"");
-		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, true);
-		AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, false);
+		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, true);
+		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, false);
 	}
 }
 #endif
@@ -897,7 +897,7 @@ void GameEventHandler::OnBeforeInitialize()
 #if defined(DEATH_TARGET_ANDROID)
 	theApplication().SetAutoSuspension(true);
 
-	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+	if (Backends::AndroidJniWrap_Activity::hasExternalStoragePermission()) {
 		_flags |= Flags::HasExternalStoragePermission;
 	}
 
@@ -1440,10 +1440,10 @@ void GameEventHandler::CheckUpdates()
 		}
 	};
 
-	auto sdkVersion = AndroidJniHelper::SdkVersion();
-	auto androidId = AndroidJniWrap_Secure::AndroidId();
-	auto deviceBrand = AndroidJniClass_Version::deviceBrand();
-	auto deviceModel = AndroidJniClass_Version::deviceModel();
+	auto sdkVersion = Backends::AndroidJniHelper::SdkVersion();
+	auto androidId = Backends::AndroidJniWrap_Secure::AndroidId();
+	auto deviceBrand = Backends::AndroidJniClass_Version::deviceBrand();
+	auto deviceModel = Backends::AndroidJniClass_Version::deviceModel();
 
 	char deviceName[64];
 	std::size_t deviceNameLength = 0;

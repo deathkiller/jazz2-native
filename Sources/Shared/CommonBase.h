@@ -358,7 +358,7 @@
 
 	Marked function, class or typedef will emit deprecation warning on supported compilers (GCC, Clang, MSVC).
 */
-#if !defined(DEATH_DEPRECATED)
+#if !defined(DEATH_DEPRECATED) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 #		define DEATH_DEPRECATED(message) __attribute((deprecated(message)))
 #	elif defined(DEATH_TARGET_MSVC)
@@ -459,7 +459,7 @@
 	Expands to @cpp constexpr @ce if C++14 or newer standard is enabled and if the compiler implements C++14
 	relaxed constexpr rules (which includes GCC 5+, Clang 3.5+ and MSVC 2017+).
 */
-#if !defined(DEATH_CONSTEXPR14)
+#if !defined(DEATH_CONSTEXPR14) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	if DEATH_CXX_STANDARD >= 201402 && !defined(DEATH_MSVC2015_COMPATIBILITY)
 #		define DEATH_CONSTEXPR14 constexpr
 #	else
@@ -474,7 +474,7 @@
 	all C++20 constexpr language additions such as trivial default initialization (which includes
 	GCC 10+, Clang 10+ and MSVC 2019 19.29+).
 */
-#if !defined(DEATH_CONSTEXPR20)
+#if !defined(DEATH_CONSTEXPR20) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	if __cpp_constexpr >= 201907
 #		define DEATH_CONSTEXPR20 constexpr
 #	else

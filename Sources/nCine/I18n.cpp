@@ -22,10 +22,6 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 
-#if defined(DEATH_TARGET_ANDROID)
-using namespace nCine::Backends;
-#endif
-
 namespace nCine
 {
 	struct LanguageInfo
@@ -615,7 +611,7 @@ namespace nCine
 		Array<String> preferred;
 
 #if defined(DEATH_TARGET_ANDROID)
-		String langId = AndroidJniWrap_Activity::getPreferredLanguage();
+		String langId = Backends::AndroidJniWrap_Activity::getPreferredLanguage();
 		if (!langId.empty()) {
 			StringUtils::lowercaseInPlace(langId);
 			arrayAppend(preferred, std::move(langId));
