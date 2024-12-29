@@ -991,12 +991,14 @@ namespace Death { namespace Containers {
 				_data[i];
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<class T> template<std::size_t size_, class U, class> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(const U begin) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(_data <= begin && begin + size_ <= _data + _size,
 					("Slice [%zu:%zu] out of range for %zu elements",
 					 std::size_t(begin - _data), std::size_t(begin + size_ - _data), _size)),
 				StaticArrayView<size_, T>{begin};
 	}
+#endif
 
 	template<class T> template<std::size_t size_> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(std::size_t begin) const {
 		static_assert(begin + size_ <= _size, "Slice needs to have a positive size");

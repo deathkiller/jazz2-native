@@ -35,6 +35,7 @@ namespace Jazz2
 		class Player;
 	}
 
+	/** @brief Base interface of a level handler */
 	class ILevelHandler
 	{
 		DEATH_RUNTIME_OBJECT();

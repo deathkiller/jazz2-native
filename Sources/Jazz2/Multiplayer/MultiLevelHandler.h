@@ -14,6 +14,7 @@ namespace Jazz2::Actors::Multiplayer
 
 namespace Jazz2::Multiplayer
 {
+	/** @brief Level handler of an online multiplayer game session */
 	class MultiLevelHandler : public LevelHandler
 	{
 		DEATH_RUNTIME_OBJECT(LevelHandler);

@@ -1,4 +1,4 @@
-#include "../../../Common.h"
+#include "../../../Main.h"
 #include "AndroidApplication.h"
 #include "../../Base/Timer.h"
 #include "../../IAppEventHandler.h"

@@ -5,6 +5,7 @@
 
 namespace Jazz2::Tiles
 {
+	/** @brief Represents tile set used by tile map, consists of texture and collision mask */
 	class TileSet
 	{
 	public:

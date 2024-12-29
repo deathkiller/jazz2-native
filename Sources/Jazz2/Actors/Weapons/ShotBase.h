@@ -12,6 +12,7 @@ namespace Jazz2::Actors
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Base class of a shot from a player's weapon */
 	class ShotBase : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

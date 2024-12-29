@@ -656,10 +656,12 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<class T, class D> template<class U, class> const T& Array<T, D>::operator[](const U i) const {
 		DEATH_DEBUG_ASSERT(std::size_t(i) < _size, ("Index %zu out of range for %zu elements", std::size_t(i), _size), _data[0]);
 		return _data[i];
 	}
+#endif
 
 	template<class T, class D> const T& Array<T, D>::front() const {
 		DEATH_DEBUG_ASSERT(_size != 0, "Array is empty", _data[0]);
@@ -671,9 +673,11 @@ namespace Death { namespace Containers {
 		return _data[_size - 1];
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<class T, class D> template<class U, class> T& Array<T, D>::operator[](const U i) {
 		return const_cast<T&>(static_cast<const Array<T, D>&>(*this)[i]);
 	}
+#endif
 
 	template<class T, class D> T& Array<T, D>::front() {
 		return const_cast<T&>(static_cast<const Array<T, D>&>(*this).front());

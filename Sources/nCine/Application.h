@@ -29,7 +29,7 @@ namespace nCine
 	class ImGuiDrawing;
 #endif
 
-	/** @brief Main entry point and handler for nCine applications */
+	/** @brief Base class for main entry points of nCine applications */
 	class Application
 #if defined(DEATH_TRACE)
 		: public ITraceSink

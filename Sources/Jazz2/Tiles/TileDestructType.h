@@ -4,6 +4,7 @@
 
 namespace Jazz2::Tiles
 {
+	/** @brief Flags that specify type of collision with tile map, supports a bitwise combination of its member values */
 	enum class TileDestructType
 	{
 		None = 0x00,

@@ -26,14 +26,19 @@
 
 namespace Jazz2::Collisions
 {
+	/** @brief Collided pair of objects found by collision detection */
 	struct CollisionPair {
 		std::int32_t ProxyIdA;
 		std::int32_t ProxyIdB;
 	};
 
-	/// The broad-phase is used for computing pairs and performing volume queries and ray casts.
-	/// This broad-phase does not persist pairs. Instead, this reports potentially new pairs.
-	/// It is up to the client to consume the new pairs and to track subsequent overlap.
+	/**
+		@brief Broad-phase for collision detection
+
+		The broad-phase is used for computing pairs and performing volume queries and ray casts.
+		This broad-phase does not persist pairs. Instead, this reports potentially new pairs.
+		It is up to the client to consume the new pairs and to track subsequent overlap.
+	*/
 	class DynamicTreeBroadPhase
 	{
 		friend class DynamicTree;

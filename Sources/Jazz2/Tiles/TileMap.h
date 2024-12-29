@@ -42,6 +42,7 @@ namespace Jazz2::Tiles
 		Circle
 	};
 
+	/** @brief Description of a tile map layer */
 	struct LayerDescription {
 		std::uint16_t Depth;
 		float SpeedX;
@@ -72,6 +73,7 @@ namespace Jazz2::Tiles
 
 	DEFINE_ENUM_OPERATORS(LayerTileFlags);
 
+	/** @brief Represents a single tile in a tile map layer */
 	struct LayerTile {
 		std::int32_t TileID;
 		std::uint16_t TileParams;
@@ -84,6 +86,7 @@ namespace Jazz2::Tiles
 											// Collapsible: Delay ("wait" parameter); Trigger: Trigger ID
 	};
 
+	/** @brief Represents a single tile map layer */
 	struct TileMapLayer {
 		std::unique_ptr<LayerTile[]> Layout;
 		Vector2i LayoutSize;
@@ -91,10 +94,12 @@ namespace Jazz2::Tiles
 		bool Visible;
 	};
 
+	/** @brief Represents a single frame of an animated tile */
 	struct AnimatedTileFrame {
 		std::int32_t TileID;
 	};
 
+	/** @brief Represents an animated tile */
 	struct AnimatedTile {
 		SmallVector<AnimatedTileFrame, 0> Tiles;
 		std::int16_t Delay;
@@ -107,6 +112,7 @@ namespace Jazz2::Tiles
 		bool Forwards;
 	};
 
+	/** @brief Represents a renderable tile map, consists of multiple layers */
 	class TileMap : public SceneNode
 	{
 #if defined(WITH_ANGELSCRIPT)
@@ -118,6 +124,7 @@ namespace Jazz2::Tiles
 		static constexpr std::int32_t AnimatedTileMask = 0x80000000;
 		static constexpr std::int32_t HardcodedOffset = 70;
 
+		/** @brief Flags that modify behaviour of @ref DestructibleDebris, supports a bitwise combination of its member values */
 		enum class DebrisFlags {
 			None = 0x00,
 			Disappear = 0x01,
@@ -127,6 +134,7 @@ namespace Jazz2::Tiles
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(DebrisFlags);
 
+		/** @brief Describes a visual debris (particle effect) */
 		struct DestructibleDebris {
 			Vector2f Pos;
 			std::uint16_t Depth;
@@ -156,7 +164,7 @@ namespace Jazz2::Tiles
 			DebrisFlags Flags;
 		};
 
-		TileMap(const StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette);
+		TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette);
 		~TileMap();
 
 		bool IsValid() const;
@@ -177,7 +185,7 @@ namespace Jazz2::Tiles
 		SuspendType GetTileSuspendState(float x, float y);
 		bool AdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount);
 
-		void AddTileSet(const StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
+		void AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
 		void ReadLayerConfiguration(Stream& s);
 		void ReadAnimatedTiles(Stream& s);
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);

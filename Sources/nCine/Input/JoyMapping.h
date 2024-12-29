@@ -17,6 +17,7 @@ namespace nCine
 	template<class T> class Vector2;
 	using Vector2f = Vector2<float>;
 
+	/// Provides translation layer for gamepads and joysticks to unified layout
 	class JoyMapping
 	{
 	public:

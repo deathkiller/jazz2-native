@@ -6,6 +6,7 @@
 
 namespace Jazz2::Tiles
 {
+	/** @brief Describes how the object interacts and collides with the environment */
 	struct TileCollisionParams
 	{
 		TileDestructType DestructType;

@@ -8,6 +8,7 @@
 
 namespace nCine
 {
+	/// Represents an asynchronous operation
 	template <typename T>
 	struct Task
 	{
