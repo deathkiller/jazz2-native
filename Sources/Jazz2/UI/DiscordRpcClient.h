@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../../Common.h"
+#include "../../Main.h"
 
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 

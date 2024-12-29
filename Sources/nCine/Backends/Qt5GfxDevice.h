@@ -1,12 +1,12 @@
 #pragma once
 
-#if defined(WITH_QT5)
+#if defined(WITH_QT5) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Graphics/IGfxDevice.h"
 #include "../Graphics/DisplayMode.h"
 #include "../Primitives/Vector2.h"
 
-namespace nCine
+namespace nCine::Backends
 {
 	class Qt5Widget;
 

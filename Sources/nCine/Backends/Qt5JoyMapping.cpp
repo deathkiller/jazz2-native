@@ -6,7 +6,7 @@
 #include "../Primitives/Vector2.h"
 #include "../Base/Algorithms.h"
 
-namespace nCine
+namespace nCine::Backends
 {
 	const unsigned int JoyMapping::MaxNameLength;
 

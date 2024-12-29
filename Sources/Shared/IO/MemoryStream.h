@@ -7,7 +7,7 @@ namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Stream interface around a memory buffer
+		@brief Provides stream interface for a region of memory
 	*/ 
 	class MemoryStream : public Stream
 	{

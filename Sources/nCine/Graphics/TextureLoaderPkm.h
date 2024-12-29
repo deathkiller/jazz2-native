@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../Common.h"
+#include "../../Main.h"
 
-#if defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)
+#if (defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "ITextureLoader.h"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"

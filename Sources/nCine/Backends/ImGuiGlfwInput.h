@@ -6,7 +6,7 @@
 
 #include <imgui.h>
 
-namespace nCine
+namespace nCine::Backends
 {
 	/// The class that handles GLFW input for ImGui
 	class ImGuiGlfwInput

@@ -2,7 +2,7 @@
 #include "GLShaderProgram.h"
 #include "../RenderResources.h"
 #include "../../ServiceLocator.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 #include <cstring> // for memcpy()
 

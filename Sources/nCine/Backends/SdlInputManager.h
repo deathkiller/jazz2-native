@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(WITH_SDL)
+#if defined(WITH_SDL) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Input/IInputManager.h"
 
@@ -21,7 +21,7 @@
 
 using namespace Death::Containers;
 
-namespace nCine
+namespace nCine::Backends
 {
 	/// Utility functions to convert between engine key enumerations and SDL ones
 	class SdlKeys

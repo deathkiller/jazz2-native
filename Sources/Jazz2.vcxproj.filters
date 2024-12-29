@@ -243,7 +243,7 @@
     <ClInclude Include="Resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Common.h">
+    <ClInclude Include="Main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\IGfxCapabilities.h">
@@ -1547,6 +1547,12 @@
     </ClInclude>
     <ClInclude Include="Jazz2\UI\InGameConsole.h">
       <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\imconfig.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="TermLogo.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

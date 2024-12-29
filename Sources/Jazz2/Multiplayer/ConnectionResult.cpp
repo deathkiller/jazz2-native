@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace Jazz2::Multiplayer
 {

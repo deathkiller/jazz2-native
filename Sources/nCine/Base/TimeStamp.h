@@ -54,8 +54,8 @@ namespace nCine
 		float nanoseconds() const;
 
 	private:
-		uint64_t _counter;
+		std::uint64_t _counter;
 
-		explicit TimeStamp(uint64_t counter);
+		explicit TimeStamp(std::uint64_t counter);
 	};
 }

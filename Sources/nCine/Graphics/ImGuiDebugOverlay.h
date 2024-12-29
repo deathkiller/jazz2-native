@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(WITH_IMGUI)
+#if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "IDebugOverlay.h"
 

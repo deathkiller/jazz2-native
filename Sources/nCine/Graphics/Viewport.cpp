@@ -13,7 +13,7 @@
 #include "GL/GLDebug.h"
 #include "../ServiceLocator.h"
 #include "../tracy.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #if defined(WITH_QT5)
 #	include "Qt5GfxDevice.h"

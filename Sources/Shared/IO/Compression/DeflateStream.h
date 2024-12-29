@@ -3,7 +3,7 @@
 #include "../../Common.h"
 #include "../Stream.h"
 
-#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #if defined(WITH_MINIZ)
 #	if !defined(CMAKE_BUILD) && defined(__has_include)
@@ -33,7 +33,7 @@ namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Read-only streaming of compressed data using the Deflate algorithm
+		@brief Provides read-only streaming of compressed data using the Deflate algorithm
 	*/
 	class DeflateStream : public Stream
 	{
@@ -88,7 +88,7 @@ namespace Death { namespace IO { namespace Compression {
 	};
 
 	/**
-		@brief Write-only streaming to compress written data by using the Deflate algorithm
+		@brief Provides write-only streaming to compress written data by using the Deflate algorithm
 	*/
 	class DeflateWriter : public Stream
 	{

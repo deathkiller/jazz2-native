@@ -1,7 +1,7 @@
 #pragma once
 
-namespace nCine {
-
+namespace nCine
+{
 	enum class Keys
 	{
 		// Common keysyms
@@ -276,5 +276,4 @@ namespace nCine {
 
 		Count
 	};
-
 }

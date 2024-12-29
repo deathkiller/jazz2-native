@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "AnimSetMapping.h"
 #include "JJ2Version.h"
 

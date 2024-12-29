@@ -1,5 +1,5 @@
 #include "TextureLoaderPvr.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 using namespace Death::IO;
 

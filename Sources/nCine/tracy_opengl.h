@@ -28,6 +28,7 @@
 #	define TracyGpuZoneCS(x, y, z)
 #	define TracyGpuZoneTransientS(x, y, z, w)
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 namespace tracy
 {
 	struct SourceLocationData;
@@ -39,5 +40,6 @@ namespace tracy
 		GpuCtxScope(const SourceLocationData *, int, bool) {}
 	};
 }
+#endif
 
 #endif

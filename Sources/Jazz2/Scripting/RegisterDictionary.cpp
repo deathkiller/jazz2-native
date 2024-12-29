@@ -2,7 +2,7 @@
 
 #include "RegisterDictionary.h"
 #include "RegisterArray.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <new>
 

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 #include "WeaponType.h"
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/Base/HashMap.h"

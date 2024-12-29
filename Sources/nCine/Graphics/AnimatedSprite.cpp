@@ -1,5 +1,5 @@
 #include "AnimatedSprite.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

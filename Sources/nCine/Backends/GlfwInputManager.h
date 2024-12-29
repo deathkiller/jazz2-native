@@ -1,10 +1,10 @@
 #pragma once
 
-#if defined(WITH_GLFW)
+#if defined(WITH_GLFW) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Input/IInputManager.h"
 #include "GlfwGfxDevice.h" // for WindowHandle()
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <cstdio>
 
@@ -16,7 +16,7 @@
 
 using namespace Death::Containers;
 
-namespace nCine
+namespace nCine::Backends
 {
 	class GlfwInputManager;
 

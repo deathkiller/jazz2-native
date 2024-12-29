@@ -160,6 +160,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}
 }}}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 // It is located in the root namespace to keep the resulting string as short as possible
 template<class T>
 struct __ti
@@ -180,6 +181,7 @@ struct __ti
 #endif
 	}
 };
+#endif
 
 namespace Death { namespace TypeInfo { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -292,7 +294,7 @@ DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
 /** @brief Class annotation to enable optimized @ref runtime_cast() functionality */
 #define DEATH_RUNTIME_OBJECT(...)
 
-/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by @ref DEATH_RUNTIME_OBJECT() */
+/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by @cpp DEATH_RUNTIME_OBJECT @ce */
 template<typename T, typename U>
 DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
 	return dynamic_cast<T>(u);

@@ -2,7 +2,7 @@
 
 #include "GlfwInputManager.h"
 
-namespace nCine
+namespace nCine::Backends
 {
 	Keys GlfwKeys::keySymValueToEnum(int keysym)
 	{

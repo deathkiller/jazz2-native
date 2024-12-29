@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Common.h"
+#include "../Main.h"
 #include "Graphics/IGfxDevice.h"
 #include "Graphics/IDebugOverlay.h"
 #include "AppConfiguration.h"
@@ -54,7 +54,7 @@ namespace nCine
 			unsigned int maxBatchSize;
 		};
 
-#if defined(WITH_IMGUI)
+#if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief GUI settings (for ImGui) that can be changed at run-time */
 		struct GuiSettings
 		{
@@ -89,20 +89,20 @@ namespace nCine
 			Count
 		};
 
-		/** @brief Can be used in AttachTraceTarget() to attach to a console (if exists) */
+		/** @brief Can be used in @ref AttachTraceTarget() to attach to a console (if exists) */
 		static constexpr char const* ConsoleTarget = "\n";
 
 		/** @brief Returns the configuration used to initialize the application */
 		inline const AppConfiguration& GetAppConfiguration() const { return appCfg_; }
 		/** @brief Returns the run-time rendering settings */
 		inline RenderingSettings& GetRenderingSettings() { return renderingSettings_; }
-#if defined(WITH_IMGUI)
+#if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns the run-time GUI settings */
 		inline GuiSettings& GetGuiSettings() { return guiSettings_; }
 		/** @brief Returns the debug overlay object, if any */
 		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() { return (debugOverlay_ != nullptr ? debugOverlay_->settings() : debugOverlayNullSettings_); }
 #endif
-#if defined(NCINE_PROFILING)
+#if defined(NCINE_PROFILING) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns all timings */
 		inline const float* GetTimings() const { return timings_; }
 #endif
@@ -133,6 +133,7 @@ namespace nCine
 		/** @brief Resizes the screen viewport, if exists */
 		void ResizeScreenViewport(std::int32_t width, std::int32_t height);
 
+		/** @brief Returns whether the application should currently be suspended */
 		bool ShouldSuspend();
 
 		/** @brief Returns the value of the auto-suspension flag (the application will be suspended when it loses focus) */
@@ -157,13 +158,17 @@ namespace nCine
 			return hasFocus_;
 		}
 
+		/** @brief Returns the path for the application to load data from */
 		inline const String& GetDataPath() const {
 			return appCfg_.dataPath();
 		}
 
+		/** @brief Switches PS4 and PS5 controllers to use extended protocol which enables rumble and other features */
 		virtual bool EnablePlayStationExtendedSupport(bool enable);
+		/** @brief Opens the specified URL in a default web browser */
 		virtual bool OpenUrl(StringView url);
 
+		/** @brief Adds the specified target as a sink for tracing */
 		void AttachTraceTarget(Containers::StringView targetPath);
 
 	protected:
@@ -199,6 +204,7 @@ namespace nCine
 		Application();
 		~Application();
 
+		/** @brief Must be called as early as possible during the application startup */
 		void PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler);
 		/** @brief Must be called before giving control to the application */
 		void InitCommon();

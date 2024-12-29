@@ -19,6 +19,7 @@ namespace Death { namespace Threading {
 		ManualReset,
 	};
 
+	/** @brief A generic event object */
 	template<EventType Type>
 	class Event
 	{
@@ -215,10 +216,10 @@ namespace Death { namespace Threading {
 #endif
 	};
 
-	/** @brief An event object that will atomically revert to an unsignaled state anytime a `Wait()` call succeeds (i.e. returns true). */
+	/** @brief An event object that will atomically revert to an unsignaled state anytime a @cpp Wait() @ce call succeeds (i.e. returns true). */
 	using AutoResetEvent = Event<EventType::AutoReset>;
 
-	/** @brief An event object that once signaled remains that way forever, unless `ResetEvent()` is called. */
+	/** @brief An event object that once signaled remains that way forever, unless @cpp ResetEvent() @ce is called. */
 	using ManualResetEvent = Event<EventType::ManualReset>;
 
 }}

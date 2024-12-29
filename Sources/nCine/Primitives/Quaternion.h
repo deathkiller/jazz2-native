@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Matrix4x4.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

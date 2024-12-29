@@ -5,7 +5,7 @@
 #	include <GL/glew.h>
 #endif
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../Graphics/GL/GLTexture.h"
 #include "../Graphics/GL/GLFramebuffer.h"
 #include "Qt5GfxDevice.h"
@@ -16,7 +16,7 @@
 #include <QApplication>
 #include <QScreen>
 
-namespace nCine
+namespace nCine::Backends
 {
 	Qt5GfxDevice::Qt5GfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, Qt5Widget& widget)
 		: IGfxDevice(windowMode, glContextInfo, displayMode), widget_(widget), isResizable_(windowMode.isResizable)

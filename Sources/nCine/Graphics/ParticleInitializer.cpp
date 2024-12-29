@@ -1,6 +1,6 @@
 #include "../CommonConstants.h"
 #include "ParticleInitializer.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

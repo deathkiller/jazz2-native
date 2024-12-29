@@ -2,7 +2,7 @@
 #include "GLRenderbuffer.h"
 #include "GLTexture.h"
 #include "GLDebug.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 namespace nCine
 {

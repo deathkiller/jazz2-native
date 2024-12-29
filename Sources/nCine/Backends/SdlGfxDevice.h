@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(WITH_SDL)
+#if defined(WITH_SDL) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Primitives/Vector2.h"
 #include "../Graphics/IGfxDevice.h"
@@ -17,7 +17,7 @@
 #	include <SDL.h>
 #endif
 
-namespace nCine
+namespace nCine::Backends
 {
 	/// The SDL based graphics device
 	class SdlGfxDevice : public IGfxDevice

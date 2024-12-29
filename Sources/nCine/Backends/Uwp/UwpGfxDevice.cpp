@@ -17,7 +17,7 @@
 namespace winrtWGD = winrt::Windows::Graphics::Display;
 namespace winrtWGDC = winrt::Windows::Graphics::Display::Core;
 
-namespace nCine
+namespace nCine::Backends
 {
 	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window)
 		: IGfxDevice(windowMode, glContextInfo, displayMode), _window(window), _renderSurface{EGL_NO_SURFACE}, _sizeChanged(2)

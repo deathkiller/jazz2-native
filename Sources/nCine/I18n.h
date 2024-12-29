@@ -49,9 +49,9 @@ namespace nCine
 		/** @brief Returns list of user's preferred languages */
 		static Array<String> GetPreferredLanguages();
 		/** @brief Returns localized name of language by ID (ISO 639-1) */
-		static StringView GetLanguageName(const StringView langId);
+		static StringView GetLanguageName(StringView langId);
 		/** @brief Returns language ID (ISO 639-1) without any regional/territorial specifiers */
-		static StringView TryRemoveLanguageSpecifiers(const StringView langId);
+		static StringView TryRemoveLanguageSpecifiers(StringView langId);
 
 	private:
 		struct StringDesc;

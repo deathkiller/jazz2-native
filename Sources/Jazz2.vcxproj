@@ -187,7 +187,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;WITH_GLEW;WITH_GLFW;__WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;WITH_GLEW;__WITH_GLFW;WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -317,7 +317,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.h" />
-    <ClInclude Include="Common.h" />
+    <ClInclude Include="Main.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.h" />
@@ -643,6 +643,7 @@
     <ClInclude Include="nCine\I18n.h" />
     <ClInclude Include="nCine\IAppEventHandler.h" />
     <ClInclude Include="nCine\Backends\GlfwInputManager.h" />
+    <ClInclude Include="nCine\imconfig.h" />
     <ClInclude Include="nCine\Input\IInputEventHandler.h" />
     <ClInclude Include="nCine\Input\IInputManager.h" />
     <ClInclude Include="nCine\Input\ImGuiJoyMappedInput.h" />
@@ -714,6 +715,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\StackAlloc.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.h" />
     <ClInclude Include="simdjson\simdjson.h" />
+    <ClInclude Include="TermLogo.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(ExtensionLibraryPath)\Cpu.cpp" />

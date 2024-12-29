@@ -2,7 +2,7 @@
 
 #include "../CommonBase.h"
 
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(DEATH_TARGET_ANDROID) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "Stream.h"
 #include "FileAccess.h"
@@ -19,6 +19,8 @@ namespace Death { namespace IO {
 
 	/**
 		@brief Read-only streaming directly from Android asset files
+
+		@partialsupport Available only on @ref DEATH_TARGET_ANDROID "Android" platform.
 	*/
 	class AndroidAssetStream : public Stream
 	{

@@ -1,5 +1,5 @@
 #include "TimeStamp.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

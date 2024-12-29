@@ -6,7 +6,7 @@ namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Defines constants for read, write, or read/write access to a file
+		@brief Defines constants for read, write, or read/write access to a file, supports a bitwise combination of its member values
 	*/
 	enum struct FileAccess {
 		None = 0,

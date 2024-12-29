@@ -9,7 +9,7 @@
 
 struct android_app;
 
-namespace nCine
+namespace nCine::Backends
 {
 	class AndroidJniClass_DisplayMode;
 

@@ -5,7 +5,7 @@
 struct AInputEvent;
 struct ANativeWindow;
 
-namespace nCine
+namespace nCine::Backends
 {
 	/// The class that handles Android input for ImGui
 	class ImGuiAndroidInput

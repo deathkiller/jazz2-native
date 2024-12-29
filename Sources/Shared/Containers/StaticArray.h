@@ -687,7 +687,7 @@ namespace Death { namespace Containers {
 	{
 		template<std::size_t size_, class T> StaticArrayData<size_, T, false>::StaticArrayData(const StaticArrayData<size_, T, false>& other) noexcept(std::is_nothrow_copy_constructible<T>::value) : StaticArrayData{NoInit} {
 			for (std::size_t i = 0; i != size_; ++i)
-				// Can't use {}, see the GCC 4.8-specific overload for details
+				/* Can't use {}, see the GCC 4.8-specific overload for details */
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
 				Implementation::construct(_data[i], other._data[i]);
 #else
@@ -697,7 +697,7 @@ namespace Death { namespace Containers {
 
 		template<std::size_t size_, class T> StaticArrayData<size_, T, false>::StaticArrayData(StaticArrayData<size_, T, false>&& other) noexcept(std::is_nothrow_move_constructible<T>::value) : StaticArrayData{NoInit} {
 			for (std::size_t i = 0; i != size_; ++i)
-				// Can't use {}, see the GCC 4.8-specific overload for details
+				/* Can't use {}, see the GCC 4.8-specific overload for details */
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
 				Implementation::construct(_data[i], std::move(other._data[i]));
 #else
@@ -709,7 +709,7 @@ namespace Death { namespace Containers {
 			for (T& i : _data) {
 				i.~T();
 #if defined(DEATH_MSVC2015_COMPATIBILITY)
-				// Complains i is set but not used for trivially destructible types
+				/* Complains i is set but not used for trivially destructible types */
 				static_cast<void>(i);
 #endif
 			}
@@ -799,7 +799,7 @@ namespace Death { namespace Containers {
 #if DEATH_CXX_STANDARD > 201402
 namespace std
 {
-	// Note that `size` can't be used as it may conflict with std::size() in C++17
+	/* Note that `size` can't be used as it may conflict with std::size() in C++17 */
 	template<size_t size_, class T> struct tuple_size<Death::Containers::StaticArray<size_, T>> : integral_constant<size_t, size_> {};
 	template<size_t index, size_t size_, class T> struct tuple_element<index, Death::Containers::StaticArray<size_, T>> { typedef T type; };
 }

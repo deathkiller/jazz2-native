@@ -57,10 +57,12 @@ namespace Death { namespace Implementation {
 /** @brief Get number of arguments in a variadic macro */
 #define DEATH_HELPER_ARGS_COUNT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #define __DEATH_NOOP__DEATH_REMOVE_PARENS_EXTRACT
 #define __DEATH_REMOVE_PARENS_EXTRACT(...) __DEATH_REMOVE_PARENS_EXTRACT __VA_ARGS__
 #define __DEATH_REMOVE_PARENS_PASTE(x, ...) x ## __VA_ARGS__
 #define __DEATH_REMOVE_PARENS_EVALUATE(x, ...) __DEATH_REMOVE_PARENS_PASTE(x, __VA_ARGS__)
+#endif
 /** @brief Remove optional parentheses from argument */
 #define DEATH_REMOVE_PARENS(x) __DEATH_REMOVE_PARENS_EVALUATE(__DEATH_NOOP, __DEATH_REMOVE_PARENS_EXTRACT x)
 

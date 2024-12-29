@@ -44,7 +44,7 @@ namespace Death { namespace IO {
 		static constexpr char PathSeparator[] = "/";
 #endif
 
-		/** @brief The available permissions to check or set */
+		/** @brief The available permissions to check or set, supports a bitwise combination of its member values */
 		enum class Permission
 		{
 			None = 0,
@@ -56,6 +56,7 @@ namespace Death { namespace IO {
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(Permission);
 
+		/** @brief Options that modify behavior of @ref Directory, supports a bitwise combination of its member values */
 		enum class EnumerationOptions
 		{
 			None = 0,
@@ -134,7 +135,7 @@ namespace Death { namespace IO {
 		/**
 		 * @brief Returns path with correct case on case-sensitive platforms (or nothing if path not found)
 		 * 
-		 * Windows is already case-insensitive by default, so no validation is performed.
+		 * Windows® is already case-insensitive by default, so no validation is performed.
 		 */
 		DEATH_ALWAYS_INLINE static Containers::StringView FindPathCaseInsensitive(Containers::StringView path) {
 			return path;
@@ -195,8 +196,10 @@ namespace Death { namespace IO {
 		/** @brief Returns the path of the Android external storage directory */
 		static Containers::String GetExternalStorage();
 #elif defined(DEATH_TARGET_UNIX)
+		/** @brief Returns the path pointing to `XDG_DATA_HOME` or `~/.local/share/` in the most cases */
 		static Containers::String GetLocalStorage();
 #elif defined(DEATH_TARGET_WINDOWS)
+		/** @brief Returns the path of Windows® directory */
 		static Containers::String GetWindowsDirectory();
 #endif
 
@@ -265,21 +268,29 @@ namespace Death { namespace IO {
 		/** @brief Tries to open specified directory in operating system's file manager */
 		static bool LaunchDirectoryAsync(Containers::StringView path);
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-		/** @brief Mounts specified path to persistent file system (Emscripten only) */
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Mounts specified path to persistent file system (Emscripten only)
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
+		 */
 		static void MountAsPersistent(Containers::StringView path);
 
-		/** @brief Saves all changes to all persistent file systems (Emscripten only) */
+		/**
+		 * @brief Saves all changes to all persistent file systems (Emscripten only)
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
+		 */
 		static void SyncToPersistent();
 #endif
 
 		/** @brief Opens file stream with specified access mode */
 		static std::unique_ptr<Stream> Open(Containers::StringView path, FileAccess mode);
 
-#if defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#if defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
 			@brief Memory-mapped file deleter
-
+		
 			@partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" and non-RT @ref DEATH_TARGET_WINDOWS "Windows" platforms.
 		*/
 		class MapDeleter
@@ -302,10 +313,22 @@ namespace Death { namespace IO {
 #	endif
 		};
 
+		/**
+		 * @brief Maps a file for reading and writing
+		 *
+		 * Maps the file as a read-write memory. The array deleter takes care of unmapping. If the file doesn't exist
+		 * or an error occurs while mapping, returns @ref std::nullopt_t. If the file is empty it's only opened
+		 * but not mapped and a zero-sized @cpp nullptr @ce array is returned, with the deleter containing the
+		 * open file handle.
+		 * 
+		 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" and non-RT @ref DEATH_TARGET_WINDOWS "Windows" platforms.
+		 */
 		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(Containers::StringView path, FileAccess mode);
 #endif
 
+		/** @brief Creates a stream from a specified region of memory */
 		static std::unique_ptr<Stream> CreateFromMemory(std::uint8_t* bufferPtr, std::int32_t bufferSize);
+		/** @overload */
 		static std::unique_ptr<Stream> CreateFromMemory(const std::uint8_t* bufferPtr, std::int32_t bufferSize);
 
 		/** @brief Returns application-specific writable directory for saving data */
@@ -317,5 +340,6 @@ namespace Death { namespace IO {
 		static void InitializeSavePath(Containers::StringView applicationName);
 	};
 
+	/** @brief Convenient shortcut to @ref FileSystem */
 	using fs = FileSystem;
 }}

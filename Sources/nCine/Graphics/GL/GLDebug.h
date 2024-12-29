@@ -4,7 +4,7 @@
 #include "../../CommonHeaders.h"
 
 #if defined(DEATH_TRACE) && defined(DEATH_TRACE_GL_ERRORS)
-#	include "../../../Common.h"
+#	include "../../../Main.h"
 #	define GL_LOG_ERRORS()										\
 		do {													\
 			GLenum __err = glGetError();						\

@@ -1,6 +1,6 @@
 #include "GLBufferObject.h"
 #include "GLDebug.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 #include "../../tracy_opengl.h"
 
 namespace nCine

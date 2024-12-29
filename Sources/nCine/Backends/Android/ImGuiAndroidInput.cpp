@@ -10,7 +10,7 @@
 #include <android/keycodes.h>
 #include <android/input.h>
 
-namespace nCine
+namespace nCine::Backends
 {
 	ANativeWindow* ImGuiAndroidInput::window_ = nullptr;
 	bool ImGuiAndroidInput::inputEnabled_ = true;

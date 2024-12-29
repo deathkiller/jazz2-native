@@ -51,9 +51,11 @@ namespace Death { namespace Containers {
 		Used to distinguish @ref String construction that bypasses small string optimization.
 	*/
 	struct AllocatedInitT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit AllocatedInitT(Init) {}
+#endif
 	};
 
 	/**
@@ -61,7 +63,7 @@ namespace Death { namespace Containers {
 
 		Use for @ref String construction that bypasses small string optimization.
 	*/
-	constexpr AllocatedInitT AllocatedInit { AllocatedInitT::Init{} };
+	constexpr AllocatedInitT AllocatedInit{AllocatedInitT::Init{}};
 
 	/**
 		@brief String
@@ -152,8 +154,12 @@ namespace Death { namespace Containers {
 		 * @cpp nullptr @ce --- in that case an empty string is constructed.
 		 * Depending on the size, it's either stored allocated or in a SSO.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		/*implicit*/ String(const char* data);
+#else
 		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a String or std::size_t */
 		template<class T, class = typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value>::type> /*implicit*/ String(T data) : String{nullptr, nullptr, nullptr, data} {}
+#endif
 
 		/**
 		 * @brief Construct from a sized C string
@@ -172,7 +178,7 @@ namespace Death { namespace Containers {
 		 */
 		explicit String(AllocatedInitT, StringView view);
 		explicit String(AllocatedInitT, ArrayView<const char> view);
-		// Without these there's ambiguity between StringView / ArrayView and char*
+		/* Without these there's ambiguity between StringView / ArrayView and char* */
 		explicit String(AllocatedInitT, MutableStringView view);
 		explicit String(AllocatedInitT, ArrayView<char> view);
 
@@ -234,8 +240,12 @@ namespace Death { namespace Containers {
 		 * Calculates the size using @ref std::strlen() and calls
 		 * @ref String(char*, std::size_t, Deleter).
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		explicit String(char* data, Deleter deleter) noexcept;
+#else
 		/* Gets ambigous when calling String{ptr, 0}. FFS, zero as null pointerwas deprecated in C++11 already, why is this still a problem?! */
 		template<class T, typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> String(char* data, T deleter) noexcept : String{deleter, nullptr, data} {}
+#endif
 
 		/**
 		 * @brief Take ownership of an immutable external data array
@@ -255,8 +265,12 @@ namespace Death { namespace Containers {
 		 * Calculates the size using @ref std::strlen() and calls
 		 * @ref String(const char*, std::size_t, Deleter).
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		explicit String(const char* data, Deleter deleter) noexcept;
+#else
 		/* Gets ambigous when calling String{ptr, 0}. FFS, zero as null pointer was deprecated in C++11 already, why is this still a problem?! */
 		template<class T, class = typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, const char*>::type> String(const char* data, T deleter) noexcept : String{deleter, nullptr, const_cast<char*>(data)} {}
+#endif
 
 		/**
 		 * @brief Taking ownership of a null pointer is not allowed
@@ -272,8 +286,12 @@ namespace Death { namespace Containers {
 		 * Since the @ref String class provides a guarantee of null-terminated
 		 * strings, @p data *can't* be @cpp nullptr @ce.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		explicit String(std::nullptr_t, Deleter deleter) = delete;
+#else
 		/* Gets ambigous when calling String{nullptr, 0}. FFS, zero as null pointer was deprecated in C++11 already, why is this still a problem?! */
 		template<class T, typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> String(std::nullptr_t, T) noexcept = delete;
+#endif
 
 		/**
 		 * @brief Create a zero-initialized string
@@ -504,12 +522,21 @@ namespace Death { namespace Containers {
 		 * has @ref StringViewFlag::NullTerminated set.
 		 * @m_keywords{substr()}
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		MutableStringView sliceSize(char* begin, std::size_t size);
+#else
 		template<class T, class = typename std::enable_if<std::is_convertible<T, char*>::value && !std::is_convertible<T, std::size_t>::value>::type> MutableStringView sliceSize(T begin, std::size_t size) {
 			return sliceSizePointerInternal(begin, size);
 		}
+#endif
+		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		StringView sliceSize(const char* begin, std::size_t size) const;
+#else
 		template<class T, class = typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value>::type> StringView sliceSize(T begin, std::size_t size) const {
 			return sliceSizePointerInternal(begin, size);
 		}
+#endif
 		MutableStringView sliceSize(std::size_t begin, std::size_t size);
 		StringView sliceSize(std::size_t begin, std::size_t size) const;
 
@@ -520,12 +547,21 @@ namespace Death { namespace Containers {
 		 * points to (one item after) the end of the original (null-terminated)
 		 * string, the result has @ref StringViewFlags::NullTerminated set.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		MutableStringView prefix(char* end);
+#else
 		template<class T, class = typename std::enable_if<std::is_convertible<T, char*>::value && !std::is_convertible<T, std::size_t>::value>::type> MutableStringView prefix(T end) {
 			return prefixPointerInternal(end);
 		}
+#endif
+		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		StringView prefix(const char* end) const;
+#else
 		template<class T, class = typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value>::type> StringView prefix(T end) const {
 			return prefixPointerInternal(end);
 		}
+#endif
 
 		/**
 		 * @brief View on a suffix after a pointer
@@ -672,8 +708,15 @@ namespace Death { namespace Containers {
 		 * and calling @ref exceptPrefix(std::size_t) instead, or vice versa,
 		 * you have to always use a string literal to call this function.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		MutableStringView exceptPrefix(char prefix) = delete;
+		/** @overload */
+		StringView exceptPrefix(char prefix) const = delete;
+#else
 		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> MutableStringView exceptPrefix(T&& prefix) = delete;
+		/** @overload */
 		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> StringView exceptPrefix(T&& prefix) const = delete;
+#endif
 
 		/**
 		 * @brief View with given suffix stripped
@@ -690,8 +733,15 @@ namespace Death { namespace Containers {
 		 * and calling @ref exceptSuffix(std::size_t) instead, or vice versa,
 		 * you have to always use a string literal to call this function.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		MutableStringView exceptSuffix(char suffix) = delete;
+		/** @overload */
+		StringView exceptSuffix(char suffix) const = delete;
+#else
 		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> MutableStringView exceptSuffix(T&& suffix) = delete;
+		/** @overload */
 		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> StringView exceptSuffix(T&& suffix) const = delete;
+#endif
 
 		/**
 		 * @brief View with given characters trimmed from prefix and suffix

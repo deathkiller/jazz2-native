@@ -3,7 +3,7 @@
 #include "GL/GLDebug.h"
 #include "../ServiceLocator.h"
 #include "IGfxCapabilities.h"
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../tracy.h"
 
 namespace nCine

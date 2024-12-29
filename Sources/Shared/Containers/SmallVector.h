@@ -252,7 +252,7 @@ namespace Death { namespace Containers {
 		using Base::empty;
 		using Base::size;
 
-		// forward iterator creation methods.
+		// Forward iterator creation methods
 		iterator begin() {
 			return (iterator)this->BeginX;
 		}
@@ -266,7 +266,7 @@ namespace Death { namespace Containers {
 			return begin() + size();
 		}
 
-		// reverse iterator creation methods.
+		// Reverse iterator creation methods
 		reverse_iterator rbegin() {
 			return reverse_iterator(end());
 		}

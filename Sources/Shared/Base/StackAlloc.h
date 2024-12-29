@@ -56,7 +56,7 @@ namespace Death { namespace Implementation {
 	@brief Tries to allocate array of specified type on stack with fallback to standard heap allocation.
 
 	If @p size is bigger than 4024, it will use heap allocation instead.
-	Usage: `auto array = stack_alloc(std::int32_t, 1024);`
+	Please, use following syntax: @cpp auto array = stack_alloc(std::int32_t, 1024); @ce
 */
 #if defined(DEATH_TARGET_MSVC)
 #	define stack_alloc(type, size)																					\

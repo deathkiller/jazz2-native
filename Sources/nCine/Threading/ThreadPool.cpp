@@ -1,7 +1,7 @@
 #if defined(WITH_THREADS)
 
 #include "ThreadPool.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 namespace nCine
 {

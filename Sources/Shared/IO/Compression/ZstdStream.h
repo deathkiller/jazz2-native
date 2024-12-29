@@ -3,7 +3,7 @@
 #include "../../Common.h"
 #include "../Stream.h"
 
-#if defined(WITH_ZSTD)
+#if defined(WITH_ZSTD) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("zstd/zstd.h")
@@ -20,7 +20,7 @@ namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Read-only streaming of compressed data using the Zstandard compression algorithm
+		@brief Provides read-only streaming of compressed data using the Zstandard compression algorithm
 	*/
 	class ZstdStream : public Stream
 	{
@@ -76,7 +76,7 @@ namespace Death { namespace IO { namespace Compression {
 	};
 
 	/**
-		@brief Write-only streaming to compress written data by using the Zstandard compression algorithm
+		@brief Provides write-only streaming to compress written data by using the Zstandard compression algorithm
 	*/
 	class ZstdWriter : public Stream
 	{

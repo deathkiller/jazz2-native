@@ -1,8 +1,8 @@
 #pragma once
 
-#if defined(WITH_IMGUI)
+#if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../Primitives/Matrix4x4.h"
 
 #include <memory>

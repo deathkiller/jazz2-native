@@ -1,7 +1,7 @@
 #if defined(WITH_ANGELSCRIPT)
 
 #include "RegisterArray.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <new>
 #include <stdlib.h>

@@ -19,7 +19,10 @@
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1;
+}
 
+namespace nCine::Backends
+{
 	bool GlfwInputManager::windowHasFocus_ = true;
 	GlfwMouseState GlfwInputManager::mouseState_;
 	GlfwMouseEvent GlfwInputManager::mouseEvent_;

@@ -8,7 +8,7 @@
 #include "GLAttribute.h"
 #include "GLVertexFormat.h"
 #include "../../Base/StaticHashMap.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 #include <string>
 

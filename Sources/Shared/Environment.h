@@ -25,6 +25,9 @@ namespace Death {
 namespace Death { namespace Environment {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/**
+	 * @brief Returns whether the application is running in a sandboxed environment
+	 */
 	bool IsSandboxed();
 	
 #if defined(DEATH_TARGET_APPLE)
@@ -62,6 +65,12 @@ namespace Death { namespace Environment {
 #	endif
 #endif
 
+	/**
+	 * @brief Returns the current unbiased interrupt-time count, in units of 100 nanoseconds
+	 * 
+	 * The unbiased interrupt-time count does not include time the system spends in sleep or hibernation.
+	 * Falls back to another monotonic time source if not supported.
+	 */
 #if defined(DEATH_TARGET_WINDOWS)
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
 		ULONGLONG now = {};
@@ -76,6 +85,12 @@ namespace Death { namespace Environment {
 	}
 #endif
 
+	/**
+	 * @brief Returns the current unbiased interrupt-time count, in milliseconds
+	 *
+	 * The unbiased interrupt-time count does not include time the system spends in sleep or hibernation.
+	 * Falls back to another monotonic time source if not supported.
+	 */
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTimeAsMs() {
 		return QueryUnbiasedInterruptTime() / 10000LL;
 	}

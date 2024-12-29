@@ -1,6 +1,6 @@
 #include "AudioReaderWav.h"
 #include "AudioLoaderWav.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <cstring>
 

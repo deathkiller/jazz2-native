@@ -7,7 +7,7 @@
 #include "BinaryShaderCache.h"
 #include "../Application.h"
 #include "../tracy.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"

@@ -2,7 +2,7 @@
 #include "../CommonHeaders.h"
 
 #include "GfxCapabilities.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <cstdio>	// for sscanf()
 #include <cstring>	// for checkGLExtension()

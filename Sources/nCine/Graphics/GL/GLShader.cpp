@@ -2,7 +2,7 @@
 #include "GLDebug.h"
 #include "../RenderResources.h"
 #include "../../Application.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 #include <string>
 

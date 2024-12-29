@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#if defined(WITH_MULTIPLAYER)
+#if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "INetworkHandler.h"
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../../nCine/Base/TimeStamp.h"
 #include "../../nCine/Threading/Thread.h"
 

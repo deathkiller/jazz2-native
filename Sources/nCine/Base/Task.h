@@ -12,7 +12,7 @@ namespace nCine
 	struct Task
 	{
 
-#if defined(WITH_COROUTINES)
+#if defined(WITH_COROUTINES) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 		struct task_promise;
 

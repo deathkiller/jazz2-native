@@ -1,6 +1,6 @@
 #if defined(WITH_QT5)
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "Qt5InputManager.h"
 #include "Qt5Widget.h"
 #include "../Input/IInputEventHandler.h"
@@ -18,7 +18,10 @@
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = 4;
+}
 
+namespace nCine::Backends
+{
 	TouchEvent Qt5InputManager::touchEvent_;
 	Qt5MouseState Qt5InputManager::mouseState_;
 	Qt5MouseEvent Qt5InputManager::mouseEvent_;

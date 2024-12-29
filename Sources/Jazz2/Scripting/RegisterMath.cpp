@@ -1,7 +1,7 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "RegisterMath.h"
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../../nCine/Primitives/Colorf.h"
 #include "../../nCine/Primitives/Vector2.h"
 #include "../../nCine/Primitives/Vector3.h"

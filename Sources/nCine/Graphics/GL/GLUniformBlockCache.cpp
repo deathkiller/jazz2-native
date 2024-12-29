@@ -1,6 +1,6 @@
 #include "GLUniformBlockCache.h"
 #include "GLUniformBlock.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 namespace nCine
 {

@@ -11,6 +11,7 @@
 #include <IO/AndroidAssetStream.h>
 
 using namespace Death::IO;
+using namespace nCine::Backends;
 
 /// Processes the next application command
 void androidHandleCommand(struct android_app* state, std::int32_t cmd)

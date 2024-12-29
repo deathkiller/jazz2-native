@@ -1,7 +1,7 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "RegisterString.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Base/HashMap.h"

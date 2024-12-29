@@ -67,7 +67,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
 #else
-		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
@@ -341,7 +341,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
 #else
-		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
@@ -438,7 +438,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
 #else
-		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
@@ -653,7 +653,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr /*implicit*/ StaticArrayView(std::nullptr_t = nullptr) noexcept;
 #else
-		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
 		template<class U, class = U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ StaticArrayView(U) noexcept : _data{} {}
 
 		constexpr /*implicit*/ StaticArrayView() noexcept : _data{} {}
@@ -1023,7 +1023,7 @@ namespace Death { namespace Containers {
 #if DEATH_CXX_STANDARD > 201402
 namespace std
 {
-	// Note that `size` can't be used as it may conflict with std::size() in C++17
+	/* Note that `size` can't be used as it may conflict with std::size() in C++17 */
 	template<size_t size_, class T> struct tuple_size<Death::Containers::StaticArrayView<size_, T>> : integral_constant<size_t, size_> {};
 	template<size_t index, size_t size_, class T> struct tuple_element<index, Death::Containers::StaticArrayView<size_, T>> { typedef T type; };
 }

@@ -4,7 +4,7 @@
 #include "../Primitives/Rect.h"
 #include "DisplayMode.h"
 #include "../AppConfiguration.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <Containers/SmallVector.h>
 

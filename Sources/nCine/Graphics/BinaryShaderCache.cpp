@@ -3,7 +3,7 @@
 #include "../ServiceLocator.h"
 #include "../Base/Algorithms.h"
 #include "../Base/HashFunctions.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #include <IO/FileSystem.h>
 #include <IO/Stream.h>

@@ -64,7 +64,7 @@ namespace nCine
 		/// The initial size for the pool of render commands
 		unsigned int renderCommandPoolSize;
 
-#if defined(WITH_IMGUI)
+#if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/// The flag is `true` if the debug overlay is enabled
 		bool withDebugOverlay;
 #endif

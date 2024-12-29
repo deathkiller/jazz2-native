@@ -1,5 +1,5 @@
 #include "EglGfxDevice.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 #include "AndroidJniHelper.h"
 #include "AndroidApplication.h"
 
@@ -21,18 +21,18 @@ extern "C"
 	{
 		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
 		if (androidApp.IsInitialized()) {
-			JNIEnv* oldEnv = nc::AndroidJniHelper::jniEnv;
-			nc::AndroidJniHelper::jniEnv = env;
+			JNIEnv* oldEnv = nc::Backends::AndroidJniHelper::jniEnv;
+			nc::Backends::AndroidJniHelper::jniEnv = env;
 
-			nc::EglGfxDevice::updateMonitorsFromJni();
+			nc::Backends::EglGfxDevice::updateMonitorsFromJni();
 
-			nc::AndroidJniHelper::jniEnv = oldEnv;
+			nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
 		}
 	}
 }
 #endif
 
-namespace nCine
+namespace nCine::Backends
 {
 	char EglGfxDevice::monitorNames_[MaxMonitors][MaxMonitorNameLength];
 

@@ -74,10 +74,14 @@ namespace Death { namespace Utf8 {
 	}
 
 	/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	Containers::Array<wchar_t> ToUtf16(const char* source);
+#else
 	template<class T, class R = Containers::Array<wchar_t>, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, const char*>::value || std::is_same<typename std::decay<T>::type, char*>::value>::type>
 	inline R ToUtf16(T&& source) {
 		return ToUtf16(source, -1);
 	}
+#endif
 
 	/**
 		@brief Narrow a UTF-16 string to UTF-8 for use with Windows Unicode APIs
@@ -99,10 +103,14 @@ namespace Death { namespace Utf8 {
 	}
 
 	/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	Containers::String FromUtf16(const wchar_t* source);
+#else
 	template<class T, class R = Containers::String, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, const wchar_t*>::value || std::is_same<typename std::decay<T>::type, wchar_t*>::value>::type>
 	inline R FromUtf16(T&& source) {
 		return FromUtf16(source, -1);
 	}
+#endif
 
 #endif
 }}

@@ -2,7 +2,7 @@
 
 #if defined(WITH_ANGELSCRIPT)
 
-#include "../../Common.h"
+#include "../../Main.h"
 #include "../../nCine/Primitives/Rect.h"
 #include "../../nCine/Base/Random.h"
 #include "RegisterArray.h"

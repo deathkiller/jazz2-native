@@ -7,7 +7,7 @@
 #include "../UI/ControlScheme.h"
 #include "../UI/HUD.h"
 #include "../UI/InGameConsole.h"
-#include "../../Common.h"
+#include "../../Main.h"
 
 #if defined(WITH_ANGELSCRIPT)
 #	include "../Scripting/LevelScriptLoader.h"

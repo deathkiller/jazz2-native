@@ -17,11 +17,11 @@ namespace winrtWUV = winrt::Windows::UI::ViewManagement;
 
 namespace nCine
 {
-	/// Handler class for nCine applications on UWP
+	/// Main entry point and handler for UWP (Universal Windows Platform) applications
 	class UwpApplication : public Application, public winrt::implements<UwpApplication, winrtWAC::IFrameworkViewSource, winrtWAC::IFrameworkView>
 	{
 	public:
-		/** @brief Entry point method to be called in the `main()` function */
+		/** @brief Entry point method to be called in the @cpp main() @ce function */
 		static int Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
 		UwpApplication() : Application(), _isSuspended(false) { }
@@ -63,7 +63,7 @@ namespace nCine
 		friend Application& theApplication();
 	};
 
-	/// Meyers' Singleton
+	/// Returns application instance
 	Application& theApplication();
 
 }

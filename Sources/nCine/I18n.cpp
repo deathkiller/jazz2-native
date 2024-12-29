@@ -1,5 +1,5 @@
 #include "I18n.h"
-#include "../Common.h"
+#include "../Main.h"
 #include "Base/Algorithms.h"
 
 #include <stdarg.h>
@@ -689,7 +689,7 @@ namespace nCine
 		return preferred;
 	}
 
-	StringView I18n::GetLanguageName(const StringView langId)
+	StringView I18n::GetLanguageName(StringView langId)
 	{
 		StringView baseLanguage = TryRemoveLanguageSpecifiers(langId);
 
@@ -710,7 +710,7 @@ namespace nCine
 		return {};
 	}
 
-	StringView I18n::TryRemoveLanguageSpecifiers(const StringView langId)
+	StringView I18n::TryRemoveLanguageSpecifiers(StringView langId)
 	{
 		StringView suffix = langId.findAny("-_.@"_s);
 		return (suffix != nullptr ? langId.prefix(suffix.begin()) : langId);
