@@ -76,6 +76,7 @@ namespace Jazz2::UI
 		Unknown = -1
 	};
 
+	/** @brief Provides access to RGB lights from various peripherals */
 	class RgbLights
 	{
 	public:

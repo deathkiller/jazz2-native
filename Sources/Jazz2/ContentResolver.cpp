@@ -147,7 +147,7 @@ namespace Jazz2
 	{
 #if defined(DEATH_TARGET_ANDROID)
 		// If `MANAGE_EXTERNAL_STORAGE` permission is granted, try to use also alternative paths
-		if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+		if (Backends::AndroidJniWrap_Activity::hasExternalStoragePermission()) {
 			constexpr StringView ExternalPaths[] = {
 				"Games/Jazz² Resurrection/"_s,
 				"Games/Jazz2 Resurrection/"_s,
@@ -168,8 +168,8 @@ namespace Jazz2
 			}
 
 			if (!found) {
-				String deviceBrand = AndroidJniClass_Version::deviceBrand();
-				String deviceModel = AndroidJniClass_Version::deviceModel();
+				String deviceBrand = Backends::AndroidJniClass_Version::deviceBrand();
+				String deviceModel = Backends::AndroidJniClass_Version::deviceModel();
 				if (deviceBrand == "Windows"_s && deviceModel == "Subsystem for Android(TM)"_s) {
 					// Set special paths if Windows Subsystem for Android™ is used
 					String externalStorageWindows = fs::CombinePath(externalStorage, "Windows/Saved Games/"_s);
