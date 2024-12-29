@@ -21,7 +21,10 @@
 
 using namespace Death;
 using namespace Death::Containers::Literals;
+
+#if defined(DEATH_TARGET_ANDROID)
 using namespace nCine::Backends;
+#endif
 
 namespace nCine
 {

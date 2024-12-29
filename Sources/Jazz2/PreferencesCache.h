@@ -88,6 +88,7 @@ namespace Jazz2
 
 #	pragma pack(pop)
 
+	/** @brief Provides access to a user preferences */
 	class PreferencesCache
 	{
 	public:

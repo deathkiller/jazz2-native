@@ -44,6 +44,7 @@ namespace Jazz2::UI
 		Vector2f Movement;
 	};
 
+	/** @brief Provides access to a user configured control scheme */
 	class ControlScheme
 	{
 		friend class Menu::RemapControlsSection;

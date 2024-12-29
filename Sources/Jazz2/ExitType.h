@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Exit type, supports a bitwise combination of its member values */
 	enum class ExitType : std::uint8_t
 	{
 		None,

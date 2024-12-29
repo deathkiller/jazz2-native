@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Direction, supports a bitwise combination of its member values */
 	enum class Direction
 	{
 		None = 0,

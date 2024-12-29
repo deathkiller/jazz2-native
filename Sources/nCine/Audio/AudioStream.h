@@ -12,7 +12,7 @@ namespace nCine
 	class IAudioReader;
 	class IAudioLoader;
 
-	/// Audio stream class
+	/// Audio stream
 	class AudioStream
 	{
 	public:

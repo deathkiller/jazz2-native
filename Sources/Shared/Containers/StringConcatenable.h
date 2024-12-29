@@ -21,6 +21,7 @@ namespace Death { namespace Containers {
 		{ typedef String ConvertTo; };
 	}
 
+	/** @brief Resulting object of a deferred string concatenation */
 	template<typename Builder, typename T>
 	struct StringBuilderBase
 	{
@@ -77,6 +78,7 @@ namespace Death { namespace Containers {
 		StringBuilder& operator=(const StringBuilder&) = delete;
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<>
 	struct StringConcatenable<char>
 	{
@@ -214,6 +216,7 @@ namespace Death { namespace Containers {
 			StringConcatenableEx<B>::appendTo(c.b, out);
 		}
 	};
+#endif
 
 	template<typename A, typename B,
 		typename = std::void_t<typename StringConcatenableEx<A>::type, typename StringConcatenableEx<B>::type>>

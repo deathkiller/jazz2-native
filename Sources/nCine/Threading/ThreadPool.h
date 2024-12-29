@@ -12,7 +12,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// Thread pool class
+	/// Thread pool
 	class ThreadPool : public IThreadPool
 	{
 	public:

@@ -13,7 +13,7 @@ namespace nCine
 	class GLUniformCache;
 	class GLAttribute;
 
-	/// The class containing material data for a drawable node
+	/// Contains material data for a drawable node
 	class Material
 	{
 	public:

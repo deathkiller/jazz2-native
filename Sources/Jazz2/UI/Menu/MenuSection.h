@@ -10,6 +10,7 @@
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief Base class of a menu section */
 	class MenuSection
 	{
 	public:

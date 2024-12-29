@@ -8,6 +8,7 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
+	/** @brief Canvas */
 	class Canvas : public SceneNode
 	{
 		friend class Font;
