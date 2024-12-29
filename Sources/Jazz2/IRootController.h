@@ -9,6 +9,7 @@ using namespace Death::Containers;
 
 namespace Jazz2
 {
+	/** @brief Base interface of a root controller */
 	class IRootController
 	{
 	public:

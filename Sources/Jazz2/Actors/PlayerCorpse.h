@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors
 {
+	/** @brief Represents a dead coprse of a player */
 	class PlayerCorpse : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

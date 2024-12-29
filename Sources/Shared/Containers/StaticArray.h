@@ -731,6 +731,7 @@ namespace Death { namespace Containers {
 		}
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<std::size_t size_, class T> template<class U, class> constexpr const T& StaticArray<size_, T>::operator[](const U i) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, ("Index %zu out of range for %zu elements", std::size_t(i), size_)), this->_data[i];
 	}
@@ -738,6 +739,7 @@ namespace Death { namespace Containers {
 	template<std::size_t size_, class T> template<class U, class> T& StaticArray<size_, T>::operator[](const U i) {
 		return const_cast<T&>(static_cast<const StaticArray<size_, T>&>(*this)[i]);
 	}
+#endif
 
 	template<std::size_t size_, class T> template<std::size_t viewSize> StaticArrayView<viewSize, T> StaticArray<size_, T>::prefix() {
 		static_assert(viewSize <= size_, "Prefix size too large");

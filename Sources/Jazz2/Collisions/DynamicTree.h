@@ -39,7 +39,11 @@ namespace Jazz2::Collisions
 	constexpr float AabbExtension = 0.1f * LengthUnitsPerMeter;
 	constexpr float AabbMultiplier = 4.0f;
 
-	/// A node in the dynamic tree. The client does not interact with this directly.
+	/**
+		@brief A node in the dynamic tree
+
+		The client does not interact with this directly.
+	*/
 	struct TreeNode
 	{
 		/// Enlarged AABB
@@ -67,14 +71,17 @@ namespace Jazz2::Collisions
 		}
 	};
 
-	/// A dynamic AABB tree broad-phase, inspired by Nathanael Presson's btDbvt.
-	/// A dynamic tree arranges data in a binary tree to accelerate
-	/// queries such as volume queries and ray casts. Leafs are proxies
-	/// with an AABB. In the tree we expand the proxy AABB by b2_fatAABBFactor
-	/// so that the proxy AABB is bigger than the client object. This allows the client
-	/// object to move by small amounts without triggering a tree update.
-	///
-	/// Nodes are pooled and relocatable, so we use node indices rather than pointers.
+	/**
+		@brief A dynamic AABB tree broad-phase
+
+		A dynamic tree arranges data in a binary tree to accelerate
+		queries such as volume queries and ray casts. Leafs are proxies
+		with an AABB. In the tree we expand the proxy AABB by b2_fatAABBFactor
+		so that the proxy AABB is bigger than the client object. This allows the client
+		object to move by small amounts without triggering a tree update.
+
+		Nodes are pooled and relocatable, so we use node indices rather than pointers.
+	*/
 	class DynamicTree
 	{
 	public:

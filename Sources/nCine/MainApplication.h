@@ -14,6 +14,7 @@ namespace nCine
 	class Qt5Widget;
 #endif
 
+	/// Main entry point and handler for standard (desktop) applications
 	class MainApplication : public Application
 	{
 	public:

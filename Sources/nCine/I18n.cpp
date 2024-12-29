@@ -21,6 +21,7 @@
 
 using namespace Death;
 using namespace Death::Containers::Literals;
+using namespace nCine::Backends;
 
 namespace nCine
 {

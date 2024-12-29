@@ -44,6 +44,7 @@ namespace Jazz2::Actors
 {
 	class Player;
 
+	/** @brief Flags that modify behaviour of @ref ActorBase, supports a bitwise combination of its member values */
 	enum class ActorState {
 		None = 0x00,
 
@@ -110,6 +111,7 @@ namespace Jazz2::Actors
 
 	DEFINE_ENUM_OPERATORS(ActorState);
 
+	/** @brief Description how to initialize an actor */
 	struct ActorActivationDetails {
 		ILevelHandler* LevelHandler;
 		Vector3i Pos;
@@ -139,6 +141,7 @@ namespace Jazz2::Actors
 		FrozenMask
 	};
 
+	/** @brief Base class of an object */
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
 		DEATH_RUNTIME_OBJECT();
@@ -201,6 +204,7 @@ namespace Jazz2::Actors
 		}
 
 	protected:
+		/** @brief Actor renderer */
 		class ActorRenderer : public BaseSprite
 		{
 			friend class ActorBase;

@@ -9,6 +9,7 @@ namespace Jazz2::Actors
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief Base class of a collectible object */
 	class CollectibleBase : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
@@ -29,7 +30,8 @@ namespace Jazz2::Actors::Collectibles
 		};
 
 		bool _untouched;
-		uint32_t _scoreValue;
+		std::uint32_t _scoreValue;
+		float _timeLeft;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
@@ -38,9 +40,6 @@ namespace Jazz2::Actors::Collectibles
 		virtual void OnCollect(Player* player);
 
 		void SetFacingDirection(bool inverse = false);
-
-	protected:
-		float _timeLeft;
 
 	private:
 		float _phase;

@@ -36,6 +36,7 @@ namespace Jazz2
 		class TileSet;
 	}
 
+	/** @brief Manages loading of assets */
 	class ContentResolver
 	{
 	public:

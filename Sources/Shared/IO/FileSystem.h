@@ -270,14 +270,14 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
-		 * @brief Mounts specified path to persistent file system (Emscripten only)
+		 * @brief Mounts specified path to persistent file system
 		 *
 		 * @partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
 		 */
 		static void MountAsPersistent(Containers::StringView path);
 
 		/**
-		 * @brief Saves all changes to all persistent file systems (Emscripten only)
+		 * @brief Saves all changes to all persistent file systems
 		 *
 		 * @partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
 		 */

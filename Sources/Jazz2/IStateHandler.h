@@ -6,6 +6,7 @@
 
 namespace Jazz2
 {
+	/** @brief Base interface of a state handler */
 	class IStateHandler
 	{
 	public:

@@ -16,9 +16,11 @@ namespace Jazz2::Tiles
 
 namespace Jazz2::Events
 {
+	/** @brief Represents event map, spawns triggered objects */
 	class EventMap
 	{
 	public:
+		/** @brief Represents an event tile */
 		struct EventTile {
 			EventType Event;
 			Actors::ActorState EventFlags;

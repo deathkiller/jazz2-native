@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+
 namespace Jazz2::Shaders
 {
 	constexpr std::uint64_t Version = 6;
@@ -2127,3 +2129,5 @@ void main() {
 }
 )";
 }
+
+#endif

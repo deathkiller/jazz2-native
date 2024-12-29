@@ -52,6 +52,7 @@ namespace Jazz2::Actors
 		class Thunderbolt;
 	}
 
+	/** @brief Represents a controllable player */
 	class Player : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

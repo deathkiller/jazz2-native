@@ -3,7 +3,7 @@
 #include "UwpInputManager.h"
 #include "../../IAppEventHandler.h"
 #include "../../Input/IInputManager.h"
-#include "../../../Common.h"
+#include "../../../Main.h"
 
 #include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>

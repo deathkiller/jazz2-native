@@ -3,7 +3,7 @@
 #include "../Common.h"
 
 // If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used instead of optimized runtime_cast<T>()
-#if !defined(DEATH_NO_RUNTIME_CAST)
+#if !defined(DEATH_NO_RUNTIME_CAST) && !defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include <memory>
 #include <type_traits>

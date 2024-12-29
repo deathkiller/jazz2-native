@@ -21,6 +21,7 @@ namespace nCine
 		Xinput
 	};
 
+	/** @brief Parsed GUID of a joystick */
 	class JoystickGuid
 	{
 	public:
@@ -37,7 +38,7 @@ namespace nCine
 
 		bool operator==(const JoystickGuid& guid) const;
 
-		uint8_t data[16];
+		std::uint8_t data[16];
 	};
 
 	/// The interface class for parsing and dispatching input events

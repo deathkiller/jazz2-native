@@ -7,6 +7,7 @@
 
 namespace Jazz2::Events
 {
+	/** @brief Spawns objects in a level */
 	class EventSpawner
 	{
 	public:

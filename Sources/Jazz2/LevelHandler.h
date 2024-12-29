@@ -59,6 +59,7 @@ namespace Jazz2
 		class InGameMenu;
 	}
 
+	/** @brief Level handler of a local game session */
 	class LevelHandler : public ILevelHandler, public IStateHandler, public IResumable, public Tiles::ITileMapOwner
 	{
 		DEATH_RUNTIME_OBJECT(ILevelHandler);

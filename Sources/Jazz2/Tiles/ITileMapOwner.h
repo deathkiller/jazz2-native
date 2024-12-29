@@ -4,6 +4,7 @@
 
 namespace Jazz2::Tiles
 {
+	/** @brief Interface used to notify tile map owner of various events */
 	class ITileMapOwner
 	{
 	public:
