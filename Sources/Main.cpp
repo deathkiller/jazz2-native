@@ -71,6 +71,7 @@ using namespace Jazz2::Multiplayer;
 #	endif
 #endif
 
+using namespace Death::IO::Compression;
 using namespace nCine;
 using namespace Jazz2;
 using namespace Jazz2::UI;
@@ -82,7 +83,7 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 {
 public:
 	static constexpr std::uint16_t StateVersion = 3;
-	static constexpr char StateFileName[] = "Jazz2.resume";
+	static constexpr StringView StateFileName = "Jazz2.resume"_s;
 
 #if defined(WITH_MULTIPLAYER)
 	static constexpr std::uint16_t MultiplayerDefaultPort = 7438;

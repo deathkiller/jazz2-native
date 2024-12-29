@@ -35,8 +35,10 @@ namespace Death { namespace Containers {
 		see documentation of a particular API using this tag for a detailed behavior description.
 	*/
 	struct DefaultInitT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		constexpr explicit DefaultInitT(Init) {}
+#endif
 	};
 
 	/**
@@ -45,8 +47,10 @@ namespace Death { namespace Containers {
 		Used to distinguish construction with value initialization (built-in types are zeroed out, others are default-constructed).
 	*/
 	struct ValueInitT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		constexpr explicit ValueInitT(Init) {}
+#endif
 	};
 
 	/**
@@ -55,8 +59,10 @@ namespace Death { namespace Containers {
 		Used to distinguish construction with no initialization at all, which leaves the data with whatever random values the memory had before.
 	*/
 	struct NoInitT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		constexpr explicit NoInitT(Init) {}
+#endif
 	};
 
 	/**
@@ -66,8 +72,10 @@ namespace Death { namespace Containers {
 		random values, but makes the instance empty (usually equivalent to a moved-out state).
 	*/
 	struct NoCreateT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		constexpr explicit NoCreateT(Init) {}
+#endif
 	};
 
 	/**
@@ -76,8 +84,10 @@ namespace Death { namespace Containers {
 		Used to distinguish construction with direct initialization.
 	*/
 	struct DirectInitT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		constexpr explicit DirectInitT(Init) {}
+#endif
 	};
 
 	/**
@@ -86,8 +96,10 @@ namespace Death { namespace Containers {
 		Used to distinguish construction with in-place initialization.
 	*/
 	struct InPlaceInitT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		constexpr explicit InPlaceInitT(Init) {}
+#endif
 	};
 
 	/**

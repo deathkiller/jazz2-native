@@ -235,8 +235,6 @@ namespace nCine
 			return false;
 		}
 
-		std::int32_t parsedMappings = 0;
-
 		std::unique_ptr<char[]> fileBuffer = std::make_unique<char[]>(fileSize + 1);
 		fileHandle->Read(fileBuffer.get(), fileSize);
 		fileHandle.reset(nullptr);

@@ -91,9 +91,13 @@ namespace Death { namespace Containers {
 		 *
 		 * For trivial types is equivalent to @ref Pair(DefaultInitT).
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value&& std::is_nothrow_constructible<S, NoInitT>::value);
+#else
 		template<class F_ = F, class = typename std::enable_if<std::is_standard_layout<F_>::value && std::is_standard_layout<S>::value && std::is_trivial<F_>::value && std::is_trivial<S>::value>::type> explicit Pair(NoInitT) noexcept {}
-
+		/** @overload */
 		template<class F_ = F, class S_ = S, class = typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_constructible<S_, NoInitT>::value>::type> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value && std::is_nothrow_constructible<S, NoInitT>::value) : _first{NoInit}, _second{NoInit} {}
+#endif
 
 		/**
 		 * @brief Default constructor

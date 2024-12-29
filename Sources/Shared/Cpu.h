@@ -313,7 +313,27 @@ namespace Death { namespace Cpu {
 		have this class implemented.
 		@see @ref tag(), @ref features()
 	*/
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	template<class T> struct TypeTraits {
+		enum : unsigned int {
+			/**
+			 * Tag-specific index. Implementation-defined, is unique among all tags
+			 * on given platform.
+			 */
+			Index
+		};
+
+		/**
+		 * @brief Tag name
+		 *
+		 * Returns a string representation of the tag, such as @cpp "Avx2" @ce
+		 * for @ref Avx2.
+		 */
+		static const char* name();
+	};
+#else
 	template<class> struct TypeTraits;
+#endif
 
 	namespace Implementation
 	{
@@ -331,17 +351,21 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct ScalarT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit ScalarT(Implementation::InitT) {}
+#endif
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// Scalar code is when nothing else is available, thus no bits set
 	template<> struct TypeTraits<ScalarT> {
 		enum: unsigned int { Index = 0 };
 		static const char* name() { return "Scalar"; }
 	};
+#endif
 
-#if defined(DEATH_TARGET_X86)
+#if defined(DEATH_TARGET_X86) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief SSE2 tag type
 
@@ -350,8 +374,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse2T : ScalarT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse2T(Implementation::InitT) : ScalarT{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -362,8 +388,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse3T : Sse2T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse3T(Implementation::InitT) : Sse2T{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -374,8 +402,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Ssse3T : Sse3T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Ssse3T(Implementation::InitT) : Sse3T{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -386,8 +416,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse41T : Ssse3T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse41T(Implementation::InitT) : Ssse3T{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -398,8 +430,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Sse42T : Sse41T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Sse42T(Implementation::InitT) : Sse41T{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -410,8 +444,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct PopcntT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit PopcntT(Implementation::InitT) {}
+#endif
 	};
 
 	/**
@@ -422,8 +458,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct LzcntT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit LzcntT(Implementation::InitT) {}
+#endif
 	};
 
 	/**
@@ -434,8 +472,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Bmi1T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Bmi1T(Implementation::InitT) {}
+#endif
 	};
 
 	/**
@@ -445,8 +485,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Bmi2T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Bmi2T(Implementation::InitT) {}
+#endif
 	};
 
 	/**
@@ -457,8 +499,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct AvxT: Sse42T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit AvxT(Implementation::InitT) : Sse42T{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -469,8 +513,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct AvxF16cT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit AvxF16cT(Implementation::InitT) {}
+#endif
 	};
 
 	/**
@@ -481,8 +527,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct AvxFmaT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit AvxFmaT(Implementation::InitT) {}
+#endif
 	};
 
 	/**
@@ -493,8 +541,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Avx2T : AvxT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Avx2T(Implementation::InitT) : AvxT{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -505,10 +555,13 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Avx512fT : Avx2T {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Avx512fT(Implementation::InitT) : Avx2T{Implementation::Init} {}
+#endif
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// Features earlier in the hierarchy should have lower bits set
 	template<> struct TypeTraits<Sse2T> {
 		enum: unsigned int { Index = 1 << 0 };
@@ -569,8 +622,9 @@ namespace Death { namespace Cpu {
 		static const char* name() { return "AvxFma"; }
 	};
 #endif
+#endif
 
-#if defined(DEATH_TARGET_ARM)
+#if defined(DEATH_TARGET_ARM) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief NEON tag type
 
@@ -579,8 +633,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct NeonT : ScalarT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit NeonT(Implementation::InitT) : ScalarT{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -591,8 +647,10 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct NeonFmaT : NeonT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit NeonFmaT(Implementation::InitT) : NeonT{Implementation::Init} {}
+#endif
 	};
 
 	/**
@@ -603,10 +661,13 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct NeonFp16T : NeonFmaT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit NeonFp16T(Implementation::InitT) : NeonFmaT{Implementation::Init} {}
+#endif
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<> struct TypeTraits<NeonT> {
 		enum: unsigned int { Index = 1 << 0 };
 		static const char* name() { return "Neon"; }
@@ -620,8 +681,9 @@ namespace Death { namespace Cpu {
 		static const char* name() { return "NeonFp16"; }
 	};
 #endif
+#endif
 
-#if defined(DEATH_TARGET_WASM)
+#if defined(DEATH_TARGET_WASM) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief SIMD128 tag type
 
@@ -630,14 +692,18 @@ namespace Death { namespace Cpu {
 		@see @ref tag(), @ref features()
 	*/
 	struct Simd128T: ScalarT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Explicit constructor to avoid ambiguous calls when using {}
 		constexpr explicit Simd128T(Implementation::InitT): ScalarT{Implementation::Init} { }
+#endif
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<> struct TypeTraits<Simd128T> {
 		enum: unsigned int { Index = 1 << 0 };
 		static const char* name() { return "Simd128"; }
 	};
+#endif
 #endif
 
 	/**
@@ -650,7 +716,7 @@ namespace Death { namespace Cpu {
 	*/
 	constexpr ScalarT Scalar { Implementation::Init };
 
-#if defined(DEATH_TARGET_X86)
+#if defined(DEATH_TARGET_X86) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief SSE2 tag
 
@@ -816,7 +882,7 @@ namespace Death { namespace Cpu {
 	constexpr Avx512fT Avx512f { Implementation::Init };
 #endif
 
-#if defined(DEATH_TARGET_ARM)
+#if defined(DEATH_TARGET_ARM) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief NEON tag type
 
@@ -848,7 +914,7 @@ namespace Death { namespace Cpu {
 	constexpr NeonFp16T NeonFp16 { Implementation::Init };
 #endif
 
-#if defined(DEATH_TARGET_WASM)
+#if defined(DEATH_TARGET_WASM) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief SIMD128 tag type
 
@@ -1228,8 +1294,10 @@ namespace Death { namespace Cpu {
 				"Extra tag out of expected bounds");
 		}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// The compile-time Tags<> is an implementation detail, don't show that in the docs
 		template<unsigned int value> constexpr /*implicit*/ Features(Implementation::Tags<value>) noexcept : _data{value} {}
+#endif
 
 		/** @brief Equality comparison */
 		constexpr bool operator==(Features other) const {
@@ -1685,6 +1753,7 @@ namespace Death { namespace Cpu {
 		}
 #endif
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #if defined(DEATH_TARGET_X86)
 	#define __DEATH_CPU_DISPATCHER_IMPLEMENTATION(function, extra)				\
 		if(features >= (Death::Cpu::Avx512f extra))								\
@@ -1749,6 +1818,7 @@ namespace Death { namespace Cpu {
 		decltype(function(DEATH_CPU_SELECT(Death::Cpu::Scalar))) function(Death::Cpu::Features features) {	\
 			return function ## Internal(features, Death::Cpu::Implementation::Tags<0>{Death::Cpu::Implementation::Init}, __VA_ARGS__);	\
 		}
+#endif
 
 	/**
 		@brief Create a function for a runtime dispatch on a base CPU instruction set and select extra instruction sets
@@ -1768,8 +1838,12 @@ namespace Death { namespace Cpu {
 		For a dispatch using just the base instruction set use
 		@ref DEATH_CPU_DISPATCHER_BASE() instead.
 	*/
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	#define __DEATH_CPU_DISPATCHER(function, ...)
+#else
 	#define __DEATH_CPU_DISPATCHER(...)										\
 		DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHER0, )(__VA_ARGS__))
+#endif
 
 	/**
 		@brief Create a runtime-dispatched function pointer
@@ -1810,7 +1884,7 @@ namespace Death { namespace Cpu {
 		See @ref Cpu-usage-automatic-cached-dispatch for more information, usage
 		example and overhead comparison.
 	*/
-#if defined(DEATH_CPU_USE_IFUNC)
+#if defined(DEATH_CPU_USE_IFUNC) || defined(DOXYGEN_GENERATING_OUTPUT)
 // On ARM we get CPU features through getauxval() but it can't be called from an ifunc resolver because it's too early at that point.
 // Instead, AT_HWCAPS is passed to it from outside, so there we call an internal variant with the caps parameter. On x86 calling into CPUID
 // from within an ifunc resolver is no problem.
@@ -1876,7 +1950,7 @@ namespace Death { namespace Cpu {
 #endif
 #endif
 
-#if defined(DEATH_TARGET_X86)
+#if defined(DEATH_TARGET_X86) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief Enable SSE2 for given function
 
@@ -1904,7 +1978,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Sse2}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_SSE2)
+#if defined(DEATH_TARGET_SSE2) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_SSE2
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_SSE2
@@ -1945,7 +2019,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Sse3}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_SSE3)
+#if defined(DEATH_TARGET_SSE3) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_SSE3
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_SSE3
@@ -1987,7 +2061,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Ssse3}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_SSSE3)
+#if defined(DEATH_TARGET_SSSE3) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_SSSE3
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_SSSE3
@@ -2030,7 +2104,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Sse41}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_SSE41)
+#if defined(DEATH_TARGET_SSE41) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_SSE41
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_SSE41
@@ -2072,7 +2146,7 @@ namespace Death { namespace Cpu {
 
 	@see @relativeref{Death,Cpu::Sse42}, @ref DEATH_ENABLE()
 */
-#if defined(DEATH_TARGET_SSE42)
+#if defined(DEATH_TARGET_SSE42) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_SSE42
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_SSE42
@@ -2117,7 +2191,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Popcnt}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_POPCNT)
+#if defined(DEATH_TARGET_POPCNT) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_POPCNT
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_POPCNT
@@ -2164,7 +2238,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Lzcnt}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_LZCNT)
+#if defined(DEATH_TARGET_LZCNT) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_LZCNT
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_LZCNT
@@ -2215,7 +2289,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Bmi1}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_BMI1)
+#if defined(DEATH_TARGET_BMI1) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_BMI1
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_BMI1
@@ -2266,7 +2340,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Bmi2}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_BMI2)
+#if defined(DEATH_TARGET_BMI2) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_BMI2
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_BMI2
@@ -2313,7 +2387,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Avx}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_AVX)
+#if defined(DEATH_TARGET_AVX) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_AVX
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX
@@ -2365,7 +2439,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::AvxF16c}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_AVX_F16C)
+#if defined(DEATH_TARGET_AVX_F16C) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_AVX_F16C
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX_F16C
@@ -2417,7 +2491,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::AvxFma}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_AVX_FMA)
+#if defined(DEATH_TARGET_AVX_FMA) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_AVX_FMA
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX_FMA
@@ -2466,7 +2540,7 @@ namespace Death { namespace Cpu {
 
 		@see @relativeref{Death,Cpu::Avx2}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_AVX2)
+#if defined(DEATH_TARGET_AVX2) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_AVX2
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX2
@@ -2508,7 +2582,7 @@ namespace Death { namespace Cpu {
 		more information and usage example.
 		@see @relativeref{Death,Cpu::Avx512f}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_AVX512F)
+#if defined(DEATH_TARGET_AVX512F) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_AVX512F
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX512F
@@ -2528,7 +2602,7 @@ namespace Death { namespace Cpu {
 #endif
 #endif
 
-#if defined(DEATH_TARGET_ARM)
+#if defined(DEATH_TARGET_ARM) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief Enable NEON for given function
 
@@ -2551,7 +2625,7 @@ namespace Death { namespace Cpu {
 		for more information and usage example.
 		@see @relativeref{Death,Cpu::Neon}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_NEON)
+#if defined(DEATH_TARGET_NEON) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_NEON
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_NEON
@@ -2590,7 +2664,7 @@ namespace Death { namespace Cpu {
 		See @ref Cpu-usage-target-attributes for more information and usage example.
 		@see @relativeref{Death,Cpu::NeonFma}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_NEON_FMA)
+#if defined(DEATH_TARGET_NEON_FMA) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_NEON_FMA
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_NEON_FMA
@@ -2626,7 +2700,7 @@ namespace Death { namespace Cpu {
 		for more information and usage example.
 		@see @relativeref{Death,Cpu::NeonFp16}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_NEON_FP16)
+#if defined(DEATH_TARGET_NEON_FP16) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_NEON_FP16
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_NEON_FP16
@@ -2642,7 +2716,7 @@ namespace Death { namespace Cpu {
 #endif
 #endif
 
-#if defined(DEATH_TARGET_WASM)
+#if defined(DEATH_TARGET_WASM) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 		@brief Enable SIMD128 for given function
 
@@ -2662,7 +2736,7 @@ namespace Death { namespace Cpu {
 		See @ref Cpu-usage-target-attributes for more information and usage example.
 		@see @relativeref{Death,Cpu::Simd128}, @ref DEATH_ENABLE()
 	*/
-#if defined(DEATH_TARGET_SIMD128)
+#if defined(DEATH_TARGET_SIMD128) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_SIMD128
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_SIMD128
@@ -2670,6 +2744,7 @@ namespace Death { namespace Cpu {
 #endif
 #endif
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 // GCC before version 12 and Clang before version 8 treat DEATH_ENABLE_ macros after each other. Clang since version 8 then treats
 // that as if only "foo" was specified, which is different but also wrong (I didn't bother finding a commit backing this) and it's
 // still broken in Clang 15. Instead, the only accepted form is __attribute__((target("foo,bar"))). Fortunately, string literal
@@ -2797,6 +2872,7 @@ namespace Death { namespace Cpu {
 	__DEATH_PASTE(DEATH_ENABLE_, v5)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v6)										\
 	__DEATH_PASTE(DEATH_ENABLE_, v7)
+#endif
 #endif
 
 	/**

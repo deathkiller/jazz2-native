@@ -64,9 +64,14 @@ namespace Death { namespace Containers {
 		 * Creates an empty @cpp nullptr @ce view. Copy a non-empty @ref Array
 		 * or @ref ArrayView onto the instance to make it useful.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
+#else
+		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
+#endif
 
 		/**
 		 * @brief Construct a view on an array with explicit size
@@ -84,8 +89,11 @@ namespace Death { namespace Containers {
 		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
 		* Expects that both types have the same size.
 		*/
-		template<class U, std::size_t size, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ ArrayView(U(&data)[size]) noexcept : _data{data}, _size{size} {
+		template<class U, std::size_t size
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type
+#endif
+		> constexpr /*implicit*/ ArrayView(U(&data)[size]) noexcept : _data{data}, _size{size} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
@@ -95,8 +103,11 @@ namespace Death { namespace Containers {
 		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
 		* Expects that both types have the same size.
 		*/
-		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ ArrayView(ArrayView<U> view) noexcept : _data{view}, _size{view.size()} {
+		template<class U
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type
+#endif
+		> constexpr /*implicit*/ ArrayView(ArrayView<U> view) noexcept : _data{view}, _size{view.size()} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
@@ -106,8 +117,11 @@ namespace Death { namespace Containers {
 		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
 		* Expects that both types have the same size.
 		*/
-		template<std::size_t size, class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ ArrayView(StaticArrayView<size, U> view) noexcept : _data{view}, _size{size} {
+		template<std::size_t size, class U
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type
+#endif
+		> constexpr /*implicit*/ ArrayView(StaticArrayView<size, U> view) noexcept : _data{view}, _size{size} {
 			static_assert(sizeof(U) == sizeof(T), "Type sizes are not compatible");
 		}
 
@@ -165,7 +179,11 @@ namespace Death { namespace Containers {
 		 *
 		 * Expects that @p i is less than @ref size().
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr T& operator[](std::size_t i) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr T& operator[](U i) const;
+#endif
 
 		/**
 		 * @brief View slice
@@ -181,9 +199,13 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @cpp data.slice(begin, begin + size) @ce.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr ArrayView<T> sliceSize(T* begin, std::size_t size) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
 			return slice(begin, begin + size);
 		}
+#endif
 		/** @overload */
 		constexpr ArrayView<T> sliceSize(std::size_t begin, std::size_t size) const {
 			return slice(begin, begin + size);
@@ -195,7 +217,11 @@ namespace Death { namespace Containers {
 		 * Both @p begin and @cpp begin + size_ @ce are expected to be in
 		 * range.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<std::size_t size_> constexpr StaticArrayView<size_, T> slice(T* begin) const;
+#else
 		template<std::size_t size_, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size_, T> slice(U begin) const;
+#endif
 		/** @overload */
 		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(std::size_t begin) const;
 
@@ -222,9 +248,13 @@ namespace Death { namespace Containers {
 		 * Equivalent to @cpp data.slice(data.begin(), end) @ce. If @p end is
 		 * @cpp nullptr @ce, returns zero-sized @cpp nullptr @ce array.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr ArrayView<T> prefix(T* end) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> prefix(U end) const {
 			return static_cast<T*>(end) ? slice(_data, end) : nullptr;
 		}
+#endif
 
 		/**
 		 * @brief View suffix after a pointer
@@ -308,9 +338,14 @@ namespace Death { namespace Containers {
 		 * Creates an empty @cpp nullptr @ce view. Copy a non-empty @ref Array
 		 * or @ref ArrayView onto the instance to make it useful.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
+#else
+		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
+#endif
 
 		/**
 		 * @brief Construct a view on a type-erased array with explicit length
@@ -335,17 +370,23 @@ namespace Death { namespace Containers {
 		 * Size in bytes is calculated automatically.
 		 */
 		template<class T, std::size_t size
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			, class = typename std::enable_if<!std::is_const<T>::value>::type
+#endif
 		> constexpr /*implicit*/ ArrayView(T(&data)[size]) noexcept : _data(data), _size(size * sizeof(T)) {}
 
 		/** @brief Construct a void view on any @ref ArrayView */
 		template<class T
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			, class = typename std::enable_if<!std::is_const<T>::value>::type
+#endif
 		> constexpr /*implicit*/ ArrayView(ArrayView<T> array) noexcept : _data(array), _size(array.size() * sizeof(T)) {}
 
 		/** @brief Construct a void view on any @ref StaticArrayView */
 		template<std::size_t size, class T
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			, class = typename std::enable_if<!std::is_const<T>::value>::type
+#endif
 		> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
 		/** @brief Construct a view on an external type / from an external representation */
@@ -394,9 +435,14 @@ namespace Death { namespace Containers {
 		 * Creates an empty @cpp nullptr @ce view. Copy a non-empty @ref Array
 		 * or @ref ArrayView onto the instance to make it useful.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
+#else
+		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
+#endif
 
 		/**
 		 * @brief Construct a view on a type-erased array array with explicit length
@@ -604,9 +650,14 @@ namespace Death { namespace Containers {
 		 * Creates a @cpp nullptr @ce view. Copy a non-empty @ref StaticArray
 		 * or @ref StaticArrayView onto the instance to make it useful.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr /*implicit*/ StaticArrayView(std::nullptr_t = nullptr) noexcept;
+#else
+		// To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t
 		template<class U, class = U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ StaticArrayView(U) noexcept : _data{} {}
 
 		constexpr /*implicit*/ StaticArrayView() noexcept : _data{} {}
+#endif
 
 		/**
 		* @brief Construct a static view on an array
@@ -617,7 +668,11 @@ namespace Death { namespace Containers {
 		* or fixed-size slicing from an @ref ArrayView / @ref Array for more
 		* safety.
 		*/
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr explicit StaticArrayView(T* data)
+#else
 		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && !std::is_same<U, T(&)[size_]>::value>::type> constexpr explicit StaticArrayView(U data)
+#endif
 			noexcept : _data(data) {}
 
 		/**
@@ -627,7 +682,11 @@ namespace Death { namespace Containers {
 		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
 		* Expects that both types have the same size.
 		*/
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<class U>
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
+#endif
 		constexpr /*implicit*/ StaticArrayView(U(&data)[size_]) noexcept : _data{data} {}
 
 		/**
@@ -636,7 +695,11 @@ namespace Death { namespace Containers {
 		 * Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
 		 * Expects that both types have the same size.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<class U>
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
+#endif
 		constexpr /*implicit*/ StaticArrayView(StaticArrayView<size_, U> view) noexcept : _data{view} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
@@ -696,12 +759,15 @@ namespace Death { namespace Containers {
 
 		/**
 		 * @brief Element access
-		 * @m_since_latest
 		 *
 		 * Expects that @p i is less than @ref size().
 		 * @see @ref front(), @ref back()
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr T& operator[](std::size_t i) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr T& operator[](U i) const;
+#endif
 
 		/** @copydoc ArrayView::slice(T*, T*) const */
 		constexpr ArrayView<T> slice(T* begin, T* end) const {
@@ -713,18 +779,26 @@ namespace Death { namespace Containers {
 		}
 
 		/** @copydoc ArrayView::sliceSize(T*, std::size_t) const */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr ArrayView<T> sliceSize(T* begin, std::size_t size) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
 			return ArrayView<T>(*this).sliceSize(begin, size);
 		}
+#endif
 		/** @overload */
 		constexpr ArrayView<T> sliceSize(std::size_t begin, std::size_t size) const {
 			return ArrayView<T>(*this).sliceSize(begin, size);
 		}
 
 		/** @copydoc ArrayView::slice(T*) const */
-		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(T* begin) const {
-			return ArrayView<T>(*this).template slice<viewSize>(begin);
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<std::size_t size__> constexpr StaticArrayView<size__, T> slice(T* begin) const;
+#else
+		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size__, T> slice(U begin) const {
+			return ArrayView<T>(*this).template slice<size__>(begin);
 		}
+#endif
 		/** @overload */
 		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(std::size_t begin) const {
 			return ArrayView<T>(*this).template slice<viewSize>(begin);
@@ -749,9 +823,13 @@ namespace Death { namespace Containers {
 		}
 
 		/** @copydoc ArrayView::prefix(T*) const */
-		constexpr ArrayView<T> prefix(T* end) const {
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr ArrayView<T> prefix(T* end) const;
+#else
+		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> prefix(U end) const {
 			return ArrayView<T>(*this).prefix(end);
 		}
+#endif
 
 		/** @copydoc ArrayView::suffix(T*) const */
 		constexpr ArrayView<T> suffix(T* begin) const {

@@ -96,7 +96,12 @@ namespace Death { namespace Containers {
 
 		The array has a non-changeable size by default and growing functionality is opt-in.
 	*/
-	template<class T, class D> class Array
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	template<class T, class D = void(*)(T*, std::size_t)>
+#else
+	template<class T, class D>
+#endif
+	class Array
 	{
 	public:
 		/** @brief Element type */
@@ -116,9 +121,14 @@ namespace Death { namespace Containers {
 		 * Creates a zero-sized array. Move an @ref Array with a nonzero size
 		 * onto the instance to make it useful.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		/*implicit*/ Array(std::nullptr_t = nullptr) noexcept;
+#else
+		// To avoid ambiguity either when calling Array{0} or in certain cases of passing 0 to overloads that take either an Array or std::size_t
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> /*implicit*/ Array(U) noexcept : _data{nullptr}, _size{0}, _deleter{} {}
 
 		/*implicit*/ Array() noexcept : _data(nullptr), _size(0), _deleter{} {}
+#endif
 
 		/**
 		 * @brief Construct a default-initialized array
@@ -291,7 +301,6 @@ namespace Death { namespace Containers {
 
 		/**
 		 * @brief Whether the array is empty
-		 * @m_since_latest
 		 *
 		 * @see @ref size()
 		 */
@@ -333,10 +342,20 @@ namespace Death { namespace Containers {
 		T& back();
 		const T& back() const;							/**< @overload */
 
-		// Has to be done this way because otherwise it causes ambiguity with a builtin operator[] for pointers if an int
-		// or ssize_t is used due to the implicit pointer conversion. Sigh.
+		/**
+		 * @brief Element access
+		 *
+		 * Expects that @p i is less than @ref size().
+		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		T& operator[](std::size_t i);
+		/** @overload */
+		const T& operator[](std::size_t i) const;
+#else
+		// Has to be done this way because otherwise it causes ambiguity with a builtin operator[] for pointers if an int or ssize_t is used due to the implicit pointer conversion
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> T& operator[](U i);
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> const T& operator[](U i) const;
+#endif
 
 		/**
 		 * @brief View on a slice
@@ -361,18 +380,25 @@ namespace Death { namespace Containers {
 
 		/**
 		 * @brief View on a slice of given size
-		 * @m_since_latest
 		 *
 		 * Equivalent to @ref ArrayView::sliceSize(T*, std::size_t) const and
 		 * overloads.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		ArrayView<T> sliceSize(T* begin, std::size_t size);
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<T> sliceSize(U begin, std::size_t size) {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
 		}
+#endif
 		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		ArrayView<const T> sliceSize(const T* begin, std::size_t size) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
 			return ArrayView<const T>{*this}.sliceSize(begin, size);
 		}
+#endif
 		/** @overload */
 		ArrayView<T> sliceSize(std::size_t begin, std::size_t size) {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
@@ -387,13 +413,21 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @ref ArrayView::slice(T*) const and overloads.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<std::size_t size_> StaticArrayView<size_, T> slice(T* begin);
+#else
 		template<std::size_t size_, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> StaticArrayView<size_, T> slice(U begin) {
 			return ArrayView<T>(*this).template slice<size_>(begin);
 		}
+#endif
 		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<std::size_t size_> StaticArrayView<size_, const T> slice(const T* begin) const;
+#else
 		template<std::size_t size_, class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> StaticArrayView<size_, const T> slice(U begin) const {
 			return ArrayView<const T>(*this).template slice<size_>(begin);
 		}
+#endif
 		/** @overload */
 		template<std::size_t size_> StaticArrayView<size_, T> slice(std::size_t begin) {
 			return ArrayView<T>(*this).template slice<size_>(begin);
@@ -421,15 +455,23 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @ref ArrayView::prefix(T*) const.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		ArrayView<T> prefix(T* end);
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type>
 		ArrayView<T> prefix(U end) {
 			return ArrayView<T>(*this).prefix(end);
 		}
+#endif
 		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		ArrayView<const T> prefix(const T* end) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type>
 		ArrayView<const T> prefix(U end) const {
 			return ArrayView<const T>(*this).prefix(end);
 		}
+#endif
 		
 		/**
 		 * @brief View on a suffix after a pointer

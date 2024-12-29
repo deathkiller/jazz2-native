@@ -266,9 +266,13 @@ namespace Death { namespace Containers {
 		 *
 		 * Alias to @ref StaticArray(InPlaceInitT, Args&&... args).
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<class ...Args> constexpr /*implicit*/ StaticArray(Args&&... args);
+#else
 		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<First>(first), std::forward<Next>(next)...} {
 			static_assert(sizeof...(next) + 1 == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
+#endif
 
 		/**
 		 * @brief In-place construct an array by copying the elements from a fixed-size array
@@ -372,8 +376,15 @@ namespace Death { namespace Containers {
 		 *
 		 * Expects that @p i is less than @ref size().
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		T& operator[](std::size_t i);
+		/** @overload */
+		constexpr const T& operator[](std::size_t i) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> T& operator[](U i);
+		/** @overload */
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr const T& operator[](U i) const;
+#endif
 
 		/**
 		 * @brief View on a slice
@@ -403,13 +414,21 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref StaticArrayView::sliceSize(T*, std::size_t) const
 		 * and overloads.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		ArrayView<T> sliceSize(T* begin, std::size_t size);
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<T> sliceSize(U begin, std::size_t size) {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
 		}
+#endif
 		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr ArrayView<const T> sliceSize(const T* begin, std::size_t size) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
 			return ArrayView<const T>{*this}.sliceSize(begin, size);
 		}
+#endif
 		/** @overload */
 		ArrayView<T> sliceSize(std::size_t begin, std::size_t size) {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
@@ -424,13 +443,21 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @ref StaticArrayView::slice(T*) const and overloads.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<std::size_t size__> StaticArrayView<size__, T> slice(T* begin);
+#else
 		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> StaticArrayView<size__, T> slice(U begin) {
 			return ArrayView<T>(*this).template slice<size__>(begin);
 		}
+#endif
 		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		template<std::size_t size__> constexpr StaticArrayView<size__, const T> slice(const T* begin) const;
+#else
 		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size__, const T> slice(U begin) const {
 			return ArrayView<const T>(*this).template slice<size__>(begin);
 		}
+#endif
 		/** @overload */
 		template<std::size_t size__> StaticArrayView<size__, T> slice(std::size_t begin) {
 			return ArrayView<T>(*this).template slice<size__>(begin);
@@ -471,13 +498,21 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @ref StaticArrayView::prefix(T*) const.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		ArrayView<T> prefix(T* end);
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<T> prefix(U end) {
 			return ArrayView<T>(*this).prefix(end);
 		}
+#endif
 		/** @overload */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr ArrayView<const T> prefix(const T* end) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<const T> prefix(U end) const {
 			return ArrayView<const T>(*this).prefix(end);
 		}
+#endif
 
 		/**
 		 * @brief View on a suffix after a pointer

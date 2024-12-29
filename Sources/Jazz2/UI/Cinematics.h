@@ -16,7 +16,6 @@
 #include <IO/Compression/DeflateStream.h>
 
 using namespace Death::IO;
-using namespace Death::IO::Compression;
 
 namespace Jazz2::UI
 {
@@ -95,7 +94,7 @@ namespace Jazz2::UI
 		std::unique_ptr<std::uint32_t[]> _currentFrame;
 		std::uint32_t _palette[256];
 		MemoryStream _compressedStreams[4];
-		DeflateStream _decompressedStreams[4];
+		Compression::DeflateStream _decompressedStreams[4];
 
 		BitArray _pressedKeys;
 		std::uint32_t _pressedActions;
