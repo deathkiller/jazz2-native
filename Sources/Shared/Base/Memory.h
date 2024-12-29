@@ -90,7 +90,6 @@ namespace Death {
 
 		/**
 			@brief Allocate aligned memory and leave it uninitialized
-			@m_since_latest
 
 			Compared to @ref allocateAligned(std::size_t), the memory is left in an
 			unitialized state. For trivial types is equivalent to

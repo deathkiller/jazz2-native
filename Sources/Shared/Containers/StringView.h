@@ -78,15 +78,19 @@ namespace Death { namespace Containers {
 	template<class T> class BasicStringView
 	{
 	public:
-		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a StringView or std::size_t */
-		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ BasicStringView(U) noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
-
 		/**
 		 * @brief Default constructor
 		 *
 		 * A default-constructed instance has @ref StringViewFlags::Global set.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr /*implicit*/ BasicStringView(std::nullptr_t = nullptr) noexcept;
+#else
+		// To avoid ambiguity in certain cases of passing 0 to overloads that take either a StringView or std::size_t
+		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ BasicStringView(U) noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
+
 		constexpr /*implicit*/ BasicStringView() noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
+#endif
 
 		/**
 		 * @brief Construct from a C string of known size
@@ -139,6 +143,9 @@ namespace Death { namespace Containers {
 		 * The resulting view has the same size as @p data, by default no
 		 * null-termination is assumed.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		/*implicit*/ BasicStringView(ArrayView<T> data, StringViewFlags flags = {}) noexcept;
+#else
 		/* This has to accept any type and then delegate to a private constructor instead of directly taking ArrayView<T>, due to how
 		   overload resolution works in copy initialization as opposed to a direct constructor/function call. If it would take ArrayView<T>
 		   directly, `Array<char> -> ArrayView<const char> -> StringView` wouldn't work because it's one custom conversion sequence more than
@@ -148,6 +155,7 @@ namespace Death { namespace Containers {
 		   overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
 		   because it'd get preferred over the implicit copy constructor. */
 		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value && !std::is_same<typename std::decay<U&&>::type, std::nullptr_t>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = {}) noexcept : BasicStringView{flags, ArrayView<T>(data)} {}
+#endif
 
 		/** @brief Construct a @ref StringView from a @ref MutableStringView */
 		template<class U, class = typename std::enable_if<std::is_same<const U, T>::value>::type> constexpr /*implicit*/ BasicStringView(BasicStringView<U> mutable_) noexcept : _data{mutable_._data}, _sizePlusFlags{mutable_._sizePlusFlags} {}
@@ -168,7 +176,11 @@ namespace Death { namespace Containers {
 		 * The @ref BasicStringView(std::nullptr_t) overload (which is a
 		 * default constructor) is additionally @cpp constexpr @ce.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		/*implicit*/ BasicStringView(T* data, StringViewFlags extraFlags = {}) noexcept;
+#else
 		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && std::is_convertible<const U&, T*>::value>::type> /*implicit*/ BasicStringView(U data, StringViewFlags extraFlags = {}) noexcept : BasicStringView{data, extraFlags, nullptr} {}
+#endif
 
 		/**
 		 * @brief Construct a view on an external type / from an external representation
@@ -275,9 +287,13 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @cpp data.slice(begin, begin + size) @ce.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr BasicStringView<T> sliceSize(T* begin, std::size_t size) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr BasicStringView<T> sliceSize(U begin, std::size_t size) const {
 			return slice(begin, begin + size);
 		}
+#endif
 
 		/** @overload */
 		constexpr BasicStringView<T> sliceSize(std::size_t begin, std::size_t size) const {
@@ -290,9 +306,13 @@ namespace Death { namespace Containers {
 		 * Equivalent to @cpp string.slice(string.begin(), end) @ce. If @p end
 		 * is @cpp nullptr @ce, returns zero-sized @cpp nullptr @ce view.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		constexpr BasicStringView<T> prefix(T* end) const;
+#else
 		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr BasicStringView<T> prefix(U end) const {
 			return static_cast<T*>(end) ? slice(_data, end) : BasicStringView<T>{};
 		}
+#endif
 
 		/**
 		 * @brief View suffix after a pointer
@@ -475,7 +495,11 @@ namespace Death { namespace Containers {
 		 * versa, you have to always use a string literal to call this
 		 * function.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		BasicStringView<T> exceptPrefix(char prefix) const = delete;
+#else
 		template<class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> BasicStringView<T> exceptPrefix(T&& prefix) const = delete;
+#endif
 
 		/**
 		 * @brief View with given suffix stripped

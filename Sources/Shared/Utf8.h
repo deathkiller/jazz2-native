@@ -52,7 +52,7 @@ namespace Death { namespace Utf8 {
 	*/
 	std::size_t FromCodePoint(char32_t character, Containers::StaticArrayView<4, char> result);
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 	/**
 		@brief Widen a UTF-8 string to UTF-16 for use with Windows Unicode APIs

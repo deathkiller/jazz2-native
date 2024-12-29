@@ -39,8 +39,10 @@ namespace Death { namespace Containers {
 		disallows allocating stateful function data on heap.
 	*/
 	struct NoAllocateInitT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct Init {};
 		constexpr explicit NoAllocateInitT(Init) {}
+#endif
 	};
 
 	/**
@@ -335,9 +337,11 @@ namespace Death { namespace Containers {
 		 * trivially copyable, it's stored inline, otherwise allocated on heap.
 		 */
 		template<class F
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			// Enabling this only for functors and lambdas convertible to function pointers,
 			// regular function pointers should go through the R(*)(Args...) overload above.
 			, typename std::enable_if<std::is_convertible<typename std::decay<F>::type, R(*)(Args...)>::value || Implementation::IsFunctor<typename std::decay<F>::type, R(Args...)>::value, int>::type = 0
+#endif
 		> /*implicit*/ Function(F&& f) noexcept(sizeof(typename std::decay<F>::type) <= sizeof(Storage) &&
 			std::is_trivially_copyable<typename std::decay<F>::type>::value
 		) : Function{nullptr, std::forward<F>(f)} {}
@@ -353,9 +357,11 @@ namespace Death { namespace Containers {
 		 * function pointers, as they never need to be allocated on heap.
 		 */
 		template<class F
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			// Enabling this only for functors that aren't convertible to function pointers,
 			// everything else never allocates so using this overload makes no sense
 			, typename std::enable_if<Implementation::IsFunctor<typename std::decay<F>::type, R(Args...)>::value, int>::type = 0
+#endif
 		> explicit Function(NoAllocateInitT, F&& f) noexcept;
 
 		/**
