@@ -28,16 +28,19 @@ namespace Jazz2::UI
 
 	DEFINE_ENUM_OPERATORS(NavigationFlags);
 
+	/** @brief Mapping target */
 	struct MappingTarget
 	{
 		std::uint32_t Data;
 	};
 
+	/** @brief Control mapping for a particular action */
 	struct ControlSchemeMapping
 	{
 		SmallVector<MappingTarget, 3> Targets;
 	};
 
+	/** @brief Result returned by @ref ControlScheme::FetchProcessedInput() */
 	struct ProcessedInput
 	{
 		std::uint64_t PressedActions;

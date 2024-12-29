@@ -8,7 +8,7 @@ namespace Jazz2
 {
 	class RumbleProcessor;
 
-	/** @brief Describes a rumble effect */
+	/** @brief Describes a gamepad rumble effect */
 	class RumbleDescription
 	{
 		friend class RumbleProcessor;
