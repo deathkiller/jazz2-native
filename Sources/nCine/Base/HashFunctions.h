@@ -61,6 +61,7 @@ namespace nCine
 		}
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// Shift-Add-XOR hash function
 	/*!
 	 * \note Specialized version of the function for C-style strings
@@ -98,6 +99,7 @@ namespace nCine
 			return hash;
 		}
 	};
+#endif
 
 	/// Jenkins hash function
 	/*!
@@ -124,6 +126,7 @@ namespace nCine
 		}
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// Jenkins hash function
 	/*!
 	 * \note Specialized version of the function for C-style strings
@@ -177,6 +180,7 @@ namespace nCine
 			return hash;
 		}
 	};
+#endif
 
 	/// Fowler-Noll-Vo Hash (FNV-1a)
 	/*!
@@ -206,6 +210,7 @@ namespace nCine
 		}
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/*!
 	 * \note Specialized version of the function for C-style strings
 	 *
@@ -274,6 +279,7 @@ namespace nCine
 			return FNV1aHashFunc<F>()(pair.first()) ^ FNV1aHashFunc<S>()(pair.second());
 		}
 	};
+#endif
 
 	uint64_t fasthash64(const void* buf, size_t len, uint64_t seed);
 	uint32_t fasthash32(const void* buf, size_t len, uint32_t seed);
@@ -298,6 +304,7 @@ namespace nCine
 		static const uint64_t Seed = 0x01000193811C9DC5;
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// fast-hash
 	/*!
 	 * \note Specialized version of the function for C-style strings
@@ -335,6 +342,7 @@ namespace nCine
 	private:
 		static const uint32_t Seed = 0x811C9DC5;
 	};
+#endif
 
 	/// CityHash
 	std::uint64_t CityHash64(const char* s, std::size_t len);
@@ -355,6 +363,7 @@ namespace nCine
 		}
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<>
 	class CityHash32Func<String>
 	{
@@ -374,6 +383,7 @@ namespace nCine
 			return CityHash32Func<F>()(pair.first()) ^ CityHash32Func<S>()(pair.second());
 		}
 	};
+#endif
 
 	template<class K>
 	class CityHash64Func
@@ -385,6 +395,7 @@ namespace nCine
 		}
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<>
 	class CityHash64Func<String>
 	{
@@ -404,4 +415,5 @@ namespace nCine
 			return CityHash64Func<F>()(pair.first()) ^ CityHash64Func<S>()(pair.second());
 		}
 	};
+#endif
 }

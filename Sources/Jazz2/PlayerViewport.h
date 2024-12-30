@@ -6,6 +6,7 @@ namespace Jazz2
 {
 	class PlayerViewport;
 
+	/** @brief Processes all lights in a scene into an intermediate target */
 	class LightingRenderer : public SceneNode
 	{
 	public:
@@ -27,6 +28,7 @@ namespace Jazz2
 		RenderCommand* RentRenderCommand();
 	};
 
+	/** @brief Applies blur to a scene */
 	class BlurRenderPass : public SceneNode
 	{
 	public:
@@ -57,6 +59,7 @@ namespace Jazz2
 		Vector2f _direction;
 	};
 
+	/** @brief Combines all previous passes of a scene into a resulting image */
 	class CombineRenderer : public SceneNode
 	{
 	public:

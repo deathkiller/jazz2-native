@@ -178,7 +178,7 @@ namespace Jazz2::UI::Menu
 #if defined(DEATH_TARGET_ANDROID)
 		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
 			IRootController::Flags flags = mainMenu->_root->GetFlags();
-			canGrantPermission = AndroidJniHelper::SdkVersion() >= 30 && (flags & IRootController::Flags::HasExternalStoragePermission) != IRootController::Flags::HasExternalStoragePermission;
+			canGrantPermission = Backends::AndroidJniHelper::SdkVersion() >= 30 && (flags & IRootController::Flags::HasExternalStoragePermission) != IRootController::Flags::HasExternalStoragePermission;
 			permissionGranted = (flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume;
 		}
 #endif
@@ -359,7 +359,7 @@ namespace Jazz2::UI::Menu
 				else {
 #	if defined(DEATH_TARGET_ANDROID)
 					// Show `ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION` intent on Android
-					AndroidJniWrap_Activity::requestExternalStoragePermission();
+					Backends::AndroidJniWrap_Activity::requestExternalStoragePermission();
 #	else
 					// `_sourcePath` contains adjusted path for display purposes
 					auto& resolver = ContentResolver::Get();
