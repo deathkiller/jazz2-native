@@ -22,7 +22,7 @@ void androidHandleCommand(struct android_app* state, std::int32_t cmd)
 /// Parses the next input event
 std::int32_t androidHandleInput(struct android_app* state, AInputEvent* event)
 {
-	return static_cast<std::int32_t>(nCine::AndroidInputManager::parseEvent(event));
+	return static_cast<std::int32_t>(AndroidInputManager::parseEvent(event));
 }
 
 namespace nCine
