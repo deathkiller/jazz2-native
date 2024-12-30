@@ -25,6 +25,7 @@ namespace nCine
 {
 	class IFile;
 
+	/// Module audio reader using `libopenmpt` library
 	class AudioReaderMpt : public IAudioReader
 	{
 	public:

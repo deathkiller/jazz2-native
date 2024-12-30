@@ -33,6 +33,7 @@ namespace nCine
 
 namespace nCine::Backends
 {
+	/// The UWP graphics device (ANGLE/Mesa)
 	class UwpGfxDevice : public IGfxDevice
 	{
 		friend class UwpApplication;

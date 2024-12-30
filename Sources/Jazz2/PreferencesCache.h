@@ -67,6 +67,7 @@ namespace Jazz2
 
 #	pragma pack(push, 1)
 
+	/** @brief Continuation state between two episodes */
 	// These structures are aligned manually, because they are serialized and it should work cross-platform
 	struct EpisodeContinuationState {
 		EpisodeContinuationFlags Flags;
@@ -81,6 +82,7 @@ namespace Jazz2
 		std::uint8_t WeaponUpgrades[(std::int32_t)WeaponType::Count];
 	};
 
+	/** @brief Continuation state between two levels in episode */
 	struct EpisodeContinuationStateWithLevel {
 		EpisodeContinuationState State;
 		String LevelName;

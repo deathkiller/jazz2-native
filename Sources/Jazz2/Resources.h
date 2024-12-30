@@ -29,6 +29,7 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(GenericGraphicResourceFlags);
 
+	/** @brief Shared graphic resource */
 	struct GenericGraphicResource
 	{
 		GenericGraphicResourceFlags Flags;
@@ -46,6 +47,7 @@ namespace Jazz2
 		GenericGraphicResource() noexcept;
 	};
 
+	/** @brief Specific graphic resource */
 	struct GraphicResource
 	{
 		GenericGraphicResource* Base;
@@ -69,6 +71,7 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(GenericSoundResourceFlags);
 
+	/** @brief Shared sound resource */
 	struct GenericSoundResource
 	{
 		AudioBuffer Buffer;
@@ -77,6 +80,7 @@ namespace Jazz2
 		GenericSoundResource(std::unique_ptr<Stream> stream, const StringView filename) noexcept;
 	};
 
+	/** @brief Specific sound resource */
 	struct SoundResource
 	{
 		SmallVector<GenericSoundResource*, 1> Buffers;

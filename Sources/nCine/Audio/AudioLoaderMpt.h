@@ -8,6 +8,7 @@
 
 namespace nCine
 {
+	/// Module audio loader using `libopenmpt` library
 	class AudioLoaderMpt : public IAudioLoader
 	{
 	public:

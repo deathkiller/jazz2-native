@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Namespace @ref Death::Environment
+*/
+
 #include "CommonWindows.h"
 
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
