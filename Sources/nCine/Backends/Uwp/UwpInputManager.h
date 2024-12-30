@@ -18,6 +18,7 @@ namespace winrtWUC = winrt::Windows::UI::Core;
 
 namespace nCine::Backends
 {
+	/// Information about UWP mouse state
 	class UwpMouseState : public MouseState
 	{
 	public:
@@ -48,6 +49,7 @@ namespace nCine::Backends
 		}
 	};
 
+	/// Information about UWP keyboard state
 	class UwpKeyboardState : public KeyboardState
 	{
 		friend class UwpInputManager;
@@ -65,6 +67,7 @@ namespace nCine::Backends
 		bool _pressedKeys[(int)Keys::Count];
 	};
 
+	/// Information about UWP joystick state
 	class UwpJoystickState : public JoystickState
 	{
 	public:
@@ -100,7 +103,7 @@ namespace nCine::Backends
 		float axesValuesState_[MaxNumAxes];
 	};
 
-	/// The class for parsing and dispatching UWP input events
+	/// The class for dispatching UWP input events
 	class UwpInputManager : public IInputManager
 	{
 		friend class UwpJoystickState;

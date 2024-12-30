@@ -353,6 +353,7 @@ namespace nCine
 
 	std::uint32_t CityHash32(const char* s, std::size_t len);
 
+	/// CityHash hash function (32-bit)
 	template<class K>
 	class CityHash32Func
 	{
@@ -385,6 +386,7 @@ namespace nCine
 	};
 #endif
 
+	/// CityHash hash function (64-bit)
 	template<class K>
 	class CityHash64Func
 	{

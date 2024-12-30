@@ -8,6 +8,7 @@
 
 namespace nCine
 {
+	/// QOI texture loader
 	class TextureLoaderQoi : public ITextureLoader
 	{
 	public:

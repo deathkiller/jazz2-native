@@ -85,7 +85,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #endif
 
 // Assertions
-#if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE)
+#if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE) && !defined(DOXYGEN_GENERATING_OUTPUT)
 #	define __DEATH_ASSERT_BASE(fmt, ...) DEATH_TRACE(TraceLevel::Assert, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #	define __DEATH_ASSERT_TRACE(...) DEATH_HELPER_EXPAND(__DEATH_ASSERT_BASE(__VA_ARGS__))
 #endif

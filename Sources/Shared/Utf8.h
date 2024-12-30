@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Namespace @ref Death::Utf8
+*/
+
 #include "CommonBase.h"
 #include "Containers/Array.h"
 #include "Containers/String.h"

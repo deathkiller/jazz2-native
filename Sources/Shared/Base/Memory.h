@@ -13,7 +13,7 @@ namespace Death {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Memory-related helper functions
+		@brief Memory-related utilities
 	*/
 	class Memory
 	{
