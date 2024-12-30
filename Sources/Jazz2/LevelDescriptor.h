@@ -23,6 +23,7 @@ namespace Jazz2
 		class TileMap;
 	}
 
+	/** @brief Contains all components to fully initialize a level instance */
 	struct LevelDescriptor
 	{
 		String FullPath;

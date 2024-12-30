@@ -14,6 +14,7 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
+	/** @brief Initialization parameters for formatted text block */
 	struct FormattedTextBlockParams
 	{
 		StringView Text;
@@ -25,6 +26,7 @@ namespace Jazz2::UI
 		float LineSpacing = 1.0f;
 	};
 
+	/** @brief Formatted text block */
 	class FormattedTextBlock
 	{
 	public:

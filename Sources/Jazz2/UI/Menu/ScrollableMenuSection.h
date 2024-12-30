@@ -9,6 +9,7 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief Simplifies creation of unified scrollable menu sections */
 	template<class TItem>
 	class ScrollableMenuSection : public MenuSection
 	{

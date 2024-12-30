@@ -109,6 +109,7 @@ namespace Jazz2
 		GraphicResource* FindAnimation(AnimState state) noexcept;
 	};
 	
+	/** @brief Episode */
 	struct Episode
 	{
 		String Name;
@@ -123,6 +124,7 @@ namespace Jazz2
 		Episode() noexcept;
 	};
 
+	/** @brief Font type */
 	enum class FontType
 	{
 		Small,
@@ -131,6 +133,7 @@ namespace Jazz2
 		Count
 	};
 
+	/** @brief Precompiled shader */
 	enum class PrecompiledShader
 	{
 		Lighting,

@@ -8,6 +8,7 @@
 
 namespace Jazz2::UI
 {
+	/** @brief Handler that only shows the loading indicator */
 	class LoadingHandler : public IStateHandler
 	{
 	public:

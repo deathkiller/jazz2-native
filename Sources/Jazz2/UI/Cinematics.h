@@ -19,6 +19,7 @@ using namespace Death::IO;
 
 namespace Jazz2::UI
 {
+	/** @brief Handler that plays a cinematic video */
 	class Cinematics : public IStateHandler
 	{
 	public:

@@ -10,6 +10,7 @@ namespace nCine
 {
 	class BitArray;
 
+	/** @brief Index in a bit array */
 	class BitArrayIndex
 	{
 	public:
@@ -22,6 +23,7 @@ namespace nCine
 		std::size_t _bit;
 	};
 
+	/** @brief Bit array */
 	class BitArray
 	{
 	public:
