@@ -8,6 +8,11 @@
 
 using namespace Death::Containers;
 
+namespace nCine
+{
+	class AndroidApplication;
+}
+
 namespace nCine::Backends
 {
 	/// The class for setting up JNI and initialize requests classes
