@@ -18,7 +18,7 @@ namespace nCine::Backends
 	/// The class for setting up JNI and initialize requests classes
 	class AndroidJniHelper
 	{
-		friend class AndroidApplication;
+		friend class nCine::AndroidApplication;
 
 	public:
 		inline static unsigned int SdkVersion() { return sdkVersion_; }
