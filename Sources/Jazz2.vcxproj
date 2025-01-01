@@ -317,6 +317,10 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.h" />
+    <ClInclude Include="Jazz2\Rendering\BlurRenderPass.h" />
+    <ClInclude Include="Jazz2\Rendering\CombineRenderer.h" />
+    <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
+    <ClInclude Include="Jazz2\Rendering\PlayerViewport.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -452,7 +456,6 @@
     <ClInclude Include="Jazz2\PitType.h" />
     <ClInclude Include="Jazz2\PlayerActions.h" />
     <ClInclude Include="Jazz2\PlayerType.h" />
-    <ClInclude Include="Jazz2\PlayerViewport.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
     <ClInclude Include="Jazz2\RumbleDescription.h" />
@@ -848,8 +851,11 @@
     <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
-    <ClCompile Include="Jazz2\PlayerViewport.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
+    <ClCompile Include="Jazz2\Rendering\BlurRenderPass.cpp" />
+    <ClCompile Include="Jazz2\Rendering\CombineRenderer.cpp" />
+    <ClCompile Include="Jazz2\Rendering\LightingRenderer.cpp" />
+    <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
     <ClCompile Include="Jazz2\RumbleProcessor.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />

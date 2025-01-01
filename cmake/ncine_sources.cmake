@@ -111,7 +111,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Main.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/PlayerViewport.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Resources.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/RumbleProcessor.cpp
@@ -237,6 +236,10 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/BlurRenderPass.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp

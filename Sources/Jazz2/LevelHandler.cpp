@@ -1,6 +1,6 @@
 ﻿#include "LevelHandler.h"
-#include "PlayerViewport.h"
 #include "PreferencesCache.h"
+#include "Rendering/PlayerViewport.h"
 #include "UI/DiscordRpcClient.h"
 #include "UI/HUD.h"
 #include "UI/InGameConsole.h"
@@ -52,18 +52,18 @@ namespace Jazz2
 		DEATH_RUNTIME_OBJECT(AudioBufferPlayer);
 
 	public:
-		explicit AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer, ArrayView<std::unique_ptr<PlayerViewport>> viewports);
+		explicit AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer, ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports);
 
 		Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D) override;
 
 		void updatePosition();
-		void updateViewports(ArrayView<std::unique_ptr<PlayerViewport>> viewports);
+		void updateViewports(ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports);
 
 	private:
-		ArrayView<std::unique_ptr<PlayerViewport>> _viewports;
+		ArrayView<std::unique_ptr<Rendering::PlayerViewport>> _viewports;
 	};
 
-	AudioBufferPlayerForSplitscreen::AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer, ArrayView<std::unique_ptr<PlayerViewport>> viewports)
+	AudioBufferPlayerForSplitscreen::AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer, ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports)
 		: AudioBufferPlayer(audioBuffer), _viewports(viewports)
 	{
 	}
@@ -99,7 +99,7 @@ namespace Jazz2
 		setPositionInternal(getAdjustedPosition(device, position_, false, false));
 	}
 
-	void AudioBufferPlayerForSplitscreen::updateViewports(ArrayView<std::unique_ptr<PlayerViewport>> viewports)
+	void AudioBufferPlayerForSplitscreen::updateViewports(ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports)
 	{
 		_viewports = viewports;
 	}
@@ -666,7 +666,7 @@ namespace Jazz2
 		bool useHalfRes = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3);
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
-			PlayerViewport& viewport = *_assignedViewports[i];
+			Rendering::PlayerViewport& viewport = *_assignedViewports[i];
 			Recti bounds = GetPlayerViewportBounds(w, h, (std::int32_t)i);
 			if (viewport.Initialize(_rootNode.get(), _upscalePass.GetNode(), bounds, useHalfRes)) {
 				InitializeCamera(viewport);
@@ -677,7 +677,7 @@ namespace Jazz2
 		_upscalePass.Register();
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
-			PlayerViewport& viewport = *_assignedViewports[i];
+			Rendering::PlayerViewport& viewport = *_assignedViewports[i];
 			viewport.Register();			
 
 			if (_pauseMenu != nullptr) {
@@ -1742,7 +1742,7 @@ namespace Jazz2
 
 	void LevelHandler::AssignViewport(Actors::Player* player)
 	{
-		_assignedViewports.emplace_back(std::make_unique<PlayerViewport>(this, player));
+		_assignedViewports.emplace_back(std::make_unique<Rendering::PlayerViewport>(this, player));
 
 #if defined(WITH_AUDIO)
 		for (auto& current : _playingSounds) {
@@ -1753,7 +1753,7 @@ namespace Jazz2
 #endif
 	}
 
-	void LevelHandler::InitializeCamera(PlayerViewport& viewport)
+	void LevelHandler::InitializeCamera(Rendering::PlayerViewport& viewport)
 	{
 		if (viewport._targetPlayer == nullptr) {
 			return;
@@ -1807,7 +1807,7 @@ namespace Jazz2
 			}
 			_viewBoundsTarget = bounds;
 		} else {
-			PlayerViewport* currentViewport = nullptr;
+			Rendering::PlayerViewport* currentViewport = nullptr;
 			float maxViewWidth = 0.0f;
 			for (auto& viewport : _assignedViewports) {
 				auto size = viewport->GetViewportSize();

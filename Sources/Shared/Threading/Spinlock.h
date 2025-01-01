@@ -6,7 +6,7 @@ namespace Death { namespace Threading {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Provides lightweight spinlock implementation
+		@brief Lightweight spinlock implementation
 	*/
 	class Spinlock
 	{

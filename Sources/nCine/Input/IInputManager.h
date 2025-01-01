@@ -1,6 +1,7 @@
 #pragma once
 
 #include "InputEvents.h"
+#include "../Primitives/Vector2.h"
 
 #include <Containers/StringView.h>
 
@@ -10,8 +11,6 @@ namespace nCine
 {
 	class IInputEventHandler;
 	class JoyMapping;
-	template <class T> class Vector2;
-	using Vector2f = Vector2<float>;
 
 	enum class JoystickGuidType {
 		Unknown,

@@ -191,7 +191,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/LightEmitter.h
 	${NCINE_SOURCE_DIR}/Jazz2/PitType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerActions.h
-	${NCINE_SOURCE_DIR}/Jazz2/PlayerViewport.h
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.h
 	${NCINE_SOURCE_DIR}/Jazz2/Resources.h
@@ -327,6 +326,10 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Version.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/BlurRenderPass.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h

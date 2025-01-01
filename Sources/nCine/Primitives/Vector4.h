@@ -6,32 +6,36 @@
 
 #include <cmath>
 
+#include <Containers/Tags.h>
+
 namespace nCine
 {
-	/// A four component vector based on templates
+	/// Four-component vector
 	template<class T>
 	class Vector4
 	{
 	public:
 		T X, Y, Z, W;
 
-		Vector4() noexcept
-			: X(0), Y(0), Z(0), W(0) {}
-		explicit Vector4(T s) noexcept
+		constexpr Vector4() noexcept
+			: X{T(0)}, Y{T(0)}, Z{T(0)}, W{T(0)} {}
+		explicit Vector4(Death::Containers::NoInitT) noexcept
+			{}
+		explicit constexpr Vector4(T s) noexcept
 			: X(s), Y(s), Z(s), W(s) {}
-		Vector4(T x, T y, T z, T w) noexcept
+		constexpr Vector4(T x, T y, T z, T w) noexcept
 			: X(x), Y(y), Z(z), W(w) {}
-		Vector4(const Vector2<T>& other, T z, T w) noexcept
+		constexpr Vector4(const Vector2<T>& other, T z, T w) noexcept
 			: X(other.X), Y(other.Y), Z(z), W(w) {}
-		Vector4(Vector2<T>&& other, T z, T w) noexcept
+		constexpr Vector4(Vector2<T>&& other, T z, T w) noexcept
 			: X(other.X), Y(other.Y), Z(z), W(w) {}
-		Vector4(const Vector3<T>& other, T w) noexcept
+		constexpr Vector4(const Vector3<T>& other, T w) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(w) {}
-		Vector4(Vector3<T>&& other, T w) noexcept
+		constexpr Vector4(Vector3<T>&& other, T w) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(w) {}
-		Vector4(const Vector4& other) noexcept
+		constexpr Vector4(const Vector4& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
-		Vector4(Vector4&& other) noexcept
+		constexpr Vector4(Vector4&& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
 		Vector4& operator=(const Vector4& other) noexcept;
 		Vector4& operator=(Vector4&& other) noexcept;
@@ -41,8 +45,8 @@ namespace nCine
 		T* Data();
 		const T* Data() const;
 
-		T& operator[](unsigned int index);
-		const T& operator[](unsigned int index) const;
+		T& operator[](std::size_t index);
+		const T& operator[](std::size_t index) const;
 
 		bool operator==(const Vector4& v) const;
 		bool operator!=(const Vector4& v) const;
@@ -146,14 +150,14 @@ namespace nCine
 	}
 
 	template<class T>
-	inline T& Vector4<T>::operator[](unsigned int index)
+	inline T& Vector4<T>::operator[](std::size_t index)
 	{
 		ASSERT(index < 4);
 		return (&X)[index];
 	}
 
 	template<class T>
-	inline const T& Vector4<T>::operator[](unsigned int index) const
+	inline const T& Vector4<T>::operator[](std::size_t index) const
 	{
 		ASSERT(index < 4);
 		return (&X)[index];

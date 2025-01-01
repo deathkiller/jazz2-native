@@ -4,9 +4,11 @@
 
 #include <algorithm>
 
+#include <Containers/Tags.h>
+
 namespace nCine
 {
-	/// A template-based Axis-Aligned Bounding Box in a two dimensional space
+	/// Axis-Aligned Bounding Box in a two dimensional space
 	template<class S>
 	class AABB
 	{
@@ -20,24 +22,27 @@ namespace nCine
 		/// Bottom-right Y coordinate as a public property
 		S B;
 
-		AABB()
-			: L(0), T(0), R(0), B(0) { }
+		constexpr AABB() noexcept
+			: L(S(0)), T(S(0)), R(S(0)), B(S(0)) {}
 
-		AABB(S l, S t, S r, S b)
-			: L(l), T(t), R(r), B(b) { }
+		explicit AABB(Death::Containers::NoInitT) noexcept
+			{}
 
-		AABB(const Vector2<S>& min, const Vector2<S>& max)
-			: L(std::min(min.X, max.X)), T(std::min(min.Y, max.Y)), R(std::max(min.X, max.X)), B(std::max(min.Y, max.Y)) { }
+		constexpr AABB(S l, S t, S r, S b) noexcept
+			: L(l), T(t), R(r), B(b) {}
+
+		constexpr AABB(const Vector2<S>& min, const Vector2<S>& max) noexcept
+			: L(std::min(min.X, max.X)), T(std::min(min.Y, max.Y)), R(std::max(min.X, max.X)), B(std::max(min.Y, max.Y)) {}
 
 		template<class U>
-		AABB<U> As() {
+		constexpr AABB<U> As() {
 			return AABB<S>(static_cast<U>(L), static_cast<U>(T), static_cast<U>(R), static_cast<U>(B));
 		}
 
-		S GetWidth() const {
+		constexpr S GetWidth() const {
 			return R - L;
 		}
-		S GetHeight() const {
+		constexpr S GetHeight() const {
 			return B - T;
 		}
 

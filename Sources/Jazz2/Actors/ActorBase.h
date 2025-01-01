@@ -30,6 +30,10 @@ namespace Jazz2
 {
 	class ILevelHandler;
 	class LevelHandler;
+}
+
+namespace Jazz2::Rendering
+{
 	class LightingRenderer;
 }
 
@@ -147,7 +151,7 @@ namespace Jazz2::Actors
 		DEATH_RUNTIME_OBJECT();
 
 		friend class Jazz2::LevelHandler;
-		friend class Jazz2::LightingRenderer;
+		friend class Jazz2::Rendering::LightingRenderer;
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MultiLevelHandler;
 #endif
