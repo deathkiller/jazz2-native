@@ -238,6 +238,12 @@
     <Filter Include="Header Files\Shared\IO\Compression">
       <UniqueIdentifier>{fbd151b2-7efb-45b9-a98b-582cf95d2a3b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Rendering">
+      <UniqueIdentifier>{f91f3d2c-18d4-4f04-acf1-f649b1cc0406}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Rendering">
+      <UniqueIdentifier>{9fd51680-3a83-42c4-94aa-b0cd99d88bce}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1488,9 +1494,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\StackAlloc.h">
       <Filter>Header Files\Shared\Base</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\PlayerViewport.h">
-      <Filter>Header Files\Jazz2</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\WarpFlags.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
@@ -1553,6 +1556,18 @@
     </ClInclude>
     <ClInclude Include="TermLogo.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Rendering\CombineRenderer.h">
+      <Filter>Header Files\Jazz2\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Rendering\LightingRenderer.h">
+      <Filter>Header Files\Jazz2\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Rendering\PlayerViewport.h">
+      <Filter>Header Files\Jazz2\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Rendering\BlurRenderPass.h">
+      <Filter>Header Files\Jazz2\Rendering</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2516,9 +2531,6 @@
     <ClCompile Include="Jazz2\UI\FormattedTextBlock.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\PlayerViewport.cpp">
-      <Filter>Source Files\Jazz2</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\RumbleProcessor.cpp">
       <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
@@ -2548,6 +2560,18 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\InGameConsole.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Rendering\BlurRenderPass.cpp">
+      <Filter>Source Files\Jazz2\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Rendering\CombineRenderer.cpp">
+      <Filter>Source Files\Jazz2\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Rendering\LightingRenderer.cpp">
+      <Filter>Source Files\Jazz2\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp">
+      <Filter>Source Files\Jazz2\Rendering</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -26,11 +26,6 @@
 
 namespace Jazz2
 {
-	class LightingRenderer;
-	class BlurRenderPass;
-	class CombineRenderer;
-	class PlayerViewport;
-
 	namespace Actors
 	{
 		class Player;
@@ -39,6 +34,14 @@ namespace Jazz2
 	namespace Actors::Bosses
 	{
 		class BossBase;
+	}
+
+	namespace Rendering
+	{
+		class LightingRenderer;
+		class BlurRenderPass;
+		class CombineRenderer;
+		class PlayerViewport;
 	}
 
 #if defined(WITH_ANGELSCRIPT)
@@ -64,10 +67,10 @@ namespace Jazz2
 	{
 		DEATH_RUNTIME_OBJECT(ILevelHandler);
 
-		friend class LightingRenderer;
-		friend class BlurRenderPass;
-		friend class CombineRenderer;
-		friend class PlayerViewport;
+		friend class Rendering::LightingRenderer;
+		friend class Rendering::BlurRenderPass;
+		friend class Rendering::CombineRenderer;
+		friend class Rendering::PlayerViewport;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
@@ -189,7 +192,7 @@ namespace Jazz2
 
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Texture> _noiseTexture;
-		SmallVector<std::unique_ptr<PlayerViewport>, 0> _assignedViewports;
+		SmallVector<std::unique_ptr<Rendering::PlayerViewport>, 0> _assignedViewports;
 
 #if defined(WITH_ANGELSCRIPT)
 		std::unique_ptr<Scripting::LevelScriptLoader> _scripts;
@@ -255,7 +258,7 @@ namespace Jazz2
 		void ProcessWeather(float timeMult);
 		void ResolveCollisions(float timeMult);
 		void AssignViewport(Actors::Player* player);
-		void InitializeCamera(PlayerViewport& viewport);
+		void InitializeCamera(Rendering::PlayerViewport& viewport);
 		void UpdatePressedActions();
 		void UpdateRichPresence();
 		void InitializeRumbleEffects();

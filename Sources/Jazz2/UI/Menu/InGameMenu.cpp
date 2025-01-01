@@ -3,8 +3,8 @@
 #include "PauseSection.h"
 #include "../ControlScheme.h"
 #include "../../LevelHandler.h"
-#include "../../PlayerViewport.h"
 #include "../../PreferencesCache.h"
+#include "../../Rendering/PlayerViewport.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"

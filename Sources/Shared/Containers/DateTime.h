@@ -22,7 +22,7 @@ namespace Death { namespace Containers {
 	class TimeSpan;
 
 	/**
-		@brief Represents an instant in time, typically expressed as a date and time of day
+		@brief Instant in time, typically expressed as a date and time of day
 	*/
 	class DateTime
 	{
@@ -282,7 +282,7 @@ namespace Death { namespace Containers {
 	};
 
 	/**
-		@brief Represents a time interval
+		@brief Time interval
 	*/
 	class TimeSpan
 	{

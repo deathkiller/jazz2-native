@@ -5,7 +5,7 @@
 #include "Font.h"
 #include "RgbLights.h"
 #include "../ILevelHandler.h"
-#include "../PlayerViewport.h"
+#include "../Rendering/PlayerViewport.h"
 #include "../Actors/Player.h"
 
 #include "../../nCine/Input/InputEvents.h"
@@ -157,7 +157,7 @@ namespace Jazz2::UI
 		TouchButtonInfo CreateTouchButton(PlayerActions action, AnimState state, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
 
-		void UpdateRgbLights(float timeMult, PlayerViewport* viewport);
+		void UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport);
 		static Color ApplyRgbGradientAlpha(Color color, std::int32_t x, std::int32_t y, float animProgress, float ambientLight);
 		static AuraLight KeyToAuraLight(Keys key);
 	};

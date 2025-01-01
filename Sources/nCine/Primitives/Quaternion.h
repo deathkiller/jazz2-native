@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// A quaternion class based on templates
+	/// Quaternion
 	template<class T>
 	class Quaternion
 	{
@@ -13,7 +13,7 @@ namespace nCine
 		T X, Y, Z, W;
 
 		Quaternion()
-			: X(0), Y(0), Z(0), W(1) {}
+			: X(T(0)), Y(T(0)), Z(T(0)), W(T(1)) {}
 		Quaternion(T x, T y, T z, T w)
 			: X(x), Y(y), Z(z), W(w) {}
 		explicit Quaternion(const Vector4<T>& v)
@@ -27,8 +27,8 @@ namespace nCine
 		T* Data();
 		const T* Data() const;
 
-		T& operator[](unsigned int index);
-		const T& operator[](unsigned int index) const;
+		T& operator[](std::size_t index);
+		const T& operator[](std::size_t index) const;
 
 		bool operator==(const Quaternion& q) const;
 		bool operator!=(const Quaternion& q) const;
@@ -103,14 +103,14 @@ namespace nCine
 	}
 
 	template<class T>
-	inline T& Quaternion<T>::operator[](unsigned int index)
+	inline T& Quaternion<T>::operator[](std::size_t index)
 	{
 		ASSERT(index < 4);
 		return (&X)[index];
 	}
 
 	template<class T>
-	inline const T& Quaternion<T>::operator[](unsigned int index) const
+	inline const T& Quaternion<T>::operator[](std::size_t index) const
 	{
 		ASSERT(index < 4);
 		return (&X)[index];

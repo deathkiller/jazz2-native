@@ -29,7 +29,7 @@ enum class TraceLevel {
 	Fatal
 };
 
-/** @brief This functions needs to be provided by the target application to enable logging */
+/** @brief This function needs to be provided by the target application to enable tracing, or @relativeref{Death,ITraceSink} can be used instead */
 void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)

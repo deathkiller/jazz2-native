@@ -4,9 +4,11 @@
 
 #include <algorithm>
 
+#include <Containers/Tags.h>
+
 namespace nCine
 {
-	/// A template-based rectangle in a two dimensional space
+	/// Rectangle in a two dimensional space
 	template<class T>
 	class Rect
 	{
@@ -21,14 +23,16 @@ namespace nCine
 		T H;
 
 		/// Default constructor, all zeros
-		Rect()
-			: X(0), Y(0), W(0), H(0) { }
+		constexpr Rect() noexcept
+			: X(T(0)), Y(T(0)), W(T(0)), H(T(0)) {}
+		explicit Rect(Death::Containers::NoInitT) noexcept
+			{}
 		/// Constructs a rectangle from top-left point and size
-		Rect(T x, T y, T w, T h)
-			: X(x), Y(y), W(w), H(h) { }
+		constexpr Rect(T x, T y, T w, T h) noexcept
+			: X(x), Y(y), W(w), H(h) {}
 		/// Constructs a rectangle from top-left point and size as two `Vector2`
-		Rect(const Vector2<T>& point, const Vector2<T>& size)
-			: X(point.X), Y(point.Y), W(size.X), H(size.Y) { }
+		constexpr Rect(const Vector2<T>& point, const Vector2<T>& size) noexcept
+			: X(point.X), Y(point.Y), W(size.X), H(size.Y) {}
 
 		/// Creates a rectangle from center and size
 		static Rect FromCenterSize(T xx, T yy, T ww, T hh);

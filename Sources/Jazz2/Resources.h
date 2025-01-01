@@ -47,7 +47,7 @@ namespace Jazz2
 		GenericGraphicResource() noexcept;
 	};
 
-	/** @brief Specific graphic resource */
+	/** @brief Specific graphic resource (from metadata) */
 	struct GraphicResource
 	{
 		GenericGraphicResource* Base;
@@ -80,7 +80,7 @@ namespace Jazz2
 		GenericSoundResource(std::unique_ptr<Stream> stream, const StringView filename) noexcept;
 	};
 
-	/** @brief Specific sound resource */
+	/** @brief Specific sound resource (from metadata) */
 	struct SoundResource
 	{
 		SmallVector<GenericSoundResource*, 1> Buffers;

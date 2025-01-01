@@ -8,13 +8,13 @@
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	template<typename T> struct StringConcatenable;
-
-	template<typename T>
-	using StringConcatenableEx = StringConcatenable<std::remove_cv_t<std::remove_reference_t<T>>>;
-
 	namespace Implementation
 	{
+		template<typename T> struct StringConcatenable;
+
+		template<typename T>
+		using StringConcatenableEx = StringConcatenable<std::remove_cv_t<std::remove_reference_t<T>>>;
+
 		template<typename A, typename B> struct ConvertToTypeHelper
 		{ typedef A ConvertTo; };
 		template<typename T> struct ConvertToTypeHelper<T, String>
@@ -35,8 +35,8 @@ namespace Death { namespace Containers {
 	template<typename A, typename B>
 	class StringBuilder : public StringBuilderBase<StringBuilder<A, B>,
 		typename Implementation::ConvertToTypeHelper<
-		typename StringConcatenableEx<A>::ConvertTo,
-		typename StringConcatenableEx<B>::ConvertTo
+		typename Implementation::StringConcatenableEx<A>::ConvertTo,
+		typename Implementation::StringConcatenableEx<B>::ConvertTo
 		>::ConvertTo
 	>
 	{
@@ -48,7 +48,7 @@ namespace Death { namespace Containers {
 		~StringBuilder() = default;
 
 	private:
-		typedef StringConcatenable<StringBuilder<A, B>> Concatenable;
+		typedef Implementation::StringConcatenable<StringBuilder<A, B>> Concatenable;
 
 		template<typename T>
 		T convertTo() const
@@ -79,148 +79,149 @@ namespace Death { namespace Containers {
 		StringBuilder& operator=(const StringBuilder&) = delete;
 	};
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	template<>
-	struct StringConcatenable<char>
+	namespace Implementation
 	{
-		typedef char type;
-		typedef String ConvertTo;
+		template<>
+		struct StringConcatenable<char>
+		{
+			typedef char type;
+			typedef String ConvertTo;
 
-		static std::size_t size(const char) {
-			return 1;
-		}
-		static inline void appendTo(const char c, char*& out) {
-			*out++ = c;
-		}
-	};
-
-	template<>
-	struct StringConcatenable<String>
-	{
-		typedef String type;
-		typedef String ConvertTo;
-
-		static std::size_t size(const String& a) {
-			return a.size();
-		}
-		static inline void appendTo(const String& a, char*& out) {
-			const std::size_t n = a.size();
-			if (n != 0) {
-				std::memcpy(out, a.data(), n);
+			static std::size_t size(const char) {
+				return 1;
 			}
-			out += n;
-		}
-	};
-
-	template<>
-	struct StringConcatenable<StringView>
-	{
-		typedef StringView type;
-		typedef String ConvertTo;
-
-		static std::size_t size(StringView a) {
-			return a.size();
-		}
-		static inline void appendTo(StringView a, char*& out) {
-			const std::size_t n = a.size();
-			if (n != 0) {
-				std::memcpy(out, a.data(), n);
+			static inline void appendTo(const char c, char*& out) {
+				*out++ = c;
 			}
-			out += n;
-		}
-	};
+		};
 
-	template<>
-	struct StringConcatenable<MutableStringView> : StringConcatenable<StringView>
-	{
-		typedef MutableStringView type;
-	};
+		template<>
+		struct StringConcatenable<String>
+		{
+			typedef String type;
+			typedef String ConvertTo;
 
-	template<std::size_t N>
-	struct StringConcatenable<const char[N]>
-	{
-		typedef const char type[N];
-		typedef String ConvertTo;
-
-		static std::size_t size(const char a[N]) {
-			return strnlen(a, N);
-		}
-		static inline void appendTo(const char a[N], char*& out) {
-			while (*a != '\0') {
-				*out++ = *a++;
+			static std::size_t size(const String& a) {
+				return a.size();
 			}
-		}
-	};
-
-	template<std::size_t N>
-	struct StringConcatenable<char[N]> : StringConcatenable<const char[N]>
-	{
-		typedef char type[N];
-	};
-
-	template<>
-	struct StringConcatenable<const char*>
-	{
-		typedef const char* type;
-		typedef String ConvertTo;
-
-		static std::size_t size(const char* a) {
-			return std::strlen(a);
-		}
-		static inline void appendTo(const char* a, char*& out) {
-			while (*a != '\0') {
-				*out++ = *a++;
+			static inline void appendTo(const String& a, char*& out) {
+				const std::size_t n = a.size();
+				if (n != 0) {
+					std::memcpy(out, a.data(), n);
+				}
+				out += n;
 			}
-		}
-	};
+		};
 
-	template<>
-	struct StringConcatenable<char*> : StringConcatenable<const char*>
-	{
-		typedef char* type;
-	};
+		template<>
+		struct StringConcatenable<StringView>
+		{
+			typedef StringView type;
+			typedef String ConvertTo;
 
-	template<>
-	struct StringConcatenable<ArrayView<const char>>
-	{
-		typedef ArrayView<const char> type;
-		typedef String ConvertTo;
-
-		static std::size_t size(const ArrayView<const char>& a) {
-			return a.size();
-		}
-		static inline void appendTo(const ArrayView<const char>& a, char*& out) {
-			const char* d = a.data();
-			const char* const end = a.end();
-			while (d != end) {
-				*out++ = *d++;
+			static std::size_t size(StringView a) {
+				return a.size();
 			}
-		}
-	};
+			static inline void appendTo(StringView a, char*& out) {
+				const std::size_t n = a.size();
+				if (n != 0) {
+					std::memcpy(out, a.data(), n);
+				}
+				out += n;
+			}
+		};
 
-	template<typename A, typename B>
-	struct StringConcatenable<StringBuilder<A, B>>
-	{
-		typedef StringBuilder<A, B> type;
-		using ConvertTo = typename Implementation::ConvertToTypeHelper<
-			typename StringConcatenableEx<A>::ConvertTo,
-			typename StringConcatenableEx<B>::ConvertTo
-		>::ConvertTo;
+		template<>
+		struct StringConcatenable<MutableStringView> : StringConcatenable<StringView>
+		{
+			typedef MutableStringView type;
+		};
 
-		static std::size_t size(const type& c) {
-			return StringConcatenableEx<A>::size(c.a) + StringConcatenableEx<B>::size(c.b);
-		}
+		template<std::size_t N>
+		struct StringConcatenable<const char[N]>
+		{
+			typedef const char type[N];
+			typedef String ConvertTo;
 
-		template<typename T>
-		static inline void appendTo(const type& c, T*& out) {
-			StringConcatenableEx<A>::appendTo(c.a, out);
-			StringConcatenableEx<B>::appendTo(c.b, out);
-		}
-	};
-#endif
+			static std::size_t size(const char a[N]) {
+				return strnlen(a, N);
+			}
+			static inline void appendTo(const char a[N], char*& out) {
+				while (*a != '\0') {
+					*out++ = *a++;
+				}
+			}
+		};
+
+		template<std::size_t N>
+		struct StringConcatenable<char[N]> : StringConcatenable<const char[N]>
+		{
+			typedef char type[N];
+		};
+
+		template<>
+		struct StringConcatenable<const char*>
+		{
+			typedef const char* type;
+			typedef String ConvertTo;
+
+			static std::size_t size(const char* a) {
+				return std::strlen(a);
+			}
+			static inline void appendTo(const char* a, char*& out) {
+				while (*a != '\0') {
+					*out++ = *a++;
+				}
+			}
+		};
+
+		template<>
+		struct StringConcatenable<char*> : StringConcatenable<const char*>
+		{
+			typedef char* type;
+		};
+
+		template<>
+		struct StringConcatenable<ArrayView<const char>>
+		{
+			typedef ArrayView<const char> type;
+			typedef String ConvertTo;
+
+			static std::size_t size(const ArrayView<const char>& a) {
+				return a.size();
+			}
+			static inline void appendTo(const ArrayView<const char>& a, char*& out) {
+				const char* d = a.data();
+				const char* const end = a.end();
+				while (d != end) {
+					*out++ = *d++;
+				}
+			}
+		};
+
+		template<typename A, typename B>
+		struct StringConcatenable<StringBuilder<A, B>>
+		{
+			typedef StringBuilder<A, B> type;
+			using ConvertTo = typename Implementation::ConvertToTypeHelper<
+				typename StringConcatenableEx<A>::ConvertTo,
+				typename StringConcatenableEx<B>::ConvertTo
+			>::ConvertTo;
+
+			static std::size_t size(const type& c) {
+				return StringConcatenableEx<A>::size(c.a) + StringConcatenableEx<B>::size(c.b);
+			}
+
+			template<typename T>
+			static inline void appendTo(const type& c, T*& out) {
+				StringConcatenableEx<A>::appendTo(c.a, out);
+				StringConcatenableEx<B>::appendTo(c.b, out);
+			}
+		};
+	}
 
 	template<typename A, typename B,
-		typename = std::void_t<typename StringConcatenableEx<A>::type, typename StringConcatenableEx<B>::type>>
+		typename = std::void_t<typename Implementation::StringConcatenableEx<A>::type, typename Implementation::StringConcatenableEx<B>::type>>
 		auto operator+(A&& a, B&& b)
 	{
 		return StringBuilder<A, B>(std::forward<A>(a), std::forward<B>(b));
@@ -230,12 +231,12 @@ namespace Death { namespace Containers {
 	Array<char>& operator+=(Array<char>& a, const StringBuilder<A, B>& b)
 	{
 		std::size_t prevLength = a.size();
-		std::size_t length = prevLength + StringConcatenable<StringBuilder<A, B>>::size(b);
+		std::size_t length = prevLength + Implementation::StringConcatenable<StringBuilder<A, B>>::size(b);
 
 		arrayReserve(a, std::max(length, 2 * arrayCapacity(a)));
 
 		char* it = a.data() + prevLength;
-		StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);
+		Implementation::StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);
 
 		arrayResize(a, NoInit, length);
 		return a;
@@ -245,7 +246,7 @@ namespace Death { namespace Containers {
 	String& operator+=(String& a, const StringBuilder<A, B>& b)
 	{
 		std::size_t prevLength = a.size();
-		std::size_t length = prevLength + StringConcatenable<StringBuilder<A, B>>::size(b);
+		std::size_t length = prevLength + Implementation::StringConcatenable<StringBuilder<A, B>>::size(b);
 
 		String result{NoInit, length};
 		char* it = result.data();
@@ -254,7 +255,7 @@ namespace Death { namespace Containers {
 			std::memcpy(it, a.data(), prevLength);
 		}
 		it += prevLength;
-		StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);
+		Implementation::StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);
 
 		a = std::move(result);
 		return a;

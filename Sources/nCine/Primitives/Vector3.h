@@ -5,28 +5,32 @@
 
 #include <cmath>
 
+#include <Containers/Tags.h>
+
 namespace nCine
 {
-	/// A three component vector based on templates
+	/// Three-component vector
 	template<class T>
 	class Vector3
 	{
 	public:
 		T X, Y, Z;
 
-		Vector3() noexcept
-			: X(0), Y(0), Z(0) {}
-		explicit Vector3(T s) noexcept
+		constexpr Vector3() noexcept
+			: X{T(0)}, Y{T(0)}, Z{T(0)} {}
+		explicit Vector3(Death::Containers::NoInitT) noexcept
+			{}
+		explicit constexpr Vector3(T s) noexcept
 			: X(s), Y(s), Z(s) {}
-		Vector3(T x, T y, T z) noexcept
+		constexpr Vector3(T x, T y, T z) noexcept
 			: X(x), Y(y), Z(z) {}
-		Vector3(const Vector2<T>& other, T z) noexcept
+		constexpr Vector3(const Vector2<T>& other, T z) noexcept
 			: X(other.X), Y(other.Y), Z(z) {}
-		Vector3(Vector2<T>&& other, T z) noexcept
+		constexpr Vector3(Vector2<T>&& other, T z) noexcept
 			: X(other.X), Y(other.Y), Z(z) {}
-		Vector3(const Vector3& other) noexcept
+		constexpr Vector3(const Vector3& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z) {}
-		Vector3(Vector3&& other) noexcept
+		constexpr Vector3(Vector3&& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z) {}
 		Vector3& operator=(const Vector3& other) noexcept;
 		Vector3& operator=(Vector3&& other) noexcept;
@@ -36,8 +40,8 @@ namespace nCine
 		T* Data();
 		const T* Data() const;
 
-		T& operator[](unsigned int index);
-		const T& operator[](unsigned int index) const;
+		T& operator[](std::size_t index);
+		const T& operator[](std::size_t index) const;
 
 		bool operator==(const Vector3& v) const;
 		bool operator!=(const Vector3& v) const;
@@ -136,14 +140,14 @@ namespace nCine
 	}
 
 	template<class T>
-	inline T& Vector3<T>::operator[](unsigned int index)
+	inline T& Vector3<T>::operator[](std::size_t index)
 	{
 		ASSERT(index < 3);
 		return (&X)[index];
 	}
 
 	template<class T>
-	inline const T& Vector3<T>::operator[](unsigned int index) const
+	inline const T& Vector3<T>::operator[](std::size_t index) const
 	{
 		ASSERT(index < 3);
 		return (&X)[index];

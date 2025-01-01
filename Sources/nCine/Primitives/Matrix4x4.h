@@ -5,23 +5,30 @@
 #include "../CommonConstants.h"
 #include "../../Main.h"
 
+#include <Containers/Tags.h>
+
 namespace nCine
 {
-	/// A four by four matrix based on templates
+	/// Four-by-four matrix
 	template<class T>
 	class Matrix4x4
 	{
 	public:
-		Matrix4x4() : vecs_{Vector4<T>(1, 0, 0, 0), Vector4<T>(0, 1, 0, 0), Vector4<T>(0, 0, 1, 0), Vector4<T>(0, 0, 0, 1)} {}
-		Matrix4x4(const Vector4<T>& v0, const Vector4<T>& v1, const Vector4<T>& v2, const Vector4<T>& v3);
+		Matrix4x4() noexcept
+			: vecs_{Vector4<T>(T(1), T(0), T(0), T(0)), Vector4<T>(T(0), T(1), T(0), T(0)), Vector4<T>(T(0), T(0), T(1), T(0)), Vector4<T>(T(0), T(0), T(0), T(1))} {}
+
+		explicit Matrix4x4(Death::Containers::NoInitT) noexcept
+			{}
+
+		Matrix4x4(const Vector4<T>& v0, const Vector4<T>& v1, const Vector4<T>& v2, const Vector4<T>& v3) noexcept;
 
 		void Set(const Vector4<T>& v0, const Vector4<T>& v1, const Vector4<T>& v2, const Vector4<T>& v3);
 
 		T* Data();
 		const T* Data() const;
 
-		Vector4<T>& operator[](unsigned int index);
-		const Vector4<T>& operator[](unsigned int index) const;
+		Vector4<T>& operator[](std::size_t index);
+		const Vector4<T>& operator[](std::size_t index) const;
 
 		bool operator==(const Matrix4x4& m) const;
 		bool operator!=(const Matrix4x4& m) const;
@@ -96,7 +103,7 @@ namespace nCine
 	using Matrix4x4f = Matrix4x4<float>;
 
 	template<class T>
-	inline Matrix4x4<T>::Matrix4x4(const Vector4<T>& v0, const Vector4<T>& v1, const Vector4<T>& v2, const Vector4<T>& v3)
+	inline Matrix4x4<T>::Matrix4x4(const Vector4<T>& v0, const Vector4<T>& v1, const Vector4<T>& v2, const Vector4<T>& v3) noexcept
 	{
 		Set(v0, v1, v2, v3);
 	}
@@ -123,14 +130,14 @@ namespace nCine
 	}
 
 	template<class T>
-	inline Vector4<T>& Matrix4x4<T>::operator[](unsigned int index)
+	inline Vector4<T>& Matrix4x4<T>::operator[](std::size_t index)
 	{
 		ASSERT(index < 4);
 		return vecs_[index];
 	}
 
 	template<class T>
-	inline const Vector4<T>& Matrix4x4<T>::operator[](unsigned int index) const
+	inline const Vector4<T>& Matrix4x4<T>::operator[](std::size_t index) const
 	{
 		ASSERT(index < 4);
 		return vecs_[index];

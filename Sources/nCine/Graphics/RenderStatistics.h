@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(NCINE_PROFILING)
+#if defined(NCINE_PROFILING) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "RenderCommand.h"
 

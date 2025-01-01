@@ -1355,7 +1355,7 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	void HUD::UpdateRgbLights(float timeMult, PlayerViewport* viewport)
+	void HUD::UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport)
 	{
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (!PreferencesCache::EnableRgbLights) {

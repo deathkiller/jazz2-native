@@ -1030,6 +1030,35 @@ namespace Death { namespace Containers {
 	}
 
 	/**
+		@brief Clear an array
+
+		If the array is not growable, it's replaced by an empty instance, freeing its
+		contents as a whole. Otherwise a destructor is called on all existing elements
+		and the @ref Array::size() is set to @cpp 0 @ce, with @ref arrayCapacity()
+		staying the same as before.
+		Amortized complexity is @f$ \mathcal{O}(n) @f$ where @f$ n @f$ is the number of
+		items in the array. On top of what the @p Allocator (or the default
+		@ref ArrayAllocator) itself needs, @p T is required to be nothrow
+		move-constructible.
+		This function is equivalent to calling @relativeref{std::vector,clear()} on a
+		@ref std::vector.
+		@m_keywords{clear()}
+	*/
+	template<class T, class Allocator = ArrayAllocator<T>> void arrayClear(Array<T>& array);
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
+	template<template<class> class Allocator, class T> inline void arrayClear(Array<T>& array) {
+		arrayClear<T, Allocator<T>>(array);
+	}
+#endif
+
+	/**
 		@brief Convert an array back to non-growable
 
 		Allocates a @ref NoInit array that's exactly large enough to fit
@@ -1726,6 +1755,26 @@ namespace Death { namespace Containers {
 				arrayGuts.data + arrayGuts.size - count);
 #endif
 			arrayGuts.size -= count;
+		}
+	}
+
+	template<class T, class Allocator> void arrayClear(Array<T>& array) {
+		// Direct access to speed up debug builds
+		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
+		// If not using our growing allocator, simply free the existing contents
+		if(arrayGuts.deleter != Allocator::deleter) {
+			array = {};
+		// Otherwise call the destructor on the excessive elements and update the size
+		} else {
+			Implementation::arrayDestruct<T>(arrayGuts.data, arrayGuts.data + arrayGuts.size);
+#if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + Allocator::capacity(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data);
+#endif
+			arrayGuts.size = 0;
 		}
 	}
 

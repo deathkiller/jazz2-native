@@ -1,12 +1,13 @@
 #pragma once
 
 #include <Common.h>
+#include <Containers/Tags.h>
 
 namespace nCine
 {
 	class Colorf;
 
-	/// A four channels unsigned char color
+	/// Four-channels 8-bit color
 	class Color
 	{
 	public:
@@ -26,18 +27,23 @@ namespace nCine
 		std::uint8_t B;
 		std::uint8_t A;
 
-		/// Default constructor (white color)
-		constexpr Color()
+		/// Default constructor (transparent color)
+		constexpr Color() noexcept
 			: Color(0, 0, 0, 0)
 		{
 		}
+
+		explicit Color(Death::Containers::NoInitT) noexcept
+		{
+		}
+
 		/// Three channels constructor
-		constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue)
+		constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue) noexcept
 			: Color(red, green, blue, 255)
 		{
 		}
 		/// Four channels constructor
-		constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue, std::uint32_t alpha)
+		constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue, std::uint32_t alpha) noexcept
 			: R(red), G(green), B(blue), A(alpha)
 		{
 		}

@@ -13,12 +13,12 @@ namespace nCine
 	const Colorf Colorf::Magenta(1.0f, 0.0f, 1.0f, 1.0f);
 	const Colorf Colorf::Cyan(0.0f, 1.0f, 1.0f, 1.0f);
 
-	Colorf::Colorf(const float channels[NumChannels])
+	Colorf::Colorf(const float channels[NumChannels]) noexcept
 	{
 		SetVec(channels);
 	}
 
-	Colorf::Colorf(const Color& color)
+	Colorf::Colorf(const Color& color) noexcept
 	{
 		constexpr float inv = 1.0f / 255.0f;
 		R = static_cast<float>(color.R * inv);

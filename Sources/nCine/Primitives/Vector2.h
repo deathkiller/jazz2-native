@@ -4,24 +4,28 @@
 
 #include <cmath>
 
+#include <Containers/Tags.h>
+
 namespace nCine
 {
-	/// A two component vector based on templates
+	/// Two-component vector
 	template<class T>
 	class Vector2
 	{
 	public:
 		T X, Y;
 
-		Vector2() noexcept
-			: X(0), Y(0) {}
-		explicit Vector2(T s) noexcept
+		constexpr Vector2() noexcept
+			: X{T(0)}, Y{T(0)} {}
+		explicit Vector2(Death::Containers::NoInitT) noexcept
+			{}
+		explicit constexpr Vector2(T s) noexcept
 			: X(s), Y(s) {}
-		Vector2(T x, T y) noexcept
+		constexpr Vector2(T x, T y) noexcept
 			: X(x), Y(y) {}
-		Vector2(const Vector2& other) noexcept
+		constexpr Vector2(const Vector2& other) noexcept
 			: X(other.X), Y(other.Y) {}
-		Vector2(Vector2&& other) noexcept
+		constexpr Vector2(Vector2&& other) noexcept
 			: X(other.X), Y(other.Y) {}
 		Vector2& operator=(const Vector2& other) noexcept;
 		Vector2& operator=(Vector2&& other) noexcept;
@@ -31,8 +35,8 @@ namespace nCine
 		T* Data();
 		const T* Data() const;
 
-		T& operator[](unsigned int index);
-		const T& operator[](unsigned int index) const;
+		T& operator[](std::size_t index);
+		const T& operator[](std::size_t index) const;
 
 		bool operator==(const Vector2& v) const;
 		bool operator!=(const Vector2& v) const;
@@ -124,14 +128,14 @@ namespace nCine
 	}
 
 	template<class T>
-	inline T& Vector2<T>::operator[](unsigned int index)
+	inline T& Vector2<T>::operator[](std::size_t index)
 	{
 		ASSERT(index < 2);
 		return (&X)[index];
 	}
 
 	template<class T>
-	inline const T& Vector2<T>::operator[](unsigned int index) const
+	inline const T& Vector2<T>::operator[](std::size_t index) const
 	{
 		ASSERT(index < 2);
 		return (&X)[index];
