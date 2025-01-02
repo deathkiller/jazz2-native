@@ -1,0 +1,683 @@
+/** @file
+	@brief Proxy definitions for documentation purposes
+	
+	Definitions from this file are usually supplied via a compiler flag by CMake
+	or by including @ref CommonBase.h. Don't include this file directly.
+*/
+
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/**
+	@brief Whether the current build is for debugging purposes
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake. Usually present when the build
+	configuration is set to `Debug`.
+*/
+#define DEATH_DEBUG
+#undef DEATH_DEBUG
+
+/**
+	@brief Whether runtime event tracing is enabled
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
+*/
+#define DEATH_TRACE
+#undef DEATH_TRACE
+
+/**
+	@brief Build with runtime CPU dispatch
+
+	Defined if the library is built with performance-critical code paths optimized
+	for multiple architectures (such as SSE or AVX on x86), with the best matching
+	variant selected at runtime based on detected CPU features. If not defined, the
+	library is built with just a single variant that's picked at compile time
+	depending on target architecture flags being passed to the compiler.
+
+	The actual feature detection and dispatch both in the runtime and compile-time
+	scenario is performed by the @relativeref{Death,Cpu} library.
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
+*/
+#define DEATH_CPU_USE_RUNTIME_DISPATCH
+#undef DEATH_CPU_USE_RUNTIME_DISPATCH
+
+/**
+	@brief GNU IFUNC is allowed to be used for runtime dispatch
+
+	Defined if the @relativeref{Death,Cpu} library can perform runtime dispatch
+	using [GNU IFUNC](https://sourceware.org/glibc/wiki/GNU_IFUNC), exposing the
+	@ref DEATH_CPU_DISPATCHED_IFUNC() macro. Supported only on Linux with glibc
+	and on Android with API 30+.
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
+*/
+#define DEATH_CPU_USE_IFUNC
+#undef DEATH_CPU_USE_IFUNC
+
+/**
+	@brief MSVC 2015 compatibility
+
+	Defined if compatibility mode for MSVC 2015 is enabled.
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
+*/
+#define DEATH_MSVC2015_COMPATIBILITY
+#undef DEATH_MSVC2015_COMPATIBILITY
+
+/**
+	@brief MSVC 2017 compatibility
+
+	Defined if compatibility mode for MSVC 2017 is enabled.
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
+*/
+#define DEATH_MSVC2017_COMPATIBILITY
+#undef DEATH_MSVC2017_COMPATIBILITY
+
+/**
+	@brief MSVC 2019 compatibility
+
+	Defined if compatibility mode for MSVC 2019 is enabled.
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
+*/
+#define DEATH_MSVC2019_COMPATIBILITY
+#undef DEATH_MSVC2019_COMPATIBILITY
+
+/**
+	@brief Unix target
+
+	Defined if the library is built for some Unix flavor (Linux, BSD, macOS, iOS,
+	Android...). Note that while the behavior of Emscripten is closely emulating
+	Unix systems, `DEATH_TARGET_UNIX` is not defined there, only
+	`DEATH_TARGET_EMSCRIPTEN`.
+*/
+#define DEATH_TARGET_UNIX
+#undef DEATH_TARGET_UNIX
+
+/**
+	@brief Apple target
+
+	Defined if the library is built for Apple platforms (macOS, iOS).
+*/
+#define DEATH_TARGET_APPLE
+#undef DEATH_TARGET_APPLE
+
+/**
+	@brief iOS target
+
+	Defined if the library is built for iOS (device or simulator).
+*/
+#define DEATH_TARGET_IOS
+#undef DEATH_TARGET_IOS
+
+/**
+	@brief iOS Simulator target
+
+	Defined if the library is built for iOS Simulator.
+*/
+#define DEATH_TARGET_IOS_SIMULATOR
+#undef DEATH_TARGET_IOS_SIMULATOR
+
+/**
+	@brief Windows target
+
+	Defined if the library is built for Windows (desktop, Windows Store, Phone or Xbox).
+*/
+#define DEATH_TARGET_WINDOWS
+#undef DEATH_TARGET_WINDOWS
+
+/**
+	@brief Windows RT target
+
+	Defined if the library is built for Universal Windows Platform (Windows Store, Phone or Xbox).
+*/
+#define DEATH_TARGET_WINDOWS_RT
+#undef DEATH_TARGET_WINDOWS_RT
+
+/**
+	@brief Emscripten target
+
+	Defined if the library is built for [Emscripten](http://kripken.github.io/emscripten-site/).
+	Note that while the behavior of Emscripten is closely emulating Unix systems,
+	`DEATH_TARGET_UNIX` is not defined there, only `DEATH_TARGET_EMSCRIPTEN`.
+*/
+#define DEATH_TARGET_EMSCRIPTEN
+#undef DEATH_TARGET_EMSCRIPTEN
+
+/**
+	@brief Android target
+
+	Defined if the library is built for Android.
+*/
+#define DEATH_TARGET_ANDROID
+#undef DEATH_TARGET_ANDROID
+
+/**
+	@brief Nintendo Switch target
+
+	Defined if the library is built for Nintendo Switch.
+*/
+#define DEATH_TARGET_SWITCH
+#undef DEATH_TARGET_SWITCH
+
+/**
+	@brief x86 target
+
+	Defined if the library is built for x86 platforms (32 or 64-bit). Note that
+	unlike other `DEATH_TARGET_*` variables, this variable,
+	`DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`, `DEATH_TARGET_WASM`,
+	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	instruction set variables are not exposed in CMake because the meaning is
+	unclear on platforms with multi-architecture binaries. If neither
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
+	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
+	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	library doesn't know about yet.
+*/
+#define DEATH_TARGET_X86
+#undef DEATH_TARGET_X86
+
+/**
+	@brief ARM target
+
+	Defined if the library is built for ARM platforms (32 or 64-bit). Note that
+	unlike other `DEATH_TARGET_*` variables, this variable,
+	`DEATH_TARGET_X86`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`, `DEATH_TARGET_WASM`,
+	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	instruction set variables are not exposed in CMake because the meaning is
+	unclear on platforms with multi-architecture binaries. If neither
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
+	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
+	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	library doesn't know about yet.
+*/
+#define DEATH_TARGET_ARM
+#undef DEATH_TARGET_ARM
+
+/**
+	@brief PowerPC target
+
+	Defined if the library is built for PowerPC platforms (32 or 64-bit). Note that
+	unlike other `DEATH_TARGET_*` variables, this variable,
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_RISCV`, `DEATH_TARGET_WASM`,
+	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	instruction set variables are not exposed in CMake because the meaning is
+	unclear on platforms with multi-architecture binaries. If neither
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
+	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
+	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	library doesn't know about yet.
+*/
+#define DEATH_TARGET_POWERPC
+#undef DEATH_TARGET_POWERPC
+
+/**
+	@brief RISC-V target
+
+	Defined if the library is built for RISC-V platforms (32 or 64-bit). Note that
+	unlike other `DEATH_TARGET_*` variables, this variable,
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_WASM`,
+	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	instruction set variables are not exposed in CMake because the meaning is
+	unclear on platforms with multi-architecture binaries. If neither
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
+	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
+	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	library doesn't know about yet.
+*/
+#define DEATH_TARGET_RISCV
+#undef DEATH_TARGET_RISCV
+
+/**
+	@brief WebAssembly target
+
+	Defined if the library is built for WebAssembly (32 or 64-bit). Note that
+	unlike other `DEATH_TARGET_*` variables, this variable,
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`,
+	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	instruction set variables are not exposed in CMake because the meaning is
+	unclear on platforms with multi-architecture binaries. If neither
+	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
+	nor `EATH_TARGET_WASM` is defined, the platform might be either a very
+	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	library doesn't know about yet.
+*/
+#define DEATH_TARGET_WASM
+#undef DEATH_TARGET_WASM
+
+/**
+	@brief GCC compiler
+
+	Defined if the code is being compiled by GCC or GCC-compatible Clang (which is
+	`DEATH_TARGET_APPLE_CLANG` but not `DEATH_TARGET_CLANG_CL`, for
+	example). While this variable is exposed in CMake as well, it's not guaranteed
+	that the reported compiler is consistent between CMake and C++ --- for example,
+	a library can be built with GCC and then used via Clang.
+
+	Major GCC version number can be accessed using the `__GNUC__` macro. Clang
+	always reports itself as GCC 4.4, its version is reported in `__clang_major__`
+	instead.
+*/
+#define DEATH_TARGET_GCC
+#undef DEATH_TARGET_GCC
+
+/**
+	@brief Clang compiler
+
+	Defined if the code is being compiled by Clang or any of its variants
+	(`DEATH_TARGET_APPLE_CLANG`, `DEATH_TARGET_CLANG_CL`). If this
+	variable is defined, usually `DEATH_TARGET_GCC` is also defined, except
+	for Clang-CL. While this variable is exposed in CMake as well, it's not
+	guaranteed that the reported compiler is consistent between CMake and C++ ---
+	for example, a library can be built with Clang and then used via GCC.
+
+	Major Clang version number can be accessed using the `__clang_major__` macro,
+	however note that Apple Clang (in Xcode)
+	[uses its own numbering](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions)
+	--- for example Clang 10 is actually Apple Clang 12.
+*/
+#define DEATH_TARGET_CLANG
+#undef DEATH_TARGET_CLANG
+
+/**
+	@brief Apple's Clang compiler
+
+	Defined if the code is being compiled by Apple's Clang. If this variable is
+	defined, `DEATH_TARGET_GCC` and `DEATH_TARGET_CLANG` are also
+	defined. This is primarily useful when checking for Clang version, as Apple
+	uses a different versioning scheme. While this variable is exposed in CMake as
+	well, it's not guaranteed that the reported compiler is consistent between
+	CMake and C++ --- for example, a library can be built with Clang and then used
+	via GCC.
+
+	Major Apple Clang version number can be accessed using the `__clang_major__`
+	macro, which is the same macro as vanilla Clang. There is no macro that exposes
+	the matching vanilla Clang version, the only option is to use
+	[an external mapping table](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions)
+	--- for example Apple Clang 12 is actually Clang 10.
+*/
+#define DEATH_TARGET_APPLE_CLANG
+#undef DEATH_TARGET_APPLE_CLANG
+
+/**
+	@brief Clang-CL compiler
+
+	Defined if the code is being compiled by Clang with a MSVC frontend. If this
+	variable is defined, `DEATH_TARGET_CLANG` and `DEATH_TARGET_MSVC` is
+	also defined (but `DEATH_TARGET_GCC` not). While this variable is exposed
+	in CMake as well, it's not guaranteed that the reported compiler is consistent
+	between CMake and C++ --- for example, a library can be built with Clang-CL and
+	then used via MSVC.
+
+	Clang-CL uses the same versioning scheme as vanilla Clang, accessible using the
+	`__clang_major__` macro. It also exposes the `_MSC_VER` macro, reporting the
+	MSVC version it's compatible with.
+*/
+#define DEATH_TARGET_CLANG_CL
+#undef DEATH_TARGET_CLANG_CL
+
+/**
+	@brief Intel LLVM compiler
+
+	Defined if the code is being compiled by Intel LLVM (oneAPI) compiler. While this
+	variable is exposed in CMake as well, it's not guaranteed that the reported compiler
+	is consistent between CMake and C++ --- for example, a library can be built with
+	Intel LLVM and then used via Clang.
+*/
+#define DEATH_TARGET_INTEL_LLVM
+#undef DEATH_TARGET_INTEL_LLVM
+
+/**
+	@brief MSVC compiler
+
+	Defined if the code is being compiled by MSVC or Clang with a MSVC frontend. If
+	this variable is defined, `DEATH_TARGET_CLANG` might also be defined.
+	While this variable is exposed in CMake as well, it's not guaranteed that the
+	reported compiler is consistent between CMake and C++ --- for example, a
+	library can be built with MSVC and then used via Clang-CL.
+
+	MSVC version can be accessed using the `_MSC_VER` macro. The macro uses an
+	[internal version numbering](https://en.wikipedia.org/wiki/Microsoft_Visual_C++#Internal_version_numbering),
+	so for example MSVC 2019 16.7 (14.27) is reported as 1927.
+*/
+#define DEATH_TARGET_MSVC
+#undef DEATH_TARGET_MSVC
+
+/**
+	@brief Cygwin compiler
+
+	Defined if the code is being compiled by Cygwin toolchain. If
+	this variable is defined, `DEATH_TARGET_GCC` and possibly also
+	`DEATH_TARGET_CLANG` are defined. While this variable is exposed in CMake
+	as well, it's not guaranteed that the reported compiler is consistent between
+	CMake and C++ --- for example, a library can be built with MSVC and then used
+	via Clang-CL.
+*/
+#define DEATH_TARGET_CYGWIN
+#undef DEATH_TARGET_CYGWIN
+
+/**
+	@brief MinGW compiler
+
+	Defined if the code is being compiled by GCC / Clang running under MinGW. If
+	this variable is defined, `DEATH_TARGET_GCC` and possibly also
+	`DEATH_TARGET_CLANG` are defined. While this variable is exposed in CMake
+	as well, it's not guaranteed that the reported compiler is consistent between
+	CMake and C++ --- for example, a library can be built with MSVC and then used
+	via Clang-CL.
+*/
+#define DEATH_TARGET_MINGW
+#undef DEATH_TARGET_MINGW
+
+/**
+	@brief STL libc++ target
+
+	Defined if the library is built against Clang [libc++](https://libcxx.llvm.org/)
+	STL implementation. This is most common on Apple acOS and iOS and on newer
+	Android NDKs, it's also sometimes used on Linux. Note that unlike other
+	`DEATH_TARGET_*` variables, this variable, `DEATH_TARGET_LIBSTDCXX` and
+	`DEATH_TARGET_DINKUMWARE` are not exposed in CMake because the detection
+	is non-trivial.
+
+	Major libc++ version number can be accessed using the `_LIBCPP_VERSION` version
+	macro. While libc++ can only be used with Clang (and not GCC), its version
+	might or might not be the same as `__clang_major__`.
+*/
+#define DEATH_TARGET_LIBCXX
+#undef DEATH_TARGET_LIBCXX
+
+/**
+	@brief STL libstdc++ target
+
+	Defined if the library is built against GCC [libstdc++](https://gcc.gnu.org/onlinedocs/libstdc++/)
+	STL implementation. This is most common on Linux and under MinGW, note that
+	Clang is able to use libstdc++ as well. Note that unlike other `DEATH_TARGET_*`
+	variables, this variable, `DEATH_TARGET_LIBCXX` and
+	`DEATH_TARGET_DINKUMWARE` are not exposed in CMake because the detection
+	is non-trivial.
+
+	Major libstdc++ version number can be accessed using the `_GLIBCXX_RELEASE`
+	macro, however it's available only since libstdc++ 7. Older versions define
+	just `__GLIBCXX__`, which contains a release date (and the dates, of course,
+	[overlap for patch releases](https://stackoverflow.com/a/37119478) and can be
+	just anything for custom GCC forks). If libstdc++ is used together with GCC, it
+	can be assumed both have the same version; if libstdc++ is used together with
+	Clang, the versions can be arbitrary.
+*/
+#define DEATH_TARGET_LIBSTDCXX
+#undef DEATH_TARGET_LIBSTDCXX
+
+/**
+	@brief STL Dinkumware target
+
+	Defined if the library is built against Dinkumware STL implementation (used by
+	MSVC). Note that Clang is able to use this implementation as well.  Note that
+	unlike other `DEATH_TARGET_*` variables, this variable,
+	`DEATH_TARGET_LIBSTDCXX` and `DEATH_TARGET_DINKUMWARE` are not
+	exposed in CMake because the detection is non-trivial.
+
+	The MSVC standard library is closely tied to a compiler version, thus
+	`_MSC_VER` can be used to determine its version on both MSVC and Clang-CL.
+*/
+#define DEATH_TARGET_DINKUMWARE
+#undef DEATH_TARGET_DINKUMWARE
+
+/**
+	@brief SSE2 target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[Streaming SIMD Extensions 2](https://en.wikipedia.org/wiki/SSE2) are enabled
+	at compile time (`-msse2` or higher on GCC/Clang, `/arch:SSE2` or higher on
+	MSVC). All x86-64 targets support SSE2. Implied by `DEATH_TARGET_SSE3`.
+*/
+#define DEATH_TARGET_SSE2
+#undef DEATH_TARGET_SSE2
+
+/**
+	@brief SSE3 target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[Streaming SIMD Extensions 3](https://en.wikipedia.org/wiki/SSE3) are enabled
+	at compile time (on GCC/Clang it's `-msse3` and higher, MSVC doesn't have a
+	direct option and it's only implied by `/arch:AVX`). Superset of
+	`DEATH_TARGET_SSE2`, implied by `DEATH_TARGET_SSSE3`.
+*/
+#define DEATH_TARGET_SSE3
+#undef DEATH_TARGET_SSE3
+
+/**
+	@brief SSSE3 target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[Supplemental Streaming SIMD Extensions 3](https://en.wikipedia.org/wiki/SSSE3)
+	are enabled at compile time (on GCC/Clang it's `-mssse3` and higher, MSVC
+	doesn't have a direct option and it's only implied by `/arch:AVX`). Superset of
+	`DEATH_TARGET_SSE3`, implied by `DEATH_TARGET_SSE41`.
+
+	Note that certain older AMD processors have [SSE4a](https://en.wikipedia.org/wiki/SSE4#SSE4a)
+	but neither SSSE3 nor SSE4.1. Both can be however treated as a subset of SSE4.1
+	to a large extent, and it's recommended to use `DEATH_TARGET_SSE41` to
+	detect those.
+*/
+#define DEATH_TARGET_SSSE3
+#undef DEATH_TARGET_SSSE3
+
+/**
+	@brief SSE4.1 target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[Streaming SIMD Extensions 4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1)
+	are enabled at compile time (on GCC/Clang it's `-msse4.1` and higher, MSVC
+	doesn't have a direct option and it's only implied by `/arch:AVX`). Superset of
+	`DEATH_TARGET_SSSE3`, implied by `DEATH_TARGET_SSE42`.
+
+	Note that certain older AMD processors have [SSE4a](https://en.wikipedia.org/wiki/SSE4#SSE4a)
+	but neither SSSE3 nor SSE4.1. Both can be however treated as a subset of SSE4.1
+	to a large extent, and it's recommended to use `DEATH_TARGET_SSE41` to
+	detect those.
+*/
+#define DEATH_TARGET_SSE41
+#undef DEATH_TARGET_SSE41
+
+/**
+	@brief SSE4.2 target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[Streaming SIMD Extensions 4.2](https://en.wikipedia.org/wiki/SSE4#SSE4.2)
+	are enabled at compile time (on GCC/Clang it's `-msse4.2` and higher, MSVC
+	doesn't have a direct option and it's only implied by `/arch:AVX`). Superset of
+	`DEATH_TARGET_SSE41`, implied by `DEATH_TARGET_AVX`.
+*/
+#define DEATH_TARGET_SSE42
+#undef DEATH_TARGET_SSE42
+
+/**
+	@brief Target with POPCNT instructions
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[POPCNT](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#ABM_(Advanced_Bit_Manipulation))
+	is enabled at compile time. On GCC/Clang it's `-mpopcnt` and is also implied by
+	`-msse4.2` and higher, MSVC doesn't have a direct option but it's assumed to
+	be implied by `/arch:AVX`. To avoid failures at runtime, prefer to detect its
+	presence with @relativeref{Death,Cpu::runtimeFeatures()}.
+*/
+#define DEATH_TARGET_POPCNT
+#undef DEATH_TARGET_POPCNT
+
+/**
+	@brief Target with LZCNT instructions
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[LZCNT](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#ABM_(Advanced_Bit_Manipulation))
+	is enabled at compile time (on GCC/Clang it's `-mlznct`, MSVC doesn't have a
+	direct option but it's assumed to be implied by `/arch:AVX2`). However note
+	that this instruction has encoding compatible with an earlier `BSR` instruction
+	which has a slightly different behavior. To avoid wrong results if it isn't
+	available, prefer to detect its presence with
+	@relativeref{Death,Cpu::runtimeFeatures()} instead.
+*/
+#define DEATH_TARGET_LZCNT
+#undef DEATH_TARGET_LZCNT
+
+/**
+	@brief Target with BMI1 instructions
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[BMI1](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#BMI1_(Bit_Manipulation_Instruction_Set_1))
+	including the `TZCNT` instruction is enabled at compile time (on GCC/Clang it's
+	`-mbmi`, MSVC doesn't have a direct option but it's assumed to be implied by
+	`/arch:AVX2`). However note that the `TZCNT` instruction has encoding
+	compatible with an earlier `BSF` instruction which has a slightly different
+	behavior. To avoid wrong results if it isn't available, prefer to detect its
+	presence with @relativeref{Death,Cpu::runtimeFeatures()} instead.
+
+	Presence of this instruction set is *not* implied by `DEATH_TARGET_BMI2`.
+*/
+#define DEATH_TARGET_BMI1
+#undef DEATH_TARGET_BMI1
+
+/**
+	@brief Target with BMI2 instructions
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[BMI2](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#BMI2_(Bit_Manipulation_Instruction_Set_2))
+	is enabled at compile time. On GCC/Clang it's `-mbmi2`, MSVC doesn't have a
+	direct option but it's assumed to be implied by `/arch:AVX2`. To avoid failures
+	at runtime, prefer to detect its presence with
+	@relativeref{Death,Cpu::runtimeFeatures()}.
+
+	Presence of this instruction set does *not* imply `DEATH_TARGET_BMI1`.
+*/
+#define DEATH_TARGET_BMI2
+#undef DEATH_TARGET_BMI2
+
+/**
+	@brief AVX target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[Advanced Vector Extensions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions)
+	are enabled at compile time (`-mavx` and higher on GCC/Clang, `/arch:AVX` on
+	MSVC). Superset of `DEATH_TARGET_SSE42`, implied by `DEATH_TARGET_AVX2`.
+*/
+#define DEATH_TARGET_AVX
+#undef DEATH_TARGET_AVX
+
+/**
+	@brief AVX target with F16C
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if the
+	[F16C instruction set](https://en.wikipedia.org/wiki/F16C) is enabled at
+	compile time. On GCC/Clang it's `-mf16c`, MSVC doesn't have a direct option but
+	it's assumed to be implied by `/arch:AVX2`. To avoid failures at runtime,
+	prefer to detect its presence with @relativeref{Death,Cpu::runtimeFeatures()}.
+*/
+#define DEATH_TARGET_AVX_F16C
+#undef DEATH_TARGET_AVX_F16C
+
+/**
+	@brief AVX target with FMA
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if the
+	[FMA3 instruction set](https://en.wikipedia.org/wiki/FMA_instruction_set) is
+	enabled at compile time. On GCC/Clang it's `-mfma`, MSVC doesn't have a direct
+	option but it's assumes to be implied by `/arch:AVX2`. To avoid failures at
+	runtime, prefer to detect its presence with
+	@relativeref{Death,Cpu::runtimeFeatures()}.
+
+	The FMA4 instruction set, which used to be supported only in certain range of
+	AMD processors and isn't anymore, is not detected, and AMD switched to FMA3
+	since.
+*/
+#define DEATH_TARGET_AVX_FMA
+#undef DEATH_TARGET_AVX_FMA
+
+/**
+	@brief AVX2 target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if
+	[Advanced Vector Extensions 2](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions_2)
+	are enabled at compile time (`-mavx2` and higher on GCC/Clang, `/arch:AVX2` on
+	MSVC). Superset of `DEATH_TARGET_AVX`, implied by `DEATH_TARGET_AVX512F`.
+*/
+#define DEATH_TARGET_AVX2
+#undef DEATH_TARGET_AVX2
+
+/**
+	@brief AVX-512 Foundation target
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if [AVX-512](https://en.wikipedia.org/wiki/AVX-512)
+	Foundation instructions are enabled at compile time (`-mavx512f` and higher on
+	GCC/Clang, `/arch:AVX512` on MSVC). Superset of `DEATH_TARGET_AVX2`.
+*/
+#define DEATH_TARGET_AVX512F
+#undef DEATH_TARGET_AVX512F
+
+/**
+	@brief NEON target
+
+	Defined on @ref DEATH_TARGET_ARM "ARM" if
+	[ARM NEON](https://en.wikipedia.org/wiki/ARM_architecture#Advanced_SIMD_(Neon))
+	instructions are enabled at compile time (`-mfpu=neon` on GCC/Clang, implicitly
+	supported on ARM64). Implied by `DEATH_TARGET_NEON_FMA`.
+
+	Apart from NEON, there's several other mutually incompatible ARM instruction
+	sets. Detection for these will be added when the platforms become more
+	widespread:
+
+	-   Helium, which is a low-power alternative to NEON
+	-   SVE, which is a HPC-focused alternative to NEON, in 2021 found mostly just
+		on [AWS Graviton](https://aws.amazon.com/ec2/graviton/)
+	-   SVE2, which is a next-generation vector instruction set designed to be a
+		successor to both NEON and SVE, scheduled to appear in production in around
+		2022
+	-   AMX, which is Apple's proprietary and patented instruction set available
+		only on their own hardware
+*/
+#define DEATH_TARGET_NEON
+#undef DEATH_TARGET_NEON
+
+/**
+	@brief NEON target with FMA
+
+	Defined on @ref DEATH_TARGET_ARM "ARM" if NEON FMA instructions are enabled
+	at compile time (`-mfpu=neon-vfpv4` on GCC/Clang on 32-bit ARM, implicitly
+	supported on ARM64). Not defined if FMA is only available for scalar code and
+	not for NEON. Superset of `DEATH_TARGET_NEON`, implied by
+	`DEATH_TARGET_NEON_FP16`.
+*/
+#define DEATH_TARGET_NEON_FMA
+#undef DEATH_TARGET_NEON_FMA
+
+/**
+	@brief NEON target with FP16 vector arithmetic
+
+	Defined on @ref DEATH_TARGET_ARM "ARM" if ARMv8.2-a NEON FP16 vector
+	arithmetic support is enabled at compile time (`-march=armv8.2-a+fp16` on
+	GCC/Clang). Superset of `DEATH_TARGET_NEON_FMA`.
+*/
+#define DEATH_TARGET_NEON_FP16
+#undef DEATH_TARGET_NEON_FP16
+
+/**
+	@brief SIMD128 target
+
+	Defined on @ref DEATH_TARGET_WASM "WebAssembly" if
+	[128-bit SIMD](https://github.com/webassembly/simd) instructions are enabled at
+	compile time (`-msimd128` passed to Clang), and the compiler supports the
+	finalized version of the intrinsics, which is since Clang 13 and Emscripten
+	2.0.18. Emscripten SDK 2.0.13 to 2.0.17 ship with a Clang that reports as 13
+	but isn't actually the final version.
+*/
+#define DEATH_TARGET_SIMD128
+#undef DEATH_TARGET_SIMD128
+
+}

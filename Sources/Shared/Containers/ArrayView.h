@@ -47,10 +47,95 @@ namespace Death { namespace Containers {
 	/**
 		@brief Array view
 
-		A non-owning wrapper around a sized continuous range of data, similar to a dynamic @ref std::span from C++20.
-		For a variant with compile-time size information see @ref StaticArrayView, for sparse and multi-dimensional views
-		see @ref StridedArrayView, for efficient bit manipulation see @ref BasicBitArrayView "BitArrayView". An owning
-		version of this container is an @ref Array.
+		A non-owning wrapper around a sized continuous range of data, similar to a dynamic
+		@ref std::span from C++20. For a variant with compile-time size information see @ref StaticArrayView.
+		An owning version of this container is an @ref Array.
+
+		@section Containers-ArrayView-usage Usage
+
+		The class is implicitly convertible from compile-time-sized C arrays and
+		@ref Array / @ref StaticArray instances of the same underlying type; it's also
+		possible to implicitly create a @cpp const @ce view on a mutable array. Besides
+		that, a view can be created manually from a pointer and size.
+
+		@attention Note that when using @cpp Containers::ArrayView<const char> @ce, C
+			string literals (such as @cpp "hello" @ce) are implicitly convertible to it
+			and the size includes also the zero-terminator (thus in case of
+			@cpp "hello" @ce the size would be 6, not 5, as one might expect). For
+			string views you're encouraged to use the @ref BasicStringView "StringView"
+			class instead.
+
+		In addition there are @ref ArrayView<void> / @ref ArrayView<const void>
+		specializations, which are meant to be used in cases where APIs accept opaque
+		blobs of data, such as writing data to a file. These provide no element access,
+		only data pointer and size in bytes, and an @ref ArrayView of any type is
+		convertible to them.
+
+		@subsection Containers-ArrayView-usage-access Data access
+
+		The class provides the usual C++ container interface --- @ref data(),
+		@ref size() and @ref isEmpty(); subscript access via @ref operator T*(), range
+		access via @ref begin() / @ref end(), and their overloads and acess to the
+		@ref front() and @ref back() element, if the view is non-empty. The view itself
+		is immutable and thus all member functions are @cpp const @ce, but if the
+		underlying type is mutable the references and pointers returned from these are
+		mutable as well.
+
+		@subsection Containers-ArrayView-usage-slicing View slicing
+
+		Except for the usual element access via @ref begin(), @ref end() and
+		@ref operator T*() that provides also access via @cpp [] @ce, there's a
+		collection of slicing functions --- @ref slice(), @ref sliceSize(),
+		@ref prefix(), @ref suffix(), @ref exceptPrefix() and @ref exceptSuffix().
+		The @ref slice(), @ref sliceSize(), @ref prefix(), @ref suffix() APIs accept
+		also a pointer as the begin/end arguments. As a special case, if @ref prefix()
+		and @ref suffix() are called with @cpp nullptr @ce, they return a zero-sized
+		@cpp nullptr @ce view.
+
+		Finally, the slicing operations provide a conversion to
+		@ref StaticArrayView (or its convenience typedefs @ref ArrayView2,
+		@ref ArrayView3 etc.). Compile-time-sized arrays are useful for APIs that want
+		to enforce a particular number of elements at compile time.
+
+		All slice operations fire an assert if the arguments are out of range, for
+		@ref StaticArrayView conversions the checks are done at compile time when
+		possible.
+
+		@subsection Containers-ArrayView-usage-convenience Convenience functions and type conversion
+
+		To avoid having to specify the full type when constructing a view or when you
+		need to disambiguate in a function call, the @ref arrayView() (or
+		@ref staticArrayView()) function can be used. These also provide a safe
+		conversion from @ref std::initializer_list that avoids the
+		@ref Containers-ArrayView-initializer-list "pitfalls described below"  As a
+		safer alternative to a @cpp reinterpret_cast @ce, @ref arrayCast() performs a
+		cast, recalculates the view size accordingly and additionally checks that the
+		type change makes sense for given type combination and array size.
+		Finally, @ref arraySize() can be used to query size of compile-time C arrays in
+		a failproof way.
+
+		@anchor Containers-ArrayView-initializer-list
+
+		<b></b>
+
+		@m_class{m-block m-warning}
+
+		@par Conversion from std::initializer_list
+			The class deliberately *doesn't* provide a @ref std::initializer_list
+			constructor, as it would lead to dangerous behavior even in very simple and
+			seemingly innocent cases. Instead, where it makes
+			sense, functions accepting @ref ArrayView provide also an overload taking
+			@ref std::initializer_list. Alternatively, you can use
+			@ref arrayView(std::initializer_list<T>), which is more explicit and thus
+			should prevent accidental use.
+		@par
+			@code{.cpp}
+			std::initializer_list<int> a{1, 2, 3, 4};
+			foo(a[2]);  // okay
+
+			Containers::ArrayView<const int> b{1, 2, 3, 4}; // hypothetical, doesn't compile
+			foo(b[2]);  // crash, initializer_list already destructed here
+			@endcode
 	*/
 	template<class T> class ArrayView
 	{
@@ -628,9 +713,17 @@ namespace Death { namespace Containers {
 	/**
 		@brief Compile-time-sized array view
 
-		Like @ref ArrayView, but with compile-time size information. Similar to a fixed-size @ref std::span from C++2a.
-		Implicitly convertible to an @ref ArrayView, explicitly convertible from it using the slicing APIs. An owning
-		version of this container is a @ref StaticArray.
+		Like @ref ArrayView, but with compile-time size information. Similar to a
+		fixed-size @ref std::span from C++2a. Implicitly convertible to an
+		@ref ArrayView, explicitly convertible from it using the slicing APIs. An
+		owning version of this container is a @ref StaticArray.
+
+		@section Containers-StaticArrayView-usage Usage
+
+		The general API is similar to what's shown in
+		@ref Containers-ArrayView-usage "ArrayView usage docs", except that here are
+		additional compile-time overloads of @ref slice(), @ref sliceSize(),
+		@ref prefix(), @paramref suffix(), @ref exceptPrefix() and @ref exceptSuffix().
 	*/
 	template<std::size_t size_, class T> class StaticArrayView
 	{

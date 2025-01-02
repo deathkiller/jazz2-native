@@ -126,8 +126,83 @@ namespace Death { namespace Containers {
 		@tparam size_   Array size
 		@tparam T       Element type
 
-		Like @ref Array, but with compile-time size information. Useful as a more featureful alternative to plain C arrays or @ref std::array,
-		especially when it comes to initialization. A non-owning version of this container is a @ref StaticArrayView.
+		Like @ref Array, but with compile-time size information. Useful as a more
+		featureful alternative to plain C arrays or @ref std::array, especially when it
+		comes to initialization. A non-owning version of this container is a
+		@ref StaticArrayView.
+
+		@section Containers-StaticArray-usage Usage
+
+		The @ref StaticArray class provides an access and slicing API similar to
+		@ref Array, which in turn shares the basic workflow patterns with
+		@ref ArrayView, see @ref Containers-ArrayView-usage "its usage docs" for
+		details. The main difference is that @ref StaticArray doesn't do any heap
+		allocation and thus has no concept of a deleter, and it has additional
+		compile-time-sized overloads of @ref slice(), @ref prefix(), @ref suffix(),
+		@ref exceptPrefix() and @ref exceptSuffix(), mirroring the APIs of
+		@ref StaticArrayView.
+
+		@subsection Containers-StaticArray-usage-initialization Array initialization
+
+		The array is by default *value-initialized*, which means that trivial types
+		are zero-initialized and the default constructor is called on other types. It
+		is possible to initialize the array in a different way using so-called *tags*:
+
+		-   @ref StaticArray(DefaultInitT) leaves trivial types uninitialized
+			and calls the default constructor elsewhere. In other words,
+			@cpp T array[size] @ce. Because of the differing behavior for trivial types
+			it's better to explicitly use either the @ref ValueInit or @ref NoInit
+			variants instead.
+		-   @ref StaticArray(ValueInitT) is equivalent to the implicit parameterless
+			constructor, zero-initializing trivial types and calling the default
+			constructor elsewhere. Useful when you want to make the choice appear
+			explicit. In other words, @cpp T array[size]{} @ce.
+		-   @ref StaticArray(DirectInitT, Args&&... args) constructs every element of
+			the array using provided arguments. In other words,
+			@cpp T array[size]{T{args...}, T{args...}, …} @ce.
+		-   @ref StaticArray(InPlaceInitT, Args&&... args) is equivalent to
+			@ref StaticArray(Args&&... args). Again useful when you want to make
+			the choice appear explicit). In other words,
+			@cpp T array[size]{args...} @ce. Note that the variadic template means you
+			can't use @cpp {} @ce for nested type initializers but have to specify the
+			types explicitly. An alternative is directly passing an array, i.e. with
+			the items wrapped in an additional @cpp {} @ce, with
+			@ref StaticArray(InPlaceInitT, const T(&)[size]) or
+			@ref StaticArray(InPlaceInitT, T(&&)[size]), or using the implicit
+			@ref StaticArray(const T(&)[size]) and @ref StaticArray(T(&&)[size])
+			variants.
+		-   @ref StaticArray(NoInitT) does not initialize anything. Useful for trivial
+			types when you'll be overwriting the contents anyway, for non-trivial types
+			this is the dangerous option and you need to call the constructor on all
+			elements manually using placement new, @ref std::uninitialized_copy() or
+			similar.
+
+		@subsection Containers-StaticArray-constexpr Usage in constexpr contexts
+
+		In order to implement the @ref StaticArray(NoInitT) constructor for arbitrary
+		types, internally the data has to be a @cpp union @ce array. That would however
+		lose trivial copyability and possibility to use the type in @cpp constexpr @ce
+		contexts, so to solve that, types that have a trivial default constructor or a
+		constructor taking @ref NoInitT use a specialized internal
+		representation without a @cpp union @ce. @ref StaticArray of such types is then
+		a @cpp constexpr @ce type and is trivially copyable if the underlying type is
+		trivially copyable.
+
+		@section Containers-StaticArray-views Conversion to array views
+
+		Arrays are implicitly convertible to @ref ArrayView / @ref StaticArrayView as
+		described in the following table. The conversion is only allowed if @cpp T* @ce
+		is implicitly convertible to @cpp U* @ce (or both are the same type) and both
+		have the same size.
+
+		Owning array type               | ↭ | Non-owning view type
+		------------------------------- | - | ---------------------
+		@ref StaticArray "Array<size, T>" | → | @ref StaticArrayView "ArrayView<size, U>"
+		@ref StaticArray "Array<size, T>" | → | @ref StaticArrayView "ArrayView<size, const U>"
+		@ref StaticArray "const Array<size, T>" | → | @ref StaticArrayView "ArrayView<size, const U>"
+		@ref StaticArray "Array<size, T>" | → | @ref ArrayView "ArrayView&lt;U&gt;"
+		@ref StaticArray "Array<size, T>" | → | @ref ArrayView "ArrayView<const U>"
+		@ref StaticArray "const Array<size, T>" | → | @ref ArrayView "ArrayView<const U>"
 	 */
 	template<std::size_t size_, class T> class StaticArray : Implementation::StaticArrayDataFor<size_, T>
 	{

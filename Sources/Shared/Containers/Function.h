@@ -240,8 +240,7 @@ namespace Death { namespace Containers {
 		An alternative to @m_class{m-doc-external} [std::move_only_function](https://en.cppreference.com/w/cpp/utility/functional/move_only_function)
 		from C++23 or a move-only alternative to @ref std::function from C++11,
 		providing a common interface for free functions, member functions, (capturing)
-		lambdas and generic functors.
-		The wrapped function is then called through @ref operator()():
+		lambdas and generic functors. The wrapped function is then called through @ref operator()().
 
 		To prevent accidental type conversions and potential extra overhead coming from
 		those, the wrapper only accepts functions that match the signature *exactly*.
@@ -273,10 +272,9 @@ namespace Death { namespace Containers {
 		implementation simplicity reasons the state is also allocated if isn't
 		trivially copyable. You can use @ref isAllocated() to check whether the
 		function state needed a heap allocation or not.
-
 		If heap allocation is undesirable, the @ref Function(NoAllocateInitT, F&&)
 		overload can be used to prevent wrapping any function with state that would
-		need to be allocated:
+		need to be allocated.
 
 		@section Containers-Function-usage-type-erased Type-erased function storage
 

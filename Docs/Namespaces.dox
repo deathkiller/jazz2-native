@@ -1,0 +1,505 @@
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/** @mainpage
+
+This is an API documentation for Jazz² Resurrection. For user documentation, please visit [project homepage](https://deat.tk/jazz2/).
+Additionaly, the project is hosted on https://github.com/deathkiller/jazz2-native/.
+
+Jazz² Resurrection is reimplementation of the game Jazz Jackrabbit 2 released in 1998. Supports various versions of the game
+(Shareware Demo, Holiday Hare '98, The Secret Files and Christmas Chronicles). Also, it partially supports some features
+of JJ2+ extension and MLLE. **Online multiplayer** and **scripting support** (AngelScript) is currently in development,
+everything else is already fully implemented.
+
+To get in touch with the developers and the community, you can use the official [Discord server](https://discord.gg/Y7SBvkD).
+
+For game-specific API documentation, see @ref Jazz2 namespace. For common utility functions and generic containers,
+see @ref Death "the shared root namespace". For nCine game engine documentation, see @ref nCine namespace.
+The nCine game engine used in this game has been extensively modified, so the original documentation no longer matches
+the current implementation.
+
+@section mainpage-platforms Supported platforms
+
+- **Android**
+- **FreeBSD**
+- **Linux**
+- **macOS**
+- **Windows**
+- **Nintendo Switch** using [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman)
+- **Xbox** (Universal Windows Platform) using ANGLE/Mesa
+- **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
+	
+@section mainpage-license License
+
+This project is licensed under the terms of the [GNU General Public License v3.0](https://github.com/deathkiller/jazz2/blob/master/LICENSE).
+
+*/
+
+/** @dir Shared
+	@brief Namespace @ref Death
+*/
+/** @namespace Death
+	@brief Shared root namespace
+*/
+/** @file Shared/Asserts.h
+	@brief Asserts and event tracing
+*/
+/** @file Shared/CommonBase.h
+	@brief Basic definitions
+*/
+/** @file Shared/Common.h
+	@brief Common header file, includes also @ref CommonBase.h, `<cstddef>` and `<cstdint>`
+	
+	This file should usually be included in any other file.
+*/
+/** @file Shared/CommonWindows.h
+	@brief Windows®-specific header file, falls back to @ref Common.h on other platforms
+	
+	This file should be included instead of `<windows.h>` to avoid potential issues.
+*/
+
+/** @dir Shared/Containers
+	@brief Namespace @ref Death::Containers, @ref Death::Containers::Literals
+*/
+/** @namespace Death::Containers
+	@brief Container implementations
+
+	Implementations for various containers which don't have direct equivalents in
+	STL or are better tailored to specific use cases than general standard
+	implementations.
+*/
+/** @namespace Death::Containers::Literals
+	@brief Container literals
+
+	Literals for easy construction of string views.
+*/
+/** @namespace Death::Containers::StringUtils
+	@brief String utilities
+*/
+
+/** @namespace Death::Cpu
+	@brief Compile-time and runtime CPU instruction set detection and dispatch
+
+	This namespace provides *tags* for x86, ARM and WebAssembly instruction sets,
+	which can be used for either system introspection or for choosing a particular
+	implementation based on the available instruction set. These tags build on top
+	of the @ref DEATH_TARGET_SSE2, @ref DEATH_TARGET_SSE3 etc. preprocessor
+	macros and provide a runtime feature detection as well.
+
+	@section Cpu-usage Usage
+
+	The @ref Cpu namespace contains tags such as @ref Cpu::Avx2, @ref Cpu::Sse2,
+	@ref Cpu::Neon or @ref Cpu::Simd128. These tags behave similarly to enum values
+	and their combination result in @ref Cpu::Features.
+
+	The most advanced base CPU instruction set enabled at compile time is then
+	exposed through the @ref Cpu::DefaultBase variable, which is an alias to one of
+	those tags, and it matches the architecture-specific @ref DEATH_TARGET_SSE2
+	etc. macros. Since it's a @cpp constexpr @ce variable, it's usable in a
+	compile-time context.
+
+	@m_class{m-note m-info}
+
+	@par
+		If you're writing multiplatform code targeting multiple architectures, you
+		still need to partially rely on the preprocessor when using the
+		architecture-specific tags, as those are defined only on the architecture
+		they apply to. The above would need to be wrapped in
+		@cpp #ifdef DEATH_TARGET_X86 @ce; if you would be checking for
+		@ref Cpu::Neon instead, then you'd need to wrap it in a
+		@ref DEATH_TARGET_ARM check. On the other hand, the per-architecture tags
+		are available on given architecture always --- so for example
+		@ref Cpu::Avx512f is present even on a compiler that doesn't even recognize
+		AVX-512 yet.
+
+	@subsection Cpu-usage-dispatch-compile-time Dispatching on available CPU instruction set at compile time
+
+	The main purpose of these tags, however, is to provide means for a compile-time
+	overload resolution. In other words, picking the best candidate among a set of
+	functions implemented with various instruction sets. As an example, let's say
+	you have three different implementations of a certain algorithm transforming
+	numeric data. One is using AVX2 instructions, another is a slower variant using
+	just SSE 4.2 and as a fallback there's one with just regular scalar code. To
+	distinguish them, the functions have the same name, but use a different *tag
+	type*.
+
+	Then you can either call a particular implementation directly --- for example
+	to test it --- or you can pass @ref Cpu::DefaultBase, and it'll pick the best
+	overload candidate for the set of CPU instruction features enabled at compile
+	time:
+
+	-   If the user code was compiled with AVX2 or higher enabled, the
+		@ref Cpu::Avx2 overload will be picked.
+	-   Otherwise, if just AVX, SSE 4.2 or anything else that includes SSE 4.2 was
+		enabled, the @ref Cpu::Sse42 overload will be picked.
+	-   Otherwise (for example when compiling for generic x86-64 that has just the
+		SSE2 feature set), the @ref Cpu::Scalar overload will be picked. If you
+		wouldn't provide this overload, the compilation would fail for such a
+		target --- which is useful for example to enforce a certain CPU feature set
+		to be enabled in order to use a certain API.
+
+	@m_class{m-block m-warning}
+
+	@par SSE3, SSSE3, SSE4.1/SSE4.2, POPCNT, LZCNT, BMI1, BMI2, AVX F16C and AVX FMA on MSVC
+		A special case worth mentioning are SSE3 and newer instructions on Windows.
+		MSVC only provides a very coarse `/arch:SSE2`, `/arch:AVX` and `/arch:AVX2`
+		for either @ref Sse2, @ref Avx or @ref Avx2, but nothing in between. That
+		means it's impossible to rely just on compile-time detection to use the
+		later SSE features on machines that don't support AVX yet (or the various
+		AVX additions on machines without AVX2), you have to use runtime dispatch
+		there, as shown below.
+
+	@subsection Cpu-usage-dispatch-runtime Runtime detection and manual dispatch
+
+	So far that was all compile-time detection, which has use mainly when a binary
+	can be optimized directly for the machine it will run on. But such approach is
+	not practical when shipping to a heterogenous set of devices. Instead, the
+	usual workflow is that the majority of code uses the lowest common
+	denominator (such as SSE2 on x86), with the most demanding functions having
+	alternative implementations --- picked at runtime --- that make use of more
+	advanced instructions for better performance.
+
+	Runtime detection is exposed through @ref Cpu::runtimeFeatures(). It will
+	detect CPU features on platforms that support it, and fall back to
+	@ref Cpu::compiledFeatures() on platforms that don't. You can then match the
+	returned @ref Cpu::Features against particular tags to decide which variant to use.
+
+	While such approach gives you the most control, manually managing the dispatch
+	branches is error prone and the argument passthrough may also add nontrivial
+	overhead. See below for an
+	@ref Cpu-usage-automatic-runtime-dispatch "efficient automatic runtime dispatch".
+
+	@section Cpu-usage-extra Usage with extra instruction sets
+
+	Besides the base instruction set, which on x86 is @ref Sse2 through
+	@ref Avx512f, with each tag being a superset of the previous one, there are
+	* *extra* instruction sets such as @ref Popcnt or @ref AvxFma.
+
+	The process of defining and dispatching to function variants that include extra
+	instruction sets gets moderately more complex, however. As shown on the diagram
+	below, those are instruction sets that neither fit into the hierarchy nor are
+	unambiguously included in a later instruction set. For example, some CPUs are
+	known to have @ref Avx and just @ref AvxFma, some @ref Avx and just
+	@ref AvxF16c and there are even CPUs with @ref Avx2 but no @ref AvxFma.
+
+	While there's no possibility of having a total ordering between all possible
+	combinations for dispatching, the following approach is chosen:
+
+	1.  The base instruction set has the main priority. For example, if both an
+		@ref Avx2 and a @ref Sse2 variant are viable candidates, the @ref Avx2
+		variant gets picked, even if the @ref Sse2 variant uses extra
+		instruction sets that the @ref Avx2 doesn't.
+	2.  After that, the variant with the most extra instruction sets is chosen. For
+		example, an @ref Avx + @ref AvxFma variant is chosen over plain @ref Avx.
+
+	On the declaration side, the desired base instruction set gets ORed with as
+	many extra instruction sets as needed, and then wrapped in a
+	@ref DEATH_CPU_DECLARE() macro. For example, a lookup algorithm may have a
+	@ref Sse41 implementation which however also relies on @ref Popcnt and
+	@ref Lzcnt, and a fallback @ref Sse2 implementation that uses neither.
+
+	And a concrete overload gets picked at compile-time by passing a desired
+	combination of CPU tags as well --- or @ref Default for the set of features
+	enabled at compile time --- this time wrapped in a @ref DEATH_CPU_SELECT().
+
+	@section Cpu-usage-target-attributes Enabling instruction sets for particular functions
+
+	On GCC and Clang, a machine target has to be enabled in order to use a
+	particular CPU instruction set or its intrinsics. While it's possible to do
+	that for the whole compilation unit by passing for example `-mavx2` to the
+	compiler, it would force you to create dedicated files for every architecture
+	variant you want to support. Instead, it's possible to equip particular
+	functions with *target attributes* defined by @ref DEATH_ENABLE_SSE2 and
+	related macros, which then makes a particular instruction set enabled for given
+	function.
+
+	In contrast, MSVC doesn't restrict intrinsics usage in any way, so you can
+	freely call e.g. AVX2 intrinsics even if the whole file is compiled with just
+	SSE2 enabled. The @ref DEATH_ENABLE_SSE2 and related macros are thus defined
+	to be empty on this compiler.
+
+	@m_class{m-note m-warning}
+
+	@par
+		On the other hand, on MSVC, using just the baseline target on the file
+		level means the compiler will not be able to use any advanced instructions
+		apart from what you call explicitly via intrinsics. You can try extracting
+		all AVX+ variants into a dedicated file with `/arch:AVX` enabled and see
+		if it makes any performance difference.
+
+	For developer convenience, the @ref DEATH_ENABLE_SSE2 etc. macros are defined
+	only on matching architectures, and generally only if the compiler itself has
+	given feature set implemented and usable. Which means you can easily use them
+	to @cpp #ifdef @ce your variants to be compiled only where it makes sense, or
+	even guard intrinsics includes with them to avoid including potentially heavy
+	headers you won't use anyway. In comparison, using the @ref DEATH_TARGET_SSE2
+	etc. macros would only make the variant available if the whole compilation unit
+	has a corresponding `-m` or `/arch:` option passed to the compiler.
+
+	Finally, the @ref DEATH_ENABLE() function allows multiple instruction sets to
+	be enabled at the same time in a more concise way and consistently on both GCC
+	and Clang.
+
+	Definitions of the `lookup()` function variants from above would then look like
+	below with the target attributes added. The extra instruction sets get
+	explicitly enabled as well, in contrast a scalar variant would have no
+	target-specific annotations at all.
+
+	@section Cpu-usage-automatic-runtime-dispatch Automatic runtime dispatch
+
+	Similarly to how the best-matching function variant can be picked at compile
+	time, there's a possibility to do the same at runtime without maintaining a
+	custom dispatch code for each case
+	@ref Cpu-usage-dispatch-runtime "as was shown above". To avoid having to
+	dispatch on every call and to remove the argument passthrough overhead, all
+	variants need to have the same function signature, separate from the CPU tags.
+	That's achievable by putting them into lambdas with a common signature, and
+	returning that lambda from a wrapper function that contains the CPU tag. After
+	that, a runtime dispatcher function that is created with the
+	`DEATH_CPU_DISPATCHER_BASE()` macro.
+
+	The macro creates an overload of the same name, but taking @ref Features
+	instead, and internally dispatches to one of the overloads using the same rules
+	as in the compile-time dispatch. Which means you can now call it with e.g.
+	@ref runtimeFeatures(), get a function pointer back and then call it with the
+	actual arguments.
+
+	@m_class{m-block m-danger}
+
+	@par Instruction enabling macros and lambdas
+		An important difference with the @ref DEATH_ENABLE_SSE2 "DEATH_ENABLE_*"
+		macros is that they now have to go also directly next to the lambda as GCC
+		[currently doesn't propagate the attributes](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80439)
+		from the wrapper function to the nested lambda. To make matters worse,
+		older versions of Clang suffer from the inverse problem and ignore lambda
+		attributes, so you have to specify them on both the lambda and the wrapper
+		function. GCC 9.1 to 9.3 also has a [bug where it can't parse attributes on lambdas with a trailing return type](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90333).
+		The preferrable solution is to not use a trailing return type at the cost
+		of potentially more verbose @cpp return @ce statements. Alternatively you
+		can require version 8, 9.4 or 10 instead, but note that 9.3 is the default
+		compiler on Ubuntu 20.04.
+
+	@subsection Cpu-usage-automatic-runtime-dispatch-extra Automatic runtime dispach with extra instruction sets
+
+	If the variants are tagged with extra instruction sets instead of just the
+	base instruction set like in the @cpp lookup() @ce case
+	@ref Cpu-usage-extra "shown above", you'll use the @ref __DEATH_CPU_DISPATCHER()
+	macro instead. There, to avoid a combinatorial explosion of cases to check,
+	you're expected to list the actual extra tags the overloads use.
+
+	If some extra instruction sets are always used together (like it is above with
+	@ref Popcnt and @ref Lzcnt), you can reduce the amount of tested combinations
+	by specifying them as a single ORed argument instead.
+	On the call side, there's no difference compared to using just the base
+	instruction sets. The created dispatcher function takes @ref Features as well.
+
+	@section Cpu-usage-automatic-cached-dispatch Automatic cached dispatch
+
+	Ultimately, the dispatch can be performed implicitly, exposing only the final
+	function or a function pointer, with no additional steps needed from the user
+	side. There's three possible scenarios with varying performance tradeoffs.
+	Continuing from the @cpp lookupImplementation() @ce example above:
+
+	<ul>
+	<li>
+	On Linux and Android with API 30+ it's possible to use the
+	[GNU IFUNC](https://sourceware.org/glibc/wiki/GNU_IFUNC) mechanism, where the
+	dynamic linker performs a dispatch during the early startup. This is the
+	fastest variant of runtime dispatch, as it results in an equivalent of a
+	regular dynamic library function call. Assuming a dispatcher was created using
+	either `DEATH_CPU_DISPATCHER()` or `DEATH_CPU_DISPATCHER_BASE()`,
+	it's implemented using the @ref DEATH_CPU_DISPATCHED_IFUNC() macro.
+	</li>
+	<li>
+	On platforms where IFUNC isn't available, a function pointer can be used
+	for runtime dispatch instead. It's one additional indirection, which may have a
+	visible effect if the dispatched-to code is relatively tiny and is called from
+	within a tight loop. Assuming a dispatcher was created using
+	either `DEATH_CPU_DISPATCHER()` or `DEATH_CPU_DISPATCHER_BASE()`,
+	it's implemented using the @ref DEATH_CPU_DISPATCHED_POINTER() macro.
+	</li>
+	<li>
+	For the least amount of overhead, the compile-time dispatch can be used, with
+	arguments passed through by hand. Similarly to IFUNC, this will also result in
+	a regular function, but without the indirect overhead. Furthermore, since it's
+	a direct call to the lambda inside, compiler optimizations will fully inline
+	its contents, removing any remaining overhead and allowing LTO and other
+	inter-procedural optimizations that wouldn't be possible with the indirect
+	calls. This option is best suited for scenarios where it's possible to build
+	and optimize code for a single target platform. In this case it calls directly
+	to the original variants, so no macro is needed and
+	`DEATH_CPU_DISPATCHER()` / `DEATH_CPU_DISPATCHER_BASE()` is not
+	needed either.
+
+	</li>
+	</ul>
+
+	With all three cases, you end up with either a function or a function pointer.
+	The macro signatures are deliberately similar to each other and to the direct
+	function declaration to make it possible to unify them under a single wrapper
+	macro in case a practical use case needs to handle more than one variant.
+*/
+
+/** @namespace Death::Environment
+	@brief Platform-specific environment helper functions
+*/
+
+/** @dir Shared/IO/Compression
+	@brief Namespace @ref Death::IO::Compression
+*/
+/** @namespace Death::IO::Compression
+	@brief Data compression streaming interfaces
+*/
+/** @dir Shared/IO
+	@brief Namespace @ref Death::IO
+*/
+/** @namespace Death::IO
+	@brief File system, streaming and IO-related classes
+*/
+
+/** @dir Shared/Threading
+	@brief Namespace @ref Death::Threading
+*/
+/** @namespace Death::Threading
+	@brief Multithreading-related classes
+*/
+
+/** @namespace Death::Trace
+	@brief Runtime event tracing implementation, should be used along with @ref Asserts.h
+*/
+
+/** @namespace Death::Utf8
+	@brief Unicode (UTF-8. UTF-16 and UTF-32) utilities
+*/
+
+/** @file Main.h
+	@brief Common nCine header file, includes @ref Common.h and project metadata
+*/
+/** @dir nCine
+	@brief Namespace @ref nCine
+*/
+/** @namespace nCine
+	@brief Root namespace of nCine game engine
+*/
+/** @namespace nCine::Backends
+	@brief Platform-specific backends
+*/
+
+/** @dir Jazz2
+	@brief Namespace @ref Jazz2
+*/
+/** @namespace Jazz2
+	@brief Root namespace of Jazz² Resurrection
+*/
+
+/** @dir Jazz2/Actors
+	@brief Namespace @ref Jazz2::Actors
+*/
+/** @namespace Jazz2::Actors
+	@brief Implementation of all objects
+*/
+/** @dir Jazz2/Actors/Collectibles
+	@brief Namespace @ref Jazz2::Actors::Collectibles
+*/
+/** @namespace Jazz2::Actors::Collectibles
+	@brief Collectibles
+*/
+/** @dir Jazz2/Actors/Enemies
+	@brief Namespace @ref Jazz2::Actors::Enemies
+*/
+/** @namespace Jazz2::Actors::Enemies
+	@brief Enemies
+*/
+/** @dir Jazz2/Actors/Enemies/Bosses
+	@brief Namespace @ref Jazz2::Actors::Bosses
+*/
+/** @namespace Jazz2::Actors::Bosses
+	@brief Enemy bosses
+*/
+/** @dir Jazz2/Actors/Environment
+	@brief Namespace @ref Jazz2::Actors::Environment
+*/
+/** @namespace Jazz2::Actors::Environment
+	@brief Environmental objects
+*/
+/** @dir Jazz2/Actors/Lighting
+	@brief Namespace @ref Jazz2::Actors::Lighting
+*/
+/** @namespace Jazz2::Actors::Lighting
+	@brief Lighting effects
+*/
+/** @dir Jazz2/Actors/Multiplayer
+	@brief Namespace @ref Jazz2::Actors::Multiplayer
+*/
+/** @namespace Jazz2::Actors::Multiplayer
+	@brief Multiplayer-related objects, compiled only if `WITH_MULTIPLAYER`
+*/
+/** @dir Jazz2/Actors/Solid
+	@brief Namespace @ref Jazz2::Actors::Solid
+*/
+/** @namespace Jazz2::Actors::Solid
+	@brief Solid objects
+*/
+/** @dir Jazz2/Actors/Weapons
+	@brief Namespace @ref Jazz2::Actors::Weapons
+*/
+/** @namespace Jazz2::Actors::Weapons
+	@brief Weapons
+*/
+
+/** @dir Jazz2/Collisions
+	@brief Namespace @ref Jazz2::Collisions
+*/
+/** @namespace Jazz2::Collisions
+	@brief Collision checking
+*/
+/** @dir Jazz2/Compatibility
+	@brief Namespace @ref Jazz2::Compatibility
+*/
+/** @namespace Jazz2::Compatibility
+	@brief Translation layer for original data files
+*/
+/** @dir Jazz2/Events
+	@brief Namespace @ref Jazz2::Events
+*/
+/** @namespace Jazz2::Events
+	@brief Events and object spawning
+*/
+/** @dir Jazz2/Multiplayer
+	@brief Namespace @ref Jazz2::Multiplayer
+*/
+/** @namespace Jazz2::Multiplayer
+	@brief Multiplayer-related classes, compiled only if `WITH_MULTIPLAYER`
+*/
+/** @dir Jazz2/Rendering
+	@brief Namespace @ref Jazz2::Rendering
+*/
+/** @namespace Jazz2::Rendering
+	@brief Scene rendering and viewport management
+*/
+/** @dir Jazz2/Scripting
+	@brief Namespace @ref Jazz2::Scripting
+*/
+/** @namespace Jazz2::Scripting
+	@brief Scripting-related classes, compiled only if `WITH_ANGELSCRIPT`
+*/
+/** @dir Jazz2/Tiles
+	@brief Namespace @ref Jazz2::Tiles
+*/
+/** @namespace Jazz2::Tiles
+	@brief Tile sets and maps
+*/
+/** @dir Jazz2/UI
+	@brief Namespace @ref Jazz2::UI
+*/
+/** @namespace Jazz2::UI
+	@brief User interface and menus
+*/
+/** @dir Jazz2/UI/Menu
+	@brief Namespace @ref Jazz2::UI::Menu
+*/
+/** @namespace Jazz2::UI::Menu
+	@brief Menu sections
+*/
+
+}
