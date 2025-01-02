@@ -22,11 +22,11 @@ namespace nCine
 		/// Constructor for an animated sprite with a parent, a texture and a specified relative position
 		AnimatedSprite(SceneNode* parent, Texture* texture, float xx, float yy);
 		/// Constructor for an animated sprite with a parent, a texture and a specified relative position as a vector
-		AnimatedSprite(SceneNode* parent, Texture* texture, const Vector2f& position);
+		AnimatedSprite(SceneNode* parent, Texture* texture, Vector2f position);
 		/// Constructor for an animated sprite with a texture and a specified position but no parent
 		AnimatedSprite(Texture* texture, float xx, float yy);
 		/// Constructor for an animated sprite with a texture and a specified position as a vector but no parent
-		AnimatedSprite(Texture* texture, const Vector2f& position);
+		AnimatedSprite(Texture* texture, Vector2f position);
 
 		/// Default move constructor
 		AnimatedSprite(AnimatedSprite&&) = default;

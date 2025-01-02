@@ -316,6 +316,7 @@ namespace Death { namespace Containers {
 		}
 	};
 
+#ifdef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@brief Allocator for growable arrays
 
@@ -330,7 +331,86 @@ namespace Death { namespace Containers {
 		@ref capacity(), @ref base() and @ref deleter() following the documented
 		semantics.
 	*/
-	template<class T> using ArrayAllocator = typename std::conditional<std::is_trivially_copyable<T>::value, ArrayMallocAllocator<T>, ArrayNewAllocator<T>>::type;
+	template<class T> struct ArrayAllocator {
+		typedef T Type; /**< Pointer type */
+
+		/**
+		 * @brief Allocate (but not construct) an array of given capacity
+		 *
+		 * Implementations are expected to store the @p capacity in a way that
+		 * makes it possible to retrieve it later via @ref capacity().
+		 */
+		static T* allocate(std::size_t capacity);
+
+		/**
+		 * @brief Reallocate an array to given capacity
+		 *
+		 * Assumes @p array was returned earlier by @ref allocate() or
+		 * @ref reallocate(). Implementations are expected to either extend
+		 * @p array in-place to @p newCapacity or allocate a new array with
+		 * @p newCapacity, move @p prevSize elements from @p array to it and call
+		 * destructors on their original location, deallocate the @p array and
+		 * update the reference to point to the new memory.
+		 */
+		static void reallocate(T*& array, std::size_t prevSize, std::size_t newCapacity);
+
+		/**
+		 * @brief Deallocate (but not destruct) an array
+		 *
+		 * Assumes that @p data was returned earlier by @ref allocate() or
+		 * @ref reallocate(). Implementations are expected to free all memory
+		 * associated with @p data.
+		 */
+		static void deallocate(T* data);
+
+		/**
+		 * @brief Grow an array
+		 *
+		 * Assumes that @p array is either @cpp nullptr @ce or was returned earlier
+		 * by @ref allocate() or @ref reallocate(). Implementations are expected to
+		 * return a new capacity with an an optimal tradeoff between reallocation
+		 * count and memory usage, the value then being passed to
+		 * @ref reallocate().
+		 *
+		 * See documentation of a particular implementation (such as
+		 * @ref ArrayNewAllocator::grow()) for details about growth strategy.
+		 */
+		static std::size_t grow(T* array, std::size_t desired);
+
+		/**
+		 * @brief Array capacity
+		 *
+		 * Implementations are expected to retrieve the capacity information from
+		 * @p array.
+		 */
+		static std::size_t capacity(T* array);
+
+		/**
+		 * @brief Array base address
+		 *
+		 * Returns base address of the allocation backing @p array. For use by
+		 * Address Sanitizer to annotate which area of the allocation is safe to
+		 * access and which not.
+		 */
+		static void* base(T* array);
+
+		/**
+		 * @brief Array deleter
+		 *
+		 * Passed as a function pointer into @ref Array. Calls destructors on
+		 * @p size elements and delegates into @ref deallocate(). The deleter
+		 * function pointer is used to distinguish if given array is using this
+		 * particular allocator --- you might want to turn this function into an
+		 * exported symbol when growing arrays across shared library boundaries to
+		 * avoid each library thinking it's using some other allocator and
+		 * reallocating on each addition.
+		 */
+		static void deleter(T* data, std::size_t size);
+	};
+#else
+	template<class T> using ArrayAllocator = typename std::conditional<std::is_trivially_copyable<T>::value,
+		ArrayMallocAllocator<T>, ArrayNewAllocator<T>>::type;
+#endif
 
 	/**
 		@brief Reinterpret-cast a growable array

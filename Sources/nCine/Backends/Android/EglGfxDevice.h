@@ -28,8 +28,8 @@ namespace nCine::Backends
 
 		void update() override;
 
-		void setWindowTitle(const StringView& windowTitle) override { }
-		void setWindowIcon(const StringView& windowIconFilename) override { }
+		void setWindowTitle(StringView windowTitle) override { }
+		void setWindowIcon(StringView windowIconFilename) override { }
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 		bool setVideoMode(unsigned int modeIndex) override;

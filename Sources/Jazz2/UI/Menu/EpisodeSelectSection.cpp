@@ -436,7 +436,7 @@ namespace Jazz2::UI::Menu
 		_root->ChangeLevel(std::move(levelInit));
 	}
 
-	void EpisodeSelectSection::AddEpisode(const StringView& episodeFile)
+	void EpisodeSelectSection::AddEpisode(StringView episodeFile)
 	{
 		if (fs::GetExtension(episodeFile) != "j2e"_s) {
 			return;

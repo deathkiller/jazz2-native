@@ -48,7 +48,7 @@ namespace nCine
 			return copyData(0, src, usedSize_);
 		}
 
-		GLUniformCache* uniform(const StringView& name);
+		GLUniformCache* uniform(StringView name);
 		/// Wrapper around `GLUniformBlock::setBlockBinding()`
 		void setBlockBinding(GLuint blockBinding);
 

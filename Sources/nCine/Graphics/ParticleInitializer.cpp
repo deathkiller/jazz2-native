@@ -47,17 +47,17 @@ namespace nCine
 		rndPositionY.Set(y - radius, y + radius);
 	}
 
-	void ParticleInitializer::setPosition(const Vector2f& pos)
+	void ParticleInitializer::setPosition(Vector2f pos)
 	{
 		setPosition(pos.X, pos.Y);
 	}
 
-	void ParticleInitializer::setPosition(const Vector2f& minPos, const Vector2f& maxPos)
+	void ParticleInitializer::setPosition(Vector2f minPos, Vector2f maxPos)
 	{
 		setPosition(minPos.X, minPos.Y, maxPos.X, maxPos.Y);
 	}
 
-	void ParticleInitializer::setPositionAndRadius(const Vector2f& pos, float radius)
+	void ParticleInitializer::setPositionAndRadius(Vector2f pos, float radius)
 	{
 		setPositionAndRadius(pos.X, pos.Y, radius);
 	}
@@ -127,27 +127,27 @@ namespace nCine
 		}
 	}
 
-	void ParticleInitializer::setVelocity(const Vector2f& vel)
+	void ParticleInitializer::setVelocity(Vector2f vel)
 	{
 		setVelocity(vel.X, vel.Y);
 	}
 
-	void ParticleInitializer::setVelocity(const Vector2f& minVel, const Vector2f& maxVel)
+	void ParticleInitializer::setVelocity(Vector2f minVel, Vector2f maxVel)
 	{
 		setVelocity(minVel.X, minVel.Y, maxVel.X, maxVel.Y);
 	}
 
-	void ParticleInitializer::setVelocityAndRadius(const Vector2f& vel, float radius)
+	void ParticleInitializer::setVelocityAndRadius(Vector2f vel, float radius)
 	{
 		setVelocityAndRadius(vel.X, vel.Y, radius);
 	}
 
-	void ParticleInitializer::setVelocityAndScale(const Vector2f& vel, float minScale, float maxScale)
+	void ParticleInitializer::setVelocityAndScale(Vector2f vel, float minScale, float maxScale)
 	{
 		setVelocityAndScale(vel.X, vel.Y, minScale, maxScale);
 	}
 
-	void ParticleInitializer::setVelocityAndAngle(const Vector2f& vel, float angle)
+	void ParticleInitializer::setVelocityAndAngle(Vector2f vel, float angle)
 	{
 		setVelocityAndAngle(vel.X, vel.Y, angle);
 	}

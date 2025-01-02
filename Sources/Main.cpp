@@ -1401,7 +1401,7 @@ void GameEventHandler::CheckUpdates()
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
-	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, const StringView& name, bool isBrand) {
+	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, StringView name, bool isBrand) {
 		bool wasSpace = true;
 		std::size_t lowercaseLength = 0;
 

@@ -53,7 +53,7 @@ namespace nCine
 		/// Constructor for a drawable node with a parent and a specified relative position
 		DrawableNode(SceneNode* parent, float xx, float yy);
 		/// Constructor for a drawable node with a parent and a specified relative position as a vector
-		DrawableNode(SceneNode* parent, const Vector2f& position);
+		DrawableNode(SceneNode* parent, Vector2f position);
 		/// Constructor for a drawable node with a parent and positioned in the relative origin
 		explicit DrawableNode(SceneNode* parent);
 		/// Constructor for a drawable node with no parent and positioned in the origin
@@ -101,7 +101,7 @@ namespace nCine
 		/// Sets the transformation anchor point
 		void setAnchorPoint(float xx, float yy);
 		/// Sets the transformation anchor point with a `Vector2f`
-		inline void setAnchorPoint(const Vector2f& point) {
+		inline void setAnchorPoint(Vector2f point) {
 			setAnchorPoint(point.X, point.Y);
 		}
 

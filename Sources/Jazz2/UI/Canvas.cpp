@@ -33,7 +33,7 @@ namespace Jazz2::UI
 		_currentRenderQueue->addCommand(command);
 	}
 
-	void Canvas::DrawTexture(const Texture& texture, const Vector2f& pos, std::uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle)
+	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle)
 	{
 		auto command = RentRenderCommand();
 		if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
@@ -72,7 +72,7 @@ namespace Jazz2::UI
 		_currentRenderQueue->addCommand(command);
 	}
 
-	void Canvas::DrawSolid(const Vector2f& pos, std::uint16_t z, const Vector2f& size, const Colorf& color, bool additiveBlending)
+	void Canvas::DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending)
 	{
 		auto command = RentRenderCommand();
 		if (command->material().setShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
@@ -98,7 +98,7 @@ namespace Jazz2::UI
 		_currentRenderQueue->addCommand(command);
 	}
 
-	Vector2f Canvas::ApplyAlignment(Alignment align, const Vector2f& vec, const Vector2f& size)
+	Vector2f Canvas::ApplyAlignment(Alignment align, Vector2f vec, Vector2f size)
 	{
 		Vector2f result = vec;
 

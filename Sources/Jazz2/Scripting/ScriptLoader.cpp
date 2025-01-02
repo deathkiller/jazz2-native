@@ -60,7 +60,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	ScriptContextType ScriptLoader::AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols)
+	ScriptContextType ScriptLoader::AddScriptFromFile(StringView path, const HashMap<String, bool>& definedSymbols)
 	{
 		String absolutePath = fs::GetAbsolutePath(path);
 		if (absolutePath.empty()) {
@@ -663,7 +663,7 @@ namespace Jazz2::Scripting
 		return pos;
 	}
 
-	int ScriptLoader::ExtractDeclaration(const StringView& scriptContent, int pos, String& name, String& declaration, MetadataType& type)
+	int ScriptLoader::ExtractDeclaration(StringView scriptContent, int pos, String& name, String& declaration, MetadataType& type)
 	{
 		int scriptSize = (int)scriptContent.size();
 		int start = pos;
@@ -815,7 +815,7 @@ namespace Jazz2::Scripting
 		return methodIt->second;
 	}
 
-	String ScriptLoader::MakeRelativePath(const StringView& path, const StringView& relativeToFile)
+	String ScriptLoader::MakeRelativePath(StringView path, StringView relativeToFile)
 	{
 		if (path.empty() || path.size() > fs::MaxPathLength) return { };
 

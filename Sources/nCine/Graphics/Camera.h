@@ -58,7 +58,7 @@ namespace nCine
 		void setOrthoProjection(float left, float right, float top, float bottom);
 		void setOrthoProjection(const ProjectionValues& values);
 
-		void setView(const Vector2f& pos, float rotation, float scale);
+		void setView(Vector2f pos, float rotation, float scale);
 		void setView(float x, float y, float rotation, float scale);
 		void setView(const ViewValues& values);
 

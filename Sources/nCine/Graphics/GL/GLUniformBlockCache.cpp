@@ -84,7 +84,7 @@ namespace nCine
 		return true;
 	}
 
-	GLUniformCache* GLUniformBlockCache::uniform(const StringView& name)
+	GLUniformCache* GLUniformBlockCache::uniform(StringView name)
 	{
 		return uniformCaches_.find(String::nullTerminatedView(name));
 	}

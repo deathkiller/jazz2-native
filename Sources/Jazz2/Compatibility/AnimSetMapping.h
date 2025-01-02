@@ -53,7 +53,7 @@ namespace Jazz2::Compatibility
 		void DiscardItems(std::uint32_t advanceBy, JJ2Version appliesTo = JJ2Version::All);
 		void SkipItems(std::uint32_t advanceBy = 1);
 		void NextSet(std::uint32_t advanceBy = 1, JJ2Version appliesTo = JJ2Version::All);
-		void Add(JJ2Version appliesTo, const StringView& category, const StringView& name, JJ2DefaultPalette palette = JJ2DefaultPalette::Sprite, bool skipNormalMap = false, bool allowRealtimePalette = false);
-		void Add(const StringView& category, const StringView& name, JJ2DefaultPalette palette = JJ2DefaultPalette::Sprite, bool skipNormalMap = false, bool allowRealtimePalette = false);
+		void Add(JJ2Version appliesTo, StringView category, StringView name, JJ2DefaultPalette palette = JJ2DefaultPalette::Sprite, bool skipNormalMap = false, bool allowRealtimePalette = false);
+		void Add(StringView category, StringView name, JJ2DefaultPalette palette = JJ2DefaultPalette::Sprite, bool skipNormalMap = false, bool allowRealtimePalette = false);
 	};
 }

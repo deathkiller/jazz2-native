@@ -26,6 +26,6 @@ namespace Jazz2::UI::Menu
 		std::int32_t _lastPointerId;
 		bool _isDirty;
 
-		void DrawOutlinedSolid(float x, float y, std::uint16_t z, Alignment align, const Vector2f& size);
+		void DrawOutlinedSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size);
 	};
 }

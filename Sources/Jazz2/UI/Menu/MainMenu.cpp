@@ -482,7 +482,7 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
 
-	void MainMenu::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords, bool unaligned)
+	void MainMenu::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, Vector2f size, const Vector4f& texCoords, bool unaligned)
 	{
 		auto* res = _metadata->FindAnimation(state);
 		if (res == nullptr) {
@@ -500,7 +500,7 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
 
-	void MainMenu::DrawSolid(float x, float y, std::uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
+	void MainMenu::DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
@@ -510,7 +510,7 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
 
-	void MainMenu::DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool unaligned)
+	void MainMenu::DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);

@@ -7,6 +7,8 @@ namespace nCine
 {
 	class Colorf;
 
+	using Death::Containers::NoInitT;
+
 	/// Four-channels 8-bit color
 	class Color
 	{
@@ -33,7 +35,7 @@ namespace nCine
 		{
 		}
 
-		explicit Color(Death::Containers::NoInitT) noexcept
+		explicit Color(NoInitT) noexcept
 		{
 		}
 

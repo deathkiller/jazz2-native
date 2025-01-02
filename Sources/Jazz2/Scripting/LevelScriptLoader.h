@@ -31,7 +31,7 @@ namespace Jazz2::Scripting
 		friend class jjPLAYER;
 
 	public:
-		LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath);
+		LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath);
 
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const;
 
@@ -47,8 +47,8 @@ namespace Jazz2::Scripting
 		void OnPlayerDied(Actors::Player* player, Actors::ActorBase* collider);
 
 	protected:
-		String OnProcessInclude(const StringView& includePath, const StringView& scriptPath) override;
-		void OnProcessPragma(const StringView& content, ScriptContextType& contextType) override;
+		String OnProcessInclude(StringView includePath, StringView scriptPath) override;
+		void OnProcessPragma(StringView content, ScriptContextType& contextType) override;
 
 	private:
 		LevelHandler* _levelHandler;
@@ -128,7 +128,7 @@ namespace Jazz2::Scripting
 		LevelScriptLoader(const LevelScriptLoader&) = delete;
 		LevelScriptLoader& operator=(const LevelScriptLoader&) = delete;
 
-		Actors::ActorBase* CreateActorInstance(const StringView& typeName);
+		Actors::ActorBase* CreateActorInstance(StringView typeName);
 
 		static void RegisterBuiltInFunctions(asIScriptEngine* engine);
 		void RegisterLegacyFunctions(asIScriptEngine* engine);

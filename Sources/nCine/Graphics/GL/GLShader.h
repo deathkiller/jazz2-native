@@ -43,11 +43,11 @@ namespace nCine
 		/// Loads a shader from the given string
 		bool loadFromString(StringView string);
 		/// Loads a shader from the given string and then append the specified file
-		bool loadFromStringAndFile(StringView string, const StringView& filename);
+		bool loadFromStringAndFile(StringView string, StringView filename);
 		/// Loads a shader by concatenating the given strings in order
 		bool loadFromStrings(ArrayView<const StringView> strings);
 		/// Loads a shader by concatenating the given strings in order, then appending the specified file
-		bool loadFromStringsAndFile(ArrayView<const StringView> strings, const StringView& filename);
+		bool loadFromStringsAndFile(ArrayView<const StringView> strings, StringView filename);
 		/// Loads a shader from the specified file
 		bool loadFromFile(StringView filename);
 

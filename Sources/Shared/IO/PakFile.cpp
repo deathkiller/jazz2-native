@@ -265,7 +265,7 @@ namespace Death { namespace IO {
 			}
 
 			// Items are always sorted by PakWriter
-			Item* foundItem = std::lower_bound(items->begin(), items->end(), name, [](const PakFile::Item& a, const StringView& b) {
+			Item* foundItem = std::lower_bound(items->begin(), items->end(), name, [](const PakFile::Item& a, StringView b) {
 				return a.Name < b;
 			});
 

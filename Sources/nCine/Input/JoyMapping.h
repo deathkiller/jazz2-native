@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IInputManager.h"
+#include "../Primitives/Vector2.h"
 
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
@@ -14,8 +15,6 @@ namespace nCine
 	class JoyAxisEvent;
 	class JoyConnectionEvent;
 	class IInputEventHandler;
-	template<class T> class Vector2;
-	using Vector2f = Vector2<float>;
 
 	/// Provides translation layer for gamepads and joysticks to unified layout
 	class JoyMapping
@@ -47,7 +46,7 @@ namespace nCine
 		bool IsJoyMapped(std::int32_t joyId) const;
 		const JoyMappedState& GetMappedState(std::int32_t joyId) const;
 		void DeadZoneNormalize(Vector2f& joyVector, float deadZoneValue = IInputManager::LeftStickDeadZone) const;
-		static JoystickGuid CreateJoystickGuid(std::uint16_t bus, std::uint16_t vendor, std::uint16_t product, std::uint16_t version, const StringView& name, std::uint8_t driverSignature, std::uint8_t driverData);
+		static JoystickGuid CreateJoystickGuid(std::uint16_t bus, std::uint16_t vendor, std::uint16_t product, std::uint16_t version, StringView name, std::uint8_t driverSignature, std::uint8_t driverData);
 		
 		std::int32_t FindMappingByGuid(const JoystickGuid& guid) const;
 		std::int32_t FindMappingByName(const char* name) const;

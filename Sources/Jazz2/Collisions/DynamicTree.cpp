@@ -130,7 +130,7 @@ namespace Jazz2::Collisions
 		FreeNode(proxyId);
 	}
 
-	bool DynamicTree::MoveProxy(std::int32_t proxyId, const AABBf& aabb, const Vector2f& displacement)
+	bool DynamicTree::MoveProxy(std::int32_t proxyId, const AABBf& aabb, Vector2f displacement)
 	{
 		//b2Assert(0 <= proxyId && proxyId < m_nodeCapacity);
 

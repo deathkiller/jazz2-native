@@ -638,7 +638,7 @@ namespace nCine
 		}
 	}
 
-	JoystickGuid JoyMapping::CreateJoystickGuid(std::uint16_t bus, std::uint16_t vendor, std::uint16_t product, std::uint16_t version, const StringView& name, std::uint8_t driverSignature, std::uint8_t driverData)
+	JoystickGuid JoyMapping::CreateJoystickGuid(std::uint16_t bus, std::uint16_t vendor, std::uint16_t product, std::uint16_t version, StringView name, std::uint8_t driverSignature, std::uint8_t driverData)
 	{
 		JoystickGuid guid;
 		std::uint16_t* guid16 = reinterpret_cast<std::uint16_t*>(guid.data);

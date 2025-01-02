@@ -36,10 +36,10 @@ namespace nCine::Backends
 
 		void setWindowSize(int width, int height) override;
 
-		inline void setWindowTitle(const StringView& windowTitle) override {
+		inline void setWindowTitle(StringView windowTitle) override {
 			SDL_SetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
 		}
-		void setWindowIcon(const StringView& windowIconFilename) override;
+		void setWindowIcon(StringView windowIconFilename) override;
 
 		const Vector2i windowPosition() const override;
 

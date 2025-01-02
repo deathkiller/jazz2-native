@@ -84,7 +84,7 @@ namespace nCine::Backends
 		SDL_SetWindowSize(windowHandle_, width, height);
 	}
 
-	void SdlGfxDevice::setWindowIcon(const StringView& windowIconFilename)
+	void SdlGfxDevice::setWindowIcon(StringView windowIconFilename)
 	{
 		std::unique_ptr<ITextureLoader> image = ITextureLoader::createFromFile(windowIconFilename);
 		const unsigned int bytesPerPixel = image->texFormat().numChannels();

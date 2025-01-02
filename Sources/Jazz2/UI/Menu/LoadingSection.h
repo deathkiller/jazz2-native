@@ -7,7 +7,7 @@ namespace Jazz2::UI::Menu
 	class LoadingSection : public MenuSection
 	{
 	public:
-		LoadingSection(const StringView& message);
+		LoadingSection(StringView message);
 		LoadingSection(String&& message);
 
 		void OnUpdate(float timeMult) override;

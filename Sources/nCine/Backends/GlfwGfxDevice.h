@@ -49,10 +49,10 @@ namespace nCine::Backends
 		void setWindowPosition(int x, int y) override;
 		void setWindowSize(int width, int height) override;
 
-		inline void setWindowTitle(const StringView& windowTitle) override {
+		inline void setWindowTitle(StringView windowTitle) override {
 			glfwSetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
 		}
-		void setWindowIcon(const StringView& windowIconFilename) override;
+		void setWindowIcon(StringView windowIconFilename) override;
 
 		const Vector2i windowPosition() const override;
 

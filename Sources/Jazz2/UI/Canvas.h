@@ -22,9 +22,9 @@ namespace Jazz2::UI
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
-		void DrawTexture(const Texture& texture, const Vector2f& pos, std::uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f);
-		void DrawSolid(const Vector2f& pos, std::uint16_t z, const Vector2f& size, const Colorf& color, bool additiveBlending = false);
-		static Vector2f ApplyAlignment(Alignment align, const Vector2f& vec, const Vector2f& size);
+		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f);
+		void DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending = false);
+		static Vector2f ApplyAlignment(Alignment align, Vector2f vec, Vector2f size);
 
 		RenderCommand* RentRenderCommand();
 		void DrawRenderCommand(RenderCommand* command);

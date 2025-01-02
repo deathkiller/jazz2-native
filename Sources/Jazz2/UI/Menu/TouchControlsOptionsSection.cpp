@@ -123,7 +123,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void TouchControlsOptionsSection::DrawOutlinedSolid(float x, float y, std::uint16_t z, Alignment align, const Vector2f& size)
+	void TouchControlsOptionsSection::DrawOutlinedSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size)
 	{
 		_root->DrawSolid(x, y, z, align, size, Colorf(1.0f, 1.0f, 1.0f, 0.5f));
 

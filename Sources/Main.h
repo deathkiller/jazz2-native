@@ -1,18 +1,23 @@
 ﻿#pragma once
 
 // Set default name and version if not provided by CMake
+/** @brief Application name */
 #if !defined(NCINE_APP)
 #	define NCINE_APP "jazz2"
 #endif
+/** @brief Application full name */
 #if !defined(NCINE_APP_NAME)
 #	define NCINE_APP_NAME "Jazz² Resurrection"
 #endif
+/** @brief Application version */
 #if !defined(NCINE_VERSION)
 #	define NCINE_VERSION "3.0.0"
 #endif
+/** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)
-#	define NCINE_BUILD_YEAR "2024"
+#	define NCINE_BUILD_YEAR "2025"
 #endif
+/** @brief Application package name */
 #if !defined(NCINE_LINUX_PACKAGE)
 #	define NCINE_LINUX_PACKAGE NCINE_APP_NAME
 #endif
@@ -33,17 +38,21 @@
 
 #include <stdlib.h>
 
-#if !defined(NCINE_INSTALL_PREFIX) && defined(DEATH_TARGET_UNIX)
+/** @brief Install prefix on Unix systems */
+#if (!defined(NCINE_INSTALL_PREFIX) && defined(DEATH_TARGET_UNIX)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_INSTALL_PREFIX "/usr/local"
 #endif
 
 // Check platform-specific capabilities
-#if defined(WITH_SDL) || defined(DEATH_TARGET_WINDOWS_RT)
+/** @brief Whether the current platform supports a gamepad rumble (see @ref nCine::IInputManager::joystickRumble()) */
+#if defined(WITH_SDL) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_GAMEPAD_RUMBLE
 #endif
-#if defined(DEATH_TARGET_ANDROID)
+/** @brief Whether the current platform has a native (hardware) back button */
+#if defined(DEATH_TARGET_ANDROID) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_NATIVE_BACK_BUTTON
 #endif
+/** @brief Whether the current platform has non-fullscreen windows */
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 #	define NCINE_HAS_WINDOWS
 #endif

@@ -111,7 +111,7 @@ namespace nCine
 				: age(newAge), scale(newScale, newScale) {}
 			SizeStep(float newAge, float newScaleX, float newScaleY)
 				: age(newAge), scale(newScaleX, newScaleY) {}
-			SizeStep(float newAge, const Vector2f& newScale)
+			SizeStep(float newAge, Vector2f newScale)
 				: age(newAge), scale(newScale) {}
 		};
 
@@ -125,7 +125,7 @@ namespace nCine
 		SizeAffector(float baseScaleX, float baseScaleY)
 			: ParticleAffector(Type::SIZE), sizeSteps_(StepsInitialSize), baseScale_(baseScaleX, baseScaleY) {}
 		/// Constructs a size affector with a vector base scale factor as a reference
-		explicit SizeAffector(const Vector2f& baseScale)
+		explicit SizeAffector(Vector2f baseScale)
 			: SizeAffector(baseScale.X, baseScale.Y) {}
 
 		/// Default move constructor
@@ -144,7 +144,7 @@ namespace nCine
 			addSizeStep(age, scale, scale);
 		}
 		void addSizeStep(float age, float scaleX, float scaleY);
-		inline void addSizeStep(float age, const Vector2f& scale) {
+		inline void addSizeStep(float age, Vector2f scale) {
 			addSizeStep(age, scale.X, scale.Y);
 		}
 
@@ -168,13 +168,13 @@ namespace nCine
 			baseScale_.Y = baseScaleY;
 		}
 
-		inline const Vector2f& baseScale() const {
+		inline Vector2f baseScale() const {
 			return baseScale_;
 		}
 		inline void setBaseScale(float baseScale) {
 			baseScale_.Set(baseScale, baseScale);
 		}
-		inline void setBaseScale(const Vector2f& baseScale) {
+		inline void setBaseScale(Vector2f baseScale) {
 			baseScale_ = baseScale;
 		}
 
@@ -265,7 +265,7 @@ namespace nCine
 		/// Affects the position of the specified particle
 		void affect(Particle* particle, float normalizedAge) override;
 		void addPositionStep(float age, float posX, float posY);
-		inline void addPositionStep(float age, const Vector2f& position) {
+		inline void addPositionStep(float age, Vector2f position) {
 			addPositionStep(age, position.X, position.Y);
 		}
 
@@ -315,7 +315,7 @@ namespace nCine
 		/// Affects the velocity of the specified particle
 		void affect(Particle* particle, float normalizedAge) override;
 		void addVelocityStep(float age, float velX, float velY);
-		inline void addVelocityStep(float age, const Vector2f& velocity) {
+		inline void addVelocityStep(float age, Vector2f velocity) {
 			addVelocityStep(age, velocity.X, velocity.Y);
 		}
 

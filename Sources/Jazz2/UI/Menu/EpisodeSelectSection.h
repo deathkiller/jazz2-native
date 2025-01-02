@@ -47,6 +47,6 @@ namespace Jazz2::UI::Menu
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 
 		void OnAfterTransition();
-		void AddEpisode(const StringView& episodeFile);
+		void AddEpisode(StringView episodeFile);
 	};
 }

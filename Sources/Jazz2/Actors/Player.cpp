@@ -1755,7 +1755,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
+	void Player::OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
 		std::int32_t sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 		if (std::abs(force.X) > 0.0f) {
@@ -1832,7 +1832,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::OnWaterSplash(const Vector2f& pos, bool inwards)
+	void Player::OnWaterSplash(Vector2f pos, bool inwards)
 	{
 		Explosion::Create(_levelHandler, Vector3i((std::int32_t)pos.X, (std::int32_t)pos.Y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
 		_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(pos.X, pos.Y, 0.0f), inwards ? 0.7f : 1.0f, 0.5f);
@@ -2554,7 +2554,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(const StringView identifier, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(StringView identifier, float gain, float pitch)
 	{
 #if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
@@ -3366,7 +3366,7 @@ namespace Jazz2::Actors
 		dest.Write(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
 	}
 
-	void Player::Respawn(const Vector2f& pos)
+	void Player::Respawn(Vector2f pos)
 	{
 		if ((GetState() & (ActorState::IsInvulnerable | ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors)) != ActorState::IsInvulnerable) {
 			return;
@@ -3382,7 +3382,7 @@ namespace Jazz2::Actors
 		SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors, true);
 	}
 
-	void Player::WarpToPosition(const Vector2f& pos, WarpFlags flags)
+	void Player::WarpToPosition(Vector2f pos, WarpFlags flags)
 	{
 		if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
 			Vector2f posPrev = _pos;

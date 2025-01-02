@@ -11,7 +11,7 @@ namespace nCine
 	{
 	}
 
-	AudioStreamPlayer::AudioStreamPlayer(const StringView& filename)
+	AudioStreamPlayer::AudioStreamPlayer(StringView filename)
 		: IAudioPlayer(ObjectType::AudioStreamPlayer), audioStream_(filename)
 	{
 	}

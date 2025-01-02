@@ -54,11 +54,11 @@ namespace nCine
 		/// Constructor for a sprite with a parent, a texture and a specified relative position
 		MeshSprite(SceneNode* parent, Texture* texture, float xx, float yy);
 		/// Constructor for a sprite with a parent, a texture and a specified relative position as a vector
-		MeshSprite(SceneNode* parent, Texture* texture, const Vector2f& position);
+		MeshSprite(SceneNode* parent, Texture* texture, Vector2f position);
 		/// Constructor for a sprite with a texture and a specified position but no parent
 		MeshSprite(Texture* texture, float xx, float yy);
 		/// Constructor for a sprite with a texture and a specified position as a vector but no parent
-		MeshSprite(Texture* texture, const Vector2f& position);
+		MeshSprite(Texture* texture, Vector2f position);
 
 		/// Default move constructor
 		MeshSprite(MeshSprite&&) = default;

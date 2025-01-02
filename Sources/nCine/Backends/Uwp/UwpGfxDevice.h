@@ -50,8 +50,8 @@ namespace nCine::Backends
 		void setWindowPosition(int x, int y) override { };
 		void setWindowSize(int width, int height) override;
 
-		void setWindowTitle(const StringView& windowTitle) override;
-		void setWindowIcon(const StringView& iconFilename) override { }
+		void setWindowTitle(StringView windowTitle) override;
+		void setWindowIcon(StringView iconFilename) override { }
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override {
 			return _currentViewMode;

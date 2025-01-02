@@ -9,15 +9,17 @@
 
 namespace nCine
 {
+	using Death::Containers::NoInitT;
+
 	/// Four-by-four matrix
 	template<class T>
 	class Matrix4x4
 	{
 	public:
-		Matrix4x4() noexcept
+		constexpr Matrix4x4() noexcept
 			: vecs_{Vector4<T>(T(1), T(0), T(0), T(0)), Vector4<T>(T(0), T(1), T(0), T(0)), Vector4<T>(T(0), T(0), T(1), T(0)), Vector4<T>(T(0), T(0), T(0), T(1))} {}
 
-		explicit Matrix4x4(Death::Containers::NoInitT) noexcept
+		explicit Matrix4x4(NoInitT) noexcept
 			{}
 
 		Matrix4x4(const Vector4<T>& v0, const Vector4<T>& v1, const Vector4<T>& v2, const Vector4<T>& v3) noexcept;

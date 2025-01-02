@@ -19,7 +19,7 @@ namespace nCine
 	class BinaryShaderCache
 	{
 	public:
-		BinaryShaderCache(const StringView& path);
+		BinaryShaderCache(StringView path);
 
 		inline bool isAvailable() const {
 			return isAvailable_;
@@ -44,7 +44,7 @@ namespace nCine
 			return path_;
 		}
 		/// Sets a new directory as the cache for binary shaders
-		bool setPath(const StringView& path);
+		bool setPath(StringView path);
 
 	private:
 		using glGetProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);

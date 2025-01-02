@@ -16,7 +16,7 @@ namespace Jazz2::Rendering
 			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}
 
-		void Initialize(Texture* source, std::int32_t width, std::int32_t height, const Vector2f& direction);
+		void Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction);
 		void Register();
 
 		bool OnDraw(RenderQueue& renderQueue) override;

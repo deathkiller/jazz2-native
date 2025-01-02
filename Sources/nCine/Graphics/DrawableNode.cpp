@@ -69,7 +69,7 @@ namespace nCine
 		renderCommand_.setIdSortKey(id());
 	}
 
-	DrawableNode::DrawableNode(SceneNode* parent, const Vector2f& position)
+	DrawableNode::DrawableNode(SceneNode* parent, Vector2f position)
 		: DrawableNode(parent, position.X, position.Y)
 	{
 	}

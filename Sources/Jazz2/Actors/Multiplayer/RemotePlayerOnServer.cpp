@@ -89,7 +89,7 @@ namespace Jazz2::Actors::Multiplayer
 		return success;
 	}
 
-	void RemotePlayerOnServer::SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
+	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
 	{
 		if (_health <= 0) {
 			// Don't sync dead players to avoid cheating
@@ -133,7 +133,7 @@ namespace Jazz2::Actors::Multiplayer
 		_speed = speed;
 	}
 
-	void RemotePlayerOnServer::OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
+	void RemotePlayerOnServer::OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
 		if (!static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerSpring(this, pos, force, keepSpeedX, keepSpeedY)) {
 			return;
@@ -142,7 +142,7 @@ namespace Jazz2::Actors::Multiplayer
 		PlayerOnServer::OnHitSpring(pos, force, keepSpeedX, keepSpeedY, removeSpecialMove);
 	}
 
-	void RemotePlayerOnServer::WarpToPosition(const Vector2f& pos, WarpFlags flags)
+	void RemotePlayerOnServer::WarpToPosition(Vector2f pos, WarpFlags flags)
 	{
 		PlayerOnServer::WarpToPosition(pos, flags);
 

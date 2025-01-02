@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Multiplayer
 		ActorBase::OnUpdate(timeMult);
 	}
 
-	void RemoteActor::AssignMetadata(const StringView& path, AnimState anim, ActorState state)
+	void RemoteActor::AssignMetadata(StringView path, AnimState anim, ActorState state)
 	{
 		constexpr ActorState RemotedFlags = ActorState::Illuminated | ActorState::IsInvulnerable | ActorState::TriggersTNT |
 			ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject |
@@ -78,7 +78,7 @@ namespace Jazz2::Actors::Multiplayer
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
 	}
 
-	void RemoteActor::SyncWithServer(const Vector2f& pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft, bool animPaused, Actors::ActorRendererType rendererType)
+	void RemoteActor::SyncWithServer(Vector2f pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft, bool animPaused, Actors::ActorRendererType rendererType)
 	{
 		Clock& c = nCine::clock();
 		std::int64_t now = c.now() * 1000 / c.frequency();

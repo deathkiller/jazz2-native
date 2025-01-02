@@ -337,7 +337,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::LoadMlleData(JJ2Block& block, std::uint32_t version, const StringView& path, bool strictParser)
+	void JJ2Level::LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser)
 	{
 		if (version > 0x106) {
 			LOGW("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
@@ -1076,7 +1076,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	bool JJ2Level::StringHasSuffixIgnoreCase(const StringView value, const StringView suffix)
+	bool JJ2Level::StringHasSuffixIgnoreCase(StringView value, StringView suffix)
 	{
 		const std::size_t size = value.size();
 		const std::size_t suffixSize = suffix.size();

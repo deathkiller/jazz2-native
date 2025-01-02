@@ -5,6 +5,8 @@
 
 namespace nCine
 {
+	using Death::Containers::NoInitT;
+
 	/// Quaternion
 	template<class T>
 	class Quaternion
@@ -12,13 +14,15 @@ namespace nCine
 	public:
 		T X, Y, Z, W;
 
-		Quaternion()
+		constexpr Quaternion() noexcept
 			: X(T(0)), Y(T(0)), Z(T(0)), W(T(1)) {}
-		Quaternion(T x, T y, T z, T w)
+		explicit Quaternion(NoInitT) noexcept
+			{}
+		constexprQuaternion(T x, T y, T z, T w) noexcept
 			: X(x), Y(y), Z(z), W(w) {}
-		explicit Quaternion(const Vector4<T>& v)
+		explicit Quaternion(const Vector4<T>& v) noexcept
 			: X(v.X), Y(v.Y), Z(v.Z), W(v.W) {}
-		Quaternion(const Quaternion& other)
+		constexpr Quaternion(const Quaternion& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
 		Quaternion& operator=(const Quaternion& other);
 

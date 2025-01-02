@@ -8,24 +8,26 @@
 
 namespace nCine
 {
+	using Death::Containers::NoInitT;
+
 	/// Axis-Aligned Bounding Box in a two dimensional space
 	template<class S>
 	class AABB
 	{
 	public:
-		/// Top-left X coordinate as a public property
+		/// Top-left X coordinate
 		S L;
-		/// Top-left Y coordinate as a public property
+		/// Top-left Y coordinate
 		S T;
-		/// Bottom-right X coordinate as a public property
+		/// Bottom-right X coordinate
 		S R;
-		/// Bottom-right Y coordinate as a public property
+		/// Bottom-right Y coordinate
 		S B;
 
 		constexpr AABB() noexcept
 			: L(S(0)), T(S(0)), R(S(0)), B(S(0)) {}
 
-		explicit AABB(Death::Containers::NoInitT) noexcept
+		explicit AABB(NoInitT) noexcept
 			{}
 
 		constexpr AABB(S l, S t, S r, S b) noexcept
@@ -63,10 +65,10 @@ namespace nCine
 		/// \returns True if this rect does overlap the other rectangle in any way
 		bool Overlaps(const AABB<S>& aabb) const;
 
-		/// Intersects this rectangle with the other rectangle
+		/// Intersects this AABB with the other AABB
 		static AABB<S> Intersect(const AABB<S>& a, const AABB<S>& b);
 
-		/// Combine two AABBs into this one.
+		/// Combine two AABBs
 		static AABB<S> Combine(const AABB<S>& a, const AABB<S>& b);
 
 		/// Eqality operator

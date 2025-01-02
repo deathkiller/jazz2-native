@@ -61,10 +61,10 @@ namespace Jazz2::Multiplayer
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
-		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) override;
+		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
-		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
+		void SetCheckpoint(Actors::Player* player, Vector2f pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void ActivateSugarRush(Actors::Player* player) override;
 		void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) override;
@@ -103,8 +103,8 @@ namespace Jazz2::Multiplayer
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
 		void HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType);
-		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY);
-		void HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, WarpFlags flags);
+		bool HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY);
+		void HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags);
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);
@@ -150,7 +150,7 @@ namespace Jazz2::Multiplayer
 			//float WarpTimeLeft;
 
 			PlayerState();
-			PlayerState(const Vector2f& pos, const Vector2f& speed);
+			PlayerState(Vector2f pos, Vector2f speed);
 		};
 
 		struct MultiplayerSpawnPoint {
