@@ -5,7 +5,7 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	SimpleMessageSection::SimpleMessageSection(const StringView& message, bool withTransition)
+	SimpleMessageSection::SimpleMessageSection(StringView message, bool withTransition)
 		: _message(message), _transitionTime(withTransition ? 0.0f : 1.0f)
 	{
 	}

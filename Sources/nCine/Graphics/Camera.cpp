@@ -36,7 +36,7 @@ namespace nCine
 		setOrthoProjection(values.left, values.right, values.top, values.bottom);
 	}
 
-	void Camera::setView(const Vector2f& position, float rotation, float scale)
+	void Camera::setView(Vector2f position, float rotation, float scale)
 	{
 		viewValues_.position = position;
 		viewValues_.rotation = rotation;

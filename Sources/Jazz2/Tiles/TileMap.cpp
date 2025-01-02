@@ -576,7 +576,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, const Vector2f& viewCenter)
+	void TileMap::DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter)
 	{
 		ZoneScopedNC("Layer", 0xA09359);
 
@@ -1360,7 +1360,7 @@ namespace Jazz2::Tiles
 		dest.Write(_triggerState.data(), _triggerState.sizeInBytes());
 	}
 
-	void TileMap::RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, const Vector2f& viewCenter, TileMapLayer& layer, float x, float y)
+	void TileMap::RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y)
 	{
 		auto target = _texturedBackgroundPass._target.get();
 		if (target == nullptr) {

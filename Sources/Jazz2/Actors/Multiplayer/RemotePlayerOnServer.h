@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Multiplayer
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;
 
-		void SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
+		void SyncWithServer(Vector2f pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
 
 	protected:
 		struct StateFrame {
@@ -34,9 +34,9 @@ namespace Jazz2::Actors::Multiplayer
 		bool OnPerish(ActorBase* collider) override;
 		void OnUpdate(float timeMult) override;
 
-		void OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove) override;
+		void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove) override;
 
-		void WarpToPosition(const Vector2f& pos, WarpFlags flags) override;
+		void WarpToPosition(Vector2f pos, WarpFlags flags) override;
 		bool TakeDamage(std::int32_t amount, float pushForce) override;
 
 		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;

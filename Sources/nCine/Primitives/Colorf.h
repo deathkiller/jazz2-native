@@ -10,6 +10,8 @@ namespace nCine
 {
 	class Color;
 
+	using Death::Containers::NoInitT;
+
 	/// Four-channels normalized float color
 	class Colorf
 	{
@@ -35,7 +37,7 @@ namespace nCine
 			: Colorf(1.0f, 1.0f, 1.0f, 1.0f)
 		{
 		}
-		explicit Colorf(Death::Containers::NoInitT) noexcept
+		explicit Colorf(NoInitT) noexcept
 		{
 		}
 		/// Three channels constructor

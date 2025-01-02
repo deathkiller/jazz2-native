@@ -1986,7 +1986,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void AnimSetMapping::Add(JJ2Version appliesTo, const StringView& category, const StringView& name, JJ2DefaultPalette palette, bool skipNormalMap, bool allowRealtimePalette)
+	void AnimSetMapping::Add(JJ2Version appliesTo, StringView category, StringView name, JJ2DefaultPalette palette, bool skipNormalMap, bool allowRealtimePalette)
 	{
 		if ((_version & appliesTo) != JJ2Version::Unknown) {
 			Entry entry;
@@ -2005,7 +2005,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void AnimSetMapping::Add(const StringView& category, const StringView& name, JJ2DefaultPalette palette, bool skipNormalMap, bool allowRealtimePalette)
+	void AnimSetMapping::Add(StringView category, StringView name, JJ2DefaultPalette palette, bool skipNormalMap, bool allowRealtimePalette)
 	{
 		Entry entry;
 		entry.Category = category;

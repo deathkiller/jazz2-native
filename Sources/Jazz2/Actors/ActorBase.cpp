@@ -1133,7 +1133,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	bool ActorBase::MoveInstantly(const Vector2f& pos, MoveType type, TileCollisionParams& params)
+	bool ActorBase::MoveInstantly(Vector2f pos, MoveType type, TileCollisionParams& params)
 	{
 		Vector2f newPos;
 		AABBf aabb;

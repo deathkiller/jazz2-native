@@ -287,7 +287,7 @@ namespace nCine::Backends
 		//});
 	}
 
-	void UwpGfxDevice::setWindowTitle(const StringView& windowTitle)
+	void UwpGfxDevice::setWindowTitle(StringView windowTitle)
 	{
 		// TODO: Disabled for now for Windows RT, because it appends application name
 		// This method is usually called from main thread, but it's required on UI thread

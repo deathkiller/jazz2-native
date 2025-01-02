@@ -19,12 +19,12 @@ namespace Death { namespace Threading {
 		ManualReset,
 	};
 
-	/** @brief An event object */
+	/** @brief Lightweight event implementation */
 	template<EventType Type>
 	class Event
 	{
 	public:
-		Event(bool isSignaled = false) noexcept
+		explicit Event(bool isSignaled = false) noexcept
 			: _isSignaled(isSignaled ? 1 : 0)
 		{
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {

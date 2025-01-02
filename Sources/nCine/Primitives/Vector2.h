@@ -8,6 +8,8 @@
 
 namespace nCine
 {
+	using Death::Containers::NoInitT;
+
 	/// Two-component vector
 	template<class T>
 	class Vector2
@@ -17,7 +19,7 @@ namespace nCine
 
 		constexpr Vector2() noexcept
 			: X{T(0)}, Y{T(0)} {}
-		explicit Vector2(Death::Containers::NoInitT) noexcept
+		explicit Vector2(NoInitT) noexcept
 			{}
 		explicit constexpr Vector2(T s) noexcept
 			: X(s), Y(s) {}

@@ -1097,7 +1097,7 @@ namespace Jazz2
 		return true;
 	}
 
-	void LevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags)
+	void LevelHandler::HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags)
 	{
 		if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
 			WarpCameraToTarget(player, true);
@@ -1141,7 +1141,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::SetCheckpoint(Actors::Player* player, const Vector2f& pos)
+	void LevelHandler::SetCheckpoint(Actors::Player* player, Vector2f pos)
 	{
 		_checkpointFrames = ElapsedFrames();
 

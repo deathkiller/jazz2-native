@@ -79,7 +79,7 @@ namespace Death { namespace Containers {
 		};
 
 		/**
-			@brief Represents a timezone that can be used by timezone conversions in @ref DateTime
+			@brief Represents a timezone that can be used in timezone conversions in @ref DateTime
 		*/
 		class TimeZone
 		{
@@ -144,7 +144,10 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Creates invalid @ref DateTime structure */
-		constexpr DateTime() noexcept : _time(INT64_MIN) { }
+		constexpr DateTime() noexcept : _time(INT64_MIN) {}
+
+		/** @brief Creates uninitialized @ref DateTime structure */
+		explicit DateTime(NoInitT) noexcept {}
 
 		/** @brief Creates @ref DateTime structure from standard @ref time_t value */
 		constexpr DateTime(time_t timet) noexcept;
@@ -323,8 +326,9 @@ namespace Death { namespace Containers {
 			return FromDays(7 * days);
 		}
 
-		constexpr TimeSpan() noexcept : _value(0) { }
-		constexpr TimeSpan(std::int64_t diff) noexcept : _value(diff) { }
+		constexpr TimeSpan() noexcept : _value(0) {}
+		explicit TimeSpan(NoInitT) noexcept {}
+		constexpr TimeSpan(std::int64_t diff) noexcept : _value(diff) {}
 
 		constexpr TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds = 0, std::int64_t milliseconds = 0) noexcept;
 		

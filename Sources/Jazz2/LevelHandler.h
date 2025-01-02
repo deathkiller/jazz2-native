@@ -134,10 +134,10 @@ namespace Jazz2
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
-		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags) override;
+		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
-		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
+		void SetCheckpoint(Actors::Player* player, Vector2f pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void ActivateSugarRush(Actors::Player* player) override;
 		void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) override;

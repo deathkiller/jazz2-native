@@ -10,7 +10,7 @@ namespace nCine
 		renderCommand_.material().setBlendingEnabled(true);
 	}
 
-	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, const Vector2f& position)
+	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, Vector2f position)
 		: BaseSprite(parent, texture, position.X, position.Y)
 	{
 	}

@@ -31,7 +31,7 @@ namespace Death { namespace IO {
 		std::int64_t GetSize() const override;
 
 		void ReserveCapacity(std::int64_t bytes);
-		std::int64_t FetchFromStream(Stream& s, std::int64_t bytesToRead);
+		std::int64_t FetchFromStream(Stream& source, std::int64_t bytesToRead);
 
 		DEATH_ALWAYS_INLINE std::uint8_t* GetBuffer() {
 			return _buffer.data();

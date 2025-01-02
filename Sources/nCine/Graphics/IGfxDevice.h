@@ -122,9 +122,9 @@ namespace nCine
 			setWindowPosition(position.X, position.Y);
 		}
 		/// Sets the application window title
-		virtual void setWindowTitle(const StringView& windowTitle) = 0;
+		virtual void setWindowTitle(StringView windowTitle) = 0;
 		/// Sets the application window icon
-		virtual void setWindowIcon(const StringView& iconFilename) = 0;
+		virtual void setWindowIcon(StringView iconFilename) = 0;
 
 		/// Returns the window or video mode width in screen coordinates
 		inline int width() const { return width_; }

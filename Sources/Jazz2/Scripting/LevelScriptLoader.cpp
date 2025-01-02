@@ -61,7 +61,7 @@ namespace Jazz2::Scripting
 		return Random().FastFloat(min, max);
 	}
 
-	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath)
+	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath)
 		: _levelHandler(levelHandler), _onLevelUpdate(nullptr), _onLevelUpdateLastFrame(-1), _onDrawAmmo(nullptr),
 			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
 			_enabledCallbacks(NoInit, 256)
@@ -153,7 +153,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	String LevelScriptLoader::OnProcessInclude(const StringView& includePath, const StringView& scriptPath)
+	String LevelScriptLoader::OnProcessInclude(StringView includePath, StringView scriptPath)
 	{
 		// Skip MLLE files, because it's handled natively
 		if (includePath.hasPrefix("MLLE-Include-"_s) && includePath.hasSuffix(".asc"_s)) {
@@ -167,7 +167,7 @@ namespace Jazz2::Scripting
 		return fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, includePath));
 	}
 
-	void LevelScriptLoader::OnProcessPragma(const StringView& content, ScriptContextType& contextType)
+	void LevelScriptLoader::OnProcessPragma(StringView content, ScriptContextType& contextType)
 	{
 		// #pragma target Jazz² Resurrection - Changes script context type to Standard
 		if (content == "target Jazz² Resurrection"_s || content == "target Jazz2 Resurrection"_s) {
@@ -3454,7 +3454,7 @@ namespace Jazz2::Scripting
 		return result->second.get();
 	}
 
-	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(const StringView& typeName)
+	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(StringView typeName)
 	{
 		auto nullTerminatedTypeName = String::nullTerminatedView(typeName);
 

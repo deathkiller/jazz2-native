@@ -40,7 +40,7 @@ namespace Jazz2::Collisions
 	constexpr float AabbMultiplier = 4.0f;
 
 	/**
-		@brief A node in the dynamic tree
+		@brief Node in the dynamic tree
 
 		The client does not interact with this directly.
 	*/
@@ -72,7 +72,7 @@ namespace Jazz2::Collisions
 	};
 
 	/**
-		@brief A dynamic AABB tree broad-phase
+		@brief Dynamic AABB tree broad-phase
 
 		A dynamic tree arranges data in a binary tree to accelerate
 		queries such as volume queries and ray casts. Leafs are proxies
@@ -101,7 +101,7 @@ namespace Jazz2::Collisions
 		/// then the proxy is removed from the tree and re-inserted. Otherwise
 		/// the function returns immediately.
 		/// @return true if the proxy was re-inserted.
-		bool MoveProxy(std::int32_t proxyId, const AABBf& aabb1, const Vector2f& displacement);
+		bool MoveProxy(std::int32_t proxyId, const AABBf& aabb1, Vector2f displacement);
 
 		/// Get proxy user data.
 		/// @return the proxy user data or 0 if the id is invalid.

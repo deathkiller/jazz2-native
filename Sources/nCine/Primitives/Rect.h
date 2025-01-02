@@ -8,6 +8,8 @@
 
 namespace nCine
 {
+	using Death::Containers::NoInitT;
+
 	/// Rectangle in a two dimensional space
 	template<class T>
 	class Rect
@@ -25,7 +27,7 @@ namespace nCine
 		/// Default constructor, all zeros
 		constexpr Rect() noexcept
 			: X(T(0)), Y(T(0)), W(T(0)), H(T(0)) {}
-		explicit Rect(Death::Containers::NoInitT) noexcept
+		explicit Rect(NoInitT) noexcept
 			{}
 		/// Constructs a rectangle from top-left point and size
 		constexpr Rect(T x, T y, T w, T h) noexcept

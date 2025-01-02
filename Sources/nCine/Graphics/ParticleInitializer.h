@@ -26,9 +26,9 @@ namespace nCine
 		void setPosition(float x, float y);
 		void setPosition(float minX, float minY, float maxX, float maxY);
 		void setPositionAndRadius(float x, float y, float radius);
-		void setPosition(const Vector2f& pos);
-		void setPosition(const Vector2f& minPos, const Vector2f& maxPos);
-		void setPositionAndRadius(const Vector2f& pos, float radius);
+		void setPosition(Vector2f pos);
+		void setPosition(Vector2f minPos, Vector2f maxPos);
+		void setPositionAndRadius(Vector2f pos, float radius);
 		void setPositionInDisc(float radius);
 
 		void setVelocity(float x, float y);
@@ -36,11 +36,11 @@ namespace nCine
 		void setVelocityAndRadius(float x, float y, float radius);
 		void setVelocityAndScale(float x, float y, float minScale, float maxScale);
 		void setVelocityAndAngle(float x, float y, float angle);
-		void setVelocity(const Vector2f& vel);
-		void setVelocity(const Vector2f& minVel, const Vector2f& maxVel);
-		void setVelocityAndRadius(const Vector2f& vel, float radius);
-		void setVelocityAndScale(const Vector2f& vel, float minScale, float maxScale);
-		void setVelocityAndAngle(const Vector2f& vel, float angle);
+		void setVelocity(Vector2f vel);
+		void setVelocity(Vector2f minVel, Vector2f maxVel);
+		void setVelocityAndRadius(Vector2f vel, float radius);
+		void setVelocityAndScale(Vector2f vel, float minScale, float maxScale);
+		void setVelocityAndAngle(Vector2f vel, float angle);
 
 		void setRotation(float rot);
 		void setRotation(float minRot, float maxRot);

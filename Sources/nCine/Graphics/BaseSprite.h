@@ -21,7 +21,7 @@ namespace nCine
 		/// Sets sprite size
 		void setSize(float width, float height);
 		/// Sets sprite size with a `Vector2f`
-		inline void setSize(const Vector2f& size) {
+		inline void setSize(Vector2f size) {
 			setSize(size.X, size.Y);
 		}
 
@@ -70,7 +70,7 @@ namespace nCine
 		/// Protected constructor accessible only by derived sprite classes
 		BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy);
 		/// Protected constructor accessible only by derived sprite classes
-		BaseSprite(SceneNode* parent, Texture* texture, const Vector2f& position);
+		BaseSprite(SceneNode* parent, Texture* texture, Vector2f position);
 
 		/// Protected copy constructor used to clone objects
 		BaseSprite(const BaseSprite& other);

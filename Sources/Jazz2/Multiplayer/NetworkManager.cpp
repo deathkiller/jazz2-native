@@ -43,7 +43,7 @@ namespace Jazz2::Multiplayer
 		ReleaseBackend();
 	}
 
-	bool NetworkManager::CreateClient(INetworkHandler* handler, const StringView& address, std::uint16_t port, std::uint32_t clientData)
+	bool NetworkManager::CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData)
 	{
 		if (_host != nullptr) {
 			return false;

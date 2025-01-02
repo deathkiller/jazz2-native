@@ -51,7 +51,7 @@ namespace Jazz2::Scripting
 		asIScriptModule* _module;
 		ScriptContextType _scriptContextType;
 
-		ScriptContextType AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols);
+		ScriptContextType AddScriptFromFile(StringView path, const HashMap<String, bool>& definedSymbols);
 		int Build();
 
 		ArrayView<String> GetMetadataForType(int typeId);
@@ -60,10 +60,10 @@ namespace Jazz2::Scripting
 		ArrayView<String> GetMetadataForTypeProperty(int typeId, int varIdx);
 		ArrayView<String> GetMetadataForTypeMethod(int typeId, asIScriptFunction* method);
 
-		virtual String OnProcessInclude(const StringView& includePath, const StringView& scriptPath) = 0;
-		virtual void OnProcessPragma(const StringView& content, ScriptContextType& contextType) { }
+		virtual String OnProcessInclude(StringView includePath, StringView scriptPath) = 0;
+		virtual void OnProcessPragma(StringView content, ScriptContextType& contextType) { }
 
-		static String MakeRelativePath(const StringView& path, const StringView& relativeToFile);
+		static String MakeRelativePath(StringView path, StringView relativeToFile);
 
 	private:
 		enum class MetadataType {
@@ -103,7 +103,7 @@ namespace Jazz2::Scripting
 		int ExcludeCode(String& scriptContent, int pos);
 		int SkipStatement(String& scriptContent, int pos);
 		int ExtractMetadata(MutableStringView scriptContent, int pos, SmallVectorImpl<String>& metadata);
-		int ExtractDeclaration(const StringView& scriptContent, int pos, String& name, String& declaration, MetadataType& type);
+		int ExtractDeclaration(StringView scriptContent, int pos, String& name, String& declaration, MetadataType& type);
 
 		static asIScriptContext* RequestContextCallback(asIScriptEngine* engine, void* param);
 		static void ReturnContextCallback(asIScriptEngine* engine, asIScriptContext* ctx, void* param);

@@ -28,11 +28,11 @@ namespace nCine
 		inline JoystickGuid(JoystickGuidType type) {
 			fromType(type);
 		}
-		inline JoystickGuid(const StringView& string) {
+		inline JoystickGuid(StringView string) {
 			fromString(string);
 		}
 		void fromType(JoystickGuidType type);
-		void fromString(const StringView& string);
+		void fromString(StringView string);
 		bool isValid() const;
 
 		bool operator==(const JoystickGuid& guid) const;

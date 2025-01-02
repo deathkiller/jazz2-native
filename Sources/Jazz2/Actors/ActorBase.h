@@ -176,8 +176,8 @@ namespace Jazz2::Actors
 		std::int32_t GetMaxHealth();
 		void DecreaseHealth(std::int32_t amount = 1, ActorBase* collider = nullptr);
 
-		bool MoveInstantly(const Vector2f& pos, MoveType type, Tiles::TileCollisionParams& params);
-		bool MoveInstantly(const Vector2f& pos, MoveType type)
+		bool MoveInstantly(Vector2f pos, MoveType type, Tiles::TileCollisionParams& params);
+		bool MoveInstantly(Vector2f pos, MoveType type)
 		{
 			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, _speed.Y >= 0.0f };
 			return MoveInstantly(pos, type, params);
@@ -189,11 +189,11 @@ namespace Jazz2::Actors
 		bool IsCollidingWith(const AABBf& aabb);
 		void UpdateAABB();
 
-		const Vector2f& GetPos() {
+		Vector2f GetPos() {
 			return _pos;
 		}
 
-		const Vector2f& GetSpeed() {
+		Vector2f GetSpeed() {
 			return _speed;
 		}
 

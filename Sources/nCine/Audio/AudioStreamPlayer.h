@@ -14,7 +14,7 @@ namespace nCine
 		/// Default constructor
 		AudioStreamPlayer();
 		/// A constructor creating a player from a file
-		explicit AudioStreamPlayer(const StringView& filename);
+		explicit AudioStreamPlayer(StringView filename);
 		~AudioStreamPlayer() override;
 
 		/// Default move constructor

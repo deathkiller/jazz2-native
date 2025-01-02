@@ -9,6 +9,8 @@
 
 namespace nCine
 {
+	using Death::Containers::NoInitT;
+
 	/// Three-component vector
 	template<class T>
 	class Vector3
@@ -18,7 +20,7 @@ namespace nCine
 
 		constexpr Vector3() noexcept
 			: X{T(0)}, Y{T(0)}, Z{T(0)} {}
-		explicit Vector3(Death::Containers::NoInitT) noexcept
+		explicit Vector3(NoInitT) noexcept
 			{}
 		explicit constexpr Vector3(T s) noexcept
 			: X(s), Y(s), Z(s) {}

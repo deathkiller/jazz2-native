@@ -19,7 +19,7 @@ namespace nCine
 		std::unique_ptr<std::uint8_t[]> bufferPtr;
 	}
 
-	BinaryShaderCache::BinaryShaderCache(const StringView& path)
+	BinaryShaderCache::BinaryShaderCache(StringView path)
 		: isAvailable_(false), platformHash_(0)
 	{
 		if (path.empty()) {
@@ -193,7 +193,7 @@ namespace nCine
 		return success;
 	}
 
-	bool BinaryShaderCache::setPath(const StringView& path)
+	bool BinaryShaderCache::setPath(StringView path)
 	{
 		if (!fs::DirectoryExists(path) || !fs::IsWritable(path)) {
 			return false;

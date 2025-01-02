@@ -39,7 +39,7 @@ namespace nCine
 		}
 	}
 
-	void JoystickGuid::fromString(const StringView& string)
+	void JoystickGuid::fromString(StringView string)
 	{
 		if (string.empty()) {
 			fromType(JoystickGuidType::Unknown);

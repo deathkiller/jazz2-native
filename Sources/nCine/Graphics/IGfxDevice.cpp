@@ -143,10 +143,10 @@ namespace nCine
 	float IGfxDevice::windowScalingFactor() const
 	{
 #if defined(DEATH_TARGET_APPLE)
-		const float factor = drawableWidth() / static_cast<float>(width());
+		float factor = drawableWidth() / static_cast<float>(width());
 #else
-		const Vector2f& scale = monitor().scale;
-		const float factor = (scale.X > scale.Y ? scale.X : scale.Y);
+		Vector2f scale = monitor().scale;
+		float factor = (scale.X > scale.Y ? scale.X : scale.Y);
 #endif
 
 		return factor;

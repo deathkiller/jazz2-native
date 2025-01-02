@@ -5,7 +5,7 @@
 
 namespace Jazz2::Rendering
 {
-	void BlurRenderPass::Initialize(Texture* source, std::int32_t width, std::int32_t height, const Vector2f& direction)
+	void BlurRenderPass::Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction)
 	{
 		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());

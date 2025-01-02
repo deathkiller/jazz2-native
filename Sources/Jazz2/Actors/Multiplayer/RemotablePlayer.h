@@ -17,14 +17,14 @@ namespace Jazz2::Actors::Multiplayer
 		void SetTeamId(std::uint8_t value);
 
 		void WarpIn(ExitType exitType);
-		void MoveRemotely(const Vector2f& pos, const Vector2f& speed);
+		void MoveRemotely(Vector2f pos, Vector2f speed);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnUpdate(float timeMult) override;
 
-		void OnWaterSplash(const Vector2f& pos, bool inwards) override;
+		void OnWaterSplash(Vector2f pos, bool inwards) override;
 
 		bool FireCurrentWeapon(WeaponType weaponType) override;
 

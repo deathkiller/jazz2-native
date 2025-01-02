@@ -10,6 +10,8 @@
 
 namespace nCine
 {
+	using Death::Containers::NoInitT;
+
 	/// Four-component vector
 	template<class T>
 	class Vector4
@@ -19,7 +21,7 @@ namespace nCine
 
 		constexpr Vector4() noexcept
 			: X{T(0)}, Y{T(0)}, Z{T(0)}, W{T(0)} {}
-		explicit Vector4(Death::Containers::NoInitT) noexcept
+		explicit Vector4(NoInitT) noexcept
 			{}
 		explicit constexpr Vector4(T s) noexcept
 			: X(s), Y(s), Z(s), W(s) {}

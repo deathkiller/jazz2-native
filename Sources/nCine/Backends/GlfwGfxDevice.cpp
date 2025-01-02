@@ -125,7 +125,7 @@ namespace nCine::Backends
 		glfwGetFramebufferSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 	}
 
-	void GlfwGfxDevice::setWindowIcon(const StringView& windowIconFilename)
+	void GlfwGfxDevice::setWindowIcon(StringView windowIconFilename)
 	{
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		std::unique_ptr<ITextureLoader> image = ITextureLoader::createFromFile(windowIconFilename);

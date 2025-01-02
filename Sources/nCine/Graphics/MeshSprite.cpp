@@ -28,7 +28,7 @@ namespace nCine
 		init();
 	}
 
-	MeshSprite::MeshSprite(SceneNode* parent, Texture* texture, const Vector2f& position)
+	MeshSprite::MeshSprite(SceneNode* parent, Texture* texture, Vector2f position)
 		: MeshSprite(parent, texture, position.X, position.Y)
 	{
 	}
@@ -38,7 +38,7 @@ namespace nCine
 	{
 	}
 
-	MeshSprite::MeshSprite(Texture* texture, const Vector2f& position)
+	MeshSprite::MeshSprite(Texture* texture, Vector2f position)
 		: MeshSprite(nullptr, texture, position.X, position.Y)
 	{
 	}

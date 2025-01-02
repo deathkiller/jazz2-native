@@ -10,7 +10,7 @@ namespace Jazz2::UI::Menu
 	class SimpleMessageSection : public MenuSection
 	{
 	public:
-		SimpleMessageSection(const StringView& message, bool withTransition = false);
+		SimpleMessageSection(StringView message, bool withTransition = false);
 		SimpleMessageSection(String&& message, bool withTransition = false);
 
 		void OnUpdate(float timeMult) override;

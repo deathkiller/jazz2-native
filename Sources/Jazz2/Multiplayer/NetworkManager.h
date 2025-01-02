@@ -51,7 +51,7 @@ namespace Jazz2::Multiplayer
 		NetworkManager(const NetworkManager&) = delete;
 		NetworkManager& operator=(const NetworkManager&) = delete;
 
-		bool CreateClient(INetworkHandler* handler, const StringView& address, std::uint16_t port, std::uint32_t clientData);
+		bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
 		bool CreateServer(INetworkHandler* handler, std::uint16_t port);
 		void Dispose();
 

@@ -24,7 +24,7 @@ namespace nCine
 		_type = ObjectType::AnimatedSprite;
 	}
 
-	AnimatedSprite::AnimatedSprite(SceneNode* parent, Texture* texture, const Vector2f& position)
+	AnimatedSprite::AnimatedSprite(SceneNode* parent, Texture* texture, Vector2f position)
 		: AnimatedSprite(parent, texture, position.X, position.Y)
 	{
 	}
@@ -34,7 +34,7 @@ namespace nCine
 	{
 	}
 
-	AnimatedSprite::AnimatedSprite(Texture* texture, const Vector2f& position)
+	AnimatedSprite::AnimatedSprite(Texture* texture, Vector2f position)
 		: AnimatedSprite(nullptr, texture, position.X, position.Y)
 	{
 	}

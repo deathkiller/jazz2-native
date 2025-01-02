@@ -2,7 +2,7 @@
 
 namespace Jazz2::UI::Menu
 {
-	LoadingSection::LoadingSection(const StringView& message)
+	LoadingSection::LoadingSection(StringView message)
 		: _message(message)
 	{
 	}

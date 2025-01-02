@@ -128,8 +128,8 @@ namespace Jazz2::Actors
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version);
 		void SerializeResumableToStream(Stream& dest);
 
-		void Respawn(const Vector2f& pos);
-		virtual void WarpToPosition(const Vector2f& pos, WarpFlags flags);
+		void Respawn(Vector2f pos);
+		virtual void WarpToPosition(Vector2f pos, WarpFlags flags);
 		void WarpToCheckpoint();
 		Modifier GetModifier() const;
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
@@ -294,10 +294,10 @@ namespace Jazz2::Actors
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
 
-		virtual void OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
-		virtual void OnWaterSplash(const Vector2f& pos, bool inwards);
+		virtual void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
+		virtual void OnWaterSplash(Vector2f pos, bool inwards);
 
-		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(const StringView identifier, float gain = 1.0f, float pitch = 1.0f);
+		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, Function<void()>&& callback = {});
 		bool CanFreefall();
 		void EndDamagingMove();

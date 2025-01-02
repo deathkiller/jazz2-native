@@ -782,7 +782,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool MultiLevelHandler::HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY)
+	bool MultiLevelHandler::HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY)
 	{
 		// TODO: Only called by RemotePlayerOnServer
 		if (_isServer) {
@@ -813,7 +813,7 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	void MultiLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, WarpFlags flags)
+	void MultiLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags)
 	{
 		if (!_isServer) {
 			return;
@@ -927,7 +927,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MultiLevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, WarpFlags flags)
+	void MultiLevelHandler::HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags)
 	{
 		LevelHandler::HandlePlayerWarped(player, prevPos, flags);
 
@@ -994,7 +994,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MultiLevelHandler::SetCheckpoint(Actors::Player* player, const Vector2f& pos)
+	void MultiLevelHandler::SetCheckpoint(Actors::Player* player, Vector2f pos)
 	{
 		LevelHandler::SetCheckpoint(player, pos);
 	}
@@ -2403,7 +2403,7 @@ namespace Jazz2::Multiplayer
 		}
 	}*/
 
-	/*void MultiLevelHandler::OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, const Vector2f speed, PlayerFlags flags)
+	/*void MultiLevelHandler::OnRemotePlayerPosReceived(PlayerState& playerState, Vector2f pos, const Vector2f speed, PlayerFlags flags)
 	{
 		Clock& c = nCine::clock();
 		std::int64_t now = c.now() * 1000 / c.frequency();
@@ -2547,7 +2547,7 @@ namespace Jazz2::Multiplayer
 	{
 	}
 
-	MultiLevelHandler::PlayerState::PlayerState(const Vector2f& pos, const Vector2f& speed)
+	MultiLevelHandler::PlayerState::PlayerState(Vector2f pos, Vector2f speed)
 		: Flags(PlayerFlags::None), PressedKeys(0), PressedKeysLast(0), UpdatedFrame(0)/*, WarpSeqNum(0), WarpTimeLeft(0.0f)*/
 	{
 	}

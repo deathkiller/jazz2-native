@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Multiplayer
 		}
 	}
 
-	void RemotablePlayer::OnWaterSplash(const Vector2f& pos, bool inwards)
+	void RemotablePlayer::OnWaterSplash(Vector2f pos, bool inwards)
 	{
 		// Already created and broadcasted by the server
 	}
@@ -91,7 +91,7 @@ namespace Jazz2::Actors::Multiplayer
 		});
 	}
 
-	void RemotablePlayer::MoveRemotely(const Vector2f& pos, const Vector2f& speed)
+	void RemotablePlayer::MoveRemotely(Vector2f pos, Vector2f speed)
 	{
 		Vector2f posPrev = _pos;
 		MoveInstantly(pos, MoveType::Absolute | MoveType::Force);

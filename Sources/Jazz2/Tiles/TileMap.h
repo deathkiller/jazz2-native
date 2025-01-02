@@ -262,7 +262,7 @@ namespace Jazz2::Tiles
 		std::int32_t _texturedBackgroundLayer;
 		TexturedBackgroundPass _texturedBackgroundPass;
 
-		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, const Vector2f& viewCenter);
+		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);
 		RenderCommand* RentRenderCommand(LayerRendererType type);
 
@@ -273,7 +273,7 @@ namespace Jazz2::Tiles
 		void UpdateDebris(float timeMult);
 		void DrawDebris(RenderQueue& renderQueue);
 
-		void RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, const Vector2f& viewCenter, TileMapLayer& layer, float x, float y);
+		void RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y);
 
 		TileSet* ResolveTileSet(std::int32_t& tileId);
 		std::int32_t ResolveTileID(LayerTile& tile);

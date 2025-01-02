@@ -126,7 +126,7 @@ namespace Death { namespace IO {
 		}
 	}
 
-	std::int64_t MemoryStream::FetchFromStream(Stream& s, std::int64_t bytesToRead)
+	std::int64_t MemoryStream::FetchFromStream(Stream& source, std::int64_t bytesToRead)
 	{
 		std::int64_t bytesReadTotal = 0;
 		if (bytesToRead > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
@@ -140,7 +140,7 @@ namespace Death { namespace IO {
 			}
 
 			while (bytesToRead > 0) {
-				std::int64_t bytesRead = s.Read(&_buffer[_pos], bytesToRead);
+				std::int64_t bytesRead = source.Read(&_buffer[_pos], bytesToRead);
 				if DEATH_UNLIKELY(bytesRead <= 0) {
 					break;
 				}
