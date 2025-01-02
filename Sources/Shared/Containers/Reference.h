@@ -57,8 +57,6 @@ namespace Death { namespace Containers {
 
 		/**
 		 * @brief Construction from r-value references is not allowed
-		 *
-		 * A @ref MoveReference can be created from r-value references instead.
 		 */
 		Reference(T&&) = delete;
 

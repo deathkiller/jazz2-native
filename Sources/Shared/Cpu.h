@@ -967,10 +967,7 @@ namespace Death { namespace Cpu {
 	/**
 		@brief Feature set
 
-		Provides storage and comparison as well as runtime detection of CPU instruction
-		set. Provides an interface similar to an @ref Containers::EnumSet, with values
-		being the @ref Sse2, @ref Sse3 etc. tags.
-
+		Provides storage and comparison as well as runtime detection of CPU instruction set.
 		See the @ref Cpu namespace for an overview and usage examples.
 	*/
 	class Features {

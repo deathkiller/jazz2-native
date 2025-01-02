@@ -121,6 +121,7 @@ namespace Death { namespace Containers {
 		typedef T Type;
 
 		enum : std::size_t {
+			/** @copydoc ArrayMallocAllocator::AllocationOffset */
 			AllocationOffset = Implementation::AllocatorTraits<T>::Offset
 		};
 

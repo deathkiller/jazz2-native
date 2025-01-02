@@ -243,8 +243,8 @@ namespace Death { namespace Containers {
 		/**
 		 * @brief Construct from a @ref String
 		 *
-		 * The resulting view has @ref StringViewFlag::NullTerminated set
-		 * always, and @ref StringViewFlag::Global if the string was originally
+		 * The resulting view has @ref StringViewFlags::NullTerminated set
+		 * always, and @ref StringViewFlags::Global if the string was originally
 		 * created from a global null-terminated view with
 		 * @ref String::nullTerminatedView() or @ref String::nullTerminatedGlobalView().
 		 */
@@ -254,8 +254,8 @@ namespace Death { namespace Containers {
 		 * @brief Construct from a const @ref String
 		 *
 		 * Enabled only if the view is not mutable. The resulting view has
-		 * @ref StringViewFlag::NullTerminated set always, and
-		 * @ref StringViewFlag::Global if the string was created from a global
+		 * @ref StringViewFlags::NullTerminated set always, and
+		 * @ref StringViewFlags::Global if the string was created from a global
 		 * null-terminated view with @ref String::nullTerminatedView() or
 		 * @ref String::nullTerminatedGlobalView().
 		 */

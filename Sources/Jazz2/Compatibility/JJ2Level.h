@@ -26,11 +26,13 @@ namespace Jazz2::Compatibility
 		friend class JJ2Episode;
 
 	public:
+		/** @brief Episode name and level name */
 		struct LevelToken {
 			String Episode;
 			String Level;
 		};
 
+		/** @brief Extra tileset used in the level */
 		struct ExtraTilesetEntry {
 			String Name;
 			std::uint16_t Offset;
