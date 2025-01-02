@@ -8,7 +8,7 @@ namespace nCine
 	class Texture;
 	class GLUniformBlockCache;
 
-	/// The base class for sprites
+	/// Base class for sprites
 	/*! \note Users cannot create instances of this class */
 	class BaseSprite : public DrawableNode
 	{

@@ -288,28 +288,21 @@ namespace Death { namespace Containers {
 		 *
 		 * If set to @cpp nullptr @ce, the contents are deleted using standard
 		 * @cpp operator delete[] @ce.
-		 * @see @ref Array(T*, std::size_t, D)
 		 */
 		D deleter() const { return _deleter; }
 
 		/**
 		 * @brief Array size
-		 *
-		 * @see @ref isEmpty()
 		 */
 		std::size_t size() const { return _size; }
 
 		/**
 		 * @brief Whether the array is empty
-		 *
-		 * @see @ref size()
 		 */
 		bool empty() const { return !_size; }
 
 		/**
 		 * @brief Pointer to first element
-		 *
-		 * @see @ref front(), @ref operator[]()
 		 */
 		T* begin() { return _data; }
 		const T* begin() const { return _data; }		/**< @overload */
@@ -317,8 +310,6 @@ namespace Death { namespace Containers {
 
 		/**
 		 * @brief Pointer to (one item after) last element
-		 *
-		 * @see @ref back(), @ref operator[]()
 		 */
 		T* end() { return _data+_size; }
 		const T* end() const { return _data+_size; }	/**< @overload */
@@ -328,7 +319,6 @@ namespace Death { namespace Containers {
 		 * @brief First element
 		 *
 		 * Expects there is at least one element.
-		 * @see @ref begin(), @ref operator[]()
 		 */
 		T& front();
 		const T& front() const;							/**< @overload */
@@ -337,7 +327,6 @@ namespace Death { namespace Containers {
 		 * @brief Last element
 		 *
 		 * Expects there is at least one element.
-		 * @see @ref end(), @ref operator[]()
 		 */
 		T& back();
 		const T& back() const;							/**< @overload */

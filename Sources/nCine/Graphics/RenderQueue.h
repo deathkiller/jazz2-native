@@ -8,7 +8,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// A class that sorts and issues the render commands collected by the scenegraph visit
+	/// Sorts and issues the render commands collected by the scenegraph visit
 	class RenderQueue
 	{
 	public:

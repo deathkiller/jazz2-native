@@ -9,7 +9,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// A class for an animated sprite
+	/// Animated sprite
 	class AnimatedSprite : public Sprite
 	{
 	public:

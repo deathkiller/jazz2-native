@@ -14,7 +14,7 @@ namespace nCine
 {
 	class GLVertexArrayObject;
 
-	/// The class that creates and handles the pool of VAOs
+	/// Creates and handles the pool of VAOs
 	class RenderVaoPool
 	{
 	public:

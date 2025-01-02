@@ -25,10 +25,13 @@ namespace Jazz2::Events
 		void RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload = nullptr);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct SpawnableEvent {
 			CreateDelegate CreateFunction;
 			PreloadDelegate PreloadFunction;
 		};
+#endif
 
 		ILevelHandler* _levelHandler;
 		HashMap<EventType, SpawnableEvent> _spawnableEvents;

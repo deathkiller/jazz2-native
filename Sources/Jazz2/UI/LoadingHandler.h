@@ -27,6 +27,8 @@ namespace Jazz2::UI
 	private:
 		IRootController* _root;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class BackgroundCanvas : public Canvas
 		{
 		public:
@@ -37,6 +39,7 @@ namespace Jazz2::UI
 		private:
 			LoadingHandler* _owner;
 		};
+#endif
 
 		UI::UpscaleRenderPass _upscalePass;
 		std::unique_ptr<BackgroundCanvas> _canvasBackground;

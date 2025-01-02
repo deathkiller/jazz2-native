@@ -6,7 +6,7 @@
 
 namespace nCine
 {
-	/// Audio player interface class
+	/// Audio player interface
 	class IAudioPlayer : public Object
 	{
 		DEATH_RUNTIME_OBJECT();

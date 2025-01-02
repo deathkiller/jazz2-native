@@ -22,6 +22,8 @@ namespace Jazz2
 		}
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct TimelineItem {
 			float EndTime;
 
@@ -35,6 +37,7 @@ namespace Jazz2
 			{
 			}
 		};
+#endif
 
 		SmallVector<TimelineItem, 0> _timeline;
 	};

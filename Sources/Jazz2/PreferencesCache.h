@@ -9,6 +9,7 @@ using namespace nCine;
 
 namespace Jazz2
 {
+	/** @brief Rescale mode */
 	enum class RescaleMode {
 		None,
 		HQ2x,
@@ -24,12 +25,14 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(RescaleMode);
 
+	/** @brief Weapon wheel style */
 	enum class WeaponWheelStyle : std::uint8_t {
 		Disabled,
 		Enabled,
 		EnabledWithAmmoCount
 	};
 
+	/** @brief Gamepad button labels */
 	enum class GamepadType : std::uint8_t {
 		Xbox,
 		PlayStation,

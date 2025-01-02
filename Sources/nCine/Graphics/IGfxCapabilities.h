@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// The interface class to query runtime OpenGL device capabilities
+	/// Interface to query runtime OpenGL device capabilities
 	class IGfxCapabilities
 	{
 	public:

@@ -26,7 +26,7 @@ namespace nCine
 		using NodeReference = const typename StaticHashMap<K, T, Capacity, HashFunc>::Node&;
 	};
 
-	/// A hashmap iterator
+	/// Static hashmap iterator
 	template<class K, class T, class HashFunc, unsigned int Capacity, bool IsConst>
 	class StaticHashMapIterator
 	{

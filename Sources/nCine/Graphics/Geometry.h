@@ -7,7 +7,7 @@
 
 namespace nCine
 {
-	/// The class containing geometric data for a drawable node
+	/// Contains geometric data for a drawable node
 	class Geometry
 	{
 	public:

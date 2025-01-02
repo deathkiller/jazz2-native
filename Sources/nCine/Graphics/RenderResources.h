@@ -21,7 +21,7 @@ namespace nCine
 	class Camera;
 	class Viewport;
 
-	/// The class that creates and handles application common OpenGL rendering resources
+	/// Creates and handles application common OpenGL rendering resources
 	class RenderResources
 	{
 		/// The `Application` class needs to create and dispose the resources

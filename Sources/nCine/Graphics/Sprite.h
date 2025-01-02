@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// A scene node representing a regular sprite
+	/// Scene node representing a regular sprite
 	class Sprite : public BaseSprite
 	{
 	public:

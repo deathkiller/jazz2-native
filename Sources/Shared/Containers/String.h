@@ -1005,6 +1005,8 @@ namespace Death { namespace Containers {
 
 		   The above approach is consistent with StringView, which is the
 		   preferrable solution after all. */
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct Small {
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 			unsigned char size;
@@ -1029,6 +1031,7 @@ namespace Death { namespace Containers {
 			Small _small;
 			Large _large;
 		};
+#endif
 	};
 
 }}

@@ -40,7 +40,7 @@ namespace nCine
 		std::uint8_t data[16];
 	};
 
-	/// The interface class for parsing and dispatching input events
+	/// Interface for parsing and dispatching input events
 	class IInputManager
 	{
 	public:

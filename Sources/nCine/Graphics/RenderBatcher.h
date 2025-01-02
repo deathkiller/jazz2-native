@@ -10,7 +10,7 @@ namespace nCine
 {
 	class RenderCommand;
 
-	/// A class that batches render commands together
+	/// Batches render commands together
 	class RenderBatcher
 	{
 	public:

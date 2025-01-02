@@ -65,6 +65,8 @@ namespace Jazz2::Events
 		void SerializeResumableToStream(Stream& dest);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct GeneratorInfo {
 			std::int32_t EventPos;
 
@@ -85,6 +87,7 @@ namespace Jazz2::Events
 			std::uint16_t Id;
 			Vector2f Pos;
 		};
+#endif
 
 		ILevelHandler* _levelHandler;
 		Vector2i _layoutSize;

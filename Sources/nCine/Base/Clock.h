@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// The class interfacing with the system clock
+	/// System clock
 	class Clock
 	{
 	public:

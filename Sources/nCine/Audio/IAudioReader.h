@@ -2,7 +2,7 @@
 
 namespace nCine
 {
-	/// Audio reader interface class
+	/// Audio reader interface
 	class IAudioReader
 	{
 	public:
@@ -23,6 +23,7 @@ namespace nCine
 		virtual void setLooping(bool value) { }
 	};
 
+	/// A class created when the audio file extension is not recognized.
 	class InvalidAudioReader : IAudioReader
 	{
 	public:

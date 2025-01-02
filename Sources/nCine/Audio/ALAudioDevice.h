@@ -18,7 +18,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// It represents the interface to the OpenAL audio device
+	/// OpenAL audio device backend implementation
 	class ALAudioDevice : public IAudioDevice
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, public IMMNotificationClient

@@ -6,7 +6,7 @@
 
 namespace nCine
 {
-	/// A class to gather statistics about the rendering subsystem
+	/// Gathers statistics about the rendering subsystem
 	class RenderStatistics
 	{
 	public:

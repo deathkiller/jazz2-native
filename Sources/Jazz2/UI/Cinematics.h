@@ -41,6 +41,8 @@ namespace Jazz2::UI
 		void OnTouchEvent(const TouchEvent& event) override;
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class CinematicsCanvas : public SceneNode
 		{
 		public:
@@ -58,6 +60,7 @@ namespace Jazz2::UI
 			Cinematics* _owner;
 			RenderCommand _renderCommand;
 		};
+#endif
 
 #if defined(WITH_AUDIO)
 		struct SfxItem {

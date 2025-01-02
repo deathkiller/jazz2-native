@@ -10,7 +10,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// The class handling the memory mapping in multiple OpenGL Buffer Objects
+	/// Handles the memory mapping in multiple OpenGL Buffer Objects
 	class RenderBuffersManager
 	{
 	public:

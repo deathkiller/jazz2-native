@@ -59,6 +59,8 @@ namespace Jazz2::UI
 			WaitingForFadeOut
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct TouchButtonInfo {
 			PlayerActions Action;
 
@@ -94,6 +96,7 @@ namespace Jazz2::UI
 
 			WeaponWheelState();
 		};
+#endif
 
 		static constexpr std::uint32_t VertexBytes = sizeof(Vertex);
 		static constexpr std::uint32_t VertexFloats = VertexBytes / sizeof(float);

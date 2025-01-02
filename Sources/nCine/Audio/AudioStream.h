@@ -12,7 +12,7 @@ namespace nCine
 	class IAudioReader;
 	class IAudioLoader;
 
-	/// Audio stream
+	/// OpenAL audio stream
 	class AudioStream
 	{
 	public:

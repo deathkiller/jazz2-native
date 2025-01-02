@@ -11,7 +11,7 @@ namespace nCine
 {
 	class IAudioLoader;
 
-	/// A class representing an OpenAL buffer
+	/// OpenAL audio buffer
 	/*! It inherits from `Object` because a buffer can be
 	 *  shared by more than one `AudioBufferPlayer` object. */
 	class AudioBuffer : public Object

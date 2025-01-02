@@ -118,6 +118,8 @@ namespace Jazz2::Multiplayer
 			LevelSynchronized
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct PeerDesc {
 			Actors::Multiplayer::RemotePlayerOnServer* Player;
 			PeerState State;
@@ -126,6 +128,7 @@ namespace Jazz2::Multiplayer
 			PeerDesc() {}
 			PeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, PeerState state) : Player(player), State(state), LastUpdated(0) {}
 		};
+#endif
 
 		enum class PlayerFlags {
 			None = 0,
@@ -141,6 +144,8 @@ namespace Jazz2::Multiplayer
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(PlayerFlags);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct PlayerState {
 			PlayerFlags Flags;
 			std::uint64_t PressedKeys;
@@ -157,6 +162,7 @@ namespace Jazz2::Multiplayer
 			Vector2f Pos;
 			std::uint8_t Team;
 		};
+#endif
 
 		static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
 		static constexpr std::int64_t ServerDelay = 64;

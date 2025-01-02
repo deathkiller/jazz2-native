@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// The class handling the screen viewport
+	/// Handles the screen viewport
 	class ScreenViewport : public Viewport
 	{
 	public:

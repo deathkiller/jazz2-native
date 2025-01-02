@@ -95,12 +95,15 @@ namespace Jazz2
 		}
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct StringRefEqualTo
 		{
 			inline bool operator()(const Reference<String>& a, const Reference<String>& b) const noexcept {
 				return a.get() == b.get();
 			}
 		};
+#endif
 
 		ContentResolver();
 

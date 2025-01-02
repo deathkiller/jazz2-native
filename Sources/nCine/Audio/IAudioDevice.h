@@ -7,7 +7,7 @@ namespace nCine
 {
 	class IAudioPlayer;
 
-	/// Audio device interface class
+	/// Audio device interface
 	class IAudioDevice
 	{
 	public:

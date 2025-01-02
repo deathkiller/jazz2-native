@@ -109,6 +109,8 @@ namespace Jazz2::UI
 		}
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct Part
 		{
 			const char* Value;
@@ -135,6 +137,7 @@ namespace Jazz2::UI
 
 			BackgroundPart(Colorf color);
 		};
+#endif
 
 		enum class FormattedTextBlockFlags : std::uint16_t {
 			None = 0,
