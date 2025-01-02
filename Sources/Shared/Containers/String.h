@@ -219,7 +219,7 @@ namespace Death { namespace Containers {
 		 *
 		 * If the view is @ref StringViewFlags::NullTerminated, returns a
 		 * non-owning reference to it without any extra allocations or copies
-		 * involved, propagating also @ref StringViewFlag::Global to
+		 * involved, propagating also @ref StringViewFlags::Global to
 		 * @ref viewFlags() if present. Otherwise creates a null-terminated
 		 * owning copy using @ref String(StringView).
 		 *
@@ -244,7 +244,7 @@ namespace Death { namespace Containers {
 		 * If the view is both @ref StringViewFlags::NullTerminated and
 		 * @ref StringViewFlags::Global, returns a non-owning reference to it
 		 * without any extra allocations or copies involved, propagating also
-		 * @ref StringViewFlag::Global to @ref viewFlags(). Otherwise creates
+		 * @ref StringViewFlags::Global to @ref viewFlags(). Otherwise creates
 		 * a null-terminated owning copy using @ref String(StringView).
 		 *
 		 * This function is primarily meant for efficiently storing
@@ -556,8 +556,8 @@ namespace Death { namespace Containers {
 		 * @brief View flags
 		 *
 		 * A @ref BasicStringView "StringView" constructed from this instance
-		 * will have these flags. @ref StringViewFlag::NullTerminated is
-		 * present always, @ref StringViewFlag::Global if the string was
+		 * will have these flags. @ref StringViewFlags::NullTerminated is
+		 * present always, @ref StringViewFlags::Global if the string was
 		 * originally created from a global null-terminated view with
 		 * @ref nullTerminatedView() or @ref nullTerminatedGlobalView().
 		 */
@@ -657,7 +657,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::sliceSize(). Both arguments are
 		 * expected to be in range. If `begin + size` points to (one item
 		 * after) the end of the original (null-terminated) string, the result
-		 * has @ref StringViewFlag::NullTerminated set.
+		 * has @ref StringViewFlags::NullTerminated set.
 		 * @m_keywords{substr()}
 		 */
 #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -792,7 +792,7 @@ namespace Death { namespace Containers {
 		 * @brief Partition
 		 *
 		 * Equivalent to @ref BasicStringView::partition(StringView) const. The
-		 * last returned value has always @ref StringViewFlag::NullTerminated
+		 * last returned value has always @ref StringViewFlags::NullTerminated
 		 * set.
 		 */
 		StaticArray<3, MutableStringView> partition(StringView separator);
@@ -1092,7 +1092,7 @@ namespace Death { namespace Containers {
 		   StringView (which uses the top two bits for marking global and
 		   null-terminated views), we can use the second highest bit of the
 		   size to denote a small string. The highest bit, marked as G in the
-		   below diagram, is used to preserve StringViewFlag::Global in case of
+		   below diagram, is used to preserve StringViewFlags::Global in case of
 		   a nullTerminatedGlobalView() and a subsequent conversion back to a
 		   StringView. In case of a large string, there's size, data pointer
 		   and deleter pointer, either 24 (or 12) bytes in total. In case of a

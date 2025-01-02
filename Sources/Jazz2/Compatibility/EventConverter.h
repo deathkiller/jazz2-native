@@ -18,6 +18,7 @@ namespace Jazz2::Compatibility
 {
 	class JJ2Level;
 
+	/** @brief Converted extended event description */
 	struct ConversionResult {
 		EventType Type;
 		std::uint8_t Params[16];

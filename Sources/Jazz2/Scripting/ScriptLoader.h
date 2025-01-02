@@ -32,7 +32,7 @@ namespace Jazz2::Scripting
 	};
 
 	/**
-		@brief Generic **AngelScript** script loader with @cpp #include @ce and @cpp #pragma @ce support
+		@brief Generic **AngelScript** script loader with `#include` and `#pragma` support
 	
 		@experimental
 	*/

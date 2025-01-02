@@ -218,10 +218,10 @@ namespace Death { namespace Threading {
 #endif
 	};
 
-	/** @brief Event object that will atomically revert to an unsignaled state anytime a @relativeref{Event<Type>,Wait()} call succeeds (i.e., returns @cpp true @ce). */
+	/** @brief Event object that will atomically revert to an unsignaled state anytime a @relativeref{Event<Type>,Wait()} call succeeds */
 	using AutoResetEvent = Event<EventType::AutoReset>;
 
-	/** @brief Event object that once signaled remains that way forever, unless @relativeref{Event<Type>,ResetEvent()} is called. */
+	/** @brief Event object that once signaled remains that way forever, unless @relativeref{Event<Type>,ResetEvent()} is called */
 	using ManualResetEvent = Event<EventType::ManualReset>;
 
 }}

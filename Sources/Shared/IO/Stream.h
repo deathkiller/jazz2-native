@@ -60,7 +60,7 @@ namespace Death { namespace IO {
 		virtual std::int64_t Write(const void* source, std::int64_t bytesToWrite) = 0;
 		/** @brief Clears all buffers for this stream and causes any buffered data to be written to the underlying device */
 		virtual bool Flush() = 0;
-		/** @brief Returns @cpp true @ce if the stream has been sucessfully opened */
+		/** @brief Returns `true` if the stream has been sucessfully opened */
 		virtual bool IsValid() = 0;
 
 		/** @brief Returns stream size in bytes */

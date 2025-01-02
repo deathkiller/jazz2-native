@@ -52,7 +52,7 @@ namespace Jazz2::Multiplayer
 	};
 
 	/**
-		@brief Allows to monitor publicly-listed running servers
+		@brief Allows to monitor publicly-listed running servers for server listing
 
 		@experimental
 	*/

@@ -74,7 +74,7 @@ namespace Death { namespace Containers {
 		@subsection Containers-ArrayView-usage-access Data access
 
 		The class provides the usual C++ container interface --- @ref data(),
-		@ref size() and @ref isEmpty(); subscript access via @ref operator T*(), range
+		@ref size() and @ref empty(); subscript access via @ref operator T*(), range
 		access via @ref begin() / @ref end(), and their overloads and acess to the
 		@ref front() and @ref back() element, if the view is non-empty. The view itself
 		is immutable and thus all member functions are @cpp const @ce, but if the
@@ -731,6 +731,7 @@ namespace Death { namespace Containers {
 		typedef T Type;
 
 		enum : std::size_t {
+			/** @brief Array size */
 			Size = size_
 		};
 

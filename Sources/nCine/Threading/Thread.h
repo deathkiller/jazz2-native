@@ -37,7 +37,7 @@ namespace nCine
 		void Set(std::int32_t cpuNum);
 		/** @brief Sets the specified CPU number to be excluded by the set */
 		void Clear(std::int32_t cpuNum);
-		/** @brief Returns @cpp true @ce if the specified CPU number belongs to the set */
+		/** @brief Returns `true` if the specified CPU number belongs to the set */
 		bool IsSet(std::int32_t cpuNum);
 
 	private:

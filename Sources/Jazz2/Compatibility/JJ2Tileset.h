@@ -13,7 +13,7 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Parses original `.j2t` tileset files */
+	/** @brief Parses original `.j2t` tile set files */
 	class JJ2Tileset
 	{
 	public:

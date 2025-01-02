@@ -50,14 +50,14 @@ namespace Death {
 			initialization is performed separately from the allocation itself with either a
 			loop or a call to @ref std::memset().
 
-			-   @ref allocateAligned(DefaultInitT, std::size_t) leaves trivial types
+			-   @ref allocateAligned(Containers::DefaultInitT, std::size_t) leaves trivial types
 				uninitialized and calls the default constructor elsewhere. Because of the
 				differing behavior for trivial types it's better to explicitly use either
-				the @ref ValueInit or @ref NoInit variants instead.
-			-   @ref allocateAligned(ValueInitT, std::size_t) is equivalent to the default
+				the @ref Containers::ValueInit or @ref Containers::NoInit variants instead.
+			-   @ref allocateAligned(Containers::ValueInitT, std::size_t) is equivalent to the default
 				case, zero-initializing trivial types and calling the default constructor
 				elsewhere. Useful when you want to make the choice appear explicit.
-			-   @ref allocateAligned(NoInitT, std::size_t) does not initialize anything.
+			-   @ref allocateAligned(Containers::NoInitT, std::size_t) does not initialize anything.
 				Useful for trivial types when you'll be overwriting the contents anyway,
 				for non-trivial types this is the dangerous option and you need to call the
 				constructor on all elements manually using placement new,
@@ -72,10 +72,10 @@ namespace Death {
 			Compared to @ref allocateAligned(std::size_t), trivial types are not
 			initialized and default constructor is called otherwise. Because of the
 			differing behavior for trivial types it's better to explicitly use either the
-			@ref allocateAligned(ValueInitT, std::size_t) or the
-			@ref allocateAligned(NoInitT, std::size_t) variant instead.
+			@ref allocateAligned(Containers::ValueInitT, std::size_t) or the
+			@ref allocateAligned(Containers::NoInitT, std::size_t) variant instead.
 
-			Implemented via @ref allocateAligned(NoInitT, std::size_t) with a
+			Implemented via @ref allocateAligned(Containers::NoInitT, std::size_t) with a
 			loop calling the constructors on the returned allocation in case of non-trivial
 			types.
 		*/
@@ -85,7 +85,7 @@ namespace Death {
 			@brief Allocate aligned memory and value-initialize it
 
 			Same as @ref allocateAligned(std::size_t), just more explicit. Implemented via
-			@ref allocateAligned(NoInitT, std::size_t) with either a
+			@ref allocateAligned(Containers::NoInitT, std::size_t) with either a
 			@ref std::memset() or a loop calling the constructors on the returned
 			allocation.
 		*/
@@ -96,7 +96,7 @@ namespace Death {
 
 			Compared to @ref allocateAligned(std::size_t), the memory is left in an
 			unitialized state. For trivial types is equivalent to
-			@ref allocateAligned(DefaultInitT, std::size_t). For non-trivial
+			@ref allocateAligned(Containers::DefaultInitT, std::size_t). For non-trivial
 			types, destruction is always done using a custom deleter that explicitly calls
 			the destructor on *all elements* --- which means that for non-trivial types
 			you're expected to construct all elements using placement new (or for example
