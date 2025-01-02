@@ -11,9 +11,11 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	class JJ2Strings // .j2s
+	/** @brief Parses original `.j2s` localization files */
+	class JJ2Strings
 	{
 	public:
+		/** @brief Texts for specific level */
 		struct LevelEntry
 		{
 			String Name;

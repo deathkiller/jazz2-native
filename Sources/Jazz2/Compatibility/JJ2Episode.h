@@ -13,7 +13,8 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	class JJ2Episode // .j2e / .j2pe
+	/** @brief Parses original `.j2e`/`.j2pe` episode files */
+	class JJ2Episode
 	{
 	public:
 		std::int32_t Position;

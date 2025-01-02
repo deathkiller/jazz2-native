@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL 2D textures
+	/// Handles OpenGL 2D textures
 	class GLTexture
 	{
 	public:

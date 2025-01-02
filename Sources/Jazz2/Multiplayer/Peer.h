@@ -8,6 +8,7 @@ struct _ENetPeer;
 
 namespace Jazz2::Multiplayer
 {
+	/** @brief Remote peer */
 	struct Peer
 	{
 		Peer(std::nullptr_t = nullptr) : _enet(nullptr) {}

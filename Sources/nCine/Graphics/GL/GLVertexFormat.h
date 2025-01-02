@@ -11,7 +11,7 @@ namespace nCine
 {
 	class GLBufferObject;
 
-	/// A class that collects all the state that specifies the format of a vertex
+	/// Collects all the state that specifies the format of a vertex
 	class GLVertexFormat
 	{
 	public:

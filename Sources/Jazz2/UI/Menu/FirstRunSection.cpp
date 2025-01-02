@@ -1,5 +1,4 @@
 ﻿#include "FirstRunSection.h"
-#include "InGameMenu.h"
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
 

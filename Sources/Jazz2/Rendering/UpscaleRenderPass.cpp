@@ -5,7 +5,7 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/Viewport.h"
 
-namespace Jazz2::UI
+namespace Jazz2::Rendering
 {
 	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
 	{
@@ -160,6 +160,11 @@ namespace Jazz2::UI
 		return true;
 	}
 
+	UpscaleRenderPass::AntialiasingSubpass::AntialiasingSubpass()
+	{
+		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+	}
+
 	void UpscaleRenderPass::AntialiasingSubpass::Register()
 	{
 		if (_view != nullptr) {
@@ -180,6 +185,11 @@ namespace Jazz2::UI
 		renderQueue.addCommand(&_renderCommand);
 
 		return true;
+	}
+
+	UpscaleRenderPassWithClipping::UpscaleRenderPassWithClipping()
+		: UpscaleRenderPass()
+	{
 	}
 
 	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)

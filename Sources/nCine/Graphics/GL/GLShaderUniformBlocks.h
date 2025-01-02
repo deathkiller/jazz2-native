@@ -10,7 +10,7 @@ namespace nCine
 	class GLShaderProgram;
 	class GLBufferObject;
 
-	/// A class to handle all the uniform blocks of a shader program using a hashmap
+	/// Handles all the uniform blocks of a shader program
 	class GLShaderUniformBlocks
 	{
 	public:

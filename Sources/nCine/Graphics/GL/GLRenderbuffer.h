@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL renderbuffer objects
+	/// Handles OpenGL renderbuffer objects
 	class GLRenderbuffer
 	{
 	public:

@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// The camera class that handles matrices for shaders
+	/// Camera that handles matrices for shaders
 	class Camera
 	{
 	public:

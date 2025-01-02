@@ -1150,7 +1150,7 @@ namespace Jazz2::Multiplayer
 			// Cache all possible multiplayer spawn points (if it's not coop level)
 			_multiplayerSpawnPoints.clear();
 			_eventMap->ForEachEvent(EventType::LevelStartMultiplayer, [this](const Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
-				_multiplayerSpawnPoints.emplace_back(MultiplayerSpawnPoint { Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), event.EventParams[0] });
+				_multiplayerSpawnPoints.emplace_back(Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), event.EventParams[0]);
 				return true;
 			});
 		} else {
@@ -2254,7 +2254,7 @@ namespace Jazz2::Multiplayer
 			std::int32_t splitIdx = (playerCount + 1) / 2;
 			SmallVector<std::int32_t, 0> teamIds(playerCount);
 			for (std::int32_t i = 0; i < playerCount; i++) {
-				teamIds.emplace_back(i);
+				teamIds.push_back(i);
 			}
 			Random().Shuffle(arrayView(teamIds));
 

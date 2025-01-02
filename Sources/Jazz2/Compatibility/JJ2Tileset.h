@@ -13,7 +13,8 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	class JJ2Tileset // .j2t
+	/** @brief Parses original `.j2t` tileset files */
+	class JJ2Tileset
 	{
 	public:
 		static constexpr std::int32_t BlockSize = 32;
@@ -29,6 +30,8 @@ namespace Jazz2::Compatibility
 		}
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct TilesetTileSection {
 			bool Opaque;
 			std::uint32_t ImageDataOffset;
@@ -39,6 +42,7 @@ namespace Jazz2::Compatibility
 			//std::uint8_t Mask[BlockSize * BlockSize];
 			std::uint8_t Mask[BlockSize * BlockSize / 8];
 		};
+#endif
 
 		static constexpr std::int32_t PaletteSize = 256;
 

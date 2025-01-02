@@ -73,7 +73,7 @@ namespace Jazz2::Compatibility
 			s->Read(levelName, 8);
 			levelName[8] = '\0';
 
-			LevelEntry& levelEntry = LevelTexts.emplace_back(String(levelName));
+			LevelEntry& levelEntry = LevelTexts.emplace_back(levelName);
 			StringUtils::lowercaseInPlace(levelEntry.Name);
 
 			/*uint8_t unknown =*/ s->ReadValue<std::uint8_t>();

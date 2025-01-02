@@ -10,6 +10,7 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
+	/** @brief Processes compressed or uncompressed blocks from original files */
 	class JJ2Block
 	{
 	public:

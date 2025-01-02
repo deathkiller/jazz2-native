@@ -14,7 +14,7 @@ namespace nCine
 	class GLRenderbuffer;
 	class GLTexture;
 
-	/// A class to handle OpenGL framebuffer objects
+	/// Handles OpenGL framebuffer objects
 	class GLFramebuffer
 	{
 	public:

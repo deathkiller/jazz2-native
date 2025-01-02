@@ -7,7 +7,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL scissor test
+	/// Handles OpenGL scissor test
 	class GLScissorTest
 	{
 	public:

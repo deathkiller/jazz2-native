@@ -12,8 +12,8 @@
 #include "Tiles/ITileMapOwner.h"
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
+#include "Rendering/UpscaleRenderPass.h"
 #include "UI/ControlScheme.h"
-#include "UI/UpscaleRenderPass.h"
 #include "UI/Menu/InGameMenu.h"
 
 #include "../nCine/Graphics/Shader.h"
@@ -189,7 +189,7 @@ namespace Jazz2
 		Shader* _combineShader;
 		Shader* _combineWithWaterShader;
 
-		UI::UpscaleRenderPassWithClipping _upscalePass;
+		Rendering::UpscaleRenderPassWithClipping _upscalePass;
 
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Texture> _noiseTexture;

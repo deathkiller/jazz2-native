@@ -181,7 +181,7 @@ namespace Death { namespace IO {
 
 		/** @brief Returns an absolute path from a relative one */
 		static Containers::String GetAbsolutePath(Containers::StringView path);
-		/** @brief Returns true if the specified path is not empty and is absolute */
+		/** @brief Returns @cpp true @ce if the specified path is not empty and is absolute */
 		static bool IsAbsolutePath(Containers::StringView path);
 
 		/** @brief Returns the path of executable */
@@ -203,33 +203,33 @@ namespace Death { namespace IO {
 		static Containers::String GetWindowsDirectory();
 #endif
 
-		/** @brief Returns true if the specified path is a directory */
+		/** @brief Returns @cpp true @ce if the specified path is a directory */
 		static bool DirectoryExists(Containers::StringView path);
-		/** @brief Returns true if the specified path is a file */
+		/** @brief Returns @cpp true @ce if the specified path is a file */
 		static bool FileExists(Containers::StringView path);
 
-		/** @brief Returns true if the file or directory exists */
+		/** @brief Returns @cpp true @ce if the file or directory exists */
 		static bool Exists(Containers::StringView path);
-		/** @brief Returns true if the file or directory is readable */
+		/** @brief Returns @cpp true @ce if the file or directory is readable */
 		static bool IsReadable(Containers::StringView path);
-		/** @brief Returns true if the file or directory is writeable */
+		/** @brief Returns @cpp true @ce if the file or directory is writeable */
 		static bool IsWritable(Containers::StringView path);
-		/** @brief Returns true if the file or directory is executable */
+		/** @brief Returns @cpp true @ce if the file or directory is executable */
 		static bool IsExecutable(Containers::StringView path);
 
-		/** @brief Returns true if the path is a file and is readable */
+		/** @brief Returns @cpp true @ce if the path is a file and is readable */
 		static bool IsReadableFile(Containers::StringView path);
-		/** @brief Returns true if the path is a file and is writeable */
+		/** @brief Returns @cpp true @ce if the path is a file and is writeable */
 		static bool IsWritableFile(Containers::StringView path);
 
-		/** @brief Returns true if the path is a symbolic link */
+		/** @brief Returns @cpp true @ce if the path is a symbolic link */
 		static bool IsSymbolicLink(Containers::StringView path);
 
-		/** @brief Returns true if the file or directory is hidden */
+		/** @brief Returns @cpp true @ce if the file or directory is hidden */
 		static bool IsHidden(Containers::StringView path);
-		/** @brief Makes a file or directory hidden or not */
+		/** @brief Makes a @cpp true @ce or directory hidden or not */
 		static bool SetHidden(Containers::StringView path, bool hidden);
-		/** @brief Returns true if the file or directory is read-only */
+		/** @brief Returns @cpp true @ce if the file or directory is read-only */
 		static bool IsReadOnly(Containers::StringView path);
 		/** @brief Makes a file or directory read-only or not */
 		static bool SetReadOnly(Containers::StringView path, bool readonly);

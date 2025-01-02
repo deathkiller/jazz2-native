@@ -450,44 +450,44 @@ namespace Jazz2::UI::Menu
 	{
 		auto& baseGame = _series[(std::int32_t)SeriesName::BaseGame];
 		if (baseGame.Items.empty()) {
-			baseGame.Items.emplace_back(HighscoreItem { "Dan"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 16, 600000, { 400, 40, 10, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 12, 500000, { 300, 35, 8, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 10, 400000, { 260, 30, 8, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 4, 300000, { 200, 25, 6, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 200000, { 120, 20, 5, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "William"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 100000, { 80, 16, 5, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 50000, { 40, 10, 4, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 40000, { 20, 8, 4, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "James"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 30000, { 12, 4, 2, 0 } });
-			baseGame.Items.emplace_back(HighscoreItem { "Oliver"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 14000, { 6, 2, 0, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Dan"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 16, 600000, { 400, 40, 10, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 12, 500000, { 300, 35, 8, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 10, 400000, { 260, 30, 8, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 4, 300000, { 200, 25, 6, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 200000, { 120, 20, 5, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "William"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 100000, { 80, 16, 5, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 50000, { 40, 10, 4, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 40000, { 20, 8, 4, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "James"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 30000, { 12, 4, 2, 0 } });
+			baseGame.Items.push_back(HighscoreItem { "Oliver"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 14000, { 6, 2, 0, 0 } });
 		}
 
 		auto& sharewareDemo = _series[(std::int32_t)SeriesName::SharewareDemo];
 		if (sharewareDemo.Items.empty()) {
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 4, 50000, { 50, 1, 1, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Dan"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 4, 45000, { 45, 1, 1, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 3, 40000, { 40, 1, 1, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 2, 35000, { 35, 1, 1, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 30000, { 30, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 25, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Matthew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 20000, { 20, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 15000, { 12, 1, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Violet"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 10000, { 6, 0, 0, 0 } });
-			sharewareDemo.Items.emplace_back(HighscoreItem { "Patrick"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 5000, { 2, 0, 0, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 4, 50000, { 50, 1, 1, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Dan"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 4, 45000, { 45, 1, 1, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 3, 40000, { 40, 1, 1, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 2, 35000, { 35, 1, 1, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 30000, { 30, 1, 0, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Scarlett"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 25, 1, 0, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Matthew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 20000, { 20, 1, 0, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 15000, { 12, 1, 0, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Violet"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 10000, { 6, 0, 0, 0 } });
+			sharewareDemo.Items.push_back(HighscoreItem { "Patrick"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 5000, { 2, 0, 0, 0 } });
 		}
 
 		auto& theSecretFiles = _series[(std::int32_t)SeriesName::TheSecretFiles];
 		if (theSecretFiles.Items.empty()) {
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Dan"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 10, 400000, { 350, 80, 15, 1 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 6, 350000, { 300, 50, 15, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 4, 300000, { 240, 40, 12, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 2, 250000, { 180, 35, 10, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 200000, { 140, 30, 8, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Christopher"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 150000, { 100, 25, 6, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 100000, { 60, 18, 4, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Victoria"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 50000, { 30, 12, 2, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 16, 6, 0, 0 } });
-			theSecretFiles.Items.emplace_back(HighscoreItem { "Alexander"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 10000, { 8, 2, 0, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Dan"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 10, 400000, { 350, 80, 15, 1 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Tina"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 6, 350000, { 300, 50, 15, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Eve"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 4, 300000, { 240, 40, 12, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Monica"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 2, 250000, { 180, 35, 10, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Paul"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 200000, { 140, 30, 8, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Christopher"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 150000, { 100, 25, 6, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Andrew"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 100000, { 60, 18, 4, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Victoria"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Lori, GameDifficulty::Normal, 1, 50000, { 30, 12, 2, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 16, 6, 0, 0 } });
+			theSecretFiles.Items.push_back(HighscoreItem { "Alexander"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 10000, { 8, 2, 0, 0 } });
 		}
 
 	}

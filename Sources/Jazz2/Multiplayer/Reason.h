@@ -6,6 +6,7 @@
 
 namespace Jazz2::Multiplayer
 {
+	/** @brief Client disconnect reason */
 	enum class Reason : std::uint32_t
 	{
 		Unknown,

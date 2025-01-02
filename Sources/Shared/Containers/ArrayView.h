@@ -92,10 +92,9 @@ namespace Death { namespace Containers {
 		and @ref suffix() are called with @cpp nullptr @ce, they return a zero-sized
 		@cpp nullptr @ce view.
 
-		Finally, the slicing operations provide a conversion to
-		@ref StaticArrayView (or its convenience typedefs @ref ArrayView2,
-		@ref ArrayView3 etc.). Compile-time-sized arrays are useful for APIs that want
-		to enforce a particular number of elements at compile time.
+		Finally, the slicing operations provide a conversion to @ref StaticArrayView.
+		Compile-time-sized arrays are useful for APIs that want to enforce
+		a particular number of elements at compile time.
 
 		All slice operations fire an assert if the arguments are out of range, for
 		@ref StaticArrayView conversions the checks are done at compile time when
@@ -723,7 +722,7 @@ namespace Death { namespace Containers {
 		The general API is similar to what's shown in
 		@ref Containers-ArrayView-usage "ArrayView usage docs", except that here are
 		additional compile-time overloads of @ref slice(), @ref sliceSize(),
-		@ref prefix(), @paramref suffix(), @ref exceptPrefix() and @ref exceptSuffix().
+		@ref prefix(), @ref suffix(), @ref exceptPrefix() and @ref exceptSuffix().
 	*/
 	template<std::size_t size_, class T> class StaticArrayView
 	{

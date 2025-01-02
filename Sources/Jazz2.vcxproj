@@ -321,6 +321,7 @@
     <ClInclude Include="Jazz2\Rendering\CombineRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h" />
+    <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -520,7 +521,6 @@
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\RgbLights.h" />
-    <ClInclude Include="Jazz2\UI\UpscaleRenderPass.h" />
     <ClInclude Include="Jazz2\WarpFlags.h" />
     <ClInclude Include="Jazz2\WeaponType.h" />
     <ClInclude Include="Jazz2\WeatherType.h" />
@@ -856,6 +856,7 @@
     <ClCompile Include="Jazz2\Rendering\CombineRenderer.cpp" />
     <ClCompile Include="Jazz2\Rendering\LightingRenderer.cpp" />
     <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp" />
+    <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
     <ClCompile Include="Jazz2\RumbleProcessor.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
@@ -908,7 +909,6 @@
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\RgbLights.cpp" />
-    <ClCompile Include="Jazz2\UI\UpscaleRenderPass.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
     <ClCompile Include="nCine\Audio\ALAudioDevice.cpp" />

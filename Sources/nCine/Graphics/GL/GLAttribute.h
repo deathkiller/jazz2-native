@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// A class to store information about an active OpenGL shader attribute
+	/// Stores information about an active OpenGL shader attribute
 	class GLAttribute
 	{
 	public:

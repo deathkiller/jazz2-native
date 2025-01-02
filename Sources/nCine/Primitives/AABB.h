@@ -82,7 +82,9 @@ namespace nCine
 		AABB operator-(const Vector2<S>& v) const;
 	};
 
+	/// Axis-Aligned Bounding Box in a two dimensional space of floats
 	using AABBf = AABB<float>;
+	/// Axis-Aligned Bounding Box in a two dimensional space of 32-bit integers
 	using AABBi = AABB<int>;
 
 	template<class S>

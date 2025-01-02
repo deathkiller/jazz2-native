@@ -17,7 +17,8 @@ using namespace nCine;
 
 namespace Jazz2::Compatibility
 {
-	class JJ2Anims // .j2a
+	/** @brief Parses original `.j2a` animation files */
+	class JJ2Anims
 	{
 	public:
 		static constexpr std::uint16_t CacheVersion = 22;
@@ -29,6 +30,8 @@ namespace Jazz2::Compatibility
 	private:
 		static constexpr int32_t AddBorder = 2;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct AnimFrameSection {
 			std::int16_t SizeX, SizeY;
 			std::int16_t ColdspotX, ColdspotY;
@@ -64,6 +67,7 @@ namespace Jazz2::Compatibility
 			std::unique_ptr<std::uint8_t[]> Data;
 			std::uint16_t Multiplier;
 		};
+#endif
 
 		JJ2Anims();
 

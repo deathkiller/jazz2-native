@@ -3,8 +3,8 @@
 #include "../IStateHandler.h"
 #include "../IRootController.h"
 #include "Canvas.h"
-#include "UpscaleRenderPass.h"
 #include "../ContentResolver.h"
+#include "../Rendering/UpscaleRenderPass.h"
 
 namespace Jazz2::UI
 {
@@ -41,7 +41,7 @@ namespace Jazz2::UI
 		};
 #endif
 
-		UI::UpscaleRenderPass _upscalePass;
+		Rendering::UpscaleRenderPass _upscalePass;
 		std::unique_ptr<BackgroundCanvas> _canvasBackground;
 		Metadata* _metadata;
 		Function<bool(IRootController*)> _callback;

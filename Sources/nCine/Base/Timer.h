@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// Basic timer and synchronization class
+	/// Accumulates the time between starting and stopping the time measurement
 	class Timer
 	{
 	public:

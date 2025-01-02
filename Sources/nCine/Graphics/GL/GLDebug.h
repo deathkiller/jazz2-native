@@ -20,7 +20,7 @@ namespace nCine
 {
 	class IGfxCapabilities;
 
-	/// A class to handle OpenGL debug functions
+	/// Handles OpenGL debug functions
 	class GLDebug
 	{
 	public:

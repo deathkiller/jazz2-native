@@ -20,11 +20,13 @@ namespace Jazz2::Compatibility
 		Menu
 	};
 
+	/** @brief Maps indices from original data file to organized entries */
 	class AnimSetMapping
 	{
 	public:
 		static constexpr char Discard[] = ":discard";
 
+		/** @brief Mapped entry */
 		struct Entry {
 			String Category;
 			String Name;

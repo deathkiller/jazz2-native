@@ -18,6 +18,7 @@ namespace Jazz2::UI
 		class RemapControlsSection;
 	}
 
+	/** @brief Navigation flags for @ref ControlScheme::FetchNavigation(), supports a bitwise combination of its member values */
 	enum class NavigationFlags
 	{
 		None = 0,
@@ -63,9 +64,12 @@ namespace Jazz2::UI
 		static constexpr std::int32_t MaxConnectedGamepads = 6;
 #endif
 
+		/** @brief Resets all bindings to default */
 		static void Reset();
 
+		/** @brief Fetches processed standard input for specified player according to the current bindings */
 		static ProcessedInput FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons = true);
+		/** @brief Fetches navigation input according to the current bindings */
 		static std::uint32_t FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags = NavigationFlags::AllowAll);
 
 		static ArrayView<ControlSchemeMapping> GetAllMappings();

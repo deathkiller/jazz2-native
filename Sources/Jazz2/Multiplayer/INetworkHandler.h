@@ -13,6 +13,11 @@ using namespace Death::Containers;
 
 namespace Jazz2::Multiplayer
 {
+	/**
+		@brief Interface to handle network requests on a server
+	
+		@experimental
+	*/
 	class INetworkHandler
 	{
 	public:

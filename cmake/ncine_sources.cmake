@@ -240,6 +240,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
@@ -263,7 +264,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/InGameConsole.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/UI/UpscaleRenderPass.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.cpp

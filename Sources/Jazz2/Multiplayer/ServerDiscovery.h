@@ -28,6 +28,7 @@ using namespace nCine;
 
 namespace Jazz2::Multiplayer
 {
+	/** @brief Server description */
 	struct ServerDesc
 	{
 		ENetAddress Endpoint;
@@ -43,12 +44,18 @@ namespace Jazz2::Multiplayer
 		//bool IsLost;
 	};
 
+	/** @brief Interface to observe publicly-listed running servers */
 	class IServerObserver
 	{
 	public:
 		virtual void OnServerFound(ServerDesc&& desc) = 0;
 	};
 
+	/**
+		@brief Allows to monitor publicly-listed running servers
+
+		@experimental
+	*/
 	class ServerDiscovery
 	{
 	public:

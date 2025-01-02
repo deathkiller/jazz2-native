@@ -771,7 +771,7 @@ namespace Jazz2
 			actor->CollisionProxyID = _collisions.CreateProxy(actor->AABB, actor.get());
 		}
 
-		_actors.emplace_back(actor);
+		_actors.push_back(std::move(actor));
 	}
 
 	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, const StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
@@ -1587,7 +1587,7 @@ namespace Jazz2
 			}
 
 			if (!found) {
-				playerZones.emplace_back(cullingRect);
+				playerZones.push_back(std::move(cullingRect));
 			}
 		}
 
@@ -1742,7 +1742,7 @@ namespace Jazz2
 
 	void LevelHandler::AssignViewport(Actors::Player* player)
 	{
-		_assignedViewports.emplace_back(std::make_unique<Rendering::PlayerViewport>(this, player));
+		_assignedViewports.push_back(std::make_unique<Rendering::PlayerViewport>(this, player));
 
 #if defined(WITH_AUDIO)
 		for (auto& current : _playingSounds) {

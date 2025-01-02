@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL blending
+	/// Handles OpenGL blending
 	class GLBlending
 	{
 	public:

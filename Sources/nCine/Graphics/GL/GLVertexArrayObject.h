@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL Vertex Array Object
+	/// Handles OpenGL vertex array object
 	class GLVertexArrayObject
 	{
 	public:

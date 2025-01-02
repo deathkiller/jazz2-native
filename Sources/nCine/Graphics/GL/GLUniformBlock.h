@@ -10,7 +10,7 @@ namespace nCine
 {
 	class GLShaderProgram;
 
-	/// A class to store information about an OpenGL uniform block
+	/// Stores information about an OpenGL uniform block
 	class GLUniformBlock
 	{
 	public:

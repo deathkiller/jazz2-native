@@ -72,6 +72,7 @@ namespace nCine
 		static const Quaternion Identity;
 	};
 
+	/// Quaternion of floats
 	using Quaternionf = Quaternion<float>;
 
 	template<class T>

@@ -79,6 +79,7 @@ namespace nCine
 		/// Sets rectangle minimum and maximum coordinates as two `Vector2`
 		void SetMinMax(const Vector2<T>& min, const Vector2<T>& max);
 
+		/// Converts elements of the rectangle to a specified type
 		template<class S>
 		Rect<S> As() {
 			return Rect<S>(static_cast<S>(X), static_cast<S>(Y), static_cast<S>(W), static_cast<S>(H));
@@ -111,7 +112,9 @@ namespace nCine
 		static const Rect Empty;
 	};
 
+	/// Rectangle in a two dimensional space of floats
 	using Rectf = Rect<float>;
+	/// Rectangle in a two dimensional space of 32-bit integers
 	using Recti = Rect<int>;
 
 	template<class T>
