@@ -28,6 +28,7 @@ namespace Jazz2::Compatibility
 	constexpr std::int32_t JJ2ParamUInt = 2;
 	constexpr std::int32_t JJ2ParamInt = 3;
 
+	/** @brief Maps original events to extended event descriptions */
 	class EventConverter
 	{
 	public:

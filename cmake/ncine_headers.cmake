@@ -330,6 +330,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h
@@ -356,7 +357,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/InGameConsole.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.h
-	${NCINE_SOURCE_DIR}/Jazz2/UI/UpscaleRenderPass.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.h

@@ -161,6 +161,9 @@ namespace Jazz2::Multiplayer
 		struct MultiplayerSpawnPoint {
 			Vector2f Pos;
 			std::uint8_t Team;
+
+			MultiplayerSpawnPoint(Vector2f pos, std::uint8_t team)
+				: Pos(pos), Team(team) {}
 		};
 #endif
 

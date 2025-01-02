@@ -132,10 +132,6 @@ namespace Death { namespace Containers {
 		checks that a view starts (or ends) with given string and then removes it.</li>
 		</ul>
 
-		@subsection Containers-BasicStringView-usage-find Character and substring lookup
-
-		@todoc document once also the findNotAny() and findLastNotAny() variants exist
-
 		@subsection Containers-BasicStringView-usage-c-string-conversion Converting StringView instances to null-terminated C strings
 
 		If possible when interacting with 3rd party APIs, passing a string together

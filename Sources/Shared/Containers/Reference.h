@@ -96,8 +96,6 @@ namespace Death { namespace Containers {
 
 		/**
 		 * @brief Access the underlying reference
-		 *
-		 * @ref get(), @ref operator*()
 		 */
 		constexpr T* operator->() const
 		{

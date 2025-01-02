@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL depth test
+	/// Handles OpenGL depth test
 	class GLDepthTest
 	{
 	public:

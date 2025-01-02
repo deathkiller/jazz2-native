@@ -485,7 +485,7 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 
 void GameEventHandler::InvokeAsync(Function<void()>&& callback, const char* sourceFunc)
 {
-	_pendingCallbacks.emplace_back(std::move(callback));
+	_pendingCallbacks.push_back(std::move(callback));
 	LOGD("Callback queued for async execution from %s", sourceFunc);
 }
 

@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Collectibles
 
 		if ((details.State & ActorState::Illuminated) == ActorState::Illuminated) {
 			_illuminateLights.reserve(IlluminateLightCount);
-			for (int i = 0; i < IlluminateLightCount; i++) {
+			for (std::int32_t i = 0; i < IlluminateLightCount; i++) {
 				auto& light = _illuminateLights.emplace_back();
 				light.Intensity = Random().NextFloat(0.22f, 0.42f);
 				light.Distance = Random().NextFloat(4.0f, 36.0f);

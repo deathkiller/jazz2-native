@@ -12,7 +12,7 @@ namespace nCine
 	template<class K, class T, class HashFunc, unsigned int Capacity, bool IsConst> class StaticHashMapIterator;
 	template<class K, class T, class HashFunc, unsigned int Capacity, bool IsConst> struct StaticHashMapHelperTraits;
 
-	/// A template based hashmap implementation with open addressing and leapfrog probing (version with static allocation)
+	/// Static hashmap implementation with open addressing and leapfrog probing (version with static allocation)
 	template<class K, class T, unsigned int Capacity, class HashFunc = FNV1aHashFunc<K>>
 	class StaticHashMap
 	{

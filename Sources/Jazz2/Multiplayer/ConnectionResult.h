@@ -6,6 +6,7 @@
 
 namespace Jazz2::Multiplayer
 {
+	/** @brief Describes a connection result of @ref INetworkHandler::OnPeerConnected() */
 	struct ConnectionResult
 	{
 		Reason FailureReason;

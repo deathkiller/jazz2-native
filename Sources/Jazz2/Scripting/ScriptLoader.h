@@ -19,13 +19,23 @@ namespace Jazz2::Scripting
 {
 	class CScriptArray;
 
+	/** @brief Script context type */
 	enum class ScriptContextType {
+		/** @brief Unknown/unsupported script part */
 		Unknown,
+		/** @brief Already included script part */
 		AlreadyIncluded,
+		/** @brief Legacy (JJ2+ compatible) script part */
 		Legacy,
+		/** @brief Standard (Jazz² Resurrection compatible) script part */
 		Standard
 	};
 
+	/**
+		@brief Generic **AngelScript** script loader with @cpp #include @ce and @cpp #pragma @ce support
+	
+		@experimental
+	*/
 	class ScriptLoader
 	{
 	public:

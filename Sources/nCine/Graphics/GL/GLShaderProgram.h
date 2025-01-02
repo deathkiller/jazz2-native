@@ -20,7 +20,7 @@ namespace nCine
 {
 	class GLShader;
 
-	/// A class to handle OpenGL shader programs
+	/// Handles OpenGL shader programs
 	class GLShaderProgram
 	{
 	public:

@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// Static RRTI and identification index
+	/// Base class of nCine objects
 	class Object
 	{
 	public:

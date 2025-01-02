@@ -38,7 +38,8 @@ namespace Jazz2::UI::Menu
 			String Name;
 			float Y;
 
-			ItemData(Item type, StringView name) : Type(type), Name(name), Y(0.0f) { }
+			ItemData(Item type, StringView name)
+				: Type(type), Name(name), Y(0.0f) {}
 		};
 
 		SmallVector<ItemData, (std::int32_t)Item::Count> _items;

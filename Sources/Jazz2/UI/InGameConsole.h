@@ -8,6 +8,7 @@
 
 namespace Jazz2::UI
 {
+	/** @brief Message importance level */
 	enum class MessageLevel
 	{
 		Unknown,

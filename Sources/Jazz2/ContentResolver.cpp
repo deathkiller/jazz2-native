@@ -631,12 +631,12 @@ namespace Jazz2
 								auto it = _cachedSounds.find(assetPathNormalized);
 								if (it != _cachedSounds.end()) {
 									it->second->Flags |= GenericSoundResourceFlags::Referenced;
-									sound.Buffers.emplace_back(it->second.get());
+									sound.Buffers.push_back(it->second.get());
 								} else {
 									auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPathNormalized));
 									auto res = _cachedSounds.emplace(assetPathNormalized, std::make_unique<GenericSoundResource>(std::move(s), assetPathNormalized));
 									res.first->second->Flags |= GenericSoundResourceFlags::Referenced;
-									sound.Buffers.emplace_back(res.first->second.get());
+									sound.Buffers.push_back(res.first->second.get());
 								}
 							}
 						}

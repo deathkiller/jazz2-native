@@ -9,7 +9,7 @@ namespace nCine
 {
 	class GLShaderProgram;
 
-	/// A class to handle all the uniforms of a shader program using a hashmap
+	/// Handles all the uniforms of a shader program
 	class GLShaderUniforms
 	{
 	public:

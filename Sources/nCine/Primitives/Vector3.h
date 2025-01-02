@@ -77,6 +77,7 @@ namespace nCine
 		Vector3 Normalized() const;
 		Vector3& Normalize();
 
+		/// Converts elements of the vector to a specified type
 		template<class S>
 		Vector3<S> As() {
 			return Vector3<S>(static_cast<S>(X), static_cast<S>(Y), static_cast<S>(Z));
@@ -98,7 +99,9 @@ namespace nCine
 		static const Vector3 ZAxis;
 	};
 
+	/// Three-component vector of floats
 	using Vector3f = Vector3<float>;
+	/// Three-component vector of 32-bit integers
 	using Vector3i = Vector3<int>;
 
 	template<class T>

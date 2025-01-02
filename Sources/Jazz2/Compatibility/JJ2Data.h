@@ -14,9 +14,11 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	class JJ2Data // .j2d
+	/** @brief Parses original `.j2d` data files */
+	class JJ2Data
 	{
 	public:
+		/** @brief Item from a `.j2d` data file */
 		struct Item {
 			String Filename;
 			std::unique_ptr<uint8_t[]> Blob;
@@ -26,7 +28,7 @@ namespace Jazz2::Compatibility
 
 		SmallVector<Item, 0> Items;
 
-		JJ2Data() { }
+		JJ2Data() {}
 
 		bool Open(const StringView path, bool strictParser);
 

@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI
 {
+	/** @brief Alignment, supports a bitwise combination of its member values */
 	enum class Alignment
 	{
 		Center = 0x00,

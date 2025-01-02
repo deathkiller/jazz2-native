@@ -20,7 +20,8 @@ namespace Jazz2::Compatibility
 {
 	class JJ2Episode;
 
-	class JJ2Level // .j2l
+	/** @brief Parses original `.j2l` level files */
+	class JJ2Level
 	{
 		friend class JJ2Episode;
 
@@ -79,6 +80,8 @@ namespace Jazz2::Compatibility
 			SpeedMultipliers
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct LayerSection {
 			std::uint32_t Flags;
 			std::uint8_t Type;				// Ignored
@@ -132,6 +135,7 @@ namespace Jazz2::Compatibility
 			std::uint8_t FrameCount;
 			std::uint16_t Frames[64];
 		};
+#endif
 
 		JJ2Version _version;
 

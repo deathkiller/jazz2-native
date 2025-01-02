@@ -7,7 +7,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL clear color
+	/// Handles OpenGL clear color
 	class GLClearColor
 	{
 	public:

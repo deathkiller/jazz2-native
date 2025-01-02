@@ -948,9 +948,6 @@
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\UI\UpscaleRenderPass.h">
-      <Filter>Header Files\Jazz2\UI</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -1569,6 +1566,9 @@
     <ClInclude Include="Jazz2\Rendering\BlurRenderPass.h">
       <Filter>Header Files\Jazz2\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h">
+      <Filter>Header Files\Jazz2\Rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2114,9 +2114,6 @@
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\UI\UpscaleRenderPass.cpp">
-      <Filter>Source Files\Jazz2\UI</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
@@ -2571,6 +2568,9 @@
       <Filter>Source Files\Jazz2\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp">
+      <Filter>Source Files\Jazz2\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp">
       <Filter>Source Files\Jazz2\Rendering</Filter>
     </ClCompile>
   </ItemGroup>

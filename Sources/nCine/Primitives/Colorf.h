@@ -12,7 +12,7 @@ namespace nCine
 
 	using Death::Containers::NoInitT;
 
-	/// Four-channels normalized float color
+	/// Four-channels normalized color with float per component
 	class Colorf
 	{
 	public:

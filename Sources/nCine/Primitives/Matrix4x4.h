@@ -102,6 +102,7 @@ namespace nCine
 		Vector4<T> vecs_[4];
 	};
 
+	/// Four-by-four matrix of floats
 	using Matrix4x4f = Matrix4x4<float>;
 
 	template<class T>

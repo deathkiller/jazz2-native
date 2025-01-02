@@ -10,7 +10,7 @@ namespace nCine
 	using key_t = GLenum;
 	using value_t = GLuint;
 
-	/// Naive implementation of a hashmap for storing pairs of OpenGL targets and object ids
+	/// Naive implementation of a hashmap for storing pairs of OpenGL targets and object IDs
 	template <unsigned int S, class MappingFunc>
 	class GLHashMap
 	{
@@ -38,7 +38,7 @@ namespace nCine
 		return buckets_[mappingFunc(key)];
 	}
 
-	/// A class to perform a mapping between OpenGL buffer object targets and array indices
+	/// Performs a mapping between OpenGL buffer object targets and array indices
 	class GLBufferObjectMappingFunc
 	{
 	public:
@@ -77,7 +77,7 @@ namespace nCine
 		}
 	};
 
-	/// A class to perform a mapping between OpenGL texture targets and array indices
+	/// Performs a mapping between OpenGL texture targets and array indices
 	class GLTextureMappingFunc
 	{
 	public:

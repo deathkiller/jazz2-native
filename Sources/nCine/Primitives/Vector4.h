@@ -82,6 +82,7 @@ namespace nCine
 		Vector4 Normalized() const;
 		Vector4& Normalize();
 
+		/// Converts elements of the vector to a specified type
 		template<class S>
 		Vector4<S> As() {
 			return Vector4<S>(static_cast<S>(X), static_cast<S>(Y), static_cast<S>(Z), static_cast<S>(W));
@@ -105,7 +106,9 @@ namespace nCine
 		static const Vector4 WAxis;
 	};
 
+	/// Four-component vector of floats
 	using Vector4f = Vector4<float>;
+	/// Four-component vector of 32-bit integers
 	using Vector4i = Vector4<int>;
 
 	template<class T>

@@ -2,8 +2,8 @@
 
 #include "../IStateHandler.h"
 #include "../IRootController.h"
-#include "UpscaleRenderPass.h"
 #include "../ContentResolver.h"
+#include "../Rendering/UpscaleRenderPass.h"
 
 #include "../../nCine/Base/BitArray.h"
 #include "../../nCine/Graphics/Camera.h"
@@ -80,7 +80,7 @@ namespace Jazz2::UI
 #endif
 
 		IRootController* _root;
-		UI::UpscaleRenderPass _upscalePass;
+		Rendering::UpscaleRenderPass _upscalePass;
 		std::unique_ptr<CinematicsCanvas> _canvas;
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;

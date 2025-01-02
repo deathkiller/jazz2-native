@@ -233,7 +233,7 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		_items.emplace_back(std::move(desc));
+		_items.push_back(std::move(desc));
 	}
 
 	void ServerSelectSection::ExecuteSelected()

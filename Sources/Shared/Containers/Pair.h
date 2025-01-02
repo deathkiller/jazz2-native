@@ -255,6 +255,11 @@ namespace Death { namespace Containers {
 		S _second;
 	};
 
+	/** @relatesalso Pair
+		@brief Make a pair
+
+		Convernience alternative to @ref Pair::Pair(const F&, const S&) and overloads.
+	*/
 	template<class F, class S> constexpr Pair<typename std::decay<F>::type, typename std::decay<S>::type> pair(F&& first, S&& second) {
 		return Pair<typename std::decay<F>::type, typename std::decay<S>::type>{std::forward<F>(first), std::forward<S>(second)};
 	}
@@ -264,6 +269,9 @@ namespace Death { namespace Containers {
 		template<class> struct DeducedPairConverter;
 	}
 
+	/** @relatesalso Pair
+		@brief Make a pair from external representation
+	*/
 	template<class T> inline auto pair(T&& other) -> decltype(Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(std::forward<T>(other))) {
 		return Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(std::forward<T>(other));
 	}

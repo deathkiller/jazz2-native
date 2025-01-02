@@ -436,11 +436,11 @@ namespace Jazz2::Compatibility
 				JJ2Level extraLayersFile;
 				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
 					for (std::int32_t j = 0; j < 8 && (i + j) < layerCount; j++) {
-						_layers.emplace_back(std::move(extraLayersFile._layers[j]));
+						_layers.push_back(std::move(extraLayersFile._layers[j]));
 					}
 				} else {
 					for (std::int32_t j = 0; j < 8 && (i + j) < layerCount; j++) {
-						_layers.emplace_back(LayerSection{});
+						_layers.emplace_back();
 					}
 				}
 			}

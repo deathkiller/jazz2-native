@@ -8,7 +8,7 @@
 
 namespace nCine
 {
-	/// Mutex class (threads synchronization)
+	/// Mutex for threads synchronization
 	class Mutex
 	{
 	public:
@@ -40,7 +40,7 @@ namespace nCine
 		friend class CondVariable;
 	};
 
-	/// Condition variable class (threads synchronization)
+	/// Condition variable for threads synchronization
 	/*! Windows version based on the <em>TinyThread++</em> library implementation.
 	 *  More info at: http://www.cs.wustl.edu/~schmidt/win32-cv-1.html */
 	class CondVariable
@@ -70,7 +70,7 @@ namespace nCine
 		CondVariable& operator=(const CondVariable&) = delete;
 	};
 
-	/// Read/write lock class (threads synchronization)
+	/// Read/write lock for threads synchronization
 	class ReadWriteLock
 	{
 	public:
@@ -135,7 +135,7 @@ namespace nCine
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_WINDOWS)
 
-	/// Barrier class (threads synchronization)
+	/// Barrier for threads synchronization
 	class Barrier
 	{
 	public:

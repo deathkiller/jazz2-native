@@ -11,7 +11,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// A class to handle OpenGL shader objects
+	/// Handles OpenGL shader objects
 	class GLShader
 	{
 	public:

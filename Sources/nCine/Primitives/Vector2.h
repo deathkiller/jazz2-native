@@ -72,6 +72,7 @@ namespace nCine
 		Vector2 Normalized() const;
 		Vector2& Normalize();
 
+		/// Converts elements of the vector to a specified type
 		template<class S>
 		Vector2<S> As() {
 			return Vector2<S>(static_cast<S>(X), static_cast<S>(Y));
@@ -89,7 +90,9 @@ namespace nCine
 		static const Vector2 YAxis;
 	};
 
+	/// Two-component vector of floats
 	using Vector2f = Vector2<float>;
+	/// Two-component vector of 32-bit integers
 	using Vector2i = Vector2<int>;
 
 	template<class T>

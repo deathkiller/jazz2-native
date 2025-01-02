@@ -26,6 +26,11 @@ namespace Jazz2::Scripting
 		GameModeHUD
 	};
 
+	/**
+		@brief Binds an **AngelScript** script file to @ref LevelHandler and executes the script
+		
+		@experimental
+	*/
 	class LevelScriptLoader : public ScriptLoader
 	{
 		friend class jjPLAYER;

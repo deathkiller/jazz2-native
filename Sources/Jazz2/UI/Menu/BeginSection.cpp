@@ -56,49 +56,49 @@ namespace Jazz2::UI::Menu
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Story") });
+			_items.emplace_back(Item::PlayEpisodes, _("Play Story"));
 		} else {
 			// TRANSLATORS: Menu item in main menu (Emscripten only)
-			_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Shareware Demo") });
+			_items.emplace_back(Item::PlayEpisodes, _("Play Shareware Demo"));
 		}
 
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		// TRANSLATORS: Menu item in main menu (Emscripten only)
-		_items.emplace_back(ItemData { Item::Import, _("Import Episodes") });
+		_items.emplace_back(Item::Import, _("Import Episodes"));
 #	endif
 #else
 		if (_isPlayable && root->HasResumableState()) {
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(ItemData { Item::Continue, _("Continue") });
+			_items.emplace_back(Item::Continue, _("Continue"));
 		}
 
 		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Story") });
+		_items.emplace_back(Item::PlayEpisodes, _("Play Story"));
 
 		if (_isPlayable) {
 #	if defined(WITH_MULTIPLAYER)
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Game") });
+			_items.emplace_back(Item::PlayCustomLevels, _("Play Custom Game"));
 #	else
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Levels") });
+			_items.emplace_back(Item::PlayCustomLevels, _("Play Custom Levels"));
 #	endif
 		}
 #endif
 
 		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(ItemData { Item::Highscores, _("Highscores") });
+		_items.emplace_back(Item::Highscores, _("Highscores"));
 		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(ItemData { Item::Options, _("Options") });
+		_items.emplace_back(Item::Options, _("Options"));
 		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(ItemData { Item::About, _("About") });
+		_items.emplace_back(Item::About, _("About"));
 #if !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		// Show quit button only in PWA/standalone environment
 		if (PreferencesCache::IsStandalone)
 #	endif
 		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(ItemData { Item::Quit, _("Quit") });
+		_items.emplace_back(Item::Quit, _("Quit"));
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

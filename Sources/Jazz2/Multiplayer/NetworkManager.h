@@ -38,6 +38,11 @@ namespace Jazz2::Multiplayer
 		Connected
 	};
 
+	/**
+		@brief Allows to create network clients and servers
+
+		@experimental
+	*/
 	class NetworkManager
 	{
 		friend class ServerDiscovery;

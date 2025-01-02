@@ -11,7 +11,7 @@ namespace nCine
 	class GLUniformBlock;
 	class GLBufferObject;
 
-	/// A class to cache a uniform block buffer and then update it in the shader
+	/// Caches a uniform block buffer and then updates it in the shader
 	class GLUniformBlockCache
 	{
 	public:

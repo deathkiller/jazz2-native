@@ -7,7 +7,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL viewport
+	/// Handles OpenGL viewport
 	class GLViewport
 	{
 		friend class IGfxDevice; // for `initRect()`

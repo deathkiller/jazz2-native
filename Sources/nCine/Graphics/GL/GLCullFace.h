@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// A class to handle OpenGL face culling
+	/// Handles OpenGL face culling
 	class GLCullFace
 	{
 	public:

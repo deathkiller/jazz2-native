@@ -9,8 +9,9 @@
 
 using namespace nCine;
 
-namespace Jazz2::UI
+namespace Jazz2::Rendering
 {
+	/** @brief Upscales input image usually to a native resolution */
 	class UpscaleRenderPass : public SceneNode
 	{
 	public:
@@ -39,15 +40,13 @@ namespace Jazz2::UI
 		}
 
 	protected:
+		/** @brief Optional antialiasing subpass */
 		class AntialiasingSubpass : public SceneNode
 		{
 			friend class UpscaleRenderPass;
 
 		public:
-			AntialiasingSubpass()
-			{
-				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
-			}
+			AntialiasingSubpass();
 
 			void Register();
 
@@ -75,12 +74,11 @@ namespace Jazz2::UI
 		RenderCommand _renderCommand;
 	};
 
+	/** @brief Upscales input image usually to a native resolution, additionaly supports 3 independent layers (background layer, clipped main layer, overlay layer) */
 	class UpscaleRenderPassWithClipping : public UpscaleRenderPass
 	{
 	public:
-		UpscaleRenderPassWithClipping() : UpscaleRenderPass()
-		{
-		}
+		UpscaleRenderPassWithClipping();
 
 		void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight) override;
 		void Register() override;

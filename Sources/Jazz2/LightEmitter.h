@@ -6,7 +6,7 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	/** @brief Light emitter */
+	/** @brief Allows objects to emit light */
 	struct LightEmitter
 	{
 		Vector2f Pos;

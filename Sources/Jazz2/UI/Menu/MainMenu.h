@@ -5,8 +5,8 @@
 #include "../../IStateHandler.h"
 #include "../../IRootController.h"
 #include "../Canvas.h"
-#include "../UpscaleRenderPass.h"
 #include "../../ContentResolver.h"
+#include "../../Rendering/UpscaleRenderPass.h"
 #include "../../Tiles/TileMap.h"
 
 #include "../../../nCine/Graphics/Camera.h"
@@ -159,7 +159,7 @@ namespace Jazz2::UI::Menu
 		};
 
 		TexturedBackgroundPass _texturedBackgroundPass;
-		UI::UpscaleRenderPassWithClipping _upscalePass;
+		Rendering::UpscaleRenderPassWithClipping _upscalePass;
 
 		std::unique_ptr<TileSet> _tileSet;
 		TileMapLayer _texturedBackgroundLayer;
