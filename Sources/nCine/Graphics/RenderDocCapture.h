@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// A class for in-application integration of RenderDoc
+	/// In-application integration of RenderDoc
 	class RenderDocCapture
 	{
 	public:

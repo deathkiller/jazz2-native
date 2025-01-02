@@ -13,7 +13,7 @@ namespace nCine
 	class Particle;
 	struct ParticleInitializer;
 
-	/// The class representing a particle system
+	/// Represents a particle system
 	class ParticleSystem : public SceneNode
 	{
 	public:

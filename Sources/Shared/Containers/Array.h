@@ -94,7 +94,163 @@ namespace Death { namespace Containers {
 		move-only to avoid accidental copies of large memory blocks. For a variant with compile-time size information
 		see @ref StaticArray. A non-owning version of this container is an @ref ArrayView.
 
-		The array has a non-changeable size by default and growing functionality is opt-in.
+		The array has a non-changeable size by default and growing functionality is
+		opt-in, see @ref Containers-Array-growable below for more information.
+
+		@section Containers-Array-usage Usage
+
+		The @ref Array class provides an access and slicing API similar to
+		@ref ArrayView, see @ref Containers-ArrayView-usage "its usage docs" for
+		details. All @ref Array slicing APIs return an @ref ArrayView, additionally
+		@ref Array instances are also implicitly convertible to it. The only difference
+		is due to the owning aspect --- mutable access to the data is provided only via
+		non @cpp const @ce overloads.
+
+		@subsection Containers-Array-usage-initialization Array initialization
+
+		The array is by default *value-initialized*, which means that trivial types
+		are zero-initialized and the default constructor is called on other types. It
+		is possible to initialize the array in a different way using so-called *tags*:
+
+		-   @ref Array(DefaultInitT, std::size_t) leaves trivial types uninitialized
+			and calls the default constructor elsewhere. In other words,
+			@cpp new T[size] @ce. Because of the differing behavior for trivial types
+			it's better to explicitly use either the @ref ValueInit or @ref NoInit
+			variants instead.
+		-   @ref Array(ValueInitT, std::size_t) is equivalent to the default case,
+			zero-initializing trivial types and calling the default constructor
+			elsewhere. Useful when you want to make the choice appear explicit. In
+			other words, @cpp new T[size]{} @ce.
+		-   @ref Array(DirectInitT, std::size_t, Args&&... args) constructs all
+			elements of the array using provided arguments. In other words,
+			@cpp new T[size]{T{args...}, T{args...}, …} @ce.
+		-   @ref Array(InPlaceInitT, ArrayView<const T>)
+			@ref Array(InPlaceInitT, std::initializer_list<T>) or the
+			@ref array(ArrayView<const T>) / @ref array(std::initializer_list<T>)
+			shorthand allocates unitialized memory and then copy-constructs all
+			elements from the list. In other words, @cpp new T[size]{args...} @ce. The
+			class deliberately *doesn't* provide an implicit @ref std::initializer_list
+			constructor due to @ref Containers-Array-initializer-list "reasons described below".
+		-   @ref Array(NoInitT, std::size_t) does not initialize anything. Useful for
+			trivial types when you'll be overwriting the contents anyway, for
+			non-trivial types this is the dangerous option and you need to call the
+			constructor on all elements manually using placement new,
+			@ref std::uninitialized_copy() or similar --- see the constructor docs for
+			an example. In other words, @cpp new char[size*sizeof(T)] @ce for
+			non-trivial types to circumvent default construction and @cpp new T[size] @ce
+			for trivial types.
+
+		<b></b>
+
+		@m_class{m-note m-success}
+
+		@par Aligned allocations
+			Please note that @ref Array allocations are by default only aligned to
+			@cpp 2*sizeof(void*) @ce. If you need overaligned memory for working with
+			SIMD types, use @ref Utility::allocateAligned() instead.
+
+		@subsection Containers-Array-usage-wrapping Wrapping externally allocated arrays
+
+		By default the class makes all allocations using @cpp operator new[] @ce and
+		deallocates using @cpp operator delete[] @ce for given @p T, with some
+		additional trickery done internally to make the @ref Array(NoInitT, std::size_t)
+		and @ref Array(DirectInitT, std::size_t, Args&&... args) constructors work.
+		It's however also possible to wrap an externally allocated array using
+		@ref Array(T*, std::size_t, D) together with specifying which function to use
+		for deallocation. By default the deleter is set to @cpp nullptr @ce, which is
+		equivalent to deleting the contents using @cpp operator delete[] @ce.
+
+		By default, plain function pointers are used to avoid having the type affected
+		by the deleter function. If the deleter needs to manage some state, a custom
+		deleter type can be used. The deleter is called *unconditionally* on destruction,
+		which has some implications especially in case of stateful deleters. See
+		the documentation of @ref Array(T*, std::size_t, D) for details.
+
+		@section Containers-Array-growable Growable arrays
+
+		The @ref Array class provides no reallocation or growing capabilities on its
+		own, and this functionality is opt-in via free functions from
+		@ref Containers/GrowableArray.h instead. This is done in order to keep
+		the concept of an owning container decoupled from the extra baggage coming from
+		custom allocators, type constructibility and such.
+
+		As long as the type stored in the array is nothrow-move-constructible, any
+		@ref Array instance can be converted to a growing container by calling the
+		family of @ref arrayAppend(), @ref arrayInsert(), @ref arrayReserve(),
+		@ref arrayResize(), @ref arrayRemove() ... functions. A growable array behaves
+		the same as a regular array to its consumers --- its @ref size() returns the
+		count of *real* elements, while available capacity can be queried through
+		@ref arrayCapacity().
+
+		A growable array can be turned back into a regular one using
+		@ref arrayShrink() if desired. That'll free all extra memory, moving the
+		elements to an array of exactly the size needed.
+
+		@m_class{m-block m-success}
+
+		@par Tip
+			Thanks to [ADL](https://en.wikipedia.org/wiki/Argument-dependent_name_lookup)
+			the @ref arrayAppend() etc. functions can be called unqualified, without
+			having to explicitly prefix them with @cpp Containers:: @ce.
+
+		@subsection Containers-Array-growable-allocators Growable allocators
+
+		Similarly to standard containers, growable arrays allow you to use a custom
+		allocator that matches the documented semantics of @ref ArrayAllocator. It's
+		also possible to switch between different allocators during the lifetime of an
+		@ref Array instance --- internally it's the same process as when a non-growable
+		array is converted to a growable version (or back, with @ref arrayShrink()).
+
+		The @ref ArrayAllocator is by default aliased to @ref ArrayNewAllocator, which
+		uses the standard C++ @cpp new[] @ce / @cpp delete[] @ce constructs and is
+		fully move-aware, requiring the types to be only nothrow-move-constructible at
+		the very least. If a type is trivially copyable, the @ref ArrayMallocAllocator
+		will get picked instead, make use of @ref std::realloc() to avoid unnecessary
+		memory copies when growing the array. The typeless nature of
+		@ref ArrayMallocAllocator internals allows for free type-casting of the array
+		instance with @ref arrayAllocatorCast(), an operation not easily doable using
+		typed allocators.
+
+		@subsection Containers-Array-growable-sanitizer AddressSanitizer container annotations
+
+		Because the alloacted growable arrays have an area between @ref size() and
+		@ref arrayCapacity() that shouldn't be accessed, when building with
+		[Address Sanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
+		enabled, this area is marked as "container overflow".
+
+		In some cases sanitizer annotations are undesirable, for example when only a
+		part of the application is built with AddressSanitizer enabled, causing false
+		positives due to the annotations being done only partially, or when a
+		particular platform is known to have broken behavior. The annotations can be
+		disabled by defining `DEATH_CONTAINERS_NO_SANITIZER_ANNOTATIONS` on the
+		compiler command line.
+
+		@section Containers-Array-views Conversion to array views
+
+		Arrays are implicitly convertible to @ref ArrayView as described in the
+		following table. The conversion is only allowed if @cpp T* @ce is implicitly
+		convertible to @cpp U* @ce (or both are the same type) and both have the same
+		size.
+
+		Owning array type               | ↭ | Non-owning view type
+		------------------------------- | - | ---------------------
+		@ref Array "Array<T>"           | → | @ref ArrayView "ArrayView&lt;U&gt;"
+		@ref Array "Array<T>"           | → | @ref ArrayView "ArrayView<const U>"
+		@ref Array "const Array<T>"     | → | @ref ArrayView "ArrayView<const U>"
+
+		@anchor Containers-Array-initializer-list
+
+		<b></b>
+
+		@m_class{m-block m-warning}
+
+		@par Conversion from std::initializer_list
+			The class deliberately *doesn't* provide a @ref std::initializer_list
+			constructor to prevent the same usability issues as with @ref std::vector.
+			Instead you're expected to use either the
+			@ref Array(InPlaceInitT, std::initializer_list<T>) constructor or the
+			@ref array(std::initializer_list<T>) shorthand, which are both more
+			explicit and thus should prevent accidental use.
 	*/
 #ifdef DOXYGEN_GENERATING_OUTPUT
 	template<class T, class D = void(*)(T*, std::size_t)>

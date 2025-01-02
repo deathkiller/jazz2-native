@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors
 {
+	/** @brief Explosion effects */
 	class Explosion : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

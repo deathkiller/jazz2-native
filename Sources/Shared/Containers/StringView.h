@@ -72,8 +72,136 @@ namespace Death { namespace Containers {
 	/**
 		@brief Base for string views
 
-		A lighter alternative to C++17 @ref std::string_view that has also a mutable variant and additional optimizations
-		for reducing unnecessary copies and allocations. An owning version of this container is a @ref String.
+		@m_keywords{StringView MutableStringView}
+
+		A lighter alternative to C++17 @ref std::string_view that has also a mutable
+		variant and additional optimizations for reducing unnecessary copies and
+		allocations. An owning version of this container is a @ref String.
+
+		@section Containers-BasicStringView-usage Usage
+
+		The class is meant to be used through either the @ref StringView or
+		@ref MutableStringView typedefs. It's implicitly convertible from C string
+		literals, but the recommended way is using the @link Literals::operator""_s() @endlink
+		literal.
+
+		While both expressions are *mostly* equivalent, the literal is
+		@cpp constexpr @ce so you can use it in a compile-time context (and on the
+		other hand, the implicit conversion uses @ref std::strlen() which has some
+		runtime impact). The main difference is however that the literal will annotate
+		the view as @ref StringViewFlags::Global "global" and
+		@ref StringViewFlags::NullTerminated "null-terminated", which can help avoid
+		copies and allocations when lifetime of the data needs to be extended or when
+		dealing with APIs that expect null-terminated strings. Additionally, the
+		literal will also preserve zero bytes inside the string, while implicit
+		conversion from a C string won't.
+
+		C string literals are implicitly immutable, in order to create a mutable one
+		you need to assign the literal to a @cpp char[] @ce (instead of
+		@cpp const char* @ce) and then create a @ref MutableStringView in a second
+		step.
+
+		This class is implicitly convertible from and to @ref ArrayView, however note
+		that the conversion will not preserve the global / null-terminated annotations.
+
+		@attention In order to allow the above-mentioned optimizations, on 32-bit
+			systems the size is limited to 1 GB. That should be more than enough for
+			real-world strings (as opposed to arbitrary binary data), if you need more
+			please use an @ref ArrayView instead.
+
+		@subsection Containers-BasicStringView-usage-slicing String view slicing
+
+		The string view class inherits the slicing APIs of @ref ArrayView ---
+		@ref slice(), @ref sliceSize(), @ref prefix(), @ref suffix(),
+		@ref exceptPrefix() and @ref exceptSuffix() --- and in addition it provides
+		string-specific utilities. These are are all derived from the slicing APIs,
+		which means they also return sub-views of the original string:
+
+		<ul>
+		<li>@ref split() and @ref splitWithoutEmptyParts() split the view on given set
+		of delimiter characters</li>
+		<li>@ref join() and @ref joinWithoutEmptyParts() is an inverse of the
+		above</li>
+		<li>@ref partition() is similar to @ref split(), but always returning three
+		elements with a clearly defined behavior, which can make certain code more
+		robust while reducing the amount of possible error states</li>
+		<li>@ref trimmed() (and its variants @ref trimmedPrefix() /
+		@ref trimmedSuffix()), commonly used to remove leading and trailing
+		whitespace</li>
+		<li>@ref exceptPrefix(StringView) const / @ref exceptSuffix(StringView) const
+		checks that a view starts (or ends) with given string and then removes it.</li>
+		</ul>
+
+		@subsection Containers-BasicStringView-usage-find Character and substring lookup
+
+		@todoc document once also the findNotAny() and findLastNotAny() variants exist
+
+		@subsection Containers-BasicStringView-usage-c-string-conversion Converting StringView instances to null-terminated C strings
+
+		If possible when interacting with 3rd party APIs, passing a string together
+		with the size information is always preferable to passing just a plain
+		@cpp const char* @ce. Apart from saving an unnecessary @ref std::strlen() call
+		it can avoid unbounded memory reads in security-critical scenarios.
+
+		Unlike a @ref String, string views can point to any slice of a larger string
+		and thus can't guarantee null termination. Because of this and because even a
+		view with @ref StringViewFlags::NullTerminated can still contain a @cpp '\0' @ce
+		anywhere in the middle, there's no implicit conversion to @cpp const char* @ce
+		provided, and the pointer returned by @ref data() should only be used together
+		with @ref size().
+
+		The quickest safe way to get a null-terminated string out of a @ref StringView
+		is to convert the view to a @ref String and then use @ref String::data().
+		However, such operation will unconditionally make a copy of the string, which
+		is unnecessary work if the view was null-terminated already. To avoid that,
+		there's @ref String::nullTerminatedView(), which will make a copy only if the
+		view is not already null-terminated, directly referencing the view with a no-op
+		deleter otherwise.
+
+		Similarly as described in @ref Containers-String-usage-c-string-conversion,
+		pointers to data in SSO instances will get invalidated when the instance is
+		moved. With @ref String::nullTerminatedGlobalView(AllocatedInitT, StringView)
+		the null-terminated copy will be always allocated.
+
+		@section Containers-BasicStringView-array-views Conversion to array views
+
+		String views are implicitly convertible to @ref ArrayView as described in the
+		following table. This also extends to other container types constructibe from
+		@ref ArrayView.
+
+		String view type                | ↭ | Array view type
+		------------------------------- | - | ---------------------
+		@ref StringView                 | → | @ref ArrayView "ArrayView<const char>"
+		@ref MutableStringView          | → | @ref ArrayView "ArrayView<const char>"
+		@ref MutableStringView          | → | @ref ArrayView "ArrayView<char>"
+
+		@section Containers-BasicStringView-stl STL compatibility
+
+		Instances of @ref StringView and @ref BasicStringView are *implicitly*
+		convertible from and to @ref std::string if you include
+		@ref Containers/StringStl.h. The conversion is provided in a separate
+		header to avoid unconditional @cpp #include <string> @ce, which significantly
+		affects compile times.
+
+		Creating a @ref std::string instance always involves a data copy,
+		while going the other way always creates a non-owning reference without
+		allocations or copies. @ref StringView / @ref MutableStringView created from a
+		@ref std::string always have @ref StringViewFlags::NullTerminated set, but the
+		usual conditions regarding views apply --- if the original string is modified,
+		view pointer, size or the null termination property may not be valid anymore.
+
+		On compilers that support C++17 and @ref std::string_view, implicit conversion
+		from and to it is provided in @ref Containers/StringStlView.h. For
+		similar reasons, it's a dedicated header to avoid unconditional
+		@cpp #include <string_view> @ce, but this one is even significantly heavier
+		than the @ref string "<string>" include on certain implementations, so it's
+		separate from a @ref std::string as well.
+
+		The @ref std::string_view type doesn't have any mutable counterpart, so there's
+		no possibility to create a @ref MutableStringView out of it. Because
+		@ref std::string_view doesn't preserve any information about the string origin,
+		neither @ref StringViewFlags::NullTerminated nor @ref StringViewFlags::Global is
+		set in a @ref StringView converted from it.
 	*/
 	template<class T> class BasicStringView
 	{

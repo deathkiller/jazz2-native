@@ -17,7 +17,7 @@ namespace nCine
 	class RenderQueue;
 	class Viewport;
 
-	/// The base class for the transformation nodes hierarchy
+	/// Base class for the transformation nodes hierarchy
 	class SceneNode : public Object
 	{
 	public:

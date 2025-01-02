@@ -68,8 +68,146 @@ namespace Death { namespace Containers {
 	/**
 		@brief String
 
-		A lightweight non-templated alternative to @ref std::string with support for custom deleters. A non-owning version
-		of this container is a @ref StringView and a @ref MutableStringView, implemented using a generic @ref BasicStringView.
+		A lightweight non-templated alternative to @ref std::string with support for
+		custom deleters. A non-owning version of this container is a
+		@ref StringView and a @ref MutableStringView, implemented using a generic
+		@ref BasicStringView.
+
+		@section Containers-String-usage Usage
+
+		It's recommended to prefer using @ref StringView / @ref MutableStringView in
+		most cases, and only create a @ref String instance if you need to extend
+		lifetime of the data or perform an operation that can't be done by mutating a
+		view in-place. The @ref String is implicitly convertible from C string
+		literals, but the designated way to instantiate a string is using the
+		@link operator""_s() @endlink literal. While both expressions are *mostly*
+		equivalent, the implicit conversion has some runtime impact due to
+		@ref std::strlen(), and it won't preserve zero bytes inside the string.
+
+		The @ref String class provides access, slicing and lookup APIs similar to
+		@ref BasicStringView "StringView", see @ref Containers-BasicStringView-usage "its usage docs"
+		for details. All @ref String slicing APIs return a (mutable)
+		@ref BasicStringView "StringView", additionally @ref String instances are
+		implicitly convertible from and to (mutable) @ref BasicStringView "StringView".
+		All instances (including an empty string) are guaranteed to be null-terminated,
+		which means a conversion to @ref BasicStringView "StringView" will always have
+		@ref StringViewFlags::NullTerminated set.
+
+		As with @ref BasicStringView "StringView", the class is implicitly convertible
+		to @ref ArrayView. In addition it's also move-convertible to @ref Array,
+		transferring the ownership of the internal data array to it. Ownership transfer
+		in the other direction is not provided because it's not possible to implicitly
+		guarantee null termination of the input @ref Array. In that case use the
+		explicit @ref String(char*, std::size_t, Deleter) constructor together with
+		@ref Array::release() and @ref Array::deleter(). See also
+		@ref Containers-String-usage-wrapping below.
+
+		@subsection Containers-String-usage-sso Small string optimization
+
+		The class stores data size, data pointer and a deleter pointer, which is 24
+		bytes on 64-bit platforms (and 12 bytes on 32-bit). To avoid allocations for
+		small strings, small strings up to 22 bytes on 64-bit (23 including the null
+		terminator) and up to 10 bytes on 32-bit (11 including the null terminator) are
+		by default stored inside the class.
+
+		Such optimization is completely transparent to the user, the only difference is
+		that @ref deleter() and @ref release() can't be called on SSO strings, as there
+		is nothing to delete / release. Presence of SSO on an instance can be queried
+		using @ref isSmall().
+
+		@attention For consistency with @ref StringView and in order to allow the small
+			string optimization, on 32-bit systems the size is limited to 1 GB. That
+			should be more than enough for real-world strings (as opposed to arbitrary
+			binary data), if you need more please use an @ref Array instead.
+
+		In cases where SSO isn't desired --- for example when strings are stored in a
+		growable array, are externally referenced via @ref StringView instances or
+		@cpp char* @ce and pointer stability is required after a reallocation --- the
+		string can be constructed with @ref String(AllocatedInitT, const char*) and
+		related APIs using the @ref AllocatedInit tag, which bypasses this optimization
+		and always allocates. This property is then also preserved on all moves and
+		copies regardless of the actual string size, i.e., small strings don't suddenly
+		become SSO instances if the growable array gets reallocated. An
+		@ref AllocatedInit small string can be turned into an SSO instance again by
+		explicitly using the @ref String(StringView) constructor.
+
+		@subsection Containers-String-usage-initialization String initialization
+
+		In addition to creating a @ref String from an existing string (literal) or
+		wrapping an externally allocated memory as mentioned above, explicit
+		initialization constructors are provided, similarly to the @ref Array class:
+
+		-   @ref String(ValueInitT, std::size_t) zero-initializes the string, meaning
+			each of its characters is @cpp '\0' @ce. For heap-allocated strings this is
+			equivalent to @cpp new char[size + 1]{} @ce (the one extra character is
+			for the null terminator).
+		-   @ref String(DirectInitT, std::size_t, char) fills the whole string with
+			given character and zero-initializes the null terminator. For
+			heap-allocated strings this is equivalent to
+			@cpp new char[size + 1]{c, c, c, …, '\0'} @ce.
+		-   @ref String(NoInitT, std::size_t) keeps the contents uninitialized, except
+			for the null terminator. Equivalent to @cpp new char[size + 1] @ce followed
+			by @cpp string[size] = '\0' @ce.
+
+		Unlike an @ref Array, there's no @ref DefaultInitT constructor, as the same
+		behavior is already provided by @ref String(NoInitT, std::size_t).
+
+		@subsection Containers-String-usage-wrapping Wrapping externally allocated strings
+
+		Similarly to @ref Array, by default the class makes all allocations using
+		@cpp operator new[] @ce and deallocates using @cpp operator delete[] @ce. It's
+		however also possible to wrap an externally allocated string using
+		@ref String(char*, std::size_t, Deleter) together with specifying which
+		function to use for deallocation.
+
+		@subsection Containers-String-usage-c-string-conversion Converting String instances to null-terminated C strings
+
+		If possible when interacting with 3rd party APIs, passing a string together
+		with the size information is always preferable to passing just a plain
+		@cpp const char* @ce. Apart from saving an unnecessary @ref std::strlen() call
+		it can avoid unbounded memory reads in security-critical scenarios.
+
+		As said above, a @ref String is guaranteed to always be null-terminated, even
+		in case it's empty. However, unlike with @ref Array, there's no implicit
+		conversion to @cpp const char* @ce, because the string can still contain a
+		@cpp '\0' @ce anywhere in the middle --- thus you have to get the pointer
+		explicitly using @ref data(). In case your string can contain null bytes, you
+		should only pass it together with @ref size() or as a range of pointers using
+		@ref begin() and @ref end() instead, assuming the target API supports such
+		input.
+
+		Extra attention is needed when the originating @ref String instance can move
+		after the C string pointer got stored somewhere. Pointers to heap-allocated
+		strings will not get invalidated but @ref Containers-String-usage-sso "SSO strings"
+		will, leading to nasty crashes when accessing the original pointer. Apart from
+		ensuring the instances won't get moved, another solution is to force the
+		strings to be always allocated with @ref String(AllocatedInitT, String&&) and
+		other variants using the @ref AllocatedInit tag.
+
+		@section Containers-String-stl STL compatibility
+
+		Instances of @ref String are *implicitly* convertible from and to
+		@ref std::string if you include @ref Containers/StringStl.h. The
+		conversion is provided in a separate header to avoid unconditional @cpp
+		#include <string> @ce, which significantly affects compile times.
+
+		Because @ref std::string doesn't provide any way to transfer ownership of its
+		underlying memory, conversion either way always involves a data copy. To
+		mitigate the conversion impact, it's recommended to convert @ref std::string
+		instances to @ref BasicStringView "StringView" instead where possible.
+
+		On compilers that support C++17 and @ref std::string_view, *implicit*
+		conversion from and to it is provided in @ref Containers/StringStlView.h.
+		For similar reasons, it's a dedicated header to avoid unconditional
+		@cpp #include <string_view> @ce, but this one is even significantly heavier
+		than the @ref string "<string>" include on certain implementations, so it's
+		separate from a @ref std::string as well. The @ref std::string_view type doesn't
+		have any mutable counterpart, so there's no differentiation for a @cpp const
+		@ce variant. While creating a @ref std::string_view from a @ref String creates
+		a non-owning reference without allocations or copies, converting the other way
+		involves a data copy. To mitigate the conversion impact, it's recommended to
+		convert @ref std::string_view instances to @ref BasicStringView "StringView"
+		instead where possible.
 	*/
 	class String
 	{
