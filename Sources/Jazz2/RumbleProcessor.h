@@ -18,6 +18,8 @@ namespace Jazz2
 		void OnEndFrame(float timeMult);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ActiveRumble
 		{
 			std::shared_ptr<RumbleDescription> Desc;
@@ -26,6 +28,7 @@ namespace Jazz2
 
 			ActiveRumble(std::int32_t joyId, std::shared_ptr<RumbleDescription> desc);
 		};
+#endif
 
 		SmallVector<ActiveRumble, 0> _activeRumble;
 	};

@@ -8,7 +8,7 @@
 
 namespace nCine
 {
-	/// Ogg Vorbis audio loader
+	/// Ogg Vorbis audio loader using `libvorbis` library
 	class AudioLoaderOgg : public IAudioLoader
 	{
 	public:

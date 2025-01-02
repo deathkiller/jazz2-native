@@ -215,6 +215,8 @@ namespace Jazz2::Tiles
 			Sprite
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct TileSetPart {
 			std::unique_ptr<TileSet> Data;
 			std::int32_t Offset;
@@ -243,6 +245,7 @@ namespace Jazz2::Tiles
 			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 			bool _alreadyRendered;
 		};
+#endif
 
 		ITileMapOwner* _owner;
 		std::int32_t _sprLayerIndex;

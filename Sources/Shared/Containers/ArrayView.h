@@ -77,8 +77,6 @@ namespace Death { namespace Containers {
 		 * @brief Construct a view on an array with explicit size
 		 * @param data      Data pointer
 		 * @param size      Data size
-		 *
-		 * @see @ref arrayView(T*, std::size_t)
 		 */
 		constexpr /*implicit*/ ArrayView(T* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -731,8 +729,6 @@ namespace Death { namespace Containers {
 
 		/**
 		 * @brief Pointer to the first element
-		 *
-		 * @see @ref front(), @ref operator[]()
 		 */
 		constexpr T* begin() const { return _data; }
 		/** @overload */
@@ -761,7 +757,6 @@ namespace Death { namespace Containers {
 		 * @brief Element access
 		 *
 		 * Expects that @p i is less than @ref size().
-		 * @see @ref front(), @ref back()
 		 */
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr T& operator[](std::size_t i) const;

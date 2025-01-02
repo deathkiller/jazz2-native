@@ -15,7 +15,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// The class that manages the cache of binary OpenGL shader programs
+	/// Manages the cache of binary OpenGL shader programs
 	class BinaryShaderCache
 	{
 	public:

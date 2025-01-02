@@ -9,7 +9,7 @@ namespace nCine
 	class RenderCommand;
 	class RenderQueue;
 
-	/// A class for objects that can be drawn through the render queue
+	/// Object that can be drawn through the render queue
 	class DrawableNode : public SceneNode
 	{
 	public:

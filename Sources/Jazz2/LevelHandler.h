@@ -170,6 +170,7 @@ namespace Jazz2
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);
 
 	protected:
+		/** @brief Describes current input state of a player */
 		struct PlayerInput {
 			std::uint64_t PressedActions;
 			std::uint64_t PressedActionsLast;

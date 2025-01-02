@@ -783,7 +783,6 @@ namespace Death { namespace Containers {
 		 *
 		 * If it's only needed to know whether a character is contained in a
 		 * string at all, consider using @ref contains(char) const instead.
-		 * @see @ref find(char) const
 		 */
 		std::size_t count(char character) const;
 

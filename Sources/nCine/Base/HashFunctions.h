@@ -62,10 +62,6 @@ namespace nCine
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/// Shift-Add-XOR hash function
-	/*!
-	 * \note Specialized version of the function for C-style strings
-	 */
 	template<>
 	class SaxHashFunc<char*>
 	{
@@ -81,10 +77,6 @@ namespace nCine
 		}
 	};
 
-	/// Shift-Add-XOR hash function
-	/*!
-	 * \note Specialized version of the function for String objects
-	 */
 	template<>
 	class SaxHashFunc<String>
 	{
@@ -127,12 +119,6 @@ namespace nCine
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/// Jenkins hash function
-	/*!
-	 * \note Specialized version of the function for C-style strings
-	 *
-	 * For more information: http://en.wikipedia.org/wiki/Jenkins_hash_function
-	 */
 	template<>
 	class JenkinsHashFunc<char*>
 	{
@@ -154,12 +140,6 @@ namespace nCine
 		}
 	};
 
-	/// Jenkins hash function
-	/*!
-	 * \note Specialized version of the function for String objects
-	 *
-	 * For more information: http://en.wikipedia.org/wiki/Jenkins_hash_function
-	 */
 	template<>
 	class JenkinsHashFunc<String>
 	{
@@ -211,11 +191,6 @@ namespace nCine
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/*!
-	 * \note Specialized version of the function for C-style strings
-	 *
-	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-	 */
 	template<>
 	class FNV1aHashFunc<char*>
 	{
@@ -240,12 +215,6 @@ namespace nCine
 		}
 	};
 
-	/// Fowler-Noll-Vo Hash (FNV-1a)
-	/*!
-	 * \note Specialized version of the function for String objects
-	 *
-	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-	 */
 	template<>
 	class FNV1aHashFunc<String>
 	{
@@ -284,7 +253,7 @@ namespace nCine
 	uint64_t fasthash64(const void* buf, size_t len, uint64_t seed);
 	uint32_t fasthash32(const void* buf, size_t len, uint32_t seed);
 
-	/// fast-hash
+	/// Fast-hash
 	/*!
 	 * For more information: https://github.com/ztanml/fast-hash
 	 */
@@ -305,7 +274,6 @@ namespace nCine
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/// fast-hash
 	/*!
 	 * \note Specialized version of the function for C-style strings
 	 *
@@ -324,7 +292,6 @@ namespace nCine
 		static const uint32_t Seed = 0x811C9DC5;
 	};
 
-	/// fast-hash
 	/*!
 	 * \note Specialized version of the function for String objects
 	 *

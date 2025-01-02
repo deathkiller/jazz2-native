@@ -9,7 +9,7 @@
 
 namespace nCine
 {
-	/// Audio loader interface class
+	/// Audio loader interface
 	class IAudioLoader
 	{
 	public:

@@ -20,7 +20,7 @@ namespace nCine
 {
 	class Colorf;
 
-	/// It represents the interface to the graphics device where everything is rendered
+	/// Represents the interface to the graphics device where everything is rendered
 	class IGfxDevice
 	{
 	public:

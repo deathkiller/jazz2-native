@@ -19,7 +19,7 @@ namespace nCine
 	class GLFramebuffer;
 	class Texture;
 
-	/// The class handling a viewport and its corresponding render target texture
+	/// Handles a viewport and its corresponding render target texture
 	class Viewport
 	{
 	public:

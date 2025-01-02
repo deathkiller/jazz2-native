@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// The interface class for handling input events from keyboard, screen touches, mouse, accelerometer and joystick
+	/// Interface for handling input events from keyboard, screen touches, mouse, accelerometer and joystick
 	class IInputEventHandler
 	{
 	public:

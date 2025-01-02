@@ -129,6 +129,8 @@ namespace Death { namespace Containers {
 	private:
 		template<class> friend class Function;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		union Storage {
 			// Simple, small enough and trivial functors
 			char data[Implementation::FunctionPointerSize*sizeof(std::size_t) + sizeof(void*)];
@@ -150,6 +152,7 @@ namespace Death { namespace Containers {
 				void(*call)();
 			} functor;
 		};
+#endif
 
 		constexpr explicit FunctionData(const Storage& storage, void(*call)()):
 			// GCC 4.8 attempts to initialize the first member (the char array) instead of performing a copy if {} is used

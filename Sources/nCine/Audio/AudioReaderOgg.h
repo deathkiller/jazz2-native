@@ -21,7 +21,7 @@ namespace nCine
 {
 	class AudioLoaderOgg;
 
-	/// Ogg Vorbis audio reader
+	/// Ogg Vorbis audio reader using `libvorbis` library
 	class AudioReaderOgg : public IAudioReader
 	{
 		friend class AudioLoaderOgg;

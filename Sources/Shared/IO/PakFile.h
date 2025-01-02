@@ -41,7 +41,7 @@ namespace Death { namespace IO {
 
 		std::unique_ptr<Stream> OpenFile(Containers::StringView path);
 
-		/** @brief The class that handles directory traversal, should be used as iterator */
+		/** @brief Handles directory traversal, should be used as iterator */
 		class Directory
 		{
 		public:
@@ -114,6 +114,8 @@ namespace Death { namespace IO {
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(ItemFlags);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct Item {
 			Containers::String Name;
 			ItemFlags Flags;
@@ -123,6 +125,7 @@ namespace Death { namespace IO {
 
 			Containers::Array<Item> ChildItems;
 		};
+#endif
 
 		static constexpr std::uint64_t Signature = 0x208FA69FF0BFBBEF;
 		static constexpr std::uint16_t Version = 1;

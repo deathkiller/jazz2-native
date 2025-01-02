@@ -8,7 +8,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// The class containing data for a rectangles based animation
+	/// Contains data for a rectangles based animation
 	class RectAnimation
 	{
 	public:

@@ -4,7 +4,7 @@
 
 namespace nCine
 {
-	/// A texture loader used to specify a raw format when loading texels
+	/// Texture loader used to specify a raw format when loading texels
 	class TextureLoaderRaw : public ITextureLoader
 	{
 	public:

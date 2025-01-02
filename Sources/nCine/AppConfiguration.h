@@ -9,7 +9,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// The class storing initialization settings for an nCine application
+	/// Stores initialization settings for an nCine application
 	class AppConfiguration
 	{
 	public:

@@ -57,7 +57,7 @@ namespace Death { namespace Threading {
 		Event& operator=(const Event&) = delete;
 		Event& operator=(Event&&) = delete;
 
-		// Returns the previous state of the event
+		/** @brief Sets the state of the event to nonsignaled, causing threads to block, returns the previous state of the event */
 		bool ResetEvent() noexcept
 		{
 			bool result;
@@ -79,6 +79,7 @@ namespace Death { namespace Threading {
 			return result;
 		}
 
+		/** @brief Sets the state of the event to signaled, allowing one or more waiting threads to proceed */
 		void SetEvent() noexcept
 		{
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
@@ -108,13 +109,13 @@ namespace Death { namespace Threading {
 			}
 		}
 
-		// Checks if the event is currently signaled
-		// Note: Unlike Win32 auto-reset event objects, this will not reset the event
+		/** @brief Checks if the event is currently signaled, this will not reset the event (unlike Win32 auto-reset event objects) */ 
 		bool IsSignaled() const noexcept
 		{
 			return !!_isSignaled.load(std::memory_order_acquire);
 		}
 
+		/** @brief Blocks the current thread until the event receives a signal */
 		bool Wait(std::uint32_t timeoutMilliseconds) noexcept
 		{
 			if (timeoutMilliseconds == 0) {
@@ -143,6 +144,7 @@ namespace Death { namespace Threading {
 			return true;
 		}
 
+		/** @overload */
 		bool Wait() noexcept
 		{
 			while (!TryAcquireEvent()) {
@@ -216,10 +218,10 @@ namespace Death { namespace Threading {
 #endif
 	};
 
-	/** @brief An event object that will atomically revert to an unsignaled state anytime a @cpp Wait() @ce call succeeds (i.e. returns true). */
+	/** @brief An event object that will atomically revert to an unsignaled state anytime a @relativeref{Event<Type>,Wait} call succeeds (i.e., returns true). */
 	using AutoResetEvent = Event<EventType::AutoReset>;
 
-	/** @brief An event object that once signaled remains that way forever, unless @cpp ResetEvent() @ce is called. */
+	/** @brief An event object that once signaled remains that way forever, unless @relativeref{Event<Type>,ResetEvent} is called. */
 	using ManualResetEvent = Event<EventType::ManualReset>;
 
 }}

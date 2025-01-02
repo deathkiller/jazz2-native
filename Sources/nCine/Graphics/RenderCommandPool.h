@@ -12,7 +12,7 @@ namespace nCine
 {
 	class RenderCommand;
 
-	/// The class that creates and handles the pool of render commands
+	/// Creates and handles the pool of render commands
 	class RenderCommandPool
 	{
 	public:
