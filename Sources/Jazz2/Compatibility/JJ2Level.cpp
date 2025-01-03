@@ -17,7 +17,7 @@ using namespace Death::IO::Compression;
 
 namespace Jazz2::Compatibility
 {
-	bool JJ2Level::Open(const StringView path, bool strictParser)
+	bool JJ2Level::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
@@ -513,7 +513,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::Convert(const StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion)
+	void JJ2Level::Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");

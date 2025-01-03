@@ -517,7 +517,7 @@ namespace Jazz2::Tiles
 		return AdvanceDestructibleTileAnimation(tile, tx, ty, amount, {});
 	}
 
-	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, const StringView soundName)
+	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName)
 	{
 		AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
 		std::int32_t max = (std::int32_t)(anim.Tiles.size() - 2);

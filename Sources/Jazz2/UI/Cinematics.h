@@ -28,7 +28,7 @@ namespace Jazz2::UI
 
 		static constexpr std::uint8_t SfxListVersion = 1;
 
-		Cinematics(IRootController* root, const StringView path, Function<bool(IRootController*, bool)>&& callback);
+		Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;
 
 		Vector2i GetViewSize() const override;
@@ -67,7 +67,7 @@ namespace Jazz2::UI
 			std::unique_ptr<AudioBuffer> Buffer;
 
 			SfxItem();
-			SfxItem(std::unique_ptr<Stream> stream, const StringView path);
+			SfxItem(std::unique_ptr<Stream> stream, StringView path);
 		};
 
 		struct SfxPlaylistItem {
@@ -103,9 +103,9 @@ namespace Jazz2::UI
 		BitArray _pressedKeys;
 		std::uint32_t _pressedActions;
 
-		void Initialize(const StringView path);
-		bool LoadCinematicsFromFile(const StringView path);
-		bool LoadSfxList(const StringView path);
+		void Initialize(StringView path);
+		bool LoadCinematicsFromFile(StringView path);
+		bool LoadSfxList(StringView path);
 		void PrepareNextFrame();
 		void Read(std::int32_t streamIndex, void* buffer, std::uint32_t bytes);
 		void UpdatePressedActions();

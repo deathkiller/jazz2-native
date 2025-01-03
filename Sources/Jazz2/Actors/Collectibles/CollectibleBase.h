@@ -22,6 +22,8 @@ namespace Jazz2::Actors::Collectibles
 	protected:
 		static constexpr int IlluminateLightCount = 20;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		struct IlluminateLight {
 			float Intensity;
 			float Distance;
@@ -32,6 +34,7 @@ namespace Jazz2::Actors::Collectibles
 		bool _untouched;
 		std::uint32_t _scoreValue;
 		float _timeLeft;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;

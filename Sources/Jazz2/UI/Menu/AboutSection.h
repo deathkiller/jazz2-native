@@ -33,6 +33,6 @@ namespace Jazz2::UI::Menu
 		bool _autoScroll;
 		bool _rewind;
 
-		void AddTranslator(const StringView languageFile, char*& result, std::size_t& resultLength);
+		void AddTranslator(StringView languageFile, char*& result, std::size_t& resultLength);
 	};
 }

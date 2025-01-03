@@ -153,8 +153,9 @@
 /**
 	@brief Whether the platform defaults to big-endian
 
-	Defined when the platform defaults to big-endian (such as HP/PA RISC, Motorola 68k, Big-Endian MIPS, PowerPC and SPARC).
-	Not defined on little-endian platforms (such as x86 and ARM). This macro only reflects the usual architecture default.
+	Defined when the platform defaults to big-endian (such as HP/PA RISC, Motorola 68k,
+	Big-Endian MIPS, PowerPC and SPARC). Not defined on little-endian platforms (such
+	as x86 and ARM). This macro only reflects the usual architecture default.
 */
 // First checking the GCC/Clang built-in, if available. As a fallback do an architecture-based check, which is mirrored
 // from SDL_endian.h. Doing this *properly* would mean we can't decide this at compile time as some architectures allow
@@ -340,13 +341,14 @@
 /**
 	@brief Whether `long double` has the same precision as `double`
 
-	Defined on platforms where the @cpp long double @ce type has a 64-bit precision instead of 80-bit, thus same as @cpp double @ce.
-	It's the case for @ref DEATH_TARGET_MSVC "MSVC" ([source](https://docs.microsoft.com/en-us/previous-versions/9cx8xs15(v=vs.140))),
+	Defined on platforms where the @cpp long double @ce type has a 64-bit precision instead of 80-bit,
+	thus same as @cpp double @ce. It's the case for @ref DEATH_TARGET_MSVC "MSVC" ([source](https://docs.microsoft.com/en-us/previous-versions/9cx8xs15(v=vs.140))),
 	32-bit @ref DEATH_TARGET_ANDROID "Android" (no reliable source found, sorry), @ref DEATH_TARGET_EMSCRIPTEN "Emscripten"
-	and @ref DEATH_TARGET_APPLE "Mac" (but not @ref DEATH_TARGET_IOS "iOS") with @ref DEATH_TARGET_ARM "ARM" processors.
-	Emscripten is a bit special because it's @cpp long double @ce is sometimes 80-bit, but its precision differs from the 80-bit
-	representation elsewhere, so it's always treated as 64-bit. Note that even though the type size and precision may be the same,
-	these are still two distinct types, similarly to how @cpp int @ce and @cpp signed int @ce behave the same but are treated as different types.
+	and @ref DEATH_TARGET_APPLE "Mac" (but not @ref DEATH_TARGET_IOS "iOS") with @ref DEATH_TARGET_ARM "ARM"
+	processors. Emscripten is a bit special because it's @cpp long double @ce is sometimes 80-bit, but
+	its precision differs from the 80-bit representation elsewhere, so it's always treated as 64-bit.
+	Note that even though the type size and precision may be the same, these are still two distinct types,
+	similarly to how @cpp int @ce and @cpp signed int @ce behave the same but are treated as different types.
 */
 #if defined(DEATH_TARGET_MSVC) || (defined(DEATH_TARGET_ANDROID) && !__LP64__) || defined(DEATH_TARGET_EMSCRIPTEN) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS) && defined(DEATH_TARGET_ARM)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_LONG_DOUBLE_SAME_AS_DOUBLE
@@ -355,8 +357,9 @@
 /**
 	@brief Whether source location built-ins are supported
 
-	Defined if compiler-specific builtins used to implement the C++20 std::source_location feature are available.
-	Defined on GCC at least since version 4.8, Clang 9+ and MSVC 2019 16.6 and newer; on all three they're present also in the C++11 mode.
+	Defined if compiler-specific builtins used to implement the C++20 std::source_location feature
+	are available. Defined on GCC at least since version 4.8, Clang 9+ and MSVC 2019 16.6 and newer;
+	on all three they're present also in the C++11 mode.
 */
 #if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)) || (defined(DEATH_TARGET_CLANG) && ((defined(__apple_build_version__) && __clang_major__ >= 12) || (!defined(__apple_build_version__) && __clang_major__ >= 9))) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_SOURCE_LOCATION_BUILTINS_SUPPORTED
@@ -494,9 +497,9 @@
 /**
 	@brief Always inline a function
 
-	Stronger than the standard @cpp inline @ce keyword where supported, but even then the compiler might decide
-	to not inline the function (for example if it's recursive). Expands to @cpp __attribute__((always_inline)) inline @ce
-	on GCC and Clang (both keywords need to be specified,
+	Stronger than the standard @cpp inline @ce keyword where supported, but even then the compiler
+	might decide to not inline the function (for example if it's recursive). Expands to
+	@cpp __attribute__((always_inline)) inline @ce on GCC and Clang (both keywords need to be specified,
 	[docs](https://gcc.gnu.org/onlinedocs/gcc/extensions-to-the-c-language-family/declaring-attributes-of-functions/common-function-attributes.html#fn-attr-always_inline)),
 	to @cpp __forceinline @ce on MSVC ([docs](https://docs.microsoft.com/en-us/cpp/cpp/inline-functions-cpp))
 	and to just @cpp inline @ce elsewhere. On GCC and Clang this makes the function inline also in Debug
@@ -546,8 +549,8 @@
 /**
 	@brief Hint for compiler to assume a condition
 
-	This macro does not handle the case when the condition isn't @cpp true @ce in any way --- only provides a hint to
-	the compiler, possibly improving performance.
+	This macro does not handle the case when the condition isn't @cpp true @ce in any way --- only
+	provides a hint to the compiler, possibly improving performance.
 */
 #if !defined(DEATH_ASSUME)
 #	if defined(DEATH_TARGET_CLANG)
@@ -571,10 +574,11 @@
 /**
 	@brief Mark an if condition as likely to happen
 
-	Since branch predictors of contemporary CPUs do a good enough job already, the main purpose of this macro
-	is to affect assembly generation and instruction cache use in hot loops --- for example, when a certain
-	condition is likely to happen each iteration, the compiler may put code of the @cpp else @ce branch in
-	a "cold" section of the code, ensuring the more probable code path stays in the cache.
+	Since branch predictors of contemporary CPUs do a good enough job already, the main purpose
+	of this macro is to affect assembly generation and instruction cache use in hot loops --- for
+	example, when a certain condition is likely to happen each iteration, the compiler may
+	put code of the @cpp else @ce branch in a "cold" section of the code, ensuring the more
+	probable code path stays in the cache.
 */
 #if !defined(DEATH_LIKELY)
 #	if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
@@ -589,8 +593,8 @@
 /**
 	@brief Mark an if condition as unlikely to happen
 
-	An inverse to @ref DEATH_LIKELY(), see its documentation for more information about suggested use and expected
-	impact on performance. Useful to mark boundary conditions in tight loops.
+	An inverse to @ref DEATH_LIKELY(), see its documentation for more information about suggested
+	use and expected impact on performance. Useful to mark boundary conditions in tight loops.
 */
 #if !defined(DEATH_UNLIKELY)
 #	if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
@@ -614,8 +618,8 @@
 /**
 	@brief No-op (eats all arguments passed to it)
 
-	Eats all arguments passed to it. Inverse of @ref CORRADE_PASSTHROUGH(). Useful on compilers that don't support
-	defining function macros on command line
+	Eats all arguments passed to it. Inverse of @ref DEATH_PASSTHROUGH(). Useful on compilers that
+	don't support defining function macros on command line
 */
 #if !defined(DEATH_NOOP)
 #	define DEATH_NOOP(...)
@@ -634,7 +638,7 @@
 /**
 	@brief Line number as a string
 
-	Turns the standard @cpp __LINE__ @ce macro into a string. Useful for example to have correct line numbers
-	when embedding GLSL shaders directly in the code.
+	Turns the standard @cpp __LINE__ @ce macro into a string. Useful for example to have correct
+	line numbers when embedding GLSL shaders directly in the code.
 */
 #define DEATH_LINE_STRING __DEATH_LINE_STRING_IMPLEMENTATION(__LINE__)

@@ -16,7 +16,7 @@
 
 namespace Jazz2::UI
 {
-	Cinematics::Cinematics(IRootController* root, const StringView path, Function<bool(IRootController*, bool)>&& callback)
+	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0)
 	{
@@ -107,7 +107,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void Cinematics::Initialize(const StringView path)
+	void Cinematics::Initialize(StringView path)
 	{
 		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
@@ -133,7 +133,7 @@ namespace Jazz2::UI
 		_pressedActions = (1 << (std::int32_t)PlayerActions::Fire) | (1 << ((std::int32_t)PlayerActions::Fire + 16));
 	}
 
-	bool Cinematics::LoadCinematicsFromFile(const StringView path)
+	bool Cinematics::LoadCinematicsFromFile(StringView path)
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();
@@ -188,7 +188,7 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	bool Cinematics::LoadSfxList(const StringView path)
+	bool Cinematics::LoadSfxList(StringView path)
 	{
 #if defined(WITH_AUDIO)
 		auto& resolver = ContentResolver::Get();
@@ -398,7 +398,7 @@ namespace Jazz2::UI
 	{
 	}
 
-	Cinematics::SfxItem::SfxItem(std::unique_ptr<Stream> stream, const StringView path)
+	Cinematics::SfxItem::SfxItem(std::unique_ptr<Stream> stream, StringView path)
 		: Buffer(std::make_unique<AudioBuffer>(std::move(stream), path))
 	{
 	}

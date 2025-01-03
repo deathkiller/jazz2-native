@@ -207,6 +207,8 @@ namespace Jazz2::Actors
 			"Thunderbolt"
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		std::int32_t _playerIndex;
 		bool _isActivelyPushing, _wasActivelyPushing;
 		bool _controllable;
@@ -279,6 +281,7 @@ namespace Jazz2::Actors
 		WeaponWheelState _weaponWheelState;
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
+#endif
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

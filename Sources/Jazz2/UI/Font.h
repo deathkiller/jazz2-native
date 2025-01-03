@@ -19,7 +19,7 @@ namespace Jazz2::UI
 		static constexpr Colorf RandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.5f);
 		static constexpr Colorf TransparentRandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.36f);
 
-		Font(const StringView path, const std::uint32_t* palette);
+		Font(StringView path, const std::uint32_t* palette);
 
 		std::int32_t GetSizeInPixels() const;
 		std::int32_t GetAscentInPixels() const;

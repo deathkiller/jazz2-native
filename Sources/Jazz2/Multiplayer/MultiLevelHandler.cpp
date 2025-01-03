@@ -628,7 +628,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	std::shared_ptr<AudioBufferPlayer> MultiLevelHandler::PlaySfx(Actors::ActorBase* self, const StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> MultiLevelHandler::PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
 		if (_isServer) {
 			std::uint32_t actorId;
@@ -666,7 +666,7 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::PlaySfx(self, identifier, buffer, pos, sourceRelative, gain, pitch);
 	}
 
-	std::shared_ptr<AudioBufferPlayer> MultiLevelHandler::PlayCommonSfx(const StringView identifier, const Vector3f& pos, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> MultiLevelHandler::PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain, float pitch)
 	{
 		if (_isServer) {
 			for (const auto& [peer, peerDesc] : _peerDesc) {
@@ -718,7 +718,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::BroadcastTriggeredEvent(initiator, eventType, eventParams);
 	}
 
-	void MultiLevelHandler::BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel)
+	void MultiLevelHandler::BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel)
 	{
 		if (!_isServer) {
 			// Level can be changed only by server
@@ -1009,7 +1009,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::ActivateSugarRush(player);
 	}
 
-	void MultiLevelHandler::ShowLevelText(const StringView text, Actors::ActorBase* initiator)
+	void MultiLevelHandler::ShowLevelText(StringView text, Actors::ActorBase* initiator)
 	{
 		if (initiator == nullptr || IsLocalPlayer(initiator)) {
 			// Pass through only messages for local players
@@ -1022,7 +1022,7 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::GetLevelText(textId, index, delimiter);
 	}
 
-	void MultiLevelHandler::OverrideLevelText(std::uint32_t textId, const StringView value)
+	void MultiLevelHandler::OverrideLevelText(std::uint32_t textId, StringView value)
 	{
 		LevelHandler::OverrideLevelText(textId, value);
 
@@ -1986,7 +1986,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::SetWeather(type, intensity);
 	}
 
-	bool MultiLevelHandler::BeginPlayMusic(const StringView path, bool setDefault, bool forceReload)
+	bool MultiLevelHandler::BeginPlayMusic(StringView path, bool setDefault, bool forceReload)
 	{
 		// TODO: This should probably be client local
 		return LevelHandler::BeginPlayMusic(path, setDefault, forceReload);

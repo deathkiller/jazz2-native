@@ -28,9 +28,12 @@ namespace Jazz2::Actors::Enemies
 		}
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		bool _canHurtPlayer;
 		uint32_t _scoreValue;
 		Direction _lastHitDir;
+#endif
 
 		void OnUpdate(float timeMult) override;
 		void OnHealthChanged(ActorBase* collider) override;

@@ -57,9 +57,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	Some of them are supplied via a compiler flag by CMake, the rest of them also requires this header file to work properly.
 */
 /** @file Shared/Common.h
-	@brief Common header file, includes also @ref CommonBase.h, @cpp <cstddef> @ce and @cpp <cstdint> @ce
-	
-	This file should usually be included in any other `.h`/`.cpp` file.
+	@brief Common header file, includes also @ref CommonBase.h, `<cstddef>` and `<cstdint>`
 */
 /** @file Shared/CommonWindows.h
 	@brief Windows®-specific header file, falls back to @ref Common.h on other platforms
@@ -518,7 +516,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	@brief Menu sections
 */
 /** @namespace Jazz2::UI::Menu::Resources
-	@brief Common menu resources defined in `Content/Metadata/UI/MainMenu.res`
+	@brief Common menu resources defined in `Metadata/UI/MainMenu.res`
 */
 
 }

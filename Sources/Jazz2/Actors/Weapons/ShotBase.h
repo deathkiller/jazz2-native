@@ -31,11 +31,14 @@ namespace Jazz2::Actors::Weapons
 		void TriggerRicochet(ActorBase* other);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		std::shared_ptr<ActorBase> _owner;
 		float _timeLeft;
 		uint8_t _upgrades;
 		int _strength;
 		ActorBase* _lastRicochet;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;

@@ -13,7 +13,7 @@ using namespace Death;
 
 namespace Jazz2::UI
 {
-	Font::Font(const StringView path, const std::uint32_t* palette)
+	Font::Font(StringView path, const std::uint32_t* palette)
 		: _baseSpacing(0)
 	{
 		auto s = fs::Open(String(path + ".font"_s), FileAccess::Read);

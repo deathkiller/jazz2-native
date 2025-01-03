@@ -319,7 +319,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void AboutSection::AddTranslator(const StringView languageFile, char*& result, std::size_t& resultLength)
+	void AboutSection::AddTranslator(StringView languageFile, char*& result, std::size_t& resultLength)
 	{
 		if (fs::GetExtension(languageFile) != "mo"_s) {
 			return;

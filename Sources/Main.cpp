@@ -112,7 +112,7 @@ public:
 	bool SaveCurrentStateIfAny() override;
 
 #if defined(WITH_MULTIPLAYER)
-	bool ConnectToServer(const StringView address, std::uint16_t port) override;
+	bool ConnectToServer(StringView address, std::uint16_t port) override;
 	bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
 
 	StringView GetServerName() const override;
@@ -700,7 +700,7 @@ void GameEventHandler::ApplyActivityIcon()
 #endif
 
 #if defined(WITH_MULTIPLAYER)
-bool GameEventHandler::ConnectToServer(const StringView address, std::uint16_t port)
+bool GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
 {
 	LOGI("Connecting to %s:%u...", address.data(), port);
 

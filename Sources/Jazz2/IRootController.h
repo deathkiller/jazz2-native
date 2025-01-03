@@ -42,7 +42,7 @@ namespace Jazz2
 		virtual bool SaveCurrentStateIfAny() = 0;
 
 #if defined(WITH_MULTIPLAYER)
-		virtual bool ConnectToServer(const StringView address, std::uint16_t port) = 0;
+		virtual bool ConnectToServer(StringView address, std::uint16_t port) = 0;
 		virtual bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) = 0;
 
 		virtual StringView GetServerName() const = 0;

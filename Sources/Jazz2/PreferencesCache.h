@@ -162,9 +162,9 @@ namespace Jazz2
 		static void Save();
 		static StringView GetDirectory();
 
-		static EpisodeContinuationState* GetEpisodeEnd(const StringView episodeName, bool createIfNotFound = false);
-		static EpisodeContinuationStateWithLevel* GetEpisodeContinue(const StringView episodeName, bool createIfNotFound = false);
-		static void RemoveEpisodeContinue(const StringView episodeName);
+		static EpisodeContinuationState* GetEpisodeEnd(StringView episodeName, bool createIfNotFound = false);
+		static EpisodeContinuationStateWithLevel* GetEpisodeContinue(StringView episodeName, bool createIfNotFound = false);
+		static void RemoveEpisodeContinue(StringView episodeName);
 
 	private:
 		enum class BoolOptions : uint64_t {

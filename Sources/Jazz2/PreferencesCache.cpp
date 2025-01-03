@@ -537,7 +537,7 @@ namespace Jazz2
 		return fs::GetDirectoryName(_configPath);
 	}
 
-	EpisodeContinuationState* PreferencesCache::GetEpisodeEnd(const StringView episodeName, bool createIfNotFound)
+	EpisodeContinuationState* PreferencesCache::GetEpisodeEnd(StringView episodeName, bool createIfNotFound)
 	{
 		auto it = _episodeEnd.find(String::nullTerminatedView(episodeName));
 		if (it == _episodeEnd.end()) {
@@ -551,7 +551,7 @@ namespace Jazz2
 		return &it->second;
 	}
 
-	EpisodeContinuationStateWithLevel* PreferencesCache::GetEpisodeContinue(const StringView episodeName, bool createIfNotFound)
+	EpisodeContinuationStateWithLevel* PreferencesCache::GetEpisodeContinue(StringView episodeName, bool createIfNotFound)
 	{
 		auto it = _episodeContinue.find(String::nullTerminatedView(episodeName));
 		if (it == _episodeContinue.end()) {
@@ -565,7 +565,7 @@ namespace Jazz2
 		return &it->second;
 	}
 
-	void PreferencesCache::RemoveEpisodeContinue(const StringView episodeName)
+	void PreferencesCache::RemoveEpisodeContinue(StringView episodeName)
 	{
 		if (episodeName.empty() || episodeName == "unknown"_s) {
 			return;
