@@ -13,16 +13,16 @@ everything else is already fully implemented.
 
 To get in touch with the developers and the community, you can use the official [Discord server](https://discord.gg/Y7SBvkD).
 
-For game-specific API documentation, see @ref Jazz2 namespace. For common utility functions and generic containers,
-see @ref Death "the shared root namespace". For nCine game engine documentation, see @ref nCine namespace.
-The nCine game engine used in this game has been extensively modified, so the original documentation no longer matches
-the current implementation.
+For getting started guide, see @ref building. For game-specific API documentation, see @ref Jazz2 namespace.
+For common utility functions and generic containers, see @ref Death "the shared root namespace".
+For nCine game engine documentation, see @ref nCine namespace. The nCine game engine used in this game has
+been extensively modified, so the original documentation no longer matches the current implementation.
 
 @section mainpage-platforms Supported platforms
 
 - **Android**
 - **FreeBSD**
-- **Linux**
+- **Linux** and other Unix-like systems
 - **macOS**
 - **Windows**
 - **Nintendo Switch** using [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman)
@@ -46,6 +46,9 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 */
 /** @file Shared/CommonBase.h
 	@brief Basic definitions
+	
+	Some configuration-specific and platform-specific definitions are also @ref CommonBase.dox "listed separately".
+	Some of them are supplied via a compiler flag by CMake, the rest of them also requires this header file to work properly.
 */
 /** @file Shared/Common.h
 	@brief Common header file, includes also @ref CommonBase.h, `<cstddef>` and `<cstdint>`

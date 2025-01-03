@@ -244,10 +244,9 @@ namespace Death { namespace Containers {
 
 		To prevent accidental type conversions and potential extra overhead coming from
 		those, the wrapper only accepts functions that match the signature *exactly*.
-		If a function or a functor has a set of overloads (such as is the case with
-		@ref std::abs() shown above), an overload matching the signature is picked. If
-		you have a function which has a different signature, wrap it in a lambda of a
-		matching singature first.
+		If a function or a functor has a set of overloads, an overload matching
+		the signature is picked. If you have a function which has a different signature,
+		wrap it in a lambda of a matching singature first.
 
 		@section Containers-Function-usage-overhead Function call overhead
 

@@ -3,6 +3,7 @@
 #include "InputEvents.h"
 #include "../Primitives/Vector2.h"
 
+#include <Containers/String.h>
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;
@@ -78,6 +79,9 @@ namespace nCine
 		/// Returns current keyboard state
 		virtual const KeyboardState& keyboardState() const = 0;
 
+		/// Returns text from the clipboard if any
+		virtual String getClipboardText() const;
+		/// Returns display name of the specified key
 		virtual StringView getKeyName(Keys key) const;
 
 		/// Returns true if the specified joystick is connected

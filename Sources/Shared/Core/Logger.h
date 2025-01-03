@@ -1210,7 +1210,7 @@ namespace Death { namespace Trace {
 		void DetachSink(ITraceSink* sink);
 
 		bool Write(TraceLevel level, const char* fmt, va_list args);
-		void Flush(uint32_t sleepDurationNs = 100);
+		void Flush(std::uint32_t sleepDurationNs = 100);
 
 	private:
 		LoggerBackend _backend;

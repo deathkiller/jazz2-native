@@ -19,7 +19,7 @@ namespace nCine
 	class RenderQueue;
 	class IInputEventHandler;
 
-	/// The class the handles ImGui drawing
+	/// Handles ImGui drawing
 	class ImGuiDrawing
 	{
 	public:

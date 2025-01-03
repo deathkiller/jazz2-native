@@ -1,0 +1,211 @@
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/** @page building Building the project
+@brief Guide how to build Jazz² Resurrection
+
+@tableofcontents
+
+@m_class{m-noindent}
+
+The project requires following tools and libraries to build it successfully:
+
+-   **CMake** 3.15 or newer
+-   C++ compiler with C++17 support --- any newer version of **GCC**, **Clang**
+    and **MSVC** should work, **MinGW** and **Clang-CL** should be also supported
+-   **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 library (alternatively **ANGLE**
+    or **Mesa** translation library)
+-   **GLEW** (required only on Windows)
+-   **GLFW** or **SDL2** (not required on Android and UWP, because these
+    platforms use a custom backend)
+-   **zlib**
+
+@m_class{m-noindent}
+
+In addition, these libraries are required for an optimal experience:
+
+-   **OpenAL** --- audio support
+-   **libopenmpt** --- music playback
+-   **libogg** / **libvorbis** --- `.ogg` file support (not needed for original levels)
+-   **libwebp** --- `.webp` file support (not needed for original levels)
+-   **AngelScript** --- **AngelScript** scripting support
+-   **liblua** --- **Lua** scripting support (currently not supported)
+
+It tries to download or compile all libraries automatically, but in case of
+build errors a manual download is necessary. Also, system-wide libraries have
+priority over the bundled ones, so in case of any incompatibility just install
+the system libraries.
+
+@section building-getting-started How to get started
+
+@m_class{m-noindent}
+
+Clone the repository using any Git client, IDE, or command line:
+
+@code{.sh}
+git clone https://github.com/deathkiller/jazz2-native.git
+@endcode
+
+@m_class{m-noindent}
+
+To configure CMake, following commands can be used:
+
+@code{.sh}
+mkdir build
+cmake -B build -D CMAKE_BUILD_TYPE=Debug
+@endcode
+
+@m_class{m-noindent}
+
+Alternatively, change `CMAKE_BUILD_TYPE` to `Release` to enable all performance
+optimizations and disable debugging. You can also specify build configuration
+parameters, which are described @ref building-config-params "below".
+To start actual build of the project, use following commands:
+
+@code{.sh}
+make -j $(nproc) -C build
+@endcode
+
+@m_class{m-noindent}
+
+Everything should be built in the @cpp "build" @ce directory. Additionally, you can create
+a symbolic link to @cpp "Content" @ce directory or copy it to @cpp "build" @ce directory manually:
+
+@code{.sh}
+ln -s "$(pwd)/Content" "$(pwd)/build/Content"
+@endcode
+
+@subsection building-android Building on Android
+
+Android build requires **Android SDK** and **NDK** installed. See [Get started with the NDK](https://developer.android.com/ndk/guides).
+Assembling APK files also requires **Gradle**. The build can be configured using a similar command as above:
+
+@code{.sh}
+mkdir build
+cmake -B build -D CMAKE_BUILD_TYPE=Debug -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK=ON -D NCINE_NDK_ARCHITECTURES="arm64-v8a;armeabi-v7a"
+@endcode
+
+@m_class{m-noindent}
+
+See @ref building-config-params-android. Then following commands can be used
+to build the project and assemble the APK file:
+
+@code{.sh}
+make -j $(nproc) -C build
+cd build
+gradle assembleDebug
+@endcode
+
+@m_class{m-noindent}
+
+Alternatively, replace `assembleDebug` with `assembleRelease` to create release APK file. 
+
+@subsection building-windows Building on Windows
+
+On Windows, Visual Studio can be used. Using already included `.sln` is not recommended,
+because it requires manual configuration. Instead the project can be opened
+as CMake directory directly in Visual Studio, or it can be configured using
+a similar command as above:
+
+@code{.sh}
+mkdir build
+cmake -B build -D CMAKE_BUILD_TYPE=Debug -A x64 -D CMAKE_SYSTEM_PROCESSOR=x64 -D NCINE_COPY_DEPENDENCIES=ON
+@endcode
+
+@m_class{m-noindent}
+
+See @ref building-config-params-windows. To build it for 32-bit operating system,
+use `Win32` instead of `x64`. To change version of VS toolset, use `-D CMAKE_GENERATOR_TOOLSET=…` parameter.
+By default CMake creates a new Visual Studio `.sln` solution and project files
+in @cpp "build" @ce directory that can be opened easily afterwards. Building
+with Clang-CL is also possible specifying `-T ClangCL` parameter.
+
+@section building-config-params Build configuration parameters
+
+By default it tries to find the first available backend for the currently installed
+libraries. **GLFW** is usually preferred over **SDL2**, because it's more lightweight.
+On the other hand, **SDL2** usually has better gamepad support and better support in general.
+The following parameters can be used to customize the build:
+
+-   `CMAKE_BUILD_TYPE` --- Specify build configuration: `Debug`, `Release`
+-   `CMAKE_INSTALL_PREFIX` (default @cpp "/usr/local" @ce) --- Install prefix on Unix systems
+-   `NCINE_DOWNLOAD_DEPENDENCIES` (default `ON`) --- Download all missing dependencies automatically
+-   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Specify preferred backend on desktop: `GLFW`, `SDL2`
+-   `NCINE_VERSION_FROM_GIT` (default `ON`) --- Try to set current game version from Git repository
+-   `NCINE_EMBED_SHADERS` (default `ON`) --- Embed shader files inside executable
+-   `NCINE_PROFILING` (default `OFF`) --- Enable profiling
+-   `NCINE_WITH_THREADS` (default `ON` except on Emscripten) --- Use multithreading
+-   `NCINE_WITH_OPENGLES` (default `OFF`) --- Use **OpenGL|ES** instead of **OpenGL**
+-   `NCINE_WITH_ANGLE` (default `OFF` except on UWP) --- Enable Google **ANGLE** libraries support
+-   `NCINE_WITH_GLEW` (default `ON`) --- Use **GLEW** library
+-   `NCINE_WITH_BACKWARD` (default `ON`) --- Enable integration with Backward for exception handling
+-   `NCINE_WITH_WEBP` (default `OFF`) --- Enable WebP image file support
+-   `NCINE_WITH_AUDIO` (default `ON`) --- Enable audio support, requires [OpenAL](https://www.openal.org/)
+-   `NCINE_WITH_VORBIS` (default `ON`) -- Enable Ogg Vorbis audio file support
+-   `NCINE_WITH_OPENMPT` (default `ON`) -- Enable module (`libopenmpt`) audio file support
+-   `NCINE_COMPILE_OPENMPT` (default `ON`) -- Download and compile `libopenmpt` from source automatically
+-   `NCINE_WITH_ANGELSCRIPT` (default `OFF`) --- Enable AngleScript scripting support
+-   `NCINE_WITH_IMGUI` (default `OFF`) --- Enable integration with **Dear ImGui**, `IMGUI_VERSION_TAG` allows to specify version
+-   `NCINE_WITH_TRACY` (default `OFF`) --- Enable integration with **Tracy** frame profiler
+-   `NCINE_WITH_RENDERDOC` (default `OFF`) --- Enable integration with **RenderDoc**
+-   `NCINE_DATA_DIR` (default @cpp "./Content" @ce) --- Path to @cpp "Content" @ce game data directory
+
+@subsubsection building-config-params-game Game-specific parameters
+
+-   `SHAREWARE_DEMO_ONLY` (default `OFF`) --- Shareware Demo only, usually used with **Emscripten**
+-   `DISABLE_RESCALE_SHADERS` (default `OFF`) --- Disable rescale shaders and use only nearest neighbor for resizing
+-   `WITH_MULTIPLAYER` (default `OFF`) --- Enable experimental multiplayer support
+
+@subsubsection building-config-params-android Platform-specific parameters for Android
+
+-   `NCINE_BUILD_ANDROID` (default `OFF`) --- Enable building for Android
+-   `NCINE_ASSEMBLE_APK` (default `ON`) --- Assemble Android APK file, requires with **Gradle**
+-   `NCINE_UNIVERSAL_APK` (default `OFF`) --- Create universal APK containing all specified CPU architectures
+-   `NCINE_NDK_ARCHITECTURES` (default @cpp "arm64-v8a" @ce) --- Semicolon-separated
+    list of target CPU architectures: `arm64-v8a`, `armeabi-v7a`, `x86_64`
+-   `NDK_DIR` --- Android NDK directory, usually detected automatically
+
+@subsubsection building-config-params-linux Platform-specific parameters for Linux
+
+-   `NCINE_BUILD_FLATPAK` (default `OFF`) --- Build Flatpak version of the game
+-   `NCINE_ASSEMBLE_DEB` (default `OFF`) --- Assemble DEB package of the game
+-   `NCINE_ASSEMBLE_RPM` (default `OFF`) --- Assemble RPM package of the game
+-   `NCINE_LINUX_PACKAGE` --- Override Linux package name, otherwise @cpp "Jazz² Resurrection" @ce will be used
+-   `NCINE_OVERRIDE_CONTENT_PATH` --- Override @cpp "Content" @ce directory path,
+    otherwise @cpp CMAKE_INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/" @ce will be used
+-   `NCINE_PACKAGED_CONTENT_PATH` (default `OFF`) --- Assemble RPM package of the game
+
+@subsubsection building-config-params-windows Platform-specific parameters for Windows
+
+-   `DEATH_WITH_VC_LTL` (default `ON`) --- Build with **VC-LTL** for lighter
+    binaries, requires [VC-LTL](https://github.com/Chuyu-Team/VC-LTL5)
+-   `NCINE_COPY_DEPENDENCIES` (default `OFF`) --- Copy all required libraries to build target directory
+
+@subsubsection building-config-params-uwp Platform-specific parameters for Universal Windows Platform
+
+-   `NCINE_UWP_CERTIFICATE_THUMBPRINT` --- Code-signing certificate thumbprint,
+    use either `NCINE_UWP_CERTIFICATE_THUMBPRINT` or `NCINE_UWP_CERTIFICATE_PATH`
+-   `NCINE_UWP_CERTIFICATE_PATH` (default @cpp "UwpCertificate.pfx" @ce) --- Code-signing certificate path
+-   `NCINE_UWP_CERTIFICATE_PASSWORD` (optional) --- Code-signing certificate password for `NCINE_UWP_CERTIFICATE_PATH`
+
+@subsubsection building-config-params-adv Advanced parameters
+
+-   `DEATH_CPU_USE_RUNTIME_DISPATCH` (default `ON` if `DEATH_CPU_USE_IFUNC`) --- Build
+    with runtime dispatch for CPU-dependent functionality, see @ref Death::Cpu
+-   `DEATH_CPU_USE_IFUNC` (default `ON` if supported) --- Allow using **GNU IFUNC** for runtime CPU dispatch
+-   `DEATH_RUNTIME_CAST` (default `ON`) --- Enable @cpp runtime_cast<T>() @ce optimization
+-   `DEATH_TRACE` (default `ON`) --- Enable runtime event tracing
+-   `DEATH_TRACE_ASYNC` (default `ON` if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
+-   `NCINE_ARCH_EXTENSIONS` --- Target CPU architecture extensions (instruction sets)
+-   `NCINE_INPUT_DEBUGGING` (default `OFF`) --- Enable (gamepad) input debugging and logging
+-   `NCINE_LINKTIME_OPTIMIZATION` (default `ON`) --- Compile with link time optimization
+-   `NCINE_ADDRESS_SANITIZER` (default `OFF`) --- Enable AddressSanitizer memory error detector of GCC and Clang
+-   `NCINE_UNDEFINED_SANITIZER` (default `OFF`) --- Enable UndefinedBehaviorSanitizer detector of GCC and Clang
+-   `NCINE_CODE_COVERAGE` (default `OFF`) --- Enable gcov instrumentation for testing code coverage
+-   `NCINE_GCC_HARDENING` (default `OFF`) --- Enable memory corruption mitigation methods of GCC
+-   `NCINE_AUTOVECTORIZATION_REPORT` (default `OFF`) --- Enable report generation from compiler auto-vectorization
+-   `NCINE_STRIP_BINARIES` (default `OFF`) --- Strip debug symbols from binaries for smaller size
+
+*/
+
+}

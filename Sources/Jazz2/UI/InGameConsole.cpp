@@ -2,6 +2,7 @@
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 
+#include "../../nCine/Application.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 
@@ -199,6 +200,31 @@ namespace Jazz2::UI
 			}
 			case Keys::Down: {
 				GetNextCommandFromHistory();
+				break;
+			}
+			case Keys::V: {
+				if ((event.mod & KeyMod::Ctrl) != KeyMod::None && (event.mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
+					auto text = theApplication().GetInputManager().getClipboardText();
+					if (!text.empty()) {
+						auto trimmedText = text.trimmedPrefix();
+						if (auto firstNewLine = trimmedText.find('\n')) {
+							trimmedText = trimmedText.prefix(firstNewLine.begin());
+						}
+						trimmedText = trimmedText.trimmedSuffix();
+
+						std::size_t lengthTotal = std::strlen(_currentLine);
+						if (lengthTotal + trimmedText.size() < MaxLineLength) {
+							std::size_t lengthAfter = std::strlen(&_currentLine[_textCursor]);
+							if (lengthAfter > 0) {
+								std::memmove(&_currentLine[_textCursor + trimmedText.size()], &_currentLine[_textCursor], lengthAfter);
+							}
+							_currentLine[_textCursor + trimmedText.size() + lengthAfter] = '\0';
+							std::memcpy(&_currentLine[_textCursor], trimmedText.data(), trimmedText.size());
+							_textCursor += trimmedText.size();
+							_carretAnim = 0.0f;
+						}
+					}
+				}
 				break;
 			}
 		}

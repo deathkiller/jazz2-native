@@ -38,13 +38,13 @@
 
 #include <stdlib.h>
 
-/** @brief Install prefix on Unix systems */
+/** @brief Install prefix on Unix systems, usually `"/usr/local"` */
 #if (!defined(NCINE_INSTALL_PREFIX) && defined(DEATH_TARGET_UNIX)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_INSTALL_PREFIX "/usr/local"
 #endif
 
 // Check platform-specific capabilities
-/** @brief Whether the current platform supports a gamepad rumble (see @ref nCine::IInputManager::joystickRumble()) */
+/** @brief Whether the current platform supports a gamepad rumble (see @relativeref{nCine,IInputManager::joystickRumble()}) */
 #if defined(WITH_SDL) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_GAMEPAD_RUMBLE
 #endif

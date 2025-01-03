@@ -13,11 +13,13 @@
 namespace Death { namespace Threading {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class EventType
 	{
 		AutoReset,
 		ManualReset,
 	};
+#endif
 
 	/** @brief Lightweight event implementation */
 	template<EventType Type>

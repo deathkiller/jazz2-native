@@ -1326,7 +1326,8 @@ namespace Death { namespace Cpu {
 		@cpp constexpr @ce and delegates into @ref compiledFeatures().
 
 		On @ref DEATH_TARGET_ARM "ARM" and Linux or Android API level 18+ uses
-		@m_class{m-doc-external} [getauxval()](https://man.archlinux.org/man/getauxval.3), or on ARM macOS and iOS uses @m_class{m-doc-external} [sysctlbyname()](https://developer.apple.com/documentation/kernel/1387446-sysctlbyname)
+		@m_class{m-doc-external} [getauxval()](https://man.archlinux.org/man/getauxval.3),
+		or on ARM macOS and iOS uses @m_class{m-doc-external} [sysctlbyname()](https://developer.apple.com/documentation/kernel/1387446-sysctlbyname)
 		to check for the @ref Neon, @ref NeonFma and @ref NeonFp16. @ref Neon and
 		@ref NeonFma are implicitly supported on ARM64. On other platforms the function
 		is @cpp constexpr @ce and delegates into @ref compiledFeatures().
@@ -1369,8 +1370,7 @@ namespace Death { namespace Cpu {
 
 		Meant to be used to select among function overloads declared with
 		@ref DEATH_CPU_DECLARE() that best matches given combination of CPU
-		instruction sets. See @ref Cpu-usage-extra for more information and usage
-		example.
+		instruction sets. See @ref Cpu-usage-extra for more information.
 
 		Internally, this macro expands to two function parameter values separated by a
 		comma, one that contains the desired instruction sets to filter the overloads
@@ -1389,7 +1389,7 @@ namespace Death { namespace Cpu {
 		@relativeref{Death,Cpu::Features}, using the same rules as the compile-time
 		overload selection. For this macro to work, at the very least there has to be
 		an overload with a @relativeref{Death,Cpu::ScalarT} argument. See
-		@ref Cpu-usage-automatic-runtime-dispatch for more information and an example.
+		@ref Cpu-usage-automatic-runtime-dispatch for more information.
 
 		This function works with just a single base CPU instruction tag such as
 		@relativeref{Death,Cpu::Avx2} or @relativeref{Death,Cpu::Neon}, but not the
@@ -1400,7 +1400,9 @@ namespace Death { namespace Cpu {
 	// Ideally this would reuse __DEATH_CPU_DISPATCHER_IMPLEMENTATION(), unfortunately due to MSVC not being able
 	// to defer macro calls unless "the new preprocessor" is enabled it wouldn't be possible to get rid of the
 	// DEATH_CPU_SELECT() macro from there.
-#if defined(DEATH_TARGET_X86)
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	#define DEATH_CPU_DISPATCHER_BASE(function)
+#elif defined(DEATH_TARGET_X86)
 	#define __DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			if(features & Death::Cpu::Avx512f)									\
@@ -1526,16 +1528,29 @@ namespace Death { namespace Cpu {
 		specifying none is valid as well. For this macro to work, at the very least
 		there has to be an overload with a
 		@ref Death::Cpu::Scalar "DEATH_CPU_DECLARE(Cpu::Scalar)" argument. See
-		@ref Cpu-usage-automatic-runtime-dispatch for more information and an example.
+		@ref Cpu-usage-automatic-runtime-dispatch for more information.
 
 		For a dispatch using just the base instruction set use
 		@ref DEATH_CPU_DISPATCHER_BASE() instead.
 	*/
 #ifdef DOXYGEN_GENERATING_OUTPUT
-	#define __DEATH_CPU_DISPATCHER(function, ...)
+	#define DEATH_CPU_DISPATCHER(function, ...)
 #else
 	#define __DEATH_CPU_DISPATCHER(...)										\
 		DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHERn, __DEATH_CPU_DISPATCHER0, )(__VA_ARGS__))
+#endif
+
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	/**
+		@brief Create a dispatched function according to the build configuration
+
+		Assuming a @p dispatcher was defined with either @ref DEATH_CPU_DISPATCHER()
+		or @ref DEATH_CPU_DISPATCHER_BASE(), will automatically use @ref DEATH_CPU_DISPATCHED_POINTER(),
+		@ref DEATH_CPU_DISPATCHED_IFUNC() or nothing depending on the build configuration.
+
+		See @ref Cpu-usage for more information and overhead comparison.
+	*/
+	#define DEATH_CPU_DISPATCHED(dispatcher, ...)
 #endif
 
 	/**
@@ -1551,8 +1566,7 @@ namespace Death { namespace Cpu {
 		@ref DEATH_CPU_DISPATCHED_IFUNC() which avoids the overhead of function
 		pointer indirection.
 
-		See @ref Cpu-usage-automatic-cached-dispatch for more information, usage
-		example and overhead comparison.
+		See @ref Cpu-usage-automatic-cached-dispatch for more information and overhead comparison.
 	*/
 	#define DEATH_CPU_DISPATCHED_POINTER(dispatcher, ...)					\
 		__VA_ARGS__ = dispatcher(Death::Cpu::runtimeFeatures());
@@ -1574,8 +1588,7 @@ namespace Death { namespace Cpu {
 		you need to be able to subsequently change the dispatched-to function (such as
 		for testing purposes), use @ref DEATH_CPU_DISPATCHED_POINTER() instead.
 
-		See @ref Cpu-usage-automatic-cached-dispatch for more information, usage
-		example and overhead comparison.
+		See @ref Cpu-usage-automatic-cached-dispatch for more information and overhead comparison.
 	*/
 #if defined(DEATH_CPU_USE_IFUNC) || defined(DOXYGEN_GENERATING_OUTPUT)
 // On ARM we get CPU features through getauxval() but it can't be called from an ifunc resolver because it's too early at that point.
@@ -1660,7 +1673,7 @@ namespace Death { namespace Cpu {
 		compilers.
 
 		Implied by @ref DEATH_ENABLE_SSE3. See @ref Cpu-usage-target-attributes for
-		more information and usage example.
+		more information.
 
 		@m_class{m-note m-info}
 
@@ -1699,7 +1712,7 @@ namespace Death { namespace Cpu {
 		compilers.
 
 		Superset of @ref DEATH_ENABLE_SSE2, implied by @ref DEATH_ENABLE_SSSE3. See
-		@ref Cpu-usage-target-attributes for more information and usage example.
+		@ref Cpu-usage-target-attributes for more information.
 
 		@m_class{m-note m-info}
 
@@ -1739,7 +1752,7 @@ namespace Death { namespace Cpu {
 		compilers.
 
 		Superset of @ref DEATH_ENABLE_SSE3, implied by @ref DEATH_ENABLE_SSE41. See
-		@ref Cpu-usage-target-attributes for more information and usage example.
+		@ref Cpu-usage-target-attributes for more information.
 
 		@m_class{m-note m-info}
 
@@ -1779,7 +1792,7 @@ namespace Death { namespace Cpu {
 		compilers.
 
 		Superset of @ref DEATH_ENABLE_SSSE3, implied by @ref DEATH_ENABLE_SSE42.
-		See @ref Cpu-usage-target-attributes for more information and usage example.
+		See @ref Cpu-usage-target-attributes for more information.
 
 		@m_class{m-note m-danger}
 
@@ -1820,7 +1833,7 @@ namespace Death { namespace Cpu {
 	compilers.
 
 	Superset of @ref DEATH_ENABLE_SSE41, implied by @ref DEATH_ENABLE_AVX. See
-	@ref Cpu-usage-target-attributes for more information and usage example.
+	@ref Cpu-usage-target-attributes for more information.
 
 	@m_class{m-note m-info}
 
@@ -1863,7 +1876,7 @@ namespace Death { namespace Cpu {
 
 		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro, so you
 		may need to specify it together with others. See
-		@ref Cpu-usage-target-attributes for more information and usage example.
+		@ref Cpu-usage-target-attributes for more information.
 
 		@m_class{m-note m-info}
 
@@ -1957,7 +1970,7 @@ namespace Death { namespace Cpu {
 
 		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro, so you
 		may need to specify it together with others. See
-		@ref Cpu-usage-target-attributes for more information and usage example.
+		@ref Cpu-usage-target-attributes for more information.
 
 		@m_class{m-note m-info}
 
@@ -2051,7 +2064,7 @@ namespace Death { namespace Cpu {
 		compilers.
 
 		Superset of @ref DEATH_ENABLE_SSE42, implied by @ref DEATH_ENABLE_AVX2. See
-		@ref Cpu-usage-target-attributes for more information and usage example.
+		@ref Cpu-usage-target-attributes for more information.
 
 		@m_class{m-note m-info}
 
@@ -2101,7 +2114,7 @@ namespace Death { namespace Cpu {
 		Superset of @ref DEATH_ENABLE_AVX on both GCC and Clang. However not
 		portably implied by any other `DEATH_ENABLE_*` macro so you may need to
 		specify it together with others. See @ref Cpu-usage-target-attributes for more
-		information and usage example.
+		information.
 
 		@m_class{m-note m-info}
 
@@ -2151,7 +2164,7 @@ namespace Death { namespace Cpu {
 		Superset of @ref DEATH_ENABLE_AVX on both GCC and Clang. However not
 		portably implied by any other `DEATH_ENABLE_*` macro so you may need to
 		specify it together with others. See @ref Cpu-usage-target-attributes for more
-		information and usage example.
+		information.
 
 		@m_class{m-note m-info}
 
@@ -2198,7 +2211,7 @@ namespace Death { namespace Cpu {
 		compilers.
 
 		Superset of @ref DEATH_ENABLE_AVX, implied by @ref DEATH_ENABLE_AVX512F.
-		See @ref Cpu-usage-target-attributes for more information and usage example.
+		See @ref Cpu-usage-target-attributes for more information.
 
 		@m_class{m-note m-info}
 
@@ -2246,7 +2259,7 @@ namespace Death { namespace Cpu {
 		empty on all compilers.
 
 		Superset of @ref DEATH_ENABLE_AVX2. See @ref Cpu-usage-target-attributes for
-		more information and usage example.
+		more information.
 	*/
 #if defined(DEATH_TARGET_AVX512F) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_AVX512F
@@ -2288,7 +2301,7 @@ namespace Death { namespace Cpu {
 		(and where `-mfpu=neon` is unrecognized).
 
 		Implied by @ref DEATH_ENABLE_NEON_FMA. See @ref Cpu-usage-target-attributes
-		for more information and usage example.
+		for more information.
 	*/
 #if defined(DEATH_TARGET_NEON) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_NEON
@@ -2361,7 +2374,7 @@ namespace Death { namespace Cpu {
 		on all compilers.
 
 		Superset of @ref DEATH_ENABLE_NEON_FMA. See @ref Cpu-usage-target-attributes
-		for more information and usage example.
+		for more information.
 	*/
 #if defined(DEATH_TARGET_NEON_FP16) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_NEON_FP16
@@ -2396,7 +2409,7 @@ namespace Death { namespace Cpu {
 		is implemented, but likely only for instruction sets building on top of this
 		one.
 
-		See @ref Cpu-usage-target-attributes for more information and usage example.
+		See @ref Cpu-usage-target-attributes for more information.
 	*/
 #if defined(DEATH_TARGET_SIMD128) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_SIMD128

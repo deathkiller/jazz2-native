@@ -104,7 +104,7 @@
 #	define _i14 ""
 #endif
 
-#define _i15 "\nParallel Hashmap \f[c:#707070]· \f[h:80]https://github.com/greg7mdp/parallel-hashmap\f[/h]\f[/c]\nPattern-defeating quicksort \f[c:#707070]· \f[h:80]https://github.com/orlp/pdqsort\f[/h]\f[/c]\nsimdjson \f[c:#707070]· \f[h:80]https://github.com/simdjson/simdjson\f[/h]\f[/c]"
+#define _i15 "\n\f[h:80]Parts of \f[/h]Corrade \f[c:#707070]· \f[h:80]https://github.com/mosra/corrade\f[/h]\f[/c]\nParallel Hashmap \f[c:#707070]· \f[h:80]https://github.com/greg7mdp/parallel-hashmap\f[/h]\f[/c]\nPattern-defeating quicksort \f[c:#707070]· \f[h:80]https://github.com/orlp/pdqsort\f[/h]\f[/c]\nsimdjson \f[c:#707070]· \f[h:80]https://github.com/simdjson/simdjson\f[/h]\f[/c]"
 
 #if defined(WITH_TRACY)
 #	define _i16 "\n\n\f[h:86]Tracy integration is enabled.\f[/h]"
