@@ -40,6 +40,12 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 */
 /** @namespace Death
 	@brief Shared root namespace
+	
+	The shared root namespace contains definitions and classes that don't depend on any other namespace.
+	Most of the definitions are defined in @ref CommonBase.h, which should be included (even transitively)
+	in every `.h`/`.cpp` file to avoid issues due to missing configuration-specific and platform-specific definitions.
+	Most of the time @ref Common.h should be used instead, which also includes @cpp <cstddef> @ce, @cpp <cstdint> @ce
+	and some function-like macros.
 */
 /** @file Shared/Asserts.h
 	@brief Asserts and event tracing
@@ -51,14 +57,17 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	Some of them are supplied via a compiler flag by CMake, the rest of them also requires this header file to work properly.
 */
 /** @file Shared/Common.h
-	@brief Common header file, includes also @ref CommonBase.h, `<cstddef>` and `<cstdint>`
+	@brief Common header file, includes also @ref CommonBase.h, @cpp <cstddef> @ce and @cpp <cstdint> @ce
 	
-	This file should usually be included in any other file.
+	This file should usually be included in any other `.h`/`.cpp` file.
 */
 /** @file Shared/CommonWindows.h
 	@brief Windows®-specific header file, falls back to @ref Common.h on other platforms
 	
 	This file should be included instead of `<windows.h>` to avoid potential issues.
+	It automatically defines @cpp WIN32_LEAN_AND_MEAN @ce, @cpp WINRT_LEAN_AND_MEAN @ce and
+	@cpp NOMINMAX @ce to include only the smallest part of `<windows.h>` as possible.
+	Afterwards, it removes the definitions that cause the most collisions using @cpp #undef @ce.
 */
 
 /** @dir Shared/Containers
@@ -259,7 +268,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	That's achievable by putting them into lambdas with a common signature, and
 	returning that lambda from a wrapper function that contains the CPU tag. After
 	that, a runtime dispatcher function that is created with the
-	`DEATH_CPU_DISPATCHER_BASE()` macro.
+	@ref DEATH_CPU_DISPATCHER_BASE() macro.
 
 	The macro creates an overload of the same name, but taking @ref Features
 	instead, and internally dispatches to one of the overloads using the same rules
@@ -286,7 +295,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 
 	If the variants are tagged with extra instruction sets instead of just the
 	base instruction set like in the @cpp lookup() @ce case
-	@ref Cpu-usage-extra "shown above", you'll use the @ref __DEATH_CPU_DISPATCHER()
+	@ref Cpu-usage-extra "shown above", you'll use the @ref DEATH_CPU_DISPATCHER()
 	macro instead. There, to avoid a combinatorial explosion of cases to check,
 	you're expected to list the actual extra tags the overloads use.
 
@@ -310,7 +319,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	dynamic linker performs a dispatch during the early startup. This is the
 	fastest variant of runtime dispatch, as it results in an equivalent of a
 	regular dynamic library function call. Assuming a dispatcher was created using
-	either `DEATH_CPU_DISPATCHER()` or `DEATH_CPU_DISPATCHER_BASE()`,
+	either @ref DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
 	it's implemented using the @ref DEATH_CPU_DISPATCHED_IFUNC() macro.
 	</li>
 	<li>
@@ -318,7 +327,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	for runtime dispatch instead. It's one additional indirection, which may have a
 	visible effect if the dispatched-to code is relatively tiny and is called from
 	within a tight loop. Assuming a dispatcher was created using
-	either `DEATH_CPU_DISPATCHER()` or `DEATH_CPU_DISPATCHER_BASE()`,
+	either @ref DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
 	it's implemented using the @ref DEATH_CPU_DISPATCHED_POINTER() macro.
 	</li>
 	<li>
@@ -331,7 +340,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	calls. This option is best suited for scenarios where it's possible to build
 	and optimize code for a single target platform. In this case it calls directly
 	to the original variants, so no macro is needed and
-	`DEATH_CPU_DISPATCHER()` / `DEATH_CPU_DISPATCHER_BASE()` is not
+	@ref DEATH_CPU_DISPATCHER() / @ref DEATH_CPU_DISPATCHER_BASE() is not
 	needed either.
 
 	</li>
@@ -473,6 +482,8 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 */
 /** @namespace Jazz2::Multiplayer
 	@brief Multiplayer-related classes, compiled only if `WITH_MULTIPLAYER`
+	
+	@experimental
 */
 /** @dir Jazz2/Rendering
 	@brief Namespace @ref Jazz2::Rendering
@@ -485,6 +496,8 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 */
 /** @namespace Jazz2::Scripting
 	@brief Scripting-related classes, compiled only if `WITH_ANGELSCRIPT`
+	
+	@experimental
 */
 /** @dir Jazz2/Tiles
 	@brief Namespace @ref Jazz2::Tiles
@@ -503,6 +516,9 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 */
 /** @namespace Jazz2::UI::Menu
 	@brief Menu sections
+*/
+/** @namespace Jazz2::UI::Menu::Resources
+	@brief Common menu resources defined in `Content/Metadata/UI/MainMenu.res`
 */
 
 }

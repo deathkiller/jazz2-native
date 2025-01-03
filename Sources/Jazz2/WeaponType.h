@@ -4,7 +4,7 @@
 
 namespace Jazz2
 {
-	/** @brief Weapon type */
+	/** @brief Player weapon type */
 	enum class WeaponType : std::uint8_t {
 		Blaster = 0,
 		Bouncer,

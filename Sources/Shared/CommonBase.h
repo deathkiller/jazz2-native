@@ -47,7 +47,11 @@
 #	error DEATH_TARGET_X86 / _ARM / _POWERPC / _RISCV defined on Emscripten
 #endif
 
-/** @brief Whether the library is built for a 32-bit target */
+/**
+	@brief Whether the library is built for a 32-bit target
+
+	Defined if the library is built for a 32-bit target. Not defined on 64-bit platforms.
+*/
 // 64-bit WebAssembly macro was tested by passing -m64 to emcc
 #if !defined(__x86_64) && !defined(_M_X64) && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(__powerpc64__) && !defined(__wasm64__)
 #	define DEATH_TARGET_32BIT
@@ -146,7 +150,12 @@
 #	define DEATH_TARGET_MINGW
 #endif
 
-/** @brief Whether the platform defaults to big-endian (such as HP/PA RISC, Motorola 68k, Big-Endian MIPS, PowerPC and SPARC) */
+/**
+	@brief Whether the platform defaults to big-endian
+
+	Defined when the platform defaults to big-endian (such as HP/PA RISC, Motorola 68k, Big-Endian MIPS, PowerPC and SPARC).
+	Not defined on little-endian platforms (such as x86 and ARM). This macro only reflects the usual architecture default.
+*/
 // First checking the GCC/Clang built-in, if available. As a fallback do an architecture-based check, which is mirrored
 // from SDL_endian.h. Doing this *properly* would mean we can't decide this at compile time as some architectures allow
 // switching endianness at runtime (and worse, have per-page endianness). So let's pretend we never saw this article:
@@ -482,7 +491,17 @@
 #	endif
 #endif
 
-/** @brief Always inline a function */
+/**
+	@brief Always inline a function
+
+	Stronger than the standard @cpp inline @ce keyword where supported, but even then the compiler might decide
+	to not inline the function (for example if it's recursive). Expands to @cpp __attribute__((always_inline)) inline @ce
+	on GCC and Clang (both keywords need to be specified,
+	[docs](https://gcc.gnu.org/onlinedocs/gcc/extensions-to-the-c-language-family/declaring-attributes-of-functions/common-function-attributes.html#fn-attr-always_inline)),
+	to @cpp __forceinline @ce on MSVC ([docs](https://docs.microsoft.com/en-us/cpp/cpp/inline-functions-cpp))
+	and to just @cpp inline @ce elsewhere. On GCC and Clang this makes the function inline also in Debug
+	mode (`-g`), while on MSVC compiling in Debug (`/Ob0`) always suppresses all inlining.
+*/
 #if !defined(DEATH_ALWAYS_INLINE)
 #	if defined(DEATH_TARGET_GCC)
 #		define DEATH_ALWAYS_INLINE __attribute__((always_inline)) inline
@@ -493,7 +512,13 @@
 #	endif
 #endif
 
-/** @brief Never inline a function */
+/**
+	@brief Never inline a function
+
+	Prevents the compiler from inlining a function during an optimization pass. Expands to @cpp __attribute__((noinline)) @ce on GCC and Clang
+	([docs](https://gcc.gnu.org/onlinedocs/gcc/extensions-to-the-c-language-family/declaring-attributes-of-functions/common-function-attributes.html#fn-attr-noinline)),
+	to @cpp __declspec(noinline) @ce on MSVC ([docs](https://docs.microsoft.com/en-us/cpp/cpp/noinline)) and is empty elsewhere.
+*/
 #if !defined(DEATH_NEVER_INLINE)
 #	if defined(DEATH_TARGET_GCC)
 #		define DEATH_NEVER_INLINE __attribute__((noinline))
@@ -504,7 +529,12 @@
 #	endif
 #endif
 
-/** @brief Hint for compiler that for the lifetime of the pointer, no other pointer will be used to access the object it points to */
+/**
+	@brief Hint for compiler that a variable isn't aliased in the current scope
+
+	This macro provides a hint to the compiler that for the lifetime of the pointer, no other pointer
+	will be used to access the object it points to.
+*/
 #if !defined(DEATH_RESTRICT)
 #	if defined(__cplusplus)
 #		define DEATH_RESTRICT __restrict
@@ -513,7 +543,12 @@
 #	endif
 #endif
 
-/** @brief Hint for compiler to assume a condition */
+/**
+	@brief Hint for compiler to assume a condition
+
+	This macro does not handle the case when the condition isn't @cpp true @ce in any way --- only provides a hint to
+	the compiler, possibly improving performance.
+*/
 #if !defined(DEATH_ASSUME)
 #	if defined(DEATH_TARGET_CLANG)
 #		define DEATH_ASSUME(condition) __builtin_assume(condition)
@@ -533,7 +568,14 @@
 #	endif
 #endif
 
-/** @brief Mark an if condition as likely to happen */
+/**
+	@brief Mark an if condition as likely to happen
+
+	Since branch predictors of contemporary CPUs do a good enough job already, the main purpose of this macro
+	is to affect assembly generation and instruction cache use in hot loops --- for example, when a certain
+	condition is likely to happen each iteration, the compiler may put code of the @cpp else @ce branch in
+	a "cold" section of the code, ensuring the more probable code path stays in the cache.
+*/
 #if !defined(DEATH_LIKELY)
 #	if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
 #		define DEATH_LIKELY(...) (__VA_ARGS__) [[likely]]
@@ -544,7 +586,12 @@
 #	endif
 #endif
 
-/** @brief Mark an if condition as unlikely to happen */
+/**
+	@brief Mark an if condition as unlikely to happen
+
+	An inverse to @ref DEATH_LIKELY(), see its documentation for more information about suggested use and expected
+	impact on performance. Useful to mark boundary conditions in tight loops.
+*/
 #if !defined(DEATH_UNLIKELY)
 #	if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
 #		define DEATH_UNLIKELY(...) (__VA_ARGS__) [[unlikely]]
@@ -555,12 +602,21 @@
 #	endif
 #endif
 
-/** @brief Passthrough (expands to all arguments passed to it) */
+/**
+	@brief Passthrough (expands to all arguments passed to it)
+
+	Expands to all arguments passed to it. Inverse of @ref DEATH_NOOP().
+*/
 #if !defined(DEATH_PASSTHROUGH)
 #	define DEATH_PASSTHROUGH(...) __VA_ARGS__
 #endif
 
-/** @brief No-op (eats all arguments passed to it) */
+/**
+	@brief No-op (eats all arguments passed to it)
+
+	Eats all arguments passed to it. Inverse of @ref CORRADE_PASSTHROUGH(). Useful on compilers that don't support
+	defining function macros on command line
+*/
 #if !defined(DEATH_NOOP)
 #	define DEATH_NOOP(...)
 #endif
@@ -575,5 +631,10 @@
 /** @brief Paste two tokens together */
 #define DEATH_PASTE(a, b) __DEATH_PASTE(a, b)
 
-/** @brief Line number as a string */
+/**
+	@brief Line number as a string
+
+	Turns the standard @cpp __LINE__ @ce macro into a string. Useful for example to have correct line numbers
+	when embedding GLSL shaders directly in the code.
+*/
 #define DEATH_LINE_STRING __DEATH_LINE_STRING_IMPLEMENTATION(__LINE__)

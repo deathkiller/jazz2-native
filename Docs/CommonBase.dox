@@ -2,8 +2,8 @@
 	@brief Proxy definitions for documentation purposes
 	
 	Definitions from this file are usually supplied via a compiler flag by CMake
-	or by including @ref CommonBase.h. Don't include this proxy file directly,
-	it's not present in the include directory.
+	or by including @ref CommonBase.h, which should be included everywhere. Don't
+	include this proxy file directly, it's not present in the include directory.
 */
 
 namespace Death {

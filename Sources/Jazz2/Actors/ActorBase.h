@@ -129,6 +129,7 @@ namespace Jazz2::Actors
 		}
 	};
 
+	/** @brief Move type, supports a bitwise combination of its member values */
 	enum class MoveType {
 		Absolute = 0x00,
 		Relative = 0x01,
@@ -137,6 +138,7 @@ namespace Jazz2::Actors
 
 	DEFINE_ENUM_OPERATORS(MoveType);
 
+	/** @brief Actor renderer type */
 	enum class ActorRendererType {
 		Default,
 		Outline,
@@ -168,6 +170,7 @@ namespace Jazz2::Actors
 
 		void SetParent(SceneNode* parent);
 		Task<bool> OnActivated(const ActorActivationDetails& details);
+		/** @brief Called when the object collides with another object */
 		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
 
 		bool IsInvulnerable();
@@ -275,10 +278,14 @@ namespace Jazz2::Actors
 
 		void SetFacingLeft(bool value);
 
+		/** @brief Called when the object is created and activated */
 		virtual Task<bool> OnActivatedAsync(const ActorActivationDetails& details);
+		/** @brief Called when corresponding tile should be deactivated */
 		virtual bool OnTileDeactivated();
 
+		/** @brief Called when health of the object changed */
 		virtual void OnHealthChanged(ActorBase* collider);
+		/** @brief Called when the object has no health left and should perish */
 		virtual bool OnPerish(ActorBase* collider);
 
 		virtual void OnUpdate(float timeMult);

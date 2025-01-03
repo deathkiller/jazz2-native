@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Level pit type */
 	enum class PitType
 	{
 		FallForever,

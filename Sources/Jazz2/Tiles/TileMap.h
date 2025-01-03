@@ -27,6 +27,7 @@ namespace Jazz2
 
 namespace Jazz2::Tiles
 {
+	/** @brief Layer speed model */
 	enum class LayerSpeedModel {
 		Default,
 		AlwaysOnTop,
@@ -34,6 +35,7 @@ namespace Jazz2::Tiles
 		SpeedMultipliers
 	};
 
+	/** @brief Layer renderer type */
 	enum class LayerRendererType {
 		Default,
 		Tinted,
@@ -61,6 +63,7 @@ namespace Jazz2::Tiles
 		Vector4f Color;
 	};
 
+	/** @brief Layer tile flags, supports a bitwise combination of its member values */
 	enum class LayerTileFlags : std::uint8_t {
 		None = 0x00,
 
