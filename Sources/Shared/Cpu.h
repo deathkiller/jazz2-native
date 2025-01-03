@@ -1395,7 +1395,7 @@ namespace Death { namespace Cpu {
 		@relativeref{Death,Cpu::Avx2} or @relativeref{Death,Cpu::Neon}, but not the
 		extra instruction sets like @relativeref{Death,Cpu::Lzcnt} or
 		@relativeref{Death,Cpu::AvxFma}. For a dispatch that takes extra instruction
-		sets into account as well use @ref __DEATH_CPU_DISPATCHER() instead.
+		sets into account as well use @ref DEATH_CPU_DISPATCHER() instead.
 	*/
 	// Ideally this would reuse __DEATH_CPU_DISPATCHER_IMPLEMENTATION(), unfortunately due to MSVC not being able
 	// to defer macro calls unless "the new preprocessor" is enabled it wouldn't be possible to get rid of the

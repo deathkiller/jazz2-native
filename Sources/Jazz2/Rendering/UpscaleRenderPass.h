@@ -60,11 +60,14 @@ namespace Jazz2::Rendering
 			Vector2f _targetSize;
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Camera> _camera;
 		std::unique_ptr<Texture> _target;
 		Vector2f _targetSize;
 		AntialiasingSubpass _antialiasing;
+#endif
 
 	private:
 		std::unique_ptr<SceneNode> _node;

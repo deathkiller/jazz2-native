@@ -19,6 +19,7 @@ namespace Death
 		
 		The sink needs to be registered using @ref Trace::AttachSink() and unregistered using @ref Trace::DetachSink().
 		Then all registered sinks are automatically used by `LOGD`/`LOGI`/`LOGW`/`LOGE` calls and asserts.
+		See also @ref Asserts.h for more details.
 	*/
 	class ITraceSink
 	{
@@ -34,7 +35,7 @@ namespace Death
 	protected:
 		/** @brief Called when new trace item is received and should be written to the sink destination */
 		virtual void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, Containers::StringView threadId, Containers::StringView message) = 0;
-		/** @brief Called when all sink buffers should be flushed */
+		/** @brief Called when all sink buffers should be flushed immediately */
 		virtual void OnTraceFlushed() = 0;
 	};
 

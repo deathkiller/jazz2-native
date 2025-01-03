@@ -11,6 +11,8 @@ namespace Jazz2::Rendering
 	class PlayerViewport
 	{
 	public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		LevelHandler* _levelHandler;
 		Actors::Player* _targetPlayer;
 
@@ -38,6 +40,7 @@ namespace Jazz2::Rendering
 		Vector2f _shakeOffset;
 		float _ambientLightTarget;
 		Vector4f _ambientLight;
+#endif
 
 		PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer);
 

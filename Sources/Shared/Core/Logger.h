@@ -1069,6 +1069,11 @@ namespace Death { namespace Trace {
 	};
 #endif
 
+	/**
+		@brief Logger backend processes trace items in the background
+		
+		This class should not usually be used directly.
+	*/
 	class LoggerBackend
 	{
 	public:
@@ -1197,6 +1202,11 @@ namespace Death { namespace Trace {
 #endif
 	};
 
+	/**
+		@brief Logger enqueues trace items for processing
+	
+		This class should not usually be used directly.
+	*/
 	class Logger
 	{
 	public:

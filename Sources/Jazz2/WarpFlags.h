@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** Warp flags, supports a bitwise combination of its member values. */
 	enum class WarpFlags
 	{
 		Default = 0,

@@ -202,7 +202,21 @@ namespace Jazz2::UI
 				GetNextCommandFromHistory();
 				break;
 			}
-			case Keys::V: {
+			case Keys::K: { // Clear line
+				if ((event.mod & KeyMod::Ctrl) != KeyMod::None && (event.mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
+					_currentLine[0] = '\0';
+					_textCursor = 0;
+					_carretAnim = 0.0f;
+				}
+				break;
+			}
+			case Keys::L: { // Clear history
+				if ((event.mod & KeyMod::Ctrl) != KeyMod::None && (event.mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
+					_logHistory.clear();
+				}
+				break;
+			}
+			case Keys::V: { // Paste
 				if ((event.mod & KeyMod::Ctrl) != KeyMod::None && (event.mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
 					auto text = theApplication().GetInputManager().getClipboardText();
 					if (!text.empty()) {

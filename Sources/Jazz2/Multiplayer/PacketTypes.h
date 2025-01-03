@@ -6,6 +6,7 @@
 
 namespace Jazz2::Multiplayer
 {
+	/** @brief Packet type broadcasted on the local network */
 	enum class BroadcastPacketType
 	{
 		Null,
@@ -13,6 +14,7 @@ namespace Jazz2::Multiplayer
 		DiscoveryResponse
 	};
 
+	/** @brief Packet type going from client to server */
 	enum class ClientPacketType
 	{
 		Null,
@@ -27,6 +29,7 @@ namespace Jazz2::Multiplayer
 		PlayerKeyPress
 	};
 
+	/** @brief Packet type going from server to client */
 	enum class ServerPacketType
 	{
 		Null,
