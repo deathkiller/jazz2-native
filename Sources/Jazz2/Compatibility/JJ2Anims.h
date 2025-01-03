@@ -23,7 +23,7 @@ namespace Jazz2::Compatibility
 	public:
 		static constexpr std::uint16_t CacheVersion = 22;
 
-		static JJ2Version Convert(const StringView path, PakWriter& pakWriter, bool isPlus = false);
+		static JJ2Version Convert(StringView path, PakWriter& pakWriter, bool isPlus = false);
 
 		static void WriteImageContent(Stream& so, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 
@@ -74,7 +74,7 @@ namespace Jazz2::Compatibility
 		static void ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims);
 		static void ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples);
 
-		static void WriteImageToFile(const StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);
+		static void WriteImageToFile(StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);
 		static void WriteImageToStream(Stream& targetStream, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);
 	};
 }

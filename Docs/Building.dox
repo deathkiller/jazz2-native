@@ -155,8 +155,10 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_OPENMPT` (default `ON`) -- Enable module (`libopenmpt`) audio file support
 -   `NCINE_COMPILE_OPENMPT` (default `ON`) -- Download and compile `libopenmpt` from source automatically
 -   `NCINE_WITH_ANGELSCRIPT` (default `OFF`) --- Enable **AngleScript** scripting support
--   `NCINE_WITH_IMGUI` (default `OFF`) --- Enable integration with **Dear ImGui**, `IMGUI_VERSION_TAG` allows to specify version
--   `NCINE_WITH_TRACY` (default `OFF`) --- Enable integration with **Tracy** frame profiler, `TRACY_VERSION_TAG` allows to specify version
+-   `NCINE_WITH_IMGUI` (default `OFF`) --- Enable integration with **Dear ImGui**
+    -   `IMGUI_VERSION_TAG` allows to specify version
+-   `NCINE_WITH_TRACY` (default `OFF`) --- Enable integration with **Tracy** frame profiler
+    -   `TRACY_VERSION_TAG` allows to specify version
 -   `NCINE_WITH_RENDERDOC` (default `OFF`) --- Enable integration with **RenderDoc**
 -   `NCINE_DATA_DIR` (default @cpp "./Content" @ce) --- Path to @cpp "Content" @ce game data directory
 
@@ -179,6 +181,7 @@ The following parameters can be used to customize the build:
     -   If not specified, following path will be used: @cpp CMAKE_INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/" @ce
 -   `NCINE_PACKAGED_CONTENT_PATH` (default `OFF`) --- Use alternative path search strategy
     -   If enabled, @cpp "Content" @ce will be always relative to current directory
+    -   Has higher priority than `NCINE_OVERRIDE_CONTENT_PATH`
 
 @subsubsection building-config-params-windows Platform-specific parameters for Windows
 

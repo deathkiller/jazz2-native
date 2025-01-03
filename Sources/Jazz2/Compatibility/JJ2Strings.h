@@ -33,15 +33,15 @@ namespace Jazz2::Compatibility
 
 		JJ2Strings() { }
 
-		JJ2Strings(const StringView name)
+		JJ2Strings(StringView name)
 			: Name(name)
 		{
 		}
 
-		bool Open(const StringView path);
+		bool Open(StringView path);
 
-		void Convert(const StringView targetPath, Function<JJ2Level::LevelToken(const StringView)>&& levelTokenConversion);
+		void Convert(StringView targetPath, Function<JJ2Level::LevelToken(StringView)>&& levelTokenConversion);
 
-		static String RecodeString(const StringView text, bool stripFormatting = false, bool escaped = false);
+		static String RecodeString(StringView text, bool stripFormatting = false, bool escaped = false);
 	};
 }

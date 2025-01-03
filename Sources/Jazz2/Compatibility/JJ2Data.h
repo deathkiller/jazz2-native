@@ -30,13 +30,13 @@ namespace Jazz2::Compatibility
 
 		JJ2Data() {}
 
-		bool Open(const StringView path, bool strictParser);
+		bool Open(StringView path, bool strictParser);
 
-		void Extract(const StringView targetPath);
+		void Extract(StringView targetPath);
 		void Convert(PakWriter& pakWriter, JJ2Version version);
 
 	private:
-		void ConvertSfxList(const Item& item, PakWriter& pakWriter, const StringView targetPath, AnimSetMapping& animMapping);
-		void ConvertMenuImage(const Item& item, PakWriter& pakWriter, const StringView targetPath, std::int32_t width, std::int32_t height);
+		void ConvertSfxList(const Item& item, PakWriter& pakWriter, StringView targetPath, AnimSetMapping& animMapping);
+		void ConvertMenuImage(const Item& item, PakWriter& pakWriter, StringView targetPath, std::int32_t width, std::int32_t height);
 	};
 }

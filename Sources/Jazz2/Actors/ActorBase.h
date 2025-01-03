@@ -255,6 +255,8 @@ namespace Jazz2::Actors
 		static constexpr std::int32_t PerPixelCollisionStep = 3;
 		static constexpr std::int32_t AnimationCandidatesCount = 5;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		ILevelHandler* _levelHandler;
 
 		Vector2f _pos;
@@ -275,6 +277,7 @@ namespace Jazz2::Actors
 		GraphicResource* _currentAnimation;
 		GraphicResource* _currentTransition;
 		bool _currentTransitionCancellable;
+#endif
 
 		void SetFacingLeft(bool value);
 
@@ -307,7 +310,7 @@ namespace Jazz2::Actors
 		void CreateSpriteDebris(AnimState state, std::int32_t count);
 		virtual float GetIceShrapnelScale() const;
 
-		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView identifier, float gain = 1.0f, float pitch = 1.0f);
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetAnimation(AnimState state, bool skipAnimation = false);
 		bool SetTransition(AnimState state, bool cancellable, Function<void()>&& callback = {});
 		void CancelTransition();
@@ -315,11 +318,11 @@ namespace Jazz2::Actors
 		virtual void OnAnimationStarted();
 		virtual void OnAnimationFinished();
 
-		static void PreloadMetadataAsync(const StringView path);
-		void RequestMetadata(const StringView path);
+		static void PreloadMetadataAsync(StringView path);
+		void RequestMetadata(StringView path);
 
 #if defined(WITH_COROUTINES)
-		auto RequestMetadataAsync(const StringView path)
+		auto RequestMetadataAsync(StringView path)
 		{
 			struct awaitable {
 				ActorBase* actor;
@@ -339,7 +342,7 @@ namespace Jazz2::Actors
 			return awaitable{this, path};
 		}
 #else
-		void RequestMetadataAsync(const StringView path);
+		void RequestMetadataAsync(StringView path);
 #endif
 
 		constexpr void SetState(ActorState flags) noexcept

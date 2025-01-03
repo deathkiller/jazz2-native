@@ -34,7 +34,7 @@ namespace Jazz2::UI
 		DiscordRpcClient();
 		~DiscordRpcClient();
 
-		bool Connect(const StringView clientId);
+		bool Connect(StringView clientId);
 		void Disconnect();
 		bool IsSupported() const;
 		std::uint64_t GetUserId() const;

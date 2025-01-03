@@ -12,7 +12,7 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	JJ2Version JJ2Anims::Convert(const StringView path, PakWriter& pakWriter, bool isPlus)
+	JJ2Version JJ2Anims::Convert(StringView path, PakWriter& pakWriter, bool isPlus)
 	{
 		JJ2Version version;
 		SmallVector<AnimSection, 0> anims;
@@ -524,7 +524,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Anims::WriteImageToFile(const StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
+	void JJ2Anims::WriteImageToFile(StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
 		FileStream so(targetPath, FileAccess::Write);
 		ASSERT_MSG(so.IsValid(), "Cannot open file for writing");

@@ -70,8 +70,8 @@ namespace Jazz2
 
 		virtual void AddActor(std::shared_ptr<Actors::ActorBase> actor) = 0;
 
-		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, const StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
-		virtual std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
+		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
+		virtual std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) = 0;
 		virtual bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) = 0;
 
@@ -86,7 +86,7 @@ namespace Jazz2
 		virtual void GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) = 0;
 
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) = 0;
-		virtual void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) = 0;
+		virtual void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) = 0;
 		virtual void HandleGameOver(Actors::Player* player) = 0;
 		virtual bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) = 0;
 		virtual void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) = 0;
@@ -95,9 +95,9 @@ namespace Jazz2
 		virtual void SetCheckpoint(Actors::Player* player, Vector2f pos) = 0;
 		virtual void RollbackToCheckpoint(Actors::Player* player) = 0;
 		virtual void ActivateSugarRush(Actors::Player* player) = 0;
-		virtual void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) = 0;
+		virtual void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) = 0;
 		virtual StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) = 0;
-		virtual void OverrideLevelText(std::uint32_t textId, const StringView value) = 0;
+		virtual void OverrideLevelText(std::uint32_t textId, StringView value) = 0;
 		virtual Vector2f GetCameraPos(Actors::Player* player) const = 0;
 		virtual void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) = 0;
 		virtual void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) = 0;
@@ -106,7 +106,7 @@ namespace Jazz2
 		virtual bool GetTrigger(std::uint8_t triggerId) = 0;
 		virtual void SetTrigger(std::uint8_t triggerId, bool newState) = 0;
 		virtual void SetWeather(WeatherType type, std::uint8_t intensity) = 0;
-		virtual bool BeginPlayMusic(const StringView path, bool setDefault = false, bool forceReload = false) = 0;
+		virtual bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) = 0;
 
 		virtual bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
 		virtual bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;

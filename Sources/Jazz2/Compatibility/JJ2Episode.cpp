@@ -17,12 +17,12 @@ namespace Jazz2::Compatibility
 	{
 	}
 
-	JJ2Episode::JJ2Episode(const StringView name, const StringView displayName, const StringView firstLevel, std::int32_t position)
+	JJ2Episode::JJ2Episode(StringView name, StringView displayName, StringView firstLevel, std::int32_t position)
 		: Name(name), DisplayName(displayName), FirstLevel(firstLevel), Position(position), ImageWidth(0), ImageHeight(0), TitleWidth(0), TitleHeight(0)
 	{
 	}
 
-	bool JJ2Episode::Open(const StringView path)
+	bool JJ2Episode::Open(StringView path)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
@@ -117,7 +117,7 @@ namespace Jazz2::Compatibility
 		return true;
 	}
 
-	void JJ2Episode::Convert(const StringView targetPath, Function<JJ2Level::LevelToken(StringView)>&& levelTokenConversion, Function<String(JJ2Episode*)>&& episodeNameConversion, Function<Pair<String, String>(JJ2Episode*)>&& episodePrevNext)
+	void JJ2Episode::Convert(StringView targetPath, Function<JJ2Level::LevelToken(StringView)>&& levelTokenConversion, Function<String(JJ2Episode*)>&& episodeNameConversion, Function<Pair<String, String>(JJ2Episode*)>&& episodePrevNext)
 	{
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");

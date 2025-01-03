@@ -431,7 +431,7 @@ namespace Jazz2::Actors
 		return 1.0f;
 	}
 
-	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(const StringView identifier, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(StringView identifier, float gain, float pitch)
 	{
 #if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
@@ -1040,18 +1040,18 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void ActorBase::PreloadMetadataAsync(const StringView path)
+	void ActorBase::PreloadMetadataAsync(StringView path)
 	{
 		ContentResolver::Get().PreloadMetadataAsync(path);
 	}
 
-	void ActorBase::RequestMetadata(const StringView path)
+	void ActorBase::RequestMetadata(StringView path)
 	{
 		_metadata = ContentResolver::Get().RequestMetadata(path);
 	}
 	
 #if !defined(WITH_COROUTINES)
-	void ActorBase::RequestMetadataAsync(const StringView path)
+	void ActorBase::RequestMetadataAsync(StringView path)
 	{
 		_metadata = ContentResolver::Get().RequestMetadata(path);
 	}

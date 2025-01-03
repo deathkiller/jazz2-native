@@ -57,9 +57,9 @@ namespace Jazz2::Compatibility
 
 		JJ2Level() : _version(JJ2Version::Unknown), _animCount(0), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasPitInstantDeath(false), _hasCTF(false), _hasLaps(false), _useLevelPalette(false) { }
 
-		bool Open(const StringView path, bool strictParser);
+		bool Open(StringView path, bool strictParser);
 
-		void Convert(const StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion = {});
+		void Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion = {});
 		void AddLevelTokenTextID(uint8_t textId);
 
 		JJ2Version GetVersion() const {

@@ -122,8 +122,8 @@ namespace Jazz2
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
 
-		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, const StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
-		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
+		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) override;
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) override;
 		void FindCollisionActorsByAABB(const Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) override;
@@ -131,7 +131,7 @@ namespace Jazz2
 		void GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) override;
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) override;
-		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, const StringView nextLevel = {}) override;
+		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
@@ -140,9 +140,9 @@ namespace Jazz2
 		void SetCheckpoint(Actors::Player* player, Vector2f pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void ActivateSugarRush(Actors::Player* player) override;
-		void ShowLevelText(const StringView text, Actors::ActorBase* initiator = nullptr) override;
+		void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
-		void OverrideLevelText(std::uint32_t textId, const StringView value) override;
+		void OverrideLevelText(std::uint32_t textId, StringView value) override;
 		Vector2f GetCameraPos(Actors::Player* player) const override;
 		void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) override;
 		void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) override;
@@ -151,7 +151,7 @@ namespace Jazz2
 		bool GetTrigger(std::uint8_t triggerId) override;
 		void SetTrigger(std::uint8_t triggerId, bool newState) override;
 		void SetWeather(WeatherType type, std::uint8_t intensity) override;
-		bool BeginPlayMusic(const StringView path, bool setDefault = false, bool forceReload = false) override;
+		bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) override;
 
 		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
 		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
@@ -181,6 +181,8 @@ namespace Jazz2
 			PlayerInput();
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Hide these members from documentation before refactoring
 		IRootController* _root;
 
 		Shader* _lightingShader;
@@ -247,6 +249,7 @@ namespace Jazz2
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 		RumbleProcessor _rumble;
 		HashMap<String, std::shared_ptr<RumbleDescription>> _rumbleEffects;
+#endif
 #endif
 
 		virtual void OnInitialized();

@@ -10,6 +10,7 @@ namespace Jazz2::Actors
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Explosion effect type */
 		enum class Type {
 			Tiny,
 			TinyBlue,

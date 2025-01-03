@@ -77,7 +77,7 @@ namespace Jazz2
 		AudioBuffer Buffer;
 		GenericSoundResourceFlags Flags;
 
-		GenericSoundResource(std::unique_ptr<Stream> stream, const StringView filename) noexcept;
+		GenericSoundResource(std::unique_ptr<Stream> stream, StringView filename) noexcept;
 	};
 
 	/** @brief Specific sound resource (from metadata) */

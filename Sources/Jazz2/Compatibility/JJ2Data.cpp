@@ -18,7 +18,7 @@ using namespace nCine;
 
 namespace Jazz2::Compatibility
 {
-	bool JJ2Data::Open(const StringView path, bool strictParser)
+	bool JJ2Data::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
@@ -65,7 +65,7 @@ namespace Jazz2::Compatibility
 		return true;
 	}
 
-	void JJ2Data::Extract(const StringView targetPath)
+	void JJ2Data::Extract(StringView targetPath)
 	{
 		fs::CreateDirectories(targetPath);
 
@@ -97,7 +97,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Data::ConvertSfxList(const Item& item, PakWriter& pakWriter, const StringView targetPath, AnimSetMapping& animMapping)
+	void JJ2Data::ConvertSfxList(const Item& item, PakWriter& pakWriter, StringView targetPath, AnimSetMapping& animMapping)
 	{
 #pragma pack(push, 1)
 		struct SoundFXList {
@@ -172,7 +172,7 @@ namespace Jazz2::Compatibility
 		ASSERT_MSG(success, "Cannot add file to .pak container");
 	}
 
-	void JJ2Data::ConvertMenuImage(const Item& item, PakWriter& pakWriter, const StringView targetPath, std::int32_t width, std::int32_t height)
+	void JJ2Data::ConvertMenuImage(const Item& item, PakWriter& pakWriter, StringView targetPath, std::int32_t width, std::int32_t height)
 	{
 		std::int32_t pixelCount = width * height;
 		RETURN_ASSERT_MSG(item.Size == pixelCount, "Image has unexpected size");
