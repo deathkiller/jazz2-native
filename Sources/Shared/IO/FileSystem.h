@@ -227,7 +227,7 @@ namespace Death { namespace IO {
 
 		/** @brief Returns `true` if the file or directory is hidden */
 		static bool IsHidden(Containers::StringView path);
-		/** @brief Makes a @cpp true @ce or directory hidden or not */
+		/** @brief Makes a file or directory hidden or not */
 		static bool SetHidden(Containers::StringView path, bool hidden);
 		/** @brief Returns `true` if the file or directory is read-only */
 		static bool IsReadOnly(Containers::StringView path);

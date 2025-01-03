@@ -247,7 +247,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	};
 }}}
 
-/** @brief Class annotation to enable optimized `runtime_cast()` functionality */
+/** @brief Class annotation to enable optimized `runtime_cast<T>()` functionality */
 #define DEATH_RUNTIME_OBJECT(...)																		\
 	__DEATH_WARNING_PUSH																				\
 	__DEATH_NO_OVERRIDE_WARNING																			\
@@ -289,7 +289,7 @@ DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
 
 #else
 
-/** @brief Class annotation to enable optimized `runtime_cast()` functionality */
+/** @brief Class annotation to enable optimized `runtime_cast<T>()` functionality */
 #define DEATH_RUNTIME_OBJECT(...)
 
 /** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` */

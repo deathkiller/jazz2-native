@@ -8,7 +8,7 @@ namespace nCine
 {
 	class Texture;
 
-	/// The class for a single particle data
+	/// Renders a single particle
 	class Particle : public Sprite
 	{
 	public:

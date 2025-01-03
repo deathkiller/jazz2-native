@@ -690,7 +690,7 @@ namespace Death { namespace Trace {
 		return result;
 	}
 
-	void Logger::Flush(uint32_t sleepDurationNs)
+	void Logger::Flush(std::uint32_t sleepDurationNs)
 	{
 		using namespace Implementation;
 

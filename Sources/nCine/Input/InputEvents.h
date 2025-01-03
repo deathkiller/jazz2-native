@@ -44,7 +44,7 @@ namespace nCine
 		RightTrigger
 	};
 
-	/// A structure containing joystick hat values
+	/// Structure containing joystick hat values
 	struct HatState
 	{
 		enum

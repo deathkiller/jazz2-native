@@ -844,9 +844,7 @@ namespace Jazz2::UI
 			Part& lastPart = processedParts[i];
 
 			if (lastPart.Height != maxHeight) {
-				// Round up division, it should be better aligned at least for 16px images
-				//float diff = ceilf((maxHeight - lastPart.Height) * 0.5f);
-				float diff = roundf((maxHeight - lastPart.Height) * 0.2f);
+				float diff = floorf((maxHeight - lastPart.Height) * 0.2f);
 				lastPart.Location.Y += diff;
 				lastPart.Height = maxHeight - diff;
 			}

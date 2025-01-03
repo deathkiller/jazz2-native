@@ -149,6 +149,8 @@ namespace nCine::Backends
 			return keyboardState_;
 		}
 
+		String getClipboardText() const override;
+
 		bool isJoyPresent(int joyId) const override;
 		const char* joyName(int joyId) const override;
 		const JoystickGuid joyGuid(int joyId) const override;

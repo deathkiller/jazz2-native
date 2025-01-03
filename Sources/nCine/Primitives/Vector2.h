@@ -78,8 +78,8 @@ namespace nCine
 			return Vector2<S>(static_cast<S>(X), static_cast<S>(Y));
 		}
 
-		static T Dot(const Vector2& v1, const Vector2& v2);
-		static Vector2 Lerp(const Vector2& a, const Vector2& b, float t);
+		static T Dot(Vector2 v1, Vector2 v2);
+		static Vector2 Lerp(Vector2 a, Vector2 b, float t);
 		static Vector2 FromAngleLength(T angle, T length);
 
 		/// A vector with all zero elements
@@ -322,13 +322,13 @@ namespace nCine
 	}
 
 	template<class T>
-	inline T Vector2<T>::Dot(const Vector2<T>& v1, const Vector2<T>& v2)
+	inline T Vector2<T>::Dot(Vector2<T> v1, Vector2<T> v2)
 	{
 		return static_cast<T>(v1.X * v2.X + v1.Y * v2.Y);
 	}
 
 	template<class T>
-	inline Vector2<T> Vector2<T>::Lerp(const Vector2<T>& a, const Vector2<T>& b, float t)
+	inline Vector2<T> Vector2<T>::Lerp(Vector2<T> a, Vector2<T> b, float t)
 	{
 		return Vector2<T>(t * (b.X - a.X) + a.X, t * (b.Y - a.Y) + a.Y);
 	}

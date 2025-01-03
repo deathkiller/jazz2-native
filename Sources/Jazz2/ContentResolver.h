@@ -88,7 +88,7 @@ namespace Jazz2
 		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);
 		void CompileShaders();
-		static std::unique_ptr<Texture> GetNoiseTexture();
+		std::unique_ptr<Texture> GetNoiseTexture();
 
 		const std::uint32_t* GetPalettes() const {
 			return _palettes;

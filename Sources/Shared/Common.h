@@ -50,7 +50,7 @@ namespace Death { namespace Implementation {
 #	define DEFINE_PRIVATE_ENUM_OPERATORS(type)
 #endif
 
-/** @brief Workaround for MSVC not being able to expand __VA_ARGS__ correctly. Would work with /Zc:preprocessor. Source: https://stackoverflow.com/a/5134656 */
+/** @brief Workaround for MSVC not being able to expand `__VA_ARGS__` correctly, would work with `/Zc:preprocessor`. Source: https://stackoverflow.com/a/5134656 */
 #define DEATH_HELPER_EXPAND(...) __VA_ARGS__
 /** @brief Pick a macro implementation based on how many arguments were passed. Source: https://stackoverflow.com/a/11763277 */
 #define DEATH_HELPER_PICK(_0, _1, _2, _3, _4, _5, _6, _7, macroName, ...) macroName
@@ -71,6 +71,7 @@ namespace Death { namespace Cpu {
 	class Features;
 }}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #if defined(DEATH_CPU_USE_RUNTIME_DISPATCH) && !defined(DEATH_CPU_USE_IFUNC)
 #	define DEATH_CPU_DISPATCHER_DECLARATION(name) decltype(name) name ## Implementation(Cpu::Features);
 #	define DEATH_CPU_DISPATCHER(...) __DEATH_CPU_DISPATCHER(__VA_ARGS__)
@@ -92,4 +93,5 @@ namespace Death { namespace Cpu {
 #		define DEATH_CPU_DISPATCHED(dispatcher, ...) __VA_ARGS__ DEATH_PASSTHROUGH
 #		define DEATH_CPU_MAYBE_UNUSED DEATH_UNUSED
 #	endif
+#endif
 #endif

@@ -81,6 +81,11 @@ namespace nCine
 		joyMapping_.SetHandler(inputEventHandler);
 	}
 
+	String IInputManager::getClipboardText() const
+	{
+		return {};
+	}
+
 	StringView IInputManager::getKeyName(Keys key) const
 	{
 		switch (key) {

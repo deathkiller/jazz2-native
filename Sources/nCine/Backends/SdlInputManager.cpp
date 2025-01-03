@@ -253,6 +253,14 @@ namespace nCine::Backends
 		}
 	}
 
+	String SdlInputManager::getClipboardText() const
+	{
+		char* clipboardText = SDL_GetClipboardText();
+		String result(clipboardText);
+		SDL_free(clipboardText);
+		return result;
+	}
+
 	StringView SdlInputManager::getKeyName(Keys key) const
 	{
 		// TODO

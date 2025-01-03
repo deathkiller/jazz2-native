@@ -2,7 +2,8 @@
 	@brief Proxy definitions for documentation purposes
 	
 	Definitions from this file are usually supplied via a compiler flag by CMake
-	or by including @ref CommonBase.h. Don't include this file directly.
+	or by including @ref CommonBase.h. Don't include this proxy file directly,
+	it's not present in the include directory.
 */
 
 namespace Death {
@@ -97,8 +98,8 @@ namespace Death {
 
 	Defined if the library is built for some Unix flavor (Linux, BSD, macOS, iOS,
 	Android...). Note that while the behavior of Emscripten is closely emulating
-	Unix systems, `DEATH_TARGET_UNIX` is not defined there, only
-	`DEATH_TARGET_EMSCRIPTEN`.
+	Unix systems, @ref DEATH_TARGET_UNIX is not defined there, only
+	@ref DEATH_TARGET_EMSCRIPTEN.
 */
 #define DEATH_TARGET_UNIX
 #undef DEATH_TARGET_UNIX
@@ -148,7 +149,7 @@ namespace Death {
 
 	Defined if the library is built for [Emscripten](http://kripken.github.io/emscripten-site/).
 	Note that while the behavior of Emscripten is closely emulating Unix systems,
-	`DEATH_TARGET_UNIX` is not defined there, only `DEATH_TARGET_EMSCRIPTEN`.
+	@ref DEATH_TARGET_UNIX is not defined there, only @ref DEATH_TARGET_EMSCRIPTEN.
 */
 #define DEATH_TARGET_EMSCRIPTEN
 #undef DEATH_TARGET_EMSCRIPTEN
@@ -174,13 +175,13 @@ namespace Death {
 
 	Defined if the library is built for x86 platforms (32 or 64-bit). Note that
 	unlike other `DEATH_TARGET_*` variables, this variable,
-	`DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`, `DEATH_TARGET_WASM`,
-	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_WASM,
+	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
 	instruction set variables are not exposed in CMake because the meaning is
 	unclear on platforms with multi-architecture binaries. If neither
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
-	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
-	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
+	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
+	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_X86
@@ -191,13 +192,13 @@ namespace Death {
 
 	Defined if the library is built for ARM platforms (32 or 64-bit). Note that
 	unlike other `DEATH_TARGET_*` variables, this variable,
-	`DEATH_TARGET_X86`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`, `DEATH_TARGET_WASM`,
-	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_WASM,
+	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
 	instruction set variables are not exposed in CMake because the meaning is
 	unclear on platforms with multi-architecture binaries. If neither
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
-	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
-	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
+	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
+	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_ARM
@@ -208,13 +209,13 @@ namespace Death {
 
 	Defined if the library is built for PowerPC platforms (32 or 64-bit). Note that
 	unlike other `DEATH_TARGET_*` variables, this variable,
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_RISCV`, `DEATH_TARGET_WASM`,
-	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_WASM,
+	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
 	instruction set variables are not exposed in CMake because the meaning is
 	unclear on platforms with multi-architecture binaries. If neither
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
-	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
-	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
+	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
+	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_POWERPC
@@ -225,13 +226,13 @@ namespace Death {
 
 	Defined if the library is built for RISC-V platforms (32 or 64-bit). Note that
 	unlike other `DEATH_TARGET_*` variables, this variable,
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_WASM`,
-	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_WASM,
+	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
 	instruction set variables are not exposed in CMake because the meaning is
 	unclear on platforms with multi-architecture binaries. If neither
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
-	nor `DEATH_TARGET_WASM` is defined, the platform might be either a very
-	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
+	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
+	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_RISCV
@@ -242,13 +243,13 @@ namespace Death {
 
 	Defined if the library is built for WebAssembly (32 or 64-bit). Note that
 	unlike other `DEATH_TARGET_*` variables, this variable,
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`,
-	`DEATH_TARGET_32BIT`, `DEATH_TARGET_BIG_ENDIAN` and derived
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
 	instruction set variables are not exposed in CMake because the meaning is
 	unclear on platforms with multi-architecture binaries. If neither
-	`DEATH_TARGET_X86`, `DEATH_TARGET_ARM`, `DEATH_TARGET_POWERPC`, `DEATH_TARGET_RISCV`
-	nor `EATH_TARGET_WASM` is defined, the platform might be either a very
-	old pre-WebAssembly `DEATH_TARGET_EMSCRIPTEN` or any other that the
+	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
+	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
+	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_WASM
@@ -258,7 +259,7 @@ namespace Death {
 	@brief GCC compiler
 
 	Defined if the code is being compiled by GCC or GCC-compatible Clang (which is
-	`DEATH_TARGET_APPLE_CLANG` but not `DEATH_TARGET_CLANG_CL`, for
+	@ref DEATH_TARGET_APPLE_CLANG but not @ref DEATH_TARGET_CLANG_CL, for
 	example). While this variable is exposed in CMake as well, it's not guaranteed
 	that the reported compiler is consistent between CMake and C++ --- for example,
 	a library can be built with GCC and then used via Clang.
@@ -274,8 +275,8 @@ namespace Death {
 	@brief Clang compiler
 
 	Defined if the code is being compiled by Clang or any of its variants
-	(`DEATH_TARGET_APPLE_CLANG`, `DEATH_TARGET_CLANG_CL`). If this
-	variable is defined, usually `DEATH_TARGET_GCC` is also defined, except
+	(@ref DEATH_TARGET_APPLE_CLANG, @ref DEATH_TARGET_CLANG_CL). If this
+	variable is defined, usually @ref DEATH_TARGET_GCC is also defined, except
 	for Clang-CL. While this variable is exposed in CMake as well, it's not
 	guaranteed that the reported compiler is consistent between CMake and C++ ---
 	for example, a library can be built with Clang and then used via GCC.
@@ -292,7 +293,7 @@ namespace Death {
 	@brief Apple's Clang compiler
 
 	Defined if the code is being compiled by Apple's Clang. If this variable is
-	defined, `DEATH_TARGET_GCC` and `DEATH_TARGET_CLANG` are also
+	defined, @ref DEATH_TARGET_GCC and @ref DEATH_TARGET_CLANG are also
 	defined. This is primarily useful when checking for Clang version, as Apple
 	uses a different versioning scheme. While this variable is exposed in CMake as
 	well, it's not guaranteed that the reported compiler is consistent between
@@ -312,8 +313,8 @@ namespace Death {
 	@brief Clang-CL compiler
 
 	Defined if the code is being compiled by Clang with a MSVC frontend. If this
-	variable is defined, `DEATH_TARGET_CLANG` and `DEATH_TARGET_MSVC` is
-	also defined (but `DEATH_TARGET_GCC` not). While this variable is exposed
+	variable is defined, @ref DEATH_TARGET_CLANG and @ref DEATH_TARGET_MSVC is
+	also defined (but @ref DEATH_TARGET_GCC not). While this variable is exposed
 	in CMake as well, it's not guaranteed that the reported compiler is consistent
 	between CMake and C++ --- for example, a library can be built with Clang-CL and
 	then used via MSVC.
@@ -340,7 +341,7 @@ namespace Death {
 	@brief MSVC compiler
 
 	Defined if the code is being compiled by MSVC or Clang with a MSVC frontend. If
-	this variable is defined, `DEATH_TARGET_CLANG` might also be defined.
+	this variable is defined, @ref DEATH_TARGET_CLANG might also be defined.
 	While this variable is exposed in CMake as well, it's not guaranteed that the
 	reported compiler is consistent between CMake and C++ --- for example, a
 	library can be built with MSVC and then used via Clang-CL.
@@ -356,8 +357,8 @@ namespace Death {
 	@brief Cygwin compiler
 
 	Defined if the code is being compiled by Cygwin toolchain. If
-	this variable is defined, `DEATH_TARGET_GCC` and possibly also
-	`DEATH_TARGET_CLANG` are defined. While this variable is exposed in CMake
+	this variable is defined, @ref DEATH_TARGET_GCC and possibly also
+	@ref DEATH_TARGET_CLANG are defined. While this variable is exposed in CMake
 	as well, it's not guaranteed that the reported compiler is consistent between
 	CMake and C++ --- for example, a library can be built with MSVC and then used
 	via Clang-CL.
@@ -369,8 +370,8 @@ namespace Death {
 	@brief MinGW compiler
 
 	Defined if the code is being compiled by GCC / Clang running under MinGW. If
-	this variable is defined, `DEATH_TARGET_GCC` and possibly also
-	`DEATH_TARGET_CLANG` are defined. While this variable is exposed in CMake
+	this variable is defined, @ref DEATH_TARGET_GCC and possibly also
+	@ref DEATH_TARGET_CLANG are defined. While this variable is exposed in CMake
 	as well, it's not guaranteed that the reported compiler is consistent between
 	CMake and C++ --- for example, a library can be built with MSVC and then used
 	via Clang-CL.
@@ -384,8 +385,8 @@ namespace Death {
 	Defined if the library is built against Clang [libc++](https://libcxx.llvm.org/)
 	STL implementation. This is most common on Apple acOS and iOS and on newer
 	Android NDKs, it's also sometimes used on Linux. Note that unlike other
-	`DEATH_TARGET_*` variables, this variable, `DEATH_TARGET_LIBSTDCXX` and
-	`DEATH_TARGET_DINKUMWARE` are not exposed in CMake because the detection
+	`DEATH_TARGET_*` variables, this variable, @ref DEATH_TARGET_LIBSTDCXX and
+	@ref DEATH_TARGET_DINKUMWARE are not exposed in CMake because the detection
 	is non-trivial.
 
 	Major libc++ version number can be accessed using the `_LIBCPP_VERSION` version
@@ -401,8 +402,8 @@ namespace Death {
 	Defined if the library is built against GCC [libstdc++](https://gcc.gnu.org/onlinedocs/libstdc++/)
 	STL implementation. This is most common on Linux and under MinGW, note that
 	Clang is able to use libstdc++ as well. Note that unlike other `DEATH_TARGET_*`
-	variables, this variable, `DEATH_TARGET_LIBCXX` and
-	`DEATH_TARGET_DINKUMWARE` are not exposed in CMake because the detection
+	variables, this variable, @ref DEATH_TARGET_LIBCXX and
+	@ref DEATH_TARGET_DINKUMWARE are not exposed in CMake because the detection
 	is non-trivial.
 
 	Major libstdc++ version number can be accessed using the `_GLIBCXX_RELEASE`
@@ -422,7 +423,7 @@ namespace Death {
 	Defined if the library is built against Dinkumware STL implementation (used by
 	MSVC). Note that Clang is able to use this implementation as well.  Note that
 	unlike other `DEATH_TARGET_*` variables, this variable,
-	`DEATH_TARGET_LIBSTDCXX` and `DEATH_TARGET_DINKUMWARE` are not
+	@ref DEATH_TARGET_LIBSTDCXX and @ref DEATH_TARGET_DINKUMWARE are not
 	exposed in CMake because the detection is non-trivial.
 
 	The MSVC standard library is closely tied to a compiler version, thus
@@ -437,7 +438,7 @@ namespace Death {
 	Defined on @ref DEATH_TARGET_X86 "x86" if
 	[Streaming SIMD Extensions 2](https://en.wikipedia.org/wiki/SSE2) are enabled
 	at compile time (`-msse2` or higher on GCC/Clang, `/arch:SSE2` or higher on
-	MSVC). All x86-64 targets support SSE2. Implied by `DEATH_TARGET_SSE3`.
+	MSVC). All x86-64 targets support SSE2. Implied by @ref DEATH_TARGET_SSE3.
 */
 #define DEATH_TARGET_SSE2
 #undef DEATH_TARGET_SSE2
@@ -449,7 +450,7 @@ namespace Death {
 	[Streaming SIMD Extensions 3](https://en.wikipedia.org/wiki/SSE3) are enabled
 	at compile time (on GCC/Clang it's `-msse3` and higher, MSVC doesn't have a
 	direct option and it's only implied by `/arch:AVX`). Superset of
-	`DEATH_TARGET_SSE2`, implied by `DEATH_TARGET_SSSE3`.
+	@ref DEATH_TARGET_SSE2, implied by @ref DEATH_TARGET_SSSE3.
 */
 #define DEATH_TARGET_SSE3
 #undef DEATH_TARGET_SSE3
@@ -461,11 +462,11 @@ namespace Death {
 	[Supplemental Streaming SIMD Extensions 3](https://en.wikipedia.org/wiki/SSSE3)
 	are enabled at compile time (on GCC/Clang it's `-mssse3` and higher, MSVC
 	doesn't have a direct option and it's only implied by `/arch:AVX`). Superset of
-	`DEATH_TARGET_SSE3`, implied by `DEATH_TARGET_SSE41`.
+	@ref DEATH_TARGET_SSE3, implied by @ref DEATH_TARGET_SSE41.
 
 	Note that certain older AMD processors have [SSE4a](https://en.wikipedia.org/wiki/SSE4#SSE4a)
 	but neither SSSE3 nor SSE4.1. Both can be however treated as a subset of SSE4.1
-	to a large extent, and it's recommended to use `DEATH_TARGET_SSE41` to
+	to a large extent, and it's recommended to use @ref DEATH_TARGET_SSE41 to
 	detect those.
 */
 #define DEATH_TARGET_SSSE3
@@ -478,11 +479,11 @@ namespace Death {
 	[Streaming SIMD Extensions 4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1)
 	are enabled at compile time (on GCC/Clang it's `-msse4.1` and higher, MSVC
 	doesn't have a direct option and it's only implied by `/arch:AVX`). Superset of
-	`DEATH_TARGET_SSSE3`, implied by `DEATH_TARGET_SSE42`.
+	@ref DEATH_TARGET_SSSE3, implied by @ref DEATH_TARGET_SSE42.
 
 	Note that certain older AMD processors have [SSE4a](https://en.wikipedia.org/wiki/SSE4#SSE4a)
 	but neither SSSE3 nor SSE4.1. Both can be however treated as a subset of SSE4.1
-	to a large extent, and it's recommended to use `DEATH_TARGET_SSE41` to
+	to a large extent, and it's recommended to use @ref DEATH_TARGET_SSE41 to
 	detect those.
 */
 #define DEATH_TARGET_SSE41
@@ -495,7 +496,7 @@ namespace Death {
 	[Streaming SIMD Extensions 4.2](https://en.wikipedia.org/wiki/SSE4#SSE4.2)
 	are enabled at compile time (on GCC/Clang it's `-msse4.2` and higher, MSVC
 	doesn't have a direct option and it's only implied by `/arch:AVX`). Superset of
-	`DEATH_TARGET_SSE41`, implied by `DEATH_TARGET_AVX`.
+	@ref DEATH_TARGET_SSE41, implied by @ref DEATH_TARGET_AVX.
 */
 #define DEATH_TARGET_SSE42
 #undef DEATH_TARGET_SSE42
@@ -540,7 +541,7 @@ namespace Death {
 	behavior. To avoid wrong results if it isn't available, prefer to detect its
 	presence with @relativeref{Death,Cpu::runtimeFeatures()} instead.
 
-	Presence of this instruction set is *not* implied by `DEATH_TARGET_BMI2`.
+	Presence of this instruction set is *not* implied by @ref DEATH_TARGET_BMI2.
 */
 #define DEATH_TARGET_BMI1
 #undef DEATH_TARGET_BMI1
@@ -555,7 +556,7 @@ namespace Death {
 	at runtime, prefer to detect its presence with
 	@relativeref{Death,Cpu::runtimeFeatures()}.
 
-	Presence of this instruction set does *not* imply `DEATH_TARGET_BMI1`.
+	Presence of this instruction set does *not* imply @ref DEATH_TARGET_BMI1.
 */
 #define DEATH_TARGET_BMI2
 #undef DEATH_TARGET_BMI2
@@ -566,7 +567,7 @@ namespace Death {
 	Defined on @ref DEATH_TARGET_X86 "x86" if
 	[Advanced Vector Extensions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions)
 	are enabled at compile time (`-mavx` and higher on GCC/Clang, `/arch:AVX` on
-	MSVC). Superset of `DEATH_TARGET_SSE42`, implied by `DEATH_TARGET_AVX2`.
+	MSVC). Superset of @ref DEATH_TARGET_SSE42, implied by @ref DEATH_TARGET_AVX2.
 */
 #define DEATH_TARGET_AVX
 #undef DEATH_TARGET_AVX
@@ -606,7 +607,7 @@ namespace Death {
 	Defined on @ref DEATH_TARGET_X86 "x86" if
 	[Advanced Vector Extensions 2](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions_2)
 	are enabled at compile time (`-mavx2` and higher on GCC/Clang, `/arch:AVX2` on
-	MSVC). Superset of `DEATH_TARGET_AVX`, implied by `DEATH_TARGET_AVX512F`.
+	MSVC). Superset of @ref DEATH_TARGET_AVX, implied by @ref DEATH_TARGET_AVX512F.
 */
 #define DEATH_TARGET_AVX2
 #undef DEATH_TARGET_AVX2
@@ -616,7 +617,7 @@ namespace Death {
 
 	Defined on @ref DEATH_TARGET_X86 "x86" if [AVX-512](https://en.wikipedia.org/wiki/AVX-512)
 	Foundation instructions are enabled at compile time (`-mavx512f` and higher on
-	GCC/Clang, `/arch:AVX512` on MSVC). Superset of `DEATH_TARGET_AVX2`.
+	GCC/Clang, `/arch:AVX512` on MSVC). Superset of @ref DEATH_TARGET_AVX2.
 */
 #define DEATH_TARGET_AVX512F
 #undef DEATH_TARGET_AVX512F
@@ -627,7 +628,7 @@ namespace Death {
 	Defined on @ref DEATH_TARGET_ARM "ARM" if
 	[ARM NEON](https://en.wikipedia.org/wiki/ARM_architecture#Advanced_SIMD_(Neon))
 	instructions are enabled at compile time (`-mfpu=neon` on GCC/Clang, implicitly
-	supported on ARM64). Implied by `DEATH_TARGET_NEON_FMA`.
+	supported on ARM64). Implied by @ref DEATH_TARGET_NEON_FMA.
 
 	Apart from NEON, there's several other mutually incompatible ARM instruction
 	sets. Detection for these will be added when the platforms become more
@@ -651,8 +652,8 @@ namespace Death {
 	Defined on @ref DEATH_TARGET_ARM "ARM" if NEON FMA instructions are enabled
 	at compile time (`-mfpu=neon-vfpv4` on GCC/Clang on 32-bit ARM, implicitly
 	supported on ARM64). Not defined if FMA is only available for scalar code and
-	not for NEON. Superset of `DEATH_TARGET_NEON`, implied by
-	`DEATH_TARGET_NEON_FP16`.
+	not for NEON. Superset of @ref DEATH_TARGET_NEON, implied by
+	@ref DEATH_TARGET_NEON_FP16.
 */
 #define DEATH_TARGET_NEON_FMA
 #undef DEATH_TARGET_NEON_FMA
@@ -662,7 +663,7 @@ namespace Death {
 
 	Defined on @ref DEATH_TARGET_ARM "ARM" if ARMv8.2-a NEON FP16 vector
 	arithmetic support is enabled at compile time (`-march=armv8.2-a+fp16` on
-	GCC/Clang). Superset of `DEATH_TARGET_NEON_FMA`.
+	GCC/Clang). Superset of @ref DEATH_TARGET_NEON_FMA.
 */
 #define DEATH_TARGET_NEON_FP16
 #undef DEATH_TARGET_NEON_FP16

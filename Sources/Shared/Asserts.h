@@ -32,6 +32,7 @@ enum class TraceLevel {
 /** @brief This function needs to be provided by the target application to enable tracing, or @relativeref{Death,ITraceSink} can be used instead */
 void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_CURRENT_FUNCTION __PRETTY_FUNCTION__
 #	elif defined(DEATH_TARGET_MSVC)
@@ -39,6 +40,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	else
 #		define __DEATH_CURRENT_FUNCTION __func__
 #	endif
+#endif
 
 #	if defined(DEATH_DEBUG)
 #		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
