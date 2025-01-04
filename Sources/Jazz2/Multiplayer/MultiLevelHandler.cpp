@@ -74,6 +74,8 @@ namespace Jazz2::Multiplayer
 
 	bool MultiLevelHandler::Initialize(const LevelInitialization& levelInit)
 	{
+		DEATH_DEBUG_ASSERT(!levelInit.IsLocalSession);
+
 		_suppressRemoting = true;
 		bool initialized = LevelHandler::Initialize(levelInit);
 		_suppressRemoting = false;
@@ -106,6 +108,16 @@ namespace Jazz2::Multiplayer
 		resolver.PreloadMetadataAsync("Interactive/PlayerSpaz"_s);
 		resolver.PreloadMetadataAsync("Interactive/PlayerLori"_s);
 		return true;
+	}
+
+	bool MultiLevelHandler::IsLocalSession() const
+	{
+		return false;
+	}
+
+	bool MultiLevelHandler::IsPausable() const
+	{
+		return false;
 	}
 
 	float MultiLevelHandler::GetDefaultAmbientLight() const

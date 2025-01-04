@@ -22,7 +22,7 @@ namespace Jazz2::UI::Menu
 		MainMenu = 0x20
 	};
 
-	DEFINE_ENUM_OPERATORS(ChangedPreferencesType);
+	DEATH_ENUM_FLAGS(ChangedPreferencesType);
 
 	/** @brief Base interface of a menu container */
 	class IMenuContainer

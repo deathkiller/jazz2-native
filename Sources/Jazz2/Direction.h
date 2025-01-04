@@ -17,5 +17,5 @@ namespace Jazz2
 		Any = Up | Down | Left | Right
 	};
 
-	DEFINE_ENUM_OPERATORS(Direction);
+	DEATH_ENUM_FLAGS(Direction);
 }

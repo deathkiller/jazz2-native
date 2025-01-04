@@ -17,5 +17,5 @@ namespace Jazz2
 		OutdoorsOnly = 0x80
 	};
 
-	DEFINE_ENUM_OPERATORS(WeatherType);
+	DEATH_ENUM_FLAGS(WeatherType);
 }

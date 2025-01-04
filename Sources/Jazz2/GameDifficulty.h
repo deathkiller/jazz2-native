@@ -11,8 +11,6 @@ namespace Jazz2
 
 		Easy,
 		Normal,
-		Hard,
-
-		Multiplayer
+		Hard
 	};
 }

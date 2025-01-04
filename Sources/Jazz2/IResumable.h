@@ -14,6 +14,7 @@ namespace Jazz2
 	public:
 		IResumable() {}
 
+		/** @brief Serializes object state to a stream */
 		virtual bool SerializeResumableToStream(Stream& dest) = 0;
 	};
 }

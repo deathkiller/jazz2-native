@@ -1,9 +1,8 @@
 /** @file
 	@brief Proxy definitions for documentation purposes
 	
-	Definitions from this file are usually supplied via a compiler flag by CMake
-	or by including @ref CommonBase.h, which should be included everywhere. Don't
-	include this proxy file directly, it's not present in the include directory.
+	Definitions from this package are usually supplied via a compiler flag by CMake
+	or by including @ref CommonBase.h.
 */
 
 namespace Death {
@@ -140,6 +139,7 @@ namespace Death {
 	@brief Windows RT target
 
 	Defined if the library is built for Universal Windows Platform (Windows Store, Phone or Xbox).
+	In this case, @ref DEATH_TARGET_WINDOWS is also defined.
 */
 #define DEATH_TARGET_WINDOWS_RT
 #undef DEATH_TARGET_WINDOWS_RT
@@ -254,6 +254,24 @@ namespace Death {
 */
 #define DEATH_TARGET_WASM
 #undef DEATH_TARGET_WASM
+
+/**
+	@brief Whether the library is built for a 32-bit target
+
+	Defined if the library is built for a 32-bit target. Not defined on 64-bit platforms.
+*/
+#define DEATH_TARGET_32BIT
+#undef DEATH_TARGET_32BIT
+
+/**
+	@brief Whether the platform defaults to big-endian
+
+	Defined when the platform defaults to big-endian (such as HP/PA RISC, Motorola 68k,
+	Big-Endian MIPS, PowerPC and SPARC). Not defined on little-endian platforms (such
+	as x86 and ARM). This macro only reflects the usual architecture default.
+*/
+#define DEATH_TARGET_BIG_ENDIAN
+#undef DEATH_TARGET_BIG_ENDIAN
 
 /**
 	@brief GCC compiler

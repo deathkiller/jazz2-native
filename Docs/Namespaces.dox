@@ -53,7 +53,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 /** @file Shared/CommonBase.h
 	@brief Basic definitions
 	
-	Some configuration-specific and platform-specific definitions are also @ref CommonBase.dox "listed separately".
+	Some configuration-specific and platform-specific definitions, including `DEATH_TARGET_*`, are @ref Death.dox "listed separately".
 	Some of them are supplied via a compiler flag by CMake, the rest of them also requires this header file to work properly.
 */
 /** @file Shared/Common.h

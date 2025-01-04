@@ -93,6 +93,7 @@ namespace Jazz2
 		Tiles::TileMap* TileMap() override;
 
 		GameDifficulty Difficulty() const override;
+		bool IsLocalSession() const override;
 		bool IsPausable() const override;
 		bool IsReforged() const override;
 		bool CanPlayersCollide() const override;

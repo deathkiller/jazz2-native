@@ -47,13 +47,8 @@
 #	error DEATH_TARGET_X86 / _ARM / _POWERPC / _RISCV defined on Emscripten
 #endif
 
-/**
-	@brief Whether the library is built for a 32-bit target
-
-	Defined if the library is built for a 32-bit target. Not defined on 64-bit platforms.
-*/
 // 64-bit WebAssembly macro was tested by passing -m64 to emcc
-#if !defined(__x86_64) && !defined(_M_X64) && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(__powerpc64__) && !defined(__wasm64__)
+#if !defined(__x86_64) && !defined(_M_X64) && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(__powerpc64__) && !defined(__wasm64__) && !defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_TARGET_32BIT
 #endif
 
@@ -150,13 +145,6 @@
 #	define DEATH_TARGET_MINGW
 #endif
 
-/**
-	@brief Whether the platform defaults to big-endian
-
-	Defined when the platform defaults to big-endian (such as HP/PA RISC, Motorola 68k,
-	Big-Endian MIPS, PowerPC and SPARC). Not defined on little-endian platforms (such
-	as x86 and ARM). This macro only reflects the usual architecture default.
-*/
 // First checking the GCC/Clang built-in, if available. As a fallback do an architecture-based check, which is mirrored
 // from SDL_endian.h. Doing this *properly* would mean we can't decide this at compile time as some architectures allow
 // switching endianness at runtime (and worse, have per-page endianness). So let's pretend we never saw this article:
@@ -171,7 +159,7 @@
 	defined(__m68k__) || defined(mc68000) || defined(_M_M68K) || \
 	(defined(__MIPS__) && defined(__MIPSEB__)) || \
 	defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) || \
-	defined(__sparc__) || defined(DOXYGEN_GENERATING_OUTPUT)
+	defined(__sparc__)
 #	define DEATH_TARGET_BIG_ENDIAN
 #endif
 
@@ -343,7 +331,7 @@
 
 	Defined on platforms where the @cpp long double @ce type has a 64-bit precision instead of 80-bit,
 	thus same as @cpp double @ce. It's the case for @ref DEATH_TARGET_MSVC "MSVC" ([source](https://docs.microsoft.com/en-us/previous-versions/9cx8xs15(v=vs.140))),
-	32-bit @ref DEATH_TARGET_ANDROID "Android" (no reliable source found, sorry), @ref DEATH_TARGET_EMSCRIPTEN "Emscripten"
+	32-bit @ref DEATH_TARGET_ANDROID "Android", @ref DEATH_TARGET_EMSCRIPTEN "Emscripten"
 	and @ref DEATH_TARGET_APPLE "Mac" (but not @ref DEATH_TARGET_IOS "iOS") with @ref DEATH_TARGET_ARM "ARM"
 	processors. Emscripten is a bit special because it's @cpp long double @ce is sometimes 80-bit, but
 	its precision differs from the 80-bit representation elsewhere, so it's always treated as 64-bit.
@@ -607,7 +595,7 @@
 #endif
 
 /**
-	@brief Passthrough (expands to all arguments passed to it)
+	@brief Passthrough
 
 	Expands to all arguments passed to it. Inverse of @ref DEATH_NOOP().
 */
@@ -616,7 +604,7 @@
 #endif
 
 /**
-	@brief No-op (eats all arguments passed to it)
+	@brief No-op
 
 	Eats all arguments passed to it. Inverse of @ref DEATH_PASSTHROUGH(). Useful on compilers that
 	don't support defining function macros on command line

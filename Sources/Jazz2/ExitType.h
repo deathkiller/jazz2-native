@@ -20,5 +20,5 @@ namespace Jazz2
 		FastTransition = 0x80
 	};
 
-	DEFINE_ENUM_OPERATORS(ExitType);
+	DEATH_ENUM_FLAGS(ExitType);
 }

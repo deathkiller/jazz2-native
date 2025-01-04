@@ -584,7 +584,7 @@ namespace Death { namespace Containers {
 		std::size_t _size;
 	};
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Make a view on an array of specific length
 
 		Convenience alternative to @ref ArrayView::ArrayView(T*, std::size_t).
@@ -593,7 +593,7 @@ namespace Death { namespace Containers {
 		return ArrayView<T>{data, size};
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Make a view on fixed-size array
 
 		Convenience alternative to @ref ArrayView::ArrayView(U(&)[size]).
@@ -602,7 +602,7 @@ namespace Death { namespace Containers {
 		return ArrayView<T>{data};
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Make a view on an initializer list
 
 		Not present as a constructor in order to avoid accidental dangling references
@@ -612,7 +612,7 @@ namespace Death { namespace Containers {
 		return ArrayView<const T>{list.begin(), list.size()};
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Make a view on @ref StaticArrayView
 
 		Convenience alternative to @ref ArrayView::ArrayView(StaticArrayView<size, U>).
@@ -621,7 +621,7 @@ namespace Death { namespace Containers {
 		return ArrayView<T>{view};
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Make a view on a view
 
 		Equivalent to the implicit @ref ArrayView copy constructor --- it shouldn't be
@@ -631,12 +631,14 @@ namespace Death { namespace Containers {
 		return view;
 	}
 
-	/** @brief Make a view on an external type / from an external representation */
+	/** @relatesalso ArrayView
+		@brief Make a view on an external type / from an external representation
+	*/
 	template<class T, class U = decltype(Implementation::ErasedArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::declval<T&&>()))> constexpr U arrayView(T&& other) {
 		return Implementation::ErasedArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::forward<T>(other));
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Reinterpret-cast an array view
 
 		Size of the new array is calculated as @cpp view.size()*sizeof(T)/sizeof(U) @ce.
@@ -652,7 +654,7 @@ namespace Death { namespace Containers {
 		return { reinterpret_cast<U*>(view.begin()), size };
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Reinterpret-cast a void array view
 
 		Size of the new array is calculated as @cpp view.size()/sizeof(U) @ce.
@@ -667,13 +669,21 @@ namespace Death { namespace Containers {
 		return { reinterpret_cast<U*>(view.data()), size };
 	}
 
-	/** @overload */
+	/** @relatesalso ArrayView
+		@overload
+	*/
 	template<class U> ArrayView<U> arrayCast(ArrayView<void> view) {
 		auto out = arrayCast<const U>(ArrayView<const void>{view});
 		return ArrayView<U>{const_cast<U*>(out.data()), out.size()};
 	}
 
-	/** @brief Array view size */
+	/** @relatesalso ArrayView
+		@brief Array view size
+
+		Alias to @ref ArrayView::size(). See also @ref arraySize(T(&)[size_]) for
+		querying size of a C array and @ref arraySize(U(T::*)[size_]) for querying size
+		of a C array member.
+	*/
 	template<class T> constexpr std::size_t arraySize(ArrayView<T> view) {
 		return view.size();
 	}
@@ -980,7 +990,7 @@ namespace Death { namespace Containers {
 		T* _data;
 	};
 
-	/**
+	/** @relatesalso StaticArrayView
 		@brief Make a static view on an array
 
 		Convenience alternative to @ref StaticArrayView::StaticArrayView(T*).
@@ -989,7 +999,7 @@ namespace Death { namespace Containers {
 		return StaticArrayView<size, T>{data};
 	}
 
-	/**
+	/** @relatesalso StaticArrayView
 		@brief Make a static view on a fixed-size array
 
 		Convenience alternative to @ref StaticArrayView::StaticArrayView(U(&)[size_]).
@@ -998,7 +1008,7 @@ namespace Death { namespace Containers {
 		return StaticArrayView<size, T>{data};
 	}
 
-	/**
+	/** @relatesalso StaticArrayView
 		@brief Make a static view on a view
 
 		Equivalent to the implicit @ref StaticArrayView copy constructor --- it
@@ -1008,12 +1018,14 @@ namespace Death { namespace Containers {
 		return view;
 	}
 
-	/** @brief Make a static view on an external type / from an external representation */
+	/** @relatesalso StaticArrayView
+		@brief Make a static view on an external type / from an external representation
+	*/
 	template<class T, class U = decltype(Implementation::ErasedStaticArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::declval<T&&>()))> constexpr U staticArrayView(T&& other) {
 		return Implementation::ErasedStaticArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::forward<T>(other));
 	}
 
-	/**
+	/** @relatesalso StaticArrayView
 		@brief Reinterpret-cast a static array view
 
 		Size of the new array is calculated as @cpp view.size()*sizeof(T)/sizeof(U) @ce.
@@ -1028,7 +1040,7 @@ namespace Death { namespace Containers {
 		return StaticArrayView<newSize, U>{reinterpret_cast<U*>(view.begin())};
 	}
 
-	/**
+	/** @relatesalso StaticArrayView
 		@brief Reinterpret-cast a statically sized array
 
 		Calls @ref arrayCast(StaticArrayView<size, T>) with the argument converted to

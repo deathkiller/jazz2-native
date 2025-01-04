@@ -16,5 +16,5 @@ namespace Jazz2
 		IncrementLaps = 0x10
 	};
 
-	DEFINE_ENUM_OPERATORS(WarpFlags);
+	DEATH_ENUM_FLAGS(WarpFlags);
 }

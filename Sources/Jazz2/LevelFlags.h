@@ -19,5 +19,5 @@ namespace Jazz2
 		HasMultiplayerSpawnPoints = 0x100
 	};
 
-	DEFINE_ENUM_OPERATORS(LevelFlags);
+	DEATH_ENUM_FLAGS(LevelFlags);
 }

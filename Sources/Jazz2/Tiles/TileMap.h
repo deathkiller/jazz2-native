@@ -74,7 +74,7 @@ namespace Jazz2::Tiles
 		OneWay = 0x10
 	};
 
-	DEFINE_ENUM_OPERATORS(LayerTileFlags);
+	DEATH_ENUM_FLAGS(LayerTileFlags);
 
 	/** @brief Represents a single tile in a tile map layer */
 	struct LayerTile {
@@ -135,7 +135,7 @@ namespace Jazz2::Tiles
 			AdditiveBlending = 0x04
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(DebrisFlags);
+		DEATH_PRIVATE_ENUM_FLAGS(DebrisFlags);
 
 		/** @brief Describes a visual debris (particle effect) */
 		struct DestructibleDebris {

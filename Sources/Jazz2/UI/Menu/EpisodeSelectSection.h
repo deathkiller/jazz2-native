@@ -14,7 +14,7 @@ namespace Jazz2::UI::Menu
 		CheatsUsed = 0x10,
 	};
 
-	DEFINE_ENUM_OPERATORS(EpisodeDataFlags);
+	DEATH_ENUM_FLAGS(EpisodeDataFlags);
 
 	struct EpisodeData {
 		Episode Description;

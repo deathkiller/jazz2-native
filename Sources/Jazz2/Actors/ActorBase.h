@@ -113,7 +113,7 @@ namespace Jazz2::Actors
 		ExcludeSimilar = 0x8000000,
 	};
 
-	DEFINE_ENUM_OPERATORS(ActorState);
+	DEATH_ENUM_FLAGS(ActorState);
 
 	/** @brief Description how to initialize an actor */
 	struct ActorActivationDetails {
@@ -136,7 +136,7 @@ namespace Jazz2::Actors
 		Force = 0x02
 	};
 
-	DEFINE_ENUM_OPERATORS(MoveType);
+	DEATH_ENUM_FLAGS(MoveType);
 
 	/** @brief Actor renderer type */
 	enum class ActorRendererType {

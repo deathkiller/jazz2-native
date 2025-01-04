@@ -6,6 +6,7 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
+	/** @brief Remote player in online session */
 	class RemotePlayerOnServer : public PlayerOnServer
 	{
 		DEATH_RUNTIME_OBJECT(PlayerOnServer);

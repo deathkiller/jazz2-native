@@ -45,14 +45,23 @@ namespace Jazz2
 		static constexpr std::int32_t SpritePlaneZ = MainPlaneZ + 10;
 		static constexpr std::int32_t PlayerZ = MainPlaneZ + 20;
 
+		/** @brief Initializes the level handler from @ref LevelInitialization */
 		virtual bool Initialize(const LevelInitialization& levelInit) = 0;
+		/** @brief Initializes the level handler from resumable state */
 		virtual bool Initialize(Stream& src, std::uint16_t version) = 0;
 
+		/** @brief Returns event spawner for the level */
 		virtual Events::EventSpawner* EventSpawner() = 0;
+		/** @brief Returns event map for the level */
 		virtual Events::EventMap* EventMap() = 0;
+		/** @brief Returns tile map for the level */
 		virtual Tiles::TileMap* TileMap() = 0;
 
+		/** @brief Return current difficulty */
 		virtual GameDifficulty Difficulty() const = 0;
+		/** @brief Return `true` if the level handler is on a local session */
+		virtual bool IsLocalSession() const = 0;
+		/** @brief Return `true` if the level handler is pausable */
 		virtual bool IsPausable() const = 0;
 		virtual bool IsReforged() const = 0;
 		virtual bool CanPlayersCollide() const = 0;
