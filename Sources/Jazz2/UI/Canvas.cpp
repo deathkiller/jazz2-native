@@ -42,7 +42,7 @@ namespace Jazz2::UI
 			// Required to reset render command properly
 			//command->setTransformation(command->transformation());
 
-			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+			auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {
 				textureUniform->setIntValue(0); // GL_TEXTURE0
 			}

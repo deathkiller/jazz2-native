@@ -739,7 +739,7 @@ namespace Jazz2::UI::Menu
 				// Required to reset render command properly
 				//command->setTransformation(command->transformation());
 
-				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
@@ -908,7 +908,7 @@ namespace Jazz2::UI::Menu
 				// Required to reset render command properly
 				//command->setTransformation(command->transformation());
 
-				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
@@ -954,7 +954,7 @@ namespace Jazz2::UI::Menu
 				// Required to reset render command properly
 				//command->setTransformation(command->transformation());
 
-				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
@@ -1000,7 +1000,7 @@ namespace Jazz2::UI::Menu
 				// Required to reset render command properly
 				//command->setTransformation(command->transformation());
 
-				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
@@ -1058,7 +1058,7 @@ namespace Jazz2::UI::Menu
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
@@ -1071,7 +1071,7 @@ namespace Jazz2::UI::Menu
 			_outputRenderCommand.material().reserveUniformsDataMemory();
 			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-			GLUniformCache* textureUniform = _outputRenderCommand.material().uniform(Material::TextureUniformName);
+			auto* textureUniform = _outputRenderCommand.material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {
 				textureUniform->setIntValue(0); // GL_TEXTURE0
 			}
