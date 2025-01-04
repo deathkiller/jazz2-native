@@ -112,7 +112,7 @@ namespace Death { namespace IO {
 			Link = 0x80					// Not implemented
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(ItemFlags);
+		DEATH_PRIVATE_ENUM_FLAGS(ItemFlags);
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't

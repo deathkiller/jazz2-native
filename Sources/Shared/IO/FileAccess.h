@@ -19,6 +19,6 @@ namespace Death { namespace IO {
 		InheritHandle = 0x20
 	};
 
-	DEFINE_ENUM_OPERATORS(FileAccess);
+	DEATH_ENUM_FLAGS(FileAccess);
 	
 }}
