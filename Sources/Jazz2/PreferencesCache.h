@@ -23,7 +23,7 @@ namespace Jazz2
 		UseAntialiasing = 0x80
 	};
 
-	DEFINE_ENUM_OPERATORS(RescaleMode);
+	DEATH_ENUM_FLAGS(RescaleMode);
 
 	/** @brief Weapon wheel style */
 	enum class WeaponWheelStyle : std::uint8_t {
@@ -40,12 +40,14 @@ namespace Jazz2
 		Switch
 	};
 
+	/** @brief Episode completion overwrite mode */
 	enum class EpisodeEndOverwriteMode : std::uint8_t {
 		Always,
 		NoCheatsOnly,
 		HigherScoreOnly
 	};
 
+	/** @brief Unlockable episodes, mainly used if compiled with `SHAREWARE_DEMO_ONLY` */
 	enum class UnlockableEpisodes : std::uint32_t {
 		None = 0x00,
 
@@ -57,8 +59,9 @@ namespace Jazz2
 		TheSecretFiles = 0x20,
 	};
 
-	DEFINE_ENUM_OPERATORS(UnlockableEpisodes);
+	DEATH_ENUM_FLAGS(UnlockableEpisodes);
 
+	/** @brief Episode continuation flags, supports a bitwise combination of its member values */
 	enum class EpisodeContinuationFlags : std::uint8_t {
 		None = 0x00,
 
@@ -66,7 +69,7 @@ namespace Jazz2
 		CheatsUsed = 0x02
 	};
 
-	DEFINE_ENUM_OPERATORS(EpisodeContinuationFlags);
+	DEATH_ENUM_FLAGS(EpisodeContinuationFlags);
 
 #	pragma pack(push, 1)
 
@@ -201,7 +204,7 @@ namespace Jazz2
 			PlayStationExtendedSupport = 0x4000000,
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
+		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
 		static constexpr std::uint8_t FileVersion = 8;
 

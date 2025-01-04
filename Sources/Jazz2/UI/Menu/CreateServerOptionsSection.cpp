@@ -338,8 +338,9 @@ namespace Jazz2::UI::Menu
 	{
 		// TODO: _gameMode is ignored
 		PlayerType players[] = { (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType) };
-		LevelInitialization levelInit(_episodeName, StringView(_levelName), GameDifficulty::Multiplayer,
+		LevelInitialization levelInit(_episodeName, StringView(_levelName), GameDifficulty::Normal,
 			PreferencesCache::EnableReforgedGameplay, false, players);
+		levelInit.IsLocalSession = false;
 
 		if (!_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);

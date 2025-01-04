@@ -147,7 +147,7 @@ namespace Jazz2::UI
 			Ellipsized = 0x10
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(FormattedTextBlockFlags);
+		DEATH_PRIVATE_ENUM_FLAGS(FormattedTextBlockFlags);
 
 		SmallVector<Part, 1> _parts;
 		SmallVector<BackgroundPart, 0> _background;

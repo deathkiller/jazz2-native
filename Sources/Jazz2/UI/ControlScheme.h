@@ -27,7 +27,7 @@ namespace Jazz2::UI
 		AllowAll = AllowKeyboard | AllowGamepads
 	};
 
-	DEFINE_ENUM_OPERATORS(NavigationFlags);
+	DEATH_ENUM_FLAGS(NavigationFlags);
 
 	/** @brief Mapping target */
 	struct MappingTarget

@@ -20,6 +20,7 @@ using namespace nCine;
 
 namespace Jazz2
 {
+	/** @brief Flags for @ref GenericGraphicResource, supports a bitwise combination of its member values */
 	enum class GenericGraphicResourceFlags
 	{
 		None = 0x00,
@@ -27,7 +28,7 @@ namespace Jazz2
 		Referenced = 0x01
 	};
 
-	DEFINE_ENUM_OPERATORS(GenericGraphicResourceFlags);
+	DEATH_ENUM_FLAGS(GenericGraphicResourceFlags);
 
 	/** @brief Shared graphic resource */
 	struct GenericGraphicResource
@@ -62,6 +63,7 @@ namespace Jazz2
 		bool operator<(const GraphicResource& p) const noexcept;
 	};
 
+	/** @brief Flags for @ref GenericSoundResource, supports a bitwise combination of its member values */
 	enum class GenericSoundResourceFlags
 	{
 		None = 0x00,
@@ -69,7 +71,7 @@ namespace Jazz2
 		Referenced = 0x01
 	};
 
-	DEFINE_ENUM_OPERATORS(GenericSoundResourceFlags);
+	DEATH_ENUM_FLAGS(GenericSoundResourceFlags);
 
 	/** @brief Shared sound resource */
 	struct GenericSoundResource
@@ -88,6 +90,7 @@ namespace Jazz2
 		SoundResource() noexcept;
 	};
 
+	/** @brief Flags for @ref Metadata, supports a bitwise combination of its member values */
 	enum class MetadataFlags {
 		None = 0x00,
 
@@ -95,7 +98,7 @@ namespace Jazz2
 		AsyncFinalizingRequired = 0x02
 	};
 
-	DEFINE_ENUM_OPERATORS(MetadataFlags);
+	DEATH_ENUM_FLAGS(MetadataFlags);
 
 	/** @brief Contains assets for specific object type */
 	struct Metadata

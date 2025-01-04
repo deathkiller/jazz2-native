@@ -4,6 +4,7 @@
 
 namespace Jazz2
 {
+	/** @brief Well-known animation state */
 	enum class AnimState
 	{
 		// Bits 0, 1: Horizontal speed (none, low, med, high)
@@ -94,5 +95,5 @@ namespace Jazz2
 		Default = 0
 	};
 
-	DEFINE_ENUM_OPERATORS(AnimState);
+	DEATH_ENUM_FLAGS(AnimState);
 }

@@ -31,9 +31,8 @@ namespace Jazz2::Multiplayer
 
 		bool Initialize(const LevelInitialization& levelInit) override;
 
-		bool IsPausable() const override {
-			return false;
-		}
+		bool IsLocalSession() const override;
+		bool IsPausable() const override;
 
 		float GetDefaultAmbientLight() const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
@@ -142,7 +141,7 @@ namespace Jazz2::Multiplayer
 			JustWarped = 0x100
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(PlayerFlags);
+		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't

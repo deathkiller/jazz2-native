@@ -648,7 +648,7 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 	ZoneScopedNC("GameEventHandler::SaveCurrentStateIfAny", 0x888888);
 
 	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
-		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
+		if (levelHandler->IsLocalSession()) {
 			auto configDir = PreferencesCache::GetDirectory();
 			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
 			if (*s) {
@@ -858,7 +858,9 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				InvokeAsync([this, flags, gameMode, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
-					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Multiplayer, isReforged);
+					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Normal, isReforged);
+					levelInit.IsLocalSession = false;
+
 					auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
 					levelHandler->SetGameMode(gameMode);
 					levelHandler->Initialize(levelInit);
@@ -1548,7 +1550,7 @@ void GameEventHandler::CheckUpdates()
 bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
 #if defined(WITH_MULTIPLAYER)
-	if (levelInit.Difficulty == GameDifficulty::Multiplayer) {
+	if (!levelInit.IsLocalSession) {
 		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
@@ -1565,7 +1567,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 	SetStateHandler(std::move(levelHandler));
 
 #if !defined(SHAREWARE_DEMO_ONLY)
-	if (levelInit.Difficulty != GameDifficulty::Multiplayer) {
+	if (levelInit.IsLocalSession) {
 		RemoveResumableStateIfAny();
 	}
 #endif
@@ -1579,7 +1581,7 @@ void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, boo
 	std::size_t playerCount = levelInit.GetPlayerCount(&firstPlayer);
 
 	auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-	if (playerCount == 1 && levelInit.Difficulty != GameDifficulty::Multiplayer) {
+	if (playerCount == 1 && levelInit.IsLocalSession) {
 		std::int32_t seriesIndex = Menu::HighscoresSection::TryGetSeriesIndex(levelInit.LastEpisodeName, playerDied);
 		if (seriesIndex >= 0) {
 			mainMenu->SwitchToSection<Menu::HighscoresSection>(seriesIndex, levelInit.Difficulty,
@@ -1648,7 +1650,7 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 {
 	if (levelInit.EpisodeName.empty() || levelInit.LevelName.empty() ||
-		levelInit.EpisodeName == "unknown"_s || levelInit.Difficulty == GameDifficulty::Multiplayer ||
+		!levelInit.IsLocalSession || levelInit.EpisodeName == "unknown"_s ||
 		(levelInit.EpisodeName == "prince"_s && levelInit.LevelName == "trainer"_s)) {
 		return;
 	}

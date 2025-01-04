@@ -19,5 +19,5 @@ namespace Jazz2::Tiles
 		VerticalMove = 0x40,
 	};
 
-	DEFINE_ENUM_OPERATORS(TileDestructType);
+	DEATH_ENUM_FLAGS(TileDestructType);
 }

@@ -114,4 +114,18 @@ namespace Death { namespace Containers {
 
 		T* _reference;
 	};
+
+	/** @relatesalso Reference
+		@brief Make a reference wrapper
+
+		Convenience alternative to @ref Reference::Reference(T&).
+
+		Useful for example when iterating a list of variables that need to be modified
+		in-place, and where the code would otherwise have to be extra verbose or would
+		fall back to raw pointers and risk them getting @cpp nullptr @ce.
+	*/
+	template<class T> constexpr Reference<T> reference(T& reference) {
+		return Reference<T>{reference};
+	}
+
 }}

@@ -5,6 +5,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Base class of an item container */
 	class GenericContainer : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

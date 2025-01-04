@@ -983,8 +983,7 @@ namespace Death { namespace Containers {
 		#	pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
 		#endif
 
-		/**
-			@relatesalso Death::Containers::BasicStringView
+		/** @relatesalso Death::Containers::BasicStringView
 			@brief String view literal
 
 			The returned instance has both @ref StringViewFlags::Global and @ref StringViewFlags::NullTerminated set.

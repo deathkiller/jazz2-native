@@ -285,6 +285,11 @@ namespace Jazz2
 		return _difficulty;
 	}
 
+	bool LevelHandler::IsLocalSession() const
+	{
+		return true;
+	}
+
 	bool LevelHandler::IsPausable() const
 	{
 		return true;
@@ -1158,7 +1163,7 @@ namespace Jazz2
 			player->SetCheckpoint(pos, ambientLight);
 		}
 
-		if (_difficulty != GameDifficulty::Multiplayer) {
+		if (IsLocalSession()) {
 			_eventMap->CreateCheckpointForRollback();
 		}
 	}
@@ -1170,7 +1175,7 @@ namespace Jazz2
 
 		WarpCameraToTarget(player);
 
-		if (_difficulty != GameDifficulty::Multiplayer) {
+		if (IsLocalSession()) {
 			for (auto& actor : _actors) {
 				// Despawn all actors that were created after the last checkpoint
 				if (actor->_spawnFrames > _checkpointFrames && !actor->GetState(Actors::ActorState::PreserveOnRollback)) {
@@ -2200,7 +2205,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatKill()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				player->TakeDamage(INT32_MAX);
@@ -2213,7 +2218,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatGod()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
@@ -2226,7 +2231,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatNext()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 		} else {
@@ -2237,7 +2242,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatGuns()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
@@ -2252,7 +2257,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatRush()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				player->ActivateSugarRush(1300.0f);
@@ -2265,7 +2270,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatGems()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				player->AddGems(0, 5);
@@ -2278,7 +2283,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatBird()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				player->SpawnBird(0, player->GetPos());
@@ -2291,7 +2296,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatPower()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
@@ -2306,7 +2311,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatCoins()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			// Coins are synchronized automatically
 			_players[0]->AddCoins(5);
@@ -2318,7 +2323,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatMorph()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 
 			PlayerType newType;
@@ -2339,7 +2344,7 @@ namespace Jazz2
 
 	bool LevelHandler::CheatShield()
 	{
-		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+		if (PreferencesCache::AllowCheats && IsLocalSession() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);

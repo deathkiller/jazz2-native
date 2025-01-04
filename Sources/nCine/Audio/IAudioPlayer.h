@@ -138,7 +138,7 @@ namespace nCine
 			As2D = 0x04
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(PlayerFlags);
+		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
 
 		/// The OpenAL source id
 		unsigned int sourceId_;

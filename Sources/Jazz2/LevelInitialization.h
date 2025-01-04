@@ -40,6 +40,7 @@ namespace Jazz2
 		String EpisodeName;
 		String LastEpisodeName;
 
+		bool IsLocalSession;
 		GameDifficulty Difficulty;
 		bool IsReforged, CheatsUsed;
 		ExitType LastExitType;
@@ -48,12 +49,12 @@ namespace Jazz2
 		PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
 
 		LevelInitialization()
-			: ElapsedMilliseconds(0), PlayerCarryOvers{}
+			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 		}
 
 		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged)
-			: ElapsedMilliseconds(0), PlayerCarryOvers{}
+			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;
@@ -69,7 +70,7 @@ namespace Jazz2
 		}
 
 		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
-			: ElapsedMilliseconds(0), PlayerCarryOvers{}
+			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;
@@ -88,7 +89,7 @@ namespace Jazz2
 		}
 
 		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
-			: ElapsedMilliseconds(0), PlayerCarryOvers{}
+			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;
@@ -113,6 +114,7 @@ namespace Jazz2
 		{
 			LevelName = copy.LevelName;
 			EpisodeName = copy.EpisodeName;
+			IsLocalSession = copy.IsLocalSession;
 			Difficulty = copy.Difficulty;
 			IsReforged = copy.IsReforged;
 			CheatsUsed = copy.CheatsUsed;
@@ -127,6 +129,7 @@ namespace Jazz2
 		{
 			LevelName = std::move(move.LevelName);
 			EpisodeName = std::move(move.EpisodeName);
+			IsLocalSession = move.IsLocalSession;
 			Difficulty = move.Difficulty;
 			IsReforged = move.IsReforged;
 			CheatsUsed = move.CheatsUsed;

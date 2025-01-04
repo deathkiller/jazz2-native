@@ -714,7 +714,7 @@ namespace Death { namespace Containers {
 		D _deleter;
 	};
 
-	/**
+	/** @relatesalso Array
 		@brief Construct a list-initialized array
 
 		Convenience shortcut to the @ref Array::Array(InPlaceInitT, ArrayView<const T>)
@@ -725,7 +725,7 @@ namespace Death { namespace Containers {
 		return Array<T>{InPlaceInit, list};
 	}
 
-	/**
+	/** @relatesalso Array
 		@brief Construct a list-initialized array
 
 		Convenience shortcut to the @ref Array::Array(InPlaceInitT, std::initializer_list<T>)
@@ -736,7 +736,7 @@ namespace Death { namespace Containers {
 		return Array<T>{InPlaceInit, list};
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Make a view on an @ref Array
 
 		Convenience alternative to converting to an @ref ArrayView explicitly.
@@ -745,7 +745,7 @@ namespace Death { namespace Containers {
 		return ArrayView<T>{array};
 	}
 
-	/**
+	/** @relatesalso ArrayView
 		@brief Make a view on a const @ref Array
 
 		Convenience alternative to converting to an @ref ArrayView explicitly.
@@ -754,7 +754,9 @@ namespace Death { namespace Containers {
 		return ArrayView<const T>{array};
 	}
 
-	/** @brief Reinterpret-cast an array */
+	/** @relatesalso Array
+		@brief Reinterpret-cast an array
+	*/
 	template<class U, class T, class D> inline ArrayView<U> arrayCast(Array<T, D>& array) {
 		return arrayCast<U>(arrayView(array));
 	}

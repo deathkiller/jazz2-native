@@ -19,5 +19,5 @@ namespace Jazz2::Compatibility
 		All = 0xffff
 	};
 
-	DEFINE_ENUM_OPERATORS(JJ2Version);
+	DEATH_ENUM_FLAGS(JJ2Version);
 }

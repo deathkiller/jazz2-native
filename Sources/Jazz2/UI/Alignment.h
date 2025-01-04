@@ -23,5 +23,5 @@ namespace Jazz2::UI
 		VerticalMask = Top | Center | Bottom
 	};
 
-	DEFINE_ENUM_OPERATORS(Alignment);
+	DEATH_ENUM_FLAGS(Alignment);
 }

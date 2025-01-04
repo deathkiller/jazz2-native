@@ -12,7 +12,7 @@ namespace Jazz2::UI::Menu
 		CheatsUsed = 0x04
 	};
 
-	DEFINE_ENUM_OPERATORS(HighscoreFlags);
+	DEATH_ENUM_FLAGS(HighscoreFlags);
 
 	struct HighscoreItem {
 		String PlayerName;
