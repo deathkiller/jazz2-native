@@ -347,7 +347,7 @@ namespace Jazz2::UI
 		_renderCommand.material().reserveUniformsDataMemory();
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+		auto* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->intValue(0) != 0) {
 			textureUniform->setIntValue(0); // GL_TEXTURE0
 		}

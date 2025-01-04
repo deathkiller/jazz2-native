@@ -75,7 +75,7 @@ namespace Jazz2::Actors::Solid
 			piece.Command->material().reserveUniformsDataMemory();
 			piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-			GLUniformCache* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
+			auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {
 				textureUniform->setIntValue(0); // GL_TEXTURE0
 			}

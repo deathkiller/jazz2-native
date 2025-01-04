@@ -70,7 +70,9 @@ namespace nCine
 		static const ExpressionToken* ExtractPluralExpression(StringView nullEntry);
 	};
 
-	/** @brief Translates text in singular form using primary translation catalog */
+	/** @relatesalso I18n
+		@brief Translates text in singular form using primary translation catalog
+	*/
 	inline StringView _(const char* text)
 	{
 		I18n& i18n = I18n::Get();
@@ -78,7 +80,9 @@ namespace nCine
 		return (result ? result : StringView(text));
 	}
 	
-	/** @brief Translates text in singular form using primary translation catalog and specified @p context */
+	/** @relatesalso I18n
+		@brief Translates text in singular form using primary translation catalog and specified @p context
+	*/
 	inline StringView _x(StringView context, const char* text)
 	{
 		I18n& i18n = I18n::Get();
@@ -87,7 +91,9 @@ namespace nCine
 		return (result ? result : textView);
 	}
 
-	/** @brief Translates text in singular or plural form using primary translation catalog */
+	/** @relatesalso I18n
+		@brief Translates text in singular or plural form using primary translation catalog
+	*/
 	inline StringView _n(const char* singular, const char* plural, std::int32_t n)
 	{
 		I18n& i18n = I18n::Get();
@@ -97,7 +103,9 @@ namespace nCine
 		return (n == 1 ? singular : plural);
 	}
 
-	/** @brief Translates text in singular or plural form using primary translation catalog and specified @p context */
+	/** @relatesalso I18n
+		@brief Translates text in singular or plural form using primary translation catalog and specified @p context
+	*/
 	inline StringView _nx(StringView context, const char* singular, const char* plural, std::int32_t n)
 	{
 		I18n& i18n = I18n::Get();
@@ -108,8 +116,13 @@ namespace nCine
 		return (n == 1 ? singular : plural);
 	}
 
-	/** @brief Translates formatted text in singular form using primary translation catalog */
+	/** @relatesalso I18n
+		@brief Translates formatted text in singular form using primary translation catalog
+	*/
 	String _f(const char* text, ...);
-	/** @brief Translates formatted text in singular or plural form using primary translation catalog */
+
+	/** @relatesalso I18n
+		@brief Translates formatted text in singular or plural form using primary translation catalog
+	*/
 	String _fn(const char* singular, const char* plural, std::int32_t n, ...);
 }

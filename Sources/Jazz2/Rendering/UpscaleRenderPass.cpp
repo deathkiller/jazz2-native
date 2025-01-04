@@ -84,7 +84,7 @@ namespace Jazz2::Rendering
 				// Required to reset render command properly
 				_antialiasing._renderCommand.setTransformation(_antialiasing._renderCommand.transformation());
 
-				GLUniformCache* textureUniform = _antialiasing._renderCommand.material().uniform(Material::TextureUniformName);
+				auto* textureUniform = _antialiasing._renderCommand.material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
@@ -122,7 +122,7 @@ namespace Jazz2::Rendering
 			// Required to reset render command properly
 			_renderCommand.setTransformation(_renderCommand.transformation());
 
-			GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+			auto* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {
 				textureUniform->setIntValue(0); // GL_TEXTURE0
 			}

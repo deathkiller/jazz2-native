@@ -535,7 +535,7 @@ namespace Jazz2::UI
 						// Required to reset render command properly
 						//command->setTransformation(command->transformation());
 
-						GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+						auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->intValue(0) != 0) {
 							textureUniform->setIntValue(0); // GL_TEXTURE0
 						}
@@ -543,7 +543,7 @@ namespace Jazz2::UI
 
 					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(charWidth * scale, uvRect.H * scale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());

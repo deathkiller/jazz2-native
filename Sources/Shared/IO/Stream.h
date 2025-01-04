@@ -24,8 +24,11 @@ namespace Death { namespace IO {
 		@brief Specifies the position in a stream to use for seeking
 	*/
 	enum class SeekOrigin {
+		/** @brief Specifies the beginning of a stream */
 		Begin,
+		/** @brief Specifies the current position within a stream */
 		Current,
+		/** @brief Specifies the end of a stream */
 		End
 	};
 

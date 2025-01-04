@@ -1090,7 +1090,7 @@ namespace Jazz2::Actors
 					//command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-					GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+					auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 					if (textureUniform && textureUniform->intValue(0) != 0) {
 						textureUniform->setIntValue(0); // GL_TEXTURE0
 					}
@@ -1183,7 +1183,7 @@ namespace Jazz2::Actors
 							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->intValue(0) != 0) {
 								textureUniform->setIntValue(0); // GL_TEXTURE0
 							}
@@ -1214,7 +1214,7 @@ namespace Jazz2::Actors
 							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->intValue(0) != 0) {
 								textureUniform->setIntValue(0); // GL_TEXTURE0
 							}
@@ -1254,7 +1254,7 @@ namespace Jazz2::Actors
 						command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 						command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-						GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+						auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->intValue(0) != 0) {
 							textureUniform->setIntValue(0); // GL_TEXTURE0
 						}
@@ -1319,7 +1319,7 @@ namespace Jazz2::Actors
 							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->intValue(0) != 0) {
 								textureUniform->setIntValue(0); // GL_TEXTURE0
 							}
@@ -1350,7 +1350,7 @@ namespace Jazz2::Actors
 							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->intValue(0) != 0) {
 								textureUniform->setIntValue(0); // GL_TEXTURE0
 							}

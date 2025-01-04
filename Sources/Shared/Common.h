@@ -17,6 +17,12 @@
 #	endif
 #endif
 
+#ifdef DOXYGEN_GENERATING_OUTPUT
+/** @brief Mark an enum as a set of flags */
+#define DEATH_ENUM_FLAGS(type)
+/** @brief Mark a private enum as a set of flags */
+#define DEATH_PRIVATE_ENUM_FLAGS(type)
+#else
 namespace Death { namespace Implementation {
 	// Used as an approximation of std::underlying_type<T>
 	template<std::int32_t S> struct __EnumTypeForSize;
@@ -46,6 +52,7 @@ namespace Death { namespace Implementation {
 	friend inline DEATH_CONSTEXPR14 type operator~(type a) { return type(~((Death::Implementation::__EnumSizedInteger<type>::Type)a)); }																		\
 	friend inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
 	friend inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }
+#endif
 
 /** @brief Workaround for MSVC not being able to expand `__VA_ARGS__` correctly, would work with `/Zc:preprocessor`. Source: https://stackoverflow.com/a/5134656 */
 #define DEATH_HELPER_EXPAND(...) __VA_ARGS__
