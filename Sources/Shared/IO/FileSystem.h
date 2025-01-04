@@ -54,7 +54,7 @@ namespace Death { namespace IO {
 			Execute = 0x04
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(Permission);
+		DEATH_PRIVATE_ENUM_FLAGS(Permission);
 
 		/** @brief Options that modify behavior of @ref Directory, supports a bitwise combination of its member values */
 		enum class EnumerationOptions
@@ -69,7 +69,7 @@ namespace Death { namespace IO {
 			SkipSpecial = 0x04
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(EnumerationOptions);
+		DEATH_PRIVATE_ENUM_FLAGS(EnumerationOptions);
 
 		/** @brief Handles directory traversal, should be used as iterator */
 		class Directory

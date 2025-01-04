@@ -3709,7 +3709,7 @@ namespace Death { namespace Backward {
 		CreateMemoryDump = 0x08
 	};
 
-	DEFINE_ENUM_OPERATORS(Flags);
+	DEATH_ENUM_FLAGS(Flags);
 
 	/*************** PRINTER ***************/
 
@@ -4380,7 +4380,7 @@ namespace Death { namespace Backward {
 			ValidRequestingThreadId = 0x02
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(MinidumpRawInfoValidity);
+		DEATH_PRIVATE_ENUM_FLAGS(MinidumpRawInfoValidity);
 
 		struct MinidumpRawInfo {
 			MinidumpRawInfoValidity Validity;

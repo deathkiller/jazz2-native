@@ -694,7 +694,7 @@ namespace Death { namespace Containers {
 #endif
 	};
 
-	/**
+	/** @relatesalso StaticArray
 		@brief Make a view on a @ref StaticArray
 
 		Convenience alternative to converting to an @ref ArrayView explicitly.
@@ -703,7 +703,7 @@ namespace Death { namespace Containers {
 		return ArrayView<T>{array};
 	}
 
-	/**
+	/** @relatesalso StaticArray
 		@brief Make a view on a const @ref StaticArray
 
 		Convenience alternative to converting to an @ref ArrayView explicitly.
@@ -712,7 +712,7 @@ namespace Death { namespace Containers {
 		return ArrayView<const T>{array};
 	}
 
-	/**
+	/** @relatesalso StaticArray
 		@brief Make a static view on a @ref StaticArray
 
 		Convenience alternative to converting to an @ref StaticArrayView explicitly.
@@ -721,7 +721,7 @@ namespace Death { namespace Containers {
 		return StaticArrayView<size, T>{array};
 	}
 
-	/**
+	/** @relatesalso StaticArray
 		@brief Make a static view on a const @ref StaticArray
 
 		Convenience alternative to converting to an @ref StaticArrayView explicitly.
@@ -730,7 +730,7 @@ namespace Death { namespace Containers {
 		return StaticArrayView<size, const T>{array};
 	}
 
-	/**
+	/** @relatesalso StaticArray
 		@brief Reinterpret-cast a static array
 
 		See @ref arrayCast(StaticArrayView<size, T>) for more information.
@@ -744,7 +744,7 @@ namespace Death { namespace Containers {
 		return arrayCast<const U>(staticArrayView(array));
 	}
 
-	/**
+	/** @relatesalso StaticArray
 		@brief Static array size
 
 		See @ref arraySize(ArrayView<T>) for more information.

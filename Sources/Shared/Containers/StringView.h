@@ -60,7 +60,7 @@ namespace Death { namespace Containers {
 		 NullTerminated = std::size_t{1} << (sizeof(std::size_t) * 8 - 2)
 	};
 
-	DEFINE_ENUM_OPERATORS(StringViewFlags);
+	DEATH_ENUM_FLAGS(StringViewFlags);
 
 	namespace Implementation
 	{
