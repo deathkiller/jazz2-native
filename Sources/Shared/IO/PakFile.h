@@ -11,6 +11,7 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/** @brief Preferred file compression, used in @ref PakWritter::AddFile() */
 	enum class PakPreferredCompression
 	{
 		None,

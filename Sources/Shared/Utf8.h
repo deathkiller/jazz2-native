@@ -12,7 +12,7 @@ namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Number of UTF-8 characters in a string
+		@brief Number of characters in a UTF-8 string
 	*/
 	std::size_t GetLength(Containers::ArrayView<const char> text);
 
@@ -48,7 +48,7 @@ namespace Death { namespace Utf8 {
 	}
 
 	/**
-		@brief Convert a UTF-32 character to UTF-8
+		@brief Converts a UTF-32 character to UTF-8
 		@param[in]  character   UTF-32 character to convert
 		@param[out] result      Where to put the UTF-8 result
 
@@ -59,7 +59,14 @@ namespace Death { namespace Utf8 {
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 	/**
-		@brief Widen a UTF-8 string to UTF-16 for use with Windows Unicode APIs
+		@brief Widens a UTF-8 string to UTF-16 for use with Windows Unicode APIs
+		
+		Converts a UTF-8 string to a wide-string (UTF-16) representation. The primary purpose of this API
+		is easy interaction with Windows Unicode APIs. If the text is not empty, the returned array
+		contains a sentinel null terminator (i.e., not counted into its size).
+		
+		@partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" to be
+			used when dealing directly with Windows Unicode APIs.
 	*/
 	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize = -1);
 
@@ -88,7 +95,13 @@ namespace Death { namespace Utf8 {
 #endif
 
 	/**
-		@brief Narrow a UTF-16 string to UTF-8 for use with Windows Unicode APIs
+		@brief Narrows a UTF-16 string to UTF-8 for use with Windows Unicode APIs
+		
+		Converts a wide-string (UTF-16) to a UTF-8 representation. The primary purpose is easy
+		interaction with Windows Unicode APIs.
+		
+		@partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" to be
+			used when dealing directly with Windows Unicode APIs.
 	*/
 	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize = -1);
 

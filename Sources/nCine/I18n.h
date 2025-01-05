@@ -70,7 +70,7 @@ namespace nCine
 		static const ExpressionToken* ExtractPluralExpression(StringView nullEntry);
 	};
 
-	/** @relatesalso I18n
+	/** @relates I18n
 		@brief Translates text in singular form using primary translation catalog
 	*/
 	inline StringView _(const char* text)
@@ -80,7 +80,7 @@ namespace nCine
 		return (result ? result : StringView(text));
 	}
 	
-	/** @relatesalso I18n
+	/** @relates I18n
 		@brief Translates text in singular form using primary translation catalog and specified @p context
 	*/
 	inline StringView _x(StringView context, const char* text)
@@ -91,7 +91,7 @@ namespace nCine
 		return (result ? result : textView);
 	}
 
-	/** @relatesalso I18n
+	/** @relates I18n
 		@brief Translates text in singular or plural form using primary translation catalog
 	*/
 	inline StringView _n(const char* singular, const char* plural, std::int32_t n)
@@ -103,7 +103,7 @@ namespace nCine
 		return (n == 1 ? singular : plural);
 	}
 
-	/** @relatesalso I18n
+	/** @relates I18n
 		@brief Translates text in singular or plural form using primary translation catalog and specified @p context
 	*/
 	inline StringView _nx(StringView context, const char* singular, const char* plural, std::int32_t n)
@@ -116,12 +116,12 @@ namespace nCine
 		return (n == 1 ? singular : plural);
 	}
 
-	/** @relatesalso I18n
+	/** @relates I18n
 		@brief Translates formatted text in singular form using primary translation catalog
 	*/
 	String _f(const char* text, ...);
 
-	/** @relatesalso I18n
+	/** @relates I18n
 		@brief Translates formatted text in singular or plural form using primary translation catalog
 	*/
 	String _fn(const char* singular, const char* plural, std::int32_t n, ...);
