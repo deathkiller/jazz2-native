@@ -56,18 +56,26 @@ namespace Jazz2
 
 		~ContentResolver();
 		
+		/** @brief Releases all cached assets */
 		void Release();
 
+		/** @brief Returns path to `"Content"` directory */
 		StringView GetContentPath() const;
+		/** @brief Returns path to `"Cache"` directory */
 		StringView GetCachePath() const;
+		/** @brief Returns path to `"Source"` directory */
 		StringView GetSourcePath() const;
 
+		/** @brief Returns `true` if the application is running in headless mode (i.e., without any display) */
 		bool IsHeadless() const;
+		/** @brief Sets whether the application is running in headless mode */
 		void SetHeadless(bool value);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
+		/** @brief Scans the `"Content"` and `"Cache"` directories for `.pak` files and mounts them  */
 		void RemountPaks();
 #endif
+		/** @brief Tries to find and open a file specified by the path */
 		std::unique_ptr<Stream> OpenContentFile(StringView path);
 
 		void BeginLoading();
