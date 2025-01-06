@@ -116,7 +116,7 @@ namespace Jazz2
 		GraphicResource* FindAnimation(AnimState state) noexcept;
 	};
 	
-	/** @brief Describes (singleplayer) episode */
+	/** @brief Describes a (singleplayer) episode */
 	struct Episode
 	{
 		String Name;

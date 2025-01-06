@@ -13,7 +13,13 @@ namespace nCine
 	template<class K, class T, class HashFunc, unsigned int Capacity, bool IsConst> struct StaticHashMapHelperTraits;
 
 	/// Static hashmap implementation with open addressing and leapfrog probing (version with static allocation)
-	template<class K, class T, unsigned int Capacity, class HashFunc = FNV1aHashFunc<K>>
+	template<class K, class T, unsigned int Capacity,
+#if defined(DEATH_TARGET_32BIT)
+		class HashFunc = CityHash32Func<K>
+#else
+		class HashFunc = CityHash64Func<K>
+#endif
+	>
 	class StaticHashMap
 	{
 	public:

@@ -28,6 +28,9 @@ been extensively modified, so the original documentation no longer matches the c
 - **Nintendo Switch** using [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman)
 - **Xbox** (Universal Windows Platform) using ANGLE/Mesa
 - **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
+
+Additionally, OpenGL 3.0, OpenGL|ES 3.0 or WebGL 2.0 is required to run the application.
+However, Google ANGLE or Mesa can be used to translate OpenGL calls to the native graphics API.
 	
 @section mainpage-license License
 
@@ -45,7 +48,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	Most of the definitions are defined in @ref CommonBase.h, which should be included (even transitively)
 	in every `.h`/`.cpp` file to avoid issues due to missing configuration-specific and platform-specific definitions.
 	Most of the time @ref Common.h should be used instead, which also includes @cpp <cstddef> @ce, @cpp <cstdint> @ce
-	and some function-like macros.
+	and some function-like macros. For event tracing and assertions, see @ref Asserts.h.
 */
 /** @file Shared/Asserts.h
 	@brief Asserts and event tracing
@@ -513,7 +516,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	@brief Namespace @ref Jazz2::UI::Menu
 */
 /** @namespace Jazz2::UI::Menu
-	@brief Menu sections
+	@brief Menu implementation
 */
 /** @namespace Jazz2::UI::Menu::Resources
 	@brief Common menu resources defined in `Metadata/UI/MainMenu.res`

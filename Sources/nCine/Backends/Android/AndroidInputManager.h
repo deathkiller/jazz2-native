@@ -131,7 +131,7 @@ namespace nCine::Backends
 		friend class AndroidInputManager;
 	};
 
-	/// The class for parsing and dispatching Android input events
+	/// Class for parsing and dispatching Android input events
 	class AndroidInputManager : public IInputManager
 	{
 		friend class nCine::AndroidApplication;

@@ -124,7 +124,7 @@ namespace nCine::Backends
 		friend class SdlInputManager;
 	};
 
-	/// The class for parsing and dispatching SDL input events
+	/// Class for parsing and dispatching SDL input events
 	class SdlInputManager : public IInputManager
 	{
 	public:

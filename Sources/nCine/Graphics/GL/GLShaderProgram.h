@@ -47,7 +47,7 @@ namespace nCine
 			Deferred
 		};
 
-		static constexpr int DefaultBatchSize = -1;
+		static constexpr std::int32_t DefaultBatchSize = -1;
 
 		GLShaderProgram();
 		explicit GLShaderProgram(QueryPhase queryPhase);

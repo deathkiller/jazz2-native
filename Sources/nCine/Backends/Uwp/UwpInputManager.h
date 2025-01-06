@@ -103,7 +103,7 @@ namespace nCine::Backends
 		float axesValuesState_[MaxNumAxes];
 	};
 
-	/// The class for dispatching UWP input events
+	/// Class for dispatching UWP input events
 	class UwpInputManager : public IInputManager
 	{
 		friend class UwpJoystickState;
