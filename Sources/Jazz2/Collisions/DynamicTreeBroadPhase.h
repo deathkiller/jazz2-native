@@ -94,13 +94,13 @@ namespace Jazz2::Collisions
 		template <typename T>
 		void Query(T* callback, const AABBf& aabb) const;
 
-		/// Ray-cast against the proxies in the tree. This relies on the callback
-		/// to perform a exact ray-cast in the case were the proxy contains a shape.
-		/// The callback also performs the any collision filtering. This has performance
-		/// roughly equal to k * log(n), where k is the number of collisions and n is the
-		/// number of proxies in the tree.
-		/// @param input the ray-cast input data. The ray extends from p1 to p1 + maxFraction * (p2 - p1).
-		/// @param callback a callback class that is called for each proxy that is hit by the ray.
+		// Ray-cast against the proxies in the tree. This relies on the callback
+		// to perform a exact ray-cast in the case were the proxy contains a shape.
+		// The callback also performs the any collision filtering. This has performance
+		// roughly equal to k * log(n), where k is the number of collisions and n is the
+		// number of proxies in the tree.
+		// @param input the ray-cast input data. The ray extends from p1 to p1 + maxFraction * (p2 - p1).
+		// @param callback a callback class that is called for each proxy that is hit by the ray.
 		//template <typename T>
 		//void RayCast(T* callback, const b2RayCastInput& input) const;
 
