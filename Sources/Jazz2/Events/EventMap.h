@@ -17,7 +17,7 @@ namespace Jazz2::Tiles
 namespace Jazz2::Events
 {
 	/** @brief Represents event map, spawns triggered objects */
-	class EventMap
+	class EventMap // : public IResumable
 	{
 	public:
 		/** @brief Represents an event tile */

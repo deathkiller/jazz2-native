@@ -68,20 +68,11 @@ namespace Death { namespace Utf8 {
 		@partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" to be
 			used when dealing directly with Windows Unicode APIs.
 	*/
-	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize = -1);
-
-	/** @overload */
-	template<std::int32_t size>
-	std::int32_t ToUtf16(wchar_t (&destination)[size], const char* source, std::int32_t sourceSize = -1) {
-		return ToUtf16(destination, size, source, sourceSize);
-	}
-
-	/** @overload */
 	Containers::Array<wchar_t> ToUtf16(const char* source, std::int32_t sourceSize);
 
 	/** @overload */
-	inline Containers::Array<wchar_t> ToUtf16(const Containers::StringView source) {
-		return ToUtf16(source.data(), static_cast<std::int32_t>(source.size()));
+	inline Containers::Array<wchar_t> ToUtf16(Containers::StringView source) {
+		return ToUtf16(source.data(), std::int32_t(source.size()));
 	}
 
 	/** @overload */
@@ -94,6 +85,15 @@ namespace Death { namespace Utf8 {
 	}
 #endif
 
+	/** @overload */
+	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize = -1);
+
+	/** @overload */
+	template<std::int32_t size>
+	std::int32_t ToUtf16(wchar_t (&destination)[size], const char* source, std::int32_t sourceSize = -1) {
+		return ToUtf16(destination, size, source, sourceSize);
+	}
+
 	/**
 		@brief Narrows a UTF-16 string to UTF-8 for use with Windows Unicode APIs
 		
@@ -103,20 +103,11 @@ namespace Death { namespace Utf8 {
 		@partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" to be
 			used when dealing directly with Windows Unicode APIs.
 	*/
-	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize = -1);
-
-	/** @overload */
-	template<std::int32_t size>
-	std::int32_t FromUtf16(char (&destination)[size], const wchar_t* source, std::int32_t sourceSize = -1) {
-		return FromUtf16(destination, size, source, sourceSize);
-	}
-
-	/** @overload */
 	Containers::String FromUtf16(const wchar_t* source, std::int32_t sourceSize);
 
 	/** @overload */
-	inline Containers::String FromUtf16(const Containers::ArrayView<const wchar_t> source) {
-		return FromUtf16(source.data(), static_cast<std::int32_t>(source.size()));
+	inline Containers::String FromUtf16(Containers::ArrayView<const wchar_t> source) {
+		return FromUtf16(source.data(), std::int32_t(source.size()));
 	}
 
 	/** @overload */
@@ -128,6 +119,15 @@ namespace Death { namespace Utf8 {
 		return FromUtf16(source, -1);
 	}
 #endif
+
+	/** @overload */
+	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize = -1);
+
+	/** @overload */
+	template<std::int32_t size>
+	std::int32_t FromUtf16(char (&destination)[size], const wchar_t* source, std::int32_t sourceSize = -1) {
+		return FromUtf16(destination, size, source, sourceSize);
+	}
 
 #endif
 }}

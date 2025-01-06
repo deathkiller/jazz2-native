@@ -35,9 +35,13 @@ namespace Jazz2::UI
 		void OnKeyPressed(const KeyboardEvent& event);
 		void OnTextInput(const TextInputEvent& event);
 
+		/** @brief Returns `true` if the console is visible */
 		bool IsVisible() const;
+		/** @brief Shows the console */
 		void Show();
+		/** @brief Hides the console */
 		void Hide();
+		/** @brief Writes a line to the console history */
 		void WriteLine(MessageLevel level, String line);
 
 	private:

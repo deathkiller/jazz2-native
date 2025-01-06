@@ -116,7 +116,7 @@ namespace Jazz2::Tiles
 	};
 
 	/** @brief Represents a renderable tile map, consists of multiple layers */
-	class TileMap : public SceneNode
+	class TileMap : public SceneNode // , public IResumable
 	{
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;

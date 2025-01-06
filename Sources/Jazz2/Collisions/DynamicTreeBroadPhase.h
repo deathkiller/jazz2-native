@@ -47,38 +47,50 @@ namespace Jazz2::Collisions
 		DynamicTreeBroadPhase();
 		~DynamicTreeBroadPhase();
 
-		/// Create a proxy with an initial AABB. Pairs are not reported until
-		/// UpdatePairs is called.
+		/**
+		 * @brief Creates a proxy with an initial AABB
+		 * 
+		 * Pairs are not reported until @ref UpdatePairs() is called
+		 */
 		std::int32_t CreateProxy(const AABBf& aabb, void* userData);
 
-		/// Destroy a proxy. It is up to the client to remove any pairs.
+		/** @brief Destroys a proxy */
 		void DestroyProxy(std::int32_t proxyId);
 
-		/// Call MoveProxy as many times as you like, then when you are done
-		/// call UpdatePairs to finalized the proxy pairs (for your time step).
+		/**
+		 * @brief Move a proxy with a swepted AABB
+		 *
+		 * If the proxy has moved outside of its fattened AABB, then the proxy is removed from
+		 * the tree and re-inserted. Otherwise the function returns immediately.
+		 *
+		 * @return `true` if the proxy was re-inserted.
+		 */
 		void MoveProxy(std::int32_t proxyId, const AABBf& aabb, Vector2f displacement);
 
-		/// Call to trigger a re-processing of it's pairs on the next call to UpdatePairs.
+		/** @brief Triggers a re-processing of it's pairs on the next call to @ref UpdatePairs() */
 		void TouchProxy(std::int32_t proxyId);
 
-		/// Get the fat AABB for a proxy.
+		/** @brief Returns the fat AABB for a proxy */
 		const AABBf& GetFatAABB(std::int32_t proxyId) const;
 
-		/// Get user data from a proxy. Returns nullptr if the id is invalid.
+		/** @brief Returns a user data from a proxy */
 		void* GetUserData(std::int32_t proxyId) const;
 
-		/// Test overlap of fat AABBs.
+		/** @brief Tests overlap of fat AABBs */
 		bool TestOverlap(std::int32_t proxyIdA, std::int32_t proxyIdB) const;
 
-		/// Get the number of proxies.
+		/** @brief Returns the number of proxies */
 		std::int32_t GetProxyCount() const;
 
-		/// Update the pairs. This results in pair callbacks. This can only add pairs.
+		/** @brief Updates the pairs */
 		template <typename T>
 		void UpdatePairs(T* callback);
 
-		/// Query an AABB for overlapping proxies. The callback class
-		/// is called for each proxy that overlaps the supplied AABB.
+		/**
+		 * @brief Queries an AABB for overlapping proxies
+		 * 
+		 * The callback class is called for each proxy that overlaps the supplied AABB.
+		 */
 		template <typename T>
 		void Query(T* callback, const AABBf& aabb) const;
 
@@ -92,18 +104,22 @@ namespace Jazz2::Collisions
 		//template <typename T>
 		//void RayCast(T* callback, const b2RayCastInput& input) const;
 
-		/// Get the height of the embedded tree.
+		/** @brief Returns the height of the embedded tree */
 		std::int32_t GetTreeHeight() const;
 
-		/// Get the balance of the embedded tree.
+		/** @brief Returns the balance of the embedded tree */
 		std::int32_t GetTreeBalance() const;
 
-		/// Get the quality metric of the embedded tree.
+		/** @brief Returns the quality metric of the embedded tree */
 		float GetTreeQuality() const;
 
-		/// Shift the world origin. Useful for large worlds.
-		/// The shift formula is: position -= newOrigin
-		/// @param newOrigin the new origin with respect to the old origin
+		/**
+		 * @brief Shift the world origin
+		 *
+		 * Useful for large worlds. The shift formula is: `position -= newOrigin`
+		 *
+		 * @param newOrigin the new origin with respect to the old origin
+		 */
 		void ShiftOrigin(Vector2f newOrigin);
 
 	private:

@@ -29,7 +29,7 @@ namespace Jazz2::UI
 
 	DEATH_ENUM_FLAGS(NavigationFlags);
 
-	/** @brief Mapping target */
+	/** @brief Control mapping target */
 	struct MappingTarget
 	{
 		std::uint32_t Data;
@@ -57,7 +57,9 @@ namespace Jazz2::UI
 		ControlScheme() = delete;
 		~ControlScheme() = delete;
 
+		/** @brief Maximum number of supported local players */
 		static constexpr std::int32_t MaxSupportedPlayers = 4;
+		/** @brief Maximum number of supported connected gamepads */
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
 		static constexpr std::int32_t MaxConnectedGamepads = 4;
 #else
@@ -72,8 +74,11 @@ namespace Jazz2::UI
 		/** @brief Fetches navigation input according to the current bindings */
 		static std::uint32_t FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags = NavigationFlags::AllowAll);
 
+		/** @brief Returns the entire mapping configuration */
 		static ArrayView<ControlSchemeMapping> GetAllMappings();
+		/** @brief Returns a mapping configuration for a given player index */
 		static ArrayView<ControlSchemeMapping> GetMappings(std::int32_t playerIdx);
+		/** @brief Returns a gamepad index for a given player index */
 		static std::int32_t GetGamepadForPlayer(std::int32_t playerIdx);
 
 		static MappingTarget CreateTarget(Keys key);
