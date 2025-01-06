@@ -15,6 +15,7 @@ using namespace nCine;
 
 namespace Jazz2::Compatibility
 {
+	/** @brief Default palette for original animation */
 	enum class JJ2DefaultPalette {
 		Sprite,
 		Menu

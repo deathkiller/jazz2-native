@@ -15,7 +15,7 @@ namespace nCine
 
 namespace nCine::Backends
 {
-	/// The class for setting up JNI and initialize requests classes
+	/// Class for setting up JNI and initialize requests classes
 	class AndroidJniHelper
 	{
 		friend class nCine::AndroidApplication;
@@ -43,7 +43,7 @@ namespace nCine::Backends
 		static String ExceptionToString(JNIEnv* env, jthrowable exception);
 	};
 
-	/// The base class for the classes handling JNI requests to the Android API
+	/// Base class for handling of JNI requests to the Android API
 	class AndroidJniClass
 	{
 	public:
@@ -77,7 +77,7 @@ namespace nCine::Backends
 		friend class AndroidJniHelper;
 	};
 
-	/// A class to handle JNI requests to `android.os.Build.VERSION`
+	/// Handles JNI requests to `android.os.Build.VERSION`
 	class AndroidJniClass_Version
 	{
 	public:
@@ -87,7 +87,7 @@ namespace nCine::Backends
 		static String deviceModel();
 	};
 
-	/// A class to handle JNI requests to `android.view.InputDevice.MotionRange`
+	/// Handles JNI requests to `android.view.InputDevice.MotionRange`
 	class AndroidJniClass_MotionRange : public AndroidJniClass
 	{
 	public:
@@ -101,7 +101,7 @@ namespace nCine::Backends
 		static jmethodID midGetRange_;
 	};
 
-	/// A class to handle JNI requests to `android.view.InputDevice`
+	/// Handles JNI requests to `android.view.InputDevice`
 	class AndroidJniClass_InputDevice : public AndroidJniClass
 	{
 	public:
@@ -131,7 +131,7 @@ namespace nCine::Backends
 		static jmethodID midHasKeys_;
 	};
 
-	/// A class to handle JNI requests to `android.view.KeyCharacterMap`
+	/// Handles JNI requests to `android.view.KeyCharacterMap`
 	class AndroidJniClass_KeyCharacterMap : public AndroidJniClass
 	{
 	public:
@@ -145,7 +145,7 @@ namespace nCine::Backends
 		static jmethodID midDeviceHasKey_;
 	};
 
-	/// A class to handle JNI requests to `android.view.KeyEvent`
+	/// Handles JNI requests to `android.view.KeyEvent`
 	class AndroidJniClass_KeyEvent : public AndroidJniClass
 	{
 	public:
@@ -169,7 +169,7 @@ namespace nCine::Backends
 		static jmethodID midIsPrintingKey_;
 	};
 	
-	/// A class to handle JNI requests to `android.view.Display.Mode`
+	/// Handles JNI requests to `android.view.Display.Mode`
 	class AndroidJniClass_DisplayMode : public AndroidJniClass
 	{
 	public:
@@ -191,7 +191,7 @@ namespace nCine::Backends
 		static jmethodID midGetRefreshRate_;
 	};
 
-	/// A class to handle JNI requests to `android.view.Display`
+	/// Handles JNI requests to `android.view.Display`
 	class AndroidJniClass_Display : public AndroidJniClass
 	{
 	public:
@@ -213,7 +213,7 @@ namespace nCine::Backends
 		static jmethodID midGetSupportedModes_;
 	};
 
-	/// A class to handle JNI requests to `android.app.Activity`
+	/// Handles JNI requests to `android.app.Activity`
 	class AndroidJniWrap_Activity
 	{
 	public:
@@ -235,7 +235,7 @@ namespace nCine::Backends
 		static jmethodID midOpenUrl_;
 	};
 
-	/// A class to handle JNI requests to `android.view.inputmethod.InputMethodManager`
+	/// Handles JNI requests to `android.view.inputmethod.InputMethodManager`
 	class AndroidJniWrap_InputMethodManager
 	{
 	public:
@@ -252,7 +252,7 @@ namespace nCine::Backends
 		static const int HIDE_IMPLICIT_ONLY = 1;
 	};
 
-	/// A class to handle JNI requests to `android.hardware.display.DisplayManager`
+	/// Handles JNI requests to `android.hardware.display.DisplayManager`
 	class AndroidJniWrap_DisplayManager
 	{
 	public:
@@ -269,7 +269,7 @@ namespace nCine::Backends
 		static jmethodID midGetDisplays_;
 	};
 
-	/// A class to handle JNI requests to `android.provider.Settings.Secure`
+	/// Handles JNI requests to `android.provider.Settings.Secure`
 	class AndroidJniWrap_Secure
 	{
 	public:

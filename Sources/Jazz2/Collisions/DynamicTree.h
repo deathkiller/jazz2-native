@@ -34,9 +34,12 @@ namespace Jazz2::Collisions
 	using nCine::AABBf;
 	using nCine::Vector2f;
 
+	/** @brief Invalid node */
 	constexpr std::int32_t NullNode = -1;
 	constexpr float LengthUnitsPerMeter = 1.0f;
+	/** @brief AABB size extension to fat AABB */
 	constexpr float AabbExtension = 0.1f * LengthUnitsPerMeter;
+	/** @brief AABB movement multiplier */
 	constexpr float AabbMultiplier = 4.0f;
 
 	/**
@@ -88,17 +91,17 @@ namespace Jazz2::Collisions
 		/** @brief Constructing the tree initializes the node pool */
 		DynamicTree();
 
-		/** @brief Destroy the tree, freeing the node pool */
+		/** @brief Destroys the tree, freeing the node pool */
 		~DynamicTree();
 
-		/** @brief Create a proxy */
+		/** @brief Creates a proxy */
 		std::int32_t CreateProxy(const AABBf& aabb, void* userData);
 
-		/** @brief Destroy a proxy */
+		/** @brief Destroys a proxy */
 		void DestroyProxy(std::int32_t proxyId);
 
 		/**
-		 * @brief Move a proxy with a swepted AABB
+		 * @brief Moves a proxy with a swepted AABB
 		 * 
 		 * If the proxy has moved outside of its fattened AABB, then the proxy is removed from
 		 * the tree and re-inserted. Otherwise the function returns immediately.
@@ -108,7 +111,7 @@ namespace Jazz2::Collisions
 		bool MoveProxy(std::int32_t proxyId, const AABBf& aabb1, Vector2f displacement);
 
 		/**
-		 * @brief Get proxy user data.
+		 * @brief Returns proxy user data.
 		 * 
 		 * @return @return the proxy user data or `0` if the id is invalid.
 		 */
@@ -122,7 +125,7 @@ namespace Jazz2::Collisions
 		/** @brief Returns the fat AABB for a proxy */
 		const AABBf& GetFatAABB(std::int32_t proxyId) const;
 
-		/** @brief Query an AABB for overlapping proxies, the callback is called for each proxy that overlaps the supplied AABB */
+		/** @brief Queries an AABB for overlapping proxies, the callback is called for each proxy that overlaps the supplied AABB */
 		template<typename T>
 		void Query(T* callback, const AABBf& aabb) const;
 
@@ -138,10 +141,10 @@ namespace Jazz2::Collisions
 		//template <typename T>
 		//void RayCast(T* callback, const b2RayCastInput& input) const;
 
-		/** @brief Validate this tree, for testing only */
+		/** @brief Validates this tree --- for testing only */
 		void Validate() const;
 
-		/** @brief Compute the height of the binary tree in @f$ \mathcal{O}(n) @f$ time, should not be called often */
+		/** @brief Computes the height of the binary tree in @f$ \mathcal{O}(n) @f$ time, should not be called often */
 		std::int32_t GetHeight() const;
 
 		/** @brief Returns the maximum balance of an node in the tree
@@ -153,11 +156,11 @@ namespace Jazz2::Collisions
 		/** @brief Returns the ratio of the sum of the node areas to the root area */
 		float GetAreaRatio() const;
 
-		/** @brief Build an optimal tree. Very expensive, for testing only */
+		/** @brief Build an optimal tree, very expensive --- for testing only */
 		void RebuildBottomUp();
 
 		/**
-		 * @brief Shift the world origin
+		 * @brief Shifts the world origin
 		 * 
 		 * Useful for large worlds. The shift formula is: `position -= newOrigin`
 		 * 

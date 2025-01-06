@@ -166,7 +166,7 @@ namespace nCine::Backends
 	};
 #endif
 
-	/// The class for parsing and dispatching Qt5 input events
+	/// Class for parsing and dispatching Qt5 input events
 	class Qt5InputManager : public IInputManager
 	{
 	public:

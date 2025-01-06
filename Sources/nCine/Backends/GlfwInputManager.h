@@ -132,7 +132,7 @@ namespace nCine::Backends
 		friend class GlfwInputManager;
 	};
 
-	/// The class for parsing and dispatching GLFW input events
+	/// Slass for parsing and dispatching GLFW input events
 	class GlfwInputManager : public IInputManager
 	{
 	public:

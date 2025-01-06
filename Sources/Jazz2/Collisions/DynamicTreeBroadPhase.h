@@ -58,7 +58,7 @@ namespace Jazz2::Collisions
 		void DestroyProxy(std::int32_t proxyId);
 
 		/**
-		 * @brief Move a proxy with a swepted AABB
+		 * @brief Moves a proxy with a swepted AABB
 		 *
 		 * If the proxy has moved outside of its fattened AABB, then the proxy is removed from
 		 * the tree and re-inserted. Otherwise the function returns immediately.
