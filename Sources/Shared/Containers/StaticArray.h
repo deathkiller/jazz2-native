@@ -211,8 +211,7 @@ namespace Death { namespace Containers {
 		typedef T Type;
 
 		enum : std::size_t {
-			/** @brief Array size */
-			Size = size_
+			Size = size_	/**< Array size */
 		};
 
 		/**

@@ -129,7 +129,7 @@ namespace Jazz2::Collisions
 		template<typename T>
 		void Query(T* callback, const AABBf& aabb) const;
 
-		///** @brief Ray-cast against the proxies in the tree
+		///* @brief Ray-cast against the proxies in the tree
 		// *
 		// * This relies on the callback to perform a exact ray-cast in the case were the proxy contains a shape.
 		// * The callback also performs the any collision filtering. This has performance

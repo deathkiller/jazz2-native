@@ -139,6 +139,8 @@ cmake -B build -D CMAKE_BUILD_TYPE=Debug -A x64 ^
 Additionaly, a code-signing certificate is required to create an installable `.msixbundle` package.
 See @ref building-config-params-uwp for more details.
 
+- - -
+
 @subsection building-config-params Build configuration parameters
 
 By default it tries to find the first available backend for the currently installed
@@ -170,7 +172,7 @@ The following parameters can be used to customize the build:
     -   `TRACY_VERSION_TAG` allows to specify version
 -   `NCINE_WITH_RENDERDOC` (default `OFF`) --- Enable integration with [RenderDoc](https://renderdoc.org/)
 -   `NCINE_DATA_DIR` (default @cpp "./Content" @ce) --- Path to @cpp "Content" @ce game data directory
-    -   Some build targets include `"Content"` directory directly inside the executable package
+    -   Some build targets include @cpp "Content" @ce directory directly inside the executable package
 
 @subsubsection building-config-params-android Platform-specific parameters for Android
 
@@ -215,7 +217,7 @@ The following parameters can be used to customize the build:
 -   `DEATH_TRACE` (default `ON`) --- Enable runtime event tracing
 -   `DEATH_TRACE_ASYNC` (default `ON` if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
 -   `NCINE_ARCH_EXTENSIONS` --- Target CPU architecture extensions (instruction sets)
-    -   See [`/arch` (MSVC)](https://learn.microsoft.com/en-us/cpp/build/reference/arch-minimum-cpu-architecture?view=msvc-170) and [`-m` (GCC)](https://gcc.gnu.org/onlinedocs/gcc-8.4.0/gcc/Submodel-Options.html) for more details.
+    -   See documentation of [`/arch` (MSVC)](https://learn.microsoft.com/en-us/cpp/build/reference/arch-minimum-cpu-architecture?view=msvc-170) and [`-m` (GCC)](https://gcc.gnu.org/onlinedocs/gcc-8.4.0/gcc/Submodel-Options.html) for more details.
 -   `NCINE_INPUT_DEBUGGING` (default `OFF`) --- Enable (gamepad) input debugging and logging
 -   `NCINE_LINKTIME_OPTIMIZATION` (default `ON`) --- Compile with link time optimization
 -   `NCINE_ADDRESS_SANITIZER` (default `OFF`) --- Enable AddressSanitizer memory error detector

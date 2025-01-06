@@ -29,12 +29,13 @@ been extensively modified, so the original documentation no longer matches the c
 - **Xbox** (Universal Windows Platform) using ANGLE/Mesa
 - **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
 
-Additionally, OpenGL 3.0, OpenGL|ES 3.0 or WebGL 2.0 is required to run the application.
-However, Google ANGLE or Mesa can be used to translate OpenGL calls to the native graphics API.
+Additionally, **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 is required to run the application.
+However, Google ANGLE or Mesa can be used to translate OpenGL calls to the native graphics API. See also
+@ref death-partialsupport "the list of partially supported features" that depend on specific platforms.
 	
 @section mainpage-license License
 
-This project is licensed under the terms of the [GNU General Public License v3.0](https://github.com/deathkiller/jazz2/blob/master/LICENSE).
+This project is licensed under the terms of the [GNU General Public License v3.0](https://github.com/deathkiller/jazz2-native/blob/master/LICENSE).
 
 */
 
@@ -51,7 +52,7 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 	and some function-like macros. For event tracing and assertions, see @ref Asserts.h.
 */
 /** @file Shared/Asserts.h
-	@brief Asserts and event tracing
+	@brief Assertions and event tracing
 */
 /** @file Shared/CommonBase.h
 	@brief Basic definitions
