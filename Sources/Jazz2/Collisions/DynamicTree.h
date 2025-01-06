@@ -76,7 +76,7 @@ namespace Jazz2::Collisions
 
 		A dynamic tree arranges data in a binary tree to accelerate
 		queries such as volume queries and ray casts. Leafs are proxies
-		with an AABB. In the tree we expand the proxy AABB by b2_fatAABBFactor
+		with an AABB. In the tree we expand the proxy AABB by @ref AabbExtension
 		so that the proxy AABB is bigger than the client object. This allows the client
 		object to move by small amounts without triggering a tree update.
 
@@ -85,69 +85,84 @@ namespace Jazz2::Collisions
 	class DynamicTree
 	{
 	public:
-		/// Constructing the tree initializes the node pool.
+		/** @brief Constructing the tree initializes the node pool */
 		DynamicTree();
 
-		/// Destroy the tree, freeing the node pool.
+		/** @brief Destroy the tree, freeing the node pool */
 		~DynamicTree();
 
-		/// Create a proxy. Provide a tight fitting AABB and a userData pointer.
+		/** @brief Create a proxy */
 		std::int32_t CreateProxy(const AABBf& aabb, void* userData);
 
-		/// Destroy a proxy. This asserts if the id is invalid.
+		/** @brief Destroy a proxy */
 		void DestroyProxy(std::int32_t proxyId);
 
-		/// Move a proxy with a swepted AABB. If the proxy has moved outside of its fattened AABB,
-		/// then the proxy is removed from the tree and re-inserted. Otherwise
-		/// the function returns immediately.
-		/// @return true if the proxy was re-inserted.
+		/**
+		 * @brief Move a proxy with a swepted AABB
+		 * 
+		 * If the proxy has moved outside of its fattened AABB, then the proxy is removed from
+		 * the tree and re-inserted. Otherwise the function returns immediately.
+		 * 
+		 * @return `true` if the proxy was re-inserted.
+		 */
 		bool MoveProxy(std::int32_t proxyId, const AABBf& aabb1, Vector2f displacement);
 
-		/// Get proxy user data.
-		/// @return the proxy user data or 0 if the id is invalid.
+		/**
+		 * @brief Get proxy user data.
+		 * 
+		 * @return @return the proxy user data or `0` if the id is invalid.
+		 */
 		void* GetUserData(std::int32_t proxyId) const;
 
+		/** @brief Returns `true` if a proxy was moved */
 		bool WasMoved(std::int32_t proxyId) const;
+		/** @brief Clears moved status of a proxy */
 		void ClearMoved(std::int32_t proxyId);
 
-		/// Get the fat AABB for a proxy.
+		/** @brief Returns the fat AABB for a proxy */
 		const AABBf& GetFatAABB(std::int32_t proxyId) const;
 
-		/// Query an AABB for overlapping proxies. The callback class
-		/// is called for each proxy that overlaps the supplied AABB.
+		/** @brief Query an AABB for overlapping proxies, the callback is called for each proxy that overlaps the supplied AABB */
 		template<typename T>
 		void Query(T* callback, const AABBf& aabb) const;
 
-		/// Ray-cast against the proxies in the tree. This relies on the callback
-		/// to perform a exact ray-cast in the case were the proxy contains a shape.
-		/// The callback also performs the any collision filtering. This has performance
-		/// roughly equal to k * log(n), where k is the number of collisions and n is the
-		/// number of proxies in the tree.
-		/// @param input the ray-cast input data. The ray extends from p1 to p1 + maxFraction * (p2 - p1).
-		/// @param callback a callback class that is called for each proxy that is hit by the ray.
+		///** @brief Ray-cast against the proxies in the tree
+		// *
+		// * This relies on the callback to perform a exact ray-cast in the case were the proxy contains a shape.
+		// * The callback also performs the any collision filtering. This has performance
+		// * roughly equal to @f$ k * log(n) @f$, where k is the number of collisions and n is the
+		// * number of proxies in the tree.
+		// * @param input the ray-cast input data. The ray extends from p1 to p1 + maxFraction * (p2 - p1).
+		// * @param callback a callback class that is called for each proxy that is hit by the ray.
+		// */
 		//template <typename T>
 		//void RayCast(T* callback, const b2RayCastInput& input) const;
 
-		/// Validate this tree. For testing.
+		/** @brief Validate this tree, for testing only */
 		void Validate() const;
 
-		/// Compute the height of the binary tree in O(N) time. Should not be
-		/// called often.
+		/** @brief Compute the height of the binary tree in @f$ \mathcal{O}(n) @f$ time, should not be called often */
 		std::int32_t GetHeight() const;
 
-		/// Get the maximum balance of an node in the tree. The balance is the difference
-		/// in height of the two children of a node.
+		/** @brief Returns the maximum balance of an node in the tree
+		 *
+		 * The balance is the difference in height of the two children of a node.
+		 */
 		std::int32_t GetMaxBalance() const;
 
-		/// Get the ratio of the sum of the node areas to the root area.
+		/** @brief Returns the ratio of the sum of the node areas to the root area */
 		float GetAreaRatio() const;
 
-		/// Build an optimal tree. Very expensive. For testing.
+		/** @brief Build an optimal tree. Very expensive, for testing only */
 		void RebuildBottomUp();
 
-		/// Shift the world origin. Useful for large worlds.
-		/// The shift formula is: position -= newOrigin
-		/// @param newOrigin the new origin with respect to the old origin
+		/**
+		 * @brief Shift the world origin
+		 * 
+		 * Useful for large worlds. The shift formula is: `position -= newOrigin`
+		 * 
+		 * @param newOrigin the new origin with respect to the old origin
+		 */
 		void ShiftOrigin(Vector2f newOrigin);
 
 	private:

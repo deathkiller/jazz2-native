@@ -14,9 +14,13 @@ namespace Jazz2::UI
 	class Font
 	{
 	public:
+		/** @brief Default (yellow) font color */
 		static constexpr Colorf DefaultColor = Colorf(333.0f, 333.0f, 333.0f, 1.0f);
+		/** @brief Default (yellow) font color with 60% transparency */
 		static constexpr Colorf TransparentDefaultColor = Colorf(333.0f, 333.0f, 333.0f, 0.6f);
+		/** @brief Random (rainbow) font color */
 		static constexpr Colorf RandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.5f);
+		/** @brief Random (rainbow) font color with 60% transparency */
 		static constexpr Colorf TransparentRandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.36f);
 
 		Font(StringView path, const std::uint32_t* palette);

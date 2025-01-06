@@ -162,8 +162,6 @@ namespace nCine::Backends
 	private:
 		static constexpr int MaxNumJoysticks = 16;
 
-		static SDL_Window *windowHandle_;
-
 		static TouchEvent touchEvent_;
 		static SdlMouseState mouseState_;
 		static SdlMouseEvent mouseEvent_;

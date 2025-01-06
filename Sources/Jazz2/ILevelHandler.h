@@ -63,27 +63,40 @@ namespace Jazz2
 		virtual bool IsLocalSession() const = 0;
 		/** @brief Return `true` if the level handler is pausable */
 		virtual bool IsPausable() const = 0;
+		/** @brief Returns `true` if Reforged Gameplay is enabled */
 		virtual bool IsReforged() const = 0;
 		virtual bool CanPlayersCollide() const = 0;
+		/** @brief Returns level bounds including camera limits */
 		virtual Recti LevelBounds() const = 0;
+		/** @brief Returns number of elapsed frames */
 		virtual float ElapsedFrames() const = 0;
+		/** @brief Returns current gravity force */
 		virtual float Gravity() const = 0;
+		/** @brief Returns current water level */
 		virtual float WaterLevel() const = 0;
 
+		/** @brief Returns list of actors (objects) */
 		virtual ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const = 0;
+		/** @brief Returns list of players */
 		virtual ArrayView<Actors::Player* const> GetPlayers() const = 0;
 
 		virtual float GetDefaultAmbientLight() const = 0;
 		virtual float GetAmbientLight(Actors::Player* player) const = 0;
 		virtual void SetAmbientLight(Actors::Player* player, float value) = 0;
 
+		/** @brief Adds an actor (object) to the level */
 		virtual void AddActor(std::shared_ptr<Actors::ActorBase> actor) = 0;
 
+		/** @brief Plays a sound effect for a given actor (object) */
 		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
+		/** @brief Plays a common sound effect */
 		virtual std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
+		/** @brief Warps a camera to its assigned target */
 		virtual void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) = 0;
+		/** @brief Returns `true` if a specified AABB is empty */
 		virtual bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) = 0;
 
+		/** @overload */
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params)
 		{
 			Actors::ActorBase* collider;

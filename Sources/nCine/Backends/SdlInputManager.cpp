@@ -26,8 +26,6 @@ namespace nCine
 
 namespace nCine::Backends
 {
-	SDL_Window* SdlInputManager::windowHandle_ = nullptr;
-
 	TouchEvent SdlInputManager::touchEvent_;
 	SdlMouseState SdlInputManager::mouseState_;
 	SdlMouseEvent SdlInputManager::mouseEvent_;
