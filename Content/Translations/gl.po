@@ -1374,7 +1374,7 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
 #, c-format
 msgid "Level \"%s\" initialized"
-msgstr ""
+msgstr "Nivel \"%s\" inicializado"
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/LevelHandler.cpp:700
@@ -1389,7 +1389,7 @@ msgstr "Para máis información, visita a páxina web oficial:"
 #: Sources/Jazz2/LevelHandler.cpp:2314 Sources/Jazz2/LevelHandler.cpp:2335
 #: Sources/Jazz2/LevelHandler.cpp:2349
 msgid "Cheats are not allowed in current context"
-msgstr ""
+msgstr "Non se permiten trucos no contexto actual"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2325
@@ -1441,11 +1441,11 @@ msgstr "Cooperativo"
 
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2332
 msgid "Unknown"
-msgstr ""
+msgstr "Descoñecido"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:275
 msgid "Unknown command"
-msgstr ""
+msgstr "Orde descoñecida"
 
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
@@ -1610,7 +1610,7 @@ msgstr "Vibración do mando"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
 msgid "Extended PlayStation™ Support"
-msgstr ""
+msgstr "Compatibilidade extendida para PlayStation™"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
