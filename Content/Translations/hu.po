@@ -1696,7 +1696,7 @@ msgstr "Epizód újrakezdése"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:229
 #, c-format
 msgid "You must complete \"%s\" first!"
-msgstr "Előbb be kell fejeznie a „%s”-t!"
+msgstr "Előbb be kell fejeznie a \"%s\"-t!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:233
@@ -1725,7 +1725,7 @@ msgstr "Az új funkciőkkal szeretnék játszani."
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:53
 msgid "Welcome to \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementation!"
 msgstr ""
-"Üdvözöljük a \f[c:#9e7056]Jazz Jackrabbit 2[/c]\f újraimplementálásában!"
+"Üdvözöljük a \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] újraimplementálásában!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57

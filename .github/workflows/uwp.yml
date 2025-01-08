@@ -89,11 +89,14 @@ jobs:
     - name: 'Create Package'
       run: |
         cd .\_build\_out\
-        $cerPath = (Get-ChildItem -Path .\*\*.cer)[0]
+        $cerFiles = Get-ChildItem -Path .\*\*.cer
         $msixbundlePath = (Get-ChildItem -Path .\*\*.msixbundle)[0]
         cd ..\..\
         mkdir _package
-        Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.cer"
+        if ($cerFiles.Count -gt 0) {
+          $cerPath = $cerFiles[0]
+          Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.cer"
+        }
         Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.msixbundle"
         Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         

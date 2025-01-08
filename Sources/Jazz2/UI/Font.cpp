@@ -475,7 +475,7 @@ namespace Jazz2::UI
 					}
 				}
 
-				while (cursor.first != ']') {
+				while (cursor.first != ']' && cursor.first < text.size()) {
 					cursor = Utf8::NextChar(text, cursor.second);
 				}
 			} else {
