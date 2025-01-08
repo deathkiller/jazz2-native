@@ -27,7 +27,7 @@ The project itself is licensed under the terms of the [GNU General Public Licens
     -   [**Dear ImGui**](https://github.com/ocornut/imgui) library --- licensed under [MIT License](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
     -   [**ENet**](https://github.com/lsalzman/enet) library --- licensed under [MIT License](https://github.com/lsalzman/enet/blob/master/LICENSE)
     -   [**libopenmpt**](https://lib.openmpt.org/libopenmpt/) library --- licensed under [BSD-3-Clause License](https://github.com/OpenMPT/openmpt/blob/master/LICENSE)
-    -   [**libvorbis **](https://github.com/xiph/vorbis) library --- licensed under [BSD-3-Clause License](https://github.com/xiph/vorbis/blob/master/COPYING)
+    -   [**libvorbis**](https://github.com/xiph/vorbis) library --- licensed under [BSD-3-Clause License](https://github.com/xiph/vorbis/blob/master/COPYING)
     -   [**libwebp**](https://github.com/webmproject/libwebp) library --- licensed under [BSD-3-Clause License](https://github.com/webmproject/libwebp/blob/main/COPYING)
     -   [**Mesa**](https://mesa3d.org/) library --- licensed under [MIT License](https://docs.mesa3d.org/license.html)
 
