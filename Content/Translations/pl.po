@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-12-22 15:36+0100\n"
 "PO-Revision-Date: \n"
-"Last-Translator: \n"
+"Last-Translator: Patrxgt\n"
 "Language-Team: Patrxgt & Klodizaur\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 "
 "|| n%100>14) ? 1 : 2);\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.4.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1382,7 +1382,7 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
 #, c-format
 msgid "Level \"%s\" initialized"
-msgstr ""
+msgstr "Poziom \"%s\" zainicjowany"
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/LevelHandler.cpp:700
@@ -1397,7 +1397,7 @@ msgstr "Po więcej informacji, odwiedź naszą oficjalną stronę internetową:"
 #: Sources/Jazz2/LevelHandler.cpp:2314 Sources/Jazz2/LevelHandler.cpp:2335
 #: Sources/Jazz2/LevelHandler.cpp:2349
 msgid "Cheats are not allowed in current context"
-msgstr ""
+msgstr "Kody oszustw nie są aktualnie dozwolone"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2325
@@ -1449,11 +1449,11 @@ msgstr "Współpraca"
 
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2332
 msgid "Unknown"
-msgstr ""
+msgstr "Nieznane"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:275
 msgid "Unknown command"
-msgstr ""
+msgstr "Nieznana komenda"
 
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
@@ -1617,7 +1617,7 @@ msgstr "Wibracje kontrolera"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
 msgid "Extended PlayStation™ Support"
-msgstr ""
+msgstr "Rozszerzone wsparcie PlayStation™"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
@@ -1631,7 +1631,7 @@ msgstr "Diagnostyka sterowania"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:44
 msgid "Reset To Default"
-msgstr ""
+msgstr "Przywróć domyślne"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:77
@@ -1876,7 +1876,7 @@ msgstr "Tryb skalowania"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:21
 msgid "Resolution"
-msgstr ""
+msgstr "Rozdzielczość"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:29
@@ -1891,7 +1891,7 @@ msgstr "Wygładzanie krawędzi"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
 msgid "Background Dithering"
-msgstr ""
+msgstr "Wygładzanie tła"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
@@ -1972,9 +1972,9 @@ msgstr "Wybierz pliki oryginalnej gry, aby odblokować dodatkowe epizody"
 #, c-format
 msgid "Processing of %i file..."
 msgid_plural "Processing of %i files..."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Przetwarzanie %i pliku..."
+msgstr[1] "Przetwarzanie %i plików..."
+msgstr[2] "Przetwarzanie %i plików..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:80
 msgid "Waiting for files..."
@@ -2079,7 +2079,7 @@ msgstr "Wstecz"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:35
 msgid "Toggle Console"
-msgstr ""
+msgstr "Włącz/Wyłącz konsolę"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:39
