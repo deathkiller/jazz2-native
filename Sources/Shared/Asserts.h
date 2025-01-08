@@ -34,7 +34,7 @@ enum class TraceLevel {
 	@brief Callback function for writing to the event log
 
 	This function needs to be provided by the target application to enable the event tracing.
-	Alternatively, @relativeref{Death,ITraceSink} can be used instead.
+	Alternatively, @relativeref{Death,ITraceSink} interface can be used instead.
 */
 void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
@@ -108,7 +108,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 	the function returns with @p returnValue instead and the execution is break (if @cpp DEATH_DEBUG @ce is defined).
 	If @cpp DEATH_STANDARD_ASSERT @ce is defined, this macro expands to @cpp assert(condition) @ce, ignoring @p message.
 	If @cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are
-	not defined), this macro expands to @cpp do {} while (false) @ce.
+	not defined), this macro expands to @cpp do{}while(false) @ce.
 
 	You can override this implementation by placing your own @cpp #define DEATH_ASSERT @ce before including
 	the @ref Asserts.h header.
@@ -133,7 +133,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 /**
 	@brief Debug-only assertion macro
 
-	Unlike @ref DEATH_ASSERT() this macro expands to @cpp do {} while (false) @ce if @cpp DEATH_DEBUG @ce
+	Unlike @ref DEATH_ASSERT() this macro expands to @cpp do{}while(false) @ce if @cpp DEATH_DEBUG @ce
 	is not defined (i.e., in release configuration).
 
 	You can override this implementation by placing your own @cpp #define DEATH_DEBUG_ASSERT @ce before including
