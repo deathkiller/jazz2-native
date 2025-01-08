@@ -31,7 +31,7 @@ enum class TraceLevel {
 };
 
 /**
-	@brief Callback function for writing to the event tracing
+	@brief Callback function for writing to the event log
 
 	This function needs to be provided by the target application to enable the event tracing.
 	Alternatively, @relativeref{Death,ITraceSink} can be used instead.
@@ -104,8 +104,8 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
 	Usable for sanity checks on user input, as it prints explanational message on error.
 
-	By default, if assertion fails, @p message is printed with @ref TraceLevel::Assert, the function returns
-	with @p returnValue instead and the execution is break (if @cpp DEATH_DEBUG @ce is defined).
+	By default, if assertion fails, @p message is printed with @ref TraceLevel::Assert to the event log,
+	the function returns with @p returnValue instead and the execution is break (if @cpp DEATH_DEBUG @ce is defined).
 	If @cpp DEATH_STANDARD_ASSERT @ce is defined, this macro expands to @cpp assert(condition) @ce, ignoring @p message.
 	If @cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are
 	not defined), this macro expands to @cpp do {} while (false) @ce.
@@ -169,7 +169,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
 	Unlike @ref DEATH_ASSERT() this macro can be used in C++11 @cpp constexpr @ce functions. In a @cpp constexpr @ce
 	context, if assertion fails, the code fails to compile. In a non-@cpp constexpr @ce context, if assertion fails,
-	@p message is printed with @ref TraceLevel::Assert and the execution is break. If @cpp DEATH_STANDARD_ASSERT @ce
+	@p message is printed with @ref TraceLevel::Assert to the event log and the execution is break. If @cpp DEATH_STANDARD_ASSERT @ce
 	is defined, @p message is ignored and the standard @cpp assert() @ce is called if condition fails. If
 	@cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are
 	not defined), this macro expands to @cpp static_cast<void>(0) @ce.
@@ -215,9 +215,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 	@brief Assert that the code is unreachable
 
 	By default, if code marked with this macro is reached, a hint message is printed with @ref TraceLevel::Assert
-	and the execution is break (if @cpp DEATH_DEBUG @ce is defined). If @cpp DEATH_STANDARD_ASSERT @ce is defined,
-	the standard @cpp assert(!"Unreachable code") @ce is called. If @cpp DEATH_NO_ASSERT @ce is defined (or if
-	both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro hints to the compiler
+	to the event log. and the execution is break (if @cpp DEATH_DEBUG @ce is defined). If @cpp DEATH_STANDARD_ASSERT @ce
+	is defined, the standard @cpp assert(!"Unreachable code") @ce is called. If @cpp DEATH_NO_ASSERT @ce is defined (or
+	if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro hints to the compiler
 	that given code is not reachable, possibly helping the optimizer (using a compiler builtin on GCC, Clang and
 	MSVC; calling @ref std::abort() otherwise).
 

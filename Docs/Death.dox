@@ -63,9 +63,6 @@ namespace Death {
 	@brief MSVC 2015 compatibility
 
 	Defined if compatibility mode for MSVC 2015 is enabled.
-	
-	No need to @cpp #include @ce anything for this macro to be defined,
-	it's supplied via a compiler flag by CMake.
 */
 #define DEATH_MSVC2015_COMPATIBILITY
 #undef DEATH_MSVC2015_COMPATIBILITY
@@ -74,9 +71,6 @@ namespace Death {
 	@brief MSVC 2017 compatibility
 
 	Defined if compatibility mode for MSVC 2017 is enabled.
-	
-	No need to @cpp #include @ce anything for this macro to be defined,
-	it's supplied via a compiler flag by CMake.
 */
 #define DEATH_MSVC2017_COMPATIBILITY
 #undef DEATH_MSVC2017_COMPATIBILITY
@@ -85,9 +79,6 @@ namespace Death {
 	@brief MSVC 2019 compatibility
 
 	Defined if compatibility mode for MSVC 2019 is enabled.
-	
-	No need to @cpp #include @ce anything for this macro to be defined,
-	it's supplied via a compiler flag by CMake.
 */
 #define DEATH_MSVC2019_COMPATIBILITY
 #undef DEATH_MSVC2019_COMPATIBILITY

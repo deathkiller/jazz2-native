@@ -1377,7 +1377,7 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
 #, c-format
 msgid "Level \"%s\" initialized"
-msgstr ""
+msgstr "Nivelul \"%s\" inițializat"
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/LevelHandler.cpp:700
@@ -1392,7 +1392,7 @@ msgstr "Pentru mai multe informații, vizitați site-ul oficial:"
 #: Sources/Jazz2/LevelHandler.cpp:2314 Sources/Jazz2/LevelHandler.cpp:2335
 #: Sources/Jazz2/LevelHandler.cpp:2349
 msgid "Cheats are not allowed in current context"
-msgstr ""
+msgstr "Codurile nu sunt permise în contextul actual"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2325
@@ -1444,11 +1444,11 @@ msgstr "Cooperare"
 
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2332
 msgid "Unknown"
-msgstr ""
+msgstr "Necunoscut"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:275
 msgid "Unknown command"
-msgstr ""
+msgstr "Comandă necunoscută"
 
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
@@ -1613,7 +1613,7 @@ msgstr "Vibrațiile Gamepadului"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
 msgid "Extended PlayStation™ Support"
-msgstr ""
+msgstr "Suport PlayStation™ extins"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
