@@ -1382,13 +1382,13 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
 #, c-format
 msgid "Level \"%s\" initialized"
-msgstr ""
+msgstr "Niveau \"%s\" initialisé"
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/LevelHandler.cpp:700
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
 msgid "For more information, visit the official website:"
-msgstr "Pour plus d'information, visitez le site officiel:"
+msgstr "Pour plus d'information, visitez le site officiel :"
 
 #: Sources/Jazz2/LevelHandler.cpp:2209 Sources/Jazz2/LevelHandler.cpp:2222
 #: Sources/Jazz2/LevelHandler.cpp:2233 Sources/Jazz2/LevelHandler.cpp:2248
@@ -1397,7 +1397,7 @@ msgstr "Pour plus d'information, visitez le site officiel:"
 #: Sources/Jazz2/LevelHandler.cpp:2314 Sources/Jazz2/LevelHandler.cpp:2335
 #: Sources/Jazz2/LevelHandler.cpp:2349
 msgid "Cheats are not allowed in current context"
-msgstr ""
+msgstr "La triche n'est pas autorisée dans le contexte actuel"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2325
@@ -1449,11 +1449,11 @@ msgstr "Coopération"
 
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2332
 msgid "Unknown"
-msgstr ""
+msgstr "Inconnu"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:275
 msgid "Unknown command"
-msgstr ""
+msgstr "Commande inconnue"
 
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
@@ -1556,7 +1556,7 @@ msgstr "Quitter"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:208
 msgid "Access to external storage has been granted!"
-msgstr "L'accès au stockage externe a été autorisé!"
+msgstr "L'accès au stockage externe a été autorisé !"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:210
 msgid ""
@@ -1619,7 +1619,7 @@ msgstr "Vibrations de la manette"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
 msgid "Extended PlayStation™ Support"
-msgstr ""
+msgstr "Prise en charge étendue PlayStation™"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
@@ -1688,7 +1688,7 @@ msgstr "Créer un serveur"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
 msgid "No custom level found!"
-msgstr "Aucun niveau personnalisé trouvé!"
+msgstr "Aucun niveau personnalisé trouvé !"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:148
@@ -1698,7 +1698,7 @@ msgstr "Mode histoire en coopération"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:160
 msgid "No episode found!"
-msgstr "Aucun épisode trouvé!"
+msgstr "Aucun épisode trouvé !"
 
 #. TRANSLATORS: Menu subitem in Play Story section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:206
@@ -1710,12 +1710,12 @@ msgstr "Recommencer l'épisode"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:229
 #, c-format
 msgid "You must complete \"%s\" first!"
-msgstr "Terminez l'épisode \"%s\" d'abord!"
+msgstr "Terminez l'épisode \"%s\" d'abord !"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:233
 msgid "Episode is locked!"
-msgstr "L'épisode est verrouillé!"
+msgstr "L'épisode est verrouillé !"
 
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
@@ -1739,7 +1739,7 @@ msgstr "Je veux jouer au jeu avec quelques nouveautés."
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:54
 msgid "Welcome to \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementation!"
 msgstr ""
-"Bienvenue à la réimplémentation de \f[c:#9e7056]Jazz Jackrabbit 2\f[/c]!"
+"Bienvenue à la réimplémentation de \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] !"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:58
@@ -1767,7 +1767,7 @@ msgstr ""
 "Vous pouvez choisir votre mode de jeu préféré.\n"
 "Cette option peut être changée à tout moment dans \f[c:#707070]%s\f[/c] > "
 "\f[c:#707070]%s\f[/c] > \f[c:#707070]%s\f[/c].\n"
-"Pour plus d'information, visiter %s et  Discord!"
+"Pour plus d'information, visiter %s et  Discord !"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
