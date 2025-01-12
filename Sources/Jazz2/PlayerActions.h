@@ -9,6 +9,7 @@ namespace Jazz2
 		Right,
 		Up,
 		Down,
+		Buttstomp,
 		Fire,
 		Jump,
 		Run,

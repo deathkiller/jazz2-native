@@ -793,11 +793,12 @@ namespace Jazz2::Actors
 				SetAnimation(_currentAnimation->State & ~AnimState::Lookup);
 			}
 
-			// Crouch
-			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down)) {
+			// Crouch / Buttstomp - Uses different bindings whether it's in the air or not
+			if (_levelHandler->PlayerActionPressed(_playerIndex, canJumpPrev ? PlayerActions::Down : PlayerActions::Buttstomp)) {
 				if (_suspendType == SuspendType::SwingingVine) {
 					// TODO: Swinging vine
 				} else if (_suspendType != SuspendType::None) {
+					// Jump off vine/hook
 					_wasDownPressed = true;
 
 					MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
@@ -971,10 +972,12 @@ namespace Jazz2::Actors
 						_canDoubleJump = true;
 					}
 					if (!CanJump()) {
+						// Extend copter time
 						if (_copterFramesLeft > 0.0f) {
 							_copterFramesLeft = 70.0f;
 						}
 					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down) && _jumpTime <= 0.0f) {
+						// Standard jump
 						SetState(ActorState::CanJump, false);
 						_isFreefall = false;
 						SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));

@@ -262,7 +262,7 @@ namespace Jazz2
 					if (version >= 4) {
 						auto mappings = UI::ControlScheme::GetAllMappings();
 
-						bool shouldResetBecauseOfOldVersion = (version < 8);
+						bool shouldResetBecauseOfOldVersion = (version < 9);
 						std::uint32_t playerCount = uc.ReadValue<std::uint8_t>();
 						std::uint32_t controlMappingCount = uc.ReadValue<std::uint8_t>();
 						for (std::uint32_t i = 0; i < playerCount; i++) {

@@ -22,6 +22,8 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 		_items.emplace_back(RemapControlsItem { PlayerActions::Down, _("Down") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Buttstomp, _("Buttstomp") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 		_items.emplace_back(RemapControlsItem { PlayerActions::Fire, _("Fire") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 		_items.emplace_back(RemapControlsItem { PlayerActions::Jump, _("Jump") });
@@ -84,10 +86,11 @@ namespace Jazz2::UI::Menu
 						bool isPressed = currentState.isButtonPressed((ButtonName)j);
 						if (isPressed != wasPressed && isPressed) {
 							newTarget = ControlScheme::CreateTarget(i, (ButtonName)j);
-							std::int32_t collidingAction, collidingAssignment;
-							if (!HasCollision(newTarget, collidingAction, collidingAssignment)) {
+							PlayerActions collidingAction;
+							std::int32_t collidingAssignment;
+							if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {
 								waitingForInput = false;
-							} else if (collidingAction == (std::int32_t)_items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
+							} else if (collidingAction == _items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
 								// Button has collision, but it's the same as it's already assigned
 								_root->PlaySfx("MenuSelect"_s, 0.5f);
 								_waitForInput = false;
@@ -104,10 +107,11 @@ namespace Jazz2::UI::Menu
 						bool isPressed = std::abs(currentValue) > 0.5f;
 						if (isPressed != wasPressed && isPressed) {
 							newTarget = ControlScheme::CreateTarget(i, (AxisName)j, currentValue < 0.0f);
-							std::int32_t collidingAction, collidingAssignment;
-							if (!HasCollision(newTarget, collidingAction, collidingAssignment)) {
+							PlayerActions collidingAction;
+							std::int32_t collidingAssignment;
+							if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {
 								waitingForInput = false;
-							} else if (collidingAction == (std::int32_t)_items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
+							} else if (collidingAction == _items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
 								// Axis has collision, but it's the same as it's already assigned
 								_root->PlaySfx("MenuSelect"_s, 0.5f);
 								_waitForInput = false;
@@ -310,10 +314,11 @@ namespace Jazz2::UI::Menu
 			}
 
 			MappingTarget newTarget = ControlScheme::CreateTarget(event.sym);
-			std::int32_t collidingAction, collidingAssignment;
-			if (!HasCollision(newTarget, collidingAction, collidingAssignment)) {
+			PlayerActions collidingAction;
+			std::int32_t collidingAssignment;
+			if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {
 				waitingForInput = false;
-			} else if (collidingAction == (std::int32_t)_items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
+			} else if (collidingAction == _items[_selectedIndex].Item.Type && collidingAssignment == _selectedColumn) {
 				// Key has collision, but it's the same as it's already assigned
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
@@ -493,14 +498,21 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	bool RemapControlsSection::HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment)
+	bool RemapControlsSection::HasCollision(PlayerActions action, MappingTarget target, PlayerActions& collidingAction, std::int32_t& collidingAssignment)
 	{
 		for (std::int32_t i = 0; i < (std::int32_t)PlayerActions::Count; i++) {
+			PlayerActions ia = (PlayerActions)i;
+
+			if ((action == PlayerActions::Down && ia == PlayerActions::Buttstomp) ||
+				(action == PlayerActions::Buttstomp && ia == PlayerActions::Down)) {
+				continue;
+			}
+
 			auto& mapping = ControlScheme::GetMappings(_playerIndex)[i];
 			std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
 			for (std::int32_t j = 0; j < targetCount; j++) {
 				if (mapping.Targets[j].Data == target.Data) {
-					collidingAction = i;
+					collidingAction = ia;
 					collidingAssignment = j;
 					return true;
 				}

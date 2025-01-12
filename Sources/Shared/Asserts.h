@@ -48,20 +48,30 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	endif
 #endif
 
+/** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	if defined(DEATH_DEBUG)
 #		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
+/** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
 #	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+/** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
 #	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+/** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
 #	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+/** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
 #	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
 #else
+/** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	define LOGD(fmt, ...) do {} while (false)
+/** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
 #	define LOGI(fmt, ...) do {} while (false)
+/** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
 #	define LOGW(fmt, ...) do {} while (false)
+/** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
 #	define LOGE(fmt, ...) do {} while (false)
+/** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
 #	define LOGF(fmt, ...) do {} while (false)
 #endif
 
