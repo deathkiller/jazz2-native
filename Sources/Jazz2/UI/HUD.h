@@ -41,14 +41,19 @@ namespace Jazz2::UI
 		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions);
 
+		/** @brief Shows a text notification */
 		void ShowLevelText(StringView text);
-		void DrawViewportSeparators();
+		/** @brief Shows a notification about coins */
 		void ShowCoins(std::int32_t count);
+		/** @brief Shows a notification about gems */
 		void ShowGems(std::uint8_t gemType, std::int32_t count);
 
+		/** @brief Begins a fullscreen fade-in transition */
 		void BeginFadeIn();
+		/** @brief Begins a fullscreen face-out transition */
 		void BeginFadeOut(float delay = 0.0f);
 
+		/** @brief Returns `true` if weapon wheel is visible */
 		bool IsWeaponWheelVisible(std::int32_t playerIndex) const;
 
 	private:
@@ -144,6 +149,7 @@ namespace Jazz2::UI
 		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
 		void DrawActiveBoss(const Rectf& adjustedView);
 		void DrawLevelText(std::int32_t& charOffset);
+		void DrawViewportSeparators();
 		void DrawCoins(const Rectf& view, std::int32_t& charOffset);
 		void DrawGems(const Rectf& view, std::int32_t& charOffset);
 

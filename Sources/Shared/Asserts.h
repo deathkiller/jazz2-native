@@ -75,7 +75,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	define LOGF(fmt, ...) do {} while (false)
 #endif
 
-/** @brief Breaks the execution if `DEATH_DEBUG` is defined */
+/** @brief Break the execution if `DEATH_DEBUG` is defined */
 #if !defined(DEATH_ASSERT_BREAK)
 #	if !defined(DEATH_DEBUG)
 #		define DEATH_ASSERT_BREAK() do {} while (false)

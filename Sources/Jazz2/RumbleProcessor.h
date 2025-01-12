@@ -13,8 +13,11 @@ namespace Jazz2
 		RumbleProcessor();
 		~RumbleProcessor();
 
+		/** @brief Cancels all active effects */
 		void CancelAllEffects();
+		/** @brief Executes an effect on a given gamepad */
 		void ExecuteEffect(std::int32_t joyId, const std::shared_ptr<RumbleDescription>& desc);
+
 		void OnEndFrame(float timeMult);
 
 	private:

@@ -21,9 +21,13 @@ namespace Jazz2::UI
 	/** @brief Navigation flags for @ref ControlScheme::FetchNavigation(), supports a bitwise combination of its member values */
 	enum class NavigationFlags
 	{
+		/** @brief None */
 		None = 0,
+		/** @brief Allow only keyboard key presses */
 		AllowKeyboard = 0x01,
+		/** @brief Allow only gamepad button presses */
 		AllowGamepads = 0x02,
+		/** @brief Allow both keyboard and gamepad presses */
 		AllowAll = AllowKeyboard | AllowGamepads
 	};
 
@@ -32,19 +36,23 @@ namespace Jazz2::UI
 	/** @brief Control mapping target */
 	struct MappingTarget
 	{
+		/** @brief Opaque data of the target */
 		std::uint32_t Data;
 	};
 
 	/** @brief Control mapping for a particular action */
 	struct ControlSchemeMapping
 	{
+		/** @brief List of mapping targets */
 		SmallVector<MappingTarget, 3> Targets;
 	};
 
 	/** @brief Result returned by @ref ControlScheme::FetchProcessedInput() */
 	struct ProcessedInput
 	{
+		/** @brief Pressed actions */
 		std::uint64_t PressedActions;
+		/** @brief Movement vector */
 		Vector2f Movement;
 	};
 

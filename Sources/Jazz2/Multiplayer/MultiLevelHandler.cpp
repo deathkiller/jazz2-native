@@ -1016,9 +1016,9 @@ namespace Jazz2::Multiplayer
 		LevelHandler::RollbackToCheckpoint(player);
 	}
 
-	void MultiLevelHandler::ActivateSugarRush(Actors::Player* player)
+	void MultiLevelHandler::HandleActivateSugarRush(Actors::Player* player)
 	{
-		LevelHandler::ActivateSugarRush(player);
+		LevelHandler::HandleActivateSugarRush(player);
 	}
 
 	void MultiLevelHandler::ShowLevelText(StringView text, Actors::ActorBase* initiator)

@@ -23,19 +23,21 @@ namespace Jazz2::Multiplayer
 {
 	class INetworkHandler;
 
+	/** @brief Network packet channel */
 	enum class NetworkChannel : std::uint8_t
 	{
-		Main,
-		UnreliableUpdates,
-		Count
+		Main,				/**< Main */
+		UnreliableUpdates,	/**< Unreliable updates */
+		Count				/**< Count of cupported channels */
 	};
 
+	/** @brief State of network connection */
 	enum class NetworkState
 	{
-		None,
-		Listening,
-		Connecting,
-		Connected
+		None,				/**< Disconnected */
+		Listening,			/**< Listening */
+		Connecting,			/**< Connecting to server */
+		Connected			/**< Connected to server */
 	};
 
 	/**

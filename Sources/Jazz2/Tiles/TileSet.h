@@ -9,14 +9,19 @@ namespace Jazz2::Tiles
 	class TileSet
 	{
 	public:
+		/** @brief Size of a tile */
 		static constexpr std::int32_t DefaultTileSize = 32;
 
 		TileSet(std::uint16_t tileCount, std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<std::uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile);
 
+		/** @brief Main (diffuse) texture */
 		std::unique_ptr<Texture> TextureDiffuse;
+		/** @brief Total number of tiles */
 		std::int32_t TileCount;
+		/** @brief Number of tiles per row */
 		std::int32_t TilesPerRow;
 
+		/** @brief Returns mask for specified tile */
 		std::uint8_t* GetTileMask(std::int32_t tileId) const
 		{
 			if (tileId >= TileCount) {
@@ -26,6 +31,7 @@ namespace Jazz2::Tiles
 			return &_mask[tileId * DefaultTileSize * DefaultTileSize];
 		}
 
+		/** @brief Returns `true` if the mask of a tile is completely empty */
 		bool IsTileMaskEmpty(std::int32_t tileId) const
 		{
 			if (tileId >= TileCount) {
@@ -35,6 +41,7 @@ namespace Jazz2::Tiles
 			return _isMaskEmpty[tileId];
 		}
 
+		/** @brief Returns `true` if the mask of a tile is completely filled (non-empty) */
 		bool IsTileMaskFilled(std::int32_t tileId) const
 		{
 			if (tileId >= TileCount) {
@@ -44,6 +51,7 @@ namespace Jazz2::Tiles
 			return _isMaskFilled[tileId];
 		}
 
+		/** @brief Returns `true` if the texture of a tile is completely opaque (non-transparent) */
 		bool IsTileFilled(std::int32_t tileId) const
 		{
 			if (tileId >= TileCount) {
@@ -53,9 +61,10 @@ namespace Jazz2::Tiles
 			return _isTileFilled[tileId];
 		}
 
-		Color* GetCaptionTile() const
+		/** @brief Returns a caption tile */
+		StaticArrayView<DefaultTileSize * DefaultTileSize, Color> GetCaptionTile() const
 		{
-			return _captionTile.get();
+			return staticArrayView<DefaultTileSize * DefaultTileSize>(_captionTile.get());
 		}
 
 	private:

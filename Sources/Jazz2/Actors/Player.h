@@ -94,10 +94,12 @@ namespace Jazz2::Actors
 		Player();
 		~Player();
 
+		/** @brief Returns player index */
 		std::uint8_t GetPlayerIndex() const {
 			return (std::uint8_t)_playerIndex;
 		}
 
+		/** @brief Returns player type */
 		PlayerType GetPlayerType() const {
 			return _playerType;
 		}

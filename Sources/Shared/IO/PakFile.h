@@ -32,9 +32,16 @@ namespace Death { namespace IO {
 
 		PakFile(const PakFile&) = delete;
 		PakFile& operator=(const PakFile&) = delete;
+		
+		explicit operator bool() const {
+			return IsValid();
+		}
 
+		/** @brief Returns mount point for the container */
 		Containers::StringView GetMountPoint() const;
+		/** @brief Returns path of the `.pak` file */
 		Containers::StringView GetPath() const;
+		
 		bool IsValid() const;
 
 		/** @brief Returns `true` if the specified path is a file */
@@ -153,6 +160,7 @@ namespace Death { namespace IO {
 	class PakWriter
 	{
 	public:
+		/** @brief Specifies optional mount point for the container */
 		Containers::String MountPoint;
 
 		explicit PakWriter(Containers::StringView path);
@@ -160,6 +168,10 @@ namespace Death { namespace IO {
 
 		PakWriter(const PakWriter&) = delete;
 		PakWriter& operator=(const PakWriter&) = delete;
+		
+		explicit operator bool() const {
+			return IsValid();
+		}
 
 		bool IsValid() const;
 

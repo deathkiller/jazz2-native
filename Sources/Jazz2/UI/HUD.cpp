@@ -1383,10 +1383,9 @@ namespace Jazz2::UI
 		_rgbAmbientLight = viewport->_ambientLight.W;
 
 		constexpr std::int32_t KeyMax2 = 14;
-		Color colors[RgbLights::ColorsSize] { };
+		Color colors[RgbLights::ColorsSize] {};
 
-		Color* captionTile = _levelHandler->_tileMap->GetCaptionTile();
-		if (captionTile != nullptr) {
+		if (auto captionTile = _levelHandler->_tileMap->GetCaptionTile()) {
 			for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(KeyLayout)); i++) {
 				std::int32_t x = KeyLayout[i] % AURA_KEYBOARD_WIDTH;
 				std::int32_t y = KeyLayout[i] / AURA_KEYBOARD_WIDTH;

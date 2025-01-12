@@ -21,6 +21,7 @@ namespace Jazz2::UI
 	class DiscordRpcClient
 	{
 	public:
+		/** @brief Rich presence description */
 		struct RichPresence
 		{
 			String State;
@@ -34,13 +35,20 @@ namespace Jazz2::UI
 		DiscordRpcClient();
 		~DiscordRpcClient();
 
+		/** @brief Connects to a local Discord client */
 		bool Connect(StringView clientId);
+		/** @brief Disconnects from a local Discord client */
 		void Disconnect();
+		/** @brief Returns `true` if connection is active */
 		bool IsSupported() const;
+		/** @brief Returns a local user ID */
 		std::uint64_t GetUserId() const;
+		/** @brief Returns a local user display name */
 		StringView GetUserDisplayName() const;
+		/** @brief Sets rich presence */
 		bool SetRichPresence(const RichPresence& richPresence);
 
+		/** @brief Returns static instance of @ref DiscordRpcClient */
 		static DiscordRpcClient& Get();
 
 	private:

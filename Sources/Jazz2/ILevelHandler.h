@@ -80,8 +80,11 @@ namespace Jazz2
 		/** @brief Returns list of players */
 		virtual ArrayView<Actors::Player* const> GetPlayers() const = 0;
 
+		/** @brief Returns default ambient light intensity */
 		virtual float GetDefaultAmbientLight() const = 0;
+		/** @brief Returns current ambient light intensity */
 		virtual float GetAmbientLight(Actors::Player* player) const = 0;
+		/** @brief Sets current ambient light intensity */
 		virtual void SetAmbientLight(Actors::Player* player, float value) = 0;
 
 		/** @brief Adds an actor (object) to the level */
@@ -103,8 +106,11 @@ namespace Jazz2
 			return IsPositionEmpty(self, aabb, params, &collider);
 		}
 
+		/** @brief Calls the callback function for all colliding objects with specified AABB */
 		virtual void FindCollisionActorsByAABB(const Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) = 0;
+		/** @brief Calls the callback function for all colliding objects with specified circle */
 		virtual void FindCollisionActorsByRadius(float x, float y, float radius, Function<bool(Actors::ActorBase*)>&& callback) = 0;
+		/** @brief Calls the callback function for all colliding players with specified AABB */
 		virtual void GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) = 0;
 
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) = 0;
@@ -116,7 +122,7 @@ namespace Jazz2
 		virtual void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) = 0;
 		virtual void SetCheckpoint(Actors::Player* player, Vector2f pos) = 0;
 		virtual void RollbackToCheckpoint(Actors::Player* player) = 0;
-		virtual void ActivateSugarRush(Actors::Player* player) = 0;
+		virtual void HandleActivateSugarRush(Actors::Player* player) = 0;
 		virtual void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) = 0;
 		virtual StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) = 0;
 		virtual void OverrideLevelText(std::uint32_t textId, StringView value) = 0;
@@ -125,9 +131,13 @@ namespace Jazz2
 		virtual void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) = 0;
 		virtual void ShakeCameraView(Actors::Player* player, float duration) = 0;
 		virtual void ShakeCameraViewNear(Vector2f pos, float duration) = 0;
+		/** @brief Returns state of a given trigger in the tile map */
 		virtual bool GetTrigger(std::uint8_t triggerId) = 0;
+		/** @brief Sets state of a given trigger in the tile map */
 		virtual void SetTrigger(std::uint8_t triggerId, bool newState) = 0;
+		/** @brief Sets current level weather */
 		virtual void SetWeather(WeatherType type, std::uint8_t intensity) = 0;
+		/** @brief Plays specified music */
 		virtual bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) = 0;
 
 		virtual bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
