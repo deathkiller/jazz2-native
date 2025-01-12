@@ -206,7 +206,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 8;
+		static constexpr std::uint8_t FileVersion = 9;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

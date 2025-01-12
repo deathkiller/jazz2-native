@@ -37,21 +37,21 @@ namespace Death { namespace IO {
 	public:
 #if defined(DEATH_TARGET_WINDOWS)
 		// Windows 10 supports long paths everywhere, so increase it a bit
-		static constexpr std::uint32_t MaxPathLength = /*MAX_PATH*/2048;
+		static constexpr std::size_t MaxPathLength = /*MAX_PATH*/2048;
 		static constexpr char PathSeparator[] = "\\";
 #else
-		static constexpr std::uint32_t MaxPathLength = PATH_MAX;
+		static constexpr std::size_t MaxPathLength = PATH_MAX;
 		static constexpr char PathSeparator[] = "/";
 #endif
 
-		/** @brief The available permissions to check or set, supports a bitwise combination of its member values */
+		/** @brief Available permissions to check or set, supports a bitwise combination of its member values */
 		enum class Permission
 		{
-			None = 0,
+			None = 0,			/**< None */
 
-			Read = 0x01,
-			Write = 0x02,
-			Execute = 0x04
+			Read = 0x01,		/**< Read */
+			Write = 0x02,		/**< Write */
+			Execute = 0x04		/**< Execute */
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(Permission);
@@ -59,6 +59,7 @@ namespace Death { namespace IO {
 		/** @brief Options that modify behavior of @ref Directory, supports a bitwise combination of its member values */
 		enum class EnumerationOptions
 		{
+			/** @brief Default behavior */
 			None = 0,
 
 			/** @brief Skip regular files */
@@ -75,6 +76,7 @@ namespace Death { namespace IO {
 		class Directory
 		{
 		public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			class Proxy
 			{
 				friend class Directory;
@@ -93,6 +95,7 @@ namespace Death { namespace IO {
 			using difference_type = std::ptrdiff_t;
 			//using reference = const Containers::StringView&;
 			using value_type = Containers::StringView;
+#endif
 
 			Directory() noexcept;
 			Directory(Containers::StringView path, EnumerationOptions options = EnumerationOptions::None);
@@ -256,13 +259,13 @@ namespace Death { namespace IO {
 		/** @brief Returns the last time the file or directory was accessed */
 		static Containers::DateTime GetLastAccessTime(Containers::StringView path);
 
-		/** @brief Returns the file or directory permissions in a mask */
+		/** @brief Returns permissions of a given file or directory */
 		static Permission GetPermissions(Containers::StringView path);
 		/** @brief Sets the file or directory permissions to those of the mask */
 		static bool ChangePermissions(Containers::StringView path, Permission mode);
-		/** @brief Adds the permissions in the mask to a file or a directory */
+		/** @brief Adds permissions in the mask to a file or a directory */
 		static bool AddPermissions(Containers::StringView path, Permission mode);
-		/** @brief Removes the permissions in the mask from a file or a directory */
+		/** @brief Removes permissions in the mask from a file or a directory */
 		static bool RemovePermissions(Containers::StringView path, Permission mode);
 
 		/** @brief Tries to open specified directory in operating system's file manager */
@@ -284,7 +287,7 @@ namespace Death { namespace IO {
 		static void SyncToPersistent();
 #endif
 
-		/** @brief Opens file stream with specified access mode */
+		/** @brief Opens a file stream with specified access mode */
 		static std::unique_ptr<Stream> Open(Containers::StringView path, FileAccess mode);
 
 #if defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DOXYGEN_GENERATING_OUTPUT)

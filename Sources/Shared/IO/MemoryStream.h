@@ -30,17 +30,22 @@ namespace Death { namespace IO {
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
 
+		/** @brief Reserves a capacity in growable memory stream */
 		void ReserveCapacity(std::int64_t bytes);
+		/** @brief Copies a specified number of bytes from a source stream to the current position */
 		std::int64_t FetchFromStream(Stream& source, std::int64_t bytesToRead);
 
+		/** @brief Returns a pointer to underlying buffer */
 		DEATH_ALWAYS_INLINE std::uint8_t* GetBuffer() {
 			return _buffer.data();
 		}
 
+		/** @overload */
 		DEATH_ALWAYS_INLINE const std::uint8_t* GetBuffer() const {
 			return _buffer.data();
 		}
 
+		/** @brief Returns a pointer to the current position, which is then incremented by a given number of bytes */
 		DEATH_ALWAYS_INLINE const std::uint8_t* GetCurrentPointer(std::int64_t bytes) {
 			if (_pos + bytes > _size) {
 				return nullptr;

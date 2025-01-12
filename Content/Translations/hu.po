@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-01-08 15:53+0100\n"
+"POT-Creation-Date: 2025-01-12 13:33+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -1523,6 +1523,7 @@ msgstr "Rekordok"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
+#. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:92
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:41
@@ -1573,14 +1574,14 @@ msgstr "Külső tárolóhoz való hozzáférés engedélyezése"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:159
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:163
 #, c-format
 msgid "Remap Controls for Player %i"
 msgstr "A %i. játékos vezérlésének átállítása"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:26
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:166
 msgid "Remap Controls"
 msgstr "Irányítás átállítása"
 
@@ -2042,48 +2043,53 @@ msgstr "Lefelé"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
+msgid "Buttstomp"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
 msgid "Fire"
 msgstr "Tüzelés"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:29
 msgid "Jump"
 msgstr "Ugrás"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:29
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
 msgid "Run"
 msgstr "Futás"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:33
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:180
 msgid "Change Weapon"
 msgstr "Fegyverváltás"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:33
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:35
 msgid "Back"
 msgstr "Vissza"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:35
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 msgid "Toggle Console"
 msgstr "Konzol kapcsoló"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:39
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:41
 #, c-format
 msgid "Weapon %i"
 msgstr "Fegyver %i"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:170
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:174
 msgid "Press any key or button to assign"
 msgstr "Nyomja meg bármelyik billentyűt vagy gombot a hozzárendeléshez"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:187
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:191
 msgid "to remove assignment"
 msgstr "a hozzárendelés eltávolításához"
 

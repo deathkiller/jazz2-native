@@ -345,8 +345,9 @@
 /**
 	@brief Whether source location built-ins are supported
 
-	Defined if compiler-specific builtins used to implement the C++20 std::source_location feature
-	are available. Defined on GCC at least since version 4.8, Clang 9+ and MSVC 2019 16.6 and newer;
+	Defined if compiler-specific builtins used to implement the C++20 
+	@m_class{m-doc-external} [std::source_location](https://en.cppreference.com/w/cpp/utility/source_location)
+	feature are available. Defined on GCC at least since version 4.8, Clang 9+ and MSVC 2019 16.6 and newer;
 	on all three they're present also in the C++11 mode.
 */
 #if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)) || (defined(DEATH_TARGET_CLANG) && ((defined(__apple_build_version__) && __clang_major__ >= 12) || (!defined(__apple_build_version__) && __clang_major__ >= 9))) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -439,8 +440,9 @@
 /**
 	@brief Thread-local annotation
 
-	Expands to C++11 @cpp thread_local @ce keyword on all compilers except old
-	Apple Clang, where it's defined as @cpp __thread @ce.
+	Expands to C++11 @cpp thread_local @ce keyword on all compilers except old Apple Clang,
+	where it's defined as @cpp __thread @ce. Note that the pre-standard @cpp __thread @ce has
+	some semantic differences, in particular regarding RAII.
 */
 #if !defined(DEATH_THREAD_LOCAL)
 #	if defined(DEATH_TARGET_APPLE) && defined(__has_feature)

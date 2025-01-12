@@ -47,7 +47,7 @@ namespace Death { namespace IO { namespace Compression {
 
 		bool CeaseReading();
 
-	protected:
+	private:
 		enum class State : std::uint8_t {
 			Unknown,
 			Created,
@@ -96,7 +96,7 @@ namespace Death { namespace IO { namespace Compression {
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
 
-	protected:
+	private:
 		enum class State : std::uint8_t {
 			Created,
 			Initialized,

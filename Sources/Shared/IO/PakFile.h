@@ -37,15 +37,19 @@ namespace Death { namespace IO {
 		Containers::StringView GetPath() const;
 		bool IsValid() const;
 
+		/** @brief Returns `true` if the specified path is a file */
 		bool FileExists(Containers::StringView path);
+		/** @brief Returns `true` if the specified path is a directory */
 		bool DirectoryExists(Containers::StringView path);
 
+		/** @brief Opens a file stream */
 		std::unique_ptr<Stream> OpenFile(Containers::StringView path);
 
 		/** @brief Handles directory traversal, should be used as iterator */
 		class Directory
 		{
 		public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			class Proxy
 			{
 				friend class Directory;
@@ -64,6 +68,7 @@ namespace Death { namespace IO {
 			using difference_type = std::ptrdiff_t;
 			//using reference = const Containers::StringView&;
 			using value_type = Containers::StringView;
+#endif
 
 			Directory() noexcept;
 			Directory(PakFile& pakFile, Containers::StringView path, FileSystem::EnumerationOptions options = FileSystem::EnumerationOptions::None);
@@ -158,7 +163,9 @@ namespace Death { namespace IO {
 
 		bool IsValid() const;
 
+		/** @brief Adds a file to the `.pak` container */
 		bool AddFile(Stream& stream, Containers::StringView path, PakPreferredCompression preferredCompression = PakPreferredCompression::None);
+		/** @brief Writes file index and finalizes the `.pak` containers */
 		void Finalize();
 
 	private:

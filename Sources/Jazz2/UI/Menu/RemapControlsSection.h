@@ -43,6 +43,6 @@ namespace Jazz2::UI::Menu
 		void OnBackPressed() override;
 
 		void RefreshPreviousState();
-		bool HasCollision(MappingTarget target, std::int32_t& collidingAction, std::int32_t& collidingAssignment);
+		bool HasCollision(PlayerActions action, MappingTarget target, PlayerActions& collidingAction, std::int32_t& collidingAssignment);
 	};
 }

@@ -29,6 +29,9 @@ namespace Jazz2::UI
 		first[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(Keys::Down));
 		first[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(0, ButtonName::Down));
 		first[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(0, AxisName::LeftY));
+		first[(std::int32_t)PlayerActions::Buttstomp].Targets.push_back(CreateTarget(Keys::Down));
+		first[(std::int32_t)PlayerActions::Buttstomp].Targets.push_back(CreateTarget(0, ButtonName::Down));
+		first[(std::int32_t)PlayerActions::Buttstomp].Targets.push_back(CreateTarget(0, AxisName::LeftY));
 
 		first[(std::int32_t)PlayerActions::Fire].Targets.push_back(CreateTarget(Keys::Space));
 		first[(std::int32_t)PlayerActions::Fire].Targets.push_back(CreateTarget(0, ButtonName::X));
@@ -70,6 +73,9 @@ namespace Jazz2::UI
 			second[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(Keys::S));
 			second[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(1, ButtonName::Down));
 			second[(std::int32_t)PlayerActions::Down].Targets.push_back(CreateTarget(1, AxisName::LeftY));
+			second[(std::int32_t)PlayerActions::Buttstomp].Targets.push_back(CreateTarget(Keys::S));
+			second[(std::int32_t)PlayerActions::Buttstomp].Targets.push_back(CreateTarget(1, ButtonName::Down));
+			second[(std::int32_t)PlayerActions::Buttstomp].Targets.push_back(CreateTarget(1, AxisName::LeftY));
 
 			second[(std::int32_t)PlayerActions::Fire].Targets.push_back(CreateTarget(Keys::R));
 			second[(std::int32_t)PlayerActions::Fire].Targets.push_back(CreateTarget(1, ButtonName::X));
