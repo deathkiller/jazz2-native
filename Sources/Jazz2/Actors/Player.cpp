@@ -3873,7 +3873,7 @@ namespace Jazz2::Actors
 		_sugarRushLeft = duration;
 		_renderer.Initialize(ActorRendererType::PartialWhiteMask);
 		_weaponWheelState = WeaponWheelState::Hidden;
-		_levelHandler->ActivateSugarRush(this);
+		_levelHandler->HandleActivateSugarRush(this);
 	}
 
 	bool Player::AddAmmo(WeaponType weaponType, std::int16_t count)

@@ -172,10 +172,15 @@ namespace Jazz2::Tiles
 
 		bool IsValid() const;
 
+		/** @brief Sets an owner of tile map */
 		void SetOwner(ITileMapOwner* owner);
+		/** @brief Returns size of tile map in tiles */
 		Vector2i GetSize() const;
+		/** @brief Returns size of tile map in pixels */
 		Vector2i GetLevelBounds() const;
+		/** @brief Returns pit type */
 		PitType GetPitType() const;
+		/** @brief Sets pit type */
 		void SetPitType(PitType value);
 
 		void OnUpdate(float timeMult) override;
@@ -188,22 +193,30 @@ namespace Jazz2::Tiles
 		SuspendType GetTileSuspendState(float x, float y);
 		bool AdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount);
 
+		/** @brief Adds an additional tile set as a continuation of the previous one */
 		void AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
 		void ReadLayerConfiguration(Stream& s);
 		void ReadAnimatedTiles(Stream& s);
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);
 
-		Color* GetCaptionTile() const
+		/** @brief Returns a caption tile */
+		StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, Color> GetCaptionTile() const
 		{
 			return _tileSets[0].Data->GetCaptionTile();
 		}
-
+		
+		/** @brief Creates a generic debris */
 		void CreateDebris(const DestructibleDebris& debris);
+		/** @brief Creates a tile debris */
 		void CreateTileDebris(std::int32_t tileId, std::int32_t x, std::int32_t y);
+		/** @brief Creates a particle debris from a sprite */
 		void CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, std::int32_t currentFrame, bool isFacingLeft);
+		/** @brief Creates a sprite debris */
 		void CreateSpriteDebris(const GraphicResource* res, Vector3f pos, std::int32_t count);
 
+		/** @brief Returns state of a given trigger */
 		bool GetTrigger(std::uint8_t triggerId);
+		/** @brief Sets state of a given trigger */
 		void SetTrigger(std::uint8_t triggerId, bool newState);
 
 		void InitializeFromStream(Stream& src);

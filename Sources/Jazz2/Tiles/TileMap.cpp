@@ -52,7 +52,7 @@ namespace Jazz2::Tiles
 	Vector2i TileMap::GetSize() const
 	{
 		if (_sprLayerIndex == -1) {
-			return { };
+			return {};
 		}
 
 		return _layers[_sprLayerIndex].LayoutSize;
@@ -61,7 +61,7 @@ namespace Jazz2::Tiles
 	Vector2i TileMap::GetLevelBounds() const
 	{
 		if (_sprLayerIndex == -1) {
-			return { };
+			return {};
 		}
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;

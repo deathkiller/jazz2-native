@@ -65,7 +65,7 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
 		void SetCheckpoint(Actors::Player* player, Vector2f pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
-		void ActivateSugarRush(Actors::Player* player) override;
+		void HandleActivateSugarRush(Actors::Player* player) override;
 		void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;

@@ -86,11 +86,15 @@ namespace Jazz2::UI
 		RgbLights();
 		~RgbLights();
 
+		/** @brief Returns `true` if the feature is supported */
 		bool IsSupported() const;
 
+		/** @brief Updates colors of the lights */
 		void Update(Color colors[ColorsSize]);
+		/** @brief Resets colors of the light to default settings */
 		void Clear();
 
+		/** @brief Returns static instance of @ref RgbLights */
 		static RgbLights& Get();
 
 	private:

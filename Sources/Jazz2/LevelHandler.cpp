@@ -1205,7 +1205,7 @@ namespace Jazz2
 #endif
 	}
 
-	void LevelHandler::ActivateSugarRush(Actors::Player* player)
+	void LevelHandler::HandleActivateSugarRush(Actors::Player* player)
 	{
 #if defined(WITH_AUDIO)
 		if (_sugarRushMusic != nullptr) {

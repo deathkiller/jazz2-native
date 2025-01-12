@@ -7,15 +7,15 @@ namespace Jazz2::Multiplayer
 	/** @brief Multiplayer game mode */
 	enum class MultiplayerGameMode
 	{
-		Unknown = 0,
+		Unknown = 0,		/**< Unspecified */
 
-		Battle,
-		TeamBattle,
-		CaptureTheFlag,
-		Race,
-		TeamRace,
-		TreasureHunt,
-		Cooperation
+		Battle,				/**< Battle */
+		TeamBattle,			/**< Team battle */
+		CaptureTheFlag,		/**< Capture the flag */
+		Race,				/**< Race */
+		TeamRace,			/**< Team race */
+		TreasureHunt,		/**< Treasure hunt */
+		Cooperation			/**< Cooperation */
 	};
 }
 

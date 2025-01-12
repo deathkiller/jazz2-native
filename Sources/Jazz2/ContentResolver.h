@@ -52,6 +52,7 @@ namespace Jazz2
 		static constexpr std::int32_t ColorsPerPalette = 256;
 		static constexpr std::int32_t InvalidValue = INT_MAX;
 
+		/** @brief Returns static instance of main content resolver */
 		static ContentResolver& Get();
 
 		~ContentResolver();
@@ -77,27 +78,44 @@ namespace Jazz2
 #endif
 		/** @brief Tries to find and open a file specified by the path */
 		std::unique_ptr<Stream> OpenContentFile(StringView path);
-
+		
+		/** @brief Marks beginning of the loading assets */
 		void BeginLoading();
+		/** @brief Marks end of the loading assets */
 		void EndLoading();
 
+		/** @brief Preloads specified metadata and its linked assets to cache */
 		void PreloadMetadataAsync(StringView path);
+		/** @brief Loads specified metadata and its linked assets if not in cache already and returns it */
 		Metadata* RequestMetadata(StringView path);
+		/** @brief Loads specified graphics asset if not in cache already and returns it */
 		GenericGraphicResource* RequestGraphics(StringView path, std::uint16_t paletteOffset);
 
+		/** @brief Loads specified tile set and its palette */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr);
+		/** @brief Returns `true` if specified level exists */
 		bool LevelExists(StringView episodeName, StringView levelName);
+		/** @brief Loads specified level into a level descriptor */
 		bool TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
+		/** @brief Loads default (sprite) palette */
 		void ApplyDefaultPalette();
 
+		/** @brief Returns specified episode by name */
 		std::optional<Episode> GetEpisode(StringView name, bool withImages = false);
+		/** @brief Returns specified episode by full path */
 		std::optional<Episode> GetEpisodeByPath(StringView path, bool withImages = false);
+		/** @brief Loads specified music */
 		std::unique_ptr<AudioStreamPlayer> GetMusic(StringView path);
+		/** @brief Returns specified font type */
 		UI::Font* GetFont(FontType fontType);
+		/** @brief Returns specified precompiled shader */
 		Shader* GetShader(PrecompiledShader shader);
+		/** @brief Precompiles all required shaders */
 		void CompileShaders();
+		/** @brief Returns a noise texture with random pixels */
 		std::unique_ptr<Texture> GetNoiseTexture();
 
+		/** @brief Returns currently loaded palette */
 		const std::uint32_t* GetPalettes() const {
 			return _palettes;
 		}

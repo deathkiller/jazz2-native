@@ -166,6 +166,7 @@ namespace Jazz2::Actors
 		AABBf AABBInner;
 		std::int32_t CollisionProxyID;
 
+		/** @brief Returns `true` if the object is currently facing left */
 		bool IsFacingLeft();
 
 		void SetParent(SceneNode* parent);
@@ -174,39 +175,49 @@ namespace Jazz2::Actors
 		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
 
 		bool IsInvulnerable();
+		/** @brief Returns current health */
 		std::int32_t GetHealth();
+		/** @brief Sets current health */
 		void SetHealth(std::int32_t value);
+		/** @brief Returns maximum health */
 		std::int32_t GetMaxHealth();
+		/** @brief Decreases health by specified amount */
 		void DecreaseHealth(std::int32_t amount = 1, ActorBase* collider = nullptr);
 
+		/** @brief Moves the object */
 		bool MoveInstantly(Vector2f pos, MoveType type, Tiles::TileCollisionParams& params);
+		/** @overload */
 		bool MoveInstantly(Vector2f pos, MoveType type)
 		{
 			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, _speed.Y >= 0.0f };
 			return MoveInstantly(pos, type, params);
 		}
 
+		/** @brief Adds external force */
 		void AddExternalForce(float x, float y);
 
+		/** @brief Returns `true` if this object is colliding with a given object */
 		bool IsCollidingWith(ActorBase* other);
+		/** @brief Returns `true` if this object is colliding with a given AABB */
 		bool IsCollidingWith(const AABBf& aabb);
+		/** @brief Updates AABB for current position, rotation and animation frame */
 		void UpdateAABB();
 
+		/** @brief Returns current position */
 		Vector2f GetPos() {
 			return _pos;
 		}
 
+		/** @brief Returns current speed */
 		Vector2f GetSpeed() {
 			return _speed;
 		}
 
-		constexpr ActorState GetState() const noexcept
-		{
+		constexpr ActorState GetState() const noexcept {
 			return _state;
 		}
 
-		constexpr bool GetState(ActorState flag) const noexcept
-		{
+		constexpr bool GetState(ActorState flag) const noexcept {
 			return (_state & flag) == flag;
 		}
 
@@ -279,6 +290,7 @@ namespace Jazz2::Actors
 		bool _currentTransitionCancellable;
 #endif
 
+		/** @brief Sets whether the object is facing left */
 		void SetFacingLeft(bool value);
 
 		/** @brief Called when the object is created and activated */
@@ -291,14 +303,22 @@ namespace Jazz2::Actors
 		/** @brief Called when the object has no health left and should perish */
 		virtual bool OnPerish(ActorBase* collider);
 
+		/** @brief Called every frame to update the object state */
 		virtual void OnUpdate(float timeMult);
+		/** @brief Called when the hitbox needs to be updated */
 		virtual void OnUpdateHitbox();
+		/** @brief Called when the object needs to be drawn */
 		virtual bool OnDraw(RenderQueue& renderQueue);
+		/** @brief Called when emitting lights */
 		virtual void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) { }
+		/** @brief Called when the object hits a floor */
 		virtual void OnHitFloor(float timeMult);
+		/** @brief Called when the object hits a ceiling */
 		virtual void OnHitCeiling(float timeMult);
+		/** @brief Called when the object hits a wall */
 		virtual void OnHitWall(float timeMult);
 
+		/** @brief Called when an event is triggered */
 		virtual void OnTriggeredEvent(EventType eventType, uint8_t* eventParams);
 
 		void TryStandardMovement(float timeMult, Tiles::TileCollisionParams& params);
@@ -306,21 +326,34 @@ namespace Jazz2::Actors
 		void UpdateFrozenState(float timeMult);
 		void HandleFrozenStateChange(ActorBase* shot);
 
+		/** @brief Creates a particle debris from a sprite */
 		void CreateParticleDebris();
+		/** @brief Creates a sprite debris */
 		void CreateSpriteDebris(AnimState state, std::int32_t count);
+		/** @brief Returns scale of ice shrapnels */
 		virtual float GetIceShrapnelScale() const;
 
+		/** @brief Plays a sound effect for the object */
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f);
+		/** @brief Sets an animation of the object */
 		bool SetAnimation(AnimState state, bool skipAnimation = false);
+		/** @brief Sets a transition animation of the object */
 		bool SetTransition(AnimState state, bool cancellable, Function<void()>&& callback = {});
+		/** @brief Cancels a cancellable transition */
 		void CancelTransition();
+		/** @brief Cancels any transition */
 		void ForceCancelTransition();
+		/** @brief Called when an animation started */
 		virtual void OnAnimationStarted();
+		/** @brief Called when an animation finished */
 		virtual void OnAnimationFinished();
 
+		/** @brief Preloads specified metadata and its linked assets to cache */
 		static void PreloadMetadataAsync(StringView path);
+		/** @brief Loads specified metadata and its linked assets */
 		void RequestMetadata(StringView path);
 
+		/** @brief Loads specified metadata and its linked assets asynchronously if supported */
 #if defined(WITH_COROUTINES)
 		auto RequestMetadataAsync(StringView path)
 		{
@@ -345,13 +378,11 @@ namespace Jazz2::Actors
 		void RequestMetadataAsync(StringView path);
 #endif
 
-		constexpr void SetState(ActorState flags) noexcept
-		{
+		constexpr void SetState(ActorState flags) noexcept {
 			_state = flags;
 		}
 
-		constexpr void SetState(ActorState flag, bool value) noexcept
-		{
+		constexpr void SetState(ActorState flag, bool value) noexcept {
 			if (value) {
 				_state = _state | flag;
 			} else {

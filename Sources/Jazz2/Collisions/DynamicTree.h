@@ -36,6 +36,7 @@ namespace Jazz2::Collisions
 
 	/** @brief Invalid node */
 	constexpr std::int32_t NullNode = -1;
+	/** @brief Length units per meter */
 	constexpr float LengthUnitsPerMeter = 1.0f;
 	/** @brief AABB size extension to fat AABB */
 	constexpr float AabbExtension = 0.1f * LengthUnitsPerMeter;

@@ -11,17 +11,23 @@ namespace Jazz2::Events
 	class EventSpawner
 	{
 	public:
+		/** @brief Delegate to create an object */
 		using CreateDelegate = std::shared_ptr<Actors::ActorBase> (*)(const Actors::ActorActivationDetails& details);
+		/** @brief Delegate to preload assets for an object */
 		using PreloadDelegate = void (*)(const Actors::ActorActivationDetails& details);
 
 		static constexpr std::int32_t SpawnParamsSize = 16;
 
 		EventSpawner(ILevelHandler* levelHandler);
 
+		/** @brief Preloads assets for a given event */
 		void PreloadEvent(EventType type, std::uint8_t* spawnParams);
+		/** @brief Spawns an object for a given event */
 		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, std::uint8_t* spawnParams, Actors::ActorState flags, std::int32_t x, std::int32_t y, std::int32_t z);
+		/** @overload */
 		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, std::uint8_t* spawnParams, Actors::ActorState flags, const Vector3i& pos);
 
+		/** @brief Registers a delegate to create an object from an event */
 		void RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload = nullptr);
 
 	private:
