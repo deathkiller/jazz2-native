@@ -107,7 +107,7 @@ namespace Death { namespace Containers {
 		{
 			// Struct tm doesn't always have the tm_gmtoff field, define this if it does
 #if defined(DEATH_USE_GMTOFF_IN_TM)
-			static std::atomic<std::int32_t> _gmtoffset { INT32_MAX }; // Invalid timezone
+			static std::atomic<std::int32_t> _gmtoffset{INT32_MAX}; // Invalid timezone
 			if (_gmtoffset == INT32_MAX) {
 				time_t t = time(nullptr);
 				struct tm tm;
@@ -914,7 +914,7 @@ namespace Death { namespace Containers {
 		switch (tz) {
 			case DateTime::Local:
 				// Use a special value for local timezone
-				_offset = -1;
+				_offset = INT32_MIN;
 				break;
 
 			case DateTime::GMT_12:
@@ -951,7 +951,7 @@ namespace Death { namespace Containers {
 
 			case DateTime::A_CST:
 				// Central Standard Time in use in Australia (UTC + 9.5)
-				_offset = 60l * (9 * MIN_PER_HOUR + MIN_PER_HOUR / 2);
+				_offset = 60L * (9 * MIN_PER_HOUR + MIN_PER_HOUR / 2);
 				break;
 
 			default:
@@ -964,7 +964,7 @@ namespace Death { namespace Containers {
 	{
 		// Get the offset using standard library
 		// It returns the difference GMT-local while we want to have the offset _from_ GMT, hence the '-'
-		return (_offset == -1 ? -Implementation::GetTimeZone() : _offset);
+		return (_offset == INT32_MIN ? -Implementation::GetTimeZone() : _offset);
 	}
 
 	DateTime::Tm::Tm() noexcept

@@ -67,8 +67,7 @@ namespace nCine
 				workingDirLength = (DWORD)(lastSlash - workingDir);
 				*lastSlash = '\0';
 				if (!::SetCurrentDirectoryW(workingDir)) {
-					// LOGE cannot be used until tracing is initialized
-					//LOGE("Failed to change working directory with error 0x%08x", ::GetLastError());
+					LOGE("Failed to change working directory with error 0x%08x", ::GetLastError());
 					workingDirLength = 0;
 				}
 			} else {

@@ -26,7 +26,9 @@ namespace Jazz2::UI
 		static constexpr std::int32_t DefaultWidth = 720;
 		static constexpr std::int32_t DefaultHeight = 405;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint8_t SfxListVersion = 1;
+#endif
 
 		Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;

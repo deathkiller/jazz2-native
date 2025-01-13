@@ -33,16 +33,26 @@ namespace Jazz2
 	/** @brief Shared graphic resource */
 	struct GenericGraphicResource
 	{
+		/** @brief Resource flags */
 		GenericGraphicResourceFlags Flags;
+		/** @brief Diffuse texture */
 		std::unique_ptr<Texture> TextureDiffuse;
 		//std::unique_ptr<Texture> TextureNormal;
+		/** @brief Collision mask */
 		std::unique_ptr<uint8_t[]> Mask;
+		/** @brief Frame dimensions */
 		Vector2i FrameDimensions;
+		/** @brief Frame configuration */
 		Vector2i FrameConfiguration;
+		/** @brief Animation duration (in normalized frames) */
 		float AnimDuration;
+		/** @brief Frame count */
 		std::int32_t FrameCount;
+		/** @brief Hotspot */
 		Vector2i Hotspot;
+		/** @brief Optional coldspot */
 		Vector2i Coldspot;
+		/** @brief Optional gunspot */
 		Vector2i Gunspot;
 
 		GenericGraphicResource() noexcept;
@@ -51,11 +61,17 @@ namespace Jazz2
 	/** @brief Specific graphic resource (from metadata) */
 	struct GraphicResource
 	{
+		/** @brief Underlying generic resource */
 		GenericGraphicResource* Base;
+		/** @brief Animation state */
 		AnimState State;
+		/** @brief Animation duration (in normalized frames) */
 		float AnimDuration;
+		/** @brief Frame count */
 		std::int32_t FrameCount;
+		/** @brief Frame offset */
 		std::int32_t FrameOffset;
+		/** @brief Animation loop mode */
 		AnimationLoopMode LoopMode;
 
 		GraphicResource() noexcept;
@@ -76,7 +92,9 @@ namespace Jazz2
 	/** @brief Shared sound resource */
 	struct GenericSoundResource
 	{
+		/** @brief Audio buffer */
 		AudioBuffer Buffer;
+		/** @brief Resource flags */
 		GenericSoundResourceFlags Flags;
 
 		GenericSoundResource(std::unique_ptr<Stream> stream, StringView filename) noexcept;
@@ -85,6 +103,7 @@ namespace Jazz2
 	/** @brief Specific sound resource (from metadata) */
 	struct SoundResource
 	{
+		/** @brief List of underlying generic resources */
 		SmallVector<GenericSoundResource*, 1> Buffers;
 
 		SoundResource() noexcept;
@@ -125,13 +144,21 @@ namespace Jazz2
 	/** @brief Describes an episode */
 	struct Episode
 	{
+		/** @brief Internal name */
 		String Name;
+		/** @brief Display name */
 		String DisplayName;
+		/** @brief Name of the first level in the episode */
 		String FirstLevel;
+		/** @brief Name of the previous episode */
 		String PreviousEpisode;
+		/** @brief Name of the next episode */
 		String NextEpisode;
+		/** @brief Position in episode selection list */
 		std::uint16_t Position;
+		/** @brief Texture for title image */
 		std::unique_ptr<Texture> TitleImage;
+		/** @brief Texture for background image */
 		std::unique_ptr<Texture> BackgroundImage;
 
 		Episode() noexcept;

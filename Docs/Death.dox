@@ -571,6 +571,16 @@ namespace Death {
 #undef DEATH_TARGET_BMI2
 
 /**
+	@brief Target with CLFLUSHOPT instruction
+
+	Defined on @ref DEATH_TARGET_X86 "x86" if CLFLUSHOPT (Flush Cache Line Optimized)
+	instruction is enabled at compile time. On GCC/Clang it's `-mclflushopt`, MSVC
+	doesn't have a direct option.
+*/
+#define DEATH_TARGET_CLFLUSHOPT
+#undef DEATH_TARGET_CLFLUSHOPT
+
+/**
 	@brief AVX target
 
 	Defined on @ref DEATH_TARGET_X86 "x86" if
