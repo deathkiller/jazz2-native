@@ -282,30 +282,12 @@ namespace Death { namespace Trace {
 #endif
 	}
 
-#if !defined(DEATH_TRACE_ASYNC)
-	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength)
+#if defined(DEATH_TRACE_ASYNC)
+	bool LoggerBackend::IsAlive() const noexcept
 	{
-		using namespace Implementation;
-
-		char threadId[16];
-		if (std::uint32_t tid = GetNativeThreadId()) {
-			snprintf(threadId, sizeof(threadId), "%u", tid);
-		} else {
-			threadId[0] = '\0';
-		}
-
-		for (std::size_t i = 0; i < _sinks.size(); i++) {
-			_sinks[i]->OnTraceReceived(level, timestamp, threadId, Containers::StringView(static_cast<const char*>(content), contentLength));
-		}
+		return _workerThreadAlive.load(std::memory_order_relaxed);
 	}
 
-	void LoggerBackend::FlushActiveSinks()
-	{
-		for (std::size_t i = 0; i < _sinks.size(); i++) {
-			_sinks[i]->OnTraceFlushed();
-		}
-	}
-#else
 	void LoggerBackend::CleanUpBeforeExit()
 	{
 		using namespace Implementation;
@@ -640,13 +622,35 @@ namespace Death { namespace Trace {
 			bool queuesAndEventsEmpty = CheckThreadQueuesAndCachedTransitEventsEmpty();
 			if (queuesAndEventsEmpty) {
 				CleanUpInvalidatedThreadContexts();
-				//_cleanup_invalidated_loggers();
 
 				// There is nothing left to do, and we can let this thread sleep for a while
 				_wakeUpEvent.Wait();
 
 				ResyncRdtscClock();
 			}
+		}
+	}
+#else
+	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength)
+	{
+		using namespace Implementation;
+
+		char threadId[16];
+		if (std::uint32_t tid = GetNativeThreadId()) {
+			snprintf(threadId, sizeof(threadId), "%u", tid);
+		} else {
+			threadId[0] = '\0';
+		}
+
+		for (std::size_t i = 0; i < _sinks.size(); i++) {
+			_sinks[i]->OnTraceReceived(level, timestamp, threadId, Containers::StringView(static_cast<const char*>(content), contentLength));
+		}
+	}
+
+	void LoggerBackend::FlushActiveSinks()
+	{
+		for (std::size_t i = 0; i < _sinks.size(); i++) {
+			_sinks[i]->OnTraceFlushed();
 		}
 	}
 #endif
@@ -696,6 +700,11 @@ namespace Death { namespace Trace {
 
 #if defined(DEATH_TRACE_ASYNC)
 		std::uint64_t timestamp = rdtsc();
+
+		if (!_backend.IsAlive()) {
+			// If the backend is not alive (yet), don't try to wait for the flushing
+			return;
+		}
 
 		std::atomic<bool> threadFlushed{false};
 		std::atomic<bool>* threadFlushedPtr = &threadFlushed;

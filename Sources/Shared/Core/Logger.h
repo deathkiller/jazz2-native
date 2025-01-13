@@ -1,6 +1,6 @@
 // Uses parts of Quill (https://github.com/odygrd/quill)
 // Copyright © 2020-2024 Odysseas Georgoudis & contributors
-// Copyright © 2024 Dan R.
+// Copyright © 2024-2025 Dan R.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 
 #pragma once
@@ -733,7 +733,6 @@ namespace Death { namespace Trace {
 		TransitEvent()
 			: Timestamp(0), FlushFlag(nullptr), Level(TraceLevel::Unknown)
 		{
-
 		}
 
 		~TransitEvent() = default;
@@ -1097,7 +1096,9 @@ namespace Death { namespace Trace {
 
 		void Notify();
 
-#if !defined(DEATH_TRACE_ASYNC)
+#if defined(DEATH_TRACE_ASYNC)
+		bool IsAlive() const noexcept;
+#else
 		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength);
 		void FlushActiveSinks();
 #endif
@@ -1126,21 +1127,8 @@ namespace Death { namespace Trace {
 			auto readResult = frontendQueue.prepareRead();
 
 			/*if (readResult.allocation) {
-				// When allocation_info has a value it means that the queue has re-allocated
-				if (_options.error_notifier) {
-					char ts[24];
-					time_t t = time(nullptr);
-					tm p;
-					localtime_rs(std::addressof(t), std::addressof(p));
-					strftime(ts, 24, "%X", std::addressof(p));
-
-					// We switched to a new here, and we also notify the user of the allocation via the error_notifier
-					_options.error_notifier(
-					  fmtquill::format("{} Quill INFO: Allocated a new SPSC queue with a capacity of {} KiB "
-						  "(previously {} KiB) from thread {}",
-						  ts, (read_result.new_capacity / 1024),
-						  (read_result.previous_capacity / 1024), thread_context->thread_id()));
-				}
+				LOGD("Allocated new queue with capacity of {} kB (previously {} kB) from thread {}",
+					(readResult.newCapacity / 1024), (readResult.previousCapacity / 1024), threadContext->GetThreadId());
 			}*/
 
 			return readResult.readPos;

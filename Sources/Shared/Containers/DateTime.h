@@ -27,6 +27,7 @@ namespace Death { namespace Containers {
 	class DateTime
 	{
 	public:
+		/** @brief Well-known timezones */
 		enum Tz
 		{
 			// The time in the current time zone
@@ -87,11 +88,13 @@ namespace Death { namespace Containers {
 			TimeZone(Tz tz) noexcept;
 			constexpr TimeZone(std::int32_t offset = 0) noexcept : _offset(offset) { }
 
+			/** @brief Returns `true` if it describes local timezone */
 			constexpr bool IsLocal() const noexcept
 			{
-				return (_offset == -1);
+				return (_offset == INT32_MIN);
 			}
 
+			/** @brief Returns a time difference from UTC in seconds */
 			std::int32_t GetOffset() const noexcept;
 
 		private:
@@ -149,9 +152,9 @@ namespace Death { namespace Containers {
 		/** @brief Creates uninitialized @ref DateTime structure */
 		explicit DateTime(NoInitT) noexcept {}
 
-		/** @brief Creates @ref DateTime structure from standard @ref time_t value */
+		/** @brief Creates @ref DateTime structure from standard `time_t` value */
 		constexpr DateTime(time_t timet) noexcept;
-		/** @brief Creates @ref DateTime structure from standard @ref tm structure */
+		/** @brief Creates @ref DateTime structure from standard `tm` structure */
 		inline DateTime(const struct tm& tm) noexcept;
 		/** @brief Creates @ref DateTime structure from partitioned @ref DateTime */
 		inline DateTime(const Tm& tm) noexcept;
@@ -169,8 +172,19 @@ namespace Death { namespace Containers {
 		 */
 		inline DateTime(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t millisec = 0) noexcept;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Creates @ref DateTime structure from Windows® `SYSTEMTIME` structure
+		 * 
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows"
+		 */
 		DateTime(const struct _SYSTEMTIME& st) noexcept;
+
+		/**
+		 * @brief Creates @ref DateTime structure from Windows® `FILETIME` structure
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows"
+		 */
 		DateTime(const struct _FILETIME& ft) noexcept;
 #endif
 
@@ -183,9 +197,12 @@ namespace Death { namespace Containers {
 		std::int32_t GetSecond(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Second; }
 		std::int32_t GetMillisecond(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Millisecond; }
 
+		/** @brief Sets @ref DateTime structure to the value corresponding to standard `time_t` value */
 		constexpr DateTime& Set(time_t timet) noexcept;
-		DateTime& Set(const Tm& tm) noexcept;
+		/** @brief Sets @ref DateTime structure to the value corresponding to standard `tm` structure */
 		DateTime& Set(const struct tm& tm) noexcept;
+		/** @brief Sets @ref DateTime structure to the value corresponding to partitioned @ref DateTime */
+		DateTime& Set(const Tm& tm) noexcept;
 
 		/**
 		 * @brief Sets @ref DateTime structure from individual parts
@@ -214,19 +231,26 @@ namespace Death { namespace Containers {
 
 		explicit operator bool() const noexcept { return IsValid(); }
 
+		/** @brief Returns @ref DateTime structure partitioned into individual components */
 		Tm Partitioned(TimeZone tz = Local) const noexcept;
 
 		/** @brief Returns number of milliseconds since 00:00, Jan 1 1970 UTC */
 		constexpr std::int64_t ToUnixMilliseconds() const noexcept;
+		/** @brief Returns number of seconds since 00:00, Jan 1 1970 UTC */
 		constexpr time_t GetTicks() const noexcept;
 
+		/** @brief Creates a new @ref DateTime structure moved from the local timezone to a given timezone */
 		inline DateTime ToTimezone(TimeZone tz, bool noDST = false) const noexcept;
+		/** @brief Creates a new @ref DateTime structure moved from a given timezone to the local timezone */
 		inline DateTime FromTimezone(TimeZone tz, bool noDST = false) const noexcept;
 
+		/** @brief Moves @ref DateTime structure from the local timezone to a given timezone */
 		void AdjustToTimezone(TimeZone tz, bool noDST = false) noexcept;
+		/** @brief Moves @ref DateTime structure from a given timezone to the local timezone */
 		void AdjustFromTimezone(TimeZone tz, bool noDST = false) noexcept;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Returns @ref DateTime structure converted to Windows® `SYSTEMTIME` structure */
 		struct _SYSTEMTIME ToWin32() const noexcept;
 #endif
 
@@ -326,11 +350,22 @@ namespace Death { namespace Containers {
 			return FromDays(7 * days);
 		}
 
+		/** @brief Creates empty @ref TimeSpan structure */
 		constexpr TimeSpan() noexcept : _value(0) {}
+		/** @brief Creates uninitialized @ref TimeSpan structure */
 		explicit TimeSpan(NoInitT) noexcept {}
+		/** @brief Creates @ref TimeSpan structure from milliseconds */
 		constexpr TimeSpan(std::int64_t diff) noexcept : _value(diff) {}
 
-		constexpr TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds = 0, std::int64_t milliseconds = 0) noexcept;
+		/**
+		 * @brief Creates @ref TimeSpan structure from individual parts
+		 *
+		 * @param hours Hours
+		 * @param minutes Minutes after the hour (0-59)
+		 * @param seconds Seconds after the minute (0-59*)
+		 * @param millisecs Milliseconds after the second (0-999)
+		 */
+		constexpr TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds = 0, std::int64_t millisecs = 0) noexcept;
 		
 		constexpr std::int32_t GetWeeks() const noexcept;
 		constexpr std::int32_t GetDays() const noexcept;
@@ -498,7 +533,7 @@ namespace Death { namespace Containers {
 		return (_time >= 0 && (_time / 1000) < INT32_MAX);
 	}
 
-	constexpr TimeSpan::TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds, std::int64_t milliseconds) noexcept
+	constexpr TimeSpan::TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds, std::int64_t millisecs) noexcept
 		: _value(0)
 	{
 		_value = hours;
@@ -507,7 +542,7 @@ namespace Death { namespace Containers {
 		_value *= 60;
 		_value += seconds;
 		_value *= 1000;
-		_value += milliseconds;
+		_value += millisecs;
 	}
 
 	constexpr std::int64_t TimeSpan::GetSeconds() const noexcept

@@ -11,13 +11,13 @@ namespace Jazz2
 {
 	/** @brief Rescale mode */
 	enum class RescaleMode {
-		None,
-		HQ2x,
-		_3xBrz,
-		CrtScanlines,
-		CrtShadowMask,
-		CrtApertureGrille,
-		Monochrome,
+		None,						/**< None/Pixel-perfect */
+		HQ2x,						/**< HQ2× */
+		_3xBrz,						/**< 3×BRZ */
+		CrtScanlines,				/**< CRT Scanlines */
+		CrtShadowMask,				/**< CRT Shadow Mask */
+		CrtApertureGrille,			/**< CRT Aperture Grille */
+		Monochrome,					/**< Monochrome */
 
 		TypeMask = 0x0f,
 		UseAntialiasing = 0x80
@@ -27,24 +27,24 @@ namespace Jazz2
 
 	/** @brief Weapon wheel style */
 	enum class WeaponWheelStyle : std::uint8_t {
-		Disabled,
-		Enabled,
-		EnabledWithAmmoCount
+		Disabled,					/**< Disabled */
+		Enabled,					/**< Enabled */
+		EnabledWithAmmoCoun			/**< Enabled with Ammo count */
 	};
 
 	/** @brief Gamepad button labels */
 	enum class GamepadType : std::uint8_t {
-		Xbox,
-		PlayStation,
-		Steam,
-		Switch
+		Xbox,						/**< Xbox */
+		PlayStation,				/**< PlayStation */
+		Steam,						/**< Steam */
+		Switch						/**< Switch */
 	};
 
 	/** @brief Episode completion overwrite mode */
 	enum class EpisodeEndOverwriteMode : std::uint8_t {
-		Always,
-		NoCheatsOnly,
-		HigherScoreOnly
+		Always,						/**< Always */
+		NoCheatsOnly,				/**< No Cheats Only */
+		HigherScoreOnly				/**< Higher Score Only */
 	};
 
 	/** @brief Unlockable episodes, mainly used if compiled with `SHAREWARE_DEMO_ONLY` */

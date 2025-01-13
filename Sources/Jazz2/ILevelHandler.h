@@ -117,17 +117,25 @@ namespace Jazz2
 		/** @brief Calls the callback function for all colliding players with specified AABB */
 		virtual void GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) = 0;
 
+		/** @brief Broadcasts specified event to all other actors */
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) = 0;
+		/** @brief Starts transition to change current level */
 		virtual void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) = 0;
+		/** @brief Called when the game is over */
 		virtual void HandleGameOver(Actors::Player* player) = 0;
+		/** @brief Called when a player dies */
 		virtual bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) = 0;
+		/** @brief Called when a player warps */
 		virtual void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) = 0;
+		/** @brief Called when a player collects or losts coins */
 		virtual void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
+		/** @brief Called when a player collects or losts gems */
 		virtual void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) = 0;
 		/** @brief Sets checkpoint for a given player */
 		virtual void SetCheckpoint(Actors::Player* player, Vector2f pos) = 0;
 		/** @brief Rolls back to the last checkpoint for a given player */
 		virtual void RollbackToCheckpoint(Actors::Player* player) = 0;
+		/** @brief Called when a player activates sugar rush */
 		virtual void HandleActivateSugarRush(Actors::Player* player) = 0;
 		/** @brief Shows a text notification */
 		virtual void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) = 0;
@@ -154,12 +162,19 @@ namespace Jazz2
 		/** @brief Plays specified music */
 		virtual bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) = 0;
 
+		/** @brief Returns `true` if player action is pressed */
 		virtual bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
+		/** @overload */
 		virtual bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
+		/** @brief Returns `true` if player action is hit (newly pressed) */
 		virtual bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
+		/** @overload */
 		virtual bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
+		/** @brief Returns value of desired horizontal player movement */
 		virtual float PlayerHorizontalMovement(std::int32_t index) = 0;
+		/** @brief Returns value of desired vertical player movement */
 		virtual float PlayerVerticalMovement(std::int32_t index) = 0;
+		/** @brief Executes a rumble effect */
 		virtual void PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect) = 0;
 	};
 }
