@@ -27,9 +27,13 @@ namespace Jazz2::UI
 
 		std::int32_t GetSizeInPixels() const;
 		std::int32_t GetAscentInPixels() const;
+		/** @brief Returns size of a single character */
 		Vector2f MeasureChar(char32_t c) const;
+		/** @brief Returns size of a string */
 		Vector2f MeasureString(StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f);
+		/** @brief Returns size of a string and its cumulative widths */
 		Vector2f MeasureStringEx(StringView text, float scale, float charSpacing, float maxWidth, std::int32_t* charFit, float* charFitWidths);
+		/** @brief Draws a string */
 		void DrawString(Canvas* canvas, StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, Colorf color, float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f, float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f);
 
 	private:

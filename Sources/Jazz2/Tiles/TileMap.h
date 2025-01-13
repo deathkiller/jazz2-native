@@ -187,10 +187,15 @@ namespace Jazz2::Tiles
 		void OnEndFrame();
 		bool OnDraw(RenderQueue& renderQueue) override;
 
+		/** @brief Returns `true` if the mask of a tile on the main (sprite) layer is completely empty */
 		bool IsTileEmpty(std::int32_t tx, std::int32_t ty);
+		/** @brief Returns `true` if the mask of tiles on the main (sprite) layer intersecting a given AABB is empty */
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
+		/** @brief Returns `true` if tiles on the main (sprite) layer intersecting a given AABB can be destroyed */
 		bool CanBeDestroyed(const AABBf& aabb, TileCollisionParams& params);
+		/** @brief Returns suspend state of a given position */
 		SuspendType GetTileSuspendState(float x, float y);
+		/** @brief Advances descructible animation of a given tile */
 		bool AdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount);
 
 		/** @brief Adds an additional tile set as a continuation of the previous one */
@@ -219,7 +224,9 @@ namespace Jazz2::Tiles
 		/** @brief Sets state of a given trigger */
 		void SetTrigger(std::uint8_t triggerId, bool newState);
 
+		/** @brief Initializes tile map state from a stream */
 		void InitializeFromStream(Stream& src);
+		/** @brief Serializes tile map state to a stream */
 		void SerializeResumableToStream(Stream& dest);
 
 		void OnInitializeViewport();

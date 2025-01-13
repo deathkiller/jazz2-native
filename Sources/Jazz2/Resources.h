@@ -103,20 +103,26 @@ namespace Jazz2
 	/** @brief Contains assets for specific object type */
 	struct Metadata
 	{
+		/** @brief Metadata path */
 		String Path;
+		/** @brief Metadata flags */
 		MetadataFlags Flags;
+		/** @brief Animations */
 		SmallVector<GraphicResource, 0> Animations;
-#if defined(WITH_AUDIO)
+#if defined(WITH_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Sounds */
 		HashMap<String, SoundResource> Sounds;
 #endif
+		/** @brief Bounding box */
 		Vector2i BoundingBox;
 
 		Metadata() noexcept;
 
+		/** @brief Finds specified animation state */
 		GraphicResource* FindAnimation(AnimState state) noexcept;
 	};
 	
-	/** @brief Describes a (singleplayer) episode */
+	/** @brief Describes an episode */
 	struct Episode
 	{
 		String Name;
@@ -134,10 +140,10 @@ namespace Jazz2
 	/** @brief Font type */
 	enum class FontType
 	{
-		Small,
-		Medium,
+		Small,			/**< Small */
+		Medium,			/**< Medium */
 
-		Count
+		Count			/**< Count of supported font types */
 	};
 
 	/** @brief Precompiled shader */

@@ -21,7 +21,9 @@ namespace Jazz2::Compatibility
 	class JJ2Anims
 	{
 	public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint16_t CacheVersion = 22;
+#endif
 
 		static JJ2Version Convert(StringView path, PakWriter& pakWriter, bool isPlus = false);
 

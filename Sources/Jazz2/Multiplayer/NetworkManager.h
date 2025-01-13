@@ -28,7 +28,7 @@ namespace Jazz2::Multiplayer
 	{
 		Main,				/**< Main */
 		UnreliableUpdates,	/**< Unreliable updates */
-		Count				/**< Count of cupported channels */
+		Count				/**< Count of supported channels */
 	};
 
 	/** @brief State of network connection */

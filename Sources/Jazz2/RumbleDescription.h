@@ -16,6 +16,7 @@ namespace Jazz2
 	public:
 		RumbleDescription() {}
 
+		/** @brief Adds a new frame to the effect timeline */
 		void AddToTimeline(float endTime, float lowFreq, float highFreq, float leftTrigger = 0.0f, float rightTrigger = 0.0f)
 		{
 			_timeline.emplace_back(endTime, lowFreq, highFreq, leftTrigger, rightTrigger);

@@ -12,13 +12,15 @@ namespace Jazz2::Multiplayer
 	struct Peer
 	{
 		Peer(std::nullptr_t = nullptr) : _enet(nullptr) {}
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		Peer(_ENetPeer* peer) : _enet(peer) {}
+#endif
 
-		inline bool operator==(const Peer& dt) const {
-			return (_enet == dt._enet);
+		inline bool operator==(const Peer& other) const {
+			return (_enet == other._enet);
 		}
-		inline bool operator!=(const Peer& dt) const {
-			return (_enet != dt._enet);
+		inline bool operator!=(const Peer& other) const {
+			return (_enet != other._enet);
 		}
 
 		explicit operator bool() const {
