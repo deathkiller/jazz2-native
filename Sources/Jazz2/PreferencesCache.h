@@ -29,7 +29,7 @@ namespace Jazz2
 	enum class WeaponWheelStyle : std::uint8_t {
 		Disabled,					/**< Disabled */
 		Enabled,					/**< Enabled */
-		EnabledWithAmmoCoun			/**< Enabled with Ammo count */
+		EnabledWithAmmoCount		/**< Enabled with Ammo count */
 	};
 
 	/** @brief Gamepad button labels */
