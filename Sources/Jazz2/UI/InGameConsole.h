@@ -11,15 +11,15 @@ namespace Jazz2::UI
 	/** @brief Message importance level */
 	enum class MessageLevel
 	{
-		Unknown,
-		Echo,
-		Debug,
-		Info,
-		Important,
-		Warning,
-		Error,
-		Assert,
-		Fatal
+		Unknown,		/**< Unspecified */
+		Echo,			/**< Echo of the input */
+		Debug,			/**< Debug */
+		Info,			/**< Info */
+		Important,		/**< Important */
+		Warning,		/**< Warning */
+		Error,			/**< Error */
+		Assert,			/**< Assert */
+		Fatal			/**< Fatal */
 	};
 
 	/** @brief In-game console */

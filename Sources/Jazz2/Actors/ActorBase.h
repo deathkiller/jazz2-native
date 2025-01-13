@@ -131,20 +131,20 @@ namespace Jazz2::Actors
 
 	/** @brief Move type, supports a bitwise combination of its member values */
 	enum class MoveType {
-		Absolute = 0x00,
-		Relative = 0x01,
-		Force = 0x02
+		Absolute = 0x00,		/**< Move to absolute position */
+		Relative = 0x01,		/**< Move to relative position */
+		Force = 0x02			/**< Ignore all collision checks */
 	};
 
 	DEATH_ENUM_FLAGS(MoveType);
 
 	/** @brief Actor renderer type */
 	enum class ActorRendererType {
-		Default,
-		Outline,
-		WhiteMask,
-		PartialWhiteMask,
-		FrozenMask
+		Default,				/**< Default rendering */
+		Outline,				/**< Draw outline around the sprite */
+		WhiteMask,				/**< Draw all non-transparent pixels as white */
+		PartialWhiteMask,		/**< Draw all non-transparent pixels as boosted shades of gray */
+		FrozenMask				/**< Apply frozen effect to the sprite */
 	};
 
 	/** @brief Base class of an object */
@@ -162,18 +162,21 @@ namespace Jazz2::Actors
 		ActorBase();
 		virtual ~ActorBase();
 
+		/** @brief Outer AABB hitbox */
 		AABBf AABB;
+		/** @brief Inner AABB hitbox */
 		AABBf AABBInner;
-		std::int32_t CollisionProxyID;
 
 		/** @brief Returns `true` if the object is currently facing left */
 		bool IsFacingLeft();
 
 		void SetParent(SceneNode* parent);
+		/** @brief Called after the object is created */
 		Task<bool> OnActivated(const ActorActivationDetails& details);
 		/** @brief Called when the object collides with another object */
 		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
 
+		/** @brief Returns `true` if the object is invulnerable */
 		bool IsInvulnerable();
 		/** @brief Returns current health */
 		std::int32_t GetHealth();
@@ -213,10 +216,12 @@ namespace Jazz2::Actors
 			return _speed;
 		}
 
+		/** @brief Returns actor state */
 		constexpr ActorState GetState() const noexcept {
 			return _state;
 		}
 
+		/** @overload */
 		constexpr bool GetState(ActorState flag) const noexcept {
 			return (_state & flag) == flag;
 		}
@@ -321,7 +326,9 @@ namespace Jazz2::Actors
 		/** @brief Called when an event is triggered */
 		virtual void OnTriggeredEvent(EventType eventType, uint8_t* eventParams);
 
+		/** @brief Performs standard movement behavior */
 		void TryStandardMovement(float timeMult, Tiles::TileCollisionParams& params);
+		/** @brief Updates hitbox to a given size */
 		void UpdateHitbox(std::int32_t w, std::int32_t h);
 		void UpdateFrozenState(float timeMult);
 		void HandleFrozenStateChange(ActorBase* shot);
@@ -378,10 +385,12 @@ namespace Jazz2::Actors
 		void RequestMetadataAsync(StringView path);
 #endif
 
+		/** @brief Sets actor state */
 		constexpr void SetState(ActorState flags) noexcept {
 			_state = flags;
 		}
 
+		/** @overload */
 		constexpr void SetState(ActorState flag, bool value) noexcept {
 			if (value) {
 				_state = _state | flag;
@@ -394,6 +403,7 @@ namespace Jazz2::Actors
 		ActorBase(const ActorBase&) = delete;
 		ActorBase& operator=(const ActorBase&) = delete;
 
+		std::int32_t _collisionProxyID;
 		ActorState _state;
 		Function<void()> _currentTransitionCallback;
 

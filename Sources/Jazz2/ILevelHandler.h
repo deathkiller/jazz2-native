@@ -41,8 +41,11 @@ namespace Jazz2
 		DEATH_RUNTIME_OBJECT();
 
 	public:
+		/** @brief Layer of the main plane */
 		static constexpr std::int32_t MainPlaneZ = 500;
+		/** @brief Layer of sprites */
 		static constexpr std::int32_t SpritePlaneZ = MainPlaneZ + 10;
+		/** @brief Layer of players */
 		static constexpr std::int32_t PlayerZ = MainPlaneZ + 20;
 
 		/** @brief Initializes the level handler from @ref LevelInitialization */
@@ -65,6 +68,7 @@ namespace Jazz2
 		virtual bool IsPausable() const = 0;
 		/** @brief Returns `true` if Reforged Gameplay is enabled */
 		virtual bool IsReforged() const = 0;
+		/** @brief Returns `true` if players can collide with each other */
 		virtual bool CanPlayersCollide() const = 0;
 		/** @brief Returns level bounds including camera limits */
 		virtual Recti LevelBounds() const = 0;
@@ -120,16 +124,26 @@ namespace Jazz2
 		virtual void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) = 0;
 		virtual void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
 		virtual void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) = 0;
+		/** @brief Sets checkpoint for a given player */
 		virtual void SetCheckpoint(Actors::Player* player, Vector2f pos) = 0;
+		/** @brief Rolls back to the last checkpoint for a given player */
 		virtual void RollbackToCheckpoint(Actors::Player* player) = 0;
 		virtual void HandleActivateSugarRush(Actors::Player* player) = 0;
+		/** @brief Shows a text notification */
 		virtual void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) = 0;
+		/** @brief Returns a level text */
 		virtual StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) = 0;
+		/** @brief Override specified level text */
 		virtual void OverrideLevelText(std::uint32_t textId, StringView value) = 0;
+		/** @brief Returns camera position of a given player */
 		virtual Vector2f GetCameraPos(Actors::Player* player) const = 0;
+		/** @brief Limits camera viewport for a given player */
 		virtual void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) = 0;
+		/** @brief Override camera viewport for a given player */
 		virtual void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) = 0;
+		/** @brief Shake camera for a given player */
 		virtual void ShakeCameraView(Actors::Player* player, float duration) = 0;
+		/** @brief Shake camera for all players near a given position */
 		virtual void ShakeCameraViewNear(Vector2f pos, float duration) = 0;
 		/** @brief Returns state of a given trigger in the tile map */
 		virtual bool GetTrigger(std::uint8_t triggerId) = 0;

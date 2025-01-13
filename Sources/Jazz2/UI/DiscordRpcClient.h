@@ -2,7 +2,7 @@
 
 #include "../../Main.h"
 
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../../nCine/Threading/Thread.h"
 
@@ -24,11 +24,17 @@ namespace Jazz2::UI
 		/** @brief Rich presence description */
 		struct RichPresence
 		{
+			/** @brief State text */
 			String State;
+			/** @brief Details description text */
 			String Details;
+			/** @brief Large image ID */
 			String LargeImage;
+			/** @brief Large image tooltip text */
 			String LargeImageTooltip;
+			/** @brief Small image ID */
 			String SmallImage;
+			/** @brief Small image tooltip text */
 			String SmallImageTooltip;
 		};
 
@@ -39,11 +45,11 @@ namespace Jazz2::UI
 		bool Connect(StringView clientId);
 		/** @brief Disconnects from a local Discord client */
 		void Disconnect();
-		/** @brief Returns `true` if connection is active */
+		/** @brief Returns `true` if Discord is running and connection is active */
 		bool IsSupported() const;
-		/** @brief Returns a local user ID */
+		/** @brief Returns a user ID of the logged-in user */
 		std::uint64_t GetUserId() const;
-		/** @brief Returns a local user display name */
+		/** @brief Returns a display name of the logged-in user */
 		StringView GetUserDisplayName() const;
 		/** @brief Sets rich presence */
 		bool SetRichPresence(const RichPresence& richPresence);

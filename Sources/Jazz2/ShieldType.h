@@ -7,13 +7,13 @@ namespace Jazz2
 	/** @brief Shield type */
 	enum class ShieldType : uint8_t
 	{
-		None,
+		None,			/**< No shield */
 
-		Fire,
-		Water,
-		Lightning,
-		Laser,
+		Fire,			/**< Fire shield */
+		Water,			/**< Water shield */
+		Lightning,		/**< Lightning shield */
+		Laser,			/**< Laser shield */
 
-		Count
+		Count			/**< Count of supported shield types */
 	};
 }

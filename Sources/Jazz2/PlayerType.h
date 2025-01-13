@@ -7,11 +7,11 @@ namespace Jazz2
 	/** @brief Player type */
 	enum class PlayerType : std::uint8_t
 	{
-		None,
+		None,		/**< None/unspecified */
 
-		Jazz,
-		Spaz,
-		Lori,
-		Frog
+		Jazz,		/**< Jazz */
+		Spaz,		/**< Spaz */
+		Lori,		/**< Lori */
+		Frog		/**< Frog */
 	};
 }

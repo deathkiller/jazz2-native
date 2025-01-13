@@ -13,6 +13,7 @@
 
 using namespace nCine;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #define AURA_REFRESH_INTERVAL 40		// 40 ms
 #define AURA_COLORS_SIZE (4 + 105)		// 4 Main colors + Keyboard mapping = 327 bytes, see AuraLight struct
 #define AURA_COLORS_LIMITED_SIZE 4		// Only first 4 main colors
@@ -49,9 +50,11 @@ namespace ChromaSDK::Keyboard
 	} CUSTOM_EFFECT_TYPE;
 }
 #endif
+#endif
 
 namespace Jazz2::UI
 {
+	/** @brief Individual lights of @ref RgbLights service */
 	enum struct AuraLight
 	{
 		// Primary / Logo / Center

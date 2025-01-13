@@ -149,89 +149,89 @@ On the other hand, **SDL2** usually has better gamepad support and better suppor
 The following parameters can be used to customize the build:
 
 -   `CMAKE_BUILD_TYPE` --- Specify build configuration: `Debug`, `Release`
--   `CMAKE_INSTALL_PREFIX` (default @cpp "/usr/local" @ce) --- Install prefix on Unix systems
--   `NCINE_DOWNLOAD_DEPENDENCIES` (default `ON`) --- Download all missing dependencies automatically
--   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Specify preferred backend on desktop: `GLFW`, `SDL2`
--   `NCINE_VERSION_FROM_GIT` (default `ON`) --- Try to set current game version from Git repository
--   `NCINE_EMBED_SHADERS` (default `ON`) --- Embed shader files inside executable
--   `NCINE_PROFILING` (default `OFF`) --- Enable profiling
--   `NCINE_WITH_THREADS` (default `ON` except on Emscripten) --- Use multiple threads for better performance
--   `NCINE_WITH_OPENGLES` (default `OFF`) --- Use **OpenGL|ES** instead of **OpenGL**
--   `NCINE_WITH_ANGLE` (default `OFF` except on UWP) --- Enable Google **ANGLE** libraries support
--   `NCINE_WITH_GLEW` (default `ON`) --- Use **GLEW** library
--   `NCINE_WITH_BACKWARD` (default `ON`) --- Enable integration with Backward for exception handling
--   `NCINE_WITH_WEBP` (default `OFF`) --- Enable `.webp` image file support
--   `NCINE_WITH_AUDIO` (default `ON`) --- Enable audio support, requires [OpenAL](https://www.openal.org/)
--   `NCINE_WITH_VORBIS` (default `ON`) -- Enable `.ogg` audio file support
--   `NCINE_WITH_OPENMPT` (default `ON`) -- Enable module music (`libopenmpt`) audio file support
--   `NCINE_COMPILE_OPENMPT` (default `ON`) -- Download and compile `libopenmpt` from source automatically
--   `NCINE_WITH_ANGELSCRIPT` (default `OFF`) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
--   `NCINE_WITH_IMGUI` (default `OFF`) --- Enable integration with [Dear ImGui](https://github.com/ocornut/imgui)
+-   `CMAKE_INSTALL_PREFIX` (default @cmake "/usr/local" @ce) --- Install prefix on Unix systems
+-   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cmake ON @ce) --- Download all missing dependencies automatically
+-   `NCINE_PREFERRED_BACKEND` (default @cmake "GLFW" @ce) --- Specify preferred backend on desktop: `GLFW`, `SDL2`
+-   `NCINE_VERSION_FROM_GIT` (default @cmake ON @ce) --- Try to set current game version from Git repository
+-   `NCINE_EMBED_SHADERS` (default @cmake ON @ce) --- Embed shader files inside executable
+-   `NCINE_PROFILING` (default @cmake OFF @ce) --- Enable profiling
+-   `NCINE_WITH_THREADS` (default @cmake ON @ce except on Emscripten) --- Use multiple threads for better performance
+-   `NCINE_WITH_OPENGLES` (default @cmake OFF @ce) --- Use **OpenGL|ES** instead of **OpenGL**
+-   `NCINE_WITH_ANGLE` (default @cmake OFF @ce except on UWP) --- Enable Google **ANGLE** libraries support
+-   `NCINE_WITH_GLEW` (default @cmake ON @ce) --- Use **GLEW** library
+-   `NCINE_WITH_BACKWARD` (default @cmake ON @ce) --- Enable integration with Backward for exception handling
+-   `NCINE_WITH_WEBP` (default @cmake OFF @ce) --- Enable `.webp` image file support
+-   `NCINE_WITH_AUDIO` (default @cmake ON @ce) --- Enable audio support, requires [OpenAL](https://www.openal.org/)
+-   `NCINE_WITH_VORBIS` (default @cmake ON @ce) -- Enable `.ogg` audio file support
+-   `NCINE_WITH_OPENMPT` (default @cmake ON @ce) -- Enable module music (`libopenmpt`) audio file support
+-   `NCINE_COMPILE_OPENMPT` (default @cmake ON @ce) -- Download and compile `libopenmpt` from source automatically
+-   `NCINE_WITH_ANGELSCRIPT` (default @cmake OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
+-   `NCINE_WITH_IMGUI` (default @cmake OFF @ce) --- Enable integration with [Dear ImGui](https://github.com/ocornut/imgui)
     -   `IMGUI_VERSION_TAG` allows to specify version
--   `NCINE_WITH_TRACY` (default `OFF`) --- Enable integration with [Tracy](https://github.com/wolfpld/tracy) frame profiler
+-   `NCINE_WITH_TRACY` (default @cmake OFF @ce) --- Enable integration with [Tracy](https://github.com/wolfpld/tracy) frame profiler
     -   `TRACY_VERSION_TAG` allows to specify version
--   `NCINE_WITH_RENDERDOC` (default `OFF`) --- Enable integration with [RenderDoc](https://renderdoc.org/)
--   `NCINE_DATA_DIR` (default @cpp "./Content" @ce) --- Path to @cpp "Content" @ce game data directory
-    -   Some build targets include @cpp "Content" @ce directory directly inside the executable package
+-   `NCINE_WITH_RENDERDOC` (default @cmake OFF @ce) --- Enable integration with [RenderDoc](https://renderdoc.org/)
+-   `NCINE_DATA_DIR` (default @cmake "./Content" @ce) --- Path to @cmake "Content" @ce game data directory
+    -   Some build targets include @cmake "Content" @ce directory directly inside the executable package
 
 @subsubsection building-config-params-android Platform-specific parameters for Android
 
--   `NCINE_BUILD_ANDROID` (default `OFF`) --- Enable building for Android
--   `NCINE_ASSEMBLE_APK` (default `ON`) --- Assemble Android APK file, requires with **Gradle**
--   `NCINE_UNIVERSAL_APK` (default `OFF`) --- Create universal APK containing all specified CPU architectures
--   `NCINE_NDK_ARCHITECTURES` (default @cpp "arm64-v8a" @ce) --- Semicolon-separated list of target CPU architectures
+-   `NCINE_BUILD_ANDROID` (default @cmake OFF @ce) --- Enable building for Android
+-   `NCINE_ASSEMBLE_APK` (default @cmake ON @ce) --- Assemble Android APK file, requires with **Gradle**
+-   `NCINE_UNIVERSAL_APK` (default @cmake OFF @ce) --- Create universal APK containing all specified CPU architectures
+-   `NCINE_NDK_ARCHITECTURES` (default @cmake "arm64-v8a" @ce) --- Semicolon-separated list of target CPU architectures
     -   Possible values: `arm64-v8a` (for 64-bit ARM), `armeabi-v7a` (for 32-bit ARM), `x86`, `x86_64`
 -   `NDK_DIR` --- Android NDK directory, usually detected automatically
 
 @subsubsection building-config-params-linux Platform-specific parameters for Linux
 
--   `NCINE_BUILD_FLATPAK` (default `OFF`) --- Build Flatpak version of the game
--   `NCINE_ASSEMBLE_DEB` (default `OFF`) --- Assemble DEB package of the game
--   `NCINE_ASSEMBLE_RPM` (default `OFF`) --- Assemble RPM package of the game
--   `NCINE_LINUX_PACKAGE` --- Override Linux package name, otherwise @cpp "Jazz² Resurrection" @ce will be used
--   `NCINE_OVERRIDE_CONTENT_PATH` --- Override @cpp "Content" @ce directory path
+-   `NCINE_BUILD_FLATPAK` (default @cmake OFF @ce) --- Build Flatpak version of the game
+-   `NCINE_ASSEMBLE_DEB` (default @cmake OFF @ce) --- Assemble DEB package of the game
+-   `NCINE_ASSEMBLE_RPM` (default @cmake OFF @ce) --- Assemble RPM package of the game
+-   `NCINE_LINUX_PACKAGE` --- Override Linux package name, otherwise @cmake "Jazz² Resurrection" @ce will be used
+-   `NCINE_OVERRIDE_CONTENT_PATH` --- Override @cmake "Content" @ce directory path
     -   If not specified, following path will be used: @cpp CMAKE_INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/" @ce
--   `NCINE_PACKAGED_CONTENT_PATH` (default `OFF`) --- Use alternative path search strategy
-    -   If enabled, @cpp "Content" @ce will be always relative to current directory
+-   `NCINE_PACKAGED_CONTENT_PATH` (default @cmake OFF @ce) --- Use alternative path search strategy
+    -   If enabled, @cmake "Content" @ce will be always relative to current directory
     -   Has higher priority than `NCINE_OVERRIDE_CONTENT_PATH`
 
 @subsubsection building-config-params-windows Platform-specific parameters for Windows
 
--   `DEATH_WITH_VC_LTL` (default `ON`) --- Build with **VC-LTL** for lighter
+-   `DEATH_WITH_VC_LTL` (default @cmake ON @ce) --- Build with **VC-LTL** for lighter
     binaries, requires [VC-LTL](https://github.com/Chuyu-Team/VC-LTL5)
--   `NCINE_COPY_DEPENDENCIES` (default `OFF`) --- Copy all required libraries to build target directory
+-   `NCINE_COPY_DEPENDENCIES` (default @cmake OFF @ce) --- Copy all required libraries to build target directory
 
 @subsubsection building-config-params-uwp Platform-specific parameters for Universal Windows Platform
 
 -   `NCINE_UWP_CERTIFICATE_THUMBPRINT` --- Code-signing certificate thumbprint
     -   Use either `NCINE_UWP_CERTIFICATE_THUMBPRINT` or `NCINE_UWP_CERTIFICATE_PATH`
--   `NCINE_UWP_CERTIFICATE_PATH` (default @cpp "UwpCertificate.pfx" @ce) --- Code-signing certificate path
+-   `NCINE_UWP_CERTIFICATE_PATH` (default @cmake "UwpCertificate.pfx" @ce) --- Code-signing certificate path
 -   `NCINE_UWP_CERTIFICATE_PASSWORD` (optional) --- Code-signing certificate password for `NCINE_UWP_CERTIFICATE_PATH`
 
 @subsubsection building-config-params-adv Advanced parameters
 
--   `DEATH_CPU_USE_RUNTIME_DISPATCH` (default `ON` if `DEATH_CPU_USE_IFUNC`) --- Build
+-   `DEATH_CPU_USE_RUNTIME_DISPATCH` (default @cmake ON @ce if `DEATH_CPU_USE_IFUNC`) --- Build
     with runtime dispatch for CPU-dependent functionality, see @ref Death::Cpu
--   `DEATH_CPU_USE_IFUNC` (default `ON` if supported) --- Allow using **GNU IFUNC** for runtime CPU dispatch
--   `DEATH_RUNTIME_CAST` (default `ON`) --- Enable @cpp runtime_cast<T>() @ce optimization
--   `DEATH_TRACE` (default `ON`) --- Enable runtime event tracing
--   `DEATH_TRACE_ASYNC` (default `ON` if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
+-   `DEATH_CPU_USE_IFUNC` (default @cmake ON @ce if supported) --- Allow using **GNU IFUNC** for runtime CPU dispatch
+-   `DEATH_RUNTIME_CAST` (default @cmake ON @ce) --- Enable @cpp runtime_cast<T>() @ce optimization
+-   `DEATH_TRACE` (default @cmake ON @ce) --- Enable runtime event tracing
+-   `DEATH_TRACE_ASYNC` (default @cmake ON @ce if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
 -   `NCINE_ARCH_EXTENSIONS` --- Target CPU architecture extensions (instruction sets)
     -   See documentation of [`/arch` (MSVC)](https://learn.microsoft.com/en-us/cpp/build/reference/arch-minimum-cpu-architecture?view=msvc-170) and [`-m` (GCC)](https://gcc.gnu.org/onlinedocs/gcc-8.4.0/gcc/Submodel-Options.html) for more details.
--   `NCINE_INPUT_DEBUGGING` (default `OFF`) --- Enable (gamepad) input debugging and logging
--   `NCINE_LINKTIME_OPTIMIZATION` (default `ON`) --- Compile with link time optimization
--   `NCINE_ADDRESS_SANITIZER` (default `OFF`) --- Enable AddressSanitizer memory error detector
--   `NCINE_UNDEFINED_SANITIZER` (default `OFF`) --- Enable UndefinedBehaviorSanitizer detector
--   `NCINE_CODE_COVERAGE` (default `OFF`) --- Enable gcov instrumentation for testing code coverage
--   `NCINE_GCC_HARDENING` (default `OFF`) --- Enable memory corruption mitigation methods of GCC
--   `NCINE_AUTOVECTORIZATION_REPORT` (default `OFF`) --- Enable report generation from compiler auto-vectorization
--   `NCINE_STRIP_BINARIES` (default `OFF`) --- Strip debug symbols from binaries for smaller size
+-   `NCINE_INPUT_DEBUGGING` (default @cmake OFF @ce) --- Enable (gamepad) input debugging and logging
+-   `NCINE_LINKTIME_OPTIMIZATION` (default @cmake ON @ce) --- Compile with link time optimization
+-   `NCINE_ADDRESS_SANITIZER` (default @cmake OFF @ce) --- Enable AddressSanitizer memory error detector
+-   `NCINE_UNDEFINED_SANITIZER` (default @cmake OFF @ce) --- Enable UndefinedBehaviorSanitizer detector
+-   `NCINE_CODE_COVERAGE` (default @cmake OFF @ce) --- Enable gcov instrumentation for testing code coverage
+-   `NCINE_GCC_HARDENING` (default @cmake OFF @ce) --- Enable memory corruption mitigation methods of GCC
+-   `NCINE_AUTOVECTORIZATION_REPORT` (default @cmake OFF @ce) --- Enable report generation from compiler auto-vectorization
+-   `NCINE_STRIP_BINARIES` (default @cmake OFF @ce) --- Strip debug symbols from binaries for smaller size
 
 @subsubsection building-config-params-game Game-specific parameters
 
--   `SHAREWARE_DEMO_ONLY` (default `OFF`) --- Shareware Demo only, usually used with **Emscripten**
--   `DISABLE_RESCALE_SHADERS` (default `OFF`) --- Disable rescale shaders and use only nearest neighbor for resizing
--   `WITH_MULTIPLAYER` (default `OFF`) --- Enable experimental multiplayer support
+-   `SHAREWARE_DEMO_ONLY` (default @cmake OFF @ce) --- Shareware Demo only, usually used with **Emscripten**
+-   `DISABLE_RESCALE_SHADERS` (default @cmake OFF @ce) --- Disable rescale shaders and use only nearest neighbor for resizing
+-   `WITH_MULTIPLAYER` (default @cmake OFF @ce) --- Enable experimental multiplayer support
 
 */
 

@@ -40,6 +40,14 @@ namespace Jazz2
 	class ContentResolver
 	{
 	public:
+		/** @brief Maximum number of palettes */
+		static constexpr std::int32_t PaletteCount = 256;
+		/** @brief Number of colors per palette */
+		static constexpr std::int32_t ColorsPerPalette = 256;
+		/** @brief Invalid value */
+		static constexpr std::int32_t InvalidValue = INT_MAX;
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint8_t LevelFile = 1;
 		static constexpr std::uint8_t EpisodeFile = 2;
 		static constexpr std::uint8_t CacheIndexFile = 3;
@@ -47,10 +55,7 @@ namespace Jazz2
 		static constexpr std::uint8_t StateFile = 5;
 		static constexpr std::uint8_t SfxListFile = 6;
 		static constexpr std::uint8_t HighscoresFile = 7;
-
-		static constexpr std::int32_t PaletteCount = 256;
-		static constexpr std::int32_t ColorsPerPalette = 256;
-		static constexpr std::int32_t InvalidValue = INT_MAX;
+#endif
 
 		/** @brief Returns static instance of main content resolver */
 		static ContentResolver& Get();

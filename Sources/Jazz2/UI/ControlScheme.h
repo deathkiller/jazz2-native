@@ -89,8 +89,11 @@ namespace Jazz2::UI
 		/** @brief Returns a gamepad index for a given player index */
 		static std::int32_t GetGamepadForPlayer(std::int32_t playerIdx);
 
+		/** @brief Creates mapping target for a given key */
 		static MappingTarget CreateTarget(Keys key);
+		/** @brief Creates mapping target for a given gamepad button */
 		static MappingTarget CreateTarget(std::uint32_t gamepadIndex, ButtonName button);
+		/** @brief Creates mapping target for a given gamepad axis */
 		static MappingTarget CreateTarget(std::uint32_t gamepadIndex, AxisName axis, bool negative = false);
 
 	private:

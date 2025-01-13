@@ -773,7 +773,7 @@ namespace Jazz2
 
 		if (!actor->GetState(Actors::ActorState::ForceDisableCollisions)) {
 			actor->UpdateAABB();
-			actor->CollisionProxyID = _collisions.CreateProxy(actor->AABB, actor.get());
+			actor->_collisionProxyID = _collisions.CreateProxy(actor->AABB, actor.get());
 		}
 
 		_actors.push_back(std::move(actor));
@@ -1704,21 +1704,21 @@ namespace Jazz2
 			Actors::ActorBase* actor = it->get();
 			if (actor->GetState(Actors::ActorState::IsDestroyed)) {
 				BeforeActorDestroyed(actor);
-				if (actor->CollisionProxyID != Collisions::NullNode) {
-					_collisions.DestroyProxy(actor->CollisionProxyID);
-					actor->CollisionProxyID = Collisions::NullNode;
+				if (actor->_collisionProxyID != Collisions::NullNode) {
+					_collisions.DestroyProxy(actor->_collisionProxyID);
+					actor->_collisionProxyID = Collisions::NullNode;
 				}
 				it = _actors.eraseUnordered(it);
 				continue;
 			}
 			
 			if (actor->GetState(Actors::ActorState::IsDirty)) {
-				if (actor->CollisionProxyID == Collisions::NullNode) {
+				if (actor->_collisionProxyID == Collisions::NullNode) {
 					continue;
 				}
 
 				actor->UpdateAABB();
-				_collisions.MoveProxy(actor->CollisionProxyID, actor->AABB, actor->_speed * timeMult);
+				_collisions.MoveProxy(actor->_collisionProxyID, actor->AABB, actor->_speed * timeMult);
 				actor->SetState(Actors::ActorState::IsDirty, false);
 			}
 			++it;
