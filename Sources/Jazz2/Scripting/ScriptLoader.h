@@ -58,8 +58,8 @@ namespace Jazz2::Scripting
 	{
 	public:
 		/** @brief Returns @ref ScriptLoader instance from active **AngelScript** context */
-		template<typename T = ScriptLoader>
-		static typename std::enable_if<std::is_base_of<ScriptLoader, T>::value, T>::type* FromActiveContext() {
+		template<typename T = ScriptLoader, class = typename std::enable_if<std::is_base_of<ScriptLoader, T>::value>::type>
+		static T* FromActiveContext() {
 			auto* ctx = asGetActiveContext();
 			DEATH_ASSERT(ctx != nullptr, "Active context is not set", nullptr);
 			return static_cast<T*>(ctx->GetEngine()->GetUserData(EngineToOwner));
@@ -102,9 +102,9 @@ namespace Jazz2::Scripting
 		/** @brief Returns metadata for specified method */
 		ArrayView<String> GetMetadataForTypeMethod(std::int32_t typeId, asIScriptFunction* method);
 
-		/** @brief Called when `#include` is encountered in a script file */
+		/** @brief Called when `#include` directive is encountered in a script file */
 		virtual String OnProcessInclude(StringView includePath, StringView scriptPath) = 0;
-		/** @brief Called when `#pragma` is encountered in a script file */
+		/** @brief Called when `#pragma` directive is encountered in a script file */
 		virtual void OnProcessPragma(StringView content, ScriptContextType& contextType) = 0;
 
 		/** @brief Creates a relative path */

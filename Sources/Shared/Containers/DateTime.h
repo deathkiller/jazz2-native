@@ -30,7 +30,7 @@ namespace Death { namespace Containers {
 		/** @brief Well-known timezones */
 		enum Tz
 		{
-			// The time in the current time zone
+			/** @brief Specifies time in the current timezone */
 			Local,
 
 			// Underscore stands for minus

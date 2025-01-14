@@ -46,20 +46,34 @@ namespace Jazz2::Tiles
 
 	/** @brief Description of a tile map layer */
 	struct LayerDescription {
+		/** @brief Layer depth (Z position) */
 		std::uint16_t Depth;
+		/** @brief Horizontal speed */
 		float SpeedX;
+		/** @brief Vertical speed */
 		float SpeedY;
+		/** @brief Horizontal auto speed */
 		float AutoSpeedX;
+		/** @brief Vertical auto speed */
 		float AutoSpeedY;
+		/** @brief Horizontal scroll offset */
 		float OffsetX;
+		/** @brief Vertical scroll offset */
 		float OffsetY;
+		/** @brief Whether layer should repeat horizontally */
 		bool RepeatX;
+		/** @brief Whether layer should repeat vertically */
 		bool RepeatY;
+		/** @brief Whether inherent offset should be used */
 		bool UseInherentOffset;
+		/** @brief Horizontal speed model */
 		LayerSpeedModel SpeedModelX;
+		/** @brief Vertical speed model */
 		LayerSpeedModel SpeedModelY;
 
+		/** @brief Layer renderer type */
 		LayerRendererType RendererType;
+		/** @brief Layer color parameter */
 		Vector4f Color;
 	};
 
@@ -78,27 +92,40 @@ namespace Jazz2::Tiles
 
 	/** @brief Represents a single tile in a tile map layer */
 	struct LayerTile {
+		/** @brief Tile ID */
 		std::int32_t TileID;
+		/** @brief Tile parameters */
 		std::uint16_t TileParams;
+		/** @brief Tile flags */
 		LayerTileFlags Flags;
+		/** @brief Tile transparency */
 		std::uint8_t Alpha;
+		/** @brief Suspend type of tile */
 		SuspendType HasSuspendType;
+		/** @brief Destruct type of tile */
 		TileDestructType DestructType;
+		/** @brief Destruct animation ID */
 		std::int32_t DestructAnimation;		// Animation index for a destructible tile that uses an animation, but doesn't animate normally
+		/** @brief Destruct animation frame index */
 		std::int32_t DestructFrameIndex;	// Denotes the specific frame from the above animation that is currently active
 											// Collapsible: Delay ("wait" parameter); Trigger: Trigger ID
 	};
 
 	/** @brief Represents a single tile map layer */
 	struct TileMapLayer {
+		/** @brief Layer layout */
 		std::unique_ptr<LayerTile[]> Layout;
+		/** @brief Layer layout size */
 		Vector2i LayoutSize;
+		/** @brief Layer description */
 		LayerDescription Description;
+		/** @brief Layer visibility */
 		bool Visible;
 	};
 
 	/** @brief Represents a single frame of an animated tile */
 	struct AnimatedTileFrame {
+		/** @brief Tile ID */
 		std::int32_t TileID;
 	};
 

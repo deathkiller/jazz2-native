@@ -83,7 +83,7 @@ namespace Jazz2::Scripting
 		void Release() const;
 
 		// Reassign the dictionary
-		CScriptDictionary& operator =(const CScriptDictionary& other);
+		CScriptDictionary& operator=(const CScriptDictionary& other);
 
 		// Sets a key/value pair
 		void Set(const dictKey_t& key, void* value, int typeId);
@@ -121,7 +121,7 @@ namespace Jazz2::Scripting
 		// Get an array of all keys
 		CScriptArray* GetKeys() const;
 
-		// STL style iterator
+		/** @brief **AngelScript** dictionary iterator */
 		class CIterator
 		{
 		public:
