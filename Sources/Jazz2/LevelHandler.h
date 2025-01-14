@@ -114,6 +114,7 @@ namespace Jazz2
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
+		/** @brief Called when a console command is entered */
 		virtual bool OnConsoleCommand(StringView line);
 
 		void OnKeyPressed(const KeyboardEvent& event) override;
@@ -164,11 +165,8 @@ namespace Jazz2
 
 		bool SerializeResumableToStream(Stream& dest) override;
 
-		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override { }
+		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override {}
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;
-
-		virtual void AttachComponents(LevelDescriptor&& descriptor);
-		virtual void SpawnPlayers(const LevelInitialization& levelInit);
 
 	protected:
 		/** @brief Describes current input state of a player */
@@ -253,25 +251,51 @@ namespace Jazz2
 #endif
 #endif
 
+		/** @brief Attaches all required level components to the handler */
+		virtual void AttachComponents(LevelDescriptor&& descriptor);
+		/** @brief Spawns all players */
+		virtual void SpawnPlayers(const LevelInitialization& levelInit);
+
+		/** @brief Called after the level is loaded and all players were spawned */
 		virtual void OnInitialized();
+		/** @brief Called before an actor (object) is destroyed */
 		virtual void BeforeActorDestroyed(Actors::ActorBase* actor);
+		/** @brief Processes events */
 		virtual void ProcessEvents(float timeMult);
+		/** @brief Processes transition to the next level if queued */
 		virtual void ProcessQueuedNextLevel();
+		/** @brief Prepares @ref LevelInitialization for transition to the next level */
 		virtual void PrepareNextLevelInitialization(LevelInitialization& levelInit);
 
+		/** @brief Returns player viewport bounds */
 		Recti GetPlayerViewportBounds(std::int32_t w, std::int32_t h, std::int32_t index);
+		/** @brief Processes weather */
 		void ProcessWeather(float timeMult);
+		/** @brief Resolves collisions */
 		void ResolveCollisions(float timeMult);
+		/** @brief Assigns viewport */
 		void AssignViewport(Actors::Player* player);
+		/** @brief Initializes camera for specified viewport */
 		void InitializeCamera(Rendering::PlayerViewport& viewport);
+		/** @brief Updates pressed actions */
 		void UpdatePressedActions();
+		/** @brief Updates rich presence */
 		void UpdateRichPresence();
+		/** @brief Initializes common rumble effects */
 		void InitializeRumbleEffects();
+		/** @brief Registers a rumple effect */
 		RumbleDescription* RegisterRumbleEffect(StringView name);
 
+		/** @brief Pauses the game */
 		void PauseGame();
+		/** @brief Resumes the paused game */
 		void ResumeGame();
+		
+#if defined(WITH_IMGUI)
+		ImVec2 WorldPosToScreenSpace(const Vector2f pos);
+#endif
 
+	private:
 		bool CheatKill();
 		bool CheatGod();
 		bool CheatNext();
@@ -283,9 +307,5 @@ namespace Jazz2
 		bool CheatCoins();
 		bool CheatMorph();
 		bool CheatShield();
-		
-#if defined(WITH_IMGUI)
-		ImVec2 WorldPosToScreenSpace(const Vector2f pos);
-#endif
 	};
 }

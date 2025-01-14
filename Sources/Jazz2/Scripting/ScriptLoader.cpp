@@ -766,7 +766,7 @@ namespace Jazz2::Scripting
 		if (it != _typeMetadataMap.end()) {
 			return it->second;
 		}
-		return { };
+		return {};
 	}
 
 	ArrayView<String> ScriptLoader::GetMetadataForFunction(asIScriptFunction* func)
@@ -777,7 +777,7 @@ namespace Jazz2::Scripting
 				return it->second;
 			}
 		}
-		return { };
+		return {};
 	}
 
 	ArrayView<String> ScriptLoader::GetMetadataForVariable(std::int32_t varIdx)
@@ -786,18 +786,18 @@ namespace Jazz2::Scripting
 		if (it != _varMetadataMap.end()) {
 			return it->second;
 		}
-		return { };
+		return {};
 	}
 
 	ArrayView<String> ScriptLoader::GetMetadataForTypeProperty(std::int32_t typeId, std::int32_t varIdx)
 	{
 		auto typeIt = _classMetadataMap.find(typeId);
 		if (typeIt == _classMetadataMap.end()) {
-			return { };
+			return {};
 		}
 		auto propIt = typeIt->second.VarMetadataMap.find(varIdx);
 		if (propIt == typeIt->second.VarMetadataMap.end()) {
-			return { };
+			return {};
 		}
 		return propIt->second;
 	}
@@ -805,15 +805,15 @@ namespace Jazz2::Scripting
 	ArrayView<String> ScriptLoader::GetMetadataForTypeMethod(std::int32_t typeId, asIScriptFunction* method)
 	{
 		if (method == nullptr) {
-			return { };
+			return {};
 		}
 		auto typeIt = _classMetadataMap.find(typeId);
 		if (typeIt == _classMetadataMap.end()) {
-			return { };
+			return {};
 		}
 		auto methodIt = typeIt->second.FuncMetadataMap.find(method->GetId());
 		if (methodIt == typeIt->second.FuncMetadataMap.end()) {
-			return { };
+			return {};
 		}
 		return methodIt->second;
 	}

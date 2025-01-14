@@ -16,6 +16,7 @@ namespace Jazz2
 		IStateHandler(const IStateHandler&) = delete;
 		IStateHandler& operator=(const IStateHandler&) = delete;
 
+		/** @brief Returns viewport size of the handler */
 		virtual nCine::Vector2i GetViewSize() const { return {}; }
 
 		/** @brief Called at the beginning of each frame */
