@@ -6,6 +6,7 @@
 
 namespace Jazz2::Scripting
 {
+	/** @brief Registers ImGui bindings to **AngelScript** engine */
 	void RegisterImGuiBindings(asIScriptEngine* engine);
 }
 

@@ -113,41 +113,41 @@ namespace Jazz2::Scripting
 			{ "Resurrection"_s, true }
 		};
 
-		_scriptContextType = AddScriptFromFile(scriptPath, DefinedSymbols);
-		if (_scriptContextType == ScriptContextType::Unknown) {
+		auto contextType = AddScriptFromFile(scriptPath, DefinedSymbols);
+		if (contextType == ScriptContextType::Unknown) {
 			LOGE("Cannot compile the script. Please correct the code and try again.");
 			return;
 		}
 
-		RegisterBuiltInFunctions(_engine);
-		switch (_scriptContextType) {
+		RegisterBuiltInFunctions(GetEngine());
+		switch (GetContextType()) {
 			case ScriptContextType::Legacy:
 				LOGD("Compiling script with \"Legacy\" context");
-				RegisterLegacyFunctions(_engine);
+				RegisterLegacyFunctions(GetEngine());
 				break;
 			case ScriptContextType::Standard:
 				LOGD("Compiling script with \"Standard\" context");
-				RegisterStandardFunctions(_engine, _module);
+				RegisterStandardFunctions(GetEngine(), GetMainModule());
 				break;
 		}
 
-		std::int32_t r = Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
+		ScriptBuildResult r = Build(); RETURN_ASSERT_MSG(r == ScriptBuildResult::Success, "Cannot compile the script. Please correct the code and try again.");
 
 		// Enable all callbacks by default
 		_enabledCallbacks.setAll();
 
-		switch (_scriptContextType) {
+		switch (GetContextType()) {
 			case ScriptContextType::Legacy:
-				_onLevelUpdate = _module->GetFunctionByDecl("void onMain()");
-				_onDrawAmmo = _module->GetFunctionByDecl("bool onDrawAmmo(jjPLAYER@ player, jjCANVAS@ canvas)");
-				_onDrawHealth = _module->GetFunctionByDecl("bool onDrawHealth(jjPLAYER@ player, jjCANVAS@ canvas)");
-				_onDrawLives = _module->GetFunctionByDecl("bool onDrawLives(jjPLAYER@ player, jjCANVAS@ canvas)");
-				_onDrawPlayerTimer = _module->GetFunctionByDecl("bool onDrawPlayerTimer(jjPLAYER@ player, jjCANVAS@ canvas)");
-				_onDrawScore = _module->GetFunctionByDecl("bool onDrawScore(jjPLAYER@ player, jjCANVAS@ canvas)");
-				_onDrawGameModeHUD = _module->GetFunctionByDecl("bool onDrawGameModeHUD(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onLevelUpdate = GetMainModule()->GetFunctionByDecl("void onMain()");
+				_onDrawAmmo = GetMainModule()->GetFunctionByDecl("bool onDrawAmmo(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawHealth = GetMainModule()->GetFunctionByDecl("bool onDrawHealth(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawLives = GetMainModule()->GetFunctionByDecl("bool onDrawLives(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawPlayerTimer = GetMainModule()->GetFunctionByDecl("bool onDrawPlayerTimer(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawScore = GetMainModule()->GetFunctionByDecl("bool onDrawScore(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawGameModeHUD = GetMainModule()->GetFunctionByDecl("bool onDrawGameModeHUD(jjPLAYER@ player, jjCANVAS@ canvas)");
 				break;
 			case ScriptContextType::Standard:
-				_onLevelUpdate = _module->GetFunctionByDecl("void onLevelUpdate(float)");
+				_onLevelUpdate = GetMainModule()->GetFunctionByDecl("void onLevelUpdate(float)");
 				// TODO: Add draw callbacks
 				break;
 		}
@@ -177,12 +177,12 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::OnLevelLoad()
 	{
-		asIScriptFunction* func = _module->GetFunctionByDecl("void onLevelLoad()");
+		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onLevelLoad()");
 		if (func == nullptr) {
 			return;
 		}
 
-		asIScriptContext* ctx = _engine->RequestContext();
+		asIScriptContext* ctx = GetEngine()->RequestContext();
 
 		ctx->Prepare(func);
 		std::int32_t r = ctx->Execute();
@@ -190,17 +190,17 @@ namespace Jazz2::Scripting
 			AS_LOG_EXCEPTION(ctx);
 		}
 
-		_engine->ReturnContext(ctx);
+		GetEngine()->ReturnContext(ctx);
 	}
 
 	void LevelScriptLoader::OnLevelBegin()
 	{
-		asIScriptFunction* func = _module->GetFunctionByDecl("void onLevelBegin()");
+		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onLevelBegin()");
 		if (func == nullptr) {
 			return;
 		}
 
-		asIScriptContext* ctx = _engine->RequestContext();
+		asIScriptContext* ctx = GetEngine()->RequestContext();
 
 		ctx->Prepare(func);
 		std::int32_t r = ctx->Execute();
@@ -208,17 +208,17 @@ namespace Jazz2::Scripting
 			AS_LOG_EXCEPTION(ctx);
 		}
 
-		_engine->ReturnContext(ctx);
+		GetEngine()->ReturnContext(ctx);
 	}
 
 	void LevelScriptLoader::OnLevelReload()
 	{
-		asIScriptFunction* func = _module->GetFunctionByDecl("void onLevelReload()");
+		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onLevelReload()");
 		if (func == nullptr) {
 			return;
 		}
 
-		asIScriptContext* ctx = _engine->RequestContext();
+		asIScriptContext* ctx = GetEngine()->RequestContext();
 
 		ctx->Prepare(func);
 		std::int32_t r = ctx->Execute();
@@ -226,14 +226,14 @@ namespace Jazz2::Scripting
 			AS_LOG_EXCEPTION(ctx);
 		}
 
-		_engine->ReturnContext(ctx);
+		GetEngine()->ReturnContext(ctx);
 	}
 
 	void LevelScriptLoader::OnLevelUpdate(float timeMult)
 	{
-		switch (_scriptContextType) {
+		switch (GetContextType()) {
 			case ScriptContextType::Legacy: {
-				asIScriptFunction* onPlayer = _module->GetFunctionByDecl("void onPlayer(jjPLAYER@)");
+				asIScriptFunction* onPlayer = GetMainModule()->GetFunctionByDecl("void onPlayer(jjPLAYER@)");
 
 				if (_onLevelUpdate == nullptr && onPlayer == nullptr) {
 					_onLevelUpdateLastFrame = (std::int32_t)_levelHandler->_elapsedFrames;
@@ -241,7 +241,7 @@ namespace Jazz2::Scripting
 				}
 
 				// Legacy context requires fixed frame count per second
-				asIScriptContext* ctx = _engine->RequestContext();
+				asIScriptContext* ctx = GetEngine()->RequestContext();
 
 				// It should update at 70 FPS instead of 60 FPS
 				std::int32_t currentFrame = (std::int32_t)(_levelHandler->_elapsedFrames * (70.0f / 60.0f));
@@ -273,7 +273,7 @@ namespace Jazz2::Scripting
 					_onLevelUpdateLastFrame++;
 				}
 
-				_engine->ReturnContext(ctx);
+				GetEngine()->ReturnContext(ctx);
 				break;
 			}
 			case ScriptContextType::Standard: {
@@ -283,7 +283,7 @@ namespace Jazz2::Scripting
 				}
 
 				// Standard context supports floating frame rate
-				asIScriptContext* ctx = _engine->RequestContext();
+				asIScriptContext* ctx = GetEngine()->RequestContext();
 				ctx->Prepare(_onLevelUpdate);
 				ctx->SetArgFloat(0, timeMult);
 				std::int32_t r = ctx->Execute();
@@ -293,7 +293,7 @@ namespace Jazz2::Scripting
 					_onLevelUpdate = nullptr;
 				}
 
-				_engine->ReturnContext(ctx);
+				GetEngine()->ReturnContext(ctx);
 				break;
 			}
 		}
@@ -308,19 +308,19 @@ namespace Jazz2::Scripting
 						it->second->_timerState = 0; // STOPPED
 						asIScriptFunction* func = (asIScriptFunction*)it->second->_timerCallback;
 						if (func == nullptr) {
-							func = _module->GetFunctionByName("onPlayerTimerEnd");
+							func = GetMainModule()->GetFunctionByName("onPlayerTimerEnd");
 							if (func == nullptr) {
 								continue;
 							}
 						}
 
-						asIScriptContext* ctx = _engine->RequestContext();
+						asIScriptContext* ctx = GetEngine()->RequestContext();
 						ctx->Prepare(func);
 
 						std::int32_t typeId = 0;
 						if (func->GetParam(0, &typeId) >= 0) {
 							if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
-								asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
+								asITypeInfo* typeInfo = GetEngine()->GetTypeInfoById(typeId);
 								if (typeInfo->GetName() == "jjPLAYER"_s) {
 									jjPLAYER* p = GetPlayerBackingStore(player);
 									ctx->SetArgObject(0, p);
@@ -333,7 +333,7 @@ namespace Jazz2::Scripting
 							AS_LOG_EXCEPTION(ctx);
 						}
 
-						_engine->ReturnContext(ctx);
+						GetEngine()->ReturnContext(ctx);
 					}
 				}
 			}
@@ -353,16 +353,16 @@ namespace Jazz2::Scripting
 
 		char funcName[32];
 		formatString(funcName, sizeof(funcName), "onFunction%i", callbackId);
-		asIScriptFunction* func = _module->GetFunctionByName(funcName);
+		asIScriptFunction* func = GetMainModule()->GetFunctionByName(funcName);
 		if (func != nullptr) {
-			asIScriptContext* ctx = _engine->RequestContext();
+			asIScriptContext* ctx = GetEngine()->RequestContext();
 			ctx->Prepare(func);
 
 			std::int32_t paramIdx = 0;
 			std::int32_t typeId = 0;
 			if (func->GetParam(paramIdx, &typeId) >= 0) {
 				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
-					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
+					asITypeInfo* typeInfo = GetEngine()->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
 						if (auto* player = runtime_cast<Actors::Player*>(initiator)) {
 							jjPLAYER* p = GetPlayerBackingStore(player);
@@ -387,7 +387,7 @@ namespace Jazz2::Scripting
 				AS_LOG_EXCEPTION(ctx);
 			}
 
-			_engine->ReturnContext(ctx);
+			GetEngine()->ReturnContext(ctx);
 			return;
 		}
 
@@ -417,7 +417,7 @@ namespace Jazz2::Scripting
 			subVideoW = (std::int32_t)view.W;
 			subVideoH = (std::int32_t)view.H;
 
-			asIScriptContext* ctx = _engine->RequestContext();
+			asIScriptContext* ctx = GetEngine()->RequestContext();
 			ctx->Prepare(func);
 
 			jjPLAYER* p = GetPlayerBackingStore(player);
@@ -433,7 +433,7 @@ namespace Jazz2::Scripting
 				AS_LOG_EXCEPTION(ctx);
 			}
 
-			_engine->ReturnContext(ctx);
+			GetEngine()->ReturnContext(ctx);
 
 			// TODO
 			asFreeMem(canvasWrapper);
@@ -451,15 +451,15 @@ namespace Jazz2::Scripting
 			}
 		}
 
-		asIScriptFunction* func = _module->GetFunctionByName("onRoast");
+		asIScriptFunction* func = GetMainModule()->GetFunctionByName("onRoast");
 		if (func != nullptr) {
-			asIScriptContext* ctx = _engine->RequestContext();
+			asIScriptContext* ctx = GetEngine()->RequestContext();
 			ctx->Prepare(func);
 
 			std::int32_t typeId = 0;
 			if (func->GetParam(0, &typeId) >= 0) {
 				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
-					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
+					asITypeInfo* typeInfo = GetEngine()->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
 						jjPLAYER* p = GetPlayerBackingStore(player);
 						ctx->SetArgObject(0, p);
@@ -468,7 +468,7 @@ namespace Jazz2::Scripting
 			}
 			if (func->GetParam(1, &typeId) >= 0) {
 				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
-					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
+					asITypeInfo* typeInfo = GetEngine()->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
 						// TODO: Detect weapons properly
 						if (auto* killer = runtime_cast<Actors::Player*>(collider)) {
@@ -486,7 +486,7 @@ namespace Jazz2::Scripting
 				AS_LOG_EXCEPTION(ctx);
 			}
 
-			_engine->ReturnContext(ctx);
+			GetEngine()->ReturnContext(ctx);
 		}
 	}
 
@@ -3459,12 +3459,12 @@ namespace Jazz2::Scripting
 		auto nullTerminatedTypeName = String::nullTerminatedView(typeName);
 
 		// Create an instance of the ActorBase script class that inherits from the ScriptActorWrapper C++ class
-		asITypeInfo* typeInfo = _module->GetTypeInfoByName(nullTerminatedTypeName.data());
+		asITypeInfo* typeInfo = GetMainModule()->GetTypeInfoByName(nullTerminatedTypeName.data());
 		if (typeInfo == nullptr) {
 			return nullptr;
 		}
 
-		asIScriptObject* obj = static_cast<asIScriptObject*>(_engine->CreateScriptObject(typeInfo));
+		asIScriptObject* obj = static_cast<asIScriptObject*>(GetEngine()->CreateScriptObject(typeInfo));
 
 		// Get the pointer to the C++ side of the ActorBase class
 		ScriptActorWrapper* obj2 = *static_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
@@ -3478,73 +3478,64 @@ namespace Jazz2::Scripting
 		return obj2;
 	}
 
-	const SmallVectorImpl<Actors::Player*>& LevelScriptLoader::GetPlayers() const
+	ArrayView<Actors::Player* const> LevelScriptLoader::GetPlayers() const
 	{
 		return _levelHandler->_players;
 	}
 
 	uint8_t LevelScriptLoader::asGetDifficulty()
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return (uint8_t)_this->_levelHandler->_difficulty;
 	}
 
 	bool LevelScriptLoader::asIsReforged()
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return (uint8_t)_this->_levelHandler->_isReforged;
 	}
 
 	int LevelScriptLoader::asGetLevelWidth()
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->_tileMap->GetLevelBounds().X;
 	}
 
 	int LevelScriptLoader::asGetLevelHeight()
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->_tileMap->GetLevelBounds().Y;
 	}
 
 	float LevelScriptLoader::asGetElapsedFrames()
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->_elapsedFrames;
 	}
 
 	float LevelScriptLoader::asGetAmbientLight()
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		// TODO: Viewports
 		return _this->_levelHandler->_defaultAmbientLight.W;
 	}
 
 	void LevelScriptLoader::asSetAmbientLight(float value)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		// TODO: Viewports
 		_this->_levelHandler->_defaultAmbientLight.W = value;
 	}
 
 	float LevelScriptLoader::asGetWaterLevel()
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->_waterLevel;
 	}
 
 	void LevelScriptLoader::asSetWaterLevel(float value)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->_waterLevel = value;
 	}
 
@@ -3555,10 +3546,9 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::asRegisterSpawnable(int eventType, const String& typeName)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
-		asITypeInfo* typeInfo = _this->_module->GetTypeInfoByName(typeName.data());
+		asITypeInfo* typeInfo = _this->GetMainModule()->GetTypeInfoByName(typeName.data());
 		if (typeInfo == nullptr) {
 			return;
 		}
@@ -3577,7 +3567,7 @@ namespace Jazz2::Scripting
 			if (_this != nullptr) {
 				auto it = _this->_eventTypeToTypeInfo.find((int)details.Type);
 				if (it != _this->_eventTypeToTypeInfo.end()) {
-					asIScriptObject* obj = static_cast<asIScriptObject*>(_this->_engine->CreateScriptObject(it->second));
+					asIScriptObject* obj = static_cast<asIScriptObject*>(_this->GetEngine()->CreateScriptObject(it->second));
 					ScriptActorWrapper* obj2 = *static_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
 					obj2->AddRef();
 					obj->Release();
@@ -3591,8 +3581,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::asSpawnEvent(int eventType, int x, int y)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
 		auto actor = _this->_levelHandler->EventSpawner()->SpawnEvent((EventType)eventType, spawnParams, Actors::ActorState::None, Vector3i(x, y, ILevelHandler::MainPlaneZ));
@@ -3603,8 +3592,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
 		int size = eventParams.GetSize();
@@ -3618,8 +3606,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::asSpawnType(const String& typeName, int x, int y)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		auto actor = _this->CreateActorInstance(typeName);
 		if (actor == nullptr) {
@@ -3637,8 +3624,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		auto actor = _this->CreateActorInstance(typeName);
 		if (actor == nullptr) {
@@ -3659,22 +3645,19 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::asChangeLevel(int exitType, const String& path)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->BeginLevelChange(nullptr, (ExitType)exitType, path);
 	}
 
 	void LevelScriptLoader::asShowLevelText(const String& text)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->ShowLevelText(text);
 	}
 
 	void LevelScriptLoader::asSetWeather(uint8_t weatherType, uint8_t intensity)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->SetWeather((WeatherType)weatherType, intensity);
 	}
 }

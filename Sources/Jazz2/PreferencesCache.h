@@ -43,8 +43,8 @@ namespace Jazz2
 	/** @brief Episode completion overwrite mode */
 	enum class EpisodeEndOverwriteMode : std::uint8_t {
 		Always,						/**< Always */
-		NoCheatsOnly,				/**< No Cheats Only */
-		HigherScoreOnly				/**< Higher Score Only */
+		NoCheatsOnly,				/**< No cheats only */
+		HigherScoreOnly				/**< Higher score only */
 	};
 
 	/** @brief Unlockable episodes, mainly used if compiled with `SHAREWARE_DEMO_ONLY` */

@@ -174,7 +174,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 	ScriptActorWrapper* ScriptActorWrapper::Factory(int actorType)
 	{
 		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		// Get the function that is calling the factory, so we can be certain it is the our internal script class
 		asIScriptFunction* func = ctx->GetFunction(0);

@@ -302,6 +302,10 @@ namespace Jazz2::UI
 						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
 							button.CurrentPointerId = event.actionIndex;
 							overrideActions |= (1 << (std::int32_t)button.Action);
+							if (button.Action == PlayerActions::Down) {
+								// Buttstomp action is not separate for Touch controls yet
+								overrideActions |= (1 << (std::int32_t)PlayerActions::Buttstomp);
+							}
 						}
 					}
 				}
@@ -322,6 +326,10 @@ namespace Jazz2::UI
 						if (!isPressed) {
 							button.CurrentPointerId = -1;
 							overrideActions &= ~(1 << (std::int32_t)button.Action);
+							if (button.Action == PlayerActions::Down) {
+								// Buttstomp action is not separate for Touch controls yet
+								overrideActions &= ~(1 << (std::int32_t)PlayerActions::Buttstomp);
+							}
 						}
 					} else {
 						// Only some buttons should allow roll-over (only when the player's on foot)
@@ -335,6 +343,10 @@ namespace Jazz2::UI
 							if (IsOnButton(button, x, y)) {
 								button.CurrentPointerId = event.pointers[j].id;
 								overrideActions |= (1 << (std::int32_t)button.Action);
+								if (button.Action == PlayerActions::Down) {
+									// Buttstomp action is not separate for Touch controls yet
+									overrideActions |= (1 << (std::int32_t)PlayerActions::Buttstomp);
+								}
 								break;
 							}
 						}
@@ -347,6 +359,10 @@ namespace Jazz2::UI
 				if (button.CurrentPointerId != -1) {
 					button.CurrentPointerId = -1;
 					overrideActions &= ~(1 << (std::int32_t)button.Action);
+					if (button.Action == PlayerActions::Down) {
+						// Buttstomp action is not separate for Touch controls yet
+						overrideActions &= ~(1 << (std::int32_t)PlayerActions::Buttstomp);
+					}
 				}
 			}
 
@@ -356,6 +372,10 @@ namespace Jazz2::UI
 				if (button.CurrentPointerId == event.actionIndex) {
 					button.CurrentPointerId = -1;
 					overrideActions &= ~(1 << (std::int32_t)button.Action);
+					if (button.Action == PlayerActions::Down) {
+						// Buttstomp action is not separate for Touch controls yet
+						overrideActions &= ~(1 << (std::int32_t)PlayerActions::Buttstomp);
+					}
 				}
 			}
 		}

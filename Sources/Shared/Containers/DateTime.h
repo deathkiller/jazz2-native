@@ -176,14 +176,14 @@ namespace Death { namespace Containers {
 		/**
 		 * @brief Creates @ref DateTime structure from Windows® `SYSTEMTIME` structure
 		 * 
-		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows"
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 		 */
 		DateTime(const struct _SYSTEMTIME& st) noexcept;
 
 		/**
 		 * @brief Creates @ref DateTime structure from Windows® `FILETIME` structure
 		 *
-		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows"
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 		 */
 		DateTime(const struct _FILETIME& ft) noexcept;
 #endif
@@ -250,7 +250,11 @@ namespace Death { namespace Containers {
 		void AdjustFromTimezone(TimeZone tz, bool noDST = false) noexcept;
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/** @brief Returns @ref DateTime structure converted to Windows® `SYSTEMTIME` structure */
+		/**
+		 * @brief Returns @ref DateTime structure converted to Windows® `SYSTEMTIME` structure
+		 * 
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+		 */
 		struct _SYSTEMTIME ToWin32() const noexcept;
 #endif
 

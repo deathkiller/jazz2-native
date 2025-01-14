@@ -5,7 +5,7 @@
 namespace Jazz2
 {
 	/** @brief Shield type */
-	enum class ShieldType : uint8_t
+	enum class ShieldType : std::uint8_t
 	{
 		None,			/**< No shield */
 

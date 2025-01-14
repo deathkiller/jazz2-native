@@ -6,6 +6,7 @@
 
 namespace Jazz2::Scripting
 {
+	/** @brief **AngelScript** reference handle */
 	class CScriptHandle
 	{
 	public:
@@ -56,6 +57,7 @@ namespace Jazz2::Scripting
 		asITypeInfo* m_type;
 	};
 
+	/** @brief Registers `ref` type to **AngelScript** engine */
 	void RegisterRef(asIScriptEngine* engine);
 }
 

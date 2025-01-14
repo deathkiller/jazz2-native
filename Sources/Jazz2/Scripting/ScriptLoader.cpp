@@ -30,9 +30,7 @@ using namespace Death::IO;
 namespace Jazz2::Scripting
 {
 	ScriptLoader::ScriptLoader()
-		:
-		_module(nullptr),
-		_scriptContextType(ScriptContextType::Unknown)
+		: _module(nullptr), _scriptContextType(ScriptContextType::Unknown)
 	{
 		_engine = asCreateScriptEngine();
 		_engine->SetEngineProperty(asEP_PROPERTY_ACCESSOR_MODE, 2); // Required to allow chained assignment to properties
@@ -43,7 +41,7 @@ namespace Jazz2::Scripting
 		_engine->SetUserData(this, EngineToOwner);
 		_engine->SetContextCallbacks(RequestContextCallback, ReturnContextCallback, this);
 
-		int r = _engine->SetMessageCallback(asMETHOD(ScriptLoader, Message), this, asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		std::int32_t r = _engine->SetMessageCallback(asMETHOD(ScriptLoader, Message), this, asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		_module = _engine->GetModule("Main", asGM_ALWAYS_CREATE); RETURN_ASSERT(_module != nullptr);
 	}
@@ -87,16 +85,16 @@ namespace Jazz2::Scripting
 		SmallVector<String, 4> metadata;
 		SmallVector<String, 0> includes;
 		String currentClass, currentNamespace, metadataName, metadataDeclaration;
-		int scriptSize = (int)scriptContent.size();
+		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
 
 		// First perform the checks for #if directives to exclude code that shouldn't be compiled
-		int pos = 0;
-		int nested = 0;
+		std::int32_t pos = 0;
+		std::int32_t nested = 0;
 		while (pos < scriptSize) {
 			asUINT len = 0;
 			asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
 			if (t == asTC_UNKNOWN && scriptContent[pos] == '#' && (pos + 1 < scriptSize)) {
-				int start = pos++;
+				std::int32_t start = pos++;
 
 				t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
 
@@ -117,7 +115,7 @@ namespace Jazz2::Scripting
 						auto it = definedSymbols.find(String::nullTerminatedView(word));
 						bool defined = (it != definedSymbols.end() && it->second);
 
-						for (int i = start; i < pos; i++) {
+						for (std::int32_t i = start; i < pos; i++) {
 							if (scriptContent[i] != '\n') {
 								scriptContent[i] = ' ';
 							}
@@ -132,7 +130,7 @@ namespace Jazz2::Scripting
 				} else if (token == "endif"_s) {
 					// Only remove the #endif if there was a matching #if
 					if (nested > 0) {
-						for (int i = start; i < pos; i++) {
+						for (std::int32_t i = start; i < pos; i++) {
 							if (scriptContent[i] != '\n') {
 								scriptContent[i] = ' ';
 							}
@@ -251,7 +249,7 @@ namespace Jazz2::Scripting
 					_foundDeclarations.emplace_back(metadata, metadataName, metadataDeclaration, type, currentClass, currentNamespace);
 				}
 			} else if (token == "#"_s && (pos + 1 < scriptSize)) {
-				int start = pos++;
+				std::int32_t start = pos++;
 
 				t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
 				if (t == asTC_IDENTIFIER) {
@@ -278,7 +276,7 @@ namespace Jazz2::Scripting
 							}
 							pos += len;
 
-							for (int i = start; i < pos; i++) {
+							for (std::int32_t i = start; i < pos; i++) {
 								if (scriptContent[i] != '\n') {
 									scriptContent[i] = ' ';
 								}
@@ -290,7 +288,7 @@ namespace Jazz2::Scripting
 
 						OnProcessPragma(scriptContent.slice(start + 7, pos).trimmed(), contextType);
 
-						for (int i = start; i < pos; i++) {
+						for (std::int32_t i = start; i < pos; i++) {
 							if (scriptContent[i] != '\n') {
 								scriptContent[i] = ' ';
 							}
@@ -302,7 +300,7 @@ namespace Jazz2::Scripting
 						pos += len;
 						for (; pos < scriptSize && scriptContent[pos] != '\n'; pos++);
 
-						for (int i = start; i < pos; i++) {
+						for (std::int32_t i = start; i < pos; i++) {
 							if (scriptContent[i] != '\n') {
 								scriptContent[i] = ' ';
 							}
@@ -331,11 +329,11 @@ namespace Jazz2::Scripting
 		return contextType;
 	}
 
-	int ScriptLoader::Build()
+	ScriptBuildResult ScriptLoader::Build()
 	{
-		int r = _module->Build();
+		std::int32_t r = _module->Build();
 		if (r < 0) {
-			return r;
+			return (ScriptBuildResult)r;
 		}
 
 		// After the script has been built, the metadata strings should be stored for later lookup
@@ -343,7 +341,7 @@ namespace Jazz2::Scripting
 			_module->SetDefaultNamespace(decl.Namespace.data());
 			switch (decl.Type) {
 				case MetadataType::Type: {
-					int typeId = _module->GetTypeIdByDecl(decl.Declaration.data());
+					std::int32_t typeId = _module->GetTypeIdByDecl(decl.Declaration.data());
 					if (typeId >= 0) {
 						auto entry = _typeMetadataMap.emplace(typeId, Array<String>(NoInit, decl.Metadata.size())).first;
 						std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
@@ -358,7 +356,7 @@ namespace Jazz2::Scripting
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					} else {
-						int typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
+						std::int32_t typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
 						asITypeInfo* type = _engine->GetTypeInfoById(typeId);
 						asIScriptFunction* func = type->GetMethodByDecl(decl.Declaration.data());
 						if (func != nullptr) {
@@ -386,7 +384,7 @@ namespace Jazz2::Scripting
 							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					} else {
-						int typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
+						std::int32_t typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
 						auto it = _classMetadataMap.find(typeId);
 						if (it == _classMetadataMap.end()) {
 							it = _classMetadataMap.emplace(typeId, ClassMetadata()).first;
@@ -408,20 +406,20 @@ namespace Jazz2::Scripting
 				}
 				case MetadataType::Variable: {
 					if (decl.ParentClass.empty()) {
-						int varIdx = _module->GetGlobalVarIndexByName(decl.Declaration.data());
+						std::int32_t varIdx = _module->GetGlobalVarIndexByName(decl.Declaration.data());
 						if (varIdx >= 0) {
 							auto entry = _varMetadataMap.emplace(varIdx, Array<String>(NoInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					} else {
-						int typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
+						std::int32_t typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
 						auto it = _classMetadataMap.find(typeId);
 						if (it == _classMetadataMap.end()) {
 							it = _classMetadataMap.emplace(typeId, ClassMetadata()).first;
 						}
 
 						asITypeInfo* objectType = _engine->GetTypeInfoById(typeId);
-						int idx = -1;
+						std::int32_t idx = -1;
 						for (asUINT i = 0; i < (asUINT)objectType->GetPropertyCount(); i++) {
 							const char* name;
 							objectType->GetProperty(i, &name);
@@ -440,7 +438,7 @@ namespace Jazz2::Scripting
 				}
 				case MetadataType::FunctionOrVariable: {
 					if (decl.ParentClass .empty()) {
-						int varIdx = _module->GetGlobalVarIndexByName(decl.Name.data());
+						std::int32_t varIdx = _module->GetGlobalVarIndexByName(decl.Name.data());
 						if (varIdx >= 0) {
 							auto entry = _varMetadataMap.emplace(varIdx, Array<String>(NoInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
@@ -452,14 +450,14 @@ namespace Jazz2::Scripting
 							}
 						}
 					} else {
-						int typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
+						std::int32_t typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
 						auto it = _classMetadataMap.find(typeId);
 						if (it == _classMetadataMap.end()) {
 							it = _classMetadataMap.emplace(typeId, ClassMetadata()).first;
 						}
 
 						asITypeInfo* objectType = _engine->GetTypeInfoById(typeId);
-						int idx = -1;
+						std::int32_t idx = -1;
 						for (asUINT i = 0; i < (asUINT)objectType->GetPropertyCount(); i++) {
 							const char* name;
 							objectType->GetProperty(i, &name);
@@ -490,14 +488,19 @@ namespace Jazz2::Scripting
 		// _foundDeclarations is not needed anymore
 		_foundDeclarations.clear();
 
-		return 0;
+		return ScriptBuildResult::Success;
 	}
 
-	int ScriptLoader::ExcludeCode(String& scriptContent, int pos)
+	void ScriptLoader::SetContextType(ScriptContextType value)
 	{
-		int scriptSize = (int)scriptContent.size();
+		_scriptContextType = value;
+	}
+
+	std::int32_t ScriptLoader::ExcludeCode(String& scriptContent, std::int32_t pos)
+	{
+		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
 		asUINT len = 0;
-		int nested = 0;
+		std::int32_t nested = 0;
 
 		while (pos < scriptSize) {
 			_engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
@@ -513,7 +516,7 @@ namespace Jazz2::Scripting
 					nested++;
 				} else if (token == "endif"_s) {
 					if (nested-- == 0) {
-						for (uint32_t i = pos; i < pos + len; i++) {
+						for (std::uint32_t i = pos; i < pos + len; i++) {
 							if (scriptContent[i] != '\n') {
 								scriptContent[i] = ' ';
 							}
@@ -525,7 +528,7 @@ namespace Jazz2::Scripting
 				}
 			}
 			if (scriptContent[pos] != '\n') {
-				for (uint32_t i = pos; i < pos + len; i++) {
+				for (std::uint32_t i = pos; i < pos + len; i++) {
 					if (scriptContent[i] != '\n') {
 						scriptContent[i] = ' ';
 					}
@@ -537,9 +540,9 @@ namespace Jazz2::Scripting
 		return pos;
 	}
 
-	int ScriptLoader::SkipStatement(String& scriptContent, int pos)
+	std::int32_t ScriptLoader::SkipStatement(String& scriptContent, std::int32_t pos)
 	{
-		int scriptSize = (int)scriptContent.size();
+		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
 		asUINT len = 0;
 
 		// Skip until ; or { whichever comes first
@@ -552,7 +555,7 @@ namespace Jazz2::Scripting
 		if (pos < scriptSize && scriptContent[pos] == '{') {
 			pos += 1;
 
-			int level = 1;
+			std::int32_t level = 1;
 			while (level > 0 && pos < scriptSize) {
 				asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
 				if (t == asTC_KEYWORD) {
@@ -565,8 +568,8 @@ namespace Jazz2::Scripting
 					// Convert all length() function calls to virtual properties for JJ2+ backward compatibility
 					auto identifier = MutableStringView(&scriptContent[pos], len);
 					if (identifier == "length"_s) {
-						int pos1 = pos + len;
-						int pos2 = pos1;
+						std::int32_t pos1 = pos + len;
+						std::int32_t pos2 = pos1;
 						asUINT len2 = 0;
 						asETokenClass t2 = asTC_UNKNOWN;
 						while (pos2 < scriptSize) {
@@ -577,7 +580,7 @@ namespace Jazz2::Scripting
 							pos2 += len2;
 						}
 						if (t2 == asTC_KEYWORD && scriptContent[pos2] == '(') {
-							int pos3 = pos2 + len2;
+							std::int32_t pos3 = pos2 + len2;
 							asUINT len3 = 0;
 							asETokenClass t3 = asTC_UNKNOWN;
 							while (pos3 < scriptSize) {
@@ -605,20 +608,20 @@ namespace Jazz2::Scripting
 		return pos;
 	}
 
-	int ScriptLoader::ExtractMetadata(MutableStringView scriptContent, int pos, SmallVectorImpl<String>& metadata)
+	std::int32_t ScriptLoader::ExtractMetadata(MutableStringView scriptContent, std::int32_t pos, SmallVectorImpl<String>& metadata)
 	{
-		int scriptSize = (int)scriptContent.size();
+		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
 
 		metadata.clear();
 
 		// Extract all metadata, they can be separated by whitespace and comments
-		for (;;) {
+		while (true) {
 			Array<char> metadataString;
 
 			// Overwrite the metadata with space characters to allow compilation
 			scriptContent[pos++] = ' ';
 
-			int level = 1;
+			std::int32_t level = 1;
 			asUINT len = 0;
 			while (level > 0 && pos < scriptSize) {
 				asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
@@ -663,10 +666,10 @@ namespace Jazz2::Scripting
 		return pos;
 	}
 
-	int ScriptLoader::ExtractDeclaration(StringView scriptContent, int pos, String& name, String& declaration, MetadataType& type)
+	std::int32_t ScriptLoader::ExtractDeclaration(StringView scriptContent, std::int32_t pos, String& name, String& declaration, MetadataType& type)
 	{
-		int scriptSize = (int)scriptContent.size();
-		int start = pos;
+		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
+		std::int32_t start = pos;
 
 		declaration = { };
 		type = MetadataType::Unknown;
@@ -707,7 +710,7 @@ namespace Jazz2::Scripting
 				// We'll only know if the declaration is a variable or function declaration
 				// when we see the statement block, or absense of a statement block.
 				bool hasParenthesis = false;
-				int nestedParenthesis = 0;
+				std::int32_t nestedParenthesis = 0;
 				declaration += scriptContent.slice(pos, pos + len);
 				pos += len;
 				for (; pos < scriptSize;) {
@@ -757,7 +760,7 @@ namespace Jazz2::Scripting
 		return start;
 	}
 
-	ArrayView<String> ScriptLoader::GetMetadataForType(int typeId)
+	ArrayView<String> ScriptLoader::GetMetadataForType(std::int32_t typeId)
 	{
 		auto it = _typeMetadataMap.find(typeId);
 		if (it != _typeMetadataMap.end()) {
@@ -777,7 +780,7 @@ namespace Jazz2::Scripting
 		return { };
 	}
 
-	ArrayView<String> ScriptLoader::GetMetadataForVariable(int varIdx)
+	ArrayView<String> ScriptLoader::GetMetadataForVariable(std::int32_t varIdx)
 	{
 		auto it = _varMetadataMap.find(varIdx);
 		if (it != _varMetadataMap.end()) {
@@ -786,7 +789,7 @@ namespace Jazz2::Scripting
 		return { };
 	}
 
-	ArrayView<String> ScriptLoader::GetMetadataForTypeProperty(int typeId, int varIdx)
+	ArrayView<String> ScriptLoader::GetMetadataForTypeProperty(std::int32_t typeId, std::int32_t varIdx)
 	{
 		auto typeIt = _classMetadataMap.find(typeId);
 		if (typeIt == _classMetadataMap.end()) {
@@ -799,7 +802,7 @@ namespace Jazz2::Scripting
 		return propIt->second;
 	}
 
-	ArrayView<String> ScriptLoader::GetMetadataForTypeMethod(int typeId, asIScriptFunction* method)
+	ArrayView<String> ScriptLoader::GetMetadataForTypeMethod(std::int32_t typeId, asIScriptFunction* method)
 	{
 		if (method == nullptr) {
 			return { };

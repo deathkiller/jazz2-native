@@ -16,6 +16,7 @@ namespace Jazz2::Scripting
 {
 	class jjPLAYER;
 
+	/** @brief Specifies a part to be drawn in @ref LevelScriptLoader::OnDraw() */
 	enum class DrawType
 	{
 		WeaponAmmo,
@@ -38,17 +39,27 @@ namespace Jazz2::Scripting
 	public:
 		LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath);
 
-		const SmallVectorImpl<Actors::Player*>& GetPlayers() const;
+		/** @brief Returns list of players */
+		ArrayView<Actors::Player* const> GetPlayers() const;
 
+		/** @brief Returns script backing store for specified player */
 		jjPLAYER* GetPlayerBackingStore(Actors::Player* player);
+		/** @overload */
 		jjPLAYER* GetPlayerBackingStore(std::int32_t playerIndex);
 
+		/** @brief Called when a level is loaded */
 		void OnLevelLoad();
+		/** @brief Called when a level begins */
 		void OnLevelBegin();
+		/** @brief Called when a level reloads */
 		void OnLevelReload();
+		/** @brief Called when a level updates (on the beginning of each frame) */
 		void OnLevelUpdate(float timeMult);
+		/** @brief Called when a level callback is triggered */
 		void OnLevelCallback(Actors::ActorBase* initiator, std::uint8_t* eventParams);
+		/** @brief Called when a part of viewport or HUD is drawn */
 		bool OnDraw(UI::HUD* hud, Actors::Player* player, const Rectf& view, DrawType type);
+		/** @brief Called when a player dies */
 		void OnPlayerDied(Actors::Player* player, Actors::ActorBase* collider);
 
 	protected:
