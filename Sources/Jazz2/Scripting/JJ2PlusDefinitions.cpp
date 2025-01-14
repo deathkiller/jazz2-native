@@ -202,8 +202,7 @@ namespace Jazz2::Scripting
 	jjSTREAM* jjSTREAM::Create() {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjSTREAM));
 		return new(mem) jjSTREAM();
@@ -211,8 +210,7 @@ namespace Jazz2::Scripting
 	jjSTREAM* jjSTREAM::CreateFromFile(const String& filename) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjSTREAM));
 		return new(mem) jjSTREAM();
@@ -513,8 +511,7 @@ namespace Jazz2::Scripting
 	jjANIMFRAME* jjANIMFRAME::get_jjAnimFrames(std::uint32_t index) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjANIMFRAME));
 		return new(mem) jjANIMFRAME();
@@ -573,8 +570,7 @@ namespace Jazz2::Scripting
 	jjANIMATION* jjANIMATION::get_jjAnimations(std::uint32_t index) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjANIMATION));
 		return new(mem) jjANIMATION(index);
@@ -617,8 +613,7 @@ namespace Jazz2::Scripting
 	jjANIMSET* jjANIMSET::get_jjAnimSets(std::uint32_t index) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjANIMSET));
 		return new(mem) jjANIMSET(index);
@@ -962,8 +957,7 @@ namespace Jazz2::Scripting
 	jjOBJ* get_jjObjects(std::int32_t index)
 	{
 		noop();
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjOBJ));
 		return new(mem) jjOBJ();
@@ -972,8 +966,7 @@ namespace Jazz2::Scripting
 	jjOBJ* get_jjObjectPresets(std::int8_t id)
 	{
 		noop();
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjOBJ));
 		return new(mem) jjOBJ();
@@ -1021,8 +1014,7 @@ namespace Jazz2::Scripting
 	jjPARTICLE* GetParticle(std::int32_t index) {
 		noop();
 		// TODO
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPARTICLE));
 		return new(mem) jjPARTICLE();
@@ -1030,8 +1022,7 @@ namespace Jazz2::Scripting
 
 	jjPARTICLE* AddParticle(std::int32_t particleType) {
 		noop();
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPARTICLE));
 		return new(mem) jjPARTICLE();
@@ -1672,7 +1663,7 @@ namespace Jazz2::Scripting
 	}
 	void jjPLAYER::timerFunction(const String& functionName) {
 		noop();
-		asIScriptFunction* func = _levelScriptLoader->_module->GetFunctionByName(String::nullTerminatedView(functionName).data());
+		asIScriptFunction* func = _levelScriptLoader->GetMainModule()->GetFunctionByName(String::nullTerminatedView(functionName).data());
 		_timerCallback = func;
 	}
 	void jjPLAYER::timerFunctionPtr(void* function) {
@@ -1829,36 +1820,31 @@ namespace Jazz2::Scripting
 
 	std::int32_t get_jjPlayerCount() {
 		// TODO
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayers().size();
 	}
 	std::int32_t get_jjLocalPlayerCount() {
 		// TODO
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayers().size();
 	}
 
 	jjPLAYER* get_jjP() {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayerBackingStore(0);
 	}
 	jjPLAYER* get_jjPlayers(std::uint8_t index) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayerBackingStore(index);
 	}
 	jjPLAYER* get_jjLocalPlayers(std::uint8_t index) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayerBackingStore(index);
 	}
 
@@ -1872,8 +1858,7 @@ namespace Jazz2::Scripting
 	jjPIXELMAP* jjPIXELMAP::CreateFromTile() {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
@@ -1881,8 +1866,7 @@ namespace Jazz2::Scripting
 	jjPIXELMAP* jjPIXELMAP::CreateFromSize(std::uint32_t width, std::uint32_t height) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
@@ -1890,8 +1874,7 @@ namespace Jazz2::Scripting
 	jjPIXELMAP* jjPIXELMAP::CreateFromFrame(const jjANIMFRAME* animFrame) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
@@ -1899,8 +1882,7 @@ namespace Jazz2::Scripting
 	jjPIXELMAP* jjPIXELMAP::CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
@@ -1908,8 +1890,7 @@ namespace Jazz2::Scripting
 	jjPIXELMAP* jjPIXELMAP::CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER* layer) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
@@ -1917,8 +1898,7 @@ namespace Jazz2::Scripting
 	jjPIXELMAP* jjPIXELMAP::CreateFromTexture(std::uint32_t animFrame) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
@@ -1926,8 +1906,7 @@ namespace Jazz2::Scripting
 	jjPIXELMAP* jjPIXELMAP::CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjPIXELMAP));
 		return new(mem) jjPIXELMAP();
@@ -1983,8 +1962,7 @@ namespace Jazz2::Scripting
 	jjMASKMAP* jjMASKMAP::CreateFromBool(bool filled) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjMASKMAP));
 		return new(mem) jjMASKMAP();
@@ -1992,8 +1970,7 @@ namespace Jazz2::Scripting
 	jjMASKMAP* jjMASKMAP::CreateFromTile(std::uint16_t tileID) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjMASKMAP));
 		return new(mem) jjMASKMAP();
@@ -2073,8 +2050,7 @@ namespace Jazz2::Scripting
 	jjLAYER* jjLAYER::get_jjLayers(std::int32_t index) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(jjLAYER));
 		return new(mem) jjLAYER();
@@ -2129,10 +2105,9 @@ namespace Jazz2::Scripting
 
 	CScriptArray* jjLAYER::jjLayerOrderGet() {
 		noop();
-		auto ctx = asGetActiveContext();
 
-		auto engine = ctx->GetEngine();
-		return CScriptArray::Create(engine->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return CScriptArray::Create(owner->GetEngine()->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
 	}
 	bool jjLAYER::jjLayerOrderSet(const CScriptArray& order) {
 		noop();
@@ -2140,9 +2115,9 @@ namespace Jazz2::Scripting
 	}
 	CScriptArray* jjLAYER::jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, std::int32_t tileIDAdjustmentFactor) {
 		noop();
-		auto ctx = asGetActiveContext();
-		auto engine = ctx->GetEngine();
-		return CScriptArray::Create(engine->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
+
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return CScriptArray::Create(owner->GetEngine()->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
 	}
 	bool jjLAYER::jjTilesFromTileset(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const CScriptArray* paletteColorMapping) {
 		noop();
@@ -2296,8 +2271,7 @@ namespace Jazz2::Scripting
 	std::int32_t LevelScriptLoader::GetDifficulty() {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		switch (_this->_levelHandler->_difficulty) {
 			case GameDifficulty::Easy: return 0;
 			default:
@@ -2309,8 +2283,7 @@ namespace Jazz2::Scripting
 		noop();
 
 		if (value >= 0 && value <= 2) {
-			auto ctx = asGetActiveContext();
-			auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+			auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			_this->_levelHandler->_difficulty = (GameDifficulty)value;
 		}
 		return value;
@@ -2328,8 +2301,7 @@ namespace Jazz2::Scripting
 	String LevelScriptLoader::get_jjMusicFileName() {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->_musicCurrentPath;
 	}
 	String get_jjTilesetFileName() {
@@ -2339,15 +2311,13 @@ namespace Jazz2::Scripting
 	String LevelScriptLoader::get_jjHelpStrings(std::uint32_t index) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->GetLevelText(index);
 	}
 	void LevelScriptLoader::set_jjHelpStrings(std::uint32_t index, const String& text) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->OverrideLevelText(index, text);
 	}
 
@@ -2359,8 +2329,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjAlert(const String& text, bool sendToAll, std::uint32_t size)
 	{
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->ShowLevelText(text);
 	}
 	void LevelScriptLoader::jjPrint(const String& text, bool timestamp) {
@@ -2373,16 +2342,14 @@ namespace Jazz2::Scripting
 		LOGW("%s", text.data());
 
 		// TODO: teamchat
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Info, text);
 	}
 	void LevelScriptLoader::jjConsole(const String& text, bool sendToAll) {
 		LOGW("%s", text.data());
 
 		// TODO: sendToAll
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Important, text);
 	}
 	void LevelScriptLoader::jjSpy(const String& text) {
@@ -2421,16 +2388,14 @@ namespace Jazz2::Scripting
 	float LevelScriptLoader::get_layerXOffset(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.OffsetX : 0);
 	}
 	float LevelScriptLoader::set_layerXOffset(std::uint8_t id, float value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.OffsetX = value;
@@ -2442,16 +2407,14 @@ namespace Jazz2::Scripting
 	float LevelScriptLoader::get_layerYOffset(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.OffsetY : 0);
 	}
 	float LevelScriptLoader::set_layerYOffset(std::uint8_t id, float value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.OffsetY = value;
@@ -2463,8 +2426,7 @@ namespace Jazz2::Scripting
 	std::int32_t LevelScriptLoader::get_layerWidth(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].LayoutSize.X : 0);
 	}
@@ -2479,24 +2441,21 @@ namespace Jazz2::Scripting
 	std::int32_t LevelScriptLoader::get_layerHeight(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].LayoutSize.Y : 0);
 	}
 	float LevelScriptLoader::get_layerXSpeed(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.SpeedX : 0.0f);
 	}
 	float LevelScriptLoader::set_layerXSpeed(std::uint8_t id, float value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.SpeedX = value;
@@ -2508,16 +2467,14 @@ namespace Jazz2::Scripting
 	float LevelScriptLoader::get_layerYSpeed(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.SpeedY : 0.0f);
 	}
 	float LevelScriptLoader::set_layerYSpeed(std::uint8_t id, float value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.SpeedY = value;
@@ -2529,16 +2486,14 @@ namespace Jazz2::Scripting
 	float LevelScriptLoader::get_layerXAutoSpeed(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.AutoSpeedX : 0.0f);
 	}
 	float LevelScriptLoader::set_layerXAutoSpeed(std::uint8_t id, float value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.AutoSpeedX = value;
@@ -2550,16 +2505,14 @@ namespace Jazz2::Scripting
 	float LevelScriptLoader::get_layerYAutoSpeed(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() ? tileMap->_layers[id].Description.AutoSpeedY : 0.0f);
 	}
 	float LevelScriptLoader::set_layerYAutoSpeed(std::uint8_t id, float value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.AutoSpeedY = value;
@@ -2571,16 +2524,14 @@ namespace Jazz2::Scripting
 	bool LevelScriptLoader::get_layerHasTiles(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() && tileMap->_layers[id].Visible);
 	}
 	bool LevelScriptLoader::set_layerHasTiles(std::uint8_t id, bool value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Visible = value;
@@ -2592,16 +2543,14 @@ namespace Jazz2::Scripting
 	bool LevelScriptLoader::get_layerTileHeight(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() && tileMap->_layers[id].Description.RepeatY);
 	}
 	bool LevelScriptLoader::set_layerTileHeight(std::uint8_t id, bool value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.RepeatY = value;
@@ -2613,16 +2562,14 @@ namespace Jazz2::Scripting
 	bool LevelScriptLoader::get_layerTileWidth(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() && tileMap->_layers[id].Description.RepeatX);
 	}
 	bool LevelScriptLoader::set_layerTileWidth(std::uint8_t id, bool value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.RepeatX = value;
@@ -2634,16 +2581,14 @@ namespace Jazz2::Scripting
 	bool LevelScriptLoader::get_layerLimitVisibleRegion(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		return (id < tileMap->_layers.size() && tileMap->_layers[id].Description.UseInherentOffset);
 	}
 	bool LevelScriptLoader::set_layerLimitVisibleRegion(std::uint8_t id, bool value) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			tileMap->_layers[id].Description.UseInherentOffset = value;
@@ -2660,8 +2605,7 @@ namespace Jazz2::Scripting
 		// TODO: Changes the X or Y speed.Unlike the basic properties like xSpeed and yAutoSpeed,
 		// these functions will ensure that the layer remains in the same position it was before its speeds were changed.
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			if (newSpeedIsAnAutoSpeed) {
@@ -2678,8 +2622,7 @@ namespace Jazz2::Scripting
 		// TODO: Changes the X or Y speed.Unlike the basic properties like xSpeed and yAutoSpeed,
 		// these functions will ensure that the layer remains in the same position it was before its speeds were changed.
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto tileMap = _this->_levelHandler->_tileMap.get();
 		if (id < tileMap->_layers.size()) {
 			if (newSpeedIsAnAutoSpeed) {
@@ -2802,47 +2745,41 @@ namespace Jazz2::Scripting
 	bool LevelScriptLoader::get_jjTriggers(std::uint8_t id) {
 		//noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->GetTrigger(id);
 	}
 	bool LevelScriptLoader::set_jjTriggers(std::uint8_t id, bool value) {
 		//noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->SetTrigger(id, value);
 		return value;
 	}
 	bool LevelScriptLoader::jjSwitchTrigger(std::uint8_t id) {
 		//noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->SetTrigger(id, !_this->_levelHandler->GetTrigger(id));
 		return _this->_levelHandler->GetTrigger(id);
 	}
 
 	bool LevelScriptLoader::isNumberedASFunctionEnabled(std::uint8_t id) {
 		//noop();
-		
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_enabledCallbacks[id];
 	}
 	bool LevelScriptLoader::setNumberedASFunctionEnabled(std::uint8_t id, bool value) {
 		//noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_enabledCallbacks.set(id, value);
 		return value;
 	}
 	void LevelScriptLoader::reenableAllNumberedASFunctions() {
 		//noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_enabledCallbacks.setAll();
 	}
 
@@ -2850,24 +2787,21 @@ namespace Jazz2::Scripting
 		noop();
 
 		// TODO
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->_waterLevel;
 	}
 	float LevelScriptLoader::getWaterLevel2() {
 		noop();
 
 		// TODO
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return _this->_levelHandler->_waterLevel;
 	}
 	float LevelScriptLoader::setWaterLevel(float value, bool instant) {
 		noop();
 
 		// TODO: instant
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->_waterLevel = value;
 		return value;
 	}
@@ -2899,8 +2833,7 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::triggerRock(std::uint8_t id) {
 		noop();
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		std::uint8_t eventParams[] = { id };
 		_this->_levelHandler->BroadcastTriggeredEvent(nullptr, EventType::RollingRockTrigger, eventParams);
 	}
@@ -2915,8 +2848,7 @@ namespace Jazz2::Scripting
 			exitType |= ExitType::FastTransition;
 		}
 
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->BeginLevelChange(nullptr, exitType, {});
 	}
 
@@ -2938,8 +2870,7 @@ namespace Jazz2::Scripting
 		noop();
 
 #if defined(WITH_AUDIO)
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->BeginPlayMusic(filename, !temporary, forceReload);
 #endif
 		return false;
@@ -2948,8 +2879,7 @@ namespace Jazz2::Scripting
 		noop();
 
 #if defined(WITH_AUDIO)
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		if (_this->_levelHandler->_music != nullptr) {
 			_this->_levelHandler->_music->stop();
 		}
@@ -2959,8 +2889,7 @@ namespace Jazz2::Scripting
 		noop();
 
 #if defined(WITH_AUDIO)
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		if (_this->_levelHandler->_music != nullptr) {
 			_this->_levelHandler->_music->play();
 		}
@@ -2970,8 +2899,7 @@ namespace Jazz2::Scripting
 		noop();
 
 #if defined(WITH_AUDIO)
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		if (_this->_levelHandler->_music != nullptr) {
 			_this->_levelHandler->_music->stop();
 		}
@@ -2981,8 +2909,7 @@ namespace Jazz2::Scripting
 		noop();
 
 #if defined(WITH_AUDIO)
-		auto ctx = asGetActiveContext();
-		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->isPaused()) {
 			_this->_levelHandler->_music->play();
 		}

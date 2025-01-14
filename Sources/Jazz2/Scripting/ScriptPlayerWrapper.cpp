@@ -16,7 +16,7 @@ namespace Jazz2::Scripting
 		_levelScripts(levelScripts),
 		_refCount(1)
 	{
-		auto& players = levelScripts->GetPlayers();
+		auto players = levelScripts->GetPlayers();
 		_player = (playerIndex < players.size() ? players[playerIndex] : nullptr);
 	}
 
@@ -73,8 +73,7 @@ namespace Jazz2::Scripting
 
 	ScriptPlayerWrapper* ScriptPlayerWrapper::Factory(int playerIndex)
 	{
-		auto ctx = asGetActiveContext();
-		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
 		void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
 		return new(mem) ScriptPlayerWrapper(owner, playerIndex);

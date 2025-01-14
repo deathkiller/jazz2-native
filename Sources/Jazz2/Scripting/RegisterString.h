@@ -6,6 +6,7 @@
 
 namespace Jazz2::Scripting
 {
+	/** @brief Registers `string` type to **AngelScript** engine */
 	void RegisterString(asIScriptEngine* engine);
 }
 

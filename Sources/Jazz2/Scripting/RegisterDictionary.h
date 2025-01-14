@@ -20,6 +20,7 @@ namespace Jazz2::Scripting
 	typedef String dictKey_t;
 	typedef HashMap<dictKey_t, CScriptDictValue> dictMap_t;
 
+	/** @brief **AngelScript** dictionary value */
 	class CScriptDictValue
 	{
 	public:
@@ -67,6 +68,7 @@ namespace Jazz2::Scripting
 		int m_typeId;
 	};
 
+	/** @brief **AngelScript** dictionary */
 	class CScriptDictionary
 	{
 	public:
@@ -183,6 +185,7 @@ namespace Jazz2::Scripting
 		dictMap_t dict;
 	};
 
+	/** @brief Registers `dictionary` type to **AngelScript** engine */
 	void RegisterDictionary(asIScriptEngine* engine);
 }
 
