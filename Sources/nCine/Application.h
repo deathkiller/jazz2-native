@@ -97,9 +97,9 @@ namespace nCine
 		/** @brief Returns the run-time rendering settings */
 		inline RenderingSettings& GetRenderingSettings() { return renderingSettings_; }
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/** @brief Returns the run-time GUI settings */
+		/** @brief Returns run-time GUI settings */
 		inline GuiSettings& GetGuiSettings() { return guiSettings_; }
-		/** @brief Returns the debug overlay object, if any */
+		/** @brief Returns debug overlay settings */
 		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() { return (debugOverlay_ != nullptr ? debugOverlay_->settings() : debugOverlayNullSettings_); }
 #endif
 #if defined(NCINE_PROFILING) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -172,6 +172,7 @@ namespace nCine
 		void AttachTraceTarget(Containers::StringView targetPath);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		AppConfiguration appCfg_;
 		RenderingSettings renderingSettings_;
 		bool isSuspended_;
@@ -200,6 +201,7 @@ namespace nCine
 		std::unique_ptr<IDebugOverlay> debugOverlay_;
 		std::unique_ptr<ImGuiDrawing> imguiDrawing_;
 #endif
+#endif
 
 		Application();
 		~Application();
@@ -208,7 +210,7 @@ namespace nCine
 		void PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler);
 		/** @brief Must be called before giving control to the application */
 		void InitCommon();
-		/** @brief A single step of the game loop made to render a frame */
+		/** @brief Processes a single step of the game loop and renders a frame */
 		void Step();
 		/** @brief Must be called before exiting to shut down the application */
 		void ShutdownCommon();

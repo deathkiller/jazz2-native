@@ -794,7 +794,7 @@ namespace Jazz2::Actors
 			}
 
 			// Crouch / Buttstomp - Uses different bindings whether it's in the air or not
-			if (_levelHandler->PlayerActionPressed(_playerIndex, canJumpPrev ? PlayerActions::Down : PlayerActions::Buttstomp)) {
+			if (_levelHandler->PlayerActionPressed(_playerIndex, CanJump() ? PlayerActions::Down : PlayerActions::Buttstomp)) {
 				if (_suspendType == SuspendType::SwingingVine) {
 					// TODO: Swinging vine
 				} else if (_suspendType != SuspendType::None) {

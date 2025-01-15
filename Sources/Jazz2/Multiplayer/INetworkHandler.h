@@ -21,11 +21,16 @@ namespace Jazz2::Multiplayer
 	class INetworkHandler
 	{
 	public:
+		/** @brief Returns the server name */
 		virtual StringView GetServerName() const = 0;
+		/** @brief Sets the server name */
 		virtual void SetServerName(StringView value) = 0;
 
+		/** @brief Called when a peer connects to the server */
 		virtual ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) = 0;
+		/** @brief Called when a peer disconnects from the server */
 		virtual void OnPeerDisconnected(const Peer& peer, Reason reason) = 0;
+		/** @brief Called when a packet is received */
 		virtual void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength) = 0;
 	};
 }
