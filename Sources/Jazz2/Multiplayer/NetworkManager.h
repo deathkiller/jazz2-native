@@ -58,16 +58,25 @@ namespace Jazz2::Multiplayer
 		NetworkManager(const NetworkManager&) = delete;
 		NetworkManager& operator=(const NetworkManager&) = delete;
 
+		/** @brief Creates a client connection */
 		bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
+		/** @brief Creates a server */
 		bool CreateServer(INetworkHandler* handler, std::uint16_t port);
+		/** @brief Disposes all active connections */
 		void Dispose();
 
+		/** @brief Returns state of network connection */
 		NetworkState GetState() const;
 
+		/** @brief Sends a packet to a given peer */
 		void SendToPeer(const Peer& peer, NetworkChannel channel, const std::uint8_t* data, std::size_t dataLength);
+		/** @overload */
 		void SendToPeer(const Peer& peer, NetworkChannel channel, const MemoryStream& packet);
+		/** @brief Sends a packet to all connected peers */
 		void SendToAll(NetworkChannel channel, const std::uint8_t* data, std::size_t dataLength);
+		/** @overload */
 		void SendToAll(NetworkChannel channel, const MemoryStream& packet);
+		/** @brief Kicks a given peer from the server */
 		void KickClient(const Peer& peer, Reason reason);
 
 	private:

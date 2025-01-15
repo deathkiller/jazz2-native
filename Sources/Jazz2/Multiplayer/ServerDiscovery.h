@@ -31,13 +31,21 @@ namespace Jazz2::Multiplayer
 	/** @brief Server description */
 	struct ServerDesc
 	{
+		/** @brief Server endpoint */
 		ENetAddress Endpoint;
+		/** @brief Server endpoint in text format */
 		String EndpointString;
+		/** @brief Server unique identifier */
 		std::uint8_t UniqueIdentifier[16];
+		/** @brief Server name */
 		String Name;
+		/** @brief Game mode and flags */
 		std::uint32_t GameModeAndFlags;
+		/** @brief Current number of players */
 		std::uint32_t CurrentPlayers;
+		/** @brief Maximum number of players */
 		std::uint32_t MaxPlayers;
+		/** @brief Current level name */
 		String LevelName;
 
 		// TODO: LastPingTime
@@ -48,6 +56,7 @@ namespace Jazz2::Multiplayer
 	class IServerObserver
 	{
 	public:
+		/** @brief Called when a server is discovered */
 		virtual void OnServerFound(ServerDesc&& desc) = 0;
 	};
 

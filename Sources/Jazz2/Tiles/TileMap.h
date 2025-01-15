@@ -29,19 +29,23 @@ namespace Jazz2::Tiles
 {
 	/** @brief Layer speed model */
 	enum class LayerSpeedModel {
-		Default,
-		AlwaysOnTop,
+		/** @brief Default model */
+		Default,			
+		/** @brief Ignores all speed and offset settings to be tied to the top/left side of the screen */
+		AlwaysOnTop,		
+		/** @brief Ignores the speed and auto speed properties, and instead ensures that the full extent of this layer will be visible and no blank space outside of it will be shown */
 		FitLevel,
+		/** @brief Treats the layer's speed and auto speed properties on this axis as multipliers of the current camera size, rather than camera position */
 		SpeedMultipliers
 	};
 
 	/** @brief Layer renderer type */
 	enum class LayerRendererType {
-		Default,
-		Tinted,
+		Default,				/**< Default rendering */
+		Tinted,					/**< Color-tinted rendering */
 
-		Sky,
-		Circle
+		Sky,					/**< Textured background --- Sky */
+		Circle					/**< Textured background --- Circle */
 	};
 
 	/** @brief Description of a tile map layer */
@@ -79,13 +83,13 @@ namespace Jazz2::Tiles
 
 	/** @brief Layer tile flags, supports a bitwise combination of its member values */
 	enum class LayerTileFlags : std::uint8_t {
-		None = 0x00,
+		None = 0x00,			/**< None */
 
-		FlipX = 0x01,
-		FlipY = 0x02,
-		Animated = 0x04,
+		FlipX = 0x01,			/**< Flipped horizontally */
+		FlipY = 0x02,			/**< Flipped vertically */
+		Animated = 0x04,		/**< Animated tile */
 
-		OneWay = 0x10
+		OneWay = 0x10			/**< One-way collision */
 	};
 
 	DEATH_ENUM_FLAGS(LayerTileFlags);
@@ -131,14 +135,23 @@ namespace Jazz2::Tiles
 
 	/** @brief Represents an animated tile */
 	struct AnimatedTile {
+		/** @brief Individual tiles (frames) */
 		SmallVector<AnimatedTileFrame, 0> Tiles;
+		/** @brief Fixed number of extra animation frames that will show the last frame */
 		std::int16_t Delay;
+		/** @brief Maximum random number of extra animation frames that will show the last frame */
 		std::int16_t DelayJitter;
+		/** @brief Fixed number of extra animation frames that will show the last frame before the animation should start to play backward (if @ref IsPingPong is enabled) */
 		std::int32_t PingPongDelay;
+		/** @brief Current frame of the animation */
 		std::int32_t CurrentTileIdx;
+		/** @brief Duration of animation frame */
 		float FrameDuration;
+		/** @brief Frames left until animation advances */
 		float FramesLeft;
+		/** @brief Whether animation should play forward and then backward */
 		bool IsPingPong;
+		/** @brief Whether animation plays forward (if @ref IsPingPong is enabled) */
 		bool Forwards;
 	};
 
@@ -150,8 +163,9 @@ namespace Jazz2::Tiles
 #endif
 
 	public:
+		/** @brief Maximum number of triggers */
 		static constexpr std::int32_t TriggerCount = 32;
-		static constexpr std::int32_t AnimatedTileMask = 0x80000000;
+		/** @brief Hardcoded offset for layer positioning */
 		static constexpr std::int32_t HardcodedOffset = 70;
 
 		/** @brief Flags that modify behaviour of @ref DestructibleDebris, supports a bitwise combination of its member values */
@@ -166,31 +180,49 @@ namespace Jazz2::Tiles
 
 		/** @brief Describes a visual debris (particle effect) */
 		struct DestructibleDebris {
+			/** @brief Position */
 			Vector2f Pos;
+			/** @brief Depth (layer) */
 			std::uint16_t Depth;
 
+			/** @brief Size */
 			Vector2f Size;
+			/** @brief Speed */
 			Vector2f Speed;
+			/** @brief Acceleration */
 			Vector2f Acceleration;
 
+			/** @brief Scale */
 			float Scale;
+			/** @brief Scale change speed */
 			float ScaleSpeed;
 
+			/** @brief Angle */
 			float Angle;
+			/** @brief Angle change speed */
 			float AngleSpeed;
 
+			/** @brief Alpha */
 			float Alpha;
+			/** @brief Alpha change speed */
 			float AlphaSpeed;
 
+			/** @brief Time remaining until disposal */
 			float Time;
 
+			/** @brief Texture horizontal scale */
 			float TexScaleX;
+			/** @brief Texture horizontal bias */
 			float TexBiasX;
+			/** @brief Texture vertical scale */
 			float TexScaleY;
+			/** @brief Texture vertical bias */
 			float TexBiasY;
 
+			/** @brief Diffuse texture */
 			Texture* DiffuseTexture;
 
+			/** @brief Behavior flags */
 			DebrisFlags Flags;
 		};
 

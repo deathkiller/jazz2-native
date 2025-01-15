@@ -90,7 +90,9 @@ namespace Jazz2::Multiplayer
 		void AttachComponents(LevelDescriptor&& descriptor) override;
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
 
+		/** @brief Returns current game mode */
 		MultiplayerGameMode GetGameMode() const;
+		/** @brief Sets current game mode */
 		bool SetGameMode(MultiplayerGameMode value);
 
 		bool OnPeerDisconnected(const Peer& peer);
