@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 		static constexpr std::int32_t TopLine = 31;
 		static constexpr std::int32_t BottomLine = 42;
 		static constexpr float KineticMultiplier = 0.01f;
-		static constexpr float KineticFriction = 6000.0f;
+		static constexpr float KineticFriction = 5000.0f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		SmallVector<ListViewItem> _items;
@@ -52,7 +52,7 @@ namespace Jazz2::UI::Menu
 		Vector2i _touchLast;
 		float _touchTime;
 		float _touchSpeed;
-		std::uint8_t _touchDirection;
+		std::int8_t _touchDirection;
 		bool _scrollable;
 #endif
 
@@ -95,18 +95,20 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
-		if (_touchStart == Vector2i::Zero && _scrollable && _touchSpeed > 0.0f) {
-			float y = _y + _touchSpeed * _touchDirection * 0.01f * timeMult;
-			if (y < _availableHeight - _height && _touchDirection == -1) {
-				y = _availableHeight - _height;
-				_touchDirection = 1;
-				_touchSpeed *= 0.1f;
-			} else if (y > 0.0f && _touchDirection == 1) {
-				y = 0.0f;
-				_touchDirection = -1;
-				_touchSpeed *= 0.1f;
+		if (_touchSpeed > 0.0f) {
+			if (_touchStart == Vector2i::Zero && _scrollable) {
+				float y = _y + (_touchSpeed * (std::int32_t)_touchDirection * KineticMultiplier * timeMult);
+				if (y < (_availableHeight - _height) && _touchDirection == -1) {
+					y = (_availableHeight - _height);
+					_touchDirection = 1;
+					_touchSpeed *= 0.33f;
+				} else if (y > 0.0f && _touchDirection == 1) {
+					y = 0.0f;
+					_touchDirection = -1;
+					_touchSpeed *= 0.33f;
+				}
+				_y = (std::int32_t)y;
 			}
-			_y = y;
 
 			_touchSpeed = std::max(_touchSpeed - KineticFriction * KineticMultiplier * timeMult, 0.0f);
 		}
@@ -256,16 +258,14 @@ namespace Jazz2::UI::Menu
 					if (pointerIndex != -1) {
 						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
 						if (_scrollable) {
-							float delta = touchMove.Y - _touchLast.Y;
+							std::int32_t delta = touchMove.Y - _touchLast.Y;
 							_y += delta;
-							if (std::abs(delta) > 2.0f) {
-								std::uint8_t newDirection = (delta < 0 ? -1 : 1);
-								if (_touchDirection != newDirection) {
-									_touchDirection = newDirection;
-									_touchSpeed = 0.0f;
-								}
-								_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
+							std::uint8_t newDirection = (delta < 0 ? -1 : 1);
+							if (_touchDirection != newDirection) {
+								_touchDirection = newDirection;
+								_touchSpeed = 0.0f;
 							}
+							_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
 						}
 						_touchLast = touchMove;
 					}

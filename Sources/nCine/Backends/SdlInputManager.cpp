@@ -145,13 +145,13 @@ namespace nCine::Backends
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 				mouseEvent_.x = event.button.x;
-				mouseEvent_.y = theApplication().GetHeight() - event.button.y;
+				mouseEvent_.y = event.button.y;
 				mouseEvent_.button_ = event.button.button;
 				break;
 			case SDL_MOUSEMOTION:
 				if (cursor_ != Cursor::HiddenLocked) {
 					mouseState_.x = event.motion.x;
-					mouseState_.y = theApplication().GetHeight() - event.motion.y;
+					mouseState_.y = event.motion.y;
 				} else {
 					mouseState_.x += event.motion.xrel;
 					mouseState_.y -= event.motion.yrel;
