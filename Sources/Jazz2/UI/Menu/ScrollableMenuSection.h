@@ -95,10 +95,8 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
-		if (_touchStart == Vector2i::Zero && _scrollable) {
+		if (_touchStart == Vector2i::Zero && _scrollable && _touchSpeed > 0.0f) {
 			float y = _y + _touchSpeed * _touchDirection * 0.01f * timeMult;
-			_touchSpeed -= KineticFriction * KineticMultiplier * timeMult;
-
 			if (y > 0.0f) {
 				y = -y;
 				_touchDirection = -1;
@@ -108,8 +106,9 @@ namespace Jazz2::UI::Menu
 				_touchDirection = 1;
 				_touchSpeed *= 0.333f;
 			}
-
 			_y = y;
+
+			_touchSpeed = std::max(_touchSpeed - KineticFriction * KineticMultiplier * timeMult, 0.0f);
 		}
 
 		OnHandleInput();
