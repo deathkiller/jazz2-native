@@ -46,6 +46,8 @@ namespace Jazz2::UI::Menu
 		}
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		IMenuContainer* _root;
+#endif
 	};
 }
