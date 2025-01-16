@@ -37,7 +37,7 @@ namespace Jazz2::UI::Menu
 		static constexpr std::int32_t ItemHeight = 40;
 		static constexpr std::int32_t TopLine = 31;
 		static constexpr std::int32_t BottomLine = 42;
-		static constexpr float KineticMultiplier = 0.01f;
+		static constexpr float KineticMultiplier = 0.1f;
 		static constexpr float KineticFriction = 5000.0f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -259,13 +259,15 @@ namespace Jazz2::UI::Menu
 						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
 						if (_scrollable) {
 							std::int32_t delta = touchMove.Y - _touchLast.Y;
-							_y += delta;
-							std::uint8_t newDirection = (delta < 0 ? -1 : 1);
-							if (_touchDirection != newDirection) {
-								_touchDirection = newDirection;
-								_touchSpeed = 0.0f;
+							if (delta != 0) {
+								_y += delta;
+								std::uint8_t newDirection = (delta < 0 ? -1 : 1);
+								if (_touchDirection != newDirection) {
+									_touchDirection = newDirection;
+									_touchSpeed = 0.0f;
+								}
+								_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
 							}
-							_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
 						}
 						_touchLast = touchMove;
 					}
