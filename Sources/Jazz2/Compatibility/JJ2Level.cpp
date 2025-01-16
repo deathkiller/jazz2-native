@@ -623,7 +623,7 @@ namespace Jazz2::Compatibility
 			co.WriteValue<std::uint8_t>(_darknessColor & 0xff);
 			co.WriteValue<std::uint8_t>((_darknessColor >> 8) & 0xff);
 			co.WriteValue<std::uint8_t>((_darknessColor >> 16) & 0xff);
-			co.WriteValue<std::uint8_t>((std::uint8_t)std::min(LightingStart * 255 / 64, 255));
+			co.WriteValue<std::uint8_t>((std::uint8_t)std::min(std::max(LightingStart, LightingMin) * 255 / 64, 255));
 
 			co.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
 			co.WriteValue<std::uint8_t>(_weatherIntensity);
