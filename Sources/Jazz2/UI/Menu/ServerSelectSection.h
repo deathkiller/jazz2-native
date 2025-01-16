@@ -40,12 +40,15 @@ namespace Jazz2::UI::Menu
 		float _animation;
 		float _y;
 		float _height;
-		Vector2f _touchStart;
-		Vector2f _touchLast;
+		float _availableHeight;
+		Vector2i _touchStart;
+		Vector2i _touchLast;
 		float _touchTime;
+		float _touchSpeed;
 		std::int32_t _pressedCount;
 		float _noiseCooldown;
 		Multiplayer::ServerDiscovery _discovery;
+		std::int8_t _touchDirection;
 
 		void ExecuteSelected();
 		void EnsureVisibleSelected();

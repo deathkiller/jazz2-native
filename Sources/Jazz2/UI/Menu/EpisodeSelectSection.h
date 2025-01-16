@@ -45,6 +45,7 @@ namespace Jazz2::UI::Menu
 		void OnExecuteSelected() override;
 		void OnDrawEmptyText(Canvas* canvas, std::int32_t& charOffset) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
+		void OnHandleInput() override;
 
 		void OnAfterTransition();
 		void AddEpisode(StringView episodeFile);

@@ -215,20 +215,20 @@ namespace Jazz2::UI::Menu
 
 		if (_touchSpeed > 0.0f) {
 			if (_touchStart == Vector2i::Zero) {
-				float scrollOffset = _scrollOffset + (_touchSpeed * (std::int32_t)_touchDirection * KineticMultiplier * timeMult);
+				float scrollOffset = _scrollOffset + (_touchSpeed * (std::int32_t)_touchDirection * TouchKineticDivider * timeMult);
 				if (scrollOffset < 0.0f && _touchDirection == -1) {
 					scrollOffset = 0.0f;
 					_touchDirection = 1;
-					_touchSpeed *= 0.2f;
+					_touchSpeed *= TouchKineticDamping;
 				} else if (scrollOffset > _maxScrollOffset && _touchDirection == 1) {
 					scrollOffset = _maxScrollOffset;
 					_touchDirection = -1;
-					_touchSpeed *= 0.2f;
+					_touchSpeed *= TouchKineticDamping;
 				}
 				_scrollOffset = scrollOffset;
 			}
 
-			_touchSpeed = std::max(_touchSpeed - KineticFriction * KineticMultiplier * timeMult, 0.0f);
+			_touchSpeed = std::max(_touchSpeed - TouchKineticFriction * TouchKineticDivider * timeMult, 0.0f);
 		}
 
 		_touchTime += timeMult;
@@ -320,7 +320,7 @@ namespace Jazz2::UI::Menu
 								_touchDirection = newDirection;
 								_touchSpeed = 0.0f;
 							}
-							_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
+							_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / TouchKineticDivider);
 						}
 						_touchLast = touchMove;
 					}

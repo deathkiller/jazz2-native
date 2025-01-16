@@ -46,6 +46,10 @@ namespace Jazz2::UI::Menu
 		}
 
 	protected:
+		static constexpr float TouchKineticDivider = 0.004f;
+		static constexpr float TouchKineticFriction = 7000.0f;
+		static constexpr float TouchKineticDamping = 0.2f;
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		IMenuContainer* _root;
 #endif

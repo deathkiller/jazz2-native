@@ -14,7 +14,9 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	ServerSelectSection::ServerSelectSection()
-		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _pressedCount(0), _noiseCooldown(0.0f), _discovery(Multiplayer::ServerDiscovery(this))
+		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f), _pressedCount(0),
+			_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(Multiplayer::ServerDiscovery(this)),
+			_touchDirection(0)
 	{
 	}
 
@@ -39,6 +41,25 @@ namespace Jazz2::UI::Menu
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
+
+		if (_touchSpeed > 0.0f) {
+			if (_touchStart == Vector2i::Zero && _availableHeight < _height) {
+				float y = _y + (_touchSpeed * (std::int32_t)_touchDirection * TouchKineticDivider * timeMult);
+				if (y < (_availableHeight - _height) && _touchDirection == -1) {
+					y = (_availableHeight - _height);
+					_touchDirection = 1;
+					_touchSpeed *= TouchKineticDamping;
+				} else if (y > 0.0f && _touchDirection == 1) {
+					y = 0.0f;
+					_touchDirection = -1;
+					_touchSpeed *= TouchKineticDamping;
+				}
+				_y = (std::int32_t)y;
+			}
+
+			_touchSpeed = std::max(_touchSpeed - TouchKineticFriction * TouchKineticDivider * timeMult, 0.0f);
+		}
+
 		if (_noiseCooldown > 0.0f) {
 			_noiseCooldown -= timeMult;
 		}
@@ -123,10 +144,10 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		float availableHeight = (bottomLine - topLine);
+		_availableHeight = (bottomLine - topLine);
 		constexpr float spacing = 20.0f;
 
-		_y = (availableHeight - _height < 0.0f ? std::clamp(_y, availableHeight - _height, 0.0f) : 0.0f);
+		_y = std::clamp(_y, _availableHeight - _height, 0.0f);
 
 		Vector2f center = Vector2f(centerX, topLine + 12.0f + _y);
 		float column1 = contentBounds.X + (contentBounds.W >= 460 ? (contentBounds.W * 0.25f) : 20.0f);
@@ -180,26 +201,37 @@ namespace Jazz2::UI::Menu
 						return;
 					}
 
-					_touchStart = Vector2f(event.pointers[pointerIndex].x * (float)viewSize.X, event.pointers[pointerIndex].y * (float)viewSize.Y);
+					_touchStart = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), y);
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 				}
 				break;
 			}
 			case TouchEventType::Move: {
-				if (_touchStart != Vector2f::Zero) {
+				if (_touchStart != Vector2i::Zero) {
 					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
-						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * (float)viewSize.X, event.pointers[pointerIndex].y * (float)viewSize.Y);
-						_y += touchMove.Y - _touchLast.Y;
+						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
+						if (_availableHeight < _height) {
+							std::int32_t delta = touchMove.Y - _touchLast.Y;
+							if (delta != 0) {
+								_y += delta;
+								std::uint8_t newDirection = (delta < 0 ? -1 : 1);
+								if (_touchDirection != newDirection) {
+									_touchDirection = newDirection;
+									_touchSpeed = 0.0f;
+								}
+								_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / TouchKineticDivider);
+							}
+						}
 						_touchLast = touchMove;
 					}
 				}
 				break;
 			}
 			case TouchEventType::Up: {
-				bool alreadyMoved = (_touchStart == Vector2f::Zero || (_touchStart - _touchLast).Length() > 10.0f || _touchTime > FrameTimer::FramesPerSecond);
-				_touchStart = Vector2f::Zero;
+				bool alreadyMoved = (_touchStart == Vector2i::Zero || (_touchStart - _touchLast).Length() > 10.0f || _touchTime > FrameTimer::FramesPerSecond);
+				_touchStart = Vector2i::Zero;
 				if (alreadyMoved) {
 					return;
 				}
