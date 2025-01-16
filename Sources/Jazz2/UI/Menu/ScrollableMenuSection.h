@@ -24,6 +24,7 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize) override;
 
 	protected:
+		/** @brief Item in @ref ScrollableMenuSection */
 		struct ListViewItem {
 			TItem Item;
 			std::int32_t Y;
@@ -36,17 +37,24 @@ namespace Jazz2::UI::Menu
 		static constexpr std::int32_t ItemHeight = 40;
 		static constexpr std::int32_t TopLine = 31;
 		static constexpr std::int32_t BottomLine = 42;
+		static constexpr float KineticMultiplier = 0.01f;
+		static constexpr float KineticFriction = 5000.0f;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		SmallVector<ListViewItem> _items;
 		std::int32_t _selectedIndex;
 		float _animation;
 		float _transitionTime;
 		std::int32_t _y;
 		std::int32_t _height;
+		std::int32_t _availableHeight;
 		Vector2i _touchStart;
 		Vector2i _touchLast;
 		float _touchTime;
+		float _touchSpeed;
+		std::uint8_t _touchDirection;
 		bool _scrollable;
+#endif
 
 		void EnsureVisibleSelected();
 		virtual void OnExecuteSelected() = 0;
@@ -61,7 +69,8 @@ namespace Jazz2::UI::Menu
 
 	template<class TItem>
 	ScrollableMenuSection<TItem>::ScrollableMenuSection()
-		: _selectedIndex(0), _animation(0.0f), _transitionTime(0.0f), _y(0), _height(0), _touchTime(0.0f), _scrollable(false)
+		: _selectedIndex(0), _animation(0.0f), _transitionTime(0.0f), _y(0), _height(0), _availableHeight(0),
+			_touchTime(0.0f), _touchSpeed(0.0f), _touchDirection(0), _scrollable(false)
 	{
 	}
 
@@ -84,6 +93,23 @@ namespace Jazz2::UI::Menu
 	{
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
+		}
+
+		if (_touchStart == Vector2i::Zero && _scrollable) {
+			float y = _y + _touchSpeed * _touchDirection * 0.01f * timeMult;
+			_touchSpeed -= KineticFriction * KineticMultiplier * timeMult;
+
+			if (y > 0.0f) {
+				y = -y;
+				_touchDirection = -1;
+				_touchSpeed *= 0.333f;
+			} else if (y < _availableHeight - _height) {
+				y = (_availableHeight - _height) * 2.0f - y;
+				_touchDirection = 1;
+				_touchSpeed *= 0.333f;
+			}
+
+			_y = y;
 		}
 
 		OnHandleInput();
@@ -156,7 +182,7 @@ namespace Jazz2::UI::Menu
 
 		std::int32_t topLine = clipRect.Y + 1;
 		std::int32_t bottomLine = clipRect.Y + clipRect.H - 1;
-		std::int32_t availableHeight = (bottomLine - topLine);
+		_availableHeight = (bottomLine - topLine);
 
 		if (_height == 0) {
 			_height = ItemHeight * 2 / 3;
@@ -169,18 +195,18 @@ namespace Jazz2::UI::Menu
 			}
 			_height -= ItemHeight / 2;
 
-			if (availableHeight - _height < 0) {
+			if (_availableHeight - _height < 0) {
 				_scrollable = true;
 			}
 
 			EnsureVisibleSelected();
 		}
 
-		if (availableHeight - _height < 0) {
-			_y = std::clamp(_y, availableHeight - _height, 0);
+		if (_availableHeight - _height < 0) {
+			_y = std::clamp(_y, _availableHeight - _height, 0);
 			_scrollable = true;
 		} else {
-			_y = (availableHeight - _height) / 2;
+			_y = (_availableHeight - _height) / 2;
 			_scrollable = false;
 		}
 
@@ -231,7 +257,10 @@ namespace Jazz2::UI::Menu
 					if (pointerIndex != -1) {
 						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
 						if (_scrollable) {
-							_y += touchMove.Y - _touchLast.Y;
+							float delta = touchMove.Y - _touchLast.Y;
+							_y += delta;
+							_touchDirection = (delta < 0 ? -1 : 1);
+							_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
 						}
 						_touchLast = touchMove;
 					}
