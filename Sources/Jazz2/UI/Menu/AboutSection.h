@@ -22,7 +22,7 @@ namespace Jazz2::UI::Menu
 		static constexpr std::int32_t BottomLine = 42;
 		static constexpr float AutoScrollRate = 0.4f;
 		static constexpr float MaxScrollRate = 8.0f;
-		static constexpr float KineticMultiplier = 0.1f;
+		static constexpr float KineticMultiplier = 0.005f;
 		static constexpr float KineticFriction = 5000.0f;
 
 		FormattedTextBlock _textBlock;
