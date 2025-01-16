@@ -219,11 +219,11 @@ namespace Jazz2::UI::Menu
 				if (scrollOffset < 0.0f && _touchDirection == -1) {
 					scrollOffset = 0.0f;
 					_touchDirection = 1;
-					_touchSpeed *= 0.33f;
+					_touchSpeed *= 0.2f;
 				} else if (scrollOffset > _maxScrollOffset && _touchDirection == 1) {
 					scrollOffset = _maxScrollOffset;
 					_touchDirection = -1;
-					_touchSpeed *= 0.33f;
+					_touchSpeed *= 0.2f;
 				}
 				_scrollOffset = scrollOffset;
 			}
