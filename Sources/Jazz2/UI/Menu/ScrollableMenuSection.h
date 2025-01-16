@@ -37,7 +37,7 @@ namespace Jazz2::UI::Menu
 		static constexpr std::int32_t ItemHeight = 40;
 		static constexpr std::int32_t TopLine = 31;
 		static constexpr std::int32_t BottomLine = 42;
-		static constexpr float KineticMultiplier = 0.1f;
+		static constexpr float KineticMultiplier = 0.005f;
 		static constexpr float KineticFriction = 5000.0f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
