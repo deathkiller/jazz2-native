@@ -25,8 +25,8 @@ namespace Jazz2::UI::Menu
 
 		FormattedTextBlock _textBlock;
 		FormattedTextBlock _textBlockHeaderOnly;
-		Vector2i _touchStart;
-		Vector2i _touchLast;
+		Vector2f _touchStart;
+		Vector2f _touchLast;
 		float _maxScrollOffset;
 		float _touchTime;
 		float _touchSpeed;

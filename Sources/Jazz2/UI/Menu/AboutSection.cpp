@@ -214,7 +214,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_touchSpeed > 0.0f) {
-			if (_touchStart == Vector2i::Zero) {
+			if (_touchStart == Vector2f::Zero) {
 				float scrollOffset = _scrollOffset + (_touchSpeed * (std::int32_t)_touchDirection * TouchKineticDivider * timeMult);
 				if (scrollOffset < 0.0f && _touchDirection == -1) {
 					scrollOffset = 0.0f;
@@ -293,14 +293,14 @@ namespace Jazz2::UI::Menu
 			case TouchEventType::Down: {
 				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 				if (pointerIndex != -1) {
-					std::int32_t y = (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y);
-					if (y < 80) {
+					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+					if (y < 80.0f) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_root->LeaveSection();
 						return;
 					}
 
-					_touchStart = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), y);
+					_touchStart = Vector2f(event.pointers[pointerIndex].x * viewSize.X, y);
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 					_autoScroll = false;
@@ -308,14 +308,14 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 			case TouchEventType::Move: {
-				if (_touchStart != Vector2i::Zero) {
+				if (_touchStart != Vector2f::Zero) {
 					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
-						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
-						std::int32_t delta = _touchLast.Y - touchMove.Y;
-						if (delta != 0) {
+						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
+						float delta = _touchLast.Y - touchMove.Y;
+						if (delta != 0.0f) {
 							_scrollOffset += delta;
-							std::uint8_t newDirection = (delta < 0 ? -1 : 1);
+							std::uint8_t newDirection = (delta < 0.0f ? -1 : 1);
 							if (_touchDirection != newDirection) {
 								_touchDirection = newDirection;
 								_touchSpeed = 0.0f;
@@ -328,8 +328,8 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 			case TouchEventType::Up: {
-				bool alreadyMoved = (_touchStart == Vector2i::Zero || (_touchStart - _touchLast).SqrLength() > 100 || _touchTime > FrameTimer::FramesPerSecond);
-				_touchStart = Vector2i::Zero;
+				bool alreadyMoved = (_touchStart == Vector2f::Zero || (_touchStart - _touchLast).SqrLength() > 100 || _touchTime > FrameTimer::FramesPerSecond);
+				_touchStart = Vector2f::Zero;
 				if (alreadyMoved) {
 					return;
 				}
