@@ -119,7 +119,8 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	AboutSection::AboutSection()
-		: _touchTime(0.0f), _scrollOffset(0.0f), _scrollRate(0.0f), _autoScroll(true), _rewind(false)
+		: _maxScrollOffset(0.0f), _touchTime(0.0f), _touchSpeed(0.0f), _scrollOffset(0.0f), _scrollRate(0.0f),
+			_touchDirection(0), _autoScroll(true), _rewind(false)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -212,6 +213,24 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
+		if (_touchSpeed > 0.0f) {
+			if (_touchStart == Vector2i::Zero) {
+				float scrollOffset = _scrollOffset + (_touchSpeed * (std::int32_t)_touchDirection * KineticMultiplier * timeMult);
+				if (scrollOffset < 0.0f && _touchDirection == -1) {
+					scrollOffset = 0.0f;
+					_touchDirection = 1;
+					_touchSpeed *= 0.33f;
+				} else if (scrollOffset > _maxScrollOffset && _touchDirection == 1) {
+					scrollOffset = _maxScrollOffset;
+					_touchDirection = -1;
+					_touchSpeed *= 0.33f;
+				}
+				_scrollOffset = scrollOffset;
+			}
+
+			_touchSpeed = std::max(_touchSpeed - KineticFriction * KineticMultiplier * timeMult, 0.0f);
+		}
+
 		_touchTime += timeMult;
 	}
 
@@ -237,14 +256,14 @@ namespace Jazz2::UI::Menu
 
 		float viewHeight = (bottomLine - topLine);
 		float textBlockHeight = _textBlock.GetCachedHeight();
-		float maxScrollOffset = textBlockHeight + viewHeight;
+		_maxScrollOffset = textBlockHeight + viewHeight;
 		if (_autoScroll && _rewind && _scrollOffset < viewHeight - 16.0f) {
 			_scrollOffset = viewHeight - 16.0f;
 			_autoScroll = false;
 		} else if (_scrollOffset < 0.0f || textBlockHeight <= 0.0f) {
 			_scrollOffset = 0.0f;
-		} else if (_scrollOffset > maxScrollOffset) {
-			_scrollOffset = maxScrollOffset;
+		} else if (_scrollOffset > _maxScrollOffset) {
+			_scrollOffset = _maxScrollOffset;
 			if (_autoScroll) {
 				_rewind = true;
 			}
@@ -263,7 +282,7 @@ namespace Jazz2::UI::Menu
 		if (_scrollOffset > viewHeight - 6.0f) {
 			_root->DrawElement(MenuGlow, 0, centerX, topLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
-		if (_scrollOffset < maxScrollOffset - viewHeight) {
+		if (_scrollOffset < _maxScrollOffset - viewHeight) {
 			_root->DrawElement(MenuGlow, 0, centerX, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 	}
@@ -293,7 +312,16 @@ namespace Jazz2::UI::Menu
 					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
 						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
-						_scrollOffset += _touchLast.Y - touchMove.Y;
+						std::int32_t delta = _touchLast.Y - touchMove.Y;
+						if (delta != 0) {
+							_scrollOffset += delta;
+							std::uint8_t newDirection = (delta < 0 ? -1 : 1);
+							if (_touchDirection != newDirection) {
+								_touchDirection = newDirection;
+								_touchSpeed = 0.0f;
+							}
+							_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
+						}
 						_touchLast = touchMove;
 					}
 				}
