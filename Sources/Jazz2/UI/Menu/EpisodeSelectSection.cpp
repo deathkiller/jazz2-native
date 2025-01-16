@@ -51,9 +51,7 @@ namespace Jazz2::UI::Menu
 
 	void EpisodeSelectSection::OnUpdate(float timeMult)
 	{
-		if (_animation < 1.0f) {
-			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
-		}
+		ScrollableMenuSection::OnUpdate(timeMult);
 
 		if (_expanded && _expandedAnimation < 1.0f) {
 			_expandedAnimation = std::min(_expandedAnimation + timeMult * 0.016f, 1.0f);
@@ -119,8 +117,6 @@ namespace Jazz2::UI::Menu
 						EnsureVisibleSelected();
 					}
 				}
-
-				_touchTime += timeMult;
 			}
 		} else {
 			_transitionTime -= 0.025f * timeMult;
@@ -256,6 +252,11 @@ namespace Jazz2::UI::Menu
 			_root->DrawElement(EpisodeComplete, 0, expandX, item.Y - 2.0f, IMenuContainer::MainLayer + (isSelected ? 20 : 10), Alignment::Right,
 				((item.Item.Flags & EpisodeDataFlags::CheatsUsed) == EpisodeDataFlags::CheatsUsed ? Colorf::Black : Colorf::White), size, size);
 		}
+	}
+
+	void EpisodeSelectSection::OnHandleInput()
+	{
+		// Already handled in OnUpdate()
 	}
 
 	void EpisodeSelectSection::OnDrawClipped(Canvas* canvas)
