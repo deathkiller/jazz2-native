@@ -258,8 +258,14 @@ namespace Jazz2::UI::Menu
 						if (_scrollable) {
 							float delta = touchMove.Y - _touchLast.Y;
 							_y += delta;
-							_touchDirection = (delta < 0 ? -1 : 1);
-							_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) /*/ KineticMultiplier*/);
+							if (std::abs(delta) > 2.0f) {
+								std::uint8_t newDirection = (delta < 0 ? -1 : 1);
+								if (_touchDirection != newDirection) {
+									_touchDirection = newDirection;
+									_touchSpeed = 0.0f;
+								}
+								_touchSpeed = (0.8f * _touchSpeed) + (0.2f * std::abs(delta) / KineticMultiplier);
+							}
 						}
 						_touchLast = touchMove;
 					}
