@@ -40,8 +40,8 @@ namespace Jazz2::UI::Menu
 		float _y;
 		float _height;
 		float _availableHeight;
-		Vector2i _touchStart;
-		Vector2i _touchLast;
+		Vector2f _touchStart;
+		Vector2f _touchLast;
 		float _touchTime;
 		float _touchSpeed;
 		std::int32_t _pressedCount;

@@ -61,7 +61,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_touchSpeed > 0.0f) {
-			if (_touchStart == Vector2i::Zero && _availableHeight < _height) {
+			if (_touchStart == Vector2f::Zero && _availableHeight < _height) {
 				float y = _y + (_touchSpeed * (std::int32_t)_touchDirection * TouchKineticDivider * timeMult);
 				if (y < (_availableHeight - _height) && _touchDirection == -1) {
 					y = (_availableHeight - _height);
@@ -72,7 +72,7 @@ namespace Jazz2::UI::Menu
 					_touchDirection = -1;
 					_touchSpeed *= TouchKineticDamping;
 				}
-				_y = (std::int32_t)y;
+				_y = y;
 			}
 
 			_touchSpeed = std::max(_touchSpeed - TouchKineticFriction * TouchKineticDivider * timeMult, 0.0f);
@@ -165,7 +165,7 @@ namespace Jazz2::UI::Menu
 		_availableHeight = (bottomLine - topLine);
 		constexpr float spacing = 20.0f;
 
-		_y = std::clamp(_y, _availableHeight - _height, 0.0f);
+		_y = (_availableHeight < _height ? std::clamp(_y, _availableHeight - _height, 0.0f) : 0.0f);
 
 		Vector2f center = Vector2f(centerX, topLine + 12.0f + _y);
 		float column1 = contentBounds.X + (contentBounds.W >= 460 ? (contentBounds.W * 0.25f) : 20.0f);
@@ -219,22 +219,22 @@ namespace Jazz2::UI::Menu
 						return;
 					}
 
-					_touchStart = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), y);
+					_touchStart = Vector2f(event.pointers[pointerIndex].x * viewSize.X, y);
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 				}
 				break;
 			}
 			case TouchEventType::Move: {
-				if (_touchStart != Vector2i::Zero) {
+				if (_touchStart != Vector2f::Zero) {
 					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
-						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
+						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
 						if (_availableHeight < _height) {
-							std::int32_t delta = touchMove.Y - _touchLast.Y;
-							if (delta != 0) {
+							float delta = touchMove.Y - _touchLast.Y;
+							if (delta != 0.0f) {
 								_y += delta;
-								std::uint8_t newDirection = (delta < 0 ? -1 : 1);
+								std::uint8_t newDirection = (delta < 0.0f ? -1 : 1);
 								if (_touchDirection != newDirection) {
 									_touchDirection = newDirection;
 									_touchSpeed = 0.0f;
@@ -248,8 +248,8 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 			case TouchEventType::Up: {
-				bool alreadyMoved = (_touchStart == Vector2i::Zero || (_touchStart - _touchLast).Length() > 10.0f || _touchTime > FrameTimer::FramesPerSecond);
-				_touchStart = Vector2i::Zero;
+				bool alreadyMoved = (_touchStart == Vector2f::Zero || (_touchStart - _touchLast).Length() > 10.0f || _touchTime > FrameTimer::FramesPerSecond);
+				_touchStart = Vector2f::Zero;
 				if (alreadyMoved) {
 					return;
 				}
