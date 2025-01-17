@@ -255,7 +255,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CreateServerOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void CreateServerOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		if (!_shouldStart && event.type == TouchEventType::Down) {
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);

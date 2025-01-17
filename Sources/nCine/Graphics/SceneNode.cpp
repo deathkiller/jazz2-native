@@ -21,7 +21,7 @@ namespace nCine
 	}
 
 	/*! \param parent The parent can be `nullptr` */
-	SceneNode::SceneNode(SceneNode* parent, const Vector2f& position)
+	SceneNode::SceneNode(SceneNode* parent, Vector2f position)
 		: SceneNode(parent, position.X, position.Y)
 	{
 	}

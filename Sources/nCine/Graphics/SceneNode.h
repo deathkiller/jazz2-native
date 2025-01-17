@@ -34,7 +34,7 @@ namespace nCine
 		/// Constructor for a node with a parent and a specified relative position
 		SceneNode(SceneNode* parent, float x, float y);
 		/// Constructor for a node with a parent and a specified relative position as a vector
-		SceneNode(SceneNode* parent, const Vector2f& position);
+		SceneNode(SceneNode* parent, Vector2f position);
 		/// Constructor for a node with a parent and positioned in the relative origin
 		explicit SceneNode(SceneNode* parent);
 		/// Constructor for a node with no parent and positioned in the origin
@@ -148,7 +148,7 @@ namespace nCine
 		/// Sets the node position through two coordinates
 		void setPosition(float x, float y);
 		/// Sets the node position through a vector
-		void setPosition(const Vector2f& position);
+		void setPosition(Vector2f position);
 		/// Sets the X coordinate of the node position
 		void setPositionX(float x);
 		/// Sets the Y coordinate of the node position
@@ -156,7 +156,7 @@ namespace nCine
 		/// Moves the node based on two offsets
 		void move(float x, float y);
 		/// Adds a move vector to the node current position
-		void move(const Vector2f& position);
+		void move(Vector2f position);
 		/// Moves the node by an offset on the X axis
 		void moveX(float x);
 		/// Moves the node by an offset on the Y axis
@@ -169,7 +169,7 @@ namespace nCine
 		/// Sets the transformation anchor point in pixels
 		void setAbsAnchorPoint(float x, float y);
 		/// Sets the transformation anchor point in pixels with a `Vector2f`
-		void setAbsAnchorPoint(const Vector2f& point);
+		void setAbsAnchorPoint(Vector2f point);
 
 		/// Gets the node scale factors
 		inline const Vector2f& scale() const {
@@ -184,7 +184,7 @@ namespace nCine
 		/// Scales the node size both horizontally and vertically
 		void setScale(float scaleFactorX, float scaleFactorY);
 		/// Scales the node size both horizontally and vertically with a `Vector2f`
-		void setScale(const Vector2f& scaleFactor);
+		void setScale(Vector2f scaleFactor);
 
 		/// Gets the node rotation in radians
 		inline float rotation() const {
@@ -374,7 +374,7 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}
 
-	inline void SceneNode::setPosition(const Vector2f& position)
+	inline void SceneNode::setPosition(Vector2f position)
 	{
 		position_ = position;
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
@@ -403,7 +403,7 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}
 
-	inline void SceneNode::move(const Vector2f& position)
+	inline void SceneNode::move(Vector2f position)
 	{
 		position_ += position;
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
@@ -431,7 +431,7 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}
 
-	inline void SceneNode::setAbsAnchorPoint(const Vector2f& point)
+	inline void SceneNode::setAbsAnchorPoint(Vector2f point)
 	{
 		anchorPoint_ = point;
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
@@ -452,7 +452,7 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}
 
-	inline void SceneNode::setScale(const Vector2f& scaleFactor)
+	inline void SceneNode::setScale(Vector2f scaleFactor)
 	{
 		scaleFactor_ = scaleFactor;
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);

@@ -75,16 +75,15 @@ namespace Death {
 	/**
 		@brief Swaps two values
 
-		Swaps two values. Equivalent to @ref std::swap(), but without the @cpp #include <utility> @ce
+		Swaps specified values. Equivalent to @ref std::swap(), but without the @cpp #include <utility> @ce
 		dependency, and without the internals delegating to @m_class{m-doc-external} [std::move()](https://en.cppreference.com/w/cpp/utility/move),
 		hurting debug performance. In order to keep supporting custom specializations, the usage pattern
-		should be similar to the standard utility, i.e. with @cpp using Utility::swap @ce.
+		should be similar to the standard utility, i.e. with @cpp using Death::swap @ce.
 
 		@partialsupport On @ref DEATH_MSVC2015_COMPATIBILITY "MSVC 2015" it's just an alias to @ref std::swap(),
 			as compiler limitations prevent creating an alternative that wouldn't conflict.
 	*/
 	/* The common_type is to prevent ambiguity with (also unrestricted) std::swap.
-	   See MoveTest::swapStlTypesAdlAmbiguity() and swapUtilityTypesAdlAmbiguity() for details.
 	   Besides resolving ambiguity, in practice it means that std::swap() will get preferred over
 	   this overload in all cases where ADL finds it due to a STL type being used. Which means
 	   potentially slightly worse debug perf than if this overload was used for those too, due to

@@ -29,7 +29,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Top, Font::DefaultColor, 1.2f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 	}
 
-	void LoadingSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void LoadingSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 	}
 }

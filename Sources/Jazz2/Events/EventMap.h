@@ -32,7 +32,7 @@ namespace Jazz2::Events
 			bool IsEventActive;
 		};
 
-		EventMap(const Vector2i& layoutSize);
+		EventMap(Vector2i layoutSize);
 
 		void SetLevelHandler(ILevelHandler* levelHandler);
 		/** @brief Returns size of event map in tiles */

@@ -188,7 +188,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ServerSelectSection::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
+	void ServerSelectSection::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {

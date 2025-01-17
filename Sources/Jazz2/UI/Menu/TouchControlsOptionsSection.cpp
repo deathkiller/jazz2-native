@@ -57,7 +57,7 @@ namespace Jazz2::UI::Menu
 		DrawOutlinedSolid(viewSize.X - PreferencesCache::TouchRightPadding.X, viewSize.Y - 0.04f * LevelHandler::DefaultHeight + PreferencesCache::TouchRightPadding.Y, IMenuContainer::MainLayer + 20, Alignment::BottomRight, Vector2f(rightSizeX, rightSizeY));
 	}
 
-	void TouchControlsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void TouchControlsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		switch(event.type) {
 			case TouchEventType::Down: {

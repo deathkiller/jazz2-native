@@ -25,7 +25,7 @@ namespace nCine
 		init();
 	}
 
-	Sprite::Sprite(SceneNode* parent, Texture* texture, const Vector2f& position)
+	Sprite::Sprite(SceneNode* parent, Texture* texture, Vector2f position)
 		: Sprite(parent, texture, position.X, position.Y)
 	{
 	}
@@ -35,7 +35,7 @@ namespace nCine
 	{
 	}
 
-	Sprite::Sprite(Texture* texture, const Vector2f& position)
+	Sprite::Sprite(Texture* texture, Vector2f position)
 		: Sprite(nullptr, texture, position.X, position.Y)
 	{
 	}

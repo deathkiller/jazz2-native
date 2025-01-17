@@ -84,7 +84,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Top, Font::DefaultColor, 0.8f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
-	void RefreshCacheSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void RefreshCacheSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		// No actions are allowed
 	}

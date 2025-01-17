@@ -39,7 +39,7 @@ namespace Jazz2::UI::Menu
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnHandleInput() override;
 		void OnExecuteSelected() override;
-		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
+		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
 		void OnBackPressed() override;
 
 		void RefreshPreviousState();

@@ -334,7 +334,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void EpisodeSelectSection::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
+	void EpisodeSelectSection::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
 		if (_shouldStart) {
 			return;
@@ -343,9 +343,9 @@ namespace Jazz2::UI::Menu
 		ScrollableMenuSection::OnTouchEvent(event, viewSize);
 	}
 
-	void EpisodeSelectSection::OnTouchUp(int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	void EpisodeSelectSection::OnTouchUp(int32_t newIndex, Vector2i viewSize, Vector2i touchPos)
 	{
-		int32_t halfW = viewSize.X / 2;
+		std::int32_t halfW = viewSize.X / 2;
 		if (std::abs(touchPos.X - halfW) < 150) {
 			if (_selectedIndex == newIndex) {
 				bool onExpand = (_touchLast.X > halfW + 100.0f && (_items[newIndex].Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue);

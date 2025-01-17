@@ -89,7 +89,7 @@ namespace Jazz2::Actors::Multiplayer
 		return success;
 	}
 
-	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
+	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
 	{
 		if (_health <= 0) {
 			// Don't sync dead players to avoid cheating

@@ -373,7 +373,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void HighscoresSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void HighscoresSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
@@ -420,7 +420,7 @@ namespace Jazz2::UI::Menu
 		ScrollableMenuSection::OnTouchEvent(event, viewSize);
 	}
 
-	void HighscoresSection::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	void HighscoresSection::OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos)
 	{
 		if (!_waitForInput) {
 			ScrollableMenuSection::OnTouchUp(newIndex, viewSize, touchPos);

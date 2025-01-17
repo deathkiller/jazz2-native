@@ -21,7 +21,7 @@ namespace Jazz2::UI::Menu
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDrawClipped(Canvas* canvas) override;
-		void OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize) override;
+		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
 
 	protected:
 		/** @brief Item in @ref ScrollableMenuSection */
@@ -62,7 +62,7 @@ namespace Jazz2::UI::Menu
 		virtual void OnHandleInput();
 		virtual void OnBackPressed();
 		virtual void OnSelectionChanged(ListViewItem& item) { }
-		virtual void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos);
+		virtual void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos);
 	};
 
 	template<class TItem>
@@ -232,7 +232,7 @@ namespace Jazz2::UI::Menu
 	}
 
 	template<class TItem>
-	void ScrollableMenuSection<TItem>::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
+	void ScrollableMenuSection<TItem>::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {
@@ -291,7 +291,7 @@ namespace Jazz2::UI::Menu
 	}
 
 	template<class TItem>
-	void ScrollableMenuSection<TItem>::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	void ScrollableMenuSection<TItem>::OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos)
 	{
 		std::int32_t halfW = viewSize.X / 2;
 		if (std::abs(touchPos.X - halfW) < 150) {
