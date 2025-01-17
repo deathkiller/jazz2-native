@@ -717,6 +717,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\IDisposable.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\StackAlloc.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\Move.h" />
     <ClInclude Include="simdjson\simdjson.h" />
     <ClInclude Include="TermLogo.h" />
   </ItemGroup>

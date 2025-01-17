@@ -460,7 +460,7 @@ namespace Death { namespace Containers {
 		/* There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
 		   `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
 		   there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that. */
-		template<class T, class = decltype(Implementation::StringConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> /*implicit*/ String(T&& other) noexcept : String{Implementation::StringConverter<typename std::decay<T&&>::type>::from(std::forward<T>(other))} {}
+		template<class T, class = decltype(Implementation::StringConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> /*implicit*/ String(T&& other) noexcept : String{Implementation::StringConverter<typename std::decay<T&&>::type>::from(Death::forward<T>(other))} {}
 
 		/**
 		 * @brief Destructor

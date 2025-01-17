@@ -3,6 +3,9 @@
 #include "../Asserts.h"
 #include "../Cpu.h"
 
+#include <algorithm>
+#include <utility>
+
 #if defined(DEATH_ENABLE_AVX2) || defined(DEATH_ENABLE_BMI1)
 #	include "../IntrinsicsAvx.h" /* TZCNT is in AVX headers :( */
 #elif defined(DEATH_ENABLE_SSE41)

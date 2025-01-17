@@ -2,6 +2,8 @@
 
 #include <Base/Memory.h>
 
+#include <utility>
+
 #if defined(DEATH_TARGET_APPLE)
 #	include <libkern/OSByteOrder.h>
 #endif

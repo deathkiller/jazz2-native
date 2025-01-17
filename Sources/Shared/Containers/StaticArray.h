@@ -58,11 +58,11 @@ namespace Death { namespace Containers {
 			constexpr explicit StaticArrayData(ValueInitT) : _data() {}
 
 			// Same as in StaticArrayData<size_, T, false>
-			template<class ...Args> constexpr explicit StaticArrayData(InPlaceInitT, Args&&... args) : _data{std::forward<Args>(args)...} {}
+			template<class ...Args> constexpr explicit StaticArrayData(InPlaceInitT, Args&&... args) : _data{forward<Args>(args)...} {}
 			template<std::size_t ...sequence> constexpr explicit StaticArrayData(InPlaceInitT, Sequence<sequence...>, const T(&data)[sizeof...(sequence)]) : _data{data[sequence]...} {}
 
 #ifndef DEATH_MSVC2017_COMPATIBILITY
-			template<std::size_t ...sequence> constexpr explicit StaticArrayData(InPlaceInitT, Sequence<sequence...>, T(&& data)[sizeof...(sequence)]) : _data{std::move(data[sequence])...} {}
+			template<std::size_t ...sequence> constexpr explicit StaticArrayData(InPlaceInitT, Sequence<sequence...>, T(&& data)[sizeof...(sequence)]) : _data{Death::move(data[sequence])...} {}
 #endif
 
 			T _data[size_];
@@ -92,11 +92,11 @@ namespace Death { namespace Containers {
 			explicit StaticArrayData(ValueInitT) : _data() {}
 
 			// Same as in StaticArrayData<size_, T, true>
-			template<class ...Args> explicit StaticArrayData(InPlaceInitT, Args&&... args) : _data{std::forward<Args>(args)...} {}
+			template<class ...Args> explicit StaticArrayData(InPlaceInitT, Args&&... args) : _data{forward<Args>(args)...} {}
 			template<std::size_t ...sequence> explicit StaticArrayData(InPlaceInitT, Implementation::Sequence<sequence...>, const T(&data)[sizeof...(sequence)]) : _data{data[sequence]...} {}
 
 #ifndef DEATH_MSVC2017_COMPATIBILITY
-			template<std::size_t ...sequence> explicit StaticArrayData(InPlaceInitT, Implementation::Sequence<sequence...>, T(&& data)[sizeof...(sequence)]) : _data{std::move(data[sequence])...} {}
+			template<std::size_t ...sequence> explicit StaticArrayData(InPlaceInitT, Implementation::Sequence<sequence...>, T(&& data)[sizeof...(sequence)]) : _data{Death::move(data[sequence])...} {}
 #endif
 
 			// Compared to StaticArrayData<size_, T, true> we need to explicitly copy/move the union members
@@ -275,7 +275,7 @@ namespace Death { namespace Containers {
 		 * *exactly*. I.e., it's not possible to omit a suffix of the array to
 		 * implicitly value-initialize it.
 		 */
-		template<class ...Args> constexpr explicit StaticArray(InPlaceInitT, Args&&... args) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<Args>(args)...} {
+		template<class ...Args> constexpr explicit StaticArray(InPlaceInitT, Args&&... args) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, Death::forward<Args>(args)...} {
 			static_assert(sizeof...(args) == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 
@@ -318,14 +318,14 @@ namespace Death { namespace Containers {
 		*      compilers don't support moving arrays.
 		*/
 #	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
-		template<std::size_t size> constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
+		template<std::size_t size> constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, Death::move(data)} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #	else
 		/* GCC 4.8 isn't able to figure out the size on its own. Which means
 		   there we use the type-provided size and lose the check for element
 		   count, but at least it compiles. */
-		constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+		constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, Death::move(data)} {}
 #	endif
 #endif
 
@@ -344,7 +344,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<class ...Args> constexpr /*implicit*/ StaticArray(Args&&... args);
 #else
-		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<First>(first), std::forward<Next>(next)...} {
+		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, Death::forward<First>(first), Death::forward<Next>(next)...} {
 			static_assert(sizeof...(next) + 1 == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #endif
@@ -376,14 +376,14 @@ namespace Death { namespace Containers {
 		*      compilers don't support moving arrays.
 		*/
 #	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
-		template<std::size_t size> constexpr /*implicit*/ StaticArray(T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, std::move(data)} {
+		template<std::size_t size> constexpr /*implicit*/ StaticArray(T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, Death::move(data)} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #	else
 		/* GCC 4.8 isn't able to figure out the size on its own. Which means
 		   there we use the type-provided size and lose the check for element
 		   count, but at least it compiles. */
-		constexpr /*implicit*/ StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+		constexpr /*implicit*/ StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, Death::move(data)} {}
 #	endif
 #endif
 
@@ -688,7 +688,7 @@ namespace Death { namespace Containers {
 			return value._data[index];
 		}
 		template<std::size_t index> DEATH_CONSTEXPR14 friend T&& get(StaticArray<size_, T>&& value) {
-			return std::move(value._data[index]);
+			return Death::move(value._data[index]);
 		}
 #endif
 	};
@@ -754,7 +754,7 @@ namespace Death { namespace Containers {
 
 	template<std::size_t size_, class T> template<class ...Args> StaticArray<size_, T>::StaticArray(DirectInitT, Args&&... args) : StaticArray{NoInit} {
 		for (T& i : this->_data) {
-			Implementation::construct(i, std::forward<Args>(args)...);
+			Implementation::construct(i, Death::forward<Args>(args)...);
 		}
 	}
 
@@ -774,9 +774,9 @@ namespace Death { namespace Containers {
 			for (std::size_t i = 0; i != size_; ++i)
 				/* Can't use {}, see the GCC 4.8-specific overload for details */
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-				Implementation::construct(_data[i], std::move(other._data[i]));
+				Implementation::construct(_data[i], Death::move(other._data[i]));
 #else
-				new(&_data[i]) T{std::move(other._data[i])};
+				new(&_data[i]) T{Death::move(other._data[i])};
 #endif
 		}
 

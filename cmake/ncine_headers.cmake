@@ -13,6 +13,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Utf8.h
 	${NCINE_SOURCE_DIR}/Shared/Base/IDisposable.h
 	${NCINE_SOURCE_DIR}/Shared/Base/Memory.h
+	${NCINE_SOURCE_DIR}/Shared/Base/Move.h
 	${NCINE_SOURCE_DIR}/Shared/Base/StackAlloc.h
 	${NCINE_SOURCE_DIR}/Shared/Base/TypeInfo.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Array.h

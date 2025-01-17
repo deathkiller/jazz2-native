@@ -24,10 +24,10 @@
 #pragma once
 
 #include "../Asserts.h"
+#include "../Base/Move.h"
 
 #include <new>
 #include <type_traits>
-#include <utility>
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -344,7 +344,7 @@ namespace Death { namespace Containers {
 #endif
 		> /*implicit*/ Function(F&& f) noexcept(sizeof(typename std::decay<F>::type) <= sizeof(Storage) &&
 			std::is_trivially_copyable<typename std::decay<F>::type>::value
-		) : Function{nullptr, std::forward<F>(f)} {}
+		) : Function{nullptr, Death::forward<F>(f)} {}
 
 		/**
 		 * @brief Wrap a small enough and trivial lambda / functor
@@ -425,7 +425,7 @@ namespace Death { namespace Containers {
 	template<class R, class ...Args> inline R Function<R(Args...)>::operator()(Args... args) {
 		void(*const call)() = _call ? _call : _storage.functor.call;
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(call, "The function is null"),
-			reinterpret_cast<R(*)(Storage&, Args...)>(call)(_storage, std::forward<Args>(args)...);
+			reinterpret_cast<R(*)(Storage&, Args...)>(call)(_storage, Death::forward<Args>(args)...);
 	}
 
 	// Free function
@@ -440,7 +440,7 @@ namespace Death { namespace Containers {
 			static_cast<R(*)(Storage&, Args...)>
 #endif
 		([](Storage& storage, Args... args) -> R {
-			return reinterpret_cast<R(*)(Args...)>(storage.function)(std::forward<Args>(args)...);
+			return reinterpret_cast<R(*)(Args...)>(storage.function)(Death::forward<Args>(args)...);
 		}));
 	}
 
@@ -457,7 +457,7 @@ namespace Death { namespace Containers {
 		// std::is_trivially_copyable can be true for classes that have deleted copy constructors
 		// (but non-deleted trivial move constructors), so we need a move here.
 		// On GCC 4.8 the __has_trivial_copy() is false for such classes, so the move isn't needed in the above variant.
-		new(&_storage.data) typename std::decay<F>::type{std::move(f)};
+		new(&_storage.data) typename std::decay<F>::type{Death::move(f)};
 #endif
 		// The + is to decay the lambda to a function pointer so we can cast it. MSVC 2015 says it's "illegal on a class"
 		// so there it's an explicit cast to the function pointer type (and the parentheses are for both to have only one ifdef).
@@ -468,7 +468,7 @@ namespace Death { namespace Containers {
 			static_cast<R(*)(Storage&, Args...)>
 #endif
 		([](Storage& storage, Args... args) -> R {
-			return reinterpret_cast<F&>(storage.data)(std::forward<Args>(args)...);
+			return reinterpret_cast<F&>(storage.data)(Death::forward<Args>(args)...);
 		}));
 	}
 
@@ -484,9 +484,9 @@ namespace Death { namespace Containers {
 	), int>::type> Function<R(Args...)>::Function(std::nullptr_t, F&& f) {
 		// GCC 4.8 attempts to initialize the first member instead of performing a copy if {} is used.
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-		reinterpret_cast<typename std::decay<F>::type*&>(_storage.functor.data) = new typename std::decay<F>::type(std::forward<F>(f));
+		reinterpret_cast<typename std::decay<F>::type*&>(_storage.functor.data) = new typename std::decay<F>::type(Death::forward<F>(f));
 #else
-		reinterpret_cast<typename std::decay<F>::type*&>(_storage.functor.data) = new typename std::decay<F>::type{std::forward<F>(f)};
+		reinterpret_cast<typename std::decay<F>::type*&>(_storage.functor.data) = new typename std::decay<F>::type{Death::forward<F>(f)};
 #endif
 		_storage.functor.free = [](Storage& storage) {
 			delete reinterpret_cast<typename std::decay<F>::type*>(storage.functor.data);
@@ -500,7 +500,7 @@ namespace Death { namespace Containers {
 			static_cast<R(*)(Storage&, Args...)>
 #endif
 		([](Storage& storage, Args... args) -> R {
-			return (*reinterpret_cast<typename std::decay<F>::type*>(storage.functor.data))(std::forward<Args>(args)...);
+			return (*reinterpret_cast<typename std::decay<F>::type*>(storage.functor.data))(Death::forward<Args>(args)...);
 		}));
 		// The actual call is put into _storage.functor.call and _call is nullptr in order to be able
 		// to tell whether it's needed to move / delete the data pointer
@@ -528,7 +528,7 @@ namespace Death { namespace Containers {
 			static_cast<R(*)(Storage&, Args...)>
 #endif
 		([](Storage& storage, Args... args) -> R {
-			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...)>(storage.member.data))(std::forward<Args>(args)...);
+			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...)>(storage.member.data))(Death::forward<Args>(args)...);
 		}));
 	}
 	template<class R, class ...Args> template<class Instance, class Class> Function<R(Args...)>::Function(Instance& instance, R(Class::*f)(Args...) &) noexcept {
@@ -545,7 +545,7 @@ namespace Death { namespace Containers {
 			static_cast<R(*)(Storage&, Args...)>
 #endif
 		([](Storage& storage, Args... args) -> R {
-			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...) &>(storage.member.data))(std::forward<Args>(args)...);
+			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...) &>(storage.member.data))(Death::forward<Args>(args)...);
 		}));
 	}
 	template<class R, class ...Args> template<class Instance, class Class> Function<R(Args...)>::Function(Instance& instance, R(Class::*f)(Args...) const) noexcept {
@@ -562,7 +562,7 @@ namespace Death { namespace Containers {
 			static_cast<R(*)(Storage&, Args...)>
 #endif
 		([](Storage& storage, Args... args) -> R {
-			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...) const>(storage.member.data))(std::forward<Args>(args)...);
+			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...) const>(storage.member.data))(Death::forward<Args>(args)...);
 		}));
 	}
 	template<class R, class ...Args> template<class Instance, class Class> Function<R(Args...)>::Function(Instance& instance, R(Class::*f)(Args...) const &) noexcept {
@@ -579,7 +579,7 @@ namespace Death { namespace Containers {
 			static_cast<R(*)(Storage&, Args...)>
 #endif
 		([](Storage& storage, Args... args) -> R {
-			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...) const &>(storage.member.data))(std::forward<Args>(args)...);
+			return (static_cast<Instance*>(storage.member.instance)->*reinterpret_cast<R(Class::*&)(Args...) const &>(storage.member.data))(Death::forward<Args>(args)...);
 		}));
 	}
 
