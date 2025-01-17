@@ -78,8 +78,11 @@ namespace Jazz2
 		friend class UI::Menu::InGameMenu;
 
 	public:
+		/** @brief Default width of viewport */
 		static constexpr std::int32_t DefaultWidth = 720;
+		/** @brief Default height of viewport */
 		static constexpr std::int32_t DefaultHeight = 405;
+		/** @brief Range of active tiles */
 		static constexpr std::int32_t ActivateTileRange = 26;
 
 		LevelHandler(IRootController* root);

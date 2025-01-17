@@ -29,7 +29,6 @@
 #include <cstddef>
 #include <initializer_list>
 #include <type_traits>
-#include <utility>
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -1120,8 +1119,38 @@ namespace Death { namespace Containers {
 	}
 }}
 
-/* C++17 structured bindings */
-#if DEATH_CXX_STANDARD > 201402
+// C++17 structured bindings
+#if DEATH_CXX_STANDARD > 201402 && !defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(DEATH_TARGET_LIBCXX)
+// Defined in <__config>, which is already pulled in from <ciso646> or <version>
+// that CommonBase.h has to include in order to detect the STL being used.
+_LIBCPP_BEGIN_NAMESPACE_STD
+#elif defined(DEATH_TARGET_LIBSTDCXX)
+// Defined in <bits/c++config.h>. Pulled in from <ciso646> or <version> by CommonBase.h, but only
+// since GCC 6.1. On versions before <cstddef> from above pulls that in. Versions before GCC 4.6(?)
+// had _GLIBCXX_BEGIN_NAMESPACE(std) instead, we don't care about those.
+#include <bits/c++config.h>
+namespace std _GLIBCXX_VISIBILITY(default) { _GLIBCXX_BEGIN_NAMESPACE_VERSION
+#elif defined(DEATH_TARGET_DINKUMWARE)
+// Defined in <yvals_core.h>, again pulled in from <ciso646> or <version> by CommonBase.h
+_STD_BEGIN
+#endif
+
+#if defined(DEATH_TARGET_LIBCXX) || defined(DEATH_TARGET_LIBSTDCXX) || defined(DEATH_TARGET_DINKUMWARE)
+	template<size_t, class> struct tuple_element;
+	template<class> struct tuple_size;
+#else
+#	include <utility>
+#endif
+
+#if defined(DEATH_TARGET_LIBCXX)
+_LIBCPP_END_NAMESPACE_STD
+#elif defined(DEATH_TARGET_LIBSTDCXX)
+_GLIBCXX_END_NAMESPACE_VERSION }
+#elif defined(DEATH_TARGET_MSVC)
+_STD_END
+#endif
+
 namespace std
 {
 	/* Note that `size` can't be used as it may conflict with std::size() in C++17 */

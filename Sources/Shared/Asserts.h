@@ -21,13 +21,13 @@
 
 /** @brief Trace level */
 enum class TraceLevel {
-	Unknown,	/**< Unspecified */
-	Debug,		/**< Debug */
-	Info,		/**< Info */
-	Warning,	/**< Warning */
-	Error,		/**< Error */
-	Assert,		/**< Assert */
-	Fatal		/**< Fatal */
+	Unknown,		/**< Unspecified */
+	Debug,			/**< Debug */
+	Info,			/**< Info */
+	Warning,		/**< Warning */
+	Error,			/**< Error */
+	Assert,			/**< Assert */
+	Fatal			/**< Fatal */
 };
 
 /**

@@ -14,7 +14,7 @@ namespace Death { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief Array allocated on stack. Don't use this class directly, use placeholder type specifier instead.
+		@brief Array allocated on the stack. Don't use this class directly, use placeholder type specifier instead.
 	*/
 	template<typename T>
 	class stack_alloc
@@ -53,11 +53,13 @@ namespace Death { namespace Implementation {
 }}
 
 /**
-	@brief Tries to allocate array of specified type on stack with fallback to standard heap allocation.
+	@brief Tries to allocate an array of the given type on the stack with a fallback to the standard heap allocation.
 
-	If @p size is bigger than 4024, it will use heap allocation instead.
+	If @p size is bigger than 4024, it will use heap allocation instead. It is recommended to use the following syntax:
 	
-	@cpp auto array = stack_alloc(std::int32_t, 1024); @ce
+	@code{.cpp}
+	auto array = stack_alloc(std::int32_t, 1024);
+	@endcode
 */
 #if defined(DEATH_TARGET_MSVC)
 #	define stack_alloc(type, size)																					\

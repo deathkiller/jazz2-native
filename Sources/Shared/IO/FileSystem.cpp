@@ -1247,7 +1247,8 @@ namespace Death { namespace IO {
 		}
 		return "/sdcard"_s;
 	}
-#elif defined(DEATH_TARGET_UNIX)
+#endif
+#if defined(DEATH_TARGET_UNIX)
 	String FileSystem::GetLocalStorage()
 	{
 		StringView localStorage = ::getenv("XDG_DATA_HOME");
@@ -1263,7 +1264,8 @@ namespace Death { namespace IO {
 
 		return {};
 	}
-#elif defined(DEATH_TARGET_WINDOWS)
+#endif
+#if defined(DEATH_TARGET_WINDOWS)
 	String FileSystem::GetWindowsDirectory()
 	{
 		wchar_t buffer[MaxPathLength];

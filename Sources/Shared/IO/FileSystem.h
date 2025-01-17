@@ -195,14 +195,29 @@ namespace Death { namespace IO {
 		static bool SetWorkingDirectory(Containers::StringView path);
 		/** @brief Returns the path of the user home directory */
 		static Containers::String GetHomeDirectory();
-#if defined(DEATH_TARGET_ANDROID)
-		/** @brief Returns the path of the Android external storage directory */
+
+#if defined(DEATH_TARGET_ANDROID) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Returns the path of the Android external storage directory
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_ANDROID "Android" platform.
+		 */
 		static Containers::String GetExternalStorage();
-#elif defined(DEATH_TARGET_UNIX)
-		/** @brief Returns the path pointing to `XDG_DATA_HOME` or `~/.local/share/` in the most cases */
+#endif
+#if defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Returns the path pointing to `$XDG_DATA_HOME` or `~/.local/share/` in the most cases
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
+		 */
 		static Containers::String GetLocalStorage();
-#elif defined(DEATH_TARGET_WINDOWS)
-		/** @brief Returns the path of Windows® directory */
+#endif
+#if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Returns the path of Windows® directory
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+		 */
 		static Containers::String GetWindowsDirectory();
 #endif
 

@@ -36,12 +36,15 @@ namespace Jazz2::UI::Menu
 #endif
 
 	public:
+		/** @brief Default width of viewport */
 		static constexpr int32_t DefaultWidth = 720;
+		/** @brief Default height of viewport */
 		static constexpr int32_t DefaultHeight = 405;
 
 		MainMenu(IRootController* root, bool afterIntro);
 		~MainMenu() override;
 
+		/** @brief Recreates the menu to the default state */
 		void Reset();
 
 		Vector2i GetViewSize() const override;
