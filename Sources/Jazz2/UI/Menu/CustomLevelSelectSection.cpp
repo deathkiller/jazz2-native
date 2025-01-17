@@ -206,7 +206,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CustomLevelSelectSection::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
+	void CustomLevelSelectSection::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {

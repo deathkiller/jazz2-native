@@ -70,7 +70,7 @@ namespace nCine
 		/// Sets the transformation anchor point for every particle
 		void setAnchorPoint(float xx, float yy);
 		/// Sets the transformation anchor point for every particle with a `Vector2f`
-		void setAnchorPoint(const Vector2f& point);
+		void setAnchorPoint(Vector2f point);
 
 		/// Flips the texture rect horizontally for every particle
 		void setFlippedX(bool flippedX);

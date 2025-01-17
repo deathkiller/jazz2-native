@@ -39,10 +39,10 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Configure Cross-Compile Support (ARM64)'
-      uses: cyberjunk/gha-ubuntu-cross@v4
-      with:
-        arch: arm64
+    #- name: 'Configure Cross-Compile Support (ARM64)'
+    #  uses: cyberjunk/gha-ubuntu-cross@v4
+    #  with:
+    #    arch: arm64
 
     - name: 'Create Build Environment'
       run: |

@@ -157,7 +157,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void SoundsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void SoundsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);

@@ -158,6 +158,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			? SkipBeginningRuntime<ArrayLength - skip().SizeAtBegin>(begin + skip().SizeAtBegin)
 			: begin + skip().SizeAtBegin);
 	}
+
 }}}
 
 // It is located in the root namespace to keep the resulting string as short as possible
@@ -245,6 +246,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			return FindInstance<OtherBases...>(t, self);
 		}
 	};
+
 }}}
 
 /** @brief Class annotation to enable optimized `runtime_cast<T>()` functionality */
@@ -259,32 +261,37 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}																									\
 	__DEATH_WARNING_POP
 
-/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
-	typedef typename std::remove_pointer<T>::type Derived;
-	return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u, std::is_base_of<T, U>());
-}
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-/** @overload */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(const U* u) noexcept {
-	typedef typename std::remove_pointer<T>::type Derived;
-	return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u, std::is_base_of<T, U>());
-}
+	/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
+		typedef typename std::remove_pointer<T>::type Derived;
+		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u, std::is_base_of<T, U>());
+	}
 
-/** @overload */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(const std::shared_ptr<U>& u) noexcept {
-	typedef typename std::remove_pointer<T>::type Derived;
-	return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u.get(), std::is_base_of<T, U>());
-}
+	/** @overload */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(const U* u) noexcept {
+		typedef typename std::remove_pointer<T>::type Derived;
+		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u, std::is_base_of<T, U>());
+	}
 
-/** @overload */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
-	typedef typename std::remove_pointer<T>::type Derived;
-	return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u.get(), std::is_base_of<T, U>());
+	/** @overload */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(const std::shared_ptr<U>& u) noexcept {
+		typedef typename std::remove_pointer<T>::type Derived;
+		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u.get(), std::is_base_of<T, U>());
+	}
+
+	/** @overload */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
+		typedef typename std::remove_pointer<T>::type Derived;
+		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u.get(), std::is_base_of<T, U>());
+	}
+
 }
 
 #else
@@ -292,28 +299,36 @@ DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
 /** @brief Class annotation to enable optimized `runtime_cast<T>()` functionality */
 #define DEATH_RUNTIME_OBJECT(...)
 
-/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
-	return dynamic_cast<T>(u);
-}
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-/** @overload */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(const U* u) noexcept {
-	return dynamic_cast<T>(u);
-}
+	/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
+		return dynamic_cast<T>(u);
+	}
 
-/** @overload */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(const std::shared_ptr<U>& u) noexcept {
-	return dynamic_cast<T>(u.get());
-}
+	/** @overload */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(const U* u) noexcept {
+		return dynamic_cast<T>(u);
+	}
 
-/** @overload */
-template<typename T, typename U>
-DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
-	return dynamic_cast<T>(u.get());
+	/** @overload */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(const std::shared_ptr<U>& u) noexcept {
+		return dynamic_cast<T>(u.get());
+	}
+
+	/** @overload */
+	template<typename T, typename U>
+	DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
+		return dynamic_cast<T>(u.get());
+	}
+
 }
 
 #endif
+
+// Allow to use runtime_cast without namespace
+using Death::runtime_cast;

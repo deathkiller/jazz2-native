@@ -30,7 +30,7 @@ namespace Jazz2::UI::Menu
 		void OnDraw(Canvas* canvas) override;
 		void OnDrawClipped(Canvas* canvas) override;
 		void OnDrawOverlay(Canvas* canvas) override;
-		void OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize) override;
+		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
 
 	private:
 		float _expandedAnimation;
@@ -41,7 +41,7 @@ namespace Jazz2::UI::Menu
 		bool _expanded;
 		bool _shouldStart;
 
-		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
+		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
 		void OnExecuteSelected() override;
 		void OnDrawEmptyText(Canvas* canvas, std::int32_t& charOffset) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;

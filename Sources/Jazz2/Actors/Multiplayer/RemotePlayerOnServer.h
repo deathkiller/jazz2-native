@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Multiplayer
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;
 
-		void SyncWithServer(Vector2f pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
+		void SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
 
 	protected:
 		struct StateFrame {

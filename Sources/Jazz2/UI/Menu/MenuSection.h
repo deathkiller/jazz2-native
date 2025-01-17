@@ -47,7 +47,7 @@ namespace Jazz2::UI::Menu
 		/** @brief Called when a text input is detected */
 		virtual void OnTextInput(const nCine::TextInputEvent& event) {}
 		/** @brief Called when a touch event is triggered */
-		virtual void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) = 0;
+		virtual void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) = 0;
 
 		/** @brief Allows to override navigation behavior */
 		virtual NavigationFlags GetNavigationFlags() const {

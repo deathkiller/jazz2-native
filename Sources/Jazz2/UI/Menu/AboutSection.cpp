@@ -287,7 +287,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void AboutSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void AboutSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {

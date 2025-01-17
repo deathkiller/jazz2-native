@@ -412,7 +412,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void RemapControlsSection::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	void RemapControlsSection::OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos)
 	{
 		auto& mapping = ControlScheme::GetMappings(_playerIndex)[newIndex];
 

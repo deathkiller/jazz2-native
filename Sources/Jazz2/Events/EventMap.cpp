@@ -8,7 +8,7 @@
 
 namespace Jazz2::Events
 {
-	EventMap::EventMap(const Vector2i& layoutSize)
+	EventMap::EventMap(Vector2i layoutSize)
 		: _levelHandler(nullptr), _layoutSize(layoutSize), _pitType(PitType::FallForever)
 	{
 	}

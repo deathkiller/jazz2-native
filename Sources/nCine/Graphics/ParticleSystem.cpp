@@ -146,7 +146,7 @@ namespace nCine
 		}
 	}
 
-	void ParticleSystem::setAnchorPoint(const Vector2f& point)
+	void ParticleSystem::setAnchorPoint(Vector2f point)
 	{
 		for (auto& particle : particleArray_) {
 			particle->setAnchorPoint(point);

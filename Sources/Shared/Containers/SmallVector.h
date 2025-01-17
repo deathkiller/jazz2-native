@@ -27,10 +27,9 @@ namespace Death { namespace Containers {
 		@brief @ref SmallVector base class
 
 		The template parameter specifies the type which should be used to hold the Size
-		and Capacity of SmallVector, so it can be adjusted. Using 32-bit size is desirable
-		to shrink the size of SmallVector. Using 64-bit size is desirable for cases like
-		SmallVector<char>, where a 32 bit size would limit the vector to ~4GB.
-		SmallVectors are used for buffering bitcode output - which can exceed 4GB.
+		and Capacity of `SmallVector`, so it can be adjusted. Using 32-bit size is desirable
+		to shrink the size of `SmallVector`. Using 64-bit size is desirable for cases like
+		@cpp SmallVector<char> @ce, where a 32 bit size would limit the vector to ~4GB.
 	*/
 	template<class Size_T> class SmallVectorBase
 	{
@@ -268,11 +267,11 @@ namespace Death { namespace Containers {
 			return capacity() * sizeof(T);
 		}
 
-		/** @brief Returns a pointer to the vector's buffer, even if @ref empty() */
+		/** @brief Returns a pointer to the vector's buffer */
 		pointer data() {
 			return pointer(begin());
 		}
-		/** @brief Returns a pointer to the vector's buffer, even if @ref empty() */
+		/** @overload */
 		const_pointer data() const {
 			return const_pointer(begin());
 		}
@@ -542,7 +541,7 @@ namespace Death { namespace Containers {
 		}
 	};
 
-	/** @brief Consists of common code factored out of `SmallVector` class to reduce code duplication based on `N` template parameter */
+	/** @brief Consists of common code of @ref SmallVector class to reduce code duplication based on `N` template parameter */
 	template<typename T>
 	class SmallVectorImpl : public SmallVectorTemplateBase<T>
 	{
@@ -1103,13 +1102,16 @@ namespace Death { namespace Containers {
 		return *this;
 	}
 
-	/** @brief Storage for the SmallVector elements */
+	/** @brief Storage for @ref SmallVector elements */
 	template<typename T, unsigned N>
 	struct SmallVectorStorage {
+		/** @brief Array of inline elements */
 		alignas(T) char InlineElts[N * sizeof(T)];
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
+#endif
 
 	template<typename T, unsigned N> class SmallVector;
 
