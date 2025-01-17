@@ -10,6 +10,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <limits>
+#include <cstring>
 #include <memory>
 #include <new>
 #include <type_traits>
