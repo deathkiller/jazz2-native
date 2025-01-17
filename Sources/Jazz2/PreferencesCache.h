@@ -63,10 +63,10 @@ namespace Jazz2
 
 	/** @brief Episode continuation flags, supports a bitwise combination of its member values */
 	enum class EpisodeContinuationFlags : std::uint8_t {
-		None = 0x00,
+		None = 0x00,				/**< None */
 
-		IsCompleted = 0x01,
-		CheatsUsed = 0x02
+		IsCompleted = 0x01,			/**< Episode is complete */
+		CheatsUsed = 0x02			/**< Cheats have been used */
 	};
 
 	DEATH_ENUM_FLAGS(EpisodeContinuationFlags);
@@ -218,8 +218,11 @@ namespace Jazz2
 		/** @brief Returns directory path of the preferences file */
 		static StringView GetDirectory();
 
+		/** @brief Returns information about episode completion */
 		static EpisodeContinuationState* GetEpisodeEnd(StringView episodeName, bool createIfNotFound = false);
+		/** @brief Returns information about episode continuation */
 		static EpisodeContinuationStateWithLevel* GetEpisodeContinue(StringView episodeName, bool createIfNotFound = false);
+		/** @brief Removes information about episode continuation (resets progress) */
 		static void RemoveEpisodeContinue(StringView episodeName);
 
 	private:

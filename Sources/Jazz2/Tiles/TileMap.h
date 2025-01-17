@@ -108,11 +108,10 @@ namespace Jazz2::Tiles
 		SuspendType HasSuspendType;
 		/** @brief Destruct type of tile */
 		TileDestructType DestructType;
-		/** @brief Destruct animation ID */
-		std::int32_t DestructAnimation;		// Animation index for a destructible tile that uses an animation, but doesn't animate normally
-		/** @brief Destruct animation frame index */
-		std::int32_t DestructFrameIndex;	// Denotes the specific frame from the above animation that is currently active
-											// Collapsible: Delay ("wait" parameter); Trigger: Trigger ID
+		/** @brief Animation ID for destructible tile */
+		std::int32_t DestructAnimation;
+		/** @brief Denotes the specific frame from the above animation that is currently active --- Collapsible: Delay ("wait" parameter); Trigger: Trigger ID */
+		std::int32_t DestructFrameIndex;
 	};
 
 	/** @brief Represents a single tile map layer */

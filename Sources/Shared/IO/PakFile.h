@@ -14,10 +14,10 @@ namespace Death { namespace IO {
 	/** @brief Preferred file compression, used in @ref PakWriter::AddFile() */
 	enum class PakPreferredCompression
 	{
-		None,
-		Deflate,
-		Lz4,
-		Zstd
+		None,				/**< None */
+		Deflate,			/**< Deflate */
+		Lz4,				/**< LZ4 */
+		Zstd				/**< Zstandard */
 	};
 
 	/**

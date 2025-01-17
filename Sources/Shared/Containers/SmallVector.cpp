@@ -1,12 +1,13 @@
 #include "SmallVector.h"
 
-#include <cstdint>
-#include <stdexcept>
+#if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+#	include <stdexcept>
+#endif
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	// Check that no bytes are wasted and everything is well-aligned.
+	// Check that no bytes are wasted and everything is well-aligned
 	namespace
 	{
 		// These structures may cause binary compat warnings on AIX. Suppress the
@@ -42,27 +43,25 @@ namespace Death { namespace Containers {
 	static_assert(sizeof(SmallVector<char, 0>) == sizeof(void*) * 2 + sizeof(void*),
 				  "1 byte elements have word-sized type for size and capacity");
 
-	/// Report that MinSize doesn't fit into this vector's size type. Throws
-	/// std::length_error or calls report_fatal_error.
-	static void report_size_overflow(std::size_t MinSize, std::size_t MaxSize) {
-		//std::string Reason = "SmallVector unable to grow. Requested capacity (" +
-		//	std::to_string(MinSize) +
+	// Reports that MinSize doesn't fit into this vector's size type
+	static void report_size_overflow(std::size_t minSize, std::size_t maxSize) {
+		//std::string reason = "SmallVector unable to grow. Requested capacity (" +
+		//	std::to_string(minSize) +
 		//	") is larger than maximum value for size type (" +
-		//	std::to_string(MaxSize) + ")";
-		//throw std::length_error(Reason);
+		//	std::to_string(maxSize) + ")";
+		//throw std::length_error(reason);
 
 #if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
 		throw std::length_error("Containers::SmallVector capacity unable to grow");
 #endif
 	}
 
-	/// Report that this vector is already at maximum capacity. Throws
-	/// std::length_error or calls report_fatal_error.
-	static void report_at_maximum_capacity(std::size_t MaxSize) {
-		//std::string Reason =
+	// Reports that this vector is already at maximum capacity
+	static void report_at_maximum_capacity(std::size_t maxSize) {
+		//std::string reason =
 		//	"SmallVector capacity unable to grow. Already at maximum size " +
-		//	std::to_string(MaxSize);
-		//throw std::length_error(Reason);
+		//	std::to_string(maxSize);
+		//throw std::length_error(reason);
 
 #if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
 		throw std::length_error("Containers::SmallVector capacity already at maximum size");
@@ -70,70 +69,70 @@ namespace Death { namespace Containers {
 	}
 
 	// Note: Moving this function into the header may cause performance regression.
-	template <class Size_T>
-	static std::size_t getNewCapacity(std::size_t MinSize, std::size_t TSize, std::size_t OldCapacity) {
-		constexpr std::size_t MaxSize = std::numeric_limits<Size_T>::max();
+	template<class Size_T>
+	static std::size_t getNewCapacity(std::size_t minSize, std::size_t typeSize, std::size_t oldCapacity) {
+		constexpr std::size_t maxSize = std::numeric_limits<Size_T>::max();
 
 		// Ensure we can fit the new capacity.
 		// This is only going to be applicable when the capacity is 32 bit.
-		if (MinSize > MaxSize)
-			report_size_overflow(MinSize, MaxSize);
+		if (minSize > maxSize)
+			report_size_overflow(minSize, maxSize);
 
 		// Ensure we can meet the guarantee of space for at least one more element.
 		// The above check alone will not catch the case where grow is called with a
 		// default MinSize of 0, but the current capacity cannot be increased.
 		// This is only going to be applicable when the capacity is 32 bit.
-		if (OldCapacity == MaxSize)
-			report_at_maximum_capacity(MaxSize);
+		if (oldCapacity == maxSize)
+			report_at_maximum_capacity(maxSize);
 
 		// In theory 2*capacity can overflow if the capacity is 64 bit, but the
 		// original capacity would never be large enough for this to be a problem.
-		std::size_t NewCapacity = 2 * OldCapacity + 1; // Always grow.
-		return std::min(std::max(NewCapacity, MinSize), MaxSize);
+		std::size_t newCapacity = 2 * oldCapacity + 1; // Always grow.
+		return std::min(std::max(newCapacity, minSize), maxSize);
 	}
 
 	template <class Size_T>
-	void* SmallVectorBase<Size_T>::replaceAllocation(void* NewElts, std::size_t TSize, std::size_t NewCapacity, std::size_t VSize) {
-		void* NewEltsReplace = malloc(NewCapacity * TSize);
-		if (VSize)
-			memcpy(NewEltsReplace, NewElts, VSize * TSize);
-		free(NewElts);
-		return NewEltsReplace;
+	void* SmallVectorBase<Size_T>::replaceAllocation(void* newElts, std::size_t typeSize, std::size_t newCapacity, std::size_t vSize) {
+		void* newEltsReplace = malloc(newCapacity * typeSize);
+		if (vSize)
+			memcpy(newEltsReplace, newElts, vSize * typeSize);
+		free(newElts);
+		return newEltsReplace;
 	}
 
 	// Note: Moving this function into the header may cause performance regression.
-	template <class Size_T>
-	void* SmallVectorBase<Size_T>::mallocForGrow(void* FirstEl, std::size_t MinSize, std::size_t TSize, std::size_t& NewCapacity) {
-		NewCapacity = getNewCapacity<Size_T>(MinSize, TSize, this->capacity());
+	template<class Size_T>
+	void* SmallVectorBase<Size_T>::mallocForGrow(void* firstEl, std::size_t minSize, std::size_t typeSize, std::size_t& newCapacity) {
+		newCapacity = getNewCapacity<Size_T>(minSize, typeSize, this->capacity());
 		// Even if capacity is not 0 now, if the vector was originally created with
 		// capacity 0, it's possible for the malloc to return FirstEl.
-		void* NewElts = malloc(NewCapacity * TSize);
-		if (NewElts == FirstEl)
-			NewElts = replaceAllocation(NewElts, TSize, NewCapacity);
-		return NewElts;
+		void* newElts = malloc(newCapacity * typeSize);
+		if (newElts == firstEl)
+			newElts = replaceAllocation(newElts, typeSize, newCapacity);
+		return newElts;
 	}
 
 	// Note: Moving this function into the header may cause performance regression.
-	template <class Size_T>
-	void SmallVectorBase<Size_T>::grow_pod(void* FirstEl, std::size_t MinSize, std::size_t TSize) {
-		std::size_t NewCapacity = getNewCapacity<Size_T>(MinSize, TSize, this->capacity());
-		void* NewElts;
-		if (BeginX == FirstEl) {
-			NewElts = malloc(NewCapacity * TSize);
-			if (NewElts == FirstEl)
-				NewElts = replaceAllocation(NewElts, TSize, NewCapacity);
+	template<class Size_T>
+	void SmallVectorBase<Size_T>::growPod(void* firstEl, std::size_t minSize, std::size_t typeSize) {
+		std::size_t newCapacity = getNewCapacity<Size_T>(minSize, typeSize, this->capacity());
+		void* newElts;
+		if (BeginX == firstEl) {
+			newElts = malloc(newCapacity * typeSize);
+			if (newElts == firstEl)
+				newElts = replaceAllocation(newElts, typeSize, newCapacity);
 
 			// Copy the elements over.  No need to run dtors on PODs.
-			memcpy(NewElts, this->BeginX, size() * TSize);
+			memcpy(newElts, this->BeginX, size() * typeSize);
 		} else {
 			// If this wasn't grown from the inline copy, grow the allocated space.
-			NewElts = realloc(this->BeginX, NewCapacity * TSize);
-			if (NewElts == FirstEl)
-				NewElts = replaceAllocation(NewElts, TSize, NewCapacity, size());
+			newElts = realloc(this->BeginX, newCapacity * typeSize);
+			if (newElts == firstEl)
+				newElts = replaceAllocation(newElts, typeSize, newCapacity, size());
 		}
 
-		this->BeginX = NewElts;
-		this->Capacity = (Size_T)NewCapacity;
+		this->BeginX = newElts;
+		this->Capacity = (Size_T)newCapacity;
 	}
 
 	template class SmallVectorBase<uint32_t>;
@@ -147,10 +146,10 @@ namespace Death { namespace Containers {
 
 	// Assertions to ensure this #if stays in sync with SmallVectorSizeType.
 	static_assert(sizeof(SmallVectorSizeType<char>) == sizeof(std::uint64_t),
-				  "Expected Containers::SmallVectorBase<std::uint64_t> variant to be in use.");
+				  "Expected Containers::SmallVectorBase<std::uint64_t> variant to be in use");
 #else
 	static_assert(sizeof(SmallVectorSizeType<char>) == sizeof(std::uint32_t),
-				  "Expected Containers::SmallVectorBase<std::uint32_t> variant to be in use.");
+				  "Expected Containers::SmallVectorBase<std::uint32_t> variant to be in use");
 #endif
 
 }}
