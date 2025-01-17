@@ -13,6 +13,7 @@
 #include <memory>
 #include <new>
 #include <type_traits>
+#include <algorithm>
 #include <utility>
 
 namespace Death { namespace Containers {
