@@ -795,7 +795,7 @@ namespace Death { namespace Containers {
 	template<class T, class D> Array<T, D>::Array(InPlaceInitT, std::initializer_list<T> list) : Array{InPlaceInit, arrayView(list)} { }
 
 	template<class T, class D> inline Array<T, D>& Array<T, D>::operator=(Array<T, D>&& other) noexcept {
-		using std::swap;
+		using Death::swap;
 		swap(_data, other._data);
 		swap(_size, other._size);
 		swap(_deleter, other._deleter);

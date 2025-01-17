@@ -416,7 +416,7 @@ namespace Death { namespace Containers {
 	}
 
 	inline FunctionData& FunctionData::operator=(FunctionData&& other) noexcept {
-		using std::swap;
+		using Death::swap;
 		swap(other._storage, _storage);
 		swap(other._call, _call);
 		return *this;

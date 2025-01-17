@@ -281,7 +281,7 @@ namespace Death { namespace Containers {
 	}
 
 	String& String::operator=(String&& other) noexcept {
-		using std::swap;
+		using Death::swap;
 		swap(other._large.data, _large.data);
 		swap(other._large.size, _large.size); // including the potential Global bit
 		swap(other._large.deleter, _large.deleter);
