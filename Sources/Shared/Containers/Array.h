@@ -778,7 +778,7 @@ namespace Death { namespace Containers {
 
 	template<class T, class D> template<class ...Args> Array<T, D>::Array(DirectInitT, std::size_t size, Args&&... args) : Array{NoInit, size} {
 		for (std::size_t i = 0; i != size; ++i)
-			Implementation::construct(_data[i], std::forward<Args>(args)...);
+			Implementation::construct(_data[i], Death::forward<Args>(args)...);
 	}
 
 	template<class T, class D> Array<T, D>::Array(InPlaceInitT, const ArrayView<const T> list) : Array{NoInit, list.size()} {
