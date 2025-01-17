@@ -25,10 +25,10 @@
 #pragma once
 
 #include "../CommonBase.h"
+#include "../Base/Move.h"
 #include "Tags.h"
 
 #include <type_traits>
-#include <utility>
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -128,9 +128,9 @@ namespace Death { namespace Containers {
 		constexpr /*implicit*/ Pair(const F& first, S&& second) noexcept(std::is_nothrow_copy_constructible<F>::value && std::is_nothrow_move_constructible<S>::value) :
 			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-			_first(first), _second(std::move(second))
+			_first(first), _second(Death::move(second))
 #else
-			_first{first}, _second{std::move(second)}
+			_first{first}, _second{Death::move(second)}
 #endif
 		{}
 
@@ -138,9 +138,9 @@ namespace Death { namespace Containers {
 		constexpr /*implicit*/ Pair(F&& first, const S& second) noexcept(std::is_nothrow_move_constructible<F>::value && std::is_nothrow_copy_constructible<S>::value) :
 			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-			_first(std::move(first)), _second(second)
+			_first(Death::move(first)), _second(second)
 #else
-			_first{std::move(first)}, _second{second}
+			_first{Death::move(first)}, _second{second}
 #endif
 		{}
 
@@ -148,9 +148,9 @@ namespace Death { namespace Containers {
 		constexpr /*implicit*/ Pair(F&& first, S&& second) noexcept(std::is_nothrow_move_constructible<F>::value && std::is_nothrow_move_constructible<S>::value) :
 			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-			_first(std::move(first)), _second(std::move(second))
+			_first(Death::move(first)), _second(Death::move(second))
 #else
-			_first{std::move(first)}, _second{std::move(second)}
+			_first{Death::move(first)}, _second{Death::move(second)}
 #endif
 		{}
 
@@ -171,9 +171,9 @@ namespace Death { namespace Containers {
 			// Explicit T() to avoid conversion warnings, similar to above; GCC 4.8 special case also similarly to above although
 			// copyMoveConstructPlainStruct() cannot really test it (see there for details).
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-			_first(F(std::move(other._first))), _second(S(std::move(other._second)))
+			_first(F(Death::move(other._first))), _second(S(Death::move(other._second)))
 #else
-			_first{F(std::move(other._first))}, _second{S(std::move(other._second))}
+			_first{F(Death::move(other._first))}, _second{S(Death::move(other._second))}
 #endif
 		{}
 
@@ -181,7 +181,7 @@ namespace Death { namespace Containers {
 		template<class T, class = decltype(Implementation::PairConverter<F, S, T>::from(std::declval<const T&>()))> /*implicit*/ Pair(const T& other) noexcept(std::is_nothrow_copy_constructible<F>::value && std::is_nothrow_copy_constructible<S>::value) : Pair{Implementation::PairConverter<F, S, T>::from(other)} {}
 
 		/** @brief Move-construct a pair from external representation */
-		template<class T, class = decltype(Implementation::PairConverter<F, S, T>::from(std::declval<T&&>()))> /*implicit*/ Pair(T&& other) noexcept(std::is_nothrow_move_constructible<F>::value && std::is_nothrow_move_constructible<S>::value) : Pair{Implementation::PairConverter<F, S, T>::from(std::move(other))} {}
+		template<class T, class = decltype(Implementation::PairConverter<F, S, T>::from(std::declval<T&&>()))> /*implicit*/ Pair(T&& other) noexcept(std::is_nothrow_move_constructible<F>::value && std::is_nothrow_move_constructible<S>::value) : Pair{Implementation::PairConverter<F, S, T>::from(Death::move(other))} {}
 
 		/** @brief Copy-convert the pair to external representation */
 		template<class T, class = decltype(Implementation::PairConverter<F, S, T>::to(std::declval<const Pair<F, S>&>()))> /*implicit*/ operator T() const& {
@@ -189,8 +189,8 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Move-convert the pair to external representation */
-		template<class T, class = decltype(Implementation::PairConverter<F, S, T>::to(std::declval<Pair<F, S>&&>()))> /*implicit*/ operator T()&& {
-			return Implementation::PairConverter<F, S, T>::to(std::move(*this));
+		template<class T, class = decltype(Implementation::PairConverter<F, S, T>::to(std::declval<Pair<F, S>&&>()))> /*implicit*/ operator T() && {
+			return Implementation::PairConverter<F, S, T>::to(Death::move(*this));
 		}
 
 		/** @brief Equality comparison */
@@ -207,7 +207,7 @@ namespace Death { namespace Containers {
 		DEATH_CONSTEXPR14 F& first() & { return _first; }
 		/** @overload */
 		/* Not F&& because that'd cause nasty dangling reference issues in common code */
-		DEATH_CONSTEXPR14 F first() && { return std::move(_first); }
+		DEATH_CONSTEXPR14 F first() && { return Death::move(_first); }
 		/** @overload */
 		constexpr const F& first() const & { return _first; }
 
@@ -215,7 +215,7 @@ namespace Death { namespace Containers {
 		DEATH_CONSTEXPR14 S& second() & { return _second; }
 		/** @overload */
 		/* Not S&& because that'd cause nasty dangling reference issues in common code */
-		DEATH_CONSTEXPR14 S second() && { return std::move(_second); }
+		DEATH_CONSTEXPR14 S second() && { return Death::move(_second); }
 		/** @overload */
 		constexpr const S& second() const & { return _second; }
 
@@ -238,7 +238,7 @@ namespace Death { namespace Containers {
 			return value._first;
 		}
 		template<std::size_t index, typename std::enable_if<index == 0, F>::type* = nullptr> DEATH_CONSTEXPR14 friend F&& get(Pair<F, S>&& value) {
-			return std::move(value._first);
+			return Death::move(value._first);
 		}
 		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> constexpr friend const S& get(const Pair<F, S>& value) {
 			return value._second;
@@ -247,7 +247,7 @@ namespace Death { namespace Containers {
 			return value._second;
 		}
 		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> DEATH_CONSTEXPR14 friend S&& get(Pair<F, S>&& value) {
-			return std::move(value._second);
+			return Death::move(value._second);
 		}
 #endif
 
@@ -261,7 +261,7 @@ namespace Death { namespace Containers {
 		Convernience alternative to @ref Pair::Pair(const F&, const S&) and overloads.
 	*/
 	template<class F, class S> constexpr Pair<typename std::decay<F>::type, typename std::decay<S>::type> pair(F&& first, S&& second) {
-		return Pair<typename std::decay<F>::type, typename std::decay<S>::type>{std::forward<F>(first), std::forward<S>(second)};
+		return Pair<typename std::decay<F>::type, typename std::decay<S>::type>{forward<F>(first), Death::forward<S>(second)};
 	}
 
 	namespace Implementation
@@ -272,13 +272,43 @@ namespace Death { namespace Containers {
 	/** @relatesalso Pair
 		@brief Make a pair from external representation
 	*/
-	template<class T> inline auto pair(T&& other) -> decltype(Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(std::forward<T>(other))) {
-		return Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(std::forward<T>(other));
+	template<class T> inline auto pair(T&& other) -> decltype(Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(Death::forward<T>(other))) {
+		return Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(Death::forward<T>(other));
 	}
 }}
 
-/* C++17 structured bindings */
-#if DEATH_CXX_STANDARD > 201402
+// C++17 structured bindings
+#if DEATH_CXX_STANDARD > 201402 && !defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(DEATH_TARGET_LIBCXX)
+// Defined in <__config>, which is already pulled in from <ciso646> or <version>
+// that CommonBase.h has to include in order to detect the STL being used.
+_LIBCPP_BEGIN_NAMESPACE_STD
+#elif defined(DEATH_TARGET_LIBSTDCXX)
+// Defined in <bits/c++config.h>. Pulled in from <ciso646> or <version> by CommonBase.h, but only
+// since GCC 6.1. On versions before <cstddef> from above pulls that in. Versions before GCC 4.6(?)
+// had _GLIBCXX_BEGIN_NAMESPACE(std) instead, we don't care about those.
+#include <bits/c++config.h>
+namespace std _GLIBCXX_VISIBILITY(default) { _GLIBCXX_BEGIN_NAMESPACE_VERSION
+#elif defined(DEATH_TARGET_DINKUMWARE)
+// Defined in <yvals_core.h>, again pulled in from <ciso646> or <version> by CommonBase.h
+_STD_BEGIN
+#endif
+
+#if defined(DEATH_TARGET_LIBCXX) || defined(DEATH_TARGET_LIBSTDCXX) || defined(DEATH_TARGET_DINKUMWARE)
+	template<size_t, class> struct tuple_element;
+	template<class> struct tuple_size;
+#else
+#	include <utility>
+#endif
+
+#if defined(DEATH_TARGET_LIBCXX)
+_LIBCPP_END_NAMESPACE_STD
+#elif defined(DEATH_TARGET_LIBSTDCXX)
+_GLIBCXX_END_NAMESPACE_VERSION }
+#elif defined(DEATH_TARGET_MSVC)
+_STD_END
+#endif
+
 namespace std
 {
 	template<class F, class S> struct tuple_size<Death::Containers::Pair<F, S>> : integral_constant<size_t, 2> {};

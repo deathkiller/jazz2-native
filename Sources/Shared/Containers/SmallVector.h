@@ -362,7 +362,7 @@ namespace Death { namespace Containers {
 			}
 
 			static T&& forward_value_param(T&& v) {
-				return std::move(v);
+				return move(v);
 			}
 			static const T& forward_value_param(const T& v) {
 				return v;

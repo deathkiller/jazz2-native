@@ -41,7 +41,7 @@ namespace Death { namespace Containers {
 	>
 	{
 	public:
-		StringBuilder(A&& a_, B&& b_) : a(std::forward<A>(a_)), b(std::forward<B>(b_)) {}
+		StringBuilder(A&& a_, B&& b_) : a(Death::forward<A>(a_)), b(Death::forward<B>(b_)) {}
 
 		StringBuilder(StringBuilder&&) = default;
 		StringBuilder(const StringBuilder&) = default;
@@ -224,7 +224,7 @@ namespace Death { namespace Containers {
 		typename = std::void_t<typename Implementation::StringConcatenableEx<A>::type, typename Implementation::StringConcatenableEx<B>::type>>
 		auto operator+(A&& a, B&& b)
 	{
-		return StringBuilder<A, B>(std::forward<A>(a), std::forward<B>(b));
+		return StringBuilder<A, B>(Death::forward<A>(a), Death::forward<B>(b));
 	}
 
 	template<typename A, typename B>
@@ -232,8 +232,9 @@ namespace Death { namespace Containers {
 	{
 		std::size_t prevLength = a.size();
 		std::size_t length = prevLength + Implementation::StringConcatenable<StringBuilder<A, B>>::size(b);
+		std::size_t doubleCapacity = 2 * arrayCapacity(a);
 
-		arrayReserve(a, std::max(length, 2 * arrayCapacity(a)));
+		arrayReserve(a, length < doubleCapacity ? doubleCapacity : length);
 
 		char* it = a.data() + prevLength;
 		Implementation::StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);
@@ -257,7 +258,7 @@ namespace Death { namespace Containers {
 		it += prevLength;
 		Implementation::StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);
 
-		a = std::move(result);
+		a = move(result);
 		return a;
 	}
 

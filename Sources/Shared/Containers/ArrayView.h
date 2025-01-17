@@ -25,6 +25,7 @@
 
 #include "../CommonBase.h"
 #include "../Asserts.h"
+#include "../Base/Move.h"
 
 #include <cstddef>
 #include <initializer_list>
@@ -207,7 +208,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Construct a view on an external type / from an external representation */
-		template<class U, class = decltype(Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ ArrayView(U&& other) noexcept : ArrayView{Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
+		template<class U, class = decltype(Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ ArrayView(U&& other) noexcept : ArrayView{Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(Death::forward<U>(other))} {}
 		
 		/** @brief Convert the view to external representation */
 		template<class U, class = decltype(Implementation::ArrayViewConverter<T, U>::to(std::declval<ArrayView<T>>()))> constexpr /*implicit*/ operator U() const {
@@ -634,7 +635,7 @@ namespace Death { namespace Containers {
 		@brief Make a view on an external type / from an external representation
 	*/
 	template<class T, class U = decltype(Implementation::ErasedArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::declval<T&&>()))> constexpr U arrayView(T&& other) {
-		return Implementation::ErasedArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::forward<T>(other));
+		return Implementation::ErasedArrayViewConverter<typename std::remove_reference<T&&>::type>::from(Death::forward<T>(other));
 	}
 
 	/** @relatesalso ArrayView
@@ -804,7 +805,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Construct a view on an external type / from an external representation */
-		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ StaticArrayView(U&& other) noexcept : StaticArrayView{Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
+		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ StaticArrayView(U&& other) noexcept : StaticArrayView{Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(Death::forward<U>(other))} {}
 
 		/** @brief Convert the view to external representation */
 		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, U>::to(std::declval<StaticArrayView<size_, T>>()))> constexpr /*implicit*/ operator U() const {
@@ -1020,7 +1021,7 @@ namespace Death { namespace Containers {
 		@brief Make a static view on an external type / from an external representation
 	*/
 	template<class T, class U = decltype(Implementation::ErasedStaticArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::declval<T&&>()))> constexpr U staticArrayView(T&& other) {
-		return Implementation::ErasedStaticArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::forward<T>(other));
+		return Implementation::ErasedStaticArrayViewConverter<typename std::remove_reference<T&&>::type>::from(Death::forward<T>(other));
 	}
 
 	/** @relatesalso StaticArrayView

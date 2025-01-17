@@ -8,6 +8,7 @@
 #include "../Cpu.h"
 
 #include <cstring>
+#include <algorithm>
 
 // clang-cl has DEATH_ENABLE_BMI1 enabled only when explicitly specified on command line, so the includes have to be
 // complicated like this to still include the headers for count() implementation which needs just POPCNT and not BMI1

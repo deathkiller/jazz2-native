@@ -31,7 +31,6 @@
 #include <initializer_list>
 #include <new>
 #include <type_traits>
-#include <utility>
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -42,7 +41,7 @@ namespace Death { namespace Containers {
 	namespace Implementation
 	{
 		template<class T, class First, class ...Next> inline void construct(T& value, First&& first, Next&& ...next) {
-			new(&value) T{std::forward<First>(first), std::forward<Next>(next)...};
+			new(&value) T{Death::forward<First>(first), Death::forward<Next>(next)...};
 		}
 		template<class T> inline void construct(T& value) {
 			new(&value) T();
@@ -50,7 +49,7 @@ namespace Death { namespace Containers {
 
 #if defined(DEATH_TARGET_GCC) && __GNUC__ < 5
 		template<class T> inline void construct(T& value, T&& b) {
-			new(&value) T(std::move(b));
+			new(&value) T(Death::move(b));
 		}
 #endif
 

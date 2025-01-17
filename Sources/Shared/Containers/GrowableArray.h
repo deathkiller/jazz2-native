@@ -25,7 +25,7 @@
 
 #include "Array.h"
 
-#include <algorithm>
+//#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 
@@ -451,7 +451,7 @@ namespace Death { namespace Containers {
 	}
 
 	template<class U, class T> Array<U> arrayAllocatorCast(Array<T>&& array) {
-		return arrayAllocatorCast<U, ArrayAllocator, T>(std::move(array));
+		return arrayAllocatorCast<U, ArrayAllocator, T>(Death::move(array));
 	}
 
 	/**
@@ -647,7 +647,7 @@ namespace Death { namespace Containers {
 		array type being inferred.
 	*/
 	template<template<class> class Allocator, class T, class ...Args> inline void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args) {
-		arrayResize<T, Allocator<T>>(array, DirectInit, size, std::forward<Args>(args)...);
+		arrayResize<T, Allocator<T>>(array, DirectInit, size, Death::forward<Args>(args)...);
 	}
 
 	/**
@@ -746,7 +746,7 @@ namespace Death { namespace Containers {
 		array type being inferred.
 	*/
 	template<template<class> class Allocator, class T, class ...Args> inline T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args) {
-		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, std::forward<Args>(args)...);
+		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, Death::forward<Args>(args)...);
 	}
 
 	/**
@@ -763,7 +763,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayAppend(Array<T>& array, typename std::common_type<T>::type&& value) {
 		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= (arrayCapacity<T, Allocator>(array)),
 			"Use the list variant to append values from within the array itself", *array.data());
-		return arrayAppend<T, Allocator>(array, InPlaceInit, std::move(value));
+		return arrayAppend<T, Allocator>(array, InPlaceInit, Death::move(value));
 	}
 
 	/**
@@ -773,7 +773,7 @@ namespace Death { namespace Containers {
 		array type being inferred.
 	*/
 	template<template<class> class Allocator, class T> inline T& arrayAppend(Array<T>& array, typename std::common_type<T>::type&& value) {
-		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, std::move(value));
+		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, Death::move(value));
 	}
 
 	/**
@@ -917,7 +917,7 @@ namespace Death { namespace Containers {
 		array type being inferred.
 	*/
 	template<template<class> class Allocator, class T, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args) {
-		return arrayInsert<T, Allocator<T>>(array, index, std::forward<Args>(args)...);
+		return arrayInsert<T, Allocator<T>>(array, index, Death::forward<Args>(args)...);
 	}
 
 	/**
@@ -935,7 +935,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<T>::type&& value) {
 		DEATH_DEBUG_ASSERT(std::size_t(&value - array.data()) >= (arrayCapacity<T, Allocator>(array)),
 			"Use the list variant to insert values from within the array itself", *array.data());
-		return arrayInsert<T, Allocator>(array, index, InPlaceInit, std::move(value));
+		return arrayInsert<T, Allocator>(array, index, InPlaceInit, Death::move(value));
 	}
 
 	/**
@@ -945,7 +945,7 @@ namespace Death { namespace Containers {
 		array type being inferred.
 	*/
 	template<template<class> class Allocator, class T> inline T& arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<T>::type&& value) {
-		return arrayInsert<T, Allocator<T>>(array, index, InPlaceInit, std::move(value));
+		return arrayInsert<T, Allocator<T>>(array, index, InPlaceInit, Death::move(value));
 	}
 
 	/**
@@ -1210,9 +1210,9 @@ namespace Death { namespace Containers {
 			for (T* end = src + count; src != end; ++src, ++dst)
 				// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-				Implementation::construct(*dst, std::move(*src));
+				Implementation::construct(*dst, Death::move(*src));
 #else
-				new(dst) T{std::move(*src)};
+				new(dst) T{Death::move(*src)};
 #endif
 		}
 
@@ -1227,7 +1227,7 @@ namespace Death { namespace Containers {
 			static_assert(std::is_nothrow_move_assignable<T>::value,
 				"nothrow move-assignable type is required");
 			for (T* end = src + count; src != end; ++src, ++dst)
-				*dst = std::move(*src);
+				*dst = Death::move(*src);
 		}
 
 		template<class T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
@@ -1282,9 +1282,9 @@ namespace Death { namespace Containers {
 		for (T* src = array, *end = src + prevSize, *dst = newArray; src != end; ++src, ++dst)
 			// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-			Implementation::construct(*dst, std::move(*src));
+			Implementation::construct(*dst, Death::move(*src));
 #else
-			new(dst) T{std::move(*src)};
+			new(dst) T{Death::move(*src)};
 #endif
 		for (T* it = array, *end = array + prevSize; it < end; ++it) it->~T();
 		deallocate(array);
@@ -1420,11 +1420,11 @@ namespace Death { namespace Containers {
 
 		// In-place construct the new elements. No helper function for this as there's no way we could memcpy such a thing.
 		for (T* it = array + prevSize; it < array.end(); ++it)
-			Implementation::construct(*it, std::forward<Args>(args)...);
+			Implementation::construct(*it, Death::forward<Args>(args)...);
 	}
 
 	template<class T, class ...Args> inline void arrayResize(Array<T>& array, DirectInitT, const std::size_t size, Args&&... args) {
-		arrayResize<T, ArrayAllocator<T>, Args...>(array, DirectInit, size, std::forward<Args>(args)...);
+		arrayResize<T, ArrayAllocator<T>, Args...>(array, DirectInit, size, Death::forward<Args>(args)...);
 	}
 
 	namespace Implementation
@@ -1517,14 +1517,14 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T, class ...Args> inline T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args) {
-		return arrayAppend<T, ArrayAllocator<T>>(array, InPlaceInit, std::forward<Args>(args)...);
+		return arrayAppend<T, ArrayAllocator<T>>(array, InPlaceInit, Death::forward<Args>(args)...);
 	}
 
 	template<class T, class Allocator, class ...Args> T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args) {
 		T* const it = Implementation::arrayGrowBy<T, Allocator>(array, 1);
 		// No helper function as there's no way we could memcpy such a thing.
 		// On GCC 4.8 this includes another workaround, see the 4.8-specific overload docs for details
-		Implementation::construct(*it, std::forward<Args>(args)...);
+		Implementation::construct(*it, Death::forward<Args>(args)...);
 		return *it;
 	}
 
@@ -1557,16 +1557,16 @@ namespace Death { namespace Containers {
 			for (T* end = src + count - nonOverlappingCount, *constructSrc = src + count, *constructDst = dst + count; constructSrc > end; --constructSrc, --constructDst) {
 				// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
-				Implementation::construct(*(constructDst - 1), std::move(*(constructSrc - 1)));
+				Implementation::construct(*(constructDst - 1), Death::move(*(constructSrc - 1)));
 #else
-				new(constructDst - 1) T{std::move(*(constructSrc - 1))};
+				new(constructDst - 1) T{Death::move(*(constructSrc - 1))};
 #endif
 			}
 
 			// Move-assign overlapping elements, going backwards to avoid overwriting values that are yet to be moved.
 			// This loop is never entered if nonOverlappingCount >= count.
 			for (T* assignSrc = src + count - nonOverlappingCount, *assignDst = dst + count - nonOverlappingCount; assignSrc > src; --assignSrc, --assignDst)
-				*(assignDst - 1) = std::move(*(assignSrc - 1));
+				*(assignDst - 1) = Death::move(*(assignSrc - 1));
 
 			// Destruct non-overlapping elements in the newly-formed gap so the calling code can assume uninitialized memory
 			// both in all cases. Here it again doesn't matter if going forward or backward, but go backward for consistency.
@@ -1681,14 +1681,14 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T, class ...Args> inline T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args) {
-		return arrayInsert<T, ArrayAllocator<T>>(array, index, InPlaceInit, std::forward<Args>(args)...);
+		return arrayInsert<T, ArrayAllocator<T>>(array, index, InPlaceInit, Death::forward<Args>(args)...);
 	}
 
 	template<class T, class Allocator, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args) {
 		T* const it = Implementation::arrayGrowAtBy<T, Allocator>(array, index, 1);
 		// No helper function as there's no way we could memcpy such a thing.
 		// On GCC 4.8 this includes another workaround, see the 4.8-specific overload docs for details
-		Implementation::construct(*it, std::forward<Args>(args)...);
+		Implementation::construct(*it, Death::forward<Args>(args)...);
 		return *it;
 	}
 
@@ -1714,7 +1714,7 @@ namespace Death { namespace Containers {
 
 			// Move-assign later elements to earlier
 			for (T* end = src + moveCount, *assignSrc = src, *assignDst = dst; assignSrc != end; ++assignSrc, ++assignDst)
-				*assignDst = std::move(*assignSrc);
+				*assignDst = Death::move(*assignSrc);
 
 			// Destruct remaining moved-out elements
 			for (T* end = src + moveCount, *destructSrc = end - destructCount; destructSrc != end; ++destructSrc)
@@ -1789,7 +1789,8 @@ namespace Death { namespace Containers {
 
 		// Otherwise move the last count elements over the ones at index, or less if there's not that many after the removed range
 		} else {
-			const std::size_t moveCount = std::min(count, arrayGuts.size - count - index);
+			const std::size_t remainingCount = arrayGuts.size - count - index;
+			const std::size_t moveCount = (count < remainingCount ? count : remainingCount);
 			Implementation::arrayShiftBackward(arrayGuts.data + arrayGuts.size - moveCount, arrayGuts.data + index, moveCount, count);
 #if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
@@ -1870,7 +1871,7 @@ namespace Death { namespace Containers {
 		// Even if we don't need to shrink, reallocating to an usual array with common deleters to avoid surprises
 		Array<T> newArray{NoInit, arrayGuts.size};
 		Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
-		array = std::move(newArray);
+		array = Death::move(newArray);
 
 #if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 		// Nothing to do (not annotating the arrays with default deleter)
@@ -1888,7 +1889,7 @@ namespace Death { namespace Containers {
 		// Even if we don't need to shrink, reallocating to an usual array with common deleters to avoid surprises
 		Array<T> newArray{DefaultInit, arrayGuts.size};
 		Implementation::arrayMoveAssign<T>(arrayGuts.data, newArray, arrayGuts.size);
-		array = std::move(newArray);
+		array = Death::move(newArray);
 
 #if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 		// Nothing to do (not annotating the arrays with default deleter)

@@ -1569,6 +1569,9 @@
     <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h">
       <Filter>Header Files\Jazz2\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\Move.h">
+      <Filter>Header Files\Shared\Base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
