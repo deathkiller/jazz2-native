@@ -798,7 +798,7 @@ namespace Death { namespace Containers {
 		}
 
 		template<std::size_t size_, class T> StaticArrayData<size_, T, false>& StaticArrayData<size_, T, false>::operator=(StaticArrayData<size_, T, false>&& other) noexcept(std::is_nothrow_move_constructible<T>::value) {
-			using std::swap;
+			using Death::swap;
 			for (std::size_t i = 0; i != size_; ++i) {
 				swap(_data[i], other._data[i]);
 			}
