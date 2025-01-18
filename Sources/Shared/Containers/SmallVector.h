@@ -37,7 +37,7 @@ namespace Death { namespace Containers {
 		void* BeginX;
 		Size_T Size = 0, Capacity;
 
-		/** @brief The maximum value of the `Size_T` used */
+		/** @brief Maximum value of the `Size_T` used */
 		static constexpr std::size_t SizeTypeMax() {
 			return std::numeric_limits<Size_T>::max();
 		}
@@ -71,10 +71,10 @@ namespace Death { namespace Containers {
 		}
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<class T>
 	using SmallVectorSizeType = typename std::conditional<sizeof(T) < 4 && sizeof(void*) >= 8, std::uint64_t, std::uint32_t>::type;
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
+	
 	/** @brief Figure out the offset of the first element */
 	template<class T, typename = void> struct SmallVectorAlignmentAndSize {
 		alignas(SmallVectorBase<SmallVectorSizeType<T>>) char Base[sizeof(
@@ -1111,7 +1111,6 @@ namespace Death { namespace Containers {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	template<typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
-#endif
 
 	template<typename T, unsigned N> class SmallVector;
 
@@ -1162,6 +1161,7 @@ namespace Death { namespace Containers {
 		static constexpr std::size_t NumElementsThatFit = PreferredInlineBytes / sizeof(T);
 		static constexpr std::size_t value = (NumElementsThatFit == 0 ? 1 : NumElementsThatFit);
 	};
+#endif
 
 	/**
 		@brief Memory-optimized vector

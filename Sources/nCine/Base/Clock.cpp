@@ -55,7 +55,7 @@ namespace nCine
 #endif
 	}
 
-	uint64_t Clock::counter() const
+	std::uint64_t Clock::counter() const
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		if (_hasPerfCounter) {

@@ -23,6 +23,8 @@
 
 #pragma once
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+
 #include "../Common.h"
 
 namespace Death { namespace Containers { namespace Implementation {
@@ -42,3 +44,5 @@ namespace Death { namespace Containers { namespace Implementation {
 	template<> struct GenerateSequence<0> { typedef Sequence<> Type; };
 
 }}}
+
+#endif

@@ -34,8 +34,8 @@ namespace nCine
 	private:
 		bool _isRunning;
 		/// Start time mark
-		uint64_t _startTime;
+		std::uint64_t _startTime;
 		/// Accumulated time ticks over multiple start and stop
-		uint64_t _accumulatedTime;
+		std::uint64_t _accumulatedTime;
 	};
 }
