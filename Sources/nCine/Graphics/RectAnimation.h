@@ -28,7 +28,7 @@ namespace nCine
 		/// Constructor for an animation with a specified default frame duration, loop and rewind mode
 		RectAnimation(float defaultFrameDuration, LoopMode loopMode);
 
-		/// Returns true if the animation is paused
+		/// Returns `true` if the animation is paused
 		inline bool isPaused() const {
 			return isPaused_;
 		}

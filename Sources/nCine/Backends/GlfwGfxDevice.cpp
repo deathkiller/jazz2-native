@@ -22,7 +22,7 @@ namespace nCine::Backends
 	{
 		initGraphics();
 		updateMonitors();
-		initDevice(windowMode.isResizable, windowMode.hasWindowScaling);
+		initDevice(windowMode.windowPositionX, windowMode.windowPositionY, windowMode.isResizable, windowMode.hasWindowScaling);
 	}
 
 	GlfwGfxDevice::~GlfwGfxDevice()
@@ -269,7 +269,7 @@ namespace nCine::Backends
 		FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
 	}
 
-	void GlfwGfxDevice::initDevice(bool isResizable, bool enableWindowScaling)
+	void GlfwGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable, bool enableWindowScaling)
 	{
 		GLFWmonitor* monitor = nullptr;
 		if (isFullscreen_) {
@@ -315,12 +315,12 @@ namespace nCine::Backends
 		glfwWindowHint(GLFW_OPENGL_PROFILE, glContextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
 #if GLFW_VERSION_COMBINED >= 3400
-		//const int windowPosX = (windowMode.windowPositionX != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
-		//						? windowMode.windowPositionX : GLFW_ANY_POSITION);
-		//const int windowPosY = (windowMode.windowPositionY != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
-		//						? windowMode.windowPositionY : GLFW_ANY_POSITION);
-		//glfwWindowHint(GLFW_POSITION_X, windowPosX);
-		//glfwWindowHint(GLFW_POSITION_Y, windowPosY);
+		if (windowPosX != AppConfiguration::WindowPositionIgnore) {
+			glfwWindowHint(GLFW_POSITION_X, windowPosX);
+		}
+		if (windowPosY != AppConfiguration::WindowPositionIgnore) {
+			glfwWindowHint(GLFW_POSITION_Y, windowPosY);
+		}
 #endif
 #if defined(GLFW_SCALE_TO_MONITOR) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Scaling is handled automatically by GLFW
@@ -333,17 +333,17 @@ namespace nCine::Backends
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
 
 #if GLFW_VERSION_COMBINED < 3400
-		//const bool ignoreBothWindowPosition = (windowMode.windowPositionX == AppConfiguration::WindowPositionIgnore &&
-		//										windowMode.windowPositionY == AppConfiguration::WindowPositionIgnore);
-		//if (!isFullscreen_ && windowPositionIsValid && !ignoreBothWindowPosition) {
-		//	Vector2i windowPos;
-		//	glfwGetWindowPos(windowHandle_, &windowPos.x, &windowPos.y);
-		//	if (windowMode.windowPositionX != AppConfiguration::WindowPositionIgnore)
-		//		windowPos.x = windowMode.windowPositionX;
-		//	if (windowMode.windowPositionY != AppConfiguration::WindowPositionIgnore)
-		//		windowPos.y = windowMode.windowPositionY;
-		//	glfwSetWindowPos(windowHandle_, windowPos.x, windowPos.y);
-		//}
+		const bool ignoreBothWindowPosition = (windowPosX == AppConfiguration::WindowPositionIgnore &&
+											   windowPosY == AppConfiguration::WindowPositionIgnore);
+		if (!isFullscreen_ && !ignoreBothWindowPosition) {
+			Vector2i windowPos;
+			glfwGetWindowPos(windowHandle_, &windowPos.X, &windowPos.Y);
+			if (windowPosX != AppConfiguration::WindowPositionIgnore)
+				windowPos.X = windowPosX;
+			if (windowPosY != AppConfiguration::WindowPositionIgnore)
+				windowPos.Y = windowPosY;
+			glfwSetWindowPos(windowHandle_, windowPos.X, windowPos.Y);
+		}
 #endif
 
 		glfwGetFramebufferSize(windowHandle_, &drawableWidth_, &drawableHeight_);

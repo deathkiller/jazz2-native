@@ -18,7 +18,7 @@
 
 namespace nCine
 {
-	const int IInputManager::MaxNumJoysticks = GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1;
+	const std::int32_t IInputManager::MaxNumJoysticks = GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1;
 }
 
 namespace nCine::Backends

@@ -18,10 +18,12 @@ namespace nCine
 
 	inline IThreadPool::~IThreadPool() { }
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// A fake thread pool which doesn't execute any commands
 	class NullThreadPool : public IThreadPool
 	{
 	public:
 		void EnqueueCommand(std::unique_ptr<IThreadCommand>&& threadCommand) override { }
 	};
+#endif
 }

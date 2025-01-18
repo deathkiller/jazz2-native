@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	enum class ButtonName : int16_t
+	enum class ButtonName : std::int16_t
 	{
 		Unknown = -1,
 		A = 0,
@@ -33,7 +33,7 @@ namespace nCine
 		Count
 	};
 
-	enum class AxisName : int16_t
+	enum class AxisName : std::int16_t
 	{
 		Unknown = -1,
 		LeftX = 0,
@@ -79,11 +79,11 @@ namespace nCine
 	class TouchEvent
 	{
 	public:
-		static constexpr unsigned int MaxPointers = 10;
+		static constexpr std::uint32_t MaxPointers = 10;
 
 		struct Pointer
 		{
-			int id;
+			std::int32_t id;
 			float x, y;
 			float pressure;
 		};
@@ -92,14 +92,14 @@ namespace nCine
 			: count(0), actionIndex(-1) {}
 
 		TouchEventType type;
-		unsigned int count;
-		int actionIndex;
+		std::uint32_t count;
+		std::int32_t actionIndex;
 		Pointer pointers[MaxPointers];
 
-		inline int findPointerIndex(int pointerId) const
+		inline std::int32_t findPointerIndex(std::int32_t pointerId) const
 		{
-			int pointerIndex = -1;
-			for (unsigned int i = 0; i < count && i < MaxPointers; i++) {
+			std::int32_t pointerIndex = -1;
+			for (std::uint32_t i = 0; i < count && i < MaxPointers; i++) {
 				if (pointers[i].id == pointerId) {
 					pointerIndex = i;
 					break;
@@ -124,9 +124,9 @@ namespace nCine
 	{
 	public:
 		/// Pointer position on the X axis
-		int x;
+		std::int32_t x;
 		/// Pointer position on the Y axis
-		int y;
+		std::int32_t y;
 
 		virtual bool isLeftButtonDown() const = 0;
 		virtual bool isMiddleButtonDown() const = 0;
@@ -140,9 +140,9 @@ namespace nCine
 	{
 	public:
 		/// Pointer position on the X axis
-		int x;
+		std::int32_t x;
 		/// Pointer position on the Y axis
-		int y;
+		std::int32_t y;
 
 		virtual bool isLeftButton() const = 0;
 		virtual bool isMiddleButton() const = 0;
@@ -174,11 +174,11 @@ namespace nCine
 	{
 	public:
 		/// Key scan code
-		int scancode;
+		std::int32_t scancode;
 		/// Key symbol code
 		Keys sym;
 		/// Key modifiers mask
-		int mod;
+		std::int32_t mod;
 
 		KeyboardEvent()
 			: scancode(0), sym(Keys::Unknown), mod(0) {}
@@ -190,7 +190,7 @@ namespace nCine
 	public:
 		/// Unicode code point encoded in UTF-8
 		char text[4];
-		int length;
+		std::int32_t length;
 
 		TextInputEvent()
 			: length(0)
@@ -218,9 +218,9 @@ namespace nCine
 	{
 	public:
 		/// Joystick id
-		int joyId;
+		std::int32_t joyId;
 		/// Button id
-		int buttonId;
+		std::int32_t buttonId;
 	};
 
 	/// Information about a joystick hat event
@@ -228,9 +228,9 @@ namespace nCine
 	{
 	public:
 		/// Joystick id
-		int joyId;
+		std::int32_t joyId;
 		/// Hat id
-		int hatId;
+		std::int32_t hatId;
 		/// Hat position state
 		unsigned char hatState;
 	};
@@ -240,9 +240,9 @@ namespace nCine
 	{
 	public:
 		/// Joystick id
-		int joyId;
+		std::int32_t joyId;
 		/// Axis id
-		int axisId;
+		std::int32_t axisId;
 		/// Axis value normalized between -1.0f and 1.0f
 		float value;
 	};
@@ -252,7 +252,7 @@ namespace nCine
 	{
 	public:
 		/// Joystick id
-		int joyId;
+		std::int32_t joyId;
 	};
 
 	/// Information about a mapped joystick state
@@ -262,15 +262,15 @@ namespace nCine
 
 	public:
 		/// The number of joystick buttons with a mapping name
-		static constexpr unsigned int NumButtons = (int)ButtonName::Count;
+		static constexpr std::uint32_t NumButtons = (std::uint32_t)ButtonName::Count;
 		/// The number of joystick axes with a mapping name
-		static constexpr unsigned int NumAxes = 6;
+		static constexpr std::uint32_t NumAxes = 6;
 
 		JoyMappedState()
 		{
-			for (unsigned int i = 0; i < NumButtons; i++)
+			for (std::uint32_t i = 0; i < NumButtons; i++)
 				buttons_[i] = false;
-			for (unsigned int i = 0; i < NumAxes; i++)
+			for (std::uint32_t i = 0; i < NumAxes; i++)
 				axesValues_[i] = 0.0f;
 			lastHatState_ = HatState::Centered;
 		}
@@ -279,7 +279,7 @@ namespace nCine
 		{
 			bool pressed = false;
 			if (name != ButtonName::Unknown)
-				pressed = buttons_[static_cast<int>(name)];
+				pressed = buttons_[static_cast<std::int32_t>(name)];
 			return pressed;
 		}
 
@@ -287,7 +287,7 @@ namespace nCine
 		{
 			float value = 0.0f;
 			if (name != AxisName::Unknown)
-				value = axesValues_[static_cast<int>(name)];
+				value = axesValues_[static_cast<std::int32_t>(name)];
 			return value;
 		}
 
@@ -302,7 +302,7 @@ namespace nCine
 	{
 	public:
 		/// Joystick id
-		int joyId;
+		std::int32_t joyId;
 		/// Button name
 		ButtonName buttonName;
 	};
@@ -312,7 +312,7 @@ namespace nCine
 	{
 	public:
 		/// Joystick id
-		int joyId;
+		std::int32_t joyId;
 		/// Axis name
 		AxisName axisName;
 		/// Axis value between its minimum and maximum

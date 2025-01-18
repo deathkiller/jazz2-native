@@ -12,10 +12,9 @@ namespace nCine
 	class RenderQueue
 	{
 	public:
-		/// Constructor that sets the owning viewport
 		RenderQueue();
 
-		/// Returns true if the queue does not contain any render commands
+		/// Returns `true` if the queue does not contain any render commands
 		bool empty() const;
 
 		/// Adds a draw command to the queue

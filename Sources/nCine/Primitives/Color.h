@@ -53,7 +53,6 @@ namespace nCine
 		explicit Color(std::uint32_t hex);
 		/// Four channels constructor from an array
 		explicit Color(const std::uint32_t channels[NumChannels]);
-		/// Constructor taking a normalized float color
 		explicit Color(const Colorf& color);
 
 		/// Returns the color as a single RGBA unsigned integer
@@ -65,11 +64,11 @@ namespace nCine
 		/// Returns the color as a single BGRA unsigned integer
 		std::uint32_t Bgra() const;
 
-		/// Gets the color array
+		/// Returns color array
 		inline const std::uint8_t* Data() const {
 			return &R;
 		}
-		/// Gets the color array
+		/// @overload
 		inline std::uint8_t* Data() {
 			return &R;
 		}
@@ -92,10 +91,9 @@ namespace nCine
 		/// Sets the alpha channel
 		void SetAlpha(std::uint32_t alpha);
 
-		/// Assignment operator from a normalized float color
+		/// Assigns operator from a normalized float color
 		Color& operator=(const Colorf& color);
 
-		/// Equality operator
 		bool operator==(const Color& color) const;
 		bool operator!=(const Color& color) const;
 
@@ -103,14 +101,14 @@ namespace nCine
 		Color& operator-=(const Color& v);
 
 		Color& operator*=(const Color& color);
-		/// Multiplication by a constant scalar
+		/// Multiplies by a constant scalar
 		Color& operator*=(float scalar);
 
 		Color operator+(const Color& color) const;
 		Color operator-(const Color& color) const;
 
 		Color operator*(const Color& color) const;
-		/// Multiplication by a constant scalar
+		/// Multiplies by a constant scalar
 		Color operator*(float scalar) const;
 	};
 }

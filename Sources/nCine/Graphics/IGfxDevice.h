@@ -38,12 +38,14 @@ namespace nCine
 		struct WindowMode
 		{
 			WindowMode()
-				: width(0), height(0), isFullscreen(false), isResizable(false), hasWindowScaling(true) { }
-			WindowMode(unsigned int w, unsigned int h, bool fullscreen, bool resizable, bool windowScaling)
-				: width(w), height(h), isFullscreen(fullscreen), isResizable(resizable), hasWindowScaling(windowScaling) { }
+				: width(0), height(0), windowPositionX(AppConfiguration::WindowPositionIgnore), windowPositionY(AppConfiguration::WindowPositionIgnore), isFullscreen(false), isResizable(false), hasWindowScaling(true) { }
+			WindowMode(unsigned int w, unsigned int h, int posX, int posY, bool fullscreen, bool resizable, bool windowScaling)
+				: width(w), height(h), windowPositionX(posX), windowPositionY(posY), isFullscreen(fullscreen), isResizable(resizable), hasWindowScaling(windowScaling) { }
 
 			unsigned int width;
 			unsigned int height;
+			int windowPositionX;
+			int windowPositionY;
 			bool isFullscreen;
 			bool isResizable;
 			bool hasWindowScaling;

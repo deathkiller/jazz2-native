@@ -23,6 +23,7 @@ namespace nCine
 		virtual void setLooping(bool value) { }
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// A class created when the audio file extension is not recognized.
 	class InvalidAudioReader : IAudioReader
 	{
@@ -32,4 +33,5 @@ namespace nCine
 		}
 		inline void rewind() const override { };
 	};
+#endif
 }

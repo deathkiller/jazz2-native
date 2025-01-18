@@ -23,7 +23,7 @@ namespace nCine
 	class Viewport
 	{
 	public:
-		/// The different types of viewports available
+		/// Types of viewports available
 		enum class Type
 		{
 			/// The viewport renders in one or more textures
@@ -34,7 +34,7 @@ namespace nCine
 			Screen
 		};
 
-		/// The clear mode for a viewport with a texture or for the screen
+		/// Clear mode for a viewport with a texture or for the screen
 		enum class ClearMode
 		{
 			/// The viewport is cleared every time it is drawn
@@ -49,7 +49,7 @@ namespace nCine
 			Never
 		};
 
-		/// The depth and stencil format for a viewport with a texture or for the screen
+		/// Depth and stencil format for a viewport with a texture or for the screen
 		enum class DepthStencilFormat
 		{
 			None,
@@ -70,6 +70,9 @@ namespace nCine
 		Viewport();
 
 		~Viewport();
+
+		Viewport(const Viewport&) = delete;
+		Viewport& operator=(const Viewport&) = delete;
 
 		/// Returns the viewport type
 		inline Type type() const {
@@ -210,7 +213,7 @@ namespace nCine
 			CommittedBit = 2
 		};
 
-		/// The reverse ordered array of viewports to be drawn before the screen
+		/// Reverse ordered array of viewports to be drawn before the screen
 		static SmallVector<Viewport*> chain_;
 
 		Type type_;
@@ -223,12 +226,12 @@ namespace nCine
 
 		DepthStencilFormat depthStencilFormat_;
 
-		/// The last frame this viewport was cleared
+		/// Last frame this viewport was cleared
 		unsigned long int lastFrameCleared_;
 		ClearMode clearMode_;
 		Colorf clearColor_;
 
-		/// The render queue of commands for this viewport/RT
+		/// Render queue of commands for this viewport/RT
 		std::unique_ptr<RenderQueue> renderQueue_;
 
 		std::unique_ptr<GLFramebuffer> fbo_;
@@ -236,20 +239,15 @@ namespace nCine
 		static const unsigned int MaxNumTextures = 4;
 		Texture* textures_[MaxNumTextures];
 
-		/// The root scene node for this viewport/RT
+		/// Root scene node for this viewport/RT
 		SceneNode* rootNode_;
 
-		/// The camera used by this viewport
+		/// Camera used by this viewport
 		/*! \note If set to `nullptr` it will use the default camera */
 		Camera* camera_;
 
 		/// Bitset that stores the various states bits
 		BitSet<uint8_t> stateBits_;
-
-		/// Deleted copy constructor
-		Viewport(const Viewport&) = delete;
-		/// Deleted assignment operator
-		Viewport& operator=(const Viewport&) = delete;
 
 		void calculateCullingRect();
 

@@ -50,25 +50,25 @@ namespace nCine
 
 		/// Calculates the center of the rectangle
 		Vector2<S> GetCenter() const;
-
+		/// Returns extents
 		Vector2<S> GetExtents() const;
-
+		/// Returns perimeter
 		S GetPerimeter() const;
 
-		/// \returns True if the point is inside this rectangle
+		/// Returns `true` if the point is inside this rectangle
 		bool Contains(S px, S py) const;
-		/// \returns True if the point vector is inside this rectangle
+		/// Returns `true` if the point vector is inside this rectangle
 		bool Contains(const Vector2<S>& p) const;
 
-		/// \returns True if the other rectangle is contained inside this one
+		/// Returns `true` if the other rectangle is contained inside this one
 		bool Contains(const AABB<S>& aabb) const;
-		/// \returns True if this rect does overlap the other rectangle in any way
+		/// Returns `true` if this rect does overlap the other rectangle in any way
 		bool Overlaps(const AABB<S>& aabb) const;
 
 		/// Intersects this AABB with the other AABB
 		static AABB<S> Intersect(const AABB<S>& a, const AABB<S>& b);
 
-		/// Combine two AABBs
+		/// Combines two AABBs
 		static AABB<S> Combine(const AABB<S>& a, const AABB<S>& b);
 
 		/// Eqality operator

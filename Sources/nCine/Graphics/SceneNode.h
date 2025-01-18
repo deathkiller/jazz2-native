@@ -28,7 +28,7 @@ namespace nCine
 			SameAsParent
 		};
 
-		/// The minimum amount of rotation to trigger a sine and cosine calculation
+		/// Minimum amount of rotation to trigger a sine and cosine calculation
 		static constexpr float MinRotation = 0.5f * fDegToRad;
 
 		/// Constructor for a node with a parent and a specified relative position
@@ -39,12 +39,10 @@ namespace nCine
 		explicit SceneNode(SceneNode* parent);
 		/// Constructor for a node with no parent and positioned in the origin
 		SceneNode();
-		/// The destructor will delete every child node
+		/// Destructor will delete every child node
 		~SceneNode() override;
 
-		/// Move constructor
 		SceneNode(SceneNode&& other) noexcept;
-		/// Move assignment operator
 		SceneNode& operator=(SceneNode&& other) noexcept;
 
 		/// Returns a copy of this object
@@ -92,7 +90,7 @@ namespace nCine
 		/// Brings this node one node back in the parent's list of children
 		bool swapNodeBack();
 
-		/// Returns true if the node visit order is used together with the layer
+		/// Returns `true` if the node visit order is used together with the layer
 		inline enum VisitOrderState visitOrderState() const {
 			return visitOrderState_;
 		}
@@ -114,7 +112,7 @@ namespace nCine
 			return false;
 		}
 
-		/// Returns true if the node is updating
+		/// Returns `true` if the node is updating
 		inline bool isUpdateEnabled() const {
 			return updateEnabled_;
 		}
@@ -122,7 +120,7 @@ namespace nCine
 		inline void setUpdateEnabled(bool updateEnabled) {
 			updateEnabled_ = updateEnabled;
 		}
-		/// Returns true if the node is drawing
+		/// Returns `true` if the node is drawing
 		inline bool isDrawEnabled() const {
 			return drawEnabled_;
 		}
@@ -130,7 +128,7 @@ namespace nCine
 		inline void setDrawEnabled(bool drawEnabled) {
 			drawEnabled_ = drawEnabled;
 		}
-		/// Returns true if the node is both updating and drawing
+		/// Returns `true` if the node is both updating and drawing
 		inline bool isEnabled() const {
 			return (updateEnabled_ == true && drawEnabled_ == true);
 		}

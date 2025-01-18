@@ -16,7 +16,7 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-	const int IInputManager::MaxNumJoysticks = 4;
+	const std::int32_t IInputManager::MaxNumJoysticks = 4;
 }
 
 namespace nCine::Backends

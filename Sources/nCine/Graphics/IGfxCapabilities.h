@@ -86,6 +86,7 @@ namespace nCine
 
 	inline IGfxCapabilities::~IGfxCapabilities() {}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// A fake graphics capabilities class that reports no available capabilities
 	class NullGfxCapabilities : public IGfxCapabilities
 	{
@@ -109,4 +110,5 @@ namespace nCine
 	private:
 		GlInfoStrings glInfoStrings_;
 	};
+#endif
 }

@@ -18,9 +18,9 @@ namespace nCine
 		explicit AudioBufferPlayer(AudioBuffer* audioBuffer);
 		~AudioBufferPlayer() override;
 
-		/// Default move constructor
+		AudioBufferPlayer(const AudioBufferPlayer&) = delete;
+		AudioBufferPlayer& operator=(const AudioBufferPlayer&) = delete;
 		AudioBufferPlayer(AudioBufferPlayer&&) = default;
-		/// Default move assignment operator
 		AudioBufferPlayer& operator=(AudioBufferPlayer&&) = default;
 
 		unsigned int bufferId() const override;
@@ -54,10 +54,5 @@ namespace nCine
 
 	private:
 		AudioBuffer* audioBuffer_;
-
-		/// Deleted copy constructor
-		AudioBufferPlayer(const AudioBufferPlayer&) = delete;
-		/// Deleted assignment operator
-		AudioBufferPlayer& operator=(const AudioBufferPlayer&) = delete;
 	};
 }

@@ -21,7 +21,7 @@ namespace nCine::Backends
 	{
 		initGraphics(windowMode.hasWindowScaling);
 		updateMonitors();
-		initDevice(windowMode.isResizable);
+		initDevice(windowMode.windowPositionX, windowMode.windowPositionY, windowMode.isResizable);
 	}
 
 	SdlGfxDevice::~SdlGfxDevice()
@@ -175,7 +175,7 @@ namespace nCine::Backends
 		FATAL_ASSERT_MSG(!err, "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
 	}
 
-	void SdlGfxDevice::initDevice(bool isResizable)
+	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
 	{
 		updateMonitors();
 
@@ -217,14 +217,15 @@ namespace nCine::Backends
 			flags |= SDL_WINDOW_FULLSCREEN;
 		}
 
-		//const bool windowPositionIsValid = (containingMonitorIndex(windowMode) != -1);
-		//const int windowPosX = (windowMode.windowPositionX != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
-		//							? windowMode.windowPositionX : SDL_WINDOWPOS_CENTERED);
-		//const int windowPosY = (windowMode.windowPositionY != AppConfiguration::WindowPositionIgnore && windowPositionIsValid
-		//							? windowMode.windowPositionY : SDL_WINDOWPOS_CENTERED);
+		if (windowPosX == AppConfiguration::WindowPositionIgnore) {
+			windowPosX = SDL_WINDOWPOS_UNDEFINED;
+		}
+		if (windowPosY == AppConfiguration::WindowPositionIgnore) {
+			windowPosY = SDL_WINDOWPOS_UNDEFINED;
+		}
 
 		// Creating a window with SDL2
-		windowHandle_ = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width_, height_, flags);
+		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, flags);
 		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 		initGLViewport();

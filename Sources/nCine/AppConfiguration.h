@@ -13,99 +13,98 @@ namespace nCine
 	class AppConfiguration
 	{
 	public:
-		static constexpr std::int32_t WindowPositionIgnore = 2147483647; // `INT_MAX`
+		static constexpr std::int32_t WindowPositionIgnore = INT_MAX;
 
-		/// Default constructor setting the defaults
 		AppConfiguration();
 
 		// User configurable compile-time variables
-		/// The interval for frame timer accumulation average and log
+		/// Interval for frame timer accumulation average and log
 		float frameTimerLogInterval;
 
 		/// The screen resolution
 		/*! \note If either `x` or `y` are zero then the screen resolution will not be changed. */
 		Vector2i resolution;
 
-		/// The window position coordinates in the virtual screen made of all the connected monitors
+		/// Window position coordinates in the virtual screen made of all the connected monitors
 		/*! \note It can also be used to go full screen on a monitor that is not the primary one of the system. */
 		/*! \note The `WindowPositionIgnore` value can be used in either or both dimensions when a specific position is not needed. */
-		//Vector2i windowPosition;
+		Vector2i windowPosition;
 
-		/// The flag is `true` if the screen is going to be in fullscreen mode
+		/// Whether the screen is going to be in fullscreen mode
 		bool fullscreen;
-		/// The flag is `true` if the window is going to be resizable
+		/// Whether the window is going to be resizable
 		bool resizable;
-		/// The flag is `true` if the window size is automatically scaled by the display factor
+		/// Whether the window size is automatically scaled by the display factor
 		bool windowScaling;
-		/// The maximum number of frames to render per second or 0 for no limit
+		/// Maximum number of frames to render per second or 0 for no limit
 		unsigned int frameLimit;
 
-		/// The window title
+		/// Window title
 		String windowTitle;
-		/// The window icon filename
+		/// Window icon filename
 		String windowIconFilename;
 
-		/// The flag is `true` if mapping is used to update OpenGL buffers
+		/// Whether mapping is used to update OpenGL buffers
 		bool useBufferMapping;
 		/// Fixed size of render commands to be collected for batching on Emscripten and ANGLE
 		/*! \note Increasing this value too much might negatively affect batching shaders compilation time.
 		A value of zero restores the default behavior of non fixed size for batches. */
 		unsigned int fixedBatchSize;
-		/// The path for the binary shaders cache (or empty to disable binary shader cache)
+		/// Path for the binary shaders cache (or empty to disable binary shader cache)
 		/*! \note Even if the path is set the functionality might still not be supported by the OpenGL context */
 		String shaderCachePath;
 
-		/// The maximum size in bytes for each VBO collecting geometry data
+		/// Maximum size in bytes for each VBO collecting geometry data
 		unsigned long vboSize;
-		/// The maximum size in bytes for each IBO collecting index data
+		/// Maximum size in bytes for each IBO collecting index data
 		unsigned long iboSize;
-		/// The maximum size for the pool of VAOs
+		/// Maximum size for the pool of VAOs
 		unsigned int vaoPoolSize;
-		/// The initial size for the pool of render commands
+		/// Initial size for the pool of render commands
 		unsigned int renderCommandPoolSize;
 
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/// The flag is `true` if the debug overlay is enabled
+		/// Whether the debug overlay is enabled
 		bool withDebugOverlay;
 #endif
-		/// The flag is `true` if the audio subsystem is enabled
+		/// Whether the audio subsystem is enabled
 		bool withAudio;
-		/// The flag is `true` if the threading subsystem is enabled
+		/// Whether the threading subsystem is enabled
 		bool withThreads;
-		/// The flag is `true` if the scenegraph based rendering is enabled
+		/// Whether the scenegraph based rendering is enabled
 		bool withScenegraph;
-		/// The flag is `true` if the vertical synchronization is enabled
+		/// Whether the vertical synchronization is enabled
 		bool withVSync;
-		/// The flag is `true` if the OpenGL debug context is enabled
+		/// Whether the OpenGL debug context is enabled
 		bool withGlDebugContext;
 
-		/// \returns The path for the application to load data from
+		/// Returns path for the application to load data from
 		const String& dataPath() const;
-		/// \returns The path for the application to load data from
+		/// @overload
 		String& dataPath();
 
-		/// \returns True if the OpenGL profile is going to be core
+		/// Returns `true` if the OpenGL profile is going to be core
 		inline bool glCoreProfile() const {
 			return glCoreProfile_;
 		}
-		/// \returns True if the OpenGL context is going to be forward compatible
+		/// Returns `true` if the OpenGL context is going to be forward compatible
 		inline bool glForwardCompatible() const {
 			return glForwardCompatible_;
 		}
-		/// \returns The major version number of the OpenGL context
+		/// Returns major version number of the OpenGL context
 		inline unsigned int glMajorVersion() const {
 			return glMajorVersion_;
 		}
-		/// \returns The minor version number of the OpenGL context
+		/// Returns minor version number of the OpenGL context
 		inline unsigned int glMinorVersion() const {
 			return glMinorVersion_;
 		}
 
-		/// \returns The number of arguments passed on the command-line
+		/// Returns number of arguments passed on the command-line
 		inline std::size_t argc() const {
 			return argv_.size();
 		}
-		/// \returns The selected argument from the ones passed on the command-line
+		/// Returns selected argument from the ones passed on the command-line
 		const StringView argv(int index) const;
 
 	private:
