@@ -6,39 +6,38 @@
 
 namespace nCine
 {
-	/// Provides base services to requesting classes
-	/*! It has memory ownership on service classes. */
+	/** @brief Provides base services to requesting classes */
 	class ServiceLocator
 	{
 	public:
-		/// Returns a reference to the current audio device instance
+		/** @brief Returns reference to the current audio device instance */
 		IAudioDevice& GetAudioDevice() {
 			return *audioDevice_;
 		}
-		/// Registers an audio device provider
+		/** @brief Registers an audio device provider */
 		void RegisterAudioDevice(std::unique_ptr<IAudioDevice> service);
-		/// Unregisters the audio device provider and reinstates the null one
+		/** @brief Unregisters the audio device provider and reinstates the null one */
 		void UnregisterAudioDevice();
 
-		/// Returns a reference to the current thread pool instance
+		/** @brief Returns reference to the current thread pool instance */
 		IThreadPool& GetThreadPool() {
 			return *threadPool_;
 		}
-		/// Registers a thread pool provider
+		/** @brief Registers a thread pool provider */
 		void RegisterThreadPool(std::unique_ptr<IThreadPool> service);
-		/// Unregisters the thread pool provider and reinstates the null one
+		/** @brief Unregisters the thread pool provider and reinstates the null one */
 		void UnregisterThreadPool();
 
-		/// Returns a reference to the current graphics capabilities instance
+		/** @brief Returns reference to the current graphics capabilities instance */
 		const IGfxCapabilities& GetGfxCapabilities() {
 			return *gfxCapabilities_;
 		}
-		/// Registers a graphics capabilities provider
+		/** @brief Registers a graphics capabilities provider */
 		void RegisterGfxCapabilities(std::unique_ptr<IGfxCapabilities> service);
-		/// Unregisters the graphics capabilitiesprovider and reinstates the null one
+		/** @brief Unregisters the graphics capabilitiesprovider and reinstates the null one */
 		void UnregisterGfxCapabilities();
 
-		/// Unregisters every registered service and reinstates null ones
+		/** @brief Unregisters every registered service and reinstates null ones */
 		void UnregisterAll();
 
 	private:
@@ -62,7 +61,6 @@ namespace nCine
 		friend ServiceLocator& theServiceLocator();
 	};
 
-	/// Meyers' Singleton
 	ServiceLocator& theServiceLocator();
 
 }

@@ -8,10 +8,7 @@ using namespace Death;
 
 namespace nCine
 {
-	/// PCG32 random number generator
-	/*!
-	 * Based on the Apache License 2.0 code from pcg-random.org
-	 */
+	/// Random number generator
 	class RandomGenerator
 	{
 	public:
@@ -54,7 +51,6 @@ namespace nCine
 		std::uint64_t _increment;
 	};
 
-	// Meyers' Singleton
 	extern RandomGenerator& Random() noexcept;
 
 }

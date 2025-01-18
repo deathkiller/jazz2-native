@@ -72,6 +72,7 @@ namespace nCine
 		};
 #endif
 
+		/** @brief Timings for profiling */
 		enum class Timings
 		{
 			PreInit,

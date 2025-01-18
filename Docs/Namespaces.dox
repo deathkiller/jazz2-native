@@ -75,6 +75,10 @@ See also @ref third-party for the licenses of the libraries used.
 	Afterwards, it removes the definitions that cause the most collisions using @cpp #undef @ce.
 */
 
+/** @dir Shared/Base
+	@brief Basic utilities for memory management and type information
+*/
+
 /** @dir Shared/Containers
 	@brief Namespace @ref Death::Containers, @ref Death::Containers::Literals
 */
@@ -90,8 +94,21 @@ See also @ref third-party for the licenses of the libraries used.
 
 	Literals for easy construction of string views.
 */
+/** @file Shared/Containers/StringUtils.h
+	@brief Namespace @ref Death::Containers::StringUtils
+*/
 /** @namespace Death::Containers::StringUtils
 	@brief String utilities
+*/
+/** @file Shared/Containers/Tags.h
+	@brief Tag @ref Death::Containers::DefaultInit, @ref Death::Containers::ValueInit, @ref Death::Containers::NoInit, @ref Death::Containers::NoCreate, @ref Death::Containers::DirectInit, @ref Death::Containers::InPlaceInit
+*/
+
+/** @dir Shared/Core
+	@brief Namespace @ref Death::Backward, @ref Death::Trace
+*/
+/** @namespace Death::Backward
+	@brief Exception handling implementation
 */
 
 /** @namespace Death::Cpu

@@ -4,10 +4,12 @@
 
 namespace nCine
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #if defined(DEATH_TARGET_WINDOWS)
 	typedef wchar_t* NativeArgument;
 #else
 	typedef char* NativeArgument;
+#endif
 #endif
 
 #if defined(WITH_QT5)

@@ -29,9 +29,7 @@ namespace nCine
 		/// Removes an object from the index and then destroys it
 		virtual ~Object() = 0;
 
-		/// Move constructor
 		Object(Object&& other) noexcept;
-		/// Move assignment operator
 		Object& operator=(Object&& other) noexcept;
 
 		/// Returns the object identification number
@@ -58,10 +56,8 @@ namespace nCine
 	private:
 		static std::uint32_t _lastId;
 
-		/// Object identification in the indexer
 		std::uint32_t _id;
 
-		 /// Deleted assignment operator
 		Object& operator=(const Object&) = delete;
 	};
 
