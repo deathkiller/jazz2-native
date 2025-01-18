@@ -8,10 +8,7 @@
 namespace Jazz2::Actors::Environment
 {
 	SwingingVine::SwingingVine()
-		:
-		_angle(0.0f),
-		_phase(0.0f),
-		_justTurned(false)
+		: _angle(0.0f), _phase(0.0f), _justTurned(false)
 	{
 	}
 
@@ -38,7 +35,7 @@ namespace Jazz2::Actors::Environment
 			_currentAnimation->Base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
 		}
 
-		for (int i = 0; i < ChunkCount; i++) {
+		for (std::int32_t i = 0; i < ChunkCount; i++) {
 			_chunks[i] = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 			_chunks[i]->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 			_chunks[i]->material().setBlendingEnabled(true);
@@ -59,7 +56,7 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
-		for (int i = 0; i < ChunkCount; i++) {
+		for (std::int32_t i = 0; i < ChunkCount; i++) {
 			_angle = sinf(_phase - i * (0.64f / ChunkCount)) * 1.2f + fPiOver2;
 
 			float distance = ChunkSize * powf(i, 0.95f);
@@ -113,7 +110,7 @@ namespace Jazz2::Actors::Environment
 			auto& resBase = _currentAnimation->Base;
 			Vector2i texSize = resBase->TextureDiffuse->size();
 
-			for (int i = 0; i < ChunkCount; i++) {
+			for (std::int32_t i = 0; i < ChunkCount; i++) {
 				auto command = _chunks[i].get();
 
 				float chunkTexSize = ChunkSize / texSize.Y;
@@ -147,5 +144,10 @@ namespace Jazz2::Actors::Environment
 		}
 
 		return false;
+	}
+
+	void SwingingVine::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/SwingingVine"_s);
 	}
 }

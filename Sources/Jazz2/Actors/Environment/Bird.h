@@ -20,6 +20,7 @@ namespace Jazz2::Actors::Environment
 
 		static void Preload(const ActorActivationDetails& details);
 
+		/** @brief Leaves the owner */
 		void FlyAway();
 
 	protected:
@@ -28,7 +29,7 @@ namespace Jazz2::Actors::Environment
 		void OnAnimationFinished() override;
 
 	private:
-		uint8_t _type;
+		std::uint8_t _type;
 		Player* _owner;
 		float _fireCooldown;
 		float _attackTime;

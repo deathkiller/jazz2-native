@@ -9,10 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Caterpillar::Caterpillar()
-		:
-		_state(StateIdle),
-		_smokesLeft(0),
-		_attackTime(0.0f)
+		: _state(StateIdle), _smokesLeft(0), _attackTime(0.0f)
 	{
 	}
 
@@ -100,7 +97,7 @@ namespace Jazz2::Actors::Enemies
 		return false;
 	}
 
-	void Caterpillar::Disoriented(int count)
+	void Caterpillar::Disoriented(std::int32_t count)
 	{
 		_attackTime = 0.0f;
 		_smokesLeft = 0;
@@ -120,7 +117,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 		_canHurtPlayer = false;
 
 		_health = INT32_MAX;

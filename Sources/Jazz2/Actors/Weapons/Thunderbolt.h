@@ -11,6 +11,7 @@ namespace Jazz2::Actors::Weapons
 	public:
 		Thunderbolt();
 
+		/** @brief Called when the shot is fired */
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
@@ -32,7 +33,7 @@ namespace Jazz2::Actors::Weapons
 		bool _hit;
 		float _lightProgress;
 		Vector2f _farPoint;
-		uint16_t _initialLayer;
+		std::uint16_t _initialLayer;
 		bool _firedUp;
 	};
 }

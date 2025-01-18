@@ -4,9 +4,13 @@
 namespace Jazz2::Actors::Environment
 {
 	SteamNote::SteamNote()
-		:
-		_cooldown(0.0f)
+		: _cooldown(0.0f)
 	{
+	}
+
+	void SteamNote::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/SteamNote"_s);
 	}
 
 	Task<bool> SteamNote::OnActivatedAsync(const ActorActivationDetails& details)
@@ -26,7 +30,7 @@ namespace Jazz2::Actors::Environment
 		// It's incorrectly positioned one tile up in "share2.j2l", so move it to correct position
 		OnUpdateHitbox();
 		bool moved = false;
-		int i = 10;
+		std::int32_t i = 10;
 		while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
 			moved = true;
 		}

@@ -104,72 +104,116 @@ namespace Jazz2::Actors
 			return _playerType;
 		}
 
+		/** @brief Returns current special move */
 		SpecialMoveType GetSpecialMove() const {
 			return _currentSpecialMove;
 		}
 
+		/** @brief Return weapon ammo */
 		ArrayView<const std::uint16_t> GetWeaponAmmo() const {
 			return _weaponAmmo;
 		}
 
+		/** @brief Returns weapon upgrades */
 		ArrayView<const std::uint8_t> GetWeaponUpgrades() const {
 			return _weaponUpgrades;
 		}
 
+		/** @brief Returns `true` if sugar rush is active */
 		bool HasSugarRush() const {
 			return (_sugarRushLeft > 0.0f);
 		}
 
+		/** @brief Returns `true` if the player can jump */
 		bool CanJump() const;
+		/** @brief Returns `true` if the player can bread solid objects */
 		bool CanBreakSolidObjects() const;
+		/** @brief Returns `true` if the player can move vertically, i.e. not affected by gravity */
 		bool CanMoveVertically() const;
 
+		/** @brief Called when the level is about to change */
 		virtual bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
+		/** @brief Called at the beginning of the next level to reveive carry over information */
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
+		/** @brief Returns current carry over information */
 		PlayerCarryOver PrepareLevelCarryOver();
+		/** @brief Initializes player state from a stream */
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version);
+		/** @brief Serializes player state to a stream */
 		void SerializeResumableToStream(Stream& dest);
 
+		/** @brief Respawns the player */
 		void Respawn(Vector2f pos);
+		/** @brief Warps to a given position */
 		virtual void WarpToPosition(Vector2f pos, WarpFlags flags);
+		/** @brief Warps to the last checkpoint */
 		void WarpToCheckpoint();
+		/** @brief Returns current modifier */
 		Modifier GetModifier() const;
+		/** @brief Sets current modifier */
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
+		/** @brief Takes damage */
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
+		/** @brief Sets invulnerability */
 		void SetInvulnerability(float time, InvulnerableType type);
 
+		/** @brief Adds score */
 		void AddScore(std::uint32_t amount);
+		/** @brief Adds health */
 		bool AddHealth(std::int32_t amount);
+		/** @brief Adds lives */
 		bool AddLives(std::int32_t count);
+		/** @brief Adds coins */
 		void AddCoins(std::int32_t count);
+		/** @brief Adds coins without notification (internal use only) */
 		void AddCoinsInternal(std::int32_t count);
+		/** @brief Adds gems */
 		void AddGems(std::uint8_t gemType, std::int32_t count);
+		/** @brief Consumes food */
 		void ConsumeFood(bool isDrinkable);
+		/** @brief Activates sugar rush */
 		void ActivateSugarRush(float duration);
+		/** @brief Adds weapon ammo */
 		virtual bool AddAmmo(WeaponType weaponType, std::int16_t count);
+		/** @brief Adds weapon upgrade */
 		virtual void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade);
+		/** @brief Adds fast fire */
 		bool AddFastFire(std::int32_t count);
+		/** @brief Morphs to a given player type */
 		bool MorphTo(PlayerType type);
+		/** @brief Reverts morpth to the original player type */
 		void MorphRevert();
+		/** @brief Sets dizzy time left */
 		bool SetDizzyTime(float time);
 
+		/** @brief Returns active shield */
 		ShieldType GetActiveShield() const {
 			return _activeShield;
 		}
 
+		/** @brief Sets active shield */
 		bool SetShield(ShieldType shieldType, float time);
+		/** @brief Increases active shield time */
 		bool IncreaseShieldTime(float time);
+		/** @brief Spawns bird companion */
 		bool SpawnBird(uint8_t type, Vector2f pos);
+		/** @brief Disables controls for specified time */
 		bool DisableControllable(float timeout);
+		/** @brief Sets checkpoint */
 		void SetCheckpoint(Vector2f pos, float ambientLight);
 
+		/** @brief Returns carrying object */
 		ActorBase* GetCarryingObject() const {
 			return _carryingObject;
 		}
+		/** @brief Cancels carrying object */
 		void CancelCarryingObject(ActorBase* expectedActor = nullptr);
+		/** @brief Updates carrying object */
 		void UpdateCarryingObject(ActorBase* actor, SuspendType suspendType = SuspendType::None);
 
+		/** @brief Switches current weapon to a given index */
 		void SwitchToWeaponByIndex(std::uint32_t weaponIndex);
+		/** @brief Returns weapon fire point and angle */
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 
 	protected:
@@ -299,16 +343,24 @@ namespace Jazz2::Actors
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
 
+		/** @brief Called when a spring is hit */
 		virtual void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
+		/** @brief Called when water should splash */
 		virtual void OnWaterSplash(Vector2f pos, bool inwards);
 
 		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f);
+		/** @brief Starts a player animation transition */
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, Function<void()>&& callback = {});
+		/** @brief Returns `true` if the player should freefall */
 		bool CanFreefall();
+		/** @brief Ends active damaging move */
 		void EndDamagingMove();
 
+		/** @brief Fires currently equipped weapon */
 		virtual bool FireCurrentWeapon(WeaponType weaponType);
+		/** @brief Emits weapon flare after firing */
 		virtual void EmitWeaponFlare();
+		/** @brief Sets current weapon */
 		virtual void SetCurrentWeapon(WeaponType weaponType);
 
 	private:

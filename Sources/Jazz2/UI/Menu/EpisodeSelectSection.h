@@ -12,6 +12,7 @@ namespace Jazz2::UI::Menu
 		IsCompleted = 0x04,
 		CanContinue = 0x08,
 		CheatsUsed = 0x10,
+		LevelsInUnknownDirectory = 0x20
 	};
 
 	DEATH_ENUM_FLAGS(EpisodeDataFlags);

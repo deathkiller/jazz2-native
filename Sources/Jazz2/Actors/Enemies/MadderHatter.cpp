@@ -122,7 +122,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen, false);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 
 		SetFacingLeft(details.Params[0] != 0);
 		_speed.X = (IsFacingLeft() ? -6.0f : 6.0f);

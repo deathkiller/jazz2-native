@@ -10,10 +10,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	Robot::Robot()
-		:
-		_state(StateWaiting),
-		_stateTime(0.0f),
-		_shots(0)
+		: _state(StateWaiting), _stateTime(0.0f), _shots(0)
 	{
 	}
 
@@ -137,7 +134,7 @@ namespace Jazz2::Actors::Bosses
 		return EnemyBase::OnPerish(collider);
 	}
 
-	void Robot::FollowNearestPlayer(int newState, float time)
+	void Robot::FollowNearestPlayer(std::int32_t newState, float time)
 	{
 		bool found = false;
 		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
@@ -213,7 +210,7 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::CanBeFrozen, false);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 
 		_health = INT32_MAX;
 		_speed.X = (IsFacingLeft() ? -8.0f : 8.0f);
@@ -241,7 +238,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Robot::SpikeBall::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
 
 		return EnemyBase::OnPerish(collider);
 	}

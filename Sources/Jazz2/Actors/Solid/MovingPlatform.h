@@ -35,10 +35,13 @@ namespace Jazz2::Actors::Solid
 			SpikeBall = 7,
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ChainPiece {
 			Vector2f Pos;
 			std::unique_ptr<RenderCommand> Command;
 		};
+#endif
 
 		PlatformType _type;
 		float _speed;

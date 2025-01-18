@@ -23,12 +23,14 @@ namespace Jazz2::Actors::Bosses
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr int StateTransition = -1;
-		static constexpr int StateWaiting = 0;
-		static constexpr int StateWalking1 = 1;
-		static constexpr int StateWalking2 = 2;
-		static constexpr int StateAttacking = 3;
+		static constexpr std::int32_t StateTransition = -1;
+		static constexpr std::int32_t StateWaiting = 0;
+		static constexpr std::int32_t StateWalking1 = 1;
+		static constexpr std::int32_t StateWalking2 = 2;
+		static constexpr std::int32_t StateAttacking = 3;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class Mace : public EnemyBase
 		{
 			DEATH_RUNTIME_OBJECT(EnemyBase);
@@ -55,14 +57,15 @@ namespace Jazz2::Actors::Bosses
 
 			void FollowNearestPlayer();
 		};
+#endif
 
-		int _state;
+		std::int32_t _state;
 		float _stateTime;
-		uint8_t _endText;
+		std::uint8_t _endText;
 		Vector2f _originPos;
 		std::shared_ptr<Mace> _mace;
 		float _maceTime;
 
-		void FollowNearestPlayer(int newState, float time);
+		void FollowNearestPlayer(std::int32_t newState, float time);
 	};
 }

@@ -31,13 +31,13 @@ namespace Jazz2::Actors::Solid
 		void OnUpdate(float timeMult) override;
 
 	private:
-		static constexpr int BouncesMax = 3;
+		static constexpr std::int32_t BouncesMax = 3;
 
 		FallDirection _fall;
 		float _angleVel;
 		float _angleVelLast;
 		float _fallTime;
-		int _bouncesLeft = BouncesMax;
+		std::int32_t _bouncesLeft = BouncesMax;
 
 		void Fall(FallDirection dir);
 		bool IsPositionBlocked();

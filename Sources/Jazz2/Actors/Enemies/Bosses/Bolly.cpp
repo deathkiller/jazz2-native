@@ -12,13 +12,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	Bolly::Bolly()
-		:
-		_state(StateWaiting),
-		_stateTime(0.0f),
-		_endText(0),
-		_noiseCooldown(0.0f),
-		_rocketsLeft(0),
-		_chainPhase(0.0f)
+		: _state(StateWaiting), _stateTime(0.0f), _endText(0), _noiseCooldown(0.0f), _rocketsLeft(0), _chainPhase(0.0f)
 	{
 	}
 
@@ -30,7 +24,7 @@ namespace Jazz2::Actors::Bosses
 		/*if (_turret != nullptr) {
 			_turret->SetState(ActorState::IsDestroyed, true);
 		}*/
-		for (int32_t i = 0; i < static_cast<int32_t>(arraySize(_chain)); i++) {
+		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_chain)); i++) {
 			if (_chain[i] != nullptr) {
 				_chain[i]->SetState(ActorState::IsDestroyed, true);
 			}
@@ -166,7 +160,7 @@ namespace Jazz2::Actors::Bosses
 		}*/
 
 		float distance = 30.0f;
-		for (int i = 0; i < static_cast<int>(arraySize(_chain)); i++) {
+		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_chain)); i++) {
 			if (_chain[i] != nullptr) {
 				float angle = sinf(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
 
@@ -192,7 +186,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::Large);
 
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
@@ -227,7 +221,7 @@ namespace Jazz2::Actors::Bosses
 		_turret->MoveInstantly(Vector2f(_pos.X + (IsFacingLeft() ? 10.0f : -10.0f) + _speed.X * timeMult, _pos.Y + 10.0f + _speed.Y * timeMult), MoveType::Absolute | MoveType::Force);
 	}*/
 
-	void Bolly::FollowNearestPlayer(int newState, float time)
+	void Bolly::FollowNearestPlayer(std::int32_t newState, float time)
 	{
 		bool found = false;
 		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
@@ -299,20 +293,20 @@ namespace Jazz2::Actors::Bosses
 			case 1: // Bottom
 				SetState(ActorState::IsSolidObject, true);
 				SetState(ActorState::CollideWithOtherActors, false);
-				CanCollideWithAmmo = true;
+				CanCollideWithShots = true;
 				Size = 0.0f;
 				break;
 			case 2: // Turret
 				SetState(ActorState::CollideWithOtherActors, false);
-				CanCollideWithAmmo = false;
+				CanCollideWithShots = false;
 				Size = 0.0f;
 				break;
 			case 3: // Chain 1
-				CanCollideWithAmmo = false;
+				CanCollideWithShots = false;
 				Size = 14.0f;
 				break;
 			case 4: // Chain 2
-				CanCollideWithAmmo = false;
+				CanCollideWithShots = false;
 				Size = 7.0f;
 				break;
 		}
@@ -328,7 +322,7 @@ namespace Jazz2::Actors::Bosses
 	{
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 
 		_timeLeft = 300.0f;
 		_health = INT32_MAX;
@@ -380,7 +374,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::Rocket::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::RF);
 
 		return EnemyBase::OnPerish(collider);
 	}

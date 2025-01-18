@@ -23,6 +23,8 @@ namespace Jazz2::Actors::Enemies
 	private:
 		static constexpr float DefaultSpeed = 1.5f;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class Banana : public EnemyBase
 		{
 			DEATH_RUNTIME_OBJECT(EnemyBase);
@@ -38,6 +40,7 @@ namespace Jazz2::Actors::Enemies
 		private:
 			std::shared_ptr<AudioBufferPlayer> _soundThrow;
 		};
+#endif
 
 		bool _isWalking;
 		bool _stuck;

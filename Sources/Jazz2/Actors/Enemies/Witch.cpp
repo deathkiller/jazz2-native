@@ -9,9 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Witch::Witch()
-		:
-		_attackTime(0.0f),
-		_playerHit(false)
+		: _attackTime(0.0f), _playerHit(false)
 	{
 	}
 
@@ -85,7 +83,7 @@ namespace Jazz2::Actors::Enemies
 					));
 					_levelHandler->AddActor(magicBullet);
 
-					Explosion::Create(_levelHandler, Vector3i((int)bulletPos.X, (int)bulletPos.Y, _renderer.layer() + 2), Explosion::Type::TinyDark);
+					Explosion::Create(_levelHandler, Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.layer() + 2), Explosion::Type::TinyDark);
 				});
 			} else if (length > 20.0f && length < 500.0f) {
 				direction.Normalize();

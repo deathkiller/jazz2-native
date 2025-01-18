@@ -23,13 +23,15 @@ namespace Jazz2::Actors::Bosses
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr int StateTransition = -1;
-		static constexpr int StateWaiting = 0;
-		static constexpr int StateOpen = 1;
-		static constexpr int StateClosed = 2;
+		static constexpr std::int32_t StateTransition = -1;
+		static constexpr std::int32_t StateWaiting = 0;
+		static constexpr std::int32_t StateOpen = 1;
+		static constexpr std::int32_t StateClosed = 2;
 
-		static constexpr int ShieldPartCount = 6;
+		static constexpr std::int32_t ShieldPartCount = 6;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class ShieldPart : public EnemyBase
 		{
 			friend class Uterus;
@@ -48,10 +50,11 @@ namespace Jazz2::Actors::Bosses
 			void OnUpdateHitbox() override;
 			bool OnPerish(ActorBase* collider) override;
 		};
+#endif
 
-		int _state;
+		std::int32_t _state;
 		float _stateTime;
-		uint8_t _endText;
+		std::uint8_t _endText;
 		std::shared_ptr<ShieldPart> _shields[ShieldPartCount];
 		Vector2f _originPos, _lastPos;
 		float _spawnCrabTime;

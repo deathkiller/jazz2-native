@@ -23,13 +23,15 @@ namespace Jazz2::Actors::Bosses
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr int StateTransition = -1;
-		static constexpr int StateWaiting = 0;
-		static constexpr int StateCopter = 1;
-		static constexpr int StateRunning1 = 2;
-		static constexpr int StateRunning2 = 3;
-		static constexpr int StatePreparingToRun = 4;
+		static constexpr std::int32_t StateTransition = -1;
+		static constexpr std::int32_t StateWaiting = 0;
+		static constexpr std::int32_t StateCopter = 1;
+		static constexpr std::int32_t StateRunning1 = 2;
+		static constexpr std::int32_t StateRunning2 = 3;
+		static constexpr std::int32_t StatePreparingToRun = 4;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class SpikeBall : public Enemies::EnemyBase
 		{
 		protected:
@@ -41,13 +43,14 @@ namespace Jazz2::Actors::Bosses
 			void OnHitWall(float timeMult) override;
 			void OnHitCeiling(float timeMult) override;
 		};
+#endif
 
-		int _state;
+		std::int32_t _state;
 		float _stateTime;
-		int _shots;
+		std::int32_t _shots;
 		Vector2f _originPos;
 
-		void FollowNearestPlayer(int newState, float time);
+		void FollowNearestPlayer(std::int32_t newState, float time);
 		void Shoot();
 		void Run();
 	};

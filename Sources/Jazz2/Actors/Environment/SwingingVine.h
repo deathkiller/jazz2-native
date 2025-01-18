@@ -14,10 +14,7 @@ namespace Jazz2::Actors::Environment
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Object/SwingingVine"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -26,7 +23,7 @@ namespace Jazz2::Actors::Environment
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 	private:
-		static constexpr int ChunkCount = 16;
+		static constexpr std::int32_t ChunkCount = 16;
 		static constexpr float ChunkSize = 136.0f / ChunkCount;
 
 		float _angle;

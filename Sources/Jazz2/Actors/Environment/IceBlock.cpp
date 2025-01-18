@@ -10,8 +10,7 @@
 namespace Jazz2::Actors::Environment
 {
 	IceBlock::IceBlock()
-		:
-		_timeLeft(200.0f)
+		: _timeLeft(200.0f)
 	{
 	}
 
@@ -52,22 +51,22 @@ namespace Jazz2::Actors::Environment
 			if (tileMap != nullptr) {
 				if (tileMap->IsTileEmpty(_originTile.X - 1, _originTile.Y)) {
 					for (int i = 0; i < 5; i++) {
-						Explosion::Create(_levelHandler, Vector3i((int)_pos.X - 24, (int)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
 				if (tileMap->IsTileEmpty(_originTile.X + 1, _originTile.Y)) {
 					for (int i = 0; i < 5; i++) {
-						Explosion::Create(_levelHandler, Vector3i((int)_pos.X + 24, (int)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X + 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
 				if (tileMap->IsTileEmpty(_originTile.X, _originTile.Y + 1)) {
 					for (int i = 0; i < 5; i++) {
-						Explosion::Create(_levelHandler, Vector3i((int)_pos.X - 16 + Random().Fast(0, 32), (int)_pos.Y + 24, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 16 + Random().Fast(0, 32), (int)_pos.Y + 24, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
 			}
 
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
 
 			_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 		}

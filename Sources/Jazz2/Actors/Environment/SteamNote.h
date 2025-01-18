@@ -11,10 +11,7 @@ namespace Jazz2::Actors::Environment
 	public:
 		SteamNote();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Object/SteamNote"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

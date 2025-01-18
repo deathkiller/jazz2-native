@@ -10,11 +10,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Rapier::Rapier()
-		:
-		_anglePhase(0.0f),
-		_attackTime(80.0f),
-		_attacking(false),
-		_noiseCooldown(Random().FastFloat(200.0f, 400.0f))
+		: _anglePhase(0.0f), _attackTime(80.0f), _attacking(false), _noiseCooldown(Random().FastFloat(200.0f, 400.0f))
 	{
 	}
 

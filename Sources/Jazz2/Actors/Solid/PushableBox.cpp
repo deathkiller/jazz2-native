@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> PushableBox::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		uint8_t theme = details.Params[0];
+		std::uint8_t theme = details.Params[0];
 
 		SetState(ActorState::CanBeFrozen, true);
 		Movable = true;

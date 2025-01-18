@@ -57,9 +57,9 @@ namespace Jazz2::Actors::Weapons
 
 	void ElectroShot::OnUpdate(float timeMult)
 	{
-		int n = (timeMult > 0.9f ? 2 : 1);
+		std::int32_t n = (timeMult > 0.9f ? 2 : 1);
 		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::Electro, _strength };
-		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
+		for (std::int32_t i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
 		}
 		if (params.TilesDestroyed > 0) {
@@ -113,9 +113,9 @@ namespace Jazz2::Actors::Weapons
 
 							debris.Time = 60.0f;
 
-							int curAnimFrame = ((_upgrades & 0x1) != 0 ? 2 : 0) + Random().Fast(0, 2);
-							int col = curAnimFrame % resBase->FrameConfiguration.X;
-							int row = curAnimFrame / resBase->FrameConfiguration.X;
+							std::int32_t curAnimFrame = ((_upgrades & 0x1) != 0 ? 2 : 0) + Random().Fast(0, 2);
+							std::int32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+							std::int32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
 							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
 							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
@@ -153,7 +153,7 @@ namespace Jazz2::Actors::Weapons
 	bool ElectroShot::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(other)) {
-			if (enemyBase->IsInvulnerable() || !enemyBase->CanCollideWithAmmo) {
+			if (enemyBase->IsInvulnerable() || !enemyBase->CanCollideWithShots) {
 				return false;
 			}
 		}

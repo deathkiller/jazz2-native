@@ -11,9 +11,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Monkey::Monkey()
-		:
-		_isWalking(false),
-		_stuck(false)
+		: _isWalking(false), _stuck(false)
 	{
 	}
 

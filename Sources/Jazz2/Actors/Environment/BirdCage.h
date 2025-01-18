@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Environment
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 
 	private:
-		uint8_t _type;
+		std::uint8_t _type;
 		bool _activated;
 
 		bool TryApplyToPlayer(Player* player);

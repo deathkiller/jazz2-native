@@ -22,9 +22,9 @@ namespace Jazz2::Actors::Environment
 
 		uint8_t _speed;
 		float _cooldown;
-		int _bubblesLeft;
+		std::int32_t _bubblesLeft;
 		float _delay;
 
-		void SpawnBubbles(int count);
+		void SpawnBubbles(std::int32_t count);
 	};
 }

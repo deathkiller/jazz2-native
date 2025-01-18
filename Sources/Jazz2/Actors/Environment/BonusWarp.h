@@ -12,15 +12,13 @@ namespace Jazz2::Actors::Environment
 	public:
 		BonusWarp();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Object/BonusWarp"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
+		/** @brief Activates the warp */
 		void Activate(Player* player);
 
-		uint16_t GetCost() const
-		{
+		/** @brief Returns cost of the warp in coins */
+		std::uint16_t GetCost() const {
 			return _cost;
 		}
 
@@ -29,7 +27,7 @@ namespace Jazz2::Actors::Environment
 		void OnUpdateHitbox() override;
 
 	private:
-		uint8_t _warpTarget, _cost;
+		std::uint8_t _warpTarget, _cost;
 		bool _setLaps;
 		bool _fast;
 	};

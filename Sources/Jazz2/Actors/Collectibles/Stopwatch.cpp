@@ -9,6 +9,11 @@ namespace Jazz2::Actors::Collectibles
 	{
 	}
 
+	void Stopwatch::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Collectible/Stopwatch"_s);
+	}
+
 	Task<bool> Stopwatch::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);

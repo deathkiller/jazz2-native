@@ -12,6 +12,7 @@ namespace Jazz2::Actors::Weapons
 		ShieldLightningShot();
 		~ShieldLightningShot();
 
+		/** @brief Called when the shot is fired */
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);
 
 		WeaponType GetWeaponType() override {
@@ -28,7 +29,7 @@ namespace Jazz2::Actors::Weapons
 
 	private:
 		Vector2f _gunspotPos;
-		int32_t _fired;
+		std::int32_t _fired;
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _noise;
 #endif

@@ -14,6 +14,11 @@ namespace Jazz2::Actors::Environment
 	{
 	}
 
+	void Spring::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/Spring"_s);
+	}
+
 	Vector2f Spring::Activate()
 	{
 		if (_state == State::Frozen || _cooldown > 0.0f || _frozenTimeLeft > 0.0f) {
@@ -115,7 +120,7 @@ namespace Jazz2::Actors::Environment
 			OnUpdateHitbox();
 
 			// Apply instant gravitation
-			int i = 10;
+			std::int32_t i = 10;
 			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
 				// Nothing to do...
 			}

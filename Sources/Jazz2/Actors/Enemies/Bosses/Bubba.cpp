@@ -282,7 +282,7 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 
 		_health = INT32_MAX;
 

@@ -116,7 +116,7 @@ namespace Jazz2::Actors::Weapons
 			return true;
 		});
 
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Large);
 
 		return ShotBase::OnPerish(collider);
 	}
@@ -143,7 +143,7 @@ namespace Jazz2::Actors::Weapons
 		// Max. distance is ~8 tiles
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 260.0f, [this, &targetPos, &targetDistance](ActorBase* actor) {
 			if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(actor)) {
-				if (!enemyBase->IsInvulnerable() && enemyBase->CanCollideWithAmmo) {
+				if (!enemyBase->IsInvulnerable() && enemyBase->CanCollideWithShots) {
 					Vector2f newPos = enemyBase->GetPos();
 					float distance = (_pos - newPos).Length();
 					if (distance < 260.0f && distance < targetDistance) {

@@ -12,10 +12,7 @@ namespace Jazz2::Actors::Environment
 	public:
 		EndOfLevel();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Object/SignEol"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

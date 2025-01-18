@@ -19,13 +19,16 @@ namespace Jazz2::Actors::Lighting
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct LightPart {
 			Vector2f Pos;
 			float Radius;
 			float Phase;
 		};
+#endif
 
-		static constexpr int LightPartCount = 16;
+		static constexpr std::int32_t LightPartCount = 16;
 
 		float _intensity;
 		float _brightness;

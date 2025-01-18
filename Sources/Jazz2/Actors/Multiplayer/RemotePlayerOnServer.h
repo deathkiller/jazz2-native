@@ -20,6 +20,7 @@ namespace Jazz2::Actors::Multiplayer
 		void SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct StateFrame {
 			std::int64_t Time;
 			Vector2f Pos;
@@ -30,6 +31,7 @@ namespace Jazz2::Actors::Multiplayer
 		StateFrame _stateBuffer[8];
 		std::int32_t _stateBufferPos;
 		Vector2f _displayPos;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnPerish(ActorBase* collider) override;

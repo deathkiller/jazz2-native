@@ -4,9 +4,13 @@
 namespace Jazz2::Actors::Collectibles
 {
 	CoinCollectible::CoinCollectible()
-		:
-		_coinValue(0)
+		: _coinValue(0)
 	{
+	}
+
+	void CoinCollectible::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Collectible/Coins"_s);
 	}
 
 	Task<bool> CoinCollectible::OnActivatedAsync(const ActorActivationDetails& details)

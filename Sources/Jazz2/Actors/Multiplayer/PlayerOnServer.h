@@ -16,11 +16,15 @@ namespace Jazz2::Actors::Multiplayer
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
+		/** @brief Returns team ID */
 		std::uint8_t GetTeamId() const;
+		/** @brief Sets team ID */
 		void SetTeamId(std::uint8_t value);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		std::uint8_t _teamId;
+#endif
 	};
 }
 

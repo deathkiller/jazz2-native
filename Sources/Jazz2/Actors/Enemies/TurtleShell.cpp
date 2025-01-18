@@ -165,7 +165,7 @@ namespace Jazz2::Actors::Enemies
 				return true;
 			}
 		} else if (auto* enemyBase = runtime_cast<EnemyBase*>(other)) {
-			if (enemyBase->CanCollideWithAmmo) {
+			if (enemyBase->CanCollideWithShots) {
 				float absSpeed = std::abs(_speed.X);
 				if (absSpeed > 2.0f) {
 					_speed.X = std::max(absSpeed, 2.0f) * (_speed.X < 0.0f ? 1.0f : -1.0f);

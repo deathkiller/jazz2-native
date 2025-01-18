@@ -21,6 +21,8 @@ namespace Jazz2::Actors::Enemies
 	private:
 		static constexpr float DefaultSpeed = 0.7f;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class Fire : public EnemyBase
 		{
 			DEATH_RUNTIME_OBJECT(EnemyBase);
@@ -33,6 +35,7 @@ namespace Jazz2::Actors::Enemies
 		private:
 			float _timeLeft;
 		};
+#endif
 
 		bool _attacking;
 		float _stateTime;

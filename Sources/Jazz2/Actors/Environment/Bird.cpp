@@ -9,16 +9,13 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Environment
 {
 	Bird::Bird()
-		:
-		_owner(nullptr),
-		_fireCooldown(60.0f),
-		_attackTime(0.0f)
+		: _owner(nullptr), _fireCooldown(60.0f), _attackTime(0.0f)
 	{
 	}
 
 	void Bird::Preload(const ActorActivationDetails& details)
 	{
-		uint8_t type = details.Params[0];
+		std::uint8_t type = details.Params[0];
 		switch (type) {
 			case 0: // Chuck (red)
 				PreloadMetadataAsync("Object/BirdChuck"_s);
@@ -35,7 +32,7 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		_type = details.Params[0];
-		uint8_t playerIndex = details.Params[1];
+		std::uint8_t playerIndex = details.Params[1];
 		auto players = _levelHandler->GetPlayers();
 		if (playerIndex < players.size()) {
 			_owner = players[playerIndex];

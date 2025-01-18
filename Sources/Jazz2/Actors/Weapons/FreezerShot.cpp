@@ -71,9 +71,9 @@ namespace Jazz2::Actors::Weapons
 
 	void FreezerShot::OnUpdate(float timeMult)
 	{
-		int n = (timeMult > 0.9f ? 2 : 1);
+		std::int32_t n = (timeMult > 0.9f ? 2 : 1);
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Freezer, _strength };
-		for (int i = 0; i < n; i++) {
+		for (std::int32_t i = 0; i < n; i++) {
 			TryMovement(timeMult / n, params);
 		}
 
@@ -153,7 +153,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool FreezerShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmokeWhite);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmokeWhite);
 
 		return ShotBase::OnPerish(collider);
 	}

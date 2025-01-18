@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Enemies
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		int _cycle;
+		std::int32_t _cycle;
 		float _cycleTimer;
 		bool _stuck;
 	};

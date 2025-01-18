@@ -11,10 +11,7 @@ namespace Jazz2::Actors::Collectibles
 	public:
 		Stopwatch();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Collectible/Stopwatch"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

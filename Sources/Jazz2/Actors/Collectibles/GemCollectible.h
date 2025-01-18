@@ -11,13 +11,12 @@ namespace Jazz2::Actors::Collectibles
 	public:
 		GemCollectible();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Collectible/Gems"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		std::uint8_t _gemType;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdateHitbox() override;

@@ -10,8 +10,8 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	using hash_t = uint32_t;
-	using hash64_t = uint64_t;
+	using hash_t = std::uint32_t;
+	using hash64_t = std::uint64_t;
 	const hash_t NullHash = static_cast<hash_t>(~0);
 
 	/// Hash function returning always the first hashmap bucket, for debug purposes

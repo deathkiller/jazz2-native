@@ -11,18 +11,12 @@ namespace Jazz2::Actors::Collectibles
 	public:
 		CarrotCollectible();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			bool maxCarrot = (details.Params[0] != 0);
-			if (maxCarrot) {
-				PreloadMetadataAsync("Collectible/CarrotFull"_s);
-			} else {
-				PreloadMetadataAsync("Collectible/Carrot"_s);
-			}
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		bool _maxCarrot;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnCollect(Player* player) override;

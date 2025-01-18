@@ -91,11 +91,11 @@ namespace Jazz2::Actors::Environment
 
 		PlaySfx("Break"_s);
 
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 12.0f), (int)(_pos.Y - 6.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 8.0f), (int)(_pos.Y + 28.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + 12.0f), (int)(_pos.Y + 10.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X - 12.0f), (std::int32_t)(_pos.Y - 6.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X - 8.0f), (std::int32_t)(_pos.Y + 28.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + 12.0f), (std::int32_t)(_pos.Y + 10.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
 
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)(_pos.Y + 12.0f), _renderer.layer() + 110), Explosion::Type::SmokePoof);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)(_pos.Y + 12.0f), _renderer.layer() + 110), Explosion::Type::SmokePoof);
 
 		// Deactivate event in map
 		auto eventMap = _levelHandler->EventMap();

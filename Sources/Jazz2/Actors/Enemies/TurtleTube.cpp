@@ -7,9 +7,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	TurtleTube::TurtleTube()
-		:
-		_onWater(false),
-		_phase(0.0f)
+		: _onWater(false), _phase(0.0f)
 	{
 	}
 

@@ -73,4 +73,9 @@ namespace Jazz2::Actors::Environment
 
 		return false;
 	}
+
+	void Moth::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/Moth"_s);
+	}
 }

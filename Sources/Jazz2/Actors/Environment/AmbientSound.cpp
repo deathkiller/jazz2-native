@@ -17,6 +17,11 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
+	void AmbientSound::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Common/AmbientSound"_s);
+	}
+
 	Task<bool> AmbientSound::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		// TODO: Implement Fade:1|Sine:1

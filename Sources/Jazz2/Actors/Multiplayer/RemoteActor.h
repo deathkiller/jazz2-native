@@ -18,6 +18,7 @@ namespace Jazz2::Actors::Multiplayer
 		void SyncWithServer(Vector2f pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft, bool animPaused, Actors::ActorRendererType rendererType);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		struct StateFrame {
 			std::int64_t Time;
 			Vector2f Pos;
@@ -28,6 +29,7 @@ namespace Jazz2::Actors::Multiplayer
 		StateFrame _stateBuffer[8];
 		std::int32_t _stateBufferPos;
 		AnimState _lastAnim;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;

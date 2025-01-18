@@ -274,12 +274,12 @@ namespace nCine
 
 	std::int32_t copyStringFirst(char* dest, std::int32_t destSize, const char* source, std::int32_t count = -1);
 
-	template <std::size_t size>
+	template<std::size_t size>
 	inline std::int32_t copyStringFirst(char(&dest)[size], const char* source, std::int32_t count = -1) {
 		return copyStringFirst(dest, size, source, count);
 	}
 
-	template <std::size_t size>
+	template<std::size_t size>
 	inline std::int32_t copyStringFirst(char(&dest)[size], Containers::StringView source) {
 		return copyStringFirst(dest, size, source.data(), (std::int32_t)source.size());
 	}

@@ -13,8 +13,10 @@ namespace Jazz2::Actors::Weapons
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
+		/** @brief Returns owner of the TNT */
 		Player* GetOwner();
 
+		/** @brief Called when the TNT is deployed */
 		void OnFire(const std::shared_ptr<ActorBase>& owner);
 
 	protected:
@@ -27,7 +29,7 @@ namespace Jazz2::Actors::Weapons
 		float _timeLeft;
 		float _lightIntensity;
 		bool _isExploded;
-		int _preexplosionTime;
+		std::int32_t _preexplosionTime;
 		std::shared_ptr<AudioBufferPlayer> _noise;
 	};
 }

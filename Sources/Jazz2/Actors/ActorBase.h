@@ -117,10 +117,15 @@ namespace Jazz2::Actors
 
 	/** @brief Description how to initialize an actor */
 	struct ActorActivationDetails {
+		/** @brief Current level handler */
 		ILevelHandler* LevelHandler;
+		/** @brief Position */
 		Vector3i Pos;
+		/** @brief Actor state */
 		ActorState State;
+		/** @brief Event type */
 		EventType Type;
+		/** @brief Event activation parameters */
 		const std::uint8_t* Params;
 
 		ActorActivationDetails(ILevelHandler* levelHandler, const Vector3i& pos, const std::uint8_t* params = nullptr)

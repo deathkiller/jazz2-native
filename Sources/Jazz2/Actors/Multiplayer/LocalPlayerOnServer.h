@@ -15,6 +15,7 @@ namespace Jazz2::Actors::Multiplayer
 		LocalPlayerOnServer();
 
 	protected:
+		/** @brief Emits weapon flare */
 		void EmitWeaponFlare() override;
 	};
 }

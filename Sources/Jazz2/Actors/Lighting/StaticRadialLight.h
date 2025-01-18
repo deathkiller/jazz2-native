@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Lighting
 	public:
 		StaticRadialLight();
 
-		static void Preload(const ActorActivationDetails& details) { }
+		static void Preload(const ActorActivationDetails& details) {}
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

@@ -115,7 +115,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool BlasterShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
 
 		return ShotBase::OnPerish(collider);
 	}
@@ -124,7 +124,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		auto events = _levelHandler->EventMap();
 		if (events != nullptr) {
-			uint8_t* eventParams;
+			std::uint8_t* eventParams;
 			switch (events->GetEventByPosition(_pos.X + _speed.X, _pos.Y + _speed.Y, &eventParams)) {
 				case EventType::ModifierRicochet:
 					TriggerRicochet(nullptr);

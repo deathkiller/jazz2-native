@@ -13,10 +13,7 @@ namespace Jazz2::Actors::Environment
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Object/Moth"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -24,6 +21,6 @@ namespace Jazz2::Actors::Environment
 
 	private:
 		float _timer;
-		int _direction;
+		std::int32_t _direction;
 	};
 }

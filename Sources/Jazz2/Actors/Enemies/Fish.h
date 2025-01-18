@@ -22,11 +22,11 @@ namespace Jazz2::Actors::Enemies
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr int StateIdle = 0;
-		static constexpr int StateAttacking = 1;
-		static constexpr int StateBraking = 2;
+		static constexpr std::int32_t StateIdle = 0;
+		static constexpr std::int32_t StateAttacking = 1;
+		static constexpr std::int32_t StateBraking = 2;
 
-		int _state;
+		std::int32_t _state;
 		float _idleTime;
 		float _attackCooldown;
 		Vector2f _direction;

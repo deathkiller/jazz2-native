@@ -9,10 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Dragonfly::Dragonfly()
-		:
-		_state(StateIdle),
-		_idleTime(0.0f),
-		_attackCooldown(60.0f)
+		: _state(StateIdle), _idleTime(0.0f), _attackCooldown(60.0f)
 	{
 	}
 

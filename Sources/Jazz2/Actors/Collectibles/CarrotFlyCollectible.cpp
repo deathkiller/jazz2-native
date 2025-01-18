@@ -7,6 +7,11 @@ namespace Jazz2::Actors::Collectibles
 	{
 	}
 
+	void CarrotFlyCollectible::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Collectible/CarrotFly"_s);
+	}
+
 	Task<bool> CarrotFlyCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);

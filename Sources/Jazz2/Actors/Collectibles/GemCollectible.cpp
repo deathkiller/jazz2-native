@@ -8,6 +8,11 @@ namespace Jazz2::Actors::Collectibles
 	{
 	}
 
+	void GemCollectible::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Collectible/Gems"_s);
+	}
+
 	Task<bool> GemCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);

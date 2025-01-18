@@ -7,10 +7,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Sucker::Sucker()
-		:
-		_cycle(0),
-		_cycleTimer(0.0f),
-		_stuck(false)
+		: _cycle(0), _cycleTimer(0.0f), _stuck(false)
 	{
 	}
 

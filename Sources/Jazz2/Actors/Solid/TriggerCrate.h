@@ -27,6 +27,6 @@ namespace Jazz2::Actors::Solid
 
 	private:
 		TriggerCrateState _newState;
-		uint8_t _triggerId;
+		std::uint8_t _triggerId;
 	};
 }

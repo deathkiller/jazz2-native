@@ -33,10 +33,13 @@ namespace Jazz2::Actors::Solid
 			Last = Lab
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct BridgePiece {
 			Vector2f Pos;
 			std::unique_ptr<RenderCommand> Command;
 		};
+#endif
 
 		static constexpr float BaseY = -6.0f;
 

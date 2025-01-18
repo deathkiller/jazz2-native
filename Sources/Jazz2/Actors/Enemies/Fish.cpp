@@ -9,10 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Fish::Fish()
-		:
-		_state(StateIdle),
-		_idleTime(0.0f),
-		_attackCooldown(60.0f)
+		: _state(StateIdle), _idleTime(0.0f), _attackCooldown(60.0f)
 	{
 	}
 
@@ -145,7 +142,7 @@ namespace Jazz2::Actors::Enemies
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
 
 		TryGenerateRandomDrop();
 

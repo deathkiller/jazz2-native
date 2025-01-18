@@ -4,9 +4,13 @@
 namespace Jazz2::Actors::Environment
 {
 	EndOfLevel::EndOfLevel()
-		:
-		_exitType(ExitType::None)
+		: _exitType(ExitType::None)
 	{
+	}
+
+	void EndOfLevel::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/SignEol"_s);
 	}
 
 	Task<bool> EndOfLevel::OnActivatedAsync(const ActorActivationDetails& details)
