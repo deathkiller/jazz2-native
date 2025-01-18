@@ -37,7 +37,7 @@ namespace nCine::Backends
 	char EglGfxDevice::monitorNames_[MaxMonitors][MaxMonitorNameLength];
 
 	EglGfxDevice::EglGfxDevice(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
-		: IGfxDevice(WindowMode(0, 0, true, false, false), glContextInfo, displayMode), state_(state)
+		: IGfxDevice(WindowMode(0, 0, 0, 0, true, false, false), glContextInfo, displayMode), state_(state)
 	{
 		updateMonitors();
 		initDevice();

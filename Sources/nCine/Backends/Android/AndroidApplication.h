@@ -11,7 +11,7 @@ namespace nCine
 	class AndroidApplication : public Application
 	{
 	public:
-		/// Entry point method to be called in the`android_main()` function
+		/// Entry point method to be called in the `android_main()` function
 		static void Run(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
 		/// Processes an Android application command
