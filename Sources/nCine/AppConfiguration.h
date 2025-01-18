@@ -13,7 +13,7 @@ namespace nCine
 	class AppConfiguration
 	{
 	public:
-		static constexpr std::int32_t WindowPositionIgnore = INT_MAX;
+		static constexpr std::int32_t WindowPositionIgnore = INT32_MAX;
 
 		AppConfiguration();
 
