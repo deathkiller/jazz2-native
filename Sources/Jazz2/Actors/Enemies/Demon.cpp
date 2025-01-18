@@ -8,11 +8,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Demon::Demon()
-		:
-		_attackTime(80.0f),
-		_attacking(false),
-		_stuck(false),
-		_turnCooldown(0.0f)
+		: _attackTime(80.0f), _attacking(false), _stuck(false), _turnCooldown(0.0f)
 	{
 	}
 

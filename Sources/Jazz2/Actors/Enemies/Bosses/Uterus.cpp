@@ -11,18 +11,13 @@
 namespace Jazz2::Actors::Bosses
 {
 	Uterus::Uterus()
-		:
-		_state(StateWaiting),
-		_stateTime(0.0f),
-		_endText(0),
-		_anglePhase(0.0f),
-		_hasShield(false)
+		: _state(StateWaiting), _stateTime(0.0f), _endText(0), _anglePhase(0.0f), _hasShield(false)
 	{
 	}
 
 	Uterus::~Uterus()
 	{
-		for (int i = 0; i < static_cast<int>(arraySize(_shields)); i++) {
+		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_shields)); i++) {
 			if (_shields[i] != nullptr) {
 				_shields[i]->SetState(ActorState::IsDestroyed, true);
 			}
@@ -68,9 +63,9 @@ namespace Jazz2::Actors::Bosses
 
 		_hasShield = true;
 
-		for (int i = 0; i < static_cast<int>(arraySize(_shields)); i++) {
+		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_shields)); i++) {
 			_shields[i] = std::make_shared<ShieldPart>();
-			_shields[i]->Phase = (fTwoPi * i / static_cast<int>(arraySize(_shields)));
+			_shields[i]->Phase = (fTwoPi * i / static_cast<std::int32_t>(arraySize(_shields)));
 			_shields[i]->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2)
@@ -148,8 +143,8 @@ namespace Jazz2::Actors::Bosses
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 
 			if (_hasShield) {
-				int shieldCount = 0;
-				for (int i = 0; i < static_cast<int>(arraySize(_shields)); i++) {
+				std::int32_t shieldCount = 0;
+				for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_shields)); i++) {
 					if (_shields[i] != nullptr) {
 						if (_shields[i]->GetHealth() > 0) {
 							if (_shields[i]->FallTime <= 0.0f) {
@@ -180,8 +175,8 @@ namespace Jazz2::Actors::Bosses
 
 	bool Uterus::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokePoof);
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokePoof);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::RF);
 
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
@@ -226,7 +221,7 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> Uterus::ShieldPart::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, false);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 
 		_elasticity = 0.3f;
 
@@ -278,7 +273,7 @@ namespace Jazz2::Actors::Bosses
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::Tiny);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::Tiny);
 
 		return EnemyBase::OnPerish(collider);
 	}

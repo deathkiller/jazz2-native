@@ -10,10 +10,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	Bilsy::Bilsy()
-		:
-		_state(StateTransition),
-		_stateTime(0.0f),
-		_endText(0)
+		: _state(StateTransition), _stateTime(0.0f), _endText(0)
 	{
 	}
 
@@ -160,7 +157,7 @@ namespace Jazz2::Actors::Bosses
 
 	void Bilsy::Teleport()
 	{
-		for (int i = 0; i < 20; i++) {
+		for (std::int32_t i = 0; i < 20; i++) {
 			Vector2f pos = Vector2f(_originPos.X + Random().NextFloat(-320.0f, 320.0f), _originPos.Y + Random().NextFloat(-240.0f, 240.0f));
 			if (MoveInstantly(pos, MoveType::Absolute)) {
 				break;
@@ -169,7 +166,7 @@ namespace Jazz2::Actors::Bosses
 
 		OnUpdateHitbox();
 
-		int j = 60;
+		std::int32_t j = 60;
 		while (j-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
 			// Nothing to do...
 		}
@@ -218,7 +215,7 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 
 		_health = INT32_MAX;
 		_speed.X = (IsFacingLeft() ? -4.0f : 4.0f);
@@ -282,7 +279,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bilsy::Fireball::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
 
 		return EnemyBase::OnPerish(collider);
 	}

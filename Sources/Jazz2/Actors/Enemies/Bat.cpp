@@ -9,9 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Bat::Bat()
-		:
-		_attacking(false),
-		_noiseCooldown(0.0f)
+		: _attacking(false), _noiseCooldown(0.0f)
 	{
 	}
 

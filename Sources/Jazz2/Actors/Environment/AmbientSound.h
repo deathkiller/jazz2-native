@@ -12,17 +12,14 @@ namespace Jazz2::Actors::Environment
 		AmbientSound();
 		~AmbientSound();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Common/AmbientSound"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 
 	private:
 		std::shared_ptr<AudioBufferPlayer> _sound;
-		uint8_t _sfx;
+		std::uint8_t _sfx;
 		float _gain;
 	};
 }

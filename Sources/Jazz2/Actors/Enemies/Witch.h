@@ -23,6 +23,8 @@ namespace Jazz2::Actors::Enemies
 	private:
 		static constexpr float DefaultSpeed = -4.0f;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class MagicBullet : public ActorBase
 		{
 			DEATH_RUNTIME_OBJECT(ActorBase);
@@ -44,6 +46,7 @@ namespace Jazz2::Actors::Enemies
 
 			void FollowNearestPlayer();
 		};
+#endif
 
 		float _attackTime;
 		bool _playerHit;

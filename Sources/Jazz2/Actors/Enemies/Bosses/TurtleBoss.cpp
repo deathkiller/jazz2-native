@@ -11,11 +11,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	TurtleBoss::TurtleBoss()
-		:
-		_state(StateWaiting),
-		_stateTime(0.0f),
-		_endText(0),
-		_maceTime(0.0f)
+		: _state(StateWaiting), _stateTime(0.0f), _endText(0), _maceTime(0.0f)
 	{
 	}
 
@@ -165,7 +161,7 @@ namespace Jazz2::Actors::Bosses
 		));
 		_levelHandler->AddActor(shell);
 
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::SmokeGray);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::SmokeGray);
 
 		CreateParticleDebris();
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
@@ -176,7 +172,7 @@ namespace Jazz2::Actors::Bosses
 		return BossBase::OnPerish(collider);
 	}
 
-	void TurtleBoss::FollowNearestPlayer(int newState, float time)
+	void TurtleBoss::FollowNearestPlayer(std::int32_t newState, float time)
 	{
 		bool found = false;
 		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
@@ -216,7 +212,7 @@ namespace Jazz2::Actors::Bosses
 	{
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
-		CanCollideWithAmmo = false;
+		CanCollideWithShots = false;
 
 		_health = INT32_MAX;
 

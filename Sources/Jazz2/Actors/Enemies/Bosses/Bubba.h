@@ -31,6 +31,8 @@ namespace Jazz2::Actors::Bosses
 			Dying = 4
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class Fireball : public EnemyBase
 		{
 		public:
@@ -46,6 +48,7 @@ namespace Jazz2::Actors::Bosses
 		private:
 			float _timeLeft;
 		};
+#endif
 
 		State _state;
 		float _stateTime;

@@ -8,8 +8,7 @@
 namespace Jazz2::Actors::Environment
 {
 	Bomb::Bomb()
-		:
-		_timeLeft(Random().NextFloat(40.0f, 90.0f))
+		: _timeLeft(Random().NextFloat(40.0f, 90.0f))
 	{
 	}
 
@@ -25,7 +24,7 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> Bomb::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		uint8_t theme = details.Params[0];
+		std::uint8_t theme = details.Params[0];
 		SetFacingLeft(details.Params[1] != 0);
 
 		_health = INT32_MAX;
@@ -74,7 +73,7 @@ namespace Jazz2::Actors::Environment
 		});
 
 		// Explosion.Large is the same as Explosion.Bomb
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()), Explosion::Type::Large);
 
 		_levelHandler->PlayCommonSfx("Bomb"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 

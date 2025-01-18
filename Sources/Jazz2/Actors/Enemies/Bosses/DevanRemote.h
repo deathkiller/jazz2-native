@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Bosses
 		void OnUpdate(float timeMult) override;
 
 	private:
-		uint8_t _introText, _endText;
+		std::uint8_t _introText, _endText;
 		std::shared_ptr<Robot> _robot;
 	};
 }

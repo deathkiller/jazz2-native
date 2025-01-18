@@ -9,6 +9,11 @@ namespace Jazz2::Actors::Collectibles
 	{
 	}
 
+	void CarrotInvincibleCollectible::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Collectible/CarrotInvincible"_s);
+	}
+
 	Task<bool> CarrotInvincibleCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);

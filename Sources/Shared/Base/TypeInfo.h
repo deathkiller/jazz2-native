@@ -264,7 +264,15 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 namespace Death {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` */
+	/**
+		@brief Casts a pointer to another type
+		
+		Safely converts pointers to classes up, down, and sideways along the inheritance
+		hierarchy of classes annotated by @ref DEATH_RUNTIME_OBJECT() in an optimized way.
+		Additionally, it can perform downcast at no performance cost. It also pulls the
+		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without taking
+		ownership.
+	*/
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
 		typedef typename std::remove_pointer<T>::type Derived;
@@ -302,7 +310,15 @@ namespace Death {
 namespace Death {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	/** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` */
+	/**
+		@brief Casts a pointer to another type
+		
+		Safely converts pointers to classes up, down, and sideways along the inheritance
+		hierarchy of classes annotated by @ref DEATH_RUNTIME_OBJECT() in an optimized way.
+		Additionally, it can perform downcast at no performance cost. It also pulls the
+		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without taking
+		ownership.
+	*/
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
 		return dynamic_cast<T>(u);

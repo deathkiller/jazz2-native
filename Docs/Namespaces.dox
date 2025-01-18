@@ -15,7 +15,8 @@ To get in touch with the developers and the community, you can use the official 
 
 For getting started guide, see @ref building. For game-specific API documentation, see @ref Jazz2 namespace.
 For common utility functions and generic containers, see @ref Death "the shared root namespace".
-For nCine game engine documentation, see @ref nCine namespace. The nCine game engine used in this game has
+In addition, @ref CommonBase.h contains common configuration-specific and platform-specific definitions.
+For **nCine** game engine documentation, see @ref nCine namespace. The **nCine** game engine used in this game has
 been extensively modified, so the original documentation no longer matches the current implementation.
 
 @section mainpage-platforms Supported platforms
@@ -29,7 +30,8 @@ been extensively modified, so the original documentation no longer matches the c
 - **Xbox** (Universal Windows Platform) using ANGLE/Mesa
 - **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
 
-Additionally, **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 is required to run the application.
+The code is mainly optimized to run on 64-bit **x86** and **ARM** processors including advanced instruction
+sets. Additionally, **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 is required to run the application.
 However, Google ANGLE or Mesa can be used to translate OpenGL calls to the native graphics API. See also
 @ref death-partialsupport "the list of partially supported features" that depend on specific platforms.
 	

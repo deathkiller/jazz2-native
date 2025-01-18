@@ -461,9 +461,15 @@ namespace Jazz2::UI::Menu
 			episode.Item.Flags = EpisodeDataFlags::None;
 
 			if (!resolver.LevelExists(episode.Item.Description.Name, episode.Item.Description.FirstLevel)) {
-				// Cannot find the first level of episode
-				episode.Item.Flags |= EpisodeDataFlags::IsMissing;
-			} else {
+				// Cannot find the first level of episode in dedicated directory, try to search also "unknown" directory
+				if (resolver.LevelExists("unknown"_s, episode.Item.Description.FirstLevel)) {
+					episode.Item.Flags |= EpisodeDataFlags::LevelsInUnknownDirectory;
+				} else {
+					episode.Item.Flags |= EpisodeDataFlags::IsMissing;
+				}
+			}
+			
+			if ((episode.Item.Flags & EpisodeDataFlags::IsMissing) != EpisodeDataFlags::IsMissing) {
 				if (!episode.Item.Description.PreviousEpisode.empty()) {
 					auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Item.Description.PreviousEpisode);
 					if (previousEpisodeEnd != nullptr && (previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {

@@ -61,9 +61,9 @@ namespace Jazz2::Actors::Weapons
 
 	void RFShot::OnUpdate(float timeMult)
 	{
-		int n = (timeMult > 0.9f ? 2 : 1);
+		std::int32_t n = (timeMult > 0.9f ? 2 : 1);
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::RF, _strength };
-		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
+		for (std::int32_t i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
 		}
 		if (params.TilesDestroyed > 0) {
@@ -81,7 +81,7 @@ namespace Jazz2::Actors::Weapons
 		if (_smokeTimer > 0.0f) {
 			_smokeTimer -= timeMult;
 		} else {
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::TinyBlue);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::TinyBlue);
 			_smokeTimer = 6.0f;
 		}
 
@@ -122,7 +122,7 @@ namespace Jazz2::Actors::Weapons
 			return true;
 		});
 
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2),
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2),
 			(_upgrades & 0x1) != 0 ? Explosion::Type::RFUpgraded : Explosion::Type::RF);
 
 		PlaySfx("Explode"_s, 0.6f);

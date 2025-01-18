@@ -125,11 +125,11 @@ namespace Jazz2::Actors::Weapons
 
 	void Thunderbolt::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		constexpr int LightCount = 4;
+		constexpr std::int32_t LightCount = 4;
 
 		if (_lightProgress < fPi) {
 			float lightIntensity = sinf(_lightProgress) * 0.2f;
-			for (int i = -1; i <= LightCount; i++) {
+			for (std::int32_t i = -1; i <= LightCount; i++) {
 				float dist = (float)i / LightCount;
 				auto& light = lights.emplace_back();
 				light.Pos = Vector2f(lerp(_pos.X, _farPoint.X, dist), lerp(_pos.Y, _farPoint.Y, dist));
@@ -151,7 +151,7 @@ namespace Jazz2::Actors::Weapons
 	bool Thunderbolt::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(other)) {
-			if (enemyBase->CanCollideWithAmmo) {
+			if (enemyBase->CanCollideWithShots) {
 				_hit = true;
 			}
 		}

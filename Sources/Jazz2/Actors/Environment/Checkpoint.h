@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Environment
 		void OnUpdateHitbox() override;
 
 	private:
-		uint8_t _theme;
+		std::uint8_t _theme;
 		bool _activated;
 	};
 }

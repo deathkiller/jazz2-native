@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Lighting
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		for (int i = 0; i < LightPartCount; i++) {
+		for (std::int32_t i = 0; i < LightPartCount; i++) {
 			float radius = Random().FastFloat(_radiusFar * 0.5f, _radiusFar * 0.8f);
 			float angle = Random().FastFloat(0.0f, fTwoPi);
 			float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);

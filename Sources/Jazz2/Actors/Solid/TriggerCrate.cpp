@@ -80,7 +80,7 @@ namespace Jazz2::Actors::Solid
 
 		CreateParticleDebris();
 
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeBrown);
 
 		return SolidObjectBase::OnPerish(collider);
 	}

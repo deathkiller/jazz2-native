@@ -6,12 +6,13 @@
 namespace Jazz2::Actors::Environment
 {
 	BonusWarp::BonusWarp()
-		:
-		_warpTarget(UINT8_MAX),
-		_cost(UINT8_MAX),
-		_setLaps(false),
-		_fast(false)
+		: _warpTarget(UINT8_MAX), _cost(UINT8_MAX), _setLaps(false), _fast(false)
 	{
+	}
+
+	void BonusWarp::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/BonusWarp"_s);
 	}
 
 	Task<bool> BonusWarp::OnActivatedAsync(const ActorActivationDetails& details)

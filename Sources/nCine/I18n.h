@@ -21,7 +21,9 @@ namespace nCine
 	class I18n
 	{
 	public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr char ContextSeparator = 0x04;
+#endif
 
 		I18n();
 		~I18n();

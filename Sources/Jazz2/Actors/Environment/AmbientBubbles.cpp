@@ -7,10 +7,7 @@
 namespace Jazz2::Actors::Environment
 {
 	AmbientBubbles::AmbientBubbles()
-		:
-		_cooldown(0.0f),
-		_bubblesLeft(0),
-		_delay(0.0f)
+		: _cooldown(0.0f), _bubblesLeft(0), _delay(0.0f)
 	{
 	}
 
@@ -48,7 +45,7 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
-	void AmbientBubbles::SpawnBubbles(int count)
+	void AmbientBubbles::SpawnBubbles(std::int32_t count)
 	{
 		if (count <= 0) {
 			return;

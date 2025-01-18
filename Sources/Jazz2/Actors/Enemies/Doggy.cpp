@@ -9,11 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Doggy::Doggy()
-		:
-		_attackSpeed(0.0f),
-		_attackTime(0.0f),
-		_noiseCooldown(120.0f),
-		_stuck(false)
+		: _attackSpeed(0.0f), _attackTime(0.0f), _noiseCooldown(120.0f), _stuck(false)
 	{
 	}
 

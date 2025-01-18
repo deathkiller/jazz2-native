@@ -7,8 +7,7 @@
 namespace Jazz2::Actors::Environment
 {
 	Eva::Eva()
-		:
-		_animationTime(0.0f)
+		: _animationTime(0.0f)
 	{
 	}
 
@@ -52,5 +51,10 @@ namespace Jazz2::Actors::Environment
 		}
 
 		return ActorBase::OnHandleCollision(other);
+	}
+
+	void Eva::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/Eva"_s);
 	}
 }

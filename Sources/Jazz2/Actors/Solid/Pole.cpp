@@ -10,18 +10,13 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Solid
 {
 	Pole::Pole()
-		:
-		_fall(FallDirection::None),
-		_angleVel(0.0f),
-		_angleVelLast(0.0f),
-		_fallTime(0.0f),
-		_bouncesLeft(BouncesMax)
+		: _fall(FallDirection::None), _angleVel(0.0f), _angleVelLast(0.0f), _fallTime(0.0f), _bouncesLeft(BouncesMax)
 	{
 	}
 
 	void Pole::Preload(const ActorActivationDetails& details)
 	{
-		uint8_t theme = details.Params[0];
+		std::uint8_t theme = details.Params[0];
 		switch (theme) {
 			default:
 			case 0: PreloadMetadataAsync("Pole/Carrotus"_s); break;
@@ -34,9 +29,9 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> Pole::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		uint8_t theme = details.Params[0];
-		int16_t x = *(int16_t*)&details.Params[1];
-		int16_t y = *(int16_t*)&details.Params[3];
+		std::uint8_t theme = details.Params[0];
+		std::int16_t x = *(std::int16_t*)&details.Params[1];
+		std::int16_t y = *(std::int16_t*)&details.Params[3];
 
 		_pos.X += x;
 		_pos.Y += y;

@@ -11,15 +11,16 @@ namespace Jazz2::Actors::Environment
 	public:
 		Spring();
 
-		bool KeepSpeedX, KeepSpeedY;
+		/** @brief Whether player horizontal speed should be kept */
+		bool KeepSpeedX;
+		/** @brief Whether player vertical speed should be kept */
+		bool KeepSpeedY;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Object/Spring"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
+		/** @brief Activates the spring */
 		Vector2f Activate();
 
 	protected:

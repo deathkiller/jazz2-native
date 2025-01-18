@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Weapons
 	bool ShotBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(other)) {
-			if (enemyBase->CanCollideWithAmmo) {
+			if (enemyBase->CanCollideWithShots) {
 				DecreaseHealth(INT32_MAX);
 			}
 		}

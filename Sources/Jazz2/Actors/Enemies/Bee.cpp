@@ -8,11 +8,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Bee::Bee()
-		:
-		_anglePhase(0.0f),
-		_attackTime(80.0f),
-		_attacking(false),
-		_returning(false)
+		: _anglePhase(0.0f), _attackTime(80.0f), _attacking(false), _returning(false)
 	{
 	}
 

@@ -7,8 +7,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Skeleton::Skeleton()
-		:
-		_stuck(false)
+		: _stuck(false)
 	{
 	}
 

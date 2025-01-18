@@ -9,11 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Crab::Crab()
-		:
-		_noiseCooldown(80.0f),
-		_stepCooldown(8.0f),
-		_canJumpPrev(false),
-		_stuck(false)
+		: _noiseCooldown(80.0f), _stepCooldown(8.0f), _canJumpPrev(false), _stuck(false)
 	{
 	}
 
@@ -97,7 +93,7 @@ namespace Jazz2::Actors::Enemies
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Large);
 
 		TryGenerateRandomDrop();
 

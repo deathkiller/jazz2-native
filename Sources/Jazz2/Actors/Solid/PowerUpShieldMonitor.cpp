@@ -107,7 +107,8 @@ namespace Jazz2::Actors::Solid
 
 	void PowerUpShieldMonitor::DestroyAndApplyToPlayer(Player* player)
 	{
-		if (player->SetShield(_shieldType, 30.0f * FrameTimer::FramesPerSecond)) {			PlaySfx("Break"_s);
+		if (player->SetShield(_shieldType, 30.0f * FrameTimer::FramesPerSecond)) {
+			PlaySfx("Break"_s);
 			DecreaseHealth(INT32_MAX, player);
 		}
 	}

@@ -8,9 +8,7 @@
 namespace Jazz2::Actors::Environment
 {
 	AirboardGenerator::AirboardGenerator()
-		:
-		_timeLeft(0.0f),
-		_active(false)
+		: _timeLeft(0.0f), _active(false)
 	{
 	}
 
@@ -47,11 +45,16 @@ namespace Jazz2::Actors::Environment
 
 				_timeLeft = _delay * FrameTimer::FramesPerSecond;
 
-				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::Generator);
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Generator);
 			}
 			return true;
 		}
 
 		return ActorBase::OnHandleCollision(other);
+	}
+
+	void AirboardGenerator::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/Airboard"_s);
 	}
 }

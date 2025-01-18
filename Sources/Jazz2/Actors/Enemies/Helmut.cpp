@@ -7,11 +7,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Helmut::Helmut()
-		:
-		_idling(false),
-		_stateTime(0.0f),
-		_stuck(false),
-		_turnCooldown(0.0f)
+		: _idling(false), _stateTime(0.0f), _stuck(false), _turnCooldown(0.0f)
 	{
 	}
 

@@ -17,9 +17,9 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> SpikeBall::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		uint8_t length = details.Params[2];
-		_speed = *(int8_t*)&details.Params[1] * 0.0072f;
-		uint8_t sync = details.Params[0];
+		std::uint8_t length = details.Params[2];
+		_speed = *(std::int8_t*)&details.Params[1] * 0.0072f;
+		std::uint8_t sync = details.Params[0];
 		_isSwing = details.Params[3] != 0;
 		_phase = sync * fPiOver2 - _speed * _levelHandler->ElapsedFrames();
 		_shade = details.Params[4] != 0;
@@ -33,7 +33,7 @@ namespace Jazz2::Actors::Solid
 		async_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s);
 		SetAnimation((AnimState)0);
 
-		for (int i = 0; i < length; i++) {
+		for (std::int32_t i = 0; i < length; i++) {
 			ChainPiece& piece = _pieces.emplace_back();
 			piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
@@ -64,16 +64,16 @@ namespace Jazz2::Actors::Solid
 		}
 
 		float scale = 1.0f;
-		MoveInstantly(GetPhasePosition((int)_pieces.size(), &scale), MoveType::Absolute | MoveType::Force);
+		MoveInstantly(GetPhasePosition((std::int32_t)_pieces.size(), &scale), MoveType::Absolute | MoveType::Force);
 
-		for (int i = 0; i < _pieces.size(); i++) {
+		for (std::int32_t i = 0; i < _pieces.size(); i++) {
 			_pieces[i].Pos = GetPhasePosition(i, &_pieces[i].Scale);
 		}
 
 		_canHurtPlayer = (std::abs(1.0f - scale) < 0.06f);
 
 		_renderer.setScale(scale);
-		_renderer.setLayer(_originLayer + (uint16_t)(scale * 20));
+		_renderer.setLayer(_originLayer + (std::uint16_t)(scale * 20));
 		if (_shade) {
 			_renderer.setColor(scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White);
 		}
@@ -96,13 +96,13 @@ namespace Jazz2::Actors::Solid
 			if (chainAnim != nullptr) {
 				Vector2i texSize = chainAnim->Base->TextureDiffuse->size();
 
-				for (int i = 0; i < _pieces.size(); i++) {
+				for (std::int32_t i = 0; i < _pieces.size(); i++) {
 					auto command = _pieces[i].Command.get();
 					float scale = _pieces[i].Scale;
 
-					int curAnimFrame = chainAnim->FrameOffset + (i % chainAnim->FrameCount);
-					int col = curAnimFrame % chainAnim->Base->FrameConfiguration.X;
-					int row = curAnimFrame / chainAnim->Base->FrameConfiguration.X;
+					std::int32_t curAnimFrame = chainAnim->FrameOffset + (i % chainAnim->FrameCount);
+					std::int32_t col = curAnimFrame % chainAnim->Base->FrameConfiguration.X;
+					std::int32_t row = curAnimFrame / chainAnim->Base->FrameConfiguration.X;
 					float texScaleX = (float(chainAnim->Base->FrameDimensions.X) / float(texSize.X));
 					float texBiasX = (float(chainAnim->Base->FrameDimensions.X * col) / float(texSize.X));
 					float texScaleY = (float(chainAnim->Base->FrameDimensions.Y) / float(texSize.Y));
@@ -130,7 +130,7 @@ namespace Jazz2::Actors::Solid
 		return EnemyBase::OnDraw(renderQueue);
 	}
 
-	Vector2f SpikeBall::GetPhasePosition(int distance, float* scale)
+	Vector2f SpikeBall::GetPhasePosition(std::int32_t distance, float* scale)
 	{
 		float effectivePhase = _phase;
 

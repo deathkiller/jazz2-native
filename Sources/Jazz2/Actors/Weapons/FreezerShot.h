@@ -10,12 +10,15 @@ namespace Jazz2::Actors::Weapons
 
 	public:
 		FreezerShot();
+
+		/** @brief Called when the shot is fired */
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);
 
 		WeaponType GetWeaponType() override {
 			return WeaponType::Freezer;
 		}
 
+		/** @brief Returns duration of freeze effect */
 		float FrozenDuration() const {
 			return ((_upgrades & 0x1) != 0 ? 280.0f : 180.0f);
 		}
@@ -31,7 +34,7 @@ namespace Jazz2::Actors::Weapons
 
 	private:
 		Vector2f _gunspotPos;
-		int32_t _fired;
+		std::int32_t _fired;
 		float _particlesTime;
 	};
 }

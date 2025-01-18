@@ -73,7 +73,7 @@ namespace Jazz2::Actors::Enemies
 
 		if (!runtime_cast<Solid::PushableBox*>(collider)) {
 			// Show explosion only if it was not killed by pushable box
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::Large);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Large);
 		}
 
 		TryGenerateRandomDrop();

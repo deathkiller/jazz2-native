@@ -5,9 +5,7 @@
 namespace Jazz2::Actors::Environment
 {
 	Copter::Copter()
-		:
-		_phase(0.0f),
-		_state(State::Free)
+		: _phase(0.0f), _state(State::Free)
 	{
 	}
 
@@ -70,6 +68,11 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 #endif
+	}
+
+	void Copter::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Enemy/LizardFloat"_s);
 	}
 
 	bool Copter::OnHandleCollision(std::shared_ptr<ActorBase> other)

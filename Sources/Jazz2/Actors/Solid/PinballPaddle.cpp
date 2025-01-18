@@ -5,8 +5,7 @@
 namespace Jazz2::Actors::Solid
 {
 	PinballPaddle::PinballPaddle()
-		:
-		_cooldown(0.0f)
+		: _cooldown(0.0f)
 	{
 	}
 

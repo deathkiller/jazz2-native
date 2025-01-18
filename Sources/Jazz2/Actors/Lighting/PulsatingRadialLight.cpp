@@ -14,11 +14,11 @@ namespace Jazz2::Actors::Lighting
 	{
 		_intensity = details.Params[0] / 255.0f;
 		_brightness = details.Params[1] / 255.0f;
-		_radiusNear1 = (float)*(uint16_t*)&details.Params[2];
-		_radiusNear2 = (float)*(uint16_t*)&details.Params[4];
-		_radiusFar = (float)*(uint16_t*)&details.Params[6];
+		_radiusNear1 = (float)*(std::uint16_t*)&details.Params[2];
+		_radiusNear2 = (float)*(std::uint16_t*)&details.Params[4];
+		_radiusFar = (float)*(std::uint16_t*)&details.Params[6];
 		_speed = details.Params[8] * 0.0072f;
-		uint8_t sync = details.Params[9];
+		std::uint8_t sync = details.Params[9];
 
 		_phase = sync * fPiOver2 + _speed * _levelHandler->ElapsedFrames();
 

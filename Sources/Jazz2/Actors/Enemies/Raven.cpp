@@ -9,10 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Raven::Raven()
-		:
-		_anglePhase(0.0f),
-		_attackTime(160.0f),
-		_attacking(false)
+		: _anglePhase(0.0f), _attackTime(160.0f), _attacking(false)
 	{
 	}
 

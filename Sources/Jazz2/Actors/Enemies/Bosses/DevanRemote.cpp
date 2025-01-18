@@ -10,9 +10,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	DevanRemote::DevanRemote()
-		:
-		_introText(0),
-		_endText(0)
+		: _introText(0), _endText(0)
 	{
 	}
 

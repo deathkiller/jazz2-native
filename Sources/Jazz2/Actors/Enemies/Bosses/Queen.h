@@ -22,14 +22,16 @@ namespace Jazz2::Actors::Bosses
 		void OnUpdate(float timeMult) override;
 
 	private:
-		static constexpr int StateTransition = -1;
-		static constexpr int StateWaiting = 0;
-		static constexpr int StateIdleToScream = 1;
-		static constexpr int StateIdleToStomp = 2;
-		static constexpr int StateIdleToBackstep = 3;
-		static constexpr int StateDead = 4;
-		static constexpr int StateScreaming = 5;
+		static constexpr std::int32_t StateTransition = -1;
+		static constexpr std::int32_t StateWaiting = 0;
+		static constexpr std::int32_t StateIdleToScream = 1;
+		static constexpr std::int32_t StateIdleToStomp = 2;
+		static constexpr std::int32_t StateIdleToBackstep = 3;
+		static constexpr std::int32_t StateDead = 4;
+		static constexpr std::int32_t StateScreaming = 5;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class Brick : public EnemyBase
 		{
 		protected:
@@ -49,11 +51,12 @@ namespace Jazz2::Actors::Bosses
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdate(float timeMult) override;
 		};
+#endif
 
-		int _state = StateWaiting;
+		std::int32_t _state = StateWaiting;
 		float _stateTime;
-		uint8_t _endText;
-		int _lastHealth;
+		std::uint8_t _endText;
+		std::int32_t _lastHealth;
 		bool _queuedBackstep;
 		float _stepSize;
 		Vector2f _originPos;

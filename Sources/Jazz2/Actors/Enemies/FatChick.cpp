@@ -9,9 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	FatChick::FatChick()
-		:
-		_isAttacking(false),
-		_stuck(false)
+		: _isAttacking(false), _stuck(false)
 	{
 	}
 

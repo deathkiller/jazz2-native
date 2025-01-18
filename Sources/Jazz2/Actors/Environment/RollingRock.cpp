@@ -15,6 +15,11 @@ namespace Jazz2::Actors::Environment
 	{
 	}
 
+	void RollingRock::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/RollingRock"_s);
+	}
+
 	Task<bool> RollingRock::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_renderer.setLayer(_renderer.layer() + 10);
@@ -188,7 +193,7 @@ namespace Jazz2::Actors::Environment
 		return EnemyBase::OnHandleCollision(other);
 	}
 
-	void RollingRock::OnTriggeredEvent(EventType eventType, uint8_t* eventParams)
+	void RollingRock::OnTriggeredEvent(EventType eventType, std::uint8_t* eventParams)
 	{
 		if (!_triggered && eventType == EventType::RollingRockTrigger && eventParams[0] == _id) {
 			_triggered = true;

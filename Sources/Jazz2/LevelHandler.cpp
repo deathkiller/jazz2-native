@@ -148,8 +148,10 @@ namespace Jazz2
 
 		_console = std::make_unique<UI::InGameConsole>(this);
 
+		// Try to search also "unknown" directory
 		LevelDescriptor descriptor;
-		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor)) {
+		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor) &&
+			(_episodeName == "unknown"_s || !resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ "unknown"_s, _levelFileName }), _difficulty, descriptor))) {
 			LOGE("Cannot load level \"%s/%s\"", _episodeName.data(), _levelFileName.data());
 			return false;
 		}

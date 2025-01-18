@@ -53,7 +53,9 @@ namespace Jazz2::Actors::Collectibles
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		bool _isDrinkable;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnCollect(Player* player) override;

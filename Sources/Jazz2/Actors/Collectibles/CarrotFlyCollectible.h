@@ -11,10 +11,7 @@ namespace Jazz2::Actors::Collectibles
 	public:
 		CarrotFlyCollectible();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Collectible/CarrotFly"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

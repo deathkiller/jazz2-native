@@ -22,12 +22,16 @@ namespace Jazz2::Actors::Weapons
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
-		inline int GetStrength() {
+		/** @brief Returns strength (damage) */
+		inline std::int32_t GetStrength() {
 			return _strength;
 		}
 
+		/** @brief Returns owner of the shot */
 		Player* GetOwner();
+		/** @brief Returns weapon type */
 		virtual WeaponType GetWeaponType();
+		/** @brief Triggers shot ricochet */
 		void TriggerRicochet(ActorBase* other);
 
 	protected:
@@ -35,13 +39,14 @@ namespace Jazz2::Actors::Weapons
 		// Hide these members from documentation before refactoring
 		std::shared_ptr<ActorBase> _owner;
 		float _timeLeft;
-		uint8_t _upgrades;
-		int _strength;
+		std::uint8_t _upgrades;
+		std::int32_t _strength;
 		ActorBase* _lastRicochet;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		/** @brief Called on shot ricochet */
 		virtual void OnRicochet();
 
 		void TryMovement(float timeMult, Tiles::TileCollisionParams& params);

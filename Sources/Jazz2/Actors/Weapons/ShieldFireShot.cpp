@@ -62,9 +62,9 @@ namespace Jazz2::Actors::Weapons
 
 	void ShieldFireShot::OnUpdate(float timeMult)
 	{
-		int n = (timeMult > 0.9f ? 2 : 1);
+		std::int32_t n = (timeMult > 0.9f ? 2 : 1);
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Blaster, _strength };
-		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
+		for (std::int32_t i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
 		}
 		if (params.TilesDestroyed > 0) {
@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool ShieldFireShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmokeGray);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmokeGray);
 
 		return ShotBase::OnPerish(collider);
 	}

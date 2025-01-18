@@ -11,13 +11,12 @@ namespace Jazz2::Actors::Collectibles
 	public:
 		CoinCollectible();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Collectible/Coins"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
-		int _coinValue;
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		std::int32_t _coinValue;
+#endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnCollect(Player* player) override;

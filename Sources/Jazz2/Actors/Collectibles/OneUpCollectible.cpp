@@ -7,6 +7,11 @@ namespace Jazz2::Actors::Collectibles
 	{
 	}
 
+	void OneUpCollectible::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Collectible/OneUp"_s);
+	}
+
 	Task<bool> OneUpCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);

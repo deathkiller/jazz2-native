@@ -12,13 +12,11 @@ namespace Jazz2::Actors::Environment
 		Copter();
 		~Copter();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Enemy/LizardFloat"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
+		/** @brief Unmounts from the assigned actor */
 		void Unmount(float timeLeft);
 
 	protected:

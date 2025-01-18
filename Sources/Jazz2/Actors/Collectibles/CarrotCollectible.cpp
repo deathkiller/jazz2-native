@@ -6,9 +6,18 @@
 namespace Jazz2::Actors::Collectibles
 {
 	CarrotCollectible::CarrotCollectible()
-		:
-		_maxCarrot(false)
+		: _maxCarrot(false)
 	{
+	}
+
+	void CarrotCollectible::Preload(const ActorActivationDetails& details)
+	{
+		bool maxCarrot = (details.Params[0] != 0);
+		if (maxCarrot) {
+			PreloadMetadataAsync("Collectible/CarrotFull"_s);
+		} else {
+			PreloadMetadataAsync("Collectible/Carrot"_s);
+		}
 	}
 
 	Task<bool> CarrotCollectible::OnActivatedAsync(const ActorActivationDetails& details)

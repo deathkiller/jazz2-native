@@ -21,17 +21,19 @@ namespace Jazz2::Actors::Bosses
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr int StateTransition = -1;
-		static constexpr int StateWaiting = 0;
-		static constexpr int StateFlying = 1;
-		static constexpr int StateNewDirection = 2;
-		static constexpr int StatePrepairingToAttack = 3;
-		static constexpr int StateAttacking = 4;
+		static constexpr std::int32_t StateTransition = -1;
+		static constexpr std::int32_t StateWaiting = 0;
+		static constexpr std::int32_t StateFlying = 1;
+		static constexpr std::int32_t StateNewDirection = 2;
+		static constexpr std::int32_t StatePrepairingToAttack = 3;
+		static constexpr std::int32_t StateAttacking = 4;
 
-		static constexpr int NormalChainLength = 5 * 3;
-		static constexpr int HardChainLength = 6 * 3;
-		static constexpr int MaxChainLength = HardChainLength;
+		static constexpr std::int32_t NormalChainLength = 5 * 3;
+		static constexpr std::int32_t HardChainLength = 6 * 3;
+		static constexpr std::int32_t MaxChainLength = HardChainLength;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class BollyPart : public EnemyBase
 		{
 			friend class Bolly;
@@ -64,8 +66,9 @@ namespace Jazz2::Actors::Bosses
 		private:
 			float _timeLeft;
 		};
+#endif
 
-		int _state;
+		std::int32_t _state;
 		float _stateTime;
 		uint8_t _endText;
 		std::shared_ptr<BollyPart> _bottom;
@@ -73,11 +76,11 @@ namespace Jazz2::Actors::Bosses
 		std::shared_ptr<BollyPart> _chain[MaxChainLength];
 		Vector2f _originPos;
 		float _noiseCooldown;
-		int _rocketsLeft;
+		std::int32_t _rocketsLeft;
 		float _chainPhase;
 
 		//void UpdateTurret(float timeMult);
-		void FollowNearestPlayer(int newState, float time);
+		void FollowNearestPlayer(std::int32_t newState, float time);
 		void FireRocket();
 	};
 }

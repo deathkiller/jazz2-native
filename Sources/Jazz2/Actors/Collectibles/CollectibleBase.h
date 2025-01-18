@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Collectibles
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	protected:
-		static constexpr int IlluminateLightCount = 20;
+		static constexpr std::int32_t IlluminateLightCount = 20;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
@@ -40,8 +40,10 @@ namespace Jazz2::Actors::Collectibles
 		void OnUpdate(float timeMult) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
+		/** @brief Called when the collectible is collected */
 		virtual void OnCollect(Player* player);
 
+		/** @brief Sets facing direction */
 		void SetFacingDirection(bool inverse = false);
 
 	private:

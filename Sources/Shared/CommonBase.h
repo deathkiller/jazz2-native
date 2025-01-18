@@ -622,7 +622,12 @@
 #define __DEATH_LINE_STRING_IMPLEMENTATION(...) __DEATH_HELPER_STR(__VA_ARGS__)
 #endif
 
-/** @brief Paste two tokens together */
+/**
+	@brief Paste two tokens together
+	
+	Concatenates preprocessor tokens to create a new one. However, two tokens
+	that don't together form a valid token cannot be pasted together.
+*/
 #define DEATH_PASTE(a, b) __DEATH_PASTE(a, b)
 
 /**

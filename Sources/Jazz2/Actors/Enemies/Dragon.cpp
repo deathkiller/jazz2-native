@@ -9,10 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Dragon::Dragon()
-		:
-		_attacking(false),
-		_stateTime(0.0f),
-		_attackTime(0.0f)
+		: _attacking(false), _stateTime(0.0f), _attackTime(0.0f)
 	{
 	}
 
@@ -131,7 +128,7 @@ namespace Jazz2::Actors::Enemies
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 		// Collide with player ammo if Reforged
-		CanCollideWithAmmo = _levelHandler->IsReforged();
+		CanCollideWithShots = _levelHandler->IsReforged();
 
 		SetFacingLeft(details.Params[0] != 0);
 

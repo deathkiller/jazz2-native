@@ -20,10 +20,12 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdate(float timeMult) override;
 
 	private:
-		static constexpr int StateIdle = 0;
-		static constexpr int StateAttacking = 1;
-		static constexpr int StateDisoriented = 2;
+		static constexpr std::int32_t StateIdle = 0;
+		static constexpr std::int32_t StateAttacking = 1;
+		static constexpr std::int32_t StateDisoriented = 2;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class Smoke : public EnemyBase
 		{
 			DEATH_RUNTIME_OBJECT(EnemyBase);
@@ -39,11 +41,12 @@ namespace Jazz2::Actors::Enemies
 			float _time;
 			Vector2f _baseSpeed;
 		};
+#endif
 
-		int _state;
-		int _smokesLeft;
+		std::int32_t _state;
+		std::int32_t _smokesLeft;
 		float _attackTime;
 
-		void Disoriented(int count);
+		void Disoriented(std::int32_t count);
 	};
 }

@@ -27,12 +27,14 @@ namespace Jazz2::UI
 #endif
 
 	public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr float DpadLeft = 0.02f;
 		static constexpr float DpadBottom = 0.1f;
 		static constexpr float DpadThreshold = 0.09f;
 		static constexpr float DpadSize = 0.37f;
 		static constexpr float ButtonSize = 0.172f;
 		static constexpr float SmallButtonSize = 0.098f;
+#endif
 
 		HUD(LevelHandler* levelHandler);
 		~HUD();

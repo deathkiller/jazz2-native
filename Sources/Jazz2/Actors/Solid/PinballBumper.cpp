@@ -5,10 +5,7 @@
 namespace Jazz2::Actors::Solid
 {
 	PinballBumper::PinballBumper()
-		:
-		_cooldown(0.0f),
-		_lightIntensity(0.0f),
-		_lightBrightness(0.0f)
+		: _cooldown(0.0f), _lightIntensity(0.0f), _lightBrightness(0.0f)
 	{
 	}
 
@@ -19,7 +16,7 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> PinballBumper::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		uint8_t theme = details.Params[0];
+		std::uint8_t theme = details.Params[0];
 
 		SetState(ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
 

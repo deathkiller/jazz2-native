@@ -13,17 +13,18 @@ namespace Jazz2::Actors::Enemies
 	public:
 		EnemyBase();
 
-		bool CanCollideWithAmmo;
+		/** @brief Whether the enemy should collide with player shots */
+		bool CanCollideWithShots;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
-		bool CanHurtPlayer() const
-		{
+		/** @brief Whether the enemy can hurt player */
+		bool CanHurtPlayer() const {
 			return (_canHurtPlayer && _frozenTimeLeft <= 0.0f);
 		}
 
-		bool IsFrozen() const
-		{
+		/** @brief Whether the enemy is currently frozen */
+		bool IsFrozen() const {
 			return (_frozenTimeLeft > 0.0f);
 		}
 
@@ -31,7 +32,7 @@ namespace Jazz2::Actors::Enemies
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
 		bool _canHurtPlayer;
-		uint32_t _scoreValue;
+		std::uint32_t _scoreValue;
 		Direction _lastHitDir;
 #endif
 
