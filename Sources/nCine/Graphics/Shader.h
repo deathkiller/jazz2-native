@@ -59,6 +59,9 @@ namespace nCine
 
 		~Shader() override;
 
+		Shader(const Shader&) = delete;
+		Shader& operator=(const Shader&) = delete;
+
 		bool loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
 		bool loadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
 		bool loadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
@@ -88,7 +91,7 @@ namespace nCine
 		/// Sets the VBO stride and pointer for the specified vertex attribute
 		bool setAttribute(const char* name, std::int32_t stride, void* pointer);
 
-		/// Returns true if the shader is linked and can therefore be used
+		/// Returns `true` if the shader is linked and can therefore be used
 		bool isLinked() const;
 
 		/// Returns the length of the information log including the null termination character
@@ -117,16 +120,11 @@ namespace nCine
 		}
 
 	private:
-		/// The OpenGL shader program
+		/// OpenGL shader program
 		std::unique_ptr<GLShaderProgram> glShaderProgram_;
 
 		bool loadDefaultShader(DefaultVertex vertex, int batchSize);
 		bool loadDefaultShader(DefaultFragment fragment);
-
-		/// Deleted copy constructor
-		Shader(const Shader&) = delete;
-		/// Deleted assignment operator
-		Shader& operator=(const Shader&) = delete;
 
 		friend class ShaderState;
 		friend class Material;

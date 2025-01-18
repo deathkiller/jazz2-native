@@ -21,7 +21,7 @@
 
 namespace nCine
 {
-	const int IInputManager::MaxNumJoysticks = 16;
+	const std::int32_t IInputManager::MaxNumJoysticks = 16;
 }
 
 namespace nCine::Backends

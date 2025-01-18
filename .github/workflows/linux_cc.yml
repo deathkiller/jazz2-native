@@ -30,8 +30,8 @@ jobs:
           CC: gcc
           CXX: g++
 
-    #runs-on: 'ubuntu-22.04'
-    runs-on: 'ubuntu-22.04-arm'
+    runs-on: 'ubuntu-22.04'
+    #runs-on: 'ubuntu-22.04-arm'
 
     steps:
     - name: 'Checkout Repository'
@@ -39,28 +39,28 @@ jobs:
       with:
         fetch-depth: 0
 
-    #- name: 'Configure Cross-Compile Support (ARM64)'
-    #  uses: cyberjunk/gha-ubuntu-cross@v4
-    #  with:
-    #    arch: arm64
+    - name: 'Configure Cross-Compile Support (ARM64)'
+      uses: cyberjunk/gha-ubuntu-cross@v4
+      with:
+        arch: arm64
 
     - name: 'Create Build Environment'
       run: |
         sudo apt install -y cmake curl
-        #sudo apt install -y libgl1-mesa-dev:arm64 libglfw3-dev:arm64 libsdl2-dev:arm64 libopenal-dev:arm64 libopenmpt-dev:arm64 zlib1g:arm64
-        sudo apt install -y libgl1-mesa-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g
+        sudo apt install -y libgl1-mesa-dev:arm64 libglfw3-dev:arm64 libsdl2-dev:arm64 libopenal-dev:arm64 libopenmpt-dev:arm64 zlib1g:arm64
+        #sudo apt install -y libgl1-mesa-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g
 
     - name: 'Configure CMake'
       run: |
-        #export CC=aarch64-linux-gnu-${{ matrix.CC }}
-        #export CXX=aarch64-linux-gnu-${{ matrix.CXX }}
-        export CC=${{ matrix.CC }}
-        export CXX=${{ matrix.CXX }}
+        export CC=aarch64-linux-gnu-${{ matrix.CC }}
+        export CXX=aarch64-linux-gnu-${{ matrix.CXX }}
+        #export CC=${{ matrix.CC }}
+        #export CXX=${{ matrix.CXX }}
         
         rm -f ./Content/Translations/*.po
         
-        #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
+        #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'
       run: |

@@ -23,9 +23,7 @@ namespace nCine
 		ParticleSystem(SceneNode* parent, unsigned int count, Texture* texture, Recti texRect);
 		~ParticleSystem() override;
 
-		/// Default move constructor
 		ParticleSystem(ParticleSystem&&);
-		/// Default move assignment operator
 		ParticleSystem& operator=(ParticleSystem&&);
 
 		/// Returns a copy of this object
@@ -96,22 +94,21 @@ namespace nCine
 		ParticleSystem(const ParticleSystem& other);
 
 	private:
-		/// The particle pool size
+		/// Particle pool size
 		unsigned int poolSize_;
-		/// The index of the next free particle in the pool
+		/// Index of the next free particle in the pool
 		int poolTop_;
-		/// The pool containing available particles (only dead ones)
+		/// Pool containing available particles (only dead ones)
 		SmallVector<Particle*, 0> particlePool_;
-		/// The array containing every particle (dead or alive)
+		/// Array containing every particle (dead or alive)
 		SmallVector<Particle*, 0> particleArray_;
 
-		/// The array of particle affectors
+		/// Array of particle affectors
 		SmallVector<ParticleAffector*, 0> affectors_;
 
-		/// A flag indicating whether the system should be simulated in local space
+		/// Flag indicating whether the system should be simulated in local space
 		bool inLocalSpace_;
 
-		/// Deleted assignment operator
 		ParticleSystem& operator=(const ParticleSystem&) = delete;
 	};
 

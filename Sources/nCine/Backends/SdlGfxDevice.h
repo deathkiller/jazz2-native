@@ -73,7 +73,7 @@ namespace nCine::Backends
 		/// Initilizes the video subsystem (SDL)
 		void initGraphics(bool enableWindowScaling);
 		/// Initilizes the OpenGL graphic context
-		void initDevice(bool isResizable);
+		void initDevice(int windowPosX, int windowPosY, bool isResizable);
 
 		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
 

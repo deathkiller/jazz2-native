@@ -13,9 +13,7 @@ namespace nCine
 	class BaseSprite : public DrawableNode
 	{
 	public:
-		/// Default move constructor
 		BaseSprite(BaseSprite&&) = default;
-		/// Default move assignment operator
 		BaseSprite& operator=(BaseSprite&&) = default;
 
 		/// Sets sprite size
@@ -83,7 +81,6 @@ namespace nCine
 
 		void updateRenderCommand() override;
 
-		/// Deleted assignment operator
 		BaseSprite& operator=(const BaseSprite&) = delete;
 	};
 

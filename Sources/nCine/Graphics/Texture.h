@@ -66,8 +66,6 @@ namespace nCine
 		/// Creates an empty texture with the specified format and size using a vector
 		Texture(const char* name, Format format, Vector2i size);
 
-		/// Creates a texture from a named memory buffer
-		//Texture(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Creates a texture from an image file
 		explicit Texture(StringView filename);
 
@@ -127,7 +125,7 @@ namespace nCine
 			return Recti(0, 0, width_, height_);
 		}
 
-		/// Returns true if the texture holds compressed data
+		/// Returns `true` if the texture holds compressed data
 		inline bool isCompressed() const {
 			return isCompressed_;
 		}

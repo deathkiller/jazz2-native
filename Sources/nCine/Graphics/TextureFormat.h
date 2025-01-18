@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/// Texture format class
+	/// Texture format
 	class TextureFormat
 	{
 	public:
@@ -25,7 +25,7 @@ namespace nCine
 		inline GLenum type() const {
 			return type_;
 		}
-		/// Returns true if the format holds compressed data
+		/// Returns `true` if the format holds compressed data
 		inline bool isCompressed() const {
 			return isCompressed_;
 		}

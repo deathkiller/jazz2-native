@@ -61,17 +61,23 @@ namespace nCine
 		/// Updates players state (and buffer queue in the case of stream players)
 		virtual void updatePlayers() = 0;
 
+		/// Returns 3D position of the listener
 		virtual const Vector3f& getListenerPosition() const = 0;
+		/// Updates position and speed of the listener
 		virtual void updateListener(const Vector3f& position, const Vector3f& velocity) = 0;
 
+		/// Returns native sample rate of used audio device
 		virtual int nativeFrequency() = 0;
 
+		/// Suspends audio device
 		virtual void suspendDevice() = 0;
+		/// Resumes audio device
 		virtual void resumeDevice() = 0;
 	};
 
 	inline IAudioDevice::~IAudioDevice() { }
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// A fake audio device which doesn't play anything
 	class NullAudioDevice : public IAudioDevice
 	{
@@ -117,4 +123,5 @@ namespace nCine
 		void suspendDevice() override { }
 		void resumeDevice() override { }
 	};
+#endif
 }

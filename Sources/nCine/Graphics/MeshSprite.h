@@ -60,9 +60,7 @@ namespace nCine
 		/// Constructor for a sprite with a texture and a specified position as a vector but no parent
 		MeshSprite(Texture* texture, Vector2f position);
 
-		/// Default move constructor
 		MeshSprite(MeshSprite&&) = default;
-		/// Default move assignment operator
 		MeshSprite& operator=(MeshSprite&&) = default;
 
 		/// Returns a copy of this object
@@ -168,7 +166,6 @@ namespace nCine
 		/// The number of indices, either shared or not, that composes the mesh
 		unsigned int numIndices_;
 
-		/// Deleted assignment operator
 		MeshSprite& operator=(const MeshSprite&) = delete;
 
 		/// Initializer method for constructors and the copy constructor

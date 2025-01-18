@@ -46,14 +46,16 @@ namespace nCine
 		/// Creates a rectangle from minimum and maximum coordinates as two `Vector2`
 		static Rect FromMinMax(const Vector2<T>& min, const Vector2<T>& max);
 
+		/// Returns size
 		Vector2<T> GetSize() const;
+		/// Returns location
 		Vector2<T> GetLocation() const;
 
-		/// Calculates the center of the rectangle
+		/// Calculates center of the rectangle
 		Vector2<T> Center() const;
-		/// Calculates the minimum coordinates of the rectangle
+		/// Calculates minimum coordinates of the rectangle
 		Vector2<T> Min() const;
-		/// Calculates the maximum coordinates of the rectangle
+		/// Calculates maximum coordinates of the rectangle
 		Vector2<T> Max() const;
 
 		/// Sets rectangle top-left point and size
@@ -88,14 +90,14 @@ namespace nCine
 		/// Inverts rectangle size and moves (x, y) to a different angle
 		void InvertSize();
 
-		/// \returns True if the point is inside this rectangle
+		/// Returns `true` if the point is inside this rectangle
 		bool Contains(T px, T py) const;
-		/// \returns True if the point vector is inside this rectangle
+		/// Returns `true` if the point vector is inside this rectangle
 		bool Contains(const Vector2<T>& p) const;
 
-		/// \returns True if the other rectangle is contained inside this one
+		/// Returns `true` if the other rectangle is contained inside this one
 		bool Contains(const Rect<T>& rect) const;
-		/// \returns True if this rect does overlap the other rectangle in any way
+		/// Returns `true` if this rect does overlap the other rectangle in any way
 		bool Overlaps(const Rect<T>& rect) const;
 
 		/// Intersects this rectangle with the other rectangle
@@ -104,7 +106,6 @@ namespace nCine
 		/// Unions this rectangle with the other rectangle
 		void Union(const Rect<T>& rect);
 
-		/// Eqality operator
 		bool operator==(const Rect& rect) const;
 		bool operator!=(const Rect& rect) const;
 

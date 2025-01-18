@@ -52,14 +52,13 @@ namespace nCine
 		}
 		/// Four channels constructor from an array
 		explicit Colorf(const float channels[NumChannels]) noexcept;
-		/// Constructor taking an unsigned char color
 		explicit Colorf(const Color& color) noexcept;
 
-		/// Gets the color array
+		/// Returns color array
 		inline const float* Data() const {
 			return &R;
 		}
-		/// Gets the color array
+		/// @overload
 		inline float* Data() {
 			return &R;
 		}
@@ -79,10 +78,9 @@ namespace nCine
 		/// Sets the alpha channel
 		void SetAlpha(float alpha);
 
-		/// Assignment operator from an unsigned char color
+		/// Assigns operator from an unsigned char color
 		Colorf& operator=(const Color& color);
 
-		/// Equality operator
 		bool operator==(const Colorf& color) const;
 		bool operator!=(const Colorf& color) const;
 
@@ -90,14 +88,14 @@ namespace nCine
 		Colorf& operator-=(const Colorf& v);
 
 		Colorf& operator*=(const Colorf& color);
-		/// Multiplication by a constant scalar
+		/// Multiplies by a constant scalar
 		Colorf& operator*=(float scalar);
 
 		Colorf operator+(const Colorf& color) const;
 		Colorf operator-(const Colorf& color) const;
 
 		Colorf operator*(const Colorf& color) const;
-		/// Multiplication by a constant scalar
+		/// Multiplies by a constant scalar
 		Colorf operator*(float scalar) const;
 	};
 }

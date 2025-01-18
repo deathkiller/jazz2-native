@@ -63,9 +63,7 @@ namespace nCine
 		glProgramBinary_t _glProgramBinary;
 		GLenum _glProgramBinaryLength;
 
-		/// Deleted copy constructor
 		BinaryShaderCache(const BinaryShaderCache&) = delete;
-		/// Deleted assignment operator
 		BinaryShaderCache& operator=(const BinaryShaderCache&) = delete;
 	};
 }

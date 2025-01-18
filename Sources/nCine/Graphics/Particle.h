@@ -20,15 +20,13 @@ namespace nCine
 		float startingRotation; // for affectors
 		/// Current particle velocity vector
 		Vector2f velocity_;
-		/// A flag indicating if particle transformations are in local space or not
+		/// Flag indicating if particle transformations are in local space or not
 		bool inLocalSpace_;
 
 		/// Constructor for a particle with a parent and texture, positioned in the relative origin
 		Particle(SceneNode* parent, Texture* texture);
 
-		/// Default move constructor
 		Particle(Particle&&) = default;
-		/// Default move assignment operator
 		Particle& operator=(Particle&&) = default;
 
 		/// Returns true if the particle is still alive
@@ -54,7 +52,6 @@ namespace nCine
 		/// Custom transform method to allow independent position from parent
 		void transform() override;
 
-		/// Deleted assignment operator
 		Particle& operator=(const Particle&) = delete;
 
 		friend class ParticleSystem;

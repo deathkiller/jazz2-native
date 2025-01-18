@@ -11,13 +11,13 @@ namespace nCine
 	class AndroidApplication : public Application
 	{
 	public:
-		/// Entry point method to be called in the @cpp android_main() @ce function
+		/// Entry point method to be called in the`android_main()` function
 		static void Run(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
 		/// Processes an Android application command
-		static void ProcessCommand(struct android_app* state, int32_t cmd);
+		static void ProcessCommand(struct android_app* state, std::int32_t cmd);
 
-		/// Returns true if the application has already called @cpp Init() @ce
+		/// Returns true if the application has already called `Init()`
 		inline bool IsInitialized() const {
 			return isInitialized_;
 		}

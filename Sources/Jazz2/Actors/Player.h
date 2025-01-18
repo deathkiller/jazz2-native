@@ -71,6 +71,7 @@ namespace Jazz2::Actors
 		friend class Weapons::Thunderbolt;
 
 	public:
+		/** @brief Modifier */
 		enum class Modifier : std::uint8_t {
 			None,
 			Airboard,
@@ -78,6 +79,7 @@ namespace Jazz2::Actors
 			LizardCopter
 		};
 
+		/** @brief Special move type */
 		enum class SpecialMoveType : std::uint8_t {
 			None,
 			Buttstomp,
@@ -85,6 +87,7 @@ namespace Jazz2::Actors
 			Sidekick
 		};
 
+		/** @brief Type of invulnerability */
 		enum class InvulnerableType {
 			Transient,
 			Blinking,
@@ -217,6 +220,7 @@ namespace Jazz2::Actors
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 
 	protected:
+		/** @brief State of level exiting */
 		enum class LevelExitingState {
 			None,
 			Waiting,
@@ -225,6 +229,7 @@ namespace Jazz2::Actors
 			Ready
 		};
 
+		/** @brief State of HUD weapon wheel */
 		enum class WeaponWheelState {
 			Hidden,
 			Opening,

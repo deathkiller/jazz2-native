@@ -140,9 +140,7 @@ namespace nCine
 			return sharedIboParams_ ? *sharedIboParams_ : iboParams_;
 		}
 
-		/// Deleted copy constructor
 		Geometry(const Geometry&) = delete;
-		/// Deleted assignment operator
 		Geometry& operator=(const Geometry&) = delete;
 
 		friend class RenderCommand;

@@ -22,35 +22,35 @@ namespace nCine
 		{
 			/// Shader program for Sprite classes
 			Sprite = 0,
-			/// Shader program for Sprite classes with grayscale font texture
+			// Shader program for Sprite classes with grayscale font texture
 			//SpriteGray,
 			/// Shader program for Sprite classes with a solid color and no texture
 			SpriteNoTexture,
 			/// Shader program for MeshSprite classes
 			MeshSprite,
-			/// Shader program for MeshSprite classes with grayscale font texture
+			// Shader program for MeshSprite classes with grayscale font texture
 			//MeshSpriteGray,
 			/// Shader program for MeshSprite classes with a solid color and no texture
 			MeshSpriteNoTexture,
-			/// Shader program for TextNode classes with glyph data in alpha channel
+			// Shader program for TextNode classes with glyph data in alpha channel
 			//TextNodeAlpha,
-			/// Shader program for TextNode classes with glyph data in red channel
+			// Shader program for TextNode classes with glyph data in red channel
 			//TextNodeRed,
 			/// Shader program for a batch of Sprite classes
 			BatchedSprites,
-			/// Shader program for a batch of Sprite classes with grayscale font texture
+			// Shader program for a batch of Sprite classes with grayscale font texture
 			//BatchedSpritesGray,
 			/// Shader program for a batch of Sprite classes with solid colors and no texture
 			BatchedSpritesNoTexture,
 			/// Shader program for a batch of MeshSprite classes
 			BatchedMeshSprites,
-			/// Shader program for a batch of MeshSprite classes with grayscale font texture
+			// Shader program for a batch of MeshSprite classes with grayscale font texture
 			//BatchedMeshSpritesGray,
 			/// Shader program for a batch of MeshSprite classes with solid colors and no texture
 			BatchedMeshSpritesNoTexture,
-			/// Shader program for a batch of TextNode classes with color font texture
+			// Shader program for a batch of TextNode classes with color font texture
 			//BatchedTextNodesAlpha,
-			/// Shader program for a batch of TextNode classes with grayscale font texture
+			// Shader program for a batch of TextNode classes with grayscale font texture
 			//BatchedTextNodesRed,
 			/// A custom shader program
 			Custom

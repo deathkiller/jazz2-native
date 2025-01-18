@@ -79,6 +79,7 @@ namespace nCine
 		static std::unique_ptr<IAudioLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// A class created when the audio file extension is not recognized
 	class InvalidAudioLoader : public IAudioLoader
 	{
@@ -90,4 +91,5 @@ namespace nCine
 			return nullptr;
 		}
 	};
+#endif
 }

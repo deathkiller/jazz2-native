@@ -56,7 +56,7 @@ namespace nCine
 			HiddenLocked
 		};
 
-		static const int MaxNumJoysticks;
+		static const std::int32_t MaxNumJoysticks;
 
 		// From `XInput.h` in DirectX SDK
 		static constexpr float LeftStickDeadZone = 7849 / 32767.0f;

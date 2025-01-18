@@ -12,7 +12,7 @@ using namespace Death;
 
 namespace nCine
 {
-	const int IInputManager::MaxNumJoysticks = 8;
+	const std::int32_t IInputManager::MaxNumJoysticks = 8;
 }
 
 namespace nCine::Backends

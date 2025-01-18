@@ -18,6 +18,9 @@ namespace nCine
 		ShaderState(DrawableNode* node, Shader* shader);
 		~ShaderState();
 
+		ShaderState(const ShaderState&) = delete;
+		ShaderState& operator=(const ShaderState&) = delete;
+
 		inline const DrawableNode* node() const {
 			return node_;
 		}
@@ -65,11 +68,6 @@ namespace nCine
 		DrawableNode* node_;
 		Shader* shader_;
 		int previousShaderType_;
-
-		/// Deleted copy constructor
-		ShaderState(const ShaderState&) = delete;
-		/// Deleted assignment operator
-		ShaderState& operator=(const ShaderState&) = delete;
 	};
 
 }

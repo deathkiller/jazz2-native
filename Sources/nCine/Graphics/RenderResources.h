@@ -35,27 +35,27 @@ namespace nCine
 		RenderResources() = delete;
 		~RenderResources() = delete;
 
-		/// A vertex format structure for vertices with positions only
+		/// Vertex format structure for vertices with positions only
 		struct VertexFormatPos2
 		{
 			GLfloat position[2];
 		};
 
-		/// A vertex format structure for vertices with positions and texture coordinates
+		/// Vertex format structure for vertices with positions and texture coordinates
 		struct VertexFormatPos2Tex2
 		{
 			GLfloat position[2];
 			GLfloat texcoords[2];
 		};
 
-		/// A vertex format structure for vertices with positions and draw indices
+		/// Vertex format structure for vertices with positions and draw indices
 		struct VertexFormatPos2Index
 		{
 			GLfloat position[2];
 			int drawindex;
 		};
 
-		/// A vertex format structure for vertices with positions, texture coordinates and draw indices
+		/// Vertex format structure for vertices with positions, texture coordinates and draw indices
 		struct VertexFormatPos2Tex2Index
 		{
 			GLfloat position[2];

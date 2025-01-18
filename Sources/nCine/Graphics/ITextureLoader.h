@@ -84,6 +84,7 @@ namespace nCine
 		void loadPixels(GLenum internalFormat, GLenum type);
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/// A class created when the texture file extension is not recognized
 	class InvalidTextureLoader : public ITextureLoader
 	{
@@ -91,5 +92,5 @@ namespace nCine
 		explicit InvalidTextureLoader(std::unique_ptr<Death::IO::Stream> fileHandle)
 			: ITextureLoader(std::move(fileHandle)) { }
 	};
-
+#endif
 }
