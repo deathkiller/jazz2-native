@@ -369,7 +369,7 @@ namespace Jazz2::UI::Menu
 		level.DisplayName = std::move(name);
 
 #if defined(DEATH_DEBUG)
-		if ((flags & LevelFlags::IsHidden) == LevelFlags::IsHidden && !PreferencesCache::AllowCheatsUnlock) {
+		if ((flags & LevelFlags::IsHidden) == LevelFlags::IsHidden) {
 			level.DisplayName += " [Hidden]"_s;
 		}
 		if ((flags & LevelFlags::IsMultiplayerLevel) == LevelFlags::IsMultiplayerLevel) {
