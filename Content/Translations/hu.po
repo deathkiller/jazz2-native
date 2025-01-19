@@ -4,8 +4,8 @@ msgstr ""
 "POT-Creation-Date: 2025-01-12 13:33+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
-"Language-Team: \n"
-"Language: hu_HU\n"
+"Language-Team: thatcakepiece\n"
+"Language: hu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1207,8 +1207,8 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"Átfenekelheted magad \n"
-"néhány néhány gyengeponton."
+"Átfenekelheted magad\n"
+"néhány néhány gyengeponton!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:3
 msgctxt "xmas99/02_xmas2"
@@ -1845,11 +1845,13 @@ msgstr "Nem"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:138
+#, fuzzy
 msgid "No Cheats Only"
 msgstr "Csak kikapcsolt csalások esetén"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:141
+#, fuzzy
 msgid "Higher Score Only"
 msgstr "Csak magasabb pontszám esetén"
 
@@ -1942,7 +1944,7 @@ msgstr "Vízszintes"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:134
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
-msgstr "Bekapcsolva  \f[c:#d0705d](Kísérleti)\f[/c]"
+msgstr "Bekapcsolva \f[c:#d0705d](Kísérleti)\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"

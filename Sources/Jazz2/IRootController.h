@@ -66,6 +66,6 @@ namespace Jazz2
 		virtual StringView GetNewestVersion() const = 0;
 
 		/** @brief Recreates level cache from `Source` directory */
-		virtual void RefreshCacheLevels() = 0;
+		virtual void RefreshCacheLevels(bool recreateAll) = 0;
 	};
 }

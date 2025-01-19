@@ -554,6 +554,8 @@ namespace Jazz2::Compatibility
 			}
 		}
 
+		CheckWaterLevelAroundStart();
+
 		// Flags
 		LevelFlags flags = LevelFlags::None;
 		if (_hasPit) {
@@ -623,7 +625,7 @@ namespace Jazz2::Compatibility
 			co.WriteValue<std::uint8_t>(_darknessColor & 0xff);
 			co.WriteValue<std::uint8_t>((_darknessColor >> 8) & 0xff);
 			co.WriteValue<std::uint8_t>((_darknessColor >> 16) & 0xff);
-			co.WriteValue<std::uint8_t>((std::uint8_t)std::min(std::max(LightingStart, LightingMin) * 255 / 64, 255));
+			co.WriteValue<std::uint8_t>((std::uint8_t)std::min(LightingStart * 255 / 64, 255));
 
 			co.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
 			co.WriteValue<std::uint8_t>(_weatherIntensity);
@@ -1046,6 +1048,86 @@ namespace Jazz2::Compatibility
 	void JJ2Level::AddLevelTokenTextID(std::uint8_t textId)
 	{
 		_levelTokenTextIds.push_back(textId);
+	}
+
+	void JJ2Level::CheckWaterLevelAroundStart()
+	{
+		bool waterAround = true;
+		bool waterShouldResetLighting = true;
+		std::int32_t waterLevelAround = INT32_MIN;
+
+		// Check neighbor tiles of level start events if they contain water event, then set it as initial water level instead
+		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
+			for (std::int32_t x = 0; x < _layers[3].Width; x++) {
+				auto& tileEvent = _events[x + y * _layers[3].Width];
+				if (tileEvent.Converted.Type == EventType::LevelStart || tileEvent.Converted.Type == EventType::LevelStartMultiplayer) {
+					std::int32_t y2 = std::min(y + 1, _layers[3].Height - 1);
+					if (x - 1 >= 0) {
+						auto& waterTile = _events[(x - 1) + y2 * _layers[3].Width];
+						if (waterTile.Converted.Type != EventType::ModifierSetWater || waterTile.Difficulty != 0 /*!All*/ || waterTile.Converted.Params[2] == 0 /*!Instant*/) {
+							waterAround = false;
+						} else {
+							// Check if water level matches other tiles
+							std::int32_t waterLevel = waterTile.Converted.Params[0] | (waterTile.Converted.Params[1] << 8);
+							if (waterLevelAround == INT32_MIN) {
+								waterLevelAround = waterLevel;
+							} else if (waterLevelAround != waterLevel) {
+								waterAround = false;
+							}
+
+							if (waterTile.Converted.Params[3] != 0 /* !IgnoreLighting */) {
+								waterShouldResetLighting = false;
+							}
+						}
+					}
+					if (y2 != y) {
+						auto& waterTile = _events[x + y2 * _layers[3].Width];
+						if (waterTile.Converted.Type != EventType::ModifierSetWater || waterTile.Difficulty != 0 /*!All*/ || waterTile.Converted.Params[2] == 0 /*!Instant*/) {
+							waterAround = false;
+						} else {
+							// Check if water level matches other tiles
+							std::int32_t waterLevel = waterTile.Converted.Params[0] | (waterTile.Converted.Params[1] << 8);
+							if (waterLevelAround == INT32_MIN) {
+								waterLevelAround = waterLevel;
+							} else if (waterLevelAround != waterLevel) {
+								waterAround = false;
+							}
+
+							if (waterTile.Converted.Params[3] != 0 /* !IgnoreLighting */) {
+								waterShouldResetLighting = false;
+							}
+						}
+					}
+					if (x + 1 < _layers[3].Width) {
+						auto& waterTile = _events[(x + 1) + y2 * _layers[3].Width];
+						if (waterTile.Converted.Type != EventType::ModifierSetWater || waterTile.Difficulty != 0 /*!All*/ || waterTile.Converted.Params[2] == 0 /*!Instant*/) {
+							waterAround = false;
+						} else {
+							// Check if water level matches other tiles
+							std::int32_t waterLevel = waterTile.Converted.Params[0] | (waterTile.Converted.Params[1] << 8);
+							if (waterLevelAround == INT32_MIN) {
+								waterLevelAround = waterLevel;
+							} else if (waterLevelAround != waterLevel) {
+								waterAround = false;
+							}
+
+							if (waterTile.Converted.Params[3] != 0 /* !IgnoreLighting */) {
+								waterShouldResetLighting = false;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (waterAround && waterLevelAround != INT32_MIN) {
+			// Override water level of the level
+			_waterLevel = std::uint16_t(waterLevelAround);
+			if (waterShouldResetLighting) {
+				// Reset also ambient lighting, because the original game ignored ambient lighting if water was used
+				LightingStart = 64;
+			}
+		}
 	}
 
 	void JJ2Level::WriteLevelName(Stream& so, MutableStringView value, Function<LevelToken(StringView)>&& levelTokenConversion)

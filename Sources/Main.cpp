@@ -58,6 +58,7 @@ using namespace Jazz2::Multiplayer;
 #endif
 
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringUtils.h>
 #include <Cpu.h>
 #include <Environment.h>
 #include <IO/FileSystem.h>
@@ -132,9 +133,9 @@ public:
 	}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-	void RefreshCacheLevels() override;
+	void RefreshCacheLevels(bool recreateAll) override;
 #else
-	void RefreshCacheLevels() override { }
+	void RefreshCacheLevels(bool recreateAll) override { }
 #endif
 
 private:
@@ -1035,6 +1036,8 @@ void GameEventHandler::RefreshCache()
 		// Close the file, so it can be writable for possible update
 		s = nullptr;
 
+		RefreshCacheLevels(false);
+
 		if (currentVersion != lastVersion) {
 			if ((lastVersion & 0xFFFFFFFFULL) == 0x0FFFFFFFULL) {
 				LOGI("Cache is already up-to-date, but created in experimental build v%i.%i.0", (lastVersion >> 48) & 0xFFFFULL, (lastVersion >> 32) & 0xFFFFULL);
@@ -1102,7 +1105,7 @@ RecreateCache:
 		}
 	}
 
-	RefreshCacheLevels();
+	RefreshCacheLevels(true);
 
 	LOGI("Cache was recreated");
 	std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
@@ -1116,7 +1119,7 @@ RecreateCache:
 	_flags |= Flags::IsVerified | Flags::IsPlayable;
 }
 
-void GameEventHandler::RefreshCacheLevels()
+void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 {
 	ZoneScopedC(0x888888);
 
@@ -1267,8 +1270,10 @@ void GameEventHandler::RefreshCacheLevels()
 	};
 
 	String episodesPath = fs::CombinePath(resolver.GetCachePath(), "Episodes"_s);
-	fs::RemoveDirectoryRecursive(episodesPath);
-	fs::CreateDirectories(episodesPath);
+	if (recreateAll) {
+		fs::RemoveDirectoryRecursive(episodesPath);
+		fs::CreateDirectories(episodesPath);
+	}
 
 	HashMap<String, bool> usedTilesets;
 
@@ -1276,6 +1281,15 @@ void GameEventHandler::RefreshCacheLevels()
 		auto extension = fs::GetExtension(item);
 		if (extension == "j2e"_s || extension == "j2pe"_s) {
 			// Episode
+			if (!recreateAll) {
+				String episodeName = fs::GetFileNameWithoutExtension(item);
+				StringUtils::lowercaseInPlace(episodeName);
+				String fullPath = fs::CombinePath(episodesPath, String((episodeName == "xmas98"_s ? "xmas99"_s : StringView(episodeName)) + ".j2e"_s));
+				if (fs::FileExists(fullPath)) {
+					continue;
+				}
+			}
+
 			Compatibility::JJ2Episode episode;
 			if (episode.Open(item)) {
 				if (episode.Name == "home"_s || (hasChristmasChronicles && episode.Name == "xmas98"_s)) {
@@ -1289,6 +1303,27 @@ void GameEventHandler::RefreshCacheLevels()
 			// Level
 			String levelName = fs::GetFileName(item);
 			if (levelName.find("-MLLE-Data-"_s) == nullptr) {
+				if (!recreateAll) {
+					String levelName = fs::GetFileNameWithoutExtension(item);
+					StringUtils::lowercaseInPlace(levelName);
+
+					String fullPath;
+					auto it = knownLevels.find(levelName);
+					if (it != knownLevels.end()) {
+						if (it->second.second().empty()) {
+							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(levelName + ".j2l"_s) });
+						} else {
+							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(it->second.second() + '_' + levelName + ".j2l"_s) });
+						}
+					} else {
+						fullPath = fs::CombinePath({ episodesPath, "unknown"_s, String(levelName + ".j2l"_s) });
+					}
+
+					if (fs::FileExists(fullPath)) {
+						continue;
+					}
+				}
+
 				Compatibility::JJ2Level level;
 				if (level.Open(item, false)) {
 					String fullPath;
@@ -1323,7 +1358,7 @@ void GameEventHandler::RefreshCacheLevels()
 			}
 		}
 #if defined(DEATH_DEBUG)
-		/*else if (extension == "j2s"_s) {
+		/*else if (extension == "j2s"_s && recreateAll) {
 			// Translations
 			Compatibility::JJ2Strings strings;
 			strings.Open(item);
@@ -1335,19 +1370,23 @@ void GameEventHandler::RefreshCacheLevels()
 #endif
 	}
 
-	// Convert only used tilesets
-	LOGI("Converting used tilesets...");
-	String tilesetsPath = fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s);
-	fs::RemoveDirectoryRecursive(tilesetsPath);
-	fs::CreateDirectories(tilesetsPath);
+	if (recreateAll || !usedTilesets.empty()) {
+		// Convert only used tilesets
+		LOGI("Converting used tilesets...");
+		String tilesetsPath = fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s);
+		if (recreateAll) {
+			fs::RemoveDirectoryRecursive(tilesetsPath);
+			fs::CreateDirectories(tilesetsPath);
+		}
 
-	for (auto& pair : usedTilesets) {
-		String tilesetPath = fs::CombinePath(resolver.GetSourcePath(), String(pair.first + ".j2t"_s));
-		auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
-		if (fs::IsReadableFile(adjustedPath)) {
-			Compatibility::JJ2Tileset tileset;
-			if (tileset.Open(adjustedPath, false)) {
-				tileset.Convert(fs::CombinePath({ tilesetsPath, String(pair.first + ".j2t"_s) }));
+		for (auto& pair : usedTilesets) {
+			String tilesetPath = fs::CombinePath(resolver.GetSourcePath(), String(pair.first + ".j2t"_s));
+			auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
+			if (fs::IsReadableFile(adjustedPath)) {
+				Compatibility::JJ2Tileset tileset;
+				if (tileset.Open(adjustedPath, false)) {
+					tileset.Convert(fs::CombinePath({ tilesetsPath, String(pair.first + ".j2t"_s) }));
+				}
 			}
 		}
 	}

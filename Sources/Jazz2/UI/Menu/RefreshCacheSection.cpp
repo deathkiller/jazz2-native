@@ -28,7 +28,7 @@ namespace Jazz2::UI::Menu
 		_thread.Run([](void* arg) {
 			auto _this = static_cast<RefreshCacheSection*>(arg);
 			if (auto mainMenu = dynamic_cast<MainMenu*>(_this->_root)) {
-				mainMenu->_root->RefreshCacheLevels();
+				mainMenu->_root->RefreshCacheLevels(true);
 			}
 
 			std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();
@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 		}, this);
 #else
 		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
-			mainMenu->_root->RefreshCacheLevels();
+			mainMenu->_root->RefreshCacheLevels(true);
 		}
 
 		std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();
