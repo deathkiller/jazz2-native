@@ -259,7 +259,7 @@ namespace Jazz2::Compatibility
 					} else {
 						buffer[j++] = '\f';
 					}
-					std::int32_t colorIndex2 = colorIndex % (static_cast<std::int32_t>(arraySize(DefaultFontColors)) + 1);
+					std::int32_t colorIndex2 = colorIndex % (std::int32_t(arraySize(DefaultFontColors)) + 1);
 					if (colorIndex2 == 0) {
 						buffer[j++] = '[';
 						buffer[j++] = '/';

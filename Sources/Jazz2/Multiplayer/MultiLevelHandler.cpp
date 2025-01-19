@@ -377,7 +377,7 @@ namespace Jazz2::Multiplayer
 
 						std::int32_t prevIdx = it->second.StateBufferPos - 1;
 						while (prevIdx < 0) {
-							prevIdx += static_cast<std::int32_t>(arraySize(it->second.StateBuffer));
+							prevIdx += std::int32_t(arraySize(it->second.StateBuffer));
 						}
 
 						auto posPrev = WorldPosToScreenSpace(it->second.StateBuffer[prevIdx].Pos);
@@ -1200,7 +1200,7 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(levelInit.PlayerCarryOvers)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(levelInit.PlayerCarryOvers)); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
 			}
@@ -2043,7 +2043,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::PrepareNextLevelInitialization(levelInit);
 
 		// Initialize only local players
-		for (std::int32_t i = 1; i < static_cast<std::int32_t>(arraySize(levelInit.PlayerCarryOvers)); i++) {
+		for (std::int32_t i = 1; i < std::int32_t(arraySize(levelInit.PlayerCarryOvers)); i++) {
 			levelInit.PlayerCarryOvers[i].Type = PlayerType::None;
 		}
 	}
@@ -2443,7 +2443,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		playerState.StateBufferPos++;
-		if (playerState.StateBufferPos >= static_cast<std::int32_t>(arraySize(playerState.StateBuffer))) {
+		if (playerState.StateBufferPos >= std::int32_t(arraySize(playerState.StateBuffer))) {
 			playerState.StateBufferPos = 0;
 		}
 

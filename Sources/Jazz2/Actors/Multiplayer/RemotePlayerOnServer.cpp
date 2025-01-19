@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		Clock& c = nCine::clock();
 		std::uint64_t now = c.now() * 1000 / c.frequency();
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_stateBuffer)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(_stateBuffer)); i++) {
 			_stateBuffer[i].Time = now - arraySize(_stateBuffer) + i;
 			_stateBuffer[i].Pos = Vector2f(details.Pos.X, details.Pos.Y);
 		}
@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		std::int32_t nextIdx = _stateBufferPos - 1;
 		if (nextIdx < 0) {
-			nextIdx += static_cast<std::int32_t>(arraySize(_stateBuffer));
+			nextIdx += std::int32_t(arraySize(_stateBuffer));
 		}
 
 		if (renderTime <= _stateBuffer[nextIdx].Time) {
@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Multiplayer
 			while (true) {
 				prevIdx = nextIdx - 1;
 				if (prevIdx < 0) {
-					prevIdx += static_cast<std::int32_t>(arraySize(_stateBuffer));
+					prevIdx += std::int32_t(arraySize(_stateBuffer));
 				}
 
 				if (prevIdx == _stateBufferPos || _stateBuffer[prevIdx].Time <= renderTime) {
@@ -112,7 +112,7 @@ namespace Jazz2::Actors::Multiplayer
 			// Actor was hidden before, reset state buffer to disable interpolation
 			std::int32_t stateBufferPrevPos = _stateBufferPos - 1;
 			if (stateBufferPrevPos < 0) {
-				stateBufferPrevPos += static_cast<std::int32_t>(arraySize(_stateBuffer));
+				stateBufferPrevPos += std::int32_t(arraySize(_stateBuffer));
 			}
 
 			std::int64_t renderTime = now - ServerDelay;
@@ -124,7 +124,7 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		_stateBufferPos++;
-		if (_stateBufferPos >= static_cast<std::int32_t>(arraySize(_stateBuffer))) {
+		if (_stateBufferPos >= std::int32_t(arraySize(_stateBuffer))) {
 			_stateBufferPos = 0;
 		}
 

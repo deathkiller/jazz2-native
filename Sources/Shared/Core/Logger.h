@@ -741,7 +741,7 @@ namespace Death { namespace Trace {
 		TransitEvent& operator=(TransitEvent const& other) = delete;
 
 		TransitEvent(TransitEvent&& other) noexcept
-			: Timestamp(other.Timestamp), Message(std::move(other.Message)), FlushFlag(other.FlushFlag), Level(other.Level)
+			: Timestamp(other.Timestamp), Message(Death::move(other.Message)), FlushFlag(other.FlushFlag), Level(other.Level)
 		{
 		}
 
@@ -749,7 +749,7 @@ namespace Death { namespace Trace {
 		{
 			if (this != &other) {
 				Timestamp = other.Timestamp;
-				Message = std::move(other.Message);
+				Message = Death::move(other.Message);
 				FlushFlag = other.FlushFlag;
 				Level = other.Level;
 			}
@@ -771,7 +771,7 @@ namespace Death { namespace Trace {
 		TransitEventBuffer& operator=(TransitEventBuffer const&) = delete;
 
 		TransitEventBuffer(TransitEventBuffer&& other) noexcept
-			: _capacity(other._capacity), _storage(std::move(other._storage)), _mask(other._mask),
+			: _capacity(other._capacity), _storage(Death::move(other._storage)), _mask(other._mask),
 				_readerPos(other._readerPos), _writerPos(other._writerPos)
 		{
 			other._capacity = 0;
@@ -784,7 +784,7 @@ namespace Death { namespace Trace {
 		{
 			if (this != &other) {
 				_capacity = other._capacity;
-				_storage = std::move(other._storage);
+				_storage = Death::move(other._storage);
 				_mask = other._mask;
 				_readerPos = other._readerPos;
 				_writerPos = other._writerPos;
@@ -849,10 +849,10 @@ namespace Death { namespace Trace {
 			// The reader position and mask are used to handle the circular buffer's wraparound.
 			std::size_t currentSize = size();
 			for (std::size_t i = 0; i < currentSize; ++i) {
-				newStorage[i] = std::move(_storage[(_readerPos + i) & _mask]);
+				newStorage[i] = Death::move(_storage[(_readerPos + i) & _mask]);
 			}
 
-			_storage = std::move(newStorage);
+			_storage = Death::move(newStorage);
 			_capacity = newCapacity;
 			_mask = _capacity - 1;
 			_writerPos = currentSize;

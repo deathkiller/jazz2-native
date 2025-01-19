@@ -3,6 +3,8 @@
 
 #include <cstring>
 
+using namespace Death::Containers;
+
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -12,7 +14,7 @@ namespace Death { namespace IO {
 		_size = 0;
 
 		if (initialCapacity > 0) {
-			Containers::arrayReserve(_buffer, initialCapacity);
+			arrayReserve(_buffer, initialCapacity);
 		}
 	}
 
@@ -28,12 +30,12 @@ namespace Death { namespace IO {
 		_size = bufferSize;
 	}
 
-	MemoryStream::MemoryStream(Containers::ArrayView<const char> buffer)
+	MemoryStream::MemoryStream(ArrayView<const char> buffer)
 		: MemoryStream(buffer.data(), static_cast<std::int64_t>(buffer.size()))
 	{
 	}
 
-	MemoryStream::MemoryStream(Containers::ArrayView<const std::uint8_t> buffer)
+	MemoryStream::MemoryStream(ArrayView<const std::uint8_t> buffer)
 		: MemoryStream(buffer.data(), static_cast<std::int64_t>(buffer.size()))
 	{
 	}
@@ -91,7 +93,7 @@ namespace Death { namespace IO {
 		if (bytesToWrite > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
 			if (_mode == AccessMode::Growable && _size < _pos + bytesToWrite) {
 				_size = _pos + bytesToWrite;
-				Containers::arrayResize(_buffer, Containers::NoInit, _size);
+				arrayResize(_buffer, Containers::NoInit, _size);
 			}
 
 			bytesWritten = (_pos + bytesToWrite > _size ? (_size - _pos) : bytesToWrite);
@@ -122,7 +124,7 @@ namespace Death { namespace IO {
 	void MemoryStream::ReserveCapacity(std::int64_t bytes)
 	{
 		if (_mode == AccessMode::Growable) {
-			Containers::arrayReserve(_buffer, _pos + bytes);
+			arrayReserve(_buffer, _pos + bytes);
 		}
 	}
 
@@ -133,7 +135,7 @@ namespace Death { namespace IO {
 			if (_size < _pos + bytesToRead) {
 				if (_mode == AccessMode::Growable) {
 					_size = _pos + bytesToRead;
-					Containers::arrayResize(_buffer, Containers::NoInit, _size);
+					arrayResize(_buffer, Containers::NoInit, _size);
 				} else {
 					bytesToRead = static_cast<std::int32_t>(_size - _pos);
 				}

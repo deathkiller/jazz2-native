@@ -1639,7 +1639,7 @@ namespace Jazz2
 			95, 92, 88, 15, 15
 		};
 
-		constexpr std::int32_t StopsPerGem = (static_cast<std::int32_t>(arraySize(PaletteStops)) / GemColorCount) - 1;
+		constexpr std::int32_t StopsPerGem = (std::int32_t(arraySize(PaletteStops)) / GemColorCount) - 1;
 
 		// Start to fill palette texture from the second row (right after base palette)
 		std::int32_t src = 0, dst = ColorsPerPalette;

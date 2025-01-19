@@ -1098,7 +1098,7 @@ namespace Jazz2::UI
 		}
 
 		float angle = -fPiOver2;
-		for (std::int32_t i = 0, j = 0; i < static_cast<std::int32_t>(arraySize(player->_weaponAmmo)); i++) {
+		for (std::int32_t i = 0, j = 0; i < std::int32_t(arraySize(player->_weaponAmmo)); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				float x = cosf(angle) * distance;
 				float y = sinf(angle) * distance;
@@ -1233,7 +1233,7 @@ namespace Jazz2::UI
 	{
 		std::int32_t weaponCount = 0;
 
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(player->_weaponAmmo)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(player->_weaponAmmo)); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				weaponCount++;
 			}
@@ -1406,7 +1406,7 @@ namespace Jazz2::UI
 		Color colors[RgbLights::ColorsSize] {};
 
 		if (auto captionTile = _levelHandler->_tileMap->GetCaptionTile()) {
-			for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(KeyLayout)); i++) {
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(KeyLayout)); i++) {
 				std::int32_t x = KeyLayout[i] % AURA_KEYBOARD_WIDTH;
 				std::int32_t y = KeyLayout[i] / AURA_KEYBOARD_WIDTH;
 				Color tileColor = captionTile[y * 32 + x];
