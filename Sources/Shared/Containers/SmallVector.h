@@ -1269,6 +1269,18 @@ namespace Death { namespace Containers {
 	extern template class SmallVectorBase<std::uint64_t>;
 #endif
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	template<typename T>
+	inline void swap(Death::Containers::SmallVectorImpl<T>& lhs, Death::Containers::SmallVectorImpl<T>& rhs) {
+		lhs.swap(rhs);
+	}
+
+	template<typename T, unsigned N>
+	inline void swap(Death::Containers::SmallVector<T, N>& lhs, Death::Containers::SmallVector<T, N>& rhs) {
+		lhs.swap(rhs);
+	}
+#endif
+
 	namespace Implementation
 	{
 		template<class T, unsigned N> struct ArrayViewConverter<T, SmallVector<T, N>> {
@@ -1289,18 +1301,3 @@ namespace Death { namespace Containers {
 	}
 
 }}
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-namespace std
-{
-	template<typename T>
-	inline void swap(Death::Containers::SmallVectorImpl<T>& lhs, Death::Containers::SmallVectorImpl<T>& rhs) {
-		lhs.swap(rhs);
-	}
-
-	template<typename T, unsigned N>
-	inline void swap(Death::Containers::SmallVector<T, N>& lhs, Death::Containers::SmallVector<T, N>& rhs) {
-		lhs.swap(rhs);
-	}
-}
-#endif

@@ -525,7 +525,7 @@ namespace nCine
 
 			mapping.isValid = true;
 
-			for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(AndroidAxisNameMapping)); i++) {
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(AndroidAxisNameMapping)); i++) {
 				mapping.desc.axes[i].name = AndroidAxisNameMapping[i];
 				if (mapping.desc.axes[i].name == AxisName::LeftTrigger || mapping.desc.axes[i].name == AxisName::RightTrigger) {
 					mapping.desc.axes[i].min = 0.0f;
@@ -539,11 +539,11 @@ namespace nCine
 			for (std::int32_t i = 0; i < AndroidButtonCount; i++) {
 				mapping.desc.buttons[i] = (ButtonName)i;
 			}
-			for (std::int32_t i = AndroidButtonCount; i < static_cast<std::int32_t>(arraySize(mapping.desc.buttons)); i++) {
+			for (std::int32_t i = AndroidButtonCount; i < std::int32_t(arraySize(mapping.desc.buttons)); i++) {
 				mapping.desc.buttons[i] = ButtonName::Unknown;
 			}
 
-			for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(AndroidDpadButtonNameMapping)); i++) {
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(AndroidDpadButtonNameMapping)); i++) {
 				mapping.desc.hats[i] = AndroidDpadButtonNameMapping[i];
 			}
 		}
@@ -846,7 +846,7 @@ namespace nCine
 	{
 		std::int32_t axisIndex = -1;
 
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(AxesStrings)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(AxesStrings)); i++) {
 			if (value == AxesStrings[i]) {
 				axisIndex = i;
 				break;
@@ -860,7 +860,7 @@ namespace nCine
 	{
 		std::int32_t buttonIndex = -1;
 
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(ButtonsStrings)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(ButtonsStrings)); i++) {
 			if (value == ButtonsStrings[i]) {
 				buttonIndex = i;
 				break;

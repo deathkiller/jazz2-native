@@ -3261,7 +3261,7 @@ namespace Jazz2::Actors
 		}
 
 		// Preload all weapons
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_weaponAmmo)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(_weaponAmmo)); i++) {
 			if (_weaponAmmo[i] != 0) {
 				PreloadMetadataAsync(String("Weapon/"_s + WeaponNames[i]));
 			}
@@ -3329,7 +3329,7 @@ namespace Jazz2::Actors
 		levelHandler->SetAmbientLight(this, _checkpointLight);
 
 		std::int32_t weaponCount = src.ReadVariableInt32();
-		RETURN_ASSERT_MSG(weaponCount == static_cast<std::int32_t>(arraySize(_weaponAmmoCheckpoint)), "Weapon count mismatch");
+		RETURN_ASSERT_MSG(weaponCount == std::int32_t(arraySize(_weaponAmmoCheckpoint)), "Weapon count mismatch");
 		_currentWeapon = (WeaponType)src.ReadVariableInt32();
 		src.Read(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
 		src.Read(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
@@ -3363,7 +3363,7 @@ namespace Jazz2::Actors
 		dest.WriteVariableInt32(_gemsTotal[1]);
 		dest.WriteVariableInt32(_gemsTotal[2]);
 		dest.WriteVariableInt32(_gemsTotal[3]);
-		dest.WriteVariableInt32(static_cast<std::int32_t>(arraySize(_weaponAmmoCheckpoint)));
+		dest.WriteVariableInt32(std::int32_t(arraySize(_weaponAmmoCheckpoint)));
 		dest.WriteVariableInt32((std::int32_t)_currentWeapon);
 		dest.Write(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
 		dest.Write(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));

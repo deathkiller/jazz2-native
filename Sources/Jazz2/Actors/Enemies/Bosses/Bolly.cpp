@@ -24,7 +24,7 @@ namespace Jazz2::Actors::Bosses
 		/*if (_turret != nullptr) {
 			_turret->SetState(ActorState::IsDestroyed, true);
 		}*/
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_chain)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(_chain)); i++) {
 			if (_chain[i] != nullptr) {
 				_chain[i]->SetState(ActorState::IsDestroyed, true);
 			}
@@ -160,7 +160,7 @@ namespace Jazz2::Actors::Bosses
 		}*/
 
 		float distance = 30.0f;
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(arraySize(_chain)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(_chain)); i++) {
 			if (_chain[i] != nullptr) {
 				float angle = sinf(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
 
@@ -186,7 +186,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i(std::int32_t(_pos.X), std::int32_t(_pos.Y), _renderer.layer() + 2), Explosion::Type::Large);
 
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));

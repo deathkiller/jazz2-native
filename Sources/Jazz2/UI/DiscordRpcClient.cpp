@@ -111,7 +111,7 @@ namespace Jazz2::UI
 		}
 
 		bool isConnected = false;
-		for (std::int32_t j = 0; j < static_cast<std::int32_t>(arraySize(RpcPaths)); j++) {
+		for (std::int32_t j = 0; j < std::int32_t(arraySize(RpcPaths)); j++) {
 			for (std::int32_t i = 0; i < 10; i++) {
 				formatString(addr.sun_path, sizeof(addr.sun_path), RpcPaths[j].data(), tempPath.data(), i);
 				if (::connect(_sockFd, (struct sockaddr*)&addr, sizeof(addr)) >= 0) {

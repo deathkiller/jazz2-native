@@ -879,7 +879,7 @@ namespace Death { namespace IO {
 
 	String FileSystem::CombinePath(std::initializer_list<StringView> paths)
 	{
-		return CombinePath(Containers::arrayView(paths));
+		return CombinePath(arrayView(paths));
 	}
 
 	StringView FileSystem::GetDirectoryName(StringView path)
@@ -989,7 +989,7 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
-		DWORD length = ::GetFullPathNameW(Utf8::ToUtf16(path), static_cast<DWORD>(arraySize(buffer)), buffer, nullptr);
+		DWORD length = ::GetFullPathNameW(Utf8::ToUtf16(path), DWORD(arraySize(buffer)), buffer, nullptr);
 		if (length == 0) {
 			return {};
 		}
@@ -1178,7 +1178,7 @@ namespace Death { namespace IO {
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		wchar_t path[MaxPathLength + 1];
 		// Returns size *without* the null terminator
-		const std::size_t size = ::GetModuleFileNameW(NULL, path, static_cast<DWORD>(arraySize(path)));
+		const std::size_t size = ::GetModuleFileNameW(NULL, path, DWORD(arraySize(path)));
 		return Utf8::FromUtf16(arrayView(path, size));
 #else
 		return {};
@@ -2535,7 +2535,7 @@ namespace Death { namespace IO {
 			}
 		}
 
-		return Containers::Array<char, MapDeleter>{data, size, MapDeleter{hFile, hMap}};
+		return Array<char, MapDeleter>{data, size, MapDeleter{hFile, hMap}};
 #	endif
 	}
 #endif

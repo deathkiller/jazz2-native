@@ -42,12 +42,12 @@ namespace Death
 	namespace Trace
 	{
 		/**
-			@brief Registers the sink and initializes logger if no sink was attached before
+			@brief Registers the sink and initializes the event logger if no sink was attached before
 		*/
 		void AttachSink(ITraceSink* sink);
 
 		/**
-			@brief Unregisters the sink and uninitializes logger if no sink left
+			@brief Unregisters the sink and uninitializes the event logger if no sink left
 		*/
 		void DetachSink(ITraceSink* sink);
 

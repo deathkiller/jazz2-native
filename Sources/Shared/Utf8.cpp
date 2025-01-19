@@ -132,7 +132,7 @@ namespace Death { namespace Utf8 {
 		const std::size_t lengthNeeded = (sourceSize == 0 ? 0 : ::MultiByteToWideChar(CP_UTF8, 0, source, sourceSize, nullptr, 0) - (sourceSize == -1 ? 1 : 0));
 
 		// Create the array with a sentinel null terminator. If size is zero, this is just a single null terminator.
-		Containers::Array<wchar_t> result { Containers::NoInit, lengthNeeded + 1 };
+		Containers::Array<wchar_t> result{Containers::NoInit, lengthNeeded + 1};
 		result[lengthNeeded] = L'\0';
 
 		if (sourceSize != 0) ::MultiByteToWideChar(CP_UTF8, 0, source, sourceSize, result.data(), (std::int32_t)lengthNeeded);

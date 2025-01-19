@@ -6,17 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#if !defined(countof) && !defined(DOXYGEN_GENERATING_OUTPUT)
-#	if defined(__cplusplus)
-		namespace Death { namespace Implementation { 
-			template<typename T, std::size_t N> char(*__ArrayCountOfHelper(T(&)[N]))[N];
-		}}
-#		define countof(a) (sizeof(*Death::Implementation::__ArrayCountOfHelper(a)))
-#	else
-#		define countof(a) (sizeof(a) / sizeof(a[0]))
-#	endif
-#endif
-
 #ifdef DOXYGEN_GENERATING_OUTPUT
 /** @brief Mark an enum as a set of flags */
 #define DEATH_ENUM_FLAGS(type)
