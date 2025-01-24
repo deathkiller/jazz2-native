@@ -624,7 +624,7 @@ namespace Jazz2::UI::Menu
 			flags = lastSection->GetNavigationFlags();
 		}
 
-		_pressedActions |= ControlScheme::FetchNativation(_pressedKeys, ArrayView(joyStates, joyStatesCount), flags);
+		_pressedActions |= ControlScheme::FetchNavigation(_pressedKeys, ArrayView(joyStates, joyStatesCount), flags);
 		if (_lastNavigationFlags != flags) {
 			_lastNavigationFlags = flags;
 			_pressedActions &= 0xffff;

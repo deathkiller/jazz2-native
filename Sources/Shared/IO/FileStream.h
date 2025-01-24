@@ -56,7 +56,7 @@ namespace Death { namespace IO {
 		std::int32_t _readPos;
 		std::int32_t _readLength;
 		std::int32_t _writePos;
-		std::int32_t _bufferLength;
+		std::int32_t _bufferSize;
 		std::unique_ptr<char[]> _buffer;
 
 		void InitializeBuffer();

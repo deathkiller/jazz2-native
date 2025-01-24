@@ -618,7 +618,6 @@ namespace Death { namespace IO {
 		}
 
 	private:
-
 		EnumerationOptions _options;
 		char _path[MaxPathLength];
 		char* _fileNamePart;

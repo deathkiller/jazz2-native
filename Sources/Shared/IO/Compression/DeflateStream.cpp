@@ -47,7 +47,7 @@ namespace Death { namespace IO { namespace Compression {
 		std::memcpy(_buffer, other._buffer, sizeof(_buffer));
 
 		// Original instance will be disabled
-		if (other._state == State::Created || other._state == State::Initialized) {
+		if (other._state == State::Created || other._state == State::Initialized || other._state == State::Read) {
 			other._state = State::Failed;
 		}
 	}
@@ -64,7 +64,7 @@ namespace Death { namespace IO { namespace Compression {
 		std::memcpy(_buffer, other._buffer, sizeof(_buffer));
 
 		// Original instance will be disabled
-		if (other._state == State::Created || other._state == State::Initialized) {
+		if (other._state == State::Created || other._state == State::Initialized || other._state == State::Read) {
 			other._state = State::Failed;
 		}
 
@@ -142,7 +142,7 @@ namespace Death { namespace IO { namespace Compression {
 		if (_state == State::Created) {
 			InitializeInternal();
 		}
-		return (_state == State::Initialized || _state == State::Finished);
+		return (_state == State::Initialized || _state == State::Read || _state == State::Finished);
 	}
 
 	std::int64_t DeflateStream::GetSize() const
@@ -199,30 +199,20 @@ namespace Death { namespace IO { namespace Compression {
 		if (_state == State::Unknown || _state >= State::Failed) {
 			return Stream::Invalid;
 		}
-
-		if (_strm.avail_in == 0) {
-			std::int32_t bytesRead = _inputSize;
-			if (bytesRead < 0 || bytesRead > sizeof(_buffer)) {
-				bytesRead = sizeof(_buffer);
-			}
-
-			bytesRead = (std::int32_t)_inputStream->Read(_buffer, bytesRead);
-			if (bytesRead <= 0) {
-				return 0;
-			}
-
-			if (_inputSize > 0) {
-				_inputSize -= bytesRead;
-			}
-
-			_strm.next_in = _buffer;
-			_strm.avail_in = static_cast<std::uint32_t>(bytesRead);
+		if (_state == State::Initialized && !FillInputBuffer()) {
+			return 0;
 		}
 
 		_strm.next_out = static_cast<unsigned char*>(ptr);
 		_strm.avail_out = size;
 
 		std::int32_t res = inflate(&_strm, Z_SYNC_FLUSH);
+
+		// If input buffer is empty, fill it and try it again
+		if (res == Z_BUF_ERROR && _strm.avail_in == 0 && FillInputBuffer()) {
+			res = inflate(&_strm, Z_SYNC_FLUSH);
+		}
+
 		if (res != Z_OK && res != Z_STREAM_END) {
 			CeaseReading();
 			_state = State::Failed;
@@ -238,9 +228,31 @@ namespace Death { namespace IO { namespace Compression {
 		return size;
 	}
 
+	bool DeflateStream::FillInputBuffer()
+	{
+		std::int32_t bytesRead = _inputSize;
+		if (bytesRead < 0 || bytesRead > sizeof(_buffer)) {
+			bytesRead = sizeof(_buffer);
+		}
+
+		bytesRead = (std::int32_t)_inputStream->Read(_buffer, bytesRead);
+		if (bytesRead <= 0) {
+			return false;
+		}
+
+		if (_inputSize > 0) {
+			_inputSize -= bytesRead;
+		}
+
+		_strm.next_in = _buffer;
+		_strm.avail_in = static_cast<std::uint32_t>(bytesRead);
+		_state = State::Read;
+		return true;
+	}
+
 	bool DeflateStream::CeaseReading()
 	{
-		if (_state != State::Initialized) {
+		if (_state != State::Initialized && _state != State::Read) {
 			return true;
 		}
 

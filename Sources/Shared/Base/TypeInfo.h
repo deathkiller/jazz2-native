@@ -270,7 +270,7 @@ namespace Death {
 		Safely converts pointers to classes up, down, and sideways along the inheritance
 		hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` in an optimized way.
 		Additionally, it can perform downcast at no performance cost. It also pulls the
-		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr **without**
+		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
 		taking ownership.
 	*/
 	template<typename T, typename U>
@@ -316,7 +316,7 @@ namespace Death {
 		Safely converts pointers to classes up, down, and sideways along the inheritance
 		hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` in an optimized way.
 		Additionally, it can perform downcast at no performance cost. It also pulls the
-		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr **without**
+		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
 		taking ownership.
 	*/
 	template<typename T, typename U>

@@ -43,10 +43,12 @@ namespace Death { namespace Implementation {
 	friend inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }
 #endif
 
-/** @brief Workaround for MSVC not being able to expand `__VA_ARGS__` correctly, would work with `/Zc:preprocessor`. Source: https://stackoverflow.com/a/5134656 */
+/** @brief Workaround for MSVC not being able to expand `__VA_ARGS__` correctly */
+// Source: https://stackoverflow.com/a/5134656, would work with `/Zc:preprocessor`
 #define DEATH_HELPER_EXPAND(...) __VA_ARGS__
 
-/** @brief Pick a macro implementation based on how many arguments were passed. Source: https://stackoverflow.com/a/11763277 */
+/** @brief Pick a macro implementation based on how many arguments were passed */
+// Source: https://stackoverflow.com/a/11763277
 #ifdef DOXYGEN_GENERATING_OUTPUT
 #define DEATH_HELPER_PICK(...)
 #else
@@ -62,7 +64,7 @@ namespace Death { namespace Implementation {
 #define __DEATH_REMOVE_PARENS_PASTE(x, ...) x ## __VA_ARGS__
 #define __DEATH_REMOVE_PARENS_EVALUATE(x, ...) __DEATH_REMOVE_PARENS_PASTE(x, __VA_ARGS__)
 #endif
-/** @brief Remove optional parentheses from argument */
+/** @brief Remove optional parentheses from the specified argument */
 #define DEATH_REMOVE_PARENS(x) __DEATH_REMOVE_PARENS_EVALUATE(__DEATH_NOOP, __DEATH_REMOVE_PARENS_EXTRACT x)
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
