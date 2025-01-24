@@ -17,6 +17,7 @@ namespace nCine
 	class AudioBuffer : public Object
 	{
 	public:
+		/** @brief Audio format */
 		enum class Format {
 			Mono8,
 			Stereo8,

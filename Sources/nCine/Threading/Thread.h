@@ -52,7 +52,7 @@ namespace nCine
 
 #endif
 
-	/** @brief Thread class */
+	/** @brief Thread */
 	class Thread
 	{
 	public:
