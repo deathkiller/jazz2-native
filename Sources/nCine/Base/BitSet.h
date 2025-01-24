@@ -18,7 +18,7 @@ namespace nCine
 		bool operator!=(const BitSet& other) const;
 
 		/// \returns True if the bit at the specified position is set
-		bool test(unsigned int pos) const;
+		bool test(std::uint32_t pos) const;
 
 		/// \returns True if all bits are set
 		bool all() const;
@@ -28,10 +28,10 @@ namespace nCine
 		bool none() const;
 
 		/// \returns The number of bits that are set
-		unsigned int count() const;
+		std::uint32_t count() const;
 
 		/// \returns The total number of bits in the bitset
-		unsigned int size() const;
+		std::uint32_t size() const;
 
 		BitSet& operator&=(const BitSet& other);
 		BitSet& operator|=(const BitSet& other);
@@ -39,26 +39,26 @@ namespace nCine
 
 		BitSet operator~() const;
 
-		BitSet& operator<<=(unsigned int pos);
-		BitSet& operator>>=(unsigned int pos);
+		BitSet& operator<<=(std::uint32_t pos);
+		BitSet& operator>>=(std::uint32_t pos);
 
-		BitSet operator<<(unsigned int pos) const;
-		BitSet operator>>(unsigned int pos) const;
+		BitSet operator<<(std::uint32_t pos) const;
+		BitSet operator>>(std::uint32_t pos) const;
 
 		/// Sets all bits in the bitset
 		void set();
 		/// Sets the bit at the specified position
-		void set(unsigned int pos);
+		void set(std::uint32_t pos);
 		/// Sets the bit at the specified position with the specified value
-		void set(unsigned int pos, bool value);
+		void set(std::uint32_t pos, bool value);
 
 		/// Resets all bits in the bitset
 		void reset();
 		/// Resets the bit at the specified position
-		void reset(unsigned int pos);
+		void reset(std::uint32_t pos);
 
 		/// Flips the bit at the specified position
-		void flip(unsigned int pos);
+		void flip(std::uint32_t pos);
 
 		friend BitSet operator&(const BitSet& lhs, const BitSet& rhs) {
 			return BitSet(lhs.bits_ & rhs.bits_);
@@ -103,7 +103,7 @@ namespace nCine
 	}
 
 	template<class T>
-	inline bool BitSet<T>::test(unsigned int pos) const
+	inline bool BitSet<T>::test(std::uint32_t pos) const
 	{
 		return ((bits_ >> pos) & T(1)) != T(0);
 	}
@@ -127,20 +127,20 @@ namespace nCine
 	}
 
 	template<>
-	inline unsigned int BitSet<uint8_t>::count() const
+	inline std::uint32_t BitSet<uint8_t>::count() const
 	{
 		static const uint8_t splitLookup[] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 		return splitLookup[bits_ & 0xF] + splitLookup[bits_ >> 4];
 	}
 
 	template<>
-	inline unsigned int BitSet<uint16_t>::count() const
+	inline std::uint32_t BitSet<uint16_t>::count() const
 	{
 		return BitSet<uint8_t>(bits_ & 0xFF).count() + BitSet<uint8_t>(bits_ >> 8).count();
 	}
 
 	template<>
-	inline unsigned int BitSet<uint32_t>::count() const
+	inline std::uint32_t BitSet<uint32_t>::count() const
 	{
 		uint32_t bits = bits_;
 		bits = bits - ((bits >> 1) & 0x55555555);
@@ -149,7 +149,7 @@ namespace nCine
 	}
 
 	template<>
-	inline unsigned int BitSet<uint64_t>::count() const
+	inline std::uint32_t BitSet<uint64_t>::count() const
 	{
 		uint64_t bits = bits_;
 		bits = bits - ((bits >> 1) & 0x5555555555555555);
@@ -158,7 +158,7 @@ namespace nCine
 	}
 
 	template<class T>
-	inline unsigned int BitSet<T>::size() const
+	inline std::uint32_t BitSet<T>::size() const
 	{
 		return sizeof(T) * 8;
 	}
@@ -191,27 +191,27 @@ namespace nCine
 	}
 
 	template<class T>
-	inline BitSet<T>& BitSet<T>::operator<<=(unsigned int pos)
+	inline BitSet<T>& BitSet<T>::operator<<=(std::uint32_t pos)
 	{
 		bits_ <<= pos;
 		return *this;
 	}
 
 	template<class T>
-	inline BitSet<T>& BitSet<T>::operator>>=(unsigned int pos)
+	inline BitSet<T>& BitSet<T>::operator>>=(std::uint32_t pos)
 	{
 		bits_ >>= pos;
 		return *this;
 	}
 
 	template<class T>
-	inline BitSet<T> BitSet<T>::operator<<(unsigned int pos) const
+	inline BitSet<T> BitSet<T>::operator<<(std::uint32_t pos) const
 	{
 		return BitSet(bits_ << pos);
 	}
 
 	template<class T>
-	inline BitSet<T> BitSet<T>::operator>>(unsigned int pos) const
+	inline BitSet<T> BitSet<T>::operator>>(std::uint32_t pos) const
 	{
 		return BitSet(bits_ >> pos);
 	}
@@ -223,13 +223,13 @@ namespace nCine
 	}
 
 	template<class T>
-	inline void BitSet<T>::set(unsigned int pos)
+	inline void BitSet<T>::set(std::uint32_t pos)
 	{
 		bits_ |= T(1) << pos;
 	}
 
 	template<class T>
-	inline void BitSet<T>::set(unsigned int pos, bool value)
+	inline void BitSet<T>::set(std::uint32_t pos, bool value)
 	{
 		value ? set(pos) : reset(pos);
 	}
@@ -241,13 +241,13 @@ namespace nCine
 	}
 
 	template<class T>
-	inline void BitSet<T>::reset(unsigned int pos)
+	inline void BitSet<T>::reset(std::uint32_t pos)
 	{
 		bits_ &= ~(T(1) << pos);
 	}
 
 	template<class T>
-	inline void BitSet<T>::flip(unsigned int pos)
+	inline void BitSet<T>::flip(std::uint32_t pos)
 	{
 		bits_ ^= (T(1) << pos);
 	}

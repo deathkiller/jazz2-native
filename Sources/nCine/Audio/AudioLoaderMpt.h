@@ -14,6 +14,9 @@ namespace nCine
 	public:
 		explicit AudioLoaderMpt(std::unique_ptr<Death::IO::Stream> fileHandle);
 
+		AudioLoaderMpt(const AudioLoaderMpt&) = delete;
+		AudioLoaderMpt& operator=(const AudioLoaderMpt&) = delete;
+
 		std::unique_ptr<IAudioReader> createReader() override;
 	};
 }

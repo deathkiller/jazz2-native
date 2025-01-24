@@ -1,7 +1,9 @@
 #pragma once
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #define NCINE_INCLUDE_OPENALC
 #include "../CommonHeaders.h"
+#endif
 
 #include "IAudioDevice.h"
 
@@ -28,6 +30,9 @@ namespace nCine
 		ALAudioDevice();
 		~ALAudioDevice() override;
 
+		ALAudioDevice(const ALAudioDevice&) = delete;
+		ALAudioDevice& operator=(const ALAudioDevice&) = delete;
+
 		bool isValid() const override;
 
 		const char* name() const override;
@@ -37,11 +42,11 @@ namespace nCine
 		}
 		void setGain(float gain) override;
 
-		inline unsigned int maxNumPlayers() const override {
+		inline std::uint32_t maxNumPlayers() const override {
 			return MaxSources;
 		}
-		inline unsigned int numPlayers() const override {
-			return (unsigned int)players_.size();
+		inline std::uint32_t numPlayers() const override {
+			return std::uint32_t(players_.size());
 		}
 		const IAudioPlayer* player(unsigned int index) const override;
 
@@ -53,14 +58,14 @@ namespace nCine
 		void freezePlayers() override;
 		void unfreezePlayers() override;
 
-		unsigned int registerPlayer(IAudioPlayer* player) override;
+		std::uint32_t registerPlayer(IAudioPlayer* player) override;
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
 		
 		const Vector3f& getListenerPosition() const override;
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
 
-		int nativeFrequency() override;
+		std::int32_t nativeFrequency() override;
 
 		void suspendDevice() override;
 		void resumeDevice() override;
@@ -68,9 +73,9 @@ namespace nCine
 	private:
 		/// Maximum number of OpenAL sources
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS)
-		static const unsigned int MaxSources = 32;
+		static const std::int32_t MaxSources = 32;
 #else
-		static const unsigned int MaxSources = 64;
+		static const std::int32_t MaxSources = 64;
 #endif
 
 		/// The OpenAL device
@@ -88,22 +93,17 @@ namespace nCine
 		/// Listener position
 		Vector3f _listenerPos;
 		/// native device frequency
-		int nativeFreq_;
+		std::int32_t nativeFreq_;
 
 		/// The OpenAL device name string
 		const char* deviceName_;
 
-		/// Deleted copy constructor
-		ALAudioDevice(const ALAudioDevice&) = delete;
-		/// Deleted assignment operator
-		ALAudioDevice& operator=(const ALAudioDevice&) = delete;
-
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		static constexpr uint64_t DeviceChangeLimitMs = 250;
+		static constexpr std::uint64_t DeviceChangeLimitMs = 250;
 
 		LPALCREOPENDEVICESOFT alcReopenDeviceSOFT_;
 		IMMDeviceEnumerator* pEnumerator_;
-		uint64_t lastDeviceChangeTime_;
+		std::uint64_t lastDeviceChangeTime_;
 		String lastDeviceId_;
 		bool shouldRecreate_;
 

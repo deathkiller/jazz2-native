@@ -15,16 +15,14 @@ namespace nCine
 		explicit AudioLoaderOgg(std::unique_ptr<Death::IO::Stream> fileHandle);
 		~AudioLoaderOgg() override;
 
+		AudioLoaderOgg(const AudioLoaderOgg&) = delete;
+		AudioLoaderOgg& operator=(const AudioLoaderOgg&) = delete;
+
 		std::unique_ptr<IAudioReader> createReader() override;
 
 	private:
 		/// Vorbisfile handle
 		OggVorbis_File oggFile_;
-
-		/// Deleted copy constructor
-		AudioLoaderOgg(const AudioLoaderOgg&) = delete;
-		/// Deleted assignment operator
-		AudioLoaderOgg& operator=(const AudioLoaderOgg&) = delete;
 	};
 }
 

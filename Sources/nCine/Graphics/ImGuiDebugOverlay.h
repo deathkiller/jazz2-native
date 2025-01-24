@@ -86,11 +86,11 @@ namespace nCine
 		bool showBottomLeftOverlay_;
 		bool showBottomRightOverlay_;
 
-		unsigned int numValues_;
+		std::uint32_t numValues_;
 		std::unique_ptr<float[]> plotValues_[ValuesType::Count];
 		float maxFrameTime_;
 		float maxUpdateVisitDraw_;
-		unsigned int index_;
+		std::uint32_t index_;
 		bool plotAdditionalFrameValues_;
 		bool plotOverlayValues_;
 		String comboVideoModes_;
@@ -98,13 +98,13 @@ namespace nCine
 		SmallVector<LogMessage, 0> logBuffer_;
 
 #if defined(WITH_RENDERDOC)
-		static constexpr unsigned int MaxRenderDocPathLength = 128;
-		static constexpr unsigned int MaxRenderDocCommentsLength = 512;
+		static constexpr std::uint32_t MaxRenderDocPathLength = 128;
+		static constexpr std::uint32_t MaxRenderDocCommentsLength = 512;
 
 		String renderDocPathTemplate_;
 		String renderDocFileComments_;
 		String renderDocCapturePath_;
-		unsigned int renderDocLastNumCaptures_;
+		std::uint32_t renderDocLastNumCaptures_;
 #endif
 
 		void guiWindow();
@@ -119,8 +119,8 @@ namespace nCine
 		void guiInputState();
 		void guiRenderDoc();
 		void guiAllocators();
-		void guiViewports(Viewport* viewport, unsigned int viewportId);
-		void guiRecursiveChildrenNodes(SceneNode* node, unsigned int childId);
+		void guiViewports(Viewport* viewport, std::uint32_t viewportId);
+		void guiRecursiveChildrenNodes(SceneNode* node, std::uint32_t childId);
 		void guiNodeInspector();
 
 #if defined(NCINE_PROFILING)

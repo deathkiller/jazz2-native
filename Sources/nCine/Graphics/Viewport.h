@@ -22,6 +22,9 @@ namespace nCine
 	/// Handles a viewport and its corresponding render target texture
 	class Viewport
 	{
+		friend class Application;
+		friend class ScreenViewport;
+
 	public:
 		/// Types of viewports available
 		enum class Type
@@ -80,13 +83,13 @@ namespace nCine
 		}
 
 		/// Returns the texture at the specified viewport's FBO color attachment index, if any
-		Texture* texture(unsigned int index);
+		Texture* texture(std::uint32_t index);
 		/// Returns the texture at the first viewport's FBO color attachment index
 		inline Texture* texture() {
 			return textures_[0];
 		}
 		/// Adds or removes a texture at the specified viewport's FBO color attachment index
-		bool setTexture(unsigned int index, Texture* texture);
+		bool setTexture(std::uint32_t index, Texture* texture);
 		/// Adds or removes a texture at the first viewport's FBO color attachment index
 		inline bool setTexture(Texture* texture) {
 			return setTexture(0, texture);
@@ -107,16 +110,16 @@ namespace nCine
 			return Vector2i(width_, height_);
 		}
 		/// Returns viewport's FBO width or zero if no texture is present
-		inline int width() const {
+		inline std::int32_t width() const {
 			return width_;
 		}
 		/// Returns viewport's FBO height or zero if no texture is present
-		inline int height() const {
+		inline std::int32_t height() const {
 			return height_;
 		}
 
 		/// Returns the number of color attachments of the viewport's FBO
-		inline unsigned int numColorAttachments() const {
+		inline std::uint32_t numColorAttachments() const {
 			return numColorAttachments_;
 		}
 
@@ -218,8 +221,8 @@ namespace nCine
 
 		Type type_;
 
-		int width_;
-		int height_;
+		std::int32_t width_;
+		std::int32_t height_;
 		Recti viewportRect_;
 		Recti scissorRect_;
 		Rectf cullingRect_;
@@ -227,7 +230,7 @@ namespace nCine
 		DepthStencilFormat depthStencilFormat_;
 
 		/// Last frame this viewport was cleared
-		unsigned long int lastFrameCleared_;
+		std::uint32_t lastFrameCleared_;
 		ClearMode clearMode_;
 		Colorf clearColor_;
 
@@ -236,7 +239,7 @@ namespace nCine
 
 		std::unique_ptr<GLFramebuffer> fbo_;
 
-		static const unsigned int MaxNumTextures = 4;
+		static const std::uint32_t MaxNumTextures = 4;
 		Texture* textures_[MaxNumTextures];
 
 		/// Root scene node for this viewport/RT
@@ -254,14 +257,11 @@ namespace nCine
 		void update();
 		void visit();
 		void sortAndCommitQueue();
-		void draw(unsigned int nextIndex);
+		void draw(std::uint32_t nextIndex);
 
 	private:
-		unsigned int numColorAttachments_;
+		std::uint32_t numColorAttachments_;
 
 		void updateCulling(SceneNode* node);
-
-		friend class Application;
-		friend class ScreenViewport;
 	};
 }

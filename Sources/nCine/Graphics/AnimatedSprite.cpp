@@ -89,7 +89,7 @@ namespace nCine
 		anims_.clear();
 	}
 
-	void AnimatedSprite::setAnimationIndex(unsigned int animIndex)
+	void AnimatedSprite::setAnimationIndex(std::uint32_t animIndex)
 	{
 		if (!anims_.empty()) {
 			ASSERT(animIndex < anims_.size());
@@ -116,7 +116,7 @@ namespace nCine
 		return currentAnim;
 	}
 
-	unsigned int AnimatedSprite::frame() const
+	std::uint32_t AnimatedSprite::frame() const
 	{
 		unsigned int frame = 0;
 		if (!anims_.empty()) {
@@ -125,7 +125,7 @@ namespace nCine
 		return frame;
 	}
 
-	void AnimatedSprite::setFrame(unsigned int frameNum)
+	void AnimatedSprite::setFrame(std::uint32_t frameNum)
 	{
 		if (!anims_.empty()) {
 			anims_[currentAnimIndex_].setFrame(frameNum);

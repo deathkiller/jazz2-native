@@ -29,17 +29,20 @@ namespace nCine
 	class AudioReaderMpt : public IAudioReader
 	{
 	public:
-		AudioReaderMpt(std::unique_ptr<Death::IO::Stream> fileHandle, int frequency);
+		AudioReaderMpt(std::unique_ptr<Death::IO::Stream> fileHandle, std::int32_t frequency);
 		~AudioReaderMpt();
 
-		unsigned long int read(void* buffer, unsigned long int bufferSize) const override;
+		AudioReaderMpt(const AudioReaderMpt&) = delete;
+		AudioReaderMpt& operator=(const AudioReaderMpt&) = delete;
+
+		std::int32_t read(void* buffer, std::int32_t bufferSize) const override;
 		void rewind() const override;
 		void setLooping(bool value) override;
 
 	private:
 		/// Audio file handle
 		std::unique_ptr<Death::IO::Stream> _fileHandle;
-		int _frequency;
+		std::int32_t _frequency;
 		openmpt_module* _module;
 
 #if defined(WITH_OPENMPT_DYNAMIC)
@@ -60,16 +63,11 @@ namespace nCine
 		static bool TryLoadLibrary();
 #endif
 
-		static size_t stream_read_func(void* stream, void* dst, size_t bytes);
-		static int stream_seek_func(void* stream, int64_t offset, int whence);
-		static int64_t stream_tell_func(void* stream);
+		static std::size_t stream_read_func(void* stream, void* dst, std::size_t bytes);
+		static std::int32_t stream_seek_func(void* stream, std::int64_t offset, std::int32_t whence);
+		static std::int64_t stream_tell_func(void* stream);
 
 		static void InternalLog(const char* message, void* user);
-
-		/// Deleted copy constructor
-		AudioReaderMpt(const AudioReaderMpt&) = delete;
-		/// Deleted assignment operator
-		AudioReaderMpt& operator=(const AudioReaderMpt&) = delete;
 	};
 }
 

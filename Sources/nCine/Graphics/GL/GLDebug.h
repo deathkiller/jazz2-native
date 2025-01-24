@@ -1,9 +1,11 @@
 #pragma once
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
+#endif
 
-#if defined(DEATH_TRACE) && defined(DEATH_TRACE_GL_ERRORS)
+#if defined(DEATH_TRACE) && defined(DEATH_TRACE_VERBOSE_GL)
 #	include "../../../Main.h"
 #	define GL_LOG_ERRORS()										\
 		do {													\

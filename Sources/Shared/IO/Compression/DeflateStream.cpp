@@ -181,7 +181,9 @@ namespace Death { namespace IO { namespace Compression {
 		std::int32_t error = (_rawInflate ? inflateInit2(&_strm, -MAX_WBITS) : inflateInit(&_strm));
 		if (error != Z_OK) {
 			_state = State::Failed;
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to initialize compressed stream with error %i", error);
+#endif
 			return;
 		}
 
@@ -216,7 +218,9 @@ namespace Death { namespace IO { namespace Compression {
 		if (res != Z_OK && res != Z_STREAM_END) {
 			CeaseReading();
 			_state = State::Failed;
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to inflate compressed stream with error %i", res);
+#endif
 			return Stream::Invalid;
 		}
 		size -= _strm.avail_out;
@@ -263,7 +267,9 @@ namespace Death { namespace IO { namespace Compression {
 
 		std::int32_t error = inflateEnd((z_stream*)&_strm);
 		if (error != Z_OK) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to finalize compressed stream with error %i", error);
+#endif
 		}
 
 		_state = State::Finished;
@@ -282,7 +288,9 @@ namespace Death { namespace IO { namespace Compression {
 			? deflateInit2(&_strm, compressionLevel, Z_DEFLATED, -MAX_WBITS, MAX_MEM_LEVEL >= 8 ? 8 : MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY)
 			: deflateInit(&_strm, compressionLevel));
 		if (error != Z_OK) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to initialize compressed stream with error %i", error);
+#endif
 			_state = State::Failed;
 		}
 	}
@@ -304,7 +312,9 @@ namespace Death { namespace IO { namespace Compression {
 
 		std::int32_t error = deflateEnd(&_strm);
 		if (error != Z_OK) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to finalize compressed stream with error %i", error);
+#endif
 		}
 
 		_state = State::Finished;
@@ -394,7 +404,9 @@ namespace Death { namespace IO { namespace Compression {
 				break;
 			}
 			if (error != Z_OK) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Failed to deflate uncompressed buffer with error %i", error);
+#endif
 				return Stream::Invalid;
 			}
 		}

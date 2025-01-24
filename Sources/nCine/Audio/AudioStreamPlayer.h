@@ -17,43 +17,42 @@ namespace nCine
 		explicit AudioStreamPlayer(StringView filename);
 		~AudioStreamPlayer() override;
 
-		/// Default move constructor
+		AudioStreamPlayer(const AudioStreamPlayer&) = delete;
+		AudioStreamPlayer& operator=(const AudioStreamPlayer&) = delete;
 		AudioStreamPlayer(AudioStreamPlayer&&) = default;
-		/// Default move assignment operator
 		AudioStreamPlayer& operator=(AudioStreamPlayer&&) = default;
 
-		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(const char* filename);
 
-		inline unsigned int bufferId() const override {
+		inline std::uint32_t bufferId() const override {
 			return audioStream_.bufferId();
 		}
 
-		inline int bytesPerSample() const override {
+		inline std::int32_t bytesPerSample() const override {
 			return audioStream_.bytesPerSample();
 		}
-		inline int numChannels() const override {
+		inline std::int32_t numChannels() const override {
 			return audioStream_.numChannels();
 		}
-		inline int frequency() const override {
+		inline std::int32_t frequency() const override {
 			return audioStream_.frequency();
 		}
 
-		inline unsigned long int numSamples() const override {
+		inline std::int32_t numSamples() const override {
 			return audioStream_.numSamples();
 		}
 		inline float duration() const override {
 			return audioStream_.duration();
 		}
 
-		inline unsigned long bufferSize() const override {
+		inline std::int32_t bufferSize() const override {
 			return audioStream_.bufferSize();
 		}
 
-		inline unsigned long int numStreamSamples() const {
+		inline std::int32_t numStreamSamples() const {
 			return audioStream_.numStreamSamples();
 		}
-		inline int streamBufferSize() const {
+		inline std::int32_t streamBufferSize() const {
 			return audioStream_.streamBufferSize();
 		}
 
@@ -71,10 +70,5 @@ namespace nCine
 
 	private:
 		AudioStream audioStream_;
-
-		/// Deleted copy constructor
-		AudioStreamPlayer(const AudioStreamPlayer&) = delete;
-		/// Deleted assignment operator
-		AudioStreamPlayer& operator=(const AudioStreamPlayer&) = delete;
 	};
 }

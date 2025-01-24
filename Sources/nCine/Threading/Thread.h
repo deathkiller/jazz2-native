@@ -2,7 +2,7 @@
 
 #include <CommonWindows.h>
 
-#if defined(WITH_THREADS)
+#if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #if defined(DEATH_TARGET_APPLE)
 #	include <mach/mach_init.h>

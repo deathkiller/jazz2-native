@@ -20,7 +20,9 @@ namespace nCine
 		using promise_type = task_promise;
 		using handle_type = std::coroutine_handle<promise_type>;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		mutable handle_type m_handle;
+#endif
 
 		Task(handle_type handle)
 			: m_handle(handle)
@@ -41,7 +43,7 @@ namespace nCine
 
 		bool await_ready()
 		{
-			return !m_handle || m_handle.done();
+			return (!m_handle || m_handle.done());
 		}
 
 		bool await_suspend(std::coroutine_handle<> handle)
@@ -88,9 +90,11 @@ namespace nCine
 
 		struct task_promise
 		{
-			std::optional<T> m_value { };
-			std::coroutine_handle<promise_type> m_inner_handler { };
-			std::coroutine_handle<promise_type> m_outer_handler { };
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			std::optional<T> m_value{};
+			std::coroutine_handle<promise_type> m_inner_handler{};
+			std::coroutine_handle<promise_type> m_outer_handler{};
+#endif
 
 			auto value()
 			{
@@ -99,18 +103,18 @@ namespace nCine
 
 			auto initial_suspend()
 			{
-				return std::suspend_never { };
+				return std::suspend_never{};
 			}
 
 			auto final_suspend() noexcept
 			{
-				return std::suspend_always { };
+				return std::suspend_always{};
 			}
 
 			void return_value(T t)
 			{
 				m_value = t;
-				//return std::suspend_always { };
+				//return std::suspend_always{};
 			}
 
 			Task<T> get_return_object()
@@ -125,7 +129,6 @@ namespace nCine
 
 			void rethrow_if_unhandled_exception()
 			{
-
 			}
 		};
 #else

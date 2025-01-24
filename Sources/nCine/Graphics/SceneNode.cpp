@@ -155,7 +155,7 @@ namespace nCine
 	}
 
 	/*! \return True if the node has been removed */
-	bool SceneNode::removeChildNodeAt(unsigned int index)
+	bool SceneNode::removeChildNodeAt(std::uint32_t index)
 	{
 		// Can't remove at an index past the number of children
 		if (children_.empty() || index > children_.size() - 1) {
@@ -215,9 +215,9 @@ namespace nCine
 	}
 
 	/*! \return If the node has no parent then 0 is returned */
-	unsigned int SceneNode::childOrderIndex() const
+	std::uint32_t SceneNode::childOrderIndex() const
 	{
-		unsigned int index = 0;
+		std::uint32_t index = 0;
 		if (parent_ != nullptr) {
 			ASSERT(parent_->children_[childOrderIndex_] == this);
 			index = childOrderIndex_;
@@ -227,10 +227,10 @@ namespace nCine
 	}
 
 	/*!	\return True if the two nodes have been swapped  */
-	bool SceneNode::swapChildrenNodes(unsigned int firstIndex, unsigned int secondIndex)
+	bool SceneNode::swapChildrenNodes(std::uint32_t firstIndex, std::uint32_t secondIndex)
 	{
 		// Check if there are at least two children and if the indices are different and valid
-		const unsigned int numChildren = (unsigned int)children_.size();
+		const std::uint32_t numChildren = std::uint32_t(children_.size());
 		if (numChildren < 2 || firstIndex == secondIndex ||
 			firstIndex > numChildren - 1 || secondIndex > numChildren - 1) {
 			return false;

@@ -51,6 +51,7 @@ namespace nCine
 		std::uint64_t _increment;
 	};
 
+	/// Returns random number generator instance
 	extern RandomGenerator& Random() noexcept;
 
 }

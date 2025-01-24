@@ -68,27 +68,27 @@ namespace nCine
 		}
 	}
 
-	unsigned long int AudioReaderMpt::read(void* buffer, unsigned long int bufferSize) const
+	std::int32_t AudioReaderMpt::read(void* buffer, std::int32_t bufferSize) const
 	{
 		if (_module == nullptr) {
 			return 0;
 		}
 
 #if defined(WITH_OPENMPT_DYNAMIC)
-		int count = _openmpt_module_read_interleaved_stereo(
+		std::size_t count = _openmpt_module_read_interleaved_stereo(
 			_module, _frequency,
 			bufferSize / (2 * sizeof(int16_t)), // Buffer size per channel
 			(int16_t*)buffer
 		);
 #else
-		size_t count = openmpt_module_read_interleaved_stereo(
+		std::size_t count = openmpt_module_read_interleaved_stereo(
 			_module, _frequency,
-			bufferSize / (2 * sizeof(int16_t)), // Buffer size per channel
-			(int16_t*)buffer
+			bufferSize / (2 * sizeof(std::int16_t)), // Buffer size per channel
+			(std::int16_t*)buffer
 		);
 #endif
 		// Number of frames * channel count * size of sample
-		return count * 2 * sizeof(int16_t);
+		return std::int32_t(count) * 2 * sizeof(std::int16_t);
 	}
 
 	void AudioReaderMpt::rewind() const
@@ -144,13 +144,13 @@ namespace nCine
 	}
 #endif
 
-	size_t AudioReaderMpt::stream_read_func(void* stream, void* dst, size_t bytes)
+	std::size_t AudioReaderMpt::stream_read_func(void* stream, void* dst, std::size_t bytes)
 	{
 		AudioReaderMpt* _this = static_cast<AudioReaderMpt*>(stream);
 		return _this->_fileHandle->Read(dst, (unsigned long)bytes);
 	}
 
-	int AudioReaderMpt::stream_seek_func(void* stream, int64_t offset, int whence)
+	std::int32_t AudioReaderMpt::stream_seek_func(void* stream, std::int64_t offset, std::int32_t whence)
 	{
 		SeekOrigin origin;
 		switch (whence) {
@@ -161,11 +161,11 @@ namespace nCine
 		}
 
 		AudioReaderMpt* _this = static_cast<AudioReaderMpt*>(stream);
-		_this->_fileHandle->Seek((int32_t)offset, origin);
+		_this->_fileHandle->Seek(offset, origin);
 		return 0;
 	}
 
-	int64_t AudioReaderMpt::stream_tell_func(void* stream)
+	std::int64_t AudioReaderMpt::stream_tell_func(void* stream)
 	{
 		AudioReaderMpt* _this = static_cast<AudioReaderMpt*>(stream);
 		return _this->_fileHandle->GetPosition();

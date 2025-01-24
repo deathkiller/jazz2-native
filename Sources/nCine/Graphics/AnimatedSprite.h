@@ -51,8 +51,8 @@ namespace nCine
 		void clearAnimations();
 
 		/// Returns the number of animations
-		inline unsigned int numAnimations() {
-			return (unsigned int)anims_.size();
+		inline std::uint32_t numAnimations() {
+			return std::uint32_t(anims_.size());
 		}
 		/// Returns the array of all animations
 		inline SmallVectorImpl<RectAnimation>& animations() {
@@ -64,11 +64,11 @@ namespace nCine
 		}
 
 		/// Returns the index of the current animation
-		unsigned int animationIndex() const {
+		std::uint32_t animationIndex() const {
 			return currentAnimIndex_;
 		}
 		/// Sets current animation index and its frame number
-		void setAnimationIndex(unsigned int animIndex);
+		void setAnimationIndex(std::uint32_t animIndex);
 
 		/// Returns the current animation, if any
 		RectAnimation* currentAnimation();
@@ -76,9 +76,9 @@ namespace nCine
 		const RectAnimation* currentAnimation() const;
 
 		/// Returns the frame number of current animation
-		unsigned int frame() const;
+		std::uint32_t frame() const;
 		/// Sets current animation to a specified frame number
-		void setFrame(unsigned int frameNum);
+		void setFrame(std::uint32_t frameNum);
 
 		inline static ObjectType sType() {
 			return ObjectType::AnimatedSprite;
@@ -90,7 +90,7 @@ namespace nCine
 
 	private:
 		SmallVector<RectAnimation, 0> anims_;
-		unsigned int currentAnimIndex_;
+		std::uint32_t currentAnimIndex_;
 
 		AnimatedSprite& operator=(const AnimatedSprite&) = delete;
 	};

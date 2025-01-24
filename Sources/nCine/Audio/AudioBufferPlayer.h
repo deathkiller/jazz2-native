@@ -23,16 +23,16 @@ namespace nCine
 		AudioBufferPlayer(AudioBufferPlayer&&) = default;
 		AudioBufferPlayer& operator=(AudioBufferPlayer&&) = default;
 
-		unsigned int bufferId() const override;
+		std::uint32_t bufferId() const override;
 
-		int bytesPerSample() const override;
-		int numChannels() const override;
-		int frequency() const override;
+		std::int32_t bytesPerSample() const override;
+		std::int32_t numChannels() const override;
+		std::int32_t frequency() const override;
 
-		unsigned long int numSamples() const override;
+		std::int32_t numSamples() const override;
 		float duration() const override;
 
-		unsigned long int bufferSize() const override;
+		std::int32_t bufferSize() const override;
 
 		/// Gets the audio buffer used for playing
 		inline const AudioBuffer* audioBuffer() const {

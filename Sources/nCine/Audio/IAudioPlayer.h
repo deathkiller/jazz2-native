@@ -11,6 +11,8 @@ namespace nCine
 	{
 		DEATH_RUNTIME_OBJECT();
 
+		friend class ALAudioDevice;
+
 	public:
 		/// Player state
 		enum class PlayerState {
@@ -29,32 +31,32 @@ namespace nCine
 		IAudioPlayer& operator=(IAudioPlayer&&) = default;
 
 		/// Returns the OpenAL id of the player source
-		inline unsigned int sourceId() const {
+		inline std::uint32_t sourceId() const {
 			return sourceId_;
 		}
 
 		/// Returns the OpenAL id of the currently playing buffer
-		virtual unsigned int bufferId() const = 0;
+		virtual std::uint32_t bufferId() const = 0;
 
 		/// Returns the number of bytes per sample
-		virtual int bytesPerSample() const = 0;
+		virtual std::int32_t bytesPerSample() const = 0;
 		/// Returns the number of audio channels of the currently playing buffer
-		virtual int numChannels() const = 0;
+		virtual std::int32_t numChannels() const = 0;
 		/// Returns the samples frequency of the currently playing buffer
-		virtual int frequency() const = 0;
+		virtual std::int32_t frequency() const = 0;
 
 		/// Returns the number of samples
-		virtual unsigned long int numSamples() const = 0;
+		virtual std::int32_t numSamples() const = 0;
 		/// Returns the duration in seconds
 		virtual float duration() const = 0;
 
 		/// Returns the size of the currently playing buffer in bytes
-		virtual unsigned long bufferSize() const = 0;
+		virtual std::int32_t bufferSize() const = 0;
 
 		/// Returns the playback position expressed in samples
-		virtual int sampleOffset() const;
+		virtual std::int32_t sampleOffset() const;
 		/// Sets the playback position expressed in samples
-		virtual void setSampleOffset(int offset);
+		virtual void setSampleOffset(std::int32_t offset);
 
 		/// Starts playing
 		virtual void play() = 0;
@@ -141,7 +143,7 @@ namespace nCine
 		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
 
 		/// The OpenAL source id
-		unsigned int sourceId_;
+		std::uint32_t sourceId_;
 		/// Current player state
 		PlayerState state_;
 		/// Player flags
@@ -155,7 +157,7 @@ namespace nCine
 		/// Player position in space
 		Vector3f position_;
 		/// Filter handle
-		unsigned int filterHandle_;
+		std::uint32_t filterHandle_;
 
 		constexpr bool GetFlags(PlayerFlags flag) const noexcept {
 			return (flags_ & flag) == flag;
@@ -179,7 +181,5 @@ namespace nCine
 		virtual Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D);
 
 		void setPositionInternal(const Vector3f& position);
-
-		friend class ALAudioDevice;
 	};
 }

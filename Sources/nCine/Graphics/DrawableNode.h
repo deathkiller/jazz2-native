@@ -23,11 +23,11 @@ namespace nCine
 		/// Presets for blending factors
 		enum class BlendingPreset
 		{
-			DISABLED, ///< uses `GL_ONE` and `GL_ZERO`
-			ALPHA, ///< uses `GL_SRC_ALPHA` and `GL_ONE_MINUS_SRC_ALPHA`
-			PREMULTIPLIED_ALPHA, ///< uses `GL_ONE` and `GL_ONE_MINUS_SRC_ALPHA`
-			ADDITIVE, ///< uses `GL_SRC_ALPHA` and `GL_ONE`
-			MULTIPLY ///< uses `GL_DST_COLOR` and `GL_ZERO`
+			DISABLED,					///< uses `GL_ONE` and `GL_ZERO`
+			ALPHA,						///< uses `GL_SRC_ALPHA` and `GL_ONE_MINUS_SRC_ALPHA`
+			PREMULTIPLIED_ALPHA,		///< uses `GL_ONE` and `GL_ONE_MINUS_SRC_ALPHA`
+			ADDITIVE,					///< uses `GL_SRC_ALPHA` and `GL_ONE`
+			MULTIPLY					///< uses `GL_DST_COLOR` and `GL_ZERO`
 		};
 
 		/// OpenGL blending factors
@@ -121,7 +121,7 @@ namespace nCine
 		void setBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor);
 
 		/// Returns the last frame in which any of the viewports have rendered this node (node was not culled)
-		inline unsigned long int lastFrameRendered() const {
+		inline std::uint32_t lastFrameRendered() const {
 			return lastFrameRendered_;
 		}
 		/// Returns the axis-aligned bounding box of the node area in the last frame
@@ -139,7 +139,7 @@ namespace nCine
 		RenderCommand renderCommand_;
 
 		/// The last frame any viewports rendered this node
-		unsigned long int lastFrameRendered_;
+		std::uint32_t lastFrameRendered_;
 		/// Axis-aligned bounding box of the node area
 		Rectf aabb_;
 		/// Calculates updated values for the AABB
@@ -157,7 +157,6 @@ namespace nCine
 		virtual void updateRenderCommand() = 0;
 
 	private:
-		/// Deleted assignment operator
 		DrawableNode& operator=(const DrawableNode&) = delete;
 
 		friend class ShaderState;

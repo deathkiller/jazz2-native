@@ -13,11 +13,11 @@ namespace nCine
 		class Commands
 		{
 		public:
-			unsigned int vertices;
-			unsigned int commands;
-			unsigned int transparents;
-			unsigned int instances;
-			unsigned int batchSize;
+			std::uint32_t vertices;
+			std::uint32_t commands;
+			std::uint32_t transparents;
+			std::uint32_t instances;
+			std::uint32_t batchSize;
 
 			Commands()
 				: vertices(0), commands(0), transparents(0), instances(0), batchSize(0) {}
@@ -38,9 +38,9 @@ namespace nCine
 		class Buffers
 		{
 		public:
-			unsigned int count;
-			unsigned long size;
-			unsigned long usedSpace;
+			std::uint32_t count;
+			std::uint32_t size;
+			std::uint32_t usedSpace;
 
 			Buffers()
 				: count(0), size(0), usedSpace(0) {}
@@ -59,8 +59,8 @@ namespace nCine
 		class Textures
 		{
 		public:
-			unsigned int count;
-			unsigned long dataSize;
+			std::uint32_t count;
+			std::uint32_t dataSize;
 
 			Textures()
 				: count(0), dataSize(0) {}
@@ -78,8 +78,8 @@ namespace nCine
 		class CustomBuffers
 		{
 		public:
-			unsigned int count;
-			unsigned long dataSize;
+			std::uint32_t count;
+			std::uint32_t dataSize;
 
 			CustomBuffers()
 				: count(0), dataSize(0) {}
@@ -97,10 +97,10 @@ namespace nCine
 		class VaoPool
 		{
 		public:
-			unsigned int size;
-			unsigned int capacity;
-			unsigned int reuses;
-			unsigned int bindings;
+			std::uint32_t size;
+			std::uint32_t capacity;
+			std::uint32_t reuses;
+			std::uint32_t bindings;
 
 			VaoPool()
 				: size(0), capacity(0), reuses(0), bindings(0) {}
@@ -120,9 +120,9 @@ namespace nCine
 		class CommandPool
 		{
 		public:
-			unsigned int usedSize;
-			unsigned int freeSize;
-			unsigned int retrievals;
+			std::uint32_t usedSize;
+			std::uint32_t freeSize;
+			std::uint32_t retrievals;
 
 			CommandPool()
 				: usedSize(0), freeSize(0), retrievals(0) {}
@@ -144,12 +144,12 @@ namespace nCine
 		}
 		/// Returns the commnad statistics for the specified type
 		static inline const Commands& commands(RenderCommand::Type type) {
-			return typedCommands_[(int)type];
+			return typedCommands_[(std::int32_t)type];
 		}
 
 		/// Returns the buffer statistics for the specified type
 		static inline const Buffers& buffers(RenderBuffersManager::BufferTypes type) {
-			return typedBuffers_[(int)type];
+			return typedBuffers_[(std::int32_t)type];
 		}
 
 		/// Returns aggregated texture statistics
@@ -168,7 +168,7 @@ namespace nCine
 		}
 
 		/// Returns the number of `DrawableNodes` culled because outside of the screen
-		static inline unsigned int culled() {
+		static inline std::uint32_t culled() {
 			return culledNodes_[(index_ + 1) % 2];
 		}
 
@@ -184,55 +184,55 @@ namespace nCine
 
 	private:
 		static Commands allCommands_;
-		static Commands typedCommands_[(int)RenderCommand::Type::Count];
-		static Buffers typedBuffers_[(int)RenderBuffersManager::BufferTypes::Count];
+		static Commands typedCommands_[(std::int32_t)RenderCommand::Type::Count];
+		static Buffers typedBuffers_[(std::int32_t)RenderBuffersManager::BufferTypes::Count];
 		static Textures textures_;
 		static CustomBuffers customVbos_;
 		static CustomBuffers customIbos_;
-		static unsigned int index_;
-		static unsigned int culledNodes_[2];
+		static std::uint32_t index_;
+		static std::uint32_t culledNodes_[2];
 		static VaoPool vaoPool_;
 		static CommandPool commandPool_;
 
 		static void reset();
 		static void gatherStatistics(const RenderCommand& command);
 		static void gatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer);
-		static inline void gatherVaoPoolStatistics(unsigned int poolSize, unsigned int poolCapacity)
+		static inline void gatherVaoPoolStatistics(std::uint32_t poolSize, std::uint32_t poolCapacity)
 		{
 			vaoPool_.size = poolSize;
 			vaoPool_.capacity = poolCapacity;
 		}
-		static inline void gatherCommandPoolStatistics(unsigned int usedSize, unsigned int freeSize)
+		static inline void gatherCommandPoolStatistics(std::uint32_t usedSize, std::uint32_t freeSize)
 		{
 			commandPool_.usedSize = usedSize;
 			commandPool_.freeSize = freeSize;
 		}
-		static inline void addTexture(unsigned long datasize)
+		static inline void addTexture(std::uint32_t datasize)
 		{
 			textures_.count++;
 			textures_.dataSize += datasize;
 		}
-		static inline void removeTexture(unsigned long datasize)
+		static inline void removeTexture(std::uint32_t datasize)
 		{
 			textures_.count--;
 			textures_.dataSize -= datasize;
 		}
-		static inline void addCustomVbo(unsigned long datasize)
+		static inline void addCustomVbo(std::uint32_t datasize)
 		{
 			customVbos_.count++;
 			customVbos_.dataSize += datasize;
 		}
-		static inline void removeCustomVbo(unsigned long datasize)
+		static inline void removeCustomVbo(std::uint32_t datasize)
 		{
 			customVbos_.count--;
 			customVbos_.dataSize -= datasize;
 		}
-		static inline void addCustomIbo(unsigned long datasize)
+		static inline void addCustomIbo(std::uint32_t datasize)
 		{
 			customIbos_.count++;
 			customIbos_.dataSize += datasize;
 		}
-		static inline void removeCustomIbo(unsigned long datasize)
+		static inline void removeCustomIbo(std::uint32_t datasize)
 		{
 			customIbos_.count--;
 			customIbos_.dataSize -= datasize;

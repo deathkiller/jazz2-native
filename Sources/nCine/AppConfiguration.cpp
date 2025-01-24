@@ -85,7 +85,7 @@ namespace nCine
 		return dataPath_;
 	}
 
-	const StringView AppConfiguration::argv(int index) const
+	const StringView AppConfiguration::argv(std::size_t index) const
 	{
 		return argv_[index];
 	}

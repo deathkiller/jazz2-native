@@ -40,18 +40,18 @@ namespace nCine
 		struct RenderingSettings
 		{
 			RenderingSettings()
-				: batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(585) { }
+				: batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(585) {}
 
-			/** @brief `true` if batching is enabled */
+			/** @brief Whether batching is enabled */
 			bool batchingEnabled;
-			/** @brief `true` if using indices for vertex batching */
+			/** @brief Whether using indices for vertex batching */
 			bool batchingWithIndices;
-			/** @brief `true` if node culling is enabled */
+			/** @brief Whether node culling is enabled */
 			bool cullingEnabled;
 			/** @brief Minimum size for a batch to be collected */
-			unsigned int minBatchSize;
+			std::uint32_t minBatchSize;
 			/** @brief Maximum size for a batch before a forced split */
-			unsigned int maxBatchSize;
+			std::uint32_t maxBatchSize;
 		};
 
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -61,7 +61,7 @@ namespace nCine
 			GuiSettings();
 
 			/** @brief ImGui drawable node layer */
-			uint16_t imguiLayer;
+			std::uint16_t imguiLayer;
 
 			/**
 				@brief ImGui viewport
@@ -90,7 +90,7 @@ namespace nCine
 			Count
 		};
 
-		/** @brief Can be used in @ref AttachTraceTarget() to attach to a console (if exists) */
+		/** @brief Can be used in @ref AttachTraceTarget() to attach to a console */
 		static constexpr char const* ConsoleTarget = "\n";
 
 		/** @brief Returns the configuration used to initialize the application */

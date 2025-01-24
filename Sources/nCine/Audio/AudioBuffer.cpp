@@ -91,7 +91,7 @@ namespace nCine
 		return *this;
 	}
 
-	void AudioBuffer::init(Format format, int frequency)
+	void AudioBuffer::init(Format format, std::int32_t frequency)
 	{
 		switch (format) {
 			case Format::Mono8:
@@ -149,7 +149,7 @@ namespace nCine
 		return samplesHaveLoaded;
 	}
 
-	bool AudioBuffer::loadFromSamples(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	bool AudioBuffer::loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize)
 	{
 		if (bytesPerSample_ == 0 || numChannels_ == 0 || frequency_ == 0) {
 			return false;

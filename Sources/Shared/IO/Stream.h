@@ -2,7 +2,7 @@
 
 #if defined(__ANDROID__) && defined(__ANDROID_API__) && __ANDROID_API__ < 24
 //	Android fully supports 64-bit file offsets only for API 24 and above.
-#else
+#elif !defined(DOXYGEN_GENERATING_OUTPUT)
 #	define _FILE_OFFSET_BITS 64
 #endif
 

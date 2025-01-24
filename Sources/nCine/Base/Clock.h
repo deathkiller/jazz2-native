@@ -33,6 +33,7 @@ namespace nCine
 		friend Clock& clock();
 	};
 
+	/// Returns system clock instance
 	extern Clock& clock();
 
 }

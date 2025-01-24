@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../Main.h"
+
 namespace nCine
 {
 	/// Audio reader interface
@@ -14,7 +16,7 @@ namespace nCine
 		 * \param bufferSize Buffer size in bytes
 		 * \return Number of bytes read
 		 */
-		virtual unsigned long int read(void* buffer, unsigned long int bufferSize) const = 0;
+		virtual std::int32_t read(void* buffer, std::int32_t bufferSize) const = 0;
 
 		/// Resets the audio file seek value
 		virtual void rewind() const = 0;
@@ -28,9 +30,7 @@ namespace nCine
 	class InvalidAudioReader : IAudioReader
 	{
 	public:
-		inline unsigned long int read(void* buffer, unsigned long int bufferSize) const override {
-			return 0;
-		}
+		inline std::int32_t read(void* buffer, std::int32_t bufferSize) const override { return 0; }
 		inline void rewind() const override { };
 	};
 #endif

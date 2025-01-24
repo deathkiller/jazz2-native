@@ -198,7 +198,9 @@ namespace Death { namespace IO { namespace Compression {
 
 		auto result = LZ4F_createDecompressionContext(&_ctx, LZ4F_VERSION);
 		if (LZ4F_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("LZ4F_createDecompressionContext() failed with error 0x%zx (%s)", result, LZ4F_getErrorName(result));
+#endif
 			_state = State::Failed;
 		}
 	}
@@ -224,7 +226,9 @@ namespace Death { namespace IO { namespace Compression {
 
 		bytesRead = _inputStream->Read(_inBuffer, bytesRead);
 		if (bytesRead <= 0) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to read frame info from input stream");
+#endif
 			_state = State::Failed;
 			return;
 		}
@@ -237,7 +241,9 @@ namespace Death { namespace IO { namespace Compression {
 		std::size_t consumedSize = bytesRead;
 		std::size_t result = LZ4F_getFrameInfo(_ctx, &info, _inBuffer, &consumedSize);
 		if (LZ4F_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("LZ4F_getFrameInfo() failed with error 0x%zx (%s)", result, LZ4F_getErrorName(result));
+#endif
 			_state = State::Failed;
 			return;
 		}
@@ -292,7 +298,9 @@ namespace Death { namespace IO { namespace Compression {
 			std::size_t srcSize = _inLength - _inPos;
 			auto result = LZ4F_decompress(_ctx, &_outBuffer[0], &dstSize, &_inBuffer[_inPos], &srcSize, nullptr);
 			if (LZ4F_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("LZ4F_decompress() failed with error 0x%zx (%s)", result, LZ4F_getErrorName(result));
+#endif
 				_state = State::Failed;
 				return Stream::Invalid;
 			}
@@ -336,7 +344,9 @@ namespace Death { namespace IO { namespace Compression {
 	{
 		auto result = LZ4F_createCompressionContext(&_ctx, LZ4F_VERSION);
 		if (LZ4F_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("LZ4F_createCompressionContext() failed with error 0x%zx (%s)", result, LZ4F_getErrorName(result));
+#endif
 			_state = State::Failed;
 		}
 
@@ -353,7 +363,9 @@ namespace Death { namespace IO { namespace Compression {
 
 		std::size_t headerSize = LZ4F_compressBegin(_ctx, &_outBuffer[0], _outCapacity, &kPrefs);
 		if (LZ4F_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("LZ4F_compressBegin() failed with error 0x%zx (%s)", headerSize, LZ4F_getErrorName(headerSize));
+#endif
 			_state = State::Failed;
 		}
 
@@ -431,7 +443,9 @@ namespace Death { namespace IO { namespace Compression {
 	{
 		std::size_t compressedSize = LZ4F_flush(_ctx, &_outBuffer[0], _outCapacity, nullptr);
 		if (LZ4F_isError(compressedSize)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("LZ4F_flush() failed with error 0x%zx (%s)", compressedSize, LZ4F_getErrorName(compressedSize));
+#endif
 			_state = State::Failed;
 			return false;
 		}
@@ -457,7 +471,9 @@ namespace Death { namespace IO { namespace Compression {
 	{
 		if (_outLength > 0) {
 			if (_outputStream->Write(&_outBuffer[0], _outLength) <= 0) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Failed to write frame info to output stream");
+#endif
 				return Stream::Invalid;
 			}
 			_outLength = 0;
@@ -471,7 +487,9 @@ namespace Death { namespace IO { namespace Compression {
 			std::size_t compressedSize = LZ4F_compressUpdate(_ctx, &_outBuffer[0], _outCapacity,
 				buffer, bytesToWrite, nullptr);
 			if (LZ4F_isError(compressedSize)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("LZ4F_compressUpdate() failed with error 0x%zx (%s)", compressedSize, LZ4F_getErrorName(compressedSize));
+#endif
 				_state = State::Failed;
 				return Stream::Invalid;
 			}
@@ -484,7 +502,9 @@ namespace Death { namespace IO { namespace Compression {
 		if (finish) {
 			std::size_t compressedSize = LZ4F_compressEnd(_ctx, &_outBuffer[0], _outCapacity, nullptr);
 			if (LZ4F_isError(compressedSize)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("LZ4F_compressEnd() failed with error 0x%zx (%s)", compressedSize, LZ4F_getErrorName(compressedSize));
+#endif
 				_state = State::Failed;
 				return Stream::Invalid;
 			}

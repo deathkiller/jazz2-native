@@ -32,7 +32,7 @@ namespace nCine
 		numVertices_ = numVertices;
 	}
 
-	void Geometry::createCustomVbo(unsigned int numFloats, GLenum usage)
+	void Geometry::createCustomVbo(std::uint32_t numFloats, GLenum usage)
 	{
 		vbo_ = std::make_unique<GLBufferObject>(GL_ARRAY_BUFFER);
 		vbo_->bufferData(numFloats * sizeof(GLfloat), nullptr, usage);
@@ -48,7 +48,7 @@ namespace nCine
 #endif
 	}
 
-	GLfloat* Geometry::acquireVertexPointer(unsigned int numFloats, unsigned int numFloatsAlignment)
+	GLfloat* Geometry::acquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment)
 	{
 		ASSERT(vbo_ == nullptr);
 		hasDirtyVertices_ = true;
@@ -106,7 +106,7 @@ namespace nCine
 		}
 	}
 
-	void Geometry::createCustomIbo(unsigned int numIndices, GLenum usage)
+	void Geometry::createCustomIbo(std::uint32_t numIndices, GLenum usage)
 	{
 		ibo_ = std::make_unique<GLBufferObject>(GL_ELEMENT_ARRAY_BUFFER);
 		ibo_->bufferData(numIndices * sizeof(GLushort), nullptr, usage);
@@ -122,7 +122,7 @@ namespace nCine
 #endif
 	}
 
-	GLushort* Geometry::acquireIndexPointer(unsigned int numIndices)
+	GLushort* Geometry::acquireIndexPointer(std::uint32_t numIndices)
 	{
 		ASSERT(ibo_ == nullptr);
 		hasDirtyIndices_ = true;
@@ -224,7 +224,7 @@ namespace nCine
 		if (hostVertexPointer_ != nullptr && hasDirtyVertices_) {
 			// Checking if the common VBO is allowed to use mapping and do the same for the custom one
 			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
-			const unsigned int numFloats = numVertices_ * numElementsPerVertex_;
+			const std::uint32_t numFloats = numVertices_ * numElementsPerVertex_;
 
 			if (mapFlags == 0 && vbo_ != nullptr) {
 				// Using buffer orphaning + `glBufferSubData()` when having a custom VBO with no mapping available

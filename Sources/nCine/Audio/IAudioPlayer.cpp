@@ -25,14 +25,14 @@ namespace nCine
 #endif
 	}
 
-	int IAudioPlayer::sampleOffset() const
+	std::int32_t IAudioPlayer::sampleOffset() const
 	{
-		int byteOffset = 0;
+		ALint byteOffset = 0;
 		alGetSourcei(sourceId_, AL_SAMPLE_OFFSET, &byteOffset);
 		return byteOffset;
 	}
 
-	void IAudioPlayer::setSampleOffset(int byteOffset)
+	void IAudioPlayer::setSampleOffset(std::int32_t byteOffset)
 	{
 		alSourcei(sourceId_, AL_SAMPLE_OFFSET, byteOffset);
 	}
