@@ -25,7 +25,7 @@ namespace nCine
 			return isAvailable_;
 		}
 
-		inline uint64_t platformHash() const {
+		inline std::uint64_t platformHash() const {
 			return platformHash_;
 		}
 

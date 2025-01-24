@@ -43,11 +43,11 @@ namespace nCine
 #endif
 	}
 
-	unsigned long int AudioReaderOgg::read(void* buffer, unsigned long int bufferSize) const
+	std::int32_t AudioReaderOgg::read(void* buffer, std::int32_t bufferSize) const
 	{
-		static int bitStream = 0;
+		std::int32_t bitStream = 0;
 		long bytes = 0;
-		unsigned long int bufferSeek = 0;
+		std::int32_t bufferSeek = 0;
 
 		do {
 			// Read up to a buffer's worth of decoded sound data

@@ -37,6 +37,7 @@ namespace nCine
 		/// Returns the time elapsed since the timestamp, as seconds in a `nanoseconds` number
 		float nanosecondsSince() const;
 
+		// Returns the number of elapsed ticks
 		inline std::uint64_t ticks() const {
 			return _counter;
 		}

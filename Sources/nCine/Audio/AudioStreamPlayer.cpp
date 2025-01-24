@@ -120,7 +120,7 @@ namespace nCine
 	void AudioStreamPlayer::updateState()
 	{
 		if (state_ == PlayerState::Playing) {
-			const bool shouldStillPlay = audioStream_.enqueue(sourceId_, GetFlags(PlayerFlags::Looping));
+			bool shouldStillPlay = audioStream_.enqueue(sourceId_, GetFlags(PlayerFlags::Looping));
 			if (!shouldStillPlay) {
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);

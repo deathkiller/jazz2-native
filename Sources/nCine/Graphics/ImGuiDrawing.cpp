@@ -33,13 +33,13 @@ using namespace Death::Containers::Literals;
 using namespace Death::IO;
 using namespace nCine::Backends;
 
-#if defined(DEATH_TRACE_GL_ERRORS)
+#if defined(DEATH_TRACE_VERBOSE_GL)
 #	define GL_CALL(op)													\
 		do {															\
 			op;															\
 			GLenum glErr_ = glGetError();								\
 			if (glErr_ != 0) {											\
-				LOGE("GL error 0x%x returned from '%s'", glErr_, #op);	\
+				LOGE("GL error 0x%x returned from %s", glErr_, #op);	\
 			}															\
 		} while (0)
 #else
@@ -212,8 +212,8 @@ namespace nCine
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
-		unsigned char* pixels = nullptr;
-		int width, height;
+		std::uint8_t* pixels = nullptr;
+		std::int32_t width, height;
 		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
 		texture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
@@ -323,11 +323,11 @@ namespace nCine
 	{
 		ImDrawData* drawData = ImGui::GetDrawData();
 
-		const unsigned int numElements = sizeof(ImDrawVert) / sizeof(GLfloat);
+		const std::uint32_t numElements = sizeof(ImDrawVert) / sizeof(GLfloat);
 
 		ImGuiIO& io = ImGui::GetIO();
-		const int fbWidth = static_cast<int>(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-		const int fbHeight = static_cast<int>(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+		const std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+		const std::int32_t fbHeight = std::int32_t(drawData->DisplaySize.y * drawData->FramebufferScale.y);
 		if (fbWidth <= 0 || fbHeight <= 0) {
 			return;
 		}
@@ -340,8 +340,8 @@ namespace nCine
 		projectionMatrix_.Translate(-clipOff.x, -clipOff.y, 0.0f);
 #endif
 
-		unsigned int numCmd = 0;
-		for (int n = 0; n < drawData->CmdListsCount; n++) {
+		std::uint32_t numCmd = 0;
+		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
 
 			RenderCommand& firstCmd = *retrieveCommandFromPool();
@@ -365,7 +365,7 @@ namespace nCine
 				lastLayerValue_ = theApplication().GetGuiSettings().imguiLayer;
 			}
 
-			for (int cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
+			for (std::int32_t cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
 				const ImDrawCmd* imCmd = &imCmdList->CmdBuffer[cmdIdx];
 				RenderCommand& currCmd = (cmdIdx == 0) ? firstCmd : *retrieveCommandFromPool();
 
@@ -417,8 +417,8 @@ namespace nCine
 	{
 		ImDrawData* drawData = ImGui::GetDrawData();
 
-		const int fbWidth = static_cast<int>(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-		const int fbHeight = static_cast<int>(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+		const std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+		const std::int32_t fbHeight = std::int32_t(drawData->DisplaySize.y * drawData->FramebufferScale.y);
 		if (fbWidth <= 0 || fbHeight <= 0) {
 			return;
 		}
@@ -434,7 +434,7 @@ namespace nCine
 		GLDepthTest::State depthTestState = GLDepthTest::state();
 		GLDepthTest::disable();
 
-		for (int n = 0; n < drawData->CmdListsCount; n++) {
+		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
 			const ImDrawIdx* firstIndex = nullptr;
 
@@ -444,7 +444,7 @@ namespace nCine
 			ibo_->bufferData(static_cast<GLsizeiptr>(imCmdList->IdxBuffer.Size) * sizeof(ImDrawIdx), static_cast<const GLvoid*>(imCmdList->IdxBuffer.Data), GL_STREAM_DRAW);
 			imguiShaderProgram_->use();
 
-			for (int cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
+			for (std::int32_t cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
 				const ImDrawCmd* imCmd = &imCmdList->CmdBuffer[cmdIdx];
 
 				// Project scissor/clipping rectangles into framebuffer space
@@ -531,8 +531,8 @@ namespace nCine
 		ImDrawData* drawData = viewport->DrawData;
 
 		// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-		int fbWidth = static_cast<int>(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-		int fbHeight = static_cast<int>(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+		std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+		std::int32_t fbHeight = std::int32_t(drawData->DisplaySize.y * drawData->FramebufferScale.y);
 		if (fbWidth <= 0 || fbHeight <= 0) {
 			return;
 		}
@@ -548,15 +548,15 @@ namespace nCine
 		ImVec2 clipOff = drawData->DisplayPos;         // (0,0) unless using multi-viewports
 		ImVec2 clipScale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
-		for (int n = 0; n < drawData->CmdListsCount; n++) {
+		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
 
-			const GLsizeiptr vtxBufferSize = (GLsizeiptr)imCmdList->VtxBuffer.Size * (int)sizeof(ImDrawVert);
-			const GLsizeiptr idxBufferSize = (GLsizeiptr)imCmdList->IdxBuffer.Size * (int)sizeof(ImDrawIdx);
+			const GLsizeiptr vtxBufferSize = GLsizeiptr(imCmdList->VtxBuffer.Size) * std::int32_t(sizeof(ImDrawVert));
+			const GLsizeiptr idxBufferSize = GLsizeiptr(imCmdList->IdxBuffer.Size) * std::int32_t(sizeof(ImDrawIdx));
 			GL_CALL(glBufferData(GL_ARRAY_BUFFER, vtxBufferSize, (const GLvoid*)imCmdList->VtxBuffer.Data, GL_STREAM_DRAW));
 			GL_CALL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, idxBufferSize, (const GLvoid*)imCmdList->IdxBuffer.Data, GL_STREAM_DRAW));
 
-			for (int cmd_i = 0; cmd_i < imCmdList->CmdBuffer.Size; cmd_i++) {
+			for (std::int32_t cmd_i = 0; cmd_i < imCmdList->CmdBuffer.Size; cmd_i++) {
 				const ImDrawCmd* imCmd = &imCmdList->CmdBuffer[cmd_i];
 				if (imCmd->UserCallback != nullptr) {
 					// User callback, registered via ImDrawList::AddCallback()
@@ -590,7 +590,7 @@ namespace nCine
 		GL_CALL(glDeleteVertexArrays(1, &vertexArrayObject));
 	}
 
-	void ImGuiDrawing::setupRenderStateForPlatformWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject)
+	void ImGuiDrawing::setupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, unsigned int vertexArrayObject)
 	{
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);

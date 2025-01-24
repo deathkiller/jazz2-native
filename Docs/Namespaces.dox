@@ -61,8 +61,8 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Assertions and event tracing
 	
 	Most functions and macros for event tracing require `DEATH_TRACE` to be defined. Otherwise, no operation is performed.
-	In addition, assert statements can be suppressed with `DEATH_NO_ASSERT` define. See also @ref Death::ITraceSink
-	companion interface.
+	In addition, assert statements can be suppressed with `DEATH_NO_ASSERT` define or redirected to the standard
+	@cpp assert() @ce with `DEATH_STANDARD_ASSERT` define. See also @ref Death::ITraceSink companion interface.
 */
 /** @file Shared/CommonBase.h
 	@brief Basic definitions
@@ -86,6 +86,18 @@ See also @ref third-party for the licenses of the libraries used.
 /** @dir Shared/Base
 	@brief Basic utilities for memory management and type information
 */
+/** @file Shared/Base/IDisposable.h
+	@brief Interface @ref Death::IDisposable
+*/
+/** @file Shared/Base/Memory.h
+	@brief Class @ref Death::Memory
+*/
+/** @file Shared/Base/Move.h
+	@brief Function @ref Death::forward(), @ref Death::move(), @ref Death::swap()
+*/
+/** @file Shared/Base/TypeInfo.h
+	@brief Function @ref Death::runtime_cast()
+*/
 
 /** @dir Shared/Containers
 	@brief Namespace @ref Death::Containers, @ref Death::Containers::Literals
@@ -102,16 +114,46 @@ See also @ref third-party for the licenses of the libraries used.
 
 	Literals for easy construction of string views.
 */
+/** @file Shared/Containers/Array.h
+	@brief Class @ref Death::Containers::Array
+*/
+/** @file Shared/Containers/ArrayView.h
+	@brief Class @ref Death::Containers::ArrayView, @ref @ref Death::Containers::StaticArrayView
+*/
+/** @file Shared/Containers/DateTime.h
+	@brief Class @ref Death::Containers::DateTime, @ref @ref Death::Containers::TimeSpan
+*/
+/** @file Shared/Containers/DateTime.h
+	@brief Class @ref Death::Containers::Function, @ref Death::Containers::FunctionData
+*/
 /** @file Shared/Containers/GrowableArray.h
 	@brief Class @ref Death::Containers::ArrayAllocator, @ref Death::Containers::ArrayNewAllocator, @ref Death::Containers::ArrayMallocAllocator, function @ref Death::Containers::arrayAllocatorCast(), @ref Death::Containers::arrayIsGrowable(), @ref Death::Containers::arrayCapacity(), @ref Death::Containers::arrayReserve(), @ref Death::Containers::arrayResize(), @ref Death::Containers::arrayAppend(), @ref Death::Containers::arrayInsert(), @ref Death::Containers::arrayRemove(), @ref Death::Containers::arrayRemoveUnordered(), @ref Death::Containers::arrayRemoveSuffix(), @ref Death::Containers::arrayClear(), @ref Death::Containers::arrayShrink()
 
 	See @ref Containers-Array-growable for more information.
- */
+*/
+/** @file Shared/Containers/Pair.h
+	@brief Class @ref Death::Containers::Pair
+*/
+/** @file Shared/Containers/Reference.h
+	@brief Class @ref Death::Containers::Reference
+*/
+/** @file Shared/Containers/SmallVector.h
+	@brief Class @ref Death::Containers::SmallVector
+*/
+/** @file Shared/Containers/StaticArray.h
+	@brief Class @ref Death::Containers::StaticArray
+*/
+/** @file Shared/Containers/String.h
+	@brief Class @ref Death::Containers::String, tag Death::Containers::AllocatedInit
+*/
 /** @file Shared/Containers/StringUtils.h
 	@brief Namespace @ref Death::Containers::StringUtils
 */
 /** @namespace Death::Containers::StringUtils
 	@brief String utilities
+*/
+/** @file Shared/Containers/StringView.h
+	@brief Class @ref Death::Containers::BasicStringView, typedef @ref Death::Containers::StringView, @ref Death::Containers::MutableStringView
 */
 /** @file Shared/Containers/Tags.h
 	@brief Tag @ref Death::Containers::DefaultInit, @ref Death::Containers::ValueInit, @ref Death::Containers::NoInit, @ref Death::Containers::NoCreate, @ref Death::Containers::DirectInit, @ref Death::Containers::InPlaceInit
@@ -427,6 +469,12 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace nCine
 	@brief Root namespace of nCine game engine
+*/
+/** @file nCine/CommonConstants.h
+	@brief Common mathematical constants
+*/
+/** @dir nCine/Backends
+	@brief Namespace @ref nCine::Backends
 */
 /** @namespace nCine::Backends
 	@brief Platform-specific backends

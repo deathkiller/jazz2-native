@@ -292,7 +292,7 @@ namespace Death { namespace IO {
 		 *
 		 * @partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
 		 */
-		static void MountAsPersistent(Containers::StringView path);
+		static bool MountAsPersistent(Containers::StringView path);
 
 		/**
 		 * @brief Saves all changes to all persistent file systems

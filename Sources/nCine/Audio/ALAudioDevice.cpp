@@ -13,7 +13,7 @@ using namespace Death;
 namespace nCine
 {
 	ALAudioDevice::ALAudioDevice()
-		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ { }, deviceName_(nullptr), nativeFreq_(44100)
+		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, deviceName_(nullptr), nativeFreq_(44100)
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
 #endif
@@ -49,7 +49,7 @@ namespace nCine
 		if (error != AL_NO_ERROR) {
 			LOGE("alGenSources() failed with error 0x%x", error);
 		} else {
-			for (int i = MaxSources - 1; i >= 0; i--) {
+			for (std::int32_t i = MaxSources - 1; i >= 0; i--) {
 				sourcePool_.push_back(sources_[i]);
 			}
 		}
@@ -106,7 +106,7 @@ namespace nCine
 		alListenerf(AL_GAIN, gain_);
 	}
 
-	const IAudioPlayer* ALAudioDevice::player(unsigned int index) const
+	const IAudioPlayer* ALAudioDevice::player(std::uint32_t index) const
 	{
 		if (index < players_.size()) {
 			return players_[index];
@@ -241,7 +241,7 @@ namespace nCine
 		alListener3f(AL_VELOCITY, velocity.X * VelocityToPhysical, velocity.Y * -VelocityToPhysical, velocity.Z * -VelocityToPhysical);
 	}
 
-	int ALAudioDevice::nativeFrequency()
+	std::int32_t ALAudioDevice::nativeFrequency()
 	{
 		return nativeFreq_;
 	}
@@ -374,7 +374,7 @@ namespace nCine
 			return S_OK;
 		}
 
-		uint64_t now = Environment::QueryUnbiasedInterruptTimeAsMs();
+		std::uint64_t now = Environment::QueryUnbiasedInterruptTimeAsMs();
 		String newDeviceId = Utf8::FromUtf16(pwstrDefaultDeviceId);
 		if (now - lastDeviceChangeTime_ > DeviceChangeLimitMs || newDeviceId != lastDeviceId_) {
 			lastDeviceChangeTime_ = now;

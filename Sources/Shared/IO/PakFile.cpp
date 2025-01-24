@@ -223,7 +223,9 @@ namespace Death { namespace IO {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 			return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("File \"%s\" was compressed using an unsupported compression method (Deflate)", String::nullTerminatedView(path).data());
+#	endif
 			return nullptr;
 #endif
 		}
@@ -232,7 +234,9 @@ namespace Death { namespace IO {
 #if defined(WITH_LZ4)
 			return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("File \"%s\" was compressed using an unsupported compression method (LZ4)", String::nullTerminatedView(path).data());
+#	endif
 			return nullptr;
 #endif
 		}
@@ -241,7 +245,9 @@ namespace Death { namespace IO {
 #if defined(WITH_ZSTD)
 			return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("File \"%s\" was compressed using an unsupported compression method (Zstd)", String::nullTerminatedView(path).data());
+#	endif
 			return nullptr;
 #endif
 		}
@@ -539,7 +545,7 @@ namespace Death { namespace IO {
 		}
 
 		DEATH_ASSERT(uncompressedSize > 0, "Failed to copy stream to .pak file", false);
-		// NOTE: Files inside .pak are limited to 4GBs only for now
+		// NOTE: Files inside .pak are limited to 4 GB only for now
 		DEATH_ASSERT(uncompressedSize < UINT32_MAX && size < UINT32_MAX, "File size in .pak file exceeded the allowed range", false);
 
 		PakFile::Item* newItem = &arrayAppend(*items, PakFile::Item());

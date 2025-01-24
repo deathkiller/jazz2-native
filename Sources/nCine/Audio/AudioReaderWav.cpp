@@ -16,13 +16,13 @@ namespace nCine
 		ASSERT(fileHandle_->IsValid());
 	}
 
-	unsigned long int AudioReaderWav::read(void* buffer, unsigned long int bufferSize) const
+	std::int32_t AudioReaderWav::read(void* buffer, std::int32_t bufferSize) const
 	{
 		ASSERT(buffer);
 		ASSERT(bufferSize > 0);
 
-		unsigned long int bytes = 0;
-		unsigned long int bufferSeek = 0;
+		std::int32_t bytes = 0;
+		std::int32_t bufferSeek = 0;
 
 		do {
 			// Read up to a buffer's worth of decoded sound data

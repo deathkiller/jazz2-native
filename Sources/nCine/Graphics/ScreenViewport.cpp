@@ -29,7 +29,7 @@ namespace nCine
 		type_ = Type::Screen;
 	}
 
-	void ScreenViewport::resize(int width, int height)
+	void ScreenViewport::resize(std::int32_t width, std::int32_t height)
 	{
 		if (width == width_ && height == height_) {
 			return;
@@ -38,9 +38,9 @@ namespace nCine
 		viewportRect_.Set(0, 0, width, height);
 
 		if (camera_ != nullptr) {
-			camera_->setOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
+			camera_->setOrthoProjection(0.0f, float(width), 0.0f, float(height));
 		}
-		RenderResources::defaultCamera_->setOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
+		RenderResources::defaultCamera_->setOrthoProjection(0.0f, float(width), 0.0f, float(height));
 
 		width_ = width;
 		height_ = height;
@@ -48,7 +48,7 @@ namespace nCine
 
 	void ScreenViewport::update()
 	{
-		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::UpdatedBit)) {
 				chain_[i]->update();
 			}
@@ -58,7 +58,7 @@ namespace nCine
 
 	void ScreenViewport::visit()
 	{
-		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::VisitedBit)) {
 				chain_[i]->visit();
 			}
@@ -73,7 +73,7 @@ namespace nCine
 		RenderStatistics::reset();
 #endif
 
-		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::CommittedBit)) {
 				chain_[i]->sortAndCommitQueue();
 			}
@@ -89,7 +89,7 @@ namespace nCine
 		// Recursive calls into the chain
 		Viewport::draw(0);
 
-		for (unsigned int i = 0; i < chain_.size(); i++) {
+		for (std::size_t i = 0; i < chain_.size(); i++) {
 			if (chain_[i]) {
 				chain_[i]->renderQueue_->clear();
 				chain_[i]->stateBits_.reset();

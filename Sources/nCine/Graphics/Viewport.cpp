@@ -62,7 +62,7 @@ namespace nCine
 			clearColor_(Colorf::Black), renderQueue_(std::make_unique<RenderQueue>()), fbo_(nullptr), rootNode_(nullptr),
 			camera_(nullptr), stateBits_(0), numColorAttachments_(0)
 	{
-		for (unsigned int i = 0; i < MaxNumTextures; i++) {
+		for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
 			textures_[i] = nullptr;
 		}
 
@@ -103,15 +103,15 @@ namespace nCine
 	Viewport::~Viewport() = default;
 
 	/*! \note Adding more textures enables the use of multiple render targets (MRTs) */
-	bool Viewport::setTexture(unsigned int index, Texture* texture)
+	bool Viewport::setTexture(std::uint32_t index, Texture* texture)
 	{
 		if (type_ == Type::Screen) {
 			return false;
 		}
 
 		if (type_ != Type::NoTexture) {
-			static const int MaxColorAttachments = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
-			const bool indexOutOfRange = (index >= static_cast<unsigned int>(MaxColorAttachments) || index >= MaxNumTextures);
+			static const std::int32_t MaxColorAttachments = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
+			const bool indexOutOfRange = (index >= std::uint32_t(MaxColorAttachments) || index >= MaxNumTextures);
 			const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->width() != width_);
 			const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->height() != height_);
 			if (indexOutOfRange || textures_[index] == texture || widthDiffers || heightDiffers)
@@ -206,7 +206,7 @@ namespace nCine
 		}
 
 		if (fbo_ != nullptr) {
-			for (unsigned int i = 0; i < MaxNumTextures; i++) {
+			for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
 				if (textures_[i] != nullptr) {
 					fbo_->detachTexture(GL_COLOR_ATTACHMENT0 + i);
 					textures_[i] = nullptr;
@@ -226,7 +226,7 @@ namespace nCine
 		return true;
 	}
 
-	Texture* Viewport::texture(unsigned int index)
+	Texture* Viewport::texture(std::uint32_t index)
 	{
 		ASSERT(index < MaxNumTextures);
 
@@ -249,8 +249,8 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 
-		const int width = (width_ != 0) ? width_ : viewportRect_.W;
-		const int height = (height_ != 0) ? height_ : viewportRect_.H;
+		const std::int32_t width = (width_ != 0 ? width_ : viewportRect_.W);
+		const std::int32_t height = (height_ != 0 ? height_ : viewportRect_.H);
 
 		const Camera* vieportCamera = (camera_ != nullptr ? camera_ : RenderResources::currentCamera());
 		Camera::ProjectionValues projValues = vieportCamera->projectionValues();
@@ -262,25 +262,25 @@ namespace nCine
 
 		const bool scissorRectNonZeroArea = (scissorRect_.W > 0 && scissorRect_.H > 0);
 		if (scissorRectNonZeroArea) {
-			Rectf scissorRectFloat(static_cast<float>(scissorRect_.X), static_cast<float>(scissorRect_.Y), static_cast<float>(scissorRect_.W), static_cast<float>(scissorRect_.H));
+			Rectf scissorRectFloat(float(scissorRect_.X), float(scissorRect_.Y), float(scissorRect_.W), float(scissorRect_.H));
 
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);
 			if (viewportRectNonZeroArea) {
 				scissorRectFloat.X -= viewportRect_.X;
 				scissorRectFloat.Y -= viewportRect_.Y;
 
-				const float viewportWidthRatio = width / static_cast<float>(viewportRect_.W);
-				const float viewportHeightRatio = height / static_cast<float>(viewportRect_.H);
+				const float viewportWidthRatio = width / float(viewportRect_.W);
+				const float viewportHeightRatio = height / float(viewportRect_.H);
 				scissorRectFloat.X *= viewportWidthRatio;
 				scissorRectFloat.Y *= viewportHeightRatio;
 				scissorRectFloat.W *= viewportWidthRatio;
 				scissorRectFloat.H *= viewportHeightRatio;
 			}
 
-			scissorRectFloat.X = (scissorRectFloat.X * projWidth / static_cast<float>(width)) + projValues.left;
-			scissorRectFloat.Y = (scissorRectFloat.Y * projHeight / static_cast<float>(height)) + projValues.top;
-			scissorRectFloat.W *= projWidth / static_cast<float>(width);
-			scissorRectFloat.H *= projHeight / static_cast<float>(height);
+			scissorRectFloat.X = (scissorRectFloat.X * projWidth / float(width)) + projValues.left;
+			scissorRectFloat.Y = (scissorRectFloat.Y * projHeight / float(height)) + projValues.top;
+			scissorRectFloat.W *= projWidth / float(width);
+			scissorRectFloat.H *= projHeight / float(height);
 
 			cullingRect_.Intersect(scissorRectFloat);
 		}
@@ -337,7 +337,7 @@ namespace nCine
 
 		if (rootNode_ != nullptr) {
 			ZoneScopedC(0x81A861);
-			unsigned int visitOrderIndex = 0;
+			std::uint32_t visitOrderIndex = 0;
 			rootNode_->OnVisit(*renderQueue_, visitOrderIndex);
 		}
 
@@ -356,7 +356,7 @@ namespace nCine
 		stateBits_.set(StateBitPositions::CommittedBit);
 	}
 
-	void Viewport::draw(unsigned int nextIndex)
+	void Viewport::draw(std::uint32_t nextIndex)
 	{
 		Viewport* nextViewport = (nextIndex < chain_.size()) ? chain_[nextIndex] : nullptr;
 		FATAL_ASSERT(nextViewport == nullptr || nextViewport->type_ != Type::Screen);

@@ -57,7 +57,6 @@ namespace nCine
 		inline virtual void OnJoyDisconnected(const JoyConnectionEvent& event) { }
 
 		/// Callback function called when the system sends a quit event, for example when the user clicks the window close button
-		/*! \returns True if the application should quit */
 		inline virtual bool OnQuitRequest() { return true; }
 	};
 }

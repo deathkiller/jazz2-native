@@ -62,10 +62,10 @@ namespace nCine
 		void setView(float x, float y, float rotation, float scale);
 		void setView(const ViewValues& values);
 
-		inline unsigned long int updateFrameProjectionMatrix() const {
+		inline std::uint32_t updateFrameProjectionMatrix() const {
 			return updateFrameProjectionMatrix_;
 		}
-		inline unsigned long int updateFrameViewMatrix() const {
+		inline std::uint32_t updateFrameViewMatrix() const {
 			return updateFrameViewMatrix_;
 		}
 
@@ -75,9 +75,9 @@ namespace nCine
 		Matrix4x4f projection_;
 		Matrix4x4f view_;
 		/// Last frame when the projection matrix was changed
-		unsigned long int updateFrameProjectionMatrix_;
+		std::uint32_t updateFrameProjectionMatrix_;
 		/// Last frame when the model matrix was changed
-		unsigned long int updateFrameViewMatrix_;
+		std::uint32_t updateFrameViewMatrix_;
 	};
 
 }

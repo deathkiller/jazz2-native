@@ -26,8 +26,6 @@ namespace nCine
 
 		/// Creates an OpenAL buffer name
 		AudioBuffer();
-		/// A constructor creating a buffer from memory
-		//AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a buffer from a file
 		explicit AudioBuffer(StringView filename);
 		AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
@@ -39,34 +37,33 @@ namespace nCine
 		AudioBuffer& operator=(AudioBuffer&& other) noexcept;
 
 		/// Initializes an empty buffer with the specified format and frequency
-		void init(Format format, int frequency);
+		void init(Format format, std::int32_t frequency);
 
-		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(StringView filename);
 		bool loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
 		/// Loads samples in raw PCM format from a memory buffer
-		bool loadFromSamples(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		bool loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize);
 
 		/// Returns the OpenAL buffer id
-		inline unsigned int bufferId() const {
+		inline std::uint32_t bufferId() const {
 			return bufferId_;
 		}
 
 		/// Returns the number of bytes per sample
-		inline int bytesPerSample() const {
+		inline std::int32_t bytesPerSample() const {
 			return bytesPerSample_;
 		}
 		/// Returns the number of audio channels
-		inline int numChannels() const {
+		inline std::int32_t numChannels() const {
 			return numChannels_;
 		}
 		/// Returns the samples frequency
-		inline int frequency() const {
+		inline std::int32_t frequency() const {
 			return frequency_;
 		}
 
 		/// Returns number of samples
-		inline unsigned long int numSamples() const {
+		inline std::int32_t numSamples() const {
 			return numSamples_;
 		}
 		/// Returns the duration in seconds
@@ -75,7 +72,7 @@ namespace nCine
 		}
 
 		/// Returns the size of the buffer in bytes
-		inline unsigned long bufferSize() const {
+		inline std::int32_t bufferSize() const {
 			return numSamples_ * numChannels_ * bytesPerSample_;
 		}
 
@@ -85,17 +82,17 @@ namespace nCine
 
 	private:
 		/// The OpenAL buffer id
-		unsigned int bufferId_;
+		std::uint32_t bufferId_;
 
 		/// Number of bytes per sample
-		int bytesPerSample_;
+		std::int32_t bytesPerSample_;
 		/// Number of channels
-		int numChannels_;
+		std::int32_t numChannels_;
 		/// Samples frequency
-		int frequency_;
+		std::int32_t frequency_;
 
 		/// Number of samples
-		unsigned long int numSamples_;
+		std::int32_t numSamples_;
 		/// Duration in seconds
 		float duration_;
 

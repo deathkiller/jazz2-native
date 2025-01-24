@@ -78,7 +78,7 @@ namespace nCine
 		BitArray& operator<<=(std::size_t shifts);
 		BitArray& operator>>=(std::size_t shifts);
 
-	protected:
+	private:
 		char* _data;
 		std::size_t _size;
 	};

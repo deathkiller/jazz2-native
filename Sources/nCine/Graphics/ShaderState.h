@@ -33,16 +33,16 @@ namespace nCine
 		/// Triggers a shader update without setting a new shader
 		bool resetShader();
 
-		bool setTexture(unsigned int unit, const Texture* texture);
+		bool setTexture(std::uint32_t unit, const Texture* texture);
 		inline bool setTexture(const Texture* texture) {
 			return setTexture(0, texture);
 		}
 
-		bool setUniformInt(const char* blockName, const char* name, const int* vector);
-		bool setUniformInt(const char* blockName, const char* name, int value0);
-		bool setUniformInt(const char* blockName, const char* name, int value0, int value1);
-		bool setUniformInt(const char* blockName, const char* name, int value0, int value1, int value2);
-		bool setUniformInt(const char* blockName, const char* name, int value0, int value1, int value2, int value3);
+		bool setUniformInt(const char* blockName, const char* name, const std::int32_t* vector);
+		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0);
+		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1);
+		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2);
+		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2, std::int32_t value3);
 
 		bool setUniformInt(const char* blockName, const char* name, const Vector2i& vector);
 		bool setUniformInt(const char* blockName, const char* name, const Vector3i& vector);
@@ -59,15 +59,15 @@ namespace nCine
 		bool setUniformFloat(const char* blockName, const char* name, const Vector4f& vector);
 		bool setUniformFloat(const char* blockName, const char* name, const Colorf& color);
 
-		unsigned int uniformBlockSize(const char* blockName);
-		bool copyToUniformBlock(const char* blockName, unsigned int destIndex, unsigned char* src, unsigned int numBytes);
-		bool copyToUniformBlock(const char* blockName, unsigned char* src, unsigned int numBytes);
-		bool copyToUniformBlock(const char* blockName, unsigned char* src);
+		std::uint32_t uniformBlockSize(const char* blockName);
+		bool copyToUniformBlock(const char* blockName, std::uint32_t destIndex, std::uint8_t* src, std::uint32_t numBytes);
+		bool copyToUniformBlock(const char* blockName, std::uint8_t* src, std::uint32_t numBytes);
+		bool copyToUniformBlock(const char* blockName, std::uint8_t* src);
 
 	private:
 		DrawableNode* node_;
 		Shader* shader_;
-		int previousShaderType_;
+		std::int32_t previousShaderType_;
 	};
 
 }

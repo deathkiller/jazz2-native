@@ -286,6 +286,8 @@ function(ncine_apply_compiler_options target)
 			message(STATUS "Runtime event tracing is enabled")
 		endif()
 		target_compile_definitions(${target} PRIVATE "DEATH_TRACE")
+		# Log also all IO operations
+		target_compile_definitions(${target} PRIVATE "DEATH_TRACE_VERBOSE_IO")
 		if(DEATH_TRACE_ASYNC)
 			target_compile_definitions(${target} PRIVATE "DEATH_TRACE_ASYNC")
 		elseif(NCINE_WITH_THREADS AND target_is_executable)

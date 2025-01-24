@@ -8,7 +8,9 @@ namespace nCine
 	class FrameTimer
 	{
 	public:
+		/** @brief Frames per second */
 		static constexpr float FramesPerSecond = 60.0f;
+		/** @brief Seconds per frame */
 		static constexpr float SecondsPerFrame = 1.0f / FramesPerSecond;
 
 		/// Constructor

@@ -42,6 +42,7 @@ namespace nCine
 		/// Destructor will delete every child node
 		~SceneNode() override;
 
+		SceneNode& operator=(const SceneNode&) = delete;
 		SceneNode(SceneNode&& other) noexcept;
 		SceneNode& operator=(SceneNode&& other) noexcept;
 
@@ -75,16 +76,16 @@ namespace nCine
 		/// Removes a child of this node, without reparenting nephews
 		bool removeChildNode(SceneNode* childNode);
 		/// Removes the child at the specified index, without reparenting nephews
-		bool removeChildNodeAt(unsigned int index);
+		bool removeChildNodeAt(std::uint32_t index);
 		/// Removes all children, without reparenting nephews
 		bool removeAllChildrenNodes();
 		/// Removes a child of this node reparenting nephews as children
 		bool unlinkChildNode(SceneNode* childNode);
 
 		/// Returns the child order index of this node or zero if it does not have a parent
-		unsigned int childOrderIndex() const;
+		std::uint32_t childOrderIndex() const;
 		/// Swaps two children at the specified indices
-		bool swapChildrenNodes(unsigned int firstIndex, unsigned int secondIndex);
+		bool swapChildrenNodes(std::uint32_t firstIndex, std::uint32_t secondIndex);
 		/// Brings this node one node forward in the parent's list of children
 		bool swapNodeForward();
 		/// Brings this node one node back in the parent's list of children
@@ -99,7 +100,7 @@ namespace nCine
 			visitOrderState_ = visitOrderState;
 		}
 		/// Returns the visit drawing order of the node
-		inline uint16_t visitOrderIndex() const {
+		inline std::uint16_t visitOrderIndex() const {
 			return visitOrderIndex_;
 		}
 
@@ -216,7 +217,7 @@ namespace nCine
 			return absColor_.A;
 		}
 		/// Sets the node alpha through an unsigned char component
-		void setAlpha(unsigned char alpha);
+		void setAlpha(std::uint8_t alpha);
 		/// Sets the node alpha through a float component
 		void setAlphaF(float alpha);
 
@@ -226,13 +227,13 @@ namespace nCine
 		}
 		/// Gets the node absolute rendering layer
 		/*! \note The final layer value is inherited from the parent if the node layer is 0. */
-		inline uint16_t absLayer() const {
+		inline std::uint16_t absLayer() const {
 			return absLayer_;
 		}
 		/// Sets the node rendering layer
 		/*! \note The lowest value (bottom) is 0 and the highest one (top) is 65535.
 		 *  When the value is 0, the final layer value is inherited from the parent. */
-		void setLayer(uint16_t layer) {
+		void setLayer(std::uint16_t layer) {
 			layer_ = layer;
 		}
 
@@ -261,7 +262,7 @@ namespace nCine
 		}
 
 		/// Returns the last frame in which any of the viewports have updtated this node
-		inline unsigned long int lastFrameUpdated() const {
+		inline std::uint32_t lastFrameUpdated() const {
 			return lastFrameUpdated_;
 		}
 
@@ -282,7 +283,7 @@ namespace nCine
 		SmallVector<SceneNode*, 0> children_;
 		/// The order index of this node among its siblings
 		/*! \note The index is cached here to make siblings reordering methods faster */
-		unsigned int childOrderIndex_;
+		std::uint32_t childOrderIndex_;
 
 		bool updateEnabled_;
 		bool drawEnabled_;
@@ -296,12 +297,12 @@ namespace nCine
 		/// The visit order state of this node
 		enum VisitOrderState visitOrderState_;
 		/// The visit order index of this node
-		uint16_t visitOrderIndex_;
+		std::uint16_t visitOrderIndex_;
 
 		/// The node rendering layer
 		/*! Even if the base scene node is not always drawable, it carries
 		 *  layer information to easily pass that information to its children. */
-		uint16_t layer_;
+		std::uint16_t layer_;
 
 		/// The node relative position
 		Vector2f position_;
@@ -329,7 +330,7 @@ namespace nCine
 		Colorf absColor_;
 
 		/// Absolute node rendering layer as calculated by the `transform()` function
-		uint16_t absLayer_;
+		std::uint16_t absLayer_;
 
 		/// Bitset that stores the various dirty states bits
 		BitSet<std::uint8_t> dirtyBits_;
@@ -340,10 +341,7 @@ namespace nCine
 		Matrix4x4f localMatrix_;
 
 		/// The last frame any viewport updated this node
-		unsigned long int lastFrameUpdated_;
-
-		/// Deleted assignment operator
-		SceneNode& operator=(const SceneNode&) = delete;
+		std::uint32_t lastFrameUpdated_;
 
 		/// Protected copy constructor used to clone objects
 		SceneNode(const SceneNode& other);
@@ -476,7 +474,7 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::ColorBit);
 	}
 
-	inline void SceneNode::setAlpha(unsigned char alpha)
+	inline void SceneNode::setAlpha(std::uint8_t alpha)
 	{
 		color_.SetAlpha(alpha / 255.0f);
 		dirtyBits_.set(DirtyBitPositions::ColorBit);

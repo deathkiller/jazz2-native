@@ -12,6 +12,8 @@ namespace nCine
 	/** @brief Stores initialization settings for an nCine application */
 	class AppConfiguration
 	{
+		friend class MainApplication;
+
 	public:
 		/** @brief Specifies uninitialized window position coordinate */
 		static constexpr std::int32_t WindowPositionIgnore = INT32_MAX;
@@ -35,7 +37,7 @@ namespace nCine
 		/** @brief Whether the window size is automatically scaled by the display factor */
 		bool windowScaling;
 		/** @brief Maximum number of frames to render per second or 0 for no limit */
-		unsigned int frameLimit;
+		std::uint32_t frameLimit;
 
 		/** @brief Window title */
 		String windowTitle;
@@ -45,18 +47,18 @@ namespace nCine
 		/** @brief Whether mapping is used to update OpenGL buffers */
 		bool useBufferMapping;
 		/** @brief Fixed size of render commands to be collected for batching on Emscripten and ANGLE */
-		unsigned int fixedBatchSize;
+		std::uint32_t fixedBatchSize;
 		/** @brief Path for the binary shaders cache (or empty to disable binary shader cache) */
 		String shaderCachePath;
 
 		/** @brief Maximum size in bytes for each VBO collecting geometry data */
-		unsigned long vboSize;
+		std::uint32_t vboSize;
 		/** @brief Maximum size in bytes for each IBO collecting index data */
-		unsigned long iboSize;
+		std::uint32_t iboSize;
 		/** @brief Maximum size for the pool of VAOs */
-		unsigned int vaoPoolSize;
+		std::uint32_t vaoPoolSize;
 		/** @brief Initial size for the pool of render commands */
-		unsigned int renderCommandPoolSize;
+		std::uint32_t renderCommandPoolSize;
 
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Whether the debug overlay is enabled */
@@ -87,11 +89,11 @@ namespace nCine
 			return glForwardCompatible_;
 		}
 		/** @brief Returns major version number of the OpenGL context */
-		inline unsigned int glMajorVersion() const {
+		inline std::uint32_t glMajorVersion() const {
 			return glMajorVersion_;
 		}
 		/** @brief Returns minor version number of the OpenGL context */
-		inline unsigned int glMinorVersion() const {
+		inline std::uint32_t glMinorVersion() const {
 			return glMinorVersion_;
 		}
 
@@ -100,14 +102,14 @@ namespace nCine
 			return argv_.size();
 		}
 		/** @brief Returns selected argument from the ones passed on the command-line */
-		const StringView argv(int index) const;
+		const StringView argv(std::size_t index) const;
 
 	private:
 		// Pre-configured compile-time variables
 		const bool glCoreProfile_;
 		const bool glForwardCompatible_;
-		const unsigned int glMajorVersion_;
-		const unsigned int glMinorVersion_;
+		const std::uint32_t glMajorVersion_;
+		const std::uint32_t glMinorVersion_;
 
 #if defined(DEATH_TARGET_WINDOWS)
 		Array<String> argv_;
@@ -115,7 +117,5 @@ namespace nCine
 		Array<StringView> argv_;
 #endif
 		String dataPath_;
-
-		friend class MainApplication;
 	};
 }

@@ -1,9 +1,11 @@
 #pragma once
 
-#include "../../../Main.h"
-
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
+#endif
+
+#include "../../../Main.h"
 
 namespace nCine
 {

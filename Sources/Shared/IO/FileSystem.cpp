@@ -1731,7 +1731,9 @@ namespace Death { namespace IO {
 #	endif
 						DWORD error = ::GetLastError();
 						if (error != ERROR_ALREADY_EXISTS) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 							LOGW("Cannot create directory \"%S\" with error 0x%08x%s", fullPath.data(), error, __GetWin32ErrorSuffix(error));
+#	endif
 							return false;
 						}
 					}
@@ -1751,7 +1753,9 @@ namespace Death { namespace IO {
 #	endif
 				DWORD error = ::GetLastError();
 				if (error != ERROR_ALREADY_EXISTS) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 					LOGW("Cannot create directory \"%S\" with error 0x%08x%s", fullPath.data(), error, __GetWin32ErrorSuffix(error));
+#	endif
 					return false;
 				}
 			}
@@ -1782,7 +1786,9 @@ namespace Death { namespace IO {
 					fullPath[i] = '\0';
 					if (::lstat(fullPath.data(), &sb) != 0) {
 						if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 							LOGW("Cannot create directory \"%s\"", fullPath.data());
+#	endif
 							return false;
 						}
 					}
@@ -1796,7 +1802,9 @@ namespace Death { namespace IO {
 
 		if (!slashWasLast) {
 			if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGW("Cannot create directory \"%s\"", fullPath.data());
+#	endif
 				return false;
 			}
 		}
@@ -2391,13 +2399,17 @@ namespace Death { namespace IO {
 	}
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-	void FileSystem::MountAsPersistent(StringView path)
+	bool FileSystem::MountAsPersistent(StringView path)
 	{
 		// It's calling asynchronous API synchronously, so it can block main thread for a while
 		std::int32_t result = __asyncjs__MountAsPersistent(path.data(), path.size());
 		if (!result) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGW("MountAsPersistent(\"%s\") failed", String::nullTerminatedView(path).data());
+#	endif
+			return false;
 		}
+		return true;
 	}
 
 	void FileSystem::SyncToPersistent()
@@ -2448,20 +2460,26 @@ namespace Death { namespace IO {
 				prot = PROT_READ | PROT_WRITE;
 				break;
 			default:
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
+#		endif
 				return {};
 		}
 
 		const std::int32_t fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
+#		endif
 			return {};
 		}
 
 		// Explicitly fail if opening directories for reading on Unix to prevent silent errors
 		struct stat sb;
 		if (::fstat(fd, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
+#		endif
 			::close(fd);
 			return {};
 		}
@@ -2497,14 +2515,18 @@ namespace Death { namespace IO {
 				mapDesiredAccess = FILE_MAP_ALL_ACCESS;
 				break;
 			default:
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
+#		endif
 				return {};
 		}
 
 		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), fileDesiredAccess, shareMode, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (hFile == INVALID_HANDLE_VALUE) {
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 			DWORD error = ::GetLastError();
 			LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
+#		endif
 			return {};
 		}
 
@@ -2519,15 +2541,19 @@ namespace Death { namespace IO {
 			data = nullptr;
 		} else {
 			if (!(hMap = ::CreateFileMappingW(hFile, nullptr, protect, 0, 0, nullptr))) {
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 				DWORD error = ::GetLastError();
 				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
+#		endif
 				::CloseHandle(hFile);
 				return {};
 			}
 
 			if (!(data = reinterpret_cast<char*>(::MapViewOfFile(hMap, mapDesiredAccess, 0, 0, 0)))) {
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 				DWORD error = ::GetLastError();
 				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
+#		endif
 				::CloseHandle(hMap);
 				::CloseHandle(hFile);
 				return {};

@@ -66,20 +66,28 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_WINDOWS)
 		if (_fileHandle != INVALID_HANDLE_VALUE) {
 			if (::CloseHandle(_fileHandle)) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGI("File \"%s\" closed", _path.data());
+#	endif
 				_fileHandle = INVALID_HANDLE_VALUE;
 			} else {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGW("Can't close the file \"%s\"", _path.data());
+#	endif
 			}
 		}
 #else
 		if (_fileDescriptor >= 0) {
 			const std::int32_t retValue = ::close(_fileDescriptor);
 			if (retValue >= 0) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGI("File \"%s\" closed", _path.data());
+#	endif
 				_fileDescriptor = -1;
 			} else {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGW("Can't close the file \"%s\"", _path.data());
+#	endif
 			}
 		}
 #endif
@@ -353,7 +361,9 @@ namespace Death { namespace IO {
 				shareMode = ((mode & FileAccess::Exclusive) == FileAccess::Exclusive ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE);
 				break;
 			default:
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
+#	endif
 				return;
 		}
 
@@ -369,7 +379,9 @@ namespace Death { namespace IO {
 #	endif
 		if (_fileHandle == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
+#		if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+#		endif
 			return;
 		}
 
@@ -390,7 +402,9 @@ namespace Death { namespace IO {
 				openFlags = O_RDWR;	// NOTE: File must already exist
 				break;
 			default:
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
+#	endif
 				return;
 		}
 		if ((mode & FileAccess::InheritHandle) != FileAccess::InheritHandle) {
@@ -400,7 +414,9 @@ namespace Death { namespace IO {
 		int defaultPermissions = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH); // 0666
 		_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);
 		if (_fileDescriptor < 0) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't open file \"%s\" - failed with error %i", _path.data(), errno);
+#	endif
 			return;
 		}
 
@@ -411,11 +427,13 @@ namespace Death { namespace IO {
 		}
 #endif
 
+#if defined(DEATH_TRACE_VERBOSE_IO)
 		switch (mode & FileAccess::ReadWrite) {
 			default: LOGI("File \"%s\" opened", _path.data()); break;
 			case FileAccess::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
 			case FileAccess::ReadWrite: LOGI("File \"%s\" opened for read+write", _path.data()); break;
 		}
+#endif
 	}
 
 	std::int64_t FileStream::SeekInternal(std::int64_t offset, SeekOrigin origin)
@@ -428,7 +446,9 @@ namespace Death { namespace IO {
 		if (!::SetFilePointerEx(_fileHandle, distanceToMove, &newPos, (DWORD)origin)) {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Can't change position in file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+#	endif
 			}
 			return Stream::OutOfRange;
 		}
@@ -454,7 +474,9 @@ namespace Death { namespace IO {
 
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Can't read from file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+#	endif
 			}
 		}
 
@@ -463,7 +485,9 @@ namespace Death { namespace IO {
 #else
 		std::int32_t bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, destination, bytesToRead));
 		if (bytesRead < 0) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't read from file \"%s\" - failed with error %i", _path.data(), errno);
+#	endif
 			return 0;
 		}
 		_filePos += bytesRead;
@@ -480,7 +504,9 @@ namespace Death { namespace IO {
 
 			DWORD error = ::GetLastError();
 			if (error != ERROR_NO_DATA) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Can't write to file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+#	endif
 			}
 		}
 
@@ -489,7 +515,9 @@ namespace Death { namespace IO {
 #else
 		std::int32_t bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, source, bytesToWrite));
 		if (bytesWritten < 0) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't write to file \"%s\" - failed with error %i", _path.data(), errno);
+#	endif
 			return 0;
 		}
 		_filePos += bytesWritten;

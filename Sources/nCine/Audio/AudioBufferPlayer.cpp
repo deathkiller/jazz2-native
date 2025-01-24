@@ -22,28 +22,28 @@ namespace nCine
 		stop();
 	}
 
-	unsigned int AudioBufferPlayer::bufferId() const
+	std::uint32_t AudioBufferPlayer::bufferId() const
 	{
-		const unsigned int bufferId = (audioBuffer_ != nullptr ? audioBuffer_->bufferId() : 0U);
+		std::uint32_t bufferId = (audioBuffer_ != nullptr ? audioBuffer_->bufferId() : 0U);
 		return (state_ != PlayerState::Initial && state_ != PlayerState::Stopped ? bufferId : 0U);
 	}
 
-	int AudioBufferPlayer::bytesPerSample() const
+	std::int32_t AudioBufferPlayer::bytesPerSample() const
 	{
 		return (audioBuffer_ != nullptr ? audioBuffer_->bytesPerSample() : 0);
 	}
 
-	int AudioBufferPlayer::numChannels() const
+	std::int32_t AudioBufferPlayer::numChannels() const
 	{
 		return (audioBuffer_ != nullptr ? audioBuffer_->numChannels() : 0);
 	}
 
-	int AudioBufferPlayer::frequency() const
+	std::int32_t AudioBufferPlayer::frequency() const
 	{
 		return (audioBuffer_ != nullptr ? audioBuffer_->frequency() : 0);
 	}
 
-	unsigned long int AudioBufferPlayer::numSamples() const
+	std::int32_t AudioBufferPlayer::numSamples() const
 	{
 		return (audioBuffer_ != nullptr ? audioBuffer_->numSamples() : 0UL);
 	}
@@ -53,7 +53,7 @@ namespace nCine
 		return (audioBuffer_ != nullptr ? audioBuffer_->duration() : 0.0f);
 	}
 
-	unsigned long int AudioBufferPlayer::bufferSize() const
+	std::int32_t AudioBufferPlayer::bufferSize() const
 	{
 		return (audioBuffer_ != nullptr ? audioBuffer_->bufferSize() : 0UL);
 	}

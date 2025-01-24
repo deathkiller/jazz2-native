@@ -208,7 +208,9 @@ namespace Death { namespace IO { namespace Compression {
 	{
 		std::size_t result = ZSTD_initDStream(_strm);
 		if (ZSTD_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("ZSTD_initDStream() failed with error 0x%zx (%s)", result, ZSTD_getErrorName(result));
+#endif
 			_state = State::Failed;
 		}
 
@@ -255,7 +257,9 @@ namespace Death { namespace IO { namespace Compression {
 			ZSTD_outBuffer outBuffer = { &_buffer[_inBufferCapacity], _outBufferCapacity, _outBufferLength };
 			std::size_t result = ZSTD_decompressStream(_strm, &outBuffer, &inBuffer);
 			if (ZSTD_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("ZSTD_decompressStream() failed with error 0x%zx (%s)", result, ZSTD_getErrorName(result));
+#endif
 				_state = State::Failed;
 				return Stream::Invalid;
 			}
@@ -298,7 +302,9 @@ namespace Death { namespace IO { namespace Compression {
 
 		std::size_t result = ZSTD_initCStream(_strm, compressionLevel);
 		if (ZSTD_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("ZSTD_initCStream() failed with error 0x%zx (%s)", result, ZSTD_getErrorName(result));
+#endif
 			_state = State::Failed;
 		}
 
@@ -400,7 +406,9 @@ namespace Death { namespace IO { namespace Compression {
 			ZSTD_outBuffer outBuffer = { &_buffer[0], _outBufferCapacity, 0 };
 			std::size_t result = ZSTD_compressStream(_strm, &outBuffer, &inBuffer);
 			if (ZSTD_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("ZSTD_compressStream() failed with error %zx (%s)", result, ZSTD_getErrorName(result));
+#endif
 				_state = State::Failed;
 				return Stream::Invalid;
 			}
@@ -416,7 +424,9 @@ namespace Death { namespace IO { namespace Compression {
 			ZSTD_outBuffer outBuffer = { &_buffer[0], _outBufferCapacity, 0 };
 			std::size_t result = ZSTD_endStream(_strm, &outBuffer);
 			if (ZSTD_isError(result)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("ZSTD_endStream() failed with error %zx (%s)", result, ZSTD_getErrorName(result));
+#endif
 				_state = State::Failed;
 				return Stream::Invalid;
 			}

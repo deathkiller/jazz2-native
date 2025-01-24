@@ -28,7 +28,7 @@ namespace nCine
 			return numVertices_;
 		}
 		/// Returns the number of float elements that composes the vertex format
-		inline unsigned int numElementsPerVertex() const {
+		inline std::uint32_t numElementsPerVertex() const {
 			return numElementsPerVertex_;
 		}
 
@@ -47,16 +47,16 @@ namespace nCine
 			numVertices_ = numVertices;
 		}
 		/// Sets the number of float elements that composes the vertex format
-		inline void setNumElementsPerVertex(unsigned int numElements) {
+		inline void setNumElementsPerVertex(std::uint32_t numElements) {
 			numElementsPerVertex_ = numElements;
 		}
 		/// Creates a custom VBO that is unique to this `Geometry` object
-		void createCustomVbo(unsigned int numFloats, GLenum usage);
+		void createCustomVbo(std::uint32_t numFloats, GLenum usage);
 		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
 		/*! This overloaded version allows a custom alignment specification */
-		GLfloat* acquireVertexPointer(unsigned int numFloats, unsigned int numFloatsAlignment);
+		GLfloat* acquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment);
 		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
-		inline GLfloat* acquireVertexPointer(unsigned int numFloats) {
+		inline GLfloat* acquireVertexPointer(std::uint32_t numFloats) {
 			return acquireVertexPointer(numFloats, 1);
 		}
 		/// Retrieves a pointer that can be used to write vertex data from a VBO owned by the buffers manager
@@ -75,7 +75,7 @@ namespace nCine
 		void shareVbo(const Geometry* geometry);
 
 		/// Returns the number of indices used to render the geometry
-		inline unsigned int numIndices() const {
+		inline std::uint32_t numIndices() const {
 			return numIndices_;
 		}
 		/// Sets the index number of the first index to draw
@@ -83,13 +83,13 @@ namespace nCine
 			firstIndex_ = firstIndex;
 		}
 		/// Sets the number of indices used to render the geometry
-		inline void setNumIndices(unsigned int numIndices) {
+		inline void setNumIndices(std::uint32_t numIndices) {
 			numIndices_ = numIndices;
 		}
 		/// Creates a custom IBO that is unique to this `Geometry` object
-		void createCustomIbo(unsigned int numIndices, GLenum usage);
+		void createCustomIbo(std::uint32_t numIndices, GLenum usage);
 		/// Retrieves a pointer that can be used to write index data from a custom IBO owned by this object
-		GLushort* acquireIndexPointer(unsigned int numIndices);
+		GLushort* acquireIndexPointer(std::uint32_t numIndices);
 		/// Retrieves a pointer that can be used to write index data from a IBO owned by the buffers manager
 		GLushort* acquireIndexPointer();
 		/// Releases the pointer used to write index data
@@ -109,9 +109,9 @@ namespace nCine
 		GLenum primitiveType_;
 		GLint firstVertex_;
 		GLsizei numVertices_;
-		unsigned int numElementsPerVertex_;
+		std::uint32_t numElementsPerVertex_;
 		GLushort firstIndex_;
-		unsigned int numIndices_;
+		std::uint32_t numIndices_;
 		const float* hostVertexPointer_;
 		const GLushort* hostIndexPointer_;
 

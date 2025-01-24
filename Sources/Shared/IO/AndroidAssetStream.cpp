@@ -39,17 +39,23 @@ namespace Death { namespace IO {
 		if (_fileDescriptor >= 0) {
 			const std::int32_t retValue = ::close(_fileDescriptor);
 			if (retValue >= 0) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGI("File \"%s\" closed", _path.data());
+#	endif
 				_fileDescriptor = -1;
 			} else {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGW("Can't close the file \"%s\"", _path.data());
+#	endif
 			}
 		}
 #else
 		if (_asset != nullptr) {
 			AAsset_close(_asset);
 			_asset = nullptr;
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGI("File \"%s\" closed", _path.data());
+#	endif
 		}
 #endif
 	}
@@ -271,7 +277,9 @@ namespace Death { namespace IO {
 	{
 		FileAccess maskedMode = mode & FileAccess::ReadWrite;
 		if (maskedMode != FileAccess::Read) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
+#endif
 			return;
 		}
 
@@ -279,7 +287,9 @@ namespace Death { namespace IO {
 		// An asset file can only be read
 		AAsset* asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (asset == nullptr) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't open file \"%s\"", _path.data());
+#	endif
 			return;
 		}
 
@@ -294,20 +304,28 @@ namespace Death { namespace IO {
 		asset = nullptr;
 
 		if (_fileDescriptor < 0) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't open file \"%s\"", _path.data());
+#	endif
 			return;
 		}
 
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 		LOGI("File \"%s\" opened", _path.data());
+#	endif
 #else
 		// An asset file can only be read
 		_asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (_asset == nullptr) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Can't open file \"%s\"", _path.data());
+#	endif
 			return;
 		}
 
+#	if defined(DEATH_TRACE_VERBOSE_IO)
 		LOGI("File \"%s\" opened", _path.data());
+#	endif
 
 		// Calculating file size
 		_size = AAsset_getLength64(_asset);

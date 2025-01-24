@@ -73,13 +73,13 @@ namespace nCine
 		virtual ~IGfxCapabilities() = 0;
 
 		/// Returns the OpenGL version numbers
-		virtual int glVersion(GLVersion version) const = 0;
+		virtual std::int32_t glVersion(GLVersion version) const = 0;
 		/// Returns the OpenGL information strings structure
 		virtual const GlInfoStrings& glInfoStrings() const = 0;
 		/// Returns the value of a runtime OpenGL integer value
-		virtual int value(GLIntValues valueName) const = 0;
+		virtual std::int32_t value(GLIntValues valueName) const = 0;
 		/// Returns the value of a runtime OpenGL integer value from an array
-		virtual int arrayValue(GLArrayIntValues arrayValueName, unsigned int index) const = 0;
+		virtual std::int32_t arrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const = 0;
 		/// Returns true if the specified OpenGL extension is available
 		virtual bool hasExtension(GLExtensions extensionName) const = 0;
 	};
@@ -91,16 +91,16 @@ namespace nCine
 	class NullGfxCapabilities : public IGfxCapabilities
 	{
 	public:
-		inline int glVersion(GLVersion version) const override {
+		inline std::int32_t glVersion(GLVersion version) const override {
 			return 0;
 		}
 		inline const GlInfoStrings& glInfoStrings() const override {
 			return glInfoStrings_;
 		}
-		inline int value(GLIntValues valueName) const override {
+		inline std::int32_t value(GLIntValues valueName) const override {
 			return 0;
 		}
-		inline int arrayValue(GLArrayIntValues arrayValueName, unsigned int index) const override {
+		inline std::int32_t arrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const override {
 			return 0;
 		}
 		inline bool hasExtension(GLExtensions extensionName) const override {

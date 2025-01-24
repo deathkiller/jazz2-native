@@ -42,24 +42,24 @@ namespace nCine
 		std::unique_ptr<GLBufferObject> vbo_;
 		std::unique_ptr<GLBufferObject> ibo_;
 
-		static const int UniformsBufferSize = 65;
-		unsigned char uniformsBuffer_[UniformsBufferSize];
+		static const std::int32_t UniformsBufferSize = 65;
+		std::uint8_t uniformsBuffer_[UniformsBufferSize];
 		std::unique_ptr<GLShaderUniforms> imguiShaderUniforms_;
 		IInputEventHandler* appInputHandler_;
 
-		int lastFrameWidth_;
-		int lastFrameHeight_;
+		std::int32_t lastFrameWidth_;
+		std::int32_t lastFrameHeight_;
 		Matrix4x4f projectionMatrix_;
-		uint16_t lastLayerValue_;
+		std::uint16_t lastLayerValue_;
 
 #if defined(IMGUI_HAS_VIEWPORT)
-		int attribLocationTex_;
-		int attribLocationProjMtx_;
-		unsigned int attribLocationVtxPos_;
-		unsigned int attribLocationVtxUV_;
-		unsigned int attribLocationVtxColor_;
-		unsigned int vboHandle_;
-		unsigned int elementsHandle_;
+		std::int32_t attribLocationTex_;
+		std::int32_t attribLocationProjMtx_;
+		std::uint32_t attribLocationVtxPos_;
+		std::uint32_t attribLocationVtxUV_;
+		std::uint32_t attribLocationVtxColor_;
+		std::uint32_t vboHandle_;
+		std::uint32_t elementsHandle_;
 #endif
 
 		RenderCommand* retrieveCommandFromPool();
@@ -73,7 +73,7 @@ namespace nCine
 		void prepareForViewports();
 		static void onRenderPlatformWindow(ImGuiViewport* viewport, void*);
 		void drawPlatformWindow(ImGuiViewport* viewport);
-		void setupRenderStateForPlatformWindow(ImDrawData* drawData, int fbWidth, int fbHeight, unsigned int vertexArrayObject);
+		void setupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, std::uint32_t vertexArrayObject);
 #endif
 	};
 }

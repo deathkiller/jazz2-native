@@ -25,16 +25,6 @@ namespace nCine
 	}
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
-	/*AudioStream::AudioStream(const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: AudioStream()
-	{
-		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
-		if (!hasLoaded) {
-			LOGE("Audio buffer cannot be loaded");
-		}
-	}*/
-
-	/*! Private constructor called only by `AudioStreamPlayer`. */
 	AudioStream::AudioStream(StringView filename)
 		: AudioStream()
 	{
@@ -55,7 +45,7 @@ namespace nCine
 	AudioStream::AudioStream(AudioStream&&) = default;
 	AudioStream& AudioStream::operator=(AudioStream&&) = default;
 
-	unsigned long int AudioStream::numStreamSamples() const
+	std::int32_t AudioStream::numStreamSamples() const
 	{
 		if (numChannels_ * bytesPerSample_ > 0) {
 			return BufferSize / (numChannels_ * bytesPerSample_);
@@ -64,7 +54,7 @@ namespace nCine
 	}
 
 	/*! \return A flag indicating whether the stream has been entirely decoded and played or not. */
-	bool AudioStream::enqueue(unsigned int source, bool looping)
+	bool AudioStream::enqueue(std::uint32_t source, bool looping)
 	{
 		if (audioReader_ == nullptr) {
 			return false;
@@ -89,13 +79,13 @@ namespace nCine
 		if (nextAvailableBufferIndex_ < NumBuffers) {
 			currentBufferId_ = buffersIds_[nextAvailableBufferIndex_];
 
-			unsigned long bytes = audioReader_->read(memBuffer_.get(), BufferSize);
+			std::int32_t bytes = audioReader_->read(memBuffer_.get(), BufferSize);
 
 			// EOF reached
 			if (bytes < BufferSize) {
 				if (looping) {
 					audioReader_->rewind();
-					const unsigned long moreBytes = audioReader_->read(memBuffer_.get() + bytes, BufferSize - bytes);
+					std::int32_t moreBytes = audioReader_->read(memBuffer_.get() + bytes, BufferSize - bytes);
 					bytes += moreBytes;
 				}
 			}
@@ -130,7 +120,7 @@ namespace nCine
 		return shouldKeepPlaying;
 	}
 
-	void AudioStream::stop(unsigned int source)
+	void AudioStream::stop(std::uint32_t source)
 	{
 		// In order to unqueue all the buffers, the source must be stopped first
 		alSourceStop(source);
@@ -159,16 +149,6 @@ namespace nCine
 			audioReader_->setLooping(value);
 		}
 	}
-
-	/*bool AudioStream::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
-	{
-		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferPtr, bufferSize);
-		if (!audioLoader->hasLoaded()) {
-			return false;
-		}
-		createReader(*audioLoader);
-		return true;
-	}*/
 
 	bool AudioStream::loadFromFile(StringView filename)
 	{

@@ -152,19 +152,19 @@ namespace nCine
 
 #if defined(NCINE_PROFILING)
 			const float* timings = theApplication().GetTimings();
-			plotValues_[ValuesType::BeginFrame][index_] = timings[(int)Application::Timings::BeginFrame] * 1000.0f;
+			plotValues_[ValuesType::BeginFrame][index_] = timings[(std::int32_t)Application::Timings::BeginFrame] * 1000.0f;
 			if (appCfg.withScenegraph) {
-				plotValues_[ValuesType::PostUpdate][index_] = timings[(int)Application::Timings::PostUpdate] * 1000.0f;
+				plotValues_[ValuesType::PostUpdate][index_] = timings[(std::int32_t)Application::Timings::PostUpdate] * 1000.0f;
 			}
-			plotValues_[ValuesType::ImGui][index_] = timings[(int)Application::Timings::ImGui] * 1000.0f;
-			plotValues_[ValuesType::EndFrame][index_] = timings[(int)Application::Timings::EndFrame] * 1000.0f;
+			plotValues_[ValuesType::ImGui][index_] = timings[(std::int32_t)Application::Timings::ImGui] * 1000.0f;
+			plotValues_[ValuesType::EndFrame][index_] = timings[(std::int32_t)Application::Timings::EndFrame] * 1000.0f;
 
 			if (appCfg.withScenegraph) {
-				plotValues_[ValuesType::UpdateVisitDraw][index_] = timings[(int)Application::Timings::Update] * 1000.0f +
-					timings[(int)Application::Timings::Visit] * 1000.0f + timings[(int)Application::Timings::Draw] * 1000.0f;
-				plotValues_[ValuesType::Update][index_] = timings[(int)Application::Timings::Update] * 1000.0f;
-				plotValues_[ValuesType::Visit][index_] = timings[(int)Application::Timings::Visit] * 1000.0f;
-				plotValues_[ValuesType::Draw][index_] = timings[(int)Application::Timings::Draw] * 1000.0f;
+				plotValues_[ValuesType::UpdateVisitDraw][index_] = timings[(std::int32_t)Application::Timings::Update] * 1000.0f +
+					timings[(std::int32_t)Application::Timings::Visit] * 1000.0f + timings[(std::int32_t)Application::Timings::Draw] * 1000.0f;
+				plotValues_[ValuesType::Update][index_] = timings[(std::int32_t)Application::Timings::Update] * 1000.0f;
+				plotValues_[ValuesType::Visit][index_] = timings[(std::int32_t)Application::Timings::Visit] * 1000.0f;
+				plotValues_[ValuesType::Draw][index_] = timings[(std::int32_t)Application::Timings::Draw] * 1000.0f;
 			}
 #endif
 
@@ -172,7 +172,7 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			float maxUpdateVisitDraw = 0.0f, avgUpdateVisitDraw = 0.0f;
 #endif
-			for (unsigned int i = 0; i < numValues_; i++) {
+			for (std::uint32_t i = 0; i < numValues_; i++) {
 				if (maxFrameTime < plotValues_[ValuesType::FrameTime][i]) {
 					maxFrameTime = plotValues_[ValuesType::FrameTime][i];
 				}
@@ -344,7 +344,7 @@ namespace nCine
 
 	void ImGuiDebugOverlay::guiConfigureGui()
 	{
-		static int numValues = 0;
+		static std::int32_t numValues = 0;
 
 		if (ImGui::CollapsingHeader("Configure GUI")) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
@@ -377,15 +377,15 @@ namespace nCine
 				numValues = (numValues == 0) ? static_cast<int>(numValues_) : numValues;
 				ImGui::SliderInt("Number of values", &numValues, 16, 512);
 				ImGui::SameLine();
-				if (ImGui::Button("Apply") && numValues_ != static_cast<unsigned int>(numValues)) {
-					numValues_ = static_cast<unsigned int>(numValues);
+				if (ImGui::Button("Apply") && numValues_ != static_cast<std::uint32_t>(numValues)) {
+					numValues_ = static_cast<std::uint32_t>(numValues);
 					initPlotValues();
 				}
 				ImGui::TreePop();
 			}
 
 			if (ImGui::TreeNode("GUI Style")) {
-				static int styleIndex = 0;
+				static std::int32_t styleIndex = 0;
 				ImGui::Combo("Theme", &styleIndex, "Dark\0Light\0Classic\0");
 
 				if (styleIndex < 0)
@@ -455,14 +455,14 @@ namespace nCine
 			const float* timings = theApplication().GetTimings();
 
 			float initTimes[3];
-			initTimes[0] = timings[(int)Application::Timings::PreInit] * 1000.0f;
-			initTimes[1] = initTimes[0] + timings[(int)Application::Timings::InitCommon] * 1000.0f;
-			initTimes[2] = initTimes[1] + timings[(int)Application::Timings::AppInit] * 1000.0f;
+			initTimes[0] = timings[(std::int32_t)Application::Timings::PreInit] * 1000.0f;
+			initTimes[1] = initTimes[0] + timings[(std::int32_t)Application::Timings::InitCommon] * 1000.0f;
+			initTimes[2] = initTimes[1] + timings[(std::int32_t)Application::Timings::AppInit] * 1000.0f;
 			ImGui::PlotHistogram("##1", initTimes, 3, 0, nullptr, 0.0f, initTimes[2], ImVec2(0.0f, 100.0f));
 
-			ImGui::Text("Pre-Init Time: %.2f ms", timings[(int)Application::Timings::PreInit] * 1000.0f);
-			ImGui::Text("Init Time: %.2f ms", timings[(int)Application::Timings::InitCommon] * 1000.0f);
-			ImGui::Text("Application Init Time: %.2f ms", timings[(int)Application::Timings::AppInit] * 1000.0f);
+			ImGui::Text("Pre-Init Time: %.2f ms", timings[(std::int32_t)Application::Timings::PreInit] * 1000.0f);
+			ImGui::Text("Init Time: %.2f ms", timings[(std::int32_t)Application::Timings::InitCommon] * 1000.0f);
+			ImGui::Text("Application Init Time: %.2f ms", timings[(std::int32_t)Application::Timings::AppInit] * 1000.0f);
 		}
 #endif
 	}
@@ -634,8 +634,8 @@ namespace nCine
 	{
 		if (ImGui::CollapsingHeader("Rendering Settings")) {
 			Application::RenderingSettings& settings = theApplication().GetRenderingSettings();
-			int minBatchSize = settings.minBatchSize;
-			int maxBatchSize = settings.maxBatchSize;
+			std::int32_t minBatchSize = settings.minBatchSize;
+			std::int32_t maxBatchSize = settings.maxBatchSize;
 
 			ImGui::Checkbox("Batching", &settings.batchingEnabled);
 			ImGui::SameLine();
@@ -653,8 +653,8 @@ namespace nCine
 	{
 		if (ImGui::CollapsingHeader("Window Settings")) {
 			/*IGfxDevice& gfxDevice = theApplication().gfxDevice();
-			const unsigned int numMonitors = gfxDevice.numMonitors();
-			for (unsigned int i = 0; i < numMonitors; i++) {
+			const std::uint32_t numMonitors = gfxDevice.numMonitors();
+			for (std::uint32_t i = 0; i < numMonitors; i++) {
 				const IGfxDevice::Monitor& monitor = gfxDevice.monitor(i);
 				widgetName_.format("Monitor #%u: \"%s\"", i, monitor.name);
 				if (i == gfxDevice.primaryMonitorIndex())
@@ -667,10 +667,10 @@ namespace nCine
 					ImGui::Text("DPI: <%d, %d>", monitor.dpi.x, monitor.dpi.y);
 					ImGui::Text("Scale: <%.2f, %.2f>", monitor.scale.x, monitor.scale.y);
 
-					const unsigned int numVideoModes = monitor.numVideoModes;
+					const std::uint32_t numVideoModes = monitor.numVideoModes;
 					widgetName_.format("%u Video Modes", numVideoModes);
 					if (ImGui::TreeNode(widgetName_.data())) {
-						for (unsigned int j = 0; j < numVideoModes; j++) {
+						for (std::uint32_t j = 0; j < numVideoModes; j++) {
 							const IGfxDevice::VideoMode& videoMode = monitor.videoModes[j];
 							widgetName_.format("#%u: %u x %u, %.2f Hz", j, videoMode.width, videoMode.height, videoMode.refreshRate);
 							if (videoMode.redBits != 8 || videoMode.greenBits != 8 || videoMode.blueBits != 8)
@@ -688,20 +688,20 @@ namespace nCine
 			static Vector2i winPosition = gfxDevice.windowPosition();
 			static bool fullScreen = gfxDevice.isFullScreen();
 
-			static int selectedVideoMode = -1;
+			static std::int32_t selectedVideoMode = -1;
 			const IGfxDevice::VideoMode currentVideoMode = gfxDevice.currentVideoMode();
 			if (fullScreen == false) {
 				ImGui::InputInt2("Resolution", resolution.data());
 				ImGui::InputInt2("Position", winPosition.data());
 				selectedVideoMode = -1;
 			} else {
-				const int monitorIndex = gfxDevice.windowMonitorIndex();
+				const std::int32_t monitorIndex = gfxDevice.windowMonitorIndex();
 				const IGfxDevice::Monitor& monitor = gfxDevice.monitor(monitorIndex);
 
-				unsigned int currentVideoModeIndex = 0;
-				const unsigned int numVideoModes = monitor.numVideoModes;
+				std::uint32_t currentVideoModeIndex = 0;
+				const std::uint32_t numVideoModes = monitor.numVideoModes;
 				comboVideoModes_.clear();
-				for (unsigned int i = 0; i < numVideoModes; i++) {
+				for (std::uint32_t i = 0; i < numVideoModes; i++) {
 					const IGfxDevice::VideoMode& mode = monitor.videoModes[i];
 					comboVideoModes_.formatAppend("%u: %u x %u, %.2f Hz", i, mode.width, mode.height, mode.refreshRate);
 					comboVideoModes_.setLength(comboVideoModes_.length() + 1);
@@ -771,7 +771,7 @@ namespace nCine
 			ImGui::Text("Device Name: %s", theServiceLocator().GetAudioDevice().name());
 			ImGui::Text("Listener Gain: %f", theServiceLocator().GetAudioDevice().gain());
 
-			unsigned int numPlayers = theServiceLocator().GetAudioDevice().numPlayers();
+			std::uint32_t numPlayers = theServiceLocator().GetAudioDevice().numPlayers();
 			ImGui::Text("Active Players: %d", numPlayers);
 
 			if (numPlayers > 0) {
@@ -784,7 +784,7 @@ namespace nCine
 
 			// Stopping or pausing players change the number of active ones
 			numPlayers = theServiceLocator().GetAudioDevice().numPlayers();
-			for (unsigned int i = 0; i < numPlayers; i++) {
+			for (std::uint32_t i = 0; i < numPlayers; i++) {
 				const IAudioPlayer* player = theServiceLocator().GetAudioDevice().player(i);
 				char widgetName[32];
 				formatString(widgetName, sizeof(widgetName), "Player %d", i);
@@ -823,7 +823,7 @@ namespace nCine
 			/*if (ImGui::TreeNode("Keyboard")) {
 				nctl::String pressedKeys;
 				const KeyboardState& keyState = input.keyboardState();
-				for (unsigned int i = 0; i < static_cast<int>(Keys::COUNT); i++) {
+				for (std::uint32_t i = 0; i < static_cast<int>(Keys::COUNT); i++) {
 					if (keyState.isKeyDown(static_cast<Keys>(i)))
 						pressedKeys.formatAppend("%d ", i);
 				}
@@ -852,8 +852,8 @@ namespace nCine
 				ImGui::TreePop();
 			}
 
-			unsigned int numConnectedJoysticks = 0;
-			for (int joyId = 0; joyId < IInputManager::MaxNumJoysticks; joyId++) {
+			std::uint32_t numConnectedJoysticks = 0;
+			for (std::int32_t joyId = 0; joyId < IInputManager::MaxNumJoysticks; joyId++) {
 				if (input.isJoyPresent(joyId))
 					numConnectedJoysticks++;
 			}
@@ -863,7 +863,7 @@ namespace nCine
 				if (ImGui::TreeNode(widgetName)) {
 					ImGui::Text("Joystick mappings: %u", input.numJoyMappings());
 
-					for (int joyId = 0; joyId < IInputManager::MaxNumJoysticks; joyId++) {
+					for (std::int32_t joyId = 0; joyId < IInputManager::MaxNumJoysticks; joyId++) {
 						if (input.isJoyPresent(joyId) == false)
 							continue;
 
@@ -878,18 +878,18 @@ namespace nCine
 
 							const JoystickState& joyState = input.joystickState(joyId);
 							/*nctl::String pressedButtons;
-							for (int buttonId = 0; buttonId < input.joyNumButtons(joyId); buttonId++) {
+							for (std::int32_t buttonId = 0; buttonId < input.joyNumButtons(joyId); buttonId++) {
 								if (joyState.isButtonPressed(buttonId))
 									pressedButtons.formatAppend("%d ", buttonId);
 							}
 							ImGui::Text("Pressed buttons: %s", pressedButtons.data());*/
 
-							for (int hatId = 0; hatId < input.joyNumHats(joyId); hatId++) {
+							for (std::int32_t hatId = 0; hatId < input.joyNumHats(joyId); hatId++) {
 								unsigned char hatState = joyState.hatState(hatId);
 								ImGui::Text("Hat %d: %u", hatId, hatState);
 							}
 
-							for (int axisId = 0; axisId < input.joyNumAxes(joyId); axisId++) {
+							for (std::int32_t axisId = 0; axisId < input.joyNumAxes(joyId); axisId++) {
 								const float axisValue = joyState.axisValue(axisId);
 								ImGui::Text("Axis %d:", axisId);
 								ImGui::SameLine();
@@ -902,14 +902,14 @@ namespace nCine
 								ImGui::Separator();
 								const JoyMappedState& joyMappedState = input.joyMappedState(joyId);
 								/*nctl::String pressedMappedButtons(64);
-								for (unsigned int buttonId = 0; buttonId < JoyMappedState::NumButtons; buttonId++) {
+								for (std::uint32_t buttonId = 0; buttonId < JoyMappedState::NumButtons; buttonId++) {
 									const ButtonName buttonName = static_cast<ButtonName>(buttonId);
 									if (joyMappedState.isButtonPressed(buttonName))
 										pressedMappedButtons.formatAppend("%s ", mappedButtonNameToString(buttonName));
 								}
 								ImGui::Text("Pressed buttons: %s", pressedMappedButtons.data());*/
 
-								for (unsigned int axisId = 0; axisId < JoyMappedState::NumAxes; axisId++) {
+								for (std::uint32_t axisId = 0; axisId < JoyMappedState::NumAxes; axisId++) {
 									const AxisName axisName = static_cast<AxisName>(axisId);
 									const float axisValue = joyMappedState.axisValue(axisName);
 									ImGui::Text("Axis %s:", mappedAxisNameToString(axisName));
@@ -936,7 +936,7 @@ namespace nCine
 			return;
 
 		if (RenderDocCapture::numCaptures() > renderDocLastNumCaptures_) {
-			unsigned int pathLength = 0;
+			std::uint32_t pathLength = 0;
 			uint64_t timestamp = 0;
 			RenderDocCapture::captureInfo(RenderDocCapture::numCaptures() - 1, renderDocCapturePath_.data(), &pathLength, &timestamp);
 			renderDocCapturePath_.setLength(pathLength);
@@ -946,7 +946,7 @@ namespace nCine
 		}
 
 		if (ImGui::CollapsingHeader("RenderDoc")) {
-			int major, minor, patch;
+			std::int32_t major, minor, patch;
 			RenderDocCapture::apiVersion(&major, &minor, &patch);
 			ImGui::Text("RenderDoc API: %d.%d.%d", major, minor, patch);
 			ImGui::Text("Target control connected: %s", RenderDocCapture::isTargetControlConnected() ? "true" : "false");
@@ -975,7 +975,7 @@ namespace nCine
 			if (RenderDocCapture::isFrameCapturing())
 				ImGui::TextUnformatted("Capturing a frame...");
 			else {
-				static int numFrames = 1;
+				static std::int32_t numFrames = 1;
 				ImGui::SetNextItemWidth(80.0f);
 				ImGui::InputInt("Frames", &numFrames);
 				if (numFrames < 1)
@@ -1011,7 +1011,7 @@ namespace nCine
 					alloc.numEntries(), alloc.numAllocations(), alloc.usedMemory());
 		ImGui::NewLine();
 
-		const int tableNumRows = alloc.numEntries() > 32 ? 32 : alloc.numEntries();
+		const std::int32_t tableNumRows = alloc.numEntries() > 32 ? 32 : alloc.numEntries();
 		if (ImGui::BeginTable("allocatorEntries", 6, ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders |
 			ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY, ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * tableNumRows))) {
 			ImGui::TableSetupScrollFreeze(0, 1);
@@ -1023,9 +1023,9 @@ namespace nCine
 			ImGui::TableSetupColumn("State");
 			ImGui::TableHeadersRow();
 
-			for (unsigned int i = 0; i < alloc.numEntries(); i++) {
+			for (std::uint32_t i = 0; i < alloc.numEntries(); i++) {
 				const nctl::IAllocator::Entry& e = alloc.entry(i);
-				const unsigned int deallocationIndex = alloc.findDeallocation(i);
+				const std::uint32_t deallocationIndex = alloc.findDeallocation(i);
 
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
@@ -1118,7 +1118,7 @@ namespace nCine
 #endif
 	}
 
-	void ImGuiDebugOverlay::guiViewports(Viewport* viewport, unsigned int viewportId)
+	void ImGuiDebugOverlay::guiViewports(Viewport* viewport, std::uint32_t viewportId)
 	{
 		char widgetName[64];
 		formatString(widgetName, sizeof(widgetName), "#%u Viewport", viewportId);
@@ -1144,7 +1144,7 @@ namespace nCine
 		}
 	}
 
-	void ImGuiDebugOverlay::guiRecursiveChildrenNodes(SceneNode* node, unsigned int childId)
+	void ImGuiDebugOverlay::guiRecursiveChildrenNodes(SceneNode* node, std::uint32_t childId)
 	{
 		/*DrawableNode* drawable = nullptr;
 		if (node->type() != Object::ObjectType::SceneNode &&
@@ -1171,7 +1171,7 @@ namespace nCine
 		if (node->name() != nullptr)
 			widgetName_.formatAppend("\"%s\" ", node->name());
 		widgetName_.formatAppend("%s", nodeTypeToString(node->type()));
-		const unsigned int numChildren = node->children().size();
+		const std::uint32_t numChildren = node->children().size();
 		if (numChildren > 0)
 			widgetName_.formatAppend(" (%u children)", node->children().size());
 		widgetName_.formatAppend(" - position: %.1f x %.1f", node->position().x, node->position().y);
@@ -1213,7 +1213,7 @@ namespace nCine
 			node->setColor(nodeColor);
 
 			if (drawable) {
-				int layer = drawable->layer();
+				std::int32_t layer = drawable->layer();
 				ImGui::PushItemWidth(100.0f);
 				ImGui::InputInt("Layer", &layer);
 				ImGui::PopItemWidth();
@@ -1247,12 +1247,12 @@ namespace nCine
 
 				const Texture* tex = baseSprite->texture();
 				Recti texRect = baseSprite->texRect();
-				int minX = texRect.x;
-				int maxX = minX + texRect.w;
+				std::int32_t minX = texRect.x;
+				std::int32_t maxX = minX + texRect.w;
 				ImGui::DragIntRange2("Rect X", &minX, &maxX, 1.0f, 0, tex->width());
 
-				int minY = texRect.y;
-				int maxY = minY + texRect.h;
+				std::int32_t minY = texRect.y;
+				std::int32_t maxY = minY + texRect.h;
 				ImGui::DragIntRange2("Rect Y", &minY, &maxY, 1.0f, 0, tex->height());
 
 				texRect.x = minX;
@@ -1315,7 +1315,7 @@ namespace nCine
 			if (numChildren > 0) {
 				if (ImGui::TreeNode("Child Nodes")) {
 					const nctl::Array<SceneNode*>& children = node->children();
-					for (unsigned int i = 0; i < children.size(); i++)
+					for (std::uint32_t i = 0; i < children.size(); i++)
 						guiRecursiveChildrenNodes(children[i], i);
 					ImGui::TreePop();
 				}
@@ -1330,7 +1330,7 @@ namespace nCine
 	{
 		if (ImGui::CollapsingHeader("Node Inspector")) {
 			guiViewports(&theApplication().GetScreenViewport(), 0);
-			for (unsigned int i = 0; i < Viewport::chain().size(); i++)
+			for (std::uint32_t i = 0; i < Viewport::chain().size(); i++)
 				guiViewports(Viewport::chain()[i], i + 1);
 		}
 	}
@@ -1620,10 +1620,10 @@ namespace nCine
 
 	void ImGuiDebugOverlay::initPlotValues()
 	{
-		for (unsigned int type = 0; type < ValuesType::Count; type++) {
+		for (std::uint32_t type = 0; type < ValuesType::Count; type++) {
 			plotValues_[type] = std::make_unique<float[]>(numValues_);
 
-			for (unsigned int i = index_; i < numValues_; i++) {
+			for (std::uint32_t i = index_; i < numValues_; i++) {
 				plotValues_[type][i] = 0.0f;
 			}
 		}

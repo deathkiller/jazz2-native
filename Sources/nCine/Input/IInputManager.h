@@ -13,6 +13,7 @@ namespace nCine
 	class IInputEventHandler;
 	class JoyMapping;
 
+	/** @brief Well-known joystick types */
 	enum class JoystickGuidType {
 		Unknown,
 		Standard,
@@ -129,10 +130,12 @@ namespace nCine
 		virtual void setCursor(Cursor cursor);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static IInputEventHandler* inputEventHandler_;
 		static Cursor cursor_;
 
 		static JoyMapping joyMapping_;
+#endif
 	};
 
 }

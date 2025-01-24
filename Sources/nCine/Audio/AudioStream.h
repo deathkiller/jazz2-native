@@ -15,29 +15,31 @@ namespace nCine
 	/// OpenAL audio stream
 	class AudioStream
 	{
+		friend class AudioStreamPlayer;
+
 	public:
 		~AudioStream();
 
 		/// Returns the OpenAL id of the currently playing buffer, or 0 if not
-		inline unsigned int bufferId() const {
+		inline std::uint32_t bufferId() const {
 			return currentBufferId_;
 		}
 
 		/// Returns the number of bytes per sample
-		inline int bytesPerSample() const {
+		inline std::int32_t bytesPerSample() const {
 			return bytesPerSample_;
 		}
 		/// Returns the number of audio channels
-		inline int numChannels() const {
+		inline std::int32_t numChannels() const {
 			return numChannels_;
 		}
 		/// Returns the samples frequency
-		inline int frequency() const {
+		inline std::int32_t frequency() const {
 			return frequency_;
 		}
 
 		/// Returns number of samples
-		inline unsigned long int numSamples() const {
+		inline std::int32_t numSamples() const {
 			return numSamples_;
 		}
 		/// Returns the duration in seconds
@@ -46,21 +48,21 @@ namespace nCine
 		}
 
 		/// Returns the size of the loaded buffer in bytes
-		inline unsigned long bufferSize() const {
-			return (numSamples_ == UINT32_MAX ? UINT32_MAX : (numSamples_ * numChannels_ * bytesPerSample_));
+		inline std::int32_t bufferSize() const {
+			return (numSamples_ == INT32_MAX ? INT32_MAX : (numSamples_ * numChannels_ * bytesPerSample_));
 		}
 
 		/// Returns the number of samples in the streaming buffer
-		unsigned long int numStreamSamples() const;
+		std::int32_t numStreamSamples() const;
 		/// Returns the size of the streaming buffer in bytes
-		inline int streamBufferSize() const {
+		inline std::int32_t streamBufferSize() const {
 			return BufferSize;
 		}
 
 		/// Enqueues new buffers and unqueues processed ones
-		bool enqueue(unsigned int source, bool looping);
+		bool enqueue(std::uint32_t source, bool looping);
 		/// Unqueues any left buffer and rewinds the loader
-		void stop(unsigned int source);
+		void stop(std::uint32_t source);
 
 		/// Queries the looping property of the stream
 		inline bool isLooping() const {
@@ -71,43 +73,41 @@ namespace nCine
 
 	private:
 		/// Number of buffers for streaming
-		static const int NumBuffers = 3;
+		static const std::int32_t NumBuffers = 3;
 		/// OpenAL buffer queue for streaming
-		SmallVector<unsigned int, NumBuffers> buffersIds_;
+		SmallVector<std::uint32_t, NumBuffers> buffersIds_;
 		/// Index of the next available OpenAL buffer
-		int nextAvailableBufferIndex_;
+		std::int32_t nextAvailableBufferIndex_;
 
 		/// Size in bytes of each streaming buffer
-		static const int BufferSize = 16 * 1024;
+		static const std::int32_t BufferSize = 16 * 1024;
 		/// Memory buffer to feed OpenAL ones
 		std::unique_ptr<char[]> memBuffer_;
 
 		/// OpenAL id of the currently playing buffer, or 0 if not
-		unsigned int currentBufferId_;
+		std::uint32_t currentBufferId_;
 
 		/// Number of bytes per sample
-		int bytesPerSample_;
+		std::int32_t bytesPerSample_;
 		/// Number of channels
-		int numChannels_;
+		std::int32_t numChannels_;
 		/// Samples frequency
-		int frequency_;
+		std::int32_t frequency_;
 
 		/// Number of samples
-		unsigned long int numSamples_;
+		std::int32_t numSamples_;
 		/// Duration in seconds
 		float duration_;
 
 		bool isLooping_;
 
 		/// OpenAL channel format enumeration
-		int format_;
+		std::int32_t format_;
 		/// The associated reader to continuosly stream decoded data
 		std::unique_ptr<IAudioReader> audioReader_;
 
 		/// Default constructor
 		AudioStream();
-		/// Constructor creating an audio stream from a named memory buffer
-		//AudioStream(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Constructor creating an audio stream from an audio file
 		explicit AudioStream(StringView filename);
 
@@ -116,11 +116,10 @@ namespace nCine
 		AudioStream(const AudioStream&) = delete;
 		AudioStream& operator=(const AudioStream&) = delete;
 
-		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(StringView filename);
 
 		void createReader(IAudioLoader& audioLoader);
 
-		friend class AudioStreamPlayer;
+
 	};
 }

@@ -16,7 +16,8 @@ using namespace Death::IO;
 namespace nCine
 {
 	IAudioLoader::IAudioLoader(std::unique_ptr<Stream> fileHandle)
-		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0L), duration_(0.0f)
+		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), bytesPerSample_(0), numChannels_(0),
+			frequency_(0), numSamples_(0L), duration_(0.0f)
 	{
 	}
 
@@ -32,12 +33,12 @@ namespace nCine
 		return createLoader(fs::Open(path, FileAccess::Read), path);
 	}
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createFromStream(std::unique_ptr<Stream> fileHandle, const StringView path)
+	std::unique_ptr<IAudioLoader> IAudioLoader::createFromStream(std::unique_ptr<Stream> fileHandle, StringView path)
 	{
 		return createLoader(std::move(fileHandle), path);
 	}
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView path)
+	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<Stream> fileHandle, StringView path)
 	{
 		auto extension = fs::GetExtension(path);
 		if (extension == "wav"_s) {

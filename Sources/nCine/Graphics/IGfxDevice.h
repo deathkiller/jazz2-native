@@ -24,14 +24,14 @@ namespace nCine
 	class IGfxDevice
 	{
 	public:
-		static constexpr unsigned int MaxMonitors = 4;
+		static constexpr std::uint32_t MaxMonitors = 4;
 #if defined(WITH_QT5)
 		// Qt5 cannot query the list of supported video modes of a monitor
-		static constexpr unsigned int MaxVideoModes = 1;
+		static constexpr std::uint32_t MaxVideoModes = 1;
 #elif defined(DEATH_TARGET_ANDROID)
-		static constexpr unsigned int MaxVideoModes = 16;
+		static constexpr std::uint32_t MaxVideoModes = 16;
 #else
-		static constexpr unsigned int MaxVideoModes = 128;
+		static constexpr std::uint32_t MaxVideoModes = 128;
 #endif
 
 		/// A structure used to initialize window properties
@@ -39,13 +39,13 @@ namespace nCine
 		{
 			WindowMode()
 				: width(0), height(0), windowPositionX(AppConfiguration::WindowPositionIgnore), windowPositionY(AppConfiguration::WindowPositionIgnore), isFullscreen(false), isResizable(false), hasWindowScaling(true) { }
-			WindowMode(unsigned int w, unsigned int h, int posX, int posY, bool fullscreen, bool resizable, bool windowScaling)
+			WindowMode(std::int32_t w, std::int32_t h, std::int32_t posX, std::int32_t posY, bool fullscreen, bool resizable, bool windowScaling)
 				: width(w), height(h), windowPositionX(posX), windowPositionY(posY), isFullscreen(fullscreen), isResizable(resizable), hasWindowScaling(windowScaling) { }
 
-			unsigned int width;
-			unsigned int height;
-			int windowPositionX;
-			int windowPositionY;
+			std::int32_t width;
+			std::int32_t height;
+			std::int32_t windowPositionX;
+			std::int32_t windowPositionY;
 			bool isFullscreen;
 			bool isResizable;
 			bool hasWindowScaling;
@@ -66,12 +66,12 @@ namespace nCine
 				return !operator==(mode);
 			}
 
-			unsigned int width;
-			unsigned int height;
+			std::uint32_t width;
+			std::uint32_t height;
 			float refreshRate;
-			unsigned char redBits;
-			unsigned char greenBits;
-			unsigned char blueBits;
+			std::uint32_t redBits;
+			std::uint32_t greenBits;
+			std::uint32_t blueBits;
 		};
 
 		/// A structure representing a connected monitor
@@ -85,7 +85,7 @@ namespace nCine
 			Vector2f scale;
 
 			/// The number of video modes in the array
-			int numVideoModes;
+			std::int32_t numVideoModes;
 			/// The array of video modes supported by the monitor
 			VideoMode videoModes[MaxVideoModes];
 		};
@@ -98,8 +98,8 @@ namespace nCine
 				  coreProfile(appCfg.glCoreProfile()), forwardCompatible(appCfg.glForwardCompatible()),
 				  debugContext(appCfg.withGlDebugContext) { }
 
-			unsigned int majorVersion;
-			unsigned int minorVersion;
+			std::uint32_t majorVersion;
+			std::uint32_t minorVersion;
 			bool coreProfile;
 			bool forwardCompatible;
 			bool debugContext;
@@ -192,13 +192,13 @@ namespace nCine
 		static constexpr float DefaultDPI = 96.0f;
 
 		/// Window width in screen coordinates
-		int width_;
+		std::int32_t width_;
 		/// Window height in screen coordinates
-		int height_;
+		std::int32_t height_;
 		/// Window width in pixels (for HiDPI screens)
-		int drawableWidth_;
+		std::int32_t drawableWidth_;
 		/// Window height in pixels (for HiDPI screens)
-		int drawableHeight_;
+		std::int32_t drawableHeight_;
 		/// Whether rendering occurs in full screen
 		bool isFullscreen_;
 		/// OpenGL context creation attributes
@@ -207,7 +207,7 @@ namespace nCine
 		DisplayMode displayMode_;
 
 		Monitor monitors_[MaxMonitors];
-		unsigned int numMonitors_;
+		std::uint32_t numMonitors_;
 		/// Used as a cache to avoid searching the current video mode in a monitor's array
 		mutable VideoMode currentVideoMode_;
 

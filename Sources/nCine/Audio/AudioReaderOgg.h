@@ -30,7 +30,10 @@ namespace nCine
 		AudioReaderOgg(std::unique_ptr<Death::IO::Stream> fileHandle, const OggVorbis_File& oggFile);
 		~AudioReaderOgg() override;
 
-		unsigned long int read(void* buffer, unsigned long int bufferSize) const override;
+		AudioReaderOgg(const AudioReaderOgg&) = delete;
+		AudioReaderOgg& operator=(const AudioReaderOgg&) = delete;
+
+		std::int32_t read(void* buffer, std::int32_t bufferSize) const override;
 		void rewind() const override;
 
 	private:
@@ -60,11 +63,6 @@ namespace nCine
 
 		static bool TryLoadLibrary();
 #endif
-
-		/// Deleted copy constructor
-		AudioReaderOgg(const AudioReaderOgg&) = delete;
-		/// Deleted assignment operator
-		AudioReaderOgg& operator=(const AudioReaderOgg&) = delete;
 	};
 }
 
