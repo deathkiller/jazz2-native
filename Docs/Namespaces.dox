@@ -118,12 +118,12 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Class @ref Death::Containers::Array
 */
 /** @file Shared/Containers/ArrayView.h
-	@brief Class @ref Death::Containers::ArrayView, @ref @ref Death::Containers::StaticArrayView
+	@brief Class @ref Death::Containers::ArrayView, @ref Death::Containers::StaticArrayView
 */
 /** @file Shared/Containers/DateTime.h
-	@brief Class @ref Death::Containers::DateTime, @ref @ref Death::Containers::TimeSpan
+	@brief Class @ref Death::Containers::DateTime, @ref Death::Containers::TimeSpan
 */
-/** @file Shared/Containers/DateTime.h
+/** @file Shared/Containers/Function.h
 	@brief Class @ref Death::Containers::Function, @ref Death::Containers::FunctionData
 */
 /** @file Shared/Containers/GrowableArray.h
@@ -144,7 +144,7 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Class @ref Death::Containers::StaticArray
 */
 /** @file Shared/Containers/String.h
-	@brief Class @ref Death::Containers::String, tag Death::Containers::AllocatedInit
+	@brief Class @ref Death::Containers::String, tag @ref Death::Containers::AllocatedInit
 */
 /** @file Shared/Containers/StringUtils.h
 	@brief Namespace @ref Death::Containers::StringUtils
