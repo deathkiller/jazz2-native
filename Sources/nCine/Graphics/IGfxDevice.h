@@ -182,7 +182,7 @@ namespace nCine
 		/// Returns the current video mode for the monitor that hosts the window
 		inline const VideoMode& currentVideoMode() const { return currentVideoMode(windowMonitorIndex()); }
 		/// Sets the video mode that will be used in full screen by the monitor that hosts the window
-		/*! \note Call this method <b>before>/b> enabling full screen */
+		/*! \note Call this method <b>before</b> enabling full screen */
 		inline virtual bool setVideoMode(unsigned int modeIndex) { return false; }
 
 		/// Returns the scaling factor for application window

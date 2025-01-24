@@ -44,7 +44,7 @@
 #endif
 
 // Check platform-specific capabilities
-/** @brief Whether the current platform supports a gamepad rumble (see @relativeref{nCine,IInputManager::joystickRumble()}) */
+/** @brief Whether the current platform supports a gamepad rumble, see @relativeref{nCine,IInputManager::joystickRumble()} */
 #if defined(WITH_SDL) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_GAMEPAD_RUMBLE
 #endif
@@ -57,6 +57,7 @@
 #	define NCINE_HAS_WINDOWS
 #endif
 
+/** @brief Function name */
 #if defined(__DEATH_CURRENT_FUNCTION)
 #	define NCINE_CURRENT_FUNCTION __DEATH_CURRENT_FUNCTION
 #else

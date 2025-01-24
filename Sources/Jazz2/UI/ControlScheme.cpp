@@ -197,7 +197,7 @@ namespace Jazz2::UI
 		return result;
 	}
 
-	std::uint32_t ControlScheme::FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags)
+	std::uint32_t ControlScheme::FetchNavigation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags)
 	{
 		std::uint32_t pressedActions = 0;
 		std::size_t joyStateCount = joyStates.size();

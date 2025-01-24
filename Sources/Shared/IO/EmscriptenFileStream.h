@@ -42,7 +42,7 @@ namespace Death { namespace IO {
 		std::int32_t _filePos;
 		std::int32_t _readPos;
 		std::int32_t _readLength;
-		std::int32_t _bufferLength;
+		std::int32_t _bufferSize;
 		std::unique_ptr<std::uint8_t[]> _buffer;
 
 		void InitializeBuffer();

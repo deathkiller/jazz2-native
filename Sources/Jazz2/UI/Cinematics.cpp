@@ -331,7 +331,7 @@ namespace Jazz2::UI
 			}
 		}
 
-		_pressedActions |= ControlScheme::FetchNativation(_pressedKeys, ArrayView(joyStates, joyStatesCount));
+		_pressedActions |= ControlScheme::FetchNavigation(_pressedKeys, ArrayView(joyStates, joyStatesCount));
 
 		// Also allow Menu action as skip key
 		if (_pressedActions & (1 << (std::uint32_t)PlayerActions::Menu)) {

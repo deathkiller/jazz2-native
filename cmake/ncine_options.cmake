@@ -42,7 +42,7 @@ else()
 			option(NCINE_COPY_DEPENDENCIES "Copy all build dependencies to target directory" OFF)
 			set(_NCINE_WITH_ANGLE_DEFAULT OFF)
 		endif()
-		option(NCINE_WITH_ANGLE "Enable Google ANGLE libraries support" ${_NCINE_WITH_ANGLE_DEFAULT})
+		option(NCINE_WITH_ANGLE "Enable Google ANGLE library support" ${_NCINE_WITH_ANGLE_DEFAULT})
 	elseif(UNIX AND NOT APPLE AND NOT ANDROID AND NOT NINTENDO_SWITCH)
 		set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (or \"native\" for current CPU)") 
 		option(NCINE_BUILD_FLATPAK "Build Flatpak version of the game" OFF)
@@ -69,7 +69,7 @@ cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file
 option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" OFF)
 option(NCINE_WITH_IMGUI "Enable integration with Dear ImGui" OFF)
 option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
-option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
+#option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
 
 cmake_dependent_option(NCINE_COMPILE_OPENMPT "Compile libopenmpt from sources instead of using library" OFF "NCINE_WITH_OPENMPT" OFF)
 

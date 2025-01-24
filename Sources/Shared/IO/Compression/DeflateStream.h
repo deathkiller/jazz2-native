@@ -65,6 +65,7 @@ namespace Death { namespace IO { namespace Compression {
 			Unknown,
 			Created,
 			Initialized,
+			Read,
 			Finished,
 			Failed
 		};
@@ -85,6 +86,7 @@ namespace Death { namespace IO { namespace Compression {
 
 		void InitializeInternal();
 		std::int32_t ReadInternal(void* ptr, std::int32_t size);
+		bool FillInputBuffer();
 	};
 
 	/**

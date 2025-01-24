@@ -43,7 +43,7 @@ namespace Death { namespace IO {
 	}
 
 	FileStream::FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize)
-		: _path(std::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferLength(bufferSize),
+		: _path(std::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferSize(bufferSize),
 #if defined(DEATH_TARGET_WINDOWS)
 			_fileHandle(INVALID_HANDLE_VALUE)
 
@@ -146,7 +146,7 @@ namespace Death { namespace IO {
 			if (_writePos > 0) {
 				FlushWriteBuffer();
 			}
-			if (bytesToRead >= _bufferLength) {
+			if (bytesToRead >= _bufferSize) {
 				_readPos = 0;
 				_readLength = 0;
 
@@ -166,11 +166,11 @@ namespace Death { namespace IO {
 			}
 
 			InitializeBuffer();
-			n = ReadInternal(&_buffer[0], _bufferLength);
+			n = ReadInternal(&_buffer[0], _bufferSize);
 			if (n == 0) {
 				return 0;
 			}
-			isBlocked = (n < _bufferLength);
+			isBlocked = (n < _bufferSize);
 			_readPos = 0;
 			_readLength = (std::int32_t)n;
 		}
@@ -223,7 +223,7 @@ namespace Death { namespace IO {
 		}
 
 		if (_writePos > 0) {
-			std::int32_t bufferBytesLeft = (_bufferLength - _writePos);
+			std::int32_t bufferBytesLeft = (_bufferSize - _writePos);
 			if (bufferBytesLeft > 0) {
 				if (bytesToWrite <= bufferBytesLeft) {
 					std::memcpy(&_buffer[_writePos], typedBuffer, bytesToWrite);
@@ -242,7 +242,7 @@ namespace Death { namespace IO {
 			_writePos = 0;
 		}
 
-		if (bytesToWrite >= _bufferLength) {
+		if (bytesToWrite >= _bufferSize) {
 			while DEATH_UNLIKELY(bytesToWrite > INT32_MAX) {
 				std::int32_t moreBytesRead = WriteInternal(typedBuffer, INT32_MAX);
 				if DEATH_UNLIKELY(moreBytesRead <= 0) {
@@ -310,7 +310,7 @@ namespace Death { namespace IO {
 	void FileStream::InitializeBuffer()
 	{
 		if DEATH_UNLIKELY(_buffer == nullptr) {
-			_buffer = std::make_unique<char[]>(_bufferLength);
+			_buffer = std::make_unique<char[]>(_bufferSize);
 		}
 	}
 

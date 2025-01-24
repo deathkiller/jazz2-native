@@ -107,8 +107,10 @@ namespace Death { namespace IO {
 		std::int64_t WriteVariableUint64(std::uint64_t value);
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
+		/** @brief Converts a 16-bit value from big-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromBE(std::uint16_t value)
 #else
+		/** @brief Converts a 16-bit value from little-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromLE(std::uint16_t value)
 #endif
 		{
@@ -116,8 +118,10 @@ namespace Death { namespace IO {
 		}
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
+		/** @brief Converts a 32-bit value from big-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromBE(std::uint32_t value)
 #else
+		/** @brief Converts a 32-bit value from little-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromLE(std::uint32_t value)
 #endif
 		{
@@ -125,8 +129,10 @@ namespace Death { namespace IO {
 		}
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
+		/** @brief Converts a 64-bit value from big-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromBE(std::uint64_t value)
 #else
+		/** @brief Converts a 64-bit value from little-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromLE(std::uint64_t value)
 #endif
 		{
@@ -134,8 +140,10 @@ namespace Death { namespace IO {
 		}
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
+		/** @brief Converts a 16-bit value from little-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromLE(std::uint16_t value)
 #else
+		/** @brief Converts a 16-bit value from big-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromBE(std::uint16_t value)
 #endif
 		{
@@ -143,8 +151,10 @@ namespace Death { namespace IO {
 		}
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
+		/** @brief Converts a 32-bit value from little-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromLE(std::uint32_t value)
 #else
+		/** @brief Converts a 32-bit value from big-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromBE(std::uint32_t value)
 #endif
 		{
@@ -152,8 +162,10 @@ namespace Death { namespace IO {
 		}
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
+		/** @brief Converts a 64-bit value from little-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromLE(std::uint64_t value)
 #else
+		/** @brief Converts a 64-bit value from big-endian to native */
 		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromBE(std::uint64_t value)
 #endif
 		{

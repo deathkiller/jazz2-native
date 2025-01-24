@@ -371,13 +371,13 @@ namespace Death { namespace Containers {
 		 */
 		constexpr TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds = 0, std::int64_t millisecs = 0) noexcept;
 		
-		constexpr std::int32_t GetWeeks() const noexcept;
-		constexpr std::int32_t GetDays() const noexcept;
-		constexpr std::int32_t GetHours() const noexcept;
-		constexpr std::int32_t GetMinutes() const noexcept;
-		constexpr std::int64_t GetSeconds() const noexcept;
+		constexpr std::int32_t GetTotalWeeks() const noexcept;
+		constexpr std::int32_t GetTotalDays() const noexcept;
+		constexpr std::int64_t GetTotalHours() const noexcept;
+		constexpr std::int64_t GetTotalMinutes() const noexcept;
+		constexpr std::int64_t GetTotalSeconds() const noexcept;
 
-		constexpr std::int64_t GetMilliseconds() const noexcept { return _value; }
+		constexpr std::int64_t GetTotalMilliseconds() const noexcept { return _value; }
 		constexpr std::int64_t GetValue() const noexcept { return _value; }
 
 		constexpr TimeSpan& operator+=(const TimeSpan& ts) noexcept
@@ -549,27 +549,27 @@ namespace Death { namespace Containers {
 		_value += millisecs;
 	}
 
-	constexpr std::int64_t TimeSpan::GetSeconds() const noexcept
+	constexpr std::int64_t TimeSpan::GetTotalSeconds() const noexcept
 	{
 		return _value / 1000;
 	}
 
-	constexpr std::int32_t TimeSpan::GetMinutes() const noexcept
+	constexpr std::int64_t TimeSpan::GetTotalMinutes() const noexcept
 	{
-		return static_cast<std::int32_t>(_value / (60 * 1000LL));
+		return _value / (60 * 1000LL);
 	}
 
-	constexpr std::int32_t TimeSpan::GetHours() const noexcept
+	constexpr std::int64_t TimeSpan::GetTotalHours() const noexcept
 	{
-		return static_cast<std::int32_t>(_value / (60 * 60 * 1000LL));
+		return _value / (60 * 60 * 1000LL);
 	}
 
-	constexpr std::int32_t TimeSpan::GetDays() const noexcept
+	constexpr std::int32_t TimeSpan::GetTotalDays() const noexcept
 	{
 		return static_cast<std::int32_t>(_value / (24 * 60 * 60 * 1000LL));
 	}
 
-	constexpr std::int32_t TimeSpan::GetWeeks() const noexcept
+	constexpr std::int32_t TimeSpan::GetTotalWeeks() const noexcept
 	{
 		return static_cast<std::int32_t>(_value / (7 * 24 * 60 * 60 * 1000LL));
 	}

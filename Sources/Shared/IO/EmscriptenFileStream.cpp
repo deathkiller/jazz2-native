@@ -11,7 +11,7 @@ namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	EmscriptenFileStream::EmscriptenFileStream(emscripten::val handle, std::int32_t bufferSize)
-		: _handle(handle), _size(-1), _filePos(0), _readPos(0), _readLength(0), _bufferLength(bufferSize)
+		: _handle(handle), _size(-1), _filePos(0), _readPos(0), _readLength(0), _bufferSize(bufferSize)
 	{
 	}
 
@@ -75,7 +75,7 @@ namespace Death { namespace IO {
 		bool isBlocked = false;
 		std::int64_t n = (_readLength - _readPos);
 		if (n == 0) {
-			if (bytesToRead >= _bufferLength) {
+			if (bytesToRead >= _bufferSize) {
 				_readPos = 0;
 				_readLength = 0;
 
@@ -95,11 +95,11 @@ namespace Death { namespace IO {
 			}
 
 			InitializeBuffer();
-			n = ReadInternal(&_buffer[0], _bufferLength);
+			n = ReadInternal(&_buffer[0], _bufferSize);
 			if (n == 0) {
 				return 0;
 			}
-			isBlocked = (n < _bufferLength);
+			isBlocked = (n < _bufferSize);
 			_readPos = 0;
 			_readLength = (std::int32_t)n;
 		}
@@ -167,7 +167,7 @@ namespace Death { namespace IO {
 	void EmscriptenFileStream::InitializeBuffer()
 	{
 		if DEATH_UNLIKELY(_buffer == nullptr) {
-			_buffer = std::make_unique<std::uint8_t[]>(_bufferLength);
+			_buffer = std::make_unique<std::uint8_t[]>(_bufferSize);
 		}
 	}
 

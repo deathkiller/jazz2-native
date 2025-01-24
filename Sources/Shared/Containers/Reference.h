@@ -48,6 +48,7 @@ namespace Death { namespace Containers {
 	template<class T> class Reference
 	{
 	public:
+		/** @brief Constructor */
 		constexpr /*implicit*/ Reference(T& reference) noexcept : _reference{&reference} {}
 
 		/**

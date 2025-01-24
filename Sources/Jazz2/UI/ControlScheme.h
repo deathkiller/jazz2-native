@@ -80,7 +80,7 @@ namespace Jazz2::UI
 		/** @brief Fetches processed standard input for specified player according to the current bindings */
 		static ProcessedInput FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons = true);
 		/** @brief Fetches navigation input according to the current bindings */
-		static std::uint32_t FetchNativation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags = NavigationFlags::AllowAll);
+		static std::uint32_t FetchNavigation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags = NavigationFlags::AllowAll);
 
 		/** @brief Returns the entire mapping configuration */
 		static ArrayView<ControlSchemeMapping> GetAllMappings();
