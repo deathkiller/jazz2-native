@@ -11,12 +11,12 @@
 
 namespace nCine
 {
-	unsigned int RenderBatcher::UboMaxSize = 0;
+	std::uint32_t RenderBatcher::UboMaxSize = 0;
 
 	RenderBatcher::RenderBatcher()
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		UboMaxSize = static_cast<unsigned int>(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
+		UboMaxSize = std::uint32_t(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
 
 		// Create the first buffer right away
 		createBuffer(UboMaxSize);
@@ -24,8 +24,8 @@ namespace nCine
 
 	void RenderBatcher::createBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
 	{
-		unsigned int minBatchSize, maxBatchSize;
-		unsigned int fixedBatchSize = theApplication().GetAppConfiguration().fixedBatchSize;
+		std::uint32_t minBatchSize, maxBatchSize;
+		std::uint32_t fixedBatchSize = theApplication().GetAppConfiguration().fixedBatchSize;
 		if (fixedBatchSize > 0) {
 			minBatchSize = fixedBatchSize;
 			maxBatchSize = fixedBatchSize;
@@ -38,9 +38,9 @@ namespace nCine
 		ASSERT(minBatchSize > 1);
 		ASSERT(maxBatchSize >= minBatchSize);
 
-		unsigned int lastSplit = 0;
+		std::uint32_t lastSplit = 0;
 
-		for (unsigned int i = 1; i < srcQueue.size(); i++) {
+		for (std::uint32_t i = 1; i < srcQueue.size(); i++) {
 			const RenderCommand* command = srcQueue[i];
 			const GLenum primitive = command->geometry().primitiveType();
 
@@ -52,7 +52,7 @@ namespace nCine
 			const bool shouldSplit = (command->lowerMaterialSortKey() != prevCommand->lowerMaterialSortKey() || prevPrimitive != primitive || primitive == GL_LINE_STRIP);
 
 			// Also collect the very last command if it can be batched with the previous one
-			unsigned int endSplit = (i == srcQueue.size() - 1 && !shouldSplit ? i + 1 : i);
+			std::uint32_t endSplit = (i == srcQueue.size() - 1 && !shouldSplit ? i + 1 : i);
 
 			// Split point if last command or split condition
 			if (i == srcQueue.size() - 1 || shouldSplit) {
@@ -60,14 +60,14 @@ namespace nCine
 				if (batchedShader && (endSplit - lastSplit) >= minBatchSize) {
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
-						unsigned int currentMaxBatchSize = maxBatchSize;
-						const unsigned int shaderBatchSize = batchedShader->batchSize();
+						std::uint32_t currentMaxBatchSize = maxBatchSize;
+						const std::uint32_t shaderBatchSize = batchedShader->batchSize();
 						if (shaderBatchSize > 0 && currentMaxBatchSize > shaderBatchSize) {
 							currentMaxBatchSize = shaderBatchSize;
 						}
 
-						const unsigned int batchSize = endSplit - lastSplit;
-						unsigned int nextSplit = endSplit;
+						const std::uint32_t batchSize = endSplit - lastSplit;
+						std::uint32_t nextSplit = endSplit;
 						if (batchSize > currentMaxBatchSize) {
 							nextSplit = lastSplit + currentMaxBatchSize;
 						} else if (batchSize < minBatchSize) {
@@ -80,7 +80,7 @@ namespace nCine
 						// Handling early splits while collecting (not enough UBO free space)
 						RenderCommand* batchCommand = collectCommands(start, end, start);
 						destQueue.push_back(batchCommand);
-						lastSplit = (unsigned int)(start - srcQueue.begin());
+						lastSplit = std::uint32_t(start - srcQueue.begin());
 					}
 				}
 
@@ -88,7 +88,7 @@ namespace nCine
 				endSplit = (i == srcQueue.size() - 1 ? i + 1 : i);
 
 				// Passthrough for unsupported command types and for the last few commands that are less than the minimum batch size
-				for (unsigned int j = lastSplit; j < endSplit; j++) {
+				for (std::uint32_t j = lastSplit; j < endSplit; j++) {
 					destQueue.push_back(srcQueue[j]);
 				}
 
@@ -122,9 +122,9 @@ namespace nCine
 		GLUniformBlockCache* instancesBlock = nullptr;
 
 		// Tracking the amount of memory required by uniform blocks, vertices and indices of all instances
-		unsigned long instancesBlockSize = 0;
-		unsigned long instancesVertexDataSize = 0;
-		unsigned int instancesIndicesAmount = 0;
+		std::uint32_t instancesBlockSize = 0;
+		std::uint32_t instancesVertexDataSize = 0;
+		std::uint32_t instancesIndicesAmount = 0;
 
 		const GLShaderProgram* refShader = refCommand->material().shaderProgram();
 		GLShaderProgram* batchedShader = RenderResources::batchedShader(refShader);
@@ -135,8 +135,8 @@ namespace nCine
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
 		const GLUniformBlockCache* singleInstanceBlock = (*start)->material().uniformBlock(Material::InstanceBlockName);
-		const int singleInstanceBlockSizePacked = singleInstanceBlock->size() - singleInstanceBlock->alignAmount(); // remove the uniform buffer offset alignment
-		const int singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
+		const std::uint32_t singleInstanceBlockSizePacked = singleInstanceBlock->size() - singleInstanceBlock->alignAmount(); // remove the uniform buffer offset alignment
+		const std::uint32_t singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
 #if defined(NCINE_PROFILING)
 		batchCommand->setType(refCommand->type());
@@ -144,9 +144,9 @@ namespace nCine
 		instancesBlock = batchCommand->material().uniformBlock(Material::InstancesBlockName);
 		FATAL_ASSERT_MSG(instancesBlock != nullptr, "Batched shader does not have an \"%s\" uniform block", Material::InstancesBlockName);
 
-		const unsigned long nonBlockUniformsSize = batchCommand->material().shaderProgram()->uniformsSize();
+		const std::uint32_t nonBlockUniformsSize = batchCommand->material().shaderProgram()->uniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
-		unsigned long nonInstancesBlocksSize = 0;
+		std::uint32_t nonInstancesBlocksSize = 0;
 		const GLShaderUniformBlocks::UniformHashMapType allUniformBlocks = refCommand->material().allUniformBlocks();
 		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
 			const char* uniformBlockName = uniformBlockCache.uniformBlock()->name();
@@ -171,7 +171,7 @@ namespace nCine
 			}
 
 			// Don't request more bytes than an instances block or an UBO can hold (also protects against big `RenderingSettings::maxBatchSize` values)
-			const unsigned long currentSize = nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize;
+			const std::uint32_t currentSize = nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize;
 			if (instancesBlockSize + singleInstanceBlockSize > instancesBlock->size() || currentSize + singleInstanceBlockSize > UboMaxSize) {
 				break;
 			}
@@ -200,8 +200,8 @@ namespace nCine
 		for (const GLUniformCache& uniformCache : allUniforms) {
 			if (uniformCache.uniform()->type() == GL_SAMPLER_2D) {
 				GLUniformCache* batchUniformCache = batchCommand->material().uniform(uniformCache.uniform()->name());
-				const int refValue = uniformCache.intValue(0);
-				const int batchValue = batchUniformCache->intValue(0);
+				const std::int32_t refValue = uniformCache.intValue(0);
+				const std::int32_t batchValue = batchUniformCache->intValue(0);
 				// Also checking if the command has just been added, as the memory at the
 				// uniforms data pointer is not cleared and might contain the reference value
 				if (batchValue != refValue || commandAdded) {
@@ -210,21 +210,21 @@ namespace nCine
 			}
 		}
 
-		const unsigned long maxVertexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).maxSize;
-		const unsigned long maxIndexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
+		const std::uint32_t maxVertexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).maxSize;
+		const std::uint32_t maxIndexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
 		// Sum the amount of VBO and IBO memory required by the batch
 		it = start;
 		const bool refShaderHasAttributes = (refShader->numAttributes() > 0);
 		while (it != nextStart) {
-			unsigned int vertexDataSize = 0;
-			unsigned int numIndices = (*it)->geometry().numIndices();
+			std::uint32_t vertexDataSize = 0;
+			std::uint32_t numIndices = (*it)->geometry().numIndices();
 
 			if (refShaderHasAttributes) {
-				unsigned int numVertices = (*it)->geometry().numVertices();
+				std::uint32_t numVertices = (*it)->geometry().numVertices();
 				if (!batchingWithIndices) {
 					numVertices += 2; // plus two degenerates if indices are not used
 				}
-				const unsigned int numElementsPerVertex = (*it)->geometry().numElementsPerVertex() + 1; // plus the mesh index
+				const std::uint32_t numElementsPerVertex = (*it)->geometry().numElementsPerVertex() + 1; // plus the mesh index
 				vertexDataSize = numVertices * numElementsPerVertex * sizeof(GLfloat);
 
 				if (batchingWithIndices) {
@@ -246,24 +246,24 @@ namespace nCine
 		nextStart = it;
 
 		// Remove the two missing degenerate vertices or indices from first and last elements
-		const unsigned long twoVerticesDataSize = 2 * (refCommand->geometry().numElementsPerVertex() + 1) * sizeof(GLfloat);
+		const std::uint32_t twoVerticesDataSize = 2 * (refCommand->geometry().numElementsPerVertex() + 1) * sizeof(GLfloat);
 		if (instancesIndicesAmount >= 2) {
 			instancesIndicesAmount -= 2;
 		} else if (instancesVertexDataSize >= twoVerticesDataSize) {
 			instancesVertexDataSize -= twoVerticesDataSize;
 		}
 
-		const unsigned int NumFloatsVertexFormat = refCommand->geometry().numElementsPerVertex();
-		const unsigned int NumFloatsVertexFormatAndIndex = NumFloatsVertexFormat + 1; // index is an `int`, same size as a `float`
-		const unsigned int SizeVertexFormat = NumFloatsVertexFormat * 4;
-		const unsigned int SizeVertexFormatAndIndex = SizeVertexFormat + sizeof(int);
+		const std::uint32_t NumFloatsVertexFormat = refCommand->geometry().numElementsPerVertex();
+		const std::uint32_t NumFloatsVertexFormatAndIndex = NumFloatsVertexFormat + 1; // index is an `int`, same size as a `float`
+		const std::uint32_t SizeVertexFormat = NumFloatsVertexFormat * 4;
+		const std::uint32_t SizeVertexFormatAndIndex = SizeVertexFormat + sizeof(std::uint32_t);
 
 		float* destVtx = nullptr;
 		GLushort* destIdx = nullptr;
 
 		const bool batchedShaderHasAttributes = (batchedShader->numAttributes() > 1);
 		if (batchedShaderHasAttributes) {
-			const unsigned int numFloats = instancesVertexDataSize / sizeof(GLfloat);
+			const std::uint32_t numFloats = instancesVertexDataSize / sizeof(GLfloat);
 			destVtx = batchCommand->geometry().acquireVertexPointer(numFloats, NumFloatsVertexFormat + 1); // aligned to vertex format with index
 
 			if (instancesIndicesAmount > 0) {
@@ -272,8 +272,8 @@ namespace nCine
 		}
 
 		it = start;
-		unsigned int instancesBlockOffset = 0;
-		unsigned short batchFirstVertexId = 0;
+		std::uint32_t instancesBlockOffset = 0;
+		std::uint16_t batchFirstVertexId = 0;
 		while (it != nextStart) {
 			RenderCommand* command = *it;
 			command->commitNodeTransformation();
@@ -284,34 +284,34 @@ namespace nCine
 			instancesBlockOffset += singleInstanceBlockSize;
 
 			if (batchedShaderHasAttributes) {
-				const unsigned int numVertices = command->geometry().numVertices();
-				const int meshIndex = (int)(it - start);
+				const std::uint32_t numVertices = command->geometry().numVertices();
+				const std::int32_t meshIndex = std::int32_t(it - start);
 				const float* srcVtx = command->geometry().hostVertexPointer();
 				FATAL_ASSERT(srcVtx != nullptr);
 
 				// Vertex of a degenerate triangle, if not a starting element and there are more than one in the batch
 				if (it != start && nextStart - start > 1 && !batchingWithIndices) {
-					memcpy(destVtx, srcVtx, SizeVertexFormat);
-					*reinterpret_cast<int*>(static_cast<void*>(&destVtx[NumFloatsVertexFormat])) = meshIndex; // last element is the index
+					std::memcpy(destVtx, srcVtx, SizeVertexFormat);
+					*reinterpret_cast<std::int32_t*>(static_cast<void*>(&destVtx[NumFloatsVertexFormat])) = meshIndex; // last element is the index
 					destVtx += NumFloatsVertexFormatAndIndex;
 				}
-				for (unsigned int i = 0; i < numVertices; i++) {
-					memcpy(destVtx, srcVtx, SizeVertexFormat);
-					*reinterpret_cast<int*>(static_cast<void*>(&destVtx[NumFloatsVertexFormat])) = meshIndex; // last element is the index
+				for (std::uint32_t i = 0; i < numVertices; i++) {
+					std::memcpy(destVtx, srcVtx, SizeVertexFormat);
+					*reinterpret_cast<std::int32_t*>(static_cast<void*>(&destVtx[NumFloatsVertexFormat])) = meshIndex; // last element is the index
 					destVtx += NumFloatsVertexFormatAndIndex;
 					srcVtx += NumFloatsVertexFormat; // source format does not include an index
 				}
 				// Vertex of a degenerate triangle, if not an ending element and there are more than one in the batch
 				if (it != nextStart - 1 && nextStart - start > 1 && !batchingWithIndices) {
 					srcVtx -= NumFloatsVertexFormat;
-					memcpy(destVtx, srcVtx, SizeVertexFormat);
-					*reinterpret_cast<int*>(static_cast<void*>(&destVtx[NumFloatsVertexFormat])) = meshIndex; // last element is the index
+					std::memcpy(destVtx, srcVtx, SizeVertexFormat);
+					*reinterpret_cast<std::int32_t*>(static_cast<void*>(&destVtx[NumFloatsVertexFormat])) = meshIndex; // last element is the index
 					destVtx += NumFloatsVertexFormatAndIndex;
 				}
 
 				if (instancesIndicesAmount > 0) {
-					unsigned short vertexId = 0;
-					const unsigned int numIndices = command->geometry().numIndices() ? command->geometry().numIndices() : numVertices;
+					std::uint16_t vertexId = 0;
+					const std::uint32_t numIndices = command->geometry().numIndices() ? command->geometry().numIndices() : numVertices;
 					const GLushort* srcIdx = command->geometry().hostIndexPointer();
 
 					// Index of a degenerate triangle, if not a starting element and there are more than one in the batch
@@ -319,7 +319,7 @@ namespace nCine
 						*destIdx = batchFirstVertexId + (srcIdx ? *srcIdx : vertexId);
 						destIdx++;
 					}
-					for (unsigned int i = 0; i < numIndices; i++) {
+					for (std::uint32_t i = 0; i < numIndices; i++) {
 						*destIdx = batchFirstVertexId + (srcIdx ? *srcIdx : vertexId);
 						destIdx++;
 						vertexId++;
@@ -351,17 +351,17 @@ namespace nCine
 			}
 		}
 
-		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			batchCommand->material().setTexture(i, refCommand->material().texture(i));
 		}
 		batchCommand->material().setBlendingEnabled(refCommand->material().isBlendingEnabled());
 		batchCommand->material().setBlendingFactors(refCommand->material().srcBlendingFactor(), refCommand->material().destBlendingFactor());
-		batchCommand->setBatchSize((int)(nextStart - start));
+		batchCommand->setBatchSize(std::int32_t(nextStart - start));
 		batchCommand->setLayer(refCommand->layer());
 		batchCommand->setVisitOrder(refCommand->visitOrder());
 
 		if (batchedShaderHasAttributes) {
-			const unsigned int totalVertices = instancesVertexDataSize / SizeVertexFormatAndIndex;
+			const std::uint32_t totalVertices = instancesVertexDataSize / SizeVertexFormatAndIndex;
 			batchCommand->geometry().setDrawParameters(refCommand->geometry().primitiveType(), 0, totalVertices);
 			batchCommand->geometry().setNumElementsPerVertex(NumFloatsVertexFormatAndIndex);
 			batchCommand->geometry().setNumIndices(instancesIndicesAmount);
@@ -372,15 +372,15 @@ namespace nCine
 		return batchCommand;
 	}
 
-	unsigned char* RenderBatcher::acquireMemory(unsigned int bytes)
+	unsigned char* RenderBatcher::acquireMemory(std::uint32_t bytes)
 	{
 		FATAL_ASSERT(bytes <= UboMaxSize);
 
-		unsigned char* ptr = nullptr;
+		std::uint8_t* ptr = nullptr;
 
 		for (ManagedBuffer& buffer : buffers_) {
 			if (buffer.freeSpace >= bytes) {
-				const unsigned int offset = buffer.size - buffer.freeSpace;
+				const std::uint32_t offset = buffer.size - buffer.freeSpace;
 				ptr = buffer.buffer.get() + offset;
 				buffer.freeSpace -= bytes;
 				break;
@@ -396,11 +396,11 @@ namespace nCine
 		return ptr;
 	}
 
-	void RenderBatcher::createBuffer(unsigned int size)
+	void RenderBatcher::createBuffer(std::uint32_t size)
 	{
 		ManagedBuffer& managedBuffer = buffers_.emplace_back();
 		managedBuffer.size = size;
 		managedBuffer.freeSpace = size;
-		managedBuffer.buffer = std::make_unique<unsigned char[]>(size);
+		managedBuffer.buffer = std::make_unique<std::uint8_t[]>(size);
 	}
 }

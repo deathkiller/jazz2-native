@@ -446,7 +446,7 @@ namespace Death { namespace Trace {
 			T _lastFlushedReaderPos{0};
 
 #	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-			// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on clang-cl
+			// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on Clang-CL
 			void flushCacheLines(T& last, T offset)
 			{
 				T lastDiff = last - (last & CacheLineMask);

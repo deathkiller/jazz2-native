@@ -10,9 +10,14 @@ namespace nCine
 	/// Handles OpenGL renderbuffer objects
 	class GLRenderbuffer
 	{
+		friend class GLFramebuffer;
+
 	public:
 		GLRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height);
 		~GLRenderbuffer();
+
+		GLRenderbuffer(const GLRenderbuffer&) = delete;
+		GLRenderbuffer& operator=(const GLRenderbuffer&) = delete;
 
 		inline GLuint glHandle() const {
 			return glHandle_;
@@ -36,14 +41,7 @@ namespace nCine
 		GLuint glHandle_;
 		GLenum attachment_;
 
-		/// Deleted copy constructor
-		GLRenderbuffer(const GLRenderbuffer&) = delete;
-		/// Deleted assignment operator
-		GLRenderbuffer& operator=(const GLRenderbuffer&) = delete;
-
 		void storage(GLenum internalFormat, GLsizei width, GLsizei height);
-
-		friend class GLFramebuffer;
 	};
 
 }

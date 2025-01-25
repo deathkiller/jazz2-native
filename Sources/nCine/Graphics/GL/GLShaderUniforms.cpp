@@ -45,7 +45,7 @@ namespace nCine
 			return;
 		}
 
-		unsigned int offset = 0;
+		std::uint32_t offset = 0;
 		for (GLUniformCache& uniformCache : uniformCaches_) {
 			uniformCache.setDataPointer(dataPointer + offset);
 			offset += uniformCache.uniform()->memorySize();
@@ -92,9 +92,9 @@ namespace nCine
 
 	void GLShaderUniforms::importUniforms(const char* includeOnly, const char* exclude)
 	{
-		const unsigned int MaxUniformName = 128;
+		constexpr std::uint32_t MaxUniformName = 128;
 
-		unsigned int importedCount = 0;
+		std::uint32_t importedCount = 0;
 		for (const GLUniform& uniform : shaderProgram_->uniforms_) {
 			const char* uniformName = uniform.name();
 			const char* currentIncludeOnly = includeOnly;

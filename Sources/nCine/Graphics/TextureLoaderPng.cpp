@@ -13,16 +13,16 @@ namespace nCine
 	TextureLoaderPng::TextureLoaderPng(std::unique_ptr<Stream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
-		constexpr uint8_t PngSignature[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
-		constexpr uint8_t PngTypeIndexed = 1;
-		constexpr uint8_t PngTypeColor = 2;
+		constexpr std::uint8_t PngSignature[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
+		constexpr std::uint8_t PngTypeIndexed = 1;
+		constexpr std::uint8_t PngTypeColor = 2;
 
 		if (!fileHandle_->IsValid()) {
 			return;
 		}
 
 		// Check header signature
-		uint8_t internalBuffer[sizeof(PngSignature)];
+		std::uint8_t internalBuffer[sizeof(PngSignature)];
 		fileHandle_->Read(internalBuffer, sizeof(PngSignature));
 		if (std::memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
 			RETURN_MSG("Invalid PNG signature");
@@ -33,10 +33,10 @@ namespace nCine
 		bool isPaletted = false;
 		bool is24Bit = false;
 
-		SmallVector<uint8_t, 0> data;
+		SmallVector<std::uint8_t, 0> data;
 
 		while (true) {
-			int length = ReadInt32BigEndian(fileHandle_);
+			std::int32_t length = ReadInt32BigEndian(fileHandle_);
 			uint32_t type = ReadInt32BigEndian(fileHandle_);
 
 			if (!headerParsed && type != 'IHDR') {
@@ -44,7 +44,7 @@ namespace nCine
 				RETURN_MSG("Invalid IHDR signature");
 			}
 
-			int blockEndPosition = (int)fileHandle_->GetPosition() + length;
+			std::int32_t blockEndPosition = std::int32_t(fileHandle_->GetPosition()) + length;
 
 			switch (type) {
 				case 'IHDR': {
@@ -53,9 +53,9 @@ namespace nCine
 					width_ = ReadInt32BigEndian(fileHandle_);
 					height_ = ReadInt32BigEndian(fileHandle_);
 
-					uint8_t bitDepth;
+					std::uint8_t bitDepth;
 					fileHandle_->Read(&bitDepth, sizeof(bitDepth));
-					uint8_t colorType;
+					std::uint8_t colorType;
 					fileHandle_->Read(&colorType, sizeof(colorType));
 
 					if (bitDepth == 8 && colorType == (PngTypeIndexed | PngTypeColor)) {
@@ -63,18 +63,18 @@ namespace nCine
 					}
 					is24Bit = (colorType == PngTypeColor);
 
-					int dataLength = width_ * height_;
+					std::int32_t dataLength = width_ * height_;
 					if (!isPaletted) {
 						dataLength *= 4;
 					}
 
 					pixels_ = std::make_unique<GLubyte[]>(dataLength);
 
-					uint8_t compression;
+					std::uint8_t compression;
 					fileHandle_->Read(&compression, sizeof(compression));
-					uint8_t filter;
+					std::uint8_t filter;
 					fileHandle_->Read(&filter, sizeof(filter));
-					uint8_t interlace;
+					std::uint8_t interlace;
 					fileHandle_->Read(&interlace, sizeof(interlace));
 
 					if (compression != 0) {
@@ -91,15 +91,15 @@ namespace nCine
 				}
 
 				case 'IDAT': {
-					int prevlength = (int)data.size();
-					int newLength = prevlength + length;
+					std::int32_t prevlength = std::int32_t(data.size());
+					std::int32_t newLength = prevlength + length;
 					data.resize_for_overwrite(newLength);
 					fileHandle_->Read(data.data() + prevlength, length);
 					break;
 				}
 
 				case 'IEND': {
-					size_t dataLength = 16 + (width_ * height_ * 5);
+					std::size_t dataLength = 16 + (width_ * height_ * 5);
 					auto buffer = std::make_unique<GLubyte[]>(dataLength);
 
 					MemoryStream ms(data.data() + 2, data.size() - 2);
@@ -107,22 +107,22 @@ namespace nCine
 					uc.Read(buffer.get(), dataLength);
 					RETURN_ASSERT_MSG(uc.IsValid(), "PNG file cannot be decompressed");
 
-					int o = 0;
-					int pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
-					int srcStride = width_ * pxStride;
-					int dstStride = width_ * (isPaletted ? 1 : 4);
+					std::int32_t o = 0;
+					std::int32_t pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
+					std::int32_t srcStride = width_ * pxStride;
+					std::int32_t dstStride = width_ * (isPaletted ? 1 : 4);
 
 					auto bufferPrev = std::make_unique<GLubyte[]>(srcStride);
 
-					for (int y = 0; y < height_; y++) {
+					for (std::int32_t y = 0; y < height_; y++) {
 						// Read filter
-						uint8_t filter = buffer[o++];
+						std::uint8_t filter = buffer[o++];
 
 						// Read data
 						GLubyte* bufferRow = &buffer[o];
 						o += srcStride;
 
-						for (int i = 0; i < srcStride; i++) {
+						for (std::int32_t i = 0; i < srcStride; i++) {
 							if (i < pxStride) {
 								bufferRow[i] = UnapplyFilter(filter, bufferRow[i], 0, bufferPrev[i], 0);
 							} else {
@@ -131,7 +131,7 @@ namespace nCine
 						}
 
 						if (is24Bit) {
-							for (int i = 0; i < srcStride; i++) {
+							for (std::int32_t i = 0; i < srcStride; i++) {
 								std::memcpy(&pixels_[y * dstStride + 4 * i], &bufferRow[3 * i], 3);
 								pixels_[y * dstStride + 4 * i + 3] = 255;
 							}
@@ -166,32 +166,32 @@ namespace nCine
 		RETURN_MSG("PNG file is corrupted");
 	}
 
-	int TextureLoaderPng::ReadInt32BigEndian(const std::unique_ptr<Stream>& s)
+	std::int32_t TextureLoaderPng::ReadInt32BigEndian(const std::unique_ptr<Stream>& s)
 	{
-		uint32_t value;
+		std::uint32_t value;
 		s->Read(&value, sizeof(value));
 		return Stream::Uint32FromBE(value);
 	}
 
-	uint8_t TextureLoaderPng::UnapplyFilter(uint8_t filter, uint8_t x, uint8_t a, uint8_t b, uint8_t c)
+	std::uint8_t TextureLoaderPng::UnapplyFilter(std::uint8_t filter, std::uint8_t x, std::uint8_t a, std::uint8_t b, std::uint8_t c)
 	{
-		constexpr uint8_t PngFilterNone = 0;
-		constexpr uint8_t PngFilterSub = 1;
-		constexpr uint8_t PngFilterUp = 2;
-		constexpr uint8_t PngFilterAverage = 3;
-		constexpr uint8_t PngFilterPaeth = 4;
+		constexpr std::uint8_t PngFilterNone = 0;
+		constexpr std::uint8_t PngFilterSub = 1;
+		constexpr std::uint8_t PngFilterUp = 2;
+		constexpr std::uint8_t PngFilterAverage = 3;
+		constexpr std::uint8_t PngFilterPaeth = 4;
 
 		switch (filter) {
 			case PngFilterNone: return x;
-			case PngFilterSub: return (uint8_t)(x + a);
-			case PngFilterUp: return (uint8_t)(x + b);
-			case PngFilterAverage: return (uint8_t)(x + (a + b) / 2);
+			case PngFilterSub: return std::uint8_t(x + a);
+			case PngFilterUp: return std::uint8_t(x + b);
+			case PngFilterAverage: return std::uint8_t(x + (a + b) / 2);
 			case PngFilterPaeth: {
-				int p = a + b - c;
-				int pa = std::abs(p - a);
-				int pb = std::abs(p - b);
-				int pc = std::abs(p - c);
-				return (uint8_t)(x + ((pa <= pb && pa <= pc) ? a : (pb <= pc) ? b : c));
+				std::int32_t p = a + b - c;
+				std::int32_t pa = std::abs(p - a);
+				std::int32_t pb = std::abs(p - b);
+				std::int32_t pc = std::abs(p - c);
+				return (std::uint8_t)(x + ((pa <= pb && pa <= pc) ? a : (pb <= pc) ? b : c));
 			}
 
 			// Unsupported filter specified

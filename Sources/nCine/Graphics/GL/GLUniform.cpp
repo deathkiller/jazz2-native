@@ -61,7 +61,7 @@ namespace nCine
 		}
 	}
 
-	unsigned int GLUniform::numComponents() const
+	std::uint32_t GLUniform::numComponents() const
 	{
 		switch (type_) {
 			case GL_FLOAT:

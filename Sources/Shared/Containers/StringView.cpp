@@ -10,7 +10,7 @@
 #include <cstring>
 #include <algorithm>
 
-// clang-cl has DEATH_ENABLE_BMI1 enabled only when explicitly specified on command line, so the includes have to be
+// Clang-CL has DEATH_ENABLE_BMI1 enabled only when explicitly specified on command line, so the includes have to be
 // complicated like this to still include the headers for count() implementation which needs just POPCNT and not BMI1
 #if ((defined(DEATH_ENABLE_SSE2) || defined(DEATH_ENABLE_AVX)) && defined(DEATH_ENABLE_BMI1)) || (defined(DEATH_ENABLE_AVX) && defined(DEATH_ENABLE_POPCNT))
 #	include "../IntrinsicsAvx.h" /* TZCNT is in AVX headers :( */

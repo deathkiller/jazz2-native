@@ -5,14 +5,18 @@
 #include "../../CommonHeaders.h"
 #endif
 
+#include "../../../Main.h"
+
 namespace nCine
 {
 	/// Stores information about an active OpenGL shader uniform
 	/*! Its only purpose is to initialize a `GLUniformCache` class. */
 	class GLUniform
 	{
+		friend class GLUniformBlock;
+
 	public:
-		static constexpr int MaxNameLength = 48;
+		static constexpr std::uint32_t MaxNameLength = 48;
 
 		GLUniform();
 		GLUniform(GLuint program, GLuint index);
@@ -39,8 +43,8 @@ namespace nCine
 			return name_;
 		}
 		GLenum basicType() const;
-		unsigned int numComponents() const;
-		inline unsigned int memorySize() const {
+		std::uint32_t numComponents() const;
+		inline std::uint32_t memorySize() const {
 			return size() * numComponents() * sizeof(basicType());
 		}
 
@@ -56,8 +60,6 @@ namespace nCine
 		GLenum type_;
 		GLint offset_;
 		char name_[MaxNameLength];
-
-		friend class GLUniformBlock;
 	};
 
 }

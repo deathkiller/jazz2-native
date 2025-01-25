@@ -28,6 +28,9 @@ namespace nCine
 		explicit IDebugOverlay(float profileTextUpdateTime);
 		virtual ~IDebugOverlay();
 
+		IDebugOverlay(const IDebugOverlay&) = delete;
+		IDebugOverlay& operator=(const IDebugOverlay&) = delete;
+
 		inline DisplaySettings& settings() {
 			return settings_;
 		}
@@ -42,9 +45,6 @@ namespace nCine
 		DisplaySettings settings_;
 		TimeStamp lastUpdateTime_;
 		float updateTime_;
-
-		IDebugOverlay(const IDebugOverlay&) = delete;
-		IDebugOverlay& operator=(const IDebugOverlay&) = delete;
 	};
 
 	inline IDebugOverlay::IDebugOverlay(float profileTextUpdateTime)

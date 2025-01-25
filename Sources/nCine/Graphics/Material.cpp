@@ -18,7 +18,7 @@ namespace nCine
 		: isBlendingEnabled_(false), srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
 			shaderProgramType_(ShaderProgramType::Custom), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
-		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			textures_[i] = nullptr;
 		}
 		textures_[0] = texture;
@@ -82,7 +82,7 @@ namespace nCine
 		ASSERT(shaderProgram_);
 
 		// Total memory size for all uniforms and uniform blocks
-		const unsigned int uniformsSize = shaderProgram_->uniformsSize() + shaderProgram_->uniformBlocksSize();
+		const std::uint32_t uniformsSize = shaderProgram_->uniformsSize() + shaderProgram_->uniformBlocksSize();
 		if (uniformsSize > uniformsHostBufferSize_) {
 			uniformsHostBuffer_ = std::make_unique<GLubyte[]>(uniformsSize);
 			uniformsHostBufferSize_ = uniformsSize;
@@ -103,7 +103,7 @@ namespace nCine
 		shaderUniformBlocks_.setUniformsDataPointer(&dataPointer[shaderProgram_->uniformsSize()]);
 	}
 
-	const GLTexture* Material::texture(unsigned int unit) const
+	const GLTexture* Material::texture(std::uint32_t unit) const
 	{
 		const GLTexture* texture = nullptr;
 		if (unit < GLTexture::MaxTextureUnits) {
@@ -112,7 +112,7 @@ namespace nCine
 		return texture;
 	}
 
-	bool Material::setTexture(unsigned int unit, const GLTexture* texture)
+	bool Material::setTexture(std::uint32_t unit, const GLTexture* texture)
 	{
 		bool result = false;
 		if (unit < GLTexture::MaxTextureUnits) {
@@ -122,14 +122,14 @@ namespace nCine
 		return result;
 	}
 
-	bool Material::setTexture(unsigned int unit, const Texture& texture)
+	bool Material::setTexture(std::uint32_t unit, const Texture& texture)
 	{
 		return setTexture(unit, texture.glTexture_.get());
 	}
 
 	void Material::bind()
 	{
-		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			if (textures_[i] != nullptr) {
 				textures_[i]->bind(i);
 			} else {
@@ -143,7 +143,7 @@ namespace nCine
 		}
 	}
 
-	void Material::defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, unsigned int vboOffset)
+	void Material::defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset)
 	{
 		shaderProgram_->defineVertexFormat(vbo, ibo, vboOffset);
 	}
@@ -176,18 +176,18 @@ namespace nCine
 		{
 			GLuint textures[GLTexture::MaxTextureUnits];
 			GLuint shaderProgram;
-			uint8_t srcBlendingFactor;
-			uint8_t destBlendingFactor;
+			std::uint8_t srcBlendingFactor;
+			std::uint8_t destBlendingFactor;
 		};
 	}
 
-	uint32_t Material::sortKey()
+	std::uint32_t Material::sortKey()
 	{
-		constexpr uint32_t Seed = 1697381921;
+		constexpr std::uint32_t Seed = 1697381921;
 		// Align to 64 bits for `fasthash64()` to properly work on Emscripten without alignment faults
 		static SortHashData hashData alignas(8);
 
-		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->glHandle() : 0;
 		}
 		hashData.shaderProgram = shaderProgram_->glHandle();

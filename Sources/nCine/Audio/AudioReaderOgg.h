@@ -6,10 +6,11 @@
 
 #include "IAudioReader.h"
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 #define OV_EXCLUDE_STATIC_CALLBACKS
-
 #include <ogg/ogg.h>
 #include <vorbis/vorbisfile.h>
+#endif
 
 #if defined(WITH_VORBIS_DYNAMIC) && defined(DEATH_TARGET_WINDOWS)
 #	include <CommonWindows.h>

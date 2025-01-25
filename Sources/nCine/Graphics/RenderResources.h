@@ -54,7 +54,7 @@ namespace nCine
 		struct VertexFormatPos2Index
 		{
 			GLfloat position[2];
-			int drawindex;
+			std::int32_t drawindex;
 		};
 
 		/// Vertex format structure for vertices with positions, texture coordinates and draw indices
@@ -62,7 +62,7 @@ namespace nCine
 		{
 			GLfloat position[2];
 			GLfloat texcoords[2];
-			int drawindex;
+			std::int32_t drawindex;
 		};
 
 		struct CameraUniformData
@@ -72,8 +72,8 @@ namespace nCine
 
 			GLShaderUniforms shaderUniforms;
 			Camera* camera;
-			unsigned long int updateFrameProjectionMatrix;
-			unsigned long int updateFrameViewMatrix;
+			std::uint32_t updateFrameProjectionMatrix;
+			std::uint32_t updateFrameViewMatrix;
 		};
 
 		static inline BinaryShaderCache& binaryShaderCache() {
@@ -98,7 +98,7 @@ namespace nCine
 		static bool registerBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader);
 		static bool unregisterBatchedShader(const GLShaderProgram* shader);
 
-		static inline unsigned char* cameraUniformsBuffer() {
+		static inline std::uint8_t* cameraUniformsBuffer() {
 			return cameraUniformsBuffer_;
 		}
 		static CameraUniformData* findCameraUniformData(GLShaderProgram* shaderProgram);
@@ -116,7 +116,7 @@ namespace nCine
 
 	private:
 #if defined(WITH_EMBEDDED_SHADERS)
-		static constexpr uint64_t EmbeddedShadersVersion = 2ull | (1ull << 63);
+		static constexpr std::uint64_t EmbeddedShadersVersion = 2ull | (1ull << 63);
 #endif
 
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
@@ -125,12 +125,12 @@ namespace nCine
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
 
-		static constexpr unsigned int DefaultShaderProgramsCount = static_cast<unsigned int>(Material::ShaderProgramType::Custom);
+		static constexpr std::uint32_t DefaultShaderProgramsCount = std::uint32_t(Material::ShaderProgramType::Custom);
 		static std::unique_ptr<GLShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
 		static HashMap<const GLShaderProgram*, GLShaderProgram*> batchedShaders_;
 
-		static constexpr unsigned int UniformsBufferSize = 128; // two 4x4 float matrices
-		static unsigned char cameraUniformsBuffer_[UniformsBufferSize];
+		static constexpr std::uint32_t UniformsBufferSize = 128; // two 4x4 float matrices
+		static std::uint8_t cameraUniformsBuffer_[UniformsBufferSize];
 		static HashMap<GLShaderProgram*, CameraUniformData> cameraUniformDataMap_;
 
 		static Camera* currentCamera_;

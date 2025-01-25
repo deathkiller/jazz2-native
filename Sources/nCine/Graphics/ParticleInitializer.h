@@ -17,8 +17,8 @@ namespace nCine
 		Vector2f rndRotation = Vector2f::Zero;
 		bool emitterRotation = true;
 
-		void setAmount(int amount);
-		void setAmount(int minAmount, int maxAmount);
+		void setAmount(std::int32_t amount);
+		void setAmount(std::int32_t minAmount, std::int32_t maxAmount);
 
 		void setLife(float life);
 		void setLife(float minLife, float maxLife);

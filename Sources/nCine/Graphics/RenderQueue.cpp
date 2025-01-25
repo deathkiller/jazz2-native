@@ -130,16 +130,16 @@ namespace nCine
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
 
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
-		unsigned int commandIndex = 0;
+		std::uint32_t commandIndex = 0;
 #endif
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
-			const int numInstances = opaqueRenderCommand->numInstances();
-			const int batchSize = opaqueRenderCommand->batchSize();
-			const uint16_t layer = opaqueRenderCommand->layer();
-			const uint16_t visitOrder = opaqueRenderCommand->visitOrder();
+			const std::int32_t numInstances = opaqueRenderCommand->numInstances();
+			const std::int32_t batchSize = opaqueRenderCommand->batchSize();
+			const std::uint16_t layer = opaqueRenderCommand->layer();
+			const std::uint16_t visitOrder = opaqueRenderCommand->visitOrder();
 
 			if (numInstances > 0) {
 				formatString(debugString, sizeof(debugString), "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
@@ -168,10 +168,10 @@ namespace nCine
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
-			const int numInstances = transparentRenderCommand->numInstances();
-			const int batchSize = transparentRenderCommand->batchSize();
-			const uint16_t layer = transparentRenderCommand->layer();
-			const uint16_t visitOrder = transparentRenderCommand->visitOrder();
+			const std::int32_t numInstances = transparentRenderCommand->numInstances();
+			const std::int32_t batchSize = transparentRenderCommand->batchSize();
+			const std::uint16_t layer = transparentRenderCommand->layer();
+			const std::uint16_t visitOrder = transparentRenderCommand->visitOrder();
 
 			if (numInstances > 0) {
 				formatString(debugString, sizeof(debugString), "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
@@ -194,8 +194,7 @@ namespace nCine
 			transparentRenderCommand->commitCameraTransformation();
 			transparentRenderCommand->issue();
 		}
-		// Depth mask has to be enabled again before exiting this method
-		// or glClear(GL_DEPTH_BUFFER_BIT) won't have any effect
+		// Depth mask has to be enabled again before exiting this method or glClear(GL_DEPTH_BUFFER_BIT) won't have any effect
 		GLDepthTest::enableDepthMask();
 		GLBlending::disable();
 

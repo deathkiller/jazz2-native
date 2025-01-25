@@ -133,6 +133,7 @@ namespace nCine
 		virtual void setPosition(const Vector3f& position);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		enum class PlayerFlags {
 			None = 0,
 			Looping = 0x01,
@@ -170,6 +171,7 @@ namespace nCine
 				flags_ = flags_ & (~flag);
 			}
 		}
+#endif
 
 		/// Updates the state of the player if the source has done playing
 		/*! It is called every frame by the `IAudioDevice` class and it is

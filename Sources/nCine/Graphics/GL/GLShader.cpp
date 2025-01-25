@@ -63,6 +63,11 @@ namespace nCine
 		return loadFromStringsAndFile(arrayView({ string }), filename);
 	}
 
+	bool GLShader::loadFromStrings(ArrayView<const StringView> strings)
+	{
+		return loadFromStringsAndFile(strings, {});
+	}
+
 	bool GLShader::loadFromStringsAndFile(ArrayView<const StringView> strings, StringView filename)
 	{
 		if (strings.empty() && filename.empty()) {

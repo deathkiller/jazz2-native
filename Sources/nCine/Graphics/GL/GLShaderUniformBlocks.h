@@ -14,12 +14,13 @@ namespace nCine
 	class GLShaderUniformBlocks
 	{
 	public:
-		static constexpr int UniformBlockCachesHashSize = 4;
+		static constexpr std::int32_t UniformBlockCachesHashSize = 4;
 		using UniformHashMapType = StaticHashMap<String, GLUniformBlockCache, UniformBlockCachesHashSize>;
 
 		GLShaderUniformBlocks();
 		explicit GLShaderUniformBlocks(GLShaderProgram* shaderProgram);
 		GLShaderUniformBlocks(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
+
 		inline void setProgram(GLShaderProgram* shaderProgram) {
 			setProgram(shaderProgram, nullptr, nullptr);
 		}

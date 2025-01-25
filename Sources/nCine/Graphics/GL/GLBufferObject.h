@@ -59,7 +59,7 @@ namespace nCine
 		GLsizeiptr size_;
 		bool mapped_;
 
-		static const int MaxIndexBufferRange = 128;
+		static const std::int32_t MaxIndexBufferRange = 128;
 		/// Current bound index for buffer base. Negative if not bound.
 		static GLuint boundIndexBase_[MaxIndexBufferRange];
 		/// Current range and offset for buffer range index

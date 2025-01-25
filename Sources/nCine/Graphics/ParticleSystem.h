@@ -18,11 +18,12 @@ namespace nCine
 	{
 	public:
 		/// Constructs a particle system with the specified maximum amount of particles
-		ParticleSystem(SceneNode* parent, unsigned int count, Texture* texture);
+		ParticleSystem(SceneNode* parent, std::uint32_t count, Texture* texture);
 		/// Constructs a particle system with the specified maximum amount of particles and the specified texture rectangle
-		ParticleSystem(SceneNode* parent, unsigned int count, Texture* texture, Recti texRect);
+		ParticleSystem(SceneNode* parent, std::uint32_t count, Texture* texture, Recti texRect);
 		~ParticleSystem() override;
 
+		ParticleSystem& operator=(const ParticleSystem&) = delete;
 		ParticleSystem(ParticleSystem&&);
 		ParticleSystem& operator=(ParticleSystem&&);
 
@@ -43,7 +44,7 @@ namespace nCine
 		void killParticles();
 
 		/// Returns the local space flag of the system
-		inline bool inLocalSpace(void) const {
+		inline bool inLocalSpace() const {
 			return inLocalSpace_;
 		}
 		/// Sets the local space flag of the system
@@ -52,12 +53,12 @@ namespace nCine
 		}
 
 		/// Returns the total number of particles in the system
-		inline unsigned int numParticles() const {
-			return (unsigned int)particleArray_.size();
+		inline std::uint32_t numParticles() const {
+			return std::uint32_t(particleArray_.size());
 		}
 		/// Returns the number of particles currently alive
-		inline unsigned int numAliveParticles() const {
-			return (unsigned int)particleArray_.size() - poolTop_ - 1;
+		inline std::uint32_t numAliveParticles() const {
+			return std::uint32_t(particleArray_.size()) - poolTop_ - 1;
 		}
 
 		/// Sets the texture object for every particle
@@ -95,9 +96,9 @@ namespace nCine
 
 	private:
 		/// Particle pool size
-		unsigned int poolSize_;
+		std::uint32_t poolSize_;
 		/// Index of the next free particle in the pool
-		int poolTop_;
+		std::int32_t poolTop_;
 		/// Pool containing available particles (only dead ones)
 		SmallVector<Particle*, 0> particlePool_;
 		/// Array containing every particle (dead or alive)
@@ -108,8 +109,6 @@ namespace nCine
 
 		/// Flag indicating whether the system should be simulated in local space
 		bool inLocalSpace_;
-
-		ParticleSystem& operator=(const ParticleSystem&) = delete;
 	};
 
 }

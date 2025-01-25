@@ -1660,7 +1660,7 @@ namespace Death { namespace Cpu {
 	/**
 		@brief Enable SSE2 for given function
 
-		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "clang-cl"
+		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "Clang-CL"
 		expands to @cpp __attribute__((__target__("sse2"))) @ce, allowing use of
 		[SSE2](https://en.wikipedia.org/wiki/SSE2) and earlier SSE instructions inside
 		a function annotated with this macro without having to specify `-msse2` for the
@@ -1739,7 +1739,7 @@ namespace Death { namespace Cpu {
 	/**
 		@brief Enable SSSE3 for given function
 
-		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "clang-cl"
+		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "Clang-CL"
 		expands to @cpp __attribute__((__target__("ssse3"))) @ce, allowing use of
 		[SSSE3](https://en.wikipedia.org/wiki/SSSE3) and earlier SSE instructions
 		inside a function annotated with this macro without having to specify `-mssse3`
@@ -1779,7 +1779,7 @@ namespace Death { namespace Cpu {
 	/**
 		@brief Enable SSE4.1 for given function
 
-		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "clang-cl"
+		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "Clang-CL"
 		expands to @cpp __attribute__((__target__("sse4.1"))) @ce, allowing use of
 		[SSE4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1) and earlier SSE
 		instructions inside a function annotated with this macro without having to
@@ -1807,7 +1807,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_SSE41
 #	endif
-#elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* also matches clang-cl */
+#elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* also matches Clang-CL */
 // The -msse4.1 option implies -msse2 -msse3 -mssse3 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -msse4.1`)
 #	define DEATH_ENABLE_SSE41 __attribute__((__target__("sse4.1")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
@@ -1820,7 +1820,7 @@ namespace Death { namespace Cpu {
 /**
 	@brief Enable SSE4.2 for given function
 
-	On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "clang-cl"
+	On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "Clang-CL"
 	expands to @cpp __attribute__((__target__("sse4.2"))) @ce, allowing use of
 	[SSE4.2](https://en.wikipedia.org/wiki/SSE4#SSE4.2) and earlier SSE
 	instructions inside a function annotated with this macro without having to
@@ -1860,7 +1860,7 @@ namespace Death { namespace Cpu {
 	/**
 		@brief Enable POPCNT for given function
 
-		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "clang-cl"
+		On @ref DEATH_TARGET_X86 "x86" GCC, Clang and @ref DEATH_TARGET_CLANG_CL "Clang-CL"
 		expands to @cpp __attribute__((__target__("popcnt"))) @ce, allowing use of the
 		[POPCNT](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#ABM_(Advanced_Bit_Manipulation))
 		instructions inside a function annotated with this macro without having to
@@ -1890,7 +1890,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_POPCNT
 #	endif
-#elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* matches clang-cl */
+#elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* matches Clang-CL */
 #	define DEATH_ENABLE_POPCNT __attribute__((__target__("popcnt")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_POPCNT "popcnt",
@@ -1909,7 +1909,7 @@ namespace Death { namespace Cpu {
 		specify `-mlzcnt` for the whole compilation unit. On x86 MSVC expands to
 		nothing, as the compiler doesn't restrict use of intrinsics in any way. Unlike
 		the SSE variants and POPCNT this macro is not defined on
-		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there LZCNT, BMI1, BMI2, AVX and
+		@ref DEATH_TARGET_CLANG_CL "Clang-CL", as there LZCNT, BMI1, BMI2, AVX and
 		newer intrinsics are provided only if enabled on compiler command line. Not
 		defined on GCC 4.8, as there it's not generally possible to enable it alongside
 		unrelated instruction sets without running into linker errors. Not defined on
@@ -1935,7 +1935,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_LZCNT
 #	endif
-#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match Clang-CL */
 #	define DEATH_ENABLE_LZCNT __attribute__((__target__("lzcnt")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_LZCNT "lzcnt",
@@ -1958,7 +1958,7 @@ namespace Death { namespace Cpu {
 		specify `-mbmi` for the whole compilation unit. On x86 MSVC expands to nothing,
 		as the compiler doesn't restrict use of intrinsics in any way. Unlike the SSE
 		variants and POPCNT this macro is not defined on
-		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there LZCNT, BMI1, AVX and newer
+		@ref DEATH_TARGET_CLANG_CL "Clang-CL", as there LZCNT, BMI1, AVX and newer
 		intrinsics are provided only if enabled on compiler command line. Not defined
 		on GCC 4.8, as there it's not generally possible to enable it alongside
 		unrelated instruction sets without running into linker errors. Not defined on
@@ -1984,7 +1984,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_BMI1
 #	endif
-#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match Clang-CL */
 #	define DEATH_ENABLE_BMI1 __attribute__((__target__("bmi")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_BMI1 "bmi",
@@ -2007,7 +2007,7 @@ namespace Death { namespace Cpu {
 		specify `-mbmi2` for the whole compilation unit. On x86 MSVC expands to
 		nothing, as the compiler doesn't restrict use of intrinsics in any way. Unlike
 		the SSE variants and POPCNT this macro is not defined on
-		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there LZCNT, BMI1, BMI2, AVX and
+		@ref DEATH_TARGET_CLANG_CL "Clang-CL", as there LZCNT, BMI1, BMI2, AVX and
 		newer intrinsics are provided only if enabled on compiler command line. Not
 		defined on GCC 4.8, as there it's not generally possible to enable it alongside
 		unrelated instruction sets without running into linker errors. Not defined on
@@ -2033,7 +2033,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_BMI2
 #	endif
-#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match Clang-CL */
 #	define DEATH_ENABLE_BMI2 __attribute__((__target__("bmi2")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_BMI2 "bmi2",
@@ -2055,7 +2055,7 @@ namespace Death { namespace Cpu {
 		SSE instructions inside a function annotated with this macro without having to
 		specify `-mavx` for the whole compilation unit. On x86 MSVC expands to nothing,
 		as the compiler doesn't restrict use of intrinsics in any way. Unlike the SSE
-		variants this macro is not defined on @ref DEATH_TARGET_CLANG_CL "clang-cl",
+		variants this macro is not defined on @ref DEATH_TARGET_CLANG_CL "Clang-CL",
 		as there AVX and newer intrinsics are provided only if enabled on compiler
 		command line. Not defined on other compilers or architectures.
 
@@ -2078,7 +2078,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX
 #	endif
-#elif defined(DEATH_TARGET_GCC) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) /* does not match Clang-CL */
 // The -mavx option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx`)
 #	define DEATH_ENABLE_AVX __attribute__((__target__("avx")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
@@ -2101,7 +2101,7 @@ namespace Death { namespace Cpu {
 		annotated with this macro without having to specify `-mf16c` for the whole
 		compilation unit. On x86 MSVC expands to nothing, as the compiler doesn't
 		restrict use of intrinsics in any way. Unlike the SSE variants this macro is
-		not defined on @ref DEATH_TARGET_CLANG_CL "clang-cl", as there AVX and newer
+		not defined on @ref DEATH_TARGET_CLANG_CL "Clang-CL", as there AVX and newer
 		intrinsics are provided only if enabled on compiler command line. Not defined
 		on GCC 4.8, as there it's not generally possible to enable it alongside other
 		instruction sets without running into linker errors. Not defined on other
@@ -2128,7 +2128,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX_F16C
 #	endif
-#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match Clang-CL */
 // The -mf16c option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang (verified with `echo | gcc -dM -E - -mf16c`)
 #	define DEATH_ENABLE_AVX_F16C __attribute__((__target__("f16c")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
@@ -2151,7 +2151,7 @@ namespace Death { namespace Cpu {
 		function annotated with this macro without having to specify `-mfma` for the
 		whole compilation unit. On x86 MSVC expands to nothing, as the compiler doesn't
 		restrict use of intrinsics in any way. Unlike the SSE variants this macro is
-		not defined on @ref DEATH_TARGET_CLANG_CL "clang-cl", as there AVX and newer
+		not defined on @ref DEATH_TARGET_CLANG_CL "Clang-CL", as there AVX and newer
 		intrinsics are provided only if enabled on compiler command line. Not defined
 		on GCC 4.8, as there it's not generally possible to enable it alongside other
 		instruction sets without running into linker errors. Not defined on other
@@ -2178,7 +2178,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX_FMA
 #	endif
-#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match Clang-CL */
 // The -mfma option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang (verified with `echo | gcc -dM -E - -mf16c`)
 #	define DEATH_ENABLE_AVX_FMA __attribute__((__target__("fma")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
@@ -2202,7 +2202,7 @@ namespace Death { namespace Cpu {
 		with this macro without having to specify `-mavx2` for the whole compilation
 		unit. On x86 MSVC expands to nothing, as the compiler doesn't restrict use of
 		intrinsics in any way. Unlike the SSE variants this macro is not defined on
-		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there AVX and newer intrinsics are
+		@ref DEATH_TARGET_CLANG_CL "Clang-CL", as there AVX and newer intrinsics are
 		provided only if enabled on compiler command line. Not defined on other
 		compilers  or architectures.
 
@@ -2225,7 +2225,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX2
 #	endif
-#elif defined(DEATH_TARGET_GCC) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) /* does not match Clang-CL */
 // The -mavx2 option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx2`)
 #	define DEATH_ENABLE_AVX2 __attribute__((__target__("avx2")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
@@ -2249,7 +2249,7 @@ namespace Death { namespace Cpu {
 		to specify `-mavx512f` for the whole compilation unit. On x86 MSVC 2017 15.3+
 		expands to nothing, as the compiler doesn't restrict use of intrinsics in any
 		way. Unlike the SSE variants this macro is not defined on
-		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there AVX and newer intrinsics are
+		@ref DEATH_TARGET_CLANG_CL "Clang-CL", as there AVX and newer intrinsics are
 		provided only if enabled on compiler command line. Not defined on other
 		compilers, earlier compiler versions without AVX-512 support or other
 		architectures.
@@ -2266,7 +2266,7 @@ namespace Death { namespace Cpu {
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_ENABLE_AVX512F
 #	endif
-#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match Clang-CL */
 // The -mavx512 option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx -mavx2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx512f`)
 #	define DEATH_ENABLE_AVX512F __attribute__((__target__("avx512f")))
 #	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)

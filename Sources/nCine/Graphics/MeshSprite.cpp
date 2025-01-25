@@ -44,9 +44,9 @@ namespace nCine
 	}
 
 	/*! \note If used directly, it requires a custom shader that understands the specified data format */
-	void MeshSprite::copyVertices(unsigned int numVertices, unsigned int bytesPerVertex, const void* vertexData)
+	void MeshSprite::copyVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
 	{
-		const unsigned int floatsPerVertex = (bytesPerVertex / sizeof(float));
+		std::uint32_t floatsPerVertex = (bytesPerVertex / sizeof(float));
 		vertices_.resize(numVertices * floatsPerVertex);
 		memcpy(vertices_.data(), vertexData, numVertices * bytesPerVertex);
 		bytesPerVertex_ = bytesPerVertex;
@@ -58,13 +58,13 @@ namespace nCine
 		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
 	}
 
-	void MeshSprite::copyVertices(unsigned int numVertices, const Vertex* vertices)
+	void MeshSprite::copyVertices(std::uint32_t numVertices, const Vertex* vertices)
 	{
 		ASSERT(texture_ != nullptr);
 		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const float*>(vertices));
 	}
 
-	void MeshSprite::copyVertices(unsigned int numVertices, const VertexNoTexture* vertices)
+	void MeshSprite::copyVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
 	{
 		ASSERT(texture_ == nullptr);
 		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const float*>(vertices));
@@ -83,9 +83,9 @@ namespace nCine
 	}
 
 	/*! \note If used directly, it requires a custom shader that understands the specified data format. */
-	void MeshSprite::setVertices(unsigned int numVertices, unsigned int bytesPerVertex, const void* vertexData)
+	void MeshSprite::setVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
 	{
-		const unsigned int floatsPerVertex = (bytesPerVertex / sizeof(float));
+		std::uint32_t floatsPerVertex = (bytesPerVertex / sizeof(float));
 		vertices_.clear();
 		bytesPerVertex_ = bytesPerVertex;
 
@@ -96,13 +96,13 @@ namespace nCine
 		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
 	}
 
-	void MeshSprite::setVertices(unsigned int numVertices, const Vertex* vertices)
+	void MeshSprite::setVertices(std::uint32_t numVertices, const Vertex* vertices)
 	{
 		ASSERT(texture_ != nullptr);
 		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const void*>(vertices));
 	}
 
-	void MeshSprite::setVertices(unsigned int numVertices, const VertexNoTexture* vertices)
+	void MeshSprite::setVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
 	{
 		ASSERT(texture_ == nullptr);
 		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const void*>(vertices));
@@ -118,14 +118,14 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}
 
-	float* MeshSprite::emplaceVertices(unsigned int numElements, unsigned int bytesPerVertex)
+	float* MeshSprite::emplaceVertices(std::uint32_t numElements, std::uint32_t bytesPerVertex)
 	{
 		if (numElements == 0 || bytesPerVertex == 0) {
 			return nullptr;
 		}
 
-		const unsigned int floatsPerVertex = bytesPerVertex / sizeof(float);
-		const unsigned int numVertices = (numElements / floatsPerVertex);
+		const std::uint32_t floatsPerVertex = bytesPerVertex / sizeof(float);
+		const std::uint32_t numVertices = (numElements / floatsPerVertex);
 		vertices_.clear();
 		vertices_.resize(numElements);
 		bytesPerVertex_ = bytesPerVertex;
@@ -139,17 +139,17 @@ namespace nCine
 		return vertices_.data();
 	}
 
-	float* MeshSprite::emplaceVertices(unsigned int numElements)
+	float* MeshSprite::emplaceVertices(std::uint32_t numElements)
 	{
-		const unsigned int bytesPerVertex = (texture_ != nullptr ? sizeof(Vertex) : sizeof(VertexNoTexture));
+		const std::uint32_t bytesPerVertex = (texture_ != nullptr ? sizeof(Vertex) : sizeof(VertexNoTexture));
 		return emplaceVertices(numElements, bytesPerVertex);
 	}
 
-	void MeshSprite::createVerticesFromTexels(unsigned int numVertices, const Vector2f* points, TextureCutMode cutMode)
+	void MeshSprite::createVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points, TextureCutMode cutMode)
 	{
 		FATAL_ASSERT(numVertices >= 3);
 
-		const unsigned int numFloats = (texture_ != nullptr ? VertexFloats : VertexNoTextureFloats);
+		const std::uint32_t numFloats = (texture_ != nullptr ? VertexFloats : VertexNoTextureFloats);
 		vertices_.resize(numVertices * numFloats);
 		bytesPerVertex_ = (texture_ != nullptr ? sizeof(Vertex) : sizeof(VertexNoTexture));
 		Vector2f min(0.0f, 0.0f);
@@ -157,7 +157,7 @@ namespace nCine
 		if (cutMode == TextureCutMode::CROP) {
 			min = points[0];
 			Vector2f max(min);
-			for (unsigned int i = 1; i < numVertices; i++) {
+			for (std::uint32_t i = 1; i < numVertices; i++) {
 				if (points[i].X > max.X) {
 					max.X = points[i].X;
 				} else if (points[i].X < min.X) {
@@ -173,14 +173,14 @@ namespace nCine
 			width_ = max.X - min.X;
 			height_ = max.Y - min.Y;
 		} else if (texRect_.W > 0 && texRect_.H > 0) {
-			width_ = static_cast<float>(texRect_.W);
-			height_ = static_cast<float>(texRect_.H);
+			width_ = float(texRect_.W);
+			height_ = float(texRect_.H);
 		}
 
 		const float halfWidth = width_ * 0.5f;
 		const float halfHeight = height_ * 0.5f;
 
-		for (unsigned int i = 0; i < numVertices; i++) {
+		for (std::uint32_t i = 0; i < numVertices; i++) {
 			if (texture_ != nullptr) {
 				Vertex& v = reinterpret_cast<Vertex&>(vertices_[i * VertexFloats]);
 				v.x = (points[i].X - min.X - halfWidth) / width_; // from -0.5 to 0.5
@@ -204,15 +204,15 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}
 
-	void MeshSprite::createVerticesFromTexels(unsigned int numVertices, const Vector2f* points)
+	void MeshSprite::createVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points)
 	{
 		createVerticesFromTexels(numVertices, points, TextureCutMode::RESIZE);
 	}
 
-	void MeshSprite::copyIndices(unsigned int numIndices, const unsigned short* indices)
+	void MeshSprite::copyIndices(std::uint32_t numIndices, const std::uint16_t* indices)
 	{
 		indices_.reserve(numIndices);
-		std::memcpy(indices_.data(), indices, numIndices * sizeof(unsigned short));
+		std::memcpy(indices_.data(), indices, numIndices * sizeof(std::uint16_t));
 
 		indexDataPointer_ = indices_.data();
 		numIndices_ = numIndices;
@@ -225,7 +225,7 @@ namespace nCine
 		copyIndices(meshSprite.numIndices_, meshSprite.indexDataPointer_);
 	}
 
-	void MeshSprite::setIndices(unsigned int numIndices, const unsigned short* indices)
+	void MeshSprite::setIndices(std::uint32_t numIndices, const std::uint16_t* indices)
 	{
 		indices_.clear();
 
@@ -240,7 +240,7 @@ namespace nCine
 		setIndices(meshSprite.numIndices_, meshSprite.indexDataPointer_);
 	}
 
-	unsigned short* MeshSprite::emplaceIndices(unsigned int numIndices)
+	unsigned short* MeshSprite::emplaceIndices(std::uint32_t numIndices)
 	{
 		if (numIndices == 0) {
 			return nullptr;

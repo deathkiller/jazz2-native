@@ -23,6 +23,11 @@ namespace nCine
 	/// Represents the interface to the graphics device where everything is rendered
 	class IGfxDevice
 	{
+		friend class Application;
+#if defined(WITH_SDL)
+		friend class MainApplication;
+#endif
+
 	public:
 		static constexpr std::uint32_t MaxMonitors = 4;
 #if defined(WITH_QT5)
@@ -225,11 +230,6 @@ namespace nCine
 
 		/// Updates the screen swapping back and front buffers
 		virtual void update() = 0;
-
-		friend class Application;
-#if defined(WITH_SDL)
-		friend class MainApplication;
-#endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		static bool emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);

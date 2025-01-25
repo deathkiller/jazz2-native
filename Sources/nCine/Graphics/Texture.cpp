@@ -66,20 +66,20 @@ namespace nCine
 	}
 
 	/*! \note It specifies a pixel format and it is intended to be used with `loadFromTexels()` */
-	Texture::Texture(const char* name, Format format, int mipMapCount, int width, int height)
+	Texture::Texture(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height)
 		: Texture()
 	{
 		init(name, format, mipMapCount, width, height);
 	}
 
 	/*! \note It specifies a pixel format and it is intended to be used with `loadFromTexels()` */
-	Texture::Texture(const char* name, Format format, int mipMapCount, Vector2i size)
+	Texture::Texture(const char* name, Format format, std::int32_t mipMapCount, Vector2i size)
 		: Texture(name, format, mipMapCount, size.X, size.Y)
 	{
 	}
 
 	/*! \note It specifies a pixel format and it is intended to be used with `loadFromTexels()` */
-	Texture::Texture(const char* name, Format format, int width, int height)
+	Texture::Texture(const char* name, Format format, std::int32_t width, std::int32_t height)
 		: Texture(name, format, 1, width, height)
 	{
 	}
@@ -89,16 +89,6 @@ namespace nCine
 		: Texture(name, format, 1, size.X, size.Y)
 	{
 	}
-
-	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
-	/*Texture::Texture(const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: Texture()
-	{
-		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
-		if (!hasLoaded) {
-			LOGE("Texture cannot be loaded");
-		}
-	}*/
 
 	Texture::Texture(StringView filename)
 		: Texture()
@@ -123,7 +113,7 @@ namespace nCine
 
 	Texture& Texture::operator=(Texture&&) = default;
 
-	void Texture::init(const char* name, Format format, int mipMapCount, int width, int height)
+	void Texture::init(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height)
 	{
 		ZoneScopedC(0x81A861);
 
@@ -147,13 +137,13 @@ namespace nCine
 #endif
 	}
 
-	void Texture::init(const char* name, Format format, int mipMapCount, Vector2i size)
+	void Texture::init(const char* name, Format format, std::int32_t mipMapCount, Vector2i size)
 	{
 		ASSERT(mipMapCount > 0);
 		init(name, format, mipMapCount, size.X, size.Y);
 	}
 
-	void Texture::init(const char* name, Format format, int width, int height)
+	void Texture::init(const char* name, Format format, std::int32_t width, std::int32_t height)
 	{
 		init(name, format, 1, width, height);
 	}
@@ -162,31 +152,6 @@ namespace nCine
 	{
 		init(name, format, 1, size.X, size.Y);
 	}
-
-	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
-	/*bool Texture::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
-	{
-		ZoneScopedC(0x81A861);
-
-		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromMemory(bufferPtr, bufferSize);
-		if (!texLoader->hasLoaded()) {
-			return false;
-		}
-
-#if defined(NCINE_PROFILING)
-		if (dataSize_ > 0) {
-			RenderStatistics::removeTexture(dataSize_);
-		}
-#endif
-		glTexture_->bind();
-		initialize(*texLoader);
-		load(*texLoader);
-
-#if defined(NCINE_PROFILING)
-		RenderStatistics::addTexture(dataSize_);
-#endif
-		return true;
-	}*/
 
 	bool Texture::loadFromFile(StringView filename)
 	{
@@ -214,27 +179,27 @@ namespace nCine
 	}
 
 	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
-	bool Texture::loadFromTexels(const unsigned char* bufferPtr)
+	bool Texture::loadFromTexels(const std::uint8_t* bufferPtr)
 	{
 		return loadFromTexels(bufferPtr, 0, 0, 0, width_, height_);
 	}
 
 	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
-	bool Texture::loadFromTexels(const unsigned char* bufferPtr, unsigned int x, unsigned int y, unsigned int width, unsigned int height)
+	bool Texture::loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
 		return loadFromTexels(bufferPtr, 0, x, y, width, height);
 	}
 
 	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
-	bool Texture::loadFromTexels(const unsigned char* bufferPtr, Recti region)
+	bool Texture::loadFromTexels(const std::uint8_t* bufferPtr, Recti region)
 	{
 		return loadFromTexels(bufferPtr, 0, region.X, region.Y, region.W, region.H);
 	}
 
 	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
-	bool Texture::loadFromTexels(const unsigned char* bufferPtr, unsigned int level, unsigned int x, unsigned int y, unsigned int width, unsigned int height)
+	bool Texture::loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-		const unsigned char* data = bufferPtr;
+		const std::uint8_t* data = bufferPtr;
 
 		const GLenum format = ncFormatToNonInternal(format_);
 		glGetError();
@@ -245,17 +210,17 @@ namespace nCine
 	}
 
 	/*! It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
-	bool Texture::loadFromTexels(const unsigned char* bufferPtr, unsigned int level, Recti region)
+	bool Texture::loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region)
 	{
 		return loadFromTexels(bufferPtr, level, region.X, region.Y, region.W, region.H);
 	}
 
-	bool Texture::saveToMemory(unsigned char* bufferPtr)
+	bool Texture::saveToMemory(std::uint8_t* bufferPtr)
 	{
 		return saveToMemory(bufferPtr, 0);
 	}
 
-	bool Texture::saveToMemory(unsigned char* bufferPtr, unsigned int level)
+	bool Texture::saveToMemory(std::uint8_t* bufferPtr, std::int32_t level)
 	{
 #if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		const GLenum format = ncFormatToNonInternal(format_);
@@ -269,7 +234,7 @@ namespace nCine
 #endif
 	}
 
-	unsigned int Texture::numChannels() const
+	std::uint32_t Texture::numChannels() const
 	{
 		switch (format_) {
 			case Texture::Format::R8:
@@ -367,14 +332,14 @@ namespace nCine
 	void Texture::initialize(const ITextureLoader& texLoader)
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		const int maxTextureSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE);
+		const std::int32_t maxTextureSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE);
 		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width %d is bigger than device maximum %d", texLoader.width(), maxTextureSize);
 		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height %d is bigger than device maximum %d", texLoader.height(), maxTextureSize);
 
 		const TextureFormat& texFormat = texLoader.texFormat();
 		GLenum internalFormat = texFormat.internalFormat();
 		GLenum format = texFormat.format();
-		unsigned long dataSize = texLoader.dataSize();
+		std::uint32_t dataSize = texLoader.dataSize();
 
 #if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
@@ -395,10 +360,10 @@ namespace nCine
 					glTexture_->texStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
 				}
 			} else if (!texFormat.isCompressed()) {
-				int levelWidth = texLoader.width();
-				int levelHeight = texLoader.height();
+				std::int32_t levelWidth = texLoader.width();
+				std::int32_t levelHeight = texLoader.height();
 
-				for (int i = 0; i < texLoader.mipMapCount(); i++) {
+				for (std::int32_t i = 0; i < texLoader.mipMapCount(); i++) {
 					glTexture_->texImage2D(i, internalFormat, levelWidth, levelHeight, format, texFormat.type(), nullptr);
 					levelWidth /= 2;
 					levelHeight /= 2;
@@ -442,13 +407,13 @@ namespace nCine
 #endif
 
 		const TextureFormat& texFormat = texLoader.texFormat();
-		int levelWidth = width_;
-		int levelHeight = height_;
+		std::int32_t levelWidth = width_;
+		std::int32_t levelHeight = height_;
 
 		GLenum format = texFormat.format();
 
-		for (int mipIdx = 0; mipIdx < texLoader.mipMapCount(); mipIdx++) {
-			const unsigned char* data = texLoader.pixels(mipIdx);
+		for (std::int32_t mipIdx = 0; mipIdx < texLoader.mipMapCount(); mipIdx++) {
+			const std::uint8_t* data = texLoader.pixels(mipIdx);
 
 			if (texFormat.isCompressed()) {
 				if (withTexStorage) {

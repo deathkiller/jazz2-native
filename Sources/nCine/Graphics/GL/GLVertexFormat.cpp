@@ -35,7 +35,7 @@ namespace nCine
 		return !operator==(other);
 	}
 
-	void GLVertexFormat::Attribute::init(unsigned int index, GLint size, GLenum type)
+	void GLVertexFormat::Attribute::init(std::uint32_t index, GLint size, GLenum type)
 	{
 		enabled_ = true;
 		vbo_ = nullptr;
@@ -51,21 +51,23 @@ namespace nCine
 	void GLVertexFormat::Attribute::setVboParameters(GLsizei stride, const GLvoid* pointer)
 	{
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
-		static const int MaxVertexAttribStride = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE);
+		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE);
 
 		if (stride > MaxVertexAttribStride) {
 			stride_ = MaxVertexAttribStride;
 			LOGW("Vertex attribute stride (%d) is bigger than the maximum value supported (%d)", stride, MaxVertexAttribStride);
 		} else
 #endif
+		{
 			stride_ = stride;
+		}
 
 		pointer_ = pointer;
 	}
 
 	void GLVertexFormat::define()
 	{
-		for (unsigned int i = 0; i < MaxAttributes; i++) {
+		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
 			if (attributes_[i].enabled_) {
 				attributes_[i].vbo_->bind();
 				glEnableVertexAttribArray(attributes_[i].index_);
@@ -104,7 +106,7 @@ namespace nCine
 
 	void GLVertexFormat::reset()
 	{
-		for (unsigned int i = 0; i < MaxAttributes; i++) {
+		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
 			attributes_[i].enabled_ = false;
 		}
 		ibo_ = nullptr;
@@ -116,7 +118,7 @@ namespace nCine
 
 		// If indices are the same then check attributes too
 		if (areEqual) {
-			for (unsigned int i = 0; i < attributes_.size(); i++) {
+			for (std::uint32_t i = 0; i < attributes_.size(); i++) {
 				if (other.attributes_[i] != attributes_[i]) {
 					areEqual = false;
 					break;

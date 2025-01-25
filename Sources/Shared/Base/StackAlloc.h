@@ -53,12 +53,15 @@ namespace Death { namespace Implementation {
 }}
 
 /**
-	@brief Tries to allocate an array of the given type on the stack with a fallback to the standard heap allocation.
+	@brief Allocates an array of the given type on the stack if possible
 
-	If @p size is bigger than 4024, it will use heap allocation instead. It is recommended to use the following syntax:
+	If @p size is greater than 4024 bytes, the standard heap allocation is used. Otherwise, the stack
+	allocation is used, which must be used with caution as there is no check on how much space is left in
+	the stack. Using the following syntax is recommended, as the type itself is an implementation detail:
 	
 	@code{.cpp}
 	auto array = stack_alloc(std::int32_t, 1024);
+	array[0] = …;
 	@endcode
 */
 #if defined(DEATH_TARGET_MSVC)

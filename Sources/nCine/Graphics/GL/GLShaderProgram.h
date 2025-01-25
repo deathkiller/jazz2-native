@@ -25,6 +25,9 @@ namespace nCine
 	/// Handles OpenGL shader programs
 	class GLShaderProgram
 	{
+		friend class GLShaderUniforms;
+		friend class GLShaderUniformBlocks;
+
 	public:
 		enum class Introspection
 		{
@@ -73,26 +76,26 @@ namespace nCine
 		inline QueryPhase queryPhase() const {
 			return queryPhase_;
 		}
-		inline unsigned int batchSize() const {
+		inline std::uint32_t batchSize() const {
 			return batchSize_;
 		}
-		inline void setBatchSize(int value) {
+		inline void setBatchSize(std::uint32_t value) {
 			batchSize_ = value;
 		}
 
 		bool isLinked() const;
 
 		/// Returns the length of the information log including the null termination character
-		unsigned int retrieveInfoLogLength() const;
+		std::uint32_t retrieveInfoLogLength() const;
 		/// Retrieves the information log and copies it in the provided string object
 		void retrieveInfoLog(std::string& infoLog) const;
 
 		/// Returns the total memory needed for all uniforms outside of blocks
-		inline unsigned int uniformsSize() const {
+		inline std::uint32_t uniformsSize() const {
 			return uniformsSize_;
 		}
 		/// Returns the total memory needed for all uniforms inside of blocks
-		inline unsigned int uniformBlocksSize() const {
+		inline std::uint32_t uniformBlocksSize() const {
 			return uniformBlocksSize_;
 		}
 
@@ -106,7 +109,7 @@ namespace nCine
 
 		bool finalizeAfterLinking(Introspection introspection);
 
-		inline unsigned int numAttributes() const {
+		inline std::uint32_t numAttributes() const {
 			return attributeLocations_.size();
 		}
 		inline bool hasAttribute(const char* name) const {
@@ -139,15 +142,15 @@ namespace nCine
 
 	private:
 		/// Max number of discoverable uniforms
-		static constexpr unsigned int MaxNumUniforms = 32;
+		static constexpr std::uint32_t MaxNumUniforms = 32;
 
-		static constexpr int AttachedShadersInitialSize = 2;
-		static constexpr int UniformsInitialSize = 8;
-		static constexpr int UniformBlocksInitialSize = 4;
-		static constexpr int AttributesInitialSize = 4;
+		static constexpr std::int32_t AttachedShadersInitialSize = 2;
+		static constexpr std::int32_t UniformsInitialSize = 8;
+		static constexpr std::int32_t UniformBlocksInitialSize = 4;
+		static constexpr std::int32_t AttributesInitialSize = 4;
 
 #if defined(DEATH_TRACE)
-		static constexpr unsigned int MaxInfoLogLength = 512;
+		static constexpr std::uint32_t MaxInfoLogLength = 512;
 		static char infoLogString_[MaxInfoLogLength];
 #endif
 
@@ -159,19 +162,19 @@ namespace nCine
 		Status status_;
 		Introspection introspection_;
 		QueryPhase queryPhase_;
-		unsigned int batchSize_;
+		std::uint32_t batchSize_;
 
 		/// A flag indicating whether the shader program should automatically log errors (the information log)
 		bool shouldLogOnErrors_;
 
-		unsigned int uniformsSize_;
-		unsigned int uniformBlocksSize_;
+		std::uint32_t uniformsSize_;
+		std::uint32_t uniformBlocksSize_;
 
 		SmallVector<GLUniform, 0> uniforms_;
 		SmallVector<GLUniformBlock, 0> uniformBlocks_;
 		SmallVector<GLAttribute, 0> attributes_;
 
-		StaticHashMap<String, int, GLVertexFormat::MaxAttributes> attributeLocations_;
+		StaticHashMap<String, std::int32_t, GLVertexFormat::MaxAttributes> attributeLocations_;
 		GLVertexFormat vertexFormat_;
 
 		bool deferredQueries();
@@ -182,8 +185,5 @@ namespace nCine
 		void discoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover);
 		void discoverAttributes();
 		void initVertexFormat();
-
-		friend class GLShaderUniforms;
-		friend class GLShaderUniformBlocks;
 	};
 }

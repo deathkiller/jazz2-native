@@ -5,8 +5,9 @@
 #include "../../CommonHeaders.h"
 #endif
 
+#include "../../../Main.h"
+
 #if defined(DEATH_TRACE) && defined(DEATH_TRACE_VERBOSE_GL)
-#	include "../../../Main.h"
 #	define GL_LOG_ERRORS()										\
 		do {													\
 			GLenum __err = glGetError();						\
@@ -100,7 +101,7 @@ namespace nCine
 	private:
 		static bool debugAvailable_;
 		static GLuint debugGroupId_;
-		static int maxLabelLength_;
+		static std::int32_t maxLabelLength_;
 
 		/// Enables OpenGL debug output and setup a callback function to log messages
 		static void enableDebugOutput();

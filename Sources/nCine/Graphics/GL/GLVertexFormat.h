@@ -18,14 +18,16 @@ namespace nCine
 	{
 	public:
 		/// The minimum value for `GL_MAX_VERTEX_ATTRIBS`
-		static const unsigned int MaxAttributes = 16;
+		static const std::uint32_t MaxAttributes = 16;
 
 		class Attribute
 		{
+			friend class GLVertexFormat;
+
 		public:
 			Attribute();
 
-			void init(unsigned int index, GLint size, GLenum type);
+			void init(std::uint32_t index, GLint size, GLenum type);
 			bool operator==(const Attribute& other) const;
 			bool operator!=(const Attribute& other) const;
 
@@ -53,7 +55,7 @@ namespace nCine
 			inline const GLvoid* pointer() const {
 				return pointer_;
 			}
-			inline unsigned int baseOffset() const {
+			inline std::uint32_t baseOffset() const {
 				return baseOffset_;
 			}
 
@@ -61,7 +63,7 @@ namespace nCine
 			inline void setVbo(const GLBufferObject* vbo) {
 				vbo_ = vbo;
 			}
-			inline void setBaseOffset(unsigned int baseOffset) {
+			inline void setBaseOffset(std::uint32_t baseOffset) {
 				baseOffset_ = baseOffset;
 			}
 
@@ -78,24 +80,22 @@ namespace nCine
 		private:
 			bool enabled_;
 			const GLBufferObject* vbo_;
-			unsigned int index_;
+			std::uint32_t index_;
 			GLint size_;
 			GLenum type_;
 			GLboolean normalized_;
 			GLsizei stride_;
 			const GLvoid* pointer_;
 			/// Used to simulate missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0
-			unsigned int baseOffset_;
-
-			friend class GLVertexFormat;
+			std::uint32_t baseOffset_;
 		};
 
 		GLVertexFormat();
 		GLVertexFormat(const GLVertexFormat& other) = default;
 		GLVertexFormat& operator=(const nCine::GLVertexFormat& other) = default;
 
-		inline unsigned int numAttributes() const {
-			return (unsigned int)attributes_.size();
+		inline std::uint32_t numAttributes() const {
+			return std::uint32_t(attributes_.size());
 		}
 
 		inline const GLBufferObject* ibo() const {
@@ -107,10 +107,10 @@ namespace nCine
 		void define();
 		void reset();
 
-		inline Attribute& operator[](unsigned int index) {
+		inline Attribute& operator[](std::uint32_t index) {
 			return attributes_[index];
 		}
-		inline const Attribute& operator[](unsigned int index) const {
+		inline const Attribute& operator[](std::uint32_t index) const {
 			return attributes_[index];
 		}
 
@@ -121,5 +121,4 @@ namespace nCine
 		SmallVector<Attribute, MaxAttributes> attributes_;
 		const GLBufferObject* ibo_;
 	};
-
 }

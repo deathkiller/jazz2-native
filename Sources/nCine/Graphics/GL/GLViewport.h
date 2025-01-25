@@ -39,5 +39,4 @@ namespace nCine
 
 		static void initRect(GLint x, GLint y, GLsizei width, GLsizei height);
 	};
-
 }

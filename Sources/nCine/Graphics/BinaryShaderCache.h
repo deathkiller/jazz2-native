@@ -21,6 +21,9 @@ namespace nCine
 	public:
 		BinaryShaderCache(StringView path);
 
+		BinaryShaderCache(const BinaryShaderCache&) = delete;
+		BinaryShaderCache& operator=(const BinaryShaderCache&) = delete;
+
 		inline bool isAvailable() const {
 			return isAvailable_;
 		}
@@ -54,7 +57,7 @@ namespace nCine
 		bool isAvailable_;
 
 		/// The hash value that identifies a specific OpenGL platform
-		uint64_t platformHash_;
+		std::uint64_t platformHash_;
 
 		/// The cache directory containing the binary shaders
 		String path_;
@@ -62,8 +65,5 @@ namespace nCine
 		glGetProgramBinary_t _glGetProgramBinary;
 		glProgramBinary_t _glProgramBinary;
 		GLenum _glProgramBinaryLength;
-
-		BinaryShaderCache(const BinaryShaderCache&) = delete;
-		BinaryShaderCache& operator=(const BinaryShaderCache&) = delete;
 	};
 }

@@ -11,8 +11,8 @@ namespace nCine {
 		explicit TextureLoaderPng(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
-		static int ReadInt32BigEndian(const std::unique_ptr<Death::IO::Stream>& s);
-		static uint8_t UnapplyFilter(uint8_t filter, uint8_t x, uint8_t a, uint8_t b, uint8_t c);
+		static std::int32_t ReadInt32BigEndian(const std::unique_ptr<Death::IO::Stream>& s);
+		static std::uint8_t UnapplyFilter(std::uint8_t filter, std::uint8_t x, std::uint8_t a, std::uint8_t b, std::uint8_t c);
 	};
 
 }

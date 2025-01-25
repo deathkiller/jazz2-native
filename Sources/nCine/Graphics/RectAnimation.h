@@ -41,11 +41,11 @@ namespace nCine
 		void updateFrame(float interval);
 
 		/// Returns current frame
-		inline unsigned int frame() const {
+		inline std::uint32_t frame() const {
 			return currentFrame_;
 		}
 		/// Sets current frame
-		void setFrame(unsigned int frameNum);
+		void setFrame(std::uint32_t frameNum);
 
 		/// Returns the default frame duration in seconds
 		float defaultFrameDuration() const {
@@ -68,14 +68,14 @@ namespace nCine
 		/// Adds a rectangle to the array specifying the frame duration
 		void addRect(const Recti& rect, float frameTime);
 		/// Creates a rectangle from origin and size and then adds it to the array, specifying the frame duration
-		void addRect(int x, int y, int w, int h, float frameTime);
+		void addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameTime);
 
 		/// Adds a rectangle to the array with the default frame duration
 		inline void addRect(const Recti& rect) {
 			addRect(rect, defaultFrameDuration_);
 		}
 		/// Creates a rectangle from origin and size and then adds it to the array, with the default frame duration
-		inline void addRect(int x, int y, int w, int h) {
+		inline void addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h) {
 			addRect(x, y, w, h, defaultFrameDuration_);
 		}
 
@@ -117,7 +117,7 @@ namespace nCine
 		/// The frame durations array
 		SmallVector<float, 0> frameDurations_;
 		/// Current frame
-		unsigned int currentFrame_;
+		std::uint32_t currentFrame_;
 		/// Elapsed time since the last frame change
 		float elapsedFrameTime_;
 		/// The flag about the frame advance direction

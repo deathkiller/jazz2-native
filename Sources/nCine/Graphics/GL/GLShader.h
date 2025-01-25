@@ -35,6 +35,9 @@ namespace nCine
 		GLShader(GLenum type, StringView filename);
 		~GLShader();
 
+		GLShader(const GLShader&) = delete;
+		GLShader& operator=(const GLShader&) = delete;
+
 		inline GLuint glHandle() const {
 			return glHandle_;
 		}
@@ -67,9 +70,5 @@ namespace nCine
 
 		GLuint glHandle_;
 		Status status_;
-
-		GLShader(const GLShader&) = delete;
-		GLShader& operator=(const GLShader&) = delete;
 	};
-
 }

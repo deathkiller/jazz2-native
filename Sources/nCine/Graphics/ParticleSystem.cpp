@@ -9,12 +9,12 @@
 
 namespace nCine
 {
-	ParticleSystem::ParticleSystem(SceneNode* parent, unsigned int count, Texture* texture)
+	ParticleSystem::ParticleSystem(SceneNode* parent, std::uint32_t count, Texture* texture)
 		: ParticleSystem(parent, count, texture, Recti(0, 0, texture->width(), texture->height()))
 	{
 	}
 
-	ParticleSystem::ParticleSystem(SceneNode* parent, unsigned int count, Texture* texture, Recti texRect)
+	ParticleSystem::ParticleSystem(SceneNode* parent, std::uint32_t count, Texture* texture, Recti texRect)
 		: SceneNode(parent, 0, 0), poolSize_(count), poolTop_(count - 1), particlePool_(poolSize_),
 			particleArray_(poolSize_), affectors_(4), inLocalSpace_(false)
 	{
@@ -26,7 +26,7 @@ namespace nCine
 		_type = ObjectType::ParticleSystem;
 
 		children_.reserve(poolSize_);
-		for (unsigned int i = 0; i < poolSize_; i++) {
+		for (std::uint32_t i = 0; i < poolSize_; i++) {
 			Particle* particle = new Particle(nullptr, texture);
 			particle->setTexRect(texRect);
 			particlePool_.push_back(particle);
@@ -66,7 +66,7 @@ namespace nCine
 			return;
 		}
 
-		const unsigned int amount = static_cast<unsigned int>(Random().Next(init.rndAmount.X, init.rndAmount.Y));
+		std::uint32_t amount = std::uint32_t(Random().Next(init.rndAmount.X, init.rndAmount.Y));
 #if defined(WITH_TRACY)
 		// TODO: Tracy
 		//tracyInfoString.format("Count: %d", amount);
@@ -75,7 +75,7 @@ namespace nCine
 		Vector2f position(0.0f, 0.0f);
 		Vector2f velocity(0.0f, 0.0f);
 
-		for (unsigned int i = 0; i < amount; i++) {
+		for (std::uint32_t i = 0; i < amount; i++) {
 			// No more unused particles in the pool
 			if (poolTop_ < 0) {
 				break;
@@ -111,7 +111,7 @@ namespace nCine
 
 	void ParticleSystem::killParticles()
 	{
-		for (int i = (int)children_.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = std::int32_t(children_.size()) - 1; i >= 0; i--) {
 			Particle* particle = static_cast<Particle*>(children_[i]);
 
 			if (particle->isAlive()) {
@@ -181,7 +181,7 @@ namespace nCine
 		}
 	}
 
-	void ParticleSystem::setLayer(uint16_t layer)
+	void ParticleSystem::setLayer(std::uint16_t layer)
 	{
 		for (auto& particle : particleArray_) {
 			particle->setLayer(layer);
@@ -197,7 +197,7 @@ namespace nCine
 		// Overridden `update()` method should call `transform()` like `SceneNode::update()` does
 		SceneNode::transform();
 
-		for (int i = (int)children_.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = std::int32_t(children_.size()) - 1; i >= 0; i--) {
 			Particle* particle = static_cast<Particle*>(children_[i]);
 
 			// Update the particle if it's alive
@@ -233,15 +233,13 @@ namespace nCine
 	}
 
 	ParticleSystem::ParticleSystem(const ParticleSystem& other)
-		: SceneNode(other), poolSize_(other.poolSize_), poolTop_(other.poolSize_ - 1),
-		particlePool_(other.poolSize_),
-		particleArray_(other.poolSize_),
-		affectors_(4), inLocalSpace_(other.inLocalSpace_)
+		: SceneNode(other), poolSize_(other.poolSize_), poolTop_(other.poolSize_ - 1), particlePool_(other.poolSize_),
+			particleArray_(other.poolSize_), affectors_(4), inLocalSpace_(other.inLocalSpace_)
 	{
 
 		_type = ObjectType::ParticleSystem;
 
-		for (unsigned int i = 0; i < other.affectors_.size(); i++) {
+		for (std::uint32_t i = 0; i < other.affectors_.size(); i++) {
 			const ParticleAffector& affector = *other.affectors_[i];
 			switch (affector.type()) {
 				case ParticleAffector::Type::COLOR:
@@ -271,7 +269,7 @@ namespace nCine
 				ZoneText(otherParticle.texture()->name(), strnlen(otherParticle.texture()->name(), Object::MaxNameLength));
 			}*/
 
-			for (unsigned int i = 0; i < poolSize_; i++) {
+			for (std::uint32_t i = 0; i < poolSize_; i++) {
 				Particle* particle = new Particle(otherParticle.clone());
 				particlePool_.push_back(particle);
 				particleArray_.push_back(particle);

@@ -5,6 +5,8 @@
 #include "../CommonHeaders.h"
 #endif
 
+#include "../../Main.h"
+
 namespace nCine
 {
 	/// Texture format
@@ -32,13 +34,13 @@ namespace nCine
 			return isCompressed_;
 		}
 		/// Returns the number of color channels
-		unsigned int numChannels() const;
+		std::uint32_t numChannels() const;
 
 		/// Converts the external format to the corresponding BGR one
 		void bgrFormat();
 
 		/// Calculates the pixel data size for each MIP map level
-		static unsigned long calculateMipSizes(GLenum internalFormat, int width, int height, int mipMapCount, unsigned long* mipDataOffsets, unsigned long* mipDataSizes);
+		static std::uint32_t calculateMipSizes(GLenum internalFormat, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes);
 
 	private:
 		GLenum internalFormat_;
@@ -54,7 +56,7 @@ namespace nCine
 		bool floatFormat();
 		/// Searches a match between a compressed internal format and an external one
 		bool compressedFormat();
-#ifdef WITH_OPENGLES
+#if defined(WITH_OPENGLES)
 		/// Searches a match between an OpenGL ES compressed internal format and an external one
 		bool oesCompressedFormat();
 #endif
