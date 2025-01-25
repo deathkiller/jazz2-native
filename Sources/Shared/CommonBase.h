@@ -229,11 +229,11 @@
 
 // There doesn't seem to be any equivalent on MSVC, https://github.com/kimwalisch/libpopcnt assumes POPCNT is on x86 MSVC
 // always, and LZCNT has encoding compatible with BSR so if not available it'll not crash but produce wrong results, sometimes.
-// Enabling them always feels a bit too much, so instead going with what clang-cl uses. There /arch:AVX matches -march=sandybridge:
+// Enabling them always feels a bit too much, so instead going with what Clang-CL uses. There /arch:AVX matches -march=sandybridge:
 // https://github.com/llvm/llvm-project/blob/6542cb55a3eb115b1c3592514590a19987ffc498/clang/lib/Driver/ToolChains/Arch/X86.cpp#L46-L58
 // and `echo | clang -march=sandybridge -dM -E -` lists only POPCNT, while /arch:AVX2 matches -march=haswell, which lists also LZCNT, BMI and BMI2.
 #elif defined(DEATH_TARGET_MSVC)
-// For extra robustness on clang-cl check the macros explicitly -- as with other AVX+ intrinsics, these are only included
+// For extra robustness on Clang-CL check the macros explicitly -- as with other AVX+ intrinsics, these are only included
 // if the corresponding macro is defined as well. Failing to do so would mean the DEATH_ENABLE_AVX_{POPCNT,LZCNT,BMI1} macros
 // are defined always, incorrectly implying presence of these intrinsics.
 #	if defined(__AVX__)
@@ -266,10 +266,10 @@
 #		define DEATH_TARGET_AVX_FMA
 #	endif
 #elif defined(DEATH_TARGET_MSVC) && defined(__AVX2__)
-// On clang-cl /arch:AVX2 matches -march=haswell:
+// On Clang-CL /arch:AVX2 matches -march=haswell:
 // https://github.com/llvm/llvm-project/blob/6542cb55a3eb115b1c3592514590a19987ffc498/clang/lib/Driver/ToolChains/Arch/X86.cpp#L46-L58
 // And `echo | clang -march=haswell -dM -E -` lists both F16C and FMA. However, for robustness, check the macros
-// explicitly -- as with other AVX+ intrinsics on clang-cl, these are only included if the corresponding macro is defined
+// explicitly -- as with other AVX+ intrinsics on Clang-CL, these are only included if the corresponding macro is defined
 // as well. Failing to do so would mean the DEATH_ENABLE_AVX_{16C,FMA} macros are defined always, incorrectly implying
 // presence of these intrinsics.
 #	if !defined(DEATH_TARGET_CLANG_CL) || defined(__F16C__)

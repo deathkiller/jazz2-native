@@ -13,6 +13,11 @@ namespace nCine
 	/// Handles the memory mapping in multiple OpenGL Buffer Objects
 	class RenderBuffersManager
 	{
+		friend class ScreenViewport;
+#if defined(NCINE_PROFILING)
+		friend class RenderStatistics;
+#endif
+
 	public:
 		enum class BufferTypes
 		{
@@ -29,7 +34,7 @@ namespace nCine
 			GLenum target;
 			GLenum mapFlags;
 			GLenum usageFlags;
-			unsigned long maxSize;
+			std::uint32_t maxSize;
 			GLuint alignment;
 		};
 
@@ -39,26 +44,26 @@ namespace nCine
 				: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
 
 			GLBufferObject* object;
-			unsigned long size;
-			unsigned long offset;
+			std::uint32_t size;
+			std::uint32_t offset;
 			GLubyte* mapBase;
 		};
 
-		RenderBuffersManager(bool useBufferMapping, unsigned long vboMaxSize, unsigned long iboMaxSize);
+		RenderBuffersManager(bool useBufferMapping, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize);
 
 		/// Returns the specifications for a buffer of the specified type
 		inline const BufferSpecifications& specs(BufferTypes type) const {
-			return specs_[(int)type];
+			return specs_[std::int32_t(type)];
 		}
 		/// Requests an amount of bytes from the specified buffer type
-		inline Parameters acquireMemory(BufferTypes type, unsigned long bytes) {
-			return acquireMemory(type, bytes, specs_[(int)type].alignment);
+		inline Parameters acquireMemory(BufferTypes type, std::uint32_t bytes) {
+			return acquireMemory(type, bytes, specs_[std::int32_t(type)].alignment);
 		}
 		/// Requests an amount of bytes from the specified buffer type with a custom alignment requirement
-		Parameters acquireMemory(BufferTypes type, unsigned long bytes, unsigned int alignment);
+		Parameters acquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment);
 
 	private:
-		BufferSpecifications specs_[(int)BufferTypes::Count];
+		BufferSpecifications specs_[std::int32_t(BufferTypes::Count)];
 
 		struct ManagedBuffer
 		{
@@ -67,8 +72,8 @@ namespace nCine
 
 			BufferTypes type;
 			std::unique_ptr<GLBufferObject> object;
-			unsigned long size;
-			unsigned long freeSpace;
+			std::uint32_t size;
+			std::uint32_t freeSpace;
 			GLubyte* mapBase;
 			std::unique_ptr<GLubyte[]> hostBuffer;
 		};
@@ -78,11 +83,6 @@ namespace nCine
 		void flushUnmap();
 		void remap();
 		void createBuffer(const BufferSpecifications& specs);
-
-		friend class ScreenViewport;
-#if defined(NCINE_PROFILING)
-		friend class RenderStatistics;
-#endif
 	};
 
 }

@@ -23,8 +23,8 @@ namespace nCine
 
 	void RenderCommand::calculateMaterialSortKey()
 	{
-		const uint64_t upper = static_cast<uint64_t>(layerSortKey()) << 32;
-		const uint32_t lower = material_.sortKey();
+		const std::uint64_t upper = std::uint64_t(layerSortKey()) << 32;
+		const std::uint32_t lower = material_.sortKey();
 		materialSortKey_ = upper | lower;
 	}
 
@@ -44,7 +44,7 @@ namespace nCine
 			GLScissorTest::enable(scissorRect_);
 		}
 
-		unsigned int offset = 0;
+		std::uint32_t offset = 0;
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Simulating missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0
 		if (geometry_.numIndices_ > 0) {
@@ -129,7 +129,7 @@ namespace nCine
 		material_.commitUniformBlocks();
 	}
 
-	float RenderCommand::calculateDepth(uint16_t layer, float nearClip, float farClip)
+	float RenderCommand::calculateDepth(std::uint16_t layer, float nearClip, float farClip)
 	{
 		// The layer translates to depth, from near to far
 		return nearClip + LayerStep + (farClip - nearClip - LayerStep) * layer * LayerStep;

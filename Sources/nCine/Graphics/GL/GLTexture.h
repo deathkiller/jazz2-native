@@ -7,11 +7,18 @@ namespace nCine
 	/// Handles OpenGL 2D textures
 	class GLTexture
 	{
+		friend class GLFramebuffer;
+		friend class Qt5GfxDevice;
+		friend class ImGuiDrawing;
+
 	public:
-		static constexpr unsigned int MaxTextureUnits = 8;
+		static constexpr std::uint32_t MaxTextureUnits = 8;
 
 		explicit GLTexture(GLenum target_);
 		~GLTexture();
+
+		GLTexture(const GLTexture&) = delete;
+		GLTexture& operator=(const GLTexture&) = delete;
 
 		inline GLuint glHandle() const {
 			return glHandle_;
@@ -20,13 +27,13 @@ namespace nCine
 			return target_;
 		}
 
-		bool bind(unsigned int textureUnit) const;
+		bool bind(std::uint32_t textureUnit) const;
 		inline bool bind() const {
 			return bind(0);
 		}
 		bool unbind() const;
-		static bool unbind(GLenum target, unsigned int textureUnit);
-		static bool unbind(unsigned int textureUnit);
+		static bool unbind(GLenum target, std::uint32_t textureUnit);
+		static bool unbind(std::uint32_t textureUnit);
 
 		void texImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data);
 		void texSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data);
@@ -43,26 +50,17 @@ namespace nCine
 
 	private:
 		static class GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> boundTextures_[MaxTextureUnits];
-		static unsigned int boundUnit_;
+		static std::uint32_t boundUnit_;
 
 		GLuint glHandle_;
 		GLenum target_;
 		/// The texture unit is mutable in order for constant texture objects to be bound
 		/*! A texture can be bound to a specific texture unit. */
-		mutable unsigned int textureUnit_;
+		mutable std::uint32_t textureUnit_;
 
-		/// Deleted copy constructor
-		GLTexture(const GLTexture&) = delete;
-		/// Deleted assignment operator
-		GLTexture& operator=(const GLTexture&) = delete;
-
-		static bool bindHandle(GLenum target, GLuint glHandle, unsigned int textureUnit);
+		static bool bindHandle(GLenum target, GLuint glHandle, std::uint32_t textureUnit);
 		static bool bindHandle(GLenum target, GLuint glHandle) {
 			return bindHandle(target, glHandle, 0);
 		}
-
-		friend class GLFramebuffer;
-		friend class Qt5GfxDevice;
-		friend class ImGuiDrawing;
 	};
 }

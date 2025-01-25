@@ -208,6 +208,7 @@ namespace nCine
 		void setGLFramebufferLabel(const char* label);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		/// Bit positions inside the state bitset
 		enum StateBitPositions
 		{
@@ -250,7 +251,8 @@ namespace nCine
 		Camera* camera_;
 
 		/// Bitset that stores the various states bits
-		BitSet<uint8_t> stateBits_;
+		BitSet<std::uint8_t> stateBits_;
+#endif
 
 		void calculateCullingRect();
 

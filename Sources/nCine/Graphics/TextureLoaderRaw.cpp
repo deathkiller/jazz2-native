@@ -2,7 +2,7 @@
 
 namespace nCine
 {
-	TextureLoaderRaw::TextureLoaderRaw(int width, int height, int mipMapCount, GLenum internalFormat)
+	TextureLoaderRaw::TextureLoaderRaw(std::int32_t width, std::int32_t height, std::int32_t mipMapCount, GLenum internalFormat)
 		: ITextureLoader()
 	{
 		width_ = width;
@@ -10,9 +10,9 @@ namespace nCine
 		mipMapCount_ = mipMapCount;
 		texFormat_ = TextureFormat(internalFormat);
 
-		unsigned int numPixels = width * height;
-		const unsigned int bytesPerPixel = texFormat_.numChannels();
-		for (int i = 0; i < mipMapCount_; i++) {
+		std::int32_t numPixels = width * height;
+		std::int32_t bytesPerPixel = texFormat_.numChannels();
+		for (std::int32_t i = 0; i < mipMapCount_; i++) {
 			dataSize_ += numPixels * bytesPerPixel;
 			numPixels /= 2;
 		}

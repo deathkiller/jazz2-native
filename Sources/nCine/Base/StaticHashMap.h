@@ -9,11 +9,11 @@
 
 namespace nCine
 {
-	template<class K, class T, class HashFunc, unsigned int Capacity, bool IsConst> class StaticHashMapIterator;
-	template<class K, class T, class HashFunc, unsigned int Capacity, bool IsConst> struct StaticHashMapHelperTraits;
+	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst> class StaticHashMapIterator;
+	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst> struct StaticHashMapHelperTraits;
 
 	/// Static hashmap implementation with open addressing and leapfrog probing (version with static allocation)
-	template<class K, class T, unsigned int Capacity, class HashFunc = FNV1aHashFunc<K>>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc = FNV1aHashFunc<K>>
 	class StaticHashMap
 	{
 	public:
@@ -88,7 +88,7 @@ namespace nCine
 		template <typename... Args> bool emplace(const K& key, Args &&... args);
 
 		/// Returns the capacity of the hashmap
-		inline unsigned int capacity() const {
+		inline std::uint32_t capacity() const {
 			return Capacity;
 		}
 		/// Returns true if the hashmap is empty
@@ -96,12 +96,12 @@ namespace nCine
 			return size_ == 0;
 		}
 		/// Returns the number of elements in the hashmap
-		inline unsigned int size() const {
+		inline std::uint32_t size() const {
 			return size_;
 		}
 		/// Returns the ratio between used and total buckets
 		inline float loadFactor() const {
-			return size_ / static_cast<float>(Capacity);
+			return size_ / float(Capacity);
 		}
 		/// Returns the hash of a given key
 		inline hash_t hash(const K& key) const {
@@ -139,28 +139,28 @@ namespace nCine
 				: key(kk), value(std::forward<Args>(args)...) {}
 		};
 
-		unsigned int size_;
-		uint8_t delta1_[Capacity];
-		uint8_t delta2_[Capacity];
+		std::uint32_t size_;
+		std::uint8_t delta1_[Capacity];
+		std::uint8_t delta2_[Capacity];
 		hash_t hashes_[Capacity];
-		uint8_t nodesBuffer_[Capacity * sizeof(Node)];
+		std::uint8_t nodesBuffer_[Capacity * sizeof(Node)];
 		Node* nodes_ = reinterpret_cast<Node*>(nodesBuffer_);
 		HashFunc hashFunc_;
 
 		void init();
 		void destructNodes();
-		bool findBucketIndex(const K& key, unsigned int& foundIndex, unsigned int& prevFoundIndex) const;
-		inline bool findBucketIndex(const K& key, unsigned int& foundIndex) const;
-		unsigned int addDelta1(unsigned int bucketIndex) const;
-		unsigned int addDelta2(unsigned int bucketIndex) const;
-		unsigned int calcNewDelta(unsigned int bucketIndex, unsigned int newIndex) const;
-		unsigned int linearSearch(unsigned int index, hash_t hash, const K& key) const;
-		bool bucketFoundOrEmpty(unsigned int index, hash_t hash, const K& key) const;
-		bool bucketFound(unsigned int index, hash_t hash, const K& key) const;
-		T& addNode(unsigned int index, hash_t hash, const K& key);
-		void insertNode(unsigned int index, hash_t hash, const K& key, const T& value);
-		void insertNode(unsigned int index, hash_t hash, const K& key, T&& value);
-		template <typename... Args> void emplaceNode(unsigned int index, hash_t hash, const K& key, Args &&... args);
+		bool findBucketIndex(const K& key, std::uint32_t& foundIndex, std::uint32_t& prevFoundIndex) const;
+		inline bool findBucketIndex(const K& key, std::uint32_t& foundIndex) const;
+		std::uint32_t addDelta1(std::uint32_t bucketIndex) const;
+		std::uint32_t addDelta2(std::uint32_t bucketIndex) const;
+		std::uint32_t calcNewDelta(std::uint32_t bucketIndex, std::uint32_t newIndex) const;
+		std::uint32_t linearSearch(std::uint32_t index, hash_t hash, const K& key) const;
+		bool bucketFoundOrEmpty(std::uint32_t index, hash_t hash, const K& key) const;
+		bool bucketFound(std::uint32_t index, hash_t hash, const K& key) const;
+		T& addNode(std::uint32_t index, hash_t hash, const K& key);
+		void insertNode(std::uint32_t index, hash_t hash, const K& key, const T& value);
+		void insertNode(std::uint32_t index, hash_t hash, const K& key, T&& value);
+		template <typename... Args> void emplaceNode(std::uint32_t index, hash_t hash, const K& key, Args &&... args);
 
 		friend class StaticHashMapIterator<K, T, HashFunc, Capacity, false>;
 		friend class StaticHashMapIterator<K, T, HashFunc, Capacity, true>;
@@ -168,65 +168,65 @@ namespace nCine
 		friend struct StaticHashMapHelperTraits<K, T, HashFunc, Capacity, true>;
 	};
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::Iterator StaticHashMap<K, T, Capacity, HashFunc>::begin()
 	{
 		Iterator iterator(this, Iterator::SentinelTagInit::BEGINNING);
 		return ++iterator;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rbegin()
 	{
 		Iterator iterator(this, Iterator::SentinelTagInit::END);
 		return ReverseIterator(--iterator);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::Iterator StaticHashMap<K, T, Capacity, HashFunc>::end()
 	{
 		return Iterator(this, Iterator::SentinelTagInit::END);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rend()
 	{
 		Iterator iterator(this, Iterator::SentinelTagInit::BEGINNING);
 		return ReverseIterator(iterator);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	inline typename StaticHashMap<K, T, Capacity, HashFunc>::ConstIterator StaticHashMap<K, T, Capacity, HashFunc>::begin() const
 	{
 		ConstIterator iterator(this, ConstIterator::SentinelTagInit::BEGINNING);
 		return ++iterator;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ConstReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rbegin() const
 	{
 		ConstIterator iterator(this, ConstIterator::SentinelTagInit::END);
 		return ConstReverseIterator(--iterator);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	inline typename StaticHashMap<K, T, Capacity, HashFunc>::ConstIterator StaticHashMap<K, T, Capacity, HashFunc>::end() const
 	{
 		return ConstIterator(this, ConstIterator::SentinelTagInit::END);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ConstReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rend() const
 	{
 		ConstIterator iterator(this, ConstIterator::SentinelTagInit::BEGINNING);
 		return ConstReverseIterator(iterator);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	StaticHashMap<K, T, Capacity, HashFunc>::StaticHashMap(const StaticHashMap<K, T, Capacity, HashFunc>& other)
 		: size_(other.size_)
 	{
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			if (other.hashes_[i] != NullHash) {
 				new (nodes_ + i) Node(other.nodes_[i]);
 			}
@@ -236,11 +236,11 @@ namespace nCine
 		}
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	StaticHashMap<K, T, Capacity, HashFunc>::StaticHashMap(StaticHashMap<K, T, Capacity, HashFunc>&& other)
 		: size_(other.size_)
 	{
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			if (other.hashes_[i] != NullHash) {
 				new (nodes_ + i) Node(std::move(other.nodes_[i]));
 			}
@@ -251,10 +251,10 @@ namespace nCine
 		other.destructNodes();
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	StaticHashMap<K, T, Capacity, HashFunc>& StaticHashMap<K, T, Capacity, HashFunc>::operator=(const StaticHashMap<K, T, Capacity, HashFunc>& other)
 	{
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			if (other.hashes_[i] != NullHash) {
 				if (hashes_[i] != NullHash) {
 					nodes_[i] = other.nodes_[i];
@@ -273,10 +273,10 @@ namespace nCine
 		return *this;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	StaticHashMap<K, T, Capacity, HashFunc>& StaticHashMap<K, T, Capacity, HashFunc>::operator=(StaticHashMap<K, T, Capacity, HashFunc>&& other)
 	{
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			if (other.hashes_[i] != NullHash) {
 				if (hashes_[i] != NullHash) {
 					nodes_[i] = std::move(other.nodes_[i]);
@@ -296,11 +296,11 @@ namespace nCine
 		return *this;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	T& StaticHashMap<K, T, Capacity, HashFunc>::operator[](const K& key)
 	{
 		const hash_t hash = hashFunc_(key);
-		int unsigned bucketIndex = hash % Capacity;
+		std::uint32_t bucketIndex = hash % Capacity;
 
 		if (bucketFoundOrEmpty(bucketIndex, hash, key) == false) {
 			if (delta1_[bucketIndex] != 0) {
@@ -315,7 +315,7 @@ namespace nCine
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
-					const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+					const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 					delta2_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 					return addNode(newIndex, hash, key);
 				} else {
@@ -324,7 +324,7 @@ namespace nCine
 				}
 			} else {
 				// Adding at ideal index + delta1
-				const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+				const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 				delta1_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 				return addNode(newIndex, hash, key);
 			}
@@ -339,11 +339,11 @@ namespace nCine
 	}
 
 	/*! \return True if the element has been inserted */
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::insert(const K& key, const T& value)
 	{
 		const hash_t hash = hashFunc_(key);
-		int unsigned bucketIndex = hash % Capacity;
+		std::uint32_t bucketIndex = hash % Capacity;
 
 		if (bucketFoundOrEmpty(bucketIndex, hash, key) == false) {
 			if (delta1_[bucketIndex] != 0) {
@@ -358,7 +358,7 @@ namespace nCine
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
-					const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+					const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 					delta2_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 					insertNode(newIndex, hash, key, value);
 					return true;
@@ -368,7 +368,7 @@ namespace nCine
 				}
 			} else {
 				// Adding at ideal index + delta1
-				const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+				const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 				delta1_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 				insertNode(newIndex, hash, key, value);
 				return true;
@@ -385,11 +385,11 @@ namespace nCine
 	}
 
 	/*! \return True if the element has been inserted */
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::insert(const K& key, T&& value)
 	{
 		const hash_t hash = hashFunc_(key);
-		int unsigned bucketIndex = hash % Capacity;
+		std::uint32_t bucketIndex = hash % Capacity;
 
 		if (bucketFoundOrEmpty(bucketIndex, hash, key) == false) {
 			if (delta1_[bucketIndex] != 0) {
@@ -404,7 +404,7 @@ namespace nCine
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
-					const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+					const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 					delta2_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 					insertNode(newIndex, hash, key, std::move(value));
 					return true;
@@ -414,7 +414,7 @@ namespace nCine
 				}
 			} else {
 				// Adding at ideal index + delta1
-				const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+				const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 				delta1_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 				insertNode(newIndex, hash, key, std::move(value));
 				return true;
@@ -431,12 +431,12 @@ namespace nCine
 	}
 
 	/*! \return True if the element has been emplaced */
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	template<typename... Args>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::emplace(const K& key, Args &&... args)
 	{
 		const hash_t hash = hashFunc_(key);
-		int unsigned bucketIndex = hash % Capacity;
+		std::uint32_t bucketIndex = hash % Capacity;
 
 		if (bucketFoundOrEmpty(bucketIndex, hash, key) == false) {
 			if (delta1_[bucketIndex] != 0) {
@@ -451,7 +451,7 @@ namespace nCine
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
-					const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+					const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 					delta2_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 					emplaceNode(newIndex, hash, key, std::forward<Args>(args)...);
 					return true;
@@ -461,7 +461,7 @@ namespace nCine
 				}
 			} else {
 				// Adding at ideal index + delta1
-				const unsigned int newIndex = linearSearch(bucketIndex + 1, hash, key);
+				const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 				delta1_[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
 				emplaceNode(newIndex, hash, key, std::forward<Args>(args)...);
 				return true;
@@ -477,17 +477,17 @@ namespace nCine
 		}
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	void StaticHashMap<K, T, Capacity, HashFunc>::clear()
 	{
 		destructNodes();
 		init();
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::contains(const K& key, T& returnedValue) const
 	{
-		int unsigned bucketIndex = 0;
+		std::uint32_t bucketIndex = 0;
 		const bool found = findBucketIndex(key, bucketIndex);
 
 		if (found) {
@@ -497,10 +497,10 @@ namespace nCine
 	}
 
 	/*! \note Prefer this method if copying `T` is expensive, but always check the validity of returned pointer. */
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	T* StaticHashMap<K, T, Capacity, HashFunc>::find(const K& key)
 	{
-		int unsigned bucketIndex = 0;
+		std::uint32_t bucketIndex = 0;
 		const bool found = findBucketIndex(key, bucketIndex);
 
 		T* returnedPtr = nullptr;
@@ -511,10 +511,10 @@ namespace nCine
 	}
 
 	/*! \note Prefer this method if copying `T` is expensive, but always check the validity of returned pointer. */
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	const T* StaticHashMap<K, T, Capacity, HashFunc>::find(const K& key) const
 	{
-		int unsigned bucketIndex = 0;
+		std::uint32_t bucketIndex = 0;
 		const bool found = findBucketIndex(key, bucketIndex);
 
 		const T* returnedPtr = nullptr;
@@ -525,13 +525,13 @@ namespace nCine
 	}
 
 	/*! \return True if the element has been found and removed */
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::remove(const K& key)
 	{
-		int unsigned foundBucketIndex = 0;
-		int unsigned prevFoundBucketIndex = 0;
+		std::uint32_t foundBucketIndex = 0;
+		std::uint32_t prevFoundBucketIndex = 0;
 		const bool found = findBucketIndex(key, foundBucketIndex, prevFoundBucketIndex);
-		unsigned int bucketIndex = foundBucketIndex;
+		std::uint32_t bucketIndex = foundBucketIndex;
 
 		if (found) {
 			// The found bucket is the last of the chain, previous one needs a delta fix
@@ -544,12 +544,12 @@ namespace nCine
 			}
 
 			while (delta1_[bucketIndex] != 0 || delta2_[bucketIndex] != 0) {
-				unsigned int lastBucketIndex = bucketIndex;
+				std::uint32_t lastBucketIndex = bucketIndex;
 				if (delta1_[lastBucketIndex] != 0) {
 					lastBucketIndex = addDelta1(lastBucketIndex);
 				}
 				if (delta2_[lastBucketIndex] != 0) {
-					unsigned int secondLastBucketIndex = lastBucketIndex;
+					std::uint32_t secondLastBucketIndex = lastBucketIndex;
 					while (delta2_[lastBucketIndex] != 0) {
 						secondLastBucketIndex = lastBucketIndex;
 						lastBucketIndex = addDelta2(lastBucketIndex);
@@ -575,24 +575,24 @@ namespace nCine
 		return found;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	void StaticHashMap<K, T, Capacity, HashFunc>::init()
 	{
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			delta1_[i] = 0;
 		}
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			delta2_[i] = 0;
 		}
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			hashes_[i] = NullHash;
 		}
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	void StaticHashMap<K, T, Capacity, HashFunc>::destructNodes()
 	{
-		for (unsigned int i = 0; i < Capacity; i++) {
+		for (std::uint32_t i = 0; i < Capacity; i++) {
 			if (hashes_[i] != NullHash) {
 				destructObject(nodes_ + i);
 				hashes_[i] = NullHash;
@@ -601,8 +601,8 @@ namespace nCine
 		size_ = 0;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	bool StaticHashMap<K, T, Capacity, HashFunc>::findBucketIndex(const K& key, unsigned int& foundIndex, unsigned int& prevFoundIndex) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	bool StaticHashMap<K, T, Capacity, HashFunc>::findBucketIndex(const K& key, std::uint32_t& foundIndex, std::uint32_t& prevFoundIndex) const
 	{
 		if (size_ == 0)
 			return false;
@@ -641,37 +641,37 @@ namespace nCine
 		return found;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	bool StaticHashMap<K, T, Capacity, HashFunc>::findBucketIndex(const K& key, unsigned int& foundIndex) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	bool StaticHashMap<K, T, Capacity, HashFunc>::findBucketIndex(const K& key, std::uint32_t& foundIndex) const
 	{
-		unsigned int prevFoundIndex = 0;
+		std::uint32_t prevFoundIndex = 0;
 		return findBucketIndex(key, foundIndex, prevFoundIndex);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::addDelta1(unsigned int bucketIndex) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	std::uint32_t StaticHashMap<K, T, Capacity, HashFunc>::addDelta1(std::uint32_t bucketIndex) const
 	{
-		unsigned int newIndex = bucketIndex + delta1_[bucketIndex];
+		std::uint32_t newIndex = bucketIndex + delta1_[bucketIndex];
 		if (newIndex > Capacity - 1) {
 			newIndex -= Capacity;
 		}
 		return newIndex;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::addDelta2(unsigned int bucketIndex) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	std::uint32_t StaticHashMap<K, T, Capacity, HashFunc>::addDelta2(std::uint32_t bucketIndex) const
 	{
-		unsigned int newIndex = bucketIndex + delta2_[bucketIndex];
+		std::uint32_t newIndex = bucketIndex + delta2_[bucketIndex];
 		if (newIndex > Capacity - 1) {
 			newIndex -= Capacity;
 		}
 		return newIndex;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::calcNewDelta(unsigned int bucketIndex, unsigned int newIndex) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	std::uint32_t StaticHashMap<K, T, Capacity, HashFunc>::calcNewDelta(std::uint32_t bucketIndex, std::uint32_t newIndex) const
 	{
-		unsigned int delta = 0;
+		std::uint32_t delta = 0;
 		if (newIndex >= bucketIndex) {
 			delta = newIndex - bucketIndex;
 		} else {
@@ -681,16 +681,16 @@ namespace nCine
 		return delta;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::linearSearch(unsigned int index, hash_t hash, const K& key) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	std::uint32_t StaticHashMap<K, T, Capacity, HashFunc>::linearSearch(std::uint32_t index, hash_t hash, const K& key) const
 	{
-		for (unsigned int i = index; i < Capacity; i++) {
+		for (std::uint32_t i = index; i < Capacity; i++) {
 			if (bucketFoundOrEmpty(i, hash, key)) {
 				return i;
 			}
 		}
 
-		for (unsigned int i = 0; i < index; i++) {
+		for (std::uint32_t i = 0; i < index; i++) {
 			if (bucketFoundOrEmpty(i, hash, key)) {
 				return i;
 			}
@@ -699,20 +699,20 @@ namespace nCine
 		return index;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	bool StaticHashMap<K, T, Capacity, HashFunc>::bucketFoundOrEmpty(unsigned int index, hash_t hash, const K& key) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	bool StaticHashMap<K, T, Capacity, HashFunc>::bucketFoundOrEmpty(std::uint32_t index, hash_t hash, const K& key) const
 	{
 		return (hashes_[index] == NullHash || (hashes_[index] == hash && nodes_[index].key == key));
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	bool StaticHashMap<K, T, Capacity, HashFunc>::bucketFound(unsigned int index, hash_t hash, const K& key) const
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	bool StaticHashMap<K, T, Capacity, HashFunc>::bucketFound(std::uint32_t index, hash_t hash, const K& key) const
 	{
 		return (hashes_[index] == hash && nodes_[index].key == key);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	T& StaticHashMap<K, T, Capacity, HashFunc>::addNode(unsigned int index, hash_t hash, const K& key)
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	T& StaticHashMap<K, T, Capacity, HashFunc>::addNode(std::uint32_t index, hash_t hash, const K& key)
 	{
 		FATAL_ASSERT(size_ < Capacity);
 		FATAL_ASSERT(hashes_[index] == NullHash);
@@ -724,8 +724,8 @@ namespace nCine
 		return nodes_[index].value;
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	void StaticHashMap<K, T, Capacity, HashFunc>::insertNode(unsigned int index, hash_t hash, const K& key, const T& value)
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	void StaticHashMap<K, T, Capacity, HashFunc>::insertNode(std::uint32_t index, hash_t hash, const K& key, const T& value)
 	{
 		FATAL_ASSERT(size_ < Capacity);
 		FATAL_ASSERT(hashes_[index] == NullHash);
@@ -735,8 +735,8 @@ namespace nCine
 		new (nodes_ + index) Node(key, value);
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
-	void StaticHashMap<K, T, Capacity, HashFunc>::insertNode(unsigned int index, hash_t hash, const K& key, T&& value)
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
+	void StaticHashMap<K, T, Capacity, HashFunc>::insertNode(std::uint32_t index, hash_t hash, const K& key, T&& value)
 	{
 		FATAL_ASSERT(size_ < Capacity);
 		FATAL_ASSERT(hashes_[index] == NullHash);
@@ -746,9 +746,9 @@ namespace nCine
 		new (nodes_ + index) Node(key, std::move(value));
 	}
 
-	template<class K, class T, unsigned int Capacity, class HashFunc>
+	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	template<typename... Args>
-	void StaticHashMap<K, T, Capacity, HashFunc>::emplaceNode(unsigned int index, hash_t hash, const K& key, Args &&... args)
+	void StaticHashMap<K, T, Capacity, HashFunc>::emplaceNode(std::uint32_t index, hash_t hash, const K& key, Args &&... args)
 	{
 		FATAL_ASSERT(size_ < Capacity);
 		FATAL_ASSERT(hashes_[index] == NullHash);

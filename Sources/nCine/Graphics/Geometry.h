@@ -10,10 +10,15 @@ namespace nCine
 	/// Contains geometric data for a drawable node
 	class Geometry
 	{
+		friend class RenderCommand;
+
 	public:
 		/// Default constructor
 		Geometry();
 		~Geometry();
+
+		Geometry(const Geometry&) = delete;
+		Geometry& operator=(const Geometry&) = delete;
 
 		/// Returns the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...)
 		inline GLenum primitiveType() const {
@@ -139,11 +144,6 @@ namespace nCine
 		inline const RenderBuffersManager::Parameters& iboParams() const {
 			return sharedIboParams_ ? *sharedIboParams_ : iboParams_;
 		}
-
-		Geometry(const Geometry&) = delete;
-		Geometry& operator=(const Geometry&) = delete;
-
-		friend class RenderCommand;
 	};
 
 }

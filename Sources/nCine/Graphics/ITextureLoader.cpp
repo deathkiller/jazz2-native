@@ -33,10 +33,10 @@ namespace nCine
 	{
 	}
 
-	long ITextureLoader::dataSize(unsigned int mipMapLevel) const
+	std::int32_t ITextureLoader::dataSize(std::uint32_t mipMapLevel) const
 	{
-		long int dataSize = 0;
-		if (mipMapCount_ > 1 && int(mipMapLevel) < mipMapCount_) {
+		std::int32_t dataSize = 0;
+		if (mipMapCount_ > 1 && std::uint32_t(mipMapLevel) < mipMapCount_) {
 			dataSize = mipDataSizes_[mipMapLevel];
 		} else if (mipMapLevel == 0) {
 			dataSize = dataSize_;
@@ -44,12 +44,12 @@ namespace nCine
 		return dataSize;
 	}
 
-	const GLubyte* ITextureLoader::pixels(unsigned int mipMapLevel) const
+	const GLubyte* ITextureLoader::pixels(std::uint32_t mipMapLevel) const
 	{
 		const GLubyte* pixels = nullptr;
 
 		if (pixels_ != nullptr) {
-			if (mipMapCount_ > 1 && int(mipMapLevel) < mipMapCount_) {
+			if (mipMapCount_ > 1 && std::int32_t(mipMapLevel) < mipMapCount_) {
 				pixels = pixels_.get() + mipDataOffsets_[mipMapLevel];
 			} else if (mipMapLevel == 0) {
 				pixels = pixels_.get();
@@ -124,7 +124,7 @@ namespace nCine
 		dataSize_ = fileHandle_->GetSize() - headerSize_;
 		fileHandle_->Seek(headerSize_, SeekOrigin::Current);
 
-		pixels_ = std::make_unique<unsigned char[]>(dataSize_);
+		pixels_ = std::make_unique<std::uint8_t[]>(dataSize_);
 		fileHandle_->Read(pixels_.get(), dataSize_);
 	}
 }

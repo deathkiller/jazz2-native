@@ -21,13 +21,13 @@ namespace nCine
 		 */
 		struct PkmHeader
 		{
-			uint32_t magicId;
-			uint16_t version;
-			uint16_t dataType;
-			uint16_t extendedWidth;
-			uint16_t extendedHeight;
-			uint16_t width;
-			uint16_t height;
+			std::uint32_t magicId;
+			std::uint16_t version;
+			std::uint16_t dataType;
+			std::uint16_t extendedWidth;
+			std::uint16_t extendedHeight;
+			std::uint16_t width;
+			std::uint16_t height;
 		};
 	};
 }

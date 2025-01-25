@@ -59,7 +59,7 @@ namespace nCine
 
 	bool GLDebug::debugAvailable_ = false;
 	GLuint GLDebug::debugGroupId_ = 0;
-	int GLDebug::maxLabelLength_ = 0;
+	std::int32_t GLDebug::maxLabelLength_ = 0;
 
 	void GLDebug::init(const IGfxCapabilities& gfxCaps)
 	{

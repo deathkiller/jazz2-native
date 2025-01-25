@@ -8,6 +8,6 @@ namespace nCine
 	class TextureLoaderRaw : public ITextureLoader
 	{
 	public:
-		TextureLoaderRaw(int width, int height, int mipMapCount, GLenum internalFormat);
+		TextureLoaderRaw(std::int32_t width, std::int32_t height, std::int32_t mipMapCount, GLenum internalFormat);
 	};
 }

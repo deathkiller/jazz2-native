@@ -55,7 +55,7 @@ namespace nCine
 		}
 	}
 
-	int GLAttribute::numComponents() const
+	std::int32_t GLAttribute::numComponents() const
 	{
 		switch (type_) {
 			case GL_BYTE:

@@ -11,6 +11,9 @@ namespace nCine
 		GLVertexArrayObject();
 		~GLVertexArrayObject();
 
+		GLVertexArrayObject(const GLVertexArrayObject&) = delete;
+		GLVertexArrayObject& operator=(const GLVertexArrayObject&) = delete;
+
 		inline GLuint glHandle() const {
 			return glHandle_;
 		}
@@ -24,11 +27,5 @@ namespace nCine
 		static GLuint boundVAO_;
 
 		GLuint glHandle_;
-
-		/// Deleted copy constructor
-		GLVertexArrayObject(const GLVertexArrayObject&) = delete;
-		/// Deleted assignment operator
-		GLVertexArrayObject& operator=(const GLVertexArrayObject&) = delete;
 	};
-
 }

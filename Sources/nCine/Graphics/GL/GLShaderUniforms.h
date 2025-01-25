@@ -13,7 +13,7 @@ namespace nCine
 	class GLShaderUniforms
 	{
 	public:
-		static constexpr int UniformCachesHashSize = 16;
+		static constexpr std::uint32_t UniformCachesHashSize = 16;
 		using UniformHashMapType = StaticHashMap<String, GLUniformCache, UniformCachesHashSize>;
 
 		GLShaderUniforms();
@@ -26,7 +26,7 @@ namespace nCine
 		void setUniformsDataPointer(GLubyte* dataPointer);
 		void setDirty(bool isDirty);
 
-		inline unsigned int numUniforms() const {
+		inline std::uint32_t numUniforms() const {
 			return uniformCaches_.size();
 		}
 		inline bool hasUniform(const char* name) const {

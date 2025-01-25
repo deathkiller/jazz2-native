@@ -36,7 +36,7 @@ namespace nCine
 
 			GLint uniformQueryIndices[MaxNumBlockUniforms];
 			glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, uniformQueryIndices);
-			for (int i = 0; i < uniformCount; i++)
+			for (std::int32_t i = 0; i < uniformCount; i++)
 				uniformIndices[i] = static_cast<GLuint>(uniformQueryIndices[i]);
 
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_TYPE, uniformTypes);
@@ -46,7 +46,7 @@ namespace nCine
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_NAME_LENGTH, uniformNameLengths);
 #endif
 
-			for (int i = 0; i < uniformCount; i++) {
+			for (std::int32_t i = 0; i < uniformCount; i++) {
 				GLUniform blockUniform;
 				blockUniform.index_ = uniformIndices[i];
 				blockUniform.blockIndex_ = static_cast<GLint>(index);
@@ -73,7 +73,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
-		static const int offsetAlignment = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
 		size_ += alignAmount_;
 	}

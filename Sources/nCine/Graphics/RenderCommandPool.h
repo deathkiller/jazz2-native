@@ -16,7 +16,7 @@ namespace nCine
 	class RenderCommandPool
 	{
 	public:
-		explicit RenderCommandPool(unsigned int poolSize);
+		explicit RenderCommandPool(std::uint32_t poolSize);
 		~RenderCommandPool();
 
 		// Adds a new command to the used pool and returns its pointer

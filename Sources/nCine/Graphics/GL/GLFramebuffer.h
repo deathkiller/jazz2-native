@@ -19,12 +19,17 @@ namespace nCine
 	/// Handles OpenGL framebuffer objects
 	class GLFramebuffer
 	{
+		friend class Qt5GfxDevice;
+
 	public:
-		static const unsigned int MaxDrawbuffers = 8;
-		static const unsigned int MaxRenderbuffers = 4;
+		static const std::uint32_t MaxDrawbuffers = 8;
+		static const std::uint32_t MaxRenderbuffers = 4;
 
 		explicit GLFramebuffer();
 		~GLFramebuffer();
+
+		GLFramebuffer(const GLFramebuffer&) = delete;
+		GLFramebuffer& operator=(const GLFramebuffer&) = delete;
 
 		inline GLuint glHandle() const {
 			return glHandle_;
@@ -36,10 +41,10 @@ namespace nCine
 		bool bind(GLenum target) const;
 		static bool unbind(GLenum target);
 
-		inline unsigned int numDrawbuffers() const { return numDrawBuffers_; }
+		inline std::uint32_t numDrawbuffers() const { return numDrawBuffers_; }
 		bool drawBuffers(unsigned int numDrawBuffers);
 
-		inline unsigned int numRenderbuffers() const { return (unsigned int)attachedRenderbuffers_.size(); }
+		inline std::uint32_t numRenderbuffers() const { return std::uint32_t(attachedRenderbuffers_.size()); }
 		bool attachRenderbuffer(const char *label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
 		bool attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
 		bool detachRenderbuffer(GLenum internalFormat);
@@ -55,22 +60,13 @@ namespace nCine
 		void setObjectLabel(const char* label);
 
 	private:
-		static unsigned int readBoundBuffer_;
-		static unsigned int drawBoundBuffer_;
-		unsigned int numDrawBuffers_;
+		static std::uint32_t readBoundBuffer_;
+		static std::uint32_t drawBoundBuffer_;
 
+		std::uint32_t numDrawBuffers_;
 		SmallVector<std::unique_ptr<GLRenderbuffer>, MaxRenderbuffers> attachedRenderbuffers_;
-
 		GLuint glHandle_;
 
-		/// Deleted copy constructor
-		GLFramebuffer(const GLFramebuffer&) = delete;
-		/// Deleted assignment operator
-		GLFramebuffer& operator=(const GLFramebuffer&) = delete;
-
 		static bool bindHandle(GLenum target, GLuint glHandle);
-
-		friend class Qt5GfxDevice;
 	};
-
 }

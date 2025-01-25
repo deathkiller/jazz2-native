@@ -282,7 +282,7 @@ namespace nCine
 		}
 	}
 
-	void SceneNode::OnVisit(RenderQueue& renderQueue, unsigned int& visitOrderIndex)
+	void SceneNode::OnVisit(RenderQueue& renderQueue, std::uint32_t& visitOrderIndex)
 	{
 		// Early return not needed, the first call to this method is on the root node
 

@@ -12,6 +12,9 @@ namespace nCine
 	/// Object that can be drawn through the render queue
 	class DrawableNode : public SceneNode
 	{
+		friend class ShaderState;
+		friend class Viewport;
+
 	public:
 		// Notable anchor points for a drawable node
 		static const Vector2f AnchorCenter;
@@ -60,9 +63,8 @@ namespace nCine
 		DrawableNode();
 		~DrawableNode() override;
 
-		/// Default move constructor
+		DrawableNode& operator=(const DrawableNode&) = delete;
 		DrawableNode(DrawableNode&&);
-		/// Default move assignment operator
 		DrawableNode& operator=(DrawableNode&&);
 
 		/// Updates the draw command and adds it to the queue
@@ -155,12 +157,6 @@ namespace nCine
 
 		/// Updates the render command
 		virtual void updateRenderCommand() = 0;
-
-	private:
-		DrawableNode& operator=(const DrawableNode&) = delete;
-
-		friend class ShaderState;
-		friend class Viewport;
 	};
 
 }

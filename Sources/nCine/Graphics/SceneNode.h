@@ -107,7 +107,7 @@ namespace nCine
 		/// Called once every frame to update the node
 		virtual void OnUpdate(float timeMult);
 		/// Draws the node and visits its children
-		virtual void OnVisit(RenderQueue& renderQueue, unsigned int& visitOrderIndex);
+		virtual void OnVisit(RenderQueue& renderQueue, std::uint32_t& visitOrderIndex);
 		/// Renders the node
 		virtual bool OnDraw(RenderQueue& renderQueue) {
 			return false;
@@ -222,7 +222,7 @@ namespace nCine
 		void setAlphaF(float alpha);
 
 		/// Gets the node rendering layer
-		inline uint16_t layer() const {
+		inline std::uint16_t layer() const {
 			return layer_;
 		}
 		/// Gets the node absolute rendering layer

@@ -18,7 +18,7 @@ namespace nCine
 	class RenderVaoPool
 	{
 	public:
-		explicit RenderVaoPool(unsigned int vaoPoolSize);
+		explicit RenderVaoPool(std::uint32_t vaoPoolSize);
 
 		void bindVao(const GLVertexFormat& vertexFormat);
 

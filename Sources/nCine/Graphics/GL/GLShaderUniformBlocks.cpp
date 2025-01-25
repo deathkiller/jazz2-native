@@ -27,7 +27,7 @@ namespace nCine
 	void GLShaderUniformBlocks::bind()
 	{
 #if defined(DEATH_DEBUG)
-		static const int offsetAlignment = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
 		if (uboParams_.object) {
 			uboParams_.object->bind();
@@ -67,7 +67,7 @@ namespace nCine
 		}
 
 		dataPointer_ = dataPointer;
-		int offset = 0;
+		std::int32_t offset = 0;
 		for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 			uniformBlockCache.setDataPointer(dataPointer + offset);
 			offset += uniformBlockCache.uniformBlock()->size() - uniformBlockCache.uniformBlock()->alignAmount();
@@ -91,7 +91,7 @@ namespace nCine
 	{
 		if (shaderProgram_ != nullptr) {
 			if (shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
-				int totalUsedSize = 0;
+				std::int32_t totalUsedSize = 0;
 				bool hasMemoryGaps = false;
 				for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 					// There is a gap if at least one block cache (not in last position) uses less memory than its size
@@ -106,7 +106,7 @@ namespace nCine
 					uboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, totalUsedSize);
 					if (uboParams_.mapBase != nullptr) {
 						if (hasMemoryGaps) {
-							int offset = 0;
+							std::int32_t offset = 0;
 							for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 								std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.dataPointer(), uniformBlockCache.usedSize());
 								offset += uniformBlockCache.usedSize();
@@ -124,9 +124,9 @@ namespace nCine
 
 	void GLShaderUniformBlocks::importUniformBlocks(const char* includeOnly, const char* exclude)
 	{
-		const unsigned int MaxUniformBlockName = 128;
+		const std::uint32_t MaxUniformBlockName = 128;
 
-		unsigned int importedCount = 0;
+		std::uint32_t importedCount = 0;
 		for (GLUniformBlock& uniformBlock : shaderProgram_->uniformBlocks_) {
 			const char* uniformBlockName = uniformBlock.name();
 			const char* currentIncludeOnly = includeOnly;

@@ -36,25 +36,25 @@ namespace nCine
 		ReverseIterator operator--(int);
 
 		/// Compound addition operator (reversed)
-		ReverseIterator& operator+=(int n);
+		ReverseIterator& operator+=(std::int32_t n);
 		/// Compound subtraction operator (reversed)
-		ReverseIterator& operator-=(int n);
+		ReverseIterator& operator-=(std::int32_t n);
 		/// Addition operator (reversed)
-		ReverseIterator operator+(int n) const;
+		ReverseIterator operator+(std::int32_t n) const;
 		/// Subtraction operator (reversed)
-		ReverseIterator operator-(int n) const;
+		ReverseIterator operator-(std::int32_t n) const;
 		/// Pointer subtraction operator (reversed)
-		friend inline int operator-(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return -static_cast<int>(lhs.it_ - rhs.it_);
+		friend inline std::int32_t operator-(const ReverseIterator& lhs, const ReverseIterator& rhs) {
+			return -std::int32_t(lhs.it_ - rhs.it_);
 		}
 		/// Pointer subtraction operator for compatible reverse iterators (reversed)
 		template <typename Iter>
-		friend inline int operator-(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return -static_cast<int>(lhs.it_ - rhs.base());
+		friend inline std::int32_t operator-(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
+			return -std::int32_t(lhs.it_ - rhs.base());
 		}
 
 		/// Subscript operator
-		Reference operator[](int n) const;
+		Reference operator[](std::int32_t n) const;
 
 		/// Equality operator
 		friend inline bool operator==(const ReverseIterator& lhs, const ReverseIterator& rhs) {
@@ -181,7 +181,7 @@ namespace nCine
 	}
 
 	template<class Iterator>
-	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator+=(int n)
+	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator+=(std::int32_t n)
 	{
 		it_ -= n;
 
@@ -189,7 +189,7 @@ namespace nCine
 	}
 
 	template<class Iterator>
-	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator-=(int n)
+	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator-=(std::int32_t n)
 	{
 		it_ += n;
 
@@ -197,7 +197,7 @@ namespace nCine
 	}
 
 	template<class Iterator>
-	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator+(int n) const
+	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator+(std::int32_t n) const
 	{
 		ReverseIterator<Iterator> iterator = *this;
 		iterator.it_ -= n;
@@ -206,7 +206,7 @@ namespace nCine
 	}
 
 	template<class Iterator>
-	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator-(int n) const
+	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator-(std::int32_t n) const
 	{
 		ReverseIterator<Iterator> iterator = *this;
 		iterator.it_ += n;
@@ -215,7 +215,7 @@ namespace nCine
 	}
 
 	template<class Iterator>
-	inline typename ReverseIterator<Iterator>::Reference ReverseIterator<Iterator>::operator[](int n) const
+	inline typename ReverseIterator<Iterator>::Reference ReverseIterator<Iterator>::operator[](std::int32_t n) const
 	{
 		return *(it_ - n);
 	}

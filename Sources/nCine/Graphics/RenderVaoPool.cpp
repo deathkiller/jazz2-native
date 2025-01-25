@@ -16,7 +16,7 @@ namespace nCine
 	}
 #endif
 
-	RenderVaoPool::RenderVaoPool(unsigned int vaoPoolSize)
+	RenderVaoPool::RenderVaoPool(std::uint32_t vaoPoolSize)
 	{
 		vaoPool_.reserve(vaoPoolSize);
 
@@ -52,11 +52,11 @@ namespace nCine
 		}
 
 		if (!vaoFound) {
-			unsigned int index = 0;
+			std::uint32_t index = 0;
 			if (vaoPool_.size() < vaoPool_.capacity()) {
 				auto& item = vaoPool_.emplace_back();
 				item.object = std::make_unique<GLVertexArrayObject>();
-				index = (unsigned int)vaoPool_.size() - 1;
+				index = std::uint32_t(vaoPool_.size() - 1);
 #if defined(DEATH_DEBUG)
 				/*if (GLDebug::isAvailable()) {
 					debugString.format("Created and defined VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
@@ -69,7 +69,7 @@ namespace nCine
 			} else {
 				// Find the least recently used VAO
 				TimeStamp time = vaoPool_[0].lastBindTime;
-				for (unsigned int i = 1; i < vaoPool_.size(); i++) {
+				for (std::uint32_t i = 1; i < vaoPool_.size(); i++) {
 					if (vaoPool_[i].lastBindTime < time) {
 						index = i;
 						time = vaoPool_[i].lastBindTime;
@@ -77,7 +77,7 @@ namespace nCine
 				}
 
 #if defined(DEATH_DEBUG)
-				formatString(debugString, sizeof(debugString), "Reuse and define VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
+				formatString(debugString, sizeof(debugString), "Reuse and define VAO 0x%lx (%u)", std::uintptr_t(vaoPool_[index].object.get()), index);
 				GLDebug::messageInsert(debugString);
 #endif
 #if defined(NCINE_PROFILING)
@@ -99,18 +99,18 @@ namespace nCine
 		}
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::gatherVaoPoolStatistics((unsigned int)vaoPool_.size(), (unsigned int)vaoPool_.capacity());
+		RenderStatistics::gatherVaoPoolStatistics(std::uint32_t(vaoPool_.size()), std::uint32_t(vaoPool_.capacity()));
 #endif
 	}
 
 	void RenderVaoPool::insertGLDebugMessage(const VaoBinding& binding)
 	{
 #if defined(DEATH_DEBUG)
-		formatString(debugString, sizeof(debugString), "Bind VAO 0x%lx (", uintptr_t(binding.object.get()));
+		formatString(debugString, sizeof(debugString), "Bind VAO 0x%lx (", std::uintptr_t(binding.object.get()));
 
 		// TODO: GLDebug
 		/*bool firstVbo = true;
-		for (unsigned int i = 0; i < binding.format.numAttributes(); i++)
+		for (std::uint32_t i = 0; i < binding.format.numAttributes(); i++)
 		{
 			if (binding.format[i].isEnabled() && binding.format[i].vbo() != nullptr)
 			{
@@ -121,7 +121,7 @@ namespace nCine
 			}
 		}
 		if (binding.format.ibo() != nullptr)
-			debugString.formatAppend(", ibo: 0x%lx", uintptr_t(binding.format.ibo()));
+			debugString.formatAppend(", ibo: 0x%lx", std::uintptr_t(binding.format.ibo()));
 		debugString.formatAppend(")");*/
 
 		GLDebug::messageInsert(debugString);

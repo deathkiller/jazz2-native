@@ -8,11 +8,11 @@
 
 namespace nCine
 {
-	RenderBuffersManager::RenderBuffersManager(bool useBufferMapping, unsigned long vboMaxSize, unsigned long iboMaxSize)
+	RenderBuffersManager::RenderBuffersManager(bool useBufferMapping, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize)
 	{
 		buffers_.reserve(4);
 
-		BufferSpecifications& vboSpecs = specs_[(int)BufferTypes::Array];
+		BufferSpecifications& vboSpecs = specs_[std::int32_t(BufferTypes::Array)];
 		vboSpecs.type = BufferTypes::Array;
 		vboSpecs.target = GL_ARRAY_BUFFER;
 		vboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
@@ -20,7 +20,7 @@ namespace nCine
 		vboSpecs.maxSize = vboMaxSize;
 		vboSpecs.alignment = sizeof(GLfloat);
 
-		BufferSpecifications& iboSpecs = specs_[(int)BufferTypes::ElementArray];
+		BufferSpecifications& iboSpecs = specs_[std::int32_t(BufferTypes::ElementArray)];
 		iboSpecs.type = BufferTypes::ElementArray;
 		iboSpecs.target = GL_ELEMENT_ARRAY_BUFFER;
 		iboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
@@ -29,19 +29,19 @@ namespace nCine
 		iboSpecs.alignment = sizeof(GLushort);
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		const int offsetAlignment = gfxCaps.value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
-		const int uboMaxSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		const std::int32_t offsetAlignment = gfxCaps.value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		const std::int32_t uboMaxSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
-		BufferSpecifications& uboSpecs = specs_[(int)BufferTypes::Uniform];
+		BufferSpecifications& uboSpecs = specs_[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type = BufferTypes::Uniform;
 		uboSpecs.target = GL_UNIFORM_BUFFER;
 		uboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
 		uboSpecs.usageFlags = GL_STREAM_DRAW;
-		uboSpecs.maxSize = static_cast<unsigned long>(uboMaxSize);
-		uboSpecs.alignment = static_cast<unsigned int>(offsetAlignment);
+		uboSpecs.maxSize = std::uint32_t(uboMaxSize);
+		uboSpecs.alignment = std::uint32_t(offsetAlignment);
 
 		// Create the first buffer for each type right away
-		for (unsigned int i = 0; i < (int)BufferTypes::Count; i++) {
+		for (std::uint32_t i = 0; i < std::uint32_t(BufferTypes::Count); i++) {
 			createBuffer(specs_[i]);
 		}
 	}
@@ -59,22 +59,22 @@ namespace nCine
 		}
 	}
 
-	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, unsigned long bytes, unsigned int alignment)
+	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment)
 	{
-		FATAL_ASSERT_MSG(bytes <= specs_[(int)type].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
-						   bytes, bufferTypeToString(type), specs_[(int)type].maxSize);
+		FATAL_ASSERT_MSG(bytes <= specs_[std::int32_t(type)].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
+						   bytes, bufferTypeToString(type), specs_[std::int32_t(type)].maxSize);
 
 		// Accepting a custom alignment only if it is a multiple of the specification one
-		if (alignment % specs_[(int)type].alignment != 0) {
-			alignment = specs_[(int)type].alignment;
+		if (alignment % specs_[std::int32_t(type)].alignment != 0) {
+			alignment = specs_[std::int32_t(type)].alignment;
 		}
 
 		Parameters params;
 
 		for (ManagedBuffer& buffer : buffers_) {
 			if (buffer.type == type) {
-				const unsigned long offset = buffer.size - buffer.freeSpace;
-				const unsigned int alignAmount = (alignment - offset % alignment) % alignment;
+				const std::uint32_t offset = buffer.size - buffer.freeSpace;
+				const std::uint32_t alignAmount = (alignment - offset % alignment) % alignment;
 
 				if (buffer.freeSpace >= bytes + alignAmount) {
 					params.object = buffer.object.get();
@@ -88,7 +88,7 @@ namespace nCine
 		}
 
 		if (params.object == nullptr) {
-			createBuffer(specs_[(int)type]);
+			createBuffer(specs_[std::int32_t(type)]);
 			params.object = buffers_.back().object.get();
 			params.offset = 0;
 			params.size = bytes;
@@ -108,11 +108,11 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			RenderStatistics::gatherStatistics(buffer);
 #endif
-			const unsigned long usedSize = buffer.size - buffer.freeSpace;
-			FATAL_ASSERT(usedSize <= specs_[(int)buffer.type].maxSize);
+			const std::uint32_t usedSize = buffer.size - buffer.freeSpace;
+			FATAL_ASSERT(usedSize <= specs_[std::int32_t(buffer.type)].maxSize);
 			buffer.freeSpace = buffer.size;
 
-			if (specs_[(int)buffer.type].mapFlags == 0) {
+			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
 				if (usedSize > 0) {
 					buffer.object->bufferSubData(0, usedSize, buffer.hostBuffer.get());
 				}
@@ -136,11 +136,11 @@ namespace nCine
 			ASSERT(buffer.freeSpace == buffer.size);
 			ASSERT(buffer.mapBase == nullptr);
 
-			if (specs_[(int)buffer.type].mapFlags == 0) {
-				buffer.object->bufferData(buffer.size, nullptr, specs_[(int)buffer.type].usageFlags);
+			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
+				buffer.object->bufferData(buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
 				buffer.mapBase = buffer.hostBuffer.get();
 			} else {
-				buffer.mapBase = static_cast<GLubyte*>(buffer.object->mapBufferRange(0, buffer.size, specs_[(int)buffer.type].mapFlags));
+				buffer.mapBase = static_cast<GLubyte*>(buffer.object->mapBufferRange(0, buffer.size, specs_[std::int32_t(buffer.type)].mapFlags));
 			}
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
@@ -179,7 +179,7 @@ namespace nCine
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
 		// TODO: GLDebug
-		//debugString.format("Create %s buffer 0x%lx", bufferTypeToString(specs.type), uintptr_t(buffers_.back().object.get()));
+		//debugString.format("Create %s buffer 0x%lx", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));
 		//GLDebug::messageInsert(debugString.data());
 	}
 }

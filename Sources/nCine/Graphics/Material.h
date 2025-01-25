@@ -16,6 +16,8 @@ namespace nCine
 	/// Contains material data for a drawable node
 	class Material
 	{
+		friend class RenderCommand;
+
 	public:
 		/// One of the predefined shader programs
 		enum class ShaderProgramType
@@ -138,9 +140,9 @@ namespace nCine
 			return shaderUniformBlocks_.allUniformBlocks();
 		}
 
-		const GLTexture* texture(unsigned int unit) const;
-		bool setTexture(unsigned int unit, const GLTexture* texture);
-		bool setTexture(unsigned int unit, const Texture& texture);
+		const GLTexture* texture(std::uint32_t unit) const;
+		bool setTexture(std::uint32_t unit, const GLTexture* texture);
+		bool setTexture(std::uint32_t unit, const Texture& texture);
 
 		inline const GLTexture* texture() const {
 			return texture(0);
@@ -164,7 +166,7 @@ namespace nCine
 		const GLTexture* textures_[GLTexture::MaxTextureUnits];
 
 		/// The size of the memory buffer containing uniform values
-		unsigned int uniformsHostBufferSize_;
+		std::uint32_t uniformsHostBufferSize_;
 		/// Memory buffer with uniform values to be sent to the GPU
 		std::unique_ptr<GLubyte[]> uniformsHostBuffer_;
 
@@ -178,10 +180,8 @@ namespace nCine
 			shaderUniformBlocks_.commitUniformBlocks();
 		}
 		/// Wrapper around `GLShaderProgram::defineVertexFormat()`
-		void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, unsigned int vboOffset);
-		uint32_t sortKey();
-
-		friend class RenderCommand;
+		void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset);
+		std::uint32_t sortKey();
 	};
 
 }

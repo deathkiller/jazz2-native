@@ -5,6 +5,8 @@
 #include "../../CommonHeaders.h"
 #endif
 
+#include "../../../Main.h"
+
 namespace nCine
 {
 	/// Stores information about an active OpenGL shader attribute
@@ -27,7 +29,7 @@ namespace nCine
 			return name_;
 		}
 		GLenum basicType() const;
-		int numComponents() const;
+		std::int32_t numComponents() const;
 
 		/// Returns true if the attribute name starts with `gl_`
 		bool hasReservedPrefix() const;
@@ -36,7 +38,7 @@ namespace nCine
 		GLint location_;
 		GLint size_;
 		GLenum type_;
-		static constexpr int MaxNameLength = 32;
+		static constexpr std::int32_t MaxNameLength = 32;
 		char name_[MaxNameLength];
 	};
 

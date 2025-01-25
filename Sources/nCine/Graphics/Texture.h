@@ -42,6 +42,9 @@ namespace nCine
 	/// Texture
 	class Texture : public Object
 	{
+		friend class Material;
+		friend class Viewport;
+
 	public:
 		/// Texture formats
 		enum class Format
@@ -58,11 +61,11 @@ namespace nCine
 		Texture();
 
 		/// Creates an empty texture with the specified format, MIP levels, and size
-		Texture(const char* name, Format format, int mipMapCount, int width, int height);
+		Texture(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height);
 		/// Creates an empty texture with the specified format, MIP levels, and size using a vector
-		Texture(const char* name, Format format, int mipMapCount, Vector2i size);
+		Texture(const char* name, Format format, std::int32_t mipMapCount, Vector2i size);
 		/// Creates an empty texture with the specified format and size
-		Texture(const char* name, Format format, int width, int height);
+		Texture(const char* name, Format format, std::int32_t width, std::int32_t height);
 		/// Creates an empty texture with the specified format and size using a vector
 		Texture(const char* name, Format format, Vector2i size);
 
@@ -77,43 +80,43 @@ namespace nCine
 		Texture& operator=(Texture&&);
 
 		/// Initializes an empty texture with the specified format, MIP levels, and size
-		void init(const char* name, Format format, int mipMapCount, int width, int height);
+		void init(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height);
 		/// Initializes an empty texture with the specified format, MIP levels, and size using a vector
-		void init(const char* name, Format format, int mipMapCount, Vector2i size);
+		void init(const char* name, Format format, std::int32_t mipMapCount, Vector2i size);
 		/// Initializes an empty texture with the specified format and size
-		void init(const char* name, Format format, int width, int height);
+		void init(const char* name, Format format, std::int32_t width, std::int32_t height);
 		/// Initializes an empty texture with the specified format and size using a vector
 		void init(const char* name, Format format, Vector2i size);
 
-		//bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		//bool loadFromMemory(const std::uint8_t* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(StringView filename);
 
 		/// Loads all texture texels in raw format from a memory buffer in the first mip level
-		bool loadFromTexels(const unsigned char* bufferPtr);
+		bool loadFromTexels(const std::uint8_t* bufferPtr);
 		/// Loads texels in raw format from a memory buffer to a texture sub-region in the first mip level
-		bool loadFromTexels(const unsigned char* bufferPtr, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
+		bool loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
 		/// Loads texels in raw format from a memory buffer to a texture sub-region with a rectangle in the first mip level
-		bool loadFromTexels(const unsigned char* bufferPtr, Recti region);
+		bool loadFromTexels(const std::uint8_t* bufferPtr, Recti region);
 		/// Loads texels in raw format from a memory buffer to a specific texture mip level and sub-region
-		bool loadFromTexels(const unsigned char* bufferPtr, unsigned int level, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
+		bool loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
 		/// Loads texels in raw format from a memory buffer to a specific texture mip level and sub-region with a rectangle
-		bool loadFromTexels(const unsigned char* bufferPtr, unsigned int level, Recti region);
+		bool loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region);
 
 		/// Saves all texture texels in the first mip level in raw format to a memory buffer
-		bool saveToMemory(unsigned char* bufferPtr);
+		bool saveToMemory(std::uint8_t* bufferPtr);
 		/// Saves all texture texels in the specified texture mip level in raw format to a memory buffer
-		bool saveToMemory(unsigned char* bufferPtr, unsigned int level);
+		bool saveToMemory(std::uint8_t* bufferPtr, std::int32_t level);
 
 		/// Returns texture width
-		inline int width() const {
+		inline std::int32_t width() const {
 			return width_;
 		}
 		/// Returns texture height
-		inline int height() const {
+		inline std::int32_t height() const {
 			return height_;
 		}
 		/// Returns texture MIP map levels
-		inline int mipMapLevels() const {
+		inline std::int32_t mipMapLevels() const {
 			return mipMapLevels_;
 		}
 		/// Returns texture size
@@ -130,9 +133,9 @@ namespace nCine
 			return isCompressed_;
 		}
 		/// Returns the number of color channels
-		unsigned int numChannels() const;
+		std::uint32_t numChannels() const;
 		/// Returns the amount of video memory needed to load the texture
-		inline unsigned long dataSize() const {
+		inline std::uint32_t dataSize() const {
 			return dataSize_;
 		}
 
@@ -167,12 +170,12 @@ namespace nCine
 
 	private:
 		std::unique_ptr<GLTexture> glTexture_;
-		int width_;
-		int height_;
-		int mipMapLevels_;
+		std::int32_t width_;
+		std::int32_t height_;
+		std::int32_t mipMapLevels_;
 		bool isCompressed_;
 		Format format_;
-		unsigned long dataSize_;
+		std::uint32_t dataSize_;
 
 		SamplerFilter minFiltering_;
 		SamplerFilter magFiltering_;
@@ -182,9 +185,6 @@ namespace nCine
 		void initialize(const ITextureLoader& texLoader);
 		/// Loads the data in a previously initialized texture
 		void load(const ITextureLoader& texLoader);
-
-		friend class Material;
-		friend class Viewport;
 	};
 
 }

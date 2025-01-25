@@ -12,26 +12,26 @@ namespace nCine
 		explicit TextureLoaderKtx(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
-		static const int KtxIdentifierLength = 12;
-		static uint8_t fileIdentifier_[KtxIdentifierLength];
+		static const std::int32_t KtxIdentifierLength = 12;
+		static std::uint8_t fileIdentifier_[KtxIdentifierLength];
 
 		/// Header for the KTX format
 		struct KtxHeader
 		{
-			uint8_t identifier[KtxIdentifierLength];
-			uint32_t endianess;
-			uint32_t glType;
-			uint32_t glTypeSize;
-			uint32_t glFormat;
-			uint32_t glInternalFormat;
-			uint32_t glBaseInternalFormat;
-			uint32_t pixelWidth;
-			uint32_t pixelHeight;
-			uint32_t pixelDepth;
-			uint32_t numberOfArrayElements;
-			uint32_t numberOfFaces;
-			uint32_t numberOfMipmapLevels;
-			uint32_t bytesOfKeyValueData;
+			std::uint8_t identifier[KtxIdentifierLength];
+			std::uint32_t endianess;
+			std::uint32_t glType;
+			std::uint32_t glTypeSize;
+			std::uint32_t glFormat;
+			std::uint32_t glInternalFormat;
+			std::uint32_t glBaseInternalFormat;
+			std::uint32_t pixelWidth;
+			std::uint32_t pixelHeight;
+			std::uint32_t pixelDepth;
+			std::uint32_t numberOfArrayElements;
+			std::uint32_t numberOfFaces;
+			std::uint32_t numberOfMipmapLevels;
+			std::uint32_t bytesOfKeyValueData;
 		};
 
 		/// Reads the KTX header and fills the corresponding structure

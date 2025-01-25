@@ -21,16 +21,16 @@ namespace nCine
 		void reset();
 
 	private:
-		static unsigned int UboMaxSize;
+		static std::uint32_t UboMaxSize;
 
 		struct ManagedBuffer
 		{
 			ManagedBuffer()
 				: size(0), freeSpace(0) {}
 
-			unsigned int size;
-			unsigned int freeSpace;
-			std::unique_ptr<unsigned char[]> buffer;
+			std::uint32_t size;
+			std::uint32_t freeSpace;
+			std::unique_ptr<std::uint8_t[]> buffer;
 		};
 
 		/// Memory buffers to collect UBO data before committing it
@@ -39,8 +39,8 @@ namespace nCine
 
 		RenderCommand* collectCommands(SmallVectorImpl<RenderCommand*>::const_iterator start, SmallVectorImpl<RenderCommand*>::const_iterator end, SmallVectorImpl<RenderCommand*>::const_iterator& nextStart);
 
-		unsigned char* acquireMemory(unsigned int bytes);
-		void createBuffer(unsigned int size);
+		std::uint8_t* acquireMemory(std::uint32_t bytes);
+		void createBuffer(std::uint32_t size);
 	};
 
 }

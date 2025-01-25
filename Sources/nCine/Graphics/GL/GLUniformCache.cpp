@@ -28,7 +28,7 @@ namespace nCine
 		return vec;
 	}
 
-	GLfloat GLUniformCache::floatValue(unsigned int index) const
+	GLfloat GLUniformCache::floatValue(std::uint32_t index) const
 	{
 		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && checkFloat() && uniform_->numComponents() > index));
 
@@ -51,7 +51,7 @@ namespace nCine
 		return vec;
 	}
 
-	GLint GLUniformCache::intValue(unsigned int index) const
+	GLint GLUniformCache::intValue(std::uint32_t index) const
 	{
 		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && checkInt() && uniform_->numComponents() > index));
 		GLint value = 0;
@@ -298,7 +298,7 @@ namespace nCine
 		}
 	}
 
-	bool GLUniformCache::checkComponents(unsigned int requiredComponents) const
+	bool GLUniformCache::checkComponents(std::uint32_t requiredComponents) const
 	{
 		if (uniform_->numComponents() != requiredComponents) {
 			LOGE("Uniform \"%s\" has %u components, not %u", uniform_->name(), uniform_->numComponents(), requiredComponents);

@@ -13,7 +13,7 @@ namespace nCine
 	using value_t = GLuint;
 
 	/// Naive implementation of a hashmap for storing pairs of OpenGL targets and object IDs
-	template <unsigned int S, class MappingFunc>
+	template<std::uint32_t S, class MappingFunc>
 	class GLHashMap
 	{
 	public:
@@ -26,15 +26,15 @@ namespace nCine
 		MappingFunc mappingFunc;
 	};
 
-	template <unsigned int S, class MappingFunc>
+	template<std::uint32_t S, class MappingFunc>
 	GLHashMap<S, MappingFunc>::GLHashMap()
 	{
 		// Initializing with a null OpenGL object id
-		for (unsigned int i = 0; i < S; i++)
+		for (std::uint32_t i = 0; i < S; i++)
 			buckets_[i] = 0;
 	}
 
-	template <unsigned int S, class MappingFunc>
+	template<std::uint32_t S, class MappingFunc>
 	inline value_t& GLHashMap<S, MappingFunc>::operator[](key_t key)
 	{
 		return buckets_[mappingFunc(key)];
@@ -44,10 +44,10 @@ namespace nCine
 	class GLBufferObjectMappingFunc
 	{
 	public:
-		static const unsigned int Size = 6;
-		inline unsigned int operator()(key_t key) const
+		static const std::uint32_t Size = 6;
+		inline std::uint32_t operator()(key_t key) const
 		{
-			unsigned int value = 0;
+			std::uint32_t value = 0;
 
 			switch (key) {
 				case GL_ARRAY_BUFFER:
@@ -83,10 +83,10 @@ namespace nCine
 	class GLTextureMappingFunc
 	{
 	public:
-		static const unsigned int Size = 4;
-		inline unsigned int operator()(key_t key) const
+		static const std::uint32_t Size = 4;
+		inline std::uint32_t operator()(key_t key) const
 		{
-			unsigned int value = 0;
+			std::uint32_t value = 0;
 
 			switch (key) {
 #if !defined(WITH_OPENGLES) // not available in OpenGL ES

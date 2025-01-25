@@ -15,8 +15,10 @@ namespace nCine
 	/// Stores information about an OpenGL uniform block
 	class GLUniformBlock
 	{
+		friend class GLUniformBlockCache;
+
 	public:
-		static constexpr int MaxNameLength = 48;
+		static constexpr std::uint32_t MaxNameLength = 48;
 
 		enum class DiscoverUniforms
 		{
@@ -39,7 +41,7 @@ namespace nCine
 			return size_;
 		}
 		/// Returns the uniform buffer offset alignment added to the original size
-		inline unsigned char alignAmount() const {
+		inline std::uint8_t alignAmount() const {
 			return alignAmount_;
 		}
 		inline const char* name() const {
@@ -53,9 +55,9 @@ namespace nCine
 
 	private:
 		/// Max number of discoverable uniforms per block
-		static const int MaxNumBlockUniforms = 16;
+		static const std::int32_t MaxNumBlockUniforms = 16;
 
-		static const int BlockUniformHashSize = 8;
+		static const std::uint32_t BlockUniformHashSize = 8;
 		StaticHashMap<String, GLUniform, BlockUniformHashSize> blockUniforms_;
 
 		GLuint program_;
@@ -63,12 +65,9 @@ namespace nCine
 		/// Offset aligned size for `glBindBufferRange()` calls
 		GLint size_;
 		/// Uniform buffer offset alignment added to `size_`
-		unsigned char alignAmount_;
+		std::uint8_t alignAmount_;
 		/// Current binding index for the uniform block. Negative if not bound.
 		GLint bindingIndex_;
 		char name_[MaxNameLength];
-
-		friend class GLUniformBlockCache;
 	};
-
 }

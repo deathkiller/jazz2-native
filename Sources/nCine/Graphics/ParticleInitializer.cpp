@@ -4,13 +4,13 @@
 
 namespace nCine
 {
-	void ParticleInitializer::setAmount(int amount)
+	void ParticleInitializer::setAmount(std::int32_t amount)
 	{
 		ASSERT(amount > 0);
 		rndAmount.Set(amount, amount);
 	}
 
-	void ParticleInitializer::setAmount(int minAmount, int maxAmount)
+	void ParticleInitializer::setAmount(std::int32_t minAmount, std::int32_t maxAmount)
 	{
 		ASSERT(minAmount <= maxAmount);
 		rndAmount.Set(minAmount, maxAmount);

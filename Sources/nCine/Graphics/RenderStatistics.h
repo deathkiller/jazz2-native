@@ -9,6 +9,15 @@ namespace nCine
 	/// Gathers statistics about the rendering subsystem
 	class RenderStatistics
 	{
+		friend class ScreenViewport;
+		friend class RenderQueue;
+		friend class RenderBuffersManager;
+		friend class Texture;
+		friend class Geometry;
+		friend class DrawableNode;
+		friend class RenderVaoPool;
+		friend class RenderCommandPool;
+
 	public:
 		class Commands
 		{
@@ -249,15 +258,6 @@ namespace nCine
 		static inline void addCommandPoolRetrieval() {
 			commandPool_.retrievals++;
 		}
-
-		friend class ScreenViewport;
-		friend class RenderQueue;
-		friend class RenderBuffersManager;
-		friend class Texture;
-		friend class Geometry;
-		friend class DrawableNode;
-		friend class RenderVaoPool;
-		friend class RenderCommandPool;
 	};
 }
 

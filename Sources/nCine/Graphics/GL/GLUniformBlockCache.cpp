@@ -50,9 +50,9 @@ namespace nCine
 		return size;
 	}
 
-	unsigned char GLUniformBlockCache::alignAmount() const
+	std::uint8_t GLUniformBlockCache::alignAmount() const
 	{
-		unsigned char alignAmount = 0;
+		std::uint8_t alignAmount = 0;
 		if (uniformBlock_ != nullptr) {
 			alignAmount = uniformBlock_->alignAmount();
 		}
@@ -75,12 +75,12 @@ namespace nCine
 		}
 	}
 
-	bool GLUniformBlockCache::copyData(unsigned int destIndex, const GLubyte* src, unsigned int numBytes)
+	bool GLUniformBlockCache::copyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes)
 	{
-		if (destIndex + numBytes > (unsigned int)size() || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
+		if (destIndex + numBytes > std::uint32_t(size()) || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
 			return false;
 		}
-		memcpy(&dataPointer_[destIndex], src, numBytes);
+		std::memcpy(&dataPointer_[destIndex], src, numBytes);
 		return true;
 	}
 

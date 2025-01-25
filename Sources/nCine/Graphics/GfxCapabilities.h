@@ -27,9 +27,9 @@ namespace nCine
 		GlInfoStrings glInfoStrings_;
 
 		/// Array of OpenGL integer values
-		std::int32_t glIntValues_[(std::int32_t)IGfxCapabilities::GLIntValues::Count];
+		std::int32_t glIntValues_[std::int32_t(IGfxCapabilities::GLIntValues::Count)];
 		/// Array of OpenGL extension availability flags
-		bool glExtensions_[(std::int32_t)IGfxCapabilities::GLExtensions::Count];
+		bool glExtensions_[std::int32_t(IGfxCapabilities::GLExtensions::Count)];
 
 		static constexpr std::int32_t MaxProgramBinaryFormats = 4;
 		std::int32_t programBinaryFormats_[MaxProgramBinaryFormats];

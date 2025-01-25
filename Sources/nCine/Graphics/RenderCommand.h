@@ -33,56 +33,56 @@ namespace nCine
 		RenderCommand();
 
 		/// Returns the number of instances collected in the command or zero if instancing is not used
-		inline int numInstances() const {
+		inline std::int32_t numInstances() const {
 			return numInstances_;
 		}
 		/// Sets the number of instances collected in the command
-		inline void setNumInstances(int numInstances) {
+		inline void setNumInstances(std::int32_t numInstances) {
 			numInstances_ = numInstances;
 		}
 
 		/// Returns the number of elements collected by the command or zero if it's not a batch
-		inline int batchSize() const {
+		inline std::int32_t batchSize() const {
 			return batchSize_;
 		}
 		/// Sets the number of batch elements collected by the command
-		inline void setBatchSize(int batchSize) {
+		inline void setBatchSize(std::int32_t batchSize) {
 			batchSize_ = batchSize;
 		}
 
 		/// Returns the drawing layer for this command
-		inline uint16_t layer() const {
+		inline std::uint16_t layer() const {
 			return layer_;
 		}
 		/// Sets the drawing layer for this command
-		inline void setLayer(uint16_t layer) {
+		inline void setLayer(std::uint16_t layer) {
 			layer_ = layer;
 		}
 		/// Returns the visit order index for this command
-		inline uint16_t visitOrder() const {
+		inline std::uint16_t visitOrder() const {
 			return visitOrder_;
 		}
 		/// Sets the visit order index for this command
-		inline void setVisitOrder(uint16_t visitOrder) {
+		inline void setVisitOrder(std::uint16_t visitOrder) {
 			visitOrder_ = visitOrder;
 		}
 
 		/// Returns the material sort key for the queue
-		inline uint64_t materialSortKey() const {
+		inline std::uint64_t materialSortKey() const {
 			return materialSortKey_;
 		}
 		/// Returns the lower part of the material sort key, used for batch splitting logic
-		inline uint32_t lowerMaterialSortKey() const {
-			return static_cast<uint32_t>(materialSortKey_);
+		inline std::uint32_t lowerMaterialSortKey() const {
+			return std::uint32_t(materialSortKey_);
 		}
 		/// Calculates a material sort key for the queue
 		void calculateMaterialSortKey();
 		/// Returns the id based secondary sort key for the queue
-		inline unsigned int idSortKey() const {
+		inline std::uint32_t idSortKey() const {
 			return idSortKey_;
 		}
 		/// Sets the id based secondary sort key for the queue
-		inline void setIdSortKey(unsigned int idSortKey) {
+		inline void setIdSortKey(std::uint32_t idSortKey) {
 			idSortKey_ = idSortKey;
 		}
 
@@ -136,22 +136,22 @@ namespace nCine
 		void commitAll();
 
 		/// Calculates the Z-depth of command layer using the specified near and far planes
-		static float calculateDepth(uint16_t layer, float nearClip, float farClip);
+		static float calculateDepth(std::uint16_t layer, float nearClip, float farClip);
 
 	private:
 		/// The distance on the Z axis between adjacent layers
 		static constexpr float LayerStep = 1.0f / static_cast<float>(0xFFFF);
 
 		/// The material sort key minimizes state changes when rendering commands
-		uint64_t materialSortKey_;
+		std::uint64_t materialSortKey_;
 		/// The id based secondary sort key stabilizes render commands sorting
-		uint32_t idSortKey_;
+		std::uint32_t idSortKey_;
 		/// The drawing layer for this command
-		uint16_t layer_;
+		std::uint16_t layer_;
 		/// The visit order index for this command
-		uint16_t visitOrder_;
-		int numInstances_;
-		int batchSize_;
+		std::uint16_t visitOrder_;
+		std::int32_t numInstances_;
+		std::int32_t batchSize_;
 
 		bool transformationCommitted_;
 
@@ -165,8 +165,8 @@ namespace nCine
 		Geometry geometry_;
 
 		/// Returns the final layer sort key for this command
-		inline uint32_t layerSortKey() const {
-			return static_cast<uint32_t>(layer_ << 16) + visitOrder_;
+		inline std::uint32_t layerSortKey() const {
+			return std::uint32_t(layer_ << 16) + visitOrder_;
 		}
 	};
 }

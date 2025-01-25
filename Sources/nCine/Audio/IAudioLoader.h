@@ -47,8 +47,6 @@ namespace nCine
 			return numSamples_ * numChannels_ * bytesPerSample_;
 		}
 
-		/// Returns the proper audio loader according to the memory buffer name extension
-		//static std::unique_ptr<IAudioLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper audio loader according to the file extension
 		static std::unique_ptr<IAudioLoader> createFromFile(const Death::Containers::StringView path);
 		static std::unique_ptr<IAudioLoader> createFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, Death::Containers::StringView path);
@@ -57,6 +55,7 @@ namespace nCine
 		virtual std::unique_ptr<IAudioReader> createReader() = 0;
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		/// A flag indicating if the loading process has been successful
 		bool hasLoaded_;
 		/// Audio file handle
@@ -73,6 +72,7 @@ namespace nCine
 		std::int32_t numSamples_;
 		/// Duration in seconds
 		float duration_;
+#endif
 
 		explicit IAudioLoader(std::unique_ptr<Death::IO::Stream> fileHandle);
 

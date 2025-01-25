@@ -20,11 +20,11 @@ namespace nCine
 		}
 
 		/// Returns texture width
-		inline int width() const {
+		inline std::int32_t width() const {
 			return width_;
 		}
 		/// Returns texture height
-		inline int height() const {
+		inline std::int32_t height() const {
 			return height_;
 		}
 		/// Returns texture size as a `Vector2<int>` class
@@ -32,15 +32,15 @@ namespace nCine
 			return Vector2i(width_, height_);
 		}
 		/// Returns the number of MIP maps stored in the texture file
-		inline int mipMapCount() const {
+		inline std::int32_t mipMapCount() const {
 			return mipMapCount_;
 		}
 		/// Returns texture data size in bytes
-		inline unsigned long dataSize() const {
+		inline std::uint32_t dataSize() const {
 			return dataSize_;
 		}
 		/// Returns the texture data size in bytes for the specified MIP map level
-		long dataSize(unsigned int mipMapLevel) const;
+		std::int32_t dataSize(std::uint32_t mipMapLevel) const;
 		/// Returns the texture format object
 		inline const TextureFormat& texFormat() const {
 			return texFormat_;
@@ -50,7 +50,7 @@ namespace nCine
 			return pixels_.get();
 		}
 		/// Returns the pointer to pixel data for the specified MIP map level
-		const GLubyte* pixels(unsigned int mipMapLevel) const;
+		const GLubyte* pixels(std::uint32_t mipMapLevel) const;
 
 		/// Returns the proper texture loader according to the memory buffer name extension
 		//static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
@@ -58,20 +58,22 @@ namespace nCine
 		static std::unique_ptr<ITextureLoader> createFromFile(const Death::Containers::StringView filename);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		/// A flag indicating if the loading process has been successful
 		bool hasLoaded_;
 		/// Texture file handle
 		std::unique_ptr<Death::IO::Stream> fileHandle_;
 
-		int width_;
-		int height_;
-		int headerSize_;
-		unsigned long dataSize_;
-		int mipMapCount_;
-		std::unique_ptr<unsigned long[]> mipDataOffsets_;
-		std::unique_ptr<unsigned long[]> mipDataSizes_;
+		std::int32_t width_;
+		std::int32_t height_;
+		std::int32_t headerSize_;
+		std::uint32_t dataSize_;
+		std::int32_t mipMapCount_;
+		std::unique_ptr<std::uint32_t[]> mipDataOffsets_;
+		std::unique_ptr<std::uint32_t[]> mipDataSizes_;
 		TextureFormat texFormat_;
 		std::unique_ptr<GLubyte[]> pixels_;
+#endif
 
 		/// An empty constructor only used by `TextureLoaderRaw`
 		ITextureLoader();

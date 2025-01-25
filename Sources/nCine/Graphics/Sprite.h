@@ -23,9 +23,8 @@ namespace nCine
 		/// Constructor for a sprite with a texture and a specified position as a vector but no parent
 		Sprite(Texture* texture, Vector2f position);
 
-		/// Default move constructor
+		Sprite& operator=(const Sprite&) = delete;
 		Sprite(Sprite&&) = default;
-		/// Default move assignment operator
 		Sprite& operator=(Sprite&&) = default;
 
 		/// Returns a copy of this object
@@ -44,9 +43,6 @@ namespace nCine
 		void textureHasChanged(Texture* newTexture) override;
 
 	private:
-		/// Deleted assignment operator
-		Sprite& operator=(const Sprite&) = delete;
-
 		/// Initializer method for constructors and the copy constructor
 		void init();
 	};

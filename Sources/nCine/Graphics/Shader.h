@@ -11,6 +11,9 @@ namespace nCine
 	/// Shader
 	class Shader : public Object
 	{
+		friend class ShaderState;
+		friend class Material;
+
 	public:
 		enum class LoadMode {
 			String,
@@ -125,8 +128,5 @@ namespace nCine
 
 		bool loadDefaultShader(DefaultVertex vertex, int batchSize);
 		bool loadDefaultShader(DefaultFragment fragment);
-
-		friend class ShaderState;
-		friend class Material;
 	};
 }

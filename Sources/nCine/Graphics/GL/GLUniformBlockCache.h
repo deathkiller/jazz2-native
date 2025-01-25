@@ -30,7 +30,7 @@ namespace nCine
 		/// Wrapper around `GLUniformBlock::size()`
 		GLint size() const;
 		/// Wrapper around `GLUniformBlock::alignAmount()`
-		unsigned char alignAmount() const;
+		std::uint8_t alignAmount() const;
 
 		inline GLubyte* dataPointer() {
 			return dataPointer_;
@@ -45,7 +45,7 @@ namespace nCine
 		}
 		void setUsedSize(GLint usedSize);
 
-		bool copyData(unsigned int destIndex, const GLubyte* src, unsigned int numBytes);
+		bool copyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes);
 		inline bool copyData(const GLubyte* src) {
 			return copyData(0, src, usedSize_);
 		}
@@ -60,7 +60,7 @@ namespace nCine
 		/// Keeps tracks of how much of the cache needs to be uploaded to the UBO
 		GLint usedSize_;
 
-		static const int UniformHashSize = 8;
+		static const std::uint32_t UniformHashSize = 8;
 		StaticHashMap<String, GLUniformCache, UniformHashSize> uniformCaches_;
 	};
 

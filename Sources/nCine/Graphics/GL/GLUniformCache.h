@@ -5,6 +5,8 @@
 #include "../../CommonHeaders.h"
 #endif
 
+#include "../../../Main.h"
+
 namespace nCine
 {
 	class GLUniform;
@@ -27,9 +29,9 @@ namespace nCine
 		}
 
 		const GLfloat* floatVector() const;
-		GLfloat floatValue(unsigned int index) const;
+		GLfloat floatValue(std::uint32_t index) const;
 		const GLint* intVector() const;
-		GLint intValue(unsigned int index) const;
+		GLint intValue(std::uint32_t index) const;
 
 		bool setFloatVector(const GLfloat* vec);
 		bool setFloatValue(GLfloat v0);
@@ -58,7 +60,7 @@ namespace nCine
 
 		bool checkFloat() const;
 		bool checkInt() const;
-		bool checkComponents(unsigned int requiredComponents) const;
+		bool checkComponents(std::uint32_t requiredComponents) const;
 	};
 
 }

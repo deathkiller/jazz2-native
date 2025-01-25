@@ -28,6 +28,7 @@ namespace nCine
 		/// Constructor for an animated sprite with a texture and a specified position as a vector but no parent
 		AnimatedSprite(Texture* texture, Vector2f position);
 
+		AnimatedSprite& operator=(const AnimatedSprite&) = delete;
 		AnimatedSprite(AnimatedSprite&&) = default;
 		AnimatedSprite& operator=(AnimatedSprite&&) = default;
 
@@ -91,8 +92,6 @@ namespace nCine
 	private:
 		SmallVector<RectAnimation, 0> anims_;
 		std::uint32_t currentAnimIndex_;
-
-		AnimatedSprite& operator=(const AnimatedSprite&) = delete;
 	};
 
 }

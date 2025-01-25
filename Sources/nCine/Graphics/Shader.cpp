@@ -64,7 +64,7 @@ namespace nCine
 					lastOffset += length + 1;
 				}
 				for (auto define : defines) {
-					std::int32_t charsLeft = backingStore.size() - lastOffset;
+					std::int32_t charsLeft = std::int32_t(backingStore.size()) - lastOffset;
 					if (lastIndex >= arraySize(strings) - 3 && arraySize(DefineFormatString) + define.size() >= charsLeft) {
 						break;
 					}

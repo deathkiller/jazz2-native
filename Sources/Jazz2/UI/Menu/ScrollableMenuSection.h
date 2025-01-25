@@ -238,13 +238,13 @@ namespace Jazz2::UI::Menu
 			case TouchEventType::Down: {
 				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 				if (pointerIndex != -1) {
-					std::int32_t y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+					std::int32_t y = event.pointers[pointerIndex].y * float(viewSize.Y);
 					if (y < 80) {
 						OnBackPressed();
 						return;
 					}
 
-					_touchStart = Vector2f(event.pointers[pointerIndex].x * viewSize.X, y);
+					_touchStart = Vector2f(event.pointers[pointerIndex].x * viewSize.X, float(y));
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 				}
@@ -258,7 +258,7 @@ namespace Jazz2::UI::Menu
 						if (_scrollable) {
 							float delta = touchMove.Y - _touchLast.Y;
 							if (delta != 0.0f) {
-								_y += delta;
+								_y += std::int32_t(delta);
 								std::uint8_t newDirection = (delta < 0.0f ? -1 : 1);
 								if (_touchDirection != newDirection) {
 									_touchDirection = newDirection;

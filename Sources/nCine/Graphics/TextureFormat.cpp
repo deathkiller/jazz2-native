@@ -24,7 +24,7 @@ namespace nCine
 		type_ = type;
 	}
 
-	unsigned int TextureFormat::numChannels() const
+	std::uint32_t TextureFormat::numChannels() const
 	{
 		switch (format_) {
 			case GL_RED:
@@ -60,13 +60,13 @@ namespace nCine
 #endif
 	}
 
-	unsigned long TextureFormat::calculateMipSizes(GLenum internalFormat, int width, int height, int mipMapCount, unsigned long* mipDataOffsets, unsigned long* mipDataSizes)
+	std::uint32_t TextureFormat::calculateMipSizes(GLenum internalFormat, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes)
 	{
-		unsigned int blockWidth = 1; // Compression block width in pixels
-		unsigned int blockHeight = 1; // Compression block height in pixels
-		unsigned int bpp = 1; // Bits per pixel
-		unsigned int blockSize = 0; // Compression block size in byts
-		unsigned int minDataSize = 1; // Minimum data size in bytes
+		std::uint32_t blockWidth = 1; // Compression block width in pixels
+		std::uint32_t blockHeight = 1; // Compression block height in pixels
+		std::uint32_t bpp = 1; // Bits per pixel
+		std::uint32_t blockSize = 0; // Compression block size in byts
+		std::uint32_t minDataSize = 1; // Minimum data size in bytes
 
 		switch (internalFormat) {
 			case GL_RGBA8:
@@ -238,14 +238,14 @@ namespace nCine
 				break;
 		}
 
-		int levelWidth = width;
-		int levelHeight = height;
-		unsigned long dataSizesSum = 0;
+		std::int32_t levelWidth = width;
+		std::int32_t levelHeight = height;
+		std::uint32_t dataSizesSum = 0;
 
 		ASSERT(mipDataOffsets);
 		ASSERT(mipDataSizes);
 
-		for (int i = 0; i < mipMapCount; i++) {
+		for (std::int32_t i = 0; i < mipMapCount; i++) {
 			mipDataOffsets[i] = dataSizesSum;
 			mipDataSizes[i] = (blockSize > 0)
 				? (levelWidth / blockWidth) * (levelHeight / blockHeight) * blockSize

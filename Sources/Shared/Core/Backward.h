@@ -350,64 +350,7 @@ namespace Death { namespace Backward {
 #else
 		const char BackwardPathDelimiter[] = ":";
 #endif
-	} // namespace Implementation
 
-	namespace system_tag
-	{
-		struct linux_tag; // seems that I cannot call that "linux" because the name is already defined... so I am adding _tag everywhere.
-		struct darwin_tag;
-		struct windows_tag;
-
-#if defined(BACKWARD_TARGET_LINUX)
-		typedef linux_tag current_tag;
-#elif defined(BACKWARD_TARGET_APPLE)
-		typedef darwin_tag current_tag;
-#elif defined(BACKWARD_TARGET_WINDOWS)
-		typedef windows_tag current_tag;
-#else
-#	error "Unsupported platform"
-#endif
-	} // namespace system_tag
-
-	namespace trace_resolver_tag
-	{
-#if defined(BACKWARD_TARGET_LINUX)
-		struct libdw;
-		struct libbfd;
-		struct libdwarf;
-		struct backtrace_symbol;
-
-#	if defined(BACKWARD_HAS_DW)
-		typedef libdw current;
-#	elif defined(BACKWARD_HAS_BFD)
-		typedef libbfd current;
-#	elif defined(BACKWARD_HAS_DWARF)
-		typedef libdwarf current;
-#	elif defined(BACKWARD_HAS_BACKTRACE_SYMBOL)
-		typedef backtrace_symbol current;
-#	else
-#		error "You shall not pass, until you know what you want"
-#	endif
-#elif defined(BACKWARD_TARGET_APPLE)
-		struct backtrace_symbol;
-
-#	if defined(BACKWARD_HAS_BACKTRACE_SYMBOL)
-		typedef backtrace_symbol current;
-#	else
-#		error "You shall not pass, until you know what you want"
-#	endif
-#elif defined(BACKWARD_TARGET_WINDOWS)
-		struct pdb_symbol;
-#	if defined(BACKWARD_HAS_PDB_SYMBOL)
-		typedef pdb_symbol current;
-#	else
-#		error "You shall not pass, until you know what you want"
-#	endif
-#endif
-	} // namespace trace_resolver_tag
-
-	namespace Implementation
-	{
 		template<typename T>
 		struct rm_ptr {
 			typedef T type;
@@ -524,19 +467,9 @@ namespace Death { namespace Backward {
 			}
 		};
 
-		// Default demangler implementation (do nothing)
-		template<typename TAG>
-		struct DemanglerImpl {
-			static std::string Demangle(const char* funcname) {
-				return funcname;
-			}
-		};
-
 #if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_APPLE)
-
-		template<>
-		struct DemanglerImpl<system_tag::current_tag> {
-			DemanglerImpl() : _demangleBufferLength(0) {}
+		struct Demangler {
+			Demangler() : _demangleBufferLength(0) {}
 
 			std::string Demangle(const char* funcName) {
 				using namespace Implementation;
@@ -552,10 +485,14 @@ namespace Death { namespace Backward {
 			Implementation::Handle<char*> _demangleBuffer;
 			std::size_t _demangleBufferLength;
 		};
-
-#endif // BACKWARD_TARGET_LINUX || BACKWARD_TARGET_APPLE
-
-		struct Demangler : public DemanglerImpl<system_tag::current_tag> {};
+#else
+		// Default demangler implementation (do nothing)
+		struct Demangler {
+			static std::string Demangle(const char* funcname) {
+				return funcname;
+			}
+		};
+#endif
 
 		// Split a string on the platform's PATH delimiter. Example: if delimiter is ":" then:
 		//   ""              --> []
@@ -583,8 +520,6 @@ namespace Death { namespace Backward {
 		}
 
 	} // namespace Implementation
-
-	/*************** A TRACE ***************/
 
 	struct Trace {
 		void* addr;
@@ -639,36 +574,11 @@ namespace Death { namespace Backward {
 		ResolvedTrace(const Trace& mini_trace) : Trace(mini_trace), object_base_address(nullptr) {}
 	};
 
-	/*************** STACK TRACE ***************/
-
-	template<typename TAG>
-	class StackTraceImpl {
+	class StackTraceBase {
 	public:
-		std::size_t size() const {
-			return 0;
+		StackTraceBase()
+			: _threadId(0), _skip(0), _context(nullptr), _errorAddr(nullptr) {
 		}
-		Trace operator[](std::size_t) const {
-			return Trace();
-		}
-		std::size_t LoadHere(std::size_t = 0) {
-			return 0;
-		}
-		std::size_t LoadFrom(void*, std::size_t = 0, void* = nullptr, void* = nullptr) {
-			return 0;
-		}
-		std::size_t GetThreadId() const {
-			return 0;
-		}
-		void SetSkipEntries(std::size_t) {}
-		void* const* begin() const {
-			return nullptr;
-		}
-	};
-
-	class StackTraceImplBase {
-	public:
-		StackTraceImplBase()
-			: _threadId(0), _skip(0), _context(nullptr), _errorAddr(nullptr) {}
 
 		std::size_t GetThreadId() const {
 			return _threadId;
@@ -678,7 +588,27 @@ namespace Death { namespace Backward {
 			_skip = n;
 		}
 
+		std::size_t size() const {
+			return (_stacktrace.size() >= GetSkipEntries())
+				? _stacktrace.size() - GetSkipEntries()
+				: 0;
+		}
+		Trace operator[](std::size_t idx) const {
+			if (idx >= size()) {
+				return Trace();
+			}
+			return Trace(_stacktrace[idx + GetSkipEntries()], idx);
+		}
+		void* const* begin() const {
+			if (size()) {
+				return &_stacktrace[GetSkipEntries()];
+			}
+			return nullptr;
+		}
+
 	protected:
+		std::vector<void*> _stacktrace;
+
 		std::size_t _threadId;
 		std::size_t _skip;
 		void* _context;
@@ -722,30 +652,6 @@ namespace Death { namespace Backward {
 		std::size_t GetSkipEntries() const {
 			return _skip;
 		}
-	};
-
-	class StackTraceImplHolder : public StackTraceImplBase {
-	public:
-		std::size_t size() const {
-			return (_stacktrace.size() >= GetSkipEntries())
-				? _stacktrace.size() - GetSkipEntries()
-				: 0;
-		}
-		Trace operator[](std::size_t idx) const {
-			if (idx >= size()) {
-				return Trace();
-			}
-			return Trace(_stacktrace[idx + GetSkipEntries()], idx);
-		}
-		void* const* begin() const {
-			if (size()) {
-				return &_stacktrace[GetSkipEntries()];
-			}
-			return nullptr;
-		}
-
-	protected:
-		std::vector<void*> _stacktrace;
 	};
 
 #if defined(BACKWARD_HAS_UNWIND)
@@ -810,8 +716,7 @@ namespace Death { namespace Backward {
 
 	} // namespace Implementation
 
-	template<>
-	class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
+	class StackTrace : public StackTraceBase {
 	public:
 		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
 			LoadThreadInfo();
@@ -842,8 +747,8 @@ namespace Death { namespace Backward {
 
 	private:
 		struct callback {
-			StackTraceImpl& self;
-			callback(StackTraceImpl& _self) : self(_self) {}
+			StackTrace& self;
+			callback(StackTrace& _self) : self(_self) {}
 
 			void operator()(std::size_t idx, void* addr) {
 				self._stacktrace[idx] = addr;
@@ -853,8 +758,7 @@ namespace Death { namespace Backward {
 
 #elif defined(BACKWARD_HAS_LIBUNWIND)
 
-	template<>
-	class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
+	class StackTrace : public StackTraceBase {
 	public:
 		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context_ = nullptr, void* errorAddr = nullptr) {
 			SetContext(context_);
@@ -1009,8 +913,7 @@ namespace Death { namespace Backward {
 
 #elif defined(BACKWARD_HAS_BACKTRACE)
 
-	template<>
-	class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
+	class StackTrace : public StackTraceBase {
 	public:
 		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
 			SetContext(context);
@@ -1049,8 +952,7 @@ namespace Death { namespace Backward {
 		EXCEPTION_RECORD ExceptionRecord;
 	};
 
-	template<>
-	class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
+	class StackTrace : public StackTraceBase {
 	public:
 		// We have to load the machine type from the image info
 		// So we first initialize the resolver, and it tells us this info
@@ -1067,6 +969,14 @@ namespace Death { namespace Backward {
 		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
 			SetContext(&(static_cast<ExceptionContext*>(context)->Context));
 			SetErrorAddress(errorAddr);
+			
+			/*if (context == nullptr) {
+				_stacktrace.resize(depth);
+				const WORD capturedFrames = ::RtlCaptureStackBackTrace(0, DWORD(depth), _stacktrace.data(), NULL);
+				_stacktrace.resize(capturedFrames);
+				return capturedFrames;
+			}*/
+
 			CONTEXT localCtx; // Used when no context is provided
 
 			if (depth == 0) {
@@ -1188,13 +1098,9 @@ namespace Death { namespace Backward {
 
 #endif
 
-	class StackTrace : public StackTraceImpl<system_tag::current_tag> {};
-
-	/*************** TRACE RESOLVER ***************/
-
-	class TraceResolverImplBase {
+	class TraceResolverBase {
 	public:
-		virtual ~TraceResolverImplBase() {}
+		virtual ~TraceResolverBase() {}
 
 		virtual void LoadAddresses(void* const* addresses, std::int32_t addressCount) {
 			(void)addresses;
@@ -1218,11 +1124,9 @@ namespace Death { namespace Backward {
 		Implementation::Demangler _demangler;
 	};
 
-	template <typename TAG> class TraceResolverImpl;
-
 #if defined(BACKWARD_TARGET_LINUX)
 
-	class TraceResolverLinuxBase : public TraceResolverImplBase {
+	class TraceResolverLinuxBase : public TraceResolverBase {
 	public:
 		TraceResolverLinuxBase()
 			: _argv0(get_argv0()), _execPath(read_symlink("/proc/self/exe")) {}
@@ -1277,13 +1181,9 @@ namespace Death { namespace Backward {
 		}
 	};
 
-	template<typename STACKTRACE_TAG>
-	class TraceResolverLinuxImpl;
-
 #if defined(BACKWARD_HAS_BACKTRACE_SYMBOL)
 
-	template<>
-	class TraceResolverLinuxImpl<trace_resolver_tag::backtrace_symbol> : public TraceResolverLinuxBase {
+	class TraceResolver : public TraceResolverLinuxBase {
 	public:
 		void LoadAddresses(void* const* addresses, std::int32_t address_count) override {
 			if (address_count == 0) {
@@ -1322,11 +1222,9 @@ namespace Death { namespace Backward {
 
 #if defined(BACKWARD_HAS_BFD)
 
-	template <>
-	class TraceResolverLinuxImpl<trace_resolver_tag::libbfd>
-		: public TraceResolverLinuxBase {
+	class TraceResolver : public TraceResolverLinuxBase {
 	public:
-		TraceResolverLinuxImpl() : _bfd_loaded(false) {}
+		TraceResolver() : _bfd_loaded(false) {}
 
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
 			Dl_info symbol_info;
@@ -1566,7 +1464,7 @@ namespace Death { namespace Backward {
 		};
 
 		struct find_sym_context {
-			TraceResolverLinuxImpl* self;
+			TraceResolverLinuxBase* self;
 			bfd_fileobject* fobj;
 			void* addr;
 			void* base_addr;
@@ -1678,10 +1576,9 @@ namespace Death { namespace Backward {
 
 #if defined(BACKWARD_HAS_DW)
 
-	template<>
-	class TraceResolverLinuxImpl<trace_resolver_tag::libdw> : public TraceResolverLinuxBase {
+	class TraceResolver : public TraceResolverLinuxBase {
 	public:
-		TraceResolverLinuxImpl() : _dwfl_handle_initialized(false) {}
+		TraceResolver() : _dwfl_handle_initialized(false) {}
 
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
 			using namespace Implementation;
@@ -1982,10 +1879,9 @@ namespace Death { namespace Backward {
 
 #if defined(BACKWARD_HAS_DWARF)
 
-	template<>
-	class TraceResolverLinuxImpl<trace_resolver_tag::libdwarf> : public TraceResolverLinuxBase {
+	class TraceResolver : public TraceResolverLinuxBase {
 	public:
-		TraceResolverLinuxImpl() : _dwarf_loaded(false) {}
+		TraceResolver() : _dwarf_loaded(false) {}
 
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
 			// trace.addr is a virtual address in memory pointing to some code.
@@ -2122,7 +2018,6 @@ namespace Death { namespace Backward {
 			return trace;
 		}
 
-	public:
 		static std::int32_t close_dwarf(Dwarf_Debug dwarf) {
 			return dwarf_finish(dwarf, NULL);
 		}
@@ -3244,17 +3139,11 @@ namespace Death { namespace Backward {
 	};
 #endif // BACKWARD_HAS_DWARF
 
-	template<>
-	class TraceResolverImpl<system_tag::linux_tag> : public TraceResolverLinuxImpl<trace_resolver_tag::current> {};
-
 #endif // BACKWARD_TARGET_LINUX
 
 #if defined(BACKWARD_TARGET_APPLE)
 
-	template<typename STACKTRACE_TAG> class TraceResolverDarwinImpl;
-
-	template<>
-	class TraceResolverDarwinImpl<trace_resolver_tag::backtrace_symbol> : public TraceResolverImplBase {
+	class TraceResolver : public TraceResolverBase {
 	public:
 		void LoadAddresses(void* const* addresses, std::int32_t address_count) override {
 			if (address_count == 0) {
@@ -3324,17 +3213,12 @@ namespace Death { namespace Backward {
 		Implementation::Handle<char**> _symbols;
 	};
 
-	template<>
-	class TraceResolverImpl<system_tag::darwin_tag>
-		: public TraceResolverDarwinImpl<trace_resolver_tag::current> {};
-
 #endif // BACKWARD_TARGET_APPLE
 
 #if defined(BACKWARD_TARGET_WINDOWS)
 
 	// Load all symbol info
-	// Based on:
-	// https://stackoverflow.com/questions/6205981/windows-c-stack-trace-from-a-running-app/28276227#28276227
+	// Based on: https://stackoverflow.com/questions/6205981/windows-c-stack-trace-from-a-running-app/28276227#28276227
 
 	struct ModuleData {
 		std::string image_name;
@@ -3373,10 +3257,9 @@ namespace Death { namespace Backward {
 		}
 	};
 
-	template<>
-	class TraceResolverImpl<system_tag::windows_tag> : public TraceResolverImplBase {
+	class TraceResolver : public TraceResolverBase {
 	public:
-		TraceResolverImpl() {
+		TraceResolver() {
 			HANDLE process = ::GetCurrentProcess();
 
 			DWORD cbNeeded;
@@ -3398,7 +3281,7 @@ namespace Death { namespace Backward {
 			_imageType = h->FileHeader.Machine;
 		}
 
-		~TraceResolverImpl() {
+		~TraceResolver() {
 			::SymCleanup(::GetCurrentProcess());
 		}
 
@@ -3458,13 +3341,11 @@ namespace Death { namespace Backward {
 
 #endif
 
-	class TraceResolver : public TraceResolverImpl<system_tag::current_tag> {};
-
-	/*************** CODE SNIPPET ***************/
-
 	class SourceFile {
 	public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		typedef std::vector<std::pair<std::int32_t, std::string>> lines_t;
+#endif
 
 		SourceFile() {}
 		SourceFile(const std::string& path) {
@@ -3481,17 +3362,17 @@ namespace Death { namespace Backward {
 
 					for (std::size_t i = 0; i < prefixes.size(); i++) {
 						const std::string& prefix = prefixes[i];
-						std::string new_path = prefix;
+						std::string newPath = prefix;
 						if (prefix[prefix.size() - 1] != '/' && prefix[prefix.size() - 1] != '\\') {
 #if defined(BACKWARD_TARGET_WINDOWS)
-							new_path += '\\';
+							newPath += '\\';
 #else
-							new_path += '/';
+							newPath += '/';
 #endif
 						}
-						new_path.append(path, offset + 1);
+						newPath.append(path, offset + 1);
 
-						_file.reset(new std::ifstream(new_path.c_str()));
+						_file.reset(new std::ifstream(newPath.c_str()));
 						if (IsOpen()) {
 							return;
 						}
@@ -3524,6 +3405,10 @@ namespace Death { namespace Backward {
 			// If no valid file found then fallback to opening the path as-is.
 			_file.reset(new std::ifstream(path.c_str()));
 		}
+
+		SourceFile(const SourceFile&) = delete;
+		SourceFile& operator=(const SourceFile&) = delete;
+
 		bool IsOpen() const {
 			return _file->is_open();
 		}
@@ -3583,21 +3468,6 @@ namespace Death { namespace Backward {
 			return GetLines(lineStart, lineCount, lines);
 		}
 
-		// there is no find_if_not in C++98, lets do something crappy to
-		// workaround.
-		struct not_isspace {
-			bool operator()(char c) {
-				return !std::isspace(c);
-			}
-		};
-		// and define this one here because C++98 is not happy with local defined
-		// struct passed to template functions, fuuuu.
-		struct not_isempty {
-			bool operator()(const lines_t::value_type& p) {
-				return !(std::find_if(p.second.begin(), p.second.end(), not_isspace()) == p.second.end());
-			}
-		};
-
 		void swap(SourceFile& b) {
 			_file.swap(b._file);
 		}
@@ -3612,12 +3482,25 @@ namespace Death { namespace Backward {
 
 		// Allow adding to paths gotten from BACKWARD_CXX_SOURCE_PREFIXES after loading the
 		// library; this can be useful when the library is loaded when the locations are unknown
-		// Warning: Because this edits the static paths variable, it is *not* intrinsiclly thread safe
-		static void AddPathsToEnvCariableImpl(const std::string& toAdd) {
+		// Warning: Because this edits the static paths variable, it is *not* thread-safe
+		static void AddPathToEnvVariable(const std::string& toAdd) {
 			GetMutablePathsFromEnvVariable().push_back(toAdd);
 		}
 
 	private:
+		// There is no find_if_not in C++98, lets do something crappy to workaround
+		struct not_isspace {
+			bool operator()(char c) {
+				return !std::isspace(c);
+			}
+		};
+		// And define this one here because C++98 is not happy with local defined struct passed to template functions
+		struct not_isempty {
+			bool operator()(const lines_t::value_type& p) {
+				return !(std::find_if(p.second.begin(), p.second.end(), not_isspace()) == p.second.end());
+			}
+		};
+
 		Implementation::Handle<std::ifstream*, Implementation::DefaultDelete<std::ifstream*>> _file;
 
 		static std::vector<std::string> GetPathsFromEnvVariableImpl() {
@@ -3647,14 +3530,13 @@ namespace Death { namespace Backward {
 		static const std::vector<std::string>& GetPathsFromEnvVariable() {
 			return GetMutablePathsFromEnvVariable();
 		}
-
-		SourceFile(const SourceFile&) = delete;
-		SourceFile& operator=(const SourceFile&) = delete;
 	};
 
 	class SnippetFactory {
 	public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		typedef SourceFile::lines_t lines_t;
+#endif
 
 		lines_t GetSnippet(const std::string& filename, std::int32_t lineStart, std::int32_t contextSize) {
 			SourceFile& srcFile = GetSourceFile(filename);
@@ -3701,147 +3583,160 @@ namespace Death { namespace Backward {
 		}
 	};
 
+	/** @brief Feature flags for @ref ExceptionHandling */
 	enum class Flags {
 		None = 0,
+		/** @brief Write exception info to stdout */
 		UseStdError = 0x01,
+		/** @brief Colorize using virtual terminal sequences */
 		ColorizeOutput = 0x02,
+		/** @brief Include code snippets */
 		IncludeSnippet = 0x04,
+		/** @brief Create memory dump */
 		CreateMemoryDump = 0x08
 	};
 
 	DEATH_ENUM_FLAGS(Flags);
 
-	/*************** PRINTER ***************/
-
-	class cfile_streambuf : public std::streambuf {
-	public:
-		cfile_streambuf(IO::Stream* sink) : _sink(sink) {}
-		int_type underflow() override {
-			return traits_type::eof();
-		}
-		int_type overflow(int_type ch) override {
-			if (traits_type::not_eof(ch) && _sink->Write(&ch, sizeof(ch) > 0)) {
-				return ch;
+	namespace Implementation
+	{
+		class StreambufWrapper : public std::streambuf {
+		public:
+			StreambufWrapper(IO::Stream* sink) : _sink(sink) {
 			}
-			return traits_type::eof();
-		}
 
-		std::streamsize xsputn(const char_type* s, std::streamsize count) override {
-			return static_cast<std::streamsize>(_sink->Write(s, sizeof(*s) * static_cast<std::int64_t>(count)));
-		}
+			StreambufWrapper(const StreambufWrapper&) = delete;
+			StreambufWrapper& operator=(const StreambufWrapper&) = delete;
 
-	private:
-		cfile_streambuf(const cfile_streambuf&) = delete;
-		cfile_streambuf& operator=(const cfile_streambuf&) = delete;
+			int_type underflow() override {
+				return traits_type::eof();
+			}
+			int_type overflow(int_type ch) override {
+				if (traits_type::not_eof(ch) && _sink->Write(&ch, sizeof(ch) > 0)) {
+					return ch;
+				}
+				return traits_type::eof();
+			}
 
-		IO::Stream* _sink;
-	};
+			std::streamsize xsputn(const char_type* s, std::streamsize count) override {
+				return static_cast<std::streamsize>(_sink->Write(s, sizeof(*s) * static_cast<std::int64_t>(count)));
+			}
+
+		private:
+			IO::Stream* _sink;
+		};
 
 #	if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_WINDOWS)
 
-	enum class Color {
-		BrightGreen = 92, Yellow = 33, BrightYellow = 93, Green = 32, Purple = 35, Reset = 0, Bold = 1, Dark = 2
-	};
+		enum class Color {
+			BrightGreen = 92, Yellow = 33, BrightYellow = 93, Green = 32, Purple = 35, Reset = 0, Bold = 1, Dark = 2
+		};
 
-	class Colorize {
-	public:
-		Colorize(std::ostream& os) : _os(os), _enabled(false), _reset(false) {}
-
-		void SetEnabled(bool enable) {
-			_enabled = enable;
-		}
-
-		void SetColor(Color code) {
-			if (!_enabled) {
-				return;
+		class Colorize {
+		public:
+			Colorize(std::ostream& os) : _os(os), _enabled(false), _reset(false) {
 			}
 
-			// Assume that the terminal can handle basic colors
-			_os << "\033[" << static_cast<std::int32_t>(code) << "m";
-			_reset = (code != Color::Reset);
-		}
-
-		~Colorize() {
-			if (_reset) {
-				SetColor(Color::Reset);
+			void SetEnabled(bool enable) {
+				_enabled = enable;
 			}
-		}
 
-	private:
-		std::ostream& _os;
-		bool _enabled;
-		bool _reset;
-	};
-
-#	else // ndef BACKWARD_TARGET_LINUX || BACKWARD_TARGET_WINDOWS
-
-	enum class Color {
-		BrightGreen = 0, Yellow = 0, BrightYellow = 0, Green = 0, Purple = 0, Reset = 0, Bold = 0, Dark = 0
-	};
-
-	class Colorize {
-	public:
-		Colorize(std::ostream&) {}
-		void SetEnabled(bool) {}
-		void SetColor(Color) {}
-	};
-
-#	endif // BACKWARD_TARGET_LINUX || BACKWARD_TARGET_WINDOWS
-
-	using PathComponents = std::vector<std::string>;
-
-	class PathTrie {
-	public:
-		explicit PathTrie(std::string _root) : _root(std::move(_root)) {};
-
-		void Insert(const PathComponents& path) {
-			Insert(path, (std::int32_t)path.size() - 2);
-		}
-
-		PathComponents Disambiguate(const PathComponents& path) const {
-			using namespace std::string_view_literals;
-
-			PathComponents result;
-			const PathTrie* current = this;
-			result.push_back(current->_root);
-			std::int32_t count = (std::int32_t)(path.size() - 2);
-			for (std::int32_t i = count; i >= 1; i--) {
-				if (current->_downstreamBranches == 1 && i < count - 2) {	// Include at least 2 subdirectories
-					break;
-				}
-				const std::string& component = path[i];
-				if (component == "Sources"sv) {	// "Sources" directory is usually root for all source files
-					result.emplace_back("…"sv);
-					break;
+			void SetColor(Color code) {
+				if (!_enabled) {
+					return;
 				}
 
-				current = current->_edges.at(component).get();
+				// Assume that the terminal can handle basic colors
+				_os << "\033[" << static_cast<std::int32_t>(code) << "m";
+				_reset = (code != Color::Reset);
+			}
+
+			~Colorize() {
+				if (_reset) {
+					SetColor(Color::Reset);
+				}
+			}
+
+		private:
+			std::ostream& _os;
+			bool _enabled;
+			bool _reset;
+		};
+
+#	else
+
+		enum class Color {
+			BrightGreen = 0, Yellow = 0, BrightYellow = 0, Green = 0, Purple = 0, Reset = 0, Bold = 0, Dark = 0
+		};
+
+		class Colorize {
+		public:
+			Colorize(std::ostream&) {
+			}
+			void SetEnabled(bool) {
+			}
+			void SetColor(Color) {
+			}
+		};
+
+#	endif
+
+		using PathComponents = std::vector<std::string>;
+
+		class PathTrie {
+		public:
+			explicit PathTrie(std::string _root) : _root(std::move(_root)) {
+			};
+
+			void Insert(const PathComponents& path) {
+				Insert(path, (std::int32_t)path.size() - 2);
+			}
+
+			PathComponents Disambiguate(const PathComponents& path) const {
+				using namespace std::string_view_literals;
+
+				PathComponents result;
+				const PathTrie* current = this;
 				result.push_back(current->_root);
-			}
-			std::reverse(result.begin(), result.end());
-			return result;
-		}
+				std::int32_t count = (std::int32_t)(path.size() - 2);
+				for (std::int32_t i = count; i >= 1; i--) {
+					if (current->_downstreamBranches == 1 && i < count - 2) {	// Include at least 2 subdirectories
+						break;
+					}
+					const std::string& component = path[i];
+					if (component == "Sources"sv) {	// "Sources" directory is usually root for all source files
+						result.emplace_back("…"sv);
+						break;
+					}
 
-	private:
-		size_t _downstreamBranches = 1;
-		std::string _root;
-		std::unordered_map<std::string, std::unique_ptr<PathTrie>> _edges;
-
-		void Insert(const PathComponents& path, std::int32_t i) {
-			if (i < 0) {
-				return;
-			}
-			if (!_edges.count(path[i])) {
-				if (!_edges.empty()) {
-					_downstreamBranches++; // This is to deal with making leaves have count 1
+					current = current->_edges.at(component).get();
+					result.push_back(current->_root);
 				}
-				_edges.insert({ path[i], std::make_unique<PathTrie>(path[i]) });
+				std::reverse(result.begin(), result.end());
+				return result;
 			}
-			_downstreamBranches -= _edges.at(path[i])->_downstreamBranches;
-			_edges.at(path[i])->Insert(path, i - 1);
-			_downstreamBranches += _edges.at(path[i])->_downstreamBranches;
-		}
-	};
+
+		private:
+			size_t _downstreamBranches = 1;
+			std::string _root;
+			std::unordered_map<std::string, std::unique_ptr<PathTrie>> _edges;
+
+			void Insert(const PathComponents& path, std::int32_t i) {
+				if (i < 0) {
+					return;
+				}
+				if (!_edges.count(path[i])) {
+					if (!_edges.empty()) {
+						_downstreamBranches++; // This is to deal with making leaves have count 1
+					}
+					_edges.insert({ path[i], std::make_unique<PathTrie>(path[i]) });
+				}
+				_downstreamBranches -= _edges.at(path[i])->_downstreamBranches;
+				_edges.at(path[i])->Insert(path, i - 1);
+				_downstreamBranches += _edges.at(path[i])->_downstreamBranches;
+			}
+		};
+	}
 
 	class Printer {
 	public:
@@ -3856,16 +3751,16 @@ namespace Death { namespace Backward {
 
 		template<typename ST>
 		void Print(ST& st, IO::Stream* s, std::int32_t signal = 0) {
-			cfile_streambuf obuf(s);
+			Implementation::StreambufWrapper obuf(s);
 			std::ostream os(&obuf);
-			Colorize colorize(os);
+			Implementation::Colorize colorize(os);
 			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
 			PrintStacktrace(st, os, signal, colorize);
 		}
 
 		template<typename ST>
 		void Print(ST& st, std::ostream& os, std::int32_t signal = 0) {
-			Colorize colorize(os);
+			Implementation::Colorize colorize(os);
 			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
 			PrintStacktrace(st, os, signal, colorize);
 		}
@@ -3905,10 +3800,10 @@ namespace Death { namespace Backward {
 			return str;
 		}
 
-		static PathComponents ParsePath(std::string_view path) {
+		static Implementation::PathComponents ParsePath(std::string_view path) {
 			using namespace std::string_view_literals;
 			
-			PathComponents parts;
+			Implementation::PathComponents parts;
 			for (auto part : Split(path, "/\\"sv)) {
 				if (parts.empty()) {
 					parts.emplace_back(part);
@@ -3932,27 +3827,27 @@ namespace Death { namespace Backward {
 			return parts;
 		}
 
-		static void AddPath(const std::string& path, std::unordered_map<std::string, PathComponents>& parsedPaths, std::unordered_map<std::string, PathTrie>& tries) {
+		static void AddPath(const std::string& path, std::unordered_map<std::string, Implementation::PathComponents>& parsedPaths, std::unordered_map<std::string, Implementation::PathTrie>& tries) {
 			if (!path.empty() && !parsedPaths.count(path)) {
 				auto parsedPath = ParsePath(path);
 				auto& fileName = parsedPath.back();
 				parsedPaths.insert({ path, parsedPath });
 				if (tries.count(fileName) == 0) {
-					tries.insert({ fileName, PathTrie(fileName) });
+					tries.insert({ fileName, Implementation::PathTrie(fileName) });
 				}
 				tries.at(fileName).Insert(parsedPath);
 			}
 		}
 
 		template<typename ST>
-		void PrintStacktrace(ST& st, std::ostream& os, std::int32_t signal, Colorize& colorize) {
+		void PrintStacktrace(ST& st, std::ostream& os, std::int32_t signal, Implementation::Colorize& colorize) {
 			using namespace std::string_view_literals;
 
 			PrintHeader(os, st.GetThreadId(), signal, colorize);
 			_resolver.LoadStacktrace(st);
 
-			std::unordered_map<std::string, PathComponents> parsedPaths;
-			std::unordered_map<std::string, PathTrie> tries;
+			std::unordered_map<std::string, Implementation::PathComponents> parsedPaths;
+			std::unordered_map<std::string, Implementation::PathTrie> tries;
 
 			bool failed = false;
 			std::vector<ResolvedTrace> resolvedTrace(st.size());
@@ -3987,31 +3882,31 @@ namespace Death { namespace Backward {
 
 #	if defined(BACKWARD_TARGET_WINDOWS)
 			if (failed) {
-				colorize.SetColor(Color::BrightYellow);
+				colorize.SetColor(Implementation::Color::BrightYellow);
 				os << "Make sure corresponding .pdb files are accessible to show full stack trace. ";
 			}
-			colorize.SetColor(Color::Yellow);
+			colorize.SetColor(Implementation::Color::Yellow);
 			os << "Memory dump file has been saved to ";
-			colorize.SetColor(Color::BrightGreen);
+			colorize.SetColor(Implementation::Color::BrightGreen);
 			os << "\"CrashDumps\"";
-			colorize.SetColor(Color::Yellow);
+			colorize.SetColor(Implementation::Color::Yellow);
 			os << " directory.\n";
-			colorize.SetColor(Color::Reset);
+			colorize.SetColor(Implementation::Color::Reset);
 #	endif
 		}
 
 		//template<typename IT>
-		//void PrintStacktrace(IT begin, IT end, std::ostream& os, std::size_t thread_id, std::int32_t signal, Colorize& colorize) {
+		//void PrintStacktrace(IT begin, IT end, std::ostream& os, std::size_t thread_id, std::int32_t signal, Implementation::Colorize& colorize) {
 		//	PrintHeader(os, thread_id, signal, colorize);
 		//	for (; begin != end; ++begin) {
 		//		PrintTrace(os, *begin, colorize);
 		//	}
 		//}
 
-		void PrintHeader(std::ostream& os, std::size_t threadId, std::int32_t signal, Colorize& colorize) {
-			colorize.SetColor(Color::Bold);
+		void PrintHeader(std::ostream& os, std::size_t threadId, std::int32_t signal, Implementation::Colorize& colorize) {
+			colorize.SetColor(Implementation::Color::Bold);
 			os << "The application exited unexpectedly";
-			colorize.SetColor(Color::Reset);
+			colorize.SetColor(Implementation::Color::Reset);
 			if (threadId != 0) {
 				os << " in thread " << threadId;
 			}
@@ -4027,7 +3922,7 @@ namespace Death { namespace Backward {
 			os << " with following stack trace:\n";
 		}
 
-		void PrintTrace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap) {
+		void PrintTrace(std::ostream& os, const ResolvedTrace& trace, Implementation::Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap) {
 			if ((std::uintptr_t)trace.addr == UINTPTR_MAX) {
 				// Skip usually the last frame on Linux
 				return;
@@ -4039,27 +3934,27 @@ namespace Death { namespace Backward {
 			if (!trace.source.filename.size() || Object) {
 				if (!trace.object_filename.empty()) {
 					os << "   Library ";
-					colorize.SetColor(Color::BrightGreen);
+					colorize.SetColor(Implementation::Color::BrightGreen);
 					os << "\"" << pathMap.at(trace.object_filename);
 					if (trace.object_base_address != nullptr) {
-						colorize.SetColor(Color::Green);
+						colorize.SetColor(Implementation::Color::Green);
 						os << "!0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
 							<< ((char*)trace.addr - (char*)trace.object_base_address) << std::dec << std::setfill(' ');
-						colorize.SetColor(Color::BrightGreen);
+						colorize.SetColor(Implementation::Color::BrightGreen);
 					}
 					os << "\"";
 				} else {
 					os << "   Source ";
-					colorize.SetColor(Color::BrightGreen);
+					colorize.SetColor(Implementation::Color::BrightGreen);
 					os << "\"<unknown>\"";
 				}
 
-				colorize.SetColor(Color::Reset);
+				colorize.SetColor(Implementation::Color::Reset);
 				if (!trace.object_function.empty()) {
 					os << ", in ";
-					colorize.SetColor(Color::Bold);
+					colorize.SetColor(Implementation::Color::Bold);
 					os << trace.object_function;
-					colorize.SetColor(Color::Reset);
+					colorize.SetColor(Implementation::Color::Reset);
 				}
 				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << (std::uint64_t)trace.addr << std::dec << std::setfill(' ') << "]\n";
 				alreadyIndented = false;
@@ -4072,7 +3967,7 @@ namespace Death { namespace Backward {
 				const ResolvedTrace::SourceLoc& inlinerLoc = trace.inliners[inlinerIdx - 1];
 				PrintSourceLocation(os, colorize, pathMap, " │ ", inlinerLoc);
 				if ((FeatureFlags & Flags::IncludeSnippet) == Flags::IncludeSnippet) {
-					PrintSnippet(os, "    │ ", inlinerLoc, colorize, Color::Purple, InlinerContextSize);
+					PrintSnippet(os, "    │ ", inlinerLoc, colorize, Implementation::Color::Purple, InlinerContextSize);
 				}
 				alreadyIndented = false;
 			}
@@ -4083,43 +3978,44 @@ namespace Death { namespace Backward {
 				}
 				PrintSourceLocation(os, colorize, pathMap, "   ", trace.source, trace.addr);
 				if ((FeatureFlags & Flags::IncludeSnippet) == Flags::IncludeSnippet) {
-					PrintSnippet(os, "      ", trace.source, colorize, Color::Yellow, TraceContextSize);
+					PrintSnippet(os, "      ", trace.source, colorize, Implementation::Color::Yellow, TraceContextSize);
 				}
 			}
 		}
 
 		void PrintSnippet(std::ostream& os, const char* indent, const ResolvedTrace::SourceLoc& sourceLoc,
-						   Colorize& colorize, Color color_code, std::int32_t contextSize) {
+						   Implementation::Colorize& colorize, Implementation::Color colorCode, std::int32_t contextSize) {
 			typedef SnippetFactory::lines_t lines_t;
 
 			lines_t lines = _snippets.GetSnippet(sourceLoc.filename, sourceLoc.line, contextSize);
 			for (lines_t::const_iterator it = lines.begin(); it != lines.end(); ++it) {
 				if (it->first == sourceLoc.line) {
-					colorize.SetColor(color_code);
+					colorize.SetColor(colorCode);
 					os << indent << ">";
 				} else {
-					colorize.SetColor(Color::Dark);
+					colorize.SetColor(Implementation::Color::Dark);
 					os << indent << " ";
 				}
 				os << std::setw(6) << it->first << ": " << it->second << "\n";
-				colorize.SetColor(Color::Reset);
+				colorize.SetColor(Implementation::Color::Reset);
 			}
 		}
 
-		void PrintSourceLocation(std::ostream& os, Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap, const char* indent, const ResolvedTrace::SourceLoc& sourceLoc, void* addr = nullptr) {
+		void PrintSourceLocation(std::ostream& os, Implementation::Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap,
+								  const char* indent, const ResolvedTrace::SourceLoc& sourceLoc, void* addr = nullptr) {
 			os << indent << "Source ";
-			colorize.SetColor(Color::BrightGreen);
+			colorize.SetColor(Implementation::Color::BrightGreen);
 			os << "\"" << pathMap.at(sourceLoc.filename);
-			colorize.SetColor(Color::Green);
+			colorize.SetColor(Implementation::Color::Green);
 			os << ":" << std::setw(0) << sourceLoc.line;
-			colorize.SetColor(Color::BrightGreen);
+			colorize.SetColor(Implementation::Color::BrightGreen);
 			os << "\"";
-			colorize.SetColor(Color::Reset);
+			colorize.SetColor(Implementation::Color::Reset);
 			if (!sourceLoc.function.empty()) {
 				os << ", in ";
-				colorize.SetColor(Color::Bold);
+				colorize.SetColor(Implementation::Color::Bold);
 				os << sourceLoc.function;
-				colorize.SetColor(Color::Reset);
+				colorize.SetColor(Implementation::Color::Reset);
 			}
 			if (Address && addr != nullptr) {
 				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << (std::uint64_t)addr << std::dec << std::setfill(' ') << "]";
@@ -4128,9 +4024,7 @@ namespace Death { namespace Backward {
 		}
 	};
 
-	/*************** SIGNALS HANDLING ***************/
-
-#if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_APPLE)
+#if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_APPLE) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 	class ExceptionHandling {
 	public:
@@ -4249,14 +4143,23 @@ namespace Death { namespace Backward {
 				st.LoadHere(32, reinterpret_cast<void*>(uctx), info->si_addr);
 			}
 
-			Printer printer;
-			printer.Address = true;
-
-			printer.FeatureFlags = FeatureFlags;
-			printer.Print(st, std::cerr, info->si_signo);
+			bool shouldWriteToStdErr = (FeatureFlags & Flags::UseStdError) == Flags::UseStdError;
 
 			IO::Stream* dest = Destination;
 			bool shouldWriteToDest = (dest != nullptr);
+
+			if (!shouldWriteToStdErr && !shouldWriteToDest) {
+				return;
+			}
+
+			Printer printer;
+			printer.Address = true;
+
+			if (shouldWriteToStdErr) {
+				printer.FeatureFlags = FeatureFlags;
+				printer.Print(st, std::cerr, info->si_signo);
+			}
+
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
 				printer.Print(st, dest, info->si_signo);
@@ -4290,7 +4193,7 @@ namespace Death { namespace Backward {
 		}
 	};
 
-#endif // BACKWARD_TARGET_LINUX || BACKWARD_TARGET_APPLE
+#endif // BACKWARD_TARGET_LINUX || BACKWARD_TARGET_APPLE || DOXYGEN_GENERATING_OUTPUT
 
 #if defined(BACKWARD_TARGET_WINDOWS)
 
@@ -4314,7 +4217,7 @@ namespace Death { namespace Backward {
 
 			EnableCrashingOnCrashes();
 
-			::SetUnhandledExceptionFilter(CrashHandler);
+			*GetPrevExceptionFilterPtr() = ::SetUnhandledExceptionFilter(CrashHandler);
 
 			::signal(SIGABRT, SignalHandler);
 //#if !defined(_Build_By_LTL)
@@ -4399,6 +4302,11 @@ namespace Death { namespace Backward {
 		static ExceptionContext* GetContext() {
 			static ExceptionContext data;
 			return &data;
+		}
+
+		static LPTOP_LEVEL_EXCEPTION_FILTER* GetPrevExceptionFilterPtr() {
+			static LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter;
+			return &prevExceptionFilter;
 		}
 
 		enum class crash_status {
@@ -4488,6 +4396,12 @@ namespace Death { namespace Backward {
 #	endif
 
 		DEATH_NEVER_INLINE static LONG WINAPI CrashHandler(EXCEPTION_POINTERS* info) {
+			// Pass-through MSVC exceptions
+			if (info->ExceptionRecord->ExceptionCode == 0xE06D7363 && 
+				(*GetPrevExceptionFilterPtr()) != nullptr) {
+				return (*GetPrevExceptionFilterPtr())(info);
+			}
+
 			// The exception info supplies a trace from exactly where the issue was, no need to skip records
 			DWORD code = info->ExceptionRecord->ExceptionCode;
 			bool isDebugException = (code == EXCEPTION_BREAKPOINT || code == EXCEPTION_SINGLE_STEP ||
@@ -4547,7 +4461,7 @@ namespace Death { namespace Backward {
 			// which is done in the constructor of TraceResolver.
 
 			HANDLE hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
-			bool shouldWriteToStdErr = (::GetFileType(hStdError) != FILE_TYPE_UNKNOWN);
+			bool shouldWriteToStdErr = ((FeatureFlags & Flags::UseStdError) == Flags::UseStdError && ::GetFileType(hStdError) != FILE_TYPE_UNKNOWN);
 
 			IO::Stream* dest = Destination;
 			bool shouldWriteToDest = (dest != nullptr);

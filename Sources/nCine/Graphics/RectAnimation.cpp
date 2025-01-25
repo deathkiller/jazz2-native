@@ -51,7 +51,7 @@ namespace nCine
 		}
 	}
 
-	void RectAnimation::setFrame(unsigned int frameNum)
+	void RectAnimation::setFrame(std::uint32_t frameNum)
 	{
 		ASSERT(frameNum < rects_.size());
 		currentFrame_ = frameNum;
@@ -63,7 +63,7 @@ namespace nCine
 		frameDurations_.push_back(frameDuration);
 	}
 
-	void RectAnimation::addRect(int x, int y, int w, int h, float frameDuration)
+	void RectAnimation::addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameDuration)
 	{
 		rects_.push_back(Recti(x, y, w, h));
 		frameDurations_.push_back(frameDuration);

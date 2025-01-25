@@ -16,6 +16,8 @@ namespace nCine
 		BaseSprite(BaseSprite&&) = default;
 		BaseSprite& operator=(BaseSprite&&) = default;
 
+		BaseSprite& operator=(const BaseSprite&) = delete;
+
 		/// Sets sprite size
 		void setSize(float width, float height);
 		/// Sets sprite size with a `Vector2f`
@@ -53,6 +55,7 @@ namespace nCine
 		void setFlippedY(bool flippedY);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		/// The sprite texture
 		Texture* texture_;
 		/// The texture source rectangle
@@ -64,6 +67,7 @@ namespace nCine
 		bool flippedY_;
 
 		GLUniformBlockCache* instanceBlock_;
+#endif
 
 		/// Protected constructor accessible only by derived sprite classes
 		BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy);
@@ -80,8 +84,6 @@ namespace nCine
 		virtual void textureHasChanged(Texture* newTexture) = 0;
 
 		void updateRenderCommand() override;
-
-		BaseSprite& operator=(const BaseSprite&) = delete;
 	};
 
 }

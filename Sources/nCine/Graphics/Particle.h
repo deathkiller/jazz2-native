@@ -11,6 +11,8 @@ namespace nCine
 	/// Renders a single particle
 	class Particle : public Sprite
 	{
+		friend class ParticleSystem;
+
 	public:
 		/// Current particle remaining life in seconds
 		float life_;
@@ -26,6 +28,7 @@ namespace nCine
 		/// Constructor for a particle with a parent and texture, positioned in the relative origin
 		Particle(SceneNode* parent, Texture* texture);
 
+		Particle& operator=(const Particle&) = delete;
 		Particle(Particle&&) = default;
 		Particle& operator=(Particle&&) = default;
 
@@ -51,10 +54,6 @@ namespace nCine
 		void OnUpdate(float timeMult) override;
 		/// Custom transform method to allow independent position from parent
 		void transform() override;
-
-		Particle& operator=(const Particle&) = delete;
-
-		friend class ParticleSystem;
 	};
 
 }
