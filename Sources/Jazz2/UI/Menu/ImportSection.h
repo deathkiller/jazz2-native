@@ -2,7 +2,7 @@
 
 #include <CommonBase.h>
 
-#if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
+#if (defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "MenuSection.h"
 #include "../../../nCine/Base/HashMap.h"
@@ -13,6 +13,7 @@ using namespace Death::IO;
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief Import Episodes menu section (Emscripten only) */
 	class ImportSection : public MenuSection
 	{
 	public:

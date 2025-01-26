@@ -22,6 +22,7 @@ namespace Jazz2::UI::Menu
 		EpisodeDataFlags Flags;
 	};
 
+	/** @brief Episode selection menu section */
 	class EpisodeSelectSection : public ScrollableMenuSection<EpisodeData>
 	{
 	public:

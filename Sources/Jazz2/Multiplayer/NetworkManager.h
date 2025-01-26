@@ -50,6 +50,7 @@ namespace Jazz2::Multiplayer
 		friend class ServerDiscovery;
 
 	public:
+		/** @brief Maximum connected peer count */
 		static constexpr std::size_t MaxPeerCount = 128;
 
 		NetworkManager();

@@ -211,6 +211,7 @@ namespace Death { namespace Cpu {
 
 	/**
 		@brief BMI2 tag type
+
 		Available only on @ref DEATH_TARGET_X86 "x86". See the @ref Cpu namespace
 		and the @ref Bmi2 tag for more information.
 	*/
@@ -535,6 +536,7 @@ namespace Death { namespace Cpu {
 
 	/**
 		@brief BMI2 tag
+
 		[BMI2](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#BMI2_(Bit_Manipulation_Instruction_Set_2))
 		instructions. Available only on @ref DEATH_TARGET_X86 "x86". This instruction
 		set is treated as an *extra*, i.e. is neither a superset of nor implied by any
@@ -1116,6 +1118,7 @@ namespace Death { namespace Cpu {
 
 	/** @relates Features
 		@brief Equality comparison of two tags
+
 		Same as @ref Features::operator==(). Needs to be present to avoid ambiguity in C++20.
 	*/
 	template<class T, class U, class = decltype(TypeTraits<T>::Index), class = decltype(TypeTraits<U>::Index)> constexpr bool operator==(T, U) {
@@ -1134,6 +1137,7 @@ namespace Death { namespace Cpu {
 
 	/** @relates Features
 		@brief Non-equality comparison of two tags
+
 		Same as @ref Features::operator!=(). Needs to be present to avoid ambiguity in
 		C++20.
 	*/
@@ -1169,6 +1173,7 @@ namespace Death { namespace Cpu {
 		return b | a;
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// Compared to the above, this produces a type that encodes the value instead of Features. Has to be in the same namespace
 	// as the tags, but since Tags<> is an implementation detail, this is hidden from plain sight as well.
 	//
@@ -1179,6 +1184,7 @@ namespace Death { namespace Cpu {
 	template<class T, unsigned int value> constexpr Implementation::Tags<TypeTraits<T>::Index | value> operator|(T, Implementation::Tags<value>) {
 		return Implementation::Tags<TypeTraits<T>::Index | value>{Implementation::Init};
 	}
+#endif
 
 	/** @relates Features
 		@brief Intersection of two feature sets
@@ -1189,6 +1195,7 @@ namespace Death { namespace Cpu {
 		return b & a;
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// Compared to the above, this produces a type that encodes the value instead of Features. Has to be in the same namespace
 	// as the tags, but since Tags<> is an implementation detail, this is hidden from plain sight as well.
 	//
@@ -1199,6 +1206,7 @@ namespace Death { namespace Cpu {
 	template<class T, unsigned int value> constexpr Implementation::Tags<TypeTraits<T>::Index& value> operator&(T, Implementation::Tags<value>) {
 		return Implementation::Tags<TypeTraits<T>::Index& value>{Implementation::Init};
 	}
+#endif
 
 	/** @relates Features
 		@brief XOR of two feature sets
@@ -1209,6 +1217,7 @@ namespace Death { namespace Cpu {
 		return b ^ a;
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// Compared to the above, this produces a type that encodes the value instead of Features. Has to be in the same namespace
 	// as the tags, but since Tags<> is an implementation detail, this is hidden from plain sight as well.
 	//
@@ -1219,16 +1228,21 @@ namespace Death { namespace Cpu {
 	template<class T, unsigned int value> constexpr Implementation::Tags<TypeTraits<T>::Index^ value> operator^(T, Implementation::Tags<value>) {
 		return Implementation::Tags<TypeTraits<T>::Index^ value>{Implementation::Init};
 	}
+#endif
 
 	/** @relates Features
 		@brief Feature set complement
 
 		Same as @ref Features::operator~().
 	*/
-	// To avoid confusion, to the doc use it's shown that the operator produces a Features, but in fact it's a type with a compile-time-encoded value
+#ifdef DOXYGEN_GENERATING_OUTPUT
+	template<class T> constexpr Features operator~(T a);
+#else
+	// To avoid confusion, to the docs use it's shown that the operator produces a Features, but in fact it's a type with a compile-time-encoded value
 	template<class T> constexpr Implementation::Tags<~TypeTraits<T>::Index> operator~(T) {
 		return Implementation::Tags<~TypeTraits<T>::Index>{Implementation::Init};
 	}
+#endif
 
 	/**
 		@brief CPU instruction sets enabled at compile time

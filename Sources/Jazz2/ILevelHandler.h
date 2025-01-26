@@ -62,9 +62,9 @@ namespace Jazz2
 
 		/** @brief Return current difficulty */
 		virtual GameDifficulty Difficulty() const = 0;
-		/** @brief Return `true` if the level handler is on a local session */
+		/** @brief Returns `true` if the level handler is on a local session */
 		virtual bool IsLocalSession() const = 0;
-		/** @brief Return `true` if the level handler is pausable */
+		/** @brief Returns `true` if the level handler is pausable */
 		virtual bool IsPausable() const = 0;
 		/** @brief Returns `true` if Reforged Gameplay is enabled */
 		virtual bool IsReforged() const = 0;

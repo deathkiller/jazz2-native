@@ -9,19 +9,19 @@ namespace Jazz2::Multiplayer
 	/** @brief Client disconnect reason */
 	enum class Reason : std::uint32_t
 	{
-		Unknown,
-		Disconnected,
-		IncompatibleVersion,
-		ServerIsFull,
-		ServerNotReady,
-		ServerStopped,
-		ServerStoppedForMaintenance,
-		ServerStoppedForReconfiguration,
-		ServerStoppedForUpdate,
-		ConnectionLost,
-		ConnectionTimedOut,
-		Kicked,
-		Banned
+		Unknown,								/**< Unspecified */
+		Disconnected,							/**< Client disconnected by user */
+		IncompatibleVersion,					/**< Incompatible client version */
+		ServerIsFull,							/**< Server is full or busy */
+		ServerNotReady,							/**< Server is not ready yet */
+		ServerStopped,							/**< Server is stopped for unknown reason */
+		ServerStoppedForMaintenance,			/**< Server is stopped for maintenance */
+		ServerStoppedForReconfiguration,		/**< Server is stopped for reconfiguration */
+		ServerStoppedForUpdate,					/**< Server is stopped for update */
+		ConnectionLost,							/**< Connection lost */
+		ConnectionTimedOut,						/**< Connection timed out */
+		Kicked,									/**< Kicked by server */
+		Banned									/**< Banned by server */
 	};
 }
 

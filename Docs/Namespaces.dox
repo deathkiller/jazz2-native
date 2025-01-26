@@ -185,7 +185,17 @@ See also @ref third-party for the licenses of the libraries used.
 	exposed through the @ref Cpu::DefaultBase variable, which is an alias to one of
 	those tags, and it matches the architecture-specific @ref DEATH_TARGET_SSE2
 	etc. macros. Since it's a @cpp constexpr @ce variable, it's usable in a
-	compile-time context.
+	compile-time context:
+	
+	@code{.cpp}
+	if constexpr (Cpu::DefaultBase >= Cpu::Avx2) {
+		// AVX2 code
+	} else {
+		// Scalar code
+	}
+	@endcode
+	
+	<b></b>
 
 	@m_class{m-note m-info}
 
@@ -210,13 +220,23 @@ See also @ref third-party for the licenses of the libraries used.
 	numeric data. One is using AVX2 instructions, another is a slower variant using
 	just SSE 4.2 and as a fallback there's one with just regular scalar code. To
 	distinguish them, the functions have the same name, but use a different *tag
-	type*.
+	type*:
+	
+	@code{.cpp}
+	void transform(Cpu::ScalarT, Containers::ArrayView<float> data);
+	void transform(Cpu::Sse42T, Containers::ArrayView<float> data);
+	void transform(Cpu::Avx2T, Containers::ArrayView<float> data);
+	@endcode
 
 	Then you can either call a particular implementation directly --- for example
 	to test it --- or you can pass @ref Cpu::DefaultBase, and it'll pick the best
 	overload candidate for the set of CPU instruction features enabled at compile
 	time:
-
+	
+	@code{.cpp}
+	transform(Cpu::DefaultBase, data);
+	@endcode
+	
 	-   If the user code was compiled with AVX2 or higher enabled, the
 		@ref Cpu::Avx2 overload will be picked.
 	-   Otherwise, if just AVX, SSE 4.2 or anything else that includes SSE 4.2 was
@@ -251,7 +271,17 @@ See also @ref third-party for the licenses of the libraries used.
 	Runtime detection is exposed through @ref Cpu::runtimeFeatures(). It will
 	detect CPU features on platforms that support it, and fall back to
 	@ref Cpu::compiledFeatures() on platforms that don't. You can then match the
-	returned @ref Cpu::Features against particular tags to decide which variant to use.
+	returned @ref Cpu::Features against particular tags to decide which variant to use:
+	
+	@code{.cpp}
+	Cpu::Features features = Cpu::runtimeFeatures();
+	if(features & Cpu::Avx2)
+		transform(Cpu::Avx2, data);
+	else if(features & Cpu::Sse41)
+		transform(Cpu::Sse41, data);
+	else
+		transform(Cpu::Scalar, data);
+	@endcode
 
 	While such approach gives you the most control, manually managing the dispatch
 	branches is error prone and the argument passthrough may also add nontrivial
@@ -262,7 +292,17 @@ See also @ref third-party for the licenses of the libraries used.
 
 	Besides the base instruction set, which on x86 is @ref Sse2 through
 	@ref Avx512f, with each tag being a superset of the previous one, there are
-	* *extra* instruction sets such as @ref Popcnt or @ref AvxFma.
+	* *extra* instruction sets such as @ref Popcnt or @ref AvxFma. Basic
+	compile-time detection for these is still straightforward, only now using
+	@ref Default instead of @link DefaultBase @endlink:
+	
+	@code{.cpp}
+	if constexpr (Cpu::Default >= (Cpu::Avx2 | Cpu::AvxFma)) {
+		// AVX2+FMA code
+	} else {
+		// Scalar code
+	}
+	@endcode
 
 	The process of defining and dispatching to function variants that include extra
 	instruction sets gets moderately more complex, however. As shown on the diagram
@@ -285,11 +325,48 @@ See also @ref third-party for the licenses of the libraries used.
 	many extra instruction sets as needed, and then wrapped in a
 	@ref DEATH_CPU_DECLARE() macro. For example, a lookup algorithm may have a
 	@ref Sse41 implementation which however also relies on @ref Popcnt and
-	@ref Lzcnt, and a fallback @ref Sse2 implementation that uses neither.
+	@ref Lzcnt, and a fallback @ref Sse2 implementation that uses neither:
+	
+	@code{.cpp}
+	int lookup(DEATH_CPU_DECLARE(Cpu::Sse41 | Cpu::Popcnt), …);
+	int lookup(DEATH_CPU_DECLARE(Cpu::Sse41 | Cpu::Lzcnt), …);
+	@endcode
 
 	And a concrete overload gets picked at compile-time by passing a desired
 	combination of CPU tags as well --- or @ref Default for the set of features
-	enabled at compile time --- this time wrapped in a @ref DEATH_CPU_SELECT().
+	enabled at compile time --- this time wrapped in a @ref DEATH_CPU_SELECT():
+	
+	@code{.cpp}
+	int found = lookup(DEATH_CPU_SELECT(Cpu::Default), …);
+	@endcode
+	
+	<b></b>
+
+	@m_class{m-block m-success}
+
+	@par Resolving overload ambiguity
+		Because the best overload is picked based on the count of extra instruction
+		sets used, it may happen that two different variants get assigned the same
+		priority, causing an ambiguity. For example, the two variants below would
+		be abiguous for a CPU with @ref Sse41 and both @ref Popcnt and @ref Lzcnt
+		present:
+	@par
+		@code{.cpp}
+		int lookup(DEATH_CPU_DECLARE(Cpu::Sse41 | Cpu::Popcnt), …);
+		int lookup(DEATH_CPU_DECLARE(Cpu::Sse41 | Cpu::Lzcnt), …);
+		@endcode
+	@par
+		It's not desirable for this library to arbitrarily decide which instruction
+		set should be preferred --- only the implementation itself can know that.
+		Thus, to resolve such potential conflict, provide an overload with both
+		extra tags and delegate from there:
+	@par
+		@code{.cpp}
+		int lookup(DEATH_CPU_DECLARE(Cpu::Sse41 | Cpu::Popcnt | Cpu::Lzcnt), …) {
+			// Or the other variant, or a custom third implementation ...
+			return lookup(DEATH_CPU_SELECT(Cpu::Sse41 | Cpu::Lzcnt), …);
+		}
+		@endcode
 
 	@section Cpu-usage-target-attributes Enabling instruction sets for particular functions
 
@@ -332,7 +409,27 @@ See also @ref third-party for the licenses of the libraries used.
 	Definitions of the `lookup()` function variants from above would then look like
 	below with the target attributes added. The extra instruction sets get
 	explicitly enabled as well, in contrast a scalar variant would have no
-	target-specific annotations at all.
+	target-specific annotations at all:
+	
+	@code{.cpp}
+	int lookup(DEATH_CPU_DECLARE(Cpu::Scalar), …) {
+		…
+	}
+	#if defined(DEATH_ENABLE_SSE2)
+	DEATH_ENABLE_SSE2 int lookup(DEATH_CPU_DECLARE(Cpu::Sse2), …) {
+		…
+	}
+	#endif
+	#if defined(DEATH_ENABLE_SSE41) && \
+		defined(DEATH_ENABLE_POPCNT) && \
+		defined(DEATH_ENABLE_LZCNT)
+	DEATH_ENABLE(SSE41,POPCNT,LZCNT) int lookup(
+		DEATH_CPU_DECLARE(Cpu::Sse41|Cpu::Popcnt|Cpu::Lzcnt), …)
+	{
+		…
+	}
+	#endif
+	@endcode
 
 	@section Cpu-usage-automatic-runtime-dispatch Automatic runtime dispatch
 
@@ -345,13 +442,40 @@ See also @ref third-party for the licenses of the libraries used.
 	That's achievable by putting them into lambdas with a common signature, and
 	returning that lambda from a wrapper function that contains the CPU tag. After
 	that, a runtime dispatcher function that is created with the
-	@ref DEATH_CPU_DISPATCHER_BASE() macro.
+	@ref DEATH_CPU_DISPATCHER_BASE() macro. The @cpp transform() @ce variants
+	from above would then look like this instead:
+	
+	@code{.cpp}
+	using TransformT = void(*)(Containers::ArrayView<float>);
+
+	TransformT transformImplementation(Cpu::ScalarT) {
+		return [](Containers::ArrayView<float> data) { … };
+	}
+	TransformT transformImplementation(Cpu::Sse42T) {
+		return [](Containers::ArrayView<float> data) { … };
+	}
+	TransformT transformImplementation(Cpu::Avx2T) {
+		return [](Containers::ArrayView<float> data) { … };
+	}
+
+	DEATH_CPU_DISPATCHER_BASE(transformImplementation)
+	@endcode
 
 	The macro creates an overload of the same name, but taking @ref Features
 	instead, and internally dispatches to one of the overloads using the same rules
 	as in the compile-time dispatch. Which means you can now call it with e.g.
 	@ref runtimeFeatures(), get a function pointer back and then call it with the
-	actual arguments.
+	actual arguments:
+	
+	@code{.cpp}
+	// Dispatch once and cache the function pointer
+	TransformT transform = transformImplementation(Cpu::runtimeFeatures());
+
+	// Call many times
+	transform(data);
+	@endcode
+	
+	<b></b>
 
 	@m_class{m-block m-danger}
 
@@ -367,6 +491,17 @@ See also @ref third-party for the licenses of the libraries used.
 		of potentially more verbose @cpp return @ce statements. Alternatively you
 		can require version 8, 9.4 or 10 instead, but note that 9.3 is the default
 		compiler on Ubuntu 20.04.
+	@par
+		All things considered, the above AVX variant would look like this with
+		relevant macros added:
+	@par
+		@code{.cpp}
+		#ifdef DEATH_ENABLE_AVX2
+		DEATH_ENABLE_AVX2 TransformT transformImplementation(Cpu::Avx2T) {
+			return [](Containers::ArrayView<float> data) DEATH_ENABLE_AVX2 { … };
+		}
+		#endif
+		@endcode
 
 	@subsection Cpu-usage-automatic-runtime-dispatch-extra Automatic runtime dispach with extra instruction sets
 
@@ -374,11 +509,33 @@ See also @ref third-party for the licenses of the libraries used.
 	base instruction set like in the @cpp lookup() @ce case
 	@ref Cpu-usage-extra "shown above", you'll use the @ref DEATH_CPU_DISPATCHER()
 	macro instead. There, to avoid a combinatorial explosion of cases to check,
-	you're expected to list the actual extra tags the overloads use.
+	you're expected to list the actual extra tags the overloads use. Which is
+	usually just one or two out of the whole set:
+	
+	@code{.cpp}
+	using LookupT = int(*)(…);
+
+	LookupT lookupImplementation(DEATH_CPU_DECLARE(Cpu::Scalar)) {
+		…
+	}
+	LookupT lookupImplementation(DEATH_CPU_DECLARE(Cpu::Sse2)) {
+		…
+	}
+	LookupT lookupImplementation(DEATH_CPU_DECLARE(Cpu::Sse41 | Cpu::Popcnt | Cpu::Lzcnt)) {
+		…
+	}
+
+	DEATH_CPU_DISPATCHER(lookupImplementation, Cpu::Popcnt, Cpu::Lzcnt)
+	@endcode
 
 	If some extra instruction sets are always used together (like it is above with
 	@ref Popcnt and @ref Lzcnt), you can reduce the amount of tested combinations
-	by specifying them as a single ORed argument instead.
+	by specifying them as a single ORed argument instead:
+	
+	@code{.cpp}
+	DEATH_CPU_DISPATCHER(lookupImplementation, Cpu::Popcnt | Cpu::Lzcnt)
+	@endcode
+	
 	On the call side, there's no difference compared to using just the base
 	instruction sets. The created dispatcher function takes @ref Features as well.
 
@@ -397,7 +554,11 @@ See also @ref third-party for the licenses of the libraries used.
 	fastest variant of runtime dispatch, as it results in an equivalent of a
 	regular dynamic library function call. Assuming a dispatcher was created using
 	either @ref DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
-	it's implemented using the @ref DEATH_CPU_DISPATCHED_IFUNC() macro.
+	it's implemented using the @ref DEATH_CPU_DISPATCHED_IFUNC() macro:
+	
+	@code{.cpp}
+	DEATH_CPU_DISPATCHED_IFUNC(lookupImplementation, int lookup(…))
+	@endcode
 	</li>
 	<li>
 	On platforms where IFUNC isn't available, a function pointer can be used
@@ -405,7 +566,11 @@ See also @ref third-party for the licenses of the libraries used.
 	visible effect if the dispatched-to code is relatively tiny and is called from
 	within a tight loop. Assuming a dispatcher was created using
 	either @ref DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
-	it's implemented using the @ref DEATH_CPU_DISPATCHED_POINTER() macro.
+	it's implemented using the @ref DEATH_CPU_DISPATCHED_POINTER() macro:
+	
+	@code{.cpp}
+	DEATH_CPU_DISPATCHED_POINTER(lookupImplementation, int(*lookup)(…))
+	@endcode
 	</li>
 	<li>
 	For the least amount of overhead, the compile-time dispatch can be used, with
@@ -418,8 +583,13 @@ See also @ref third-party for the licenses of the libraries used.
 	and optimize code for a single target platform. In this case it calls directly
 	to the original variants, so no macro is needed and
 	@ref DEATH_CPU_DISPATCHER() / @ref DEATH_CPU_DISPATCHER_BASE() is not
-	needed either.
-
+	needed either:
+	
+	@code{.cpp}
+	int lookup(…) {
+		return lookupImplementation(DEATH_CPU_SELECT(Cpu::Default))(…);
+	}
+	@endcode
 	</li>
 	</ul>
 
@@ -427,6 +597,14 @@ See also @ref third-party for the licenses of the libraries used.
 	The macro signatures are deliberately similar to each other and to the direct
 	function declaration to make it possible to unify them under a single wrapper
 	macro in case a practical use case needs to handle more than one variant.
+	The mechanism can be selected automatically according to the build configuration
+	using the @ref DEATH_CPU_DISPATCHED macro:
+	
+	@code{.cpp}
+	DEATH_CPU_DISPATCHED(lookupImplementation, bool DEATH_CPU_DISPATCHED_DECLARATION(lookup)(…)({
+		return lookupImplementation(Cpu::DefaultBase)(…);
+	})
+	@endcode
 */
 
 /** @namespace Death::Environment

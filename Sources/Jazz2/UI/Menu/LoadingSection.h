@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief Loading menu section */
 	class LoadingSection : public MenuSection
 	{
 	public:

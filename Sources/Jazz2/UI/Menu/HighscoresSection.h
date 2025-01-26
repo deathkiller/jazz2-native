@@ -31,6 +31,7 @@ namespace Jazz2::UI::Menu
 		SmallVector<HighscoreItem, 0> Items;
 	};
 
+	/** @brief Highscores menu section */
 	class HighscoresSection : public ScrollableMenuSection<HighscoreItem*>
 	{
 	public:

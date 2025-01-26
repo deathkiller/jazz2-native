@@ -41,7 +41,9 @@ namespace Jazz2::Compatibility
 			std::uint8_t PaletteRemapping[256];
 		};
 
+		/** @brief Number of layers in the original game */
 		static constexpr std::int32_t JJ2LayerCount = 8;
+		/** @brief Number of level text entries in the original game */
 		static constexpr std::int32_t TextEventStringsCount = 16;
 
 		String LevelName;

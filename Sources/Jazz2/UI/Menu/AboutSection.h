@@ -5,6 +5,7 @@
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief About menu section */
 	class AboutSection : public MenuSection
 	{
 	public:

@@ -14,7 +14,11 @@ namespace Jazz2::Actors::Multiplayer
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Level handler of an online multiplayer game session */
+	/**
+		@brief Level handler of an online multiplayer game session
+
+		@experimental
+	*/
 	class MultiLevelHandler : public LevelHandler
 	{
 		DEATH_RUNTIME_OBJECT(LevelHandler);
@@ -95,7 +99,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Sets current game mode */
 		bool SetGameMode(MultiplayerGameMode value);
 
+		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
+		/** @brief Called when a packet is received, see @ref INetworkHandler */
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength);
 
 	protected:
@@ -103,13 +109,21 @@ namespace Jazz2::Multiplayer
 		void ProcessEvents(float timeMult) override;
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
+		/** @brief Called when a player entered a transition to change the level */
 		void HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType);
+		/** @brief Called when a player interacts with a spring */
 		bool HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY);
+		/** @brief Called when a player is going to warp */
 		void HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags);
+		/** @brief Called when a player takes a damage */
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
+		/** @brief Called when a player requests to synchronize weapon ammo */
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
+		/** @brief Called when a player requests to synchronize weapon upgrades */
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);
+		/** @brief Called when a player emits a weapon flare */
 		void HandlePlayerEmitWeaponFlare(Actors::Player* player);
+		/** @brief Called when a player changes their current weapon */
 		void HandlePlayerWeaponChanged(Actors::Player* player);
 
 	private:
