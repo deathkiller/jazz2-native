@@ -16,6 +16,7 @@ namespace Jazz2::UI::Menu
 		StringView DisplayName;
 	};
 
+	/** @brief Options menu section */
 	class OptionsSection : public ScrollableMenuSection<OptionsItem>
 	{
 	public:

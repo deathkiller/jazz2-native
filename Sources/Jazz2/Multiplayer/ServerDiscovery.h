@@ -31,8 +31,10 @@ namespace Jazz2::Multiplayer
 	/** @brief Server description */
 	struct ServerDesc
 	{
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief Server endpoint */
 		ENetAddress Endpoint;
+#endif
 		/** @brief Server endpoint in text format */
 		String EndpointString;
 		/** @brief Server unique identifier */
@@ -52,7 +54,11 @@ namespace Jazz2::Multiplayer
 		//bool IsLost;
 	};
 
-	/** @brief Interface to observe publicly-listed running servers */
+	/**
+		@brief Interface to observe publicly-listed running servers
+
+		@experimental
+	*/
 	class IServerObserver
 	{
 	public:
@@ -68,10 +74,14 @@ namespace Jazz2::Multiplayer
 	class ServerDiscovery
 	{
 	public:
+		/** @brief UDP port for server discovery broadcast */
 		static constexpr std::uint16_t DiscoveryPort = 7439;
+		/** @brief Length of server unique identifier */
 		static constexpr std::int32_t UniqueIdentifierLength = 16;
 
+		/** @brief Creates an instance to advertise a running server */
 		ServerDiscovery(INetworkHandler* server, std::uint16_t port);
+		/** @brief Creates an instance to observe servers */
 		ServerDiscovery(IServerObserver* observer);
 		~ServerDiscovery();
 

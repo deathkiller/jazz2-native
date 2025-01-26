@@ -15,6 +15,7 @@ namespace Jazz2::UI::Menu
 		String Description;
 	};
 
+	/** @brief First run menu section */
 	class FirstRunSection : public ScrollableMenuSection<FirstRunItem>
 	{
 	public:

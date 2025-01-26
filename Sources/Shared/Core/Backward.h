@@ -3586,7 +3586,7 @@ namespace Death { namespace Backward {
 	/** @brief Feature flags for @ref ExceptionHandling */
 	enum class Flags {
 		None = 0,
-		/** @brief Write exception info to stdout */
+		/** @brief Write exception info to `stdout` */
 		UseStdError = 0x01,
 		/** @brief Colorize using virtual terminal sequences */
 		ColorizeOutput = 0x02,
@@ -4028,27 +4028,6 @@ namespace Death { namespace Backward {
 
 	class ExceptionHandling {
 	public:
-		static std::vector<std::int32_t> MakeDefaultSignals() {
-			const std::int32_t posixSignals[] = {
-				// Signals for which the default action is "Core".
-				SIGABRT,	// Abort signal from abort(3)
-				SIGBUS,		// Bus error (bad memory access)
-				SIGFPE,		// Floating point exception
-				SIGILL,		// Illegal Instruction
-				SIGIOT,		// IOT trap. A synonym for SIGABRT
-				SIGQUIT,	// Quit from keyboard
-				SIGSEGV,	// Invalid memory reference
-				SIGSYS,		// Bad argument to routine (SVr4)
-				SIGTRAP,	// Trace/breakpoint trap
-				SIGXCPU,	// CPU time limit exceeded (4.2BSD)
-				SIGXFSZ,	// File size limit exceeded (4.2BSD)
-#	if defined(BACKWARD_TARGET_APPLE)
-				SIGEMT,		// Emulation instruction executed
-#	endif
-			};
-			return std::vector<std::int32_t>(posixSignals, posixSignals + sizeof(posixSignals) / sizeof(posixSignals[0]));
-		}
-
 		IO::Stream* Destination;
 		Flags FeatureFlags;
 
@@ -4176,6 +4155,27 @@ namespace Death { namespace Backward {
 		static ExceptionHandling*& GetSingleton() {
 			static ExceptionHandling* current = nullptr;
 			return current;
+		}
+
+		static std::vector<std::int32_t> MakeDefaultSignals() {
+			const std::int32_t posixSignals[] = {
+				// Signals for which the default action is "Core".
+				SIGABRT,	// Abort signal from abort(3)
+				SIGBUS,		// Bus error (bad memory access)
+				SIGFPE,		// Floating point exception
+				SIGILL,		// Illegal Instruction
+				SIGIOT,		// IOT trap. A synonym for SIGABRT
+				SIGQUIT,	// Quit from keyboard
+				SIGSEGV,	// Invalid memory reference
+				SIGSYS,		// Bad argument to routine (SVr4)
+				SIGTRAP,	// Trace/breakpoint trap
+				SIGXCPU,	// CPU time limit exceeded (4.2BSD)
+				SIGXFSZ,	// File size limit exceeded (4.2BSD)
+#	if defined(BACKWARD_TARGET_APPLE)
+				SIGEMT,		// Emulation instruction executed
+#	endif
+			};
+			return std::vector<std::int32_t>(posixSignals, posixSignals + sizeof(posixSignals) / sizeof(posixSignals[0]));
 		}
 
 #	if defined(__GNUC__)

@@ -17,6 +17,7 @@ namespace Jazz2::Compatibility
 	class JJ2Tileset
 	{
 	public:
+		/** @brief Size of a tile */
 		static constexpr std::int32_t BlockSize = 32;
 
 		JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }

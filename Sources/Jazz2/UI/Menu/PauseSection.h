@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief In-game menu root section */
 	class PauseSection : public MenuSection
 	{
 	public:

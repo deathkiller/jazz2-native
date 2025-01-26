@@ -25,6 +25,7 @@ namespace Jazz2::Compatibility
 	class AnimSetMapping
 	{
 	public:
+		/** Specifies that the entry should be discarded */
 		static constexpr char Discard[] = ":discard";
 
 		/** @brief Mapped entry */
@@ -41,7 +42,9 @@ namespace Jazz2::Compatibility
 		Entry* Get(std::uint32_t set, std::uint32_t item);
 		Entry* GetByOrdinal(std::uint32_t index);
 
+		/** @brief Returns mapping of animations for the specified version */
 		static AnimSetMapping GetAnimMapping(JJ2Version version);
+		/** @brief Returns mapping of sounds for the specified version */
 		static AnimSetMapping GetSampleMapping(JJ2Version version);
 
 	private:

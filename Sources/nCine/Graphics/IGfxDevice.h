@@ -196,6 +196,7 @@ namespace nCine
 	protected:
 		static constexpr float DefaultDPI = 96.0f;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		/// Window width in screen coordinates
 		std::int32_t width_;
 		/// Window height in screen coordinates
@@ -215,6 +216,7 @@ namespace nCine
 		std::uint32_t numMonitors_;
 		/// Used as a cache to avoid searching the current video mode in a monitor's array
 		mutable VideoMode currentVideoMode_;
+#endif
 
 		/// Inits the OpenGL viewport based on the drawable resolution
 		void initGLViewport();

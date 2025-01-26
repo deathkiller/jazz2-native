@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief Main menu root section */
 	class BeginSection : public MenuSection
 	{
 	public:
