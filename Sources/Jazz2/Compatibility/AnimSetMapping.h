@@ -25,7 +25,7 @@ namespace Jazz2::Compatibility
 	class AnimSetMapping
 	{
 	public:
-		/** Specifies that the entry should be discarded */
+		/** @brief Specifies that the entry should be discarded */
 		static constexpr char Discard[] = ":discard";
 
 		/** @brief Mapped entry */

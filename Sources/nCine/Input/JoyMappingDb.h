@@ -30,6 +30,8 @@ static const char* ControllerMappings[] = {
 #endif
 #if defined(SDL_JOYSTICK_LINUX)
 	"03000000c82d00000160000011010000,8BitDo SN30 Pro,a:b1,b:b0,back:b10,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b6,leftstick:b13,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b14,righttrigger:b9,rightx:a2,righty:a3,start:b11,x:b4,y:b3",
+	// Sony DualShock 4 V2 mapping on SDL2/Linux/Flatpak
+	"03008fe54c050000cc09000000006800,Sony DualShock 4,a:b0,b:b1,back:b4,dpdown:b12,dpleft:b13,dpright:b14,dpup:b11,guide:b5,leftshoulder:b9,leftstick:b7,lefttrigger:a4,leftx:a0,lefty:a1,rightshoulder:b10,rightstick:b8,righttrigger:a5,rightx:a2,righty:a3,start:b6,touchpad:b15,x:b2,y:b3",
 #endif
 #if defined(SDL_PLATFORM_MACOS)
 	"03008fe54c050000c405000000016800,8BitDo Pro 2 (USB/BT A),a:b0,b:b1,x:b2,y:b3,dpup:b11,dpdown:b12,dpleft:b13,dpright:b14,leftshoulder:b9,lefttrigger:a4,leftstick:b7,leftx:a0,lefty:a1,rightshoulder:b10,righttrigger:a5,rightstick:b8,rightx:a2,righty:a3,start:b6,back:b4,guide:b5,hint:!SDL_GAMECONTROLLER_USE_BUTTON_LABELS:=1,",
