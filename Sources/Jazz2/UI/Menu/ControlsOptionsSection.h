@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class ControlsOptionsItemType {
 		RemapControls,
 		TouchControls,
@@ -28,6 +29,7 @@ namespace Jazz2::UI::Menu
 		bool HasBooleanValue;
 		std::int32_t PlayerIndex;
 	};
+#endif
 
 	class ControlsOptionsSection : public ScrollableMenuSection<ControlsOptionsItem>
 	{

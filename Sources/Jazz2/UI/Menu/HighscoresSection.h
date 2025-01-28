@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class HighscoreFlags {
 		None = 0,
 
@@ -30,6 +31,7 @@ namespace Jazz2::UI::Menu
 	struct HighscoreSeries {
 		SmallVector<HighscoreItem, 0> Items;
 	};
+#endif
 
 	/** @brief Highscores menu section */
 	class HighscoresSection : public ScrollableMenuSection<HighscoreItem*>

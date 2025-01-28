@@ -7,9 +7,18 @@
 #include <cstdint>
 
 #ifdef DOXYGEN_GENERATING_OUTPUT
-/** @brief Mark an enum as a set of flags */
+/**
+	@brief Mark an enum as a set of flags
+
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce and @cpp ^ @ce) for a given @cpp enum class @ce type. 
+*/
 #define DEATH_ENUM_FLAGS(type)
-/** @brief Mark a private enum as a set of flags */
+/**
+	@brief Mark a private enum as a set of flags
+
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce and @cpp ^ @ce) for a given @cpp enum class @ce type as friends
+	of encapsulating class. This variant should be used for @cpp enum class @ce types declared within classes.
+*/
 #define DEATH_PRIVATE_ENUM_FLAGS(type)
 #else
 namespace Death { namespace Implementation {
@@ -22,7 +31,11 @@ namespace Death { namespace Implementation {
 	template<class T> struct __EnumSizedInteger { using Type = typename __EnumTypeForSize<sizeof(T)>::Type; };
 }}
 
-/** @brief Mark an enum as a set of flags */
+/**
+	@brief Mark an enum as a set of flags
+
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ^ @ce) for a given @cpp enum class @ce type. 
+*/
 #define DEATH_ENUM_FLAGS(type)	\
 	inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) | ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
 	inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
@@ -32,7 +45,12 @@ namespace Death { namespace Implementation {
 	inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
 	inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }
 
-/** @brief Mark a private enum as a set of flags */
+/**
+	@brief Mark a private enum as a set of flags
+
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ^ @ce) for a given @cpp enum class @ce type
+	as friends of encapsulating class. To be used for types declared within classes.
+*/
 #define DEATH_PRIVATE_ENUM_FLAGS(type)	\
 	friend inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) | ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
 	friend inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
@@ -60,7 +78,7 @@ namespace Death { namespace Implementation {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 // Internal macro implementation
-#define __DEATH_PASTE(a, b) a ## b
+#define __DEATH_PASTE(x, y) x ## y
 #define __DEATH_NOOP__DEATH_REMOVE_PARENS_EXTRACT
 #define __DEATH_REMOVE_PARENS_EXTRACT(...) __DEATH_REMOVE_PARENS_EXTRACT __VA_ARGS__
 #define __DEATH_REMOVE_PARENS_PASTE(x, ...) x ## __VA_ARGS__
@@ -73,9 +91,14 @@ namespace Death { namespace Implementation {
 	Concatenates preprocessor tokens to create a new one. However, two tokens
 	that don't together form a valid token cannot be pasted together.
 */
-#define DEATH_PASTE(a, b) __DEATH_PASTE(a, b)
+#define DEATH_PASTE(x, y) __DEATH_PASTE(x, y)
 
-/** @brief Remove optional parentheses from the specified argument */
+/**
+	@brief Remove optional parentheses from the specified argument
+
+	Allows one or more arguments to be passed to another macro or function. Parentheses are
+	automatically removed before passing to the destination.
+*/
 #define DEATH_REMOVE_PARENS(x) __DEATH_REMOVE_PARENS_EVALUATE(__DEATH_NOOP, __DEATH_REMOVE_PARENS_EXTRACT x)
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

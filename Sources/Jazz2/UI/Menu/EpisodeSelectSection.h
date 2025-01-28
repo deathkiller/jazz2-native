@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class EpisodeDataFlags {
 		None = 0x00,
 
@@ -21,6 +22,7 @@ namespace Jazz2::UI::Menu
 		Episode Description;
 		EpisodeDataFlags Flags;
 	};
+#endif
 
 	/** @brief Episode selection menu section */
 	class EpisodeSelectSection : public ScrollableMenuSection<EpisodeData>

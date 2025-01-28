@@ -24,7 +24,7 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
 
 	protected:
-		/** @brief Item in @ref ScrollableMenuSection */
+		/** @brief Generic item in @ref ScrollableMenuSection */
 		struct ListViewItem {
 			TItem Item;
 			std::int32_t Y;
@@ -54,14 +54,23 @@ namespace Jazz2::UI::Menu
 		bool _scrollable;
 #endif
 
+		/** @brief Makes currently selected item visible in the viewport */
 		void EnsureVisibleSelected();
+		/** @brief Called when the selected item should be executed */
 		virtual void OnExecuteSelected() = 0;
+		/** @brief Called when an item layout should be calculated */
 		virtual void OnLayoutItem(Canvas* canvas, ListViewItem& item);
+		/** @brief Called when an information about empty list should be drawn */
 		virtual void OnDrawEmptyText(Canvas* canvas, std::int32_t& charOffset) { }
+		/** @brief Called when an item should be drawn */
 		virtual void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) = 0;
+		/** @brief Called when input should be handled */
 		virtual void OnHandleInput();
+		/** @brief Called when back button is pressed */
 		virtual void OnBackPressed();
+		/** @brief Called when selected item is changed */
 		virtual void OnSelectionChanged(ListViewItem& item) { }
+		/** @brief Called when a touch event is released */
 		virtual void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos);
 	};
 

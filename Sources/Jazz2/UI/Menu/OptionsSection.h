@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class OptionsItemType {
 		Gameplay,
 		Graphics,
@@ -15,6 +16,7 @@ namespace Jazz2::UI::Menu
 		OptionsItemType Type;
 		StringView DisplayName;
 	};
+#endif
 
 	/** @brief Options menu section */
 	class OptionsSection : public ScrollableMenuSection<OptionsItem>

@@ -7,10 +7,12 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	struct MultiplayerGameModeItem {
 		Multiplayer::MultiplayerGameMode Mode;
 		StringView DisplayName;
 	};
+#endif
 
 	class MultiplayerGameModeSelectSection : public ScrollableMenuSection<MultiplayerGameModeItem>
 	{

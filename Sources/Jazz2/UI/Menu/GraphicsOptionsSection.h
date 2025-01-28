@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class GraphicsOptionsItemType {
 		RescaleMode,
 		Resolution,
@@ -26,6 +27,7 @@ namespace Jazz2::UI::Menu
 		StringView DisplayName;
 		bool HasBooleanValue;
 	};
+#endif
 
 	class GraphicsOptionsSection : public ScrollableMenuSection<GraphicsOptionsItem>
 	{

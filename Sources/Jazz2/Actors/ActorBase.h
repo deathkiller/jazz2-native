@@ -15,6 +15,7 @@
 #include <Containers/Function.h>
 #include <Containers/StringView.h>
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 // If coroutines are not supported, load resources synchronously
 #if defined(WITH_COROUTINES)
 #	define async_return co_return
@@ -22,6 +23,7 @@
 #else
 #	define async_return return
 #	define async_await
+#endif
 #endif
 
 using namespace Death::Containers::Literals;

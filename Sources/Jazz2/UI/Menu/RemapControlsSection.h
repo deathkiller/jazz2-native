@@ -8,10 +8,12 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	struct RemapControlsItem {
 		PlayerActions Type;
 		String DisplayName;
 	};
+#endif
 
 	class RemapControlsSection : public ScrollableMenuSection<RemapControlsItem>
 	{
