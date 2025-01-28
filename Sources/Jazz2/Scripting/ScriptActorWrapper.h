@@ -43,11 +43,13 @@ namespace Jazz2::Scripting
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		LevelScriptLoader* _levelScripts;
 		asIScriptObject* _obj;
 		asILockableSharedBool* _isDead;
 
-		uint32_t _scoreValue;
+		std::uint32_t _scoreValue;
+#endif
 
 		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
 		bool OnTileDeactivated() override;

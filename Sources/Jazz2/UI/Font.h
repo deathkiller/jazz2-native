@@ -25,7 +25,9 @@ namespace Jazz2::UI
 
 		Font(StringView path, const std::uint32_t* palette);
 
+		/** @brief Returns font size in pixels */
 		std::int32_t GetSizeInPixels() const;
+		/** @brief Returns font ascent in pixels */
 		std::int32_t GetAscentInPixels() const;
 		/** @brief Returns size of a single character */
 		Vector2f MeasureChar(char32_t c) const;

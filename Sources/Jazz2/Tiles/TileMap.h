@@ -242,6 +242,7 @@ namespace Jazz2::Tiles
 		void SetPitType(PitType value);
 
 		void OnUpdate(float timeMult) override;
+		/** @brief Called at the end of each frame */
 		void OnEndFrame();
 		bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -258,8 +259,11 @@ namespace Jazz2::Tiles
 
 		/** @brief Adds an additional tile set as a continuation of the previous one */
 		void AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
+		/** @brief Reads layer configuration from a stream */
 		void ReadLayerConfiguration(Stream& s);
+		/** @brief Reads description of animated tiles from a stream */
 		void ReadAnimatedTiles(Stream& s);
+		/** @brief Sets tile event flags */
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);
 
 		/** @brief Returns a caption tile */
@@ -287,6 +291,7 @@ namespace Jazz2::Tiles
 		/** @brief Serializes tile map state to a stream */
 		void SerializeResumableToStream(Stream& dest);
 
+		/** @brief Called when the viewport needs to be initialized (e.g., when the resolution is changed) */
 		void OnInitializeViewport();
 
 	private:

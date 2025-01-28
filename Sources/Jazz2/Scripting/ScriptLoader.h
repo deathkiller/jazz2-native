@@ -57,7 +57,7 @@ namespace Jazz2::Scripting
 	class ScriptLoader
 	{
 	public:
-		/** @brief Returns @ref ScriptLoader instance from active **AngelScript** context */
+		/** @brief Returns @ref ScriptLoader instance from active **AngelScript** context if exists */
 		template<typename T = ScriptLoader, class = typename std::enable_if<std::is_base_of<ScriptLoader, T>::value>::type>
 		static T* FromActiveContext() {
 			auto* ctx = asGetActiveContext();

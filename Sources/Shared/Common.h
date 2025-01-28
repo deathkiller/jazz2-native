@@ -59,11 +59,22 @@ namespace Death { namespace Implementation {
 #define DEATH_HELPER_ARGS_COUNT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
+// Internal macro implementation
+#define __DEATH_PASTE(a, b) a ## b
 #define __DEATH_NOOP__DEATH_REMOVE_PARENS_EXTRACT
 #define __DEATH_REMOVE_PARENS_EXTRACT(...) __DEATH_REMOVE_PARENS_EXTRACT __VA_ARGS__
 #define __DEATH_REMOVE_PARENS_PASTE(x, ...) x ## __VA_ARGS__
 #define __DEATH_REMOVE_PARENS_EVALUATE(x, ...) __DEATH_REMOVE_PARENS_PASTE(x, __VA_ARGS__)
 #endif
+
+/**
+	@brief Paste two tokens together
+
+	Concatenates preprocessor tokens to create a new one. However, two tokens
+	that don't together form a valid token cannot be pasted together.
+*/
+#define DEATH_PASTE(a, b) __DEATH_PASTE(a, b)
+
 /** @brief Remove optional parentheses from the specified argument */
 #define DEATH_REMOVE_PARENS(x) __DEATH_REMOVE_PARENS_EVALUATE(__DEATH_NOOP, __DEATH_REMOVE_PARENS_EXTRACT x)
 

@@ -104,11 +104,11 @@ namespace nCine
 			return visitOrderIndex_;
 		}
 
-		/// Called once every frame to update the node
+		/** @brief Called every frame to update the object state */
 		virtual void OnUpdate(float timeMult);
 		/// Draws the node and visits its children
 		virtual void OnVisit(RenderQueue& renderQueue, std::uint32_t& visitOrderIndex);
-		/// Renders the node
+		/** @brief Called when the object needs to be drawn */
 		virtual bool OnDraw(RenderQueue& renderQueue) {
 			return false;
 		}

@@ -26,6 +26,7 @@ namespace Jazz2::Compatibility
 
 		void Convert(StringView targetPath) const;
 
+		/** @brief Returns maximum number of supported tiles */
 		std::int32_t GetMaxSupportedTiles() const {
 			return (_version == JJ2Version::BaseGame ? 1024 : 4096);
 		}

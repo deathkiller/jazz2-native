@@ -23,6 +23,8 @@ namespace Jazz2::Scripting
 	/** @brief **AngelScript** dictionary value */
 	class CScriptDictValue
 	{
+		friend class CScriptDictionary;
+
 	public:
 		// This class must not be declared as local variable in C++, because it needs
 		// to receive the script engine pointer in all operations. The engine pointer
@@ -57,8 +59,7 @@ namespace Jazz2::Scripting
 		void EnumReferences(asIScriptEngine* engine);
 
 	protected:
-		friend class CScriptDictionary;
-
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		union
 		{
 			asINT64 m_valueInt;
@@ -66,6 +67,7 @@ namespace Jazz2::Scripting
 			void* m_valueObj;
 		};
 		int m_typeId;
+#endif
 	};
 
 	/** @brief **AngelScript** dictionary */
@@ -124,6 +126,8 @@ namespace Jazz2::Scripting
 		/** @brief **AngelScript** dictionary iterator */
 		class CIterator
 		{
+			friend class CScriptDictionary;
+
 		public:
 			void operator++();    // Pre-increment
 			void operator++(int); // Post-increment
@@ -143,15 +147,15 @@ namespace Jazz2::Scripting
 			const void* GetAddressOfValue() const;
 
 		protected:
-			friend class CScriptDictionary;
-
 			CIterator();
 			CIterator(const CScriptDictionary& dict, dictMap_t::const_iterator it);
 
 			CIterator& operator=(const CIterator&) { return *this; } // Not used
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 			dictMap_t::const_iterator m_it;
 			const CScriptDictionary& m_dict;
+#endif
 		};
 
 		CIterator begin() const;
@@ -178,11 +182,13 @@ namespace Jazz2::Scripting
 		// Cache the object types needed
 		void Init(asIScriptEngine* engine);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		// Our properties
 		asIScriptEngine* engine;
 		mutable int refCount;
 		mutable bool gcFlag;
 		dictMap_t dict;
+#endif
 	};
 
 	/** @brief Registers `dictionary` type to **AngelScript** engine */

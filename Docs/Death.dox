@@ -363,7 +363,7 @@ namespace Death {
 #undef DEATH_TARGET_MSVC
 
 /**
-	@brief Cygwin compiler
+	@brief Cygwin environment
 
 	Defined if the code is being compiled by Cygwin toolchain. If
 	this variable is defined, @ref DEATH_TARGET_GCC and possibly also

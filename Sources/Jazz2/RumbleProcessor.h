@@ -18,6 +18,7 @@ namespace Jazz2
 		/** @brief Executes an effect on a given gamepad */
 		void ExecuteEffect(std::int32_t joyId, const std::shared_ptr<RumbleDescription>& desc);
 
+		/** @brief Called at the end of each frame */
 		void OnEndFrame(float timeMult);
 
 	private:

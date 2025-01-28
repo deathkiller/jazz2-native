@@ -436,7 +436,7 @@ namespace Death { namespace Cpu {
 		widely supported instruction sets are @ref Sse2 on x86, @ref Neon on ARM and
 		@ref Simd128 on WebAssembly.
 	*/
-	constexpr ScalarT Scalar { Implementation::Init };
+	constexpr ScalarT Scalar{Implementation::Init};
 
 #if defined(DEATH_TARGET_X86) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
@@ -447,7 +447,7 @@ namespace Death { namespace Cpu {
 		and is present on majority of contemporary 32-bit x86 processors as well.
 		Superset of @ref Scalar, implied by @ref Sse3.
 	*/
-	constexpr Sse2T Sse2 { Implementation::Init };
+	constexpr Sse2T Sse2{Implementation::Init};
 
 	/**
 		@brief SSE3 tag
@@ -456,7 +456,7 @@ namespace Death { namespace Cpu {
 		only on @ref DEATH_TARGET_X86 "x86". Superset of @ref Sse2, implied by
 		@ref Ssse3.
 	*/
-	constexpr Sse3T Sse3 { Implementation::Init };
+	constexpr Sse3T Sse3{Implementation::Init};
 
 	/**
 		@brief SSSE3 tag
@@ -469,7 +469,7 @@ namespace Death { namespace Cpu {
 		but neither SSSE3 nor SSE4.1. Both can be however treated as a subset of SSE4.1
 		to a large extent, and it's recommended to use @ref Sse41 to handle those.
 	*/
-	constexpr Ssse3T Ssse3 { Implementation::Init };
+	constexpr Ssse3T Ssse3{Implementation::Init};
 
 	/**
 		@brief SSE4.1 tag
@@ -482,7 +482,7 @@ namespace Death { namespace Cpu {
 		but neither SSSE3 nor SSE4.1. Both can be however treated as a subset of SSE4.1
 		to a large extent, and it's recommended to use @ref Sse41 to handle those.
 	*/
-	constexpr Sse41T Sse41 { Implementation::Init };
+	constexpr Sse41T Sse41{Implementation::Init};
 
 	/**
 		@brief SSE4.2 tag
@@ -491,7 +491,7 @@ namespace Death { namespace Cpu {
 		Available only on @ref DEATH_TARGET_X86 "x86". Superset of @ref Sse41,
 		implied by @ref Avx.
 	*/
-	constexpr Sse42T Sse42 { Implementation::Init };
+	constexpr Sse42T Sse42{Implementation::Init};
 
 	/**
 		@brief POPCNT tag
@@ -501,7 +501,7 @@ namespace Death { namespace Cpu {
 		set is treated as an *extra*, i.e. is neither a superset of nor implied by any
 		other instruction set. See @ref Cpu-usage-extra for more information.
 	*/
-	constexpr PopcntT Popcnt { Implementation::Init };
+	constexpr PopcntT Popcnt{Implementation::Init};
 
 	/**
 		@brief LZCNT tag
@@ -516,7 +516,7 @@ namespace Death { namespace Cpu {
 		it isn't available, prefer to always detect its presence with
 		@ref runtimeFeatures() instead of a compile-time check.
 	*/
-	constexpr LzcntT Lzcnt { Implementation::Init };
+	constexpr LzcntT Lzcnt{Implementation::Init};
 
 	/**
 		@brief BMI1 tag
@@ -532,7 +532,7 @@ namespace Death { namespace Cpu {
 		it isn't available, prefer to always detect its presence with
 		@ref runtimeFeatures() instead of a compile-time check.
 	*/
-	constexpr Bmi1T Bmi1 { Implementation::Init };
+	constexpr Bmi1T Bmi1{Implementation::Init};
 
 	/**
 		@brief BMI2 tag
@@ -542,7 +542,7 @@ namespace Death { namespace Cpu {
 		set is treated as an *extra*, i.e. is neither a superset of nor implied by any
 		other instruction set. See @ref Cpu-usage-extra for more information.
 	*/
-	constexpr Bmi2T Bmi2 { Implementation::Init };
+	constexpr Bmi2T Bmi2{Implementation::Init};
 
 	/**
 		@brief AVX tag
@@ -551,7 +551,7 @@ namespace Death { namespace Cpu {
 		Available only on @ref DEATH_TARGET_X86 "x86". Superset of @ref Sse42,
 		implied by @ref Avx2.
 	*/
-	constexpr AvxT Avx { Implementation::Init };
+	constexpr AvxT Avx{Implementation::Init};
 
 	/**
 		@brief AVX F16C tag
@@ -561,7 +561,7 @@ namespace Death { namespace Cpu {
 		i.e. is neither a superset of nor implied by any other instruction set. See
 		@ref Cpu-usage-extra for more information.
 	*/
-	constexpr AvxF16cT AvxF16c { Implementation::Init };
+	constexpr AvxF16cT AvxF16c{Implementation::Init};
 
 	/**
 		@brief AVX FMA tag
@@ -571,7 +571,7 @@ namespace Death { namespace Cpu {
 		treated as an *extra*, i.e. is neither a superset of nor implied by any other
 		instruction set. See @ref Cpu-usage-extra for more information.
 	*/
-	constexpr AvxFmaT AvxFma { Implementation::Init };
+	constexpr AvxFmaT AvxFma{Implementation::Init};
 
 	/**
 		@brief AVX2 tag
@@ -580,7 +580,7 @@ namespace Death { namespace Cpu {
 		Available only on @ref DEATH_TARGET_X86 "x86". Superset of @ref Avx,
 		implied by @ref Avx512f.
 	*/
-	constexpr Avx2T Avx2 { Implementation::Init };
+	constexpr Avx2T Avx2{Implementation::Init};
 
 	/**
 		@brief AVX-512 Foundation tag
@@ -588,7 +588,7 @@ namespace Death { namespace Cpu {
 		[AVX-512](https://en.wikipedia.org/wiki/AVX-512) Foundation. Available only on
 		@ref DEATH_TARGET_X86 "x86". Superset of @ref Avx2.
 	*/
-	constexpr Avx512fT Avx512f { Implementation::Init };
+	constexpr Avx512fT Avx512f{Implementation::Init};
 #endif
 
 #if defined(DEATH_TARGET_ARM) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -599,7 +599,7 @@ namespace Death { namespace Cpu {
 		Available only on @ref DEATH_TARGET_ARM "ARM". Superset of @ref Scalar,
 		implied by @ref NeonFp16.
 	*/
-	constexpr NeonT Neon { Implementation::Init };
+	constexpr NeonT Neon{Implementation::Init};
 
 	/**
 		@brief NEON FMA tag type
@@ -608,7 +608,7 @@ namespace Death { namespace Cpu {
 		with FMA instructions. Available only on @ref DEATH_TARGET_ARM "ARM".
 		Superset of @ref Neon, implied by @ref NeonFp16.
 	*/
-	constexpr NeonFmaT NeonFma { Implementation::Init };
+	constexpr NeonFmaT NeonFma{Implementation::Init};
 
 	/**
 		@brief NEON FP16 tag type
@@ -617,7 +617,7 @@ namespace Death { namespace Cpu {
 		with ARMv8.2-a FP16 vector arithmetic. Available only on
 		@ref DEATH_TARGET_ARM "ARM". Superset of @ref NeonFma.
 	*/
-	constexpr NeonFp16T NeonFp16 { Implementation::Init };
+	constexpr NeonFp16T NeonFp16{Implementation::Init};
 #endif
 
 #if defined(DEATH_TARGET_WASM) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -627,7 +627,7 @@ namespace Death { namespace Cpu {
 		[128-bit WebAssembly SIMD](https://github.com/webassembly/simd). Available only
 		on @ref DEATH_TARGET_WASM "WebAssembly". Superset of @ref Scalar.
 	*/
-	constexpr Simd128T Simd128 { Implementation::Init };
+	constexpr Simd128T Simd128{Implementation::Init};
 #endif
 
 	namespace Implementation
@@ -914,7 +914,7 @@ namespace Death { namespace Cpu {
 		together with the extra instruction sets, and @ref runtimeFeatures() which is
 		capable of detecting the available CPU feature set at runtime.
 	*/
-	constexpr DefaultBaseT DefaultBase { Implementation::Init };
+	constexpr DefaultBaseT DefaultBase{Implementation::Init};
 
 	/**
 		@brief Default extra tags
@@ -939,7 +939,7 @@ namespace Death { namespace Cpu {
 		base instruction sets available, and @ref runtimeFeatures() which is capable of
 		detecting the available CPU feature set at runtime.
 	*/
-	constexpr DefaultExtraT DefaultExtra { Implementation::Init };
+	constexpr DefaultExtraT DefaultExtra{Implementation::Init};
 
 	/**
 		@brief Default tags
@@ -947,7 +947,7 @@ namespace Death { namespace Cpu {
 		A combination of @ref DefaultBase and @ref DefaultExtra, see their
 		documentation for more information.
 	*/
-	constexpr DefaultT Default { Implementation::Init };
+	constexpr DefaultT Default{Implementation::Init};
 
 	/**
 		@brief Tag for a tag type
@@ -955,7 +955,7 @@ namespace Death { namespace Cpu {
 		Returns a tag corresponding to tag type @p T.
 	*/
 	template<class T> constexpr T tag() {
-		return T { Implementation::Init };
+		return T{Implementation::Init};
 	}
 
 #if defined(DEATH_TARGET_ARM) && ((defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)) || defined(__FreeBSD__))
