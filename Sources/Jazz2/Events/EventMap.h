@@ -34,6 +34,7 @@ namespace Jazz2::Events
 
 		EventMap(Vector2i layoutSize);
 
+		/** @brief Sets owner of the event map */
 		void SetLevelHandler(ILevelHandler* levelHandler);
 		/** @brief Returns size of event map in tiles */
 		Vector2i GetSize() const;

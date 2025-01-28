@@ -86,12 +86,14 @@ namespace Jazz2::Scripting
 		void ReleaseAllHandles(asIScriptEngine* engine);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		mutable int refCount;
 		mutable bool gcFlag;
 		asITypeInfo* objType;
 		SArrayBuffer* buffer;
 		int elementSize;
 		int subTypeId;
+#endif
 
 		// Constructors
 		CScriptArray(asITypeInfo* ot, void* initBuf); // Called from script when initialized with list

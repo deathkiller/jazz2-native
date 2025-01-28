@@ -41,8 +41,10 @@ namespace Jazz2::Scripting
 		}
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		LevelScriptLoader* _levelScripts;
 		Actors::Player* _player;
+#endif
 
 		bool asIsInGame() const;
 		int asGetIndex() const;

@@ -76,21 +76,31 @@ namespace Jazz2
 	/** @brief Continuation state between two episodes */
 	// These structures are aligned manually, because they are serialized and it should work cross-platform
 	struct EpisodeContinuationState {
+		/** @brief Flags */
 		EpisodeContinuationFlags Flags;
+		/** @brief Difficulty and player type */
 		std::uint8_t DifficultyAndPlayerType;
+		/** @brief Lives */
 		std::uint8_t Lives;
 		std::uint8_t Unused1;
+		/** @brief Score */
 		std::int32_t Score;
 		std::uint16_t Unused2;
+		/** @brief Elapsed game time in milliseconds */
 		std::uint64_t ElapsedMilliseconds;
+		/** @brief Gems collected */
 		std::int32_t Gems[4];
+		/** @brief Weapon ammo */
 		std::uint16_t Ammo[(std::int32_t)WeaponType::Count];
+		/** @brief Weapon upgrades */
 		std::uint8_t WeaponUpgrades[(std::int32_t)WeaponType::Count];
 	};
 
 	/** @brief Continuation state between two levels in episode */
 	struct EpisodeContinuationStateWithLevel {
+		/** @brief Continuation state */
 		EpisodeContinuationState State;
+		/** @brief Last level name */
 		String LevelName;
 	};
 

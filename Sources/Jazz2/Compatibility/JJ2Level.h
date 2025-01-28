@@ -28,16 +28,23 @@ namespace Jazz2::Compatibility
 	public:
 		/** @brief Episode name and level name */
 		struct LevelToken {
+			/** @brief Episode name */
 			String Episode;
+			/** @brief Level name */
 			String Level;
 		};
 
 		/** @brief Extra tileset used in the level */
 		struct ExtraTilesetEntry {
+			/** @brief Tile set name */
 			String Name;
+			/** @brief Offset tile index */
 			std::uint16_t Offset;
+			/** @brief Number of tiles */
 			std::uint16_t Count;
+			/** @brief Whether palette remapping is used */
 			bool HasPaletteRemapping;
+			/** @brief Palette remapping */
 			std::uint8_t PaletteRemapping[256];
 		};
 
@@ -62,14 +69,17 @@ namespace Jazz2::Compatibility
 		bool Open(StringView path, bool strictParser);
 
 		void Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion = {});
-		void AddLevelTokenTextID(uint8_t textId);
+		void AddLevelTokenTextID(std::uint8_t textId);
 
+		/** @brief Returns target version of the level */
 		JJ2Version GetVersion() const {
 			return _version;
 		}
+		/** @brief Returns maximum number of supported tiles */
 		std::int32_t GetMaxSupportedTiles() const {
 			return (_version == JJ2Version::BaseGame ? 1024 : 4096);
 		}
+		/** @brief Returns maximum number of supported animations */
 		std::int32_t GetMaxSupportedAnims() const {
 			return (_version == JJ2Version::BaseGame ? 128 : 256);
 		}

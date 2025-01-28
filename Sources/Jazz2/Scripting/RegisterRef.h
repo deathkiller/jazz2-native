@@ -53,8 +53,10 @@ namespace Jazz2::Scripting
 		CScriptHandle(void* ref, int typeId);
 		CScriptHandle &Assign(void* ref, int typeId);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		void* m_ref;
 		asITypeInfo* m_type;
+#endif
 	};
 
 	/** @brief Registers `ref` type to **AngelScript** engine */
