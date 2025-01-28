@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class FirstRunItemType {
 		LegacyPreset,
 		ReforgedPreset
@@ -14,6 +15,7 @@ namespace Jazz2::UI::Menu
 		String DisplayName;
 		String Description;
 	};
+#endif
 
 	/** @brief First run menu section */
 	class FirstRunSection : public ScrollableMenuSection<FirstRunItem>

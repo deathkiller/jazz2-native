@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class GameplayEnhancementsItemType {
 		ReforgedGameplay,
 		ReforgedHUD,
@@ -16,6 +17,7 @@ namespace Jazz2::UI::Menu
 		GameplayEnhancementsItemType Type;
 		String DisplayName;
 	};
+#endif
 
 	class GameplayEnhancementsSection : public ScrollableMenuSection<GameplayEnhancementsItem>
 	{

@@ -6,6 +6,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class PlayCustomItemType {
 		PlayCustomLevels,
 		PlayStoryInCoop,
@@ -17,6 +18,7 @@ namespace Jazz2::UI::Menu
 		PlayCustomItemType Type;
 		StringView DisplayName;
 	};
+#endif
 
 	class PlayCustomSection : public ScrollableMenuSection<PlayCustomItem>
 	{

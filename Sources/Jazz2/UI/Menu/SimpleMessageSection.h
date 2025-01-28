@@ -7,6 +7,7 @@
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief Section showing a simple message */
 	class SimpleMessageSection : public MenuSection
 	{
 	public:

@@ -4,10 +4,12 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	struct LanguageData {
 		String FileName;
 		String DisplayName;
 	};
+#endif
 
 	class LanguageSelectSection : public ScrollableMenuSection<LanguageData>
 	{

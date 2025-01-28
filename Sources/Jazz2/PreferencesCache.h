@@ -98,7 +98,7 @@ namespace Jazz2
 
 	/** @brief Continuation state between two levels in episode */
 	struct EpisodeContinuationStateWithLevel {
-		/** @brief Continuation state */
+		/** @brief Base continuation state */
 		EpisodeContinuationState State;
 		/** @brief Last level name */
 		String LevelName;

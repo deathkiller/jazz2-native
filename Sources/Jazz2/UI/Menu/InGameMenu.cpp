@@ -437,12 +437,12 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
 	}
 
-	Vector2f InGameMenu::MeasureString(const StringView text, float scale, float charSpacing, float lineSpacing)
+	Vector2f InGameMenu::MeasureString(StringView text, float scale, float charSpacing, float lineSpacing)
 	{
 		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);
 	}
 
-	void InGameMenu::DrawStringShadow(const StringView text, int& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
+	void InGameMenu::DrawStringShadow(StringView text, int& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
@@ -453,7 +453,7 @@ namespace Jazz2::UI::Menu
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
 
-	void InGameMenu::PlaySfx(const StringView identifier, float gain)
+	void InGameMenu::PlaySfx(StringView identifier, float gain)
 	{
 #if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));

@@ -55,8 +55,11 @@ namespace Jazz2::UI::Menu
 		}
 
 	protected:
+		/** @brief Kinetic divider for smooth touch controls */
 		static constexpr float TouchKineticDivider = 0.004f;
+		/** @brief Kinetic friction for smooth touch controls */
 		static constexpr float TouchKineticFriction = 7000.0f;
+		/** @brief Kinetic damping for smooth touch controls */
 		static constexpr float TouchKineticDamping = 0.2f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

@@ -4,6 +4,7 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class GameplayOptionsItemType {
 		Enhancements,
 		Language,
@@ -32,6 +33,7 @@ namespace Jazz2::UI::Menu
 		bool HasBooleanValue;
 		bool IsReadOnly;
 	};
+#endif
 
 	class GameplayOptionsSection : public ScrollableMenuSection<GameplayOptionsItem>
 	{

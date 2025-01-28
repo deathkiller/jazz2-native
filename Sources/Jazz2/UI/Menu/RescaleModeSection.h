@@ -5,10 +5,12 @@
 
 namespace Jazz2::UI::Menu
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	struct RescaleModeItem {
 		RescaleMode Mode;
 		StringView DisplayName;
 	};
+#endif
 
 	class RescaleModeSection : public ScrollableMenuSection<RescaleModeItem>
 	{
