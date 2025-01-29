@@ -353,6 +353,7 @@ namespace Jazz2::Actors
 		/** @brief Called when water should splash */
 		virtual void OnWaterSplash(Vector2f pos, bool inwards);
 
+		/** @brief Plays a sound effect for the player */
 		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f);
 		/** @brief Starts a player animation transition */
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, Function<void()>&& callback = {});

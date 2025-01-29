@@ -177,6 +177,7 @@ namespace Jazz2::Actors
 		/** @brief Returns `true` if the object is currently facing left */
 		bool IsFacingLeft();
 
+		/** @brief Sets internal parent node */
 		void SetParent(SceneNode* parent);
 		/** @brief Called after the object is created */
 		Task<bool> OnActivated(const ActorActivationDetails& details);
@@ -242,23 +243,36 @@ namespace Jazz2::Actors
 		public:
 			ActorRenderer(ActorBase* owner);
 
+			/** @brief Whether the animation is paused */
 			bool AnimPaused;
+			/** @brief Frame configuration */
 			Vector2i FrameConfiguration;
+			/** @brief Frame dimensions */
 			Vector2i FrameDimensions;
+			/** @brief Animation loop mode */
 			AnimationLoopMode LoopMode;
+			/** @brief Frame offset */
 			std::int32_t FirstFrame;
+			/** @brief Frame count */
 			std::int32_t FrameCount;
+			/** @brief Animation duration (in normalized frames) */
 			float AnimDuration;
+			/** @brief Current animation progress */
 			float AnimTime;
+			/** @brief Current animation frame */
 			std::int32_t CurrentFrame;
+			/** @brief Hotspot */
 			Vector2f Hotspot;
 
+			/** @brief Initializes the renderer to the specified renderer type */
 			void Initialize(ActorRendererType type);
 
 			void OnUpdate(float timeMult) override;
 			bool OnDraw(RenderQueue& renderQueue) override;
 
+			/** @brief Returns `true` if animation is running */
 			bool IsAnimationRunning();
+			/** @brief Returns active renderer type */
 			ActorRendererType GetRendererType() const;
 
 		protected:
@@ -273,9 +287,13 @@ namespace Jazz2::Actors
 			static std::int32_t NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max);
 		};
 
+		/** @brief Alpha transparency threshold */
 		static constexpr std::uint8_t AlphaThreshold = 40;
+		/** @brief Step for collision checking */
 		static constexpr float CollisionCheckStep = 0.5f;
+		/** @brief Step for per-pixel collisions */
 		static constexpr std::int32_t PerPixelCollisionStep = 3;
+		/** @brief Maximum number of animation candidates */
 		static constexpr std::int32_t AnimationCandidatesCount = 5;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -337,7 +355,9 @@ namespace Jazz2::Actors
 		void TryStandardMovement(float timeMult, Tiles::TileCollisionParams& params);
 		/** @brief Updates hitbox to a given size */
 		void UpdateHitbox(std::int32_t w, std::int32_t h);
+		/** @brief Updates frozen state of the object */
 		void UpdateFrozenState(float timeMult);
+		/** @brief Handles change of frozen state after collision with other object */
 		void HandleFrozenStateChange(ActorBase* shot);
 
 		/** @brief Creates a particle debris from a sprite */

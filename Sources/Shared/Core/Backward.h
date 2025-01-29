@@ -521,6 +521,7 @@ namespace Death { namespace Backward {
 
 	} // namespace Implementation
 
+	/** @brief Raw trace item */
 	struct Trace {
 		void* addr;
 		std::size_t idx;
@@ -530,6 +531,7 @@ namespace Death { namespace Backward {
 		explicit Trace(void* addr_, std::size_t idx_) : addr(addr_), idx(idx_) {}
 	};
 
+	/** @brief Resolved trace item */
 	struct ResolvedTrace : public Trace {
 
 		struct SourceLoc {
@@ -574,6 +576,7 @@ namespace Death { namespace Backward {
 		ResolvedTrace(const Trace& mini_trace) : Trace(mini_trace), object_base_address(nullptr) {}
 	};
 
+	/** @brief Base class of stack trace */
 	class StackTraceBase {
 	public:
 		StackTraceBase()
@@ -607,12 +610,14 @@ namespace Death { namespace Backward {
 		}
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		std::vector<void*> _stacktrace;
 
 		std::size_t _threadId;
 		std::size_t _skip;
 		void* _context;
 		void* _errorAddr;
+#endif
 
 		void LoadThreadInfo() {
 #if defined(BACKWARD_TARGET_LINUX)
@@ -1098,24 +1103,30 @@ namespace Death { namespace Backward {
 
 #endif
 
+	/** @brief Base class for trace resolving */
 	class TraceResolverBase {
 	public:
 		virtual ~TraceResolverBase() {}
 
+		/** @brief Loads symbols from given addresses */
 		virtual void LoadAddresses(void* const* addresses, std::int32_t addressCount) {
 			(void)addresses;
 			(void)addressCount;
 		}
 
-		template <class ST> void LoadStacktrace(ST& st) {
+		/** @brief Loads symbols from a given stack trace */
+		template<class ST>
+		void LoadStacktrace(ST& st) {
 			LoadAddresses(st.begin(), static_cast<std::int32_t>(st.size()));
 		}
 
+		/** @brief Resolves symbols in a given trace item */
 		virtual ResolvedTrace Resolve(ResolvedTrace t) {
 			return t;
 		}
 
 	protected:
+		/** @brief Demangles the specified function name */
 		std::string Demangle(const char* funcName) {
 			return _demangler.Demangle(funcName);
 		}
@@ -3341,6 +3352,7 @@ namespace Death { namespace Backward {
 
 #endif
 
+	/** @brief Represents a file with source code */
 	class SourceFile {
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -3409,10 +3421,12 @@ namespace Death { namespace Backward {
 		SourceFile(const SourceFile&) = delete;
 		SourceFile& operator=(const SourceFile&) = delete;
 
+		/** @brief Returns `true` if the file can be read */
 		bool IsOpen() const {
 			return _file->is_open();
 		}
 
+		/** @brief Returns lines from the file within the specified range */
 		lines_t& GetLines(std::int32_t lineStart, std::int32_t lineCount, lines_t& lines) {
 			// This function make uses of the dumbest algo ever:
 			//	1) seek(0)
@@ -3463,6 +3477,7 @@ namespace Death { namespace Backward {
 			return lines;
 		}
 
+		/** @overload */
 		lines_t GetLines(std::int32_t lineStart, std::int32_t lineCount) {
 			lines_t lines;
 			return GetLines(lineStart, lineCount, lines);
@@ -3532,18 +3547,21 @@ namespace Death { namespace Backward {
 		}
 	};
 
+	/** @brief Helps to create snippets from source code */
 	class SnippetFactory {
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		typedef SourceFile::lines_t lines_t;
 #endif
 
+		/** @brief Creates a snippet from a given file and line number */
 		lines_t GetSnippet(const std::string& filename, std::int32_t lineStart, std::int32_t contextSize) {
 			SourceFile& srcFile = GetSourceFile(filename);
 			std::int32_t start = lineStart - (contextSize / 2);
 			return srcFile.GetLines(start, contextSize);
 		}
 
+		/** @brief Creates a combined snippet from given files and line numbers */
 		lines_t GetCombinedSnippet(const std::string& filenameA, std::int32_t lineA, const std::string& filenameB, std::int32_t lineB, std::int32_t contextSize) {
 			SourceFile& srcFileA = GetSourceFile(filenameA);
 			SourceFile& srcFileB = GetSourceFile(filenameB);
@@ -3553,6 +3571,7 @@ namespace Death { namespace Backward {
 			return lines;
 		}
 
+		/** @brief Creates a coalesced snippet from a given file and line numbers */
 		lines_t GetCoalescedSnippet(const std::string& filename, std::int32_t lineA, std::int32_t lineB, std::int32_t contextSize) {
 			SourceFile& srcFile = GetSourceFile(filename);
 
@@ -3738,6 +3757,7 @@ namespace Death { namespace Backward {
 		};
 	}
 
+	/** @brief Exception and stack trace printer */
 	class Printer {
 	public:
 		Flags FeatureFlags;
@@ -3749,6 +3769,7 @@ namespace Death { namespace Backward {
 		Printer()
 			: FeatureFlags(Flags::None), Address(false), Object(false), InlinerContextSize(5), TraceContextSize(7) {}
 
+		/** @brief Prints the specified stack trace to a stream */
 		template<typename ST>
 		void Print(ST& st, IO::Stream* s, std::int32_t signal = 0) {
 			Implementation::StreambufWrapper obuf(s);
@@ -3758,6 +3779,7 @@ namespace Death { namespace Backward {
 			PrintStacktrace(st, os, signal, colorize);
 		}
 
+		/** @overload */
 		template<typename ST>
 		void Print(ST& st, std::ostream& os, std::int32_t signal = 0) {
 			Implementation::Colorize colorize(os);
@@ -3765,6 +3787,7 @@ namespace Death { namespace Backward {
 			PrintStacktrace(st, os, signal, colorize);
 		}
 
+		/** @brief Returns stack trace resolver */
 		TraceResolver const& GetResolver() const {
 			return _resolver;
 		}
@@ -4026,9 +4049,12 @@ namespace Death { namespace Backward {
 
 #if defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_APPLE) || defined(DOXYGEN_GENERATING_OUTPUT)
 
+	/** @brief Unhandled exception handling */
 	class ExceptionHandling {
 	public:
+		/** @brief Destination stream for printing exception information */
 		IO::Stream* Destination;
+		/** @brief Feature flags */
 		Flags FeatureFlags;
 
 		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags), _loaded(false) {
@@ -4079,10 +4105,12 @@ namespace Death { namespace Backward {
 			_loaded = success;
 		}
 
+		/** @brief Returns `true` if the exception handling is successfully initialized */
 		bool IsLoaded() const {
 			return _loaded;
 		}
 
+		/** @brief Handles a given Unix signal */
 		void HandleSignal(int signo, siginfo_t* info, void* _ctx) {
 			ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
 

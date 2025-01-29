@@ -100,6 +100,7 @@ namespace Jazz2::UI::Menu::Resources
 
 	static constexpr AnimState LoriExistsCheck = (AnimState)120;
 
+	/** @brief Returns animation resource for the specified gamepad axis */
 	inline AnimState GetResourceForAxisName(AxisName axis, Containers::StringView& axisName)
 	{
 		switch (axis) {
@@ -135,6 +136,7 @@ namespace Jazz2::UI::Menu::Resources
 		}
 	}
 
+	/** @brief Returns animation resource for the specified gamepad button */
 	inline AnimState GetResourceForButtonName(ButtonName button)
 	{
 		switch (PreferencesCache::GamepadButtonLabels) {
