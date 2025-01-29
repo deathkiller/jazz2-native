@@ -1831,7 +1831,7 @@ namespace Jazz2::Actors
 			}
 
 			_levelHandler->PlayerExecuteRumble(_playerIndex, "Spring"_s);
-			PlaySfx("Spring"_s);
+			PlayPlayerSfx("Spring"_s);
 		}
 	}
 

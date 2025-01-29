@@ -10,55 +10,59 @@
 /**
 	@brief Mark an enum as a set of flags
 
-	Defines out-of-class operators (@cpp | @ce, @cpp & @ce and @cpp ^ @ce) for a given @cpp enum class @ce type. 
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ~ @ce and @cpp ^ @ce)
+	for a given @cpp enum class @ce type.
 */
 #define DEATH_ENUM_FLAGS(type)
 /**
 	@brief Mark a private enum as a set of flags
 
-	Defines out-of-class operators (@cpp | @ce, @cpp & @ce and @cpp ^ @ce) for a given @cpp enum class @ce type as friends
-	of encapsulating class. This variant should be used for @cpp enum class @ce types declared within classes.
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ~ @ce and @cpp ^ @ce)
+	for a given @cpp enum class @ce type as friends of encapsulating class. This variant
+	should be used for @cpp enum class @ce types declared within classes.
 */
 #define DEATH_PRIVATE_ENUM_FLAGS(type)
 #else
 namespace Death { namespace Implementation {
 	// Used as an approximation of std::underlying_type<T>
-	template<std::int32_t S> struct __EnumTypeForSize;
-	template<> struct __EnumTypeForSize<1> { using Type = std::int8_t; };
-	template<> struct __EnumTypeForSize<2> { using Type = std::int16_t; };
-	template<> struct __EnumTypeForSize<4> { using Type = std::int32_t; };
-	template<> struct __EnumTypeForSize<8> { using Type = std::int64_t; };
-	template<class T> struct __EnumSizedInteger { using Type = typename __EnumTypeForSize<sizeof(T)>::Type; };
+	template<std::int32_t S> struct EnumTypeForSize;
+	template<> struct EnumTypeForSize<1> { using Type = std::int8_t; };
+	template<> struct EnumTypeForSize<2> { using Type = std::int16_t; };
+	template<> struct EnumTypeForSize<4> { using Type = std::int32_t; };
+	template<> struct EnumTypeForSize<8> { using Type = std::int64_t; };
+	template<class T> struct EnumSizedInteger { using Type = typename EnumTypeForSize<sizeof(T)>::Type; };
 }}
 
 /**
 	@brief Mark an enum as a set of flags
 
-	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ^ @ce) for a given @cpp enum class @ce type. 
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ~ @ce and @cpp ^ @ce)
+	for a given @cpp enum class @ce type.
 */
 #define DEATH_ENUM_FLAGS(type)	\
-	inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) | ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
-	inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
-	inline DEATH_CONSTEXPR14 type operator&(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) & ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
-	inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
-	inline DEATH_CONSTEXPR14 type operator~(type a) { return type(~((Death::Implementation::__EnumSizedInteger<type>::Type)a)); }																		\
-	inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
-	inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }
+	inline constexpr type operator|(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) | ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
+	inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
+	inline constexpr type operator&(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) & ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
+	inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
+	inline constexpr type operator~(type a) { return type(~((Death::Implementation::EnumSizedInteger<type>::Type)a)); }																		\
+	inline constexpr type operator^(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
+	inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }
 
 /**
 	@brief Mark a private enum as a set of flags
 
-	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ^ @ce) for a given @cpp enum class @ce type
-	as friends of encapsulating class. To be used for types declared within classes.
+	Defines out-of-class operators (@cpp | @ce, @cpp & @ce, @cpp ~ @ce and @cpp ^ @ce)
+	for a given @cpp enum class @ce type as friends of encapsulating class. This variant
+	should be used for @cpp enum class @ce types declared within classes.
 */
 #define DEATH_PRIVATE_ENUM_FLAGS(type)	\
-	friend inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) | ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
-	friend inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
-	friend inline DEATH_CONSTEXPR14 type operator&(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) & ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
-	friend inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
-	friend inline DEATH_CONSTEXPR14 type operator~(type a) { return type(~((Death::Implementation::__EnumSizedInteger<type>::Type)a)); }																		\
-	friend inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
-	friend inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }
+	friend inline constexpr type operator|(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) | ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
+	friend inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
+	friend inline constexpr type operator&(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) & ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
+	friend inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
+	friend inline constexpr type operator~(type a) { return type(~((Death::Implementation::EnumSizedInteger<type>::Type)a)); }																		\
+	friend inline constexpr type operator^(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
+	friend inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }
 #endif
 
 /** @brief Workaround for MSVC not being able to expand `__VA_ARGS__` correctly */
@@ -96,8 +100,8 @@ namespace Death { namespace Implementation {
 /**
 	@brief Remove optional parentheses from the specified argument
 
-	Allows one or more arguments to be passed to another macro or function. Parentheses are
-	automatically removed before passing to the destination.
+	Allows one or more arguments enclosed in parentheses to be passed to another macro or
+	function. Parentheses are automatically removed before passing to the destination.
 */
 #define DEATH_REMOVE_PARENS(x) __DEATH_REMOVE_PARENS_EVALUATE(__DEATH_NOOP, __DEATH_REMOVE_PARENS_EXTRACT x)
 

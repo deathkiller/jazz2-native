@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Lighting
 {
+	/** @brief Pulsating radial light */
 	class PulsatingRadialLight : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
