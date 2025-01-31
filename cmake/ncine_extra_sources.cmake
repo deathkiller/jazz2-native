@@ -184,15 +184,9 @@ if(Threads_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE Threads::Threads)
 
 	if(WIN32)
-		list(APPEND SOURCES
-			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThread.cpp
-			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThreadSync.cpp
-		)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThreadSync.cpp)
 	else()
-		list(APPEND SOURCES
-			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThread.cpp
-			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThreadSync.cpp
-		)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/PosixThreadSync.cpp)
 	endif()
 
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.h)

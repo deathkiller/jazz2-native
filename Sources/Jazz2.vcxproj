@@ -1023,10 +1023,9 @@
     <ClCompile Include="nCine\Primitives\Colorf.cpp" />
     <ClCompile Include="nCine\Backends\Qt5Widget.cpp" />
     <ClCompile Include="nCine\ServiceLocator.cpp" />
-    <ClCompile Include="nCine\Threading\PosixThread.cpp" />
     <ClCompile Include="nCine\Threading\PosixThreadSync.cpp" />
+    <ClCompile Include="nCine\Threading\Thread.cpp" />
     <ClCompile Include="nCine\Threading\ThreadPool.cpp" />
-    <ClCompile Include="nCine\Threading\WindowsThread.cpp" />
     <ClCompile Include="nCine\Threading\WindowsThreadSync.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\AmmoCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CoinCollectible.cpp" />
