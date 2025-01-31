@@ -2,17 +2,28 @@
 
 #include <CommonWindows.h>
 
-#if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <emscripten/emscripten.h>
+#elif defined(DEATH_TARGET_WINDOWS)
+#	include <synchapi.h>
+#else
+#	include <unistd.h>
+#	if defined(DEATH_TARGET_SWITCH)
+#		include <switch.h>
+#	endif
+#endif
 
-#if defined(DEATH_TARGET_APPLE)
-#	include <mach/mach_init.h>
-#elif !defined(DEATH_TARGET_WINDOWS)
-#	include <pthread.h>
+#if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	if defined(DEATH_TARGET_APPLE)
+#		include <mach/mach_init.h>
+#	elif !defined(DEATH_TARGET_WINDOWS)
+#		include <pthread.h>
+#	endif
 #endif
 
 namespace nCine
 {
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 
 	/** @brief CPU affinity mask for a thread */
 	class ThreadAffinityMask
@@ -56,6 +67,23 @@ namespace nCine
 	class Thread
 	{
 	public:
+		/// Puts the current thread to sleep for the specified number of milliseconds
+		static void Sleep(std::uint32_t milliseconds)
+		{
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			emscripten_sleep(milliseconds);
+#elif defined(DEATH_TARGET_SWITCH)
+			const std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
+			svcSleepThread(nanoseconds);
+#elif defined(DEATH_TARGET_WINDOWS)
+			::SleepEx(static_cast<DWORD>(milliseconds), FALSE);
+#else
+			const unsigned int microseconds = static_cast<unsigned int>(milliseconds) * 1000;
+			::usleep(microseconds);
+#endif
+		}
+
+#if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		using ThreadFuncDelegate = void (*)(void*);
 
 		/** @brief A default constructor for an object without the associated function */
@@ -68,18 +96,14 @@ namespace nCine
 		Thread(const Thread& other);
 		Thread& operator=(const Thread& other);
 
-		Thread(Thread&& other) noexcept
-		{
-			// Move constructor
+		Thread(Thread&& other) noexcept {
 			_sharedBlock = other._sharedBlock;
 			other._sharedBlock = nullptr;
 		}
 
-		Thread& operator=(Thread&& other) noexcept
-		{
+		Thread& operator=(Thread&& other) noexcept {
 			Detach();
 
-			// Move assignment
 			_sharedBlock = other._sharedBlock;
 			other._sharedBlock = nullptr;
 
@@ -102,12 +126,12 @@ namespace nCine
 		/** @brief Sets the calling thread name (not supported on Emscripten and Switch) */
 		static void SetCurrentName(const char* name);
 
-#if !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_SWITCH)
 		/** @brief Gets the thread priority */
 		std::int32_t GetPriority() const;
 		/** @brief Sets the thread priority */
 		void SetPriority(std::int32_t priority);
-#endif
+#	endif
 
 		/** @brief Returns the calling thread ID */
 		static std::uintptr_t GetCurrentId();
@@ -116,17 +140,17 @@ namespace nCine
 		/** @brief Yields the calling thread in favour of another one with the same priority */
 		static void YieldExecution();
 
-#if !defined(DEATH_TARGET_ANDROID)
+#	if !defined(DEATH_TARGET_ANDROID)
 		/** @brief Tries to cancel or terminate the thread (depending on operating system) */
 		bool Abort();
-#endif
+#	endif
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 		/** @brief Gets the thread affinity mask */
 		ThreadAffinityMask GetAffinityMask() const;
 		/** @brief Sets the thread affinity mask*/ 
 		void SetAffinityMask(ThreadAffinityMask affinityMask);
-#endif
+#	endif
 
 	private:
 		struct SharedBlock;
@@ -135,16 +159,18 @@ namespace nCine
 
 		SharedBlock* _sharedBlock;
 
-#if defined(DEATH_TARGET_WINDOWS)
-#	if defined(DEATH_TARGET_MINGW)
+#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_MINGW)
 		static unsigned int(__attribute__((__stdcall__)) WrapperFunction)(void* arg);
-#	else
+#		else
 		static unsigned int __stdcall WrapperFunction(void* arg);
+#		endif
+#	else
+		static void* WrapperFunction(void* arg);
 #	endif
 #else
-		static void* WrapperFunction(void* arg);
+		Thread() = delete;
+		~Thread() = delete;
 #endif
 	};
 }
-
-#endif

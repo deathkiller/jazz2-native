@@ -50,11 +50,11 @@ extern "C"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
 #include "Graphics/GL/GLDebug.h"
-#include "Base/Timer.h"
 #include "Base/FrameTimer.h"
 #include "Graphics/SceneNode.h"
 #include "Input/IInputManager.h"
 #include "Input/JoyMapping.h"
+#include "Threading/Thread.h"
 #include "ServiceLocator.h"
 #include "tracy.h"
 #include "tracy_opengl.h"
@@ -695,7 +695,7 @@ namespace nCine
 #else
 			const float frameDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
 			while (frameTimer_->GetFrameDuration() < frameDuration) {
-				Timer::sleep(0);
+				Thread::Sleep(0);
 			}
 #endif
 			FrameMarkEnd("Frame limiting");

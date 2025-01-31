@@ -183,11 +183,6 @@ if(Threads_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_THREADS")
 	target_link_libraries(${NCINE_APP} PRIVATE Threads::Threads)
 
-	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
-		${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
-	)
-
 	if(WIN32)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThread.cpp

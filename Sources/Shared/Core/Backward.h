@@ -3771,20 +3771,20 @@ namespace Death { namespace Backward {
 
 		/** @brief Prints the specified stack trace to a stream */
 		template<typename ST>
-		void Print(ST& st, IO::Stream* s, std::int32_t signal = 0) {
+		void Print(ST& st, IO::Stream* s, std::uint32_t exceptionCode = 0) {
 			Implementation::StreambufWrapper obuf(s);
 			std::ostream os(&obuf);
 			Implementation::Colorize colorize(os);
 			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
-			PrintStacktrace(st, os, signal, colorize);
+			PrintStacktrace(st, os, exceptionCode, colorize);
 		}
 
 		/** @overload */
 		template<typename ST>
-		void Print(ST& st, std::ostream& os, std::int32_t signal = 0) {
+		void Print(ST& st, std::ostream& os, std::uint32_t exceptionCode = 0) {
 			Implementation::Colorize colorize(os);
 			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
-			PrintStacktrace(st, os, signal, colorize);
+			PrintStacktrace(st, os, exceptionCode, colorize);
 		}
 
 		/** @brief Returns stack trace resolver */
@@ -3863,10 +3863,10 @@ namespace Death { namespace Backward {
 		}
 
 		template<typename ST>
-		void PrintStacktrace(ST& st, std::ostream& os, std::int32_t signal, Implementation::Colorize& colorize) {
+		void PrintStacktrace(ST& st, std::ostream& os, std::uint32_t exceptionCode, Implementation::Colorize& colorize) {
 			using namespace std::string_view_literals;
 
-			PrintHeader(os, st.GetThreadId(), signal, colorize);
+			PrintHeader(os, st.GetThreadId(), exceptionCode, colorize);
 			_resolver.LoadStacktrace(st);
 
 			std::unordered_map<std::string, Implementation::PathComponents> parsedPaths;
@@ -3919,27 +3919,55 @@ namespace Death { namespace Backward {
 		}
 
 		//template<typename IT>
-		//void PrintStacktrace(IT begin, IT end, std::ostream& os, std::size_t thread_id, std::int32_t signal, Implementation::Colorize& colorize) {
-		//	PrintHeader(os, thread_id, signal, colorize);
+		//void PrintStacktrace(IT begin, IT end, std::ostream& os, std::size_t thread_id, std::uint32_t exceptionCode, Implementation::Colorize& colorize) {
+		//	PrintHeader(os, thread_id, exceptionCode, colorize);
 		//	for (; begin != end; ++begin) {
 		//		PrintTrace(os, *begin, colorize);
 		//	}
 		//}
 
-		void PrintHeader(std::ostream& os, std::size_t threadId, std::int32_t signal, Implementation::Colorize& colorize) {
+		void PrintHeader(std::ostream& os, std::size_t threadId, std::uint32_t exceptionCode, Implementation::Colorize& colorize) {
 			colorize.SetColor(Implementation::Color::Bold);
 			os << "The application exited unexpectedly";
 			colorize.SetColor(Implementation::Color::Reset);
 			if (threadId != 0) {
 				os << " in thread " << threadId;
 			}
-			if (signal != 0) {
-				os << " due to signal " << signal;
-#	if defined(BACKWARD_TARGET_LINUX) && defined(__GLIBC__) && __GLIBC__*100 + __GLIBC_MINOR__ >= 232
-				const char* signalName = sigabbrev_np(signal);
+			if (exceptionCode != 0) {
+#	if defined(BACKWARD_TARGET_WINDOWS)
+				os << " due to exception 0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+					<< std::uint64_t(exceptionCode) << std::dec << std::setw(0) << std::setfill(' ');
+
+				switch (exceptionCode) {
+					case EXCEPTION_ACCESS_VIOLATION: os << " (EXCEPTION_ACCESS_VIOLATION)"; break;
+					case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: os << " (EXCEPTION_ARRAY_BOUNDS_EXCEEDED)"; break;
+					case EXCEPTION_BREAKPOINT: os << " (EXCEPTION_BREAKPOINT)"; break;
+					case EXCEPTION_DATATYPE_MISALIGNMENT: os << " (EXCEPTION_DATATYPE_MISALIGNMENT)"; break;
+					case EXCEPTION_FLT_DENORMAL_OPERAND: os << " (EXCEPTION_FLT_DENORMAL_OPERAND)"; break;
+					case EXCEPTION_FLT_DIVIDE_BY_ZERO: os << " (EXCEPTION_FLT_DIVIDE_BY_ZERO)"; break;
+					case EXCEPTION_FLT_INEXACT_RESULT: os << " (EXCEPTION_FLT_INEXACT_RESULT)"; break;
+					case EXCEPTION_FLT_INVALID_OPERATION: os << " (EXCEPTION_FLT_INVALID_OPERATION)"; break;
+					case EXCEPTION_FLT_OVERFLOW: os << " (EXCEPTION_FLT_OVERFLOW)"; break;
+					case EXCEPTION_FLT_STACK_CHECK: os << " (EXCEPTION_FLT_STACK_CHECK)"; break;
+					case EXCEPTION_FLT_UNDERFLOW: os << " (EXCEPTION_FLT_UNDERFLOW)"; break;
+					case EXCEPTION_ILLEGAL_INSTRUCTION: os << " (EXCEPTION_ILLEGAL_INSTRUCTION)"; break;
+					case EXCEPTION_IN_PAGE_ERROR: os << " (EXCEPTION_IN_PAGE_ERROR)"; break;
+					case EXCEPTION_INT_DIVIDE_BY_ZERO: os << " (EXCEPTION_INT_DIVIDE_BY_ZERO)"; break;
+					case EXCEPTION_INT_OVERFLOW: os << " (EXCEPTION_INT_OVERFLOW)"; break;
+					case EXCEPTION_INVALID_DISPOSITION: os << " (EXCEPTION_INVALID_DISPOSITION)"; break;
+					case EXCEPTION_NONCONTINUABLE_EXCEPTION: os << " (EXCEPTION_NONCONTINUABLE_EXCEPTION)"; break;
+					case EXCEPTION_PRIV_INSTRUCTION: os << " (EXCEPTION_PRIV_INSTRUCTION)"; break;
+					case EXCEPTION_SINGLE_STEP: os << " (EXCEPTION_SINGLE_STEP)"; break;
+					case EXCEPTION_STACK_OVERFLOW: os << " (EXCEPTION_STACK_OVERFLOW)"; break;
+				}
+#	else
+				os << " due to signal " << exceptionCode;
+#		if defined(BACKWARD_TARGET_LINUX) && defined(__GLIBC__) && __GLIBC__*100 + __GLIBC_MINOR__ >= 232
+				const char* signalName = sigabbrev_np(int(exceptionCode));
 				if (signalName != nullptr) {
 					os << " (SIG" << signalName << ")";
 				}
+#		endif
 #	endif
 			}
 			os << " with following stack trace:\n";
@@ -3979,7 +4007,8 @@ namespace Death { namespace Backward {
 					os << trace.object_function;
 					colorize.SetColor(Implementation::Color::Reset);
 				}
-				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << (std::uint64_t)trace.addr << std::dec << std::setfill(' ') << "]\n";
+				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+					<< std::uint64_t(trace.addr) << std::dec << std::setfill(' ') << "]\n";
 				alreadyIndented = false;
 			}
 
@@ -4041,7 +4070,8 @@ namespace Death { namespace Backward {
 				colorize.SetColor(Implementation::Color::Reset);
 			}
 			if (Address && addr != nullptr) {
-				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << (std::uint64_t)addr << std::dec << std::setfill(' ') << "]";
+				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+					<< std::uint64_t(addr) << std::dec << std::setfill(' ') << "]";
 			}
 			os << "\n";
 		}
@@ -4164,12 +4194,12 @@ namespace Death { namespace Backward {
 
 			if (shouldWriteToStdErr) {
 				printer.FeatureFlags = FeatureFlags;
-				printer.Print(st, std::cerr, info->si_signo);
+				printer.Print(st, std::cerr, std::uint32_t(info->si_signo));
 			}
 
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
-				printer.Print(st, dest, info->si_signo);
+				printer.Print(st, dest, std::uint32_t(info->si_signo));
 				dest->Flush();
 			}
 		}
@@ -4396,7 +4426,7 @@ namespace Death { namespace Backward {
 				if ((current->FeatureFlags & Flags::CreateMemoryDump) == Flags::CreateMemoryDump) {
 					WriteMinidumpWithException(::GetThreadId(GetThreadHandle()), GetContext());
 				}
-				current->HandleStacktrace(current->SkipRecords());
+				current->HandleStacktrace();
 			}
 			{
 				std::unique_lock<std::mutex> lk(mtx());
@@ -4424,14 +4454,15 @@ namespace Death { namespace Backward {
 #	endif
 
 		DEATH_NEVER_INLINE static LONG WINAPI CrashHandler(EXCEPTION_POINTERS* info) {
+			DWORD code = info->ExceptionRecord->ExceptionCode;
+
 			// Pass-through MSVC exceptions
-			if (info->ExceptionRecord->ExceptionCode == 0xE06D7363 && 
+			if (code == 0xE06D7363 &&
 				(*GetPrevExceptionFilterPtr()) != nullptr) {
 				return (*GetPrevExceptionFilterPtr())(info);
 			}
 
 			// The exception info supplies a trace from exactly where the issue was, no need to skip records
-			DWORD code = info->ExceptionRecord->ExceptionCode;
 			bool isDebugException = (code == EXCEPTION_BREAKPOINT || code == EXCEPTION_SINGLE_STEP ||
 									 code == DBG_PRINTEXCEPTION_C || code == DBG_PRINTEXCEPTION_WIDE_C);
 			if (!isDebugException) {
@@ -4483,7 +4514,7 @@ namespace Death { namespace Backward {
 			}
 		}
 
-		void HandleStacktrace(std::int32_t skipFrames = 0) {
+		void HandleStacktrace() {
 			// Printer creates the TraceResolver, which can supply us a machine type for stack walking. Without this,
 			// StackTrace can only guess using some macros. StackTrace also requires that the PDBs are already loaded,
 			// which is done in the constructor of TraceResolver.
@@ -4498,6 +4529,8 @@ namespace Death { namespace Backward {
 				return;
 			}
 
+			std::int32_t skipFrames = SkipRecords();
+
 			Printer printer;
 			printer.Address = true;
 
@@ -4509,12 +4542,12 @@ namespace Death { namespace Backward {
 
 			if (shouldWriteToStdErr) {
 				printer.FeatureFlags = FeatureFlags;
-				printer.Print(st, std::cerr);
+				printer.Print(st, std::cerr, GetContext()->ExceptionRecord.ExceptionCode);
 			}
 
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
-				printer.Print(st, dest);
+				printer.Print(st, dest, GetContext()->ExceptionRecord.ExceptionCode);
 				dest->Flush();
 			}
 		}
@@ -4565,7 +4598,9 @@ namespace Death { namespace Backward {
 			std::int32_t pathPrefixLength = swprintf_s(minidumpPath, L"%s\\CrashDumps\\", processPathLength > 0 ? processPath : L".");
 			::CreateDirectory(minidumpPath, NULL);
 			TryEnableFileCompression(minidumpPath);
-			swprintf_s(minidumpPath + pathPrefixLength, arraySize(minidumpPath) - pathPrefixLength, L"%s (%02i-%02i-%02i-%02i-%02i-%02i).dmp", &processPath[processPathLength], lt.wYear % 100, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
+			swprintf_s(minidumpPath + pathPrefixLength, arraySize(minidumpPath) - pathPrefixLength,
+				L"%s (%02i-%02i-%02i-%02i-%02i-%02i).dmp", &processPath[processPathLength], lt.wYear % 100,
+				lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
 
 			HANDLE dumpFile = ::CreateFile(minidumpPath, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (dumpFile != INVALID_HANDLE_VALUE) {
@@ -4649,7 +4684,8 @@ namespace Death { namespace Backward {
 				callback.CallbackParam = reinterpret_cast<void*>(&context);
 
 				constexpr MINIDUMP_TYPE MinidumpType = (MINIDUMP_TYPE)(MiniDumpScanMemory | MiniDumpWithHandleData | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory);
-				success = ::MiniDumpWriteDump(process, ::GetProcessId(process), dumpFile, MinidumpType, ctx != nullptr ? &exceptInfo : NULL, &userStreams, &callback);
+				success = ::MiniDumpWriteDump(process, ::GetProcessId(process), dumpFile, MinidumpType,
+					ctx != nullptr ? &exceptInfo : NULL, &userStreams, &callback);
 
 				::CloseHandle(dumpFile);
 			}

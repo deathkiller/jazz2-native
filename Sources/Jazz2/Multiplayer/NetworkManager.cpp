@@ -4,7 +4,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "INetworkHandler.h"
-#include "../../nCine/Base/Timer.h"
+#include "../../nCine/Threading/Thread.h"
 
 /*
 // <mmeapi.h> included by "enet.h" still uses `far` macro
@@ -244,7 +244,7 @@ namespace Jazz2::Multiplayer
 						reason = Reason::ConnectionLost;
 						break;
 					}
-					Timer::sleep(ProcessingIntervalMs);
+					Thread::Sleep(ProcessingIntervalMs);
 					continue;
 				}
 
@@ -316,7 +316,7 @@ namespace Jazz2::Multiplayer
 						break;
 					}
 				}
-				Timer::sleep(ProcessingIntervalMs);
+				Thread::Sleep(ProcessingIntervalMs);
 				continue;
 			}
 

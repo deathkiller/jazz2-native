@@ -81,11 +81,15 @@ namespace Death { namespace Environment {
 		::QueryUnbiasedInterruptTime(&now);
 		return now;
 	}
+#elif defined(DEATH_TARGET_APPLE)
+	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
+		return clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 100ULL;
+	}
 #else
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		return (std::uint64_t)ts.tv_sec * 10000000ULL + (ts.tv_nsec / 100ULL);
+		return std::uint64_t(ts.tv_sec) * 10000000ULL + std::uint64_t(ts.tv_nsec) / 100ULL;
 	}
 #endif
 

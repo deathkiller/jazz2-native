@@ -14,7 +14,6 @@
 
 #include "nCine/IAppEventHandler.h"
 #include "nCine/tracy.h"
-#include "nCine/Base/Timer.h"
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
@@ -1087,7 +1086,7 @@ RecreateCache:
 			}
 
 			pakWriter = nullptr;
-			Timer::sleep(t * 100);
+			Thread::Sleep(t * 100);
 			t++;
 			pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s));
 		}
