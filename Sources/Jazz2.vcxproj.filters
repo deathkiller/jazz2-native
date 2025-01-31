@@ -1907,13 +1907,7 @@
     <ClCompile Include="nCine\Threading\WindowsThreadSync.cpp">
       <Filter>Source Files\nCine\Threading</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Threading\WindowsThread.cpp">
-      <Filter>Source Files\nCine\Threading</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\Threading\PosixThreadSync.cpp">
-      <Filter>Source Files\nCine\Threading</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Threading\PosixThread.cpp">
       <Filter>Source Files\nCine\Threading</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\Viewport.cpp">
@@ -2575,6 +2569,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp">
       <Filter>Source Files\Jazz2\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Threading\Thread.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

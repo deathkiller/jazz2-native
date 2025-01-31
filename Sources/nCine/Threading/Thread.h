@@ -2,17 +2,6 @@
 
 #include <CommonWindows.h>
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-#	include <emscripten/emscripten.h>
-#elif defined(DEATH_TARGET_WINDOWS)
-#	include <synchapi.h>
-#else
-#	include <unistd.h>
-#	if defined(DEATH_TARGET_SWITCH)
-#		include <switch.h>
-#	endif
-#endif
-
 #if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	if defined(DEATH_TARGET_APPLE)
 #		include <mach/mach_init.h>
@@ -68,20 +57,7 @@ namespace nCine
 	{
 	public:
 		/// Puts the current thread to sleep for the specified number of milliseconds
-		static void Sleep(std::uint32_t milliseconds)
-		{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-			emscripten_sleep(milliseconds);
-#elif defined(DEATH_TARGET_SWITCH)
-			const std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
-			svcSleepThread(nanoseconds);
-#elif defined(DEATH_TARGET_WINDOWS)
-			::SleepEx(static_cast<DWORD>(milliseconds), FALSE);
-#else
-			const unsigned int microseconds = static_cast<unsigned int>(milliseconds) * 1000;
-			::usleep(microseconds);
-#endif
-		}
+		static void Sleep(std::uint32_t milliseconds);
 
 #if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		using ThreadFuncDelegate = void (*)(void*);
@@ -95,20 +71,8 @@ namespace nCine
 
 		Thread(const Thread& other);
 		Thread& operator=(const Thread& other);
-
-		Thread(Thread&& other) noexcept {
-			_sharedBlock = other._sharedBlock;
-			other._sharedBlock = nullptr;
-		}
-
-		Thread& operator=(Thread&& other) noexcept {
-			Detach();
-
-			_sharedBlock = other._sharedBlock;
-			other._sharedBlock = nullptr;
-
-			return *this;
-		}
+		Thread(Thread&& other) noexcept;
+		Thread& operator=(Thread&& other) noexcept;
 
 		/** @brief Returns the number of processors in the machine */
 		static std::uint32_t GetProcessorCount();
@@ -140,10 +104,8 @@ namespace nCine
 		/** @brief Yields the calling thread in favour of another one with the same priority */
 		static void YieldExecution();
 
-#	if !defined(DEATH_TARGET_ANDROID)
 		/** @brief Tries to cancel or terminate the thread (depending on operating system) */
 		bool Abort();
-#	endif
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 		/** @brief Gets the thread affinity mask */
