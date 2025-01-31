@@ -2,6 +2,8 @@
 
 #include <CommonWindows.h>
 
+#if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
+
 #if !defined(DEATH_TARGET_WINDOWS)
 #	include <pthread.h>
 #endif
@@ -11,9 +13,14 @@ namespace nCine
 	/// Mutex for threads synchronization
 	class Mutex
 	{
+		friend class CondVariable;
+
 	public:
 		Mutex();
 		~Mutex();
+
+		Mutex(const Mutex&) = delete;
+		Mutex& operator=(const Mutex&) = delete;
 
 		void Lock();
 		void Unlock();
@@ -31,13 +38,6 @@ namespace nCine
 #else
 		pthread_mutex_t mutex_;
 #endif
-
-		/// Deleted copy constructor
-		Mutex(const Mutex&) = delete;
-		/// Deleted assignment operator
-		Mutex& operator=(const Mutex&) = delete;
-
-		friend class CondVariable;
 	};
 
 	/// Condition variable for threads synchronization
@@ -48,6 +48,9 @@ namespace nCine
 	public:
 		CondVariable();
 		~CondVariable();
+
+		CondVariable(const CondVariable&) = delete;
+		CondVariable& operator=(const CondVariable&) = delete;
 
 		void Wait(Mutex& mutex);
 		void Signal();
@@ -63,11 +66,6 @@ namespace nCine
 #else
 		pthread_cond_t cond_;
 #endif
-
-		/// Deleted copy constructor
-		CondVariable(const CondVariable&) = delete;
-		/// Deleted assignment operator
-		CondVariable& operator=(const CondVariable&) = delete;
 	};
 
 	/// Read/write lock for threads synchronization
@@ -76,6 +74,9 @@ namespace nCine
 	public:
 		ReadWriteLock();
 		~ReadWriteLock();
+
+		ReadWriteLock(const ReadWriteLock&) = delete;
+		ReadWriteLock& operator=(const ReadWriteLock&) = delete;
 
 		inline void EnterReadLock() {
 #if defined(DEATH_TARGET_WINDOWS)
@@ -126,11 +127,6 @@ namespace nCine
 #else
 		pthread_rwlock_t rwlock_;
 #endif
-
-		/// Deleted copy constructor
-		ReadWriteLock(const ReadWriteLock&) = delete;
-		/// Deleted assignment operator
-		ReadWriteLock& operator=(const ReadWriteLock&) = delete;
 	};
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_WINDOWS)
@@ -143,6 +139,9 @@ namespace nCine
 		explicit Barrier(unsigned int count);
 		~Barrier();
 
+		Barrier(const Barrier&) = delete;
+		Barrier& operator=(const Barrier&) = delete;
+
 		/// The calling thread waits at the barrier
 		inline int Wait() {
 			return pthread_barrier_wait(&barrier_);
@@ -150,13 +149,10 @@ namespace nCine
 
 	private:
 		pthread_barrier_t barrier_;
-
-		/// Deleted copy constructor
-		Barrier(const Barrier&) = delete;
-		/// Deleted assignment operator
-		Barrier& operator=(const Barrier&) = delete;
 	};
 
 #endif
 
 }
+
+#endif

@@ -43,6 +43,7 @@ namespace Death { namespace Containers {
 		template<class, class> struct StringViewConverter;
 	}
 
+	/** @brief String view flags */
 	enum class StringViewFlags : std::size_t
 	{
 		/**
@@ -56,6 +57,7 @@ namespace Death { namespace Containers {
 		 * The referenced string is null-terminated. A string view with this flag
 		 * set doesn't need to have a null-terminated copy allocated in order to
 		 * pass to an API that expects only null-terminated strings.
+		 * @see @ref Containers-BasicStringView-usage-c-string-conversion
 		 */
 		 NullTerminated = std::size_t{1} << (sizeof(std::size_t) * 8 - 2)
 	};

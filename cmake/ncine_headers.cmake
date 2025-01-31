@@ -164,6 +164,8 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector4.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadCommand.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadPool.h
+	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
+	${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
 )
 
 list(APPEND HEADERS

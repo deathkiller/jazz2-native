@@ -4,7 +4,7 @@
 
 #include "NetworkManager.h"
 #include "PacketTypes.h"
-#include "../../nCine/Base/Timer.h"
+#include "../../nCine/Threading/Thread.h"
 
 #include <Containers/String.h>
 #include <IO/MemoryStream.h>
@@ -205,7 +205,7 @@ namespace Jazz2::Multiplayer
 				observer->OnServerFound(std::move(discoveredServer));
 			} else {
 				// No responses, sleep for a while
-				Timer::sleep(500);
+				Thread::Sleep(500);
 			}
 		}
 
@@ -272,7 +272,7 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
-			Timer::sleep(500);
+			Thread::Sleep(500);
 		}
 
 		if (_this->_socket != ENET_SOCKET_NULL) {
