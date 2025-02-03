@@ -3,7 +3,7 @@
 
 #include <chrono>
 #include <cmath>	// for ldexp()
-#include <memory>
+#include <cstring>
 #include <tuple>
 
 #if defined(DEATH_TARGET_WINDOWS)

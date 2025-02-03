@@ -3872,7 +3872,9 @@ namespace Death { namespace Backward {
 			std::unordered_map<std::string, Implementation::PathComponents> parsedPaths;
 			std::unordered_map<std::string, Implementation::PathTrie> tries;
 
+#	if defined(BACKWARD_TARGET_WINDOWS)
 			bool failed = false;
+#	endif
 			std::vector<ResolvedTrace> resolvedTrace(st.size());
 			for (std::size_t traceIdx = 0; traceIdx < st.size(); ++traceIdx) {
 				resolvedTrace[traceIdx] = _resolver.Resolve(st[traceIdx]);
@@ -3881,20 +3883,22 @@ namespace Death { namespace Backward {
 				AddPath(resolvedTrace[traceIdx].object_filename, parsedPaths, tries);
 				AddPath(resolvedTrace[traceIdx].source.filename, parsedPaths, tries);
 
+#	if defined(BACKWARD_TARGET_WINDOWS)
 				if (resolvedTrace[traceIdx].object_function.empty()) {
 					failed = true;
 				}
+#	endif
 			}
 
 			// Finalize paths
 			std::unordered_map<std::string, std::string> pathMap;
 			for (auto& [raw, parsedPath] : parsedPaths) {
 				std::string newPath = Join(tries.at(parsedPath.back()).Disambiguate(parsedPath),
-#if defined(BACKWARD_TARGET_WINDOWS)
+#	if defined(BACKWARD_TARGET_WINDOWS)
 					"\\"sv
-#else
+#	else
 					"/"sv
-#endif
+#	endif
 				);
 				pathMap.insert({ raw, newPath });
 			}
