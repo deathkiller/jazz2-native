@@ -1296,6 +1296,11 @@ namespace Death { namespace Containers {
 				return { other.data(), other.size() };
 			}
 		};
+		template<class T, unsigned N> struct ArrayViewConverter<const T, SmallVector<const T, N>> {
+			static ArrayView<const T> from(const SmallVector<const T, N>& other) {
+				return { other.data(), other.size() };
+			}
+		};
 		template<class T, unsigned N> struct ErasedArrayViewConverter<SmallVector<T, N>> : ArrayViewConverter<T, SmallVector<T, N>> {};
 		template<class T, unsigned N> struct ErasedArrayViewConverter<const SmallVector<T, N>> : ArrayViewConverter<const T, SmallVector<T, N>> {};
 	}

@@ -4,11 +4,15 @@
 #include "../nCine/Input/InputEvents.h"
 #include "../nCine/Primitives/Vector2.h"
 
+#include <Base/TypeInfo.h>
+
 namespace Jazz2
 {
 	/** @brief Base interface of a state handler, only one handler runs at a time */
 	class IStateHandler
 	{
+		DEATH_RUNTIME_OBJECT();
+
 	public:
 		IStateHandler() {}
 		virtual ~IStateHandler() {}

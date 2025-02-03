@@ -84,7 +84,7 @@ namespace nCine
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE)
 
-	Barrier::Barrier(unsigned int count)
+	Barrier::Barrier(std::uint32_t count)
 	{
 		pthread_barrier_init(&barrier_, nullptr, count);
 	}

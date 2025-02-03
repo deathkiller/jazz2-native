@@ -120,7 +120,7 @@ public:
 
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
 	void OnPeerDisconnected(const Peer& peer, Reason reason) override;
-	void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength) override;
+	void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data) override;
 #endif
 
 	Flags GetFlags() const override {
@@ -497,7 +497,7 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 #if defined(WITH_MULTIPLAYER)
 		_networkManager = nullptr;
 #endif
-		if (auto mainMenu = dynamic_cast<Menu::MainMenu*>(_currentHandler.get())) {
+		if (auto* mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
 			mainMenu->Reset();
 		} else {
 			SetStateHandler(std::make_unique<Menu::MainMenu>(this, afterIntro));
@@ -647,7 +647,7 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 {
 	ZoneScopedNC("GameEventHandler::SaveCurrentStateIfAny", 0x888888);
 
-	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
+	if (auto* levelHandler = runtime_cast<LevelHandler*>(_currentHandler)) {
 		if (levelHandler->IsLocalSession()) {
 			auto configDir = PreferencesCache::GetDirectory();
 			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
@@ -708,7 +708,7 @@ bool GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
 		_networkManager = std::make_unique<NetworkManager>();
 	}
 
-	return _networkManager->CreateClient(this, address, port, 0xCA000000 | MultiplayerProtocolVersion);
+	return _networkManager->CreateClient(this, address, port, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
 }
 
 bool GameEventHandler::CreateServer(LevelInitialization&& levelInit, std::uint16_t port)
@@ -748,17 +748,25 @@ void GameEventHandler::SetServerName(StringView value)
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 {
-	LOGI("Peer connected");
+	LOGI("[MP] Peer connected");
 
 	if (_networkManager->GetState() == NetworkState::Listening) {
-		if ((clientData & 0xFF000000) != 0xCA000000 || (clientData & 0x00FFFFFF) > MultiplayerProtocolVersion) {
+		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
 			// Connected client is newer than server, reject it
 			return Reason::IncompatibleVersion;
 		}
 	} else {
 		// TODO: Auth packet
-		std::uint8_t data[] = { (std::uint8_t)ClientPacketType::Auth, 0x01, 0x02, 0x03, 0x04 };
-		_networkManager->SendToPeer(peer, NetworkChannel::Main, data, sizeof(data));
+		MemoryStream packet(24);
+		packet.Write("J2R ", 4);
+
+		constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
+		packet.WriteVariableUint64(currentVersion);
+
+		packet.Write(PreferencesCache::UniquePlayerID, sizeof(PreferencesCache::UniquePlayerID));
+		// TODO: Player name
+		packet.WriteVariableUint32(0);
+		_networkManager->SendToPeer(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
 	}
 
 	return true;
@@ -766,9 +774,9 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
-	LOGI("Peer disconnected (%u)", (std::uint32_t)reason);
+	LOGI("[MP] Peer disconnected (%u)", (std::uint32_t)reason);
 
-	if (auto multiLevelHandler = dynamic_cast<MultiLevelHandler*>(_currentHandler.get())) {
+	if (auto* multiLevelHandler = runtime_cast<MultiLevelHandler*>(_currentHandler)) {
 		if (multiLevelHandler->OnPeerDisconnected(peer)) {
 			return;
 		}
@@ -780,7 +788,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			_networkManager = nullptr;
 #endif
 			Menu::MainMenu* mainMenu;
-			if (mainMenu = dynamic_cast<Menu::MainMenu*>(_currentHandler.get())) {
+			if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
 				mainMenu->Reset();
 			} else {
 				auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
@@ -805,46 +813,43 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 	}
 }
 
-void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength)
+void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 {
 	bool isServer = (_networkManager->GetState() == NetworkState::Listening);
 	if (isServer) {
-		auto packetType = (ClientPacketType)data[0];
-		switch (packetType) {
+		switch ((ClientPacketType)packetType) {
 			case ClientPacketType::Ping: {
-				std::uint8_t data[] = { (std::uint8_t)ServerPacketType::Pong };
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, data, sizeof(data));
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::Pong, {});
 				break;
 			}
-			/*case ClientPacketType::Auth: {
-				// TODO: Move this to MultiLevelHandler
-				std::uint8_t flags = 0;
-				if (PreferencesCache::EnableReforged) {
-					flags |= 0x01;
+			case ClientPacketType::Auth: {
+				MemoryStream packet(data);
+				char gameID[5];
+				packet.Read(gameID, 4);
+
+				std::uint64_t gameVersion = packet.ReadVariableUint64();
+				std::uint64_t playerID_1 = packet.ReadValue<std::uint64_t>();
+				std::uint64_t playerID_2 = packet.ReadValue<std::uint64_t>();
+
+				// TODO: Player name
+
+				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, playerID: 0x%llX%llX",
+					peer._enet, 4, gameID, gameVersion, playerID_1, playerID_2);
+
+				constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
+
+				if (strncmp(gameID, "J2R ", 4) != 0 || gameVersion != currentVersion) {
+					_networkManager->KickClient(peer, Reason::IncompatibleVersion);
+					return;
 				}
-
-				// TODO: Hardcoded level
-				String episodeName = "prince"_s;
-				String levelName = "01_castle1"_s;
-
-				MemoryStream packet(10 + episodeName.size() + levelName.size());
-				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::LoadLevel);
-				packet.WriteValue<std::uint8_t>(flags);
-				packet.WriteVariableUint32(episodeName.size());
-				packet.Write(episodeName.data(), episodeName.size());
-				packet.WriteVariableUint32(levelName.size());
-				packet.Write(levelName.data(), levelName.size());
-
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet);
 				break;
-			}*/
+			}
 		}
 
 	} else {
-		auto packetType = (ServerPacketType)data[0];
-		switch (packetType) {
+		switch ((ServerPacketType)packetType) {
 			case ServerPacketType::LoadLevel: {
-				MemoryStream packet(data + 1, dataLength - 1);
+				MemoryStream packet(data);
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 				MultiplayerGameMode gameMode = (MultiplayerGameMode)packet.ReadValue<std::uint8_t>();
 				std::uint32_t episodeLength = packet.ReadVariableUint32();
@@ -871,8 +876,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		}
 	}
 
-	if (auto* multiLevelHandler = dynamic_cast<MultiLevelHandler*>(_currentHandler.get())) {
-		if (multiLevelHandler->OnPacketReceived(peer, channelId, data, dataLength)) {
+	if (auto* multiLevelHandler = runtime_cast<MultiLevelHandler*>(_currentHandler)) {
+		if (multiLevelHandler->OnPacketReceived(peer, channelId, packetType, data)) {
 			return;
 		}
 	}

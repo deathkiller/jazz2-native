@@ -27,6 +27,8 @@ namespace Jazz2::UI::Menu
 	/** @brief Main menu */
 	class MainMenu : public IStateHandler, public IMenuContainer
 	{
+		DEATH_RUNTIME_OBJECT(IStateHandler, IMenuContainer);
+
 		friend class BeginSection;
 		friend class RefreshCacheSection;
 		friend class StartGameOptionsSection;

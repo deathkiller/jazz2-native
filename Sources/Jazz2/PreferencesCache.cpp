@@ -3,6 +3,7 @@
 #include "LevelHandler.h"
 #include "UI/ControlScheme.h"
 #include "../nCine/Application.h"
+#include "../nCine/Base/Random.h"
 
 #include <Containers/StringConcatenable.h>
 #include <Environment.h>
@@ -17,6 +18,7 @@ using namespace nCine;
 
 namespace Jazz2
 {
+	std::uint8_t PreferencesCache::UniquePlayerID[16];
 	bool PreferencesCache::FirstRun = false;
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	bool PreferencesCache::IsStandalone = false;
@@ -258,6 +260,17 @@ namespace Jazz2
 						OverwriteEpisodeEnd = (EpisodeEndOverwriteMode)uc.ReadValue<std::uint8_t>();
 					}
 
+					if (version >= 10) {
+						uc.Read(UniquePlayerID, sizeof(UniquePlayerID));
+						// TODO: Player name
+						std::uint32_t playerNameLength = uc.ReadVariableUint32();
+						String playerName(NoInit, playerNameLength);
+						uc.Read(playerName.data(), playerNameLength);
+					} else {
+						// Generate a new UUID when upgrading from older version
+						Random().Uuid(UniquePlayerID);
+					}
+
 					// Controls
 					if (version >= 4) {
 						auto mappings = UI::ControlScheme::GetAllMappings();
@@ -337,32 +350,40 @@ namespace Jazz2
 							uc.Seek(nameLength + episodeContinueSize, SeekOrigin::Current);
 						}
 					}
+				} else {
+					resetConfig = true;
 				}
 			} else {
-				FirstRun = true;
-				TryLoadPreferredLanguage();
+				resetConfig = true;
+			}
+		}
+		
+		if (resetConfig) {
+			// Config file doesn't exist or reset is requested
+			FirstRun = true;
+			Random().Uuid(UniquePlayerID);
+			TryLoadPreferredLanguage();
 
-				fs::CreateDirectories(configDir);
+			fs::CreateDirectories(configDir);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-				// Create "Source" directory on the first launch
-				auto& resolver = ContentResolver::Get();
-				fs::CreateDirectories(resolver.GetSourcePath());
+			// Create "Source" directory on the first launch
+			auto& resolver = ContentResolver::Get();
+			fs::CreateDirectories(resolver.GetSourcePath());
 
 #	if defined(DEATH_TARGET_UNIX)
-				StringView isSteamDeck = ::getenv("SteamDeck");
-				if (isSteamDeck == "1"_s) {
-					GamepadButtonLabels = GamepadType::Steam;
-				}
+			StringView isSteamDeck = ::getenv("SteamDeck");
+			if (isSteamDeck == "1"_s) {
+				GamepadButtonLabels = GamepadType::Steam;
+			}
 #	elif defined(DEATH_TARGET_WINDOWS)
-				wchar_t envSteamDeck[2] = {};
-				DWORD envLength = ::GetEnvironmentVariable(L"SteamDeck", envSteamDeck, 2);
-				if (envLength == 1 && envSteamDeck[0] == L'1') {
-					GamepadButtonLabels = GamepadType::Steam;
-				}
+			wchar_t envSteamDeck[2] = {};
+			DWORD envLength = ::GetEnvironmentVariable(L"SteamDeck", envSteamDeck, 2);
+			if (envLength == 1 && envSteamDeck[0] == L'1') {
+				GamepadButtonLabels = GamepadType::Steam;
+			}
 #	endif
 #endif
-			}
 		}
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
@@ -483,6 +504,10 @@ namespace Jazz2
 		co.WriteValue<std::uint8_t>((std::uint8_t)GamepadButtonLabels);
 		co.WriteValue<std::uint8_t>(GamepadRumble);
 		co.WriteValue<std::uint8_t>((std::uint8_t)OverwriteEpisodeEnd);
+
+		co.Write(UniquePlayerID, sizeof(UniquePlayerID));
+		// TODO: Player name
+		co.WriteVariableUint32(0);
 
 		// Controls
 		co.WriteValue<std::uint8_t>((std::uint8_t)UI::ControlScheme::MaxSupportedPlayers);

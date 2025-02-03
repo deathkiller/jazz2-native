@@ -102,7 +102,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
 		/** @brief Called when a packet is received, see @ref INetworkHandler */
-		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength);
+		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 
 	protected:
 		void BeforeActorDestroyed(Actors::ActorBase* actor) override;

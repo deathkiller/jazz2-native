@@ -28,6 +28,8 @@ namespace Jazz2::UI::Menu
 	/** @brief Base interface of a menu container */
 	class IMenuContainer
 	{
+		DEATH_RUNTIME_OBJECT();
+
 	public:
 		static constexpr std::uint16_t MainLayer = 600;
 		static constexpr std::uint16_t ShadowLayer = 580;

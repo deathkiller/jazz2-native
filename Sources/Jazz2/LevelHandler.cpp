@@ -1290,10 +1290,6 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
-		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
-			return false;
-		}
-
 		bool isGamepad;
 		return PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
@@ -1316,10 +1312,6 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads)
 	{
-		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
-			return false;
-		}
-
 		bool isGamepad;
 		return PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
@@ -1976,7 +1968,7 @@ namespace Jazz2
 
 		for (std::int32_t i = 0; i < UI::ControlScheme::MaxSupportedPlayers; i++) {
 			auto processedInput = UI::ControlScheme::FetchProcessedInput(i,
-				_pressedKeys, ArrayView(joyStates, joyStatesCount), !_hud->IsWeaponWheelVisible(i));
+				_pressedKeys, ArrayView(joyStates, joyStatesCount), _hud == nullptr || !_hud->IsWeaponWheelVisible(i));
 
 			auto& input = _playerInputs[i];
 			input.PressedActionsLast = input.PressedActions;

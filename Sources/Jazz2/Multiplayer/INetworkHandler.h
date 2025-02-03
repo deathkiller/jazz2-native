@@ -31,7 +31,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Called when a peer disconnects from the server */
 		virtual void OnPeerDisconnected(const Peer& peer, Reason reason) = 0;
 		/** @brief Called when a packet is received */
-		virtual void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength) = 0;
+		virtual void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data) = 0;
 	};
 }
 

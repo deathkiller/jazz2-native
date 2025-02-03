@@ -115,6 +115,9 @@ namespace Jazz2
 		/** @brief Value of @ref MaxFps that specifies the frame rate of the monitor being used */
 		static constexpr std::int32_t UseVsync = -1;
 
+		/** @brief Unique player ID */
+		static std::uint8_t UniquePlayerID[16];
+
 		/** @brief Whether the application is running for the first time */
 		static bool FirstRun;
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -272,7 +275,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 9;
+		static constexpr std::uint8_t FileVersion = 10;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

@@ -28,6 +28,17 @@ namespace Death {
 #undef DEATH_TRACE
 
 /**
+	@brief Whether exception usage is suppressed
+
+	Exception usage is automatically enabled according to the compiler support
+	by checking the @cpp _CPPUNWIND @ce and @cpp __EXCEPTIONS @ce defines. If
+	@cpp DEATH_SUPPRESS_EXCEPTIONS @ce is defined, exception support is explicitly
+	disabled. In this case, @cpp throw @ce is usually replaced by asserts.
+*/
+#define DEATH_SUPPRESS_EXCEPTIONS
+#undef DEATH_SUPPRESS_EXCEPTIONS
+
+/**
 	@brief Build with runtime CPU dispatch
 
 	Defined if the library is built with performance-critical code paths optimized
@@ -86,10 +97,9 @@ namespace Death {
 /**
 	@brief Unix target
 
-	Defined if the library is built for some Unix flavor (Linux, BSD, macOS, iOS,
-	Android...). Note that while the behavior of Emscripten is closely emulating
-	Unix systems, @ref DEATH_TARGET_UNIX is not defined there, only
-	@ref DEATH_TARGET_EMSCRIPTEN.
+	Defined if the library is built for some Unix flavor (Linux, BSD, macOS, iOS, Android...).
+	Note that while the behavior of Emscripten is closely emulating Unix systems,
+	@ref DEATH_TARGET_UNIX is not defined there, only @ref DEATH_TARGET_EMSCRIPTEN.
 */
 #define DEATH_TARGET_UNIX
 #undef DEATH_TARGET_UNIX
