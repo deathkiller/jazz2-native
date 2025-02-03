@@ -65,7 +65,7 @@ namespace Jazz2
 	/** @brief Level handler of a local game session */
 	class LevelHandler : public ILevelHandler, public IStateHandler, public IResumable, public Tiles::ITileMapOwner
 	{
-		DEATH_RUNTIME_OBJECT(ILevelHandler);
+		DEATH_RUNTIME_OBJECT(ILevelHandler, IStateHandler);
 
 		friend class Rendering::LightingRenderer;
 		friend class Rendering::BlurRenderPass;

@@ -24,13 +24,12 @@
 #define DEATH_PRIVATE_ENUM_FLAGS(type)
 #else
 namespace Death { namespace Implementation {
-	// Used as an approximation of std::underlying_type<T>
-	template<std::int32_t S> struct EnumTypeForSize;
-	template<> struct EnumTypeForSize<1> { using Type = std::int8_t; };
-	template<> struct EnumTypeForSize<2> { using Type = std::int16_t; };
-	template<> struct EnumTypeForSize<4> { using Type = std::int32_t; };
-	template<> struct EnumTypeForSize<8> { using Type = std::int64_t; };
-	template<class T> struct EnumSizedInteger { using Type = typename EnumTypeForSize<sizeof(T)>::Type; };
+	template<int> struct VariableSize;
+	template<> struct VariableSize<1> { using Type = std::int8_t; };
+	template<> struct VariableSize<2> { using Type = std::int16_t; };
+	template<> struct VariableSize<4> { using Type = std::int32_t; };
+	template<> struct VariableSize<8> { using Type = std::int64_t; };
+	template<typename T> using EnumSizedInteger = typename VariableSize<sizeof(T)>::Type;
 }}
 
 /**
@@ -40,13 +39,13 @@ namespace Death { namespace Implementation {
 	for a given @cpp enum class @ce type.
 */
 #define DEATH_ENUM_FLAGS(type)	\
-	inline constexpr type operator|(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) | ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
-	inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
-	inline constexpr type operator&(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) & ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
-	inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
-	inline constexpr type operator~(type a) { return type(~((Death::Implementation::EnumSizedInteger<type>::Type)a)); }																		\
-	inline constexpr type operator^(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
-	inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }
+	inline constexpr type operator|(type a, type b) { return type(((::Death::Implementation::EnumSizedInteger<type>)a) | ((::Death::Implementation::EnumSizedInteger<type>)b)); }	\
+	inline type& operator|=(type& a, type b) { return (type&)(((::Death::Implementation::EnumSizedInteger<type>&)a) |= ((::Death::Implementation::EnumSizedInteger<type>)b)); }		\
+	inline constexpr type operator&(type a, type b) { return type(((::Death::Implementation::EnumSizedInteger<type>)a) & ((::Death::Implementation::EnumSizedInteger<type>)b)); }	\
+	inline type& operator&=(type& a, type b) { return (type&)(((::Death::Implementation::EnumSizedInteger<type>&)a) &= ((::Death::Implementation::EnumSizedInteger<type>)b)); }		\
+	inline constexpr type operator~(type a) { return type(~((::Death::Implementation::EnumSizedInteger<type>)a)); }																	\
+	inline constexpr type operator^(type a, type b) { return type(((::Death::Implementation::EnumSizedInteger<type>)a) ^ ((::Death::Implementation::EnumSizedInteger<type>)b)); }	\
+	inline type& operator^=(type& a, type b) { return (type&)(((::Death::Implementation::EnumSizedInteger<type>&)a) ^= ((::Death::Implementation::EnumSizedInteger<type>)b)); }
 
 /**
 	@brief Mark a private enum as a set of flags
@@ -56,13 +55,13 @@ namespace Death { namespace Implementation {
 	should be used for @cpp enum class @ce types declared within classes.
 */
 #define DEATH_PRIVATE_ENUM_FLAGS(type)	\
-	friend inline constexpr type operator|(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) | ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
-	friend inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
-	friend inline constexpr type operator&(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) & ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
-	friend inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }		\
-	friend inline constexpr type operator~(type a) { return type(~((Death::Implementation::EnumSizedInteger<type>::Type)a)); }																		\
-	friend inline constexpr type operator^(type a, type b) { return type(((Death::Implementation::EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }	\
-	friend inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::EnumSizedInteger<type>::Type)b)); }
+	friend inline constexpr type operator|(type a, type b) { return type(((::Death::Implementation::EnumSizedInteger<type>)a) | ((::Death::Implementation::EnumSizedInteger<type>)b)); }	\
+	friend inline type& operator|=(type& a, type b) { return (type&)(((::Death::Implementation::EnumSizedInteger<type>&)a) |= ((::Death::Implementation::EnumSizedInteger<type>)b)); }		\
+	friend inline constexpr type operator&(type a, type b) { return type(((::Death::Implementation::EnumSizedInteger<type>)a) & ((::Death::Implementation::EnumSizedInteger<type>)b)); }	\
+	friend inline type& operator&=(type& a, type b) { return (type&)(((::Death::Implementation::EnumSizedInteger<type>&)a) &= ((::Death::Implementation::EnumSizedInteger<type>)b)); }		\
+	friend inline constexpr type operator~(type a) { return type(~((::Death::Implementation::EnumSizedInteger<type>)a)); }																	\
+	friend inline constexpr type operator^(type a, type b) { return type(((::Death::Implementation::EnumSizedInteger<type>)a) ^ ((::Death::Implementation::EnumSizedInteger<type>)b)); }	\
+	friend inline type& operator^=(type& a, type b) { return (type&)(((::Death::Implementation::EnumSizedInteger<type>&)a) ^= ((::Death::Implementation::EnumSizedInteger<type>)b)); }
 #endif
 
 /** @brief Workaround for MSVC not being able to expand `__VA_ARGS__` correctly */

@@ -253,7 +253,8 @@ extern "C" {
 
 	extern void *enet_malloc(size_t);
 	extern void enet_free(void *);
-	extern ENetPacket* enet_packet_create(const void*,size_t,enet_uint32);
+	extern ENetPacket* enet_packet_create(enet_uint8,const void*,size_t,enet_uint32);
+	extern ENetPacket* enet_packet_create_raw(const void*,size_t,enet_uint32);
 	extern int enet_packet_resize(ENetPacket*, size_t);
 	extern ENetPacket* enet_packet_copy(ENetPacket*);
 	extern void enet_packet_destroy(ENetPacket*);
@@ -1242,7 +1243,7 @@ extern "C" {
 // !
 // =======================================================================//
 
-	ENetCallbacks callbacks = { malloc, free, abort, enet_packet_create, enet_packet_destroy };
+	ENetCallbacks callbacks = { malloc, free, abort, enet_packet_create_raw, enet_packet_destroy };
 
 	int enet_initialize_with_callbacks(ENetVersion version, const ENetCallbacks *inits) {
 		if (version < ENET_VERSION_CREATE(1, 3, 0)) {
@@ -1357,28 +1358,61 @@ extern "C" {
 
 	/**
 	 * Creates a packet that may be sent to a peer.
+	 * @param type         packet type sent as the first byte
+	 * @param data         initial contents of the packet's data
+	 * @param dataLength   size of the data allocated for this packet
+	 * @param flags        flags for this packet as described for the ENetPacket structure.
+	 * @returns the packet on success, NULL on failure
+	 */
+	ENetPacket* enet_packet_create(enet_uint8 type, const void* data, size_t dataLength, enet_uint32 flags) {
+		if (flags & ENET_PACKET_FLAG_NO_ALLOCATE) {
+			return NULL;
+		}
+
+		ENetPacket* packet = (ENetPacket*)enet_malloc(sizeof(ENetPacket) + 1 + dataLength);
+		if (packet == NULL) {
+			return NULL;
+		}
+
+		packet->data = (enet_uint8*)packet + sizeof(ENetPacket);
+		packet->data[0] = type;
+		if (dataLength > 0) {
+			memcpy(&packet->data[1], data, dataLength);
+		}
+
+		packet->referenceCount = 0;
+		packet->flags        = flags;
+		packet->dataLength = 1 + dataLength;
+		packet->freeCallback = NULL;
+		packet->userData     = NULL;
+
+		return packet;
+	}
+
+	/**
+	 * Creates a raw packet that may be sent to a peer.
+	 * @param type         initial contents of the packet's data; the packet's data will remain uninitialized if data is NULL.
 	 * @param data         initial contents of the packet's data; the packet's data will remain uninitialized if data is NULL.
 	 * @param dataLength   size of the data allocated for this packet
 	 * @param flags        flags for this packet as described for the ENetPacket structure.
 	 * @returns the packet on success, NULL on failure
 	 */
-	ENetPacket *enet_packet_create(const void *data, size_t dataLength, enet_uint32 flags) {
-		ENetPacket *packet;
+	ENetPacket* enet_packet_create_raw(const void* data, size_t dataLength, enet_uint32 flags) {
+		ENetPacket* packet;
 		if (flags & ENET_PACKET_FLAG_NO_ALLOCATE) {
-			packet = (ENetPacket *)enet_malloc(sizeof (ENetPacket));
+			packet = (ENetPacket*)enet_malloc(sizeof(ENetPacket));
 			if (packet == NULL) {
 				return NULL;
 			}
 
-			packet->data = (enet_uint8 *)data;
-		}
-		else {
-			packet = (ENetPacket *)enet_malloc(sizeof (ENetPacket) + dataLength);
+			packet->data = (enet_uint8*)data;
+		} else {
+			packet = (ENetPacket*)enet_malloc(sizeof(ENetPacket) + dataLength);
 			if (packet == NULL) {
 				return NULL;
 			}
 
-			packet->data = (enet_uint8 *)packet + sizeof(ENetPacket);
+			packet->data = (enet_uint8*)packet + sizeof(ENetPacket);
 
 			if (data != NULL) {
 				memcpy(packet->data, data, dataLength);
@@ -1386,23 +1420,22 @@ extern "C" {
 		}
 
 		packet->referenceCount = 0;
-		packet->flags        = flags;
-		packet->dataLength   = dataLength;
+		packet->flags = flags;
+		packet->dataLength = dataLength;
 		packet->freeCallback = NULL;
-		packet->userData     = NULL;
+		packet->userData = NULL;
 
 		return packet;
 	}
 
-	/** Attempts to resize the data in the packet to length specified in the 
-		dataLength parameter 
+	/** Attempts to resize the data in the packet to length specified in the dataLength parameter 
 		@param packet packet to resize
 		@param dataLength new size for the packet data
 		@returns 0 on success, < 0 on failure
 	*/
-	int enet_packet_resize(ENetPacket * packet, size_t dataLength)
+	int enet_packet_resize(ENetPacket* packet, size_t dataLength)
 	{
-		enet_uint8 *newData = 0;
+		enet_uint8* newData = 0;
 
 		if (dataLength <= packet->dataLength || (packet->flags & ENET_PACKET_FLAG_NO_ALLOCATE))
 		{
@@ -1411,7 +1444,7 @@ extern "C" {
 		   return 0;
 		}
 
-		newData = (enet_uint8 *) enet_malloc(dataLength);
+		newData = (enet_uint8*)enet_malloc(dataLength);
 		if (newData == NULL)
 		  return -1;
 
@@ -1424,23 +1457,22 @@ extern "C" {
 		return 0;
 	}
 
-	ENetPacket *enet_packet_create_offset(const void *data, size_t dataLength, size_t dataOffset, enet_uint32 flags) {
-		ENetPacket *packet;
+	ENetPacket *enet_packet_create_offset(const void* data, size_t dataLength, size_t dataOffset, enet_uint32 flags) {
+		ENetPacket* packet;
 		if (flags & ENET_PACKET_FLAG_NO_ALLOCATE) {
-			packet = (ENetPacket *)enet_malloc(sizeof (ENetPacket));
+			packet = (ENetPacket*)enet_malloc(sizeof(ENetPacket));
 			if (packet == NULL) {
 				return NULL;
 			}
 
 			packet->data = (enet_uint8 *)data;
-		}
-		else {
-			packet = (ENetPacket *)enet_malloc(sizeof (ENetPacket) + dataLength + dataOffset);
+		} else {
+			packet = (ENetPacket*)enet_malloc(sizeof(ENetPacket) + dataLength + dataOffset);
 			if (packet == NULL) {
 				return NULL;
 			}
 
-			packet->data = (enet_uint8 *)packet + sizeof(ENetPacket);
+			packet->data = (enet_uint8*)packet + sizeof(ENetPacket);
 
 			if (data != NULL) {
 				memcpy(packet->data + dataOffset, data, dataLength);
@@ -1456,15 +1488,15 @@ extern "C" {
 		return packet;
 	}
 
-	ENetPacket *enet_packet_copy(ENetPacket *packet) {
-		return enet_packet_create(packet->data, packet->dataLength, packet->flags);
+	ENetPacket *enet_packet_copy(ENetPacket* packet) {
+		return enet_packet_create_raw(packet->data, packet->dataLength, packet->flags);
 	}
 
 	/**
 	 * Destroys the packet and deallocates its data.
 	 * @param packet packet to be destroyed
 	 */
-	void enet_packet_destroy(ENetPacket *packet) {
+	void enet_packet_destroy(ENetPacket* packet) {
 		if (packet == NULL) {
 			return;
 		}
@@ -1511,14 +1543,14 @@ extern "C" {
 		initializedCRC32 = 1;
 	}
 
-	enet_uint32 enet_crc32(const ENetBuffer *buffers, size_t bufferCount) {
+	enet_uint32 enet_crc32(const ENetBuffer* buffers, size_t bufferCount) {
 		enet_uint32 crc = 0xFFFFFFFF;
 
 		if (!initializedCRC32) { initialize_crc32(); }
 
 		while (bufferCount-- > 0) {
-			const enet_uint8 *data = (const enet_uint8 *)buffers->data;
-			const enet_uint8 *dataEnd = &data[buffers->dataLength];
+			const enet_uint8* data = (const enet_uint8*)buffers->data;
+			const enet_uint8* dataEnd = &data[buffers->dataLength];
 
 			while (data < dataEnd) {
 				crc = (crc >> 8) ^ crcTable[(crc & 0xFF) ^ *data++];

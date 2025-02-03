@@ -20,9 +20,9 @@ namespace nCine
 		/// Initializes the generator with the specified seeds
 		void Initialize(std::uint64_t initState, std::uint64_t initSequence) noexcept;
 
-		/// Generates a uniformly distributed `32-bit number
+		/// Generates a uniformly distributed 32-bit number
 		std::uint32_t Next() noexcept;
-		/// Generates a uniformly distributed `32-bit number, r, where min <= r < max
+		/// Generates a uniformly distributed 32-bit number, r, where min <= r < max
 		std::uint32_t Next(std::uint32_t min, std::uint32_t max) noexcept;
 		/// Generates a uniformly distributed float number, r, where 0 <= r < 1
 		float NextFloat() noexcept;
@@ -37,6 +37,9 @@ namespace nCine
 		float FastFloat() noexcept;
 		/// Faster but less uniform version of `real()`
 		float FastFloat(float min, float max) noexcept;
+
+		/// Gnerates a 128-bit unique UUID
+		void Uuid(Containers::StaticArrayView<16, std::uint8_t> result);
 
 		template<class T>
 		void Shuffle(Containers::ArrayView<T> data) noexcept

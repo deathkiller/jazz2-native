@@ -70,3 +70,24 @@ namespace Death { namespace IO {
 	};
 
 }}
+
+namespace Death { namespace Containers { namespace Implementation {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	template<> struct ArrayViewConverter<std::uint8_t, IO::MemoryStream> {
+		static ArrayView<std::uint8_t> from(IO::MemoryStream& other) {
+			return { other.GetBuffer(), std::size_t(other.GetSize()) };
+		}
+		static ArrayView<std::uint8_t> from(IO::MemoryStream&& other) {
+			return { other.GetBuffer(), std::size_t(other.GetSize()) };
+		}
+	};
+	template<> struct ArrayViewConverter<const std::uint8_t, IO::MemoryStream> {
+		static ArrayView<const std::uint8_t> from(const IO::MemoryStream& other) {
+			return { other.GetBuffer(), std::size_t(other.GetSize()) };
+		}
+	};
+	template<> struct ErasedArrayViewConverter<IO::MemoryStream> : ArrayViewConverter<std::uint8_t, IO::MemoryStream> {};
+	template<> struct ErasedArrayViewConverter<const IO::MemoryStream> : ArrayViewConverter<const std::uint8_t, IO::MemoryStream> {};
+
+}}}

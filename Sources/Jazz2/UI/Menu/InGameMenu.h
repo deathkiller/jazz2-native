@@ -16,6 +16,8 @@ namespace Jazz2::UI::Menu
 	/** @brief In-game menu */
 	class InGameMenu : public IMenuContainer
 	{
+		DEATH_RUNTIME_OBJECT(IMenuContainer);
+
 	public:
 		/** @brief Default width of viewport */
 		static constexpr std::int32_t DefaultWidth = 720;

@@ -136,14 +136,14 @@ namespace nCine
 	{
 	public:
 		/// Creates a barrier for the specified amount of waiting threads
-		explicit Barrier(unsigned int count);
+		explicit Barrier(std::uint32_t count);
 		~Barrier();
 
 		Barrier(const Barrier&) = delete;
 		Barrier& operator=(const Barrier&) = delete;
 
 		/// The calling thread waits at the barrier
-		inline int Wait() {
+		inline std::int32_t Wait() {
 			return pthread_barrier_wait(&barrier_);
 		}
 

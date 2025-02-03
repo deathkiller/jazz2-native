@@ -106,7 +106,7 @@ namespace Jazz2::UI::Menu
 			if (_touchStart == Vector2f::Zero && _scrollable) {
 				float y = _y + (_touchSpeed * (std::int32_t)_touchDirection * TouchKineticDivider * timeMult);
 				if (y < (_availableHeight - _height) && _touchDirection == -1) {
-					y = (_availableHeight - _height);
+					y = float(_availableHeight - _height);
 					_touchDirection = 1;
 					_touchSpeed *= TouchKineticDamping;
 				} else if (y > 0.0f && _touchDirection == 1) {
@@ -114,7 +114,7 @@ namespace Jazz2::UI::Menu
 					_touchDirection = -1;
 					_touchSpeed *= TouchKineticDamping;
 				}
-				_y = y;
+				_y = std::int32_t(y);
 			}
 
 			_touchSpeed = std::max(_touchSpeed - TouchKineticFriction * TouchKineticDivider * timeMult, 0.0f);
@@ -232,11 +232,11 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_items[0].Y < topLine + ItemHeight / 2) {
-			_root->DrawElement(MenuGlow, 0, center.X, topLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+			_root->DrawElement(MenuGlow, 0, float(center.X), float(topLine), 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 		std::int32_t itemHeight = _items[_items.size() - 1].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
 		if (_items[_items.size() - 1].Y > bottomLine - itemHeight / 2) {
-			_root->DrawElement(MenuGlow, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+			_root->DrawElement(MenuGlow, 0, float(center.X), float(bottomLine), 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 	}
 
@@ -247,7 +247,7 @@ namespace Jazz2::UI::Menu
 			case TouchEventType::Down: {
 				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 				if (pointerIndex != -1) {
-					std::int32_t y = event.pointers[pointerIndex].y * float(viewSize.Y);
+					std::int32_t y = std::int32_t(event.pointers[pointerIndex].y * float(viewSize.Y));
 					if (y < 80) {
 						OnBackPressed();
 						return;
