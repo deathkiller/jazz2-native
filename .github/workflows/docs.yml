@@ -38,6 +38,7 @@ jobs:
     
     - name: 'Build'
       run: |
+        mkdir ./build/docs/
         ./m.css/documentation/doxygen.py Docs/conf.py
         
     - name: 'Upload Package'
