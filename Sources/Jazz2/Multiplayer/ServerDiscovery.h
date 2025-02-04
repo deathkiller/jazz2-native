@@ -20,6 +20,7 @@
 #undef far
 
 #include <Containers/SmallVector.h>
+#include <Containers/StaticArray.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -29,7 +30,7 @@ using namespace nCine;
 namespace Jazz2::Multiplayer
 {
 	/** @brief Server description */
-	struct ServerDesc
+	struct ServerDescription
 	{
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief Server endpoint */
@@ -38,7 +39,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Server endpoint in text format */
 		String EndpointString;
 		/** @brief Server unique identifier */
-		std::uint8_t UniqueIdentifier[16];
+		StaticArray<16, std::uint8_t> UniqueIdentifier;
 		/** @brief Server name */
 		String Name;
 		/** @brief Game mode and flags */
@@ -63,7 +64,7 @@ namespace Jazz2::Multiplayer
 	{
 	public:
 		/** @brief Called when a server is discovered */
-		virtual void OnServerFound(ServerDesc&& desc) = 0;
+		virtual void OnServerFound(ServerDescription&& desc) = 0;
 	};
 
 	/**
@@ -102,7 +103,7 @@ namespace Jazz2::Multiplayer
 		static ENetSocket TryCreateSocket(const char* multicastAddress, ENetAddress& parsedAddress);
 
 		static void TrySendRequest(ENetSocket socket, const ENetAddress& address);
-		static bool ProcessResponses(ENetSocket socket, ServerDesc& discoveredServer, std::int32_t timeoutMs = 0);
+		static bool ProcessResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs = 0);
 		static bool ProcessRequests(ENetSocket socket, std::int32_t timeoutMs = 0);
 
 		static void OnClientThread(void* param);

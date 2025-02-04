@@ -50,25 +50,32 @@ namespace Jazz2::Collisions
 	*/
 	struct TreeNode
 	{
-		/// Enlarged AABB
+		/** @brief Enlarged AABB */
 		AABBf Aabb;
 
+		/** @brief Opaque pointer to user-supplied data */
 		void* UserData;
 
 		union
 		{
+			/** @brief Node ID of parent node */
 			std::int32_t Parent;
+			/** @brief Node ID of next node */
 			std::int32_t Next;
 		};
 
+		/** @brief Node ID of the first child */
 		std::int32_t Child1;
+		/** @brief Node ID of the second child */
 		std::int32_t Child2;
 
-		// leaf = 0, free node = -1
+		/** @brief Height (leaf = 0, free node = -1) */
 		std::int32_t Height;
 
+		/** @brief Whether node has been moved */
 		bool Moved;
 
+		/** @brief Returns whether the node is leaf */
 		bool IsLeaf() const
 		{
 			return (Child1 == NullNode);
@@ -118,7 +125,7 @@ namespace Jazz2::Collisions
 		 */
 		void* GetUserData(std::int32_t proxyId) const;
 
-		/** @brief Returns `true` if a proxy was moved */
+		/** @brief Returns `true` if a proxy has been moved */
 		bool WasMoved(std::int32_t proxyId) const;
 		/** @brief Clears moved status of a proxy */
 		void ClearMoved(std::int32_t proxyId);
@@ -130,15 +137,15 @@ namespace Jazz2::Collisions
 		template<typename T>
 		void Query(T* callback, const AABBf& aabb) const;
 
-		///* @brief Ray-cast against the proxies in the tree
-		// *
-		// * This relies on the callback to perform a exact ray-cast in the case were the proxy contains a shape.
-		// * The callback also performs the any collision filtering. This has performance
-		// * roughly equal to @f$ k * log(n) @f$, where k is the number of collisions and n is the
-		// * number of proxies in the tree.
-		// * @param input the ray-cast input data. The ray extends from p1 to p1 + maxFraction * (p2 - p1).
-		// * @param callback a callback class that is called for each proxy that is hit by the ray.
-		// */
+		// @brief Ray-cast against the proxies in the tree
+		//
+		// This relies on the callback to perform a exact ray-cast in the case were the proxy contains a shape.
+		// The callback also performs the any collision filtering. This has performance
+		// roughly equal to @f$ k * log(n) @f$, where k is the number of collisions and n is the
+		// number of proxies in the tree.
+		// @param input the ray-cast input data. The ray extends from p1 to p1 + maxFraction * (p2 - p1).
+		// @param callback a callback class that is called for each proxy that is hit by the ray.
+		//
 		//template <typename T>
 		//void RayCast(T* callback, const b2RayCastInput& input) const;
 
@@ -157,7 +164,7 @@ namespace Jazz2::Collisions
 		/** @brief Returns the ratio of the sum of the node areas to the root area */
 		float GetAreaRatio() const;
 
-		/** @brief Build an optimal tree, very expensive --- for testing only */
+		/** @brief Builds an optimal tree, very expensive --- for testing only */
 		void RebuildBottomUp();
 
 		/**

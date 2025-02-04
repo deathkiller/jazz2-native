@@ -1,5 +1,5 @@
 DOXYFILE = 'Doxyfile'
-FAVICON = 'favicon.ico'
+#FAVICON = 'favicon.ico'
 MAIN_PROJECT_URL = 'https://deat.tk/jazz2/'
 SHOW_UNDOCUMENTED = True
 VERSION_LABELS = True

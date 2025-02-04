@@ -108,7 +108,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool ServerDiscovery::ProcessResponses(ENetSocket socket, ServerDesc& discoveredServer, std::int32_t timeoutMs)
+	bool ServerDiscovery::ProcessResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs)
 	{
 		ENetSocketSet set;
 		ENET_SOCKETSET_EMPTY(set);
@@ -200,7 +200,7 @@ namespace Jazz2::Multiplayer
 				TrySendRequest(socket, _this->_address);
 			}
 
-			ServerDesc discoveredServer;
+			ServerDescription discoveredServer;
 			if (ProcessResponses(socket, discoveredServer, 0)) {
 				observer->OnServerFound(std::move(discoveredServer));
 			} else {

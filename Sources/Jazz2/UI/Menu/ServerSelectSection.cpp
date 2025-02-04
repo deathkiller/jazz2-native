@@ -256,7 +256,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ServerSelectSection::OnServerFound(Multiplayer::ServerDesc&& desc)
+	void ServerSelectSection::OnServerFound(Multiplayer::ServerDescription&& desc)
 	{
 		for (auto& item : _items) {
 			if (item.Desc.EndpointString == desc.EndpointString) {
@@ -293,7 +293,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	ServerSelectSection::ItemData::ItemData(Multiplayer::ServerDesc&& desc)
+	ServerSelectSection::ItemData::ItemData(Multiplayer::ServerDescription&& desc)
 		: Desc(std::move(desc))
 	{
 	}

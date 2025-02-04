@@ -38,7 +38,7 @@ namespace nCine
 		/// Faster but less uniform version of `real()`
 		float FastFloat(float min, float max) noexcept;
 
-		/// Gnerates a 128-bit unique UUID
+		/// Gnerates a 128-bit unique identifier
 		void Uuid(Containers::StaticArrayView<16, std::uint8_t> result);
 
 		template<class T>
