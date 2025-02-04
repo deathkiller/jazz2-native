@@ -28,7 +28,9 @@ namespace Jazz2::Collisions
 {
 	/** @brief Collided pair of objects found by collision detection */
 	struct CollisionPair {
+		/** @brief Proxy ID of the first node */
 		std::int32_t ProxyIdA;
+		/** @brief Proxy ID of the second node */
 		std::int32_t ProxyIdB;
 	};
 

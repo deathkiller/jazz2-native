@@ -34,6 +34,9 @@ namespace Death {
 	by checking the @cpp _CPPUNWIND @ce and @cpp __EXCEPTIONS @ce defines. If
 	@cpp DEATH_SUPPRESS_EXCEPTIONS @ce is defined, exception support is explicitly
 	disabled. In this case, @cpp throw @ce is usually replaced with asserts.
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
 */
 #define DEATH_SUPPRESS_EXCEPTIONS
 #undef DEATH_SUPPRESS_EXCEPTIONS

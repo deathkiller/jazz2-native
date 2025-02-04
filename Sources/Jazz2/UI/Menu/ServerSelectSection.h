@@ -21,14 +21,14 @@ namespace Jazz2::UI::Menu
 		void OnDrawClipped(Canvas* canvas) override;
 		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
 
-		void OnServerFound(Multiplayer::ServerDesc&& desc) override;
+		void OnServerFound(Multiplayer::ServerDescription&& desc) override;
 
 	private:
 		struct ItemData {
-			Multiplayer::ServerDesc Desc;
+			Multiplayer::ServerDescription Desc;
 			float Y;
 
-			ItemData(Multiplayer::ServerDesc&& desc);
+			ItemData(Multiplayer::ServerDescription&& desc);
 		};
 
 		static constexpr std::int32_t ItemHeight = 20;
