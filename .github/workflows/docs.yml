@@ -17,12 +17,6 @@ jobs:
     #runs-on: 'ubuntu-latest'
     runs-on: 'ubuntu-22.04'
 
-    steps:
-    - uses: webfactory/ssh-agent@v0.9.0
-      with:
-        ssh-private-key: |
-          ${{ secrets.DOCS_DEPLOY_PRIVATE_KEY }}
-
     - name: 'Checkout Repository'
       uses: actions/checkout@v4
       with:
@@ -39,7 +33,7 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt install texlive-base texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended
-        pip3 install jinja2 Pygments
+        pip3 install doxygen jinja2 Pygments
     
     - name: 'Build'
       run: |
