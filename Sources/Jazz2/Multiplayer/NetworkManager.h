@@ -70,9 +70,9 @@ namespace Jazz2::Multiplayer
 		NetworkState GetState() const;
 
 		/** @brief Sends a packet to a given peer */
-		void SendToPeer(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> packet);
+		void SendToPeer(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 		/** @brief Sends a packet to all connected peers */
-		void SendToAll(NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> packet);
+		void SendToAll(NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 		/** @brief Kicks a given peer from the server */
 		void KickClient(const Peer& peer, Reason reason);
 
