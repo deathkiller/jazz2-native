@@ -5,6 +5,9 @@
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/Base/HashMap.h"
 
+#include <Containers/StaticArray.h>
+
+using namespace Death::Containers;
 using namespace nCine;
 
 namespace Jazz2
@@ -91,9 +94,9 @@ namespace Jazz2
 		/** @brief Gems collected */
 		std::int32_t Gems[4];
 		/** @brief Weapon ammo */
-		std::uint16_t Ammo[(std::int32_t)WeaponType::Count];
+		StaticArray<(std::int32_t)WeaponType::Count, std::uint16_t> Ammo;
 		/** @brief Weapon upgrades */
-		std::uint8_t WeaponUpgrades[(std::int32_t)WeaponType::Count];
+		StaticArray<(std::int32_t)WeaponType::Count, std::uint8_t> WeaponUpgrades;
 	};
 
 	/** @brief Continuation state between two levels in episode */
@@ -116,7 +119,7 @@ namespace Jazz2
 		static constexpr std::int32_t UseVsync = -1;
 
 		/** @brief Unique player ID */
-		static std::uint8_t UniquePlayerID[16];
+		static StaticArray<16, std::uint8_t> UniquePlayerID;
 
 		/** @brief Whether the application is running for the first time */
 		static bool FirstRun;

@@ -1,0 +1,47 @@
+name: 'API Docs'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    #runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-22.04'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 'Checkout Repository (m.css)'
+      uses: actions/checkout@v4
+      with:
+        repository: 'deathkiller/m.css'
+        ssh-key: '${{ secrets.DOCS_DEPLOY_PRIVATE_KEY }}'
+        path: 'm.css'
+
+    - name: 'Create Build Environment'
+      run: |
+        sudo apt update -y
+        sudo apt install texlive-base texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended
+        pip3 install jinja2 Pygments
+    
+    - name: 'Build'
+      run: |
+        ./m.css/documentation/doxygen.py Docs/conf.py
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Jazz2_ApiDocs
+        path: ./build/docs/html/

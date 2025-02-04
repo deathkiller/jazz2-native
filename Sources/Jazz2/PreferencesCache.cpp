@@ -18,7 +18,7 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	std::uint8_t PreferencesCache::UniquePlayerID[16];
+	StaticArray<16, std::uint8_t> PreferencesCache::UniquePlayerID;
 	bool PreferencesCache::FirstRun = false;
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	bool PreferencesCache::IsStandalone = false;
