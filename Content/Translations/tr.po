@@ -1368,13 +1368,13 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
 #, c-format
 msgid "Level \"%s\" initialized"
-msgstr ""
+msgstr "\"%s\" bölümü başlatıldı"
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/LevelHandler.cpp:705
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
 msgid "For more information, visit the official website:"
-msgstr ""
+msgstr "Daha fazla bilgi için, resmi web sitesini ziyaret edin:"
 
 #: Sources/Jazz2/LevelHandler.cpp:2214 Sources/Jazz2/LevelHandler.cpp:2227
 #: Sources/Jazz2/LevelHandler.cpp:2238 Sources/Jazz2/LevelHandler.cpp:2253
@@ -1383,7 +1383,7 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:2319 Sources/Jazz2/LevelHandler.cpp:2340
 #: Sources/Jazz2/LevelHandler.cpp:2354
 msgid "Cheats are not allowed in current context"
-msgstr ""
+msgstr "Mevcut bağlamda hile kullanılması yasaktır"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2337
@@ -1417,7 +1417,7 @@ msgstr "Yarış"
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2341
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
-msgstr ""
+msgstr "Takım Yarışı"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2342
@@ -1435,11 +1435,11 @@ msgstr "Eşli Oyun"
 
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2344
 msgid "Unknown"
-msgstr ""
+msgstr "Bilinmiyor"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:315
 msgid "Unknown command"
-msgstr ""
+msgstr "Bilinmeyen komut"
 
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
@@ -1518,7 +1518,7 @@ msgstr "Özel Bölüm Seç"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
 msgid "Highscores"
-msgstr ""
+msgstr "Yüksek puanlar"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
@@ -1603,7 +1603,7 @@ msgstr "Gamepad Titreşim Seviyesi"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
 msgid "Extended PlayStation™ Support"
-msgstr ""
+msgstr "Gelişmiş Playstation™ Desteği"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
@@ -1617,7 +1617,7 @@ msgstr "Giriş Tanılama"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:44
 msgid "Reset To Default"
-msgstr ""
+msgstr "Varsayılana Sıfırla"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:77
@@ -1801,12 +1801,12 @@ msgstr "Komutlama"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 msgid "Allow Cheats"
-msgstr ""
+msgstr "Hilelere İzin Ver"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
 msgid "Overwrite Episode Completion"
-msgstr ""
+msgstr "Bölümün üzerine yaz"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:54
@@ -1832,26 +1832,26 @@ msgstr "Önbelleği Yenile"
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:134
 msgid "Yes"
-msgstr ""
+msgstr "Evet"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:134
 msgid "No"
-msgstr ""
+msgstr "Hayır"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:138
 msgid "No Cheats Only"
-msgstr ""
+msgstr "Sadece hilesiz"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:141
 msgid "Higher Score Only"
-msgstr ""
+msgstr "Sadece en yüksek skor"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "Always"
-msgstr ""
+msgstr "Hep"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19
@@ -1861,7 +1861,7 @@ msgstr "Ölçeklendirme Ayarları"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:21
 msgid "Resolution"
-msgstr ""
+msgstr "Çözünürlük"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:29
@@ -1876,7 +1876,7 @@ msgstr "Kenar Yumuşatma"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
 msgid "Background Dithering"
-msgstr ""
+msgstr "Arkaplan Titremesi"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
@@ -1941,12 +1941,12 @@ msgstr "Etkin \f[c:#d0705d](Deneysel)\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr ""
+msgstr "\f[c:#d0705d]Ana oyun\f[/c] için yüksek puanlar"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:128
 #, c-format
 msgid "Highscores for \f[c:#d0705d]%s\f[/c]"
-msgstr ""
+msgstr "\f[c:#d0705d]%s\f[/c] için yüksek puanlar"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:71
@@ -1957,8 +1957,8 @@ msgstr "Ekstra bölümleri orijinal oyun dosyalarının içinden seçerek aç"
 #, c-format
 msgid "Processing of %i file..."
 msgid_plural "Processing of %i files..."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%i dosyası işleniyor..."
+msgstr[1] "%i dosyaları işleniyor..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:80
 msgid "Waiting for files..."
@@ -2037,7 +2037,7 @@ msgstr "Aşağı"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
 msgid "Buttstomp"
-msgstr ""
+msgstr "Popo vuruşu"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
@@ -2068,7 +2068,7 @@ msgstr "Geri"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 msgid "Toggle Console"
-msgstr ""
+msgstr "Konsolu Aç/Kapat"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:41
@@ -2125,7 +2125,7 @@ msgstr "Sunucu bulunamadı, ama hala aranıyor!"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
-msgstr ""
+msgstr "Devam etmek için \f[c:#d0705d]Ateş\f[/c] tuşuna bas"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
@@ -2263,13 +2263,6 @@ msgstr ""
 "Lütfen daha sonra tekrar deneyin."
 
 #: Sources/Main.cpp:796
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2284,13 +2277,6 @@ msgstr ""
 "Lütfen daha sonra tekrar deneyin."
 
 #: Sources/Main.cpp:797
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2305,13 +2291,6 @@ msgstr ""
 "Lütfen daha sonra tekrar deneyin."
 
 #: Sources/Main.cpp:798
-#, fuzzy
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Server is shutting down.\n"
-#| "Please try it later."
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"

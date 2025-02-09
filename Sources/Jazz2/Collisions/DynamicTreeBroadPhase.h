@@ -116,7 +116,7 @@ namespace Jazz2::Collisions
 		float GetTreeQuality() const;
 
 		/**
-		 * @brief Shift the world origin
+		 * @brief Shifts the world origin
 		 *
 		 * Useful for large worlds. The shift formula is: `position -= newOrigin`
 		 *

@@ -112,14 +112,13 @@ namespace Jazz2::Multiplayer
 		return _state;
 	}
 
-	void NetworkManager::SendToPeer(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
+	void NetworkManager::SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
 		ENetPeer* target;
 		if (peer == nullptr) {
 			if (_state != NetworkState::Connected || _peers.empty()) {
 				return;
 			}
-
 			target = _peers[0];
 		} else {
 			target = peer._enet;
@@ -135,15 +134,52 @@ namespace Jazz2::Multiplayer
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
 		_lock.Lock();
-		if (enet_peer_send(target, std::uint8_t(channel), packet) < 0) {
-			enet_packet_destroy(packet);
-		} else if (channel == NetworkChannel::UnreliableUpdates) {
+		bool success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
+		if (success && channel == NetworkChannel::UnreliableUpdates) {
 			enet_host_flush(_host);
 		}
 		_lock.Unlock();
+
+		if (!success) {
+			enet_packet_destroy(packet);
+		}
 	}
 
-	void NetworkManager::SendToAll(NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
+	void NetworkManager::SendTo(Function<bool(const Peer&)>&& predicate, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
+	{
+		if (_peers.empty()) {
+			return;
+		}
+
+		enet_uint32 flags;
+		if (channel == NetworkChannel::Main) {
+			flags = ENET_PACKET_FLAG_RELIABLE;
+		} else {
+			flags = ENET_PACKET_FLAG_UNSEQUENCED;
+		}
+
+		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
+
+		_lock.Lock();
+		bool success = false;
+		for (ENetPeer* peer : _peers) {
+			if (predicate(Peer(peer))) {
+				if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
+					success = true;
+				}
+			}
+		}
+		if (success && channel == NetworkChannel::UnreliableUpdates) {
+			enet_host_flush(_host);
+		}
+		_lock.Unlock();
+
+		if (!success) {
+			enet_packet_destroy(packet);
+		}
+	}
+
+	void NetworkManager::SendTo(AllPeersT, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
 		if (_peers.empty()) {
 			return;
@@ -165,12 +201,14 @@ namespace Jazz2::Multiplayer
 				success = true;
 			}
 		}
-		if (!success) {
-			enet_packet_destroy(packet);
-		} else if (channel == NetworkChannel::UnreliableUpdates) {
+		if (success && channel == NetworkChannel::UnreliableUpdates) {
 			enet_host_flush(_host);
 		}
 		_lock.Unlock();
+
+		if (!success) {
+			enet_packet_destroy(packet);
+		}
 	}
 
 	void NetworkManager::KickClient(const Peer& peer, Reason reason)
