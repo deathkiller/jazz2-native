@@ -766,7 +766,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		packet.Write(PreferencesCache::UniquePlayerID, sizeof(PreferencesCache::UniquePlayerID));
 		// TODO: Player name
 		packet.WriteVariableUint32(0);
-		_networkManager->SendToPeer(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
+		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
 	}
 
 	return true;
@@ -819,7 +819,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 	if (isServer) {
 		switch ((ClientPacketType)packetType) {
 			case ClientPacketType::Ping: {
-				_networkManager->SendToPeer(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::Pong, {});
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::Pong, {});
 				break;
 			}
 			case ClientPacketType::Auth: {

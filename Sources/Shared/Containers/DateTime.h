@@ -178,14 +178,22 @@ namespace Death { namespace Containers {
 		 * 
 		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		DateTime(const SYSTEMTIME& st) noexcept;
+#else
 		DateTime(const struct _SYSTEMTIME& st) noexcept;
+#endif
 
 		/**
 		 * @brief Creates @ref DateTime structure from Windows® `FILETIME` structure
 		 *
 		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		DateTime(const FILETIME& st) noexcept;
+#else
 		DateTime(const struct _FILETIME& ft) noexcept;
+#endif
 #endif
 
 		std::int32_t GetYear(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Year; }
@@ -255,7 +263,11 @@ namespace Death { namespace Containers {
 		 * 
 		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 		 */
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		SYSTEMTIME ToWin32() const noexcept;
+#else
 		struct _SYSTEMTIME ToWin32() const noexcept;
+#endif
 #endif
 
 		bool TryParse(StringView input, StringView format, StringView* endParse = nullptr) noexcept;

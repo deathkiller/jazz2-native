@@ -9,6 +9,7 @@
 #include "../../nCine/Threading/Thread.h"
 #include "../../nCine/Threading/ThreadSync.h"
 
+#include <Containers/Function.h>
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
 #include <IO/MemoryStream.h>
@@ -41,6 +42,24 @@ namespace Jazz2::Multiplayer
 	};
 
 	/**
+		@brief All connected peers tag type
+	*/
+	struct AllPeersT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		struct Init {};
+		// Explicit constructor to avoid ambiguous calls when using {}
+		constexpr explicit AllPeersT(Init) {}
+#endif
+	};
+
+	/**
+		@brief All connected peers tag
+
+		Use in @ref NetworkManager::SendTo() to send to all connected peers or the remote server peer.
+	*/
+	constexpr AllPeersT AllPeers{AllPeersT::Init{}};
+
+	/**
 		@brief Allows to create network clients and servers
 
 		@experimental
@@ -59,9 +78,9 @@ namespace Jazz2::Multiplayer
 		NetworkManager(const NetworkManager&) = delete;
 		NetworkManager& operator=(const NetworkManager&) = delete;
 
-		/** @brief Creates a client connection */
+		/** @brief Creates a client connection to a remote server */
 		bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
-		/** @brief Creates a server */
+		/** @brief Creates a server accepting that accepts incoming connections */
 		bool CreateServer(INetworkHandler* handler, std::uint16_t port);
 		/** @brief Disposes all active connections */
 		void Dispose();
@@ -70,9 +89,11 @@ namespace Jazz2::Multiplayer
 		NetworkState GetState() const;
 
 		/** @brief Sends a packet to a given peer */
-		void SendToPeer(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
-		/** @brief Sends a packet to all connected peers */
-		void SendToAll(NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
+		void SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
+		/** @brief Sends a packet to all connected peers that match a given predicate */
+		void SendTo(Function<bool(const Peer&)>&& predicate, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
+		/** @brief Sends a packet to all connected peers or the remote server peer */
+		void SendTo(AllPeersT, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 		/** @brief Kicks a given peer from the server */
 		void KickClient(const Peer& peer, Reason reason);
 

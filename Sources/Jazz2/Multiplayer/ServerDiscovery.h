@@ -42,7 +42,7 @@ namespace Jazz2::Multiplayer
 		StaticArray<16, std::uint8_t> UniqueIdentifier;
 		/** @brief Server name */
 		String Name;
-		/** @brief Game mode and flags */
+		/** @brief Combined multiplayer game mode and flags */
 		std::uint32_t GameModeAndFlags;
 		/** @brief Current number of players */
 		std::uint32_t CurrentPlayers;
@@ -80,9 +80,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Length of server unique identifier */
 		static constexpr std::int32_t UniqueIdentifierLength = 16;
 
-		/** @brief Creates an instance to advertise a running server */
+		/** @brief Creates an instance to advertise a running local server */
 		ServerDiscovery(INetworkHandler* server, std::uint16_t port);
-		/** @brief Creates an instance to observe servers */
+		/** @brief Creates an instance to observe remote servers */
 		ServerDiscovery(IServerObserver* observer);
 		~ServerDiscovery();
 
