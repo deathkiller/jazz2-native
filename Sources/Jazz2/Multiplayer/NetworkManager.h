@@ -95,7 +95,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Sends a packet to all connected peers or the remote server peer */
 		void SendTo(AllPeersT, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 		/** @brief Kicks a given peer from the server */
-		void KickClient(const Peer& peer, Reason reason);
+		void Kick(const Peer& peer, Reason reason);
 
 	private:
 		static constexpr std::uint32_t ProcessingIntervalMs = 4;

@@ -32,9 +32,6 @@
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	// Forward declarations for the Death::Containers namespace
-	template<class, class> class Pair;
-
 	namespace Implementation
 	{
 		enum : std::size_t {
@@ -1081,7 +1078,11 @@ namespace Death { namespace Containers {
 		void construct(const char* data, std::size_t size);
 		void copyConstruct(const String& other);
 		void destruct();
-		Pair<const char*, std::size_t> dataInternal() const;
+		struct Data {
+			const char* data;
+			std::size_t size;
+		};
+		Data dataInternal() const;
 
 		MutableStringView sliceSizePointerInternal(char* begin, std::size_t size);
 		StringView sliceSizePointerInternal(const char* begin, std::size_t size) const;

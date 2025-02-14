@@ -333,7 +333,7 @@ namespace Death { namespace Containers {
 		/** @brief Returns @ref TimeSpan that represents a specified number of milliseconds */
 		static constexpr TimeSpan FromMilliseconds(std::int64_t milliseconds) noexcept
 		{
-			return TimeSpan(0, 0, 0, milliseconds);
+			return TimeSpan(milliseconds);
 		}
 
 		/** @brief Returns @ref TimeSpan that represents a specified number of seconds */
@@ -371,7 +371,7 @@ namespace Death { namespace Containers {
 		/** @brief Creates uninitialized @ref TimeSpan structure */
 		explicit TimeSpan(NoInitT) noexcept {}
 		/** @brief Creates @ref TimeSpan structure from milliseconds */
-		constexpr TimeSpan(std::int64_t diff) noexcept : _value(diff) {}
+		constexpr TimeSpan(std::int64_t milliseconds) noexcept : _value(milliseconds) {}
 
 		/**
 		 * @brief Creates @ref TimeSpan structure from individual parts
@@ -381,7 +381,7 @@ namespace Death { namespace Containers {
 		 * @param seconds Seconds after the minute (0-59*)
 		 * @param millisecs Milliseconds after the second (0-999)
 		 */
-		constexpr TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds = 0, std::int64_t millisecs = 0) noexcept;
+		constexpr TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds = 0, std::int64_t milliseconds = 0) noexcept;
 		
 		constexpr std::int32_t GetTotalWeeks() const noexcept;
 		constexpr std::int32_t GetTotalDays() const noexcept;
@@ -549,7 +549,7 @@ namespace Death { namespace Containers {
 		return (_time >= 0 && (_time / 1000) < INT32_MAX);
 	}
 
-	constexpr TimeSpan::TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds, std::int64_t millisecs) noexcept
+	constexpr TimeSpan::TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds, std::int64_t milliseconds) noexcept
 		: _value(0)
 	{
 		_value = hours;
@@ -558,7 +558,7 @@ namespace Death { namespace Containers {
 		_value *= 60;
 		_value += seconds;
 		_value *= 1000;
-		_value += millisecs;
+		_value += milliseconds;
 	}
 
 	constexpr std::int64_t TimeSpan::GetTotalSeconds() const noexcept
