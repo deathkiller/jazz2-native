@@ -1,6 +1,5 @@
 #include "String.h"
 #include "Array.h"
-#include "Pair.h"
 #include "StaticArray.h"
 
 #include <cstring>
@@ -92,7 +91,7 @@ namespace Death { namespace Containers {
 		else delete[] _large.data;
 	}
 
-	inline Pair<const char*, std::size_t> String::dataInternal() const {
+	inline String::Data String::dataInternal() const {
 		if (_small.size & Implementation::SmallStringBit)
 			return { _small.data, _small.size & ~SmallSizeMask };
 		return { _large.data, _large.size & ~LargeSizeMask };
@@ -178,12 +177,12 @@ namespace Death { namespace Containers {
 
 	String::String(AllocatedInitT, const String& other)
 	{
-		const Pair<const char*, std::size_t> data = other.dataInternal();
-		const std::size_t sizePlusOne = data.second() + 1;
-		_large.size = data.second();
+		const Data data = other.dataInternal();
+		const std::size_t sizePlusOne = data.size + 1;
+		_large.size = data.size;
 		_large.data = new char[sizePlusOne];
 		// Copies also the null terminator
-		std::memcpy(_large.data, data.first(), sizePlusOne);
+		std::memcpy(_large.data, data.data, sizePlusOne);
 		_large.deleter = nullptr;
 	}
 
@@ -289,23 +288,23 @@ namespace Death { namespace Containers {
 	}
 
 	String::operator ArrayView<const char>() const noexcept {
-		const Pair<const char*, std::size_t> data = dataInternal();
-		return { data.first(), data.second() };
+		const Data data = dataInternal();
+		return { data.data, data.size };
 	}
 
 	String::operator ArrayView<const void>() const noexcept {
-		const Pair<const char*, std::size_t> data = dataInternal();
-		return { data.first(), data.second() };
+		const Data data = dataInternal();
+		return { data.data, data.size };
 	}
 
 	String::operator ArrayView<char>() noexcept {
-		const Pair<const char*, std::size_t> data = dataInternal();
-		return { const_cast<char*>(data.first()), data.second() };
+		const Data data = dataInternal();
+		return { const_cast<char*>(data.data), data.size };
 	}
 
 	String::operator ArrayView<void>() noexcept {
-		const Pair<const char*, std::size_t> data = dataInternal();
-		return { const_cast<char*>(data.first()), data.second() };
+		const Data data = dataInternal();
+		return { const_cast<char*>(data.data), data.size };
 	}
 
 	String::operator Array<char>() && {

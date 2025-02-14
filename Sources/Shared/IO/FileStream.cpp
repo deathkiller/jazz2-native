@@ -380,7 +380,7 @@ namespace Death { namespace IO {
 		if (_fileHandle == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Can't open file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+			LOGE("Can't open file \"%s\" - failed with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 #		endif
 			return;
 		}
@@ -447,7 +447,7 @@ namespace Death { namespace IO {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Can't change position in file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Can't change position in file \"%s\" - failed with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
 			return Stream::OutOfRange;
@@ -475,7 +475,7 @@ namespace Death { namespace IO {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Can't read from file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Can't read from file \"%s\" - failed with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
 		}
@@ -505,7 +505,7 @@ namespace Death { namespace IO {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_NO_DATA) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Can't write to file \"%s\" - failed with error 0x%08X%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Can't write to file \"%s\" - failed with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
 		}

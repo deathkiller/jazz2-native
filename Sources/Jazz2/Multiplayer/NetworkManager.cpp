@@ -211,9 +211,11 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void NetworkManager::KickClient(const Peer& peer, Reason reason)
+	void NetworkManager::Kick(const Peer& peer, Reason reason)
 	{
-		enet_peer_disconnect_now(peer._enet, std::uint32_t(reason));
+		if (peer != nullptr) {
+			enet_peer_disconnect_now(peer._enet, std::uint32_t(reason));
+		}
 	}
 
 	void NetworkManager::InitializeBackend()

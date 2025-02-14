@@ -839,7 +839,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
 
 				if (strncmp(gameID, "J2R ", 4) != 0 || gameVersion != currentVersion) {
-					_networkManager->KickClient(peer, Reason::IncompatibleVersion);
+					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
 				break;
@@ -884,7 +884,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 	if (isServer && (ClientPacketType)data[0] == ClientPacketType::Auth) {
 		// Message was not processed by level handler, kick the client
-		_networkManager->KickClient(peer, Reason::ServerNotReady);
+		_networkManager->Kick(peer, Reason::ServerNotReady);
 	}
 }
 #endif
