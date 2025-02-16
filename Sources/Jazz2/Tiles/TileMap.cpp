@@ -179,6 +179,43 @@ namespace Jazz2::Tiles
 			DrawLayer(renderQueue, layer, cullingRect, viewCenter);
 		}
 
+		if (_sprLayerIndex != -1) {
+			auto& spriteLayer = _layers[_sprLayerIndex];
+			// Render black bars if layout width is smaller than viewport width
+			if (spriteLayer.LayoutSize.X * TileSet::DefaultTileSize < cullingRect.W) {
+				std::int32_t w = (cullingRect.W - (spriteLayer.LayoutSize.X * TileSet::DefaultTileSize)) / 2;
+
+				// Left
+				{
+					auto command = RentRenderCommand(LayerRendererType::Solid);
+					command->setType(RenderCommand::Type::TileMap);
+
+					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(w, cullingRect.H);
+					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
+
+					command->setTransformation(Matrix4x4f::Translation(cullingRect.X, cullingRect.Y, 0.0f));
+					command->setLayer(spriteLayer.Description.Depth);
+
+					renderQueue.addCommand(command);
+				}
+				// Right
+				{
+					auto command = RentRenderCommand(LayerRendererType::Solid);
+					command->setType(RenderCommand::Type::TileMap);
+
+					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(w, cullingRect.H);
+					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
+
+					command->setTransformation(Matrix4x4f::Translation(cullingRect.X + cullingRect.W - w, cullingRect.Y, 0.0f));
+					command->setLayer(spriteLayer.Description.Depth);
+
+					renderQueue.addCommand(command);
+				}
+			}
+		}
+
 		DrawDebris(renderQueue);
 
 		TracyPlot("TileMap Render Commands", static_cast<std::int64_t>(_renderCommandsCount));
@@ -795,6 +832,7 @@ namespace Jazz2::Tiles
 
 		bool shaderChanged;
 		switch (type) {
+			case LayerRendererType::Solid: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::SpriteNoTexture); break;
 			case LayerRendererType::Tinted: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Tinted)); break;
 			case LayerRendererType::Sky: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)); break;
 			case LayerRendererType::Circle: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundCircleDither : PrecompiledShader::TexturedBackgroundCircle)); break;

@@ -224,7 +224,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 	}
 
 #if defined(WITH_IMGUI)
-	//config.withDebugOverlay = true;
+	config.withDebugOverlay = true;
 #endif
 }
 

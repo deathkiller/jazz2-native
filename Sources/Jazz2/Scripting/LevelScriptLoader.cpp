@@ -1360,25 +1360,24 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalProperty("bool jjSugarRushesAllowed", &g_levelHasFood);
 
 		engine->RegisterObjectType("jjWEAPON", sizeof(jjWEAPON), asOBJ_REF | asOBJ_NOCOUNT);
-		// TODO
-		/*engine->RegisterGlobalFunction("jjWEAPON@ get_jjWeapons(int)", asFUNCTION(gejjWEAPON), asCALL_CDECL);
+		engine->RegisterGlobalFunction("jjWEAPON@ get_jjWeapons(int)", asFUNCTION(get_jjWEAPON), asCALL_CDECL);
 		engine->RegisterObjectProperty("jjWEAPON", "bool infinite", asOFFSET(jjWEAPON, infinite));
 		engine->RegisterObjectProperty("jjWEAPON", "bool replenishes", asOFFSET(jjWEAPON, replenishes));
-		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByShield", asOFFSET(jjWEAPON, shield));
-		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByBubbles", asOFFSET(jjWEAPON, bubbles));
-		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromGunCrates", asOFFSET(jjWEAPON, crates));
-		engine->RegisterObjectProperty("jjWEAPON", "bool gradualAim", asOFFSET(jjWEAPON, gradual));
+		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByShield", asOFFSET(jjWEAPON, replacedByShield));
+		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByBubbles", asOFFSET(jjWEAPON, replacedByBubbles));
+		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromGunCrates", asOFFSET(jjWEAPON, comesFromGunCrates));
+		engine->RegisterObjectProperty("jjWEAPON", "bool gradualAim", asOFFSET(jjWEAPON, gradualAim));
 		engine->RegisterObjectProperty("jjWEAPON", "int multiplier", asOFFSET(jjWEAPON, multiplier));
 		engine->RegisterObjectProperty("jjWEAPON", "int maximum", asOFFSET(jjWEAPON, maximum));
 		engine->RegisterObjectProperty("jjWEAPON", "int gemsLost", asOFFSET(jjWEAPON, gemsLost));
 		engine->RegisterObjectProperty("jjWEAPON", "int gemsLostPowerup", asOFFSET(jjWEAPON, gemsLostPowerup));
 		engine->RegisterObjectProperty("jjWEAPON", "int8 style", asOFFSET(jjWEAPON, style));
 		engine->RegisterObjectProperty("jjWEAPON", "SPREAD::Spread spread", asOFFSET(jjWEAPON, spread));
-		engine->RegisterObjectProperty("jjWEAPON", "bool defaultSample", asOFFSET(jjWEAPON, sample));
-		engine->RegisterObjectProperty("jjWEAPON", "bool allowed", asOFFSET(jjWEAPON, appearsInLevel));
-		engine->RegisterObjectProperty("jjWEAPON", "bool allowedPowerup", asOFFSET(jjWEAPON, powerupAppearsInLevel));
-		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirds", asOFFSET(jjWEAPON, canBeShotByBirds));
-		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirdsPowerup", asOFFSET(jjWEAPON, powerupCanBeShotByBirds));*/
+		engine->RegisterObjectProperty("jjWEAPON", "bool defaultSample", asOFFSET(jjWEAPON, defaultSample));
+		engine->RegisterObjectProperty("jjWEAPON", "bool allowed", asOFFSET(jjWEAPON, allowed));
+		engine->RegisterObjectProperty("jjWEAPON", "bool allowedPowerup", asOFFSET(jjWEAPON, allowedPowerup));
+		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirds", asOFFSET(jjWEAPON, comesFromBirds));
+		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirdsPowerup", asOFFSET(jjWEAPON, comesFromBirdsPowerup));
 
 		engine->SetDefaultNamespace("AIR");
 		engine->RegisterEnum("Jump");
@@ -1394,18 +1393,18 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Jump", "LORI", groundjumpLORI);
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectType("jjCHARACTER", sizeof(jjCHARACTER), asOBJ_REF | asOBJ_NOCOUNT);
-		/*engine->RegisterGlobalFunction("jjCHARACTER@ get_jjCharacters(CHAR::Char)", asFUNCTION(gejjCHARACTER), asCALL_CDECL);
+		engine->RegisterGlobalFunction("jjCHARACTER@ get_jjCharacters(CHAR::Char)", asFUNCTION(get_jjCHARACTER), asCALL_CDECL);
 		engine->RegisterObjectProperty("jjCHARACTER", "AIR::Jump airJump", asOFFSET(jjCHARACTER, airJump));
 		engine->RegisterObjectProperty("jjCHARACTER", "GROUND::Jump groundJump", asOFFSET(jjCHARACTER, groundJump));
 		engine->RegisterObjectProperty("jjCHARACTER", "int doubleJumpCountMax", asOFFSET(jjCHARACTER, doubleJumpCountMax));
-		REGISTER_FLOAT_PROPERTY("jjCHARACTER", "doubleJumpXSpeed", jjCHARACTER, doubleJumpXSpeed);
-		REGISTER_FLOAT_PROPERTY("jjCHARACTER", "doubleJumpYSpeed", jjCHARACTER, doubleJumpYSpeed);
+		engine->RegisterObjectProperty("jjCHARACTER", "float doubleJumpXSpeed", asOFFSET(jjCHARACTER, doubleJumpXSpeed));
+		engine->RegisterObjectProperty("jjCHARACTER", "float doubleJumpYSpeed", asOFFSET(jjCHARACTER, doubleJumpYSpeed));
 		engine->RegisterObjectProperty("jjCHARACTER", "int helicopterDurationMax", asOFFSET(jjCHARACTER, helicopterDurationMax));
-		REGISTER_FLOAT_PROPERTY("jjCHARACTER", "helicopterXSpeed", jjCHARACTER, helicopterXSpeed);
-		REGISTER_FLOAT_PROPERTY("jjCHARACTER", "helicopterYSpeed", jjCHARACTER, helicopterYSpeed);
-		engine->RegisterObjectProperty("jjCHARACTER", "bool canHurt", asOFFSET(jjCHARACTER, specialMovesDoDamage));
+		engine->RegisterObjectProperty("jjCHARACTER", "float helicopterXSpeed", asOFFSET(jjCHARACTER, helicopterXSpeed));
+		engine->RegisterObjectProperty("jjCHARACTER", "float helicopterYSpeed", asOFFSET(jjCHARACTER, helicopterYSpeed));
+		engine->RegisterObjectProperty("jjCHARACTER", "bool canHurt", asOFFSET(jjCHARACTER, canHurt));
 		engine->RegisterObjectProperty("jjCHARACTER", "bool canRun", asOFFSET(jjCHARACTER, canRun));
-		engine->RegisterObjectProperty("jjCHARACTER", "bool morphBoxCycle", asOFFSET(jjCHARACTER, availableToMorphBoxes));*/
+		engine->RegisterObjectProperty("jjCHARACTER", "bool morphBoxCycle", asOFFSET(jjCHARACTER, morphBoxCycle));
 
 		engine->SetDefaultNamespace("CREATOR");
 		engine->RegisterEnum("Type");
