@@ -1808,8 +1808,11 @@ namespace Jazz2::Scripting
 		std::int32_t set_fastfire(std::int32_t value);
 		std::int8_t get_currWeapon() const;
 		std::int8_t set_currWeapon(std::int8_t value);
-		std::int32_t get_lives() const;
-		std::int32_t set_lives(std::int32_t value);
+
+		//std::int32_t get_lives() const;
+		//std::int32_t set_lives(std::int32_t value);
+		std::int32_t lives = 0;
+
 		std::int32_t get_invincibility() const;
 		std::int32_t set_invincibility(std::int32_t value);
 		std::int32_t get_blink() const;
@@ -1994,6 +1997,11 @@ namespace Jazz2::Scripting
 		std::uint32_t _timerState;
 		float _timerLeft;
 		bool _timerPersists;
+
+		bool _backingStoreDirty = false;
+
+		void SyncPropertiesToBackingStore();
+		void SyncPropertiesFromBackingStore();
 	};
 
 	std::int32_t get_jjPlayerCount();

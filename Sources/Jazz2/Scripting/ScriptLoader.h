@@ -121,7 +121,9 @@ namespace Jazz2::Scripting
 		};
 
 		struct RawMetadataDeclaration {
-			RawMetadataDeclaration(SmallVectorImpl<String>& m, const String& n, const String& d, MetadataType t, const String& c, const String& ns) : Metadata(std::move(m)), Name(n), Declaration(d), Type(t), ParentClass(c), Namespace(ns) {}
+			RawMetadataDeclaration(SmallVectorImpl<String>&& m, String n, String d, MetadataType t, String c, String ns)
+				: Metadata(std::move(m)), Name(std::move(n)), Declaration(std::move(d)),
+					Type(t), ParentClass(std::move(c)), Namespace(std::move(ns)) {}
 
 			SmallVector<String, 0> Metadata;
 			String Name;

@@ -48,6 +48,7 @@ namespace Jazz2::Scripting
 			// The string factory might be modified from multiple threads, so it is necessary to use a mutex
 			asAcquireExclusiveLock();
 
+			// Recreate non-owned string
 			const String stringView(data, length, [](char*, std::size_t) {});
 			auto it = _stringCache.find(stringView);
 			if (it != _stringCache.end()) {

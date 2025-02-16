@@ -146,6 +146,9 @@ private:
 	std::unique_ptr<NetworkManager> _networkManager;
 	String _serverName;
 #endif
+#if defined(DEATH_DEBUG)
+	String _debugStartLevel;
+#endif
 
 	void OnBeforeInitialize();
 	void OnAfterInitialize();
@@ -173,25 +176,28 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	// Allow `/extract-pak` only on PC platforms
-	if (config.argc() >= 3) {
-		for (std::int32_t i = 0; i < config.argc() - 2; i++) {
-			auto arg = config.argv(i);
-			if (arg == "/extract-pak"_s) {
+	for (std::int32_t i = 0; i < config.argc(); i++) {
+		auto arg = config.argv(i);
+		if (arg == "/extract-pak"_s && i + 2 < config.argc()) {
 #	if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
-				// Always attach to console in this case
-				theApplication().AttachTraceTarget(Application::ConsoleTarget);
+			// Always attach to console in this case
+			theApplication().AttachTraceTarget(Application::ConsoleTarget);
 #	endif
-				auto pakFile = config.argv(i + 1);
-				if (fs::FileExists(pakFile)) {
-					ExtractPakFile(pakFile, config.argv(i + 2));
-				} else {
-					LOGE("\"%s\" not found", pakFile.data());
-				}
-
-				theApplication().Quit();
-				return;
+			auto pakFile = config.argv(i + 1);
+			if (fs::FileExists(pakFile)) {
+				ExtractPakFile(pakFile, config.argv(i + 2));
+			} else {
+				LOGE("\"%s\" not found", pakFile.data());
 			}
+
+			theApplication().Quit();
+			return;
 		}
+#if defined(DEATH_DEBUG)
+		else if (arg.hasPrefix("/level"_s) && i + 1 < config.argc()) {
+			_debugStartLevel = config.argv(i + 1);
+		}
+#endif
 	}
 #endif
 
@@ -255,6 +261,19 @@ void GameEventHandler::OnInitialize()
 #	endif
 	}, this);
 
+#	if defined(DEATH_DEBUG)
+	if (!_debugStartLevel.empty()) {
+		thread.Join();
+
+		auto parts = _debugStartLevel.partition('/');
+		LevelInitialization levelInit(!parts[2].empty() ? parts[0] : "unknown"_s, !parts[2].empty() ? parts[2] : parts[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+			PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+
+		ChangeLevel(std::move(levelInit));
+		return;
+	}
+#	endif
+
 #	if defined(WITH_MULTIPLAYER)
 	// TODO: Multiplayer
 	/*if (PreferencesCache::InitialState == "/server"_s) {
@@ -311,6 +330,19 @@ void GameEventHandler::OnInitialize()
 	OnAfterInitialize();
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 	CheckUpdates();
+#	endif
+
+#	if defined(DEATH_DEBUG)
+	if (!_debugStartLevel.empty()) {
+		thread.Join();
+
+		auto parts = _debugStartLevel.partition('/');
+		LevelInitialization levelInit(!parts[2].empty() ? parts[0] : "unknown"_s, !parts[2].empty() ? parts[2] : parts[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+			PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+
+		ChangeLevel(std::move(levelInit));
+		return;
+	}
 #	endif
 
 #	if defined(WITH_MULTIPLAYER)

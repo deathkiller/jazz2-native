@@ -66,6 +66,9 @@ namespace Jazz2::Scripting
 		String OnProcessInclude(StringView includePath, StringView scriptPath) override;
 		void OnProcessPragma(StringView content, ScriptContextType& contextType) override;
 
+		void OnBeforeScriptCall();
+		void OnAfterScriptCall();
+
 	private:
 		LevelHandler* _levelHandler;
 		asIScriptFunction* _onLevelUpdate;

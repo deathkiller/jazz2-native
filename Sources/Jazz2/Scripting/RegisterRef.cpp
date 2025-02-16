@@ -8,17 +8,24 @@
 
 namespace Jazz2::Scripting
 {
-	static void Construct(CScriptHandle* self) {
+	static void Construct(CScriptHandle* self)
+	{
 		new(self) CScriptHandle();
 	}
-	static void Construct(CScriptHandle* self, const CScriptHandle& o) {
+
+	static void Construct(CScriptHandle* self, const CScriptHandle& o)
+	{
 		new(self) CScriptHandle(o);
 	}
+
 	// This one is not static because it needs to be friend with the CScriptHandle class
-	void Construct(CScriptHandle* self, void* ref, int typeId) {
+	void Construct(CScriptHandle* self, void* ref, int typeId)
+	{
 		new(self) CScriptHandle(ref, typeId);
 	}
-	static void Destruct(CScriptHandle* self) {
+
+	static void Destruct(CScriptHandle* self)
+	{
 		self->~CScriptHandle();
 	}
 

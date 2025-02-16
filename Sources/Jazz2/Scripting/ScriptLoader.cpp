@@ -33,7 +33,11 @@ namespace Jazz2::Scripting
 		: _module(nullptr), _scriptContextType(ScriptContextType::Unknown)
 	{
 		_engine = asCreateScriptEngine();
+		_engine->SetEngineProperty(asEP_COPY_SCRIPT_SECTIONS, true);
 		_engine->SetEngineProperty(asEP_PROPERTY_ACCESSOR_MODE, 2); // Required to allow chained assignment to properties
+#if ANGELSCRIPT_VERSION >= 23600
+		_engine->SetEngineProperty(asEP_IGNORE_DUPLICATE_SHARED_INTF, true);
+#endif
 		_engine->SetEngineProperty(asEP_COMPILER_WARNINGS, true);
 #if !defined(DEATH_DEBUG)
 		_engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
@@ -246,7 +250,8 @@ namespace Jazz2::Scripting
 				ExtractDeclaration(scriptContent, pos, metadataName, metadataDeclaration, type);
 
 				if (type != MetadataType::Unknown) {
-					_foundDeclarations.emplace_back(metadata, metadataName, metadataDeclaration, type, currentClass, currentNamespace);
+					_foundDeclarations.emplace_back(std::move(metadata), metadataName,
+						metadataDeclaration, type, currentClass, currentNamespace);
 				}
 			} else if (token == "#"_s && (pos + 1 < scriptSize)) {
 				std::int32_t start = pos++;
@@ -314,7 +319,6 @@ namespace Jazz2::Scripting
 		}
 
 		// Append the actual script
-		_engine->SetEngineProperty(asEP_COPY_SCRIPT_SECTIONS, true);
 		_module->AddScriptSection(path.data(), scriptContent.data(), scriptSize, 0);
 
 		if (includes.size() > 0) {
@@ -343,7 +347,7 @@ namespace Jazz2::Scripting
 				case MetadataType::Type: {
 					std::int32_t typeId = _module->GetTypeIdByDecl(decl.Declaration.data());
 					if (typeId >= 0) {
-						auto entry = _typeMetadataMap.emplace(typeId, Array<String>(NoInit, decl.Metadata.size())).first;
+						auto entry = _typeMetadataMap.emplace(typeId, Array<String>(DefaultInit, decl.Metadata.size())).first;
 						std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 					}
 					break;
@@ -352,7 +356,7 @@ namespace Jazz2::Scripting
 					if (decl.ParentClass.empty()) {
 						asIScriptFunction* func = _module->GetFunctionByDecl(decl.Declaration.data());
 						if (func != nullptr) {
-							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					} else {
@@ -365,7 +369,7 @@ namespace Jazz2::Scripting
 								it = _classMetadataMap.emplace(typeId, ClassMetadata()).first;
 							}
 
-							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					}
@@ -375,13 +379,13 @@ namespace Jazz2::Scripting
 					if (decl.ParentClass.empty()) {
 						asIScriptFunction* func = _module->GetFunctionByName(String("get_"_s + decl.Declaration).data());
 						if (func != nullptr) {
-							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 						func = _module->GetFunctionByName(String("set_"_s + decl.Declaration).data());
 						if (func != nullptr) {
-							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
-							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
+							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
+							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					} else {
 						std::int32_t typeId = _module->GetTypeIdByDecl(decl.ParentClass.data());
@@ -393,13 +397,13 @@ namespace Jazz2::Scripting
 						asITypeInfo* type = _engine->GetTypeInfoById(typeId);
 						asIScriptFunction* func = type->GetMethodByName(String("get_" + decl.Declaration).data());
 						if (func != nullptr) {
-							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 						func = type->GetMethodByName(String("set_" + decl.Declaration).data());
 						if (func != nullptr) {
-							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
-							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
+							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
+							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					}
 					break;
@@ -408,7 +412,7 @@ namespace Jazz2::Scripting
 					if (decl.ParentClass.empty()) {
 						std::int32_t varIdx = _module->GetGlobalVarIndexByName(decl.Declaration.data());
 						if (varIdx >= 0) {
-							auto entry = _varMetadataMap.emplace(varIdx, Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = _varMetadataMap.emplace(varIdx, Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					} else {
@@ -430,7 +434,7 @@ namespace Jazz2::Scripting
 						}
 
 						if (idx >= 0) {
-							auto entry = it->second.VarMetadataMap.emplace(idx, Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = it->second.VarMetadataMap.emplace(idx, Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
 					}
@@ -440,12 +444,12 @@ namespace Jazz2::Scripting
 					if (decl.ParentClass .empty()) {
 						std::int32_t varIdx = _module->GetGlobalVarIndexByName(decl.Name.data());
 						if (varIdx >= 0) {
-							auto entry = _varMetadataMap.emplace(varIdx, Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = _varMetadataMap.emplace(varIdx, Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						} else {
 							asIScriptFunction* func = _module->GetFunctionByDecl(decl.Declaration.data());
 							if (func != nullptr) {
-								auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
+								auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
 								std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 							}
 						}
@@ -468,13 +472,13 @@ namespace Jazz2::Scripting
 						}
 
 						if (idx >= 0) {
-							auto entry = it->second.VarMetadataMap.emplace(idx, Array<String>(NoInit, decl.Metadata.size())).first;
+							auto entry = it->second.VarMetadataMap.emplace(idx, Array<String>(DefaultInit, decl.Metadata.size())).first;
 							std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						} else {
 							asITypeInfo* type = _engine->GetTypeInfoById(typeId);
 							asIScriptFunction* func = type->GetMethodByDecl(decl.Declaration.data());
 							if (func != nullptr) {
-								auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
+								auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(DefaultInit, decl.Metadata.size())).first;
 								std::move(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 							}
 						}

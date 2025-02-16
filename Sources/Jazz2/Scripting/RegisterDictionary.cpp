@@ -58,7 +58,7 @@ namespace Jazz2::Scripting
 	CScriptDictionary* CScriptDictionary::Create(asIScriptEngine* engine)
 	{
 		// Use the custom memory routine from AngelScript to allow application to better control how much memory is used
-		CScriptDictionary* obj = (CScriptDictionary*)asAllocMem(sizeof(CScriptDictionary));
+		CScriptDictionary* obj = static_cast<CScriptDictionary*>(asAllocMem(sizeof(CScriptDictionary)));
 		new(obj) CScriptDictionary(engine);
 		return obj;
 	}
@@ -66,7 +66,7 @@ namespace Jazz2::Scripting
 	CScriptDictionary* CScriptDictionary::Create(asBYTE* buffer)
 	{
 		// Use the custom memory routine from AngelScript to allow application to better control how much memory is used
-		CScriptDictionary* obj = (CScriptDictionary*)asAllocMem(sizeof(CScriptDictionary));
+		CScriptDictionary* obj = static_cast<CScriptDictionary*>(asAllocMem(sizeof(CScriptDictionary)));
 		new(obj) CScriptDictionary(buffer);
 		return obj;
 	}
@@ -538,7 +538,8 @@ namespace Jazz2::Scripting
 					return false;
 				}
 				// RefCastObject will increment the refcount if successful
-				engine->RefCastObject(m_valueObj, engine->GetTypeInfoById(m_typeId), engine->GetTypeInfoById(typeId), reinterpret_cast<void**>(value));
+				engine->RefCastObject(m_valueObj, engine->GetTypeInfoById(m_typeId),
+					engine->GetTypeInfoById(typeId), reinterpret_cast<void**>(value));
 
 				return true;
 			}

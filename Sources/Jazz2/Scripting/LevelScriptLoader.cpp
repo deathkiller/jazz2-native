@@ -17,6 +17,7 @@
 #include "../Actors/ActorBase.h"
 #include "../Actors/Player.h"
 #include "../Compatibility/JJ2Strings.h"
+#include "../UI/InGameConsole.h"
 
 #include "../../nCine/Base/Random.h"
 
@@ -116,6 +117,9 @@ namespace Jazz2::Scripting
 		auto contextType = AddScriptFromFile(scriptPath, DefinedSymbols);
 		if (contextType == ScriptContextType::Unknown) {
 			LOGE("Cannot compile the script. Please correct the code and try again.");
+#if defined(DEATH_DEBUG)
+			levelHandler->_console->WriteLine(UI::MessageLevel::Error, "Cannot compile the script. Please correct the code and try again."_s);
+#endif
 			return;
 		}
 
@@ -124,15 +128,28 @@ namespace Jazz2::Scripting
 		switch (GetContextType()) {
 			case ScriptContextType::Legacy:
 				LOGD("Compiling script with \"Legacy\" context");
+#if defined(DEATH_DEBUG)
+				levelHandler->_console->WriteLine(UI::MessageLevel::Debug, "Compiling script with \"Legacy\" context"_s);
+#endif
 				RegisterLegacyFunctions(GetEngine());
 				break;
 			case ScriptContextType::Standard:
 				LOGD("Compiling script with \"Standard\" context");
+#if defined(DEATH_DEBUG)
+				levelHandler->_console->WriteLine(UI::MessageLevel::Debug, "Compiling script with \"Standard\" context"_s);
+#endif
 				RegisterStandardFunctions(GetEngine(), GetMainModule());
 				break;
 		}
 
-		ScriptBuildResult r = Build(); RETURN_ASSERT_MSG(r == ScriptBuildResult::Success, "Cannot compile the script. Please correct the code and try again.");
+		ScriptBuildResult r = Build();
+		if (r != ScriptBuildResult::Success) {
+			LOGE("Cannot compile the script. Please correct the code and try again.");
+#if defined(DEATH_DEBUG)
+			levelHandler->_console->WriteLine(UI::MessageLevel::Error, "Cannot compile the script. Please correct the code and try again."_s);
+#endif
+			return;
+		}
 
 		// Enable all callbacks by default
 		_enabledCallbacks.setAll();
@@ -176,6 +193,17 @@ namespace Jazz2::Scripting
 		}
 	}
 
+	void LevelScriptLoader::OnBeforeScriptCall()
+	{
+	}
+
+	void LevelScriptLoader::OnAfterScriptCall()
+	{
+		for (auto& p : _playerBackingStore) {
+			p.second->SyncPropertiesFromBackingStore();
+		}
+	}
+
 	void LevelScriptLoader::OnLevelLoad()
 	{
 		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onLevelLoad()");
@@ -183,6 +211,7 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+		OnBeforeScriptCall();
 		asIScriptContext* ctx = GetEngine()->RequestContext();
 
 		ctx->Prepare(func);
@@ -192,6 +221,7 @@ namespace Jazz2::Scripting
 		}
 
 		GetEngine()->ReturnContext(ctx);
+		OnAfterScriptCall();
 	}
 
 	void LevelScriptLoader::OnLevelBegin()
@@ -201,6 +231,7 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+		OnBeforeScriptCall();
 		asIScriptContext* ctx = GetEngine()->RequestContext();
 
 		ctx->Prepare(func);
@@ -210,6 +241,7 @@ namespace Jazz2::Scripting
 		}
 
 		GetEngine()->ReturnContext(ctx);
+		OnAfterScriptCall();
 	}
 
 	void LevelScriptLoader::OnLevelReload()
@@ -219,6 +251,7 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+		OnBeforeScriptCall();
 		asIScriptContext* ctx = GetEngine()->RequestContext();
 
 		ctx->Prepare(func);
@@ -228,6 +261,7 @@ namespace Jazz2::Scripting
 		}
 
 		GetEngine()->ReturnContext(ctx);
+		OnAfterScriptCall();
 	}
 
 	void LevelScriptLoader::OnLevelUpdate(float timeMult)
@@ -242,6 +276,7 @@ namespace Jazz2::Scripting
 				}
 
 				// Legacy context requires fixed frame count per second
+				OnBeforeScriptCall();
 				asIScriptContext* ctx = GetEngine()->RequestContext();
 
 				// It should update at 70 FPS instead of 60 FPS
@@ -275,6 +310,7 @@ namespace Jazz2::Scripting
 				}
 
 				GetEngine()->ReturnContext(ctx);
+				OnAfterScriptCall();
 				break;
 			}
 			case ScriptContextType::Standard: {
@@ -284,7 +320,9 @@ namespace Jazz2::Scripting
 				}
 
 				// Standard context supports floating frame rate
+				OnBeforeScriptCall();
 				asIScriptContext* ctx = GetEngine()->RequestContext();
+
 				ctx->Prepare(_onLevelUpdate);
 				ctx->SetArgFloat(0, timeMult);
 				std::int32_t r = ctx->Execute();
@@ -295,6 +333,7 @@ namespace Jazz2::Scripting
 				}
 
 				GetEngine()->ReturnContext(ctx);
+				OnAfterScriptCall();
 				break;
 			}
 		}
@@ -315,7 +354,9 @@ namespace Jazz2::Scripting
 							}
 						}
 
+						OnBeforeScriptCall();
 						asIScriptContext* ctx = GetEngine()->RequestContext();
+
 						ctx->Prepare(func);
 
 						std::int32_t typeId = 0;
@@ -335,6 +376,7 @@ namespace Jazz2::Scripting
 						}
 
 						GetEngine()->ReturnContext(ctx);
+						OnAfterScriptCall();
 					}
 				}
 			}
@@ -356,7 +398,9 @@ namespace Jazz2::Scripting
 		formatString(funcName, sizeof(funcName), "onFunction%i", callbackId);
 		asIScriptFunction* func = GetMainModule()->GetFunctionByName(funcName);
 		if (func != nullptr) {
+			OnBeforeScriptCall();
 			asIScriptContext* ctx = GetEngine()->RequestContext();
+
 			ctx->Prepare(func);
 
 			std::int32_t paramIdx = 0;
@@ -389,6 +433,7 @@ namespace Jazz2::Scripting
 			}
 
 			GetEngine()->ReturnContext(ctx);
+			OnAfterScriptCall();
 			return;
 		}
 
@@ -418,7 +463,9 @@ namespace Jazz2::Scripting
 			subVideoW = (std::int32_t)view.W;
 			subVideoH = (std::int32_t)view.H;
 
+			OnBeforeScriptCall();
 			asIScriptContext* ctx = GetEngine()->RequestContext();
+
 			ctx->Prepare(func);
 
 			jjPLAYER* p = GetPlayerBackingStore(player);
@@ -435,6 +482,7 @@ namespace Jazz2::Scripting
 			}
 
 			GetEngine()->ReturnContext(ctx);
+			OnAfterScriptCall();
 
 			// TODO
 			asFreeMem(canvasWrapper);
@@ -454,7 +502,9 @@ namespace Jazz2::Scripting
 
 		asIScriptFunction* func = GetMainModule()->GetFunctionByName("onRoast");
 		if (func != nullptr) {
+			OnBeforeScriptCall();
 			asIScriptContext* ctx = GetEngine()->RequestContext();
+
 			ctx->Prepare(func);
 
 			std::int32_t typeId = 0;
@@ -488,6 +538,7 @@ namespace Jazz2::Scripting
 			}
 
 			GetEngine()->ReturnContext(ctx);
+			OnAfterScriptCall();
 		}
 	}
 
@@ -696,8 +747,11 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "int set_fastfire(int)", asMETHOD(jjPLAYER, set_fastfire), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 get_currWeapon() const", asMETHOD(jjPLAYER, get_currWeapon), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 set_currWeapon(uint8)", asMETHOD(jjPLAYER, set_currWeapon), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "int get_lives() const", asMETHOD(jjPLAYER, get_lives), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "int set_lives(int)", asMETHOD(jjPLAYER, set_lives), asCALL_THISCALL);
+		
+		//engine->RegisterObjectMethod("jjPLAYER", "int get_lives() const", asMETHOD(jjPLAYER, get_lives), asCALL_THISCALL);
+		//engine->RegisterObjectMethod("jjPLAYER", "int set_lives(int)", asMETHOD(jjPLAYER, set_lives), asCALL_THISCALL);
+		engine->RegisterObjectProperty("jjPLAYER", "int lives", asOFFSET(jjPLAYER, lives));
+
 		engine->RegisterObjectMethod("jjPLAYER", "int get_invincibility() const", asMETHOD(jjPLAYER, get_invincibility), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_invincibility(int)", asMETHOD(jjPLAYER, set_invincibility), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_blink() const", asMETHOD(jjPLAYER, get_blink), asCALL_THISCALL);
@@ -3426,11 +3480,13 @@ namespace Jazz2::Scripting
 	{
 		auto it = _playerBackingStore.find(player->GetPlayerIndex());
 		if (it != _playerBackingStore.end()) {
+			it->second->SyncPropertiesToBackingStore();
 			return it->second.get();
 		}
 
 		auto [result, success] = _playerBackingStore.emplace(player->GetPlayerIndex(), std::make_unique<jjPLAYER>(this, player));
 		DEATH_DEBUG_ASSERT(success);
+		result->second->SyncPropertiesToBackingStore();
 		return result->second.get();
 	}
 
@@ -3439,6 +3495,7 @@ namespace Jazz2::Scripting
 		std::uint8_t playerIndex8 = (std::uint8_t)playerIndex;
 		auto it = _playerBackingStore.find(playerIndex8);
 		if (it != _playerBackingStore.end()) {
+			it->second->SyncPropertiesToBackingStore();
 			return it->second.get();
 		}
 
@@ -3452,6 +3509,7 @@ namespace Jazz2::Scripting
 
 		auto [result, success] = _playerBackingStore.emplace(playerIndex8, std::make_unique<jjPLAYER>(this, *pp));
 		DEATH_DEBUG_ASSERT(success);
+		result->second->SyncPropertiesToBackingStore();
 		return result->second.get();
 	}
 
