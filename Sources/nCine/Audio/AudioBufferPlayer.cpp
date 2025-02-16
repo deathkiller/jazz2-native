@@ -55,7 +55,7 @@ namespace nCine
 
 	std::int32_t AudioBufferPlayer::bufferSize() const
 	{
-		return (audioBuffer_ != nullptr ? audioBuffer_->bufferSize() : 0UL);
+		return (audioBuffer_ != nullptr ? audioBuffer_->bufferSize() : 0);
 	}
 
 	void AudioBufferPlayer::setAudioBuffer(AudioBuffer* audioBuffer)

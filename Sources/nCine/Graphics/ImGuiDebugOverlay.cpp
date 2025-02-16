@@ -35,6 +35,8 @@
 #	include "allocators_config.h"
 #endif
 
+using namespace Death::Containers::Literals;
+
 namespace ImGui
 {
 	void TextInRoundedRectangle(const char* text, const char* text_end = nullptr)
@@ -490,6 +492,7 @@ namespace nCine
 						std::uint32_t color;
 						switch (message.Level) {
 							case TraceLevel::Fatal:		color = 0xFF403EEC; break;
+							case TraceLevel::Assert:	color = 0xFFad00cc; break;
 							case TraceLevel::Error:		color = 0xFF5050D8; break;
 							case TraceLevel::Warning:	color = 0xFF7AC7EB; break;
 							case TraceLevel::Info:		color = 0xFFEEEEEE; break;
@@ -505,7 +508,7 @@ namespace nCine
 
 						ImGui::TableSetColumnIndex(2);
 
-						auto separator = message.Text.partition(" #> ");
+						auto separator = message.Text.partition(" ‡ "_s);
 						if (!separator[0].empty()) {
 							ImGui::TextInRoundedRectangle(separator[0].begin(), separator[0].end());
 							ImGui::TextUnformatted(separator[2].begin(), separator[2].end());
@@ -794,17 +797,16 @@ namespace nCine
 					ImGui::Text("Channels: %d", player->numChannels());
 					ImGui::Text("Frequency: %d Hz", player->frequency());
 					auto bufferSize = player->bufferSize();
-					if (bufferSize == UINT32_MAX) {
+					if (bufferSize < 0) {
 						ImGui::Text("Buffer Size: Streaming");
 					} else {
 						ImGui::Text("Buffer Size: %lu bytes", bufferSize);
 					}
-					ImGui::NewLine();
-
 					ImGui::Text("State: %s", audioPlayerStateToString(player->state()));
 					ImGui::Text("Looping: %s", player->isLooping() ? "true" : "false");
 					ImGui::Text("Gain: %f", player->gain());
 					ImGui::Text("Pitch: %f", player->pitch());
+					ImGui::Text("Low-pass: %f", player->lowPass());
 					const Vector3f& pos = player->position();
 					ImGui::Text("Position: <%f, %f, %f>", pos.X, pos.Y, pos.Z);
 

@@ -42,9 +42,10 @@ namespace Jazz2::Tiles
 	/** @brief Layer renderer type */
 	enum class LayerRendererType {
 		Default,				/**< Default rendering */
+		Solid,					/**< Solid color rendering */
 		Tinted,					/**< Color-tinted rendering */
 
-		Sky,					/**< Textured background --- Sky */
+		Sky = 10,				/**< Textured background --- Sky */
 		Circle					/**< Textured background --- Circle */
 	};
 

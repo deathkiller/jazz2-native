@@ -49,7 +49,7 @@ namespace nCine
 
 		/// Returns the size of the loaded buffer in bytes
 		inline std::int32_t bufferSize() const {
-			return (numSamples_ == INT32_MAX ? INT32_MAX : (numSamples_ * numChannels_ * bytesPerSample_));
+			return (numSamples_ == -1 ? -1 : (numSamples_ * numChannels_ * bytesPerSample_));
 		}
 
 		/// Returns the number of samples in the streaming buffer

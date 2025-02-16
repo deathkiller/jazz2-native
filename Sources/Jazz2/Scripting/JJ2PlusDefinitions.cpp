@@ -2958,7 +2958,17 @@ namespace Jazz2::Scripting
 		noop(); return false;
 	}
 
-	// TODO
+	jjWEAPON* get_jjWEAPON(int index) {
+		noop();
+		static jjWEAPON dummy;
+		return &dummy;
+	}
+
+	jjCHARACTER* get_jjCHARACTER(int index) {
+		noop();
+		static jjCHARACTER dummy;
+		return &dummy;
+	}
 
 	std::int32_t GetEvent(std::uint16_t tx, std::uint16_t ty) {
 		noop(); return 0;

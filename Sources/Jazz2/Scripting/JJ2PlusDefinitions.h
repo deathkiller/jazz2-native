@@ -2013,12 +2013,40 @@ namespace Jazz2::Scripting
 
 	class jjWEAPON
 	{
-
+	public:
+		bool infinite;
+		bool replenishes;
+		bool replacedByShield;
+		bool replacedByBubbles;
+		bool comesFromGunCrates;
+		bool gradualAim;
+		int multiplier;
+		int maximum;
+		int gemsLost;
+		int gemsLostPowerup;
+		std::int8_t style;
+		int spread;
+		bool defaultSample;
+		bool allowed;
+		bool allowedPowerup;
+		bool comesFromBirds;
+		bool comesFromBirdsPowerup;
 	};
 
 	class jjCHARACTER
 	{
-
+	public:
+		int airJump;
+		int groundJump;
+		int doubleJumpCountMax;
+		float doubleJumpXSpeed;
+		float doubleJumpYSpeed;
+		int helicopterDurationMax;
+		float helicopterXSpeed;
+		float helicopterYSpeed;
+		bool canHurt;
+		bool canRun;
+		bool morphBoxCycle;
 	};
 
 	class jjLAYER;
@@ -2276,7 +2304,9 @@ namespace Jazz2::Scripting
 	bool getUseLayer8Speeds();
 	bool setUseLayer8Speeds(bool value);
 
-	// TODO
+	jjWEAPON* get_jjWEAPON(int index);
+
+	jjCHARACTER* get_jjCHARACTER(int index);
 
 	std::int32_t GetEvent(std::uint16_t tx, std::uint16_t ty);
 	std::int32_t GetEventParamWrapper(std::uint16_t tx, std::uint16_t ty, std::int32_t offset, std::int32_t length);
