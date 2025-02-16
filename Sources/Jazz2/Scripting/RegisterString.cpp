@@ -6,6 +6,7 @@
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Base/HashMap.h"
 
+#include <cstring>
 #include <memory>
 #include <new>
 
@@ -13,6 +14,7 @@
 #	include <locale.h>		// setlocale()
 #endif
 
+#include <Containers/Reference.h>
 #include <Containers/StringConcatenable.h>
 
 #define AS_USE_ACCESSORS 1
@@ -28,12 +30,13 @@ namespace Jazz2::Scripting
 	public:
 		struct InternalData {
 			std::unique_ptr<String> Data;
-			int RefCount;
+			std::int32_t RefCount;
 
-			InternalData(int refCount) : RefCount(refCount) { }
+			InternalData(std::int32_t refCount) : RefCount(refCount) {}
 		};
 
-		StringFactory() { }
+		StringFactory() {}
+
 		~StringFactory()
 		{
 			// The script engine must release each string constant that it has requested
@@ -45,17 +48,19 @@ namespace Jazz2::Scripting
 			// The string factory might be modified from multiple threads, so it is necessary to use a mutex
 			asAcquireExclusiveLock();
 
-			StringView stringView(data, length);
-			auto it = _stringCache.find(String::nullTerminatedView(stringView));
+			const String stringView(data, length, [](char*, std::size_t) {});
+			auto it = _stringCache.find(stringView);
 			if (it != _stringCache.end()) {
 				it->second.RefCount++;;
 			} else {
-				it = _stringCache.emplace(String(stringView), 1).first;
-				it->second.Data = std::make_unique<String>(stringView);
+				auto data = std::make_unique<String>(stringView);
+				it = _stringCache.emplace(*data.get(), 1).first;
+				it->second.Data = std::move(data);
+				//LOGD("Allocated \"%s\" string", it->second.Data.get()->data());
 			}
 			asReleaseExclusiveLock();
 
-			return reinterpret_cast<const void*>(it->second.Data.get());
+			return static_cast<const void*>(it->second.Data.get());
 		}
 
 		int ReleaseStringConstant(const void* str)
@@ -67,12 +72,14 @@ namespace Jazz2::Scripting
 			// The string factory might be modified from multiple threads, so it is necessary to use a mutex
 			asAcquireExclusiveLock();
 
-			auto it = _stringCache.find(*reinterpret_cast<const String*>(str));
+			const String& stringView = *static_cast<const String*>(str);
+			auto it = _stringCache.find(stringView);
 			if (it == _stringCache.end()) {
 				ret = asERROR;
 			} else {
 				it->second.RefCount--;
 				if (it->second.RefCount == 0) {
+					//LOGD("Released \"%s\" string", it->second.Data.get()->data());
 					_stringCache.erase(it);
 				}
 			}
@@ -86,17 +93,24 @@ namespace Jazz2::Scripting
 		{
 			if (str == nullptr) return asERROR;
 
-			const String* string = reinterpret_cast<const String*>(str);
+			const String& stringView = *static_cast<const String*>(str);
 			if (length) {
-				*length = (asUINT)string->size();
+				*length = (asUINT)stringView.size();
 			}
 			if (data != nullptr) {
-				memcpy(data, string->data(), string->size());
+				std::memcpy(data, stringView.data(), stringView.size());
 			}
 			return asSUCCESS;
 		}
 
-		HashMap<String, InternalData> _stringCache;
+		struct StringRefEqualTo
+		{
+			inline bool operator()(const Reference<const String>& a, const Reference<const String>& b) const noexcept {
+				return a.get() == b.get();
+			}
+		};
+
+		HashMap<Reference<const String>, InternalData, FNV1aHashFunc<String>, StringRefEqualTo> _stringCache;
 	};
 
 	static StringFactory* _stringFactory = nullptr;

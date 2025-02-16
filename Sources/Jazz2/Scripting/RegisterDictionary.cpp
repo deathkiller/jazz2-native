@@ -4,6 +4,7 @@
 #include "RegisterArray.h"
 #include "../../Main.h"
 
+#include <cstring>
 #include <new>
 
 #define AS_USE_ACCESSORS 1
@@ -29,9 +30,9 @@ namespace Jazz2::Scripting
 		// This is called from RegisterScriptDictionary
 		static void Setup(asIScriptEngine* engine)
 		{
-			SDictionaryCache* cache = reinterpret_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
+			SDictionaryCache* cache = static_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
 			if (cache == nullptr) {
-				cache = new SDictionaryCache;
+				cache = new SDictionaryCache();
 				engine->SetUserData(cache, DICTIONARY_CACHE);
 				engine->SetEngineUserDataCleanupCallback(SDictionaryCache::Cleanup, DICTIONARY_CACHE);
 
@@ -44,7 +45,7 @@ namespace Jazz2::Scripting
 		// This is called from the engine when shutting down
 		static void Cleanup(asIScriptEngine* engine)
 		{
-			SDictionaryCache* cache = reinterpret_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
+			SDictionaryCache* cache = static_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
 			if (cache != nullptr) {
 				delete cache;
 			}
@@ -87,7 +88,7 @@ namespace Jazz2::Scripting
 		engine = e;
 
 		// The dictionary object type is cached to avoid dynamically parsing it each time
-		SDictionaryCache* cache = reinterpret_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
+		SDictionaryCache* cache = static_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
 
 		// Notify the garbage collector of this object
 		engine->NotifyGarbageCollectorOfNewObject(this, cache->dictType);
@@ -101,7 +102,7 @@ namespace Jazz2::Scripting
 		Init(ctx->GetEngine());
 
 		// Determine if the dictionary key type is registered as reference type or value type
-		SDictionaryCache& cache = *reinterpret_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
+		SDictionaryCache& cache = *static_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
 		bool keyAsRef = cache.keyType->GetFlags() & asOBJ_REF ? true : false;
 
 		// Initialize the dictionary from the buffer
@@ -248,7 +249,7 @@ namespace Jazz2::Scripting
 		DeleteAll();
 	}
 
-	CScriptDictionary& CScriptDictionary::operator =(const CScriptDictionary& other)
+	CScriptDictionary& CScriptDictionary::operator=(const CScriptDictionary& other)
 	{
 		// Clear everything we had before
 		DeleteAll();
@@ -403,7 +404,7 @@ namespace Jazz2::Scripting
 	CScriptArray* CScriptDictionary::GetKeys() const
 	{
 		// Retrieve the object type for the array<string> from the cache
-		SDictionaryCache* cache = reinterpret_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
+		SDictionaryCache* cache = static_cast<SDictionaryCache*>(engine->GetUserData(DICTIONARY_CACHE));
 		asITypeInfo* ti = cache->arrayType;
 
 		// Create the array object
@@ -552,13 +553,12 @@ namespace Jazz2::Scripting
 			// Copy the object into the given reference
 			if (isCompatible) {
 				engine->AssignScriptObject(value, m_valueObj, engine->GetTypeInfoById(typeId));
-
 				return true;
 			}
 		} else {
 			if (m_typeId == typeId) {
 				int size = engine->GetSizeOfPrimitiveType(typeId);
-				memcpy(value, &m_valueInt, size);
+				std::memcpy(value, &m_valueInt, size);
 				return true;
 			}
 
@@ -570,12 +570,12 @@ namespace Jazz2::Scripting
 				else if (m_typeId == asTYPEID_BOOL) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					char localValue;
-					memcpy(&localValue, &m_valueInt, sizeof(char));
+					std::memcpy(&localValue, &m_valueInt, sizeof(char));
 					*(double*)value = localValue ? 1.0 : 0.0;
 				} else if (m_typeId > asTYPEID_DOUBLE && (m_typeId & asTYPEID_MASK_OBJECT) == 0) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					int localValue;
-					memcpy(&localValue, &m_valueInt, sizeof(int));
+					std::memcpy(&localValue, &m_valueInt, sizeof(int));
 					*(double*)value = double(localValue); // enums are 32bit
 				} else {
 					// The stored type is an object
@@ -590,12 +590,12 @@ namespace Jazz2::Scripting
 				else if (m_typeId == asTYPEID_BOOL) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					char localValue;
-					memcpy(&localValue, &m_valueInt, sizeof(char));
+					std::memcpy(&localValue, &m_valueInt, sizeof(char));
 					*(asINT64*)value = localValue ? 1 : 0;
 				} else if (m_typeId > asTYPEID_DOUBLE && (m_typeId & asTYPEID_MASK_OBJECT) == 0) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					int localValue;
-					memcpy(&localValue, &m_valueInt, sizeof(int));
+					std::memcpy(&localValue, &m_valueInt, sizeof(int));
 					*(asINT64*)value = localValue; // enums are 32bit
 				} else {
 					// The stored type is an object
@@ -613,12 +613,12 @@ namespace Jazz2::Scripting
 				} else if (m_typeId == asTYPEID_BOOL) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					char localValue;
-					memcpy(&localValue, &m_valueInt, sizeof(char));
+					std::memcpy(&localValue, &m_valueInt, sizeof(char));
 					*(int*)value = localValue ? 1 : 0;
 				} else if (m_typeId > asTYPEID_DOUBLE && (m_typeId & asTYPEID_MASK_OBJECT) == 0) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					int localValue;
-					memcpy(&localValue, &m_valueInt, sizeof(int));
+					std::memcpy(&localValue, &m_valueInt, sizeof(int));
 					*(int*)value = localValue; // enums are 32bit
 				} else {
 					// The stored type is an object
@@ -638,7 +638,7 @@ namespace Jazz2::Scripting
 					// Compare only the bytes that were actually set
 					asQWORD zero = 0;
 					int size = engine->GetSizeOfPrimitiveType(m_typeId);
-					*(bool*)value = memcmp(&m_valueInt, &zero, size) == 0 ? false : true;
+					*(bool*)value = std::memcmp(&m_valueInt, &zero, size) == 0 ? false : true;
 				}
 				return true;
 			}
@@ -656,7 +656,7 @@ namespace Jazz2::Scripting
 		}
 
 		// Return the address of the primitive or the pointer to the object
-		return reinterpret_cast<const void*>(&m_valueObj);
+		return static_cast<const void*>(&m_valueObj);
 	}
 
 	bool CScriptDictValue::Get(asIScriptEngine* engine, asINT64& value) const

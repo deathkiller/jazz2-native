@@ -130,7 +130,7 @@ namespace Jazz2
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct StringRefEqualTo
 		{
-			inline bool operator()(const Reference<String>& a, const Reference<String>& b) const noexcept {
+			inline bool operator()(const Reference<const String>& a, const Reference<const String>& b) const noexcept {
 				return a.get() == b.get();
 			}
 		};
@@ -157,13 +157,13 @@ namespace Jazz2
 		bool _isHeadless;
 		bool _isLoading;
 		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
-		HashMap<Reference<String>, std::unique_ptr<Metadata>, FNV1aHashFunc<String>, StringRefEqualTo> _cachedMetadata;
+		HashMap<Reference<const String>, std::unique_ptr<Metadata>, FNV1aHashFunc<String>, StringRefEqualTo> _cachedMetadata;
 		HashMap<Pair<String, std::uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 #if defined(WITH_AUDIO)
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
 #endif
-		std::unique_ptr<UI::Font> _fonts[(int32_t)FontType::Count];
-		std::unique_ptr<Shader> _precompiledShaders[(int32_t)PrecompiledShader::Count];
+		std::unique_ptr<UI::Font> _fonts[(std::int32_t)FontType::Count];
+		std::unique_ptr<Shader> _precompiledShaders[(std::int32_t)PrecompiledShader::Count];
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		SmallVector<std::unique_ptr<PakFile>> _mountedPaks;
 #endif

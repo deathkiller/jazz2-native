@@ -59,7 +59,9 @@ namespace Jazz2::Scripting
 #endif
 	};
 
-	/** @brief Registers `ref` type to **AngelScript** engine */
+	/** @relatesalso CScriptHandle
+		@brief Registers `ref` type to **AngelScript** engine
+	*/
 	void RegisterRef(asIScriptEngine* engine);
 }
 
