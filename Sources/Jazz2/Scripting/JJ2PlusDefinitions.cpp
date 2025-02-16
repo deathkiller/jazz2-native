@@ -1197,7 +1197,7 @@ namespace Jazz2::Scripting
 		return value;
 	}
 
-	std::int32_t jjPLAYER::get_lives() const {
+	/*std::int32_t jjPLAYER::get_lives() const {
 		noop();
 		return _player->_lives;
 	}
@@ -1205,7 +1205,7 @@ namespace Jazz2::Scripting
 		noop();
 		_player->_lives = value;
 		return _player->_lives;
-	}
+	}*/
 
 	std::int32_t jjPLAYER::get_invincibility() const {
 		noop(); return 0;
@@ -1816,6 +1816,25 @@ namespace Jazz2::Scripting
 	bool jjPLAYER::isEnemy(const jjPLAYER* victim) const {
 		noop();
 		return false;
+	}
+
+	void jjPLAYER::SyncPropertiesToBackingStore() {
+		// TODO
+		_backingStoreDirty = true;
+
+		lives = _player->_lives;
+	}
+	void jjPLAYER::SyncPropertiesFromBackingStore() {
+		// TODO
+		if (!_backingStoreDirty) {
+			return;
+		}
+
+		if (lives != _player->_lives) {
+			LOGW("SYNC");
+		}
+
+		lives = _player->_lives;
 	}
 
 	std::int32_t get_jjPlayerCount() {

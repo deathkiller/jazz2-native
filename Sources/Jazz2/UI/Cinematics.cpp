@@ -5,10 +5,8 @@
 
 #include "../../nCine/Application.h"
 #include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/Graphics/Viewport.h"
 #include "../../nCine/Input/IInputManager.h"
 #include "../../nCine/Audio/AudioBufferPlayer.h"
-#include "../../nCine/Audio/AudioReaderMpt.h"
 #include "../../nCine/Base/FrameTimer.h"
 
 #include <Containers/StringConcatenable.h>

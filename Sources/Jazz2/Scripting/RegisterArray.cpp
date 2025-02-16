@@ -827,7 +827,7 @@ namespace Jazz2::Scripting
 		if (index >= buffer->numElements) {
 			// If this is called from a script we raise a script exception
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Index out of bounds");
 			}
 			return;
@@ -959,11 +959,11 @@ namespace Jazz2::Scripting
 		if (!(subTypeId & ~asTYPEID_MASK_SEQNBR)) {
 			// Simple compare of values
 			switch (subTypeId) {
-#define COMPARE(T) *((T*)a) < *((T*)b)
+				#define COMPARE(T) *((T*)a) < *((T*)b)
 				case asTYPEID_BOOL:   return COMPARE(bool);
 				case asTYPEID_INT8:   return COMPARE(asINT8);
 				case asTYPEID_INT16:  return COMPARE(asINT16);
-				case asTYPEID_INT32:  return COMPARE(asINT32);
+				case asTYPEID_INT32:  return COMPARE(/*asINT32*/int);
 				case asTYPEID_INT64:  return COMPARE(asINT64);
 				case asTYPEID_UINT8:  return COMPARE(asBYTE);
 				case asTYPEID_UINT16: return COMPARE(asWORD);
@@ -972,7 +972,7 @@ namespace Jazz2::Scripting
 				case asTYPEID_FLOAT:  return COMPARE(float);
 				case asTYPEID_DOUBLE: return COMPARE(double);
 				default: return COMPARE(signed int); // All enums fall in this case
-#undef COMPARE
+				#undef COMPARE
 			}
 		}
 
@@ -1054,11 +1054,11 @@ namespace Jazz2::Scripting
 		if (!(subTypeId & ~asTYPEID_MASK_SEQNBR)) {
 			// Simple compare of values
 			switch (subTypeId) {
-#define COMPARE(T) *((T*)a) == *((T*)b)
+				#define COMPARE(T) *((T*)a) == *((T*)b)
 				case asTYPEID_BOOL:   return COMPARE(bool);
 				case asTYPEID_INT8:   return COMPARE(asINT8);
 				case asTYPEID_INT16:  return COMPARE(asINT16);
-				case asTYPEID_INT32:  return COMPARE(asINT32);
+				case asTYPEID_INT32:  return COMPARE(/*asINT32*/int);
 				case asTYPEID_INT64:  return COMPARE(asINT64);
 				case asTYPEID_UINT8:  return COMPARE(asBYTE);
 				case asTYPEID_UINT16: return COMPARE(asWORD);
@@ -1067,7 +1067,7 @@ namespace Jazz2::Scripting
 				case asTYPEID_FLOAT:  return COMPARE(float);
 				case asTYPEID_DOUBLE: return COMPARE(double);
 				default: return COMPARE(signed int); // All enums fall here. TODO: update this when enums can have different sizes and types
-#undef COMPARE
+				#undef COMPARE
 			}
 		} else {
 			int r = 0;
@@ -1170,7 +1170,7 @@ namespace Jazz2::Scripting
 
 				// Throw an exception
 				if (ctx != nullptr) {
-					char tmp[512];
+					char tmp[256];
 
 					if (cache && cache->eqFuncReturnCode == asMULTIPLE_FUNCTIONS) {
 #if defined(DEATH_TARGET_MSVC)
@@ -1276,7 +1276,7 @@ namespace Jazz2::Scripting
 	{
 		if ((subTypeId & asTYPEID_MASK_OBJECT) && !(subTypeId & asTYPEID_OBJHANDLE)) {
 			// Real address of object
-			return reinterpret_cast<void*>(*(size_t*)buf);
+			return reinterpret_cast<void*>(*static_cast<size_t*>(buf));
 		} else {
 			// Primitive is just a raw data
 			return buf;
@@ -1320,7 +1320,7 @@ namespace Jazz2::Scripting
 
 				// Throw an exception
 				if (ctx != nullptr) {
-					char tmp[512];
+					char tmp[256];
 
 					if (cache && cache->cmpFuncReturnCode == asMULTIPLE_FUNCTIONS) {
 #if defined(DEATH_TARGET_MSVC)
@@ -1641,7 +1641,7 @@ namespace Jazz2::Scripting
 			asReleaseExclusiveLock();
 			return;
 		}
-		memset(cache, 0, sizeof(SArrayCache));
+		std::memset(cache, 0, sizeof(SArrayCache));
 
 		// If the sub type is a handle to const, then the methods must be const too
 		bool mustBeConst = (subTypeId & asTYPEID_HANDLETOCONST) ? true : false;

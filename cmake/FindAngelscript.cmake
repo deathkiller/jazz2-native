@@ -3,8 +3,14 @@ include(ncine_helpers)
 if(NOT TARGET Angelscript)
 	if(NCINE_DOWNLOAD_DEPENDENCIES)
 		# Try to build `Angelscript` from source
-		#set(ANGELSCRIPT_URL "https://www.angelcode.com/angelscript/sdk/files/angelscript_2.36.1.zip")
-		set(ANGELSCRIPT_URL "https://github.com/codecat/angelscript-mirror/archive/refs/heads/master.tar.gz")
+		set(ANGELSCRIPT_VERSION_TAG "v2.37.0" CACHE STRING "The version for AngelScript")
+		if(ANGELSCRIPT_VERSION_TAG)
+			string(REGEX REPLACE "^v" "" ANGELSCRIPT_VERSION_TAG ${ANGELSCRIPT_VERSION_TAG})
+			set(ANGELSCRIPT_URL "https://www.angelcode.com/angelscript/sdk/files/angelscript_${ANGELSCRIPT_VERSION_TAG}.zip")
+		else()
+			set(ANGELSCRIPT_URL "https://github.com/codecat/angelscript-mirror/archive/refs/heads/master.tar.gz")
+		endif()
+		
 		message(STATUS "Downloading dependencies from \"${ANGELSCRIPT_URL}\"...")
 		
 		include(FetchContent)
@@ -17,7 +23,11 @@ if(NOT TARGET Angelscript)
 
 		ncine_add_dependency(Angelscript STATIC)
 
-		set(ANGELSCRIPT_DIR "${angelscriptgit_SOURCE_DIR}/sdk/angelscript")
+		if(IS_DIRECTORY "${angelscriptgit_SOURCE_DIR}/sdk")
+			set(ANGELSCRIPT_DIR "${angelscriptgit_SOURCE_DIR}/sdk/angelscript")
+		else()
+			set(ANGELSCRIPT_DIR "${angelscriptgit_SOURCE_DIR}/angelscript")		
+		endif()
 		set(ANGELSCRIPT_INCLUDE_DIR "${ANGELSCRIPT_DIR}/include")
 		set_target_properties(Angelscript PROPERTIES
 			INTERFACE_INCLUDE_DIRECTORIES ${ANGELSCRIPT_INCLUDE_DIR})

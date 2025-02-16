@@ -170,9 +170,10 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_OPENMPT` (default @cpp ON @ce) -- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce) -- Download and compile **libopenmpt** from source automatically
 -   `NCINE_WITH_ANGELSCRIPT` (default @cpp OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
+    -   `ANGELSCRIPT_VERSION_TAG` allows to specify the version to be downloaded if @cpp NCINE_DOWNLOAD_DEPENDENCIES @ce
 -   `NCINE_WITH_LUA` @m_class{m-label m-danger m-flat} **deprecated** --- Enable [Lua](https://www.lua.org/) scripting support
 -   `NCINE_WITH_IMGUI` (default @cpp OFF @ce) --- Enable integration with [Dear ImGui](https://github.com/ocornut/imgui) library
-    -   `IMGUI_VERSION_TAG` allows to specify version
+    -   `IMGUI_VERSION_TAG` allows to specify the version to be downloaded
 
 @subsubsection building-config-params-android Platform-specific parameters for Android
 
@@ -234,7 +235,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_FIXED_BATCH_SIZE` (default @cpp OFF @ce) --- Enable fixed batch size for rendering
 -   `NCINE_WITH_RENDERDOC` @m_class{m-label m-danger m-flat} **deprecated** --- Enable integration with [RenderDoc](https://renderdoc.org/)
 -   `NCINE_WITH_TRACY` (default @cpp OFF @ce) --- Enable integration with [Tracy](https://github.com/wolfpld/tracy) frame profiler
-    -   `TRACY_VERSION_TAG` allows to specify version
+    -   `TRACY_VERSION_TAG` allows to specify the version to be downloaded
 
 @subsubsection building-config-params-game Game-specific parameters
 

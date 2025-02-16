@@ -12,19 +12,14 @@ using namespace Jazz2::Actors;
 namespace Jazz2::Scripting
 {
 	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScriptLoader* levelScripts, int playerIndex)
-		:
-		_levelScripts(levelScripts),
-		_refCount(1)
+		: _levelScripts(levelScripts), _refCount(1)
 	{
 		auto players = levelScripts->GetPlayers();
 		_player = (playerIndex < players.size() ? players[playerIndex] : nullptr);
 	}
 
 	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScriptLoader* levelScripts, Player* player)
-		:
-		_levelScripts(levelScripts),
-		_refCount(1),
-		_player(player)
+		: _levelScripts(levelScripts), _refCount(1), _player(player)
 	{
 	}
 
