@@ -191,7 +191,9 @@ namespace Jazz2::Scripting
 #endif
 	};
 
-	/** @brief Registers `dictionary` type to **AngelScript** engine */
+	/** @relatesalso CScriptDictionary
+		@brief Registers `dictionary` type to **AngelScript** engine
+	*/
 	void RegisterDictionary(asIScriptEngine* engine);
 }
 

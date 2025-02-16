@@ -2,10 +2,11 @@
 
 #include "RegisterArray.h"
 #include "../../Main.h"
+#include "../../nCine/Base/Algorithms.h"
 
+#include <cstring>
 #include <new>
 #include <stdlib.h>
-#include <algorithm>	// std::sort
 
 #include <Containers/StringConcatenable.h>
 
@@ -36,7 +37,7 @@ namespace Jazz2::Scripting
 
 	static void CleanupTypeInfoArrayCache(asITypeInfo* type)
 	{
-		SArrayCache* cache = reinterpret_cast<SArrayCache*>(type->GetUserData(ARRAY_CACHE));
+		SArrayCache* cache = static_cast<SArrayCache*>(type->GetUserData(ARRAY_CACHE));
 		if (cache != nullptr) {
 			cache->~SArrayCache();
 			asFreeMem(cache);
@@ -355,21 +356,21 @@ namespace Jazz2::Scripting
 
 			// Copy the values of the primitive type into the internal buffer
 			if (length > 0) {
-				memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
+				std::memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
 			}
 		} else if (ti->GetSubTypeId() & asTYPEID_OBJHANDLE) {
 			CreateBuffer(&buffer, length);
 
 			// Copy the handles into the internal buffer
 			if (length > 0) {
-				memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
+				std::memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
 			}
 
 			// With object handles it is safe to clear the memory in the received buffer
 			// instead of increasing the ref count. It will save time both by avoiding the
 			// call the increase ref, and also relieve the engine from having to release
 			// its references too
-			memset((((asUINT*)buf) + 1), 0, length * elementSize);
+			std::memset((((asUINT*)buf) + 1), 0, length * elementSize);
 		} else if (ti->GetSubType()->GetFlags() & asOBJ_REF) {
 			// Only allocate the buffer, but not the objects
 			subTypeId |= asTYPEID_OBJHANDLE;
@@ -378,12 +379,12 @@ namespace Jazz2::Scripting
 
 			// Copy the handles into the internal buffer
 			if (length > 0) {
-				memcpy(buffer->data, (((asUINT*)buf) + 1), length * elementSize);
+				std::memcpy(buffer->data, (((asUINT*)buf) + 1), length * elementSize);
 			}
 
 			// For ref types we can do the same as for handles, as they are
 			// implicitly stored as handles.
-			memset((((asUINT*)buf) + 1), 0, length * elementSize);
+			std::memset((((asUINT*)buf) + 1), 0, length * elementSize);
 		} else {
 			// TODO: Optimize by calling the copy constructor of the object instead of
 			//       constructing with the default constructor and then assigning the value
@@ -587,7 +588,7 @@ namespace Jazz2::Scripting
 			return;
 
 		// Allocate memory for the buffer
-		SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * maxElements));
+		SArrayBuffer* newBuffer = static_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * maxElements));
 		if (newBuffer != nullptr) {
 			newBuffer->numElements = buffer->numElements;
 			newBuffer->maxElements = maxElements;
@@ -602,7 +603,7 @@ namespace Jazz2::Scripting
 
 		// As objects in arrays of objects are not stored inline, it is safe to use memcpy here
 		// since we're just copying the pointers to objects and not the actual objects.
-		memcpy(newBuffer->data, buffer->data, buffer->numElements * elementSize);
+		std::memcpy(newBuffer->data, buffer->data, buffer->numElements * elementSize);
 
 		// Release the old buffer
 		asFreeMem(buffer);
@@ -644,7 +645,7 @@ namespace Jazz2::Scripting
 		// Compact the elements
 		// As objects in arrays of objects are not stored inline, it is safe to use memmove here
 		// since we're just copying the pointers to objects and not the actual objects.
-		memmove(buffer->data + start * elementSize, buffer->data + (start + count) * elementSize, (buffer->numElements - start - count) * elementSize);
+		std::memmove(buffer->data + start * elementSize, buffer->data + (start + count) * elementSize, (buffer->numElements - start - count) * elementSize);
 		buffer->numElements -= count;
 	}
 
@@ -672,7 +673,7 @@ namespace Jazz2::Scripting
 
 		if (buffer->maxElements < buffer->numElements + delta) {
 			// Allocate memory for the buffer
-			SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * (buffer->numElements + delta)));
+			SArrayBuffer* newBuffer = static_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * (buffer->numElements + delta)));
 			if (newBuffer != nullptr) {
 				newBuffer->numElements = buffer->numElements + delta;
 				newBuffer->maxElements = newBuffer->numElements;
@@ -687,9 +688,9 @@ namespace Jazz2::Scripting
 
 			// As objects in arrays of objects are not stored inline, it is safe to use memcpy here
 			// since we're just copying the pointers to objects and not the actual objects.
-			memcpy(newBuffer->data, buffer->data, at * elementSize);
+			std::memcpy(newBuffer->data, buffer->data, at * elementSize);
 			if (at < buffer->numElements) {
-				memcpy(newBuffer->data + (at + delta) * elementSize, buffer->data + at * elementSize, (buffer->numElements - at) * elementSize);
+				std::memcpy(newBuffer->data + (at + delta) * elementSize, buffer->data + at * elementSize, (buffer->numElements - at) * elementSize);
 			}
 			// Initialize the new elements with default values
 			Construct(newBuffer, at, at + delta);
@@ -702,12 +703,12 @@ namespace Jazz2::Scripting
 			Destruct(buffer, at, at - delta);
 			// As objects in arrays of objects are not stored inline, it is safe to use memmove here
 			// since we're just copying the pointers to objects and not the actual objects.
-			memmove(buffer->data + at * elementSize, buffer->data + (at - delta) * elementSize, (buffer->numElements - (at - delta)) * elementSize);
+			std::memmove(buffer->data + at * elementSize, buffer->data + (at - delta) * elementSize, (buffer->numElements - (at - delta)) * elementSize);
 			buffer->numElements += delta;
 		} else {
 			// As objects in arrays of objects are not stored inline, it is safe to use memmove here
 			// since we're just copying the pointers to objects and not the actual objects.
-			memmove(buffer->data + (at + delta) * elementSize, buffer->data + at * elementSize, (buffer->numElements - at) * elementSize);
+			std::memmove(buffer->data + (at + delta) * elementSize, buffer->data + at * elementSize, (buffer->numElements - at) * elementSize);
 			Construct(buffer, at, at + delta);
 			buffer->numElements += delta;
 		}
@@ -873,7 +874,7 @@ namespace Jazz2::Scripting
 	// internal
 	void CScriptArray::CreateBuffer(SArrayBuffer** buf, asUINT numElements)
 	{
-		*buf = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * numElements));
+		*buf = static_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * numElements));
 
 		if ((*buf) != nullptr) {
 			(*buf)->numElements = numElements;
@@ -913,7 +914,7 @@ namespace Jazz2::Scripting
 				if (*d == 0) {
 					// Set the remaining entries to null so the destructor
 					// won't attempt to destroy invalid objects later
-					memset(d, 0, sizeof(void*) * (max - d));
+					std::memset(d, 0, sizeof(void*) * (max - d));
 
 					// There is no need to set an exception on the context,
 					// as CreateScriptObject has already done that
@@ -923,7 +924,7 @@ namespace Jazz2::Scripting
 		} else {
 			// Set all elements to zero whether they are handles or primitives
 			void* d = (void*)(buf->data + start * elementSize);
-			memset(d, 0, (end - start) * elementSize);
+			std::memset(d, 0, (end - start) * elementSize);
 		}
 	}
 
@@ -1025,7 +1026,7 @@ namespace Jazz2::Scripting
 
 		// Check if all elements are equal
 		bool isEqual = true;
-		SArrayCache* cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
+		SArrayCache* cache = static_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
 		for (asUINT n = 0; n < GetSize(); n++)
 			if (!Equals(At(n), other.At(n), cmpContext, cache)) {
 				isEqual = false;
@@ -1247,7 +1248,7 @@ namespace Jazz2::Scripting
 	// the heap and the array stores the pointers to the objects
 	void CScriptArray::Copy(void* dst, void* src)
 	{
-		memcpy(dst, src, elementSize);
+		std::memcpy(dst, src, elementSize);
 	}
 
 	// internal
@@ -1311,7 +1312,7 @@ namespace Jazz2::Scripting
 	void CScriptArray::Sort(asUINT startAt, asUINT count, bool asc)
 	{
 		// Subtype isn't primitive and doesn't have opCmp
-		SArrayCache* cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
+		SArrayCache* cache = static_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
 		if (subTypeId & ~asTYPEID_MASK_SEQNBR) {
 			if (cache == nullptr || cache->cmpFunc == 0) {
 				asIScriptContext* ctx = asGetActiveContext();
@@ -1413,7 +1414,8 @@ namespace Jazz2::Scripting
 					return false;
 				}
 			} customLess = { asc, cmpContext, cache ? cache->cmpFunc : 0 };
-			std::sort((void**)GetArrayItemPointer(start), (void**)GetArrayItemPointer(end), customLess);
+
+			nCine::sort((void**)GetArrayItemPointer(start), (void**)GetArrayItemPointer(end), customLess);
 
 			// Clean up
 			if (cmpContext != nullptr) {
@@ -1592,7 +1594,7 @@ namespace Jazz2::Scripting
 						}
 				} else {
 					// Primitives are copied byte for byte
-					memcpy(dst->data, src->data, count * elementSize);
+					std::memcpy(dst->data, src->data, count * elementSize);
 				}
 			}
 		}
@@ -1614,7 +1616,7 @@ namespace Jazz2::Scripting
 		// methods is quite time consuming if a lot of array objects are created.
 
 		// First check if a cache already exists for this array type
-		SArrayCache* cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
+		SArrayCache* cache = static_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
 		if (cache != nullptr) return;
 
 		// We need to make sure the cache is created only once, even
@@ -1623,14 +1625,14 @@ namespace Jazz2::Scripting
 
 		// Now that we got the lock, we need to check again to make sure the
 		// cache wasn't created while we were waiting for the lock
-		cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
+		cache = static_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
 		if (cache != nullptr) {
 			asReleaseExclusiveLock();
 			return;
 		}
 
 		// Create the cache
-		cache = reinterpret_cast<SArrayCache*>(asAllocMem(sizeof(SArrayCache)));
+		cache = static_cast<SArrayCache*>(asAllocMem(sizeof(SArrayCache)));
 		if (cache == nullptr) {
 			asIScriptContext* ctx = asGetActiveContext();
 			if (ctx != nullptr) {

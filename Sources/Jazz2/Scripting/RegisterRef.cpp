@@ -84,7 +84,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	CScriptHandle& CScriptHandle::operator =(const CScriptHandle& other)
+	CScriptHandle& CScriptHandle::operator=(const CScriptHandle& other)
 	{
 		Set(other.m_ref, other.m_type);
 
@@ -144,7 +144,7 @@ namespace Jazz2::Scripting
 
 		// If the argument is another CScriptHandle, we should copy the content instead
 		if (type != nullptr && strcmp(type->GetName(), "ref") == 0) {
-			CScriptHandle* r = (CScriptHandle*)ref;
+			CScriptHandle* r = static_cast<CScriptHandle*>(ref);
 			ref = r->m_ref;
 			type = r->m_type;
 		}

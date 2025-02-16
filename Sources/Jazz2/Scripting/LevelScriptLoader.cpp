@@ -119,6 +119,7 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+		SetContextType(contextType);
 		RegisterBuiltInFunctions(GetEngine());
 		switch (GetContextType()) {
 			case ScriptContextType::Legacy:

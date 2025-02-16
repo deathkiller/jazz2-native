@@ -118,7 +118,9 @@ namespace Jazz2::Scripting
 		bool  Equals(const void* a, const void* b, asIScriptContext* ctx, SArrayCache* cache) const;
 	};
 
-	/** @brief Registers `array` type to **AngelScript** engine */
+	/** @relatesalso CScriptArray
+		@brief Registers `array` type to **AngelScript** engine
+	*/
 	void RegisterArray(asIScriptEngine* engine);
 }
 
