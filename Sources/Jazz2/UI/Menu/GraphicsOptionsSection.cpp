@@ -132,7 +132,12 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::PreferZoomOut: enabled = PreferencesCache::PreferZoomOut; break;
 				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
 				case GraphicsOptionsItemType::UnalignedViewport: enabled = PreferencesCache::UnalignedViewport; customText = (enabled ? _("Enabled \f[c:#d0705d](Experimental)\f[/c]") : _("Disabled")); break;
-				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
+				case GraphicsOptionsItemType::ShowPerformanceMetrics:
+					enabled = PreferencesCache::ShowPerformanceMetrics;
+					// TODO
+					// TRANSLATORS: Reserved for later use
+					auto TBD = (true ? _("Short") : _("Detailed"));
+					break;
 			}
 
 			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
