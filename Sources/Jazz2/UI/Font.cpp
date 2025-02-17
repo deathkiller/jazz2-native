@@ -52,7 +52,7 @@ namespace Jazz2::UI
 					(float)(i % cols) / cols,
 					(float)(i / cols) / rows,
 					widths[i],
-					height - 1
+					height
 				);
 			}
 
@@ -74,7 +74,7 @@ namespace Jazz2::UI
 							(float)(i % cols) / cols,
 							(float)(i / cols) / rows,
 							charWidth,
-							height - 1
+							height
 						);
 					}
 					continue;
@@ -88,7 +88,7 @@ namespace Jazz2::UI
 					(float)(i % cols) / cols,
 					(float)(i / cols) / rows,
 					charWidth,
-					height - 1
+					height
 				);
 			}
 

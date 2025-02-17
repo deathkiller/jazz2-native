@@ -210,8 +210,10 @@ namespace Jazz2::UI::Menu
 			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer - 200, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
 		}
 
+		Vector2f displayNameSize = _root->MeasureString(item.Item.DisplayName, 0.8f);
 		_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX * 0.3f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f);
+			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor),
+			displayNameSize.X > 120.0f ? (displayNameSize.X > 150.0f ? 0.68f : 0.72f) : 0.8f);
 
 		std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
 		for (std::int32_t j = 0; j < targetCount; j++) {

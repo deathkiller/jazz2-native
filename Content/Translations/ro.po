@@ -138,7 +138,7 @@ msgid ""
 "To Clear Your Path"
 msgstr ""
 "\n"
-"Sari cu fundul pe o cutie argintie \n"
+"Sparge cu șezutul o cutie argintie \n"
 "Pentru a iți elibera calea"
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:2
@@ -338,7 +338,7 @@ msgid ""
 "to open key blocks!"
 msgstr ""
 "\n"
-"Sparge cu fundul cutia de metal \n"
+"Sparge cu șezutul cutia de metal \n"
 "pentru a deschide cuburile cu chei!"
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:1
@@ -613,7 +613,7 @@ msgid ""
 "Buttstomp the manhole cover!"
 msgstr ""
 "\n"
-"Sparge cu fundul capacul de canal!"
+"Sparge cu șezutul capacul de canalizare!"
 
 #: .fake/Translations/rescue/03_psych1.j2l.h:1
 msgctxt "rescue/03_psych1"
@@ -634,7 +634,7 @@ msgid ""
 "so go up and around!"
 msgstr ""
 "\n"
-"Nu poți să le spargi cu fundul\n"
+"Nu poți să le spargi cu șezutul\n"
 "așa că mergi în sus și ocoleștele!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:2
@@ -1150,7 +1150,7 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"Poți sparge cu fundul prin\n"
+"Poți sparge cu șezutul prin\n"
 "unele din punctele slabe\n"
 "din drumuri!"
 
@@ -1211,9 +1211,9 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"Poți sparge cu fundul prin\n"
+"Poți sparge cu șezutul prin\n"
 "unele din punctele slabe\n"
-"din drumuri!"
+"din căile tale!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:3
 msgctxt "xmas99/02_xmas2"
@@ -1952,11 +1952,11 @@ msgstr "Activat \f[c:#d0705d](Experimental)\f[/c]"
 #. TRANSLATORS: Reserved for later use
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Short"
-msgstr ""
+msgstr "Scurt"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Detailed"
-msgstr ""
+msgstr "Detaliat"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
@@ -2058,7 +2058,7 @@ msgstr "Jos"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
 msgid "Buttstomp"
-msgstr ""
+msgstr "Sparge cu șezutul"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
