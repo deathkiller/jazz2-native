@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-01-12 13:34+0100\n"
+"POT-Creation-Date: 2025-02-17 16:01+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: 1NSH4N3 & Akfiz\n"
@@ -1374,75 +1374,75 @@ msgstr ""
 "Vă rugăm să vizitați\n"
 "www.project2.com"
 
-#: Sources/Jazz2/LevelHandler.cpp:157 Sources/Jazz2/LevelHandler.cpp:210
+#: Sources/Jazz2/LevelHandler.cpp:159 Sources/Jazz2/LevelHandler.cpp:212
 #, c-format
 msgid "Level \"%s\" initialized"
 msgstr "Nivelul \"%s\" inițializat"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:705
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:133
+#: Sources/Jazz2/LevelHandler.cpp:707
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:134
 msgid "For more information, visit the official website:"
 msgstr "Pentru mai multe informații, vizitați site-ul oficial:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2214 Sources/Jazz2/LevelHandler.cpp:2227
-#: Sources/Jazz2/LevelHandler.cpp:2238 Sources/Jazz2/LevelHandler.cpp:2253
-#: Sources/Jazz2/LevelHandler.cpp:2266 Sources/Jazz2/LevelHandler.cpp:2279
-#: Sources/Jazz2/LevelHandler.cpp:2292 Sources/Jazz2/LevelHandler.cpp:2307
-#: Sources/Jazz2/LevelHandler.cpp:2319 Sources/Jazz2/LevelHandler.cpp:2340
-#: Sources/Jazz2/LevelHandler.cpp:2354
+#: Sources/Jazz2/LevelHandler.cpp:2208 Sources/Jazz2/LevelHandler.cpp:2221
+#: Sources/Jazz2/LevelHandler.cpp:2232 Sources/Jazz2/LevelHandler.cpp:2247
+#: Sources/Jazz2/LevelHandler.cpp:2260 Sources/Jazz2/LevelHandler.cpp:2273
+#: Sources/Jazz2/LevelHandler.cpp:2286 Sources/Jazz2/LevelHandler.cpp:2301
+#: Sources/Jazz2/LevelHandler.cpp:2313 Sources/Jazz2/LevelHandler.cpp:2334
+#: Sources/Jazz2/LevelHandler.cpp:2348
 msgid "Cheats are not allowed in current context"
 msgstr "Codurile nu sunt permise în contextul actual"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2337
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2274
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:215
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
 msgid "Battle"
 msgstr "Bătălie"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2338
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2275
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
 msgid "Team Battle"
 msgstr "Bătălie în Echipă"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2339
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2276
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Capture The Flag"
 msgstr "Capturați Steagul"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2340
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2277
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
 msgstr "Cursa"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2341
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2278
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
 msgstr "Cursa în echipă"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2342
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2279
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
 msgstr "Vânătoare de Comori"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2343
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2280
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Cooperation"
 msgstr "Cooperare"
 
-#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2344
+#: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2281
 msgid "Unknown"
 msgstr "Necunoscut"
 
@@ -1451,7 +1451,7 @@ msgid "Unknown command"
 msgstr "Comandă necunoscută"
 
 #. TRANSLATORS: Header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:131
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:132
 msgid ""
 "Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released "
 "in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare "
@@ -1464,22 +1464,22 @@ msgstr ""
 "unele caracteristici ale extensiei JJ2+."
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:136
 msgid "Developers"
 msgstr "Dezvoltatori"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:137
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
 msgid "Contributors"
 msgstr "Contribuitori"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:139
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:140
 msgid "Translators"
 msgstr "Traducatori"
 
 #. TRANSLATORS: Footer text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:141
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:142
 msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
@@ -1490,8 +1490,8 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:59
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:76
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:148
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:150
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:144
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:146
 msgid "Play Story"
 msgstr "Joacă Povestea"
 
@@ -1519,7 +1519,7 @@ msgstr "Joacă un joc personalizat"
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:84
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:127
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:147
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:19
 msgid "Play Custom Levels"
 msgstr "Joacă Niveluri Customizate"
@@ -1651,7 +1651,7 @@ msgstr "Slab"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:134
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:142
 msgid "Disabled"
 msgstr "Dezactivat"
 
@@ -1661,7 +1661,7 @@ msgstr "Dezactivat"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:159
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:165
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:142
 msgid "Enabled"
 msgstr "Activat"
 
@@ -1680,34 +1680,34 @@ msgstr "Modul de joc"
 msgid "Create Server"
 msgstr "Creați un server"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:160
 msgid "No custom level found!"
 msgstr "Nu s-a găsit niciun nivel customizat!"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:148
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:144
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:21
 msgid "Play Story in Cooperation"
 msgstr "Joacă povestea în cooperare"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:160
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:156
 msgid "No episode found!"
 msgstr "Nu s-a găsit niciun episod!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:206
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:207
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:202
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:203
 msgid "Restart episode"
 msgstr "Repornește episodul"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:229
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:225
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "Trebuie să finalizezi mai întâi \"%s\"!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:233
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:229
 msgid "Episode is locked!"
 msgstr "Episodul este blocat!"
 
@@ -1949,6 +1949,15 @@ msgstr "Orizontal"
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Activat \f[c:#d0705d](Experimental)\f[/c]"
 
+#. TRANSLATORS: Reserved for later use
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
+msgid "Short"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
+msgid "Detailed"
+msgstr ""
+
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
 msgstr "Punctaje pentru \f[c:#d0705d]Jocul de bază\f[/c]"
@@ -2127,11 +2136,11 @@ msgstr "Monocrom"
 msgid "Select Rescale Mode"
 msgstr "Alege Modul de Redimensionare"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:108
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:129
 msgid "Connect to Server"
 msgstr "Conectare la server"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:121
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:142
 msgid "No servers found, but still searchin'!"
 msgstr "Nu s-au găsit servere, dar încă mai caut!"
 
@@ -2186,12 +2195,12 @@ msgstr "Greu"
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Poți ajusta poziția zonelor tactile prin a le trage și fixa."
 
-#: Sources/Main.cpp:279 Sources/Main.cpp:334
+#: Sources/Main.cpp:298 Sources/Main.cpp:366
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "Conectare la %s:%u..."
 
-#: Sources/Main.cpp:539 Sources/Main.cpp:587
+#: Sources/Main.cpp:571 Sources/Main.cpp:619
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2205,7 +2214,7 @@ msgstr ""
 "Asigură-te că toate fișierele necesare\n"
 "sunt accesibile și încearcă din nou."
 
-#: Sources/Main.cpp:641
+#: Sources/Main.cpp:673
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2219,7 +2228,7 @@ msgstr ""
 "Asigurați-vă că toate fișierele necesare\n"
 "sunt accesibile și încercați din nou."
 
-#: Sources/Main.cpp:792
+#: Sources/Main.cpp:832
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2231,7 +2240,7 @@ msgstr ""
 "\n"
 "Versiunea clientului dvs. nu este compatibilă cu serverul."
 
-#: Sources/Main.cpp:793
+#: Sources/Main.cpp:833
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2245,7 +2254,7 @@ msgstr ""
 "Capacitatea serverului este completă.\n"
 "Vă rugăm să încercați mai târziu."
 
-#: Sources/Main.cpp:794
+#: Sources/Main.cpp:834
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2260,7 +2269,7 @@ msgstr ""
 "dumneavoastră.\n"
 "Vă rugăm să încercați din nou în câteva secunde."
 
-#: Sources/Main.cpp:795
+#: Sources/Main.cpp:835
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2274,7 +2283,7 @@ msgstr ""
 "Serverul se închide.\n"
 "Vă rugăm să încercați mai târziu."
 
-#: Sources/Main.cpp:796
+#: Sources/Main.cpp:836
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2288,7 +2297,7 @@ msgstr ""
 "Serverul se oprește pentru întreținere.\n"
 "Vă rugăm să încercați mai târziu."
 
-#: Sources/Main.cpp:797
+#: Sources/Main.cpp:837
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2302,7 +2311,7 @@ msgstr ""
 "Serverul se oprește pentru reconfigurare.\n"
 "Vă rugăm să încercați mai târziu."
 
-#: Sources/Main.cpp:798
+#: Sources/Main.cpp:838
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2317,7 +2326,7 @@ msgstr ""
 "Vă rugăm să verificați versiunea clientului dvs. și să încercați din nou "
 "într-un minut."
 
-#: Sources/Main.cpp:799
+#: Sources/Main.cpp:839
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2331,7 +2340,7 @@ msgstr ""
 "Vă rugăm să încercați din nou și dacă problema persistă,\n"
 "verificați conexiunea de rețea."
 
-#: Sources/Main.cpp:800
+#: Sources/Main.cpp:840
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2343,7 +2352,7 @@ msgstr ""
 "\n"
 "Serverul nu răspunde la cererea de conectare."
 
-#: Sources/Main.cpp:801
+#: Sources/Main.cpp:841
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2357,7 +2366,7 @@ msgstr ""
 "Ați fost \f[c:#90705050]dat afară\f[/c] de pe server.\n"
 "Contactați administratorii serverului pentru mai multe informații."
 
-#: Sources/Main.cpp:802
+#: Sources/Main.cpp:842
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
