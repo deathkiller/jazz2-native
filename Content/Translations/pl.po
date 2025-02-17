@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 "
 "|| n%100>14) ? 1 : 2);\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.4.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1957,11 +1957,11 @@ msgstr "Włączono \f[c:#d0705d](Eksperymentalne)\f[/c]"
 #. TRANSLATORS: Reserved for later use
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Short"
-msgstr ""
+msgstr "Krótki"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Detailed"
-msgstr ""
+msgstr "Szczegółowy"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
@@ -2062,7 +2062,7 @@ msgstr "Dół"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
 msgid "Buttstomp"
-msgstr ""
+msgstr "Rąbnięcie tyłkiem"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
