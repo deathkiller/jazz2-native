@@ -95,7 +95,7 @@ namespace Death { namespace IO { namespace Compression {
 	{
 		switch (origin) {
 			case SeekOrigin::Current: {
-				DEATH_ASSERT(offset >= 0, "Can't seek to negative values", Stream::OutOfRange);
+				DEATH_ASSERT(offset >= 0, "Cannot seek to negative values", Stream::OutOfRange);
 
 				char buffer[4096];
 				while (offset > 0) {
