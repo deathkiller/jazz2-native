@@ -718,7 +718,7 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		LOGD("[MP] Changing level to \"%s\" (0x%02x)", nextLevel.data(), exitType);
+		LOGD("[MP] Changing level to \"%s\" (0x%02x)", nextLevel.data(), (std::uint32_t)exitType);
 
 		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
 	}
@@ -1477,7 +1477,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					MultiplayerGameMode gameMode = (MultiplayerGameMode)packet.ReadValue<std::uint8_t>();
 
-					LOGD("[MP] ServerPacketType::ChangeGameMode - mode: %u", gameMode);
+					LOGD("[MP] ServerPacketType::ChangeGameMode - mode: %u", (std::uint32_t)gameMode);
 
 					_gameMode = gameMode;
 					break;
@@ -1558,7 +1558,7 @@ namespace Jazz2::Multiplayer
 					std::int32_t posY = packet.ReadVariableInt32();
 
 					LOGD("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: %u, playerType: %u, health: %u, flags: %u, team: %u, x: %i, y: %i",
-						playerIndex, playerType, health, flags, teamId, posX, posY);
+						playerIndex, (std::uint32_t)playerType, health, flags, teamId, posX, posY);
 
 					_lastSpawnedActorId = playerIndex;
 
@@ -1901,7 +1901,7 @@ namespace Jazz2::Multiplayer
 					}
 
 					ExitType exitType = (ExitType)packet.ReadValue<std::uint8_t>();
-					LOGD("[MP] ServerPacketType::PlayerWarpIn - playerIndex: %u, exitType: 0x%02x", playerIndex, exitType);
+					LOGD("[MP] ServerPacketType::PlayerWarpIn - playerIndex: %u, exitType: 0x%02x", playerIndex, (std::uint32_t)exitType);
 
 					_root->InvokeAsync([this, exitType]() {
 						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn(exitType);

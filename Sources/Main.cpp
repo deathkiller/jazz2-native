@@ -891,7 +891,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				String levelName = String(NoInit, levelLength);
 				packet.Read(levelName.data(), levelLength);
 
-				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, episode: %s, level: %s", flags, gameMode, episodeName.data(), levelName.data());
+				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, episode: %s, level: %s", flags, (std::uint32_t)gameMode, episodeName.data(), levelName.data());
 
 				InvokeAsync([this, flags, gameMode, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
