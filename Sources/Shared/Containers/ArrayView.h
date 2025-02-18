@@ -649,7 +649,7 @@ namespace Death { namespace Containers {
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		const std::size_t size = view.size() * sizeof(T) / sizeof(U);
 		DEATH_ASSERT(size * sizeof(U) == view.size() * sizeof(T),
-			("Can't reinterpret %zu %zu-byte items into a %zu-byte type", view.size(), sizeof(T), sizeof(U)), {});
+			("Cannot reinterpret %zu %zu-byte items into a %zu-byte type", view.size(), sizeof(T), sizeof(U)), {});
 		return { reinterpret_cast<U*>(view.begin()), size };
 	}
 
@@ -664,7 +664,7 @@ namespace Death { namespace Containers {
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		const std::size_t size = view.size() / sizeof(U);
 		DEATH_ASSERT(size * sizeof(U) == view.size(),
-			("Can't reinterpret %zu bytes into a %zu-byte type", view.size(), sizeof(U)), {});
+			("Cannot reinterpret %zu bytes into a %zu-byte type", view.size(), sizeof(U)), {});
 		return { reinterpret_cast<U*>(view.data()), size };
 	}
 

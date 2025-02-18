@@ -45,7 +45,7 @@ namespace Death { namespace IO {
 				_fileDescriptor = -1;
 			} else {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGW("Can't close the file \"%s\"", _path.data());
+				LOGW("Cannot close file \"%s\"", _path.data());
 #	endif
 			}
 		}
@@ -278,7 +278,7 @@ namespace Death { namespace IO {
 		FileAccess maskedMode = mode & FileAccess::ReadWrite;
 		if (maskedMode != FileAccess::Read) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Can't open file \"%s\" - wrong open mode", _path.data());
+			LOGE("Cannot open file \"%s\" because of invalid mode (%u)", _path.data(), (std::uint32_t)mode);
 #endif
 			return;
 		}
@@ -288,7 +288,7 @@ namespace Death { namespace IO {
 		AAsset* asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (asset == nullptr) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Can't open file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\"", _path.data());
 #	endif
 			return;
 		}
@@ -305,7 +305,7 @@ namespace Death { namespace IO {
 
 		if (_fileDescriptor < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Can't open file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\"", _path.data());
 #	endif
 			return;
 		}
@@ -318,7 +318,7 @@ namespace Death { namespace IO {
 		_asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (_asset == nullptr) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Can't open file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\"", _path.data());
 #	endif
 			return;
 		}

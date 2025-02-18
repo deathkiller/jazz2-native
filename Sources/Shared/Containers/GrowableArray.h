@@ -251,7 +251,7 @@ namespace Death { namespace Containers {
 			// the array into a different type (as the deleter is a typeless std::free() in any case)
 			const std::size_t inBytes = capacity * sizeof(T) + AllocationOffset;
 			char* const memory = static_cast<char*>(std::malloc(inBytes));
-			DEATH_ASSERT(memory != nullptr, ("Can't allocate %zu bytes", inBytes), {});
+			DEATH_ASSERT(memory != nullptr, ("Cannot allocate %zu bytes", inBytes), {});
 			reinterpret_cast<std::size_t*>(memory)[0] = inBytes;
 			return reinterpret_cast<T*>(memory + AllocationOffset);
 		}
@@ -445,7 +445,7 @@ namespace Death { namespace Containers {
 			"The array has to use the ArrayMallocAllocator or a derivative", {});
 		const std::size_t size = array.size() * sizeof(T) / sizeof(U);
 		DEATH_ASSERT(size * sizeof(U) == array.size() * sizeof(T),
-			("Can't reinterpret %zu %zu-byte items into a %zu-byte type", array.size(), sizeof(T), sizeof(U)), {});
+			("Cannot reinterpret %zu %zu-byte items into a %zu-byte type", array.size(), sizeof(T), sizeof(U)), {});
 		return Array<U>{reinterpret_cast<U*>(array.release()), size, Allocator<U>::deleter};
 	}
 
@@ -1293,7 +1293,7 @@ namespace Death { namespace Containers {
 	template<class T> void ArrayMallocAllocator<T>::reallocate(T*& array, std::size_t, const std::size_t newCapacity) {
 		const std::size_t inBytes = newCapacity * sizeof(T) + AllocationOffset;
 		char* const memory = static_cast<char*>(std::realloc(reinterpret_cast<char*>(array) - AllocationOffset, inBytes));
-		DEATH_ASSERT(memory != nullptr, ("Can't reallocate %zu bytes", inBytes), );
+		DEATH_ASSERT(memory != nullptr, ("Cannot reallocate %zu bytes", inBytes), );
 		reinterpret_cast<std::size_t*>(memory)[0] = inBytes;
 		array = reinterpret_cast<T*>(memory + AllocationOffset);
 	}
@@ -1576,7 +1576,7 @@ namespace Death { namespace Containers {
 		template<class T, class Allocator> T* arrayGrowAtBy(Array<T>& array, const std::size_t index, const std::size_t count) {
 			// Direct access & caching to speed up debug builds
 			auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-			DEATH_DEBUG_ASSERT(index <= arrayGuts.size, ("Can't insert at index %zu into an array of size %zu", index, arrayGuts.size), arrayGuts.data);
+			DEATH_DEBUG_ASSERT(index <= arrayGuts.size, ("Cannot insert at index %zu into an array of size %zu", index, arrayGuts.size), arrayGuts.data);
 
 			// No values to add, early exit
 			if (count == 0)
@@ -1725,7 +1725,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemove(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
+		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Cannot remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;
@@ -1764,7 +1764,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemoveUnordered(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
+		DEATH_DEBUG_ASSERT(index + count <= arrayGuts.size, ("Cannot remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;
@@ -1805,7 +1805,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayRemoveSuffix(Array<T>& array, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_DEBUG_ASSERT(count <= arrayGuts.size, ("Can't remove %zu elements from an array of size %zu", count, arrayGuts.size), );
+		DEATH_DEBUG_ASSERT(count <= arrayGuts.size, ("Cannot remove %zu elements from an array of size %zu", count, arrayGuts.size), );
 
 		// Nothing to remove, yay!
 		if (count == 0) return;

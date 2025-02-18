@@ -64,6 +64,8 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS)
 	const char* __GetWin32ErrorSuffix(DWORD error);
+#else
+	const char* __GetUnixErrorSuffix(std::int32_t error);
 #endif
 
 	namespace
@@ -1787,7 +1789,7 @@ namespace Death { namespace IO {
 					if (::lstat(fullPath.data(), &sb) != 0) {
 						if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-							LOGW("Cannot create directory \"%s\"", fullPath.data());
+							LOGW("Cannot create directory \"%s\" with error %i%s", fullPath.data(), errno, __GetUnixErrorSuffix(errno));
 #	endif
 							return false;
 						}
@@ -1803,7 +1805,7 @@ namespace Death { namespace IO {
 		if (!slashWasLast) {
 			if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGW("Cannot create directory \"%s\"", fullPath.data());
+				LOGW("Cannot create directory \"%s\" with error %i%s", fullPath.data(), errno, __GetUnixErrorSuffix(errno));
 #	endif
 				return false;
 			}
@@ -2461,7 +2463,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
+				LOGE("Cannot open file \"%s\" because of invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
 #		endif
 				return {};
 		}
@@ -2469,7 +2471,7 @@ namespace Death { namespace IO {
 		const std::int32_t fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
+			LOGE("Cannot open file \"%s\" with error %i%s", String::nullTerminatedView(path).data(), errno, __GetUnixErrorSuffix(errno));
 #		endif
 			return {};
 		}
@@ -2478,7 +2480,7 @@ namespace Death { namespace IO {
 		struct stat sb;
 		if (::fstat(fd, &sb) == 0 && S_ISDIR(sb.st_mode)) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
+			LOGE("Cannot open directory \"%s\" as memory-mapped file", String::nullTerminatedView(path).data());
 #		endif
 			::close(fd);
 			return {};
@@ -2516,7 +2518,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
+				LOGE("Cannot open file \"%s\" because of invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
 #		endif
 				return {};
 		}

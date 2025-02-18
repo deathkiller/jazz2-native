@@ -358,7 +358,7 @@ namespace Death { namespace Containers {
 
 	auto String::deleter() const -> Deleter {
 		DEATH_DEBUG_ASSERT(!(_small.size & Implementation::SmallStringBit),
-			"Can't call on a SSO instance", {});
+			"Cannot call on a SSO instance", {});
 		return _large.deleter;
 	}
 
@@ -824,7 +824,7 @@ namespace Death { namespace Containers {
 
 	char* String::release() {
 		DEATH_DEBUG_ASSERT(!(_small.size & Implementation::SmallStringBit),
-			"Can't call on a SSO instance", {});
+			"Cannot call on a SSO instance", {});
 		char* data = _large.data;
 
 		// Create a zero-size small string to fullfil the guarantee of data() being always non-null and null-terminated.
