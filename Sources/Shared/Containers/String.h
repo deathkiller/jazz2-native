@@ -276,9 +276,12 @@ namespace Death { namespace Containers {
 		 * size, it's either stored allocated or in a SSO.
 		 */
 		/*implicit*/ String(StringView view);
+		/** @overload */
 		/*implicit*/ String(ArrayView<const char> view);
-		// Without these there's ambiguity between StringView / ArrayView and char*
+		/* Without these there's ambiguity between StringView / ArrayView and char* */
+		/** @overload */
 		/*implicit*/ String(MutableStringView view);
+		/** @overload */
 		/*implicit*/ String(ArrayView<char> view);
 
 		/**
@@ -312,9 +315,12 @@ namespace Death { namespace Containers {
 		 * Compared to @ref String(StringView) the data is always allocated.
 		 */
 		explicit String(AllocatedInitT, StringView view);
+		/** @overload */
 		explicit String(AllocatedInitT, ArrayView<const char> view);
 		/* Without these there's ambiguity between StringView / ArrayView and char* */
+		/** @overload */
 		explicit String(AllocatedInitT, MutableStringView view);
+		/** @overload */
 		explicit String(AllocatedInitT, ArrayView<char> view);
 
 		/**
@@ -324,6 +330,7 @@ namespace Death { namespace Containers {
 		 * transferred. Otherwise a copy is allocated.
 		 */
 		explicit String(AllocatedInitT, String&& other);
+		/** @overload */
 		explicit String(AllocatedInitT, const String& other);
 
 		/**
@@ -495,6 +502,7 @@ namespace Death { namespace Containers {
 		 * the null terminator is not counted into it.
 		 */
 		/*implicit*/ operator ArrayView<const char>() const noexcept;
+		/** @overload */
 		/*implicit*/ operator ArrayView<const void>() const noexcept;
 
 		/**
@@ -505,6 +513,7 @@ namespace Death { namespace Containers {
 		 * deleters the returned view is not guaranteed to be actually mutable.
 		 */
 		/*implicit*/ operator ArrayView<char>() noexcept;
+		/** @overload */
 		/*implicit*/ operator ArrayView<void>() noexcept;
 
 		/**
@@ -568,6 +577,7 @@ namespace Death { namespace Containers {
 		 * null bytes earlier than at the end.
 		 */
 		char* data();
+		/** @overload */
 		const char* data() const;
 
 		/**
@@ -596,14 +606,18 @@ namespace Death { namespace Containers {
 		 * @brief Pointer to the first byte
 		 */
 		char* begin();
+		/** @overload */
 		const char* begin() const;
+		/** @overload */
 		const char* cbegin() const;
 
 		/**
 		 * @brief Pointer to (one item after) the last byte
 		 */
 		char* end();
+		/** @overload */
 		const char* end() const;
+		/** @overload */
 		const char* cend() const;
 
 		/**
@@ -612,6 +626,7 @@ namespace Death { namespace Containers {
 		 * Expects there is at least one byte.
 		 */
 		char& front();
+		/** @overload */
 		char front() const;
 
 		/**
@@ -620,10 +635,12 @@ namespace Death { namespace Containers {
 		 * Expects there is at least one byte.
 		 */
 		char& back();
+		/** @overload */
 		char back() const;
 
 		/** @brief Element access */
 		char& operator[](std::size_t i);
+		/** @overload */
 		char operator[](std::size_t i) const;
 
 		/**
@@ -644,8 +661,11 @@ namespace Death { namespace Containers {
 		 * @m_keywords{substr()}
 		 */
 		MutableStringView slice(char* begin, char* end);
+		/** @overload */
 		StringView slice(const char* begin, const char* end) const;
+		/** @overload */
 		MutableStringView slice(std::size_t begin, std::size_t end);
+		/** @overload */
 		StringView slice(std::size_t begin, std::size_t end) const;
 
 		/**
@@ -672,7 +692,9 @@ namespace Death { namespace Containers {
 			return sliceSizePointerInternal(begin, size);
 		}
 #endif
+		/** @overload */
 		MutableStringView sliceSize(std::size_t begin, std::size_t size);
+		/** @overload */
 		StringView sliceSize(std::size_t begin, std::size_t size) const;
 
 		/**
@@ -705,6 +727,7 @@ namespace Death { namespace Containers {
 		 * always @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView suffix(char* begin);
+		/** @overload */
 		StringView suffix(const char* begin) const;
 
 		/**
@@ -715,6 +738,7 @@ namespace Death { namespace Containers {
 		 * @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView prefix(std::size_t size);
+		/** @overload */
 		StringView prefix(std::size_t size) const;
 
 		/**
@@ -724,6 +748,7 @@ namespace Death { namespace Containers {
 		 * always @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView exceptPrefix(std::size_t size);
+		/** @overload */
 		StringView exceptPrefix(std::size_t size) const;
 
 		/**
@@ -734,6 +759,7 @@ namespace Death { namespace Containers {
 		 * @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView exceptSuffix(std::size_t size);
+		/** @overload */
 		StringView exceptSuffix(std::size_t size) const;
 
 		/**
@@ -742,6 +768,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::split(char) const.
 		 */
 		Array<MutableStringView> split(char delimiter);
+		/** @overload */
 		Array<StringView> split(char delimiter) const;
 
 		/**
@@ -750,6 +777,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::split(StringView) const.
 		 */
 		Array<MutableStringView> split(StringView delimiter);
+		/** @overload */
 		Array<StringView> split(StringView delimiter) const;
 
 		/**
@@ -758,6 +786,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::splitWithoutEmptyParts(char) const.
 		 */
 		Array<MutableStringView> splitWithoutEmptyParts(char delimiter);
+		/** @overload */
 		Array<StringView> splitWithoutEmptyParts(char delimiter) const;
 
 		/**
@@ -766,6 +795,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::splitOnAnyWithoutEmptyParts(StringView) const.
 		 */
 		Array<MutableStringView> splitOnAnyWithoutEmptyParts(StringView delimiters);
+		/** @overload */
 		Array<StringView> splitOnAnyWithoutEmptyParts(StringView delimiters) const;
 
 		/**
@@ -774,6 +804,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::splitOnWhitespaceWithoutEmptyParts() const.
 		 */
 		Array<MutableStringView> splitOnWhitespaceWithoutEmptyParts();
+		/** @overload */
 		Array<StringView> splitOnWhitespaceWithoutEmptyParts() const;
 
 		/**
@@ -783,6 +814,7 @@ namespace Death { namespace Containers {
 		 * value has always @ref StringViewFlags::NullTerminated set.
 		 */
 		StaticArray<3, MutableStringView> partition(char separator);
+		/** @overload */
 		StaticArray<3, StringView> partition(char separator) const;
 
 		/**
@@ -793,6 +825,7 @@ namespace Death { namespace Containers {
 		 * set.
 		 */
 		StaticArray<3, MutableStringView> partition(StringView separator);
+		/** @overload */
 		StaticArray<3, StringView> partition(StringView separator) const;
 
 		/**
@@ -810,6 +843,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::joinWithoutEmptyParts().
 		 */
 		String joinWithoutEmptyParts(ArrayView<const StringView> strings) const;
+		/** @overload */
 		String joinWithoutEmptyParts(std::initializer_list<StringView> strings) const;
 
 		/**
@@ -818,6 +852,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::hasPrefix().
 		 */
 		bool hasPrefix(StringView prefix) const;
+		/** @overload */
 		bool hasPrefix(char prefix) const;
 
 		/**
@@ -826,6 +861,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::hasSuffix().
 		 */
 		bool hasSuffix(StringView suffix) const;
+		/** @overload */
 		bool hasSuffix(char suffix) const;
 
 		/**
@@ -834,6 +870,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::exceptPrefix().
 		 */
 		MutableStringView exceptPrefix(StringView prefix);
+		/** @overload */
 		StringView exceptPrefix(StringView prefix) const;
 
 		/**
@@ -859,6 +896,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::exceptSuffix().
 		 */
 		MutableStringView exceptSuffix(StringView suffix);
+		/** @overload */
 		StringView exceptSuffix(StringView suffix) const;
 
 		/**
@@ -884,6 +922,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::trimmed(StringView) const.
 		 */
 		MutableStringView trimmed(StringView characters);
+		/** @overload */
 		StringView trimmed(StringView characters) const;
 
 		/**
@@ -892,6 +931,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::trimmed() const.
 		 */
 		MutableStringView trimmed();
+		/** @overload */
 		StringView trimmed() const;
 
 		/**
@@ -900,6 +940,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::trimmedPrefix(StringView) const.
 		 */
 		MutableStringView trimmedPrefix(StringView characters);
+		/** @overload */
 		StringView trimmedPrefix(StringView characters) const;
 
 		/**
@@ -908,6 +949,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::trimmedPrefix() const.
 		 */
 		MutableStringView trimmedPrefix();
+		/** @overload */
 		StringView trimmedPrefix() const;
 
 		/**
@@ -916,6 +958,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::trimmedSuffix(StringView) const.
 		 */
 		MutableStringView trimmedSuffix(StringView characters);
+		/** @overload */
 		StringView trimmedSuffix(StringView characters) const;
 
 		/**
@@ -924,6 +967,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::trimmedSuffix() const.
 		 */
 		MutableStringView trimmedSuffix();
+		/** @overload */
 		StringView trimmedSuffix() const;
 
 		/**
@@ -932,6 +976,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::find(StringView) const.
 		 */
 		MutableStringView find(StringView substring);
+		/** @overload */
 		StringView find(StringView substring) const;
 
 		/**
@@ -941,6 +986,7 @@ namespace Death { namespace Containers {
 		 * is a specialization of @ref BasicStringView::find(StringView) const.
 		 */
 		MutableStringView find(char character);
+		/** @overload */
 		StringView find(char character) const;
 
 		/**
@@ -949,6 +995,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::findOr(StringView, T*) const.
 		 */
 		MutableStringView findOr(StringView substring, char* fail);
+		/** @overload */
 		StringView findOr(StringView substring, const char* fail) const;
 
 		/**
@@ -958,6 +1005,7 @@ namespace Death { namespace Containers {
 		 * turn is a specialization of @ref BasicStringView::findOr(StringView, T*) const.
 		 */
 		MutableStringView findOr(char character, char* fail);
+		/** @overload */
 		StringView findOr(char character, const char* fail) const;
 
 		/**
@@ -966,6 +1014,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::findLast(StringView) const.
 		 */
 		MutableStringView findLast(StringView substring);
+		/** @overload */
 		StringView findLast(StringView substring) const;
 
 		/**
@@ -975,6 +1024,7 @@ namespace Death { namespace Containers {
 		 * turn is a specialization of @ref BasicStringView::findLast(StringView) const.
 		 */
 		MutableStringView findLast(char character);
+		/** @overload */
 		StringView findLast(char character) const;
 
 		/**
@@ -983,6 +1033,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::findLastOr(StringView, T*) const.
 		 */
 		MutableStringView findLastOr(StringView substring, char* fail);
+		/** @overload */
 		StringView findLastOr(StringView substring, const char* fail) const;
 
 		/**
@@ -992,6 +1043,7 @@ namespace Death { namespace Containers {
 		 * which in turn is a specialization of @ref BasicStringView::findLastOr(StringView, T*) const.
 		 */
 		MutableStringView findLastOr(char character, char* fail);
+		/** @overload */
 		StringView findLastOr(char character, const char* fail) const;
 
 		/**
@@ -1014,6 +1066,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::findAny().
 		 */
 		MutableStringView findAny(StringView characters);
+		/** @overload */
 		StringView findAny(StringView characters) const;
 
 		/**
@@ -1022,6 +1075,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::findAnyOr().
 		 */
 		MutableStringView findAnyOr(StringView characters, char* fail);
+		/** @overload */
 		StringView findAnyOr(StringView characters, const char* fail) const;
 
 		/**
@@ -1030,6 +1084,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::findLastAny().
 		 */
 		MutableStringView findLastAny(StringView characters);
+		/** @overload */
 		StringView findLastAny(StringView characters) const;
 
 		/**
@@ -1038,6 +1093,7 @@ namespace Death { namespace Containers {
 		 * Equivalent to @ref BasicStringView::findLastAnyOr().
 		 */
 		MutableStringView findLastAnyOr(StringView characters, char* fail);
+		/** @overload */
 		StringView findLastAnyOr(StringView characters, const char* fail) const;
 
 		/**

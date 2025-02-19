@@ -33,6 +33,7 @@ namespace Death { namespace IO {
 		bool IsValid() override;
 
 		std::int64_t GetSize() const override;
+		/** @brief Returns file name */
 		Containers::StringView GetName() const;
 
 	private:
@@ -61,11 +62,15 @@ namespace Death { namespace IO {
 	public:
 		EmscriptenFilePicker();
 
+		/** @brief Returns `true` if the browser can detect a cancellation request */
 		bool IsCancelSupported() const;
 
+		/** @brief Prompts the user for file(s) */
 		void FetchFilesAsync(Containers::StringView fileFilter, bool multiple, Containers::Function<void(Containers::ArrayView<EmscriptenFileStream>)>&& callback);
+		/** @brief Prompts the user for a whole directory */
 		void FetchDirectoryAsync(Containers::Function<void(Containers::ArrayView<EmscriptenFileStream>)>&& callback);
 
+		/** @brief Saves a file to user's storage */
 		static void SaveFileAsync(Containers::ArrayView<char> bytesToSave, Containers::StringView filenameHint = {});
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

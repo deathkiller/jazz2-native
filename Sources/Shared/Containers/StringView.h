@@ -370,12 +370,14 @@ namespace Death { namespace Containers {
 		 * @brief Pointer to the first byte
 		 */
 		constexpr T* begin() const { return _data; }
+		/** @overload */
 		constexpr T* cbegin() const { return _data; }
 
 		/**
 		 * @brief Pointer to (one item after) the last byte
 		 */
 		constexpr T* end() const { return _data + (_sizePlusFlags & ~Implementation::StringViewSizeMask); }
+		/** @overload */
 		constexpr T* cend() const { return _data + (_sizePlusFlags & ~Implementation::StringViewSizeMask); }
 
 		/**
@@ -591,6 +593,7 @@ namespace Death { namespace Containers {
 		 * as well.
 		 */
 		bool hasPrefix(StringView prefix) const;
+		/** @overload */
 		bool hasPrefix(char prefix) const;
 
 		/**
@@ -600,6 +603,7 @@ namespace Death { namespace Containers {
 		 * as well.
 		 */
 		bool hasSuffix(StringView suffix) const;
+		/** @overload */
 		bool hasSuffix(char suffix) const;
 
 		/**

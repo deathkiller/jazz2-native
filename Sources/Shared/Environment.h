@@ -34,37 +34,99 @@ namespace Death { namespace Environment {
 	 */
 	bool IsSandboxed();
 	
-#if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_APPLE) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+	 * @brief Returns version of Apple operating system running this application
+	 *
+	 * @partialsupport Available only on @ref DEATH_TARGET_APPLE "Apple" platform.
+	 */
 	Containers::String GetAppleVersion();
-#elif defined(DEATH_TARGET_SWITCH)
+#endif
+
+#if defined(DEATH_TARGET_SWITCH) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+	 * @brief Returns version of Switch firmware running this application
+	 *
+	 * @partialsupport Available only on @ref DEATH_TARGET_SWITCH "Switch" platform.
+	 */
 	std::uint32_t GetSwitchVersion();
+
+	/**
+	 * @brief Returns `true` if this device is running Atmosphère custom firmware
+	 *
+	 * @partialsupport Available only on @ref DEATH_TARGET_SWITCH "Switch" platform.
+	 */
 	bool HasSwitchAtmosphere();
-#elif defined(DEATH_TARGET_UNIX)
+#endif
+
+#if defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+	 * @brief Returns version of Unix system running this application
+	 *
+	 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
+	 */
 	Containers::String GetUnixVersion();
-#elif defined(DEATH_TARGET_WINDOWS)
+#endif
+
+#if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+	 * @brief Version of Windows® running this application
+	 * 
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+	 */
 	extern const std::uint64_t WindowsVersion;
 
+	/**
+	 * @brief Returns `true` if this application is running on Windows® Vista or later
+	 * 
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+	 */
 	DEATH_ALWAYS_INLINE bool IsWindowsVista() {
 		return WindowsVersion >= 0x06000000000000; // 6.0.0
 	}
 
+	/**
+	 * @brief Returns `true` if this application is running on Windows® 7 or later
+	 * 
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+	 */
 	DEATH_ALWAYS_INLINE bool IsWindows7() {
 		return WindowsVersion >= 0x06000100000000; // 6.1.0
 	}
 
+	/**
+	 * @brief Returns `true` if this application is running on Windows® 8 or later
+	 * 
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+	 */
 	DEATH_ALWAYS_INLINE bool IsWindows8() {
 		return WindowsVersion >= 0x06000300000000; // 6.3.0
 	}
 
+	/**
+	 * @brief Returns `true` if this application is running on Windows® 10 or later
+	 * 
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+	 */
 	DEATH_ALWAYS_INLINE bool IsWindows10() {
 		return WindowsVersion >= 0x0a0000000047ba; // 10.0.18362
 	}
 
+	/**
+	 * @brief Returns `true` if this application is running on Windows® 11 or later
+	 * 
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+	 */
 	DEATH_ALWAYS_INLINE bool IsWindows11() {
 		return WindowsVersion >= 0x0a0000000055f0; // 10.0.22000
 	}
 
-#	if defined(DEATH_TARGET_WINDOWS_RT)
+#	if defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+	 * @brief Type of device running this application
+	 * 
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS_RT "Windows RT" platform.
+	 */
 	extern const DeviceType CurrentDeviceType;
 #	endif
 #endif

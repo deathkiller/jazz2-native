@@ -63,7 +63,9 @@ namespace Death { namespace Environment {
 
 		return result;
 	}
-#elif defined(DEATH_TARGET_SWITCH)
+#endif
+
+#if defined(DEATH_TARGET_SWITCH)
 	std::uint32_t GetSwitchVersion()
 	{
 		return hosversionGet();
@@ -73,7 +75,9 @@ namespace Death { namespace Environment {
 	{
 		return hosversionIsAtmosphere();
 	}
-#elif defined(DEATH_TARGET_UNIX)
+#endif
+
+#if defined(DEATH_TARGET_UNIX)
 	Containers::String GetUnixVersion()
 	{
 		FILE* fp = ::fopen("/etc/os-release", "r");
@@ -133,7 +137,9 @@ namespace Death { namespace Environment {
 
 		return result;
 	}
-#elif defined(DEATH_TARGET_WINDOWS_RT)
+#endif
+
+#if defined(DEATH_TARGET_WINDOWS_RT)
 	static std::uint64_t GetWindowsVersion()
 	{
 		winrt::hstring versionString = winrtWSP::AnalyticsInfo::VersionInfo().DeviceFamilyVersion();
@@ -189,4 +195,5 @@ namespace Death { namespace Environment {
 
 	const std::uint64_t WindowsVersion = GetWindowsVersion();
 #endif
+
 }}

@@ -168,9 +168,9 @@ namespace Death { namespace Containers {
 		 * @param hour Hours after the day (0-23)
 		 * @param minute Minutes after the hour (0-59)
 		 * @param second Seconds after the minute (0-59*)
-		 * @param millisec Milliseconds after the second (0-999)
+		 * @param milliseconds Milliseconds after the second (0-999)
 		 */
-		inline DateTime(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t millisec = 0) noexcept;
+		inline DateTime(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t milliseconds = 0) noexcept;
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
@@ -196,13 +196,21 @@ namespace Death { namespace Containers {
 #endif
 #endif
 
+		/** @brief Returns the year component of the date represented by this instance */
 		std::int32_t GetYear(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Year; }
+		/** @brief Returns the month component of the date represented by this instance */
 		std::int32_t GetMonth(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Month; }
+		/** @brief Returns the day of the month represented by this instance */
 		std::int32_t GetDay(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Day; }
+		/** @brief Returns the day of the week represented by this instance */
 		std::int32_t GetWeekDay(const TimeZone tz = Local) const noexcept { return Partitioned(tz).GetWeekDay(); }
+		/** @brief Returns the hour component of the date represented by this instance */
 		std::int32_t GetHour(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Hour; }
+		/** @brief Returns the minute component of the date represented by this instance */
 		std::int32_t GetMinute(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Minute; }
+		/** @brief Returns the second component of the date represented by this instance */
 		std::int32_t GetSecond(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Second; }
+		/** @brief Returns the millisecond component of the date represented by this instance */
 		std::int32_t GetMillisecond(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Millisecond; }
 
 		/** @brief Sets @ref DateTime structure to the value corresponding to standard `time_t` value */
@@ -225,14 +233,22 @@ namespace Death { namespace Containers {
 		 */
 		DateTime& Set(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t millisec = 0) noexcept;
 
+		/** @brief Sets the year component of the date represented by this instance */
 		DateTime& SetYear(std::int32_t year) noexcept;
+		/** @brief Sets the month component of the date represented by this instance */
 		DateTime& SetMonth(std::int32_t month) noexcept;
+		/** @brief Sets the day of the month represented by this instance */
 		DateTime& SetDay(std::int32_t day) noexcept;
+		/** @brief Sets the hour component of the date represented by this instance */
 		DateTime& SetHour(std::int32_t hour) noexcept;
+		/** @brief Sets the minute component of the date represented by this instance */
 		DateTime& SetMinute(std::int32_t minute) noexcept;
+		/** @brief Sets the second component of the date represented by this instance */
 		DateTime& SetSecond(std::int32_t second) noexcept;
+		/** @brief Sets the millisecond component of the date represented by this instance */
 		DateTime& SetMillisecond(std::int32_t millisecond) noexcept;
 
+		/** @brief Resets the time component of the date represented by this instance to 0:00:00 */
 		DateTime& ResetTime() noexcept;
 
 		constexpr bool IsValid() const noexcept { return (_time != INT64_MIN); }
@@ -270,8 +286,10 @@ namespace Death { namespace Containers {
 #endif
 #endif
 
+		/** @brief Converts the specified string representation of a date and time to its @ref DateTime equivalent */
 		bool TryParse(StringView input, StringView format, StringView* endParse = nullptr) noexcept;
 #if defined(DEATH_USE_WCHAR)
+		/** @overload */
 		bool TryParse(std::wstring_view input, std::wstring_view format, std::wstring_view::const_iterator* endParse = nullptr) noexcept;
 #endif
 
@@ -379,17 +397,23 @@ namespace Death { namespace Containers {
 		 * @param hours Hours
 		 * @param minutes Minutes after the hour (0-59)
 		 * @param seconds Seconds after the minute (0-59*)
-		 * @param millisecs Milliseconds after the second (0-999)
+		 * @param milliseconds Milliseconds after the second (0-999)
 		 */
 		constexpr TimeSpan(std::int32_t hours, std::int32_t minutes, std::int64_t seconds = 0, std::int64_t milliseconds = 0) noexcept;
 		
+		/** @brief Returns the value of this instance expressed in whole weeks */
 		constexpr std::int32_t GetTotalWeeks() const noexcept;
+		/** @brief Returns the value of this instance expressed in whole days */
 		constexpr std::int32_t GetTotalDays() const noexcept;
+		/** @brief Returns the value of this instance expressed in whole hours */
 		constexpr std::int64_t GetTotalHours() const noexcept;
+		/** @brief Returns the value of this instance expressed in whole minutes */
 		constexpr std::int64_t GetTotalMinutes() const noexcept;
+		/** @brief Returns the value of this instance expressed in whole seconds */
 		constexpr std::int64_t GetTotalSeconds() const noexcept;
-
+		/** @brief Returns the value of this instance expressed in whole milliseconds */
 		constexpr std::int64_t GetTotalMilliseconds() const noexcept { return _value; }
+		
 		constexpr std::int64_t GetValue() const noexcept { return _value; }
 
 		constexpr TimeSpan& operator+=(const TimeSpan& ts) noexcept
@@ -495,9 +519,9 @@ namespace Death { namespace Containers {
 		return Set(tm.Year, tm.Month, tm.Day, tm.Hour, tm.Minute, tm.Second, tm.Millisecond);
 	}
 
-	inline DateTime::DateTime(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour, std::int32_t minute, std::int32_t second, std::int32_t millisec) noexcept
+	inline DateTime::DateTime(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour, std::int32_t minute, std::int32_t second, std::int32_t milliseconds) noexcept
 	{
-		Set(year, month, day, hour, minute, second, millisec);
+		Set(year, month, day, hour, minute, second, milliseconds);
 	}
 
 	constexpr std::int64_t DateTime::ToUnixMilliseconds() const noexcept

@@ -54,8 +54,8 @@ namespace Death { namespace Containers {
 		static_assert(!std::is_lvalue_reference<F>::value && !std::is_lvalue_reference<S>::value, "Use a Reference<T> to store a T& in a Pair");
 
 	public:
-		typedef F FirstType;
-		typedef S SecondType;
+		typedef F FirstType;	/**< @brief First type */
+		typedef S SecondType;	/**< @brief Second type */
 
 		/**
 		 * @brief Construct a default-initialized pair

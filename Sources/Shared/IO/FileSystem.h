@@ -162,7 +162,9 @@ namespace Death { namespace IO {
 
 		/** @brief Combines together specified path components */
 		static Containers::String CombinePath(Containers::StringView first, Containers::StringView second);
+		/** @overload */
 		static Containers::String CombinePath(Containers::ArrayView<const Containers::StringView> paths);
+		/** @overload */
 		static Containers::String CombinePath(std::initializer_list<Containers::StringView> paths);
 
 		/** @brief Returns the path up to, but not including, the final separator */
