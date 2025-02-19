@@ -45,16 +45,16 @@ namespace Death { namespace Environment {
 
 #if defined(DEATH_TARGET_SWITCH) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Returns version of Switch firmware running this application
+	 * @brief Returns version of Nintendo Switch firmware running this application
 	 *
-	 * @partialsupport Available only on @ref DEATH_TARGET_SWITCH "Switch" platform.
+	 * @partialsupport Available only on @ref DEATH_TARGET_SWITCH "Nintendo Switch" platform.
 	 */
 	std::uint32_t GetSwitchVersion();
 
 	/**
 	 * @brief Returns `true` if this device is running Atmosphère custom firmware
 	 *
-	 * @partialsupport Available only on @ref DEATH_TARGET_SWITCH "Switch" platform.
+	 * @partialsupport Available only on @ref DEATH_TARGET_SWITCH "Nintendo Switch" platform.
 	 */
 	bool HasSwitchAtmosphere();
 #endif
@@ -70,7 +70,7 @@ namespace Death { namespace Environment {
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Version of Windows® running this application
+	 * @brief Version of Windows® operating system running this application
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */

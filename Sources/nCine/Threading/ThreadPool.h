@@ -26,6 +26,8 @@ namespace nCine
 		void EnqueueCommand(std::unique_ptr<IThreadCommand>&& threadCommand) override;
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ThreadStruct
 		{
 			std::list<std::unique_ptr<IThreadCommand>>* queue;
@@ -33,6 +35,7 @@ namespace nCine
 			CondVariable* queueCV;
 			bool shouldQuit;
 		};
+#endif
 
 		std::list<std::unique_ptr<IThreadCommand>> queue_;
 		SmallVector<Thread, 0> threads_;

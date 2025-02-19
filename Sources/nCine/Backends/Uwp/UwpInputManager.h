@@ -147,6 +147,8 @@ namespace nCine::Backends
 	private:
 		static const int MaxNumJoysticks = 8;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct UwpGamepadInfo
 		{
 			UwpGamepadInfo() : Gamepad(nullptr), Connected(false),
@@ -163,6 +165,7 @@ namespace nCine::Backends
 			uint64_t RumbleExpiration;
 			uint64_t RumbleTriggersExpiration;
 		};
+#endif
 
 		static UwpMouseState mouseState_;
 		static UwpKeyboardState keyboardState_;

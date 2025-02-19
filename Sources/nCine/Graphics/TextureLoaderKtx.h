@@ -15,6 +15,8 @@ namespace nCine
 		static const std::int32_t KtxIdentifierLength = 12;
 		static std::uint8_t fileIdentifier_[KtxIdentifierLength];
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		/// Header for the KTX format
 		struct KtxHeader
 		{
@@ -33,6 +35,7 @@ namespace nCine
 			std::uint32_t numberOfMipmapLevels;
 			std::uint32_t bytesOfKeyValueData;
 		};
+#endif
 
 		/// Reads the KTX header and fills the corresponding structure
 		bool readHeader(KtxHeader& header);

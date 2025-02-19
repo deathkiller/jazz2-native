@@ -23,6 +23,8 @@ namespace nCine
 	private:
 		static std::uint32_t UboMaxSize;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ManagedBuffer
 		{
 			ManagedBuffer()
@@ -32,6 +34,7 @@ namespace nCine
 			std::uint32_t freeSpace;
 			std::unique_ptr<std::uint8_t[]> buffer;
 		};
+#endif
 
 		/// Memory buffers to collect UBO data before committing it
 		/*! \note It is a RAM buffer and cannot be handled by the `RenderBuffersManager` */

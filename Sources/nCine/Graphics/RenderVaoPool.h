@@ -23,12 +23,15 @@ namespace nCine
 		void bindVao(const GLVertexFormat& vertexFormat);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct VaoBinding
 		{
 			std::unique_ptr<GLVertexArrayObject> object;
 			GLVertexFormat format;
 			TimeStamp lastBindTime;
 		};
+#endif
 
 		SmallVector<VaoBinding, 0> vaoPool_;
 

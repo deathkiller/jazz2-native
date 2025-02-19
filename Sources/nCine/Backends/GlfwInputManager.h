@@ -166,6 +166,8 @@ namespace nCine::Backends
 	private:
 		static const int MaxNumJoysticks = GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class JoystickEventsSimulator
 		{
 		public:
@@ -189,6 +191,7 @@ namespace nCine::Backends
 			/// Old state used to simulate joystick axes events
 			float axesValuesState_[MaxNumJoysticks][MaxNumAxes];
 		};
+#endif
 
 		static bool windowHasFocus_;
 		static GlfwMouseState mouseState_;

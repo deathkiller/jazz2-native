@@ -16,6 +16,8 @@ namespace nCine
 		std::unique_ptr<IAudioReader> createReader() override;
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		/// Header for the RIFF WAVE format
 		struct WavHeader
 		{
@@ -35,6 +37,7 @@ namespace nCine
 			char subchunk2Id[4];
 			std::uint32_t subchunk2Size;
 		};
+#endif
 
 	public:
 		static const std::uint32_t HeaderSize = sizeof(WavHeader);
