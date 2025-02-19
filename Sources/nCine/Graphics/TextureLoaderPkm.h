@@ -15,6 +15,8 @@ namespace nCine
 		explicit TextureLoaderPkm(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		/// Header for the PKM header
 		/*! The extended width and height are the dimensions rounded up to a multiple of 4.
 		 *  The total data size in bytes is (extendedWidth / 4) * (extendedHeight / 4) * 8
@@ -29,6 +31,7 @@ namespace nCine
 			std::uint16_t width;
 			std::uint16_t height;
 		};
+#endif
 	};
 }
 

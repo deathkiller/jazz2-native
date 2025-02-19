@@ -54,6 +54,8 @@ namespace nCine
 	private:
 		static constexpr std::uint32_t MaxNameLength = 64;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct MappingDescription
 		{
 			struct Axis
@@ -92,6 +94,7 @@ namespace nCine
 			bool isValid;
 			MappingDescription desc;
 		};
+#endif
 
 		static const char* AxesStrings[];
 		static const char* ButtonsStrings[];

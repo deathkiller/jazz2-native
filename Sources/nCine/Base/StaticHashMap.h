@@ -120,6 +120,8 @@ namespace nCine
 		bool remove(const K& key);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		/// The template class for the node stored inside the hashmap
 		class Node
 		{
@@ -138,6 +140,7 @@ namespace nCine
 			Node(K kk, Args &&... args)
 				: key(kk), value(std::forward<Args>(args)...) {}
 		};
+#endif
 
 		std::uint32_t size_;
 		std::uint8_t delta1_[Capacity];

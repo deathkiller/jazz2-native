@@ -13,6 +13,8 @@ namespace nCine
 		explicit TextureLoaderDds(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		/// Header for the DDS pixel format
 		struct DdsPixelformat
 		{
@@ -45,6 +47,7 @@ namespace nCine
 			std::uint32_t dwCaps4;
 			std::uint32_t dwReserved2;
 		};
+#endif
 
 		static const std::uint32_t DDPF_ALPHAPIXELS = 0x1;
 		static const std::uint32_t DDPF_ALPHA = 0x2;

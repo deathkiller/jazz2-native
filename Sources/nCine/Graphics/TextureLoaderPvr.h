@@ -13,6 +13,8 @@ namespace nCine
 		explicit TextureLoaderPvr(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		/// Header for the PVR3 format
 		struct Pvr3Header
 		{
@@ -29,6 +31,7 @@ namespace nCine
 			std::uint32_t numMipmaps;
 			std::uint32_t metaDataSize;
 		};
+#endif
 
 		static const std::uint64_t FMT_PVRTC_2BPP_RGB = 0;
 		static const std::uint64_t FMT_PVRTC_2BPP_RGBA = 1;

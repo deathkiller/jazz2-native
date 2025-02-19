@@ -38,6 +38,8 @@ namespace nCine
 		static constexpr float Margin = 10.0f;
 		static constexpr float Transparency = 0.5f;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ValuesType
 		{
 			enum
@@ -79,6 +81,7 @@ namespace nCine
 			String ThreadId;
 			TraceLevel Level;
 		};
+#endif
 
 		bool lockOverlayPositions_;
 		bool showTopLeftOverlay_;

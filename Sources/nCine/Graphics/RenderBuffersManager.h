@@ -65,6 +65,8 @@ namespace nCine
 	private:
 		BufferSpecifications specs_[std::int32_t(BufferTypes::Count)];
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ManagedBuffer
 		{
 			ManagedBuffer()
@@ -77,6 +79,7 @@ namespace nCine
 			GLubyte* mapBase;
 			std::unique_ptr<GLubyte[]> hostBuffer;
 		};
+#endif
 
 		SmallVector<ManagedBuffer, 0> buffers_;
 

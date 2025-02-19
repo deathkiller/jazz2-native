@@ -44,6 +44,8 @@ namespace nCine
 	private:
 		static class GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> boundBuffers_;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct BufferRange
 		{
 			BufferRange()
@@ -53,6 +55,7 @@ namespace nCine
 			GLintptr offset;
 			GLsizei ptrsize;
 		};
+#endif
 
 		GLuint glHandle_;
 		GLenum target_;
