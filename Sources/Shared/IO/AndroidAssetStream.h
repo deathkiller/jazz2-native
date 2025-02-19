@@ -75,10 +75,12 @@ namespace Death { namespace IO {
 		/** @brief Returns the total size of the asset data */
 		static std::int64_t GetFileSize(const Containers::StringView path);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static AAssetDir* OpenDirectory(const Containers::StringView path);
 		static void CloseDirectory(AAssetDir* assetDir);
 		static void RewindDirectory(AAssetDir* assetDir);
 		static const char* GetNextFileName(AAssetDir* assetDir);
+#endif
 
 	private:
 		static ANativeActivity* _nativeActivity;
