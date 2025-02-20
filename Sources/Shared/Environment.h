@@ -61,7 +61,7 @@ namespace Death { namespace Environment {
 
 #if defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Returns version of Unix system running this application
+	 * @brief Returns name and version of Unix system running this application
 	 *
 	 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
 	 */

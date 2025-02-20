@@ -1376,7 +1376,7 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:159 Sources/Jazz2/LevelHandler.cpp:212
 #, c-format
 msgid "Level \"%s\" initialized"
-msgstr ""
+msgstr "Livello \"%s\" inizializzato"
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/LevelHandler.cpp:707
@@ -1391,7 +1391,7 @@ msgstr "Per ulteriori informazioni, visitare il sito Web ufficiale:"
 #: Sources/Jazz2/LevelHandler.cpp:2313 Sources/Jazz2/LevelHandler.cpp:2334
 #: Sources/Jazz2/LevelHandler.cpp:2348
 msgid "Cheats are not allowed in current context"
-msgstr ""
+msgstr "I trucchi non sono consentiti nel contesto attuale"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2274
@@ -1443,11 +1443,11 @@ msgstr "Cooperazione"
 
 #: Sources/Jazz2/Multiplayer/MultiLevelHandler.cpp:2281
 msgid "Unknown"
-msgstr ""
+msgstr "Sconosciuto"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:315
 msgid "Unknown command"
-msgstr ""
+msgstr "Comando sconosciuto"
 
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:132
@@ -1613,7 +1613,7 @@ msgstr "Vibrazione gamepad"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:37
 msgid "Extended PlayStation™ Support"
-msgstr ""
+msgstr "Supporto PlayStation™ esteso"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:41
@@ -1627,7 +1627,7 @@ msgstr "Diagnostica immissione"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:44
 msgid "Reset To Default"
-msgstr ""
+msgstr "Reimposta valori predefiniti"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:77
@@ -1872,7 +1872,7 @@ msgstr "Modalità ridimensionamento"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:21
 msgid "Resolution"
-msgstr ""
+msgstr "Risoluzione"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:29
@@ -1887,7 +1887,7 @@ msgstr "Antialiasing"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
 msgid "Background Dithering"
-msgstr ""
+msgstr "Retinatura di sfondo"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
@@ -1953,11 +1953,11 @@ msgstr "Abilitata \f[c:#d0705d](Sperimentale)\f[/c]"
 #. TRANSLATORS: Reserved for later use
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Short"
-msgstr ""
+msgstr "Breve"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
 msgid "Detailed"
-msgstr ""
+msgstr "Dettagliato"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:118
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
@@ -1978,8 +1978,8 @@ msgstr ""
 #, c-format
 msgid "Processing of %i file..."
 msgid_plural "Processing of %i files..."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Processamento file %i..."
+msgstr[1] "Processamento dei file %i..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:80
 msgid "Waiting for files..."
@@ -2058,7 +2058,7 @@ msgstr "Giù"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
 msgid "Buttstomp"
-msgstr ""
+msgstr "Schiacciata col didietro"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
@@ -2089,7 +2089,7 @@ msgstr "Indietro"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 msgid "Toggle Console"
-msgstr ""
+msgstr "Attiva/disattiva console"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:41
@@ -2105,7 +2105,7 @@ msgstr "Premi un tasto o pulsante per assegnare"
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:191
 msgid "to remove assignment"
-msgstr "per rimuovere l'assegnazione"
+msgstr "rimuovi tasto assegnato"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
