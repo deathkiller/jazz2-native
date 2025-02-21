@@ -234,9 +234,11 @@ namespace Jazz2::Tiles
 			return false;
 		}
 		if (ty >= layoutSize.Y) {
-			return (_pitType != PitType::StandOnPlatform);
-		}
-		if (ty < 0) {
+			if (_pitType == PitType::StandOnPlatform) {
+				return false;
+			}
+			ty = layoutSize.Y - 1;
+		} else if (ty < 0) {
 			ty = 0;
 		}
 
@@ -261,20 +263,15 @@ namespace Jazz2::Tiles
 		if (aabb.L < 0 || aabb.R >= limitRightPx) {
 			return false;
 		}
-		if (aabb.B >= limitBottomPx) {
-			return (_pitType != PitType::StandOnPlatform);
+		if (aabb.B >= limitBottomPx && _pitType == PitType::StandOnPlatform) {
+			return false;
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
 		std::int32_t hx1 = std::max((std::int32_t)aabb.L, 0);
 		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
-		std::int32_t hy1 = std::max((std::int32_t)aabb.T, 0);
-		std::int32_t hy2 = std::min((std::int32_t)std::ceil(aabb.B), limitBottomPx - 1);
-
-		if (hy2 <= 0) {
-			hy1 = 0;
-			hy2 = 1;
-		}
+		std::int32_t hy1 = std::clamp((std::int32_t)aabb.T, 0, limitBottomPx - 2);
+		std::int32_t hy2 = std::clamp((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
 
 		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
 		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;
@@ -394,20 +391,15 @@ namespace Jazz2::Tiles
 		if (aabb.L < 0 || aabb.R >= limitRightPx) {
 			return false;
 		}
-		if (aabb.B >= limitBottomPx) {
-			return (_pitType != PitType::StandOnPlatform);
+		if (aabb.B >= limitBottomPx && _pitType == PitType::StandOnPlatform) {
+			return false;
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
 		std::int32_t hx1 = std::max((std::int32_t)aabb.L, 0);
 		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
-		std::int32_t hy1 = std::max((std::int32_t)aabb.T, 0);
-		std::int32_t hy2 = std::min((std::int32_t)std::ceil(aabb.B), limitBottomPx - 1);
-
-		if (hy2 <= 0) {
-			hy1 = 0;
-			hy2 = 1;
-		}
+		std::int32_t hy1 = std::clamp((std::int32_t)aabb.T, 0, limitBottomPx - 2);
+		std::int32_t hy2 = std::clamp((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
 
 		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
 		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;

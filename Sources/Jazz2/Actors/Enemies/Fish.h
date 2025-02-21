@@ -25,10 +25,12 @@ namespace Jazz2::Actors::Enemies
 		static constexpr std::int32_t StateIdle = 0;
 		static constexpr std::int32_t StateAttacking = 1;
 		static constexpr std::int32_t StateBraking = 2;
+		static constexpr std::int32_t StateReturning = 3;
 
 		std::int32_t _state;
 		float _idleTime;
 		float _attackCooldown;
 		Vector2f _direction;
+		Vector2f _originPos;
 	};
 }
