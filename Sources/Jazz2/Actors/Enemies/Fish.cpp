@@ -29,6 +29,8 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
+		_originPos = _pos;
+
 		async_await RequestMetadataAsync("Enemy/Fish"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Idle);
@@ -57,55 +59,60 @@ namespace Jazz2::Actors::Enemies
 
 		SetState(ActorState::CanJump, false);
 
-		if (_attackCooldown < 0.0f) {
-			_attackCooldown = 60.0f;
+		if (_state == StateAttacking) {
+			_speed.X += _direction.X * 0.11f * timeMult;
+			_speed.Y += _direction.Y * 0.11f * timeMult;
+		} else if (_state == StateBraking) {
+			_speed.X = lerp(_speed.X, _speed.X * 0.96f, timeMult);
+			_speed.Y = lerp(_speed.Y, _speed.Y * 0.96f, timeMult);
 
-			Vector2f targetPos;
-			auto players = _levelHandler->GetPlayers();
-			for (auto* player : players) {
-				targetPos = player->GetPos();
-				_direction.X = targetPos.X - _pos.X;
-				_direction.Y = targetPos.Y - _pos.Y;
-				float length = _direction.Length();
-				if (length < 320.0f) {
-					_direction.Normalize();
-
-					_speed.X = 0.0f;
-					_speed.Y = 0.0f;
-					SetFacingLeft(_direction.X < 0.0f);
-					_state = StateAttacking;
-
-					_attackCooldown = 240.0f;
-
-					SetTransition(AnimState::TransitionAttack, false, [this]() {
-						_state = StateBraking;
-					});
-					break;
-				}
+			if (std::abs(_speed.X) < 0.01f && std::abs(_speed.Y) < 0.01f) {
+				_state = StateReturning;
+			}
+		} else if (_state == StateReturning) {
+			Vector2f diff = _originPos - _pos;
+			if (diff.Length() < 8.0f) {
+				_state = StateIdle;
+				_attackCooldown = 240.0f;
+			} else {
+				constexpr float ReturnSpeed = 3.0f;
+				_speed = diff.Normalized() * ReturnSpeed;
+				SetFacingLeft(_speed.X < 0.0f);
 			}
 		} else {
-			if (_state == StateAttacking) {
-				_speed.X += _direction.X * 0.11f * timeMult;
-				_speed.Y += _direction.Y * 0.11f * timeMult;
-			} else if (_state == StateBraking) {
-				_speed.X = lerp(_speed.X, _speed.X * 0.96f, timeMult);
-				_speed.Y = lerp(_speed.Y, _speed.Y * 0.96f, timeMult);
+			if (_attackCooldown < 0.0f) {
+				_attackCooldown = 60.0f;
 
-				if (std::abs(_speed.X) < 0.01f && std::abs(_speed.Y) < 0.01f) {
-					_state = StateIdle;
+				Vector2f targetPos;
+				auto players = _levelHandler->GetPlayers();
+				for (auto* player : players) {
+					targetPos = player->GetPos();
+					_direction = targetPos - _pos;
+					float length = _direction.Length();
+					if (length < 320.0f) {
+						_direction.Normalize();
+
+						_speed.X = 0.0f;
+						_speed.Y = 0.0f;
+						SetFacingLeft(_direction.X < 0.0f);
+						_state = StateAttacking;
+
+						SetTransition(AnimState::TransitionAttack, false, [this]() {
+							_state = StateBraking;
+						});
+						break;
+					}
 				}
+			} else if (_idleTime < 0.0f) {
+				float x = Random().NextFloat(-1.4f, 1.4f);
+				float y = Random().NextFloat(-2.0f, 2.0f);
+
+				_speed.X = (_speed.X + x) * 0.2f;
+				_speed.Y = (_speed.Y + y) * 0.2f;
+
+				_idleTime = 20.0f;
 			} else {
-				if (_idleTime < 0.0f) {
-					float x = Random().NextFloat(-1.4f, 1.4f);
-					float y = Random().NextFloat(-2.0f, 2.0f);
-
-					_speed.X = (_speed.X + x) * 0.2f;
-					_speed.Y = (_speed.Y + y) * 0.2f;
-
-					_idleTime = 20.0f;
-				} else {
-					_idleTime -= timeMult;
-				}
+				_idleTime -= timeMult;
 			}
 
 			_attackCooldown -= timeMult;
