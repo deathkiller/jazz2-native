@@ -64,7 +64,7 @@ namespace Death {
 				@ref std::uninitialized_copy() or similar --- see the function docs for an
 				example.
 		*/
-		template<class T, std::size_t alignment = alignof(T)> inline static Containers::Array<T> allocateAligned(std::size_t size);
+		template<class T, std::size_t alignment = alignof(T)> inline static Containers::Array<T> AllocateAligned(std::size_t size);
 
 		/**
 			@brief Allocate aligned memory and default-initialize it
@@ -79,7 +79,7 @@ namespace Death {
 			loop calling the constructors on the returned allocation in case of non-trivial
 			types.
 		*/
-		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> allocateAligned(Containers::DefaultInitT, std::size_t size);
+		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> AllocateAligned(Containers::DefaultInitT, std::size_t size);
 
 		/**
 			@brief Allocate aligned memory and value-initialize it
@@ -89,7 +89,7 @@ namespace Death {
 			@ref std::memset() or a loop calling the constructors on the returned
 			allocation.
 		*/
-		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> allocateAligned(Containers::ValueInitT, std::size_t size);
+		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> AllocateAligned(Containers::ValueInitT, std::size_t size);
 
 		/**
 			@brief Allocate aligned memory and leave it uninitialized
@@ -103,13 +103,13 @@ namespace Death {
 			@ref std::uninitialized_copy()) in order to avoid calling destructors on
 			uninitialized memory.
 		*/
-		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> allocateAligned(Containers::NoInitT, std::size_t size);
+		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> AllocateAligned(Containers::NoInitT, std::size_t size);
 
 		/**
 			@brief Returns a value of given size from unaligned pointer
 		*/
 		template<typename T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
-		inline static constexpr T loadUnaligned(const void* p) noexcept {
+		inline static constexpr T LoadUnaligned(const void* p) noexcept {
 			std::remove_const_t<T> v;
 			std::memcpy(&v, p, sizeof(T));
 			return v;
@@ -119,7 +119,7 @@ namespace Death {
 			@brief Stores a value of given size to unaligned pointer
 		*/
 		template<typename T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
-		inline static constexpr void storeUnaligned(void* p, T v) noexcept {
+		inline static constexpr void StoreUnaligned(void* p, T v) noexcept {
 			std::memcpy(p, &v, sizeof(T));
 		}
 	};
@@ -127,28 +127,28 @@ namespace Death {
 	namespace Implementation
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		template<class T, typename std::enable_if<std::is_trivially_destructible<T>::value, int>::type = 0> void alignedDeleter(T* const data, std::size_t) {
+		template<class T, typename std::enable_if<std::is_trivially_destructible<T>::value, int>::type = 0> void AlignedDeleter(T* const data, std::size_t) {
 			_aligned_free(data);
 		}
-		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> void alignedDeleter(T* const data, std::size_t size) {
+		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> void AlignedDeleter(T* const data, std::size_t size) {
 			for (std::size_t i = 0; i != size; ++i) data[i].~T();
 			_aligned_free(data);
 		}
 #else
-		template<class T, typename std::enable_if<std::is_trivially_destructible<T>::value, int>::type = 0> void alignedDeleter(T* const data, std::size_t) {
+		template<class T, typename std::enable_if<std::is_trivially_destructible<T>::value, int>::type = 0> void AlignedDeleter(T* const data, std::size_t) {
 			std::free(data);
 		}
-		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> void alignedDeleter(T* const data, std::size_t size) {
+		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> void AlignedDeleter(T* const data, std::size_t size) {
 			for (std::size_t i = 0; i != size; ++i) data[i].~T();
 			std::free(data);
 		}
 #	if !defined(DEATH_TARGET_UNIX)
-		template<class T, typename std::enable_if<std::is_trivially_destructible<T>::value, int>::type = 0> void alignedOffsetDeleter(T* const data, std::size_t) {
+		template<class T, typename std::enable_if<std::is_trivially_destructible<T>::value, int>::type = 0> void AlignedOffsetDeleter(T* const data, std::size_t) {
 			// Using a unsigned byte in order to be able to represent a 255 byte offset as well
 			std::uint8_t* const dataChar = reinterpret_cast<std::uint8_t*>(data);
 			std::free(dataChar - *(dataChar - 1));
 		}
-		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> void alignedOffsetDeleter(T* const data, std::size_t size) {
+		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> void AlignedOffsetDeleter(T* const data, std::size_t size) {
 			for (std::size_t i = 0; i != size; ++i) data[i].~T();
 
 			// Using a unsigned byte in order to be able to represent a 255 byte offset as well
@@ -159,7 +159,7 @@ namespace Death {
 #endif
 	}
 
-	template<class T, std::size_t alignment> Containers::Array<T> Memory::allocateAligned(Containers::NoInitT, const std::size_t size) {
+	template<class T, std::size_t alignment> Containers::Array<T> Memory::AllocateAligned(Containers::NoInitT, const std::size_t size) {
 		// On non-Unix non-Windows platforms we're storing the alignment offset in a byte right before the returned pointer.
 		// Because it's a byte, we can represent a value of at most 255 there (256 would make no sense as a 256-byte-aligned
 		// allocation can be only off by 255 bytes at most). Again it's good to have the same requirements on all platforms
@@ -183,13 +183,13 @@ namespace Death {
 		void* data = {};
 		int result = posix_memalign(&data, alignment < sizeof(void*) ? sizeof(void*) : alignment, size * sizeof(T));
 		DEATH_DEBUG_ASSERT(result == 0);
-		return Containers::Array<T>{static_cast<T*>(data), size, Implementation::alignedDeleter<T>};
+		return Containers::Array<T>{static_cast<T*>(data), size, Implementation::AlignedDeleter<T>};
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Windows
 		// Zero size is not allowed: https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/aligned-malloc
 		if (!size) return {};
 
-		return Containers::Array<T>{static_cast<T*>(_aligned_malloc(size * sizeof(T), alignment)), size, Implementation::alignedDeleter<T>};
+		return Containers::Array<T>{static_cast<T*>(_aligned_malloc(size * sizeof(T), alignment)), size, Implementation::AlignedDeleter<T>};
 #else
 		// Other -- for allocations larger than the min alignment allocate with (align - 1) more and align manually,
 		// then provide a custom deleter that undoes this.
@@ -217,29 +217,29 @@ namespace Death {
 		// before calling std::free().
 		void(*deleter)(T*, std::size_t);
 		if (offset == 0) {
-			deleter = Implementation::alignedDeleter<T>;
+			deleter = Implementation::AlignedDeleter<T>;
 		} else {
 			(pointer + offset)[-1] = offset;
-			deleter = Implementation::alignedOffsetDeleter<T>;
+			deleter = Implementation::AlignedOffsetDeleter<T>;
 		}
 		return Containers::Array<T>{reinterpret_cast<T*>(pointer + offset), size, deleter};
 #endif
 	}
 
-	template<class T, std::size_t alignment> Containers::Array<T> Memory::allocateAligned(Containers::DefaultInitT, const std::size_t size) {
-		Containers::Array<T> out = allocateAligned<T, alignment>(Containers::NoInit, size);
+	template<class T, std::size_t alignment> Containers::Array<T> Memory::AllocateAligned(Containers::DefaultInitT, const std::size_t size) {
+		Containers::Array<T> out = AllocateAligned<T, alignment>(Containers::NoInit, size);
 		Containers::Implementation::arrayConstruct(Containers::DefaultInit, out.begin(), out.end());
 		return out;
 	}
 
-	template<class T, std::size_t alignment> Containers::Array<T> Memory::allocateAligned(Containers::ValueInitT, const std::size_t size) {
-		Containers::Array<T> out = allocateAligned<T, alignment>(Containers::NoInit, size);
+	template<class T, std::size_t alignment> Containers::Array<T> Memory::AllocateAligned(Containers::ValueInitT, const std::size_t size) {
+		Containers::Array<T> out = AllocateAligned<T, alignment>(Containers::NoInit, size);
 		Containers::Implementation::arrayConstruct(Containers::ValueInit, out.begin(), out.end());
 		return out;
 	}
 
-	template<class T, std::size_t alignment> inline Containers::Array<T> Memory::allocateAligned(std::size_t size) {
-		return allocateAligned<T, alignment>(Containers::ValueInit, size);
+	template<class T, std::size_t alignment> inline Containers::Array<T> Memory::AllocateAligned(std::size_t size) {
+		return AllocateAligned<T, alignment>(Containers::ValueInit, size);
 	}
 
 }

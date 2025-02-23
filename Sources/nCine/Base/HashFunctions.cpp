@@ -106,9 +106,9 @@ namespace nCine
 	{
 		using Death::Memory;
 #if defined(DEATH_TARGET_BIG_ENDIAN)
-		return ByteSwap64(Memory::loadUnaligned<std::uint64_t>(p));
+		return ByteSwap64(Memory::LoadUnaligned<std::uint64_t>(p));
 #else
-		return Memory::loadUnaligned<std::uint64_t>(p);
+		return Memory::LoadUnaligned<std::uint64_t>(p);
 #endif
 	}
 
@@ -116,9 +116,9 @@ namespace nCine
 	{
 		using Death::Memory;
 #if defined(DEATH_TARGET_BIG_ENDIAN)
-		return ByteSwap32(Memory::loadUnaligned<std::uint32_t>(p));
+		return ByteSwap32(Memory::LoadUnaligned<std::uint32_t>(p));
 #else
-		return Memory::loadUnaligned<std::uint32_t>(p);
+		return Memory::LoadUnaligned<std::uint32_t>(p);
 #endif
 	}
 
