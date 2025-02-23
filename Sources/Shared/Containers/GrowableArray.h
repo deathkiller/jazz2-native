@@ -1436,8 +1436,8 @@ namespace Death { namespace Containers {
 			if (count == 0)
 				return arrayGuts.data + arrayGuts.size;
 
-			// For arrays with an unknown deleter we'll always copy-allocate to a new place. Not using reallocate() as we don't
-			// know where the original memory comes from.
+			// For arrays with an unknown deleter we'll always copy-allocate to a new place. Not using reallocate()
+			// as we don't know where the original memory comes from.
 			const std::size_t desiredCapacity = arrayGuts.size + count;
 			std::size_t capacity;
 #if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
@@ -1810,8 +1810,9 @@ namespace Death { namespace Containers {
 		// Nothing to remove, yay!
 		if (count == 0) return;
 
-		// If we don't have our own deleter, we need to reallocate in order to store the capacity. That'll also cause the excessive
-		// elements to be properly destructed, so nothing else needs to be done. Not using reallocate() as we don't know where the original memory comes from.
+		// If we don't have our own deleter, we need to reallocate in order to store the capacity. That'll
+		// also cause the excessive elements to be properly destructed, so nothing else needs to be done.
+		// Not using reallocate() as we don't know where the original memory comes from.
 		if (arrayGuts.deleter != Allocator::deleter) {
 			T* const newArray = Allocator::allocate(arrayGuts.size - count);
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size - count);

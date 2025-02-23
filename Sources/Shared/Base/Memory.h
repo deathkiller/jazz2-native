@@ -41,7 +41,7 @@ namespace Death {
 			in it being aligned to the whole memory page, or small alignment values could
 			get rounded up to the default @cpp 2*sizeof(void*) @ce alignment.
 
-			@section Utility-allocateAligned-initialization Array initialization
+			@section Memory-AllocateAligned-initialization Array initialization
 
 			Like with @ref Containers::Array, the returned array is by default
 			* *value-initialized*, which means that trivial types are zero-initialized and
@@ -50,32 +50,31 @@ namespace Death {
 			initialization is performed separately from the allocation itself with either a
 			loop or a call to @ref std::memset().
 
-			-   @ref allocateAligned(Containers::DefaultInitT, std::size_t) leaves trivial types
+			-   @ref AllocateAligned(Containers::DefaultInitT, std::size_t) leaves trivial types
 				uninitialized and calls the default constructor elsewhere. Because of the
 				differing behavior for trivial types it's better to explicitly use either
 				the @ref Containers::ValueInit or @ref Containers::NoInit variants instead.
-			-   @ref allocateAligned(Containers::ValueInitT, std::size_t) is equivalent to the default
+			-   @ref AllocateAligned(Containers::ValueInitT, std::size_t) is equivalent to the default
 				case, zero-initializing trivial types and calling the default constructor
 				elsewhere. Useful when you want to make the choice appear explicit.
-			-   @ref allocateAligned(Containers::NoInitT, std::size_t) does not initialize anything.
+			-   @ref AllocateAligned(Containers::NoInitT, std::size_t) does not initialize anything.
 				Useful for trivial types when you'll be overwriting the contents anyway,
 				for non-trivial types this is the dangerous option and you need to call the
 				constructor on all elements manually using placement new,
-				@ref std::uninitialized_copy() or similar --- see the function docs for an
-				example.
+				@ref std::uninitialized_copy() or similar.
 		*/
 		template<class T, std::size_t alignment = alignof(T)> inline static Containers::Array<T> AllocateAligned(std::size_t size);
 
 		/**
 			@brief Allocate aligned memory and default-initialize it
 
-			Compared to @ref allocateAligned(std::size_t), trivial types are not
+			Compared to @ref AllocateAligned(std::size_t), trivial types are not
 			initialized and default constructor is called otherwise. Because of the
 			differing behavior for trivial types it's better to explicitly use either the
-			@ref allocateAligned(Containers::ValueInitT, std::size_t) or the
-			@ref allocateAligned(Containers::NoInitT, std::size_t) variant instead.
+			@ref AllocateAligned(Containers::ValueInitT, std::size_t) or the
+			@ref AllocateAligned(Containers::NoInitT, std::size_t) variant instead.
 
-			Implemented via @ref allocateAligned(Containers::NoInitT, std::size_t) with a
+			Implemented via @ref AllocateAligned(Containers::NoInitT, std::size_t) with a
 			loop calling the constructors on the returned allocation in case of non-trivial
 			types.
 		*/
@@ -84,8 +83,8 @@ namespace Death {
 		/**
 			@brief Allocate aligned memory and value-initialize it
 
-			Same as @ref allocateAligned(std::size_t), just more explicit. Implemented via
-			@ref allocateAligned(Containers::NoInitT, std::size_t) with either a
+			Same as @ref AllocateAligned(std::size_t), just more explicit. Implemented via
+			@ref AllocateAligned(Containers::NoInitT, std::size_t) with either a
 			@ref std::memset() or a loop calling the constructors on the returned
 			allocation.
 		*/
@@ -94,9 +93,9 @@ namespace Death {
 		/**
 			@brief Allocate aligned memory and leave it uninitialized
 
-			Compared to @ref allocateAligned(std::size_t), the memory is left in an
+			Compared to @ref AllocateAligned(std::size_t), the memory is left in an
 			unitialized state. For trivial types is equivalent to
-			@ref allocateAligned(Containers::DefaultInitT, std::size_t). For non-trivial
+			@ref AllocateAligned(Containers::DefaultInitT, std::size_t). For non-trivial
 			types, destruction is always done using a custom deleter that explicitly calls
 			the destructor on *all elements* --- which means that for non-trivial types
 			you're expected to construct all elements using placement new (or for example

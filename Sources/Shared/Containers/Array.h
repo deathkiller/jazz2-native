@@ -145,7 +145,7 @@ namespace Death { namespace Containers {
 		@par Aligned allocations
 			Please note that @ref Array allocations are by default only aligned to
 			@cpp 2*sizeof(void*) @ce. If you need overaligned memory for working with
-			SIMD types, use @ref Memory::allocateAligned() instead.
+			SIMD types, use @ref Memory::AllocateAligned() instead.
 
 		@subsection Containers-Array-usage-wrapping Wrapping externally allocated arrays
 

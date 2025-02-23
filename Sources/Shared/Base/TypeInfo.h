@@ -13,14 +13,14 @@
 
 #if defined(__has_builtin)
 #	if __has_builtin(__builtin_constant_p)
-#		define DEATH_HAS_BUILTIN_CONSTANT(x) __builtin_constant_p(x)
+#		define __DEATH_HAS_BUILTIN_CONSTANT(x) __builtin_constant_p(x)
 #	endif
 #	if __has_builtin(__builtin_strcmp)
-#		define DEATH_HAS_BUILTIN_STRCMP(x, y) __builtin_strcmp(x, y)
+#		define __DEATH_HAS_BUILTIN_STRCMP(x, y) __builtin_strcmp(x, y)
 #	endif
 #elif defined(DEATH_TARGET_GCC)
-#	define DEATH_HAS_BUILTIN_CONSTANT(x) __builtin_constant_p(x)
-#	define DEATH_HAS_BUILTIN_STRCMP(x, y) __builtin_strcmp(x, y)
+#	define __DEATH_HAS_BUILTIN_CONSTANT(x) __builtin_constant_p(x)
+#	define __DEATH_HAS_BUILTIN_STRCMP(x, y) __builtin_strcmp(x, y)
 #endif
 
 #if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
@@ -91,9 +91,9 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}
 #endif
 
-#if defined(DEATH_HAS_BUILTIN_CONSTANT)
+#if defined(__DEATH_HAS_BUILTIN_CONSTANT)
 	static DEATH_CONSTEXPR14 DEATH_ALWAYS_INLINE bool IsConstantString(const char* str) noexcept {
-		while (DEATH_HAS_BUILTIN_CONSTANT(*str)) {
+		while (__DEATH_HAS_BUILTIN_CONSTANT(*str)) {
 			if (*str == '\0') {
 				return true;
 			}
@@ -130,11 +130,11 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}
 
 	static DEATH_CONSTEXPR14 inline std::int32_t constexpr_strcmp(const char* v1, const char* v2) noexcept {
-#if DEATH_CXX_STANDARD >= 201402 && defined(DEATH_HAS_BUILTIN_CONSTANT) && defined(DEATH_HAS_BUILTIN_STRCMP)
+#if DEATH_CXX_STANDARD >= 201402 && defined(__DEATH_HAS_BUILTIN_CONSTANT) && defined(__DEATH_HAS_BUILTIN_STRCMP)
 		if (IsConstantString(v1) && IsConstantString(v2)) {
 			return constexpr_strcmp_loop(v1, v2);
 		}
-		return DEATH_HAS_BUILTIN_STRCMP(v1, v2);
+		return __DEATH_HAS_BUILTIN_STRCMP(v1, v2);
 #elif DEATH_CXX_STANDARD >= 201402
 		return constexpr_strcmp_loop(v1, v2);
 #else
@@ -272,6 +272,9 @@ namespace Death {
 		Additionally, it can perform downcast at no performance cost. It also pulls the
 		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
 		taking ownership.
+		
+		If @cpp DEATH_NO_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
+		and the standard @cpp dynamic_cast<T>() @ce is used to cast the pointer instead.
 	*/
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
@@ -318,6 +321,9 @@ namespace Death {
 		Additionally, it can perform downcast at no performance cost. It also pulls the
 		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
 		taking ownership.
+		
+		If @cpp DEATH_NO_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
+		and the standard @cpp dynamic_cast<T>() @ce is used to cast the pointer instead.
 	*/
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
