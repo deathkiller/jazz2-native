@@ -470,8 +470,9 @@ namespace nCine
 #elif defined(DEATH_TARGET_ANDROID)
 		const StringView vendor = gfxCapabilities.glInfoStrings().vendor;
 		const StringView renderer = gfxCapabilities.glInfoStrings().renderer;
-		// Some GPUs doesn't work with dynamic batch size, so disable it for now
-		if (vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) {
+		// Some GPUs doesn't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
+		if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
+			(vendor == "ARM"_s && renderer == "Mali-T830"_s) {
 			const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
 			if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
 				LOGW("Detected %s: Using fixed batch size", renderer.data());
