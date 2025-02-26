@@ -12,7 +12,7 @@ namespace nCine
 	{
 	public:
 		/// Entry point method to be called in the `android_main()` function
-		static void Run(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
+		static void Run(struct android_app* state, CreateAppEventHandlerDelegate createAppEventHandler);
 
 		/// Processes an Android application command
 		static void ProcessCommand(struct android_app* state, std::int32_t cmd);
@@ -37,7 +37,7 @@ namespace nCine
 		String packageName_;
 
 		struct android_app* state_;
-		std::unique_ptr<IAppEventHandler>(*createAppEventHandler_)();
+		CreateAppEventHandlerDelegate createAppEventHandler_;
 		
 		void PreInit();
 		/// Must be called at the beginning to initialize the application

@@ -65,6 +65,7 @@ namespace nCine
 			std::int32_t drawindex;
 		};
 
+		/// Camera uniform data structure
 		struct CameraUniformData
 		{
 			CameraUniformData()

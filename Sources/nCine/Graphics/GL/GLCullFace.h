@@ -14,6 +14,7 @@ namespace nCine
 		GLCullFace() = delete;
 		~GLCullFace() = delete;
 
+		/// Holds the face culling state
 		struct State
 		{
 			bool enabled = false;

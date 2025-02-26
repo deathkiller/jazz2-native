@@ -16,6 +16,7 @@ namespace nCine
 		GLScissorTest() = delete;
 		~GLScissorTest() = delete;
 
+		/// Holds the scissor test state
 		struct State
 		{
 			bool enabled = false;

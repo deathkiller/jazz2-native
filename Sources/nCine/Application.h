@@ -29,6 +29,9 @@ namespace nCine
 	class ImGuiDrawing;
 #endif
 
+	/** @brief Delegate type that creates an instance of @ref IAppEventHandler */
+	using CreateAppEventHandlerDelegate = std::unique_ptr<IAppEventHandler>(*)();
+
 	/** @brief Base class for main entry points of nCine applications */
 	class Application
 #if defined(DEATH_TRACE)

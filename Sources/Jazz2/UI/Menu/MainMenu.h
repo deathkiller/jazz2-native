@@ -105,6 +105,8 @@ namespace Jazz2::UI::Menu
 			Overlay
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class MenuBackgroundCanvas : public Canvas
 		{
 		public:
@@ -161,6 +163,7 @@ namespace Jazz2::UI::Menu
 			RenderCommand _outputRenderCommand;
 			bool _alreadyRendered;
 		};
+#endif
 
 		TexturedBackgroundPass _texturedBackgroundPass;
 		Rendering::UpscaleRenderPassWithClipping _upscalePass;

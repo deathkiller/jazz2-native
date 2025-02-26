@@ -66,6 +66,7 @@ namespace nCine
 #endif
 		};
 
+		/// Scoped group for OpenGL debug messages
 		class ScopedGroup
 		{
 		public:

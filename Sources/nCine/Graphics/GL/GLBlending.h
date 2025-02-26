@@ -14,6 +14,7 @@ namespace nCine
 		GLBlending() = delete;
 		~GLBlending() = delete;
 
+		/// Holds the blending state
 		struct State
 		{
 			bool enabled = false;

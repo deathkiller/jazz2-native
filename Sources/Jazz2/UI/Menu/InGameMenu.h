@@ -84,6 +84,8 @@ namespace Jazz2::UI::Menu
 			Overlay
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		class MenuBackgroundCanvas : public Canvas
 		{
 		public:
@@ -119,6 +121,7 @@ namespace Jazz2::UI::Menu
 		private:
 			InGameMenu* _owner;
 		};
+#endif
 
 		Recti _contentBounds;
 		std::unique_ptr<MenuBackgroundCanvas> _canvasBackground;

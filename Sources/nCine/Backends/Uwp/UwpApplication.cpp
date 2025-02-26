@@ -32,7 +32,7 @@ namespace nCine
 		return *_instance;
 	}
 
-	int UwpApplication::Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
+	int UwpApplication::Run(CreateAppEventHandlerDelegate createAppEventHandler)
 	{
 		if (createAppEventHandler == nullptr) {
 			return EXIT_FAILURE;

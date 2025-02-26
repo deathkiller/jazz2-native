@@ -21,7 +21,7 @@ namespace nCine
 	{
 	public:
 		/** @brief Entry point method to be called in the `main()`/`wWinMain()` function */ 
-		static int Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
+		static int Run(CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv);
 
 		void Quit() override;
 
@@ -36,7 +36,7 @@ namespace nCine
 #endif
 
 		/** @brief Must be called at the beginning to initialize the application */
-		void Init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
+		void Init(CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv);
 		/** @brief Must be called continuously to keep the application running */
 		void ProcessStep();
 		/** @brief Processes events inside the game loop */

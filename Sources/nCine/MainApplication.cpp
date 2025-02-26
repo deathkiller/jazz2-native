@@ -43,7 +43,7 @@ namespace nCine
 		return instance;
 	}
 
-	int MainApplication::Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
+	int MainApplication::Run(CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv)
 	{
 		if (createAppEventHandler == nullptr) {
 			return EXIT_FAILURE;
@@ -151,7 +151,7 @@ namespace nCine
 		return false;
 	}
 
-	void MainApplication::Init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
+	void MainApplication::Init(CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv)
 	{
 		ZoneScopedC(0x81A861);
 #if defined(NCINE_PROFILING)

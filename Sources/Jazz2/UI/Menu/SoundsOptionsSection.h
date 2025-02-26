@@ -24,10 +24,13 @@ namespace Jazz2::UI::Menu
 			Count
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ItemData {
 			String Name;
 			float TouchY;
 		};
+#endif
 
 		ItemData _items[(std::int32_t)Item::Count];
 		std::int32_t _selectedIndex;

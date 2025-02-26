@@ -81,6 +81,7 @@ namespace nCine
 	public:
 		static constexpr std::uint32_t MaxPointers = 10;
 
+		/// Information about a single touch pointer
 		struct Pointer
 		{
 			std::int32_t id;

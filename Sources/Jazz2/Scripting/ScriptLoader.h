@@ -120,6 +120,8 @@ namespace Jazz2::Scripting
 			FunctionOrVariable
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct RawMetadataDeclaration {
 			RawMetadataDeclaration(SmallVectorImpl<String>&& m, String n, String d, MetadataType t, String c, String ns)
 				: Metadata(std::move(m)), Name(std::move(n)), Declaration(std::move(d)),
@@ -137,6 +139,7 @@ namespace Jazz2::Scripting
 			HashMap<std::int32_t, Array<String>> FuncMetadataMap;
 			HashMap<std::int32_t, Array<String>> VarMetadataMap;
 		};
+#endif
 
 		static constexpr asPWORD EngineToOwner = 0;
 

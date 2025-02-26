@@ -1134,10 +1134,15 @@ namespace Death { namespace Containers {
 		void construct(const char* data, std::size_t size);
 		void copyConstruct(const String& other);
 		void destruct();
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct Data {
 			const char* data;
 			std::size_t size;
 		};
+#endif
+
 		Data dataInternal() const;
 
 		MutableStringView sliceSizePointerInternal(char* begin, std::size_t size);
