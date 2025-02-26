@@ -14,18 +14,18 @@ namespace Death { namespace IO {
 		_size = 0;
 
 		if (initialCapacity > 0) {
-			arrayReserve(_buffer, initialCapacity);
+			arrayReserve(_data, initialCapacity);
 		}
 	}
 
 	MemoryStream::MemoryStream(void* bufferPtr, std::int64_t bufferSize)
-		: _buffer(static_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _pos(0), _mode(AccessMode::Writable)
+		: _data(static_cast<std::uint8_t*>(bufferPtr), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _pos(0), _mode(AccessMode::Writable)
 	{
 		_size = bufferSize;
 	}
 
 	MemoryStream::MemoryStream(const void* bufferPtr, std::int64_t bufferSize)
-		: _buffer(const_cast<std::uint8_t*>(static_cast<const std::uint8_t*>(bufferPtr)), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _pos(0), _mode(AccessMode::ReadOnly)
+		: _data(const_cast<std::uint8_t*>(static_cast<const std::uint8_t*>(bufferPtr)), bufferSize, [](std::uint8_t* data, std::size_t size) {}), _pos(0), _mode(AccessMode::ReadOnly)
 	{
 		_size = bufferSize;
 	}
@@ -78,7 +78,7 @@ namespace Death { namespace IO {
 
 			bytesRead = (_size < _pos + bytesToRead ? (_size - _pos) : bytesToRead);
 			if (bytesRead > 0) {
-				std::memcpy(destination, &_buffer[_pos], bytesRead);
+				std::memcpy(destination, &_data[_pos], bytesRead);
 				_pos += bytesRead;
 			}
 		}
@@ -93,12 +93,12 @@ namespace Death { namespace IO {
 		if (bytesToWrite > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
 			if (_mode == AccessMode::Growable && _size < _pos + bytesToWrite) {
 				_size = _pos + bytesToWrite;
-				arrayResize(_buffer, Containers::NoInit, _size);
+				arrayResize(_data, Containers::NoInit, _size);
 			}
 
 			bytesWritten = (_pos + bytesToWrite > _size ? (_size - _pos) : bytesToWrite);
 			if (bytesWritten > 0) {
-				std::memcpy(&_buffer[_pos], source, bytesWritten);
+				std::memcpy(&_data[_pos], source, bytesWritten);
 				_pos += bytesWritten;
 			}
 		}
@@ -124,7 +124,7 @@ namespace Death { namespace IO {
 	void MemoryStream::ReserveCapacity(std::int64_t bytes)
 	{
 		if (_mode == AccessMode::Growable) {
-			arrayReserve(_buffer, _pos + bytes);
+			arrayReserve(_data, _pos + bytes);
 		}
 	}
 
@@ -135,14 +135,14 @@ namespace Death { namespace IO {
 			if (_size < _pos + bytesToRead) {
 				if (_mode == AccessMode::Growable) {
 					_size = _pos + bytesToRead;
-					arrayResize(_buffer, Containers::NoInit, _size);
+					arrayResize(_data, Containers::NoInit, _size);
 				} else {
 					bytesToRead = static_cast<std::int32_t>(_size - _pos);
 				}
 			}
 
 			while (bytesToRead > 0) {
-				std::int64_t bytesRead = source.Read(&_buffer[_pos], bytesToRead);
+				std::int64_t bytesRead = source.Read(&_data[_pos], bytesToRead);
 				if DEATH_UNLIKELY(bytesRead <= 0) {
 					break;
 				}

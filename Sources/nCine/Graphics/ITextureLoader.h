@@ -3,6 +3,8 @@
 #include "TextureFormat.h"
 #include "../Primitives/Vector2.h"
 
+#include <memory>
+
 #include <Containers/StringView.h>
 #include <IO/Stream.h>
 

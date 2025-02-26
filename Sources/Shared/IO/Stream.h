@@ -14,8 +14,7 @@
 #include "../Common.h"
 #include "../Base/IDisposable.h"
 
-#include <cstdio>		// for FILE
-#include <memory>
+#include <type_traits>
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -

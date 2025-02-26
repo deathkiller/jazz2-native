@@ -4,6 +4,8 @@
 #include "FileAccess.h"
 #include "../Containers/String.h"
 
+#include <memory>
+
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 

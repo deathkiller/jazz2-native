@@ -93,7 +93,7 @@ jobs:
 
   # Testing builds with workarounds
   Workarounds:
-    if: ${{ false }}  # Temporarily disabled, it will be removed in the future as it's no longer needed.
+    #if: ${{ false }}  # Temporarily disabled, it will be removed in the future as it's no longer needed.
     strategy:
       fail-fast: false
       matrix:
@@ -132,8 +132,8 @@ jobs:
         rm -f ./Content/Translations/*.po
         
         export JAVA_HOME=$JAVA_HOME_17_X64
-        #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_WITH_FIXED_BATCH_SIZE=10
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_INPUT_DEBUGGING=ON
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_WITH_FIXED_BATCH_SIZE=10
+        #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_INPUT_DEBUGGING=ON
 
     - name: 'Build'
       run: |
@@ -156,11 +156,17 @@ jobs:
           * ) exit 1 ;;
         esac
         
-        echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
         mkdir ./_package/
         $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2d.apk"
-        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2d.apk"
         cp -f ./LICENSE ./_package/LICENSE
+        
+        if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+          echo 'Pull requests are not signed!'
+        else
+          echo 'Signing APK file...'
+          echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2d.apk"
+        fi
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v4

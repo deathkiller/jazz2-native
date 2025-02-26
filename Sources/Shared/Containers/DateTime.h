@@ -197,21 +197,21 @@ namespace Death { namespace Containers {
 #endif
 
 		/** @brief Returns the year component of the date represented by this instance */
-		std::int32_t GetYear(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Year; }
+		std::int32_t GetYear(TimeZone tz = Local) const noexcept { return Partitioned(tz).Year; }
 		/** @brief Returns the month component of the date represented by this instance */
-		std::int32_t GetMonth(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Month; }
+		std::int32_t GetMonth(TimeZone tz = Local) const noexcept { return Partitioned(tz).Month; }
 		/** @brief Returns the day of the month represented by this instance */
-		std::int32_t GetDay(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Day; }
+		std::int32_t GetDay(TimeZone tz = Local) const noexcept { return Partitioned(tz).Day; }
 		/** @brief Returns the day of the week represented by this instance */
-		std::int32_t GetWeekDay(const TimeZone tz = Local) const noexcept { return Partitioned(tz).GetWeekDay(); }
+		std::int32_t GetWeekDay(TimeZone tz = Local) const noexcept { return Partitioned(tz).GetWeekDay(); }
 		/** @brief Returns the hour component of the date represented by this instance */
-		std::int32_t GetHour(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Hour; }
+		std::int32_t GetHour(TimeZone tz = Local) const noexcept { return Partitioned(tz).Hour; }
 		/** @brief Returns the minute component of the date represented by this instance */
-		std::int32_t GetMinute(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Minute; }
+		std::int32_t GetMinute(TimeZone tz = Local) const noexcept { return Partitioned(tz).Minute; }
 		/** @brief Returns the second component of the date represented by this instance */
-		std::int32_t GetSecond(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Second; }
+		std::int32_t GetSecond(TimeZone tz = Local) const noexcept { return Partitioned(tz).Second; }
 		/** @brief Returns the millisecond component of the date represented by this instance */
-		std::int32_t GetMillisecond(const TimeZone tz = Local) const noexcept { return Partitioned(tz).Millisecond; }
+		std::int32_t GetMillisecond(TimeZone tz = Local) const noexcept { return Partitioned(tz).Millisecond; }
 
 		/** @brief Sets @ref DateTime structure to the value corresponding to standard `time_t` value */
 		constexpr DateTime& Set(time_t timet) noexcept;
@@ -292,6 +292,9 @@ namespace Death { namespace Containers {
 		/** @overload */
 		bool TryParse(std::wstring_view input, std::wstring_view format, std::wstring_view::const_iterator* endParse = nullptr) noexcept;
 #endif
+
+		/** @brief Converts this instance to the string representation */
+		String ToString() const noexcept;
 
 		constexpr DateTime& operator+=(const TimeSpan& ts) noexcept;
 		constexpr DateTime operator+(const TimeSpan& ts) const noexcept
@@ -415,6 +418,9 @@ namespace Death { namespace Containers {
 		constexpr std::int64_t GetTotalMilliseconds() const noexcept { return _value; }
 		
 		constexpr std::int64_t GetValue() const noexcept { return _value; }
+
+		/** @brief Converts this instance to the string representation */
+		String ToString() const noexcept;
 
 		constexpr TimeSpan& operator+=(const TimeSpan& ts) noexcept
 		{

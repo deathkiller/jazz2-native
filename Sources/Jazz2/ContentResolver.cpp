@@ -1113,13 +1113,13 @@ namespace Jazz2
 
 			// Caption Tile
 			if (captionTileId > 0) {
-				std::int32_t tw = (width / TileSet::DefaultTileSize);
-				std::int32_t tx = (captionTileId % tw) * TileSet::DefaultTileSize;
-				std::int32_t ty = (captionTileId / tw) * TileSet::DefaultTileSize;
+				std::uint32_t tw = (width / TileSet::DefaultTileSize);
+				std::uint32_t tx = (captionTileId % tw) * TileSet::DefaultTileSize;
+				std::uint32_t ty = (captionTileId / tw) * TileSet::DefaultTileSize;
 				if (tx + TileSet::DefaultTileSize <= width && ty + TileSet::DefaultTileSize <= height) {
 					captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
-					for (std::int32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
-						for (std::int32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+					for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+						for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 							Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
 							Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
 							Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);

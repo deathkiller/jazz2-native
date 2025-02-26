@@ -374,6 +374,8 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
+		LOGI("Level \"%s\" (%s/%s.j2l) loaded", descriptor.DisplayName.data(), _episodeName.data(), _levelFileName.data());
+
 		if (!descriptor.DisplayName.empty()) {
 			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + descriptor.DisplayName));
 		} else {
@@ -1811,7 +1813,7 @@ namespace Jazz2
 			for (auto& viewport : _assignedViewports) {
 				auto size = viewport->GetViewportSize();
 				if (maxViewWidth < size.X) {
-					maxViewWidth = size.X;
+					maxViewWidth = (float)size.X;
 				}
 				if (viewport->_targetPlayer == player) {
 					currentViewport = viewport.get();
