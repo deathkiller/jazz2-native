@@ -85,7 +85,7 @@ namespace Death { namespace Environment {
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
-	DEATH_ALWAYS_INLINE bool IsWindowsVista() {
+	DEATH_ALWAYS_INLINE bool IsWindowsVista() noexcept {
 		return WindowsVersion >= 0x06000000000000; // 6.0.0
 	}
 
@@ -94,7 +94,7 @@ namespace Death { namespace Environment {
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
-	DEATH_ALWAYS_INLINE bool IsWindows7() {
+	DEATH_ALWAYS_INLINE bool IsWindows7() noexcept {
 		return WindowsVersion >= 0x06000100000000; // 6.1.0
 	}
 
@@ -103,7 +103,7 @@ namespace Death { namespace Environment {
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
-	DEATH_ALWAYS_INLINE bool IsWindows8() {
+	DEATH_ALWAYS_INLINE bool IsWindows8() noexcept {
 		return WindowsVersion >= 0x06000300000000; // 6.3.0
 	}
 
@@ -112,7 +112,7 @@ namespace Death { namespace Environment {
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
-	DEATH_ALWAYS_INLINE bool IsWindows10() {
+	DEATH_ALWAYS_INLINE bool IsWindows10() noexcept {
 		return WindowsVersion >= 0x0a0000000047ba; // 10.0.18362
 	}
 
@@ -121,7 +121,7 @@ namespace Death { namespace Environment {
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
-	DEATH_ALWAYS_INLINE bool IsWindows11() {
+	DEATH_ALWAYS_INLINE bool IsWindows11() noexcept {
 		return WindowsVersion >= 0x0a0000000055f0; // 10.0.22000
 	}
 
