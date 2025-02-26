@@ -151,6 +151,8 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+		LOGD("Script compiled successfully.");
+
 		// Enable all callbacks by default
 		_enabledCallbacks.setAll();
 

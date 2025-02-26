@@ -57,7 +57,7 @@ namespace Death {
 	template<class T> constexpr T&& forward(typename std::remove_reference<T>::type&& t) noexcept {
 		/* bits/move.h in libstdc++ has this and it makes sense to have it here
 		   also, although I can't really explain what accidents it prevents */
-		static_assert(!std::is_lvalue_reference<T>::value, "T cannot be a lvalue reference");
+		static_assert(!std::is_lvalue_reference<T>::value, "T cannot be a l-value reference");
 		return static_cast<T&&>(t);
 	}
 

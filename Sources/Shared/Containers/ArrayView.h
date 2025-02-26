@@ -981,7 +981,7 @@ namespace Death { namespace Containers {
 		template<std::size_t index> constexpr friend T& get(StaticArrayView<size_, T> value) {
 			return value._data[index];
 		}
-		// As the view is non-owning, a rvalue doesn't imply that its contents are able to be moved out. Thus, unlike StaticArray or Pair/Triple,
+		// As the view is non-owning, a r-value doesn't imply that its contents are able to be moved out. Thus, unlike StaticArray or Pair/Triple,
 		// it takes the view by value and has no difference in behavior depending on whether the input is T&, const T& or T&&.
 #endif
 

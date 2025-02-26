@@ -2,6 +2,8 @@
 
 #include "../../Main.h"
 
+#include <memory>
+
 #include <Containers/StringView.h>
 #include <IO/Stream.h>
 

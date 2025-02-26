@@ -12,13 +12,14 @@ namespace nCine
 		size_t fileRead(void* ptr, size_t size, size_t nmemb, void* datasource)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
-			return file->Read(ptr, size * nmemb);
+			std::int64_t bytesRead = file->Read(ptr, size * nmemb);
+			return bytesRead > 0 ? (size_t)bytesRead : 0;
 		}
 
 		int fileSeek(void* datasource, ogg_int64_t offset, int whence)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
-			return file->Seek(offset, (SeekOrigin)whence);
+			return file->Seek(offset, (SeekOrigin)whence) >= 0 ? 0 : -1;
 		}
 
 		int fileClose(void* datasource)
@@ -31,7 +32,7 @@ namespace nCine
 		long fileTell(void* datasource)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
-			return file->GetPosition();
+			return (long)file->GetPosition();
 		}
 
 		const ov_callbacks fileCallbacks = { fileRead, fileSeek, fileClose, fileTell };

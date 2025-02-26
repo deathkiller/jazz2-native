@@ -13,7 +13,7 @@
 #if defined(WITH_ANGELSCRIPT)
 namespace Jazz2::Scripting
 {
-	class jjCANVAS;
+	struct jjCANVAS;
 }
 #endif
 

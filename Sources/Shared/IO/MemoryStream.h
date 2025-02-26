@@ -37,12 +37,12 @@ namespace Death { namespace IO {
 
 		/** @brief Returns a pointer to underlying buffer */
 		DEATH_ALWAYS_INLINE std::uint8_t* GetBuffer() {
-			return _buffer.data();
+			return _data.data();
 		}
 
 		/** @overload */
 		DEATH_ALWAYS_INLINE const std::uint8_t* GetBuffer() const {
-			return _buffer.data();
+			return _data.data();
 		}
 
 		/** @brief Returns a pointer to the current position, which is then incremented by a given number of bytes */
@@ -50,7 +50,7 @@ namespace Death { namespace IO {
 			if (_pos + bytes > _size) {
 				return nullptr;
 			}
-			const std::uint8_t* ptr = &_buffer[_pos];
+			const std::uint8_t* ptr = &_data[_pos];
 			_pos += bytes;
 			return ptr;
 		}
@@ -63,7 +63,7 @@ namespace Death { namespace IO {
 			Growable
 		};
 
-		Containers::Array<std::uint8_t> _buffer;
+		Containers::Array<std::uint8_t> _data;
 		std::int64_t _size;
 		std::int64_t _pos;
 		AccessMode _mode;

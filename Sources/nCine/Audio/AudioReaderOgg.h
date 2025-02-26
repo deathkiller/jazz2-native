@@ -6,6 +6,8 @@
 
 #include "IAudioReader.h"
 
+#include <memory>
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #define OV_EXCLUDE_STATIC_CALLBACKS
 #include <ogg/ogg.h>

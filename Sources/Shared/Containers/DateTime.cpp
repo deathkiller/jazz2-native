@@ -1,7 +1,9 @@
 #include "DateTime.h"
+#include "String.h"
 #include "../CommonWindows.h"
 #include "../Asserts.h"
 
+#include <cstdio>
 #include <cstring>
 #include <sys/types.h>
 
@@ -91,7 +93,7 @@ namespace Death { namespace Containers {
 #endif
 		}
 
-		static bool IsDST(DateTime date) noexcept
+		static bool IsDST(DateTime date, std::int32_t& bias) noexcept
 		{
 			time_t timet = date.GetTicks();
 			if (timet == (time_t)-1) {
@@ -100,7 +102,18 @@ namespace Death { namespace Containers {
 
 			struct tm temp;
 			tm* tm = GetLocalTm(&timet, &temp);
-			return (tm != nullptr && tm->tm_isdst == 1);
+			if (tm == nullptr || !tm->tm_isdst) {
+				return false;
+			}
+
+//#if defined(DEATH_TARGET_WINDOWS) && defined(_UCRT)
+//			long dstbias = 0;
+//			_get_dstbias(&dstbias);
+//			bias = dstbias;
+//#else
+			bias = DST_OFFSET;
+//#endif
+			return true;
 		}
 
 		static std::int32_t GetTimeZone() noexcept
@@ -118,7 +131,7 @@ namespace Death { namespace Containers {
 				// This function is supposed to return the same value whether DST is enabled or not, so we need to use
 				// an additional offset if DST is on as tm_gmtoff already does include it
 				if (tm.tm_isdst) {
-					gmtoffset += 3600;
+					gmtoffset += DST_OFFSET;
 				}
 
 				_gmtoffset = gmtoffset;
@@ -1296,11 +1309,12 @@ namespace Death { namespace Containers {
 	void DateTime::AdjustToTimezone(TimeZone tz, bool noDST) noexcept
 	{
 		std::int32_t secDiff = Implementation::GetTimeZone() + tz.GetOffset();
+		std::int32_t bias = 0;
 
 		// We are converting from the local time to some other time zone, but local time zone does not include the DST offset
 		// (as it varies depending on the date), so we have to handle DST manually, unless a special flag inhibiting this was specified.
-		if (!noDST && Implementation::IsDST(*this) && !tz.IsLocal()) {
-			secDiff -= DST_OFFSET;
+		if (!tz.IsLocal() && !noDST && Implementation::IsDST(*this, bias)) {
+			secDiff -= bias;
 		}
 
 		_time += secDiff * 1000;
@@ -1309,12 +1323,13 @@ namespace Death { namespace Containers {
 	void DateTime::AdjustFromTimezone(TimeZone tz, bool noDST) noexcept
 	{
 		std::int32_t secDiff = Implementation::GetTimeZone() + tz.GetOffset();
+		std::int32_t bias = 0;
 
-		if (!noDST && Implementation::IsDST(*this) && !tz.IsLocal()) {
-			secDiff -= DST_OFFSET;
+		if (!tz.IsLocal() && !noDST && Implementation::IsDST(*this, bias)) {
+			secDiff -= bias;
 		}
 
-		_time -= secDiff * 1000;
+		_time -= secDiff * 1000;	// To milliseconds
 	}
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -1361,5 +1376,29 @@ namespace Death { namespace Containers {
 		return true;
 	}
 #endif
+
+	String DateTime::ToString() const noexcept
+	{
+		auto p = Partitioned();
+
+		char result[64];
+		std::int32_t length = snprintf(result, sizeof(result), "%04d/%02d/%02d %02d:%02d:%02d.%03d", p.Year, p.Month + 1, p.Day, p.Hour, p.Minute, p.Second, p.Millisecond);
+		return String(result, length);
+	}
+
+	String TimeSpan::ToString() const noexcept
+	{
+		std::int64_t v = _value;
+		std::int32_t milliseconds = (std::int32_t)(v % 1000);
+		v /= 1000;
+		std::int32_t seconds = (std::int32_t)(v % 60);
+		v /= 60;
+		std::int64_t minutes = (std::int32_t)(v % 60);
+		v /= 60;
+
+		char result[64];
+		std::int32_t length = snprintf(result, sizeof(result), "%lld:%02d:%02d.%03d", v, minutes, seconds, milliseconds);
+		return String(result, length);
+	}
 
 }}
