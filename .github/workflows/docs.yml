@@ -35,8 +35,12 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt update -y
-        sudo apt install doxygen texlive-base texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended
+        #sudo apt install doxygen texlive-base texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended
+        sudo apt install texlive-base texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended
         pip3 install jinja2 Pygments
+        
+    - name: 'Install Doxygen'
+      uses: ssciwr/doxygen-install@v1
     
     - name: 'Build'
       run: |
