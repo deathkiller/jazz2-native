@@ -417,7 +417,7 @@ namespace Death { namespace IO {
 	}
 
 	PakFile::Directory::Directory(Directory&& other) noexcept
-		: _impl(std::move(other._impl))
+		: _impl(Death::move(other._impl))
 	{
 	}
 
@@ -429,7 +429,7 @@ namespace Death { namespace IO {
 
 	PakFile::Directory& PakFile::Directory::operator=(Directory&& other) noexcept
 	{
-		_impl = std::move(other._impl);
+		_impl = Death::move(other._impl);
 		return *this;
 	}
 

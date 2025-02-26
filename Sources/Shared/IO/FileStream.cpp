@@ -67,7 +67,7 @@ namespace Death { namespace IO {
 	}
 
 	FileStream::FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize)
-		: _path(std::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferSize(bufferSize),
+		: _path(Death::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferSize(bufferSize),
 #if defined(DEATH_TARGET_WINDOWS)
 			_fileHandle(INVALID_HANDLE_VALUE)
 

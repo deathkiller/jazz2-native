@@ -17,7 +17,7 @@ namespace Death { namespace IO {
 	}
 
 	AndroidAssetStream::AndroidAssetStream(Containers::String&& path, FileAccess mode)
-		: _path(std::move(path)), _size(Stream::Invalid),
+		: _path(Death::move(path)), _size(Stream::Invalid),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 			_fileDescriptor(-1), _startOffset(0L)
 #else

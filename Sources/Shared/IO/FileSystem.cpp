@@ -652,7 +652,7 @@ namespace Death { namespace IO {
 	}
 
 	FileSystem::Directory::Directory(Directory&& other) noexcept
-		: _impl(std::move(other._impl))
+		: _impl(Death::move(other._impl))
 	{
 	}
 
@@ -664,7 +664,7 @@ namespace Death { namespace IO {
 
 	FileSystem::Directory& FileSystem::Directory::operator=(Directory&& other) noexcept
 	{
-		_impl = std::move(other._impl);
+		_impl = Death::move(other._impl);
 		return *this;
 	}
 

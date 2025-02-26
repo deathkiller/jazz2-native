@@ -50,7 +50,7 @@ namespace Death { namespace IO { namespace Compression {
 		_inputSize = other._inputSize;
 		_state = other._state;
 
-		_buffer = std::move(other._buffer);
+		_buffer = Death::move(other._buffer);
 		_inBufferPos = other._inBufferPos;
 		_inBufferLength = other._inBufferLength;
 		_inBufferCapacity = other._inBufferCapacity;
@@ -74,7 +74,7 @@ namespace Death { namespace IO { namespace Compression {
 		_inputSize = other._inputSize;
 		_state = other._state;
 		
-		_buffer = std::move(other._buffer);
+		_buffer = Death::move(other._buffer);
 		_inBufferPos = other._inBufferPos;
 		_inBufferLength = other._inBufferLength;
 		_inBufferCapacity = other._inBufferCapacity;
