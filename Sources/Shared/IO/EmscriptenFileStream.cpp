@@ -222,7 +222,7 @@ namespace Death { namespace IO {
 			return;
 		}
 
-		_activeCallback = std::move(callback);
+		_activeCallback = Death::move(callback);
 
 		// Create file input element which will display a native file dialog
 		auto document = emscripten::val::global("document");
@@ -289,7 +289,7 @@ namespace Death { namespace IO {
 			return;
 		}
 
-		_activeCallback = std::move(callback);
+		_activeCallback = Death::move(callback);
 
 		// Create file input element which will display a native file dialog
 		auto document = emscripten::val::global("document");

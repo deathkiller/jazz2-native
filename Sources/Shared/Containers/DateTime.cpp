@@ -1393,7 +1393,7 @@ namespace Death { namespace Containers {
 		v /= 1000;
 		std::int32_t seconds = (std::int32_t)(v % 60);
 		v /= 60;
-		std::int64_t minutes = (std::int32_t)(v % 60);
+		std::int32_t minutes = (std::int32_t)(v % 60);
 		v /= 60;
 
 		char result[64];

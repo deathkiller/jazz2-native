@@ -59,7 +59,7 @@ namespace Death { namespace IO { namespace Compression {
 		std::memcpy(_inBuffer, other._inBuffer, sizeof(_inBuffer));
 		_inPos = other._inPos;
 		_inLength = other._inLength;
-		_outBuffer = std::move(other._outBuffer);
+		_outBuffer = Death::move(other._outBuffer);
 		_outCapacity = other._outCapacity;
 		_outPos = other._outPos;
 		_outPosTotal = other._outPosTotal;
@@ -85,7 +85,7 @@ namespace Death { namespace IO { namespace Compression {
 		std::memcpy(_inBuffer, other._inBuffer, sizeof(_inBuffer));
 		_inPos = other._inPos;
 		_inLength = other._inLength;
-		_outBuffer = std::move(other._outBuffer);
+		_outBuffer = Death::move(other._outBuffer);
 		_outCapacity = other._outCapacity;
 		_outPos = other._outPos;
 		_outPosTotal = other._outPosTotal;
