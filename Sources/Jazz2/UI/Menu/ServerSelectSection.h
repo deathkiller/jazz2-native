@@ -24,12 +24,15 @@ namespace Jazz2::UI::Menu
 		void OnServerFound(Multiplayer::ServerDescription&& desc) override;
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ItemData {
 			Multiplayer::ServerDescription Desc;
 			float Y;
 
 			ItemData(Multiplayer::ServerDescription&& desc);
 		};
+#endif
 
 		static constexpr std::int32_t ItemHeight = 20;
 		static constexpr std::int32_t TopLine = 31;

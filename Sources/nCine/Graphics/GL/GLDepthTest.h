@@ -14,6 +14,7 @@ namespace nCine
 		GLDepthTest() = delete;
 		~GLDepthTest() = delete;
 
+		/// Holds the depth test state
 		struct State
 		{
 			bool enabled = false;

@@ -18,6 +18,7 @@ namespace nCine
 	class ParticleAffector
 	{
 	public:
+		/// Affector type
 		enum class Type
 		{
 			COLOR,
@@ -53,6 +54,7 @@ namespace nCine
 	class ColorAffector : public ParticleAffector
 	{
 	public:
+		/// Holds the color step
 		struct ColorStep
 		{
 			float age;
@@ -100,6 +102,7 @@ namespace nCine
 	class SizeAffector : public ParticleAffector
 	{
 	public:
+		/// Holds the size step
 		struct SizeStep
 		{
 			float age;
@@ -191,6 +194,7 @@ namespace nCine
 	class RotationAffector : public ParticleAffector
 	{
 	public:
+		/// Holds the rotation step
 		struct RotationStep
 		{
 			float age;
@@ -238,6 +242,7 @@ namespace nCine
 	class PositionAffector : public ParticleAffector
 	{
 	public:
+		/// Holds the position step
 		struct PositionStep
 		{
 			float age;
@@ -288,6 +293,7 @@ namespace nCine
 	class VelocityAffector : public ParticleAffector
 	{
 	public:
+		/// Holds the velocity step
 		struct VelocityStep
 		{
 			float age;

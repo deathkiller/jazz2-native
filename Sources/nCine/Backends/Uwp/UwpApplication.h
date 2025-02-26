@@ -22,7 +22,7 @@ namespace nCine
 	{
 	public:
 		/** @brief Entry point method to be called in the `main()` function */
-		static int Run(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
+		static int Run(CreateAppEventHandlerDelegate createAppEventHandler);
 
 		UwpApplication() : Application(), _isSuspended(false) { }
 		~UwpApplication() = default;

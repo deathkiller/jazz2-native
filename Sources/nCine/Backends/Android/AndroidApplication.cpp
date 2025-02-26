@@ -33,7 +33,7 @@ namespace nCine
 		return instance;
 	}
 
-	void AndroidApplication::Run(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
+	void AndroidApplication::Run(struct android_app* state, CreateAppEventHandlerDelegate createAppEventHandler)
 	{
 		ASSERT(state != nullptr);
 		ASSERT(createAppEventHandler != nullptr);

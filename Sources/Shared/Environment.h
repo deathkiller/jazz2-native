@@ -142,17 +142,17 @@ namespace Death { namespace Environment {
 	 * Falls back to another monotonic time source if not supported.
 	 */
 #if defined(DEATH_TARGET_WINDOWS)
-	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
+	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() noexcept {
 		ULONGLONG now = {};
 		::QueryUnbiasedInterruptTime(&now);
 		return now;
 	}
 #elif defined(DEATH_TARGET_APPLE)
-	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
+	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() noexcept {
 		return clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 100ULL;
 	}
 #else
-	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() {
+	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() noexcept {
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		return std::uint64_t(ts.tv_sec) * 10000000ULL + std::uint64_t(ts.tv_nsec) / 100ULL;
@@ -165,7 +165,7 @@ namespace Death { namespace Environment {
 	 * The unbiased interrupt-time count does not include time the system spends in sleep or hibernation.
 	 * Falls back to another monotonic time source if not supported.
 	 */
-	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTimeAsMs() {
+	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTimeAsMs() noexcept {
 		return QueryUnbiasedInterruptTime() / 10000LL;
 	}
 

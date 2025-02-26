@@ -9,6 +9,7 @@ namespace nCine
 	class Camera
 	{
 	public:
+		/// Values for the projection matrix
 		struct ProjectionValues
 		{
 			float left;
@@ -25,6 +26,7 @@ namespace nCine
 				: left(ll), right(rr), top(tt), bottom(bb), nearClip(-1.0f), farClip(1.0f) {}
 		};
 
+		/// Values for the view matrix
 		struct ViewValues
 		{
 			Vector2f position;

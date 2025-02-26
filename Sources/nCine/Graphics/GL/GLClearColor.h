@@ -16,6 +16,7 @@ namespace nCine
 		GLClearColor() = delete;
 		~GLClearColor() = delete;
 
+		/// Holds the clear color state
 		struct State
 		{
 			Colorf color = Colorf(0.0f, 0.0f, 0.0f, 0.0f);

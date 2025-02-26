@@ -23,11 +23,14 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ItemData {
 			String LevelName;
 			String DisplayName;
 			float Y;
 		};
+#endif
 
 		static constexpr std::int32_t ItemHeight = 20;
 		static constexpr std::int32_t TopLine = 31;

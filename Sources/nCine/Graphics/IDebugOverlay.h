@@ -13,15 +13,16 @@ namespace nCine
 	class IDebugOverlay
 	{
 	public:
+		/// Settings for the debug overlay
 		struct DisplaySettings
 		{
 			DisplaySettings() : showProfilerGraphs(true), showInfoText(true), showInterface(false) {}
 
-			/// True if showing the profiler graphs
+			/// Whether to show the profiler graphs
 			bool showProfilerGraphs;
-			/// True if showing the information text
+			/// Whether to show the information text
 			bool showInfoText;
-			/// True if showing the debug interface
+			/// Whether to show the debug interface
 			bool showInterface;
 		};
 

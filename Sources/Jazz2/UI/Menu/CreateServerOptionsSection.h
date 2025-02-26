@@ -29,10 +29,13 @@ namespace Jazz2::UI::Menu
 			Count
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ItemData {
 			String Name;
 			float TouchY;
 		};
+#endif
 
 		String _episodeName;
 		String _levelName;

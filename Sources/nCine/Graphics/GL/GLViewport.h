@@ -18,6 +18,7 @@ namespace nCine
 		GLViewport() = delete;
 		~GLViewport() = delete;
 
+		/// Holds the viewport state
 		struct State
 		{
 			Recti rect = Recti(0, 0, 0, 0);
