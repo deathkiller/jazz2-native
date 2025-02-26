@@ -115,6 +115,7 @@ namespace Death { namespace Containers {
 
 			explicit operator bool() const noexcept { return IsValid(); }
 
+			/** @brief Returns the day of the week */
 			std::int32_t GetWeekDay() noexcept
 			{
 				if (_dayOfWeek == -1) {
@@ -123,7 +124,9 @@ namespace Death { namespace Containers {
 				return _dayOfWeek;
 			}
 
+			/** @brief Adds the specified number of months */
 			void AddMonths(std::int32_t monDiff) noexcept;
+			/** @brief Adds the specified number of days */
 			void AddDays(std::int32_t dayDiff) noexcept;
 
 		private:
