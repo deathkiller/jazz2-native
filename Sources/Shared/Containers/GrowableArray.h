@@ -117,7 +117,7 @@ namespace Death { namespace Containers {
 		All reallocation operations expect that @p T is nothrow move-constructible.
 	*/
 	template<class T> struct ArrayNewAllocator {
-		typedef T Type;
+		typedef T Type;	/**< Pointer type */
 
 		enum : std::size_t {
 			/** @copydoc ArrayMallocAllocator::AllocationOffset */

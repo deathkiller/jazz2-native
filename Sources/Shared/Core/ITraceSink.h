@@ -33,7 +33,7 @@ namespace Death
 		ITraceSink& operator=(ITraceSink const&) = delete;
 
 	protected:
-		/** @brief Called when new trace item is received and should be written to the sink destination */
+		/** @brief Called when new trace entry is received and should be written to the sink destination */
 		virtual void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, Containers::StringView threadId, Containers::StringView message) = 0;
 		/** @brief Called when all sink buffers should be flushed immediately */
 		virtual void OnTraceFlushed() = 0;
@@ -52,7 +52,7 @@ namespace Death
 		void DetachSink(ITraceSink* sink);
 
 		/**
-			@brief Flushes and waits until all prior items are written to all sinks
+			@brief Flushes and waits until all prior entries are written to all sinks
 		*/
 		void Flush();
 	}

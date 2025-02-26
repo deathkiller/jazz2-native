@@ -1091,15 +1091,21 @@ namespace Death { namespace Trace {
 		LoggerBackend(LoggerBackend const&) = delete;
 		LoggerBackend& operator=(LoggerBackend const&) = delete;
 
+		/** @brief Registers the sink */
 		void AttachSink(ITraceSink* sink);
+		/** @brief Unregisters the sink */
 		void DetachSink(ITraceSink* sink);
 
+		/** @brief Notifies the background worker about new entries in the queue */
 		void Notify();
 
 #if defined(DEATH_TRACE_ASYNC)
+		/** @brief Returns `true` if the background worker is alive */
 		bool IsAlive() const noexcept;
 #else
+		/** @brief Dispatches the specified entry to all sinks */
 		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength);
+		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void FlushActiveSinks();
 #endif
 
@@ -1204,10 +1210,14 @@ namespace Death { namespace Trace {
 		Logger(Logger const&) = delete;
 		Logger& operator=(Logger const&) = delete;
 
+		/** @brief Registers the sink */
 		void AttachSink(ITraceSink* sink);
+		/** @brief Unregisters the sink */
 		void DetachSink(ITraceSink* sink);
 
+		/** @brief Writes the specified entry to all sinks */
 		bool Write(TraceLevel level, const char* fmt, va_list args);
+		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void Flush(std::uint32_t sleepDurationNs = 100);
 
 	private:
