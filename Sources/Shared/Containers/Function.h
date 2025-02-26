@@ -444,6 +444,8 @@ namespace Death { namespace Containers {
 		}));
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	// Doxygen 1.12.0 outputs also some template specializations, so suppress it
 	// Simple, small enough and trivial functor which is not convertible to a function pointer 
 	template<class R, class ...Args> template<class F, typename std::enable_if<Implementation::IsFunctor<typename std::decay<F>::type, R(Args...)>::value, int>::type> Function<R(Args...)>::Function(NoAllocateInitT, F&& f) noexcept {
 		static_assert(sizeof(typename std::decay<F>::type) <= sizeof(FunctionData::Storage) &&
@@ -471,6 +473,7 @@ namespace Death { namespace Containers {
 			return reinterpret_cast<F&>(storage.data)(Death::forward<Args>(args)...);
 		}));
 	}
+#endif
 
 	// Non-trivially-destructible/-copyable or too large functor. MSVC 2017 has all lambdas not trivially copyable,
 	// so it has to additionally check that it isn't convertible to a function pointer to avoid ambiguity with the
