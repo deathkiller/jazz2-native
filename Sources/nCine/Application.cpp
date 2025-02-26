@@ -465,7 +465,9 @@ namespace nCine
 		const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
 		GLDebug::init(gfxCapabilities);
 
-#if defined(DEATH_TARGET_ANDROID) && !(defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0)
+#if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
+		LOGI("Using fixed batch size: %u", appCfg_.fixedBatchSize);
+#elif defined(DEATH_TARGET_ANDROID)
 		const StringView vendor = gfxCapabilities.glInfoStrings().vendor;
 		const StringView renderer = gfxCapabilities.glInfoStrings().renderer;
 		// Some GPUs doesn't work with dynamic batch size, so disable it for now
