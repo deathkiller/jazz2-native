@@ -5,15 +5,15 @@
 #include "IStateHandler.h"
 #include "IRootController.h"
 #include "LevelDescriptor.h"
-#include "RumbleProcessor.h"
 #include "WeatherType.h"
 #include "Events/EventMap.h"
 #include "Events/EventSpawner.h"
 #include "Tiles/ITileMapOwner.h"
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
+#include "Input/RumbleProcessor.h"
+#include "Input/ControlScheme.h"
 #include "Rendering/UpscaleRenderPass.h"
-#include "UI/ControlScheme.h"
 #include "UI/Menu/InGameMenu.h"
 
 #include "../nCine/Graphics/Shader.h"
@@ -23,6 +23,8 @@
 #if defined(WITH_IMGUI)
 #	include <imgui.h>
 #endif
+
+using namespace Jazz2::Input;
 
 namespace Jazz2
 {
@@ -246,7 +248,7 @@ namespace Jazz2
 
 		BitArray _pressedKeys;
 		std::uint32_t _overrideActions;
-		PlayerInput _playerInputs[UI::ControlScheme::MaxSupportedPlayers];
+		PlayerInput _playerInputs[ControlScheme::MaxSupportedPlayers];
 
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
 		RumbleProcessor _rumble;

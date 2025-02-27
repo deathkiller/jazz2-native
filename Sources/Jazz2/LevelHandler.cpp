@@ -1362,7 +1362,7 @@ namespace Jazz2
 			return;
 		}
 
-		std::int32_t joyIdx = UI::ControlScheme::GetGamepadForPlayer(index);
+		std::int32_t joyIdx = ControlScheme::GetGamepadForPlayer(index);
 		if (joyIdx >= 0) {
 			_rumble.ExecuteEffect(joyIdx, it->second);
 		}
@@ -1439,7 +1439,7 @@ namespace Jazz2
 
 		if (!_players.empty()) {
 			std::size_t playerCount = _players.size();
-			SmallVector<AABBi, UI::ControlScheme::MaxSupportedPlayers * 2> playerZones;
+			SmallVector<AABBi, ControlScheme::MaxSupportedPlayers * 2> playerZones;
 			playerZones.reserve(playerCount * 2);
 			for (std::size_t i = 0; i < playerCount; i++) {
 				auto pos = _players[i]->GetPos();
@@ -1573,7 +1573,7 @@ namespace Jazz2
 		}
 
 		std::size_t playerCount = _assignedViewports.size();
-		SmallVector<Rectf, UI::ControlScheme::MaxSupportedPlayers> playerZones;
+		SmallVector<Rectf, ControlScheme::MaxSupportedPlayers> playerZones;
 		playerZones.reserve(playerCount);
 		for (std::size_t i = 0; i < playerCount; i++) {
 			Rectf cullingRect = _assignedViewports[i]->_view->cullingRect();
@@ -1960,7 +1960,7 @@ namespace Jazz2
 
 		auto& input = theApplication().GetInputManager();
 
-		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
+		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
 		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
 			if (input.isJoyMapped(i)) {
@@ -1968,8 +1968,8 @@ namespace Jazz2
 			}
 		}
 
-		for (std::int32_t i = 0; i < UI::ControlScheme::MaxSupportedPlayers; i++) {
-			auto processedInput = UI::ControlScheme::FetchProcessedInput(i,
+		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+			auto processedInput = ControlScheme::FetchProcessedInput(i,
 				_pressedKeys, ArrayView(joyStates, joyStatesCount), _hud == nullptr || !_hud->IsWeaponWheelVisible(i));
 
 			auto& input = _playerInputs[i];

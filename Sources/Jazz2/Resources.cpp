@@ -1,6 +1,6 @@
 ﻿#include "Resources.h"
 
-namespace Jazz2
+namespace Jazz2::Resources
 {
 	GenericGraphicResource::GenericGraphicResource() noexcept
 		: Flags(GenericGraphicResourceFlags::None)

@@ -738,6 +738,12 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace Jazz2::Events
 	@brief Events and object spawning
 */
+/** @dir Jazz2/Input
+	@brief Namespace @ref Jazz2::Input
+*/
+/** @namespace Jazz2::Input
+	@brief Input handling
+*/
 /** @dir Jazz2/Multiplayer
 	@brief Namespace @ref Jazz2::Multiplayer
 */
@@ -752,11 +758,19 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace Jazz2::Rendering
 	@brief Scene rendering and viewport management
 */
+/** @namespace Jazz2::Resources
+	@brief Structures for game resources
+*/
 /** @dir Jazz2/Scripting
 	@brief Namespace @ref Jazz2::Scripting
 */
 /** @namespace Jazz2::Scripting
 	@brief Scripting-related classes, compiled only if `WITH_ANGELSCRIPT`
+	
+	@experimental
+*/
+/** @namespace Jazz2::Scripting::Legacy
+	@brief Legacy JJ2+ definitions
 	
 	@experimental
 */

@@ -2,10 +2,8 @@
 
 #include "RumbleDescription.h"
 
-namespace Jazz2
+namespace Jazz2::Input
 {
-	class JoyMapping;
-
 	/** @brief Gamepad rumble processor */
 	class RumbleProcessor
 	{

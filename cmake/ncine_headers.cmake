@@ -197,8 +197,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.h
 	${NCINE_SOURCE_DIR}/Jazz2/Resources.h
-	${NCINE_SOURCE_DIR}/Jazz2/RumbleDescription.h
-	${NCINE_SOURCE_DIR}/Jazz2/RumbleProcessor.h
 	${NCINE_SOURCE_DIR}/Jazz2/ShieldType.h
 	${NCINE_SOURCE_DIR}/Jazz2/SuspendType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WarpFlags.h
@@ -329,6 +327,10 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Version.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.h
+	${NCINE_SOURCE_DIR}/Jazz2/Input/ControlScheme.h
+	${NCINE_SOURCE_DIR}/Jazz2/Input/RgbLights.h
+	${NCINE_SOURCE_DIR}/Jazz2/Input/RumbleDescription.h
+	${NCINE_SOURCE_DIR}/Jazz2/Input/RumbleProcessor.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/BlurRenderPass.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.h
@@ -352,14 +354,12 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Cinematics.h
-	${NCINE_SOURCE_DIR}/Jazz2/UI/ControlScheme.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/DiscordRpcClient.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/FormattedTextBlock.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/InGameConsole.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.h
-	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.h

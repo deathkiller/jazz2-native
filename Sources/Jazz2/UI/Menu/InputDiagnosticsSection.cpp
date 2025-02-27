@@ -1,7 +1,7 @@
 ﻿#include "InputDiagnosticsSection.h"
 #include "MenuResources.h"
-#include "../ControlScheme.h"
 #include "../../PreferencesCache.h"
+#include "../../Input/ControlScheme.h"
 
 #include "../../../nCine/Application.h"
 

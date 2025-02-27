@@ -4,7 +4,7 @@
 
 #include "PacketTypes.h"
 #include "../PreferencesCache.h"
-#include "../UI/ControlScheme.h"
+#include "../Input/ControlScheme.h"
 #include "../UI/HUD.h"
 #include "../UI/InGameConsole.h"
 #include "../../Main.h"

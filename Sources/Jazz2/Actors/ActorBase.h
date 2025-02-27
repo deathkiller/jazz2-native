@@ -27,6 +27,7 @@
 #endif
 
 using namespace Death::Containers::Literals;
+using namespace Jazz2::Resources;
 
 namespace Jazz2
 {

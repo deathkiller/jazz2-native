@@ -2,7 +2,7 @@
 #include "MenuResources.h"
 #include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
-#include "../ControlScheme.h"
+#include "../../Input/ControlScheme.h"
 #include "../DiscordRpcClient.h"
 #include "BeginSection.h"
 #include "FirstRunSection.h"
@@ -610,7 +610,7 @@ namespace Jazz2::UI::Menu
 		auto& input = theApplication().GetInputManager();
 		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
 
-		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
+		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
 		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
 			if (input.isJoyMapped(i)) {

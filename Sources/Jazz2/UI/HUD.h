@@ -1,17 +1,17 @@
 ﻿#pragma once
 
 #include "Canvas.h"
-#include "ControlScheme.h"
 #include "Font.h"
-#include "RgbLights.h"
 #include "../ILevelHandler.h"
-#include "../Rendering/PlayerViewport.h"
 #include "../Actors/Player.h"
+#include "../Input/ControlScheme.h"
+#include "../Input/RgbLights.h"
+#include "../Rendering/PlayerViewport.h"
 
 #include "../../nCine/Input/InputEvents.h"
 
 #if defined(WITH_ANGELSCRIPT)
-namespace Jazz2::Scripting
+namespace Jazz2::Scripting::Legacy
 {
 	struct jjCANVAS;
 }
@@ -23,7 +23,7 @@ namespace Jazz2::UI
 	class HUD : public Canvas
 	{
 #if defined(WITH_ANGELSCRIPT)
-		friend class Scripting::jjCANVAS;
+		friend struct Scripting::Legacy::jjCANVAS;
 #endif
 
 	public:

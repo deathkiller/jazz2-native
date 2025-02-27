@@ -1,13 +1,13 @@
 #include "RumbleProcessor.h"
-#include "PreferencesCache.h"
-#include "UI/ControlScheme.h"
-#include "../nCine/Application.h"
-#include "../nCine/Base/FrameTimer.h"
-#include "../nCine/Input/IInputManager.h"
+#include "ControlScheme.h"
+#include "../PreferencesCache.h"
+#include "../../nCine/Application.h"
+#include "../../nCine/Base/FrameTimer.h"
+#include "../../nCine/Input/IInputManager.h"
 
 using namespace nCine;
 
-namespace Jazz2
+namespace Jazz2::Input
 {
 	RumbleProcessor::RumbleProcessor()
 	{
@@ -26,7 +26,7 @@ namespace Jazz2
 		}
 
 		auto& inputManager = theApplication().GetInputManager();
-		for (std::int32_t j = 0; j < UI::ControlScheme::MaxConnectedGamepads; j++) {
+		for (std::int32_t j = 0; j < ControlScheme::MaxConnectedGamepads; j++) {
 			inputManager.joystickRumble(j, 0.0f, 0.0f, 0);
 			inputManager.joystickRumbleTriggers(j, 0.0f, 0.0f, 0);
 		}
@@ -67,7 +67,7 @@ namespace Jazz2
 			return;
 		}
 
-		for (std::int32_t j = 0; j < UI::ControlScheme::MaxConnectedGamepads; j++) {
+		for (std::int32_t j = 0; j < ControlScheme::MaxConnectedGamepads; j++) {
 			if (!inputManager.isJoyPresent(j)) {
 				// Allow rumble only for connected gamepads
 				for (std::size_t i = 0; i < _activeRumble.size(); i++) {

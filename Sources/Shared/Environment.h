@@ -30,7 +30,7 @@ namespace Death { namespace Environment {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-	 * @brief Returns whether the application is running in a sandboxed environment
+	 * @brief Returns whether the application is currently running in a sandboxed environment
 	 * 
 	 * Returns @cpp true @ce if running on @ref DEATH_TARGET_IOS "iOS", @ref DEATH_TARGET_ANDROID "Android",
 	 * as a @ref DEATH_TARGET_APPLE "macOS" app bundle, @ref DEATH_TARGET_WINDOWS_RT "Windows Phone/Store"
@@ -40,7 +40,7 @@ namespace Death { namespace Environment {
 	
 #if defined(DEATH_TARGET_APPLE) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Returns version of Apple operating system running this application
+	 * @brief Returns version of Apple operating system currently running this application
 	 *
 	 * @partialsupport Available only on @ref DEATH_TARGET_APPLE "Apple" platforms.
 	 */
@@ -49,7 +49,7 @@ namespace Death { namespace Environment {
 
 #if defined(DEATH_TARGET_SWITCH) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Returns version of Nintendo Switch firmware running this application
+	 * @brief Returns version of Nintendo Switch firmware currently running this application
 	 *
 	 * @partialsupport Available only on @ref DEATH_TARGET_SWITCH "Nintendo Switch" platform.
 	 */
@@ -65,7 +65,7 @@ namespace Death { namespace Environment {
 
 #if defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Returns name and version of Unix system running this application
+	 * @brief Returns name and version of Unix system currently running this application
 	 *
 	 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
 	 */
@@ -74,14 +74,14 @@ namespace Death { namespace Environment {
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Version of Windows® operating system running this application
+	 * @brief Version of Windows® operating system currently running this application
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
 	extern const std::uint64_t WindowsVersion;
 
 	/**
-	 * @brief Returns `true` if this application is running on Windows® Vista or later
+	 * @brief Returns `true` if this application is currently running on Windows® Vista or later
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
@@ -90,7 +90,7 @@ namespace Death { namespace Environment {
 	}
 
 	/**
-	 * @brief Returns `true` if this application is running on Windows® 7 or later
+	 * @brief Returns `true` if this application is currently running on Windows® 7 or later
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
@@ -99,7 +99,7 @@ namespace Death { namespace Environment {
 	}
 
 	/**
-	 * @brief Returns `true` if this application is running on Windows® 8 or later
+	 * @brief Returns `true` if this application is currently running on Windows® 8 or later
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
@@ -108,7 +108,7 @@ namespace Death { namespace Environment {
 	}
 
 	/**
-	 * @brief Returns `true` if this application is running on Windows® 10 or later
+	 * @brief Returns `true` if this application is currently running on Windows® 10 or later
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
@@ -117,7 +117,7 @@ namespace Death { namespace Environment {
 	}
 
 	/**
-	 * @brief Returns `true` if this application is running on Windows® 11 or later
+	 * @brief Returns `true` if this application is currently running on Windows® 11 or later
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
@@ -127,7 +127,7 @@ namespace Death { namespace Environment {
 
 #	if defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Type of device running this application
+	 * @brief Type of device currently running this application
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS_RT "Windows RT" platform.
 	 */

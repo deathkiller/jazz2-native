@@ -114,7 +114,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Resources.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/RumbleProcessor.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/ActorBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Player.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/PlayerCorpse.cpp
@@ -237,6 +236,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Input/ControlScheme.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Input/RgbLights.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Input/RumbleProcessor.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/BlurRenderPass.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.cpp
@@ -257,14 +259,12 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Cinematics.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/UI/ControlScheme.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/DiscordRpcClient.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/FormattedTextBlock.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/InGameConsole.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.cpp

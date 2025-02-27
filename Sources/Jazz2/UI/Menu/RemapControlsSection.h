@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "ScrollableMenuSection.h"
-#include "../ControlScheme.h"
+#include "../../Input/ControlScheme.h"
 
 #include "../../../nCine/Input/InputEvents.h"
 #include "../../../nCine/Base/BitArray.h"

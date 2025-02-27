@@ -1,7 +1,7 @@
 ﻿#include "PreferencesCache.h"
 #include "ContentResolver.h"
 #include "LevelHandler.h"
-#include "UI/ControlScheme.h"
+#include "Input/ControlScheme.h"
 #include "../nCine/Application.h"
 #include "../nCine/Base/Random.h"
 
@@ -171,7 +171,7 @@ namespace Jazz2
 #	endif
 #endif
 
-		UI::ControlScheme::Reset();
+		ControlScheme::Reset();
 
 		// Try to read config file
 		if (!resetConfig) {
@@ -273,7 +273,7 @@ namespace Jazz2
 
 					// Controls
 					if (version >= 4) {
-						auto mappings = UI::ControlScheme::GetAllMappings();
+						auto mappings = ControlScheme::GetAllMappings();
 
 						bool shouldResetBecauseOfOldVersion = (version < 9);
 						std::uint32_t playerCount = uc.ReadValue<std::uint8_t>();
@@ -281,12 +281,12 @@ namespace Jazz2
 						for (std::uint32_t i = 0; i < playerCount; i++) {
 							for (std::uint32_t j = 0; j < controlMappingCount; j++) {
 								std::uint8_t targetCount = uc.ReadValue<std::uint8_t>();
-								if (!shouldResetBecauseOfOldVersion && i < UI::ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerActions::Count) {
+								if (!shouldResetBecauseOfOldVersion && i < ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerActions::Count) {
 									auto& mapping = mappings[i * (std::uint32_t)PlayerActions::Count + j];
 									mapping.Targets.clear();
 
 									for (std::uint32_t k = 0; k < targetCount; k++) {
-										UI::MappingTarget target = { uc.ReadValue<std::uint32_t>() };
+										MappingTarget target = { uc.ReadValue<std::uint32_t>() };
 										mapping.Targets.push_back(target);
 									}
 								} else {
@@ -298,7 +298,7 @@ namespace Jazz2
 						// Reset primary Menu action, because it's hardcoded
 						auto& menuMapping = mappings[(std::uint32_t)PlayerActions::Menu];
 						if (menuMapping.Targets.empty()) {
-							mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(UI::ControlScheme::CreateTarget(Keys::Escape));
+							mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(ControlScheme::CreateTarget(Keys::Escape));
 						}
 					} else {
 						// Skip old control mapping definitions
@@ -421,7 +421,7 @@ namespace Jazz2
 			} else if (arg == "/mute"_s) {
 				MasterVolume = 0.0f;
 			} else if (arg == "/reset-controls"_s) {
-				UI::ControlScheme::Reset();
+				ControlScheme::Reset();
 			}
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			else if (arg == "/standalone"_s) {
@@ -510,10 +510,10 @@ namespace Jazz2
 		co.WriteVariableUint32(0);
 
 		// Controls
-		co.WriteValue<std::uint8_t>((std::uint8_t)UI::ControlScheme::MaxSupportedPlayers);
+		co.WriteValue<std::uint8_t>((std::uint8_t)ControlScheme::MaxSupportedPlayers);
 		co.WriteValue<std::uint8_t>((std::uint8_t)PlayerActions::Count);
-		for (std::int32_t i = 0; i < UI::ControlScheme::MaxSupportedPlayers; i++) {
-			auto mappings = UI::ControlScheme::GetMappings(i);
+		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+			auto mappings = ControlScheme::GetMappings(i);
 			for (std::uint32_t j = 0; j < mappings.size(); j++) {
 				const auto& mapping = mappings[j];
 				std::uint8_t targetCount = (std::uint8_t)mapping.Targets.size();
