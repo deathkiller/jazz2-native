@@ -2,11 +2,13 @@
 
 #include "IMenuContainer.h"
 #include "../Canvas.h"
-#include "../ControlScheme.h"
+#include "../../Input/ControlScheme.h"
 #include "../../../Main.h"
 
 #include "../../../nCine/Primitives/Vector2.h"
 #include "../../../nCine/Input/IInputManager.h"
+
+using namespace Jazz2::Input;
 
 namespace Jazz2::UI::Menu
 {

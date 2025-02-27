@@ -30,7 +30,7 @@ static const std::uint8_t KeyLayout[] = {
 };
 #endif
 
-namespace Jazz2::UI
+namespace Jazz2::Input
 {
 	RgbLights& RgbLights::Get()
 	{

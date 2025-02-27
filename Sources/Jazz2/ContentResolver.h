@@ -27,6 +27,7 @@
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+using namespace Jazz2::Resources;
 using namespace nCine;
 
 namespace Jazz2

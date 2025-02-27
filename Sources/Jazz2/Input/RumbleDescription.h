@@ -4,7 +4,7 @@
 
 using namespace Death::Containers;
 
-namespace Jazz2
+namespace Jazz2::Input
 {
 	class RumbleProcessor;
 

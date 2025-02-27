@@ -317,6 +317,11 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.h" />
+    <ClInclude Include="Jazz2\ContentResolver.h" />
+    <ClInclude Include="Jazz2\Input\ControlScheme.h" />
+    <ClInclude Include="Jazz2\Input\RgbLights.h" />
+    <ClInclude Include="Jazz2\Input\RumbleDescription.h" />
+    <ClInclude Include="Jazz2\Input\RumbleProcessor.h" />
     <ClInclude Include="Jazz2\Rendering\BlurRenderPass.h" />
     <ClInclude Include="Jazz2\Rendering\CombineRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
@@ -459,8 +464,6 @@
     <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
-    <ClInclude Include="Jazz2\RumbleDescription.h" />
-    <ClInclude Include="Jazz2\RumbleProcessor.h" />
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
@@ -480,7 +483,6 @@
     <ClInclude Include="Jazz2\UI\Alignment.h" />
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\Cinematics.h" />
-    <ClInclude Include="Jazz2\UI\ControlScheme.h" />
     <ClInclude Include="Jazz2\UI\DiscordRpcClient.h" />
     <ClInclude Include="Jazz2\UI\Font.h" />
     <ClInclude Include="Jazz2\UI\FormattedTextBlock.h" />
@@ -520,7 +522,6 @@
     <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h" />
-    <ClInclude Include="Jazz2\UI\RgbLights.h" />
     <ClInclude Include="Jazz2\WarpFlags.h" />
     <ClInclude Include="Jazz2\WeaponType.h" />
     <ClInclude Include="Jazz2\WeatherType.h" />
@@ -691,7 +692,6 @@
     <ClInclude Include="Jazz2\AnimState.h" />
     <ClInclude Include="Jazz2\Collisions\DynamicTree.h" />
     <ClInclude Include="Jazz2\Collisions\DynamicTreeBroadPhase.h" />
-    <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Events\EventMap.h" />
     <ClInclude Include="Jazz2\Events\EventSpawner.h" />
     <ClInclude Include="Jazz2\EventType.h" />
@@ -848,6 +848,9 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Level.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Strings.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
+    <ClCompile Include="Jazz2\Input\ControlScheme.cpp" />
+    <ClCompile Include="Jazz2\Input\RgbLights.cpp" />
+    <ClCompile Include="Jazz2\Input\RumbleProcessor.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
@@ -859,7 +862,6 @@
     <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp" />
     <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
-    <ClCompile Include="Jazz2\RumbleProcessor.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />
@@ -873,7 +875,6 @@
     <ClCompile Include="Jazz2\Scripting\ScriptPlayerWrapper.cpp" />
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
     <ClCompile Include="Jazz2\UI\Cinematics.cpp" />
-    <ClCompile Include="Jazz2\UI\ControlScheme.cpp" />
     <ClCompile Include="Jazz2\UI\DiscordRpcClient.cpp" />
     <ClCompile Include="Jazz2\UI\Font.cpp" />
     <ClCompile Include="Jazz2\UI\FormattedTextBlock.cpp" />
@@ -909,7 +910,6 @@
     <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp" />
-    <ClCompile Include="Jazz2\UI\RgbLights.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
     <ClCompile Include="nCine\Audio\ALAudioDevice.cpp" />

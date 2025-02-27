@@ -15,6 +15,9 @@ namespace Death::IO
 namespace Jazz2::Scripting
 {
 	class ScriptPlayerWrapper;
+}
+namespace Jazz2::Scripting::Legacy
+{
 	class jjPLAYER;
 }
 #endif
@@ -60,7 +63,7 @@ namespace Jazz2::Actors
 		friend class UI::HUD;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
-		friend class Scripting::jjPLAYER;
+		friend class Scripting::Legacy::jjPLAYER;
 #endif
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MultiLevelHandler;

@@ -11,13 +11,13 @@
 using namespace Death::Containers;
 using namespace nCine;
 
-namespace Jazz2::UI
+namespace Jazz2::UI::Menu
 {
-	namespace Menu
-	{
-		class RemapControlsSection;
-	}
+	class RemapControlsSection;
+}
 
+namespace Jazz2::Input
+{
 	/** @brief Navigation flags for @ref ControlScheme::FetchNavigation(), supports a bitwise combination of its member values */
 	enum class NavigationFlags
 	{
@@ -59,7 +59,7 @@ namespace Jazz2::UI
 	/** @brief Provides access to a user configured control scheme */
 	class ControlScheme
 	{
-		friend class Menu::RemapControlsSection;
+		friend class UI::Menu::RemapControlsSection;
 
 	public:
 		ControlScheme() = delete;

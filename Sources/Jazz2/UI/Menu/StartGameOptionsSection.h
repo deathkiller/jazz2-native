@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "MenuSection.h"
-#include "../ControlScheme.h"
+#include "../../Input/ControlScheme.h"
 
 namespace Jazz2::UI::Menu
 {

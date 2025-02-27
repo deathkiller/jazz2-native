@@ -14,7 +14,10 @@ namespace Jazz2::UI
 
 namespace Jazz2::Scripting
 {
-	class jjPLAYER;
+	namespace Legacy
+	{
+		class jjPLAYER;
+	}
 
 	/** @brief Specifies a part to be drawn in @ref LevelScriptLoader::OnDraw() */
 	enum class DrawType
@@ -34,7 +37,7 @@ namespace Jazz2::Scripting
 	*/
 	class LevelScriptLoader : public ScriptLoader
 	{
-		friend class jjPLAYER;
+		friend class Legacy::jjPLAYER;
 
 	public:
 		LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath);

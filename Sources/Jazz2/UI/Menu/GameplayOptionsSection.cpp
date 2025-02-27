@@ -5,7 +5,7 @@
 #include "LanguageSelectSection.h"
 #include "RefreshCacheSection.h"
 #include "../DiscordRpcClient.h"
-#include "../RgbLights.h"
+#include "../../Input/RgbLights.h"
 #include "../../PreferencesCache.h"
 
 #include <Utf8.h>

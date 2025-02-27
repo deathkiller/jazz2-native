@@ -52,7 +52,7 @@ namespace ChromaSDK::Keyboard
 #endif
 #endif
 
-namespace Jazz2::UI
+namespace Jazz2::Input
 {
 	/** @brief Individual lights of @ref RgbLights service */
 	enum struct AuraLight

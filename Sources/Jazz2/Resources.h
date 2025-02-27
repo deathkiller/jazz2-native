@@ -18,7 +18,7 @@ using namespace Death::Containers;
 using namespace Death::IO;
 using namespace nCine;
 
-namespace Jazz2
+namespace Jazz2::Resources
 {
 	/** @brief Flags for @ref GenericGraphicResource, supports a bitwise combination of its member values */
 	enum class GenericGraphicResourceFlags

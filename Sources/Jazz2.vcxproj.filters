@@ -244,6 +244,12 @@
     <Filter Include="Source Files\Jazz2\Rendering">
       <UniqueIdentifier>{9fd51680-3a83-42c4-94aa-b0cd99d88bce}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Input">
+      <UniqueIdentifier>{1507ea40-2384-499d-b295-afe88c90b994}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Input">
+      <UniqueIdentifier>{e213d1ee-1e55-4994-b2c1-5e13336c39f6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -585,9 +591,6 @@
     <ClInclude Include="nCine\Primitives\Colorf.h">
       <Filter>Header Files\nCine\Primitives</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\ContentResolver.h">
-      <Filter>Header Files\Jazz2</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\AnimState.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
@@ -909,9 +912,6 @@
     <ClInclude Include="Jazz2\UI\Alignment.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\UI\RgbLights.h">
-      <Filter>Header Files\Jazz2\UI</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h">
       <Filter>Header Files\Jazz2\Actors\Solid</Filter>
     </ClInclude>
@@ -971,9 +971,6 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.Palettes.h">
       <Filter>Header Files\Jazz2\Compatibility</Filter>
-    </ClInclude>
-    <ClInclude Include="Jazz2\UI\ControlScheme.h">
-      <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleTough.h">
       <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
@@ -1494,12 +1491,6 @@
     <ClInclude Include="Jazz2\WarpFlags.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\RumbleProcessor.h">
-      <Filter>Header Files\Jazz2</Filter>
-    </ClInclude>
-    <ClInclude Include="Jazz2\RumbleDescription.h">
-      <Filter>Header Files\Jazz2</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.h">
       <Filter>Header Files\Shared\Threading\Implementation</Filter>
     </ClInclude>
@@ -1571,6 +1562,21 @@
     </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Move.h">
       <Filter>Header Files\Shared\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\ContentResolver.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Input\RgbLights.h">
+      <Filter>Header Files\Jazz2\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Input\RumbleDescription.h">
+      <Filter>Header Files\Jazz2\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Input\RumbleProcessor.h">
+      <Filter>Header Files\Jazz2\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Input\ControlScheme.h">
+      <Filter>Header Files\Jazz2\Input</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2075,9 +2081,6 @@
     <ClCompile Include="Jazz2\UI\Font.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\UI\RgbLights.cpp">
-      <Filter>Source Files\Jazz2\UI</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\Actors\Solid\BarrelContainer.cpp">
       <Filter>Source Files\Jazz2\Actors\Solid</Filter>
     </ClCompile>
@@ -2122,9 +2125,6 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="Jazz2\UI\ControlScheme.cpp">
-      <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Enemies\TurtleTough.cpp">
       <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
@@ -2525,9 +2525,6 @@
     <ClCompile Include="Jazz2\UI\FormattedTextBlock.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\RumbleProcessor.cpp">
-      <Filter>Source Files\Jazz2</Filter>
-    </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Threading\Implementation\WaitOnAddress.cpp">
       <Filter>Source Files\Shared\Threading\Implementation</Filter>
     </ClCompile>
@@ -2572,6 +2569,15 @@
     </ClCompile>
     <ClCompile Include="nCine\Threading\Thread.cpp">
       <Filter>Source Files\nCine\Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Input\RumbleProcessor.cpp">
+      <Filter>Source Files\Jazz2\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Input\ControlScheme.cpp">
+      <Filter>Source Files\Jazz2\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Input\RgbLights.cpp">
+      <Filter>Source Files\Jazz2\Input</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

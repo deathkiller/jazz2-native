@@ -4,7 +4,7 @@
 
 using namespace nCine;
 
-namespace Jazz2::UI
+namespace Jazz2::Input
 {
 	ControlSchemeMapping ControlScheme::_mappings[MaxSupportedPlayers * (std::int32_t)PlayerActions::Count] = {};
 
