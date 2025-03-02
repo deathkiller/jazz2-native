@@ -27,14 +27,11 @@ namespace Jazz2::UI::Multiplayer
 		void Show();
 		/** @brief Hides the lobby screen */
 		void Hide();
-		/** Sets allowed player types as bitmask of @ref PlayerType */
+		/** @brief Sets allowed player types as bitmask of @ref PlayerType */
 		void SetAllowedPlayerTypes(std::uint8_t playerTypes);
 
 	private:
-		static constexpr std::uint16_t MainLayer = 100;
-		static constexpr std::uint16_t ShadowLayer = 80;
-		static constexpr std::uint16_t FontLayer = 200;
-		static constexpr std::uint16_t FontShadowLayer = 120;
+		static constexpr std::uint16_t MainLayer = 60;
 		
 		Jazz2::Multiplayer::MpLevelHandler* _levelHandler;
 		Font* _smallFont;

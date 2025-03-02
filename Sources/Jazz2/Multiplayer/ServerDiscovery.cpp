@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "NetworkManager.h"
+#include "NetworkManagerBase.h"
 #include "PacketTypes.h"
 #include "../../nCine/Threading/Thread.h"
 
@@ -18,7 +18,7 @@ namespace Jazz2::Multiplayer
 	{
 		DEATH_DEBUG_ASSERT(server != nullptr, "server cannot be null", );
 
-		NetworkManager::InitializeBackend();
+		NetworkManagerBase::InitializeBackend();
 
 		_socket = TryCreateSocket("ff02::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
@@ -31,7 +31,7 @@ namespace Jazz2::Multiplayer
 	{
 		DEATH_DEBUG_ASSERT(observer != nullptr, "observer cannot be null", );
 
-		NetworkManager::InitializeBackend();
+		NetworkManagerBase::InitializeBackend();
 
 		_socket = TryCreateSocket("ff02::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
@@ -45,7 +45,7 @@ namespace Jazz2::Multiplayer
 		_observer = nullptr;
 		_thread.Join();
 
-		NetworkManager::ReleaseBackend();
+		NetworkManagerBase::ReleaseBackend();
 	}
 
 	ENetSocket ServerDiscovery::TryCreateSocket(const char* multicastAddress, ENetAddress& parsedAddress)
@@ -254,7 +254,7 @@ namespace Jazz2::Multiplayer
 							//packet.WriteVariableUint32(server->GetCurrentPlayers());
 							packet.WriteVariableUint32(7); // TODO: CurrentPlayers
 							//packet.WriteVariableUint32(server->GetMaxPlayers());
-							packet.WriteVariableUint32((std::uint32_t)NetworkManager::MaxPeerCount); // TODO: MaxPlayers
+							packet.WriteVariableUint32((std::uint32_t)NetworkManagerBase::MaxPeerCount); // TODO: MaxPlayers
 
 							// TODO: Current level
 							auto levelName = String("unknown/unknown");

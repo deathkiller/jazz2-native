@@ -5,9 +5,6 @@
 #include "PlayerType.h"
 #include "WeaponType.h"
 
-#include <algorithm>
-#include <cstring>
-
 #include <Containers/ArrayView.h>
 #include <Containers/String.h>
 
@@ -70,116 +67,16 @@ namespace Jazz2
 		/** @brief Player carry over descriptions */
 		PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
 
-		LevelInitialization()
-			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
-		{
-		}
+		LevelInitialization();
 
-		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged)
-			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
-		{
-			LevelName = level;
-			EpisodeName = episode;
-			Difficulty = difficulty;
-			IsReforged = isReforged;
-			CheatsUsed = false;
+		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged);
+		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType);
+		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes);
 
-			LastExitType = ExitType::None;
-
-			for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
-				PlayerCarryOvers[i].Type = PlayerType::None;
-			}
-		}
-
-		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
-			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
-		{
-			LevelName = level;
-			EpisodeName = episode;
-			Difficulty = difficulty;
-			IsReforged = isReforged;
-			CheatsUsed = cheatsUsed;
-
-			LastExitType = ExitType::None;
-
-			PlayerCarryOvers[0].Type = playerType;
-			PlayerCarryOvers[0].Lives = DefaultLives;
-
-			for (std::int32_t i = 1; i < MaxPlayerCount; i++) {
-				PlayerCarryOvers[i].Type = PlayerType::None;
-			}
-		}
-
-		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
-			: IsLocalSession(true), ElapsedMilliseconds(0), PlayerCarryOvers{}
-		{
-			LevelName = level;
-			EpisodeName = episode;
-			Difficulty = difficulty;
-			IsReforged = isReforged;
-			CheatsUsed = cheatsUsed;
-
-			LastExitType = ExitType::None;
-
-			std::int32_t playerCount = std::min((std::int32_t)playerTypes.size(), MaxPlayerCount);
-			for (std::int32_t i = 0; i < playerCount; i++) {
-				PlayerCarryOvers[i].Type = playerTypes[i];
-				PlayerCarryOvers[i].Lives = DefaultLives;
-			}
-
-			for (std::int32_t i = playerCount; i < MaxPlayerCount; i++) {
-				PlayerCarryOvers[i].Type = PlayerType::None;
-			}
-		}
-
-		LevelInitialization(const LevelInitialization& copy)
-		{
-			LevelName = copy.LevelName;
-			EpisodeName = copy.EpisodeName;
-			IsLocalSession = copy.IsLocalSession;
-			Difficulty = copy.Difficulty;
-			IsReforged = copy.IsReforged;
-			CheatsUsed = copy.CheatsUsed;
-			LastExitType = copy.LastExitType;
-			LastEpisodeName = copy.LastEpisodeName;
-			ElapsedMilliseconds = copy.ElapsedMilliseconds;
-
-			std::memcpy(PlayerCarryOvers, copy.PlayerCarryOvers, sizeof(PlayerCarryOvers));
-		}
-
-		LevelInitialization(LevelInitialization&& move)
-		{
-			LevelName = std::move(move.LevelName);
-			EpisodeName = std::move(move.EpisodeName);
-			IsLocalSession = move.IsLocalSession;
-			Difficulty = move.Difficulty;
-			IsReforged = move.IsReforged;
-			CheatsUsed = move.CheatsUsed;
-			LastExitType = move.LastExitType;
-			LastEpisodeName = std::move(move.LastEpisodeName);
-			ElapsedMilliseconds = move.ElapsedMilliseconds;
-
-			std::memcpy(PlayerCarryOvers, move.PlayerCarryOvers, sizeof(PlayerCarryOvers));
-		}
+		LevelInitialization(const LevelInitialization& copy) noexcept;
+		LevelInitialization(LevelInitialization&& move) noexcept;
 
 		/** @brief Returns number of assigned players */
-		std::int32_t GetPlayerCount(const PlayerCarryOver** firstPlayer = nullptr) const
-		{
-			if (firstPlayer != nullptr) {
-				*firstPlayer = nullptr;
-			}
-
-			std::int32_t playerCount = 0;
-			for (std::int32_t i = playerCount; i < MaxPlayerCount; i++) {
-				if (PlayerCarryOvers[i].Type != PlayerType::None) {
-					playerCount++;
-					if (firstPlayer != nullptr && *firstPlayer == nullptr) {
-						*firstPlayer = &PlayerCarryOvers[i];
-					}
-				}
-			}
-
-			return playerCount;
-		}
+		std::int32_t GetPlayerCount(const PlayerCarryOver** firstPlayer = nullptr) const;
 	};
 }

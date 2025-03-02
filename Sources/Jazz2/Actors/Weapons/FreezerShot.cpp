@@ -97,7 +97,7 @@ namespace Jazz2::Actors::Weapons
 
 			auto tileMap = _levelHandler->TileMap();
 			auto resBase = _currentAnimation->Base;
-			if (tileMap != nullptr && _pos.Y < _levelHandler->WaterLevel() && resBase->TextureDiffuse != nullptr) {
+			if (tileMap != nullptr && _pos.Y < _levelHandler->GetWaterLevel() && resBase->TextureDiffuse != nullptr) {
 				Vector2i texSize = resBase->TextureDiffuse->size();
 				float dx = Random().FastFloat(-8.0f, 8.0f);
 				float dy = Random().FastFloat(-3.0f, 3.0f);
@@ -108,7 +108,7 @@ namespace Jazz2::Actors::Weapons
 				debris.Pos = Vector2f(_pos.X + dx, _pos.Y + dy);
 				debris.Depth = _renderer.layer();
 				debris.Size = Vector2f(currentSize, currentSize);
-				debris.Acceleration = Vector2f(0.0f, _levelHandler->Gravity());
+				debris.Acceleration = Vector2f(0.0f, _levelHandler->GetGravity());
 
 				debris.Scale = 1.2f,
 					debris.Alpha = 1.0f;

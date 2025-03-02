@@ -6,6 +6,10 @@
 #include "../../PlayerAction.h"
 #include "../Alignment.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "../../Multiplayer/ServerInitialization.h"
+#endif
+
 #include "../../../nCine/I18n.h"
 
 namespace Jazz2::UI::Menu
@@ -62,7 +66,7 @@ namespace Jazz2::UI::Menu
 		/** @brief Connects to a multiplayer server */
 		virtual bool ConnectToServer(const StringView address, std::uint16_t port) = 0;
 		/** @brief Creates a multiplayer server */
-		virtual bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) = 0;
+		virtual bool CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit) = 0;
 #endif
 		/** @brief Applies changes to preferences */
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;

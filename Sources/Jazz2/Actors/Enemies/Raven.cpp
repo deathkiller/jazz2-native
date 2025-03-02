@@ -114,7 +114,7 @@ namespace Jazz2::Actors::Enemies
 			SetAnimation(AnimState::TransitionAttack);
 
 			// Can't fly into the water
-			float waterLevel = _levelHandler->WaterLevel() - 12.0f;
+			float waterLevel = _levelHandler->GetWaterLevel() - 12.0f;
 			if (foundPos.Y > waterLevel - 8.0f) {
 				foundPos.Y = waterLevel - 8.0f;
 			}

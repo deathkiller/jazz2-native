@@ -113,7 +113,7 @@ public:
 
 #if defined(WITH_MULTIPLAYER)
 	bool ConnectToServer(StringView address, std::uint16_t port) override;
-	bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
+	bool CreateServer(ServerInitialization&& serverInit) override;
 
 	StringView GetServerName() const override;
 	void SetServerName(StringView value) override;
@@ -395,7 +395,7 @@ void GameEventHandler::OnBeginFrame()
 		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
 			_pendingCallbacks[i]();
 		}
-		LOGD("%i async callbacks executed", _pendingCallbacks.size());
+		//LOGD("%i async callbacks executed", _pendingCallbacks.size());
 		_pendingCallbacks.clear();
 	}
 
@@ -518,7 +518,7 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 void GameEventHandler::InvokeAsync(Function<void()>&& callback, const char* sourceFunc)
 {
 	_pendingCallbacks.push_back(std::move(callback));
-	LOGD("Callback queued for async execution from %s", sourceFunc);
+	//LOGD("Callback queued for async execution from %s", sourceFunc);
 }
 
 void GameEventHandler::GoToMainMenu(bool afterIntro)
@@ -743,25 +743,26 @@ bool GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
 	return _networkManager->CreateClient(this, address, port, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
 }
 
-bool GameEventHandler::CreateServer(LevelInitialization&& levelInit, std::uint16_t port)
+bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 {
-	LOGI("Creating server on port %u...", port);
+	LOGI("Creating server \"%s\" on port %u...", serverInit.ServerName.data(), serverInit.ServerPort);
 
 	if (_networkManager == nullptr) {
 		_networkManager = std::make_unique<NetworkManager>();
 	}
 
+	if (!_networkManager->CreateServer(this, serverInit.ServerPort)) {
+		return false;
+	}
+
+	_serverName = std::move(serverInit.ServerName);
 	if (_serverName.empty()) {
 		_serverName = "Unnamed server"_s;
 	}
 
-	if (!_networkManager->CreateServer(this, port)) {
-		return false;
-	}
-
-	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get());
-		levelHandler->Initialize(levelInit);
+	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), serverInit.GameMode);
+		levelHandler->Initialize(serverInit.InitialLevel);
 		SetStateHandler(std::move(levelHandler));
 	}, NCINE_CURRENT_FUNCTION);
 
@@ -806,7 +807,24 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
-	LOGI("[MP] Peer disconnected (%u)", (std::uint32_t)reason);
+	const char* reasonStr;
+	switch (reason) {
+		case Reason::Disconnected: reasonStr = "Client disconnected by user"; break;
+		case Reason::IncompatibleVersion: reasonStr = "Incompatible client version"; break;
+		case Reason::ServerIsFull: reasonStr = "Server is full or busy"; break;
+		case Reason::ServerNotReady: reasonStr = "Server is not ready yet"; break;
+		case Reason::ServerStopped: reasonStr = "Server is stopped for unknown reason"; break;
+		case Reason::ServerStoppedForMaintenance: reasonStr = "Server is stopped for maintenance"; break;
+		case Reason::ServerStoppedForReconfiguration: reasonStr = "Server is stopped for reconfiguration"; break;
+		case Reason::ServerStoppedForUpdate: reasonStr = "Server is stopped for update"; break;
+		case Reason::ConnectionLost: reasonStr = "Connection lost"; break;
+		case Reason::ConnectionTimedOut: reasonStr = "Connection timed out"; break;
+		case Reason::Kicked: reasonStr = "Kicked by server"; break;
+		case Reason::Banned: reasonStr = "Banned by server"; break;
+		default: reasonStr = "Unknown reason"; break;
+	}
+
+	LOGI("[MP] Peer disconnected: %s (%u)", reasonStr, (std::uint32_t)reason);
 
 	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
 		if (multiLevelHandler->OnPeerDisconnected(peer)) {
@@ -898,8 +916,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
 
-					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get());
-					levelHandler->SetGameMode(gameMode);
+					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), gameMode);
 					levelHandler->Initialize(levelInit);
 					SetStateHandler(std::move(levelHandler));
 				}, NCINE_CURRENT_FUNCTION);
@@ -1626,7 +1643,8 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get());
+		// TODO: Set proper game mode
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), MpGameMode::Unknown);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}

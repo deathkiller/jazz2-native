@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Enemies
 				_direction.X = targetPos.X - _pos.X;
 				_direction.Y = targetPos.Y - _pos.Y;
 				float length = _direction.Length();
-				if (length < 320.0f && targetPos.Y < _levelHandler->WaterLevel()) {
+				if (length < 320.0f && targetPos.Y < _levelHandler->GetWaterLevel()) {
 					_direction.Normalize();
 
 					_speed.X = 0.0f;
@@ -118,7 +118,7 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			// Can't fly into the water
-			if (_pos.Y > _levelHandler->WaterLevel() - 12.0f) {
+			if (_pos.Y > _levelHandler->GetWaterLevel() - 12.0f) {
 				_speed.Y = -0.4f;
 				_state = StateIdle;
 

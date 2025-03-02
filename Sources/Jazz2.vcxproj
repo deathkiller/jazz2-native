@@ -78,6 +78,7 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
+  
   <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   <Import Project="$(SolutionDir)\VC-LTL helper for Visual Studio.props" />
   <Import Project="$(SolutionDir)\Sign.props" Condition="Exists('$(SolutionDir)\Sign.props')" />
@@ -103,6 +104,7 @@
       </PropertyGroup>
     </Otherwise>
   </Choose>
+  
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -320,6 +322,8 @@
     <ClInclude Include="Jazz2\Input\RgbLights.h" />
     <ClInclude Include="Jazz2\Input\RumbleDescription.h" />
     <ClInclude Include="Jazz2\Input\RumbleProcessor.h" />
+    <ClInclude Include="Jazz2\Multiplayer\NetworkManagerBase.h" />
+    <ClInclude Include="Jazz2\Multiplayer\ServerInitialization.h" />
     <ClInclude Include="Jazz2\Rendering\BlurRenderPass.h" />
     <ClInclude Include="Jazz2\Rendering\CombineRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
@@ -851,9 +855,11 @@
     <ClCompile Include="Jazz2\Input\ControlScheme.cpp" />
     <ClCompile Include="Jazz2\Input\RgbLights.cpp" />
     <ClCompile Include="Jazz2\Input\RumbleProcessor.cpp" />
+    <ClCompile Include="Jazz2\LevelInitialization.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\NetworkManagerBase.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Rendering\BlurRenderPass.cpp" />

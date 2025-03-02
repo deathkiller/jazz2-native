@@ -689,10 +689,12 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpGameMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpLevelHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PacketTypes.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Reason.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerInitialization.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Backends/enet.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
@@ -711,6 +713,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpLevelHandler.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp

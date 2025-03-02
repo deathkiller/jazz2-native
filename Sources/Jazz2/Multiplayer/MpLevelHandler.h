@@ -40,13 +40,14 @@ namespace Jazz2::Multiplayer
 		friend class UI::Multiplayer::MpInGameLobby;
 
 	public:
-		MpLevelHandler(IRootController* root, NetworkManager* networkManager);
+		MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpGameMode gameMode);
 		~MpLevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
 
 		bool IsLocalSession() const override;
 		bool IsPausable() const override;
+		float GetHurtInvulnerableTime() const override;
 
 		float GetDefaultAmbientLight() const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
@@ -87,7 +88,7 @@ namespace Jazz2::Multiplayer
 		void ShakeCameraView(Actors::Player* player, float duration) override;
 		void ShakeCameraViewNear(Vector2f pos, float duration) override;
 		void SetTrigger(std::uint8_t triggerId, bool newState) override;
-		void SetWeather(WeatherType type, uint8_t intensity) override;
+		void SetWeather(WeatherType type, std::uint8_t intensity) override;
 		bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) override;
 
 		bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads = true) override;
@@ -138,7 +139,7 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerWeaponChanged(Actors::Player* player);
 
 	private:
-		enum class PeerState {
+		enum class LevelPeerState {
 			Unknown,
 			LevelLoaded,
 			LevelSynchronized,
@@ -148,16 +149,14 @@ namespace Jazz2::Multiplayer
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		struct PeerDesc {
+		struct LevelPeerDesc {
 			Actors::Multiplayer::RemotePlayerOnServer* Player;
-			PeerState State;
+			LevelPeerState State;
 			std::uint64_t LastUpdated;
-			PlayerType PreferredPlayerType;
-			String PlayerName;
 
-			PeerDesc() {}
-			PeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, PeerState state)
-				: Player(player), State(state), LastUpdated(0), PreferredPlayerType(PlayerType::None) {}
+			LevelPeerDesc() {}
+			LevelPeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, LevelPeerState state)
+				: Player(player), State(state), LastUpdated(0) {}
 		};
 #endif
 
@@ -208,7 +207,7 @@ namespace Jazz2::Multiplayer
 		bool _isServer;
 		bool _initialUpdateSent;
 		bool _enableSpawning;
-		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer description
+		HashMap<Peer, LevelPeerDesc> _peerDesc; // Server: Per peer description
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID

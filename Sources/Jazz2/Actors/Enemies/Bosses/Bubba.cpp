@@ -48,7 +48,7 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		// Process level bounds
-		Recti levelBounds = _levelHandler->LevelBounds();
+		Recti levelBounds = _levelHandler->GetLevelBounds();
 		if (_pos.X < levelBounds.X) {
 			_pos.X = static_cast<float>(levelBounds.X);
 		} else if (_pos.X > levelBounds.X + levelBounds.W) {
@@ -111,7 +111,7 @@ namespace Jazz2::Actors::Bosses
 			case State::Tornado: {
 				if (_stateTime <= 0.0f) {
 					float cooldownMin, cooldownMax;
-					switch (_levelHandler->Difficulty()) {
+					switch (_levelHandler->GetDifficulty()) {
 						case GameDifficulty::Easy:
 							cooldownMin = 600.0f;
 							cooldownMax = 1200.0f;

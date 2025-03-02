@@ -9,7 +9,7 @@ namespace Jazz2::UI::Menu
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	struct MultiplayerGameModeItem {
-		Multiplayer::MpGameMode Mode;
+		Jazz2::Multiplayer::MpGameMode Mode;
 		StringView DisplayName;
 	};
 #endif

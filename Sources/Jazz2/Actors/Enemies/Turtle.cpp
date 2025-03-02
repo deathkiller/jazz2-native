@@ -157,7 +157,7 @@ namespace Jazz2::Actors::Enemies
 			TryGenerateRandomDrop();
 		} else {
 			float shellSpeedY;
-			if (_pos.Y > _levelHandler->WaterLevel()) {
+			if (_pos.Y > _levelHandler->GetWaterLevel()) {
 				shellSpeedY = -0.65f;
 			} else if (_levelHandler->IsReforged()) {
 				shellSpeedY = -1.1f;
@@ -222,7 +222,7 @@ namespace Jazz2::Actors::Enemies
 		constexpr float Distance = 96.0f;
 
 		bool shouldWithdraw = false;
-		if (_levelHandler->Difficulty() != GameDifficulty::Easy) {
+		if (_levelHandler->GetDifficulty() != GameDifficulty::Easy) {
 			AABBf withdrawAabb = AABB;
 			withdrawAabb.T = withdrawAabb.B - 30.0f;
 			withdrawAabb.L -= Distance;

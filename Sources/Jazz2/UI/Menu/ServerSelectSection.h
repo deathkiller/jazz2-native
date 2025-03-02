@@ -7,7 +7,7 @@
 
 namespace Jazz2::UI::Menu
 {
-	class ServerSelectSection : public MenuSection, public Multiplayer::IServerObserver
+	class ServerSelectSection : public MenuSection, public Jazz2::Multiplayer::IServerObserver
 	{
 	public:
 		ServerSelectSection();
@@ -21,16 +21,16 @@ namespace Jazz2::UI::Menu
 		void OnDrawClipped(Canvas* canvas) override;
 		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
 
-		void OnServerFound(Multiplayer::ServerDescription&& desc) override;
+		void OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc) override;
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ItemData {
-			Multiplayer::ServerDescription Desc;
+			Jazz2::Multiplayer::ServerDescription Desc;
 			float Y;
 
-			ItemData(Multiplayer::ServerDescription&& desc);
+			ItemData(Jazz2::Multiplayer::ServerDescription&& desc);
 		};
 #endif
 
@@ -50,7 +50,7 @@ namespace Jazz2::UI::Menu
 		float _touchSpeed;
 		std::int32_t _pressedCount;
 		float _noiseCooldown;
-		Multiplayer::ServerDiscovery _discovery;
+		Jazz2::Multiplayer::ServerDiscovery _discovery;
 		std::int8_t _touchDirection;
 
 		void ExecuteSelected();

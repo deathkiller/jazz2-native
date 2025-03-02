@@ -282,7 +282,7 @@ namespace Jazz2
 		return _tileMap.get();
 	}
 
-	GameDifficulty LevelHandler::Difficulty() const
+	GameDifficulty LevelHandler::GetDifficulty() const
 	{
 		return _difficulty;
 	}
@@ -308,17 +308,17 @@ namespace Jazz2
 		return false;
 	}
 
-	Recti LevelHandler::LevelBounds() const
+	Recti LevelHandler::GetLevelBounds() const
 	{
 		return _levelBounds;
 	}
 
-	float LevelHandler::ElapsedFrames() const
+	float LevelHandler::GetElapsedFrames() const
 	{
 		return _elapsedFrames;
 	}
 
-	float LevelHandler::Gravity() const
+	float LevelHandler::GetGravity() const
 	{
 		constexpr float DefaultGravity = 0.3f;
 
@@ -326,9 +326,14 @@ namespace Jazz2
 		return (_isReforged ? DefaultGravity : DefaultGravity * 0.8f);
 	}
 
-	float LevelHandler::WaterLevel() const
+	float LevelHandler::GetWaterLevel() const
 	{
 		return _waterLevel;
+	}
+
+	float LevelHandler::GetHurtInvulnerableTime() const
+	{
+		return 180.0f;
 	}
 
 	ArrayView<const std::shared_ptr<Actors::ActorBase>> LevelHandler::GetActors() const
@@ -1152,7 +1157,7 @@ namespace Jazz2
 
 	void LevelHandler::SetCheckpoint(Actors::Player* player, Vector2f pos)
 	{
-		_checkpointFrames = ElapsedFrames();
+		_checkpointFrames = GetElapsedFrames();
 
 		// All players will be respawned at the checkpoint, so also set the same ambient light
 		float ambientLight = _defaultAmbientLight.W;

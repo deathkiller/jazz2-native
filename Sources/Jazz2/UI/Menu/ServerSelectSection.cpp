@@ -15,7 +15,7 @@ namespace Jazz2::UI::Menu
 {
 	ServerSelectSection::ServerSelectSection()
 		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f), _pressedCount(0),
-			_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(Multiplayer::ServerDiscovery(this)),
+			_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(this),
 			_touchDirection(0)
 	{
 	}
@@ -126,7 +126,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Connect to Server"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Connect To Server"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
@@ -258,7 +258,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ServerSelectSection::OnServerFound(Multiplayer::ServerDescription&& desc)
+	void ServerSelectSection::OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc)
 	{
 		for (auto& item : _items) {
 			if (item.Desc.EndpointString == desc.EndpointString) {
@@ -295,7 +295,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	ServerSelectSection::ItemData::ItemData(Multiplayer::ServerDescription&& desc)
+	ServerSelectSection::ItemData::ItemData(Jazz2::Multiplayer::ServerDescription&& desc)
 		: Desc(std::move(desc))
 	{
 	}

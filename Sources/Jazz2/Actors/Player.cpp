@@ -294,7 +294,7 @@ namespace Jazz2::Actors
 			(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpInFreefall &&
 				_currentTransition->State != AnimState::TransitionWarpOut && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
 			Vector2f lastPos = _pos;
-			Recti levelBounds = _levelHandler->LevelBounds();
+			Recti levelBounds = _levelHandler->GetLevelBounds();
 			if (lastPos.X < levelBounds.X) {
 				lastPos.X = (float)levelBounds.X;
 				_pos = lastPos;
@@ -1161,7 +1161,7 @@ namespace Jazz2::Actors
 				auto* res = _metadata->FindAnimation(ShieldFire);
 				if (res != nullptr) {
 					constexpr float PosMultiplier = 0.003f;
-					float frames = _levelHandler->ElapsedFrames();
+					float frames = _levelHandler->GetElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 					float shieldSize = 70.0f * shieldScale;
@@ -1242,7 +1242,7 @@ namespace Jazz2::Actors
 			case ShieldType::Water: {
 				auto* res = _metadata->FindAnimation(ShieldWater);
 				if (res != nullptr) {
-					float frames = _levelHandler->ElapsedFrames();
+					float frames = _levelHandler->GetElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1297,7 +1297,7 @@ namespace Jazz2::Actors
 				auto* res = _metadata->FindAnimation(ShieldLightning);
 				if (res != nullptr) {
 					constexpr float PosMultiplier = 0.001f;
-					float frames = _levelHandler->ElapsedFrames();
+					float frames = _levelHandler->GetElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 					float shieldSize = 70.0f * shieldScale + sinf(frames * 0.06f) * 4.0f;
@@ -1520,7 +1520,7 @@ namespace Jazz2::Actors
 						if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 							_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 						}
-						float invulnerableTime = (!_levelHandler->IsLocalSession() ? 80.0f : 180.0f);
+						float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 						SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 						PlayPlayerSfx("HurtSoft"_s);
 					} else {
@@ -2129,7 +2129,7 @@ namespace Jazz2::Actors
 				cancelCopter = (CanJump() || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
 
 				_copterFramesLeft -= timeMult;
-				_speed.Y = std::min(_speed.Y + _levelHandler->Gravity() * timeMult, 1.5f);
+				_speed.Y = std::min(_speed.Y + _levelHandler->GetGravity() * timeMult, 1.5f);
 			} else {
 				cancelCopter = ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall && _copterFramesLeft > 0.0f);
 			}
@@ -2241,7 +2241,7 @@ namespace Jazz2::Actors
 	void Player::OnHandleWater()
 	{
 		if (_inWater) {
-			if (_pos.Y >= _levelHandler->WaterLevel()) {
+			if (_pos.Y >= _levelHandler->GetWaterLevel()) {
 				SetState(ActorState::ApplyGravitation, false);
 
 				if (std::abs(_speed.X) > 1.0f || std::abs(_speed.Y) > 1.0f) {
@@ -2280,17 +2280,17 @@ namespace Jazz2::Actors
 
 				SetAnimation(AnimState::Jump);
 
-				OnWaterSplash(Vector2f(_pos.X, _levelHandler->WaterLevel()), false);
+				OnWaterSplash(Vector2f(_pos.X, _levelHandler->GetWaterLevel()), false);
 			}
 		} else {
-			if (_pos.Y >= _levelHandler->WaterLevel() && _waterCooldownLeft <= 0.0f) {
+			if (_pos.Y >= _levelHandler->GetWaterLevel() && _waterCooldownLeft <= 0.0f) {
 				_inWater = true;
 				_waterCooldownLeft = 20.0f;
 
 				_controllable = true;
 				EndDamagingMove();
 
-				OnWaterSplash(Vector2f(_pos.X, _levelHandler->WaterLevel()), true);
+				OnWaterSplash(Vector2f(_pos.X, _levelHandler->GetWaterLevel()), true);
 			}
 
 			// Adjust walking animation speed
@@ -2510,13 +2510,13 @@ namespace Jazz2::Actors
 					// External force of pinball bumber has higher priority
 					if (_externalForceCooldown <= 0.0f || _speed.Y < 0.0f) {
 						if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity() * timeMult * 8.0f, -6.0f);
+							_speed.Y = std::max(_speed.Y - _levelHandler->GetGravity() * timeMult * 8.0f, -6.0f);
 						} else if (GetState(ActorState::ApplyGravitation)) {
-							float gravity = _levelHandler->Gravity();
+							float gravity = _levelHandler->GetGravity();
 							_externalForce.Y = -2.0f * gravity * timeMult;
 							_speed.Y = std::min(gravity * timeMult, _speed.Y);
 						} else {
-							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity() * timeMult, -6.0f);
+							_speed.Y = std::max(_speed.Y - _levelHandler->GetGravity() * timeMult, -6.0f);
 						}
 					}
 				}

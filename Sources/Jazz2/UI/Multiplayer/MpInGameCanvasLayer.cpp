@@ -27,24 +27,36 @@ namespace Jazz2::UI::Multiplayer
 
 		if (_levelHandler->_isServer) {
 			for (auto& [peer, peerDesc] : _levelHandler->_peerDesc) {
-				if (peerDesc.Player != nullptr) {
-					auto pos = peerDesc.Player->GetPos();
-					_smallFont->DrawString(this, peerDesc.PlayerName, charOffset, pos.X - 4.0f, pos.Y - 42.0f, MainLayer, Alignment::Center,
-						Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+				if (peerDesc.Player != nullptr && peerDesc.Player->_renderer.isEnabled()) {
+					auto* globalPeerDesc = _levelHandler->_networkManager->GetPeerDescriptor(peer);
+					if (globalPeerDesc != nullptr) {
+						auto pos = peerDesc.Player->GetPos();
+						DrawStringShadow(globalPeerDesc->PlayerName, pos.X - 4.0f, pos.Y - 42.0f);
+					}
 				}
 			}
 		} else {
 			for (auto& [actorId, playerName] : _levelHandler->_playerNames) {
 				auto it = _levelHandler->_remoteActors.find(actorId);
-				if (it != _levelHandler->_remoteActors.end()) {
+				if (it != _levelHandler->_remoteActors.end() && it->second->_renderer.isEnabled()) {
 					auto pos = it->second->GetPos();
-					_smallFont->DrawString(this, playerName, charOffset, pos.X - 4.0f, pos.Y - 42.0f, MainLayer, Alignment::Center,
-						Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+					DrawStringShadow(playerName, pos.X - 4.0f, pos.Y - 42.0f);
 				}
 			}
 		}
 
 		return true;
+	}
+
+	void MpInGameCanvasLayer::DrawStringShadow(StringView text, float x, float y)
+	{
+		std::int32_t charOffsetShadow = 0;
+		_smallFont->DrawString(this, text, charOffsetShadow, x, y + 1.0f, FontShadowLayer, Alignment::Center,
+			Colorf(0.0f, 0.0f, 0.0f, 0.36f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+
+		std::int32_t charOffset = 0;
+		_smallFont->DrawString(this, text, charOffset, x, y, FontLayer, Alignment::Center,
+			Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 	}
 }
 

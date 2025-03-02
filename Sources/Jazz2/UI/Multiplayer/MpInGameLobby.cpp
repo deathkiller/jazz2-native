@@ -61,9 +61,13 @@ namespace Jazz2::UI::Multiplayer
 		ViewSize = _levelHandler->GetViewSize();
 
 		if (_isVisible) {
+			DrawSolid(Vector2f(0.0f, 0.0f), 20, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 1.0f)));
+		}
+
+		if (_isVisible && _levelHandler->_pauseMenu == nullptr) {
 			std::int32_t charOffset = 0;
 
-			DrawSolid(Vector2f(0.0f, 0.0f), 20, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
+			//DrawSolid(Vector2f(0.0f, 0.0f), 20, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
 
 			static const StringView playerTypes[] = { "Jazz"_s, "Spaz"_s, "Lori"_s };
 			static const Colorf playerColors[] = {
@@ -77,10 +81,10 @@ namespace Jazz2::UI::Multiplayer
 
 			Vector2i center = ViewSize / 2;
 
-			_smallFont->DrawString(this, _levelHandler->_lobbyMessage, charOffset, center.X, center.Y / 2, FontLayer,
+			_smallFont->DrawString(this, _levelHandler->_lobbyMessage, charOffset, center.X, center.Y / 2, MainLayer,
 				Alignment::Center, Font::DefaultColor, 1.0f, 0.7f, 0.6f, 0.6f, 0.4f, 1.0f);
 
-			_smallFont->DrawString(this, _("Character"), charOffset, center.X, center.Y + 10.0f, FontLayer,
+			_smallFont->DrawString(this, _("Character"), charOffset, center.X, center.Y + 10.0f, MainLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 			float offset, spacing;
@@ -107,10 +111,10 @@ namespace Jazz2::UI::Multiplayer
 
 					float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, FontLayer,
+					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
 						Alignment::Center, playerColors[j], size, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 				} else {
-					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, FontLayer,
+					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
 						Alignment::Center, Font::TransparentDefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 				}
 			}
@@ -118,13 +122,13 @@ namespace Jazz2::UI::Multiplayer
 			//if (_selectedIndex == i) {
 				float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				_smallFont->DrawString(this, "<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 50.0f, FontLayer,
+				_smallFont->DrawString(this, "<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 50.0f, MainLayer,
 					Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.7f);
-				_smallFont->DrawString(this, ">"_s, charOffset, center.X + 110.0f + 30.0f * size, center.Y + 50.0f, FontLayer,
+				_smallFont->DrawString(this, ">"_s, charOffset, center.X + 110.0f + 30.0f * size, center.Y + 50.0f, MainLayer,
 					Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.7f);
 			//}
 
-			_smallFont->DrawString(this, _("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, (ViewSize.Y + (center.Y + 80.0f)) / 2, FontLayer,
+			_smallFont->DrawString(this, _("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, (ViewSize.Y + (center.Y + 80.0f)) / 2, MainLayer,
 				Alignment::Bottom, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 		}
 
@@ -171,6 +175,10 @@ namespace Jazz2::UI::Multiplayer
 	{
 		auto& input = theApplication().GetInputManager();
 		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
+
+		if (_levelHandler->_pauseMenu != nullptr) {
+			return;
+		}
 
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;

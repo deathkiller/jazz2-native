@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Lighting
 		_speed = details.Params[8] * 0.0072f;
 		std::uint8_t sync = details.Params[9];
 
-		_phase = sync * fPiOver2 + _speed * _levelHandler->ElapsedFrames();
+		_phase = sync * fPiOver2 + _speed * _levelHandler->GetElapsedFrames();
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);

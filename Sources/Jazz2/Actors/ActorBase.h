@@ -45,6 +45,10 @@ namespace Jazz2::Multiplayer
 {
 	class MpLevelHandler;
 }
+namespace Jazz2::UI::Multiplayer
+{
+	class MpInGameCanvasLayer;
+}
 #endif
 
 namespace Jazz2::Actors
@@ -164,6 +168,7 @@ namespace Jazz2::Actors
 		friend class Jazz2::Rendering::LightingRenderer;
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MpLevelHandler;
+		friend class Jazz2::UI::Multiplayer::MpInGameCanvasLayer;
 #endif
 
 	public:

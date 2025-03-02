@@ -173,3 +173,84 @@ jobs:
       with:
         name: Jazz2_Android_DEBUG_${{ matrix.Platform }}
         path: ./_package/
+
+
+  # Testing builds with online multiplayer
+  MultiplayerPreview:
+    #if: ${{ false }}  # Temporarily disabled, it will be removed in the future as it's no longer needed.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Platform: ARM
+
+        - BuildType: Release
+          Platform: x64
+
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 'Create Build Environment'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y cmake curl g++
+
+    - name: 'Configure CMake'
+      run: |
+        case "${{ matrix.Platform }}" in
+          ARM ) architecture="arm64-v8a;armeabi-v7a"
+                universalApk="ON" ;;
+          x64 ) architecture="x86_64"
+                   universalApk="OFF" ;;
+          * ) exit 1 ;;
+        esac
+        
+        rm -f ./Content/Translations/*.po
+        
+        export JAVA_HOME=$JAVA_HOME_17_X64
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D WITH_MULTIPLAYER=ON
+
+    - name: 'Build'
+      run: |
+        export JAVA_HOME=$JAVA_HOME_17_X64
+        make -j $(nproc) -C ./_build/
+        cd ./_build/android/
+        gradle assemble${{ matrix.BuildType }}
+
+    - name: 'Create Package'
+      run: |
+        case "${{ matrix.BuildType }}" in
+          Debug ) buildDir="debug"
+                  fileSuffix="debug" ;;
+          * ) buildDir="release"
+              fileSuffix="release-unsigned" ;;
+        esac
+        case "${{ matrix.Platform }}" in
+          ARM ) filename="app-universal-$fileSuffix.apk" ;;
+          x64 ) filename="app-x86_64-$fileSuffix.apk" ;;
+          * ) exit 1 ;;
+        esac
+        
+        mkdir ./_package/
+        $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2.apk"
+        cp -f ./LICENSE ./_package/LICENSE
+        
+        if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+          echo 'Pull requests are not signed!'
+        else
+          echo 'Signing APK file...'
+          echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2.apk"
+        fi
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Jazz2_Android_MultiplayerPreview_${{ matrix.Platform }}
+        path: ./_package/

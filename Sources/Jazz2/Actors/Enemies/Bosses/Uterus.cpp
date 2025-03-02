@@ -208,7 +208,7 @@ namespace Jazz2::Actors::Bosses
 			if (diff.Length() > 40) {
 				Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff.Normalized() * 0.4f).Normalized();
 				float mult = (_hasShield ? 0.8f : 2.0f) * timeMult;
-				switch (_levelHandler->Difficulty()) {
+				switch (_levelHandler->GetDifficulty()) {
 					case GameDifficulty::Easy: mult *= 0.8f; break;
 					case GameDifficulty::Hard: mult *= 1.1f; break;
 				}

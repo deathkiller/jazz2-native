@@ -128,7 +128,7 @@ namespace Jazz2::Actors::Enemies
 			_targetPos.Y += (_targetPos.Y - _originPos.Y) * 1.6f;
 
 			// Can't fly into the water
-			float waterLevel = _levelHandler->WaterLevel() - 12.0f;
+			float waterLevel = _levelHandler->GetWaterLevel() - 12.0f;
 			if (_targetPos.Y > waterLevel) {
 				_targetPos.Y = waterLevel;
 			}

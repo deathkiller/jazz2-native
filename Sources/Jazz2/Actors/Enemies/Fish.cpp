@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Enemies
 
 	void Fish::OnUpdate(float timeMult)
 	{
-		float waterLevel = _levelHandler->WaterLevel();
+		float waterLevel = _levelHandler->GetWaterLevel();
 		bool inWater = (_pos.Y > waterLevel - 160.0f);
 		if (!inWater) {
 			// Don't move if not in water

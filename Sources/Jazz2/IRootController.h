@@ -3,6 +3,10 @@
 #include "../Main.h"
 #include "LevelInitialization.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "Multiplayer/ServerInitialization.h"
+#endif
+
 #include <Containers/Function.h>
 
 using namespace Death::Containers;
@@ -52,7 +56,7 @@ namespace Jazz2
 		/** @brief Sets current state handler to remove multiplayer session */
 		virtual bool ConnectToServer(StringView address, std::uint16_t port) = 0;
 		/** @brief Creates a multiplayer server */
-		virtual bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) = 0;
+		virtual bool CreateServer(Multiplayer::ServerInitialization&& serverInit) = 0;
 
 		/** @brief Returns name of the server */
 		virtual StringView GetServerName() const = 0;

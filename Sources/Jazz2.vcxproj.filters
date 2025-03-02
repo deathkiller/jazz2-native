@@ -966,9 +966,6 @@
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\PlayerActions.h">
-      <Filter>Header Files\Jazz2</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -1587,8 +1584,17 @@
     <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameLobby.h">
       <Filter>Header Files\Jazz2\UI\Multiplayer</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameCanvas.h">
+    <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.h">
       <Filter>Header Files\Jazz2\UI\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\PlayerAction.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\ServerInitialization.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\NetworkManagerBase.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2591,11 +2597,17 @@
     <ClCompile Include="Jazz2\Input\RgbLights.cpp">
       <Filter>Source Files\Jazz2\Input</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameCanvas.cpp">
-      <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameLobby.cpp">
       <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.cpp">
+      <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\LevelInitialization.cpp">
+      <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\NetworkManagerBase.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

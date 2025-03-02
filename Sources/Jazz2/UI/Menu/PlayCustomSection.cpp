@@ -16,11 +16,11 @@ namespace Jazz2::UI::Menu
 	PlayCustomSection::PlayCustomSection()
 	{
 		// TRANSLATORS: Menu item in Play Custom Game section
-		_items.emplace_back(PlayCustomItem { PlayCustomItemType::PlayCustomLevels, _("Play Custom Levels") });
+		_items.emplace_back(PlayCustomItem { PlayCustomItemType::PlayCustomLevels, _("Play Custom Levels Locally") });
 		// TRANSLATORS: Menu item in Play Custom Game section
-		_items.emplace_back(PlayCustomItem { PlayCustomItemType::PlayStoryInCoop, _("Play Story in Cooperation") });
+		_items.emplace_back(PlayCustomItem { PlayCustomItemType::PlayStoryInCoop, _("Host Story in Cooperation") });
 		// TRANSLATORS: Menu item in Play Custom Game section
-		_items.emplace_back(PlayCustomItem { PlayCustomItemType::CreateCustomServer, _("Create Custom Server") });
+		_items.emplace_back(PlayCustomItem { PlayCustomItemType::CreateCustomServer, _("Host Custom Levels") });
 		// TRANSLATORS: Menu item in Play Custom Game section
 		_items.emplace_back(PlayCustomItem { PlayCustomItemType::ConnectToServer, _("Connect To Server") });
 	}
@@ -37,14 +37,18 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		//int32_t charOffset = 0;
-		//_root->DrawStringShadow(_("Play Custom Game"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
-		//	Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		int32_t charOffset = 0;
+		_root->DrawStringShadow(_("Play Custom Game"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
 	void PlayCustomSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		item.Height = ItemHeight * 8 / 7;
+		item.Height = ItemHeight;
+
+		if (item.Item.Type == PlayCustomItemType::PlayCustomLevels) {
+			item.Height += 44.0f;
+		}
 	}
 
 	void PlayCustomSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
@@ -61,6 +65,11 @@ namespace Jazz2::UI::Menu
 		} else {
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f);
+		}
+
+		if (item.Item.Type == PlayCustomItemType::PlayCustomLevels) {
+			_root->DrawStringShadow(_("— Online Multiplayer —"), charOffset, centerX, item.Y + 50.0f, IMenuContainer::FontLayer,
+				Alignment::Center, Colorf(0.8f, 0.42f, 0.32f, 0.5f), 0.8f);
 		}
 	}
 

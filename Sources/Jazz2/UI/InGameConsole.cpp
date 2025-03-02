@@ -62,7 +62,7 @@ namespace Jazz2::UI
 		Vector2f currentLinePos = Vector2f(46.0f, ViewSize.Y - 60.0f);
 
 		if (_isVisible) {
-			DrawSolid(Vector2f(0.0f, 0.0f), 20, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
+			DrawSolid(Vector2f(0.0f, 0.0f), 80, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
 
 			Colorf color = (_currentLine[0] == '/' ? Colorf(0.38f, 0.48f, 0.69f, 0.5f) : Colorf(0.62f, 0.44f, 0.34f, 0.5f));
 
