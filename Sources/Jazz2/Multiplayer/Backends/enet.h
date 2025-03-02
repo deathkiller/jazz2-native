@@ -143,17 +143,17 @@
 	#define ENET_SOCKETSET_REMOVE(sockset, socket) FD_CLR(socket, &(sockset))
 	#define ENET_SOCKETSET_CHECK(sockset, socket)  FD_ISSET(socket, &(sockset))
 #else
+	#include <errno.h>
 	#include <sys/types.h>
 	#include <sys/time.h>
 	#include <sys/socket.h>
-	#include <errno.h>
+	#include <arpa/inet.h>
+	#include <netinet/in.h>
+	#include <netinet/tcp.h>
 
 	#if defined(ENET_IMPLEMENTATION)
 	#include <poll.h>
 	#include <string.h>
-	#include <arpa/inet.h>
-	#include <netinet/in.h>
-	#include <netinet/tcp.h>
 	#include <netdb.h>
 	#include <unistd.h>
 	#include <sys/ioctl.h>
