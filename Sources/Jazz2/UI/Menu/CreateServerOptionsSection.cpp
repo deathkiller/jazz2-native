@@ -249,7 +249,7 @@ namespace Jazz2::UI::Menu
 				_items[i].TouchY = center.Y;
 			}
 
-		    center.Y += 56.0f;
+		    center.Y += 52.0f;
 		}
 	}
 
