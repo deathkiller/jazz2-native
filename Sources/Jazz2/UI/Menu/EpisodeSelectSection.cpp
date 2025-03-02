@@ -64,28 +64,28 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (!_shouldStart) {
-			if (_root->ActionHit(PlayerActions::Menu)) {
+			if (_root->ActionHit(PlayerAction::Menu)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->LeaveSection();
 				return;
 			} else if (!_items.empty()) {
-				if (_root->ActionHit(PlayerActions::Fire)) {
+				if (_root->ActionHit(PlayerAction::Fire)) {
 					OnExecuteSelected();
-				} else if (_root->ActionHit(PlayerActions::Left)) {
+				} else if (_root->ActionHit(PlayerAction::Left)) {
 					if (!_multiplayer && _expanded) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = false;
 						_expandedAnimation = 0.0f;
 						EnsureVisibleSelected();
 					}
-				} else if (_root->ActionHit(PlayerActions::Right)) {
+				} else if (_root->ActionHit(PlayerAction::Right)) {
 					if (!_multiplayer && !_expanded && (_items[_selectedIndex].Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = true;
 						EnsureVisibleSelected();
 					}
 				} else if (_items.size() > 1) {
-					if (_root->ActionHit(PlayerActions::Up)) {
+					if (_root->ActionHit(PlayerAction::Up)) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_animation = 0.0f;
 						_transitionFromEpisode = _selectedIndex;
@@ -100,7 +100,7 @@ namespace Jazz2::UI::Menu
 							_selectedIndex = (std::int32_t)(_items.size() - 1);
 						}
 						EnsureVisibleSelected();
-					} else if (_root->ActionHit(PlayerActions::Down)) {
+					} else if (_root->ActionHit(PlayerAction::Down)) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_animation = 0.0f;
 						_transitionFromEpisode = _selectedIndex;

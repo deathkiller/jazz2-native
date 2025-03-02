@@ -134,13 +134,13 @@ namespace Jazz2::UI::Menu
 	template<class TItem>
 	void ScrollableMenuSection<TItem>::OnHandleInput()
 	{
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerAction::Menu)) {
 			OnBackPressed();
 		} else if (!_items.empty()) {
-			if (_root->ActionHit(PlayerActions::Fire)) {
+			if (_root->ActionHit(PlayerAction::Fire)) {
 				OnExecuteSelected();
 			} else if (_items.size() > 1) {
-				if (_root->ActionHit(PlayerActions::Up)) {
+				if (_root->ActionHit(PlayerAction::Up)) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_animation = 0.0f;
 
@@ -151,7 +151,7 @@ namespace Jazz2::UI::Menu
 					}
 					EnsureVisibleSelected();
 					OnSelectionChanged(_items[_selectedIndex]);
-				} else if (_root->ActionHit(PlayerActions::Down)) {
+				} else if (_root->ActionHit(PlayerAction::Down)) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_animation = 0.0f;
 

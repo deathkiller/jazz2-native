@@ -5,7 +5,7 @@
 namespace Jazz2::Multiplayer
 {
 	/** @brief Multiplayer game mode */
-	enum class MultiplayerGameMode
+	enum class MpGameMode
 	{
 		Unknown = 0,		/**< Unspecified */
 

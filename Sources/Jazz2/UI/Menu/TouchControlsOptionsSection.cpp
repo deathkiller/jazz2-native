@@ -23,7 +23,7 @@ namespace Jazz2::UI::Menu
 
 	void TouchControlsOptionsSection::OnUpdate(float timeMult)
 	{
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerAction::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 			return;

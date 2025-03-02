@@ -54,7 +54,7 @@ namespace Jazz2::UI::Menu
 
 	void ControlsOptionsSection::OnHandleInput()
 	{
-		if (!_items.empty() && _items[_selectedIndex].Item.HasBooleanValue && (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right))) {
+		if (!_items.empty() && _items[_selectedIndex].Item.HasBooleanValue && (_root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right))) {
 			OnExecuteSelected();
 		} else {
 			ScrollableMenuSection::OnHandleInput();

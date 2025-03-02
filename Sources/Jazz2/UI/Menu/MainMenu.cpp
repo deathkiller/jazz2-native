@@ -48,8 +48,8 @@ namespace Jazz2::UI::Menu
 		resolver.EndLoading();
 
 		// Mark Fire and Menu button as already pressed to avoid some issues
-		_pressedActions = (1 << (int32_t)PlayerActions::Fire) | (1 << ((int32_t)PlayerActions::Fire + 16)) |
-			(1 << (int32_t)PlayerActions::Menu) | (1 << ((int32_t)PlayerActions::Menu + 16));
+		_pressedActions = (1 << (int32_t)PlayerAction::Fire) | (1 << ((int32_t)PlayerAction::Fire + 16)) |
+			(1 << (int32_t)PlayerAction::Menu) | (1 << ((int32_t)PlayerAction::Menu + 16));
 
 		SwitchToSection<BeginSection>();
 
@@ -564,12 +564,12 @@ namespace Jazz2::UI::Menu
 #endif
 	}
 
-	bool MainMenu::ActionPressed(PlayerActions action)
+	bool MainMenu::ActionPressed(PlayerAction action)
 	{
 		return ((_pressedActions & (1 << (std::int32_t)action)) == (1 << (std::int32_t)action));
 	}
 
-	bool MainMenu::ActionHit(PlayerActions action)
+	bool MainMenu::ActionHit(PlayerAction action)
 	{
 		return ((_pressedActions & ((1 << (std::int32_t)action) | (1 << (16 + (std::int32_t)action)))) == (1 << (std::int32_t)action));
 	}

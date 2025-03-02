@@ -281,8 +281,8 @@ namespace Jazz2
 						for (std::uint32_t i = 0; i < playerCount; i++) {
 							for (std::uint32_t j = 0; j < controlMappingCount; j++) {
 								std::uint8_t targetCount = uc.ReadValue<std::uint8_t>();
-								if (!shouldResetBecauseOfOldVersion && i < ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerActions::Count) {
-									auto& mapping = mappings[i * (std::uint32_t)PlayerActions::Count + j];
+								if (!shouldResetBecauseOfOldVersion && i < ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerAction::Count) {
+									auto& mapping = mappings[i * (std::uint32_t)PlayerAction::Count + j];
 									mapping.Targets.clear();
 
 									for (std::uint32_t k = 0; k < targetCount; k++) {
@@ -296,9 +296,9 @@ namespace Jazz2
 						}
 
 						// Reset primary Menu action, because it's hardcoded
-						auto& menuMapping = mappings[(std::uint32_t)PlayerActions::Menu];
+						auto& menuMapping = mappings[(std::uint32_t)PlayerAction::Menu];
 						if (menuMapping.Targets.empty()) {
-							mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(ControlScheme::CreateTarget(Keys::Escape));
+							mappings[(std::int32_t)PlayerAction::Menu].Targets.push_back(ControlScheme::CreateTarget(Keys::Escape));
 						}
 					} else {
 						// Skip old control mapping definitions
@@ -511,7 +511,7 @@ namespace Jazz2
 
 		// Controls
 		co.WriteValue<std::uint8_t>((std::uint8_t)ControlScheme::MaxSupportedPlayers);
-		co.WriteValue<std::uint8_t>((std::uint8_t)PlayerActions::Count);
+		co.WriteValue<std::uint8_t>((std::uint8_t)PlayerAction::Count);
 		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
 			auto mappings = ControlScheme::GetMappings(i);
 			for (std::uint32_t j = 0; j < mappings.size(); j++) {

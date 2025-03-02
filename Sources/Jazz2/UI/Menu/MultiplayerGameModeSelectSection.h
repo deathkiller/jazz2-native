@@ -3,13 +3,13 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "ScrollableMenuSection.h"
-#include "../../Multiplayer/MultiplayerGameMode.h"
+#include "../../Multiplayer/MpGameMode.h"
 
 namespace Jazz2::UI::Menu
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	struct MultiplayerGameModeItem {
-		Multiplayer::MultiplayerGameMode Mode;
+		Multiplayer::MpGameMode Mode;
 		StringView DisplayName;
 	};
 #endif

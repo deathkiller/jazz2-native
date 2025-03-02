@@ -2,7 +2,7 @@
 
 #include "Canvas.h"
 #include "Font.h"
-#include "../ILevelHandler.h"
+#include "../LevelHandler.h"
 #include "../Actors/Player.h"
 #include "../Input/ControlScheme.h"
 #include "../Input/RgbLights.h"
@@ -69,7 +69,7 @@ namespace Jazz2::UI
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct TouchButtonInfo {
-			PlayerActions Action;
+			PlayerAction Action;
 
 			float Left;
 			float Top;
@@ -165,7 +165,7 @@ namespace Jazz2::UI
 		static std::int32_t GetWeaponCount(Actors::Player* player);
 		void DrawWeaponWheelSegment(WeaponWheelState& state, float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
 
-		TouchButtonInfo CreateTouchButton(PlayerActions action, AnimState state, Alignment align, float x, float y, float w, float h);
+		TouchButtonInfo CreateTouchButton(PlayerAction action, AnimState state, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
 
 		void UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport);

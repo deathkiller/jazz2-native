@@ -64,16 +64,16 @@ namespace Jazz2::UI::Menu
 			_noiseCooldown -= timeMult;
 		}
 
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerAction::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 			return;
 		} else if (!_items.empty()) {
-			if (_root->ActionHit(PlayerActions::Fire)) {
+			if (_root->ActionHit(PlayerAction::Fire)) {
 				ExecuteSelected();
 			} else if (_items.size() > 1) {
-				if (_root->ActionPressed(PlayerActions::Up)) {
-					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerActions::Up)) {
+				if (_root->ActionPressed(PlayerAction::Up)) {
+					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Up)) {
 						if (_noiseCooldown <= 0.0f) {
 							_noiseCooldown = 10.0f;
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -88,8 +88,8 @@ namespace Jazz2::UI::Menu
 						EnsureVisibleSelected();
 						_pressedCount = std::min(_pressedCount + 6, 10);
 					}
-				} else if (_root->ActionPressed(PlayerActions::Down)) {
-					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerActions::Down)) {
+				} else if (_root->ActionPressed(PlayerAction::Down)) {
+					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Down)) {
 						if (_noiseCooldown <= 0.0f) {
 							_noiseCooldown = 10.0f;
 							_root->PlaySfx("MenuSelect"_s, 0.5f);

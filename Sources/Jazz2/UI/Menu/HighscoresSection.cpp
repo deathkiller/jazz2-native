@@ -71,20 +71,20 @@ namespace Jazz2::UI::Menu
 
 		if (waitingForInput) {
 #if defined(DEATH_TARGET_ANDROID)
-			if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
+			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				auto& app = static_cast<AndroidApplication&>(theApplication());
 				app.ToggleSoftInput();
 			} else
 #endif
-			if (_root->ActionHit(PlayerActions::Menu) || _root->ActionHit(PlayerActions::Run)) {
+			if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				auto& selectedItem = _items[_selectedIndex];
 				if (!selectedItem.Item->PlayerName.empty()) {
 					SerializeToFile();
 				}
-			} else if (_root->ActionHit(PlayerActions::Fire)) {
+			} else if (_root->ActionHit(PlayerAction::Fire)) {
 				auto& selectedItem = _items[_selectedIndex];
 				if (!selectedItem.Item->PlayerName.empty()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -316,11 +316,11 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerAction::Menu)) {
 			OnBackPressed();
-		} else if (_root->ActionHit(PlayerActions::Fire)) {
+		} else if (_root->ActionHit(PlayerAction::Fire)) {
 			OnExecuteSelected();
-		} else if (_root->ActionHit(PlayerActions::Up)) {
+		} else if (_root->ActionHit(PlayerAction::Up)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex > 0) {
@@ -330,7 +330,7 @@ namespace Jazz2::UI::Menu
 			}
 			EnsureVisibleSelected();
 			OnSelectionChanged(_items[_selectedIndex]);
-		} else if (_root->ActionHit(PlayerActions::Down)) {
+		} else if (_root->ActionHit(PlayerAction::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex < (std::int32_t)(_items.size() - 1)) {
@@ -340,7 +340,7 @@ namespace Jazz2::UI::Menu
 			}
 			EnsureVisibleSelected();
 			OnSelectionChanged(_items[_selectedIndex]);
-		} else if (_root->ActionHit(PlayerActions::Left)) {
+		} else if (_root->ActionHit(PlayerAction::Left)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			_selectedSeries--;
@@ -355,7 +355,7 @@ namespace Jazz2::UI::Menu
 				EnsureVisibleSelected();
 				OnSelectionChanged(_items[_selectedIndex]);
 			}
-		} else if (_root->ActionHit(PlayerActions::Right)) {
+		} else if (_root->ActionHit(PlayerAction::Right)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			_selectedSeries++;
@@ -626,8 +626,6 @@ namespace Jazz2::UI::Menu
 
 	String HighscoresSection::TryGetDefaultName()
 	{
-		// TODO: Discord integration
-
 #if defined(DEATH_TARGET_ANDROID)
 		// TODO: Get user name on Android
 #elif defined(DEATH_TARGET_SWITCH)

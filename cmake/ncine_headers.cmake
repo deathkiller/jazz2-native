@@ -193,7 +193,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/LevelInitialization.h
 	${NCINE_SOURCE_DIR}/Jazz2/LightEmitter.h
 	${NCINE_SOURCE_DIR}/Jazz2/PitType.h
-	${NCINE_SOURCE_DIR}/Jazz2/PlayerActions.h
+	${NCINE_SOURCE_DIR}/Jazz2/PlayerAction.h
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.h
 	${NCINE_SOURCE_DIR}/Jazz2/Resources.h

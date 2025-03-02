@@ -795,5 +795,13 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace Jazz2::UI::Menu::Resources
 	@brief Common menu resources defined in `Metadata/UI/MainMenu.res`
 */
+/** @dir Jazz2/UI/Multiplayer
+	@brief Namespace @ref Jazz2::UI::Multiplayer
+*/
+/** @namespace Jazz2::UI::Multiplayer
+	@brief Multiplayer-related user interface, compiled only if `WITH_MULTIPLAYER`
+	
+	@experimental
+*/
 
 }

@@ -240,11 +240,11 @@ namespace Jazz2::UI::Menu
 
 	void InputDiagnosticsSection::OnHandleInput()
 	{
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerAction::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 		} else if (_itemCount > 1) {
-			if (_root->ActionHit(PlayerActions::Left)) {
+			if (_root->ActionHit(PlayerAction::Left)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
 
@@ -253,7 +253,7 @@ namespace Jazz2::UI::Menu
 				} else {
 					_selectedIndex = _itemCount - 1;
 				}
-			} else if (_root->ActionHit(PlayerActions::Right)) {
+			} else if (_root->ActionHit(PlayerAction::Right)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
 

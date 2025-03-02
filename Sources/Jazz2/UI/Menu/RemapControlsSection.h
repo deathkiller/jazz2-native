@@ -10,7 +10,7 @@ namespace Jazz2::UI::Menu
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	struct RemapControlsItem {
-		PlayerActions Type;
+		PlayerAction Type;
 		String DisplayName;
 	};
 #endif
@@ -45,6 +45,6 @@ namespace Jazz2::UI::Menu
 		void OnBackPressed() override;
 
 		void RefreshPreviousState();
-		bool HasCollision(PlayerActions action, MappingTarget target, PlayerActions& collidingAction, std::int32_t& collidingAssignment);
+		bool HasCollision(PlayerAction action, MappingTarget target, PlayerAction& collidingAction, std::int32_t& collidingAssignment);
 	};
 }

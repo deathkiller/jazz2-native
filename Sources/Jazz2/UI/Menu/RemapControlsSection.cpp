@@ -14,31 +14,31 @@ namespace Jazz2::UI::Menu
 			_timeout(0.0f), _hintAnimation(0.0f)
 	{
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Left, _("Left") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Left, _("Left") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Right, _("Right") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Right, _("Right") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Up, _("Up") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Up, _("Up") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Down, _("Down") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Down, _("Down") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Buttstomp, _("Buttstomp") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Buttstomp, _("Buttstomp") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Fire, _("Fire") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Fire, _("Fire") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Jump, _("Jump") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Jump, _("Jump") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Run, _("Run") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Run, _("Run") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::ChangeWeapon, _("Change Weapon") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::ChangeWeapon, _("Change Weapon") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Menu, _("Back") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Menu, _("Back") });
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-		_items.emplace_back(RemapControlsItem { PlayerActions::Console, _("Toggle Console") });
+		_items.emplace_back(RemapControlsItem { PlayerAction::Console, _("Toggle Console") });
 
-		for (std::int32_t i = 0; i <= (std::int32_t)PlayerActions::SwitchToThunderbolt - (std::int32_t)PlayerActions::SwitchToBlaster; i++) {
+		for (std::int32_t i = 0; i <= (std::int32_t)PlayerAction::SwitchToThunderbolt - (std::int32_t)PlayerAction::SwitchToBlaster; i++) {
 			// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-			_items.emplace_back(RemapControlsItem { (PlayerActions)((std::int32_t)PlayerActions::SwitchToBlaster + i), _f("Weapon %i", i + 1) });
+			_items.emplace_back(RemapControlsItem { (PlayerAction)((std::int32_t)PlayerAction::SwitchToBlaster + i), _f("Weapon %i", i + 1) });
 		}
 	}
 
@@ -86,7 +86,7 @@ namespace Jazz2::UI::Menu
 						bool isPressed = currentState.isButtonPressed((ButtonName)j);
 						if (isPressed != wasPressed && isPressed) {
 							newTarget = ControlScheme::CreateTarget(i, (ButtonName)j);
-							PlayerActions collidingAction;
+							PlayerAction collidingAction;
 							std::int32_t collidingAssignment;
 							if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {
 								waitingForInput = false;
@@ -107,7 +107,7 @@ namespace Jazz2::UI::Menu
 						bool isPressed = std::abs(currentValue) > 0.5f;
 						if (isPressed != wasPressed && isPressed) {
 							newTarget = ControlScheme::CreateTarget(i, (AxisName)j, currentValue < 0.0f);
-							PlayerActions collidingAction;
+							PlayerAction collidingAction;
 							std::int32_t collidingAssignment;
 							if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {
 								waitingForInput = false;
@@ -175,7 +175,7 @@ namespace Jazz2::UI::Menu
 				Alignment::Center, textColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else {
 			auto& mapping = ControlScheme::GetMappings(_playerIndex)[_selectedIndex];
-			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (std::int32_t)PlayerActions::Menu && _selectedColumn == 0)) {
+			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (std::int32_t)PlayerAction::Menu && _selectedColumn == 0)) {
 				char stringBuffer[64];
 				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:#d0705d]%s\f[/c] │", _("Change Weapon").data());
 
@@ -281,7 +281,7 @@ namespace Jazz2::UI::Menu
 					if (_waitForInput) {
 						color = Colorf(0.62f, 0.44f, 0.34f, 0.5f);
 					} else {
-						color = (_selectedIndex == (std::int32_t)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
+						color = (_selectedIndex == (std::int32_t)PlayerAction::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
 					}
 
 					_root->DrawStringShadow(value, charOffset, centerX * (0.81f + j * 0.2f), item.Y, IMenuContainer::MainLayer - 10,
@@ -316,7 +316,7 @@ namespace Jazz2::UI::Menu
 			}
 
 			MappingTarget newTarget = ControlScheme::CreateTarget(event.sym);
-			PlayerActions collidingAction;
+			PlayerAction collidingAction;
 			std::int32_t collidingAssignment;
 			if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {
 				waitingForInput = false;
@@ -353,12 +353,12 @@ namespace Jazz2::UI::Menu
 
 		auto mapping = ControlScheme::GetMappings(_playerIndex);
 
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerAction::Menu)) {
 			OnBackPressed();
-		} else if (_root->ActionHit(PlayerActions::Fire)) {
+		} else if (_root->ActionHit(PlayerAction::Fire)) {
 			OnExecuteSelected();
-		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
-			if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
+		} else if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
+			if (_selectedIndex == (int32_t)PlayerAction::Menu && _selectedColumn == 0) {
 				return;
 			}
 
@@ -369,7 +369,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
 			}
-		} else if (_root->ActionHit(PlayerActions::Up)) {
+		} else if (_root->ActionHit(PlayerAction::Up)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex > 0) {
@@ -381,7 +381,7 @@ namespace Jazz2::UI::Menu
 
 			EnsureVisibleSelected();
 			OnSelectionChanged(_items[_selectedIndex]);
-		} else if (_root->ActionHit(PlayerActions::Down)) {
+		} else if (_root->ActionHit(PlayerAction::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex < (std::int32_t)(_items.size() - 1)) {
@@ -393,7 +393,7 @@ namespace Jazz2::UI::Menu
 
 			EnsureVisibleSelected();
 			OnSelectionChanged(_items[_selectedIndex]);
-		} else if (_root->ActionHit(PlayerActions::Left)) {
+		} else if (_root->ActionHit(PlayerAction::Left)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedColumn > 0) {
@@ -402,7 +402,7 @@ namespace Jazz2::UI::Menu
 				std::int32_t lastColumn = std::min((std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1);
 				_selectedColumn = lastColumn;
 			}
-		} else if (_root->ActionHit(PlayerActions::Right)) {
+		} else if (_root->ActionHit(PlayerAction::Right)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			std::int32_t lastColumn = std::min((std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1);
@@ -432,7 +432,7 @@ namespace Jazz2::UI::Menu
 						_waitForInput = false;
 						_waitForInputPrev = true;
 
-						if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
+						if (_selectedIndex == (int32_t)PlayerAction::Menu && _selectedColumn == 0) {
 							return;
 						}
 
@@ -474,7 +474,7 @@ namespace Jazz2::UI::Menu
 
 	void RemapControlsSection::OnExecuteSelected()
 	{
-		if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
+		if (_selectedIndex == (int32_t)PlayerAction::Menu && _selectedColumn == 0) {
 			return;
 		}
 
@@ -500,13 +500,13 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	bool RemapControlsSection::HasCollision(PlayerActions action, MappingTarget target, PlayerActions& collidingAction, std::int32_t& collidingAssignment)
+	bool RemapControlsSection::HasCollision(PlayerAction action, MappingTarget target, PlayerAction& collidingAction, std::int32_t& collidingAssignment)
 	{
-		for (std::int32_t i = 0; i < (std::int32_t)PlayerActions::Count; i++) {
-			PlayerActions ia = (PlayerActions)i;
+		for (std::int32_t i = 0; i < (std::int32_t)PlayerAction::Count; i++) {
+			PlayerAction ia = (PlayerAction)i;
 
-			if ((action == PlayerActions::Down && ia == PlayerActions::Buttstomp) ||
-				(action == PlayerActions::Buttstomp && ia == PlayerActions::Down)) {
+			if ((action == PlayerAction::Down && ia == PlayerAction::Buttstomp) ||
+				(action == PlayerAction::Buttstomp && ia == PlayerAction::Down)) {
 				continue;
 			}
 

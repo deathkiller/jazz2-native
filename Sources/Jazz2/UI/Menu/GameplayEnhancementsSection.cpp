@@ -77,7 +77,7 @@ namespace Jazz2::UI::Menu
 
 	void GameplayEnhancementsSection::OnHandleInput()
 	{
-		if (!_items.empty() && (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right))) {
+		if (!_items.empty() && (_root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right))) {
 			OnExecuteSelected();
 		} else {
 			ScrollableMenuSection::OnHandleInput();

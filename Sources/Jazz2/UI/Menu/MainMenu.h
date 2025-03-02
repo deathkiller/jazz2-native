@@ -69,8 +69,8 @@ namespace Jazz2::UI::Menu
 		bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
 #endif
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
-		bool ActionPressed(PlayerActions action) override;
-		bool ActionHit(PlayerActions action) override;
+		bool ActionPressed(PlayerAction action) override;
+		bool ActionHit(PlayerAction action) override;
 
 		Recti GetContentBounds() const override {
 			return _contentBounds;

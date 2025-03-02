@@ -21,7 +21,7 @@ namespace Jazz2::UI::Menu
 			_transitionTime += 0.025f * timeMult;
 		}
 
-		if (_root->ActionHit(PlayerActions::Menu) || _root->ActionHit(PlayerActions::Fire)) {
+		if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Fire)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 			return;

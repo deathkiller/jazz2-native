@@ -131,7 +131,7 @@ namespace nCine
 
 #if defined(GL_DEBUG_SUPPORTED)
 	/// Callback for `glDebugMessageCallback()`
-	void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
+	void __stdcall debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
 	{
 		const char* sourceString;
 		switch (source) {
@@ -176,7 +176,7 @@ namespace nCine
 #if defined(GL_DEBUG_SUPPORTED)
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(static_cast<GLDEBUGPROC>(debugCallback), nullptr);
-		LOGI("OpenGL debug callback set");
+		LOGI("OpenGL debug callback initialized");
 #endif
 	}
 }

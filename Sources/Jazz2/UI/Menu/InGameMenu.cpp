@@ -37,7 +37,7 @@ namespace Jazz2::UI::Menu
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
 		// Mark Menu button as already pressed to avoid some issues
-		_pressedActions = (1 << (std::int32_t)PlayerActions::Menu) | (1 << ((std::int32_t)PlayerActions::Menu + 16));
+		_pressedActions = (1 << (std::int32_t)PlayerAction::Menu) | (1 << ((std::int32_t)PlayerAction::Menu + 16));
 
 		SwitchToSection<PauseSection>();
 
@@ -484,12 +484,12 @@ namespace Jazz2::UI::Menu
 		_root->_root->GoToMainMenu(false);
 	}
 
-	bool InGameMenu::ActionPressed(PlayerActions action)
+	bool InGameMenu::ActionPressed(PlayerAction action)
 	{
 		return ((_pressedActions & (1 << (std::int32_t)action)) == (1 << (std::int32_t)action));
 	}
 
-	bool InGameMenu::ActionHit(PlayerActions action)
+	bool InGameMenu::ActionHit(PlayerAction action)
 	{
 		return ((_pressedActions & ((1 << (std::int32_t)action) | (1 << (16 + (std::int32_t)action)))) == (1 << (std::int32_t)action));
 	}

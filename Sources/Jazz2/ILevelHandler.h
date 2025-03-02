@@ -2,7 +2,7 @@
 
 #include "Actors/ActorBase.h"
 #include "LevelInitialization.h"
-#include "PlayerActions.h"
+#include "PlayerAction.h"
 #include "WarpFlags.h"
 #include "WeatherType.h"
 
@@ -163,13 +163,13 @@ namespace Jazz2
 		virtual bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) = 0;
 
 		/** @brief Returns `true` if player action is pressed */
-		virtual bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
+		virtual bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads = true) = 0;
 		/** @overload */
-		virtual bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
+		virtual bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) = 0;
 		/** @brief Returns `true` if player action is hit (newly pressed) */
-		virtual bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
+		virtual bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads = true) = 0;
 		/** @overload */
-		virtual bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
+		virtual bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) = 0;
 		/** @brief Returns value of desired horizontal player movement */
 		virtual float PlayerHorizontalMovement(std::int32_t index) = 0;
 		/** @brief Returns value of desired vertical player movement */

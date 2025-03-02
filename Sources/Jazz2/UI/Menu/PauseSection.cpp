@@ -30,13 +30,13 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.02f, 1.0f);
 		}
 
-		if (_root->ActionHit(PlayerActions::Fire)) {
+		if (_root->ActionHit(PlayerAction::Fire)) {
 			ExecuteSelected();
-		} else if (_root->ActionHit(PlayerActions::Menu)) {
+		} else if (_root->ActionHit(PlayerAction::Menu)) {
 			if (auto ingameMenu = dynamic_cast<InGameMenu*>(_root)) {
 				ingameMenu->ResumeGame();
 			}
-		} else if (_root->ActionHit(PlayerActions::Up)) {
+		} else if (_root->ActionHit(PlayerAction::Up)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex > 0) {
@@ -44,7 +44,7 @@ namespace Jazz2::UI::Menu
 			} else {
 				_selectedIndex = (int32_t)Item::Count - 1;
 			}
-		} else if (_root->ActionHit(PlayerActions::Down)) {
+		} else if (_root->ActionHit(PlayerAction::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex < (int32_t)Item::Count - 1) {

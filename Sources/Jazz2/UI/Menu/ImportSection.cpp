@@ -36,12 +36,12 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		if (_root->ActionHit(PlayerActions::Fire)) {
+		if (_root->ActionHit(PlayerAction::Fire)) {
 			if (_state > State::Loading) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				ShowPicker();
 			}
-		} else if (_root->ActionHit(PlayerActions::Menu)) {
+		} else if (_root->ActionHit(PlayerAction::Menu)) {
 			if (_state != State::Loading) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->LeaveSection();
