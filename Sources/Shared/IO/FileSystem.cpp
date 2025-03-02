@@ -25,9 +25,10 @@
 #	include <dirent.h>
 #	include <fcntl.h>
 #	include <ftw.h>
-#
-#	if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 #		include <sys/mman.h>
+#	endif
+#	if defined(DEATH_TARGET_UNIX)
 #		include <sys/wait.h>
 #	endif
 #	if defined(DEATH_TARGET_APPLE)
