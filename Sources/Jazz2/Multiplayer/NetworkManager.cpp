@@ -7,6 +7,7 @@ using namespace Death;
 namespace Jazz2::Multiplayer
 {
 	NetworkManager::NetworkManager()
+		: GameMode(MpGameMode::Unknown)
 	{
 	}
 
@@ -41,7 +42,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	NetworkManager::PeerDesc::PeerDesc()
-		: PreferredPlayerType(PlayerType::None), Authenticated(false)
+		: Uuid1(0), Uuid2(0), IsAuthenticated(false), PreferredPlayerType(PlayerType::None)
 	{
 	}
 }

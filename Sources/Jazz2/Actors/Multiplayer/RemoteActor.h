@@ -15,7 +15,9 @@ namespace Jazz2::Actors::Multiplayer
 		RemoteActor();
 
 		void AssignMetadata(StringView path, AnimState anim, ActorState state);
-		void SyncWithServer(Vector2f pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft, bool animPaused, Actors::ActorRendererType rendererType);
+		void SyncPositionWithServer(Vector2f pos);
+		void SyncAnimationWithServer(AnimState anim, float rotation, Actors::ActorRendererType rendererType);
+		void SyncMiscWithServer(bool isVisible, bool animPaused, bool isFacingLeft);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
