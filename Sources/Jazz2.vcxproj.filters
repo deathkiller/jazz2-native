@@ -250,6 +250,12 @@
     <Filter Include="Source Files\Jazz2\Input">
       <UniqueIdentifier>{e213d1ee-1e55-4994-b2c1-5e13336c39f6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\UI\Multiplayer">
+      <UniqueIdentifier>{68e92d28-11e9-47df-a1f0-7501edb86af8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\UI\Multiplayer">
+      <UniqueIdentifier>{dfcad49c-23cc-4162-960a-23fd6033b0c0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1335,7 +1341,7 @@
     <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Multiplayer\MultiLevelHandler.h">
+    <ClInclude Include="Jazz2\Multiplayer\MpLevelHandler.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h">
@@ -1458,7 +1464,7 @@
     <ClInclude Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Multiplayer\MultiplayerGameMode.h">
+    <ClInclude Include="Jazz2\Multiplayer\MpGameMode.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\FirstRunSection.h">
@@ -1577,6 +1583,12 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Input\ControlScheme.h">
       <Filter>Header Files\Jazz2\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameLobby.h">
+      <Filter>Header Files\Jazz2\UI\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameCanvas.h">
+      <Filter>Header Files\Jazz2\UI\Multiplayer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2441,7 +2453,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp">
       <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp">
+    <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp">
@@ -2578,6 +2590,12 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Input\RgbLights.cpp">
       <Filter>Source Files\Jazz2\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameCanvas.cpp">
+      <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameLobby.cpp">
+      <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

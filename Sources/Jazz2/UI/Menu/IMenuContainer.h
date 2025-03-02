@@ -3,7 +3,7 @@
 #include "../../AnimState.h"
 #include "../../ContentResolver.h"
 #include "../../LevelInitialization.h"
-#include "../../PlayerActions.h"
+#include "../../PlayerAction.h"
 #include "../Alignment.h"
 
 #include "../../../nCine/I18n.h"
@@ -67,9 +67,9 @@ namespace Jazz2::UI::Menu
 		/** @brief Applies changes to preferences */
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;
 		/** @brief Returns `true` if specified action is pressed */
-		virtual bool ActionPressed(PlayerActions action) = 0;
+		virtual bool ActionPressed(PlayerAction action) = 0;
 		/** @brief Returns `true` if specified action is hit (newly pressed) */
-		virtual bool ActionHit(PlayerActions action) = 0;
+		virtual bool ActionHit(PlayerAction action) = 0;
 
 		/** @brief Returns viewport size of the menu */
 		virtual Vector2i GetViewSize() const = 0;

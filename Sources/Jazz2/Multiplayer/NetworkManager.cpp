@@ -235,6 +235,8 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::OnClientThread(void* param)
 	{
+		Thread::SetCurrentName("Multiplayer client");
+
 		NetworkManager* _this = static_cast<NetworkManager*>(param);
 		INetworkHandler* handler = _this->_handler;
 		ENetHost* host = _this->_host;
@@ -315,6 +317,8 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::OnServerThread(void* param)
 	{
+		Thread::SetCurrentName("Multiplayer server");
+
 		NetworkManager* _this = static_cast<NetworkManager*>(param);
 		INetworkHandler* handler = _this->_handler;
 		ENetHost* host = _this->_host;

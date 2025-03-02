@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../PlayerActions.h"
+#include "../PlayerAction.h"
 #include "../../nCine/Base/BitArray.h"
 #include "../../nCine/Input/InputEvents.h"
 #include "../../nCine/Primitives/Vector2.h"
@@ -104,6 +104,6 @@ namespace Jazz2::Input
 		static constexpr std::uint32_t ButtonMask = 0x0000FFFFu;
 		static constexpr float GamepadDeadZone = 0.1f;
 
-		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (std::int32_t)PlayerActions::Count];
+		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (std::int32_t)PlayerAction::Count];
 	};
 }

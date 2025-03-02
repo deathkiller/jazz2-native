@@ -484,11 +484,11 @@ namespace Jazz2
 		if (_pauseMenu == nullptr) {
 			UpdatePressedActions();
 
-			if (PlayerActionHit(0, PlayerActions::Menu)) {
+			if (PlayerActionHit(0, PlayerAction::Menu)) {
 				if (!_console->IsVisible() && _nextLevelType == ExitType::None) {
 					PauseGame();
 				}
-			} else if (PlayerActionHit(0, PlayerActions::Console)) {
+			} else if (PlayerActionHit(0, PlayerAction::Console)) {
 				if (_console->IsVisible()) {
 					_console->Hide();
 				} else {
@@ -496,7 +496,7 @@ namespace Jazz2
 				}
 			}
 #if defined(DEATH_DEBUG)
-			if (PreferencesCache::AllowCheats && PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
+			if (PreferencesCache::AllowCheats && PlayerActionPressed(0, PlayerAction::ChangeWeapon) && PlayerActionHit(0, PlayerAction::Jump)) {
 				_cheatsUsed = true;
 				BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 			}
@@ -1290,15 +1290,15 @@ namespace Jazz2
 		_levelTexts[textId] = value;
 	}
 
-	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads)
+	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads)
 	{
 		bool isGamepad;
 		return PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
 
-	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool LevelHandler::PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
-		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+		if (_console->IsVisible() && action != PlayerAction::Menu && action != PlayerAction::Console) {
 			return false;
 		}
 
@@ -1312,15 +1312,15 @@ namespace Jazz2
 		return false;
 	}
 
-	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads)
+	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads)
 	{
 		bool isGamepad;
 		return PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
 
-	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool LevelHandler::PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
-		if (_console->IsVisible() && action != PlayerActions::Menu && action != PlayerActions::Console) {
+		if (_console->IsVisible() && action != PlayerAction::Menu && action != PlayerAction::Console) {
 			return false;
 		}
 
@@ -1983,14 +1983,14 @@ namespace Jazz2
 			auto& input = _playerInputs[0];
 			input.PressedActions |= _overrideActions;
 
-			if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Right)) != 0) {
+			if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Right)) != 0) {
 				input.RequiredMovement.X = 1.0f;
-			} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Left)) != 0) {
+			} else if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Left)) != 0) {
 				input.RequiredMovement.X = -1.0f;
 			}
-			if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Down)) != 0) {
+			if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Down)) != 0) {
 				input.RequiredMovement.Y = 1.0f;
-			} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Up)) != 0) {
+			} else if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Up)) != 0) {
 				input.RequiredMovement.Y = -1.0f;
 			}
 		}
@@ -2194,8 +2194,8 @@ namespace Jazz2
 
 		// Mark Menu button as already pressed to avoid some issues
 		for (auto& input : _playerInputs) {
-			input.PressedActions |= (1ull << (std::int32_t)PlayerActions::Menu);
-			input.PressedActionsLast |= (1ull << (std::int32_t)PlayerActions::Menu);
+			input.PressedActions |= (1ull << (std::int32_t)PlayerAction::Menu);
+			input.PressedActionsLast |= (1ull << (std::int32_t)PlayerAction::Menu);
 		}
 	}
 

@@ -25,7 +25,7 @@ namespace Jazz2::Scripting::Legacy
 #if defined(WITH_MULTIPLAYER)
 namespace Jazz2::Multiplayer
 {
-	class MultiLevelHandler;
+	class MpLevelHandler;
 }
 #endif
 
@@ -66,7 +66,7 @@ namespace Jazz2::Actors
 		friend class Scripting::Legacy::jjPLAYER;
 #endif
 #if defined(WITH_MULTIPLAYER)
-		friend class Jazz2::Multiplayer::MultiLevelHandler;
+		friend class Jazz2::Multiplayer::MpLevelHandler;
 #endif
 		friend class Environment::SwingingVine;
 		friend class Solid::PinballBumper;

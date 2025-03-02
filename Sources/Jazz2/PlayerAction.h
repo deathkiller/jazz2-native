@@ -3,7 +3,7 @@
 namespace Jazz2
 {
 	/** @brief Player action */
-	enum class PlayerActions
+	enum class PlayerAction
 	{
 		Left,							/**< Left */
 		Right,							/**< Right */

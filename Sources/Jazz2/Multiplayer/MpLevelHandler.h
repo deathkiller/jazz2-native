@@ -3,13 +3,21 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../LevelHandler.h"
-#include "MultiplayerGameMode.h"
+#include "MpGameMode.h"
 #include "NetworkManager.h"
+
+#include <Threading/Spinlock.h>
 
 namespace Jazz2::Actors::Multiplayer
 {
 	class RemoteActor;
 	class RemotePlayerOnServer;
+}
+
+namespace Jazz2::UI::Multiplayer
+{
+	class MpInGameCanvasLayer;
+	class MpInGameLobby;
 }
 
 namespace Jazz2::Multiplayer
@@ -19,7 +27,7 @@ namespace Jazz2::Multiplayer
 
 		@experimental
 	*/
-	class MultiLevelHandler : public LevelHandler
+	class MpLevelHandler : public LevelHandler
 	{
 		DEATH_RUNTIME_OBJECT(LevelHandler);
 
@@ -28,10 +36,12 @@ namespace Jazz2::Multiplayer
 		friend class Scripting::LevelScriptLoader;
 #endif
 		friend class Actors::Multiplayer::RemotePlayerOnServer;
+		friend class UI::Multiplayer::MpInGameCanvasLayer;
+		friend class UI::Multiplayer::MpInGameLobby;
 
 	public:
-		MultiLevelHandler(IRootController* root, NetworkManager* networkManager);
-		~MultiLevelHandler() override;
+		MpLevelHandler(IRootController* root, NetworkManager* networkManager);
+		~MpLevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
 
@@ -80,12 +90,13 @@ namespace Jazz2::Multiplayer
 		void SetWeather(WeatherType type, uint8_t intensity) override;
 		bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) override;
 
-		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
-		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads = true) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
+		bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads = true) override;
+		bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
 		float PlayerHorizontalMovement(std::int32_t index) override;
 		float PlayerVerticalMovement(std::int32_t index) override;
+		void PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect) override;
 
 		bool SerializeResumableToStream(Stream& dest) override;
 
@@ -95,9 +106,9 @@ namespace Jazz2::Multiplayer
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
 
 		/** @brief Returns current game mode */
-		MultiplayerGameMode GetGameMode() const;
+		MpGameMode GetGameMode() const;
 		/** @brief Sets current game mode */
-		bool SetGameMode(MultiplayerGameMode value);
+		bool SetGameMode(MpGameMode value);
 
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
@@ -130,7 +141,9 @@ namespace Jazz2::Multiplayer
 		enum class PeerState {
 			Unknown,
 			LevelLoaded,
-			LevelSynchronized
+			LevelSynchronized,
+			PlayerReady,
+			PlayerSpawned
 		};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -138,10 +151,13 @@ namespace Jazz2::Multiplayer
 		struct PeerDesc {
 			Actors::Multiplayer::RemotePlayerOnServer* Player;
 			PeerState State;
-			std::uint32_t LastUpdated;
+			std::uint64_t LastUpdated;
+			PlayerType PreferredPlayerType;
+			String PlayerName;
 
 			PeerDesc() {}
-			PeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, PeerState state) : Player(player), State(state), LastUpdated(0) {}
+			PeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, PeerState state)
+				: Player(player), State(state), LastUpdated(0), PreferredPlayerType(PlayerType::None) {}
 		};
 #endif
 
@@ -184,9 +200,10 @@ namespace Jazz2::Multiplayer
 
 		static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
+		static constexpr std::uint32_t MaxPlayerNameLength = 32;
 
 		NetworkManager* _networkManager;
-		MultiplayerGameMode _gameMode;
+		MpGameMode _gameMode;
 		float _updateTimeLeft;
 		bool _isServer;
 		bool _initialUpdateSent;
@@ -195,22 +212,31 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID
+		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::uint64_t _seqNum; // Client: sequence number of the last update
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 		bool _ignorePackets;
+		Threading::Spinlock _lock;
+		String _lobbyMessage;
+
+		std::unique_ptr<UI::Multiplayer::MpInGameCanvasLayer> _inGameCanvasLayer;
+		std::unique_ptr<UI::Multiplayer::MpInGameLobby> _inGameLobby;
 
 		void SynchronizePeers();
 		std::uint32_t FindFreeActorId();
 		std::uint8_t FindFreePlayerId();
 		bool IsLocalPlayer(Actors::ActorBase* actor);
-		void ApplyGameModeToAllPlayers(MultiplayerGameMode gameMode);
-		void ApplyGameModeToPlayer(MultiplayerGameMode gameMode, Actors::Player* player);
+		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
+		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
+
+		void SetLobbyMessage(StringView message);
+		void SetPlayerReady(PlayerType playerType);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
-		static StringView GameModeToString(MultiplayerGameMode mode);
+		static StringView GameModeToString(MpGameMode mode);
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		static constexpr std::int32_t PlotValueCount = 512;

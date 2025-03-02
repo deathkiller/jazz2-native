@@ -21,10 +21,10 @@ namespace Jazz2::UI::Menu
 	{
 		if (episodeName == "unknown"_s) {
 			// Custom level
-			_gameMode = MultiplayerGameMode::Battle;
+			_gameMode = MpGameMode::Battle;
 		} else {
 			// Episode
-			_gameMode = MultiplayerGameMode::Cooperation;
+			_gameMode = MpGameMode::Cooperation;
 		}
 
 		// TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
@@ -62,9 +62,9 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (!_shouldStart) {
-			if (_root->ActionHit(PlayerActions::Fire)) {
+			if (_root->ActionHit(PlayerAction::Fire)) {
 				ExecuteSelected();
-			} else if (_root->ActionHit(PlayerActions::Left)) {
+			} else if (_root->ActionHit(PlayerAction::Left)) {
 				if (_selectedIndex == 0) {
 					if (_selectedPlayerType > 0) {
 						StartImageTransition();
@@ -81,7 +81,7 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 					}
 				}*/
-			} else if (_root->ActionHit(PlayerActions::Right)) {
+			} else if (_root->ActionHit(PlayerAction::Right)) {
 				if (_selectedIndex == 0) {
 					if (_selectedPlayerType < _availableCharacters - 1) {
 						StartImageTransition();
@@ -98,7 +98,7 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.4f);
 					}
 				}*/
-			} else if (_root->ActionHit(PlayerActions::Up)) {
+			} else if (_root->ActionHit(PlayerAction::Up)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
 				if (_selectedIndex > 0) {
@@ -106,7 +106,7 @@ namespace Jazz2::UI::Menu
 				} else {
 					_selectedIndex = (int32_t)Item::Count - 1;
 				}
-			} else if (_root->ActionHit(PlayerActions::Down)) {
+			} else if (_root->ActionHit(PlayerAction::Down)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
 				if (_selectedIndex < (int32_t)Item::Count - 1) {
@@ -114,7 +114,7 @@ namespace Jazz2::UI::Menu
 				} else {
 					_selectedIndex = 0;
 				}
-			} else if (_root->ActionHit(PlayerActions::Menu)) {
+			} else if (_root->ActionHit(PlayerAction::Menu)) {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->LeaveSection();
 			}
@@ -212,12 +212,12 @@ namespace Jazz2::UI::Menu
 		    } else if (i == 1) {
 				StringView gameModeString;
 				switch (_gameMode) {
-					case MultiplayerGameMode::Battle: gameModeString = _("Battle"); break;
-					case MultiplayerGameMode::TeamBattle: gameModeString = _("Team Battle"); break;
-					case MultiplayerGameMode::CaptureTheFlag: gameModeString = _("Capture The Flag"); break;
-					case MultiplayerGameMode::Race: gameModeString = _("Race"); break;
-					case MultiplayerGameMode::TreasureHunt: gameModeString = _("Treasure Hunt"); break;
-					case MultiplayerGameMode::Cooperation: gameModeString = _("Cooperation"); break;
+					case MpGameMode::Battle: gameModeString = _("Battle"); break;
+					case MpGameMode::TeamBattle: gameModeString = _("Team Battle"); break;
+					case MpGameMode::CaptureTheFlag: gameModeString = _("Capture The Flag"); break;
+					case MpGameMode::Race: gameModeString = _("Race"); break;
+					case MpGameMode::TreasureHunt: gameModeString = _("Treasure Hunt"); break;
+					case MpGameMode::Cooperation: gameModeString = _("Cooperation"); break;
 				}
 
 				_root->DrawStringShadow(gameModeString, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,
@@ -309,7 +309,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CreateServerOptionsSection::SetGameMode(Multiplayer::MultiplayerGameMode value)
+	void CreateServerOptionsSection::SetGameMode(Multiplayer::MpGameMode value)
 	{
 		_gameMode = value;
 	}

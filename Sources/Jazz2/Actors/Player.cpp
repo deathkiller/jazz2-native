@@ -190,18 +190,18 @@ namespace Jazz2::Actors
 		ZoneScoped;
 
 #if defined(DEATH_DEBUG)
-		if (PreferencesCache::AllowCheats && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::ChangeWeapon)) {
-			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 400.0f : 100.0f);
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Left)) {
+		if (PreferencesCache::AllowCheats && _levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::ChangeWeapon)) {
+			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Run) ? 400.0f : 100.0f);
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Left)) {
 				MoveInstantly(Vector2f(-moveDistance, 0.0f), MoveType::Relative | MoveType::Force);
 			}
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Right)) {
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Right)) {
 				MoveInstantly(Vector2f(moveDistance, 0.0f), MoveType::Relative | MoveType::Force);
 			}
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Up)) {
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Up)) {
 				MoveInstantly(Vector2f(0.0f, -moveDistance), MoveType::Relative | MoveType::Force);
 			}
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Down)) {
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Down)) {
 				MoveInstantly(Vector2f(0.0f, moveDistance), MoveType::Relative | MoveType::Force);
 			}
 		}
@@ -270,13 +270,13 @@ namespace Jazz2::Actors
 		// Handle weapon switching
 		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog) {
 			bool isGamepad;
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad)) {
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::ChangeWeapon, true, isGamepad)) {
 				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
 					SwitchToNextWeapon();
 				}
 			} else {
-				for (std::uint32_t i = 0; i <= (std::uint32_t)PlayerActions::SwitchToThunderbolt - (std::uint32_t)PlayerActions::SwitchToBlaster; i++) {
-					if (_levelHandler->PlayerActionHit(_playerIndex, (PlayerActions)(i + (std::uint32_t)PlayerActions::SwitchToBlaster))) {
+				for (std::uint32_t i = 0; i <= (std::uint32_t)PlayerAction::SwitchToThunderbolt - (std::uint32_t)PlayerAction::SwitchToBlaster; i++) {
+					if (_levelHandler->PlayerActionHit(_playerIndex, (PlayerAction)(i + (std::uint32_t)PlayerAction::SwitchToBlaster))) {
 						SwitchToWeaponByIndex(i);
 					}
 				}
@@ -663,16 +663,16 @@ namespace Jazz2::Actors
 	{
 		// Move
 		if (PreferencesCache::ToggleRunAction) {
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Run)) {
+			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Run)) {
 				_isRunPressed = !_isRunPressed;
 			}
 		} else {
-			_isRunPressed = _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run);
+			_isRunPressed = _levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Run);
 		}
 
 		if (_keepRunningTime <= 0.0f) {
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
-				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Fire)));
+				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Fire)));
 
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(_playerIndex);
 			float playerMovementVelocity = std::abs(playerMovement);
@@ -778,7 +778,7 @@ namespace Jazz2::Actors
 			}
 		} else {
 			// Look-up
-			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Up)) {
+			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Up)) {
 				if (!_wasUpPressed && _dizzyTime <= 0.0f) {
 					// Check also previous CanJump to avoid animation glitches on Springs
 					if (((canJumpPrev && CanJump()) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
@@ -794,7 +794,7 @@ namespace Jazz2::Actors
 			}
 
 			// Crouch / Buttstomp - Uses different bindings whether it's in the air or not
-			if (_levelHandler->PlayerActionPressed(_playerIndex, CanJump() ? PlayerActions::Down : PlayerActions::Buttstomp)) {
+			if (_levelHandler->PlayerActionPressed(_playerIndex, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
 				if (_suspendType == SuspendType::SwingingVine) {
 					// TODO: Swinging vine
 				} else if (_suspendType != SuspendType::None) {
@@ -842,7 +842,7 @@ namespace Jazz2::Actors
 			}
 
 			// Jump
-			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Jump)) {
+			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Jump)) {
 				if (!_wasJumpPressed) {
 					_wasJumpPressed = true;
 
@@ -976,7 +976,7 @@ namespace Jazz2::Actors
 						if (_copterFramesLeft > 0.0f) {
 							_copterFramesLeft = 70.0f;
 						}
-					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down) && _jumpTime <= 0.0f) {
+					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Down) && _jumpTime <= 0.0f) {
 						// Standard jump
 						SetState(ActorState::CanJump, false);
 						_isFreefall = false;
@@ -1018,7 +1018,7 @@ namespace Jazz2::Actors
 
 		// Fire
 		bool weaponInUse = false;
-		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Fire)) {
+		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Fire)) {
 			if (!_isLifting && _suspendType != SuspendType::SwingingVine && !_canPushFurther) {
 				if (_playerType == PlayerType::Frog) {
 					if (_currentTransition == nullptr && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {

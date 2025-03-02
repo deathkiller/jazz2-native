@@ -43,7 +43,7 @@
 #if defined(WITH_MULTIPLAYER)
 #	include "Jazz2/Multiplayer/NetworkManager.h"
 #	include "Jazz2/Multiplayer/INetworkHandler.h"
-#	include "Jazz2/Multiplayer/MultiLevelHandler.h"
+#	include "Jazz2/Multiplayer/MpLevelHandler.h"
 #	include "Jazz2/Multiplayer/PacketTypes.h"
 using namespace Jazz2::Multiplayer;
 #endif
@@ -760,7 +760,7 @@ bool GameEventHandler::CreateServer(LevelInitialization&& levelInit, std::uint16
 	}
 
 	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
-		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get());
 		levelHandler->Initialize(levelInit);
 		SetStateHandler(std::move(levelHandler));
 	}, NCINE_CURRENT_FUNCTION);
@@ -797,7 +797,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 
 		packet.Write(PreferencesCache::UniquePlayerID, sizeof(PreferencesCache::UniquePlayerID));
 		// TODO: Player name
-		packet.WriteVariableUint32(0);
+		//packet.WriteVariableUint32(0);
 		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
 	}
 
@@ -808,7 +808,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
 	LOGI("[MP] Peer disconnected (%u)", (std::uint32_t)reason);
 
-	if (auto* multiLevelHandler = runtime_cast<MultiLevelHandler*>(_currentHandler)) {
+	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
 		if (multiLevelHandler->OnPeerDisconnected(peer)) {
 			return;
 		}
@@ -883,7 +883,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 			case ServerPacketType::LoadLevel: {
 				MemoryStream packet(data);
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-				MultiplayerGameMode gameMode = (MultiplayerGameMode)packet.ReadValue<std::uint8_t>();
+				MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
 				std::uint32_t episodeLength = packet.ReadVariableUint32();
 				String episodeName = String(NoInit, episodeLength);
 				packet.Read(episodeName.data(), episodeLength);
@@ -898,7 +898,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
 
-					auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
+					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get());
 					levelHandler->SetGameMode(gameMode);
 					levelHandler->Initialize(levelInit);
 					SetStateHandler(std::move(levelHandler));
@@ -908,7 +908,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		}
 	}
 
-	if (auto* multiLevelHandler = runtime_cast<MultiLevelHandler*>(_currentHandler)) {
+	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
 		if (multiLevelHandler->OnPacketReceived(peer, channelId, packetType, data)) {
 			return;
 		}
@@ -1626,7 +1626,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
-		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get());
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}

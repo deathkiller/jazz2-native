@@ -78,7 +78,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  
   <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   <Import Project="$(SolutionDir)\VC-LTL helper for Visual Studio.props" />
   <Import Project="$(SolutionDir)\Sign.props" Condition="Exists('$(SolutionDir)\Sign.props')" />
@@ -104,7 +103,6 @@
       </PropertyGroup>
     </Otherwise>
   </Choose>
-  
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -327,6 +325,8 @@
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h" />
     <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h" />
+    <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.h" />
+    <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameLobby.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -452,15 +452,15 @@
     <ClInclude Include="Jazz2\Multiplayer\Backends\enet.h" />
     <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h" />
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h" />
-    <ClInclude Include="Jazz2\Multiplayer\MultiLevelHandler.h" />
-    <ClInclude Include="Jazz2\Multiplayer\MultiplayerGameMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\MpLevelHandler.h" />
+    <ClInclude Include="Jazz2\Multiplayer\MpGameMode.h" />
     <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h" />
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h" />
     <ClInclude Include="Jazz2\Multiplayer\Peer.h" />
     <ClInclude Include="Jazz2\Multiplayer\Reason.h" />
     <ClInclude Include="Jazz2\Multiplayer\ServerDiscovery.h" />
     <ClInclude Include="Jazz2\PitType.h" />
-    <ClInclude Include="Jazz2\PlayerActions.h" />
+    <ClInclude Include="Jazz2\PlayerAction.h" />
     <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
@@ -852,7 +852,7 @@
     <ClCompile Include="Jazz2\Input\RgbLights.cpp" />
     <ClCompile Include="Jazz2\Input\RumbleProcessor.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp" />
-    <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
@@ -910,6 +910,8 @@
     <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.cpp" />
+    <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameLobby.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
     <ClCompile Include="nCine\Audio\ALAudioDevice.cpp" />

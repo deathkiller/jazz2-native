@@ -3,7 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../Weapons/ShotBase.h"
-#include "../../Multiplayer/MultiLevelHandler.h"
+#include "../../Multiplayer/MpLevelHandler.h"
 #include "../../../nCine/Base/Clock.h"
 
 namespace Jazz2::Actors::Multiplayer
@@ -83,7 +83,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		if (lastState == LevelExitingState::None) {
 			// Level changing just started, send the request to the player as WarpIn packet
-			static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerLevelChanging(this, exitType);
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerLevelChanging(this, exitType);
 		}
 
 		return success;
@@ -135,7 +135,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemotePlayerOnServer::OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
-		if (!static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerSpring(this, pos, force, keepSpeedX, keepSpeedY)) {
+		if (!static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSpring(this, pos, force, keepSpeedX, keepSpeedY)) {
 			return;
 		}
 
@@ -146,7 +146,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		PlayerOnServer::WarpToPosition(pos, flags);
 
-		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerBeforeWarp(this, pos, flags);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerBeforeWarp(this, pos, flags);
 	}
 
 	bool RemotePlayerOnServer::TakeDamage(std::int32_t amount, float pushForce)
@@ -155,7 +155,7 @@ namespace Jazz2::Actors::Multiplayer
 			return false;
 		}
 
-		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerTakeDamage(this, amount, pushForce);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerTakeDamage(this, amount, pushForce);
 
 		return true;
 	}
@@ -166,7 +166,7 @@ namespace Jazz2::Actors::Multiplayer
 			return false;
 		}
 
-		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
 
 		return true;
 	}
@@ -175,7 +175,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		PlayerOnServer::AddWeaponUpgrade(weaponType, upgrade);
 
-		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshWeaponUpgrades(this, weaponType);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerRefreshWeaponUpgrades(this, weaponType);
 	}
 
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
@@ -186,7 +186,7 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		if (prevAmmo != _weaponAmmo[(std::int32_t)weaponType]) {
-			static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
 		}
 
 		return true;
@@ -196,14 +196,14 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		PlayerOnServer::EmitWeaponFlare();
 
-		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerEmitWeaponFlare(this);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerEmitWeaponFlare(this);
 	}
 
 	void RemotePlayerOnServer::SetCurrentWeapon(WeaponType weaponType)
 	{
 		PlayerOnServer::SetCurrentWeapon(weaponType);
 
-		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
 	}
 }
 

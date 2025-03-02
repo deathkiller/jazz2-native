@@ -87,18 +87,18 @@ namespace Jazz2::UI
 		_metadata = resolver.RequestMetadata("UI/HUD"_s);
 		_smallFont = resolver.GetFont(FontType::Small);
 
-		_touchButtons[0] = CreateTouchButton(PlayerActions::None, TouchDpad, Alignment::BottomLeft, DpadLeft, DpadBottom, DpadSize, DpadSize);
+		_touchButtons[0] = CreateTouchButton(PlayerAction::None, TouchDpad, Alignment::BottomLeft, DpadLeft, DpadBottom, DpadSize, DpadSize);
 		// D-pad subsections
-		_touchButtons[1] = CreateTouchButton(PlayerActions::Up, AnimState::Default, Alignment::BottomLeft, DpadLeft, DpadBottom + (DpadSize * 2 / 3), DpadSize, (DpadSize / 3) + DpadThreshold);
-		_touchButtons[2] = CreateTouchButton(PlayerActions::Down, AnimState::Default, Alignment::BottomLeft, DpadLeft, DpadBottom - DpadThreshold, DpadSize, (DpadSize / 3) + DpadThreshold);
-		_touchButtons[3] = CreateTouchButton(PlayerActions::Left, AnimState::Default, Alignment::BottomLeft | AllowRollover, DpadLeft - DpadThreshold, DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
-		_touchButtons[4] = CreateTouchButton(PlayerActions::Right, AnimState::Default, Alignment::BottomLeft | AllowRollover, DpadLeft + (DpadSize * 2 / 3), DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
+		_touchButtons[1] = CreateTouchButton(PlayerAction::Up, AnimState::Default, Alignment::BottomLeft, DpadLeft, DpadBottom + (DpadSize * 2 / 3), DpadSize, (DpadSize / 3) + DpadThreshold);
+		_touchButtons[2] = CreateTouchButton(PlayerAction::Down, AnimState::Default, Alignment::BottomLeft, DpadLeft, DpadBottom - DpadThreshold, DpadSize, (DpadSize / 3) + DpadThreshold);
+		_touchButtons[3] = CreateTouchButton(PlayerAction::Left, AnimState::Default, Alignment::BottomLeft | AllowRollover, DpadLeft - DpadThreshold, DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
+		_touchButtons[4] = CreateTouchButton(PlayerAction::Right, AnimState::Default, Alignment::BottomLeft | AllowRollover, DpadLeft + (DpadSize * 2 / 3), DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
 		// Action buttons
-		_touchButtons[5] = CreateTouchButton(PlayerActions::Fire, TouchFire, Alignment::BottomRight, (ButtonSize + 0.02f) * 2, 0.04f, ButtonSize, ButtonSize);
-		_touchButtons[6] = CreateTouchButton(PlayerActions::Jump, TouchJump, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
-		_touchButtons[7] = CreateTouchButton(PlayerActions::Run, TouchRun, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
-		_touchButtons[8] = CreateTouchButton(PlayerActions::ChangeWeapon, TouchChange, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
-		_touchButtons[9] = CreateTouchButton(PlayerActions::Menu, TouchPause, Alignment::TopRight | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
+		_touchButtons[5] = CreateTouchButton(PlayerAction::Fire, TouchFire, Alignment::BottomRight, (ButtonSize + 0.02f) * 2, 0.04f, ButtonSize, ButtonSize);
+		_touchButtons[6] = CreateTouchButton(PlayerAction::Jump, TouchJump, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
+		_touchButtons[7] = CreateTouchButton(PlayerAction::Run, TouchRun, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
+		_touchButtons[8] = CreateTouchButton(PlayerAction::ChangeWeapon, TouchChange, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
+		_touchButtons[9] = CreateTouchButton(PlayerAction::Menu, TouchPause, Alignment::TopRight | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
 	}
 
 	HUD::~HUD()
@@ -223,7 +223,7 @@ namespace Jazz2::UI
 						continue;
 					}
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
-					if (button.Action == PlayerActions::Menu && PreferencesCache::UseNativeBackButton) {
+					if (button.Action == PlayerAction::Menu && PreferencesCache::UseNativeBackButton) {
 						continue;
 					}
 #endif
@@ -249,7 +249,7 @@ namespace Jazz2::UI
 						}
 					}
 
-					Colorf color = (button.Action == PlayerActions::Run && player->_isRunPressed ? Colorf(0.6f, 0.6f, 0.6f) : Colorf::White);
+					Colorf color = (button.Action == PlayerAction::Run && player->_isRunPressed ? Colorf(0.6f, 0.6f, 0.6f) : Colorf::White);
 
 					DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(std::round(x - button.Width * 0.5f), std::round(y - button.Height * 0.5f)),
 						TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
@@ -298,13 +298,13 @@ namespace Jazz2::UI
 				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
 				for (std::uint32_t i = 0; i < TouchButtonsCount; i++) {
 					auto& button = _touchButtons[i];
-					if (button.Action != PlayerActions::None) {
+					if (button.Action != PlayerAction::None) {
 						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
 							button.CurrentPointerId = event.actionIndex;
 							overrideActions |= (1 << (std::int32_t)button.Action);
-							if (button.Action == PlayerActions::Down) {
+							if (button.Action == PlayerAction::Down) {
 								// Buttstomp action is not separate for Touch controls yet
-								overrideActions |= (1 << (std::int32_t)PlayerActions::Buttstomp);
+								overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
 							}
 						}
 					}
@@ -313,7 +313,7 @@ namespace Jazz2::UI
 		} else if (event.type == TouchEventType::Move) {
 			for (std::uint32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
-				if (button.Action != PlayerActions::None) {
+				if (button.Action != PlayerAction::None) {
 					if (button.CurrentPointerId != -1) {
 						bool isPressed = false;
 						std::int32_t pointerIndex = event.findPointerIndex(button.CurrentPointerId);
@@ -326,9 +326,9 @@ namespace Jazz2::UI
 						if (!isPressed) {
 							button.CurrentPointerId = -1;
 							overrideActions &= ~(1 << (std::int32_t)button.Action);
-							if (button.Action == PlayerActions::Down) {
+							if (button.Action == PlayerAction::Down) {
 								// Buttstomp action is not separate for Touch controls yet
-								overrideActions &= ~(1 << (std::int32_t)PlayerActions::Buttstomp);
+								overrideActions &= ~(1 << (std::int32_t)PlayerAction::Buttstomp);
 							}
 						}
 					} else {
@@ -343,9 +343,9 @@ namespace Jazz2::UI
 							if (IsOnButton(button, x, y)) {
 								button.CurrentPointerId = event.pointers[j].id;
 								overrideActions |= (1 << (std::int32_t)button.Action);
-								if (button.Action == PlayerActions::Down) {
+								if (button.Action == PlayerAction::Down) {
 									// Buttstomp action is not separate for Touch controls yet
-									overrideActions |= (1 << (std::int32_t)PlayerActions::Buttstomp);
+									overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
 								}
 								break;
 							}
@@ -359,9 +359,9 @@ namespace Jazz2::UI
 				if (button.CurrentPointerId != -1) {
 					button.CurrentPointerId = -1;
 					overrideActions &= ~(1 << (std::int32_t)button.Action);
-					if (button.Action == PlayerActions::Down) {
+					if (button.Action == PlayerAction::Down) {
 						// Buttstomp action is not separate for Touch controls yet
-						overrideActions &= ~(1 << (std::int32_t)PlayerActions::Buttstomp);
+						overrideActions &= ~(1 << (std::int32_t)PlayerAction::Buttstomp);
 					}
 				}
 			}
@@ -372,9 +372,9 @@ namespace Jazz2::UI
 				if (button.CurrentPointerId == event.actionIndex) {
 					button.CurrentPointerId = -1;
 					overrideActions &= ~(1 << (std::int32_t)button.Action);
-					if (button.Action == PlayerActions::Down) {
+					if (button.Action == PlayerAction::Down) {
 						// Buttstomp action is not separate for Touch controls yet
-						overrideActions &= ~(1 << (std::int32_t)PlayerActions::Buttstomp);
+						overrideActions &= ~(1 << (std::int32_t)PlayerAction::Buttstomp);
 					}
 				}
 			}
@@ -1207,7 +1207,7 @@ namespace Jazz2::UI
 		}
 
 		bool isGamepad;
-		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
+		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerAction::ChangeWeapon, true, isGamepad) || !isGamepad) {
 			if (state.Anim > 0.0f) {
 				if (state.Anim < WeaponWheelAnimDuration * 0.5f) {
 					// Switch to the next weapon on short press
@@ -1332,7 +1332,7 @@ namespace Jazz2::UI
 		DrawRenderCommand(command);
 	}
 
-	HUD::TouchButtonInfo HUD::CreateTouchButton(PlayerActions action, AnimState state, Alignment align, float x, float y, float w, float h)
+	HUD::TouchButtonInfo HUD::CreateTouchButton(PlayerAction action, AnimState state, Alignment align, float x, float y, float w, float h)
 	{
 		TouchButtonInfo info;
 		info.Action = action;

@@ -43,11 +43,11 @@ namespace Jazz2::UI::Menu
 			_pressedCooldown = std::min(_pressedCooldown + timeMult * 0.008f, 1.0f);
 		}
 
-		if (_root->ActionHit(PlayerActions::Menu)) {
+		if (_root->ActionHit(PlayerAction::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 			return;
-		} else if (_root->ActionHit(PlayerActions::Up)) {
+		} else if (_root->ActionHit(PlayerAction::Up)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex > 0) {
@@ -55,7 +55,7 @@ namespace Jazz2::UI::Menu
 			} else {
 				_selectedIndex = (int32_t)Item::Count - 1;
 			}
-		} else if (_root->ActionHit(PlayerActions::Down)) {
+		} else if (_root->ActionHit(PlayerAction::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex < (int32_t)Item::Count - 1) {
@@ -63,8 +63,8 @@ namespace Jazz2::UI::Menu
 			} else {
 				_selectedIndex = 0;
 			}
-		} else if (_root->ActionPressed(PlayerActions::Left) || _root->ActionPressed(PlayerActions::Right)) {
-			if (_pressedCooldown >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)) {
+		} else if (_root->ActionPressed(PlayerAction::Left) || _root->ActionPressed(PlayerAction::Right)) {
+			if (_pressedCooldown >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right)) {
 				float* value;
 				switch (_selectedIndex) {
 					default:
@@ -73,7 +73,7 @@ namespace Jazz2::UI::Menu
 					case (int32_t)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
 				}
 
-				*value = std::clamp(*value + (_root->ActionPressed(PlayerActions::Left) ? -0.03f : 0.03f), 0.0f, 1.0f);
+				*value = std::clamp(*value + (_root->ActionPressed(PlayerAction::Left) ? -0.03f : 0.03f), 0.0f, 1.0f);
 
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Audio);
 				_root->PlaySfx("MenuSelect"_s, 0.6f);

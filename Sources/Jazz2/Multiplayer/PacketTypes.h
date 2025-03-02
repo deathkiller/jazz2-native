@@ -25,6 +25,7 @@ namespace Jazz2::Multiplayer
 		LevelReady,
 		ChatMessage,
 
+		PlayerReady,
 		PlayerUpdate,
 		PlayerKeyPress
 	};
@@ -37,6 +38,7 @@ namespace Jazz2::Multiplayer
 		Reserved,
 
 		LoadLevel,
+		ShowInGameLobby,
 		ChangeGameMode,
 		PlaySfx,
 		PlayCommonSfx,
@@ -53,6 +55,7 @@ namespace Jazz2::Multiplayer
 		CreateMirroredActor,
 		DestroyRemoteActor,
 		UpdateAllActors,
+		MarkRemoteActorAsPlayer,
 
 		PlayerRespawn,
 		PlayerMoveInstantly,

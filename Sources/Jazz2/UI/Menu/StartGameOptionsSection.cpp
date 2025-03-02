@@ -53,9 +53,9 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (!_shouldStart) {
-			if (_root->ActionHit(PlayerActions::Fire)) {
+			if (_root->ActionHit(PlayerAction::Fire)) {
 				ExecuteSelected();
-			} else if (_root->ActionHit(PlayerActions::Left)) {
+			} else if (_root->ActionHit(PlayerAction::Left)) {
 				if (_selectedIndex == 0) {
 					if (_playerCount > 1) {
 						_playerCount--;
@@ -76,7 +76,7 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 					}
 				}
-			} else if (_root->ActionHit(PlayerActions::Right)) {
+			} else if (_root->ActionHit(PlayerAction::Right)) {
 				if (_selectedIndex == 0) {
 					if (_playerCount < ControlScheme::MaxSupportedPlayers) {
 						_playerCount++;
@@ -97,7 +97,7 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.4f);
 					}
 				}
-			} else if (_root->ActionHit(PlayerActions::Up)) {
+			} else if (_root->ActionHit(PlayerAction::Up)) {
 				if (_selectedIndex > 1 && _selectedIndex <= _playerCount) {
 					StartImageTransition();
 				}
@@ -108,7 +108,7 @@ namespace Jazz2::UI::Menu
 				}
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
-			} else if (_root->ActionHit(PlayerActions::Down)) {
+			} else if (_root->ActionHit(PlayerAction::Down)) {
 				if (_selectedIndex > 0 && _selectedIndex < _playerCount) {
 					StartImageTransition();
 				}
@@ -119,7 +119,7 @@ namespace Jazz2::UI::Menu
 				}
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
-			} else if (_root->ActionHit(PlayerActions::Menu)) {
+			} else if (_root->ActionHit(PlayerAction::Menu)) {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->LeaveSection();
 			}

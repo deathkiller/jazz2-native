@@ -183,23 +183,23 @@ namespace Jazz2::UI::Menu
 
 	void AboutSection::OnUpdate(float timeMult)
 	{
-		if (_root->ActionHit(PlayerActions::Fire)) {
+		if (_root->ActionHit(PlayerAction::Fire)) {
 			// Approximation of scroll offsets, needs to be changed when header is changed
 			if (_scrollOffset > 40.0f && _scrollOffset < 400.0f) {
 				if (theApplication().OpenUrl("https://deat.tk/jazz2/"_s)) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 				}
 			}
-		} else if (_root->ActionHit(PlayerActions::Menu)) {
+		} else if (_root->ActionHit(PlayerAction::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
-		} else if (_root->ActionPressed(PlayerActions::Up)) {
+		} else if (_root->ActionPressed(PlayerAction::Up)) {
 			if (_scrollRate < MaxScrollRate) {
 				_scrollRate += 0.16f * timeMult;
 			}
 			_scrollOffset -= _scrollRate * timeMult;
 			_autoScroll = false;
-		} else if (_root->ActionPressed(PlayerActions::Down)) {
+		} else if (_root->ActionPressed(PlayerAction::Down)) {
 			if (_scrollRate < MaxScrollRate) {
 				_scrollRate += 0.16f * timeMult;
 			}

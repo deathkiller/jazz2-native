@@ -160,10 +160,10 @@ namespace Jazz2
 		void SetWeather(WeatherType type, std::uint8_t intensity) override;
 		bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) override;
 
-		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionPressed(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
-		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads = true) override;
-		bool PlayerActionHit(std::int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads = true) override;
+		bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
+		bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads = true) override;
+		bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
 		float PlayerHorizontalMovement(std::int32_t index) override;
 		float PlayerVerticalMovement(std::int32_t index) override;
 		void PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect) override;

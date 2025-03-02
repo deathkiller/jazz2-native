@@ -3,7 +3,7 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "MenuSection.h"
-#include "../../Multiplayer/MultiplayerGameMode.h"
+#include "../../Multiplayer/MpGameMode.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -18,7 +18,7 @@ namespace Jazz2::UI::Menu
 		void OnDrawOverlay(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
 
-		void SetGameMode(Multiplayer::MultiplayerGameMode value);
+		void SetGameMode(Multiplayer::MpGameMode value);
 
 	private:
 		enum class Item {
@@ -40,7 +40,7 @@ namespace Jazz2::UI::Menu
 		String _episodeName;
 		String _levelName;
 		String _previousEpisodeName;
-		Multiplayer::MultiplayerGameMode _gameMode;
+		Multiplayer::MpGameMode _gameMode;
 
 		ItemData _items[(std::int32_t)Item::Count];
 		std::int32_t _selectedIndex;

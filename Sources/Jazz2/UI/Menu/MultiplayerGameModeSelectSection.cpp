@@ -15,19 +15,19 @@ namespace Jazz2::UI::Menu
 	MultiplayerGameModeSelectSection::MultiplayerGameModeSelectSection()
 	{
 		// TRANSLATORS: Menu item in Select Game Mode section
-		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::Battle, _("Battle") });
+		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::Battle, _("Battle") });
 		// TRANSLATORS: Menu item in Select Game Mode section
-		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::TeamBattle, _("Team Battle") });
+		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::TeamBattle, _("Team Battle") });
 		// TRANSLATORS: Menu item in Select Game Mode section
-		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::CaptureTheFlag, _("Capture The Flag") });
+		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::CaptureTheFlag, _("Capture The Flag") });
 		// TRANSLATORS: Menu item in Select Game Mode section
-		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::Race, _("Race") });
+		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::Race, _("Race") });
 		// TRANSLATORS: Menu item in Select Game Mode section
-		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::TeamRace, _("Team Race") });
+		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::TeamRace, _("Team Race") });
 		// TRANSLATORS: Menu item in Select Game Mode section
-		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::TreasureHunt, _("Treasure Hunt") });
+		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::TreasureHunt, _("Treasure Hunt") });
 		// TRANSLATORS: Menu item in Select Game Mode section
-		_items.emplace_back(MultiplayerGameModeItem { MultiplayerGameMode::Cooperation, _("Cooperation") });
+		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::Cooperation, _("Cooperation") });
 	}
 
 	void MultiplayerGameModeSelectSection::OnDraw(Canvas* canvas)
@@ -69,7 +69,7 @@ namespace Jazz2::UI::Menu
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		if (auto* underlyingSection = dynamic_cast<CreateServerOptionsSection*>(_root->GetUnderlyingSection())) {
-			MultiplayerGameMode gameMode = _items[_selectedIndex].Item.Mode;
+			MpGameMode gameMode = _items[_selectedIndex].Item.Mode;
 			underlyingSection->SetGameMode(gameMode);
 		}
 

@@ -686,8 +686,8 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/INetworkHandler.h
-		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.h
-		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiplayerGameMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpGameMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpLevelHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PacketTypes.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.h
@@ -698,6 +698,8 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayCustomSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.h
 	)
 
 	list(APPEND SOURCES
@@ -707,12 +709,14 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpLevelHandler.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayCustomSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.cpp
 	)
 endif()

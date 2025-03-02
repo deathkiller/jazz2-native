@@ -1,6 +1,6 @@
 ﻿#include "Cinematics.h"
 #include "../PreferencesCache.h"
-#include "../PlayerActions.h"
+#include "../PlayerAction.h"
 #include "../Input/ControlScheme.h"
 
 #include "../../nCine/Application.h"
@@ -54,7 +54,7 @@ namespace Jazz2::UI
 
 		UpdatePressedActions();
 
-		if ((_pressedActions & ((1 << (std::int32_t)PlayerActions::Fire) | (1 << (16 + (std::int32_t)PlayerActions::Fire)))) == (1 << (std::int32_t)PlayerActions::Fire)) {
+		if ((_pressedActions & ((1 << (std::int32_t)PlayerAction::Fire) | (1 << (16 + (std::int32_t)PlayerAction::Fire)))) == (1 << (std::int32_t)PlayerAction::Fire)) {
 			if (_callback && _callback(_root, false)) {
 				_callback = nullptr;
 				_framesLeft = 0;
@@ -130,7 +130,7 @@ namespace Jazz2::UI
 #endif
 
 		// Mark Fire button as already pressed to avoid some issues
-		_pressedActions = (1 << (std::int32_t)PlayerActions::Fire) | (1 << ((std::int32_t)PlayerActions::Fire + 16));
+		_pressedActions = (1 << (std::int32_t)PlayerAction::Fire) | (1 << ((std::int32_t)PlayerAction::Fire + 16));
 	}
 
 	bool Cinematics::LoadCinematicsFromFile(StringView path)
@@ -334,8 +334,8 @@ namespace Jazz2::UI
 		_pressedActions |= ControlScheme::FetchNavigation(_pressedKeys, ArrayView(joyStates, joyStatesCount));
 
 		// Also allow Menu action as skip key
-		if (_pressedActions & (1 << (std::uint32_t)PlayerActions::Menu)) {
-			_pressedActions |= (1 << (std::uint32_t)PlayerActions::Fire);
+		if (_pressedActions & (1 << (std::uint32_t)PlayerAction::Menu)) {
+			_pressedActions |= (1 << (std::uint32_t)PlayerAction::Fire);
 		}
 	}
 
