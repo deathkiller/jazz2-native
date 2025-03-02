@@ -307,15 +307,15 @@ namespace Death { namespace IO {
 		/** @brief Opens a file stream with specified access mode */
 		static std::unique_ptr<Stream> Open(Containers::StringView path, FileAccess mode);
 
-#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
 			@brief Memory-mapped file deleter
 		
-			@partialsupport Available only on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
+			@partialsupport Available only on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
 		*/
 		class MapDeleter
 		{
-#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 		public:
 			constexpr explicit MapDeleter() : _fd {} {}
 			constexpr explicit MapDeleter(int fd) noexcept : _fd { fd } {}

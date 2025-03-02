@@ -94,9 +94,11 @@
 
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
-	#include <mmsystem.h>
 
+	#if defined(ENET_IMPLEMENTATION)
+	#include <mmsystem.h>
 	#include <intrin.h>
+	#endif
 
 	#if defined(_WIN32) && defined(_MSC_VER)
 	#if _MSC_VER < 1900
@@ -142,18 +144,21 @@
 	#define ENET_SOCKETSET_CHECK(sockset, socket)  FD_ISSET(socket, &(sockset))
 #else
 	#include <sys/types.h>
-	#include <sys/ioctl.h>
 	#include <sys/time.h>
 	#include <sys/socket.h>
+	#include <errno.h>
+
+	#if defined(ENET_IMPLEMENTATION)
 	#include <poll.h>
+	#include <string.h>
 	#include <arpa/inet.h>
 	#include <netinet/in.h>
 	#include <netinet/tcp.h>
 	#include <netdb.h>
 	#include <unistd.h>
-	#include <string.h>
-	#include <errno.h>
+	#include <sys/ioctl.h>
 	#include <fcntl.h>
+	#endif
 
 	#ifdef __APPLE__
 	#include <mach/clock.h>
