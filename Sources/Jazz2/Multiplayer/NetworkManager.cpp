@@ -24,7 +24,7 @@ namespace Jazz2::Multiplayer
 	{
 		ConnectionResult result = NetworkManagerBase::OnPeerConnected(peer, clientData);
 
-		if (result) {
+		if (result && GetState() == NetworkState::Listening) {
 			_peerDesc[peer] = {};
 		}
 
@@ -35,7 +35,9 @@ namespace Jazz2::Multiplayer
 	{
 		NetworkManagerBase::OnPeerDisconnected(peer, reason);
 
-		_peerDesc.erase(peer);
+		if (GetState() == NetworkState::Listening) {
+			_peerDesc.erase(peer);
+		}
 	}
 
 	NetworkManager::PeerDesc::PeerDesc()
