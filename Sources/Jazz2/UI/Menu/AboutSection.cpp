@@ -12,11 +12,8 @@
 #	define _i1 "\nOpenGL"
 #endif
 
-#if defined(WITH_AUDIO) && defined(DEATH_TARGET_ANDROID)
-#	define _i2 " · OpenSL│ES"
-#else
-#	define _i2 ""
-#endif
+// Reserved for future use
+#define _i2 ""
 
 #if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
 #	if defined(DEATH_CPU_USE_IFUNC)

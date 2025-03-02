@@ -47,8 +47,9 @@ namespace Jazz2::Actors::Enemies
 		if (FindNearestPlayer(targetPos)) {
 			if (_attacking) {
 				// Can't fly into the water
-				if (targetPos.Y > _levelHandler->WaterLevel() - 20.0f) {
-					targetPos.Y = _levelHandler->WaterLevel() - 20.0f;
+				float waterLevel = _levelHandler->GetWaterLevel();
+				if (targetPos.Y > waterLevel - 20.0f) {
+					targetPos.Y = waterLevel - 20.0f;
 				}
 
 				Vector2f direction = (_pos - targetPos);

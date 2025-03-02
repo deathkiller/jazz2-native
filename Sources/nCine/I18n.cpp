@@ -458,7 +458,7 @@ namespace nCine
 		_file = std::make_unique<char[]>(fileSize + 1);
 		fileHandle->Read(_file.get(), fileSize);
 		_file[fileSize] = '\0';
-		_fileSize = fileSize;
+		_fileSize = std::uint32_t(fileSize);
 
 		constexpr std::uint32_t SignatureLE = 0x950412de;
 		constexpr std::uint32_t SignatureBE = 0xde120495;

@@ -38,7 +38,7 @@ namespace Jazz2::Compatibility
 
 		JJ2Block headerBlock(s, headerBlockPackedSize, headerBlockUnpackedSize);
 
-		std::int32_t baseOffset = s->GetPosition();
+		std::int32_t baseOffset = (std::int32_t)s->GetPosition();
 
 		while (s->GetPosition() < s->GetSize()) {
 			StringView name = headerBlock.ReadString(32, true);

@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		OnUpdateHitbox();
 
-		if (_pos.Y >= _levelHandler->WaterLevel()) {
+		if (_pos.Y >= _levelHandler->GetWaterLevel()) {
 			DecreaseHealth(INT32_MAX);
 			return;
 		}

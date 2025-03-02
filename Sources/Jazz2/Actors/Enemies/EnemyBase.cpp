@@ -56,7 +56,7 @@ namespace Jazz2::Actors::Enemies
 
 	void EnemyBase::SetHealthByDifficulty(int health)
 	{
-		switch (_levelHandler->Difficulty()) {
+		switch (_levelHandler->GetDifficulty()) {
 			case GameDifficulty::Easy: health = (int)std::round(health * 0.6f); break;
 			case GameDifficulty::Hard: health = (int)std::round(health * 1.4f); break;
 		}
@@ -299,7 +299,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_pos.Y > _levelHandler->WaterLevel()) {
+		if (_pos.Y > _levelHandler->GetWaterLevel()) {
 			constexpr int DebrisSize = 3;
 
 			Vector2i texSize = res->Base->TextureDiffuse->size();

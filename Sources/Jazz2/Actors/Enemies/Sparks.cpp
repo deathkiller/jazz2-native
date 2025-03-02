@@ -50,11 +50,11 @@ namespace Jazz2::Actors::Enemies
 				targetPos = player->GetPos();
 				Vector2f direction = (targetPos - _pos);
 				float length = direction.Length();
-				if (length < 180.0f && targetPos.Y < _levelHandler->WaterLevel()) {
+				if (length < 180.0f && targetPos.Y < _levelHandler->GetWaterLevel()) {
 					if (length > 100.0f) {
 						direction.Normalize();
 						float maxSpeed = DefaultSpeed;
-						switch (_levelHandler->Difficulty()) {
+						switch (_levelHandler->GetDifficulty()) {
 							case GameDifficulty::Normal: maxSpeed += 1.0f;
 							case GameDifficulty::Hard: maxSpeed += 2.0f;
 						}

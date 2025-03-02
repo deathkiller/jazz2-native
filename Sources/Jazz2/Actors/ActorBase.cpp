@@ -70,7 +70,7 @@ namespace Jazz2::Actors
 		_levelHandler = details.LevelHandler;
 		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((std::int32_t)details.Pos.X / 32, (std::int32_t)details.Pos.Y / 32);
-		_spawnFrames = _levelHandler->ElapsedFrames();
+		_spawnFrames = _levelHandler->GetElapsedFrames();
 
 		std::uint16_t layer = (std::uint16_t)details.Pos.Z;
 		_renderer.setLayer(layer);
@@ -180,8 +180,8 @@ namespace Jazz2::Actors
 		float currentGravity;
 		float currentElasticity = _elasticity;
 		if ((_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation) {
-			currentGravity = _levelHandler->Gravity();
-			if (_pos.Y >= _levelHandler->WaterLevel()) {
+			currentGravity = _levelHandler->GetGravity();
+			if (_pos.Y >= _levelHandler->GetWaterLevel()) {
 				currentGravity *= 0.5f;
 				currentElasticity *= 0.7f;
 			}

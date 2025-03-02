@@ -61,7 +61,7 @@ namespace Jazz2
 		virtual Tiles::TileMap* TileMap() = 0;
 
 		/** @brief Return current difficulty */
-		virtual GameDifficulty Difficulty() const = 0;
+		virtual GameDifficulty GetDifficulty() const = 0;
 		/** @brief Returns `true` if the level handler is on a local session */
 		virtual bool IsLocalSession() const = 0;
 		/** @brief Returns `true` if the level handler is pausable */
@@ -71,13 +71,15 @@ namespace Jazz2
 		/** @brief Returns `true` if players can collide with each other */
 		virtual bool CanPlayersCollide() const = 0;
 		/** @brief Returns level bounds including camera limits */
-		virtual Recti LevelBounds() const = 0;
+		virtual Recti GetLevelBounds() const = 0;
 		/** @brief Returns number of elapsed frames */
-		virtual float ElapsedFrames() const = 0;
+		virtual float GetElapsedFrames() const = 0;
 		/** @brief Returns current gravity force */
-		virtual float Gravity() const = 0;
+		virtual float GetGravity() const = 0;
 		/** @brief Returns current water level */
-		virtual float WaterLevel() const = 0;
+		virtual float GetWaterLevel() const = 0;
+		/** @brief Returns current water level */
+		virtual float GetHurtInvulnerableTime() const = 0;
 
 		/** @brief Returns list of actors (objects) */
 		virtual ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const = 0;

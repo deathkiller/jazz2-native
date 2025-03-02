@@ -202,7 +202,7 @@ namespace Jazz2::Actors::Bosses
 				if (_stateTime <= 0.0f) {
 					_state = State::Transition;
 
-					switch (_levelHandler->Difficulty()) {
+					switch (_levelHandler->GetDifficulty()) {
 						case GameDifficulty::Easy: _crouchCooldown = Random().NextFloat(360.0f, 600.0f); break;
 						default:
 						case GameDifficulty::Normal: _crouchCooldown = Random().NextFloat(180.0f, 360.0f); break;
@@ -352,7 +352,7 @@ namespace Jazz2::Actors::Bosses
 			bool willFaceLeft = (foundPos.X < _pos.X);
 
 			float xOffset, yOffset, speedMult;
-			if (_levelHandler->Difficulty() == GameDifficulty::Easy) {
+			if (_levelHandler->GetDifficulty() == GameDifficulty::Easy) {
 				xOffset = 100.0f;
 				yOffset = 70.0f;
 				speedMult = 0.01f;
@@ -420,7 +420,7 @@ namespace Jazz2::Actors::Bosses
 		_speed.X = 0.0f;
 		_state = State::Crouch;
 
-		switch (_levelHandler->Difficulty()) {
+		switch (_levelHandler->GetDifficulty()) {
 			case GameDifficulty::Easy: _stateTime = Random().NextFloat(100.0f, 240.0f); break;
 			default:
 			case GameDifficulty::Normal: _stateTime = Random().NextFloat(60.0f, 120.0f); break;

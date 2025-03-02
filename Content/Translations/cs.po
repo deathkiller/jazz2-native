@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2025-02-17 15:59+0100\n"
-"PO-Revision-Date: 2025-02-17 15:59+0100\n"
+"PO-Revision-Date: 2025-03-02 11:41+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -2139,7 +2139,7 @@ msgstr ""
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
-msgstr ""
+msgstr "Pro pokračování stiskněte tlačítko \f[c:#d0705d]Střelba\f[/c]"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15

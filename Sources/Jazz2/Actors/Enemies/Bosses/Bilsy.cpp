@@ -73,7 +73,7 @@ namespace Jazz2::Actors::Bosses
 			case StateWaiting: {
 				if (_stateTime <= 0.0f) {
 					bool isFacingPlayer;
-					if (_levelHandler->Difficulty() < GameDifficulty::Hard) {
+					if (_levelHandler->GetDifficulty() < GameDifficulty::Hard) {
 						bool found = false;
 						Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
 
@@ -123,7 +123,7 @@ namespace Jazz2::Actors::Bosses
 
 					PlaySfx("Disappear"_s, 0.8f);
 
-					if (_levelHandler->Difficulty() < GameDifficulty::Hard) {
+					if (_levelHandler->GetDifficulty() < GameDifficulty::Hard) {
 						_canHurtPlayer = false;
 					}
 
@@ -196,7 +196,7 @@ namespace Jazz2::Actors::Bosses
 		SetTransition((AnimState)1073741824, false, [this]() {
 			SetState(ActorState::CanBeFrozen, true);
 
-			if (_levelHandler->Difficulty() < GameDifficulty::Hard) {
+			if (_levelHandler->GetDifficulty() < GameDifficulty::Hard) {
 				_canHurtPlayer = true;
 			}
 

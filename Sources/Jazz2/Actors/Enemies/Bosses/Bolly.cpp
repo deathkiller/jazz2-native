@@ -66,7 +66,7 @@ namespace Jazz2::Actors::Bosses
 		});
 		_levelHandler->AddActor(_turret);*/
 
-		int32_t chainLength = (_levelHandler->Difficulty() < GameDifficulty::Hard ? NormalChainLength : HardChainLength);
+		int32_t chainLength = (_levelHandler->GetDifficulty() < GameDifficulty::Hard ? NormalChainLength : HardChainLength);
 		for (int32_t i = 0; i < chainLength; i++) {
 			_chain[i] = std::make_shared<BollyPart>();
 			uint8_t chainParams[1] = { (uint8_t)((i % 3) == 2 ? 3 : 4) };
@@ -243,7 +243,7 @@ namespace Jazz2::Actors::Bosses
 
 			SetFacingLeft(targetPos.X < _pos.X);
 
-			float speedMultiplier = (_levelHandler->Difficulty() < GameDifficulty::Hard ? 0.6f : 0.8f);
+			float speedMultiplier = (_levelHandler->GetDifficulty() < GameDifficulty::Hard ? 0.6f : 0.8f);
 			Vector2f speed = (targetPos - _pos).Normalized();
 			_speed.X = speed.X * speedMultiplier;
 			_speed.Y = speed.Y * speedMultiplier;

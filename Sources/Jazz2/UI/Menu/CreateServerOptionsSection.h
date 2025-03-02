@@ -18,12 +18,14 @@ namespace Jazz2::UI::Menu
 		void OnDrawOverlay(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
 
-		void SetGameMode(Multiplayer::MpGameMode value);
+		void SetGameMode(Jazz2::Multiplayer::MpGameMode value);
 
 	private:
 		enum class Item {
 			Character,
 			GameMode,
+			ServerName,
+			ServerPort,
 			Start,
 
 			Count
@@ -40,7 +42,7 @@ namespace Jazz2::UI::Menu
 		String _episodeName;
 		String _levelName;
 		String _previousEpisodeName;
-		Multiplayer::MpGameMode _gameMode;
+		Jazz2::Multiplayer::MpGameMode _gameMode;
 
 		ItemData _items[(std::int32_t)Item::Count];
 		std::int32_t _selectedIndex;

@@ -43,7 +43,7 @@ namespace Jazz2::Actors::Solid
 		_speed = *(std::int8_t*)&details.Params[2] * 0.0072f;
 		std::uint8_t sync = details.Params[1];
 		_isSwing = details.Params[4] != 0;
-		_phase = sync * fPiOver2 - _speed * _levelHandler->ElapsedFrames();
+		_phase = sync * fPiOver2 - _speed * _levelHandler->GetElapsedFrames();
 
 		_originPos = _pos;
 		_lastPos = _originPos;

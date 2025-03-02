@@ -45,7 +45,7 @@ namespace Jazz2::Actors::Bosses
 		_lastHealth = _health;
 
 		_stepSize = 0.3f;
-		switch (_levelHandler->Difficulty()) {
+		switch (_levelHandler->GetDifficulty()) {
 			case GameDifficulty::Easy: _stepSize *= 1.3f; break;
 			case GameDifficulty::Hard: _stepSize *= 0.7f; break;
 		}

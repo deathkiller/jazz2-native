@@ -991,7 +991,7 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		so->WriteValue<std::int32_t>(ms.GetSize());
+		so->WriteValue<std::int32_t>((std::int32_t)ms.GetSize());
 		so->Write(ms.GetBuffer(), ms.GetSize());
 
 #if defined(DEATH_DEBUG)
@@ -1143,14 +1143,14 @@ namespace Jazz2::Compatibility
 				LevelToken token = levelTokenConversion(adjustedValue);
 				if (!token.Episode.empty()) {
 					String fullName = token.Episode + '/' + token.Level;
-					so.WriteValue<std::uint8_t>(fullName.size());
+					so.WriteValue<std::uint8_t>((std::uint8_t)fullName.size());
 					so.Write(fullName.data(), fullName.size());
 				} else {
-					so.WriteValue<std::uint8_t>(token.Level.size());
+					so.WriteValue<std::uint8_t>((std::uint8_t)token.Level.size());
 					so.Write(token.Level.data(), token.Level.size());
 				}
 			} else {
-				so.WriteValue<std::uint8_t>(adjustedValue.size());
+				so.WriteValue<std::uint8_t>((std::uint8_t)adjustedValue.size());
 				so.Write(adjustedValue.data(), adjustedValue.size());
 			}
 		} else {

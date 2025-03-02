@@ -24,9 +24,10 @@ namespace Jazz2::Actors::Enemies
 		async_await RequestMetadataAsync("Enemy/TurtleTube"_s);
 		SetAnimation(AnimState::Idle);
 
-		if (_levelHandler->WaterLevel() + WaterDifference <= _pos.Y) {
+		float adjustedWaterLevel = _levelHandler->GetWaterLevel() + WaterDifference;
+		if (adjustedWaterLevel <= _pos.Y) {
 			// Water is above the enemy, it's floating on the water
-			_pos.Y = _levelHandler->WaterLevel() + WaterDifference;
+			_pos.Y = adjustedWaterLevel;
 			SetState(ActorState::ApplyGravitation, false);
 			_onWater = true;
 		} else {
@@ -41,26 +42,26 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnUpdate(timeMult);
 
-		float waterLevel = _levelHandler->WaterLevel();
+		float adjustedWaterLevel = _levelHandler->GetWaterLevel() + WaterDifference;
 		if (_onWater) {
 			// Floating on the water
 			_speed.X = sinf(_phase);
 
 			_phase += timeMult * 0.02f;
 
-			if (waterLevel + WaterDifference < _pos.Y) {
+			if (adjustedWaterLevel < _pos.Y) {
 				// Water is above the enemy, return the enemy on the surface
-				_pos.Y = waterLevel + WaterDifference;
-			} else if (waterLevel + WaterDifference > _pos.Y) {
+				_pos.Y = adjustedWaterLevel;
+			} else if (adjustedWaterLevel > _pos.Y) {
 				// Water is below the enemy, apply gravitation and pause the animation 
 				_speed.X = 0.0f;
 				SetState(ActorState::ApplyGravitation, true);
 				_onWater = false;
 			}
 		} else {
-			if (waterLevel + WaterDifference <= _pos.Y) {
+			if (adjustedWaterLevel <= _pos.Y) {
 				// Water is above the enemy, return the enemy on the surface
-				_pos.Y = waterLevel + WaterDifference;
+				_pos.Y = adjustedWaterLevel;
 				SetState(ActorState::ApplyGravitation, false);
 				_onWater = true;
 

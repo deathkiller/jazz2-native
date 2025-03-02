@@ -44,7 +44,7 @@ namespace Jazz2::UI::Menu
 		void ResumeSavedState() override;
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 		bool ConnectToServer(const StringView address, std::uint16_t port) override;
-		bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
+		bool CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit) override;
 #endif
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
 		bool ActionPressed(PlayerAction action) override;

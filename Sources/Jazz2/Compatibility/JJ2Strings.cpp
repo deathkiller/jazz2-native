@@ -272,7 +272,7 @@ namespace Jazz2::Compatibility
 
 				const std::uint16_t c = Windows1250_Utf8[(std::uint8_t)current];
 				if (c < 0x80) {
-					buffer[j++] = c;
+					buffer[j++] = (char)c;
 				} else if (c < 0x800) {
 					buffer[j++] = 0xc0 | (c >> 6);
 					buffer[j++] = 0x80 | (c & 0x3f);

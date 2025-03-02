@@ -37,7 +37,7 @@ jobs:
         sudo apt update -y
         #sudo apt install doxygen
         sudo apt install texlive-base texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended
-        pip3 install jinja2 Pygments
+        pip3 install jinja2 natsort Pygments
         
     - name: 'Install Doxygen'
       uses: ssciwr/doxygen-install@v1

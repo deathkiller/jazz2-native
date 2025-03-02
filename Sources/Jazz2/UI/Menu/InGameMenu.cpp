@@ -327,9 +327,9 @@ namespace Jazz2::UI::Menu
 		return _root->_root->ConnectToServer(address, port);
 	}
 
-	bool InGameMenu::CreateServer(LevelInitialization&& levelInit, std::uint16_t port)
+	bool InGameMenu::CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit)
 	{
-		return _root->_root->CreateServer(std::move(levelInit), port);
+		return _root->_root->CreateServer(std::move(serverInit));
 	}
 #endif
 

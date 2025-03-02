@@ -141,7 +141,7 @@ namespace Jazz2::Actors::Bosses
 	bool TurtleBoss::OnPerish(ActorBase* collider)
 	{
 		float shellSpeedY;
-		if (_pos.Y > _levelHandler->WaterLevel()) {
+		if (_pos.Y > _levelHandler->GetWaterLevel()) {
 			shellSpeedY = -0.65f;
 		} else if (_levelHandler->IsReforged()) {
 			shellSpeedY = -1.1f;

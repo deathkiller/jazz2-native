@@ -97,15 +97,16 @@ namespace Jazz2
 		Events::EventMap* EventMap() override;
 		Tiles::TileMap* TileMap() override;
 
-		GameDifficulty Difficulty() const override;
+		GameDifficulty GetDifficulty() const override;
 		bool IsLocalSession() const override;
 		bool IsPausable() const override;
 		bool IsReforged() const override;
 		bool CanPlayersCollide() const override;
-		Recti LevelBounds() const override;
-		float ElapsedFrames() const override;
-		float Gravity() const override;
-		float WaterLevel() const override;
+		Recti GetLevelBounds() const override;
+		float GetElapsedFrames() const override;
+		float GetGravity() const override;
+		float GetWaterLevel() const override;
+		float GetHurtInvulnerableTime() const override;
 
 		ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const override;
 		ArrayView<Actors::Player* const> GetPlayers() const override;

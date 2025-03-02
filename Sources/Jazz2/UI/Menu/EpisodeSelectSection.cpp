@@ -141,12 +141,12 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(
 #if defined(WITH_MULTIPLAYER)
-			_multiplayer ? _("Play Story in Cooperation") : _("Play Story"),
+			_multiplayer ? _("Host Story in Cooperation") : _("Play Story"),
 #else
 			_("Play Story"),
 #endif
-			charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+			charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer, Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f),
+			0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
 	void EpisodeSelectSection::OnDrawEmptyText(Canvas* canvas, std::int32_t& charOffset)

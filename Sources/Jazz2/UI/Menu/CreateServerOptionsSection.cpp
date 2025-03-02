@@ -15,7 +15,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	CreateServerOptionsSection::CreateServerOptionsSection(const StringView episodeName, const StringView levelName, const StringView previousEpisodeName)
-		: _episodeName(episodeName), _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(2),
+		: _episodeName(episodeName), _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(4),
 			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
 	{
@@ -31,6 +31,10 @@ namespace Jazz2::UI::Menu
 		_items[(int32_t)Item::Character].Name = _("Character");
 		// TRANSLATORS: Menu item to select game mode
 		_items[(int32_t)Item::GameMode].Name = _("Game Mode");
+		// TRANSLATORS: Menu item to set server name
+		_items[(int32_t)Item::ServerName].Name = _("Server Name");
+		// TRANSLATORS: Menu item to set server port
+		_items[(int32_t)Item::ServerPort].Name = _("Server Port");
 		// TRANSLATORS: Menu item to create server with selected settings
 		_items[(int32_t)Item::Start].Name = _("Create Server");
 	}
@@ -156,6 +160,9 @@ namespace Jazz2::UI::Menu
 
 		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f, 0.88f);
 
+		// TODO
+		center.Y *= 0.7f;
+
 		std::int32_t charOffset = 0;
 		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 		    if (_selectedIndex == i) {
@@ -224,11 +231,25 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
 
 				_items[i].TouchY = center.Y + 28.0f;
+			} else if (i == 2) {
+				// TODO
+				StringView serverName = _("Unnamed server");
+				_root->DrawStringShadow(serverName, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
+
+				_items[i].TouchY = center.Y + 28.0f;
+			} else if (i == 3) {
+				// TODO
+				StringView serverPort = "7438"_s;
+				_root->DrawStringShadow(serverPort, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
+
+				_items[i].TouchY = center.Y + 28.0f;
 			} else {
 				_items[i].TouchY = center.Y;
 			}
 
-		    center.Y += 70.0f;
+		    center.Y += 56.0f;
 		}
 	}
 
@@ -309,7 +330,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CreateServerOptionsSection::SetGameMode(Multiplayer::MpGameMode value)
+	void CreateServerOptionsSection::SetGameMode(Jazz2::Multiplayer::MpGameMode value)
 	{
 		_gameMode = value;
 	}
@@ -336,11 +357,17 @@ namespace Jazz2::UI::Menu
 
 	void CreateServerOptionsSection::OnAfterTransition()
 	{
-		// TODO: _gameMode is ignored
-		PlayerType players[] = { (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType) };
-		LevelInitialization levelInit(_episodeName, StringView(_levelName), GameDifficulty::Normal,
-			PreferencesCache::EnableReforgedGameplay, false, players);
-		levelInit.IsLocalSession = false;
+		ServerInitialization serverInit;
+		// TODO: Hardcoded name and port
+		//serverInit.ServerName = ""_s;
+		serverInit.ServerPort = 7438;
+		serverInit.GameMode = _gameMode;
+
+		serverInit.InitialLevel.IsLocalSession = false;
+		serverInit.InitialLevel.EpisodeName = _episodeName;
+		serverInit.InitialLevel.LevelName = _levelName;
+		serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
+		serverInit.InitialLevel.PlayerCarryOvers[0].Type = (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType);
 
 		if (!_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
@@ -348,10 +375,10 @@ namespace Jazz2::UI::Menu
 				// Set CheatsUsed to true if cheats were used in the previous episode or the previous episode is not completed
 				if ((previousEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ||
 					(previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) != EpisodeContinuationFlags::IsCompleted) {
-					levelInit.CheatsUsed = true;
+					serverInit.InitialLevel.CheatsUsed = true;
 				}
 
-				auto& firstPlayer = levelInit.PlayerCarryOvers[0];
+				auto& firstPlayer = serverInit.InitialLevel.PlayerCarryOvers[0];
 				if (previousEpisodeEnd->Lives > 0) {
 					firstPlayer.Lives = previousEpisodeEnd->Lives;
 				}
@@ -361,16 +388,15 @@ namespace Jazz2::UI::Menu
 				std::memcpy(firstPlayer.WeaponUpgrades, previousEpisodeEnd->WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
 			} else {
 				// Set CheatsUsed to true if the previous episode is not completed
-				levelInit.CheatsUsed = true;
+				serverInit.InitialLevel.CheatsUsed = true;
 			}
 		}
 
 		if (PreferencesCache::EnableReforgedGameplay && _levelName == "01_xmas1"_s) {
-			levelInit.LastExitType = ExitType::Warp | ExitType::Frozen;
+			serverInit.InitialLevel.LastExitType = ExitType::Warp | ExitType::Frozen;
 		}
 
-		// TODO: Hardcoded port
-		_root->CreateServer(std::move(levelInit), 7438);
+		_root->CreateServer(std::move(serverInit));
 	}
 
 	void CreateServerOptionsSection::StartImageTransition()
