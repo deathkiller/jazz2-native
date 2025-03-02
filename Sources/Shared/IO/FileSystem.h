@@ -311,7 +311,7 @@ namespace Death { namespace IO {
 		/**
 			@brief Memory-mapped file deleter
 		
-			@partialsupport Available only on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
+			@partialsupport Available on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
 		*/
 		class MapDeleter
 		{
@@ -341,7 +341,7 @@ namespace Death { namespace IO {
 		 * but not mapped and a zero-sized @cpp nullptr @ce array is returned, with the deleter containing the
 		 * open file handle.
 		 * 
-		 * @partialsupport Available only on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
+		 * @partialsupport Available on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
 		 */
 		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(Containers::StringView path, FileAccess mode);
 #endif

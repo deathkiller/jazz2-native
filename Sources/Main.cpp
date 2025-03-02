@@ -886,9 +886,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, playerID: 0x%llX%llX",
 					peer._enet, 4, gameID, gameVersion, playerID_1, playerID_2);
 
+				constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL; // Exclude patch from version check
 				constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
 
-				if (strncmp(gameID, "J2R ", 4) != 0 || gameVersion != currentVersion) {
+				if (strncmp(gameID, "J2R ", 4) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
