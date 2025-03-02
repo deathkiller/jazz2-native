@@ -40,7 +40,7 @@ namespace Jazz2::Multiplayer
 		friend class UI::Multiplayer::MpInGameLobby;
 
 	public:
-		MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpGameMode gameMode, bool enableLedgeClimb);
+		MpLevelHandler(IRootController* root, NetworkManager* networkManager, bool enableLedgeClimb);
 		~MpLevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
@@ -191,6 +191,15 @@ namespace Jazz2::Multiplayer
 			PlayerState(Vector2f pos, Vector2f speed);
 		};
 
+		struct RemotingActorInfo {
+			std::uint32_t ActorID;
+			std::int32_t LastPosX;
+			std::int32_t LastPosY;
+			std::uint32_t LastAnimation;
+			std::uint16_t LastRotation;
+			std::uint8_t LastRendererType;
+		};
+
 		struct MultiplayerSpawnPoint {
 			Vector2f Pos;
 			std::uint8_t Team;
@@ -205,7 +214,6 @@ namespace Jazz2::Multiplayer
 		static constexpr std::uint32_t MaxPlayerNameLength = 32;
 
 		NetworkManager* _networkManager;
-		MpGameMode _gameMode;
 		float _updateTimeLeft;
 		bool _isServer;
 		bool _initialUpdateSent;
@@ -213,7 +221,7 @@ namespace Jazz2::Multiplayer
 		HashMap<Peer, LevelPeerDesc> _peerDesc; // Server: Per peer description
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
-		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID
+		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
 		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
@@ -224,6 +232,10 @@ namespace Jazz2::Multiplayer
 		bool _enableLedgeClimb;
 		Threading::Spinlock _lock;
 		String _lobbyMessage;
+
+#if defined(DEATH_DEBUG)
+		std::int32_t _debugAverageUpdatePacketSize;
+#endif
 
 		std::unique_ptr<UI::Multiplayer::MpInGameCanvasLayer> _inGameCanvasLayer;
 		std::unique_ptr<UI::Multiplayer::MpInGameLobby> _inGameLobby;

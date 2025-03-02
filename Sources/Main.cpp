@@ -760,8 +760,10 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 	LOGI("Creating server \"%s\" on port %u...", _serverName.data(), serverInit.ServerPort);
 
+	_networkManager->GameMode = serverInit.GameMode;
+
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), serverInit.GameMode, true);
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), true);
 		levelHandler->Initialize(serverInit.InitialLevel);
 		SetStateHandler(std::move(levelHandler));
 	}, NCINE_CURRENT_FUNCTION);
@@ -878,24 +880,26 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(gameID, 4);
 
 				std::uint64_t gameVersion = packet.ReadVariableUint64();
-				std::uint64_t playerID_1 = packet.ReadValue<std::uint64_t>();
-				std::uint64_t playerID_2 = packet.ReadValue<std::uint64_t>();
+				std::uint64_t uuid1 = packet.ReadValue<std::uint64_t>();
+				std::uint64_t uuid2 = packet.ReadValue<std::uint64_t>();
 
-				// TODO: Player name
-
-				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, playerID: 0x%llX%llX",
-					peer._enet, 4, gameID, gameVersion, playerID_1, playerID_2);
+				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: 0x%016llX%016llX",
+					peer._enet, 4, gameID, gameVersion, uuid1, uuid2);
 
 				constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL; // Exclude patch from version check
 				constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
 
-				if (strncmp(gameID, "J2R ", 4) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
+				if (strncmp("J2R ", gameID, 4) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
 
 				if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
-					globalPeerDesc->Authenticated = true;
+					globalPeerDesc->IsAuthenticated = true;
+					globalPeerDesc->Uuid1 = uuid1;
+					globalPeerDesc->Uuid2 = uuid2;
+				} else {
+					DEATH_ASSERT_UNREACHABLE();
 				}
 				break;
 			}
@@ -922,7 +926,9 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
 
-					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), gameMode, enableLedgeClimb);
+					_networkManager->GameMode = gameMode;
+
+					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), enableLedgeClimb);
 					levelHandler->Initialize(levelInit);
 					SetStateHandler(std::move(levelHandler));
 				}, NCINE_CURRENT_FUNCTION);
@@ -1650,7 +1656,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
 		// TODO: Set proper game mode and ledge climb
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), MpGameMode::Unknown, true);
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), true);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}

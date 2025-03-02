@@ -14,10 +14,14 @@ namespace Jazz2::Actors::Multiplayer
 	public:
 		RemotablePlayer();
 
+		/** @brief Returns team ID */
 		std::uint8_t GetTeamId() const;
+		/** @brief Sets team ID */
 		void SetTeamId(std::uint8_t value);
 
+		/** @brief Warps the player in */
 		void WarpIn(ExitType exitType);
+		/** @brief Moves the player remotely */
 		void MoveRemotely(Vector2f pos, Vector2f speed);
 
 	protected:
