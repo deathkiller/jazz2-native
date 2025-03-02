@@ -1078,12 +1078,17 @@ namespace Jazz2
 		}
 	}
 
+	void LevelHandler::HandleLevelChange(LevelInitialization&& levelInit)
+	{
+		_root->ChangeLevel(std::move(levelInit));
+	}
+
 	void LevelHandler::HandleGameOver(Actors::Player* player)
 	{
 		LevelInitialization levelInit;
 		PrepareNextLevelInitialization(levelInit);
 		levelInit.LevelName = ":gameover"_s;
-		_root->ChangeLevel(std::move(levelInit));
+		HandleLevelChange(std::move(levelInit));
 	}
 
 	bool LevelHandler::HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider)
@@ -1508,7 +1513,7 @@ namespace Jazz2
 		if (playersReady && _nextLevelTime <= 0.0f) {
 			LevelInitialization levelInit;
 			PrepareNextLevelInitialization(levelInit);
-			_root->ChangeLevel(std::move(levelInit));
+			HandleLevelChange(std::move(levelInit));
 		}
 	}
 

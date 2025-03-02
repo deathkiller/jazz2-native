@@ -44,12 +44,13 @@ namespace Jazz2::UI::Menu
 		void OnShow(IMenuContainer* root) override;
 		void OnDraw(Canvas* canvas) override;
 
-	private:
-		bool _isDirty;
-
+	protected:
 		void OnHandleInput() override;
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 		void OnExecuteSelected() override;
+
+	private:
+		bool _isDirty;
 	};
 }

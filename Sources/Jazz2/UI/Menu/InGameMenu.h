@@ -70,6 +70,8 @@ namespace Jazz2::UI::Menu
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
 		void PlaySfx(StringView identifier, float gain = 1.0f) override;
 
+		/** @brief Returns `true` if the level handler is on a local session */
+		bool IsLocalSession() const;
 		/** @brief Hides the in-game menu and resumes paused game */
 		void ResumeGame();
 		/** @brief Leaves the paused game and switches back to the main menu */

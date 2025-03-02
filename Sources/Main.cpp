@@ -745,8 +745,6 @@ bool GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
 
 bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 {
-	LOGI("Creating server \"%s\" on port %u...", serverInit.ServerName.data(), serverInit.ServerPort);
-
 	if (_networkManager == nullptr) {
 		_networkManager = std::make_unique<NetworkManager>();
 	}
@@ -760,8 +758,10 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		_serverName = "Unnamed server"_s;
 	}
 
+	LOGI("Creating server \"%s\" on port %u...", _serverName.data(), serverInit.ServerPort);
+
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), serverInit.GameMode);
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), serverInit.GameMode, true);
 		levelHandler->Initialize(serverInit.InitialLevel);
 		SetStateHandler(std::move(levelHandler));
 	}, NCINE_CURRENT_FUNCTION);
@@ -893,6 +893,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
+
+				if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
+					globalPeerDesc->Authenticated = true;
+				}
 				break;
 			}
 		}
@@ -914,10 +918,11 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				InvokeAsync([this, flags, gameMode, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
+					bool enableLedgeClimb = (flags & 0x02) != 0;
 					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
 
-					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), gameMode);
+					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), gameMode, enableLedgeClimb);
 					levelHandler->Initialize(levelInit);
 					SetStateHandler(std::move(levelHandler));
 				}, NCINE_CURRENT_FUNCTION);
@@ -932,7 +937,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		}
 	}
 
-	if (isServer && (ClientPacketType)data[0] == ClientPacketType::Auth) {
+	if (isServer && (ClientPacketType)packetType == ClientPacketType::Auth) {
 		// Message was not processed by level handler, kick the client
 		_networkManager->Kick(peer, Reason::ServerNotReady);
 	}
@@ -1644,8 +1649,8 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
-		// TODO: Set proper game mode
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), MpGameMode::Unknown);
+		// TODO: Set proper game mode and ledge climb
+		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), MpGameMode::Unknown, true);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}

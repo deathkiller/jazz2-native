@@ -40,7 +40,7 @@ namespace Jazz2::Multiplayer
 		friend class UI::Multiplayer::MpInGameLobby;
 
 	public:
-		MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpGameMode gameMode);
+		MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpGameMode gameMode, bool enableLedgeClimb);
 		~MpLevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
@@ -73,6 +73,8 @@ namespace Jazz2::Multiplayer
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) override;
+
+		void HandleLevelChange(LevelInitialization&& levelInit) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
@@ -153,10 +155,11 @@ namespace Jazz2::Multiplayer
 			Actors::Multiplayer::RemotePlayerOnServer* Player;
 			LevelPeerState State;
 			std::uint64_t LastUpdated;
+			bool EnableLedgeClimb;
 
 			LevelPeerDesc() {}
-			LevelPeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, LevelPeerState state)
-				: Player(player), State(state), LastUpdated(0) {}
+			LevelPeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, LevelPeerState state, bool enableLedgeClimb)
+				: Player(player), State(state), LastUpdated(0), EnableLedgeClimb(enableLedgeClimb) {}
 		};
 #endif
 
@@ -218,6 +221,7 @@ namespace Jazz2::Multiplayer
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 		bool _ignorePackets;
+		bool _enableLedgeClimb;
 		Threading::Spinlock _lock;
 		String _lobbyMessage;
 

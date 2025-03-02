@@ -10,17 +10,21 @@
 namespace Jazz2::Multiplayer
 {
 	/**
-		@brief Manages network connections
+		@brief Manages game-specific network connections
 
 		@experimental
 	*/
 	class NetworkManager : public NetworkManagerBase
 	{
 	public:
-		/** @brief Peer description */
+		/** @brief Peer descriptor */
 		struct PeerDesc {
+			/** @brief Preferred player type selected by the peer */
 			PlayerType PreferredPlayerType;
+			/** @brief Player display name */
 			String PlayerName;
+			/** @brief Whether the peer is already authenticated */
+			bool Authenticated;
 
 			PeerDesc();
 		};

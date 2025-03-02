@@ -42,7 +42,7 @@ namespace Jazz2::UI::Menu
 	{
 		ScrollableMenuSection::OnShow(root);
 
-		_isInGame = dynamic_cast<InGameMenu*>(_root);
+		_isInGame = runtime_cast<InGameMenu*>(_root);
 	}
 
 	void GameplayEnhancementsSection::OnUpdate(float timeMult)
@@ -92,8 +92,8 @@ namespace Jazz2::UI::Menu
 	void GameplayEnhancementsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
+		bool isReadOnly = IsItemReadOnly(item.Item.Type);
 
-		bool isReadOnly = (item.Item.Type == GameplayEnhancementsItemType::ReforgedGameplay && _isInGame);
 		if (isSelected) {
 			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
@@ -136,14 +136,12 @@ namespace Jazz2::UI::Menu
 
 	void GameplayEnhancementsSection::OnExecuteSelected()
 	{
-		switch (_items[_selectedIndex].Item.Type) {
-			case GameplayEnhancementsItemType::ReforgedGameplay:
-				if (_isInGame) {
-					return;
-				}
-				PreferencesCache::EnableReforgedGameplay = !PreferencesCache::EnableReforgedGameplay;
-				break;
+		if (IsItemReadOnly(_items[_selectedIndex].Item.Type)) {
+			return;
+		}
 
+		switch (_items[_selectedIndex].Item.Type) {
+			case GameplayEnhancementsItemType::ReforgedGameplay: PreferencesCache::EnableReforgedGameplay = !PreferencesCache::EnableReforgedGameplay; break;
 			case GameplayEnhancementsItemType::ReforgedHUD: PreferencesCache::EnableReforgedHUD = !PreferencesCache::EnableReforgedHUD; break;
 			case GameplayEnhancementsItemType::ReforgedMainMenu:
 				PreferencesCache::EnableReforgedMainMenu = !PreferencesCache::EnableReforgedMainMenu;
@@ -160,5 +158,20 @@ namespace Jazz2::UI::Menu
 		_isDirty = true;
 		_animation = 0.0f;
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
+	}
+
+	bool GameplayEnhancementsSection::IsItemReadOnly(GameplayEnhancementsItemType type)
+	{
+		if (type == GameplayEnhancementsItemType::ReforgedGameplay && _isInGame) {
+			return true;
+		} else if (type == GameplayEnhancementsItemType::LedgeClimb && _isInGame) {
+			if (auto* inGameMenu = runtime_cast<InGameMenu*>(_root)) {
+				if (!inGameMenu->IsLocalSession()) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 }

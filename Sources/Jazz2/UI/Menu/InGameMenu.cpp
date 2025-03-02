@@ -471,6 +471,11 @@ namespace Jazz2::UI::Menu
 #endif
 	}
 
+	bool InGameMenu::IsLocalSession() const
+	{
+		return _root->IsLocalSession();
+	}
+
 	void InGameMenu::ResumeGame()
 	{
 		_root->ResumeGame();

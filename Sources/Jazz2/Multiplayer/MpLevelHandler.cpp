@@ -59,10 +59,10 @@ using namespace nCine;
 
 namespace Jazz2::Multiplayer
 {
-	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpGameMode gameMode)
+	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpGameMode gameMode, bool enableLedgeClimb)
 		: LevelHandler(root), _gameMode(gameMode), _networkManager(networkManager), _updateTimeLeft(1.0f),
 			_initialUpdateSent(false), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0), _seqNumWarped(0), _suppressRemoting(false),
-			_ignorePackets(false)
+			_ignorePackets(false), _enableLedgeClimb(enableLedgeClimb)
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 			, _plotIndex(0), _actorsMaxCount(0.0f), _actorsCount{}, _remoteActorsCount{}, _remotingActorsCount{},
 			_mirroredActorsCount{}, _updatePacketMaxSize(0.0f), _updatePacketSize{}, _compressedUpdatePacketSize{}
@@ -71,7 +71,7 @@ namespace Jazz2::Multiplayer
 		_isServer = (networkManager->GetState() == NetworkState::Listening);
 
 		if (_isServer) {
-			// TODO
+			// TODO: Lobby message
 			_lobbyMessage = "Welcome to the testing server!";
 		}
 	}
@@ -99,6 +99,10 @@ namespace Jazz2::Multiplayer
 			if (PreferencesCache::EnableReforgedGameplay) {
 				flags |= 0x01;
 			}
+			if (PreferencesCache::EnableLedgeClimb) {
+				flags |= 0x02;
+			}
+
 			MemoryStream packet(10 + _episodeName.size() + _levelFileName.size());
 			packet.WriteValue<std::uint8_t>(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)_gameMode);
@@ -106,8 +110,11 @@ namespace Jazz2::Multiplayer
 			packet.Write(_episodeName.data(), _episodeName.size());
 			packet.WriteVariableUint32(_levelFileName.size());
 			packet.Write(_levelFileName.data(), _levelFileName.size());
-			// TODO: Send it to only authenticated peers
-			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (globalPeerDesc != nullptr && globalPeerDesc->Authenticated);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
 		}
 
 		auto& resolver = ContentResolver::Get();
@@ -196,7 +203,14 @@ namespace Jazz2::Multiplayer
 				LOGD("[MP] Level \"%s/%s\" is ready", _episodeName.data(), _levelFileName.data());
 
 				if (!_isServer) {
-					_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::LevelReady, {});
+					std::uint8_t flags = 0;
+					if (PreferencesCache::EnableLedgeClimb) {
+						flags |= 0x02;
+					}
+
+					MemoryStream packet(1);
+					packet.WriteValue<std::uint8_t>(flags);
+					_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::LevelReady, packet);
 				}
 			}
 
@@ -743,7 +757,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel)
 	{
-		if (!_isServer) {
+		if (!_isServer || _nextLevelType != ExitType::None) {
 			// Level can be changed only by server
 			return;
 		}
@@ -751,6 +765,24 @@ namespace Jazz2::Multiplayer
 		LOGD("[MP] Changing level to \"%s\" (0x%02x)", nextLevel.data(), (std::uint32_t)exitType);
 
 		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
+
+		if ((exitType & ExitType::FastTransition) != ExitType::FastTransition) {
+			float fadeOutDelay = _nextLevelTime - 40.0f;
+
+			MemoryStream packet(4);
+			packet.WriteVariableInt32((std::int32_t)fadeOutDelay);
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto it = _peerDesc.find(peer);
+				return (it != _peerDesc.end() && it->second.State >= LevelPeerState::LevelLoaded);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::FadeOut, packet);
+		}
+	}
+
+	void MpLevelHandler::HandleLevelChange(LevelInitialization&& levelInit)
+	{
+		levelInit.IsLocalSession = false;
+		LevelHandler::HandleLevelChange(std::move(levelInit));
 	}
 
 	void MpLevelHandler::HandleGameOver(Actors::Player* player)
@@ -1326,6 +1358,9 @@ namespace Jazz2::Multiplayer
 					if (PreferencesCache::EnableReforgedGameplay) {
 						flags |= 0x01;
 					}
+					if (PreferencesCache::EnableLedgeClimb) {
+						flags |= 0x02;
+					}
 
 					MemoryStream packet(10 + _episodeName.size() + _levelFileName.size());
 					packet.WriteValue<std::uint8_t>(flags);
@@ -1339,21 +1374,29 @@ namespace Jazz2::Multiplayer
 					return true;
 				}
 				case ClientPacketType::LevelReady: {
-					LOGD("[MP] ClientPacketType::LevelReady - peer: 0x%p", peer._enet);
+					MemoryStream packet(data);
+					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 
-					_peerDesc[peer] = LevelPeerDesc(nullptr, LevelPeerState::LevelLoaded);
+					LOGD("[MP] ClientPacketType::LevelReady - peer: 0x%p, flags: 0x%02x, ", peer._enet, flags);
 
-					std::uint8_t flags = 0x01 | 0x02 | 0x04; // Set Visibility | Show | SetLobbyMessage
-					// TODO: Allowed characters
-					std::uint8_t allowedCharacters = 0x01 | 0x02 | 0x04; // Jazz | Spaz | Lori
+					bool enableLedgeClimb = (flags & 0x02) != 0;
+					_peerDesc[peer] = LevelPeerDesc(nullptr, LevelPeerState::LevelLoaded, enableLedgeClimb);
 
-					MemoryStream packet(6 + _lobbyMessage.size());
-					packet.WriteValue<std::uint8_t>(flags);
-					packet.WriteValue<std::uint8_t>(allowedCharacters);
-					packet.WriteVariableUint32(_lobbyMessage.size());
-					packet.Write(_lobbyMessage.data(), _lobbyMessage.size());
+					auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer);
+					if (globalPeerDesc == nullptr || globalPeerDesc->PreferredPlayerType == PlayerType::None) {
+						// Show in-game lobby only to newly connected players
+						std::uint8_t flags = 0x01 | 0x02 | 0x04; // Set Visibility | Show | SetLobbyMessage
+						// TODO: Allowed characters
+						std::uint8_t allowedCharacters = 0x01 | 0x02 | 0x04; // Jazz | Spaz | Lori
 
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowInGameLobby, packet);
+						MemoryStream packet(6 + _lobbyMessage.size());
+						packet.WriteValue<std::uint8_t>(flags);
+						packet.WriteValue<std::uint8_t>(allowedCharacters);
+						packet.WriteVariableUint32(_lobbyMessage.size());
+						packet.Write(_lobbyMessage.data(), _lobbyMessage.size());
+
+						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowInGameLobby, packet);
+					}
 					return true;
 				}
 				case ClientPacketType::ChatMessage: {
@@ -1595,6 +1638,30 @@ namespace Jazz2::Multiplayer
 							}
 						}, NCINE_CURRENT_FUNCTION);
 					}
+					return true;
+				}
+				case ServerPacketType::FadeOut: {
+					MemoryStream packet(data);
+					std::int32_t fadeOutDelay = packet.ReadVariableInt32();
+
+					LOGD("[MP] ServerPacketType::FadeOut - delay: %i", fadeOutDelay);
+
+					_root->InvokeAsync([this, fadeOutDelay]() {
+						if (_hud != nullptr) {
+							_hud->BeginFadeOut((float)fadeOutDelay);
+						}
+
+#if defined(WITH_AUDIO)
+						if (_sugarRushMusic != nullptr) {
+							_sugarRushMusic->stop();
+							_sugarRushMusic = nullptr;
+						}
+						if (_music != nullptr) {
+							_music->stop();
+							_music = nullptr;
+						}
+#endif
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::ChangeGameMode: {
@@ -2272,7 +2339,7 @@ namespace Jazz2::Multiplayer
 
 				auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer);
 
-				std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>();
+				std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc.EnableLedgeClimb);
 				std::uint8_t playerParams[2] = { (std::uint8_t)globalPeerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
 				player->OnActivated(Actors::ActorActivationDetails(
 					this,

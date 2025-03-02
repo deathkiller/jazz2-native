@@ -21,7 +21,7 @@ namespace Jazz2::UI::Menu
 
 		void OnDraw(Canvas* canvas) override;
 
-	private:
+	protected:
 		void OnExecuteSelected() override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 	};

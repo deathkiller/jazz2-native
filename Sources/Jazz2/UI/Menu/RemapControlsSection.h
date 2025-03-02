@@ -27,6 +27,15 @@ namespace Jazz2::UI::Menu
 		void OnDraw(Canvas* canvas) override;
 
 	protected:
+		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
+		void OnKeyPressed(const KeyboardEvent& event) override;
+		void OnHandleInput() override;
+		void OnExecuteSelected() override;
+		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
+		void OnBackPressed() override;
+
+	protected:
 		std::int32_t _selectedColumn;
 		std::int32_t _playerIndex;
 		float _timeout;
@@ -35,14 +44,6 @@ namespace Jazz2::UI::Menu
 		bool _isDirty;
 		bool _waitForInput;
 		bool _waitForInputPrev;
-
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnKeyPressed(const KeyboardEvent& event) override;
-		void OnHandleInput() override;
-		void OnExecuteSelected() override;
-		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
-		void OnBackPressed() override;
 
 		void RefreshPreviousState();
 		bool HasCollision(PlayerAction action, MappingTarget target, PlayerAction& collidingAction, std::int32_t& collidingAssignment);

@@ -8,8 +8,8 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
-	RemotePlayerOnServer::RemotePlayerOnServer()
-		: _stateBufferPos(0)
+	RemotePlayerOnServer::RemotePlayerOnServer(bool enableLedgeClimb)
+		: _stateBufferPos(0), _enableLedgeClimb(enableLedgeClimb)
 	{
 	}
 
@@ -68,6 +68,11 @@ namespace Jazz2::Actors::Multiplayer
 		PlayerOnServer::OnUpdate(timeMult);
 
 		_renderer.setPosition(_displayPos);
+	}
+
+	bool RemotePlayerOnServer::IsLedgeClimbAllowed() const
+	{
+		return (_enableLedgeClimb && PlayerOnServer::IsLedgeClimbAllowed());
 	}
 
 	bool RemotePlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)

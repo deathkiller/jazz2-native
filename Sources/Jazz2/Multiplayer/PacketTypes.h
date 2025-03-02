@@ -39,6 +39,7 @@ namespace Jazz2::Multiplayer
 
 		LoadLevel,
 		ShowInGameLobby,
+		FadeOut,
 		ChangeGameMode,
 		PlaySfx,
 		PlayCommonSfx,

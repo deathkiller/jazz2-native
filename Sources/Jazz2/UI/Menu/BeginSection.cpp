@@ -45,7 +45,7 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
+		if (auto* mainMenu = runtime_cast<MainMenu*>(_root)) {
 			_isPlayable = ((mainMenu->_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 		}
 #endif
@@ -176,7 +176,7 @@ namespace Jazz2::UI::Menu
 		bool canGrantPermission = false;
 		bool permissionGranted = false;
 #if defined(DEATH_TARGET_ANDROID)
-		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
+		if (auto* mainMenu = runtime_cast<MainMenu*>(_root)) {
 			IRootController::Flags flags = mainMenu->_root->GetFlags();
 			canGrantPermission = Backends::AndroidJniHelper::SdkVersion() >= 30 && (flags & IRootController::Flags::HasExternalStoragePermission) != IRootController::Flags::HasExternalStoragePermission;
 			permissionGranted = (flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume;

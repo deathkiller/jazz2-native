@@ -36,7 +36,7 @@ namespace Jazz2
 		std::uint8_t WeaponUpgrades[WeaponCount];
 	};
 
-	/** @brief Level initialization */
+	/** @brief Level initialization parameters */
 	struct LevelInitialization
 	{
 		/** @brief Maximum player count */

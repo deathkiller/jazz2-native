@@ -179,6 +179,11 @@ namespace Jazz2::Actors
 		return (_inWater || _activeModifier != Modifier::None);
 	}
 
+	bool Player::IsLedgeClimbAllowed() const
+	{
+		return PreferencesCache::EnableLedgeClimb;
+	}
+
 	bool Player::OnTileDeactivated()
 	{
 		// Player cannot be deactivated
@@ -1670,7 +1675,7 @@ namespace Jazz2::Actors
 				}
 			}
 		} else {
-			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !CanJump() &&
+			if (IsLedgeClimbAllowed() && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !CanJump() &&
 				!_inWater && _currentSpecialMove == SpecialMoveType::None && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionUppercutEnd) &&
 				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
 
