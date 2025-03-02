@@ -25,7 +25,7 @@
 #	include <dirent.h>
 #	include <fcntl.h>
 #	include <ftw.h>
-#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #		include <sys/mman.h>
 #	endif
 #	if defined(DEATH_TARGET_UNIX)
@@ -2438,10 +2438,10 @@ namespace Death { namespace IO {
 		return std::make_unique<FileStream>(path, mode);
 	}
 
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	void FileSystem::MapDeleter::operator()(const char* const data, const std::size_t size)
 	{
-#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 		if (data != nullptr) ::munmap(const_cast<char*>(data), size);
 		if (_fd != 0) ::close(_fd);
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -2454,7 +2454,7 @@ namespace Death { namespace IO {
 
 	std::optional<Array<char, FileSystem::MapDeleter>> FileSystem::OpenAsMemoryMapped(StringView path, FileAccess mode)
 	{
-#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 		int flags, prot;
 		switch (mode) {
 			case FileAccess::Read:
