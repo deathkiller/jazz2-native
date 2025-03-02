@@ -21,6 +21,8 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Sets team ID */
 		void SetTeamId(std::uint8_t value);
 
+
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		std::uint8_t _teamId;

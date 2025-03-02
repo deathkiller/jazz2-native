@@ -12,7 +12,9 @@ namespace Jazz2::Actors::Multiplayer
 		DEATH_RUNTIME_OBJECT(PlayerOnServer);
 
 	public:
-		RemotePlayerOnServer();
+		RemotePlayerOnServer(bool enableLedgeClimb);
+
+		bool IsLedgeClimbAllowed() const override;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;
@@ -31,6 +33,7 @@ namespace Jazz2::Actors::Multiplayer
 		StateFrame _stateBuffer[8];
 		std::int32_t _stateBufferPos;
 		Vector2f _displayPos;
+		bool _enableLedgeClimb;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

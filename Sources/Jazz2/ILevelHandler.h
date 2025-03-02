@@ -123,6 +123,9 @@ namespace Jazz2
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) = 0;
 		/** @brief Starts transition to change current level */
 		virtual void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) = 0;
+
+		/** @brief Called when the level is changed */
+		virtual void HandleLevelChange(LevelInitialization&& levelInit) = 0;
 		/** @brief Called when the game is over */
 		virtual void HandleGameOver(Actors::Player* player) = 0;
 		/** @brief Called when a player dies */

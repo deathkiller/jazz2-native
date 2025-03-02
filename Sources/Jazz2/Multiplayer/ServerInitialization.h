@@ -7,22 +7,21 @@
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Server initialization */
+	/**
+		@brief Server initialization parameters
+
+		@experimental
+	*/
 	struct ServerInitialization
 	{
+		/** @brief Level initialization parameters */
 		LevelInitialization InitialLevel;
+		/** @brief Multiplayer game mode */
 		MpGameMode GameMode;
+		/** @brief Server name */
 		String ServerName;
+		/** @brief Server port */
 		std::uint16_t ServerPort;
-
-		//ServerInitialization();
-
-		//LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged);
-		//LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType);
-		//LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes);
-
-		//LevelInitialization(const LevelInitialization& copy);
-		//LevelInitialization(LevelInitialization&& move);
 	};
 }
 

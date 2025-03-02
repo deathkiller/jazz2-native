@@ -31,7 +31,7 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-		bool isInGame = dynamic_cast<InGameMenu*>(_root);
+		bool isInGame = runtime_cast<InGameMenu*>(_root);
 
 		_items.clear();
 

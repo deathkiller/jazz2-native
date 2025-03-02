@@ -61,8 +61,6 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Allows to create generic network clients and servers
-
-		@experimental
 	*/
 	class NetworkManagerBase
 	{

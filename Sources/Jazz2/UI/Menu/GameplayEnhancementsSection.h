@@ -31,14 +31,17 @@ namespace Jazz2::UI::Menu
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 
+	protected:
+		void OnHandleInput() override;
+		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
+		void OnExecuteSelected() override;
+
 	private:
 		float _transition;
 		bool _isDirty;
 		bool _isInGame;
 
-		void OnHandleInput() override;
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnExecuteSelected() override;
+		bool IsItemReadOnly(GameplayEnhancementsItemType type);
 	};
 }

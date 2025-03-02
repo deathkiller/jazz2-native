@@ -48,6 +48,15 @@ namespace Jazz2::UI::Menu
 
 		static std::int32_t TryGetSeriesIndex(StringView episodeName, bool playerDied);
 
+	protected:
+		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
+		void OnHandleInput() override;
+		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
+		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
+		void OnExecuteSelected() override;
+		void OnBackPressed() override;
+
 	private:
 		enum class SeriesName {
 			BaseGame,
@@ -69,14 +78,6 @@ namespace Jazz2::UI::Menu
 		std::size_t _textCursor;
 		float _carretAnim;
 		bool _waitForInput;
-
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnHandleInput() override;
-		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
-		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
-		void OnExecuteSelected() override;
-		void OnBackPressed() override;
 
 		void FillDefaultsIfEmpty();
 		void DeserializeFromFile();

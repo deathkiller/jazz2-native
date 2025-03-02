@@ -140,6 +140,8 @@ namespace Jazz2
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) override;
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) override;
+
+		void HandleLevelChange(LevelInitialization&& levelInit) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;

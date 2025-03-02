@@ -29,13 +29,14 @@ namespace Jazz2::UI::Menu
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 
-	private:
-		bool _committed;
-
+	protected:
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 		void OnBackPressed() override;
 		void OnSelectionChanged(ListViewItem& item) override;
 		void OnExecuteSelected() override;
+
+	private:
+		bool _committed;
 	};
 }

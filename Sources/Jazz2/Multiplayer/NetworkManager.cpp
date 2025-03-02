@@ -41,7 +41,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	NetworkManager::PeerDesc::PeerDesc()
-		: PreferredPlayerType(PlayerType::None)
+		: PreferredPlayerType(PlayerType::None), Authenticated(false)
 	{
 	}
 }
