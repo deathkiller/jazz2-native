@@ -1013,6 +1013,12 @@ namespace nCine
 		return false;
 	}
 
+	String Application::GetUserName()
+	{
+		// Not implemented in base class
+		return {};
+	}
+
 	bool Application::OpenUrl(StringView url)
 	{
 		// Not implemented in base class

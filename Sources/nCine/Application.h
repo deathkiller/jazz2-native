@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../Main.h"
 #include "Graphics/IGfxDevice.h"
@@ -169,6 +169,8 @@ namespace nCine
 
 		/** @brief Switches PS4 and PS5 controllers to use extended protocol which enables rumble and other features */
 		virtual bool EnablePlayStationExtendedSupport(bool enable);
+		/** @brief Returns the user name of the logged-in user */
+		virtual String GetUserName();
 		/** @brief Opens the specified URL in a default web browser */
 		virtual bool OpenUrl(StringView url);
 

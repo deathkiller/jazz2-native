@@ -118,9 +118,6 @@ namespace Jazz2
 		/** @brief Value of @ref MaxFps that specifies the frame rate of the monitor being used */
 		static constexpr std::int32_t UseVsync = -1;
 
-		/** @brief Unique player ID */
-		static StaticArray<16, std::uint8_t> UniquePlayerID;
-
 		/** @brief Whether the application is running for the first time */
 		static bool FirstRun;
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -180,8 +177,6 @@ namespace Jazz2
 		static bool EnableRgbLights;
 		/** @brief Whether unsigned scripts can be loaded */
 		static bool AllowUnsignedScripts;
-		/** @brief Whether Discord integration is enabled */
-		static bool EnableDiscordIntegration;
 		/** @brief Whether tutorial is completed */
 		static bool TutorialCompleted;
 		/** @brief Whether the last state should be resumed on start */
@@ -226,6 +221,15 @@ namespace Jazz2
 		static Vector2f TouchLeftPadding;
 		/** @brief Touch controls right padding */
 		static Vector2f TouchRightPadding;
+
+		// User Profile
+		/** @brief Unique player ID */
+		static StaticArray<16, std::uint8_t> UniquePlayerID;
+		/** @brief Player display name */
+		static String PlayerName;
+		/** @brief Whether Discord integration is enabled */
+		static bool EnableDiscordIntegration;
+
 
 		/** @brief Initializes preferences cache from a given application configuration */
 		static void Initialize(const AppConfiguration& config);

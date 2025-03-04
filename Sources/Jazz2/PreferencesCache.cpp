@@ -18,7 +18,6 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	StaticArray<16, std::uint8_t> PreferencesCache::UniquePlayerID;
 	bool PreferencesCache::FirstRun = false;
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	bool PreferencesCache::IsStandalone = false;
@@ -53,7 +52,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableRgbLights = true;
 #endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
-	bool PreferencesCache::EnableDiscordIntegration = false;
+
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::ResumeOnStart = false;
 	bool PreferencesCache::AllowCheats = false;
@@ -76,6 +75,9 @@ namespace Jazz2
 	bool PreferencesCache::UseNativeBackButton = false;
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
+	StaticArray<16, std::uint8_t> PreferencesCache::UniquePlayerID;
+	String PreferencesCache::PlayerName;
+	bool PreferencesCache::EnableDiscordIntegration = true;
 
 	String PreferencesCache::_configPath;
 	HashMap<String, EpisodeContinuationState> PreferencesCache::_episodeEnd;
@@ -262,10 +264,9 @@ namespace Jazz2
 
 					if (version >= 10) {
 						uc.Read(UniquePlayerID, sizeof(UniquePlayerID));
-						// TODO: Player name
 						std::uint32_t playerNameLength = uc.ReadVariableUint32();
-						String playerName(NoInit, playerNameLength);
-						uc.Read(playerName.data(), playerNameLength);
+						PlayerName = String(NoInit, playerNameLength);
+						uc.Read(PlayerName.data(), playerNameLength);
 					} else {
 						// Generate a new UUID when upgrading from older version
 						Random().Uuid(UniquePlayerID);
@@ -351,9 +352,11 @@ namespace Jazz2
 						}
 					}
 				} else {
+					// The file is too new or corrupted
 					resetConfig = true;
 				}
 			} else {
+				// The file doesn't exist
 				resetConfig = true;
 			}
 		}
@@ -362,6 +365,7 @@ namespace Jazz2
 			// Config file doesn't exist or reset is requested
 			FirstRun = true;
 			Random().Uuid(UniquePlayerID);
+			PlayerName = theApplication().GetUserName();
 			TryLoadPreferredLanguage();
 
 			fs::CreateDirectories(configDir);
@@ -506,8 +510,8 @@ namespace Jazz2
 		co.WriteValue<std::uint8_t>((std::uint8_t)OverwriteEpisodeEnd);
 
 		co.Write(UniquePlayerID, sizeof(UniquePlayerID));
-		// TODO: Player name
-		co.WriteVariableUint32(0);
+		co.WriteVariableUint32((std::uint32_t)PlayerName.size());
+		co.Write(PlayerName.data(), (std::int64_t)PlayerName.size());
 
 		// Controls
 		co.WriteValue<std::uint8_t>((std::uint8_t)ControlScheme::MaxSupportedPlayers);
@@ -530,7 +534,7 @@ namespace Jazz2
 
 		for (auto& pair : _episodeEnd) {
 			co.WriteValue<std::uint8_t>((std::uint8_t)pair.first.size());
-			co.Write(pair.first.data(), (uint32_t)pair.first.size());
+			co.Write(pair.first.data(), (std::int64_t)pair.first.size());
 
 			co.Write(&pair.second, sizeof(EpisodeContinuationState));
 		}
@@ -541,10 +545,10 @@ namespace Jazz2
 
 		for (auto& pair : _episodeContinue) {
 			co.WriteValue<std::uint8_t>((std::uint8_t)pair.first.size());
-			co.Write(pair.first.data(), (std::uint32_t)pair.first.size());
+			co.Write(pair.first.data(), (std::int64_t)pair.first.size());
 
 			co.WriteValue<std::uint8_t>((std::uint8_t)pair.second.LevelName.size());
-			co.Write(pair.second.LevelName.data(), (std::uint32_t)pair.second.LevelName.size());
+			co.Write(pair.second.LevelName.data(), (std::int64_t)pair.second.LevelName.size());
 
 			co.Write(&pair.second.State, sizeof(EpisodeContinuationState));
 		}

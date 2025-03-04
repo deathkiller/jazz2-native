@@ -10,11 +10,6 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
-#elif defined(DEATH_TARGET_SWITCH)
-#	include <switch.h>
-#elif defined(DEATH_TARGET_UNIX)
-#	include <pwd.h>
-#	include <unistd.h>
 #endif
 
 using namespace Death::IO::Compression;
@@ -36,20 +31,26 @@ namespace Jazz2::UI::Menu
 		if (seriesIndex >= 0 && seriesIndex < (std::int32_t)SeriesName::Count) {
 			_selectedSeries = seriesIndex;
 
-			String name;
-			std::uint64_t id = 0;
+			String playerName;
+			std::uint64_t userId = 0;
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			if (PreferencesCache::EnableDiscordIntegration && DiscordRpcClient::Get().IsSupported()) {
-				name = DiscordRpcClient::Get().GetUserDisplayName();
-				id = DiscordRpcClient::Get().GetUserId();
+				playerName = DiscordRpcClient::Get().GetUserDisplayName();
+				userId = DiscordRpcClient::Get().GetUserId();
 			}
 #endif
-			if (name.empty()) {
-				name = TryGetDefaultName();
+			if (playerName.empty()) {
+				playerName = PreferencesCache::PlayerName;
+				if (playerName.empty()) {
+					playerName = theApplication().GetUserName();
+					if (playerName.empty()) {
+						playerName = "Me"_s;
+					}
+				}
 			}
-			if (name.size() > MaxNameLength) {
-				auto [_, prevChar] = Utf8::PrevChar(name, MaxNameLength);
-				name = name.prefix(prevChar);
+			if (playerName.size() > MaxPlayerNameLength) {
+				auto [_, prevChar] = Utf8::PrevChar(playerName, MaxPlayerNameLength);
+				playerName = playerName.prefix(prevChar);
 			}
 
 			HighscoreFlags flags = HighscoreFlags::None;
@@ -57,7 +58,7 @@ namespace Jazz2::UI::Menu
 			if (cheatsUsed) flags |= HighscoreFlags::CheatsUsed;
 
 			// TODO: PlayerId is unused
-			AddItemAndFocus(HighscoreItem { std::move(name), id, flags, itemToAdd.Type, difficulty, itemToAdd.Lives, itemToAdd.Score,
+			AddItemAndFocus(HighscoreItem { std::move(playerName), userId, flags, itemToAdd.Type, difficulty, itemToAdd.Lives, itemToAdd.Score,
 				{ itemToAdd.Gems[0], itemToAdd.Gems[1], itemToAdd.Gems[2], itemToAdd.Gems[3] }, DateTime::UtcNow().ToUnixMilliseconds(), elapsedMilliseconds });
 		}
 	}
@@ -208,7 +209,7 @@ namespace Jazz2::UI::Menu
 	{
 		if (_waitForInput) {
 			auto& selectedItem = _items[_selectedIndex];
-			if (selectedItem.Item->PlayerName.size() + event.length <= MaxNameLength) {
+			if (selectedItem.Item->PlayerName.size() + event.length <= MaxPlayerNameLength) {
 				selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(_textCursor)
 					+ StringView(event.text, event.length)
 					+ selectedItem.Item->PlayerName.exceptPrefix(_textCursor);
@@ -622,61 +623,5 @@ namespace Jazz2::UI::Menu
 		for (auto& entry : entries) {
 			_items.emplace_back(&entry);
 		}
-	}
-
-	String HighscoresSection::TryGetDefaultName()
-	{
-#if defined(DEATH_TARGET_ANDROID)
-		// TODO: Get user name on Android
-#elif defined(DEATH_TARGET_SWITCH)
-		AccountUid uid;
-		AccountProfile profile;
-		if (R_SUCCEEDED(accountInitialize(AccountServiceType_Application))) {
-			String userName;
-			if (R_SUCCEEDED(accountGetPreselectedUser(&uid)) && R_SUCCEEDED(accountGetProfile(&profile, uid))) {
-				AccountProfileBase profileBase;
-				AccountUserData userData;
-				accountProfileGet(&profile, &userData, &profileBase);
-				String userName = profileBase.nickname;
-				accountProfileClose(&profile);
-			}
-			accountExit();
-
-			if (!userName.empty()) {
-				return userName;
-			}
-		}
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-		// TODO: Get user name on UWP/Xbox
-#elif defined(DEATH_TARGET_WINDOWS)
-		wchar_t userName[64];
-		DWORD userNameLength = (DWORD)arraySize(userName);
-		if (::GetUserName(userName, &userNameLength) && userNameLength > 0) {
-			return Utf8::FromUtf16(userName);
-		}
-#elif defined(DEATH_TARGET_APPLE)
-		StringView userName = ::getenv("USER");
-		if (!userName.empty()) {
-			return userName;
-		}
-#elif defined(DEATH_TARGET_UNIX)
-		struct passwd* pw = ::getpwuid(::getuid());
-		if (pw != nullptr) {
-			StringView userName = pw->pw_gecos;	// Display name
-			if (!userName.empty()) {
-				return userName;
-			}
-			userName = pw->pw_name;	// Plain name
-			if (!userName.empty()) {
-				return userName;
-			}
-		}
-
-		StringView userName = ::getenv("USER");
-		if (!userName.empty()) {
-			return userName;
-		}
-#endif
-		return "Me"_s;
 	}
 }

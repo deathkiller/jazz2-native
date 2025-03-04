@@ -388,4 +388,5 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TouchControlsOptionsSection.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/UserProfileOptionsSection.h
 )

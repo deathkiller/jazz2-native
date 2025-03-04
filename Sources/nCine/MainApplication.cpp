@@ -1,4 +1,4 @@
-#include "MainApplication.h"
+﻿#include "MainApplication.h"
 #include "IAppEventHandler.h"
 #include "../Main.h"
 
@@ -19,6 +19,9 @@
 #	include <emscripten/emscripten.h>
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_UNIX)
+#	include <pwd.h>
+#	include <unistd.h>
 #elif defined(DEATH_TARGET_WINDOWS)
 #	include <timeapi.h>
 #	include <Utf8.h>
@@ -129,6 +132,58 @@ namespace nCine
 #else
 		return false;
 #endif
+	}
+
+	String MainApplication::GetUserName()
+	{
+#if defined(DEATH_TARGET_SWITCH)
+		AccountUid uid;
+		AccountProfile profile;
+		if (R_SUCCEEDED(accountInitialize(AccountServiceType_Application))) {
+			String userName;
+			if (R_SUCCEEDED(accountGetPreselectedUser(&uid)) && R_SUCCEEDED(accountGetProfile(&profile, uid))) {
+				AccountProfileBase profileBase;
+				AccountUserData userData;
+				accountProfileGet(&profile, &userData, &profileBase);
+				String userName = profileBase.nickname;
+				accountProfileClose(&profile);
+			}
+			accountExit();
+
+			if (!userName.empty()) {
+				return userName;
+			}
+		}
+#elif defined(DEATH_TARGET_WINDOWS)
+		wchar_t userName[64];
+		DWORD userNameLength = (DWORD)arraySize(userName);
+		if (::GetUserName(userName, &userNameLength) && userNameLength > 0) {
+			return Utf8::FromUtf16(userName);
+		}
+#elif defined(DEATH_TARGET_APPLE)
+		StringView userName = ::getenv("USER");
+		if (!userName.empty()) {
+			return userName;
+		}
+#elif defined(DEATH_TARGET_UNIX)
+		struct passwd* pw = ::getpwuid(::getuid());
+		if (pw != nullptr) {
+			StringView userName = pw->pw_gecos;	// Display name
+			if (!userName.empty()) {
+				return userName;
+			}
+			userName = pw->pw_name;	// Plain name
+			if (!userName.empty()) {
+				return userName;
+			}
+		}
+
+		StringView userName = ::getenv("USER");
+		if (!userName.empty()) {
+			return userName;
+		}
+#endif
+		return {};
 	}
 
 	bool MainApplication::OpenUrl(StringView url)

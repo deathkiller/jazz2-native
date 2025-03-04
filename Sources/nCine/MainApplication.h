@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Application.h"
 
@@ -26,6 +26,7 @@ namespace nCine
 		void Quit() override;
 
 		bool EnablePlayStationExtendedSupport(bool enable) override;
+		String GetUserName() override;
 		bool OpenUrl(StringView url) override;
 
 	private:

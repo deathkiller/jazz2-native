@@ -9,7 +9,8 @@ namespace Jazz2::UI::Menu
 		Gameplay,
 		Graphics,
 		Sounds,
-		Controls
+		Controls,
+		UserProfile
 	};
 
 	struct OptionsItem {

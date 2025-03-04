@@ -211,7 +211,6 @@ namespace Jazz2::Multiplayer
 
 		static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
-		static constexpr std::uint32_t MaxPlayerNameLength = 32;
 
 		NetworkManager* _networkManager;
 		float _updateTimeLeft;
