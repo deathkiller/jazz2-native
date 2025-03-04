@@ -83,7 +83,7 @@ public class MainActivity extends MainActivityBase {
 			PackageManager.DONT_KILL_APP);
 	}
 
-	void setImmersiveSticky() {
+	private void setImmersiveSticky() {
 		View decorView = getWindow().getDecorView();
 		decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN |
 										View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
@@ -93,7 +93,7 @@ public class MainActivity extends MainActivityBase {
 										View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
 	}
 
-	void hideInsets() {
+	private void hideInsets() {
 		getWindow().setDecorFitsSystemWindows(false);
 		WindowInsetsController controller = getWindow().getInsetsController();
 		controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());

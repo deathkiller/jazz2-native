@@ -8,4 +8,11 @@ extern "C"
 	{
 		nativeUpdateMonitors(env, clazz);
 	}
+	
+	extern void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri);
+	
+	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
+	{
+		nativeUpdateMonitors(env, clazz, action, uri);
+	}
 }

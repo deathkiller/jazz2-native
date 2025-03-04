@@ -11,6 +11,7 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
+#	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
 
 using namespace Jazz2::UI::Menu::Resources;
@@ -19,6 +20,9 @@ namespace Jazz2::UI::Menu
 {
 	UserProfileOptionsSection::UserProfileOptionsSection()
 		: _isDirty(false), _waitForInput(false), _textCursor(0), _carretAnim(0.0f)
+#if defined(DEATH_TARGET_ANDROID)
+			, _recalcVisibleBoundsTimeLeft(30.0f)
+#endif
 	{
 		_localPlayerName = PreferencesCache::PlayerName;
 		if (_localPlayerName.empty()) {
@@ -27,6 +31,12 @@ namespace Jazz2::UI::Menu
 				_localPlayerName = "Unknown"_s;
 			}
 		}
+
+#if defined(DEATH_TARGET_ANDROID)
+		_currentViewportBounds = AndroidJniWrap_Activity::getVisibleBounds();
+		_initialViewportSize.X = _currentViewportBounds.W;
+		_initialViewportSize.Y = _currentViewportBounds.H;
+#endif
 	}
 
 	UserProfileOptionsSection::~UserProfileOptionsSection()
@@ -109,6 +119,12 @@ namespace Jazz2::UI::Menu
 
 		if (waitingForInput) {
 #if defined(DEATH_TARGET_ANDROID)
+			_recalcVisibleBoundsTimeLeft -= timeMult;
+			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
+				_recalcVisibleBoundsTimeLeft = 60.0f;
+				_currentViewportBounds = AndroidJniWrap_Activity::getVisibleBounds();
+			}
+
 			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				auto& app = static_cast<AndroidApplication&>(theApplication());
@@ -148,10 +164,28 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_("User Profile"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+	}
 
+	void UserProfileOptionsSection::OnDrawOverlay(Canvas* canvas)
+	{
 #if defined(DEATH_TARGET_ANDROID)
 		if (_waitForInput) {
-			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer + 200, Alignment::TopLeft, Colorf::White);
+			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer, Alignment::TopLeft, Colorf::White);
+
+			if (_currentVisibleBounds.W < _initialVisibleSize.X || _currentVisibleBounds.H < _initialVisibleSize.Y) {
+				Vector2i viewSize = _root->GetViewSize();
+				if (_currentVisibleBounds.Y * viewSize.Y / _initialVisibleSize.Y < 32.0f) {
+					_root->DrawSolid(0.0f, 0.0f, IMenuContainer::MainLayer - 10, Alignment::TopLeft, Vector2f(viewSize.X, viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
+
+					std::int32_t charOffset = 0;
+					_root->DrawStringShadow(_localPlayerName, charOffset, 120.0f, 52.0f, IMenuContainer::MainLayer,
+						Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
+
+					Vector2f textToCursorSize = _root->MeasureString(_localPlayerName.prefix(_textCursor), 1.0f);
+					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, 52.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
+						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+				}
+			}
 		}
 #endif
 	}
@@ -284,7 +318,7 @@ namespace Jazz2::UI::Menu
 
 			Vector2f textSize = _root->MeasureString(playerName, 0.8f);
 
-			_root->DrawStringShadow(playerName.data(), charOffset, centerX + (isDiscord ? 12.0f : 0.0f), item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+			_root->DrawStringShadow(playerName, charOffset, centerX + (isDiscord ? 12.0f : 0.0f), item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor))), 0.8f);
 		
 			if (isDiscord) {
