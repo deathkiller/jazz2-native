@@ -17,7 +17,7 @@ namespace Jazz2::Multiplayer
 		InvalidPassword,						/**< Invalid password specified */
 		InvalidPlayerName,						/**< Invalid player name specified */
 		NotInWhitelist,							/**< Client is not in server whitelist */
-		Requires3rdPartyAuthProvider,			/**< Server requires 3rd party authentication provider */
+		Requires3rdPartyAuthProvider,			/**< Server requires 3rd party authentication provider (e.g., Discord) */
 		ServerIsFull,							/**< Server is full or busy */
 		ServerNotReady,							/**< Server is not ready yet */
 		ServerStopped,							/**< Server is stopped for unknown reason */

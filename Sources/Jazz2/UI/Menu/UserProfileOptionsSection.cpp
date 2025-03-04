@@ -9,6 +9,10 @@
 #include <Utf8.h>
 #include <Containers/StringConcatenable.h>
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../../nCine/Backends/Android/AndroidApplication.h"
+#endif
+
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
@@ -64,6 +68,35 @@ namespace Jazz2::UI::Menu
 			OnExecuteSelected();
 		} else {
 			ScrollableMenuSection::OnHandleInput();
+		}
+	}
+
+
+	void UserProfileOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
+	{
+		if (event.type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (pointerIndex != -1) {
+				float x = event.pointers[pointerIndex].x;
+				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+#if defined(DEATH_TARGET_ANDROID)
+				if (x < 0.2f && y < 80.0f) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					auto& app = static_cast<AndroidApplication&>(theApplication());
+					app.ToggleSoftInput();
+					return;
+				}
+#endif
+			}
+		}
+
+		ScrollableMenuSection::OnTouchEvent(event, viewSize);
+	}
+
+	void UserProfileOptionsSection::OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos)
+	{
+		if (!_waitForInput) {
+			ScrollableMenuSection::OnTouchUp(newIndex, viewSize, touchPos);
 		}
 	}
 
