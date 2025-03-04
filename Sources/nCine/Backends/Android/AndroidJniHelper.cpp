@@ -756,34 +756,33 @@ namespace nCine::Backends
 			return {};
 		}
 
-		jobject window = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetWindow_);
+		jobject windowObject = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetWindow_);
 		if (window == nullptr) {
 			return {};
 		}
 
 		Recti result;
-
-		jobject decorView = AndroidJniHelper::jniEnv->CallObjectMethod(window, midGetDecorView_);
+		jobject decorViewObject = AndroidJniHelper::jniEnv->CallObjectMethod(windowObject, midGetDecorView_);
 		if (decorView != nullptr) {
-			jobject rect = AndroidJniHelper::jniEnv->NewObject(rectClass_, midRectInit_);
+			jobject rectObject = AndroidJniHelper::jniEnv->NewObject(rectClass_, midRectInit_);
 			if (rect != nullptr) {
-				AndroidJniHelper::jniEnv->CallVoidMethod(decorView, getWindowVisibleDisplayFrame, rect);
+				AndroidJniHelper::jniEnv->CallVoidMethod(decorViewObject, midGetWindowVisibleDisplayFrame_, rectObject);
 
-				std::int32_t left = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectLeft_);
-				std::int32_t top = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectTop_);
-				std::int32_t right = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectRight_);
-				std::int32_t bottom = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectBottom_);
+				std::int32_t left = AndroidJniHelper::jniEnv->GetIntField(rectObject, fidRectLeft_);
+				std::int32_t top = AndroidJniHelper::jniEnv->GetIntField(rectObject, fidRectTop_);
+				std::int32_t right = AndroidJniHelper::jniEnv->GetIntField(rectObject, fidRectRight_);
+				std::int32_t bottom = AndroidJniHelper::jniEnv->GetIntField(rectObject, fidRectBottom_);
 
 				result.X = left;
 				result.Y = top;
 				result.W = right - left;
 				result.H = bottom - top;
 
-				AndroidJniHelper::jniEnv->DeleteLocalRef(rect);
+				AndroidJniHelper::jniEnv->DeleteLocalRef(rectObject);
 			}
-			AndroidJniHelper::jniEnv->DeleteLocalRef(decorView);
+			AndroidJniHelper::jniEnv->DeleteLocalRef(decorViewObject);
 		}
-		AndroidJniHelper::jniEnv->DeleteLocalRef(window);
+		AndroidJniHelper::jniEnv->DeleteLocalRef(windowObject);
 
 		return result;
 	}
