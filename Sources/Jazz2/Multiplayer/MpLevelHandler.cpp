@@ -358,7 +358,7 @@ namespace Jazz2::Multiplayer
 					}
 
 #if defined(DEATH_DEBUG)
-					_debugAverageUpdatePacketSize = lerp(_debugAverageUpdatePacketSize, (std::int32_t)packet.GetSize(), 0.2f * timeMult);
+					_debugAverageUpdatePacketSize = lerp(_debugAverageUpdatePacketSize, (std::int32_t)(packet.GetSize() * UpdatesPerSecond), 0.04f * timeMult);
 #endif
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 					_updatePacketSize[_plotIndex] = packet.GetSize();
@@ -374,7 +374,7 @@ namespace Jazz2::Multiplayer
 					SynchronizePeers();
 				} else {
 #if defined(DEATH_DEBUG)
-						_debugAverageUpdatePacketSize = 0;
+					_debugAverageUpdatePacketSize = 0;
 #endif
 				}
 			} else {
@@ -995,7 +995,6 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::HandlePlayerWeaponChanged(Actors::Player* player)
 	{
-		// TODO: Only called by RemotePlayerOnServer
 		if (_isServer) {
 			for (const auto & [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
@@ -1005,6 +1004,14 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerChangeWeapon, packet);
 					break;
 				}
+			}
+		} else {
+			auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(player);
+			if (!remotablePlayer->ChangingWeaponFromServer) {
+				MemoryStream packet(5);
+				packet.WriteVariableUint32(_lastSpawnedActorId);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
+				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerChangeWeaponRequest, packet);
 			}
 		}
 	}
@@ -1128,7 +1135,12 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
-		if (index > 0) {
+		if (index > 0 && _isServer) {
+			// PlayerChangeWeaponRequest is sent from the client side everytime, suppress these actions on the server
+			if (action == PlayerAction::ChangeWeapon || (action >= PlayerAction::SwitchToBlaster && action <= PlayerAction::SwitchToThunderbolt)) {
+				return false;
+			}
+
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
 				if ((it->second.PressedKeys & (1ull << (std::int32_t)action)) != 0) {
@@ -1152,7 +1164,12 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
-		if (index > 0) {
+		if (index > 0 && _isServer) {
+			// PlayerChangeWeaponRequest is sent from the client side everytime, suppress these actions on the server
+			if (action == PlayerAction::ChangeWeapon || (action >= PlayerAction::SwitchToBlaster && action <= PlayerAction::SwitchToThunderbolt)) {
+				return false;
+			}
+
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
 				if ((it->second.PressedKeys & (1ull << (std::int32_t)action)) != 0 && (it->second.PressedKeysLast & (1ull << (std::int32_t)action)) == 0) {
@@ -1170,7 +1187,7 @@ namespace Jazz2::Multiplayer
 
 	float MpLevelHandler::PlayerHorizontalMovement(std::int32_t index)
 	{
-		if (index > 0) {
+		if (index > 0 && _isServer) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
 				if ((it->second.PressedKeys & (1ull << (std::int32_t)PlayerAction::Left)) != 0) {
@@ -1188,7 +1205,7 @@ namespace Jazz2::Multiplayer
 
 	float MpLevelHandler::PlayerVerticalMovement(std::int32_t index)
 	{
-		if (index > 0) {
+		if (index > 0 && _isServer) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
 				if ((it->second.PressedKeys & (1ull << (std::int32_t)PlayerAction::Up)) != 0) {
@@ -1206,7 +1223,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect)
 	{
-		if (index > 0) {
+		if (index > 0 && _isServer) {
 			// Ignore remote players
 			return;
 		}
@@ -1628,6 +1645,38 @@ namespace Jazz2::Multiplayer
 					//LOGD("Player %i pressed 0x%08x, last state was 0x%08x", playerIndex, it->second.PressedKeys & 0xffffffffu, prevState);
 					return true;
 				}
+				case ClientPacketType::PlayerChangeWeaponRequest: {
+					MemoryStream packet(data);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+
+					auto it = _peerDesc.find(peer);
+					if (it == _peerDesc.end()) {
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest - invalid playerIndex (%u)", playerIndex);
+						return true;
+					}
+
+					auto player = it->second.Player;
+					if (playerIndex != player->_playerIndex) {
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest - received playerIndex %u instead of %i", playerIndex, player->_playerIndex);
+						return true;
+					}
+
+					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+
+					LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
+
+					const auto& playerAmmo = player->GetWeaponAmmo();
+					if (weaponType >= playerAmmo.size() || playerAmmo[weaponType] == 0) {
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest - playerIndex: %u, no ammo in selected weapon", playerIndex);
+
+						// Request is denied, send the current weapon back to the client
+						HandlePlayerWeaponChanged(player);
+						return true;
+					}
+
+					static_cast<Actors::Player*>(player)->SetCurrentWeapon((WeaponType)weaponType);
+					return true;
+				}
 			}
 		} else {
 			switch ((ServerPacketType)packetType) {
@@ -1644,9 +1693,16 @@ namespace Jazz2::Multiplayer
 					std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
 
 					if (flags & 0x04) {
+						// Lobby message
 						std::uint32_t lobbyMessageLength = packet.ReadVariableUint32();
 						_lobbyMessage = String(NoInit, lobbyMessageLength);
 						packet.Read(_lobbyMessage.data(), lobbyMessageLength);
+					}
+					if (flags & 0x08) {
+						// TODO: Lobby server logo
+						std::uint32_t serverLogoLength = packet.ReadVariableUint32();
+						Array<std::uint8_t> serverLogo{NoInit, serverLogoLength};
+						packet.Read(serverLogo.data(), serverLogoLength);
 					}
 
 					LOGD("[MP] ServerPacketType::ShowInGameLobby - flags: 0x%02x, allowedPlayerTypes: 0x%02x, message: \"%s\"", flags, allowedPlayerTypes, _lobbyMessage.data());
@@ -2045,7 +2101,10 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
 
-					_players[0]->SetCurrentWeapon((WeaponType)weaponType);
+					auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
+					remotablePlayer->ChangingWeaponFromServer = true;
+					static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon((WeaponType)weaponType);
+					remotablePlayer->ChangingWeaponFromServer = false;
 					return true;
 				}
 				case ServerPacketType::PlayerRefreshAmmo: {

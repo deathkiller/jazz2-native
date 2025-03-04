@@ -2,14 +2,14 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "../../ILevelHandler.h"
+#include "../../Multiplayer/MpLevelHandler.h"
 
 #include "../../../nCine/Base/Clock.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
 	RemotablePlayer::RemotablePlayer()
-		: _teamId(0), _warpPending(false)
+		: ChangingWeaponFromServer(false), _teamId(0), _warpPending(false)
 	{
 	}
 
@@ -44,6 +44,19 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		return true;
+	}
+
+	void RemotablePlayer::SetCurrentWeapon(WeaponType weaponType)
+	{
+		if (_currentWeapon == weaponType) {
+			return;
+		}
+
+		Player::SetCurrentWeapon(weaponType);
+
+		if (!ChangingWeaponFromServer) {
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
+		}
 	}
 
 	std::uint8_t RemotablePlayer::GetTeamId() const

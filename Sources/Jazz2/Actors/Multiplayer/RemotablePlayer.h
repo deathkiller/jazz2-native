@@ -14,6 +14,8 @@ namespace Jazz2::Actors::Multiplayer
 	public:
 		RemotablePlayer();
 
+		bool ChangingWeaponFromServer;
+
 		/** @brief Returns team ID */
 		std::uint8_t GetTeamId() const;
 		/** @brief Sets team ID */
@@ -32,6 +34,7 @@ namespace Jazz2::Actors::Multiplayer
 		void OnWaterSplash(Vector2f pos, bool inwards) override;
 
 		bool FireCurrentWeapon(WeaponType weaponType) override;
+		void SetCurrentWeapon(WeaponType weaponType) override;
 
 	private:
 		std::uint8_t _teamId;
