@@ -27,6 +27,12 @@ namespace Jazz2::UI::Menu
 		DeserializeFromFile();
 		FillDefaultsIfEmpty();
 		RefreshList();
+
+#if defined(DEATH_TARGET_ANDROID)
+		_currentVisibleBounds = AndroidJniWrap_Activity::getVisibleBounds();
+		_initialVisibleSize.X = _currentVisibleBounds.W;
+		_initialVisibleSize.Y = _currentVisibleBounds.H;
+#endif
 	}
 
 	HighscoresSection::HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, std::uint64_t elapsedMilliseconds, const PlayerCarryOver& itemToAdd)
@@ -79,7 +85,7 @@ namespace Jazz2::UI::Menu
 			_recalcVisibleBoundsTimeLeft -= timeMult;
 			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
 				_recalcVisibleBoundsTimeLeft = 60.0f;
-				_currentViewportBounds = AndroidJniWrap_Activity::getVisibleBounds();
+				_currentVisibleBounds = AndroidJniWrap_Activity::getVisibleBounds();
 			}
 
 			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {

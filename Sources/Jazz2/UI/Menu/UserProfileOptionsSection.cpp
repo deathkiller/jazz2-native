@@ -33,9 +33,9 @@ namespace Jazz2::UI::Menu
 		}
 
 #if defined(DEATH_TARGET_ANDROID)
-		_currentViewportBounds = AndroidJniWrap_Activity::getVisibleBounds();
-		_initialViewportSize.X = _currentViewportBounds.W;
-		_initialViewportSize.Y = _currentViewportBounds.H;
+		_currentVisibleBounds = AndroidJniWrap_Activity::getVisibleBounds();
+		_initialVisibleSize.X = _currentVisibleBounds.W;
+		_initialVisibleSize.Y = _currentVisibleBounds.H;
 #endif
 	}
 
@@ -122,7 +122,7 @@ namespace Jazz2::UI::Menu
 			_recalcVisibleBoundsTimeLeft -= timeMult;
 			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
 				_recalcVisibleBoundsTimeLeft = 60.0f;
-				_currentViewportBounds = AndroidJniWrap_Activity::getVisibleBounds();
+				_currentVisibleBounds = AndroidJniWrap_Activity::getVisibleBounds();
 			}
 
 			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
