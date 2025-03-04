@@ -757,15 +757,15 @@ namespace nCine::Backends
 		}
 
 		jobject windowObject = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetWindow_);
-		if (window == nullptr) {
+		if (windowObject == nullptr) {
 			return {};
 		}
 
 		Recti result;
 		jobject decorViewObject = AndroidJniHelper::jniEnv->CallObjectMethod(windowObject, midGetDecorView_);
-		if (decorView != nullptr) {
+		if (decorViewObject != nullptr) {
 			jobject rectObject = AndroidJniHelper::jniEnv->NewObject(rectClass_, midRectInit_);
-			if (rect != nullptr) {
+			if (rectObject != nullptr) {
 				AndroidJniHelper::jniEnv->CallVoidMethod(decorViewObject, midGetWindowVisibleDisplayFrame_, rectObject);
 
 				std::int32_t left = AndroidJniHelper::jniEnv->GetIntField(rectObject, fidRectLeft_);
