@@ -32,6 +32,7 @@ namespace Jazz2::UI::Menu
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
+		void OnDrawOverlay(Canvas* canvas) override;
 		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
 		void OnTextInput(const nCine::TextInputEvent& event) override;
 		NavigationFlags GetNavigationFlags() const override;
@@ -54,5 +55,10 @@ namespace Jazz2::UI::Menu
 		float _carretAnim;
 		String _localPlayerName;
 		String _prevPlayerName;
+#if defined(DEATH_TARGET_ANDROID)
+		Vector2i _initialVisibleSize;
+		Recti _currentVisibleBounds;
+		float _recalcVisibleBoundsTimeLeft;
+#endif
 	};
 }

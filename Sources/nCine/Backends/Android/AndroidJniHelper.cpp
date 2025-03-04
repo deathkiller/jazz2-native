@@ -188,7 +188,7 @@ namespace nCine::Backends
 			return {};
 		}
 
-		char const* utf8Message = env->GetStringUTFChars(jmessage, 0);
+		char const* utf8Message = env->GetStringUTFChars(jmessage, nullptr);
 		String result = utf8Message;
 		env->ReleaseStringUTFChars(jmessage, utf8Message);
 
@@ -373,7 +373,7 @@ namespace nCine::Backends
 		int length;
 
 		if (strDeviceName) {
-			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceName, 0);
+			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceName, nullptr);
 			length = copyStringFirst(destination, maxStringSize, deviceName);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceName, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceName);
@@ -390,7 +390,7 @@ namespace nCine::Backends
 		int length;
 
 		if (strDeviceDescriptor) {
-			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceDescriptor, 0);
+			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceDescriptor, nullptr);
 			length = copyStringFirst(destination, maxStringSize, deviceName);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceDescriptor, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceDescriptor);
@@ -537,7 +537,7 @@ namespace nCine::Backends
 		int length;
 
 		if (strCharacters) {
-			const char* characters = AndroidJniHelper::jniEnv->GetStringUTFChars(strCharacters, 0);
+			const char* characters = AndroidJniHelper::jniEnv->GetStringUTFChars(strCharacters, nullptr);
 			length = std::min((std::int32_t)strlen(characters), maxStringSize);
 			std::memcpy(destination, characters, length);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strCharacters, characters);
@@ -616,7 +616,7 @@ namespace nCine::Backends
 		int length;
 
 		if (strDisplayName) {
-			const char* displayName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDisplayName, 0);
+			const char* displayName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDisplayName, nullptr);
 			length = copyStringFirst(destination, maxStringSize, displayName);
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDisplayName, displayName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDisplayName);
@@ -690,7 +690,7 @@ namespace nCine::Backends
 		}
 
 		jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strLanguage);
-		const char* language = AndroidJniHelper::jniEnv->GetStringUTFChars(strLanguage, 0);
+		const char* language = AndroidJniHelper::jniEnv->GetStringUTFChars(strLanguage, nullptr);
 		String result = String(NoInit, length);
 		std::memcpy(result.data(), language, length);
 		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strLanguage, language);
@@ -914,7 +914,7 @@ namespace nCine::Backends
 		}
 		
 		jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strAndroidId);
-		const char* androidId = AndroidJniHelper::jniEnv->GetStringUTFChars(strAndroidId, 0);
+		const char* androidId = AndroidJniHelper::jniEnv->GetStringUTFChars(strAndroidId, nullptr);
 		androidId_ = String(NoInit, length);
 		std::memcpy(androidId_.data(), androidId, length);
 		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strAndroidId, androidId);

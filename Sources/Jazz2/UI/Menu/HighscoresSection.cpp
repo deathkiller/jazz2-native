@@ -10,6 +10,7 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
+#	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
 
 using namespace Death::IO::Compression;
@@ -19,6 +20,9 @@ namespace Jazz2::UI::Menu
 {
 	HighscoresSection::HighscoresSection()
 		: _selectedSeries(0), _notValidPos(-1), _notValidSeries(-1), _textCursor(0), _carretAnim(0.0f), _waitForInput(false)
+#if defined(DEATH_TARGET_ANDROID)
+			, _recalcVisibleBoundsTimeLeft(30.0f)
+#endif
 	{
 		DeserializeFromFile();
 		FillDefaultsIfEmpty();
@@ -72,6 +76,12 @@ namespace Jazz2::UI::Menu
 
 		if (waitingForInput) {
 #if defined(DEATH_TARGET_ANDROID)
+			_recalcVisibleBoundsTimeLeft -= timeMult;
+			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
+				_recalcVisibleBoundsTimeLeft = 60.0f;
+				_currentViewportBounds = AndroidJniWrap_Activity::getVisibleBounds();
+			}
+
 			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				auto& app = static_cast<AndroidApplication&>(theApplication());
@@ -134,10 +144,30 @@ namespace Jazz2::UI::Menu
 			Alignment::Right, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
 		_root->DrawStringShadow(">"_s, charOffset, centerX + 80.0f + 100.0f, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Right, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
+	}
 
+	void HighscoresSection::OnDrawOverlay(Canvas* canvas)
+	{
 #if defined(DEATH_TARGET_ANDROID)
 		if (_waitForInput) {
-			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer + 200, Alignment::TopLeft, Colorf::White);
+			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer, Alignment::TopLeft, Colorf::White);
+
+			if (_currentVisibleBounds.W < _initialVisibleSize.X || _currentVisibleBounds.H < _initialVisibleSize.Y) {
+				Vector2i viewSize = _root->GetViewSize();
+				if (_currentVisibleBounds.Y * viewSize.Y / _initialVisibleSize.Y < 32.0f) {
+					_root->DrawSolid(0.0f, 0.0f, IMenuContainer::MainLayer - 10, Alignment::TopLeft, Vector2f(viewSize.X, viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
+
+					auto& selectedItem = _items[_selectedIndex];
+
+					std::int32_t charOffset = 0;
+					_root->DrawStringShadow(selectedItem.Item->PlayerName, charOffset, 120.0f, 52.0f, IMenuContainer::MainLayer,
+						Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
+
+					Vector2f textToCursorSize = _root->MeasureString(selectedItem.Item->PlayerName.prefix(_textCursor), 1.0f);
+					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, 52.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
+						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+				}
+			}
 		}
 #endif
 	}

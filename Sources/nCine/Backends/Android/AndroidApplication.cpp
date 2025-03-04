@@ -13,6 +13,35 @@
 using namespace Death::IO;
 using namespace nCine::Backends;
 
+#if defined(DEATH_TARGET_ANDROID)
+extern "C"
+{
+	namespace nc = nCine;
+
+	/** @brief Called by `jnicall_functions.cpp` */
+	void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
+	{
+		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
+		if (androidApp.IsInitialized()) {
+			JNIEnv* oldEnv = nc::Backends::AndroidJniHelper::jniEnv;
+			nc::Backends::AndroidJniHelper::jniEnv = env;
+
+			const char* actionStr = env->GetStringUTFChars(action, nullptr);
+			const char* uriStr = env->GetStringUTFChars(uri, nullptr);
+
+			androidApp.HandleIntent(actionStr, uriStr);
+
+			env->ReleaseStringUTFChars(action, actionStr);
+			env->ReleaseStringUTFChars(uri, uriStr);
+
+			nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
+		} else {
+			LOGE("Received intent %s with \"%s\", but AndroidApplication is not initialized yet", action.data(), uri.data());
+		}
+	}
+}
+#endif
+
 /// Processes the next application command
 void androidHandleCommand(struct android_app* state, std::int32_t cmd)
 {
@@ -195,13 +224,15 @@ namespace nCine
 		return AndroidJniWrap_Activity::openUrl(url);
 	}
 
+	void AndroidApplication::HandleIntent(StringView action, StringView uri)
+	{
+		LOGI("Received intent %s with \"%s\"", action.data(), uri.data());
+	}
+
 	void AndroidApplication::ToggleSoftInput()
 	{
 		if (isInitialized_) {
 			AndroidJniWrap_InputMethodManager::toggleSoftInput();
-
-			auto bounds = AndroidJniWrap_Activity::getVisibleBounds();
-			LOGW("ACTIVITY BOUNDS: %i | %i | %i | %i", bounds.X, bounds.Y, bounds.W, bounds.H);
 		}
 	}
 

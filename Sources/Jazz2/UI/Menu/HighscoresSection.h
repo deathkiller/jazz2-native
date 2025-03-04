@@ -42,6 +42,7 @@ namespace Jazz2::UI::Menu
 
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
+		void OnDrawOverlay(Canvas* canvas) override;
 		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
 		void OnTextInput(const nCine::TextInputEvent& event) override;
 		NavigationFlags GetNavigationFlags() const override;
@@ -78,6 +79,11 @@ namespace Jazz2::UI::Menu
 		std::size_t _textCursor;
 		float _carretAnim;
 		bool _waitForInput;
+#if defined(DEATH_TARGET_ANDROID)
+		Vector2i _initialVisibleSize;
+		Recti _currentVisibleBounds;
+		float _recalcVisibleBoundsTimeLeft;
+#endif
 
 		void FillDefaultsIfEmpty();
 		void DeserializeFromFile();

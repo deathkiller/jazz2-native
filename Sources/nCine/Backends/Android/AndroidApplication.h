@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../../Application.h"
 
@@ -28,6 +28,9 @@ namespace nCine
 		}
 
 		bool OpenUrl(StringView url) override;
+
+		/// Handles the intent sent to the application activity
+		void HandleIntent(StringView action, StringView uri);
 
 		/// Toggles the software keyboard
 		void ToggleSoftInput();
