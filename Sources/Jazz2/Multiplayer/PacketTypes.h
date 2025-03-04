@@ -27,7 +27,8 @@ namespace Jazz2::Multiplayer
 
 		PlayerReady,
 		PlayerUpdate,
-		PlayerKeyPress
+		PlayerKeyPress,
+		PlayerChangeWeaponRequest
 	};
 
 	/** @brief Packet type going from server to client */

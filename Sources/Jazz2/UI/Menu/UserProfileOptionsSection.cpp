@@ -148,6 +148,12 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_("User Profile"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+#if defined(DEATH_TARGET_ANDROID)
+		if (_waitForInput) {
+			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer + 200, Alignment::TopLeft, Colorf::White);
+		}
+#endif
 	}
 
 	void UserProfileOptionsSection::OnKeyPressed(const KeyboardEvent& event)
@@ -262,11 +268,13 @@ namespace Jazz2::UI::Menu
 
 		if (item.Item.Type == UserProfileOptionsItemType::PlayerName) {
 			String playerName;
+			bool isDiscord = false;
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			if (DiscordRpcClient::Get().IsSupported()) {
 				StringView discordUserName = DiscordRpcClient::Get().GetUserDisplayName();
 				if (!discordUserName.empty()) {
-					playerName = "\uE000  "_s + discordUserName;
+					playerName = discordUserName;
+					isDiscord = true;
 				}
 			}
 #endif
@@ -274,11 +282,17 @@ namespace Jazz2::UI::Menu
 				playerName = _localPlayerName;
 			}
 
-			_root->DrawStringShadow(playerName.data(), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+			Vector2f textSize = _root->MeasureString(playerName, 0.8f);
+
+			_root->DrawStringShadow(playerName.data(), charOffset, centerX + (isDiscord ? 12.0f : 0.0f), item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor))), 0.8f);
 		
+			if (isDiscord) {
+				_root->DrawStringShadow("\uE000"_s, charOffset, centerX - textSize.X * 0.5f - 5.0f, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)));
+			}
+
 			if (isSelected && _waitForInput) {
-				Vector2f textSize = _root->MeasureString(playerName, 0.8f);
 				Vector2f textToCursorSize = _root->MeasureString(playerName.prefix(_textCursor), 0.8f);
 				_root->DrawSolid(centerX - textSize.X * 0.5f + textToCursorSize.X + 1.0f, item.Y + 22.0f - 1.0f, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(1.0f, 12.0f),
 					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);

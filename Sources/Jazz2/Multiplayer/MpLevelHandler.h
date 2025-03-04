@@ -10,6 +10,7 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
+	class RemotablePlayer;
 	class RemoteActor;
 	class RemotePlayerOnServer;
 }
@@ -35,6 +36,7 @@ namespace Jazz2::Multiplayer
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
+		friend class Actors::Multiplayer::RemotablePlayer;
 		friend class Actors::Multiplayer::RemotePlayerOnServer;
 		friend class UI::Multiplayer::MpInGameCanvasLayer;
 		friend class UI::Multiplayer::MpInGameLobby;
