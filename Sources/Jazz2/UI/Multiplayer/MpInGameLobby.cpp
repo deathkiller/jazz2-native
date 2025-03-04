@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../../LevelHandler.h"
+#include "../../PreferencesCache.h"
 #include "../Menu/IMenuContainer.h"
 
 #include "../../../nCine/Application.h"
@@ -61,11 +62,13 @@ namespace Jazz2::UI::Multiplayer
 		ViewSize = _levelHandler->GetViewSize();
 
 #if defined(DEATH_DEBUG)
-		char debugBuffer[64];
-		formatString(debugBuffer, sizeof(debugBuffer), "%i b | ", _levelHandler->_debugAverageUpdatePacketSize);
-		std::int32_t debugCharOffset = 0;
-		_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 40.0f, 1.0f,
-			MainLayer, Alignment::TopRight, Font::DefaultColor, 0.8f);
+		if (PreferencesCache::ShowPerformanceMetrics && _levelHandler->_isServer) {
+			char debugBuffer[64];
+			formatString(debugBuffer, sizeof(debugBuffer), "%i b | ", _levelHandler->_debugAverageUpdatePacketSize);
+			std::int32_t debugCharOffset = 0;
+			_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 40.0f, 1.0f,
+				MainLayer, Alignment::TopRight, Font::DefaultColor, 0.8f);
+		}
 #endif
 
 		if (_isVisible) {

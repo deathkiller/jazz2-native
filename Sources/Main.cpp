@@ -60,16 +60,17 @@ using namespace Jazz2::Multiplayer;
 #include <Containers/StringUtils.h>
 #include <Cpu.h>
 #include <Environment.h>
+#include <Utf8.h>
 #include <IO/FileSystem.h>
 #include <IO/PakFile.h>
 #include <IO/Compression/DeflateStream.h>
 
 #if !defined(DEATH_DEBUG)
 #	include <IO/HttpRequest.h>
-#	if defined(DEATH_TARGET_WINDOWS)
-#		include <Utf8.h>
-#	endif
 #endif
+
+/** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
+#define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
 
 using namespace Death::IO::Compression;
 using namespace nCine;
@@ -138,6 +139,8 @@ public:
 #endif
 
 private:
+	constexpr static std::uint32_t MaxPlayerNameLength = 24;
+
 	Flags _flags = Flags::None;
 	std::unique_ptr<IStateHandler> _currentHandler;
 	SmallVector<Function<void()>> _pendingCallbacks;
@@ -791,16 +794,42 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 			return Reason::IncompatibleVersion;
 		}
 	} else {
-		// TODO: Auth packet
-		MemoryStream packet(24);
+		MemoryStream packet(64 + MaxPlayerNameLength);
 		packet.Write("J2R ", 4);
 
-		constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
+		constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 		packet.WriteVariableUint64(currentVersion);
 
 		packet.Write(PreferencesCache::UniquePlayerID, sizeof(PreferencesCache::UniquePlayerID));
+
+		// TODO: Password
+		packet.WriteVariableUint32(0);
+
 		// TODO: Player name
-		//packet.WriteVariableUint32(0);
+		String playerName; std::uint64_t playerUserId = 0;
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
+			playerName = UI::DiscordRpcClient::Get().GetUserDisplayName();
+			playerUserId = UI::DiscordRpcClient::Get().GetUserId();
+		}
+#endif
+		if (playerName.empty()) {
+			playerName = PreferencesCache::PlayerName;
+		}
+		/*if (playerName.empty()) {
+			char buffer[64];
+			formatString(buffer, sizeof(buffer), "%X", Random().Next());
+			playerName = buffer;
+		}*/
+		if (playerName.size() > MaxPlayerNameLength) {
+			auto [_, prevChar] = Utf8::PrevChar(playerName, MaxPlayerNameLength);
+			playerName = playerName.prefix(prevChar);
+		}
+		packet.WriteValue<std::uint8_t>((std::uint8_t)playerName.size());
+		packet.Write(playerName.data(), (std::uint32_t)playerName.size());
+
+		packet.WriteVariableUint64(playerUserId);
+
 		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
 	}
 
@@ -812,7 +841,13 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 	const char* reasonStr;
 	switch (reason) {
 		case Reason::Disconnected: reasonStr = "Client disconnected by user"; break;
+		case Reason::InvalidParameter: reasonStr = "Invalid parameter specified"; break;
 		case Reason::IncompatibleVersion: reasonStr = "Incompatible client version"; break;
+		case Reason::AuthFailed: reasonStr = "Authentication failed"; break;
+		case Reason::InvalidPassword: reasonStr = "Invalid password specified"; break;
+		case Reason::InvalidPlayerName: reasonStr = "Invalid player name specified"; break;
+		case Reason::NotInWhitelist: reasonStr = "Client is not in server whitelist"; break;
+		case Reason::Requires3rdPartyAuthProvider: reasonStr = "Server requires 3rd party authentication provider"; break;
 		case Reason::ServerIsFull: reasonStr = "Server is full or busy"; break;
 		case Reason::ServerNotReady: reasonStr = "Server is not ready yet"; break;
 		case Reason::ServerStopped: reasonStr = "Server is stopped for unknown reason"; break;
@@ -823,6 +858,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 		case Reason::ConnectionTimedOut: reasonStr = "Connection timed out"; break;
 		case Reason::Kicked: reasonStr = "Kicked by server"; break;
 		case Reason::Banned: reasonStr = "Banned by server"; break;
+		case Reason::CheatingDetected: reasonStr = "Cheating detected"; break;
 		default: reasonStr = "Unknown reason"; break;
 	}
 
@@ -849,7 +885,13 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			}
 
 			switch (reason) {
+				case Reason::InvalidParameter: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid parameter specified.")); break;
 				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client version is not compatible with the server.")); break;
+				case Reason::AuthFailed: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nAuthentication failed.\nContact server administrators for more information.")); break;
+				case Reason::InvalidPassword: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid password specified.")); break;
+				case Reason::InvalidPlayerName: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid player name specified.\nPlease check your profile and try it again.")); break;
+				case Reason::NotInWhitelist: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThis client is not in the server whitelist.\nContact server administrators for more information.")); break;
+				case Reason::Requires3rdPartyAuthProvider: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer requires 3rd party authentication provider.\nContact server administrators for more information.")); break;
 				case Reason::ServerIsFull: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer capacity is full.\nPlease try it later.")); break;
 				case Reason::ServerNotReady: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer is not in a state where it can process your request.\nPlease try again in a few seconds.")); break;
 				case Reason::ServerStopped: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
@@ -860,6 +902,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				case Reason::ConnectionTimedOut: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe server is not responding for connection request.")); break;
 				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#907050]kicked\f[/c] off the server.\nContact server administrators for more information.")); break;
 				case Reason::Banned: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#725040]banned\f[/c] off the server.\nContact server administrators for more information.")); break;
+				case Reason::CheatingDetected: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nCheating detected.")); break;
 			}
 		}, NCINE_CURRENT_FUNCTION);
 	}
@@ -876,7 +919,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 			}
 			case ClientPacketType::Auth: {
 				MemoryStream packet(data);
-				char gameID[5];
+				char gameID[4];
 				packet.Read(gameID, 4);
 
 				std::uint64_t gameVersion = packet.ReadVariableUint64();
@@ -887,17 +930,41 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					peer._enet, 4, gameID, gameVersion, uuid1, uuid2);
 
 				constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL; // Exclude patch from version check
-				constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
+				constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
 				if (strncmp("J2R ", gameID, 4) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
 
+				// TODO: Check Uuid for whitelist (Reason::NotInWhitelist)
+
+				std::uint32_t passwordLength = packet.ReadVariableUint32();
+				String password = String(NoInit, passwordLength);
+				packet.Read(password.data(), passwordLength);
+
+				// TODO: Check password (Reason::InvalidPassword)
+
+				std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
+
+				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
+				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
+					LOGD("[MP] ClientPacketType::PlayerReady - player name length out of bounds (%u)", playerNameLength);
+					_networkManager->Kick(peer, Reason::InvalidPlayerName);
+					return;
+				}
+
+				String playerName{NoInit, playerNameLength};
+				packet.Read(playerName.data(), playerNameLength);
+
+				std::uint64_t playerUserId = packet.ReadVariableUint64();
+				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist) / (Reason::Requires3rdPartyAuthProvider)
+
 				if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
-					globalPeerDesc->IsAuthenticated = true;
 					globalPeerDesc->Uuid1 = uuid1;
 					globalPeerDesc->Uuid2 = uuid2;
+					globalPeerDesc->PlayerName = std::move(playerName);
+					globalPeerDesc->IsAuthenticated = true;
 				} else {
 					DEATH_ASSERT_UNREACHABLE();
 				}
@@ -1052,7 +1119,7 @@ void GameEventHandler::RefreshCache()
 		return;
 	}
 
-	constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
+	constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
 	auto& resolver = ContentResolver::Get();
 	auto cachePath = fs::CombinePath(resolver.GetCachePath(), "Source.idx"_s);
@@ -1640,7 +1707,7 @@ void GameEventHandler::CheckUpdates()
 	Http::Request req(url, Http::InternetProtocol::V4);
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
 	if (resp.Status.Code == Http::HttpStatus::Ok && !resp.Body.empty() && resp.Body.size() < sizeof(_newestVersion) - 1) {
-		constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, arraySize(NCINE_VERSION) - 1 });
+		constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 		std::uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.Body.data()), resp.Body.size()));
 		if (currentVersion < latestVersion) {
 			std::memcpy(_newestVersion, resp.Body.data(), resp.Body.size());

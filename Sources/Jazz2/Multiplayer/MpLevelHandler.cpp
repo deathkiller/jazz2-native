@@ -243,134 +243,140 @@ namespace Jazz2::Multiplayer
 #endif
 
 			if (_isServer) {
-				std::uint32_t actorCount = (std::uint32_t)(_players.size() + _remotingActors.size());
+				if (!_peerDesc.empty()) {
+					std::uint32_t actorCount = (std::uint32_t)(_players.size() + _remotingActors.size());
 
-				MemoryStream packet(5 + actorCount * 19);
-				packet.WriteVariableUint32(actorCount);
+					MemoryStream packet(5 + actorCount * 19);
+					packet.WriteVariableUint32(actorCount);
 
-				for (Actors::Player* player : _players) {
-					/*Vector2f pos;
-					auto it = _playerStates.find(player->_playerIndex);
-					if (it != _playerStates.end()) {
-						// Remote players
-						pos = player->_pos;
+					for (Actors::Player* player : _players) {
+						/*Vector2f pos;
+						auto it = _playerStates.find(player->_playerIndex);
+						if (it != _playerStates.end()) {
+							// Remote players
+							pos = player->_pos;
 
-						// TODO: This should be WarpUpdatesLeft
-						if (it->second.WarpTimeLeft > 0.0f) {
-							it->second.WarpTimeLeft -= timeMult;
-							if (it->second.WarpTimeLeft <= 0.0f) {
-								it->second.WarpTimeLeft = 0.0f;
-								LOGW("Player warped without permission (possible cheating attempt)");
+							// TODO: This should be WarpUpdatesLeft
+							if (it->second.WarpTimeLeft > 0.0f) {
+								it->second.WarpTimeLeft -= timeMult;
+								if (it->second.WarpTimeLeft <= 0.0f) {
+									it->second.WarpTimeLeft = 0.0f;
+									LOGW("Player warped without permission (possible cheating attempt)");
+								}
+							} else if (it->second.WarpTimeLeft < 0.0f) {
+								it->second.WarpTimeLeft += timeMult;
+								if (it->second.WarpTimeLeft >= 0.0f) {
+									it->second.WarpTimeLeft = 0.0f;
+									LOGW("Player failed to warp in time (possible cheating attempt)");
+								}
 							}
-						} else if (it->second.WarpTimeLeft < 0.0f) {
-							it->second.WarpTimeLeft += timeMult;
-							if (it->second.WarpTimeLeft >= 0.0f) {
-								it->second.WarpTimeLeft = 0.0f;
-								LOGW("Player failed to warp in time (possible cheating attempt)");
-							}
+						} else {
+							// Local players
+							pos = player->_pos;
+						}*/
+						Vector2f pos = player->_pos;
+
+						packet.WriteVariableUint32(player->_playerIndex);
+
+						std::uint8_t flags = 0x01 | 0x02; // PositionChanged | AnimationChanged
+						if (player->_renderer.isDrawEnabled()) {
+							flags |= 0x04;
 						}
-					} else {
-						// Local players
-						pos = player->_pos;
-					}*/
-					Vector2f pos = player->_pos;
+						if (player->_renderer.AnimPaused) {
+							flags |= 0x08;
+						}
+						if (player->IsFacingLeft()) {
+							flags |= 0x10;
+						}
+						packet.WriteValue<std::uint8_t>(flags);
 
-					packet.WriteVariableUint32(player->_playerIndex);
+						packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
+						packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
+						packet.WriteVariableUint32((std::uint32_t)(player->_currentTransition != nullptr ? player->_currentTransition->State : player->_currentAnimation->State));
 
-					std::uint8_t flags = 0x01 | 0x02; // PositionChanged | AnimationChanged
-					if (player->_renderer.isDrawEnabled()) {
-						flags |= 0x04;
+						float rotation = player->_renderer.rotation();
+						if (rotation < 0.0f) rotation += fRadAngle360;
+						packet.WriteValue<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
+						Actors::ActorRendererType rendererType = player->_renderer.GetRendererType();
+						packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
 					}
-					if (player->_renderer.AnimPaused) {
-						flags |= 0x08;
-					}
-					if (player->IsFacingLeft()) {
-						flags |= 0x10;
-					}
-					packet.WriteValue<std::uint8_t>(flags);
 
-					packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
-					packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
-					packet.WriteVariableUint32((std::uint32_t)(player->_currentTransition != nullptr ? player->_currentTransition->State : player->_currentAnimation->State));
+					for (auto& [remotingActor, remotingActorInfo] : _remotingActors) {
+						packet.WriteVariableUint32(remotingActorInfo.ActorID);
 
-					float rotation = player->_renderer.rotation();
-					if (rotation < 0.0f) rotation += fRadAngle360;
-					packet.WriteValue<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
-					Actors::ActorRendererType rendererType = player->_renderer.GetRendererType();
-					packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
-				}
+						std::int32_t newPosX = (std::int32_t)(remotingActor->_pos.X * 512.0f);
+						std::int32_t newPosY = (std::int32_t)(remotingActor->_pos.Y * 512.0f);
+						bool positionChanged = (newPosX != remotingActorInfo.LastPosX || newPosY != remotingActorInfo.LastPosY);
 
-				for (auto& [remotingActor, remotingActorInfo] : _remotingActors) {
-					packet.WriteVariableUint32(remotingActorInfo.ActorID);
+						std::uint32_t newAnimation = (std::uint32_t)(remotingActor->_currentTransition != nullptr ? remotingActor->_currentTransition->State : (remotingActor->_currentAnimation != nullptr ? remotingActor->_currentAnimation->State : AnimState::Idle));
+						float rotation = remotingActor->_renderer.rotation();
+						if (rotation < 0.0f) rotation += fRadAngle360;
+						std::uint16_t newRotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
+						std::uint8_t newRendererType = (std::uint8_t)remotingActor->_renderer.GetRendererType();
+						bool animationChanged = (newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation || newRendererType != remotingActorInfo.LastRendererType);
 
-					std::int32_t newPosX = (std::int32_t)(remotingActor->_pos.X * 512.0f);
-					std::int32_t newPosY = (std::int32_t)(remotingActor->_pos.Y * 512.0f);
-					bool positionChanged = (newPosX != remotingActorInfo.LastPosX || newPosY != remotingActorInfo.LastPosY);
-					
-					std::uint32_t newAnimation = (std::uint32_t)(remotingActor->_currentTransition != nullptr ? remotingActor->_currentTransition->State : (remotingActor->_currentAnimation != nullptr ? remotingActor->_currentAnimation->State : AnimState::Idle));
-					float rotation = remotingActor->_renderer.rotation();
-					if (rotation < 0.0f) rotation += fRadAngle360;
-					std::uint16_t newRotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
-					std::uint8_t newRendererType = (std::uint8_t)remotingActor->_renderer.GetRendererType();
-					bool animationChanged = (newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation || newRendererType != remotingActorInfo.LastRendererType);
+						std::uint8_t flags = 0;
+						if (positionChanged) {
+							flags |= 0x01;
+						}
+						if (animationChanged) {
+							flags |= 0x02;
+						}
+						if (remotingActor->_renderer.isDrawEnabled()) {
+							flags |= 0x04;
+						}
+						if (remotingActor->_renderer.AnimPaused) {
+							flags |= 0x08;
+						}
+						if (remotingActor->IsFacingLeft()) {
+							flags |= 0x10;
+						}
+						packet.WriteValue<std::uint8_t>(flags);
 
-					std::uint8_t flags = 0;
-					if (positionChanged) {
-						flags |= 0x01;
+						if (positionChanged) {
+							packet.WriteValue<std::int32_t>(newPosX);
+							packet.WriteValue<std::int32_t>(newPosY);
+
+							remotingActorInfo.LastPosX = newPosX;
+							remotingActorInfo.LastPosY = newPosY;
+						}
+						if (animationChanged) {
+							packet.WriteVariableUint32(newAnimation);
+							packet.WriteValue<std::uint16_t>(newRotation);
+							packet.WriteValue<std::uint8_t>(newRendererType);
+
+							remotingActorInfo.LastAnimation = newAnimation;
+							remotingActorInfo.LastRotation = newRotation;
+							remotingActorInfo.LastRendererType = newRendererType;
+						}
 					}
-					if (animationChanged) {
-						flags |= 0x02;
-					}
-					if (remotingActor->_renderer.isDrawEnabled()) {
-						flags |= 0x04;
-					}
-					if (remotingActor->_renderer.AnimPaused) {
-						flags |= 0x08;
-					}
-					if (remotingActor->IsFacingLeft()) {
-						flags |= 0x10;
-					}
-					packet.WriteValue<std::uint8_t>(flags);
 
-					if (positionChanged) {
-						packet.WriteValue<std::int32_t>(newPosX);
-						packet.WriteValue<std::int32_t>(newPosY);
-
-						remotingActorInfo.LastPosX = newPosX;
-						remotingActorInfo.LastPosY = newPosY;
+					MemoryStream packetCompressed(1024);
+					{
+						DeflateWriter dw(packetCompressed);
+						dw.Write(packet.GetBuffer(), packet.GetSize());
 					}
-					if (animationChanged) {
-						packet.WriteVariableUint32(newAnimation);
-						packet.WriteValue<std::uint16_t>(newRotation);
-						packet.WriteValue<std::uint8_t>(newRendererType);
-
-						remotingActorInfo.LastAnimation = newAnimation;
-						remotingActorInfo.LastRotation = newRotation;
-						remotingActorInfo.LastRendererType = newRendererType;
-					}
-				}
-
-				MemoryStream packetCompressed(1024);
-				{
-					DeflateWriter dw(packetCompressed);
-					dw.Write(packet.GetBuffer(), packet.GetSize());
-				}
 
 #if defined(DEATH_DEBUG)
-				_debugAverageUpdatePacketSize = lerp(_debugAverageUpdatePacketSize, (std::int32_t)packet.GetSize(), 0.2f * timeMult);
+					_debugAverageUpdatePacketSize = lerp(_debugAverageUpdatePacketSize, (std::int32_t)packet.GetSize(), 0.2f * timeMult);
 #endif
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
-				_updatePacketSize[_plotIndex] = packet.GetSize();
-				_updatePacketMaxSize = std::max(_updatePacketMaxSize, _updatePacketSize[_plotIndex]);
-				_compressedUpdatePacketSize[_plotIndex] = packetCompressed.GetSize();
+					_updatePacketSize[_plotIndex] = packet.GetSize();
+					_updatePacketMaxSize = std::max(_updatePacketMaxSize, _updatePacketSize[_plotIndex]);
+					_compressedUpdatePacketSize[_plotIndex] = packetCompressed.GetSize();
 #endif
 
-				_networkManager->SendTo([this](const Peer& peer) {
-					auto it = _peerDesc.find(peer);
-					return (it != _peerDesc.end() && it->second.State >= LevelPeerState::LevelSynchronized);
-				}, NetworkChannel::UnreliableUpdates, (std::uint8_t)ServerPacketType::UpdateAllActors, packetCompressed);
+					_networkManager->SendTo([this](const Peer& peer) {
+						auto it = _peerDesc.find(peer);
+						return (it != _peerDesc.end() && it->second.State >= LevelPeerState::LevelSynchronized);
+					}, NetworkChannel::UnreliableUpdates, (std::uint8_t)ServerPacketType::UpdateAllActors, packetCompressed);
 
-				SynchronizePeers();
+					SynchronizePeers();
+				} else {
+#if defined(DEATH_DEBUG)
+						_debugAverageUpdatePacketSize = 0;
+#endif
+				}
 			} else {
 				if (!_players.empty()) {
 					_seqNum++;
@@ -1476,16 +1482,6 @@ namespace Jazz2::Multiplayer
 				case ClientPacketType::PlayerReady: {
 					MemoryStream packet(data);
 					PlayerType preferredPlayerType = (PlayerType)packet.ReadValue<std::uint8_t>();
-					std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
-
-					// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
-					if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-						LOGD("[MP] ClientPacketType::PlayerReady - player name length out of bounds (%u)", playerNameLength);
-						return true;
-					}
-
-					String playerName{NoInit, playerNameLength};
-					packet.Read(playerName.data(), playerNameLength);
 
 					auto it = _peerDesc.find(peer);
 					if (it == _peerDesc.end() || (it->second.State != LevelPeerState::LevelLoaded && it->second.State != LevelPeerState::LevelSynchronized)) {
@@ -1501,9 +1497,6 @@ namespace Jazz2::Multiplayer
 
 					// Allow to set player name only once
 					auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer);	
-					if (globalPeerDesc->PreferredPlayerType == PlayerType::None) {
-						globalPeerDesc->PlayerName = Death::move(playerName);
-					}
 					globalPeerDesc->PreferredPlayerType = preferredPlayerType;
 
 					_root->InvokeAsync([this, peer]() {
@@ -1830,7 +1823,7 @@ namespace Jazz2::Multiplayer
 							std::unique_lock lock(_lock);
 							_remoteActors[actorId] = remoteActor;
 						}
-						AddActor(std::static_pointer_cast<Actors::ActorBase>(remoteActor));
+						AddActor(remoteActor);
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
@@ -2311,10 +2304,16 @@ namespace Jazz2::Multiplayer
 
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 					
-					// TODO: Send player name
 					if (otherPlayer->_playerIndex == 0) {
-						// TODO: Server player name
-						String playerName = "Server"_s;
+						StringView playerName;
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+						if (UI::DiscordRpcClient::Get().IsSupported()) {
+							playerName = UI::DiscordRpcClient::Get().GetUserDisplayName();
+						}
+#endif
+						if (playerName.empty()) {
+							playerName = PreferencesCache::PlayerName;
+						}
 
 						MemoryStream packet(5 + playerName.size());
 						packet.WriteVariableUint32(otherPlayer->_playerIndex);
@@ -2454,7 +2453,6 @@ namespace Jazz2::Multiplayer
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 				}
 
-				// TODO: Send player name
 				{
 					MemoryStream packet(5 + globalPeerDesc->PlayerName.size());
 					packet.WriteVariableUint32(playerIndex);
@@ -2607,26 +2605,10 @@ namespace Jazz2::Multiplayer
 
 		_inGameLobby->Hide();
 
-		MemoryStream packet(72);
+		MemoryStream packet(1);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)playerType);
-
-		// TODO
-		String playerName;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
-			playerName = UI::DiscordRpcClient::Get().GetUserDisplayName();
-		}
-#endif
-		if (playerName.empty()) {
-			char buffer[64];
-			formatString(buffer, sizeof(buffer), "%x", Random().Next());
-			playerName = buffer;
-		}
-		if (playerName.size() > MaxPlayerNameLength) {
-			playerName = playerName.prefix(MaxPlayerNameLength);
-		}
-		packet.WriteValue<std::uint8_t>((std::uint8_t)playerName.size());
-		packet.Write(playerName.data(), (std::uint32_t)playerName.size());
+		// TODO: Selected team
+		packet.WriteValue<std::uint8_t>(0);
 
 		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerReady, packet);
 	}

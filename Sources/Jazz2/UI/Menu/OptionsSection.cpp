@@ -4,6 +4,7 @@
 #include "GraphicsOptionsSection.h"
 #include "SoundsOptionsSection.h"
 #include "ControlsOptionsSection.h"
+#include "UserProfileOptionsSection.h"
 
 #include <Utf8.h>
 
@@ -23,6 +24,8 @@ namespace Jazz2::UI::Menu
 #endif
 		// TRANSLATORS: Menu item in Options section
 		_items.emplace_back(OptionsItem { OptionsItemType::Controls, _("Controls") });
+		// TRANSLATORS: Menu item in Options section
+		_items.emplace_back(OptionsItem { OptionsItemType::UserProfile, _("User Profile") });
 	}
 
 	void OptionsSection::OnDraw(Canvas* canvas)
@@ -73,6 +76,7 @@ namespace Jazz2::UI::Menu
 			case OptionsItemType::Graphics: _root->SwitchToSection<GraphicsOptionsSection>(); break;
 			case OptionsItemType::Sounds: _root->SwitchToSection<SoundsOptionsSection>(); break;
 			case OptionsItemType::Controls: _root->SwitchToSection<ControlsOptionsSection>(); break;
+			case OptionsItemType::UserProfile: _root->SwitchToSection<UserProfileOptionsSection>(); break;
 		}
 	}
 }

@@ -74,7 +74,7 @@ namespace Jazz2::UI
 		_nonce = 0;
 		_hEventRead = ::CreateEvent(NULL, FALSE, TRUE, NULL);
 		_hEventWrite = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-		_thread.Run(DiscordRpcClient::OnBackgroundThread, this);
+		_thread = Thread(DiscordRpcClient::OnBackgroundThread, this);
 #else
 		if (_sockFd >= 0) {
 			return true;
@@ -129,7 +129,7 @@ namespace Jazz2::UI
 
 		_clientId = clientId;
 		_nonce = 0;
-		_thread.Run(DiscordRpcClient::OnBackgroundThread, this);
+		_thread = Thread(DiscordRpcClient::OnBackgroundThread, this);
 #endif
 		return true;
 	}

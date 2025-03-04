@@ -329,6 +329,7 @@
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h" />
     <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h" />
+    <ClInclude Include="Jazz2\UI\Menu\UserProfileOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameLobby.h" />
     <ClInclude Include="Main.h" />
@@ -916,6 +917,7 @@
     <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\UserProfileOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.cpp" />
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameLobby.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />

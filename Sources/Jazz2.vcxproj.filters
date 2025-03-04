@@ -1596,6 +1596,9 @@
     <ClInclude Include="Jazz2\Multiplayer\NetworkManagerBase.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\UserProfileOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2608,6 +2611,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\NetworkManagerBase.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\UserProfileOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

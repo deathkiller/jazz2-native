@@ -49,10 +49,6 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::OverwriteEpisodeEnd, _("Overwrite Episode Completion"), true, isInGame });
 
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableDiscordIntegration, _("Discord Integration"), true });
-#endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableRgbLights, _("Razer Chroma™"), true });
@@ -142,9 +138,6 @@ namespace Jazz2::UI::Menu
 							// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 							: _("Always")));
 					break;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-				case GameplayOptionsItemType::EnableDiscordIntegration: enabled = PreferencesCache::EnableDiscordIntegration; break;
-#endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 				case GameplayOptionsItemType::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
 #endif
@@ -203,17 +196,6 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 			}
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-			case GameplayOptionsItemType::EnableDiscordIntegration: {
-				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
-				if (!PreferencesCache::EnableDiscordIntegration) {
-					DiscordRpcClient::Get().Disconnect();
-				}
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
-#endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 			case GameplayOptionsItemType::EnableRgbLights: {
 				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;

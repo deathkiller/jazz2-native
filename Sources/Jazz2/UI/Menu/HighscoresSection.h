@@ -67,7 +67,7 @@ namespace Jazz2::UI::Menu
 		};
 
 		static constexpr std::int32_t MaxItems = 10;
-		static constexpr std::int32_t MaxNameLength = 24;
+		static constexpr std::int32_t MaxPlayerNameLength = 24;
 		static constexpr StringView FileName = "Highscores.list"_s;
 		static constexpr std::uint16_t FileVersion = 1;
 
@@ -84,7 +84,5 @@ namespace Jazz2::UI::Menu
 		void SerializeToFile();
 		void AddItemAndFocus(HighscoreItem&& item);
 		void RefreshList();
-
-		static String TryGetDefaultName();
 	};
 }
