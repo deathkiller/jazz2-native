@@ -388,6 +388,11 @@ void GameEventHandler::OnInitialize()
 
 	Vector2i res = theApplication().GetResolution();
 	LOGI("Rendering resolution: %ix%i (%ix%i)", res.X, res.Y, viewSize.X, viewSize.Y);
+
+#if defined(DEATH_TARGET_ANDROID)
+	auto bounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+	LOGW("ACTIVITY BOUNDS: %i | %i | %i | %i", bounds.X, bounds.Y, bounds.W, bounds.H);
+#endif
 }
 
 void GameEventHandler::OnBeginFrame()

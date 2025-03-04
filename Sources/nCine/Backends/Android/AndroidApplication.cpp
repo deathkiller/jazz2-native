@@ -1,4 +1,4 @@
-#include "../../../Main.h"
+﻿#include "../../../Main.h"
 #include "AndroidApplication.h"
 #include "../../Base/Timer.h"
 #include "../../IAppEventHandler.h"
@@ -199,6 +199,9 @@ namespace nCine
 	{
 		if (isInitialized_) {
 			AndroidJniWrap_InputMethodManager::toggleSoftInput();
+
+			auto bounds = AndroidJniWrap_Activity::getVisibleBounds();
+			LOGW("ACTIVITY BOUNDS: %i | %i | %i | %i", bounds.X, bounds.Y, bounds.W, bounds.H);
 		}
 	}
 

@@ -389,31 +389,35 @@ namespace Jazz2::UI::Menu
 					return;
 				} else
 #endif
-				if (y >= 80.0f && std::abs(x - 0.5f) > 0.35f) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_animation = 0.0f;
+				if (y >= 80.0f) {
+					Recti contentBounds = _root->GetContentBounds();
+					float topLine = contentBounds.Y + TopLine;
+					if (std::abs(x - 0.5f) > (y > topLine ? 0.35f : 0.1f)) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_animation = 0.0f;
 
-					if (x < 0.5f) {
-						_selectedSeries--;
-						if (_selectedSeries < 0) {
-							_selectedSeries = (std::int32_t)SeriesName::Count - 1;
+						if (x < 0.5f) {
+							_selectedSeries--;
+							if (_selectedSeries < 0) {
+								_selectedSeries = (std::int32_t)SeriesName::Count - 1;
+							}
+						} else {
+							_selectedSeries++;
+							if (_selectedSeries >= (std::int32_t)SeriesName::Count) {
+								_selectedSeries = 0;
+							}
 						}
-					} else {
-						_selectedSeries++;
-						if (_selectedSeries >= (std::int32_t)SeriesName::Count) {
-							_selectedSeries = 0;
-						}
-					}
 
-					RefreshList();
-					if (!_items.empty()) {
-						if (_selectedIndex >= _items.size()) {
-							_selectedIndex = _items.size() - 1;
+						RefreshList();
+						if (!_items.empty()) {
+							if (_selectedIndex >= _items.size()) {
+								_selectedIndex = _items.size() - 1;
+							}
+							EnsureVisibleSelected();
+							OnSelectionChanged(_items[_selectedIndex]);
 						}
-						EnsureVisibleSelected();
-						OnSelectionChanged(_items[_selectedIndex]);
+						return;
 					}
-					return;
 				}
 			}
 		}

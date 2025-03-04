@@ -1,4 +1,6 @@
-#pragma once
+﻿#pragma once
+
+#include "../../Primitives/Rect.h"
 
 #include <jni.h>
 #include <android/api-level.h>
@@ -224,6 +226,7 @@ namespace nCine::Backends
 		static void requestExternalStoragePermission();
 		static void setActivityEnabled(StringView activity, bool enable);
 		static bool openUrl(StringView url);
+		static Recti getVisibleBounds();
 
 	private:
 		static jobject activityObject_;
@@ -233,6 +236,16 @@ namespace nCine::Backends
 		static jmethodID midRequestExternalStoragePermission_;
 		static jmethodID midSetActivityEnabled_;
 		static jmethodID midOpenUrl_;
+		static jmethodID midGetWindow_;
+
+		static jmethodID midGetDecorView_;
+		static jclass rectClass_;
+		static jmethodID midRectInit_;
+		static jfieldID fidRectLeft_;
+		static jfieldID fidRectTop_;
+		static jfieldID fidRectRight_;
+		static jfieldID fidRectBottom_;
+		static jmethodID midGetWindowVisibleDisplayFrame_;
 	};
 
 	/// Handles JNI requests to `android.view.inputmethod.InputMethodManager`

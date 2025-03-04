@@ -342,11 +342,10 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		_root->PlaySfx("MenuSelect"_s, 0.6f);
-
 		switch (_items[_selectedIndex].Item.Type) {
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			case UserProfileOptionsItemType::EnableDiscordIntegration: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
 				if (PreferencesCache::EnableDiscordIntegration) {
 					DiscordRpcClient::Get().Connect("591586859960762378"_s);
@@ -364,6 +363,7 @@ namespace Jazz2::UI::Menu
 					break;
 				}
 #endif
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_carretAnim = 0.0f;
 				_prevPlayerName = _localPlayerName;
 				_textCursor = _localPlayerName.size();

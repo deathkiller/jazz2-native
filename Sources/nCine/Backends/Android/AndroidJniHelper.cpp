@@ -1,4 +1,4 @@
-#include "AndroidJniHelper.h"
+﻿#include "AndroidJniHelper.h"
 #include "AndroidApplication.h"
 #include "../../../Main.h"
 #include "../../Base/Algorithms.h"
@@ -53,6 +53,16 @@ namespace nCine::Backends
 	jmethodID AndroidJniWrap_Activity::midRequestExternalStoragePermission_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midSetActivityEnabled_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midOpenUrl_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midGetWindow_ = nullptr;
+
+	jmethodID AndroidJniWrap_Activity::midGetDecorView_ = nullptr;
+	jclass AndroidJniWrap_Activity::rectClass_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midRectInit_ = nullptr;
+	jfieldID AndroidJniWrap_Activity::fidRectLeft_ = nullptr;
+	jfieldID AndroidJniWrap_Activity::fidRectTop_ = nullptr;
+	jfieldID AndroidJniWrap_Activity::fidRectRight_ = nullptr;
+	jfieldID AndroidJniWrap_Activity::fidRectBottom_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midGetWindowVisibleDisplayFrame_ = nullptr;
 
 	jobject AndroidJniWrap_InputMethodManager::inputMethodManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midToggleSoftInput_ = nullptr;
@@ -648,6 +658,20 @@ namespace nCine::Backends
 		midSetActivityEnabled_ = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
 		midSetActivityEnabled_ = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
 		midOpenUrl_ = AndroidJniClass::getMethodID(nativeActivityClass, "openUrl", "(Ljava/lang/String;)Z");
+		midGetWindow_ = AndroidJniClass::getMethodID(nativeActivityClass, "getWindow", "()Landroid/view/Window;");
+
+		jclass windowClass = AndroidJniClass::findClass("android/view/Window");
+		midGetDecorView_ = AndroidJniClass::getMethodID(windowClass, "getDecorView", "()Landroid/view/View;");
+
+		rectClass_ = AndroidJniClass::findClass("android/graphics/Rect");
+		midRectInit_ = AndroidJniClass::getMethodID(rectClass_, "<init>", "()V");
+		fidRectLeft_ = AndroidJniHelper::jniEnv->GetFieldID(rectClass_, "left", "I");
+		fidRectTop_ = AndroidJniHelper::jniEnv->GetFieldID(rectClass_, "top", "I");
+		fidRectRight_ = AndroidJniHelper::jniEnv->GetFieldID(rectClass_, "right", "I");
+		fidRectBottom_ = AndroidJniHelper::jniEnv->GetFieldID(rectClass_, "bottom", "I");
+
+		jclass viewClass = AndroidJniClass::findClass("android/view/View");
+		midGetWindowVisibleDisplayFrame_ = AndroidJniClass::getMethodID(viewClass, "getWindowVisibleDisplayFrame", "(Landroid/graphics/Rect;)V");
 	}
 
 	void AndroidJniWrap_Activity::finishAndRemoveTask()
@@ -722,6 +746,45 @@ namespace nCine::Backends
 
 		jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(activityObject_, midOpenUrl_, strUrl);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strUrl);
+		return result;
+	}
+
+	Recti AndroidJniWrap_Activity::getVisibleBounds()
+	{
+		if (midGetWindow_ == nullptr || midGetDecorView_ == nullptr || midRectInit_ == nullptr || midGetWindowVisibleDisplayFrame_ == nullptr ||
+			fidRectLeft_ == nullptr || fidRectTop_ == nullptr || fidRectRight_ == nullptr || fidRectBottom_ == nullptr) {
+			return {};
+		}
+
+		jobject window = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetWindow_);
+		if (window == nullptr) {
+			return {};
+		}
+
+		Recti result;
+
+		jobject decorView = AndroidJniHelper::jniEnv->CallObjectMethod(window, midGetDecorView_);
+		if (decorView != nullptr) {
+			jobject rect = AndroidJniHelper::jniEnv->NewObject(rectClass_, midRectInit_);
+			if (rect != nullptr) {
+				AndroidJniHelper::jniEnv->CallVoidMethod(decorView, getWindowVisibleDisplayFrame, rect);
+
+				std::int32_t left = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectLeft_);
+				std::int32_t top = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectTop_);
+				std::int32_t right = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectRight_);
+				std::int32_t bottom = AndroidJniHelper::jniEnv->GetIntField(rect, fidRectBottom_);
+
+				result.X = left;
+				result.Y = top;
+				result.W = right - left;
+				result.H = bottom - top;
+
+				AndroidJniHelper::jniEnv->DeleteLocalRef(rect);
+			}
+			AndroidJniHelper::jniEnv->DeleteLocalRef(decorView);
+		}
+		AndroidJniHelper::jniEnv->DeleteLocalRef(window);
+
 		return result;
 	}
 	
