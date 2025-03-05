@@ -31,7 +31,7 @@ extern "C"
 		if (androidApp.IsInitialized()) {
 			androidApp.HandleIntent(actionStr, uriStr);
 		} else {
-			LOGE("Received intent %s with \"%s\", but AndroidApplication is not initialized yet", actionStr.data(), uriStr.data());
+			LOGE("Received intent %s with \"%s\", but AndroidApplication is not initialized yet", actionStr, uriStr);
 		}
 
 		env->ReleaseStringUTFChars(action, actionStr);
