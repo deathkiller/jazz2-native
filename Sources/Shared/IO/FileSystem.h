@@ -175,6 +175,14 @@ namespace Death { namespace IO {
 		static Containers::StringView GetFileNameWithoutExtension(Containers::StringView path);
 		/** @brief Returns the extension as lower-case string without dot or empty string if it is not found */
 		static Containers::String GetExtension(Containers::StringView path);
+		/** @brief Converts path using native separators to forward slashes */
+#if defined(DEATH_TARGET_WINDOWS)
+		static Containers::String FromNativeSeparators(Containers::String path);
+#else
+		DEATH_ALWAYS_INLINE static Containers::StringView FromNativeSeparators(Containers::StringView path) {
+			return path;
+		}
+#endif
 		/** @brief Converts path using forward slashes to native separators */
 #if defined(DEATH_TARGET_WINDOWS)
 		static Containers::String ToNativeSeparators(Containers::String path);

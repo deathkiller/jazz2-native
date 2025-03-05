@@ -970,17 +970,35 @@ namespace Death { namespace IO {
 	}
 
 #if defined(DEATH_TARGET_WINDOWS)
+	String FileSystem::FromNativeSeparators(String path)
+	{
+		// Take ownership first if not already (e.g., directly from `String::nullTerminatedView()`)
+		if (!path.isSmall() && path.deleter()) {
+			path = String { path };
+		}
+
+		for (char& c : path) {
+			if (c == '\\') {
+				c = '/';
+			}
+		}
+
+		return path;
+	}
+
 	String FileSystem::ToNativeSeparators(String path)
 	{
 		// Take ownership first if not already (e.g., directly from `String::nullTerminatedView()`)
 		if (!path.isSmall() && path.deleter()) {
 			path = String{path};
 		}
+
 		for (char& c : path) {
 			if (c == '/') {
 				c = '\\';
 			}
 		}
+
 		return path;
 	}
 #endif

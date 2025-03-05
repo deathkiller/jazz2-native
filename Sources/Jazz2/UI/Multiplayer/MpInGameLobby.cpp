@@ -149,7 +149,26 @@ namespace Jazz2::UI::Multiplayer
 	void MpInGameLobby::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		// TODO
+		if (event.type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (pointerIndex != -1) {
+				float x = event.pointers[pointerIndex].x;
+				float y = event.pointers[pointerIndex].y /** (float)ViewSize.Y*/;
 
+				if (y < 0.7f) {
+					if (x < 0.333f) {
+						_selectedPlayerType = 0;
+					} else if (x < 0.666f) {
+						_selectedPlayerType = 1;
+					} else {
+						_selectedPlayerType = 2;
+					}
+					_animation = 0.0f;
+				} else {
+					_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
+				}
+			}
+		}
 	}
 
 	bool MpInGameLobby::IsVisible() const
