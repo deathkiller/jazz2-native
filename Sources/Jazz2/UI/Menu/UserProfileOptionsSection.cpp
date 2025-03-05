@@ -427,8 +427,7 @@ namespace Jazz2::UI::Menu
 			_localPlayerName = std::move(_prevPlayerName);
 #if defined(DEATH_TARGET_ANDROID)
 			auto& app = static_cast<AndroidApplication&>(theApplication());
-			bool r = app.HideSoftInput();
-			LOGW("app.HideSoftInput() returned %s", r ? "TRUE" : "FALSE");
+			app.HideSoftInput();
 			RecalcLayoutForSoftInput();
 #endif
 			return;
@@ -440,8 +439,13 @@ namespace Jazz2::UI::Menu
 #if defined(DEATH_TARGET_ANDROID)
 	void UserProfileOptionsSection::RecalcLayoutForSoftInput()
 	{
-		if (_recalcVisibleBoundsTimeLeft > 10.0f) {
-			_recalcVisibleBoundsTimeLeft = 10.0f;
+		_currentVisibleBounds.X = 0.0f;
+		_currentVisibleBounds.Y = 0.0f;
+		_currentVisibleBounds.W = _initialVisibleSize.X;
+		_currentVisibleBounds.H = _initialVisibleSize.Y;
+
+		if (_recalcVisibleBoundsTimeLeft > 6.0f) {
+			_recalcVisibleBoundsTimeLeft = 6.0f;
 		}
 	}
 #endif
