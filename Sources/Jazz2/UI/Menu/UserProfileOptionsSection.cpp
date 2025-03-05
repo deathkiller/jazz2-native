@@ -93,7 +93,8 @@ namespace Jazz2::UI::Menu
 				if (x < 0.2f && y < 80.0f) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					auto& app = static_cast<AndroidApplication&>(theApplication());
-					app.ShowSoftInput();
+					//app.ShowSoftInput();
+					app.ToggleSoftInput();
 					RecalcLayoutForSoftInput();
 					return;
 				}
