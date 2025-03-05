@@ -83,6 +83,8 @@ namespace Jazz2::UI::Menu
 		Vector2i _initialVisibleSize;
 		Recti _currentVisibleBounds;
 		float _recalcVisibleBoundsTimeLeft;
+
+		void RecalcLayoutForSoftInput();
 #endif
 
 		void FillDefaultsIfEmpty();
