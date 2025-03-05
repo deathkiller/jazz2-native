@@ -13,6 +13,6 @@ extern "C"
 	
 	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
 	{
-		nativeUpdateMonitors(env, clazz, action, uri);
+		nativeHandleIntent(env, clazz, action, uri);
 	}
 }

@@ -1386,7 +1386,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(4);
 					packet.WriteVariableUint32(playerIndex);
 
-					_networkManager->SendTo([this, otherPeer = peer](const Peer& peer) {
+					_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
 						return (peer != otherPeer);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
 				}
@@ -1472,7 +1472,7 @@ namespace Jazz2::Multiplayer
 					std::uint8_t reserved = packet.ReadValue<std::uint8_t>();
 
 					std::uint32_t messageLength = packet.ReadVariableUint32();
-					if (messageLength == 0 && messageLength > 1024) {
+					if (messageLength == 0 || messageLength > 1024) {
 						LOGD("[MP] ClientPacketType::ChatMessage - length out of bounds (%u)", messageLength);
 						return true;
 					}
@@ -1491,7 +1491,7 @@ namespace Jazz2::Multiplayer
 						return (it != _peerDesc.end() && it->second.State != LevelPeerState::Unknown && peer != otherPeer);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packetOut);
 
-					_root->InvokeAsync([this, peer, message = std::move(message)]() {
+					_root->InvokeAsync([this, message = std::move(message)]() {
 						_console->WriteLine(UI::MessageLevel::Info, message);
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
@@ -1806,7 +1806,7 @@ namespace Jazz2::Multiplayer
 					std::uint8_t reserved = packet.ReadValue<std::uint8_t>();
 
 					std::uint32_t messageLength = packet.ReadVariableUint32();
-					if (messageLength == 0 && messageLength > 1024) {
+					if (messageLength == 0 || messageLength > 1024) {
 						LOGD("[MP] ServerPacketType::ChatMessage - length out of bounds (%u)", messageLength);
 						return true;
 					}
@@ -1899,7 +1899,7 @@ namespace Jazz2::Multiplayer
 
 					_root->InvokeAsync([this, actorId, eventType, eventParams = std::move(eventParams), actorFlags, tileX, tileY, posZ]() {
 						// TODO: Remove const_cast
-						std::shared_ptr<Actors::ActorBase> actor =_eventSpawner.SpawnEvent(eventType, const_cast<std::uint8_t*>(eventParams.data()), actorFlags, tileX, tileY, ILevelHandler::SpritePlaneZ);
+						std::shared_ptr<Actors::ActorBase> actor =_eventSpawner.SpawnEvent(eventType, const_cast<std::uint8_t*>(eventParams.data()), actorFlags, tileX, tileY, posZ);
 						if (actor != nullptr) {
 							{
 								std::unique_lock lock(_lock);
