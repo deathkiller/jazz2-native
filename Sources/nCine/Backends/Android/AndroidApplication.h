@@ -32,6 +32,9 @@ namespace nCine
 		/// Handles the intent sent to the application activity
 		void HandleIntent(StringView action, StringView uri);
 
+		/// Handles changes of content bounds
+		void HandleContentBoundsChanged(Recti bounds);
+
 		/// Toggles the software keyboard
 		void ToggleSoftInput();
 

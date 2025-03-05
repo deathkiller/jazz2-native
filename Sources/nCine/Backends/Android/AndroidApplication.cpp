@@ -13,10 +13,22 @@
 using namespace Death::IO;
 using namespace nCine::Backends;
 
-#if defined(DEATH_TARGET_ANDROID)
 extern "C"
 {
 	namespace nc = nCine;
+
+	void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, std::size_t savedStateSize)
+	{
+		LOGW("CALLED ANativeActivity_onCreate");
+
+		activity->callbacks->onContentRectChanged = [](ANativeActivity* act, const ARect* rect) {
+			LOGW("CALLED onContentRectChanged");
+			nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
+			if (androidApp.IsInitialized()) {
+				androidApp.HandleContentBoundsChanged(Recti(rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top));
+			}
+		};
+	}
 
 	/** @brief Called by `jnicall_functions.cpp` */
 	void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
@@ -40,13 +52,12 @@ extern "C"
 		nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
 	}
 }
-#endif
 
 /// Processes the next application command
-void androidHandleCommand(struct android_app* state, std::int32_t cmd)
+/*void androidHandleCommand(struct android_app* state, std::int32_t cmd)
 {
 	nCine::AndroidApplication::ProcessCommand(state, cmd);
-}
+}*/
 
 /// Parses the next input event
 std::int32_t androidHandleInput(struct android_app* state, AInputEvent* event)
@@ -70,7 +81,8 @@ namespace nCine
 		app.state_ = state;
 		app.createAppEventHandler_ = createAppEventHandler;
 
-		state->onAppCmd = androidHandleCommand;
+		//state->onAppCmd = androidHandleCommand;
+		state->onAppCmd = AndroidApplication::ProcessCommand;
 		state->onInputEvent = androidHandleInput;
 
 		while (!app.ShouldQuit()) {
@@ -227,6 +239,11 @@ namespace nCine
 	void AndroidApplication::HandleIntent(StringView action, StringView uri)
 	{
 		LOGI("Received intent %s with \"%s\"", action.data(), uri.data());
+	}
+
+	void AndroidApplication::HandleContentBoundsChanged(Recti bounds)
+	{
+		LOGI("Received content bounds: %i | %i | %i | %i", bounds.X, bounds.Y, bounds.W, bounds.H);
 	}
 
 	void AndroidApplication::ToggleSoftInput()

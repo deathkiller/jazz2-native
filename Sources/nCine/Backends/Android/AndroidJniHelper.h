@@ -258,8 +258,10 @@ namespace nCine::Backends
 		static void toggleSoftInput();
 
 	private:
+		static jobject activityObject_;
 		static jobject inputMethodManagerObject_;
 		static jmethodID midToggleSoftInput_;
+		static jmethodID midShowSoftInput_;
 
 		static const int SHOW_IMPLICIT = 1;
 		static const int HIDE_IMPLICIT_ONLY = 1;

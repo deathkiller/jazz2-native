@@ -64,8 +64,10 @@ namespace nCine::Backends
 	jfieldID AndroidJniWrap_Activity::fidRectBottom_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midGetWindowVisibleDisplayFrame_ = nullptr;
 
+	jobject AndroidJniWrap_InputMethodManager::activityObject_ = nullptr;
 	jobject AndroidJniWrap_InputMethodManager::inputMethodManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midToggleSoftInput_ = nullptr;
+	jmethodID AndroidJniWrap_InputMethodManager::midShowSoftInput_ = nullptr;
 
 	jobject AndroidJniWrap_DisplayManager::displayManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_DisplayManager::midGetDisplay_ = nullptr;
@@ -792,8 +794,8 @@ namespace nCine::Backends
 	void AndroidJniWrap_InputMethodManager::init(struct android_app* state)
 	{
 		// Retrieve `NativeActivity`
-		jobject nativeActivityObject = state->activity->clazz;
-		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(nativeActivityObject);
+		activityObject_ = state->activity->clazz;
+		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(activityObject_);
 
 		// Retrieve `Context.INPUT_METHOD_SERVICE`
 		jclass contextClass = AndroidJniClass::findClass("android/content/Context");
@@ -803,10 +805,11 @@ namespace nCine::Backends
 		// Run `getSystemService(Context.INPUT_METHOD_SERVICE)`
 		jclass inputMethodManagerClass = AndroidJniClass::findClass("android/view/inputmethod/InputMethodManager");
 		jmethodID midGetSystemService = AndroidJniClass::getMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-		jobject inputMethodManagerObject = AndroidJniHelper::jniEnv->CallObjectMethod(nativeActivityObject, midGetSystemService, inputMethodServiceObject);
+		jobject inputMethodManagerObject = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetSystemService, inputMethodServiceObject);
 		inputMethodManagerObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(inputMethodManagerObject);
 
 		midToggleSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "toggleSoftInput", "(II)V");
+		midShowSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "showSoftInput", "(Landroid/view/View;I)Z");
 	}
 
 	void AndroidJniWrap_InputMethodManager::shutdown()
@@ -819,6 +822,11 @@ namespace nCine::Backends
 	void AndroidJniWrap_InputMethodManager::toggleSoftInput()
 	{
 		AndroidJniHelper::jniEnv->CallVoidMethod(inputMethodManagerObject_, midToggleSoftInput_, SHOW_IMPLICIT, HIDE_IMPLICIT_ONLY);
+	}
+
+	bool AndroidJniWrap_InputMethodManager::showSoftInput()
+	{
+		return AndroidJniHelper::jniEnv->CallBooleanMethod(inputMethodManagerObject_, midShowSoftInput_, activityObject_, 0);
 	}
 
 	// ------------------- AndroidJniWrap_DisplayManager -------------------
