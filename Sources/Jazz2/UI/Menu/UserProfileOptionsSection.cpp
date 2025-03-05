@@ -441,8 +441,8 @@ namespace Jazz2::UI::Menu
 	{
 		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 
-		if (_recalcVisibleBoundsTimeLeft > 6.0f) {
-			_recalcVisibleBoundsTimeLeft = 6.0f;
+		if (_recalcVisibleBoundsTimeLeft > 20.0f) {
+			_recalcVisibleBoundsTimeLeft = 20.0f;
 		}
 	}
 #endif
