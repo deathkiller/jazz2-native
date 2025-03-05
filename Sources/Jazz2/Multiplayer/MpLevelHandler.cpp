@@ -687,7 +687,7 @@ namespace Jazz2::Multiplayer
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateMirroredActor, packet);
 				}
 			} else {
-				const auto& metadataPath = actorPtr->_metadata->Path;
+				String metadataPath = fs::FromNativeSeparators(actorPtr->_metadata->Path);
 
 				MemoryStream packet(28 + metadataPath.size());
 				packet.WriteVariableUint32(actorId);
@@ -2349,7 +2349,7 @@ namespace Jazz2::Multiplayer
 
 				// Synchronize actors
 				for (Actors::Player* otherPlayer : _players) {
-					const auto& metadataPath = otherPlayer->_metadata->Path;
+					String metadataPath = fs::FromNativeSeparators(otherPlayer->_metadata->Path);
 
 					MemoryStream packet(28 + metadataPath.size());
 					packet.WriteVariableUint32(otherPlayer->_playerIndex);
@@ -2416,7 +2416,7 @@ namespace Jazz2::Multiplayer
 							}
 						}
 					} else {
-						const auto& metadataPath = remotingActor->_metadata->Path;
+						String metadataPath = fs::FromNativeSeparators(remotingActor->_metadata->Path);
 
 						MemoryStream packet(28 + metadataPath.size());
 						packet.WriteVariableUint32(remotingActorInfo.ActorID);
@@ -2491,7 +2491,7 @@ namespace Jazz2::Multiplayer
 
 				// Create the player also on all other clients
 				{
-					const auto& metadataPath = player->_metadata->Path;
+					String metadataPath = fs::FromNativeSeparators(player->_metadata->Path);
 
 					MemoryStream packet(28 + metadataPath.size());
 					packet.WriteVariableUint32(playerIndex);
