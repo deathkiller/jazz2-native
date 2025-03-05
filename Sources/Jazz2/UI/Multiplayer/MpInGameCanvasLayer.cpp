@@ -23,8 +23,6 @@ namespace Jazz2::UI::Multiplayer
 	{
 		Canvas::OnDraw(renderQueue);
 
-		std::int32_t charOffset = 0;
-
 		if (_levelHandler->_isServer) {
 			for (auto& [peer, peerDesc] : _levelHandler->_peerDesc) {
 				if (peerDesc.Player != nullptr && peerDesc.Player->_renderer.isEnabled()) {
