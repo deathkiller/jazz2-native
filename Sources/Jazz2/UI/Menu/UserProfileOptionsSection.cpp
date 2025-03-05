@@ -90,7 +90,7 @@ namespace Jazz2::UI::Menu
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 #if defined(DEATH_TARGET_ANDROID)
-				if (x < 0.2f && y < 80.0f) {
+				if (x < 0.2f && y < 80.0f && _waitForInput) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					auto& app = static_cast<AndroidApplication&>(theApplication());
 					app.ShowSoftInput();
@@ -414,6 +414,9 @@ namespace Jazz2::UI::Menu
 				_prevPlayerName = _localPlayerName;
 				_textCursor = _localPlayerName.size();
 				_waitForInput = true;
+#if defined(DEATH_TARGET_ANDROID)
+				RecalcLayoutForSoftInput();
+#endif
 				break;
 			}
 		}
@@ -441,8 +444,8 @@ namespace Jazz2::UI::Menu
 	{
 		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 
-		if (_recalcVisibleBoundsTimeLeft > 20.0f) {
-			_recalcVisibleBoundsTimeLeft = 20.0f;
+		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
+			_recalcVisibleBoundsTimeLeft = 30.0f;
 		}
 	}
 #endif
