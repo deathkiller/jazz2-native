@@ -439,10 +439,7 @@ namespace Jazz2::UI::Menu
 #if defined(DEATH_TARGET_ANDROID)
 	void UserProfileOptionsSection::RecalcLayoutForSoftInput()
 	{
-		_currentVisibleBounds.X = 0.0f;
-		_currentVisibleBounds.Y = 0.0f;
-		_currentVisibleBounds.W = _initialVisibleSize.X;
-		_currentVisibleBounds.H = _initialVisibleSize.Y;
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 
 		if (_recalcVisibleBoundsTimeLeft > 6.0f) {
 			_recalcVisibleBoundsTimeLeft = 6.0f;
