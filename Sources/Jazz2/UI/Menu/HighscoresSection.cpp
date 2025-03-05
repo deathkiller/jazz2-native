@@ -92,6 +92,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				auto& app = static_cast<AndroidApplication&>(theApplication());
 				app.ToggleSoftInput();
+				RecalcLayoutForSoftInput();
 			} else
 #endif
 			if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
@@ -189,6 +190,11 @@ namespace Jazz2::UI::Menu
 					if (!selectedItem.Item->PlayerName.empty()) {
 						SerializeToFile();
 					}
+#if defined(DEATH_TARGET_ANDROID)
+					auto& app = static_cast<AndroidApplication&>(theApplication());
+					app.HideSoftInput();
+					RecalcLayoutForSoftInput();
+#endif
 					break;
 				}
 				case Keys::Return: {
@@ -197,6 +203,11 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_waitForInput = false;
 						SerializeToFile();
+#if defined(DEATH_TARGET_ANDROID)
+						auto& app = static_cast<AndroidApplication&>(theApplication());
+						app.HideSoftInput();
+						RecalcLayoutForSoftInput();
+#endif
 					}
 					break;
 				}
@@ -421,7 +432,8 @@ namespace Jazz2::UI::Menu
 				if (x < 0.2f && y < 80.0f) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					auto& app = static_cast<AndroidApplication&>(theApplication());
-					app.ToggleSoftInput();
+					app.ShowSoftInput();
+					RecalcLayoutForSoftInput();
 					return;
 				} else
 #endif
@@ -481,6 +493,11 @@ namespace Jazz2::UI::Menu
 			if (!selectedItem.Item->PlayerName.empty()) {
 				SerializeToFile();
 			}
+#if defined(DEATH_TARGET_ANDROID)
+			auto& app = static_cast<AndroidApplication&>(theApplication());
+			app.HideSoftInput();
+			RecalcLayoutForSoftInput();
+#endif
 			return;
 		}
 
@@ -664,4 +681,18 @@ namespace Jazz2::UI::Menu
 			_items.emplace_back(&entry);
 		}
 	}
+
+#if defined(DEATH_TARGET_ANDROID)
+	void HighscoresSection::RecalcLayoutForSoftInput()
+	{
+		_currentVisibleBounds.X = 0.0f;
+		_currentVisibleBounds.Y = 0.0f;
+		_currentVisibleBounds.W = _initialVisibleSize.X;
+		_currentVisibleBounds.H = _initialVisibleSize.Y;
+
+		if (_recalcVisibleBoundsTimeLeft > 6.0f) {
+			_recalcVisibleBoundsTimeLeft = 6.0f;
+		}
+	}
+#endif
 }

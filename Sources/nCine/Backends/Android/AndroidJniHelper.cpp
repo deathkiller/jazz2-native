@@ -865,7 +865,6 @@ namespace nCine::Backends
 		if (decorViewObject != nullptr) {
 			jobject windowToken = AndroidJniHelper::jniEnv->CallObjectMethod(decorViewObject, midGetWindowToken_);
 			if (windowToken != nullptr) {
-				LOGW("windowToken RECEIVED");
 				result = AndroidJniHelper::jniEnv->CallBooleanMethod(inputMethodManagerObject_, midHideSoftInput_, windowToken, 0);
 				AndroidJniHelper::jniEnv->DeleteLocalRef(windowToken);
 			}
