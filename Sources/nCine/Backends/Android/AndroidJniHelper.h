@@ -256,6 +256,7 @@ namespace nCine::Backends
 		static void shutdown();
 
 		static void toggleSoftInput();
+		static bool showSoftInput();
 
 	private:
 		static jobject activityObject_;
