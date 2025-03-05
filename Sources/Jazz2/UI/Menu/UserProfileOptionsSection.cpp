@@ -427,7 +427,8 @@ namespace Jazz2::UI::Menu
 			_localPlayerName = std::move(_prevPlayerName);
 #if defined(DEATH_TARGET_ANDROID)
 			auto& app = static_cast<AndroidApplication&>(theApplication());
-			app.HideSoftInput();
+			bool r = app.HideSoftInput();
+			LOGW("app.HideSoftInput() returned %s", r ? "TRUE" : "FALSE");
 			RecalcLayoutForSoftInput();
 #endif
 			return;
