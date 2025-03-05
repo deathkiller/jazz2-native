@@ -9,6 +9,10 @@
 #include <Containers/String.h>
 #include <IO/MemoryStream.h>
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include <net/if.h>
+#endif
+
 using namespace Death::IO;
 
 namespace Jazz2::Multiplayer
@@ -20,7 +24,7 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase::InitializeBackend();
 
-		_socket = TryCreateSocket("ff02::333", _address);
+		_socket = TryCreateSocket(/*"ff02::333"*/"ff1e::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
 			_thread.Run(ServerDiscovery::OnServerThread, this);
 		}
@@ -33,7 +37,7 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase::InitializeBackend();
 
-		_socket = TryCreateSocket("ff02::333", _address);
+		_socket = TryCreateSocket(/*"ff02::333"*/"ff1e::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
 			_thread.Run(ServerDiscovery::OnClientThread, this);
 		}
@@ -56,7 +60,13 @@ namespace Jazz2::Multiplayer
 			return ENET_SOCKET_NULL;
 		}
 
-		std::int32_t on = 1, ifidx = 0, hops = 3;
+#if defined(DEATH_TARGET_ANDROID)
+		std::int32_t ifidx = if_nametoindex("wlan0");
+#else
+		std::int32_t ifidx = 0;
+#endif
+
+		std::int32_t on = 1, hops = 3;
 		if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_IF, (const char*)&ifidx, sizeof(ifidx)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (const char*)&hops, sizeof(hops)) != 0 ||
