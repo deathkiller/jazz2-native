@@ -25,7 +25,7 @@ extern "C"
 			LOGW("CALLED onContentRectChanged");
 			nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
 			if (androidApp.IsInitialized()) {
-				androidApp.HandleContentBoundsChanged(Recti(rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top));
+				androidApp.HandleContentBoundsChanged(nc::Recti(rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top));
 			}
 		};
 	}
