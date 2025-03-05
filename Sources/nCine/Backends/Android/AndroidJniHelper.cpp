@@ -821,6 +821,7 @@ namespace nCine::Backends
 
 		midToggleSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "toggleSoftInput", "(II)V");
 		midShowSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "showSoftInput", "(Landroid/view/View;I)Z");
+		midHideSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "hideSoftInputFromWindow", "(Landroid/os/IBinder;I)Z");
 
 		jclass viewClass = AndroidJniClass::findClass("android/view/View");
 		midGetWindowToken_ = AndroidJniClass::getMethodID(viewClass, "getWindowToken", "()Landroid/os/IBinder;");
@@ -864,6 +865,7 @@ namespace nCine::Backends
 		if (decorViewObject != nullptr) {
 			jobject windowToken = AndroidJniHelper::jniEnv->CallObjectMethod(decorViewObject, midGetWindowToken_);
 			if (windowToken != nullptr) {
+				LOGW("windowToken RECEIVED");
 				result = AndroidJniHelper::jniEnv->CallBooleanMethod(inputMethodManagerObject_, midHideSoftInput_, windowToken, 0);
 				AndroidJniHelper::jniEnv->DeleteLocalRef(windowToken);
 			}
