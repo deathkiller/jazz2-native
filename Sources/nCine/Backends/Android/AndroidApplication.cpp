@@ -238,6 +238,20 @@ namespace nCine
 		}
 	}
 
+	bool AndroidApplication::ShowSoftInput()
+	{
+		if (isInitialized_) {
+			AndroidJniWrap_InputMethodManager::showSoftInput();
+		}
+	}
+
+	bool AndroidApplication::HideSoftInput()
+	{
+		if (isInitialized_) {
+			AndroidJniWrap_InputMethodManager::hideSoftInput();
+		}
+	}
+
 	void AndroidApplication::PreInit()
 	{
 		profileStartTime_ = TimeStamp::now();

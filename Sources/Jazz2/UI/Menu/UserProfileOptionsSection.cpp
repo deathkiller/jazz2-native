@@ -93,7 +93,8 @@ namespace Jazz2::UI::Menu
 				if (x < 0.2f && y < 80.0f) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					auto& app = static_cast<AndroidApplication&>(theApplication());
-					app.ToggleSoftInput();
+					app.ShowSoftInput();
+					RecalcLayoutForSoftInput();
 					return;
 				}
 #endif
@@ -129,6 +130,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				auto& app = static_cast<AndroidApplication&>(theApplication());
 				app.ToggleSoftInput();
+				RecalcLayoutForSoftInput();
 			} else
 #endif
 			if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
@@ -198,6 +200,11 @@ namespace Jazz2::UI::Menu
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_waitForInput = false;
 					_localPlayerName = std::move(_prevPlayerName);
+#if defined(DEATH_TARGET_ANDROID)
+					auto& app = static_cast<AndroidApplication&>(theApplication());
+					app.HideSoftInput();
+					RecalcLayoutForSoftInput();
+#endif
 					break;
 				}
 				case Keys::Return: {
@@ -205,6 +212,11 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_waitForInput = false;
 						_isDirty = true;
+#if defined(DEATH_TARGET_ANDROID)
+						auto& app = static_cast<AndroidApplication&>(theApplication());
+						app.HideSoftInput();
+						RecalcLayoutForSoftInput();
+#endif
 					}
 					break;
 				}
@@ -413,9 +425,23 @@ namespace Jazz2::UI::Menu
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_waitForInput = false;
 			_localPlayerName = std::move(_prevPlayerName);
+#if defined(DEATH_TARGET_ANDROID)
+			auto& app = static_cast<AndroidApplication&>(theApplication());
+			app.HideSoftInput();
+			RecalcLayoutForSoftInput();
+#endif
 			return;
 		}
 
 		ScrollableMenuSection::OnBackPressed();
 	}
+
+#if defined(DEATH_TARGET_ANDROID)
+	void UserProfileOptionsSection::RecalcLayoutForSoftInput()
+	{
+		if (_recalcVisibleBoundsTimeLeft > 10.0f) {
+			_recalcVisibleBoundsTimeLeft = 10.0f;
+		}
+	}
+#endif
 }

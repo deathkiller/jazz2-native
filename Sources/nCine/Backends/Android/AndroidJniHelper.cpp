@@ -64,10 +64,11 @@ namespace nCine::Backends
 	jfieldID AndroidJniWrap_Activity::fidRectBottom_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midGetWindowVisibleDisplayFrame_ = nullptr;
 
-	jobject AndroidJniWrap_InputMethodManager::activityObject_ = nullptr;
 	jobject AndroidJniWrap_InputMethodManager::inputMethodManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midToggleSoftInput_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midShowSoftInput_ = nullptr;
+	jmethodID AndroidJniWrap_InputMethodManager::midHideSoftInput_ = nullptr;
+	jmethodID AndroidJniWrap_InputMethodManager::midGetWindowToken_ = nullptr;
 
 	jobject AndroidJniWrap_DisplayManager::displayManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_DisplayManager::midGetDisplay_ = nullptr;
@@ -751,20 +752,31 @@ namespace nCine::Backends
 		return result;
 	}
 
-	Recti AndroidJniWrap_Activity::getVisibleBounds()
+	jobject AndroidJniWrap_Activity::getDecorView()
 	{
-		if (midGetWindow_ == nullptr || midGetDecorView_ == nullptr || midRectInit_ == nullptr || midGetWindowVisibleDisplayFrame_ == nullptr ||
-			fidRectLeft_ == nullptr || fidRectTop_ == nullptr || fidRectRight_ == nullptr || fidRectBottom_ == nullptr) {
-			return {};
+		if (midGetWindow_ == nullptr || midGetDecorView_ == nullptr) {
+			return nullptr;
 		}
 
 		jobject windowObject = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetWindow_);
 		if (windowObject == nullptr) {
+			return nullptr;
+		}
+
+		jobject decorViewObject = AndroidJniHelper::jniEnv->CallObjectMethod(windowObject, midGetDecorView_);
+		AndroidJniHelper::jniEnv->DeleteLocalRef(windowObject);
+		return decorViewObject;
+	}
+
+	Recti AndroidJniWrap_Activity::getVisibleBounds()
+	{
+		if (midRectInit_ == nullptr || midGetWindowVisibleDisplayFrame_ == nullptr ||
+			fidRectLeft_ == nullptr || fidRectTop_ == nullptr || fidRectRight_ == nullptr || fidRectBottom_ == nullptr) {
 			return {};
 		}
 
 		Recti result;
-		jobject decorViewObject = AndroidJniHelper::jniEnv->CallObjectMethod(windowObject, midGetDecorView_);
+		jobject decorViewObject = getDecorView();
 		if (decorViewObject != nullptr) {
 			jobject rectObject = AndroidJniHelper::jniEnv->NewObject(rectClass_, midRectInit_);
 			if (rectObject != nullptr) {
@@ -784,7 +796,6 @@ namespace nCine::Backends
 			}
 			AndroidJniHelper::jniEnv->DeleteLocalRef(decorViewObject);
 		}
-		AndroidJniHelper::jniEnv->DeleteLocalRef(windowObject);
 
 		return result;
 	}
@@ -794,7 +805,7 @@ namespace nCine::Backends
 	void AndroidJniWrap_InputMethodManager::init(struct android_app* state)
 	{
 		// Retrieve `NativeActivity`
-		activityObject_ = state->activity->clazz;
+		jobject activityObject = state->activity->clazz;
 		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(activityObject_);
 
 		// Retrieve `Context.INPUT_METHOD_SERVICE`
@@ -810,6 +821,9 @@ namespace nCine::Backends
 
 		midToggleSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "toggleSoftInput", "(II)V");
 		midShowSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "showSoftInput", "(Landroid/view/View;I)Z");
+
+		jclass viewClass = AndroidJniClass::findClass("android/view/View");
+		midGetWindowToken_ = AndroidJniClass::getMethodID(viewClass, "getWindowToken", "()Landroid/os/IBinder;");
 	}
 
 	void AndroidJniWrap_InputMethodManager::shutdown()
@@ -826,7 +840,36 @@ namespace nCine::Backends
 
 	bool AndroidJniWrap_InputMethodManager::showSoftInput()
 	{
-		return AndroidJniHelper::jniEnv->CallBooleanMethod(inputMethodManagerObject_, midShowSoftInput_, activityObject_, 0);
+		if (midShowSoftInput_ == nullptr) {
+			return false;
+		}
+
+		bool result = false;
+		jobject decorViewObject = AndroidJniWrap_Activity::getDecorView();
+		if (decorViewObject != nullptr) {
+			result = AndroidJniHelper::jniEnv->CallBooleanMethod(inputMethodManagerObject_, midShowSoftInput_, decorViewObject, 0);
+			AndroidJniHelper::jniEnv->DeleteLocalRef(decorViewObject);
+		}
+		return false;
+	}
+
+	bool AndroidJniWrap_InputMethodManager::hideSoftInput()
+	{
+		if (midGetWindowToken_ == nullptr || midHideSoftInput_ == nullptr) {
+			return false;
+		}
+
+		bool result = false;
+		jobject decorViewObject = AndroidJniWrap_Activity::getDecorView();
+		if (decorViewObject != nullptr) {
+			jobject windowToken = AndroidJniHelper::jniEnv->CallObjectMethod(decorViewObject, midGetWindowToken_);
+			if (windowToken != nullptr) {
+				result = AndroidJniHelper::jniEnv->CallBooleanMethod(inputMethodManagerObject_, midHideSoftInput_, windowToken, 0);
+				AndroidJniHelper::jniEnv->DeleteLocalRef(windowToken);
+			}
+			AndroidJniHelper::jniEnv->DeleteLocalRef(decorViewObject);
+		}
+		return result;
 	}
 
 	// ------------------- AndroidJniWrap_DisplayManager -------------------

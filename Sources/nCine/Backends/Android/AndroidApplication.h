@@ -37,6 +37,10 @@ namespace nCine
 
 		/// Toggles the software keyboard
 		void ToggleSoftInput();
+		/// Shows the software keyboard
+		bool ShowSoftInput();
+		/// Hides the software keyboard
+		bool HideSoftInput();
 
 	private:
 		bool isInitialized_;

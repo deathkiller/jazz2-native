@@ -226,6 +226,7 @@ namespace nCine::Backends
 		static void requestExternalStoragePermission();
 		static void setActivityEnabled(StringView activity, bool enable);
 		static bool openUrl(StringView url);
+		static jobject getDecorView();
 		static Recti getVisibleBounds();
 
 	private:
@@ -257,12 +258,14 @@ namespace nCine::Backends
 
 		static void toggleSoftInput();
 		static bool showSoftInput();
+		static bool hideSoftInput();
 
 	private:
-		static jobject activityObject_;
 		static jobject inputMethodManagerObject_;
 		static jmethodID midToggleSoftInput_;
 		static jmethodID midShowSoftInput_;
+		static jmethodID midHideSoftInput_;
+		static jmethodID midGetWindowToken_;
 
 		static const int SHOW_IMPLICIT = 1;
 		static const int HIDE_IMPLICIT_ONLY = 1;
