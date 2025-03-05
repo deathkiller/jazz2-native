@@ -806,7 +806,7 @@ namespace nCine::Backends
 	{
 		// Retrieve `NativeActivity`
 		jobject activityObject = state->activity->clazz;
-		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(activityObject_);
+		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(activityObject);
 
 		// Retrieve `Context.INPUT_METHOD_SERVICE`
 		jclass contextClass = AndroidJniClass::findClass("android/content/Context");
@@ -816,7 +816,7 @@ namespace nCine::Backends
 		// Run `getSystemService(Context.INPUT_METHOD_SERVICE)`
 		jclass inputMethodManagerClass = AndroidJniClass::findClass("android/view/inputmethod/InputMethodManager");
 		jmethodID midGetSystemService = AndroidJniClass::getMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-		jobject inputMethodManagerObject = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetSystemService, inputMethodServiceObject);
+		jobject inputMethodManagerObject = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject, midGetSystemService, inputMethodServiceObject);
 		inputMethodManagerObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(inputMethodManagerObject);
 
 		midToggleSoftInput_ = AndroidJniClass::getMethodID(inputMethodManagerClass, "toggleSoftInput", "(II)V");
