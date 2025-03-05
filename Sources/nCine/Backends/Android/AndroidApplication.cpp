@@ -17,19 +17,6 @@ extern "C"
 {
 	namespace nc = nCine;
 
-	void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, std::size_t savedStateSize)
-	{
-		LOGW("CALLED ANativeActivity_onCreate");
-
-		activity->callbacks->onContentRectChanged = [](ANativeActivity* act, const ARect* rect) {
-			LOGW("CALLED onContentRectChanged");
-			nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
-			if (androidApp.IsInitialized()) {
-				androidApp.HandleContentBoundsChanged(nc::Recti(rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top));
-			}
-		};
-	}
-
 	/** @brief Called by `jnicall_functions.cpp` */
 	void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
 	{
@@ -53,18 +40,6 @@ extern "C"
 	}
 }
 
-/// Processes the next application command
-/*void androidHandleCommand(struct android_app* state, std::int32_t cmd)
-{
-	nCine::AndroidApplication::ProcessCommand(state, cmd);
-}*/
-
-/// Parses the next input event
-std::int32_t androidHandleInput(struct android_app* state, AInputEvent* event)
-{
-	return static_cast<std::int32_t>(AndroidInputManager::parseEvent(event));
-}
-
 namespace nCine
 {
 	Application& theApplication()
@@ -81,9 +56,19 @@ namespace nCine
 		app.state_ = state;
 		app.createAppEventHandler_ = createAppEventHandler;
 
-		//state->onAppCmd = androidHandleCommand;
 		state->onAppCmd = AndroidApplication::ProcessCommand;
-		state->onInputEvent = androidHandleInput;
+
+		state->onInputEvent = [](struct android_app* state, AInputEvent* event) -> std::int32_t {
+			return static_cast<std::int32_t>(AndroidInputManager::parseEvent(event));
+		};
+
+		state->activity->callbacks->onContentRectChanged = [](ANativeActivity* act, const ARect* rect) {
+			LOGW("CALLED onContentRectChanged");
+			nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
+			if (androidApp.IsInitialized()) {
+				androidApp.HandleContentBoundsChanged(nc::Recti(rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top));
+			}
+		};
 
 		while (!app.ShouldQuit()) {
 			int ident, events;

@@ -9,6 +9,7 @@
 #include "../../nCine/Threading/Thread.h"
 #include "../../nCine/Threading/ThreadSync.h"
 
+#include <Base/IDisposable.h>
 #include <Containers/Function.h>
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
@@ -62,7 +63,7 @@ namespace Jazz2::Multiplayer
 	/**
 		@brief Allows to create generic network clients and servers
 	*/
-	class NetworkManagerBase
+	class NetworkManagerBase : public Death::IDisposable
 	{
 		friend class ServerDiscovery;
 
