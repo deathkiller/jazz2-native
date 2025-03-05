@@ -1,4 +1,4 @@
-﻿package @NCINE_REVERSE_DNS@;
+package @NCINE_REVERSE_DNS@;
 
 import android.app.NativeActivity;
 import android.content.Intent;
