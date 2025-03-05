@@ -21,23 +21,23 @@ extern "C"
 	/** @brief Called by `jnicall_functions.cpp` */
 	void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
 	{
+		JNIEnv* oldEnv = nc::Backends::AndroidJniHelper::jniEnv;
+		nc::Backends::AndroidJniHelper::jniEnv = env;
+
+		const char* actionStr = env->GetStringUTFChars(action, nullptr);
+		const char* uriStr = env->GetStringUTFChars(uri, nullptr);
+
 		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
 		if (androidApp.IsInitialized()) {
-			JNIEnv* oldEnv = nc::Backends::AndroidJniHelper::jniEnv;
-			nc::Backends::AndroidJniHelper::jniEnv = env;
-
-			const char* actionStr = env->GetStringUTFChars(action, nullptr);
-			const char* uriStr = env->GetStringUTFChars(uri, nullptr);
-
 			androidApp.HandleIntent(actionStr, uriStr);
-
-			env->ReleaseStringUTFChars(action, actionStr);
-			env->ReleaseStringUTFChars(uri, uriStr);
-
-			nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
 		} else {
 			LOGE("Received intent %s with \"%s\", but AndroidApplication is not initialized yet", action.data(), uri.data());
 		}
+
+		env->ReleaseStringUTFChars(action, actionStr);
+		env->ReleaseStringUTFChars(uri, uriStr);
+
+		nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
 	}
 }
 #endif
