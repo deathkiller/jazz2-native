@@ -15,7 +15,7 @@ namespace Jazz2::UI
 		ASSERT_MSG(_metadata != nullptr, "Cannot load required metadata");
 	}
 
-	LoadingHandler::LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback, bool darkMode)
+	LoadingHandler::LoadingHandler(IRootController* root, bool darkMode, Function<bool(IRootController*)>&& callback)
 		: LoadingHandler(root, darkMode)
 	{
 		_callback = std::move(callback);
