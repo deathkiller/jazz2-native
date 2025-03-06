@@ -86,6 +86,8 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Returns state of network connection */
 		NetworkState GetState() const;
+		/** @brief Returns mean round trip time to the server, in milliseconds */
+		std::uint32_t GetRoundTripTimeMs();
 
 		/** @brief Sends a packet to a given peer */
 		void SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);

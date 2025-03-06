@@ -1336,6 +1336,11 @@ namespace Jazz2::Multiplayer
 		ApplyGameModeToAllPlayers(_networkManager->GameMode);
 	}
 
+	bool MpLevelHandler::IsCheatingAllowed()
+	{
+		return _isServer && PreferencesCache::AllowCheats && _networkManager->GameMode == MpGameMode::Cooperation;
+	}
+
 	MpGameMode MpLevelHandler::GetGameMode() const
 	{
 		return _networkManager->GameMode;
@@ -1365,6 +1370,20 @@ namespace Jazz2::Multiplayer
 	bool MpLevelHandler::OnPeerDisconnected(const Peer& peer)
 	{
 		if (_isServer) {
+			if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
+				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", globalPeerDesc->PlayerName.data()));
+
+				MemoryStream packet(10 + globalPeerDesc->PlayerName.size());
+				packet.WriteValue<std::uint8_t>(0x02);
+				packet.WriteVariableUint64((std::uint64_t)peer._enet);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)globalPeerDesc->PlayerName.size());
+				packet.Write(globalPeerDesc->PlayerName.data(), (std::uint32_t)globalPeerDesc->PlayerName.size());
+
+				_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
+					return (peer != otherPeer);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerStateChanged, packet);
+			}
+
 			auto it = _peerDesc.find(peer);
 			if (it != _peerDesc.end()) {
 				Actors::Player* player = it->second.Player;
@@ -1407,6 +1426,20 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			switch ((ClientPacketType)packetType) {
 				case ClientPacketType::Auth: {
+					if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", globalPeerDesc->PlayerName.data()));
+
+						MemoryStream packet(10 + globalPeerDesc->PlayerName.size());
+						packet.WriteValue<std::uint8_t>(0x01);
+						packet.WriteVariableUint64((std::uint64_t)peer._enet);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)globalPeerDesc->PlayerName.size());
+						packet.Write(globalPeerDesc->PlayerName.data(), (std::uint32_t)globalPeerDesc->PlayerName.size());
+
+						_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
+							return (peer != otherPeer);
+						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerStateChanged, packet);
+					}
+
 					std::uint8_t flags = 0;
 					if (PreferencesCache::EnableReforgedGameplay) {
 						flags |= 0x01;
@@ -1680,6 +1713,21 @@ namespace Jazz2::Multiplayer
 			}
 		} else {
 			switch ((ServerPacketType)packetType) {
+				case ServerPacketType::PeerStateChanged: {
+					MemoryStream packet(data);
+					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+					std::uint64_t peerId = packet.ReadVariableUint64();
+					std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
+					String playerName{NoInit, playerNameLength};
+					packet.Read(playerName.data(), playerNameLength);
+
+					if (flags & 0x01) {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", playerName.data()));
+					} else if (flags & 0x02) {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", playerName.data()));
+					}
+					break;
+				}
 				case ServerPacketType::LoadLevel: {
 					// Start to ignore all incoming packets, because they no longer belong to this handler
 					_ignorePackets = true;

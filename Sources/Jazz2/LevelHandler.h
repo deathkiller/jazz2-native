@@ -263,6 +263,8 @@ namespace Jazz2
 		virtual void AttachComponents(LevelDescriptor&& descriptor);
 		/** @brief Spawns all players */
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);
+		/** @brief Returns `true` if cheats are enabled */
+		virtual bool IsCheatingAllowed();
 
 		/** @brief Called after the level is loaded and all players were spawned */
 		virtual void OnInitialized();

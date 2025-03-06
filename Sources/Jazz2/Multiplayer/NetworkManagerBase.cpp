@@ -112,6 +112,11 @@ namespace Jazz2::Multiplayer
 		return _state;
 	}
 
+	std::uint32_t NetworkManagerBase::GetRoundTripTimeMs()
+	{
+		return (_state == NetworkState::Connected && !_peers.empty() ? _peers[0]->roundTripTime : 0);
+	}
+
 	void NetworkManagerBase::SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
 		ENetPeer* target;
