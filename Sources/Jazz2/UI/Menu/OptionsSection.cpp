@@ -47,7 +47,7 @@ namespace Jazz2::UI::Menu
 
 	void OptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		item.Height = ItemHeight * 8 / 7;
+		item.Height = ItemHeight;
 	}
 
 	void OptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected)

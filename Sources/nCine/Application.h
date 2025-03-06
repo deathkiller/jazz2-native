@@ -108,7 +108,7 @@ namespace nCine
 #endif
 #if defined(NCINE_PROFILING) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns all timings */
-		inline const float* GetTimings() const { return timings_; }
+		inline StaticArrayView<(std::int32_t)Timings::Count, const float> GetTimings() const { return timings_; }
 #endif
 
 		/** @brief Returns the graphics device instance */

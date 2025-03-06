@@ -17,8 +17,8 @@ namespace Jazz2::UI
 		/** @brief Default height of viewport */
 		static constexpr std::int32_t DefaultHeight = 405;
 
-		LoadingHandler(IRootController* root);
-		LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback);
+		LoadingHandler(IRootController* root, bool darkMode = false);
+		LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback, bool darkMode = false);
 		~LoadingHandler() override;
 
 		Vector2i GetViewSize() const override;
@@ -47,5 +47,7 @@ namespace Jazz2::UI
 		std::unique_ptr<BackgroundCanvas> _canvasBackground;
 		Metadata* _metadata;
 		Function<bool(IRootController*)> _callback;
+		float _transition;
+		bool _darkMode;
 	};
 }

@@ -534,13 +534,19 @@ namespace Jazz2::Multiplayer
 			if (line.hasPrefix('/')) {
 				if (line.hasPrefix("/ban "_s)) {
 					// TODO: Implement /ban
+				} else if (line == "/endpoints"_s) {
+					auto endpoints = _networkManager->GetServerEndpoints();
+					for (const auto& endpoint : endpoints) {
+						_console->WriteLine(UI::MessageLevel::Info, endpoint);
+					}
+					return true;
 				} else if (line == "/info"_s) {
 					char infoBuffer[128];
-					formatString(infoBuffer, sizeof(infoBuffer), "Current level: %s/%s (\f[w:80]\f[c:#707070]%s\f[/c]\f[/w])", _episodeName.data(), _levelFileName.data(), GameModeToString(_networkManager->GameMode).data());
+					formatString(infoBuffer, sizeof(infoBuffer), "Current Level: %s/%s (\f[w:80]\f[c:#707070]%s\f[/c]\f[/w])", _episodeName.data(), _levelFileName.data(), GameModeToString(_networkManager->GameMode).data());
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
 					formatString(infoBuffer, sizeof(infoBuffer), "Players: \f[w:80]\f[c:#707070]%zu\f[/c]\f[/w]/%zu", _peerDesc.size() + 1, NetworkManagerBase::MaxPeerCount);
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
-					formatString(infoBuffer, sizeof(infoBuffer), "Server load: %i ms", (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
+					formatString(infoBuffer, sizeof(infoBuffer), "Server Load: %i ms", (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
 					return true;
 				} else if (line.hasPrefix("/kick "_s)) {

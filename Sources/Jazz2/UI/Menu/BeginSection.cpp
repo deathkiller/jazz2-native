@@ -8,9 +8,7 @@
 #include "MainMenu.h"
 
 #if defined(WITH_MULTIPLAYER)
-#	include "PlayCustomSection.h"
-#else
-#	include "CustomLevelSelectSection.h"
+#	include "PlayMultiplayerSection.h"
 #endif
 
 #include <Containers/StringConcatenable.h>
@@ -56,10 +54,10 @@ namespace Jazz2::UI::Menu
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::PlayEpisodes, _("Play Story"));
+			_items.emplace_back(Item::PlaySingleplayer, _("Play Story"));
 		} else {
 			// TRANSLATORS: Menu item in main menu (Emscripten only)
-			_items.emplace_back(Item::PlayEpisodes, _("Play Shareware Demo"));
+			_items.emplace_back(Item::PlaySingleplayer, _("Play Shareware Demo"));
 		}
 
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -73,17 +71,14 @@ namespace Jazz2::UI::Menu
 		}
 
 		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(Item::PlayEpisodes, _("Play Story"));
+		_items.emplace_back(Item::PlaySingleplayer, _("Play Story"));
 
-		if (_isPlayable) {
 #	if defined(WITH_MULTIPLAYER)
+		if (_isPlayable) {
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::PlayCustomLevels, _("Play Custom Game"));
-#	else
-			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::PlayCustomLevels, _("Play Custom Levels"));
-#	endif
+			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
 		}
+#	endif
 #endif
 
 		// TRANSLATORS: Menu item in main menu
@@ -342,7 +337,7 @@ namespace Jazz2::UI::Menu
 				}
 				break;
 #endif
-			case Item::PlayEpisodes:
+			case Item::PlaySingleplayer:
 				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #if defined(SHAREWARE_DEMO_ONLY)
@@ -381,15 +376,11 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<ImportSection>();
 				break;
-#else
-			case Item::PlayCustomLevels:
+#elif defined(WITH_MULTIPLAYER)
+			case Item::PlayMultiplayer:
 				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
-#	if defined(WITH_MULTIPLAYER)
-					_root->SwitchToSection<PlayCustomSection>();
-#	else
-					_root->SwitchToSection<CustomLevelSelectSection>();
-#	endif
+					_root->SwitchToSection<PlayMultiplayerSection>();
 				}
 				break;
 #endif

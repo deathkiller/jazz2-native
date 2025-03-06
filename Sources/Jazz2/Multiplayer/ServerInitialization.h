@@ -22,6 +22,9 @@ namespace Jazz2::Multiplayer
 		String ServerName;
 		/** @brief Server port */
 		std::uint16_t ServerPort;
+		/** @brief Whether the server is private (i.e. not visible in the server list) */
+		bool IsPrivate;
+
 	};
 }
 

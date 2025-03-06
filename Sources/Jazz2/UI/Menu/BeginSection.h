@@ -21,11 +21,11 @@ namespace Jazz2::UI::Menu
 #if !defined(SHAREWARE_DEMO_ONLY)
 			Continue,
 #endif
-			PlayEpisodes,
+			PlaySingleplayer,
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			Import,
-#else
-			PlayCustomLevels,
+#elif defined(WITH_MULTIPLAYER)
+			PlayMultiplayer,
 #endif
 			Highscores,
 			Options,

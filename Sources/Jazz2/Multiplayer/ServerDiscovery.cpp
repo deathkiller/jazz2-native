@@ -4,6 +4,7 @@
 
 #include "NetworkManagerBase.h"
 #include "PacketTypes.h"
+#include "../PreferencesCache.h"
 #include "../../nCine/Threading/Thread.h"
 
 #include <Containers/String.h>
@@ -136,7 +137,7 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		char addressString[256];
+		char addressString[64];
 		if (enet_address_get_host_ip(&discoveredServer.Endpoint, addressString, sizeof(addressString)) != 0) {
 			return false;
 		}
@@ -250,12 +251,7 @@ namespace Jazz2::Multiplayer
 							packet.WriteValue<std::uint64_t>(PacketSignature);
 							packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
 							packet.WriteValue<std::uint16_t>(_this->_actualPort);
-
-							// TODO: Unique identifier
-							//packet.Write(server->GetUniqueIdentifier(), UniqueIdentifierLength);
-							static const std::uint8_t UniqueIdentifier[16] = { 1, 2, 3, 4, 5, 6 };
-							packet.Write(UniqueIdentifier, UniqueIdentifierLength);
-
+							packet.Write(PreferencesCache::UniquePlayerID.data(), PreferencesCache::UniquePlayerID.size());
 
 							packet.WriteValue<std::uint8_t>((std::uint8_t)name.size());
 							packet.Write(name.data(), (std::uint8_t)name.size());

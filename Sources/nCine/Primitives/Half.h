@@ -33,14 +33,14 @@ namespace nCine
 	/**
 		@brief Half-precision float literal
 
-		Represents a floating-point value in the [`binary16` format](https://en.wikipedia.org/wiki/Half-precision_floating-point_format).
+		Represents a floating-point value in the `binary16` [format](https://en.wikipedia.org/wiki/Half-precision_floating-point_format).
 
 		The sole purpose of this type is to make creation, conversion and visualization
 		of half-float values easier. By design it doesn't support any arithmetic
 		operations as not all CPU architecture have native support for half-floats and
-		thus the operations would be done faster in a regular single-precision @cp float @ce.
+		thus the operations would be done faster in a regular single-precision @cpp float @ce.
 
-		The class provides explicit conversion from and to @cp float @ce,
+		The class provides explicit conversion from and to @cpp float @ce,
 		equality comparison with correct treatment of NaN values, promotion and
 		negation operator, a @link Literals::operator""_h() @endlink literal.
 	*/

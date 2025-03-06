@@ -1,4 +1,4 @@
-﻿#include "PlayCustomSection.h"
+﻿#include "PlayMultiplayerSection.h"
 
 #if defined(WITH_MULTIPLAYER)
 
@@ -13,19 +13,17 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	PlayCustomSection::PlayCustomSection()
+	PlayMultiplayerSection::PlayMultiplayerSection()
 	{
-		// TRANSLATORS: Menu item in Play Custom Game section
-		_items.emplace_back(PlayCustomItem { PlayCustomItemType::PlayCustomLevels, _("Play Custom Levels Locally") });
-		// TRANSLATORS: Menu item in Play Custom Game section
-		_items.emplace_back(PlayCustomItem { PlayCustomItemType::PlayStoryInCoop, _("Host Story in Cooperation") });
-		// TRANSLATORS: Menu item in Play Custom Game section
-		_items.emplace_back(PlayCustomItem { PlayCustomItemType::CreateCustomServer, _("Host Custom Levels") });
-		// TRANSLATORS: Menu item in Play Custom Game section
-		_items.emplace_back(PlayCustomItem { PlayCustomItemType::ConnectToServer, _("Connect To Server") });
+		// TRANSLATORS: Menu item in Play Multiplayer section
+		_items.emplace_back(PlayMultiplayerItem { PlayMultiplayerItemType::ConnectToServer, _("Connect To Server") });
+		// TRANSLATORS: Menu item in Play Multiplayer section
+		_items.emplace_back(PlayMultiplayerItem { PlayMultiplayerItemType::CreatePublicServer, _("Create Public Server") });
+		// TRANSLATORS: Menu item in Play Multiplayer section
+		_items.emplace_back(PlayMultiplayerItem { PlayMultiplayerItemType::CreatePrivateServer, _("Create Private Server") });
 	}
 
-	void PlayCustomSection::OnDraw(Canvas* canvas)
+	void PlayMultiplayerSection::OnDraw(Canvas* canvas)
 	{
 		Recti contentBounds = _root->GetContentBounds();
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
@@ -38,20 +36,16 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Play Custom Game"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Play Online"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
-	void PlayCustomSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
+	void PlayMultiplayerSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		item.Height = ItemHeight;
-
-		if (item.Item.Type == PlayCustomItemType::PlayCustomLevels) {
-			item.Height += 44.0f;
-		}
+		item.Height = ItemHeight * 8 / 7;
 	}
 
-	void PlayCustomSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
+	void PlayMultiplayerSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
 
@@ -66,22 +60,16 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f);
 		}
-
-		if (item.Item.Type == PlayCustomItemType::PlayCustomLevels) {
-			_root->DrawStringShadow(_("— Online Multiplayer —"), charOffset, centerX, item.Y + 50.0f, IMenuContainer::FontLayer,
-				Alignment::Center, Colorf(0.8f, 0.42f, 0.32f, 0.5f), 0.8f);
-		}
 	}
 
-	void PlayCustomSection::OnExecuteSelected()
+	void PlayMultiplayerSection::OnExecuteSelected()
 	{
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		switch (_items[_selectedIndex].Item.Type) {
-			case PlayCustomItemType::PlayCustomLevels: _root->SwitchToSection<CustomLevelSelectSection>(); break;
-			case PlayCustomItemType::PlayStoryInCoop: _root->SwitchToSection<EpisodeSelectSection>(true); break;
-			case PlayCustomItemType::CreateCustomServer: _root->SwitchToSection<CustomLevelSelectSection>(true); break;
-			case PlayCustomItemType::ConnectToServer: _root->SwitchToSection<ServerSelectSection>(); break;
+			case PlayMultiplayerItemType::ConnectToServer: _root->SwitchToSection<ServerSelectSection>(); break;
+			case PlayMultiplayerItemType::CreatePublicServer: _root->SwitchToSection<EpisodeSelectSection>(true, false); break;
+			case PlayMultiplayerItemType::CreatePrivateServer: _root->SwitchToSection<EpisodeSelectSection>(true, true); break;
 		}
 	}
 }

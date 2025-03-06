@@ -153,7 +153,7 @@ namespace nCine
 			plotValues_[ValuesType::FrameTime][index_] = theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f;
 
 #if defined(NCINE_PROFILING)
-			const float* timings = theApplication().GetTimings();
+			auto timings = theApplication().GetTimings();
 			plotValues_[ValuesType::BeginFrame][index_] = timings[(std::int32_t)Application::Timings::BeginFrame] * 1000.0f;
 			if (appCfg.withScenegraph) {
 				plotValues_[ValuesType::PostUpdate][index_] = timings[(std::int32_t)Application::Timings::PostUpdate] * 1000.0f;
@@ -454,7 +454,7 @@ namespace nCine
 	{
 #if defined(NCINE_PROFILING)
 		if (ImGui::CollapsingHeader("Init Times")) {
-			const float* timings = theApplication().GetTimings();
+			auto timings = theApplication().GetTimings();
 
 			float initTimes[3];
 			initTimes[0] = timings[(std::int32_t)Application::Timings::PreInit] * 1000.0f;

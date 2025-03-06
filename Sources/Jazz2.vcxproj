@@ -78,7 +78,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  
   <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   <Import Project="$(SolutionDir)\VC-LTL helper for Visual Studio.props" />
   <Import Project="$(SolutionDir)\Sign.props" Condition="Exists('$(SolutionDir)\Sign.props')" />
@@ -104,7 +103,6 @@
       </PropertyGroup>
     </Otherwise>
   </Choose>
-  
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -510,14 +508,13 @@
     <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\InputDiagnosticsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h" />
-    <ClInclude Include="Jazz2\UI\Menu\LoadingSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuResources.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />
-    <ClInclude Include="Jazz2\UI\Menu\PlayCustomSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\PlayMultiplayerSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
@@ -904,12 +901,11 @@
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\InputDiagnosticsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp" />
-    <ClCompile Include="Jazz2\UI\Menu\LoadingSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />
-    <ClCompile Include="Jazz2\UI\Menu\PlayCustomSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\PlayMultiplayerSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp" />

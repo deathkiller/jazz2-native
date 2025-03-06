@@ -72,7 +72,7 @@ namespace Death { namespace IO {
 		std::int64_t CopyTo(Stream& targetStream);
 
 		/** @brief Reads a trivial value from the stream */
-		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
+		template<typename T, class = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
 		DEATH_ALWAYS_INLINE T ReadValue()
 		{
 			T buffer = {};
@@ -81,7 +81,7 @@ namespace Death { namespace IO {
 		}
 
 		/** @brief Writes a trivial value to the stream */
-		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
+		template<typename T, class = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
 		DEATH_ALWAYS_INLINE void WriteValue(const T& value)
 		{
 			Write(&value, sizeof(T));

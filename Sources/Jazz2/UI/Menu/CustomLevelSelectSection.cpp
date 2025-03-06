@@ -1,6 +1,5 @@
 ﻿#include "CustomLevelSelectSection.h"
 #include "StartGameOptionsSection.h"
-#include "MainMenu.h"
 #include "MenuResources.h"
 #include "../../LevelFlags.h"
 #include "../../PreferencesCache.h"
@@ -19,14 +18,15 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer)
-		: _multiplayer(multiplayer), _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f),
-			_touchTime(0.0f), _touchSpeed(0.0f), _pressedCount(0), _noiseCooldown(0.0f), _touchDirection(0)
+	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer, bool privateServer)
+		: _multiplayer(multiplayer), _privateServer(privateServer), _selectedIndex(0), _animation(0.0f), _y(0.0f),
+			_height(0.0f), _availableHeight(0.0f), _touchTime(0.0f), _touchSpeed(0.0f), _pressedCount(0),
+			_noiseCooldown(0.0f), _touchDirection(0)
 	{
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		_indexingThread.Run([](void* arg) {
-			auto* section = static_cast<CustomLevelSelectSection*>(arg);
-			section->AddCustomLevels();
+			auto* _this = static_cast<CustomLevelSelectSection*>(arg);
+			_this->AddCustomLevels();
 		}, this);
 #else
 		AddCustomLevels();
@@ -144,15 +144,8 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(
-#if defined(WITH_MULTIPLAYER)
-			_multiplayer ? _("Host Custom Levels") : _("Play Custom Levels Locally"),
-#else
-			_("Play Custom Levels"),
-#endif
-			
-			charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer, Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f),
-			0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		_root->DrawStringShadow(_("Play Custom Levels"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer, Alignment::Center,
+			Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
 	void CustomLevelSelectSection::OnDrawClipped(Canvas* canvas)
@@ -294,7 +287,7 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_MULTIPLAYER)
 		if (_multiplayer) {
-			_root->SwitchToSection<CreateServerOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr);
+			_root->SwitchToSection<CreateServerOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr, _privateServer);
 			return;
 		}
 #endif

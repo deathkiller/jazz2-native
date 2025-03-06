@@ -22,9 +22,6 @@ namespace Jazz2
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	bool PreferencesCache::IsStandalone = false;
 #endif
-#if defined(WITH_MULTIPLAYER)
-	String PreferencesCache::InitialState;
-#endif
 	UnlockableEpisodes PreferencesCache::UnlockedEpisodes = UnlockableEpisodes::None;
 	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
 	bool PreferencesCache::EnableFullscreen = false;
@@ -430,11 +427,6 @@ namespace Jazz2
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			else if (arg == "/standalone"_s) {
 				IsStandalone = true;
-			}
-#	endif
-#	if defined(WITH_MULTIPLAYER)
-			else if (InitialState.empty() && (arg == "/server"_s || arg.hasPrefix("/connect:"_s))) {
-				InitialState = arg;
 			}
 #	endif
 		}

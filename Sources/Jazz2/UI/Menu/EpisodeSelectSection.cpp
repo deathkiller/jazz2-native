@@ -1,4 +1,5 @@
 ﻿#include "EpisodeSelectSection.h"
+#include "CustomLevelSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "MainMenu.h"
 #include "MenuResources.h"
@@ -15,9 +16,9 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	EpisodeSelectSection::EpisodeSelectSection(bool multiplayer)
-		: _multiplayer(multiplayer), _expandedAnimation(0.0f), _transitionFromEpisode(-1), _transitionFromEpisodeTime(0.0f),
-			_expanded(false), _shouldStart(false)
+	EpisodeSelectSection::EpisodeSelectSection(bool multiplayer, bool privateServer)
+		: _multiplayer(multiplayer), _privateServer(privateServer), _expandedAnimation(0.0f), _transitionFromEpisode(-1),
+			_transitionFromEpisodeTime(0.0f), _expanded(false), _shouldStart(false)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -32,7 +33,7 @@ namespace Jazz2::UI::Menu
 
 		std::int32_t maxPosition = 0;
 		for (const ListViewItem& item : _items) {
-			if (maxPosition < item.Item.Description.Position) {
+			if (maxPosition < item.Item.Description.Position && item.Item.Description.Position < UINT16_MAX - 2) {
 				maxPosition = item.Item.Description.Position;
 			}
 		}
@@ -141,7 +142,7 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(
 #if defined(WITH_MULTIPLAYER)
-			_multiplayer ? _("Host Story in Cooperation") : _("Play Story"),
+			_multiplayer ? (_privateServer ? _("Create Private Server") : _("Create Public Server")) : _("Play Story"),
 #else
 			_("Play Story"),
 #endif
@@ -388,10 +389,21 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_MULTIPLAYER)
 			if (_multiplayer) {
-				_root->SwitchToSection<CreateServerOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel, selectedItem.Item.Description.PreviousEpisode);
+				if ((selectedItem.Item.Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels) {
+					_root->SwitchToSection<CustomLevelSelectSection>(true, _privateServer);
+					return;
+				}
+
+				_root->SwitchToSection<CreateServerOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel,
+					selectedItem.Item.Description.PreviousEpisode, _privateServer);
 				return;
 			}
 #endif
+
+			if ((selectedItem.Item.Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels) {
+				_root->SwitchToSection<CustomLevelSelectSection>();
+				return;
+			}
 
 			if ((selectedItem.Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 				if (_expanded) {
@@ -460,37 +472,42 @@ namespace Jazz2::UI::Menu
 			episode.Item.Description = std::move(*description);
 			episode.Item.Flags = EpisodeDataFlags::None;
 
-			if (!resolver.LevelExists(episode.Item.Description.Name, episode.Item.Description.FirstLevel)) {
-				// Cannot find the first level of episode in dedicated directory, try to search also "unknown" directory
-				if (resolver.LevelExists("unknown"_s, episode.Item.Description.FirstLevel)) {
-					episode.Item.Flags |= EpisodeDataFlags::LevelsInUnknownDirectory;
-				} else {
-					episode.Item.Flags |= EpisodeDataFlags::IsMissing;
+			if (episode.Item.Description.FirstLevel == ":custom-levels"_s) {
+				episode.Item.Flags |= EpisodeDataFlags::RedirectToCustomLevels | EpisodeDataFlags::IsAvailable;
+				episode.Item.Description.DisplayName = _("Play Custom Levels");
+			} else {
+				if (!resolver.LevelExists(episode.Item.Description.Name, episode.Item.Description.FirstLevel)) {
+					// Cannot find the first level of episode in dedicated directory, try to search also "unknown" directory
+					if (resolver.LevelExists("unknown"_s, episode.Item.Description.FirstLevel)) {
+						episode.Item.Flags |= EpisodeDataFlags::LevelsInUnknownDirectory;
+					} else {
+						episode.Item.Flags |= EpisodeDataFlags::IsMissing;
+					}
 				}
-			}
-			
-			if ((episode.Item.Flags & EpisodeDataFlags::IsMissing) != EpisodeDataFlags::IsMissing) {
-				if (!episode.Item.Description.PreviousEpisode.empty()) {
-					auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Item.Description.PreviousEpisode);
-					if (previousEpisodeEnd != nullptr && (previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
+
+				if ((episode.Item.Flags & EpisodeDataFlags::IsMissing) != EpisodeDataFlags::IsMissing) {
+					if (!episode.Item.Description.PreviousEpisode.empty()) {
+						auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Item.Description.PreviousEpisode);
+						if (previousEpisodeEnd != nullptr && (previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
+							episode.Item.Flags |= EpisodeDataFlags::IsAvailable;
+						}
+					} else {
 						episode.Item.Flags |= EpisodeDataFlags::IsAvailable;
 					}
-				} else {
-					episode.Item.Flags |= EpisodeDataFlags::IsAvailable;
-				}
 
-				if ((episode.Item.Flags & EpisodeDataFlags::IsAvailable) == EpisodeDataFlags::IsAvailable) {
-					auto currentEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Item.Description.Name);
-					if (currentEpisodeEnd != nullptr && (currentEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
-						episode.Item.Flags |= EpisodeDataFlags::IsCompleted;
-						if ((currentEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
-							episode.Item.Flags |= EpisodeDataFlags::CheatsUsed;
+					if ((episode.Item.Flags & EpisodeDataFlags::IsAvailable) == EpisodeDataFlags::IsAvailable) {
+						auto currentEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Item.Description.Name);
+						if (currentEpisodeEnd != nullptr && (currentEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
+							episode.Item.Flags |= EpisodeDataFlags::IsCompleted;
+							if ((currentEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
+								episode.Item.Flags |= EpisodeDataFlags::CheatsUsed;
+							}
 						}
-					}
 
-					auto episodeContinue = PreferencesCache::GetEpisodeContinue(episode.Item.Description.Name);
-					if (episodeContinue != nullptr) {
-						episode.Item.Flags |= EpisodeDataFlags::CanContinue;
+						auto episodeContinue = PreferencesCache::GetEpisodeContinue(episode.Item.Description.Name);
+						if (episodeContinue != nullptr) {
+							episode.Item.Flags |= EpisodeDataFlags::CanContinue;
+						}
 					}
 				}
 			}
