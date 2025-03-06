@@ -200,6 +200,8 @@ namespace Jazz2::Multiplayer
 			std::int32_t LastPosY;
 			std::uint32_t LastAnimation;
 			std::uint16_t LastRotation;
+			std::uint16_t LastScaleX;
+			std::uint16_t LastScaleY;
 			std::uint8_t LastRendererType;
 		};
 
@@ -212,7 +214,8 @@ namespace Jazz2::Multiplayer
 		};
 #endif
 
-		static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
+		//static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
+		static constexpr float UpdatesPerSecond = 30.0f; // ~33 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
 
 		NetworkManager* _networkManager;
@@ -254,6 +257,7 @@ namespace Jazz2::Multiplayer
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 		static StringView GameModeToString(MpGameMode mode);
+		static void InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor);
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		static constexpr std::int32_t PlotValueCount = 512;

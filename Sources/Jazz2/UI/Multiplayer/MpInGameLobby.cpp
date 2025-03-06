@@ -126,6 +126,8 @@ namespace Jazz2::UI::Multiplayer
 
 					float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
+					//DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 10, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
+
 					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
 						Alignment::Center, playerColors[j], size, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 				} else {

@@ -101,6 +101,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Color.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.cpp
+	${NCINE_SOURCE_DIR}/nCine/Primitives/Half.cpp
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.cpp
 )
 

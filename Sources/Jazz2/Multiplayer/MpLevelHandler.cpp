@@ -27,6 +27,7 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Audio/AudioReaderMpt.h"
 #include "../../nCine/Base/Random.h"
+#include "../../nCine/Primitives/Half.h"
 
 #include "../Actors/Player.h"
 #include "../Actors/Multiplayer/LocalPlayerOnServer.h"
@@ -246,7 +247,7 @@ namespace Jazz2::Multiplayer
 				if (!_peerDesc.empty()) {
 					std::uint32_t actorCount = (std::uint32_t)(_players.size() + _remotingActors.size());
 
-					MemoryStream packet(5 + actorCount * 19);
+					MemoryStream packet(4 + actorCount * 24);
 					packet.WriteVariableUint32(actorCount);
 
 					for (Actors::Player* player : _players) {
@@ -285,8 +286,11 @@ namespace Jazz2::Multiplayer
 						if (player->_renderer.AnimPaused) {
 							flags |= 0x08;
 						}
-						if (player->IsFacingLeft()) {
+						if (player->_renderer.isFlippedX()) {
 							flags |= 0x10;
+						}
+						if (player->_renderer.isFlippedY()) {
+							flags |= 0x20;
 						}
 						packet.WriteValue<std::uint8_t>(flags);
 
@@ -297,6 +301,9 @@ namespace Jazz2::Multiplayer
 						float rotation = player->_renderer.rotation();
 						if (rotation < 0.0f) rotation += fRadAngle360;
 						packet.WriteValue<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
+						Vector2f scale = player->_renderer.scale();
+						packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
+						packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
 						Actors::ActorRendererType rendererType = player->_renderer.GetRendererType();
 						packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
 					}
@@ -312,8 +319,12 @@ namespace Jazz2::Multiplayer
 						float rotation = remotingActor->_renderer.rotation();
 						if (rotation < 0.0f) rotation += fRadAngle360;
 						std::uint16_t newRotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
+						Vector2f newScale = remotingActor->_renderer.scale();
+						std::uint16_t newScaleX = (std::uint16_t)Half{newScale.X};
+						std::uint16_t newScaleY = (std::uint16_t)Half{newScale.Y};
 						std::uint8_t newRendererType = (std::uint8_t)remotingActor->_renderer.GetRendererType();
-						bool animationChanged = (newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation || newRendererType != remotingActorInfo.LastRendererType);
+						bool animationChanged = (newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation ||
+							newScaleX != remotingActorInfo.LastScaleX || newScaleY != remotingActorInfo.LastScaleY || newRendererType != remotingActorInfo.LastRendererType);
 
 						std::uint8_t flags = 0;
 						if (positionChanged) {
@@ -328,8 +339,11 @@ namespace Jazz2::Multiplayer
 						if (remotingActor->_renderer.AnimPaused) {
 							flags |= 0x08;
 						}
-						if (remotingActor->IsFacingLeft()) {
+						if (remotingActor->_renderer.isFlippedX()) {
 							flags |= 0x10;
+						}
+						if (remotingActor->_renderer.isFlippedY()) {
+							flags |= 0x20;
 						}
 						packet.WriteValue<std::uint8_t>(flags);
 
@@ -343,10 +357,14 @@ namespace Jazz2::Multiplayer
 						if (animationChanged) {
 							packet.WriteVariableUint32(newAnimation);
 							packet.WriteValue<std::uint16_t>(newRotation);
+							packet.WriteValue<std::uint16_t>(newScaleX);
+							packet.WriteValue<std::uint16_t>(newScaleY);
 							packet.WriteValue<std::uint8_t>(newRendererType);
 
 							remotingActorInfo.LastAnimation = newAnimation;
 							remotingActorInfo.LastRotation = newRotation;
+							remotingActorInfo.LastScaleX = newScaleX;
+							remotingActorInfo.LastScaleY = newScaleY;
 							remotingActorInfo.LastRendererType = newRendererType;
 						}
 					}
@@ -687,18 +705,9 @@ namespace Jazz2::Multiplayer
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateMirroredActor, packet);
 				}
 			} else {
-				String metadataPath = fs::FromNativeSeparators(actorPtr->_metadata->Path);
+				MemoryStream packet;
+				InitializeCreateRemoteActorPacket(packet, actorId, actorPtr);
 
-				MemoryStream packet(28 + metadataPath.size());
-				packet.WriteVariableUint32(actorId);
-				packet.WriteVariableInt32((std::int32_t)actorPtr->_pos.X);
-				packet.WriteVariableInt32((std::int32_t)actorPtr->_pos.Y);
-				packet.WriteVariableInt32((std::int32_t)actorPtr->_renderer.layer());
-				packet.WriteVariableUint32((std::uint32_t)actorPtr->_state);
-				packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
-				packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
-				packet.WriteVariableUint32((std::uint32_t)(actorPtr->_currentTransition != nullptr ? actorPtr->_currentTransition->State : actorPtr->_currentAnimation->State));
-				
 				_networkManager->SendTo([this](const Peer& peer) {
 					auto it = _peerDesc.find(peer);
 					return (it != _peerDesc.end() && it->second.State >= LevelPeerState::LevelSynchronized);
@@ -1721,6 +1730,8 @@ namespace Jazz2::Multiplayer
 					String playerName{NoInit, playerNameLength};
 					packet.Read(playerName.data(), playerNameLength);
 
+					LOGD("[MP] ServerPacketType::PeerStateChanged - flags: 0x%02x, peer: 0x%016X, name: \"%s\"", flags, peerId, playerName.data());
+
 					if (flags & 0x01) {
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", playerName.data()));
 					} else if (flags & 0x02) {
@@ -1906,6 +1917,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::CreateRemoteActor: {
 					MemoryStream packet(data);
 					std::uint32_t actorId = packet.ReadVariableUint32();
+					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 					std::int32_t posX = packet.ReadVariableInt32();
 					std::int32_t posY = packet.ReadVariableInt32();
 					std::int32_t posZ = packet.ReadVariableInt32();
@@ -1913,15 +1925,19 @@ namespace Jazz2::Multiplayer
 					std::uint32_t metadataLength = packet.ReadVariableUint32();
 					String metadataPath = String(NoInit, metadataLength);
 					packet.Read(metadataPath.data(), metadataLength);
-					std::uint32_t anim = packet.ReadVariableUint32();
+					AnimState anim = (AnimState)packet.ReadVariableUint32();
+					float rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
+					float scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
+					float scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
+					Actors::ActorRendererType rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
 
 					//LOGD("Remote actor %u created on [%i;%i] with metadata \"%s\"", actorId, posX, posY, metadataPath.data());
 					LOGD("[MP] ServerPacketType::CreateRemoteActor - actorId: %u, metadata: \"%s\", x: %i, y: %i", actorId, metadataPath.data(), posX, posY);
 
-					_root->InvokeAsync([this, actorId, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim]() {
+					_root->InvokeAsync([this, actorId, flags, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim, rotation, scaleX, scaleY, rendererType]() {
 						std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = std::make_shared<Actors::Multiplayer::RemoteActor>();
 						remoteActor->OnActivated(Actors::ActorActivationDetails(this, Vector3i(posX, posY, posZ)));
-						remoteActor->AssignMetadata(metadataPath, (AnimState)anim, state);
+						remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType);
 
 						{
 							std::unique_lock lock(_lock);
@@ -1993,7 +2009,7 @@ namespace Jazz2::Multiplayer
 						bool positionChanged = (flags & 0x01) != 0;
 						bool animationChanged = (flags & 0x02) != 0;
 
-						float posX, posY, rotation;
+						float posX, posY, rotation, scaleX, scaleY;
 						AnimState anim; Actors::ActorRendererType rendererType;
 
 						if (positionChanged) {
@@ -2007,10 +2023,14 @@ namespace Jazz2::Multiplayer
 						if (animationChanged) {
 							anim = (AnimState)packet.ReadVariableUint32();
 							rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
+							scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
+							scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
 							rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
 						} else {
 							anim = AnimState::Idle;
 							rotation = 0.0f;
+							scaleX = 0.0f;
+							scaleY = 0.0f;
 							rendererType = Actors::ActorRendererType::Default;
 						}
 
@@ -2021,9 +2041,9 @@ namespace Jazz2::Multiplayer
 									remoteActor->SyncPositionWithServer(Vector2f(posX, posY));
 								}
 								if (animationChanged) {
-									remoteActor->SyncAnimationWithServer(anim, rotation, rendererType);
+									remoteActor->SyncAnimationWithServer(anim, rotation, scaleX, scaleY, rendererType);
 								}
-								remoteActor->SyncMiscWithServer((flags & 0x04) != 0, (flags & 0x08) != 0, (flags & 0x10) != 0);
+								remoteActor->SyncMiscWithServer(flags);
 							}
 						}
 					}
@@ -2399,15 +2419,8 @@ namespace Jazz2::Multiplayer
 				for (Actors::Player* otherPlayer : _players) {
 					String metadataPath = fs::FromNativeSeparators(otherPlayer->_metadata->Path);
 
-					MemoryStream packet(28 + metadataPath.size());
-					packet.WriteVariableUint32(otherPlayer->_playerIndex);
-					packet.WriteVariableInt32((std::int32_t)otherPlayer->_pos.X);
-					packet.WriteVariableInt32((std::int32_t)otherPlayer->_pos.Y);
-					packet.WriteVariableInt32((std::int32_t)otherPlayer->_renderer.layer());
-					packet.WriteVariableUint32((std::uint32_t)otherPlayer->_state);
-					packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
-					packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
-					packet.WriteVariableUint32((std::uint32_t)(otherPlayer->_currentTransition != nullptr ? otherPlayer->_currentTransition->State : otherPlayer->_currentAnimation->State));
+					MemoryStream packet;
+					InitializeCreateRemoteActorPacket(packet, otherPlayer->_playerIndex, otherPlayer);
 
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 					
@@ -2464,17 +2477,8 @@ namespace Jazz2::Multiplayer
 							}
 						}
 					} else {
-						String metadataPath = fs::FromNativeSeparators(remotingActor->_metadata->Path);
-
-						MemoryStream packet(28 + metadataPath.size());
-						packet.WriteVariableUint32(remotingActorInfo.ActorID);
-						packet.WriteVariableInt32((std::int32_t)remotingActor->_pos.X);
-						packet.WriteVariableInt32((std::int32_t)remotingActor->_pos.Y);
-						packet.WriteVariableInt32((std::int32_t)remotingActor->_renderer.layer());
-						packet.WriteVariableUint32((std::uint32_t)remotingActor->_state);
-						packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
-						packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
-						packet.WriteVariableUint32((std::uint32_t)(remotingActor->_currentTransition != nullptr ? remotingActor->_currentTransition->State : remotingActor->_currentAnimation->State));
+						MemoryStream packet;
+						InitializeCreateRemoteActorPacket(packet, remotingActorInfo.ActorID, remotingActor);
 
 						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 					}
@@ -2539,17 +2543,8 @@ namespace Jazz2::Multiplayer
 
 				// Create the player also on all other clients
 				{
-					String metadataPath = fs::FromNativeSeparators(player->_metadata->Path);
-
-					MemoryStream packet(28 + metadataPath.size());
-					packet.WriteVariableUint32(playerIndex);
-					packet.WriteVariableInt32((std::int32_t)player->_pos.X);
-					packet.WriteVariableInt32((std::int32_t)player->_pos.Y);
-					packet.WriteVariableInt32((std::int32_t)player->_renderer.layer());
-					packet.WriteVariableUint32((std::uint32_t)player->_state);
-					packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
-					packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
-					packet.WriteVariableUint32((std::uint32_t)(player->_currentTransition != nullptr ? player->_currentTransition->State : player->_currentAnimation->State));
+					MemoryStream packet;
+					InitializeCreateRemoteActorPacket(packet, playerIndex, player.get());
 
 					_networkManager->SendTo([this, self = peer](const Peer& peer) {
 						if (peer == self) {
@@ -2746,6 +2741,45 @@ namespace Jazz2::Multiplayer
 			case MpGameMode::Cooperation: return _("Cooperation");
 			default: return _("Unknown");
 		}
+	}
+
+	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor)
+	{
+		String metadataPath = fs::FromNativeSeparators(actor->_metadata->Path);
+
+		std::uint8_t flags = 0;
+		if (actor->_renderer.isDrawEnabled()) {
+			flags |= 0x04;
+		}
+		if (actor->_renderer.AnimPaused) {
+			flags |= 0x08;
+		}
+		if (actor->_renderer.isFlippedX()) {
+			flags |= 0x10;
+		}
+		if (actor->_renderer.isFlippedY()) {
+			flags |= 0x20;
+		}
+
+		packet.ReserveCapacity(36 + metadataPath.size());
+
+		packet.WriteVariableUint32(actorId);
+		packet.WriteValue<std::uint8_t>(flags);
+		packet.WriteVariableInt32((std::int32_t)actor->_pos.X);
+		packet.WriteVariableInt32((std::int32_t)actor->_pos.Y);
+		packet.WriteVariableInt32((std::int32_t)actor->_renderer.layer());
+		packet.WriteVariableUint32((std::uint32_t)actor->_state);
+		packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
+		packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
+		packet.WriteVariableUint32((std::uint32_t)(actor->_currentTransition != nullptr ? actor->_currentTransition->State : actor->_currentAnimation->State));
+
+		float rotation = actor->_renderer.rotation();
+		if (rotation < 0.0f) rotation += fRadAngle360;
+		packet.WriteValue<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
+		Vector2f scale = actor->_renderer.scale();
+		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
+		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
+		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetRendererType());
 	}
 
 	/*void MpLevelHandler::UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult)

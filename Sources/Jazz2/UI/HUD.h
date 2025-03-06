@@ -115,7 +115,7 @@ namespace Jazz2::UI
 		static constexpr std::uint16_t ShadowLayer = 80;
 		static constexpr std::uint16_t FontLayer = 200;
 		static constexpr std::uint16_t FontShadowLayer = 120;
-		static constexpr std::uint16_t TouchButtonsLayer = 400;
+		static constexpr std::uint16_t TouchButtonsLayer = 800;
 		static constexpr std::int32_t TouchButtonsCount = 10;
 
 		static constexpr float WeaponWheelAnimDuration = 20.0f;

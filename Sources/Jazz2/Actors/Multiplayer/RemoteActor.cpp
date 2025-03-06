@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Multiplayer
 		ActorBase::OnUpdate(timeMult);
 	}
 
-	void RemoteActor::AssignMetadata(StringView path, AnimState anim, ActorState state)
+	void RemoteActor::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType)
 	{
 		constexpr ActorState RemotedFlags = ActorState::Illuminated | ActorState::IsInvulnerable | ActorState::TriggersTNT |
 			ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject |
@@ -76,6 +76,11 @@ namespace Jazz2::Actors::Multiplayer
 		RequestMetadata(path);
 		SetAnimation(anim);
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
+
+		_renderer.Initialize(rendererType);
+		_renderer.setRotation(rotation);
+		
+		SyncMiscWithServer(flags);
 	}
 
 	void RemoteActor::SyncPositionWithServer(Vector2f pos)
@@ -108,7 +113,7 @@ namespace Jazz2::Actors::Multiplayer
 		}
 	}
 
-	void RemoteActor::SyncAnimationWithServer(AnimState anim, float rotation, Actors::ActorRendererType rendererType)
+	void RemoteActor::SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType)
 	{
 		if (_lastAnim != anim) {
 			_lastAnim = anim;
@@ -116,14 +121,16 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		_renderer.setRotation(rotation);
+		_renderer.setScale(scaleX, scaleY);
 		_renderer.Initialize(rendererType);
 	}
 
-	void RemoteActor::SyncMiscWithServer(bool isVisible, bool animPaused, bool isFacingLeft)
+	void RemoteActor::SyncMiscWithServer(std::uint8_t flags)
 	{
-		_renderer.setDrawEnabled(isVisible);
-		_renderer.AnimPaused = animPaused;
-		SetFacingLeft(isFacingLeft);
+		_renderer.setDrawEnabled((flags & 0x04) != 0);
+		_renderer.AnimPaused = (flags & 0x08) != 0;
+		SetFacingLeft((flags & 0x10) != 0);
+		_renderer.setFlippedY((flags & 0x20) != 0);
 	}
 }
 

@@ -1593,7 +1593,7 @@ namespace Jazz2::Actors
 					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 					}
-					float invulnerableTime = (!_levelHandler->IsLocalSession() ? 80.0f : 180.0f);
+					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
@@ -1643,7 +1643,7 @@ namespace Jazz2::Actors
 					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 					}
-					float invulnerableTime = (!_levelHandler->IsLocalSession() ? 80.0f : 180.0f);
+					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
@@ -1667,7 +1667,7 @@ namespace Jazz2::Actors
 					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 					}
-					float invulnerableTime = (!_levelHandler->IsLocalSession() ? 80.0f : 180.0f);
+					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
@@ -3721,7 +3721,7 @@ namespace Jazz2::Actors
 				_controllable = true;
 			});
 
-			float invulnerableTime = (!_levelHandler->IsLocalSession() ? 80.0f : 180.0f);
+			float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 			SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 			PlayPlayerSfx("Hurt"_s);
 			_levelHandler->PlayerExecuteRumble(_playerIndex, "Hurt"_s);
