@@ -1599,6 +1599,9 @@
     <ClInclude Include="Jazz2\UI\Menu\UserProfileOptionsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Primitives\Half.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2614,6 +2617,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\UserProfileOptionsSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Primitives\Half.cpp">
+      <Filter>Source Files\nCine\Primitives</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

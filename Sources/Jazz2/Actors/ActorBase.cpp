@@ -38,7 +38,7 @@ namespace Jazz2::Actors
 	{
 	}
 
-	bool ActorBase::IsFacingLeft()
+	bool ActorBase::IsFacingLeft() const
 	{
 		return GetState(ActorState::IsFacingLeft);
 	}

@@ -181,7 +181,7 @@ namespace Jazz2::Actors
 		AABBf AABBInner;
 
 		/** @brief Returns `true` if the object is currently facing left */
-		bool IsFacingLeft();
+		bool IsFacingLeft() const;
 
 		/** @brief Sets internal parent node */
 		void SetParent(SceneNode* parent);

@@ -156,6 +156,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Primitives/AABB.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Color.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.h
+	${NCINE_SOURCE_DIR}/nCine/Primitives/Half.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Matrix4x4.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Quaternion.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Rect.h
