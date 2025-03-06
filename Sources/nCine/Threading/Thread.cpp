@@ -40,6 +40,47 @@
 
 namespace nCine
 {
+#if !defined(DEATH_TARGET_MSVC)
+	DEATH_ALWAYS_INLINE void InterlockedOperationBarrier()
+	{
+#	if defined(DEATH_TARGET_ARM) || defined(DEATH_TARGET_RISCV)
+		__sync_synchronize();
+#	endif
+	}
+#endif
+
+	template<typename T>
+	DEATH_ALWAYS_INLINE T ExchangePointer(T volatile* destination, T value)
+	{
+#if defined(DEATH_TARGET_MSVC)
+#	if !defined(DEATH_TARGET_32BIT)
+		return (T)_InterlockedExchangePointer((void* volatile*)destination, value);
+#	else
+		return (T)_InterlockedExchange((long volatile*)(void* volatile*)destination, (long)(void*)value);
+#	endif
+#else
+		T result = (T)__atomic_exchange_n((void* volatile*)destination, value, __ATOMIC_ACQ_REL);
+		InterlockedOperationBarrier();
+		return result;
+#endif
+	}
+
+	template<typename T>
+	DEATH_ALWAYS_INLINE T ExchangePointer(T volatile* destination, std::nullptr_t value)
+	{
+#if defined(DEATH_TARGET_MSVC)
+#	if !defined(DEATH_TARGET_32BIT)
+		return (T)_InterlockedExchangePointer((void* volatile*)destination, value);
+#	else
+		return (T)_InterlockedExchange((long volatile*)(void* volatile*)destination, (long)(void*)value);
+#	endif
+#else
+		T result = (T)__atomic_exchange_n((void* volatile*)destination, value, __ATOMIC_ACQ_REL);
+		InterlockedOperationBarrier();
+		return result;
+#endif
+	}
+
 	void Thread::Sleep(std::uint32_t milliseconds)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -273,39 +314,53 @@ namespace nCine
 
 	bool Thread::Join()
 	{
+		bool result = false;
+
+		auto* sharedBlock = _sharedBlock;
+		if (sharedBlock != nullptr) {
+			++sharedBlock->_refCount;
+
 #if defined(DEATH_TARGET_WINDOWS)
-		return (_sharedBlock != nullptr &&
-			::WaitForSingleObject(_sharedBlock->_handle, INFINITE) == WAIT_OBJECT_0);
-#else
-		if (_sharedBlock != nullptr && _sharedBlock->_handle != 0) {
-			if (pthread_join(_sharedBlock->_handle, nullptr) == 0) {
-				_sharedBlock->_handle = 0;
-				return true;
+			result = ::WaitForSingleObject(sharedBlock->_handle, INFINITE) == WAIT_OBJECT_0;
+			if (--sharedBlock->_refCount == 0) {
+				::CloseHandle(sharedBlock->_handle);
+				delete sharedBlock;
 			}
-		}
-		return false;
+#else
+			result = (_sharedBlock->_handle != 0 && pthread_join(_sharedBlock->_handle, nullptr) == 0);
+			if (result) {
+				sharedBlock->_handle = 0;
+			}
+			if (--sharedBlock->_refCount == 0) {
+				if (sharedBlock->_handle != 0) {
+					pthread_detach(sharedBlock->_handle);
+				}
+				delete sharedBlock;
+			}
 #endif
+		}
+
+		return result;
 	}
 	
 	void Thread::Detach()
 	{
-		if (_sharedBlock == nullptr) {
+		auto* sharedBlock = ExchangePointer(&_sharedBlock, nullptr);
+		if (sharedBlock == nullptr) {
 			return;
 		}
 
 		// This returns the value before decrementing
-		if (--_sharedBlock->_refCount == 0) {
+		if (--sharedBlock->_refCount == 0) {
 #if defined(DEATH_TARGET_WINDOWS)
-			::CloseHandle(_sharedBlock->_handle);
+			::CloseHandle(sharedBlock->_handle);
 #else
-			if (_sharedBlock->_handle != 0) {
-				pthread_detach(_sharedBlock->_handle);
+			if (sharedBlock->_handle != 0) {
+				pthread_detach(sharedBlock->_handle);
 			}
 #endif
-			delete _sharedBlock;
+			delete sharedBlock;
 		}
-
-		_sharedBlock = nullptr;
 	}
 
 	void Thread::SetName(const char* name)

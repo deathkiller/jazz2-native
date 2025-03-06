@@ -62,11 +62,15 @@ namespace Jazz2::UI::Multiplayer
 		ViewSize = _levelHandler->GetViewSize();
 
 #if defined(DEATH_DEBUG)
-		if (PreferencesCache::ShowPerformanceMetrics && _levelHandler->_isServer) {
+		if (PreferencesCache::ShowPerformanceMetrics) {
 			char debugBuffer[64];
-			formatString(debugBuffer, sizeof(debugBuffer), "%i b | ", _levelHandler->_debugAverageUpdatePacketSize);
+			if (_levelHandler->_isServer) {
+				formatString(debugBuffer, sizeof(debugBuffer), "%i b |", _levelHandler->_debugAverageUpdatePacketSize);
+			} else {
+				formatString(debugBuffer, sizeof(debugBuffer), "%u ms |", _levelHandler->_networkManager->GetRoundTripTimeMs());
+			}
 			std::int32_t debugCharOffset = 0;
-			_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 40.0f, 1.0f,
+			_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
 				MainLayer, Alignment::TopRight, Font::DefaultColor, 0.8f);
 		}
 #endif

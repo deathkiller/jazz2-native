@@ -38,6 +38,8 @@ namespace Jazz2::Multiplayer
 		Pong,
 		Reserved,
 
+		PeerStateChanged,
+
 		LoadLevel,
 		ShowInGameLobby,
 		FadeOut,

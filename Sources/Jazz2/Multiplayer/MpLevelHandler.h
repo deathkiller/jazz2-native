@@ -107,9 +107,6 @@ namespace Jazz2::Multiplayer
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
 
-		void AttachComponents(LevelDescriptor&& descriptor) override;
-		void SpawnPlayers(const LevelInitialization& levelInit) override;
-
 		/** @brief Returns current game mode */
 		MpGameMode GetGameMode() const;
 		/** @brief Sets current game mode */
@@ -121,6 +118,10 @@ namespace Jazz2::Multiplayer
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 
 	protected:
+		void AttachComponents(LevelDescriptor&& descriptor) override;
+		void SpawnPlayers(const LevelInitialization& levelInit) override;
+		bool IsCheatingAllowed() override;
+
 		void BeforeActorDestroyed(Actors::ActorBase* actor) override;
 		void ProcessEvents(float timeMult) override;
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
