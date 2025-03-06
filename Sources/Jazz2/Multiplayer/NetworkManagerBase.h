@@ -80,14 +80,16 @@ namespace Jazz2::Multiplayer
 		/** @brief Creates a client connection to a remote server */
 		bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
 		/** @brief Creates a server accepting that accepts incoming connections */
-		bool CreateServer(INetworkHandler* handler, std::uint16_t port);
+		bool CreateServer(INetworkHandler* handler, std::uint16_t port, bool isPrivate);
 		/** @brief Disposes all active connections */
 		void Dispose();
 
 		/** @brief Returns state of network connection */
 		NetworkState GetState() const;
 		/** @brief Returns mean round trip time to the server, in milliseconds */
-		std::uint32_t GetRoundTripTimeMs();
+		std::uint32_t GetRoundTripTimeMs() const;
+		/** @brief Returns IPv4 and IPv6 addresses and ports of the server */
+		Array<String> GetServerEndpoints() const;
 
 		/** @brief Sends a packet to a given peer */
 		void SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
@@ -117,6 +119,8 @@ namespace Jazz2::Multiplayer
 
 		static void InitializeBackend();
 		static void ReleaseBackend();
+		static String AddressToString(const struct in_addr& address, std::uint16_t port);
+		static String AddressToString(const struct in6_addr& address, std::uint16_t port);
 
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);

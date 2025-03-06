@@ -74,7 +74,7 @@
 	#ifndef ENET_NO_PRAGMA_LINK
 	#ifndef  __GNUC__
 	#pragma comment(lib, "ws2_32.lib")
-	//#pragma comment(lib, "winmm.lib")
+	#pragma comment(lib, "iphlpapi.lib")
 	#endif
 	#endif
 
@@ -5173,9 +5173,8 @@ extern "C" {
 
 		int err;
 
-
 		sin.sin6_family = AF_INET6;
-		sin.sin6_port = ENET_HOST_TO_NET_16 (address->port);
+		sin.sin6_port = ENET_HOST_TO_NET_16(address->port);
 		sin.sin6_addr = address->host;
 		sin.sin6_scope_id = address->sin6_scope_id;
 

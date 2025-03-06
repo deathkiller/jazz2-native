@@ -29,7 +29,6 @@
 #include "Jazz2/UI/LoadingHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 #include "Jazz2/UI/Menu/HighscoresSection.h"
-#include "Jazz2/UI/Menu/LoadingSection.h"
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
 #include "Jazz2/Compatibility/JJ2Anims.h"
@@ -149,9 +148,6 @@ private:
 	std::unique_ptr<NetworkManager> _networkManager;
 	String _serverName;
 #endif
-#if defined(DEATH_DEBUG)
-	String _debugStartLevel;
-#endif
 
 	void OnBeforeInitialize();
 	void OnAfterInitialize();
@@ -196,11 +192,6 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			theApplication().Quit();
 			return;
 		}
-#if defined(DEATH_DEBUG)
-		else if (arg.hasPrefix("/level"_s) && i + 1 < config.argc()) {
-			_debugStartLevel = config.argv(i + 1);
-		}
-#endif
 	}
 #endif
 
@@ -264,46 +255,46 @@ void GameEventHandler::OnInitialize()
 #	endif
 	}, this);
 
-#	if defined(DEATH_DEBUG)
-	if (!_debugStartLevel.empty()) {
-		thread.Join();
-
-		auto parts = _debugStartLevel.partition('/');
-		LevelInitialization levelInit(!parts[2].empty() ? parts[0] : "unknown"_s, !parts[2].empty() ? parts[2] : parts[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
-			PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
-
-		ChangeLevel(std::move(levelInit));
-		return;
-	}
-#	endif
-
-#	if defined(WITH_MULTIPLAYER)
-	// TODO: Multiplayer
-	/*if (PreferencesCache::InitialState == "/server"_s) {
-		thread.Join();
-
-		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-		mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
-		SetStateHandler(std::move(mainMenu));
-
-		// TODO: Hardcoded port
-		CreateServer(MultiplayerDefaultPort);
-	} else*/ if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
-		thread.Join();
-
-		String address; std::uint16_t port;
-		if (TryParseAddressAndPort(PreferencesCache::InitialState.exceptPrefix(9), address, port)) {
-			if (port == 0) {
-				port = MultiplayerDefaultPort;
-			}
-
+#	if defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)
+	const AppConfiguration& config = theApplication().GetAppConfiguration();
+	for (std::int32_t i = 0; i < config.argc(); i++) {
+		auto arg = config.argv(i);
+#		if defined(WITH_MULTIPLAYER)
+		if (arg == "/server"_s) { //
+			// TODO: Create dedicated server
+			/*thread.Join();
 			auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-			mainMenu->SwitchToSection<Menu::LoadingSection>(_f("Connecting to %s:%u...", address.data(), port));
+			mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
 			SetStateHandler(std::move(mainMenu));
+			// TODO: Hardcoded port
+			CreateServer(MultiplayerDefaultPort);*/
+		} else if (arg == "/connect"_s && i + 1 < config.argc()) {
+			String address; std::uint16_t port;
+			if (TryParseAddressAndPort(config.argv(i + 1), address, port)) {
+				if (port == 0) {
+					port = MultiplayerDefaultPort;
+				}
 
-			ConnectToServer(address.data(), (std::uint16_t)port);
+				thread.Join();
+
+				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
+				ConnectToServer(address.data(), (std::uint16_t)port);
+				return;
+			}
+		}
+#		endif
+#		if defined(DEATH_DEBUG)
+		if (arg == "/level"_s && i + 1 < config.argc()) {
+			auto level = config.argv(i + 1).partition('/');
+			LevelInitialization levelInit(!level[2].empty() ? level[0] : "unknown"_s, !level[2].empty() ? level[2] : level[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+
+			thread.Join();
+
+			ChangeLevel(std::move(levelInit));
 			return;
 		}
+#		endif
 	}
 #	endif
 
@@ -335,43 +326,41 @@ void GameEventHandler::OnInitialize()
 	CheckUpdates();
 #	endif
 
-#	if defined(DEATH_DEBUG)
-	if (!_debugStartLevel.empty()) {
-		thread.Join();
-
-		auto parts = _debugStartLevel.partition('/');
-		LevelInitialization levelInit(!parts[2].empty() ? parts[0] : "unknown"_s, !parts[2].empty() ? parts[2] : parts[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
-			PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
-
-		ChangeLevel(std::move(levelInit));
-		return;
-	}
-#	endif
-
-#	if defined(WITH_MULTIPLAYER)
-	/*if (PreferencesCache::InitialState == "/server"_s) {
-		LOGI("Starting server on port %u...", MultiplayerDefaultPort);
-
-		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-		mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
-		SetStateHandler(std::move(mainMenu));
-
-		// TODO: Hardcoded port
-		CreateServer(MultiplayerDefaultPort);
-	} else*/ if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
-		String address; std::uint16_t port;
-		if (TryParseAddressAndPort(PreferencesCache::InitialState.exceptPrefix(9), address, port)) {
-			if (port == 0) {
-				port = MultiplayerDefaultPort;
-			}
-
-			auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-			mainMenu->SwitchToSection<Menu::LoadingSection>(_f("Connecting to %s:%u...", address.data(), port));
+#	if defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)
+	const AppConfiguration& config = theApplication().GetAppConfiguration();
+	for (std::int32_t i = 0; i < config.argc(); i++) {
+		auto arg = config.argv(i);
+#		if defined(WITH_MULTIPLAYER)
+		if (arg == "/server"_s) { //
+			// TODO: Create dedicated server
+			/*auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+			mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
 			SetStateHandler(std::move(mainMenu));
+			// TODO: Hardcoded port
+			CreateServer(MultiplayerDefaultPort);*/
+		} else if (arg == "/connect"_s && i + 1 < config.argc()) {
+			String address; std::uint16_t port;
+			if (TryParseAddressAndPort(config.argv(i + 1), address, port)) {
+				if (port == 0) {
+					port = MultiplayerDefaultPort;
+				}
 
-			ConnectToServer(address.data(), (std::uint16_t)port);
+				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
+				ConnectToServer(address.data(), (std::uint16_t)port);
+				return;
+			}
+		}
+#		endif
+#		if defined(DEATH_DEBUG)
+		if (arg == "/level"_s && i + 1 < config.argc()) {
+			auto level = config.argv(i + 1).partition('/');
+			LevelInitialization levelInit(!level[2].empty() ? level[0] : "unknown"_s, !level[2].empty() ? level[2] : level[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+
+			ChangeLevel(std::move(levelInit));
 			return;
 		}
+#		endif
 	}
 #	endif
 
@@ -752,7 +741,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		_networkManager = std::make_unique<NetworkManager>();
 	}
 
-	if (!_networkManager->CreateServer(this, serverInit.ServerPort)) {
+	if (!_networkManager->CreateServer(this, serverInit.ServerPort, serverInit.IsPrivate)) {
 		return false;
 	}
 
@@ -885,24 +874,24 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			}
 
 			switch (reason) {
-				case Reason::InvalidParameter: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid parameter specified.")); break;
-				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client version is not compatible with the server.")); break;
-				case Reason::AuthFailed: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nAuthentication failed.\nContact server administrators for more information.")); break;
-				case Reason::InvalidPassword: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid password specified.")); break;
-				case Reason::InvalidPlayerName: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid player name specified.\nPlease check your profile and try it again.")); break;
-				case Reason::NotInWhitelist: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThis client is not in the server whitelist.\nContact server administrators for more information.")); break;
-				case Reason::Requires3rdPartyAuthProvider: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer requires 3rd party authentication provider.\nContact server administrators for more information.")); break;
-				case Reason::ServerIsFull: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer capacity is full.\nPlease try it later.")); break;
-				case Reason::ServerNotReady: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer is not in a state where it can process your request.\nPlease try again in a few seconds.")); break;
-				case Reason::ServerStopped: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later.")); break;
-				case Reason::ServerStoppedForMaintenance: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for maintenance.\nPlease try it again later.")); break;
-				case Reason::ServerStoppedForReconfiguration: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for reconfiguration.\nPlease try it again later.")); break;
-				case Reason::ServerStoppedForUpdate: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for update.\nPlease check your client version and try it again in a minute.")); break;
-				case Reason::ConnectionLost: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been lost!\f[/c]\n\n\nPlease try it again and if the problem persists,\ncheck your network connection.")); break;
-				case Reason::ConnectionTimedOut: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe server is not responding for connection request.")); break;
-				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#907050]kicked\f[/c] off the server.\nContact server administrators for more information.")); break;
-				case Reason::Banned: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#725040]banned\f[/c] off the server.\nContact server administrators for more information.")); break;
-				case Reason::CheatingDetected: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nCheating detected.")); break;
+				case Reason::InvalidParameter: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid parameter specified."), true); break;
+				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client version is not compatible with the server."), true); break;
+				case Reason::AuthFailed: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nAuthentication failed.\nContact server administrators for more information."), true); break;
+				case Reason::InvalidPassword: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid password specified."), true); break;
+				case Reason::InvalidPlayerName: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid player name specified.\nPlease check your profile and try it again."), true); break;
+				case Reason::NotInWhitelist: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThis client is not in the server whitelist.\nContact server administrators for more information."), true); break;
+				case Reason::Requires3rdPartyAuthProvider: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer requires 3rd party authentication provider.\nContact server administrators for more information."), true); break;
+				case Reason::ServerIsFull: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer capacity is full.\nPlease try it later."), true); break;
+				case Reason::ServerNotReady: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nServer is not in a state where it can process your request.\nPlease try again in a few seconds."), true); break;
+				case Reason::ServerStopped: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down.\nPlease try it later."), true); break;
+				case Reason::ServerStoppedForMaintenance: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for maintenance.\nPlease try it again later."), true); break;
+				case Reason::ServerStoppedForReconfiguration: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for reconfiguration.\nPlease try it again later."), true); break;
+				case Reason::ServerStoppedForUpdate: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nServer is shutting down for update.\nPlease check your client version and try it again in a minute."), true); break;
+				case Reason::ConnectionLost: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been lost!\f[/c]\n\n\nPlease try it again and if the problem persists,\ncheck your network connection."), true); break;
+				case Reason::ConnectionTimedOut: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe server is not responding for connection request."), true); break;
+				case Reason::Kicked: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#907050]kicked\f[/c] off the server.\nContact server administrators for more information."), true); break;
+				case Reason::Banned: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#725040]banned\f[/c] off the server.\nContact server administrators for more information."), true); break;
+				case Reason::CheatingDetected: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nCheating detected."), true); break;
 			}
 		}, NCINE_CURRENT_FUNCTION);
 	}
@@ -1424,8 +1413,14 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 
 			Compatibility::JJ2Episode episode;
 			if (episode.Open(item)) {
-				if (episode.Name == "home"_s || (hasChristmasChronicles && episode.Name == "xmas98"_s)) {
+				if (hasChristmasChronicles && episode.Name == "xmas98"_s) {
 					continue;
+				}
+				if (episode.Name == "home"_s) {
+					episode.FirstLevel = ":custom-levels"_s;
+					episode.Position = UINT16_MAX;
+				} else if (episode.Position >= UINT32_MAX) {
+					episode.Position = UINT16_MAX - 1;
 				}
 
 				String fullPath = fs::CombinePath(episodesPath, String((episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s));

@@ -1353,9 +1353,6 @@
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h">
       <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\UI\Menu\LoadingSection.h">
-      <Filter>Header Files\Jazz2\UI\Menu</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\LevelDescriptor.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
@@ -1455,7 +1452,7 @@
     <ClInclude Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.h">
       <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\UI\Menu\PlayCustomSection.h">
+    <ClInclude Include="Jazz2\UI\Menu\PlayMultiplayerSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.h">
@@ -2471,9 +2468,6 @@
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\UI\Menu\LoadingSection.cpp">
-      <Filter>Source Files\Jazz2\UI\Menu</Filter>
-    </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Stream.cpp">
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
@@ -2534,7 +2528,7 @@
     <ClCompile Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.cpp">
       <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\UI\Menu\PlayCustomSection.cpp">
+    <ClCompile Include="Jazz2\UI\Menu\PlayMultiplayerSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.cpp">

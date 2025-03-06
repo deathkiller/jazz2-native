@@ -678,6 +678,10 @@ if(WITH_MULTIPLAYER)
 	message(STATUS "Building the game with multiplayer support")
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
 	
+	if(WIN32)
+		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi)
+	endif()
+	
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.h
@@ -698,7 +702,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Backends/enet.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
-		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayCustomSection.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.h
@@ -717,7 +721,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayCustomSection.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.cpp

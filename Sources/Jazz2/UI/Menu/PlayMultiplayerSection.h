@@ -7,23 +7,22 @@
 namespace Jazz2::UI::Menu
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	enum class PlayCustomItemType {
-		PlayCustomLevels,
-		PlayStoryInCoop,
-		CreateCustomServer,
-		ConnectToServer
+	enum class PlayMultiplayerItemType {
+		ConnectToServer,
+		CreatePublicServer,
+		CreatePrivateServer
 	};
 
-	struct PlayCustomItem {
-		PlayCustomItemType Type;
+	struct PlayMultiplayerItem {
+		PlayMultiplayerItemType Type;
 		StringView DisplayName;
 	};
 #endif
 
-	class PlayCustomSection : public ScrollableMenuSection<PlayCustomItem>
+	class PlayMultiplayerSection : public ScrollableMenuSection<PlayMultiplayerItem>
 	{
 	public:
-		PlayCustomSection();
+		PlayMultiplayerSection();
 
 		void OnDraw(Canvas* canvas) override;
 

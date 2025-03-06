@@ -10,7 +10,7 @@ namespace Jazz2::UI::Menu
 	class CreateServerOptionsSection : public MenuSection
 	{
 	public:
-		CreateServerOptionsSection(const StringView episodeName, const StringView levelName, const StringView previousEpisodeName);
+		CreateServerOptionsSection(const StringView episodeName, const StringView levelName, const StringView previousEpisodeName, bool privateServer);
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -53,9 +53,9 @@ namespace Jazz2::UI::Menu
 		std::int32_t _lastPlayerType;
 		std::int32_t _lastDifficulty;
 		float _imageTransition;
-
 		float _animation;
 		float _transitionTime;
+		bool _privateServer;
 		bool _shouldStart;
 
 		void ExecuteSelected();

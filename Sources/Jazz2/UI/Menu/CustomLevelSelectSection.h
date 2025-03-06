@@ -11,7 +11,7 @@ namespace Jazz2::UI::Menu
 	class CustomLevelSelectSection : public MenuSection
 	{
 	public:
-		CustomLevelSelectSection(bool multiplayer = false);
+		CustomLevelSelectSection(bool multiplayer = false, bool privateServer = false);
 		~CustomLevelSelectSection();
 
 		Recti GetClipRectangle(const Recti& contentBounds) override;
@@ -38,6 +38,7 @@ namespace Jazz2::UI::Menu
 
 		SmallVector<ItemData> _items;
 		bool _multiplayer;
+		bool _privateServer;
 		std::int32_t _selectedIndex;
 		float _animation;
 		float _y;

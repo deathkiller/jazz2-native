@@ -128,9 +128,6 @@ namespace Jazz2
 		 */
 		static bool IsStandalone;
 #endif
-#if defined(WITH_MULTIPLAYER)
-		static String InitialState;
-#endif
 		/** @brief Currently unlocked episodes if compiled with `SHAREWARE_DEMO_ONLY` */
 		static UnlockableEpisodes UnlockedEpisodes;
 

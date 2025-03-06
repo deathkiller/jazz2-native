@@ -4,28 +4,22 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "INetworkHandler.h"
+#include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Threading/Thread.h"
-
-/*
-// <mmeapi.h> included by "enet.h" still uses `far` macro
-#define far
-
-#define ENET_IMPLEMENTATION
-#define ENET_FEATURE_ADDRESS_MAPPING
-#if defined(DEATH_DEBUG)
-#	define ENET_DEBUG
-#endif
-#include "Backends/enet.h"
-
-// Undefine it again after include
-#undef far
-*/
 
 #include <atomic>
 
+#include <Containers/GrowableArray.h>
 #include <Containers/String.h>
 
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <iphlpapi.h>
+#else
+#	include <ifaddrs.h>
+#endif
+
 using namespace Death;
+using namespace Death::Containers::Literals;
 
 namespace Jazz2::Multiplayer
 {
@@ -70,11 +64,11 @@ namespace Jazz2::Multiplayer
 		_peers.push_back(peer);
 
 		_handler = handler;
-		_thread.Run(NetworkManagerBase::OnClientThread, this);
+		_thread = Thread(NetworkManagerBase::OnClientThread, this);
 		return true;
 	}
 
-	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port)
+	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port, bool isPrivate)
 	{
 		if (_host != nullptr) {
 			return false;
@@ -87,11 +81,13 @@ namespace Jazz2::Multiplayer
 		_host = enet_host_create(&addr, MaxPeerCount, (std::size_t)NetworkChannel::Count, 0, 0);
 		RETURNF_ASSERT_MSG(_host != nullptr, "Failed to create a server");
 
-		_discovery = std::make_unique<ServerDiscovery>(handler, port);
+		if (!isPrivate) {
+			_discovery = std::make_unique<ServerDiscovery>(handler, port);
+		}
 
 		_handler = handler;
 		_state = NetworkState::Listening;
-		_thread.Run(NetworkManagerBase::OnServerThread, this);
+		_thread = Thread(NetworkManagerBase::OnServerThread, this);
 		return true;
 	}
 
@@ -105,6 +101,7 @@ namespace Jazz2::Multiplayer
 		_thread.Join();
 
 		_host = nullptr;
+		_discovery = nullptr;
 	}
 
 	NetworkState NetworkManagerBase::GetState() const
@@ -112,9 +109,78 @@ namespace Jazz2::Multiplayer
 		return _state;
 	}
 
-	std::uint32_t NetworkManagerBase::GetRoundTripTimeMs()
+	std::uint32_t NetworkManagerBase::GetRoundTripTimeMs() const
 	{
 		return (_state == NetworkState::Connected && !_peers.empty() ? _peers[0]->roundTripTime : 0);
+	}
+
+	Array<String> NetworkManagerBase::GetServerEndpoints() const
+	{
+		Array<String> result;
+
+		if (_state == NetworkState::Listening) {
+#if defined(DEATH_TARGET_WINDOWS)
+			ULONG bufferSize = 15000;
+			std::unique_ptr<std::uint8_t[]> buffer = std::make_unique<std::uint8_t[]>(bufferSize);
+			PIP_ADAPTER_ADDRESSES adapterAddresses = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.get());
+
+			if (::GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, adapterAddresses, &bufferSize) == NO_ERROR) {
+				for (PIP_ADAPTER_ADDRESSES adapter = adapterAddresses; adapter != NULL; adapter = adapter->Next) {
+					for (PIP_ADAPTER_UNICAST_ADDRESS address = adapter->FirstUnicastAddress; address != NULL; address = address->Next) {
+						String addressString;
+						if (address->Address.lpSockaddr->sa_family == AF_INET) { // IPv4
+							auto* addrPtr = &((struct sockaddr_in*)address->Address.lpSockaddr)->sin_addr;
+							String addressString = AddressToString(*addrPtr, _host->address.port);
+							if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
+								arrayAppend(result, std::move(addressString));
+							}
+						} else if (address->Address.lpSockaddr->sa_family == AF_INET6) { // IPv6
+							auto* addrPtr = &((struct sockaddr_in6*)address->Address.lpSockaddr)->sin6_addr;
+							String addressString = AddressToString(*addrPtr, _host->address.port);
+							if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
+								arrayAppend(result, std::move(addressString));
+							}
+						} else {
+							// Unsupported address family
+						}
+					}
+				}
+			}
+#else
+			struct ifaddrs* ifAddrStruct = nullptr;
+			if (getifaddrs(&ifAddrStruct) == 0) {
+				for (struct ifaddrs* ifa = ifAddrStruct; ifa != nullptr; ifa = ifa->ifa_next) {
+					if (ifa->ifa_addr == nullptr) {
+						continue;
+					}
+
+					if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
+						auto* addrPtr = &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
+						String addressString = AddressToString(*addrPtr, _host->address.port);
+						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
+							arrayAppend(result, std::move(addressString));
+						}
+					} else if (ifa->ifa_addr->sa_family == AF_INET6) { // IPv6
+						auto* addrPtr = &((struct sockaddr_in6*)ifa->ifa_addr)->sin6_addr;
+						String addressString = AddressToString(*addrPtr, _host->address.port);
+						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
+							arrayAppend(result, std::move(addressString));
+						}
+					}
+				}
+				freeifaddrs(ifAddrStruct);
+			}
+#endif
+		} else {
+			if (!_peers.empty()) {
+				String addressString = AddressToString(_peers[0]->address.host, _peers[0]->address.port);
+				if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
+					arrayAppend(result, std::move(addressString));
+				}
+			}
+		}
+
+		return result;
 	}
 
 	void NetworkManagerBase::SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
@@ -246,6 +312,49 @@ namespace Jazz2::Multiplayer
 		if (--_initializeCount == 0) {
 			enet_deinitialize();
 		}
+	}
+
+	String NetworkManagerBase::AddressToString(const struct in_addr& address, std::uint16_t port)
+	{
+		char addressString[64];
+
+		if (inet_ntop(AF_INET, &address, addressString, sizeof(addressString) - 1) == NULL) {
+			return {};
+		}
+
+		std::size_t addressLength = strnlen(addressString, sizeof(addressString));
+
+		std::int32_t totalLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
+		return String(addressString, totalLength);
+	}
+
+	String NetworkManagerBase::AddressToString(const struct in6_addr& address, std::uint16_t port)
+	{
+		char addressString[64];
+		std::size_t addressLength = 0;
+
+		if (IN6_IS_ADDR_V4MAPPED(&address)) {
+			struct in_addr buf;
+			enet_inaddr_map6to4(&address, &buf);
+
+			if (inet_ntop(AF_INET, &buf, addressString, sizeof(addressString) - 1) == NULL) {
+				return {};
+			}
+
+			addressLength = strnlen(addressString + 1, sizeof(addressString) - 1);
+		} else {
+			if (inet_ntop(AF_INET6, (void*)&address, &addressString[1], sizeof(addressString) - 3) == NULL) {
+				return {};
+			}
+
+			addressString[0] = '[';
+			addressLength = strnlen(addressString, sizeof(addressString));
+			addressString[addressLength] = ']';
+			addressLength++;
+		}
+
+		std::int32_t totalLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
+		return String(addressString, totalLength);
 	}
 
 	void NetworkManagerBase::OnClientThread(void* param)

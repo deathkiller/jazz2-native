@@ -1,9 +1,11 @@
 ﻿#include "LoadingHandler.h"
 
+#include "../../nCine/Application.h"
+
 namespace Jazz2::UI
 {
-	LoadingHandler::LoadingHandler(IRootController* root)
-		: _root(root)
+	LoadingHandler::LoadingHandler(IRootController* root, bool darkMode)
+		: _root(root), _transition(0.0f), _darkMode(darkMode)
 	{
 		_canvasBackground = std::make_unique<BackgroundCanvas>(this);
 
@@ -13,8 +15,8 @@ namespace Jazz2::UI
 		ASSERT_MSG(_metadata != nullptr, "Cannot load required metadata");
 	}
 
-	LoadingHandler::LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback)
-		: LoadingHandler(root)
+	LoadingHandler::LoadingHandler(IRootController* root, Function<bool(IRootController*)>&& callback, bool darkMode)
+		: LoadingHandler(root, darkMode)
 	{
 		_callback = std::move(callback);
 	}
@@ -31,8 +33,14 @@ namespace Jazz2::UI
 
 	void LoadingHandler::OnBeginFrame()
 	{
+		float timeMult = theApplication().GetTimeMult();
+
 		if (_callback && _callback(_root)) {
 			_callback = nullptr;
+		}
+
+		if (_transition < 1.0f) {
+			_transition = std::min(_transition + timeMult * 0.04f, 1.0f);
 		}
 	}
 
@@ -67,7 +75,7 @@ namespace Jazz2::UI
 
 		ViewSize = _owner->_upscalePass.GetViewSize();
 
-		DrawSolid(Vector2f::Zero, 950, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Colorf::White);
+		DrawSolid(Vector2f::Zero, 950, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), _owner->_darkMode ? Colorf::Black : Colorf::White);
 
 		auto* loadingRes = _owner->_metadata->FindAnimation(AnimState::Idle);
 		if (loadingRes != nullptr) {
@@ -87,7 +95,8 @@ namespace Jazz2::UI
 				float(base->FrameDimensions.Y * row) / float(texSize.Y)
 			);
 
-			DrawTexture(*base->TextureDiffuse.get(), pos, 960, size, texCoords, Colorf::White, false);
+			Colorf color = Colorf(1.0f, 1.0f, 1.0f, (_owner->_darkMode ? 0.8f : 1.0f) * _owner->_transition);
+			DrawTexture(*base->TextureDiffuse.get(), pos, 960, size, texCoords, color, false);
 		}
 
 		return true;

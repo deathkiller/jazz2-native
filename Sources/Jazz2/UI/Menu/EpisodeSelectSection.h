@@ -13,7 +13,8 @@ namespace Jazz2::UI::Menu
 		IsCompleted = 0x04,
 		CanContinue = 0x08,
 		CheatsUsed = 0x10,
-		LevelsInUnknownDirectory = 0x20
+		LevelsInUnknownDirectory = 0x20,
+		RedirectToCustomLevels = 0x40
 	};
 
 	DEATH_ENUM_FLAGS(EpisodeDataFlags);
@@ -28,7 +29,7 @@ namespace Jazz2::UI::Menu
 	class EpisodeSelectSection : public ScrollableMenuSection<EpisodeData>
 	{
 	public:
-		EpisodeSelectSection(bool multiplayer = false);
+		EpisodeSelectSection(bool multiplayer = false, bool privateServer = false);
 
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
@@ -49,6 +50,7 @@ namespace Jazz2::UI::Menu
 		std::int32_t _transitionFromEpisode;
 		float _transitionFromEpisodeTime;
 		bool _multiplayer;
+		bool _privateServer;
 		bool _expanded;
 		bool _shouldStart;
 
