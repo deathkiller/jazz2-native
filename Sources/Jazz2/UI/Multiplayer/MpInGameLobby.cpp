@@ -71,7 +71,7 @@ namespace Jazz2::UI::Multiplayer
 			}
 			std::int32_t debugCharOffset = 0;
 			_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
-				MainLayer, Alignment::TopRight, Font::DefaultColor, 0.8f);
+				200, Alignment::TopRight, Font::DefaultColor, 0.8f);
 		}
 #endif
 

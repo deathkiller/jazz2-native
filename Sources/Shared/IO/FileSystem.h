@@ -325,15 +325,15 @@ namespace Death { namespace IO {
 		{
 #	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 		public:
-			constexpr explicit MapDeleter() : _fd {} {}
-			constexpr explicit MapDeleter(int fd) noexcept : _fd { fd } {}
+			constexpr explicit MapDeleter() : _fd{} {}
+			constexpr explicit MapDeleter(int fd) noexcept : _fd{fd} {}
 			void operator()(const char* data, std::size_t size);
 		private:
 			int _fd;
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		public:
-			constexpr explicit MapDeleter() : _hFile {}, _hMap {} {}
-			constexpr explicit MapDeleter(void* hFile, void* hMap) noexcept : _hFile { hFile }, _hMap { hMap } {}
+			constexpr explicit MapDeleter() : _hFile{}, _hMap{} {}
+			constexpr explicit MapDeleter(void* hFile, void* hMap) noexcept : _hFile{hFile}, _hMap{hMap} {}
 			void operator()(const char* data, std::size_t size);
 		private:
 			void* _hFile;
@@ -348,6 +348,20 @@ namespace Death { namespace IO {
 		 * or an error occurs while mapping, returns @ref std::nullopt_t. If the file is empty it's only opened
 		 * but not mapped and a zero-sized @cpp nullptr @ce array is returned, with the deleter containing the
 		 * open file handle.
+		 * 
+		 * @m_class{m-block m-warning}
+		 * 
+		 * @par Reading and writing a file while it's mapped
+		 *		On @ref DEATH_TARGET_UNIX "Unix"-like systems it's possible to write to a file that's currently
+		 *		mapped with this function and the changes will be reflected to the mapping. The mapped size
+		 *		however cannot change --- if the file gets longer, the additional data will not be present
+		 *		in the mapping, if it gets shorter, the suffix gets filled with @cpp '\0' @ce bytes.
+		 * @par
+		 *		On @ref DEATH_TARGET_WINDOWS "Windows" it's not possible to open a file for writing while it's
+		 *		mapped with this function. Doing so will result in an *Invalid Argument* error.
+		 * @par
+		 *		Opening a file for reading while it's mapped with this function works on all platforms and gives
+		 *		back the same contents as the (potentially updated) mapped memory.
 		 * 
 		 * @partialsupport Available on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
 		 */
