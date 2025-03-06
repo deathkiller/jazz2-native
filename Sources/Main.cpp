@@ -307,7 +307,7 @@ void GameEventHandler::OnInitialize()
 		} else {
 			// The intro video is over, show loading screen instead
 			root->InvokeAsync([root]() {
-				static_cast<GameEventHandler*>(root)->SetStateHandler(std::make_unique<LoadingHandler>(root, [](IRootController* root) {
+				static_cast<GameEventHandler*>(root)->SetStateHandler(std::make_unique<LoadingHandler>(root, false, [](IRootController* root) {
 					if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
 						root->GoToMainMenu(true);
 						return true;
