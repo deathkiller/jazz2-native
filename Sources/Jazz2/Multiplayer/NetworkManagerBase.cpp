@@ -14,6 +14,8 @@
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <iphlpapi.h>
+#elif defined(DEATH_TARGET_ANDROID)
+#	include "Backends/ifaddrs-android.h"
 #else
 #	include <ifaddrs.h>
 #endif
