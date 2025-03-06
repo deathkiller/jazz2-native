@@ -8,7 +8,8 @@ namespace nCine
 	};
 
 	// half_to_float_fast4() from https://gist.github.com/rygorous/2144712
-	float Half::UnpackHalf(const std::uint16_t value) {
+	float Half::UnpackHalf(const std::uint16_t value)
+	{
 		constexpr const FloatBits Magic{113 << 23};
 		// Exponent mask after shift
 		constexpr const std::uint32_t ShiftedExp = 0x7c00 << 13;
