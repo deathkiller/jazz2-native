@@ -1540,7 +1540,7 @@ namespace Jazz2::Multiplayer
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packetOut);
 
 					_root->InvokeAsync([this, message = std::move(message)]() {
-						_console->WriteLine(UI::MessageLevel::Info, message);
+						_console->WriteLine(UI::MessageLevel::Info, std::move(message));
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
@@ -1738,9 +1738,9 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::PeerStateChanged - flags: 0x%02x, peer: 0x%016X, name: \"%s\"", flags, peerId, playerName.data());
 
-					if (flags & 0x01) {
+					if ((flags & 0x01) != 0) {
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", playerName.data()));
-					} else if (flags & 0x02) {
+					} else if ((flags & 0x02) != 0) {
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", playerName.data()));
 					}
 					break;

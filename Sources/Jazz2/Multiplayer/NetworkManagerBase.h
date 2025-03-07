@@ -79,7 +79,7 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Creates a client connection to a remote server */
 		bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
-		/** @brief Creates a server accepting that accepts incoming connections */
+		/** @brief Creates a server that accepts incoming connections */
 		bool CreateServer(INetworkHandler* handler, std::uint16_t port, bool isPrivate);
 		/** @brief Disposes all active connections */
 		void Dispose();
