@@ -1485,9 +1485,6 @@
     <ClInclude Include="Jazz2\UI\FormattedTextBlock.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\Base\StackAlloc.h">
-      <Filter>Header Files\Shared\Base</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\WarpFlags.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>

@@ -21,11 +21,11 @@ namespace Jazz2::Multiplayer
 	ServerDiscovery::ServerDiscovery(INetworkHandler* server, std::uint16_t port)
 		: _server(server), _observer(nullptr), _actualPort(port)
 	{
-		DEATH_DEBUG_ASSERT(server != nullptr, "server cannot be null", );
+		DEATH_DEBUG_ASSERT(server != nullptr, "server is null", );
 
 		NetworkManagerBase::InitializeBackend();
 
-		_socket = TryCreateSocket(/*"ff02::333"*/"ff1e::333", _address);
+		_socket = TryCreateSocket("ff1e::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
 			_thread.Run(ServerDiscovery::OnServerThread, this);
 		}
@@ -34,11 +34,11 @@ namespace Jazz2::Multiplayer
 	ServerDiscovery::ServerDiscovery(IServerObserver* observer)
 		: _server(nullptr), _observer(observer)
 	{
-		DEATH_DEBUG_ASSERT(observer != nullptr, "observer cannot be null", );
+		DEATH_DEBUG_ASSERT(observer != nullptr, "observer is null", );
 
 		NetworkManagerBase::InitializeBackend();
 
-		_socket = TryCreateSocket(/*"ff02::333"*/"ff1e::333", _address);
+		_socket = TryCreateSocket("ff1e::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
 			_thread.Run(ServerDiscovery::OnClientThread, this);
 		}
@@ -137,12 +137,10 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		char addressString[64];
-		if (enet_address_get_host_ip(&discoveredServer.Endpoint, addressString, sizeof(addressString)) != 0) {
+		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(discoveredServer.Endpoint.host, discoveredServer.Endpoint.port);
+		if (discoveredServer.EndpointString.empty()) {
 			return false;
 		}
-
-		discoveredServer.EndpointString = addressString;
 
 		MemoryStream packet(buffer, bytesRead);
 		std::uint64_t signature = packet.ReadValue<std::uint64_t>();
@@ -166,7 +164,7 @@ namespace Jazz2::Multiplayer
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
 
-		LOGD("[MP] Found server at [%s]:%u (%s)", addressString, discoveredServer.Endpoint.port, discoveredServer.LevelName.data());
+		LOGD("[MP] Found server at %s (%s)", discoveredServer.EndpointString.data(), discoveredServer.LevelName.data());
 		return true;
 	}
 

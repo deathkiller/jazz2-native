@@ -110,6 +110,7 @@ namespace Jazz2::Multiplayer
 			MemoryStream packet(10 + _episodeName.size() + _levelFileName.size());
 			packet.WriteValue<std::uint8_t>(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)_networkManager->GameMode);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)levelInit.LastExitType);
 			packet.WriteVariableUint32(_episodeName.size());
 			packet.Write(_episodeName.data(), _episodeName.size());
 			packet.WriteVariableUint32(_levelFileName.size());
@@ -1466,6 +1467,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(10 + _episodeName.size() + _levelFileName.size());
 					packet.WriteValue<std::uint8_t>(flags);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)_networkManager->GameMode);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ExitType::None);
 					packet.WriteVariableUint32(_episodeName.size());
 					packet.Write(_episodeName.data(), _episodeName.size());
 					packet.WriteVariableUint32(_levelFileName.size());

@@ -170,15 +170,16 @@ namespace Jazz2::UI::Multiplayer
 				Vector2i center = ViewSize / 2;
 
 				if (y >= center.Y + 50.0f - 24.f && y <= center.Y + 50.0f + 24.0f) {
-					if (x < 0.42f) {
+					if (x > 0.3f && x < 0.44f) {
 						_selectedPlayerType = 0;
-					} else if (x <= 0.58f) {
+					} else if (x <= 0.56f) {
 						_selectedPlayerType = 1;
-					} else {
+					} else if (x < 0.7f) {
 						_selectedPlayerType = 2;
 					}
 					_animation = 0.0f;
-				} else if (y >= ((ViewSize.Y + (center.Y + 80.0f)) / 2) - 24.f && y <= ((ViewSize.Y + (center.Y + 80.0f)) / 2) + 24.f) {
+				} else if (y >= ((ViewSize.Y + (center.Y + 80.0f)) / 2) - 24.f && y <= ((ViewSize.Y + (center.Y + 80.0f)) / 2) + 24.f &&
+						   x > 0.3f && x < 0.7f) {
 					if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
 						_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
 					}

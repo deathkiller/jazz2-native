@@ -1,7 +1,5 @@
 ﻿#include "FormattedTextBlock.h"
 
-#include <Base/StackAlloc.h>
-
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 
@@ -234,7 +232,7 @@ namespace Jazz2::UI
 
 		char* unprocessedText = _text.data();
 		std::int32_t unprocessedLength = (std::int32_t)_text.size();
-		auto charFitWidths = stack_alloc(float, unprocessedLength + 1);
+		SmallVector<float, 1000> charFitWidths(DefaultInit, unprocessedLength + 1);
 
 		Colorf currentColor = _defaultColor;
 		float scale = _defaultScale;
@@ -534,7 +532,7 @@ namespace Jazz2::UI
 			std::int32_t lengthToMeasure = (std::int32_t)(nextPtr - unprocessedText);
 			float maxWidth = _proposedWidth - currentLocation.X;
 			std::int32_t charFit;
-			Vector2f size = _font->MeasureStringEx(StringView(unprocessedText, lengthToMeasure), scale, charSpacing, maxWidth, &charFit, charFitWidths);
+			Vector2f size = _font->MeasureStringEx(StringView(unprocessedText, lengthToMeasure), scale, charSpacing, maxWidth, &charFit, charFitWidths.data());
 			float charFitWidth = (charFit > 0 ? charFitWidths[charFit - 1] : 0.0f);
 
 			if (charFit >= lengthToMeasure) {
@@ -611,7 +609,7 @@ namespace Jazz2::UI
 						}
 
 						InsertEllipsis(currentLocation, currentColor, scale, charSpacing, lineSpacing,
-							styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0, maxWidth, charFitWidths);
+							styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0, maxWidth, charFitWidths.data());
 						skipTill = SkipTill::EndOfHighlight;
 						continue;
 					} else {
@@ -721,7 +719,7 @@ namespace Jazz2::UI
 					}
 
 					InsertEllipsis(currentLocation, currentColor, scale, charSpacing, lineSpacing,
-						styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0, maxWidth, charFitWidths);
+						styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0, maxWidth, charFitWidths.data());
 					_flags |= FormattedTextBlockFlags::Ellipsized;
 
 					if (!IsMultiline()) {

@@ -291,31 +291,6 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	ConnectionResult NetworkManagerBase::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
-	{
-		return _handler->OnPeerConnected(peer, clientData);
-	}
-
-	void NetworkManagerBase::OnPeerDisconnected(const Peer& peer, Reason reason)
-	{
-		_handler->OnPeerDisconnected(peer, reason);
-	}
-
-	void NetworkManagerBase::InitializeBackend()
-	{
-		if (++_initializeCount == 1) {
-			std::int32_t error = enet_initialize();
-			RETURN_ASSERT_MSG(error == 0, "enet_initialize() failed with error %i", error);
-		}
-	}
-
-	void NetworkManagerBase::ReleaseBackend()
-	{
-		if (--_initializeCount == 0) {
-			enet_deinitialize();
-		}
-	}
-
 	String NetworkManagerBase::AddressToString(const struct in_addr& address, std::uint16_t port)
 	{
 		char addressString[64];
@@ -357,6 +332,31 @@ namespace Jazz2::Multiplayer
 
 		std::int32_t totalLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
 		return String(addressString, totalLength);
+	}
+
+	ConnectionResult NetworkManagerBase::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
+	{
+		return _handler->OnPeerConnected(peer, clientData);
+	}
+
+	void NetworkManagerBase::OnPeerDisconnected(const Peer& peer, Reason reason)
+	{
+		_handler->OnPeerDisconnected(peer, reason);
+	}
+
+	void NetworkManagerBase::InitializeBackend()
+	{
+		if (++_initializeCount == 1) {
+			std::int32_t error = enet_initialize();
+			RETURN_ASSERT_MSG(error == 0, "enet_initialize() failed with error %i", error);
+		}
+	}
+
+	void NetworkManagerBase::ReleaseBackend()
+	{
+		if (--_initializeCount == 0) {
+			enet_deinitialize();
+		}
 	}
 
 	void NetworkManagerBase::OnClientThread(void* param)

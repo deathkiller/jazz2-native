@@ -6,6 +6,7 @@
 #include "../Common.h"
 #include "../Asserts.h"
 #include "ArrayView.h"
+#include "Tags.h"
 
 #include <initializer_list>
 #include <iterator>
@@ -612,7 +613,7 @@ namespace Death { namespace Containers {
 			resizeImpl<false>(n);
 		}
 
-		/** @brief Like resize, but @ref T is POD, the new values won't be initialized */
+		/** @brief Like resize, but if @ref T is POD, the new values won't be initialized */
 		void resize_for_overwrite(size_type n) {
 			resizeImpl<true>(n);
 		}
@@ -1182,14 +1183,19 @@ namespace Death { namespace Containers {
 	public:
 		SmallVector() : SmallVectorImpl<T>(N) {}
 
-		~SmallVector() {
-			// Destroy the constructed elements in the vector.
-			this->destroy_range(this->begin(), this->end());
+
+		explicit SmallVector(DefaultInitT, std::size_t size)
+			: SmallVectorImpl<T>(N) {
+			this->resize_for_overwrite(size);
+		}
+
+		explicit SmallVector(ValueInitT, std::size_t size)
+			: SmallVectorImpl<T>(N) {
+			this->resize(size);
 		}
 
 		explicit SmallVector(std::size_t size)
-			: SmallVectorImpl<T>(N) {
-			this->resize(size);
+			: SmallVector{ValueInit, size} {
 		}
 
 		SmallVector(std::size_t size, const T& value)
@@ -1213,6 +1219,11 @@ namespace Death { namespace Containers {
 
 		SmallVector(std::initializer_list<T> il) : SmallVectorImpl<T>(N) {
 			this->assign(il);
+		}
+
+		~SmallVector() {
+			// Destroy the constructed elements in the vector.
+			this->destroy_range(this->begin(), this->end());
 		}
 
 		SmallVector(const SmallVector& other) : SmallVectorImpl<T>(N) {

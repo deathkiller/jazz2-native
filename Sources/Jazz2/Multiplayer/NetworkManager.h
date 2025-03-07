@@ -34,8 +34,27 @@ namespace Jazz2::Multiplayer
 			PeerDesc();
 		};
 
+		// Server Configuration
 		/** @brief Current multiplayer game mode */
 		MpGameMode GameMode;
+		/** @brief Server name */
+		String ServerName;
+		/** @brief Password of the server */
+		String ServerPassword;
+		/** @brief Welcome message in the lobby */
+		String WelcomeMessage;
+		/** @brief Maximum number of players */
+		std::uint32_t MaxPlayerCount;
+		/** @brief Allowed player types as bitmask of @ref PlayerType */
+		std::uint8_t AllowedPlayerTypes;
+		/** @brief Time after which inactive players will be kicked, in seconds, `-1` to disable */
+		std::int32_t IdleKickTimeSecs;
+		/** @brief List of whitelisted unique player IDs, value can contain user-defined comment */
+		HashMap<String, String> WhitelistedUniquePlayerIDs;
+		/** @brief List of banned unique player IDs, value can contain user-defined reason */
+		HashMap<String, String> BannedUniquePlayerIDs;
+		/** @brief List of banned IP addresses, value can contain user-defined reason */
+		HashMap<String, String> BannedIPAddresses;
 
 		NetworkManager();
 		~NetworkManager();
@@ -43,7 +62,7 @@ namespace Jazz2::Multiplayer
 		NetworkManager(const NetworkManager&) = delete;
 		NetworkManager& operator=(const NetworkManager&) = delete;
 
-		/** @brief Returns global (session) peer descriptor for the specified peer */
+		/** @brief Returns global (session) peer descriptor for the specified connected peer */
 		PeerDesc* GetPeerDescriptor(const Peer& peer);
 
 	protected:
@@ -51,7 +70,7 @@ namespace Jazz2::Multiplayer
 		void OnPeerDisconnected(const Peer& peer, Reason reason) override;
 
 	private:
-		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer description
+		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer descriptor
 	};
 }
 
