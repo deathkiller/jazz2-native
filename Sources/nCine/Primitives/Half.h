@@ -105,23 +105,13 @@ namespace nCine
 			return Half{std::uint16_t(_data ^ (1 << 15))};
 		}
 
-		/**
-		 * @brief Conversion to underlying representation
-		 *
-		 * @see @ref data()
-		 */
+		/** @brief Conversion to underlying representation */
 		constexpr explicit operator std::uint16_t() const { return _data; }
 
-		/**
-		 * @brief Conversion to 32-bit float representation
-		 */
+		/** @brief Conversion to 32-bit float representation */
 		explicit operator float() const { return UnpackHalf(_data); }
 
-		/**
-		 * @brief Underlying representation
-		 *
-		 * @see @ref operator std::uint16_t()
-		 */
+		/** @brief Underlying representation */
 		constexpr std::uint16_t data() const { return _data; }
 
 	private:

@@ -78,7 +78,7 @@ namespace Jazz2
 		virtual float GetGravity() const = 0;
 		/** @brief Returns current water level */
 		virtual float GetWaterLevel() const = 0;
-		/** @brief Returns current water level */
+		/** @brief Returns default invulnerable time when a player is hurt */
 		virtual float GetHurtInvulnerableTime() const = 0;
 
 		/** @brief Returns list of actors (objects) */

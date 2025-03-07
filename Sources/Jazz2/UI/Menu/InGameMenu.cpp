@@ -442,7 +442,7 @@ namespace Jazz2::UI::Menu
 		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);
 	}
 
-	void InGameMenu::DrawStringShadow(StringView text, int& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
+	void InGameMenu::DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();

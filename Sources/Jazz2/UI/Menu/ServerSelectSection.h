@@ -54,7 +54,7 @@ namespace Jazz2::UI::Menu
 		std::int8_t _touchDirection;
 
 		void ExecuteSelected();
-		void EnsureVisibleSelected();
+		void EnsureVisibleSelected(std::int32_t offset = 0);
 	};
 }
 

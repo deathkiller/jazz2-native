@@ -203,7 +203,6 @@ namespace Jazz2::Multiplayer
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
 		ENetSocket socket = _this->_socket;
-		IServerObserver* observer = _this->_observer;
 
 		while (_this->_observer != nullptr) {
 			if (_this->_lastRequest.secondsSince() > 10) {
@@ -213,7 +212,7 @@ namespace Jazz2::Multiplayer
 
 			ServerDescription discoveredServer;
 			if (ProcessResponses(socket, discoveredServer, 0)) {
-				observer->OnServerFound(std::move(discoveredServer));
+				_this->_observer->OnServerFound(std::move(discoveredServer));
 			} else {
 				// No responses, sleep for a while
 				Thread::Sleep(500);
@@ -232,7 +231,6 @@ namespace Jazz2::Multiplayer
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
 		ENetSocket socket = _this->_socket;
-		INetworkHandler* server = _this->_server;
 		std::int32_t delayCount = 0;
 
 		while (_this->_server != nullptr) {

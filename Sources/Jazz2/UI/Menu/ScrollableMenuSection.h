@@ -55,7 +55,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 		/** @brief Makes currently selected item visible in the viewport */
-		void EnsureVisibleSelected();
+		void EnsureVisibleSelected(std::int32_t offset = 0);
 		/** @brief Called when the selected item should be executed */
 		virtual void OnExecuteSelected() = 0;
 		/** @brief Called when an item layout should be calculated */
@@ -144,23 +144,29 @@ namespace Jazz2::UI::Menu
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_animation = 0.0f;
 
+					std::int32_t offset;
 					if (_selectedIndex > 0) {
 						_selectedIndex--;
+						offset = -ItemHeight / 3;
 					} else {
 						_selectedIndex = (std::int32_t)(_items.size() - 1);
+						offset = 0;
 					}
-					EnsureVisibleSelected();
+					EnsureVisibleSelected(offset);
 					OnSelectionChanged(_items[_selectedIndex]);
 				} else if (_root->ActionHit(PlayerAction::Down)) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_animation = 0.0f;
 
+					std::int32_t offset;
 					if (_selectedIndex < _items.size() - 1) {
 						_selectedIndex++;
+						offset = ItemHeight / 3;
 					} else {
 						_selectedIndex = 0;
+						offset = 0;
 					}
-					EnsureVisibleSelected();
+					EnsureVisibleSelected(offset);
 					OnSelectionChanged(_items[_selectedIndex]);
 				}
 			}
@@ -319,7 +325,7 @@ namespace Jazz2::UI::Menu
 	}
 
 	template<class TItem>
-	void ScrollableMenuSection<TItem>::EnsureVisibleSelected()
+	void ScrollableMenuSection<TItem>::EnsureVisibleSelected(std::int32_t offset)
 	{
 		if (!_scrollable) {
 			return;
@@ -329,18 +335,18 @@ namespace Jazz2::UI::Menu
 		Recti clipRect = GetClipRectangle(contentBounds);
 		std::int32_t topLine = clipRect.Y + 1;
 		std::int32_t bottomLine = clipRect.Y + clipRect.H - 1;
+		std::int32_t y = _items[_selectedIndex].Y + offset;
 
-		auto& item = _items[_selectedIndex];
-		if (item.Y < topLine + ItemHeight / 2) {
+		if (y < topLine + ItemHeight / 2) {
 			// Scroll up
-			_y += (topLine + ItemHeight / 2 - item.Y);
+			_y += (topLine + ItemHeight / 2 - y);
 			return;
 		}
 		
-		std::int32_t itemHeight = item.Height - ItemHeight * 4 / 5 + ItemHeight / 2;
-		if (item.Y > bottomLine - itemHeight) {
+		std::int32_t itemHeight = _items[_selectedIndex].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
+		if (y > bottomLine - itemHeight) {
 			// Scroll down
-			_y += (bottomLine - itemHeight - item.Y);
+			_y += (bottomLine - itemHeight - y);
 			return;
 		}
 	}

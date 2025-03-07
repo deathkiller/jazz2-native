@@ -80,12 +80,15 @@ namespace Jazz2::UI::Menu
 						}
 						_animation = 0.0f;
 
+						std::int32_t offset;
 						if (_selectedIndex > 0) {
 							_selectedIndex--;
+							offset = -ItemHeight / 2;
 						} else {
 							_selectedIndex = (std::int32_t)(_items.size() - 1);
+							offset = 0;
 						}
-						EnsureVisibleSelected();
+						EnsureVisibleSelected(offset);
 						_pressedCount = std::min(_pressedCount + 6, 10);
 					}
 				} else if (_root->ActionPressed(PlayerAction::Down)) {
@@ -96,12 +99,15 @@ namespace Jazz2::UI::Menu
 						}
 						_animation = 0.0f;
 
+						std::int32_t offset;
 						if (_selectedIndex < _items.size() - 1) {
 							_selectedIndex++;
+							offset = ItemHeight / 2;
 						} else {
 							_selectedIndex = 0;
+							offset = 0;
 						}
-						EnsureVisibleSelected();
+						EnsureVisibleSelected(offset);
 						_pressedCount = std::min(_pressedCount + 6, 10);
 					}
 				} else {
@@ -282,16 +288,17 @@ namespace Jazz2::UI::Menu
 		_root->ConnectToServer(selectedItem.Desc.EndpointString, selectedItem.Desc.Endpoint.port);
 	}
 
-	void ServerSelectSection::EnsureVisibleSelected()
+	void ServerSelectSection::EnsureVisibleSelected(std::int32_t offset)
 	{
 		Recti contentBounds = _root->GetContentBounds();
 		float topLine = contentBounds.Y + TopLine;
 		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
-		if (_items[_selectedIndex].Y < topLine + ItemHeight * 0.5f) {
-			_y += (topLine + ItemHeight * 0.5f - _items[_selectedIndex].Y);
-		} else if (_items[_selectedIndex].Y > bottomLine - ItemHeight * 0.5f) {
-			_y += (bottomLine - ItemHeight * 0.5f - _items[_selectedIndex].Y);
+		std::int32_t y = _items[_selectedIndex].Y + offset;
+		if (y < topLine + ItemHeight * 0.5f) {
+			_y += (topLine + ItemHeight * 0.5f - y);
+		} else if (y > bottomLine - ItemHeight * 0.5f) {
+			_y += (bottomLine - ItemHeight * 0.5f - y);
 		}
 	}
 

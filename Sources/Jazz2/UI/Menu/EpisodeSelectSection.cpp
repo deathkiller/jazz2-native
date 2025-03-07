@@ -95,12 +95,15 @@ namespace Jazz2::UI::Menu
 						_expanded = false;
 						_expandedAnimation = 0.0f;
 
+						std::int32_t offset;
 						if (_selectedIndex > 0) {
 							_selectedIndex--;
+							offset = -ItemHeight / 2;
 						} else {
 							_selectedIndex = (std::int32_t)(_items.size() - 1);
+							offset = 0;
 						}
-						EnsureVisibleSelected();
+						EnsureVisibleSelected(offset);
 					} else if (_root->ActionHit(PlayerAction::Down)) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_animation = 0.0f;
@@ -110,12 +113,15 @@ namespace Jazz2::UI::Menu
 						_expanded = false;
 						_expandedAnimation = 0.0f;
 
+						std::int32_t offset;
 						if (_selectedIndex < _items.size() - 1) {
 							_selectedIndex++;
+							offset = ItemHeight / 2;
 						} else {
 							_selectedIndex = 0;
+							offset = 0;
 						}
-						EnsureVisibleSelected();
+						EnsureVisibleSelected(offset);
 					}
 				}
 			}

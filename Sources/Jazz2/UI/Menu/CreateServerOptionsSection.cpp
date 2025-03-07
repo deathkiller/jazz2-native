@@ -5,6 +5,7 @@
 #include "MainMenu.h"
 #include "MenuResources.h"
 #include "MultiplayerGameModeSelectSection.h"
+#include "SimpleMessageSection.h"
 #include "../../PreferencesCache.h"
 
 #include <Utf8.h>
@@ -370,34 +371,40 @@ namespace Jazz2::UI::Menu
 		serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 		serverInit.InitialLevel.PlayerCarryOvers[0].Type = (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType);
 
-		if (!_previousEpisodeName.empty()) {
-			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
-			if (previousEpisodeEnd != nullptr) {
-				// Set CheatsUsed to true if cheats were used in the previous episode or the previous episode is not completed
-				if ((previousEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ||
-					(previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) != EpisodeContinuationFlags::IsCompleted) {
+		if (_gameMode == MpGameMode::Cooperation) {
+			if (!_previousEpisodeName.empty()) {
+				auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
+				if (previousEpisodeEnd != nullptr) {
+					// Set CheatsUsed to true if cheats were used in the previous episode or the previous episode is not completed
+					if ((previousEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ||
+						(previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) != EpisodeContinuationFlags::IsCompleted) {
+						serverInit.InitialLevel.CheatsUsed = true;
+					}
+
+					auto& firstPlayer = serverInit.InitialLevel.PlayerCarryOvers[0];
+					if (previousEpisodeEnd->Lives > 0) {
+						firstPlayer.Lives = previousEpisodeEnd->Lives;
+					}
+					firstPlayer.Score = previousEpisodeEnd->Score;
+					std::memcpy(firstPlayer.Gems, previousEpisodeEnd->Gems, sizeof(firstPlayer.Gems));
+					std::memcpy(firstPlayer.Ammo, previousEpisodeEnd->Ammo, sizeof(firstPlayer.Ammo));
+					std::memcpy(firstPlayer.WeaponUpgrades, previousEpisodeEnd->WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
+				} else {
+					// Set CheatsUsed to true if the previous episode is not completed
 					serverInit.InitialLevel.CheatsUsed = true;
 				}
+			}
 
-				auto& firstPlayer = serverInit.InitialLevel.PlayerCarryOvers[0];
-				if (previousEpisodeEnd->Lives > 0) {
-					firstPlayer.Lives = previousEpisodeEnd->Lives;
-				}
-				firstPlayer.Score = previousEpisodeEnd->Score;
-				std::memcpy(firstPlayer.Gems, previousEpisodeEnd->Gems, sizeof(firstPlayer.Gems));
-				std::memcpy(firstPlayer.Ammo, previousEpisodeEnd->Ammo, sizeof(firstPlayer.Ammo));
-				std::memcpy(firstPlayer.WeaponUpgrades, previousEpisodeEnd->WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
-			} else {
-				// Set CheatsUsed to true if the previous episode is not completed
-				serverInit.InitialLevel.CheatsUsed = true;
+			if (PreferencesCache::EnableReforgedGameplay && _levelName == "01_xmas1"_s) {
+				serverInit.InitialLevel.LastExitType = ExitType::Warp | ExitType::Frozen;
 			}
 		}
 
-		if (PreferencesCache::EnableReforgedGameplay && _levelName == "01_xmas1"_s) {
-			serverInit.InitialLevel.LastExitType = ExitType::Warp | ExitType::Frozen;
+		if (!_root->CreateServer(std::move(serverInit))) {
+			_shouldStart = false;
+			_transitionTime = 0.0f;
+			_root->SwitchToSection<SimpleMessageSection>(_("\f[c:#704a4a]Cannot create the server!\f[/c]\n\n\nPlease verify that no other server\nis running on that port and try it again."), true);
 		}
-
-		_root->CreateServer(std::move(serverInit));
 	}
 
 	void CreateServerOptionsSection::StartImageTransition()
