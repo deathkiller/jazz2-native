@@ -967,6 +967,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				MemoryStream packet(data);
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 				MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
+				ExitType lastExitType = (ExitType)packet.ReadValue<std::uint8_t>();
 				std::uint32_t episodeLength = packet.ReadVariableUint32();
 				String episodeName = String(NoInit, episodeLength);
 				packet.Read(episodeName.data(), episodeLength);
@@ -976,11 +977,12 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, episode: %s, level: %s", flags, (std::uint32_t)gameMode, episodeName.data(), levelName.data());
 
-				InvokeAsync([this, flags, gameMode, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
+				InvokeAsync([this, flags, gameMode, lastExitType, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
 					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
+					levelInit.LastExitType = lastExitType;
 
 					_networkManager->GameMode = gameMode;
 
