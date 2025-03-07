@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-03-06 23:25+0100\n"
-"PO-Revision-Date: 2025-03-06 23:26+0100\n"
+"POT-Creation-Date: 2025-03-07 11:09+0100\n"
+"PO-Revision-Date: 2025-03-07 11:09+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1402,28 +1402,28 @@ msgstr "\f[c:#d0705d]%s\f[/c] se připojil"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2741
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:222
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:223
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
 msgid "Battle"
 msgstr "Bitva"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2742
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:223
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:224
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
 msgid "Team Battle"
 msgstr "Týmová bitva"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2743
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:224
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:225
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Capture The Flag"
 msgstr "Boj o vlajku"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2744
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:225
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:226
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
 msgstr "Závod"
@@ -1436,14 +1436,14 @@ msgstr "Týmový závod"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2746
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:226
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:227
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
 msgstr "Lovci pokladů"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2747
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:227
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:228
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Cooperation"
 msgstr "Kooperace"
@@ -1496,8 +1496,8 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:57
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:74
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:145
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:147
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:151
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:153
 msgid "Play Story"
 msgstr "Hrát příběh"
 
@@ -1667,74 +1667,83 @@ msgid "Enabled"
 msgstr "Povoleno"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:31
-#: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:102
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:32
+#: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:109
 msgid "Character"
 msgstr "Postava"
 
 #. TRANSLATORS: Menu item to select game mode
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:33
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:34
 msgid "Game Mode"
 msgstr "Herní režim"
 
 #. TRANSLATORS: Menu item to set server name
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:35
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:36
 msgid "Server Name"
 msgstr "Název serveru"
 
 #. TRANSLATORS: Menu item to set server port
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:37
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:38
 msgid "Server Port"
 msgstr "Port serveru"
 
 #. TRANSLATORS: Menu item to create server with selected settings
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:39
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:40
 msgid "Create Server"
 msgstr "Vytvořit server"
 
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:236
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:237
 msgid "Unnamed server"
 msgstr "Nepojmenovaný server"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:147
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:477
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:406
+msgid ""
+"\f[c:#704a4a]Cannot create the server!\f[/c]\n"
+"\n"
+"\n"
+"Please verify that no other server\n"
+"is running on that port and try it again."
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:153
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:483
 msgid "Play Custom Levels"
 msgstr "Hrát vlastní úrovně"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:160
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:166
 msgid "No custom level found!"
 msgstr "Nebyly nalezeny žádné vlastní úrovně!"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:145
-#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:21
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:151
+#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:23
 msgid "Create Private Server"
 msgstr "Vytvořit soukromý server"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:145
-#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:19
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:151
+#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:21
 msgid "Create Public Server"
 msgstr "Vytvořit veřejný server"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:157
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:163
 msgid "No episode found!"
 msgstr "Nebyly nalezeny žádné epizody!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:203
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:204
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:209
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:210
 msgid "Restart episode"
 msgstr "Smazat postup"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:226
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:232
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "Nejprve musíte dokončit \"%s\"!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:230
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:236
 msgid "Episode is locked!"
 msgstr "Epizoda je zamčena!"
 
@@ -2045,8 +2054,8 @@ msgid "Save & Exit"
 msgstr "Uložit & Ukončit"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
-#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:23
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:129
+#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:19
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:135
 msgid "Connect To Server"
 msgstr "Připojit k serveru"
 
@@ -2159,12 +2168,12 @@ msgstr "Monochrome"
 msgid "Select Rescale Mode"
 msgstr "Vybrat režim škálování"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:142
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:148
 msgid "No servers found, but still searchin'!"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:46
-#: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:148
+#: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:155
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
 msgstr "Pro pokračování stiskněte tlačítko \f[c:#d0705d]Střelba\f[/c]"
 
@@ -2414,34 +2423,6 @@ msgid ""
 "\n"
 "Cheating detected."
 msgstr ""
-
-#~ msgid "Play Singleplayer"
-#~ msgstr "Hra pro jednoho hráče"
-
-#~ msgid "Play Multiplayer"
-#~ msgstr "Hra pro více hráčů"
-
-#~ msgid "Play Custom Game"
-#~ msgstr "Hrát vlastní hru"
-
-#~ msgid "Host Custom Levels"
-#~ msgstr "Hostovat vlastní úrovně"
-
-#~ msgid "Play Custom Levels Locally"
-#~ msgstr "Hrát vlastní úrovně lokálně"
-
-#~ msgid "Host Story in Cooperation"
-#~ msgstr "Hostovat příběh v kooperaci"
-
-#, c-format
-#~ msgid "Connecting to %s:%u..."
-#~ msgstr "Připojování k %s:%u..."
-
-#~ msgid "Create Custom Server"
-#~ msgstr "Vytvořit vlastní server"
-
-#~ msgid "Connect to Server"
-#~ msgstr "Připojit se k serveru"
 
 #~ msgid "or"
 #~ msgstr "nebo"

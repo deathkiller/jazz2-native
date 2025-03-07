@@ -342,7 +342,7 @@ namespace Death { namespace IO {
 		};
 
 		/**
-		 * @brief Maps a file for reading and writing
+		 * @brief Maps a file for reading and/or writing
 		 *
 		 * Maps the file as a read-write memory. The array deleter takes care of unmapping. If the file doesn't exist
 		 * or an error occurs while mapping, returns @ref std::nullopt_t. If the file is empty it's only opened

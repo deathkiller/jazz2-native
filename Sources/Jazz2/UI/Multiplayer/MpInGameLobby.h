@@ -34,6 +34,7 @@ namespace Jazz2::UI::Multiplayer
 		static constexpr std::uint16_t MainLayer = 60;
 		
 		Jazz2::Multiplayer::MpLevelHandler* _levelHandler;
+		Metadata* _metadata;
 		Font* _smallFont;
 		std::uint32_t _pressedActions;
 		float _animation;
@@ -44,6 +45,12 @@ namespace Jazz2::UI::Multiplayer
 		bool ActionPressed(PlayerAction action);
 		bool ActionHit(PlayerAction action);
 		void UpdatePressedActions();
+
+		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
+			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false);
+		void DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
+			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
+			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f);
 	};
 }
 

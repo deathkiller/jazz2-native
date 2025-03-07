@@ -56,7 +56,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 		void ExecuteSelected();
-		void EnsureVisibleSelected();
+		void EnsureVisibleSelected(std::int32_t offset = 0);
 		void AddCustomLevels();
 		void AddLevel(const StringView levelFile);
 	};

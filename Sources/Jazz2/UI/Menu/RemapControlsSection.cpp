@@ -372,26 +372,32 @@ namespace Jazz2::UI::Menu
 		} else if (_root->ActionHit(PlayerAction::Up)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
+			std::int32_t offset;
 			if (_selectedIndex > 0) {
 				_selectedIndex--;
+				offset = -ItemHeight / 3;
 			} else {
 				_selectedIndex = (std::int32_t)(_items.size() - 1);
+				offset = 0;
 			}
 			_selectedColumn = std::min({ _selectedColumn, (std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1 });
 
-			EnsureVisibleSelected();
+			EnsureVisibleSelected(offset);
 			OnSelectionChanged(_items[_selectedIndex]);
 		} else if (_root->ActionHit(PlayerAction::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
+			std::int32_t offset;
 			if (_selectedIndex < (std::int32_t)(_items.size() - 1)) {
 				_selectedIndex++;
+				offset = ItemHeight / 3;
 			} else {
 				_selectedIndex = 0;
+				offset = 0;
 			}
 			_selectedColumn = std::min({ _selectedColumn, (std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1 });
 
-			EnsureVisibleSelected();
+			EnsureVisibleSelected(offset);
 			OnSelectionChanged(_items[_selectedIndex]);
 		} else if (_root->ActionHit(PlayerAction::Left)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);

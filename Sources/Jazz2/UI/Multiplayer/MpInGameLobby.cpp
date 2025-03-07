@@ -5,11 +5,13 @@
 #include "../../LevelHandler.h"
 #include "../../PreferencesCache.h"
 #include "../Menu/IMenuContainer.h"
+#include "../Menu/MenuResources.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
 
 using namespace Jazz2::Multiplayer;
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Multiplayer
 {
@@ -18,6 +20,9 @@ namespace Jazz2::UI::Multiplayer
 			_allowedPlayerTypes(0), _isVisible(false)
 	{
 		auto& resolver = ContentResolver::Get();
+
+		_metadata = resolver.RequestMetadata("UI/MainMenu"_s);
+		ASSERT_MSG(_metadata != nullptr, "Cannot load required metadata");
 
 		_smallFont = resolver.GetFont(FontType::Small);
 	}
@@ -38,7 +43,9 @@ namespace Jazz2::UI::Multiplayer
 			UpdatePressedActions();
 
 			if (ActionHit(PlayerAction::Fire)) {
-				_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
+				if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
+					_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
+				}
 			} else if (ActionHit(PlayerAction::Left)) {
 				_selectedPlayerType--;
 				if (_selectedPlayerType < 0) {
@@ -96,23 +103,14 @@ namespace Jazz2::UI::Multiplayer
 
 			Vector2i center = ViewSize / 2;
 
-			_smallFont->DrawString(this, _levelHandler->_lobbyMessage, charOffset, center.X, center.Y / 2, MainLayer,
+			DrawStringShadow(_levelHandler->_lobbyMessage, charOffset, center.X, center.Y / 2, MainLayer,
 				Alignment::Center, Font::DefaultColor, 1.0f, 0.7f, 0.6f, 0.6f, 0.4f, 1.0f);
 
-			_smallFont->DrawString(this, _("Character"), charOffset, center.X, center.Y + 10.0f, MainLayer,
+			DrawStringShadow(_("Character"), charOffset, center.X, center.Y + 10.0f, MainLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-			float offset, spacing;
-			if (_availableCharacters == 1) {
-				offset = 0.0f;
-				spacing = 0.0f;
-			} else if (_availableCharacters == 2) {
-				offset = 50.0f;
-				spacing = 100.0f;
-			} else {
-				offset = 100.0f;
-				spacing = 300.0f / _availableCharacters;
-			}
+			float offset = 100.0f;
+			float spacing = 100.0f;
 
 			/*if (contentBounds.W < 480) {
 				offset *= 0.7f;
@@ -121,31 +119,40 @@ namespace Jazz2::UI::Multiplayer
 
 			for (std::int32_t j = 0; j < _availableCharacters; j++) {
 				float x = center.X - offset + j * spacing;
-				if ((std::int32_t)_selectedPlayerType == j) {
-					//DrawElement(MenuGlow, 0, x, center.Y - 12.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(playerTypes[j]) + 3) * 0.4f, 2.2f, true, true);
+				if ((_allowedPlayerTypes & (1 << j)) == 0 || j ==2) {
+					if (_selectedPlayerType == j) {
+						DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 20, Alignment::Center,
+							Colorf(1.0f, 1.0f, 1.0f, 0.2f), 3.6f, 5.0f, true, true);
+					}
 
+					DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
+						Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.34f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
+				} else if ((std::int32_t)_selectedPlayerType == j) {
 					float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-					//DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 10, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
+					DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 20, Alignment::Center,
+						Colorf(1.0f, 1.0f, 1.0f, 0.3f * size), 3.6f * size, 5.0f * size, true, true);
 
-					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
+					DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
 						Alignment::Center, playerColors[j], size, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 				} else {
 					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
-						Alignment::Center, Font::TransparentDefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
+						Alignment::Center, Font::TransparentDefaultColor, 0.9f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 				}
 			}
 
 			//if (_selectedIndex == i) {
 				float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				_smallFont->DrawString(this, "<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 50.0f, MainLayer,
-					Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.7f);
-				_smallFont->DrawString(this, ">"_s, charOffset, center.X + 110.0f + 30.0f * size, center.Y + 50.0f, MainLayer,
-					Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.7f);
+				Colorf fontColor = Font::DefaultColor;
+				fontColor.SetAlpha(std::min(1.0f, 0.6f + _animation));
+				DrawStringShadow("<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 50.0f, MainLayer,
+					Alignment::Center, fontColor, 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
+				DrawStringShadow(">"_s, charOffset, center.X + 110.0f + 30.0f * size, center.Y + 50.0f, MainLayer,
+					Alignment::Center, fontColor, 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
 			//}
 
-			_smallFont->DrawString(this, _("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, (ViewSize.Y + (center.Y + 80.0f)) / 2, MainLayer,
+			DrawStringShadow(_("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, (ViewSize.Y + (center.Y + 80.0f)) / 2, MainLayer,
 				Alignment::Bottom, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 		}
 
@@ -159,9 +166,10 @@ namespace Jazz2::UI::Multiplayer
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y /** (float)ViewSize.Y*/;
+				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
+				Vector2i center = ViewSize / 2;
 
-				if (y < 0.7f) {
+				if (y >= center.Y + 50.0f - 20.f && y <= center.Y + 50.0f + 20.f) {
 					if (x < 0.333f) {
 						_selectedPlayerType = 0;
 					} else if (x < 0.666f) {
@@ -170,8 +178,10 @@ namespace Jazz2::UI::Multiplayer
 						_selectedPlayerType = 2;
 					}
 					_animation = 0.0f;
-				} else {
-					_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
+				} else if (y >= (ViewSize.Y + (center.Y + 80.0f)) / 2 - 20.f && y <= (ViewSize.Y + (center.Y + 80.0f)) / 2 + 20.f) {
+					if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
+						_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
+					}
 				}
 			}
 		}
@@ -225,6 +235,48 @@ namespace Jazz2::UI::Multiplayer
 		}
 
 		_pressedActions |= ControlScheme::FetchNavigation(_levelHandler->_pressedKeys, ArrayView(joyStates, joyStatesCount));
+	}
+
+	void MpInGameLobby::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
+	{
+		auto* res = _metadata->FindAnimation(state);
+		if (res == nullptr) {
+			return;
+		}
+
+		if (frame < 0) {
+			frame = res->FrameOffset + ((std::int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
+		}
+
+		GenericGraphicResource* base = res->Base;
+		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
+		if (!unaligned) {
+			adjustedPos.X = std::round(adjustedPos.X);
+			adjustedPos.Y = std::round(adjustedPos.Y);
+		}
+
+		Vector2i texSize = base->TextureDiffuse->size();
+		std::int32_t col = frame % base->FrameConfiguration.X;
+		std::int32_t row = frame / base->FrameConfiguration.X;
+		Vector4f texCoords = Vector4f(
+			float(base->FrameDimensions.X) / float(texSize.X),
+			float(base->FrameDimensions.X * col) / float(texSize.X),
+			float(base->FrameDimensions.Y) / float(texSize.Y),
+			float(base->FrameDimensions.Y * row) / float(texSize.Y)
+		);
+
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
+	}
+
+	void MpInGameLobby::DrawStringShadow(StringView text, int& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
+		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
+	{
+		std::int32_t charOffsetShadow = charOffset;
+		_smallFont->DrawString(this, text, charOffsetShadow, x, y + 2.8f * scale, z - 10,
+			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		_smallFont->DrawString(this, text, charOffset, x, y, z,
+			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
 }
 
