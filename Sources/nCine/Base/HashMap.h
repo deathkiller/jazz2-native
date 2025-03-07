@@ -6,6 +6,7 @@
 namespace nCine
 {
 	// Use `flat_hash_map` from Parallel Hashmap library
+	/** @brief Generic hash map */
 	template <class K, class V,
 #if defined(DEATH_TARGET_32BIT)
 		class Hash = CityHash32Func<K>,

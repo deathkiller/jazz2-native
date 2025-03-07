@@ -100,9 +100,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Kicks a given peer from the server */
 		void Kick(const Peer& peer, Reason reason);
 
-		/** @brief Converts the specified IPv4 address to the string representation */
+		/** @brief Converts the specified IPv4 endpoint to the string representation */
 		static String AddressToString(const struct in_addr& address, std::uint16_t port);
-		/** @brief Converts the specified IPv6 address to the string representation */
+		/** @brief Converts the specified IPv6 endpoint to the string representation */
 		static String AddressToString(const struct in6_addr& address, std::uint16_t port);
 
 	protected:
