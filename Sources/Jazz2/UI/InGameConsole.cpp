@@ -68,20 +68,20 @@ namespace Jazz2::UI
 
 			// Current line
 			std::int32_t charOffset = 0, charOffsetShadow = 0;
-			_smallFont->DrawString(this, ">"_s, charOffsetShadow, currentLinePos.X - 16.0f + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 200,
+			_smallFont->DrawString(this, ">"_s, charOffsetShadow, currentLinePos.X - 16.0f + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 100,
 				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, ">"_s, charOffset, currentLinePos.X - 16.0f, currentLinePos.Y, FontLayer + 200,
+			_smallFont->DrawString(this, ">"_s, charOffset, currentLinePos.X - 16.0f, currentLinePos.Y, FontLayer + 100,
 				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 
 			StringView currentLine = _currentLine;
-			_smallFont->DrawString(this, currentLine, charOffsetShadow, currentLinePos.X + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 200,
+			_smallFont->DrawString(this, currentLine, charOffsetShadow, currentLinePos.X + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 100,
 				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, currentLine, charOffset, currentLinePos.X, currentLinePos.Y, FontLayer + 200,
+			_smallFont->DrawString(this, currentLine, charOffset, currentLinePos.X, currentLinePos.Y, FontLayer + 100,
 				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 
 			// Carret
 			Vector2f textToCursorSize = _smallFont->MeasureString(StringView{_currentLine, _textCursor}, 0.8f);
-			DrawSolid(Vector2f(currentLinePos.X + textToCursorSize.X + 1.0f, currentLinePos.Y - 7.0f), FontLayer + 220, Vector2f(1.0f, 12.0f),
+			DrawSolid(Vector2f(currentLinePos.X + textToCursorSize.X + 1.0f, currentLinePos.Y - 7.0f), FontLayer + 120, Vector2f(1.0f, 12.0f),
 				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 		}
 
@@ -110,9 +110,9 @@ namespace Jazz2::UI
 					color = Font::DefaultColor; color.A *= alpha;
 
 					std::int32_t charOffset = 0, charOffsetShadow = 0;
-					_smallFont->DrawString(this, "›"_s, charOffsetShadow, historyLinePos.X - 13.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 200,
+					_smallFont->DrawString(this, "›"_s, charOffsetShadow, historyLinePos.X - 13.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 100,
 								Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
-					_smallFont->DrawString(this, "›"_s, charOffset, historyLinePos.X - 13.0f, historyLinePos.Y, FontLayer + 200,
+					_smallFont->DrawString(this, "›"_s, charOffset, historyLinePos.X - 13.0f, historyLinePos.Y, FontLayer + 100,
 						Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 					break;
 				}
@@ -122,9 +122,9 @@ namespace Jazz2::UI
 			}
 
 			std::int32_t charOffset = 0, charOffsetShadow = 0;
-			_smallFont->DrawString(this, line.Message, charOffsetShadow, historyLinePos.X, historyLinePos.Y + 2.0f, FontShadowLayer + 200,
+			_smallFont->DrawString(this, line.Message, charOffsetShadow, historyLinePos.X, historyLinePos.Y + 2.0f, FontShadowLayer + 100,
 						Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, line.Message, charOffset, historyLinePos.X, historyLinePos.Y, FontLayer + 200,
+			_smallFont->DrawString(this, line.Message, charOffset, historyLinePos.X, historyLinePos.Y, FontLayer + 100,
 				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 
 			historyLinePos.Y -= 16.0f;

@@ -99,6 +99,7 @@ namespace Jazz2::UI
 		_touchButtons[7] = CreateTouchButton(PlayerAction::Run, TouchRun, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
 		_touchButtons[8] = CreateTouchButton(PlayerAction::ChangeWeapon, TouchChange, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
 		_touchButtons[9] = CreateTouchButton(PlayerAction::Menu, TouchPause, Alignment::TopRight | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
+		_touchButtons[10] = CreateTouchButton(PlayerAction::Console, AnimState::Default, Alignment::TopLeft | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
 	}
 
 	HUD::~HUD()
@@ -213,47 +214,46 @@ namespace Jazz2::UI
 		DrawActiveBoss(adjustedView);
 		DrawLevelText(charOffset);
 
-		if (!players.empty()) {
-			Actors::Player* player = players[0];
-
-			// Touch Controls
-			if (_touchButtonsTimer > 0.0f) {
-				for (auto& button : _touchButtons) {
-					if (button.Graphics == nullptr) {
-						continue;
-					}
-#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
-					if (button.Action == PlayerAction::Menu && PreferencesCache::UseNativeBackButton) {
-						continue;
-					}
-#endif
-					float x = button.Left;
-					float y = button.Top;
-					if ((button.Align & Alignment::Right) == Alignment::Right) {
-						x = ViewSize.X - button.Width * 0.5f - x;
-					} else {
-						x = x + button.Width * 0.5f;
-					}
-					if ((button.Align & Alignment::Bottom) == Alignment::Bottom) {
-						y = ViewSize.Y - button.Height * 0.5f - y;
-					} else {
-						y = y + button.Height * 0.5f;
-					}
-					if ((button.Align & Fixed) != Fixed) {
-						if ((button.Align & Alignment::Right) == Alignment::Right) {
-							x -= PreferencesCache::TouchRightPadding.X;
-							y += PreferencesCache::TouchRightPadding.Y;
-						} else {
-							x += PreferencesCache::TouchLeftPadding.X;
-							y += PreferencesCache::TouchLeftPadding.Y;
-						}
-					}
-
-					Colorf color = (button.Action == PlayerAction::Run && player->_isRunPressed ? Colorf(0.6f, 0.6f, 0.6f) : Colorf::White);
-
-					DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(std::round(x - button.Width * 0.5f), std::round(y - button.Height * 0.5f)),
-						TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
+		// Touch Controls
+		if (_touchButtonsTimer > 0.0f) {
+			for (auto& button : _touchButtons) {
+				if (button.Graphics == nullptr) {
+					continue;
 				}
+				if (players.empty() && button.Action != PlayerAction::Menu && button.Action != PlayerAction::Console) {
+					continue;
+				}
+#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
+				if (button.Action == PlayerAction::Menu && PreferencesCache::UseNativeBackButton) {
+					continue;
+				}
+#endif
+				float x = button.Left;
+				float y = button.Top;
+				if ((button.Align & Alignment::Right) == Alignment::Right) {
+					x = ViewSize.X - button.Width * 0.5f - x;
+				} else {
+					x = x + button.Width * 0.5f;
+				}
+				if ((button.Align & Alignment::Bottom) == Alignment::Bottom) {
+					y = ViewSize.Y - button.Height * 0.5f - y;
+				} else {
+					y = y + button.Height * 0.5f;
+				}
+				if ((button.Align & Fixed) != Fixed) {
+					if ((button.Align & Alignment::Right) == Alignment::Right) {
+						x -= PreferencesCache::TouchRightPadding.X;
+						y += PreferencesCache::TouchRightPadding.Y;
+					} else {
+						x += PreferencesCache::TouchLeftPadding.X;
+						y += PreferencesCache::TouchLeftPadding.Y;
+					}
+				}
+
+				Colorf color = (button.Action == PlayerAction::Run && players[0]->_isRunPressed ? Colorf(0.6f, 0.6f, 0.6f) : Colorf::White);
+
+				DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(std::round(x - button.Width * 0.5f), std::round(y - button.Height * 0.5f)),
+					TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
 			}
 		}
 

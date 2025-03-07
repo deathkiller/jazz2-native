@@ -119,7 +119,7 @@ namespace Jazz2::UI::Multiplayer
 
 			for (std::int32_t j = 0; j < _availableCharacters; j++) {
 				float x = center.X - offset + j * spacing;
-				if ((_allowedPlayerTypes & (1 << j)) == 0 || j ==2) {
+				if ((_allowedPlayerTypes & (1 << j)) == 0) {
 					if (_selectedPlayerType == j) {
 						DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 20, Alignment::Center,
 							Colorf(1.0f, 1.0f, 1.0f, 0.2f), 3.6f, 5.0f, true, true);
@@ -131,7 +131,7 @@ namespace Jazz2::UI::Multiplayer
 					float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
 					DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 20, Alignment::Center,
-						Colorf(1.0f, 1.0f, 1.0f, 0.3f * size), 3.6f * size, 5.0f * size, true, true);
+						Colorf(1.0f, 1.0f, 1.0f, 0.26f * size), 3.6f * size, 5.0f * size, true, true);
 
 					DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
 						Alignment::Center, playerColors[j], size, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
@@ -153,7 +153,7 @@ namespace Jazz2::UI::Multiplayer
 			//}
 
 			DrawStringShadow(_("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, (ViewSize.Y + (center.Y + 80.0f)) / 2, MainLayer,
-				Alignment::Bottom, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
+				Alignment::Center, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 		}
 
 		return true;
@@ -169,16 +169,16 @@ namespace Jazz2::UI::Multiplayer
 				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
 				Vector2i center = ViewSize / 2;
 
-				if (y >= center.Y + 50.0f - 20.f && y <= center.Y + 50.0f + 20.f) {
-					if (x < 0.333f) {
+				if (y >= center.Y + 50.0f - 24.f && y <= center.Y + 50.0f + 24.0f) {
+					if (x < 0.42f) {
 						_selectedPlayerType = 0;
-					} else if (x < 0.666f) {
+					} else if (x <= 0.58f) {
 						_selectedPlayerType = 1;
 					} else {
 						_selectedPlayerType = 2;
 					}
 					_animation = 0.0f;
-				} else if (y >= (ViewSize.Y + (center.Y + 80.0f)) / 2 - 20.f && y <= (ViewSize.Y + (center.Y + 80.0f)) / 2 + 20.f) {
+				} else if (y >= ((ViewSize.Y + (center.Y + 80.0f)) / 2) - 24.f && y <= ((ViewSize.Y + (center.Y + 80.0f)) / 2) + 24.f) {
 					if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
 						_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
 					}
