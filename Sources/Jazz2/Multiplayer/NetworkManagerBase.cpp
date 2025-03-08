@@ -295,9 +295,10 @@ namespace Jazz2::Multiplayer
 		}
 
 		std::size_t addressLength = strnlen(addressString, sizeof(addressString));
-
-		std::int32_t totalLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
-		return String(addressString, totalLength);
+		if (port != 0) {
+			addressLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
+		}
+		return String(addressString, addressLength);
 	}
 
 	String NetworkManagerBase::AddressToString(const struct in6_addr& address, std::uint16_t port)
@@ -325,8 +326,15 @@ namespace Jazz2::Multiplayer
 			addressLength++;
 		}
 
-		std::int32_t totalLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
-		return String(addressString, totalLength);
+		if (port != 0) {
+			addressLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
+		}
+		return String(addressString, addressLength);
+	}
+
+	String NetworkManagerBase::AddressToString(const Peer& peer)
+	{
+		return AddressToString(peer._enet->address.host);
 	}
 
 	ConnectionResult NetworkManagerBase::OnPeerConnected(const Peer& peer, std::uint32_t clientData)

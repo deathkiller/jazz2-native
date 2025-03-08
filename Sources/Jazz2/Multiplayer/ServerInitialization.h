@@ -16,20 +16,20 @@ namespace Jazz2::Multiplayer
 	*/
 	struct ServerConfiguration
 	{
-		/** @brief Multiplayer game mode */
-		MpGameMode GameMode;
 		/** @brief Server name */
 		String ServerName;
-		/** @brief Server port */
-		std::uint16_t ServerPort;
-		/** @brief Whether the server is private (i.e. not visible in the server list) */
-		bool IsPrivate;
 		/** @brief Password of the server */
 		String ServerPassword;
 		/** @brief Welcome message in the lobby */
 		String WelcomeMessage;
 		/** @brief Maximum number of players */
 		std::uint32_t MaxPlayerCount;
+		/** @brief Multiplayer game mode */
+		MpGameMode GameMode;
+		/** @brief Server port */
+		std::uint16_t ServerPort;
+		/** @brief Whether the server is private (i.e. not visible in the server list) */
+		bool IsPrivate;
 		/** @brief Allowed player types as bitmask of @ref PlayerType */
 		std::uint8_t AllowedPlayerTypes;
 		/** @brief Time after which inactive players will be kicked, in seconds, `-1` to disable */

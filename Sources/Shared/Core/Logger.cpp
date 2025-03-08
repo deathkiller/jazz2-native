@@ -3,6 +3,7 @@
 #if defined(DEATH_TRACE)
 
 #include <stdarg.h>
+#include <cstdio>
 
 #if defined(DEATH_TRACE_ASYNC)
 #	include <algorithm>

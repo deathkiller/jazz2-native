@@ -780,6 +780,16 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 			// Connected client is newer than server, reject it
 			return Reason::IncompatibleVersion;
 		}
+
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (_networkManager->GetPeerCount() > serverConfig.MaxPlayerCount) {
+			return Reason::ServerIsFull;
+		}
+
+		auto address = NetworkManagerBase::AddressToString(peer);
+		if (serverConfig.BannedIPAddresses.contains(address)) {
+			return Reason::Banned;
+		}
 	} else {
 		MemoryStream packet(64 + MaxPlayerNameLength);
 		packet.Write("J2R ", 4);
@@ -911,13 +921,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				MemoryStream packet(data);
 				char gameID[4];
 				packet.Read(gameID, 4);
-
 				std::uint64_t gameVersion = packet.ReadVariableUint64();
-				std::uint64_t uuid1 = packet.ReadValue<std::uint64_t>();
-				std::uint64_t uuid2 = packet.ReadValue<std::uint64_t>();
-
-				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: 0x%016llX%016llX",
-					peer._enet, 4, gameID, gameVersion, uuid1, uuid2);
 
 				constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL; // Exclude patch from version check
 				constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
@@ -927,13 +931,35 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					return;
 				}
 
-				// TODO: Check Uuid for whitelist (Reason::NotInWhitelist)
+				StaticArray<16, std::uint8_t> uuid;
+				packet.Read(uuid.data(), uuid.size());
+
+				String uniquePlayerId{NoInit, 39};
+				std:int32_t uniquePlayerIdLength = formatString(uniquePlayerId.data(), uniquePlayerId.size(), "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+					uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
+				DEATH_DEBUG_ASSERT(uniquePlayerId.size() == uniquePlayerIdLength);
+
+				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: %s",
+					peer._enet, 4, gameID, gameVersion, uniquePlayerId);
+
+				const auto& serverConfig = _networkManager->GetServerConfiguration();
+				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
+					_networkManager->Kick(peer, Reason::Banned);
+					return;
+				}
+				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
+					_networkManager->Kick(peer, Reason::NotInWhitelist);
+					return;
+				}
 
 				std::uint32_t passwordLength = packet.ReadVariableUint32();
 				String password = String(NoInit, passwordLength);
 				packet.Read(password.data(), passwordLength);
 
-				// TODO: Check password (Reason::InvalidPassword)
+				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
+					_networkManager->Kick(peer, Reason::InvalidPassword);
+					return;
+				}
 
 				std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
 
@@ -951,8 +977,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist) / (Reason::Requires3rdPartyAuthProvider)
 
 				if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
-					globalPeerDesc->Uuid1 = uuid1;
-					globalPeerDesc->Uuid2 = uuid2;
+					globalPeerDesc->Uuid = std::move(uuid);
 					globalPeerDesc->PlayerName = std::move(playerName);
 					globalPeerDesc->IsAuthenticated = true;
 				} else {

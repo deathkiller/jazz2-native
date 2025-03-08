@@ -89,7 +89,7 @@ namespace Jazz2::Multiplayer
 		NetworkState GetState() const;
 		/** @brief Returns mean round trip time to the server, in milliseconds */
 		std::uint32_t GetRoundTripTimeMs() const;
-		/** @brief Returns IPv4 and IPv6 addresses and ports of the server */
+		/** @brief Returns all IPv4 and IPv6 addresses along with ports of the server */
 		Array<String> GetServerEndpoints() const;
 
 		/** @brief Sends a packet to a given peer */
@@ -102,9 +102,11 @@ namespace Jazz2::Multiplayer
 		void Kick(const Peer& peer, Reason reason);
 
 		/** @brief Converts the specified IPv4 endpoint to the string representation */
-		static String AddressToString(const struct in_addr& address, std::uint16_t port);
+		static String AddressToString(const struct in_addr& address, std::uint16_t port = 0);
 		/** @brief Converts the specified IPv6 endpoint to the string representation */
-		static String AddressToString(const struct in6_addr& address, std::uint16_t port);
+		static String AddressToString(const struct in6_addr& address, std::uint16_t port = 0);
+		/** @brief Converts the endpoint of the specified peer to the string representation */
+		static String AddressToString(const Peer& peer);
 
 	protected:
 		/** @brief Called when a peer connects to the local server or the local client connects to a server */
