@@ -1401,35 +1401,35 @@ namespace Death { namespace Containers {
 
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		// Pull documentation of all public methods in base classes
-		using SmallVectorBase<SmallVectorSizeType<T>>::size;
-		using SmallVectorBase<SmallVectorSizeType<T>>::capacity;
-		using SmallVectorBase<SmallVectorSizeType<T>>::empty;
-		using SmallVectorTemplateCommon<T>::begin;
-		using SmallVectorTemplateCommon<T>::end;
-		using SmallVectorTemplateCommon<T>::rbegin;
-		using SmallVectorTemplateCommon<T>::rend;
-		using SmallVectorTemplateCommon<T>::size_in_bytes;
-		using SmallVectorTemplateCommon<T>::max_size;
-		using SmallVectorTemplateCommon<T>::capacity_in_bytes;
-		using SmallVectorTemplateCommon<T>::data;
-		using SmallVectorTemplateCommon<T>::operator[];
-		using SmallVectorTemplateCommon<T>::front;
-		using SmallVectorTemplateCommon<T>::back;
-		using SmallVectorImpl<T>::clear;
-		using SmallVectorImpl<T>::resize;
-		using SmallVectorImpl<T>::resize_for_overwrite;
-		using SmallVectorImpl<T>::truncate;
-		using SmallVectorImpl<T>::reserve;
-		using SmallVectorTemplateBase<T>::push_back;
-		using SmallVectorTemplateBase<T>::pop_back;
-		using SmallVectorImpl<T>::pop_back_n;
-		using SmallVectorImpl<T>::pop_back_val;
-		using SmallVectorImpl<T>::swap;
-		using SmallVectorImpl<T>::append;
-		using SmallVectorImpl<T>::assign;
-		using SmallVectorImpl<T>::erase;
-		using SmallVectorImpl<T>::eraseUnordered;
-		using SmallVectorImpl<T>::insert;
+		using SmallVectorBase::size;
+		using SmallVectorBase::capacity;
+		using SmallVectorBase::empty;
+		using SmallVectorTemplateCommon::begin;
+		using SmallVectorTemplateCommon::end;
+		using SmallVectorTemplateCommon::rbegin;
+		using SmallVectorTemplateCommon::rend;
+		using SmallVectorTemplateCommon::size_in_bytes;
+		using SmallVectorTemplateCommon::max_size;
+		using SmallVectorTemplateCommon::capacity_in_bytes;
+		using SmallVectorTemplateCommon::data;
+		using SmallVectorTemplateCommon::operator[];
+		using SmallVectorTemplateCommon::front;
+		using SmallVectorTemplateCommon::back;
+		using SmallVectorImpl::clear;
+		using SmallVectorImpl::resize;
+		using SmallVectorImpl::resize_for_overwrite;
+		using SmallVectorImpl::truncate;
+		using SmallVectorImpl::reserve;
+		using SmallVectorTemplateBase::push_back;
+		using SmallVectorTemplateBase::pop_back;
+		using SmallVectorImpl::pop_back_n;
+		using SmallVectorImpl::pop_back_val;
+		using SmallVectorImpl::swap;
+		using SmallVectorImpl::append;
+		using SmallVectorImpl::assign;
+		using SmallVectorImpl::erase;
+		using SmallVectorImpl::eraseUnordered;
+		using SmallVectorImpl::insert;
 #endif
 	};
 
