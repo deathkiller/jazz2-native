@@ -57,11 +57,6 @@ namespace Jazz2
 		virtual bool ConnectToServer(StringView address, std::uint16_t port) = 0;
 		/** @brief Creates a multiplayer server */
 		virtual bool CreateServer(Multiplayer::ServerInitialization&& serverInit) = 0;
-
-		/** @brief Returns name of the server */
-		virtual StringView GetServerName() const = 0;
-		/** @brief Sets name of the server */
-		virtual void SetServerName(StringView value) = 0;
 #endif
 
 		/** @brief Returns current state flags */

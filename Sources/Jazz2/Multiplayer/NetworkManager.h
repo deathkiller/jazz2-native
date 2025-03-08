@@ -4,12 +4,22 @@
 
 #include "NetworkManagerBase.h"
 #include "MpGameMode.h"
+#include "ServerInitialization.h"
 #include "../PlayerType.h"
-
-#include "../../nCine/Base/HashMap.h"
 
 namespace Jazz2::Multiplayer
 {
+	/**
+		@brief Client configuration
+	*/
+	struct ClientConfiguration
+	{
+		/** @brief Multiplayer game mode */
+		MpGameMode GameMode;
+		/** @brief Welcome message in the lobby */
+		String WelcomeMessage;
+	};
+
 	/**
 		@brief Manages game-specific network connections
 
@@ -34,42 +44,42 @@ namespace Jazz2::Multiplayer
 			PeerDesc();
 		};
 
-		// Server Configuration
-		/** @brief Current multiplayer game mode */
-		MpGameMode GameMode;
-		/** @brief Server name */
-		String ServerName;
-		/** @brief Password of the server */
-		String ServerPassword;
-		/** @brief Welcome message in the lobby */
-		String WelcomeMessage;
-		/** @brief Maximum number of players */
-		std::uint32_t MaxPlayerCount;
-		/** @brief Allowed player types as bitmask of @ref PlayerType */
-		std::uint8_t AllowedPlayerTypes;
-		/** @brief Time after which inactive players will be kicked, in seconds, `-1` to disable */
-		std::int32_t IdleKickTimeSecs;
-		/** @brief List of whitelisted unique player IDs, value can contain user-defined comment */
-		HashMap<String, String> WhitelistedUniquePlayerIDs;
-		/** @brief List of banned unique player IDs, value can contain user-defined reason */
-		HashMap<String, String> BannedUniquePlayerIDs;
-		/** @brief List of banned IP addresses, value can contain user-defined reason */
-		HashMap<String, String> BannedIPAddresses;
-
 		NetworkManager();
 		~NetworkManager();
 
 		NetworkManager(const NetworkManager&) = delete;
 		NetworkManager& operator=(const NetworkManager&) = delete;
 
+		bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData) override;
+
+		/** @brief Creates a server that accepts incoming connections */
+		virtual bool CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig);
+
+		void Dispose() override;
+
+		/** @brief Returns client configuration */
+		ClientConfiguration& GetClientConfiguration();
+
+		/** @brief Returns server configuration */
+		ServerConfiguration& GetServerConfiguration();
+
+		/** @brief Returns connected peer count */
+		std::uint32_t GetPeerCount() const;
 		/** @brief Returns global (session) peer descriptor for the specified connected peer */
 		PeerDesc* GetPeerDescriptor(const Peer& peer);
 
+		static ServerConfiguration CreateDefaultServerConfiguration();
+
 	protected:
+		using NetworkManagerBase::CreateServer;
+
 		ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
 		void OnPeerDisconnected(const Peer& peer, Reason reason) override;
 
 	private:
+		std::unique_ptr<ClientConfiguration> _clientConfig;
+		std::unique_ptr<ServerConfiguration> _serverConfig;
+		std::unique_ptr<ServerDiscovery> _discovery;
 		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer descriptor
 	};
 }

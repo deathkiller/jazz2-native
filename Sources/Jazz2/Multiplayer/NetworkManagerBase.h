@@ -2,6 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
+#include "ConnectionResult.h"
 #include "Peer.h"
 #include "Reason.h"
 #include "ServerDiscovery.h"
@@ -69,7 +70,7 @@ namespace Jazz2::Multiplayer
 
 	public:
 		/** @brief Maximum connected peer count */
-		static constexpr std::size_t MaxPeerCount = 128;
+		static constexpr std::uint32_t MaxPeerCount = 128;
 
 		NetworkManagerBase();
 		~NetworkManagerBase();
@@ -78,11 +79,11 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase& operator=(const NetworkManagerBase&) = delete;
 
 		/** @brief Creates a client connection to a remote server */
-		bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
+		virtual bool CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
 		/** @brief Creates a server that accepts incoming connections */
-		bool CreateServer(INetworkHandler* handler, std::uint16_t port, bool isPrivate);
+		virtual bool CreateServer(INetworkHandler* handler, std::uint16_t port);
 		/** @brief Disposes all active connections */
-		void Dispose();
+		virtual void Dispose();
 
 		/** @brief Returns state of network connection */
 		NetworkState GetState() const;
@@ -120,7 +121,6 @@ namespace Jazz2::Multiplayer
 		SmallVector<_ENetPeer*, 1> _peers;
 		INetworkHandler* _handler;
 		Mutex _lock;
-		std::unique_ptr<ServerDiscovery> _discovery;
 
 		static void InitializeBackend();
 		static void ReleaseBackend();

@@ -236,7 +236,6 @@ namespace Jazz2::Multiplayer
 		bool _ignorePackets;
 		bool _enableLedgeClimb;
 		Threading::Spinlock _lock;
-		String _lobbyMessage;
 
 #if defined(DEATH_DEBUG)
 		std::int32_t _debugAverageUpdatePacketSize;
@@ -252,7 +251,7 @@ namespace Jazz2::Multiplayer
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
 
-		void SetLobbyMessage(StringView message);
+		void SetWelcomeMessage(StringView message);
 		void SetPlayerReady(PlayerType playerType);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);

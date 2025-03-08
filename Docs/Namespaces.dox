@@ -83,89 +83,6 @@ See also @ref third-party for the licenses of the libraries used.
 	Afterwards, it removes the definitions that cause the most collisions using @cpp #undef @ce.
 */
 
-/** @dir Shared/Base
-	@brief Basic utilities for memory management and type information
-*/
-/** @file Shared/Base/IDisposable.h
-	@brief Interface @ref Death::IDisposable
-*/
-/** @file Shared/Base/Memory.h
-	@brief Class @ref Death::Memory
-*/
-/** @file Shared/Base/Move.h
-	@brief Function @ref Death::forward(), @ref Death::move(), @ref Death::swap()
-*/
-/** @file Shared/Base/TypeInfo.h
-	@brief Function @ref Death::runtime_cast()
-*/
-
-/** @dir Shared/Containers
-	@brief Namespace @ref Death::Containers, @ref Death::Containers::Literals
-*/
-/** @namespace Death::Containers
-	@brief Container implementations
-
-	Implementations for various containers which don't have direct equivalents in
-	STL or are better tailored to specific use cases than general standard
-	implementations.
-*/
-/** @namespace Death::Containers::Literals
-	@brief Container literals
-
-	Literals for easy construction of string views.
-*/
-/** @file Shared/Containers/Array.h
-	@brief Class @ref Death::Containers::Array
-*/
-/** @file Shared/Containers/ArrayView.h
-	@brief Class @ref Death::Containers::ArrayView, @ref Death::Containers::StaticArrayView
-*/
-/** @file Shared/Containers/DateTime.h
-	@brief Class @ref Death::Containers::DateTime, @ref Death::Containers::TimeSpan
-*/
-/** @file Shared/Containers/Function.h
-	@brief Class @ref Death::Containers::Function, @ref Death::Containers::FunctionData
-*/
-/** @file Shared/Containers/GrowableArray.h
-	@brief Class @ref Death::Containers::ArrayAllocator, @ref Death::Containers::ArrayNewAllocator, @ref Death::Containers::ArrayMallocAllocator, function @ref Death::Containers::arrayAllocatorCast(), @ref Death::Containers::arrayIsGrowable(), @ref Death::Containers::arrayCapacity(), @ref Death::Containers::arrayReserve(), @ref Death::Containers::arrayResize(), @ref Death::Containers::arrayAppend(), @ref Death::Containers::arrayInsert(), @ref Death::Containers::arrayRemove(), @ref Death::Containers::arrayRemoveUnordered(), @ref Death::Containers::arrayRemoveSuffix(), @ref Death::Containers::arrayClear(), @ref Death::Containers::arrayShrink()
-
-	See @ref Containers-Array-growable for more information.
-*/
-/** @file Shared/Containers/Pair.h
-	@brief Class @ref Death::Containers::Pair
-*/
-/** @file Shared/Containers/Reference.h
-	@brief Class @ref Death::Containers::Reference
-*/
-/** @file Shared/Containers/SmallVector.h
-	@brief Class @ref Death::Containers::SmallVector
-*/
-/** @file Shared/Containers/StaticArray.h
-	@brief Class @ref Death::Containers::StaticArray
-*/
-/** @file Shared/Containers/String.h
-	@brief Class @ref Death::Containers::String, tag @ref Death::Containers::AllocatedInit
-*/
-/** @file Shared/Containers/StringUtils.h
-	@brief Namespace @ref Death::Containers::StringUtils
-*/
-/** @namespace Death::Containers::StringUtils
-	@brief String utilities
-*/
-/** @file Shared/Containers/StringView.h
-	@brief Class @ref Death::Containers::BasicStringView, typedef @ref Death::Containers::StringView, @ref Death::Containers::MutableStringView
-*/
-/** @file Shared/Containers/Tags.h
-	@brief Tag @ref Death::Containers::DefaultInit, @ref Death::Containers::ValueInit, @ref Death::Containers::NoInit, @ref Death::Containers::NoCreate, @ref Death::Containers::DirectInit, @ref Death::Containers::InPlaceInit
-*/
-
-/** @dir Shared/Core
-	@brief Namespace @ref Death::Backward, @ref Death::Trace
-*/
-/** @namespace Death::Backward
-	@brief Exception handling implementation
-*/
-
 /** @namespace Death::Cpu
 	@brief Compile-time and runtime CPU instruction set detection and dispatch
 
@@ -611,17 +528,146 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Platform-specific environment helper functions
 */
 
+/** @dir Shared/Base
+	@brief Basic utilities for memory management and type information
+*/
+/** @file Shared/Base/IDisposable.h
+	@brief Interface @ref Death::IDisposable
+*/
+/** @file Shared/Base/Memory.h
+	@brief Class @ref Death::Memory
+*/
+/** @file Shared/Base/Move.h
+	@brief Function @ref Death::forward(), @ref Death::move(), @ref Death::swap()
+*/
+/** @file Shared/Base/TypeInfo.h
+	@brief Function @ref Death::runtime_cast()
+*/
+
+/** @dir Shared/Containers
+	@brief Namespace @ref Death::Containers, @ref Death::Containers::Literals
+*/
+/** @namespace Death::Containers
+	@brief Container implementations
+
+	Implementations for various containers which don't have direct equivalents in
+	STL or are better tailored to specific use cases than general standard
+	implementations.
+*/
+/** @namespace Death::Containers::Literals
+	@brief Container literals
+
+	Literals for easy construction of string views.
+*/
+/** @file Shared/Containers/Array.h
+	@brief Class @ref Death::Containers::Array
+*/
+/** @file Shared/Containers/ArrayView.h
+	@brief Class @ref Death::Containers::ArrayView, @ref Death::Containers::StaticArrayView
+*/
+/** @file Shared/Containers/DateTime.h
+	@brief Class @ref Death::Containers::DateTime, @ref Death::Containers::TimeSpan
+*/
+/** @file Shared/Containers/Function.h
+	@brief Class @ref Death::Containers::Function, @ref Death::Containers::FunctionData
+*/
+/** @file Shared/Containers/GrowableArray.h
+	@brief Class @ref Death::Containers::ArrayAllocator, @ref Death::Containers::ArrayNewAllocator, @ref Death::Containers::ArrayMallocAllocator, function @ref Death::Containers::arrayAllocatorCast(), @ref Death::Containers::arrayIsGrowable(), @ref Death::Containers::arrayCapacity(), @ref Death::Containers::arrayReserve(), @ref Death::Containers::arrayResize(), @ref Death::Containers::arrayAppend(), @ref Death::Containers::arrayInsert(), @ref Death::Containers::arrayRemove(), @ref Death::Containers::arrayRemoveUnordered(), @ref Death::Containers::arrayRemoveSuffix(), @ref Death::Containers::arrayClear(), @ref Death::Containers::arrayShrink()
+
+	See @ref Containers-Array-growable for more information.
+*/
+/** @file Shared/Containers/Pair.h
+	@brief Class @ref Death::Containers::Pair
+*/
+/** @file Shared/Containers/Reference.h
+	@brief Class @ref Death::Containers::Reference
+*/
+/** @file Shared/Containers/SmallVector.h
+	@brief Class @ref Death::Containers::SmallVector
+*/
+/** @file Shared/Containers/StaticArray.h
+	@brief Class @ref Death::Containers::StaticArray
+*/
+/** @file Shared/Containers/String.h
+	@brief Class @ref Death::Containers::String, tag @ref Death::Containers::AllocatedInit
+*/
+/** @file Shared/Containers/StringUtils.h
+	@brief Namespace @ref Death::Containers::StringUtils
+*/
+/** @namespace Death::Containers::StringUtils
+	@brief String utilities
+*/
+/** @file Shared/Containers/StringView.h
+	@brief Class @ref Death::Containers::BasicStringView, typedef @ref Death::Containers::StringView, @ref Death::Containers::MutableStringView
+*/
+/** @file Shared/Containers/Tags.h
+	@brief Tag @ref Death::Containers::DefaultInit, @ref Death::Containers::ValueInit, @ref Death::Containers::NoInit, @ref Death::Containers::NoCreate, @ref Death::Containers::DirectInit, @ref Death::Containers::InPlaceInit
+*/
+
+/** @dir Shared/Core
+	@brief Namespace @ref Death::Backward, @ref Death::Trace
+*/
+/** @file Shared/Core/Backward.h
+	@brief Namespace @ref Death::Backward
+*/
+/** @namespace Death::Backward
+	@brief Exception handling implementation
+*/
+/** @file Shared/Core/Logger.h
+	@brief Class @ref Death::Trace::LoggerBackend, @ref Death::Trace::Logger
+*/
+/** @file Shared/Core/ITraceSink.h
+	@brief Interface @ref Death::ITraceSink
+*/
+
+/** @dir Shared/IO
+	@brief Namespace @ref Death::IO
+*/
+/** @namespace Death::IO
+	@brief File system, streaming and IO-related classes
+*/
+/** @file Shared/IO/AndroidAssetStream.h
+	@brief Class @ref Death::IO::AndroidAssetStream
+*/
+/** @file Shared/IO/BoundedFileStream.h
+	@brief Class @ref Death::IO::BoundedFileStream
+*/
+/** @file Shared/IO/EmscriptenFileStream.h
+	@brief Class @ref Death::IO::EmscriptenFileStream, @ref Death::IO::EmscriptenFilePicker
+*/
+/** @file Shared/IO/FileAccess.h
+	@brief Enum @ref Death::IO::FileAccess
+*/
+/** @file Shared/IO/FileStream.h
+	@brief Class @ref Death::IO::FileStream
+*/
+/** @file Shared/IO/FileSystem.h
+	@brief Class @ref Death::IO::FileSystem
+*/
+/** @file Shared/IO/MemoryStream.h
+	@brief Class @ref Death::IO::MemoryStream
+*/
+/** @file Shared/IO/PakFile.h
+	@brief Class @ref Death::IO::PakFile
+*/
+/** @file Shared/IO/Stream.h
+	@brief Class @ref Death::IO::Stream
+*/
+
 /** @dir Shared/IO/Compression
 	@brief Namespace @ref Death::IO::Compression
 */
 /** @namespace Death::IO::Compression
 	@brief Data compression streaming interfaces
 */
-/** @dir Shared/IO
-	@brief Namespace @ref Death::IO
+/** @file Shared/IO/Compression/DeflateStream.h
+	@brief Class @ref Death::IO::Compression::DeflateStream
 */
-/** @namespace Death::IO
-	@brief File system, streaming and IO-related classes
+/** @file Shared/IO/Compression/Lz4Stream.h
+	@brief Class @ref Death::IO::Compression::Lz4Stream
+*/
+/** @file Shared/IO/Compression/ZstdStream.h
+	@brief Class @ref Death::IO::Compression::ZstdStream
 */
 
 /** @dir Shared/Threading
@@ -629,6 +675,12 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace Death::Threading
 	@brief Multithreading-related classes
+*/
+/** @file Shared/Threading/Event.h
+	@brief Class @ref Death::Threading::Event, typedef @ref Death::Threading::AutoResetEvent, @ref Death::Threading::ManualResetEvent
+*/
+/** @file Shared/Threading/Spinlock.h
+	@brief Class @ref Death::Threading::Spinlock
 */
 
 /** @namespace Death::Trace
@@ -648,8 +700,26 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace nCine
 	@brief Root namespace of nCine game engine
 */
+/** @file nCine/AppConfiguration.h
+	@brief Class @ref nCine::AppConfiguration
+*/
+/** @file nCine/Application.h
+	@brief Class @ref nCine::Application
+*/
 /** @file nCine/CommonConstants.h
 	@brief Common mathematical constants
+*/
+/** @file nCine/I18n.h
+	@brief Class @ref nCine::I18n
+*/
+/** @file nCine/IAppEventHandler.h
+	@brief Interface @ref nCine::IAppEventHandler
+*/
+/** @file nCine/MainApplication.h
+	@brief Class @ref nCine::MainApplication
+*/
+/** @file nCine/ServiceLocator.h
+	@brief Class @ref nCine::ServiceLocator
 */
 /** @dir nCine/Backends
 	@brief Namespace @ref nCine::Backends

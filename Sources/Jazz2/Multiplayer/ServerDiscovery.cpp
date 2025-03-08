@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "NetworkManagerBase.h"
+#include "NetworkManager.h"
 #include "PacketTypes.h"
 #include "../PreferencesCache.h"
 #include "../../nCine/Threading/Thread.h"
@@ -18,8 +18,8 @@ using namespace Death::IO;
 
 namespace Jazz2::Multiplayer
 {
-	ServerDiscovery::ServerDiscovery(INetworkHandler* server, std::uint16_t port)
-		: _server(server), _observer(nullptr), _actualPort(port)
+	ServerDiscovery::ServerDiscovery(NetworkManager* server)
+		: _server(server), _observer(nullptr)
 	{
 		DEATH_DEBUG_ASSERT(server != nullptr, "server is null", );
 
@@ -156,9 +156,10 @@ namespace Jazz2::Multiplayer
 		discoveredServer.Name = String(NoInit, nameLength);
 		packet.Read(discoveredServer.Name.data(), nameLength);
 
-		discoveredServer.GameModeAndFlags = packet.ReadVariableUint32();
-		discoveredServer.CurrentPlayers = packet.ReadVariableUint32();
-		discoveredServer.MaxPlayers = packet.ReadVariableUint32();
+		discoveredServer.Flags = packet.ReadVariableUint32();
+		discoveredServer.GameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
+		discoveredServer.CurrentPlayerCount = packet.ReadVariableUint32();
+		discoveredServer.MaxPlayerCount = packet.ReadVariableUint32();
 
 		nameLength = packet.ReadValue<std::uint8_t>();
 		discoveredServer.LevelName = String(NoInit, nameLength);
@@ -241,22 +242,29 @@ namespace Jazz2::Multiplayer
 						_this->_lastRequest = TimeStamp::now();
 
 						// If server name is empty, it's private and shouldn't respond to discovery messages
-						auto name = _this->_server->GetServerName();
-						if (!name.empty()) {
+						auto& serverConfig = _this->_server->GetServerConfiguration();
+						if (!serverConfig.ServerName.empty()) {
 							MemoryStream packet(512);
 							packet.WriteValue<std::uint64_t>(PacketSignature);
 							packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
-							packet.WriteValue<std::uint16_t>(_this->_actualPort);
+							packet.WriteValue<std::uint16_t>(serverConfig.ServerPort);
 							packet.Write(PreferencesCache::UniquePlayerID.data(), PreferencesCache::UniquePlayerID.size());
 
-							packet.WriteValue<std::uint8_t>((std::uint8_t)name.size());
-							packet.Write(name.data(), (std::uint8_t)name.size());
+							packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.ServerName.size());
+							packet.Write(serverConfig.ServerName.data(), (std::uint8_t)serverConfig.ServerName.size());
 
-							packet.WriteVariableUint32(0); // TODO: GameModeAndFlags
-							//packet.WriteVariableUint32(server->GetCurrentPlayers());
-							packet.WriteVariableUint32(7); // TODO: CurrentPlayers
-							//packet.WriteVariableUint32(server->GetMaxPlayers());
-							packet.WriteVariableUint32((std::uint32_t)NetworkManagerBase::MaxPeerCount); // TODO: MaxPlayers
+							std::uint32_t flags = 0;
+							if (!serverConfig.ServerPassword.empty()) {
+								flags |= 0x01;
+							}
+							if (!serverConfig.WhitelistedUniquePlayerIDs.empty()) {
+								flags |= 0x02;
+							}
+							packet.WriteVariableUint32(flags);
+							packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
+
+							packet.WriteVariableUint32(_this->_server->GetPeerCount());
+							packet.WriteVariableUint32(serverConfig.MaxPlayerCount);
 
 							// TODO: Current level
 							auto levelName = String("unknown/unknown");

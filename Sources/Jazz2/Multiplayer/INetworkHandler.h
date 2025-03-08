@@ -21,11 +21,6 @@ namespace Jazz2::Multiplayer
 	class INetworkHandler
 	{
 	public:
-		/** @brief Returns the local server name */
-		virtual StringView GetServerName() const = 0;
-		/** @brief Sets the local server name */
-		virtual void SetServerName(StringView value) = 0;
-
 		/** @brief Called when a peer connects to the local server or the local client connects to a server */
 		virtual ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) = 0;
 		/** @brief Called when a peer disconnects from the local server or the local client disconnects from a server */
