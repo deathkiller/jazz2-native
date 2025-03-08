@@ -154,8 +154,8 @@ namespace Jazz2::Multiplayer
 				ondemand::object whitelistedUniquePlayerIDs;
 				if (doc["WhitelistedUniquePlayerIDs"].get(whitelistedUniquePlayerIDs) == SUCCESS) {
 					for (auto item : whitelistedUniquePlayerIDs) {
-						std::string_view key = item.unescaped_key();
-						if (!key.empty()) {
+						std::string_view key;
+						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
 							std::string_view value;
 							item.value().get(value);
 							serverConfig.WhitelistedUniquePlayerIDs.emplace(key, value);
@@ -166,8 +166,8 @@ namespace Jazz2::Multiplayer
 				ondemand::object bannedUniquePlayerIDs;
 				if (doc["bannedUniquePlayerIDs"].get(bannedUniquePlayerIDs) == SUCCESS) {
 					for (auto item : bannedUniquePlayerIDs) {
-						std::string_view key = item.unescaped_key();
-						if (!key.empty()) {
+						std::string_view key;
+						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
 							std::string_view value;
 							item.value().get(value);
 							serverConfig.BannedUniquePlayerIDs.emplace(key, value);
@@ -178,8 +178,8 @@ namespace Jazz2::Multiplayer
 				ondemand::object bannedIPAddresses;
 				if (doc["BannedIPAddresses"].get(bannedIPAddresses) == SUCCESS) {
 					for (auto item : bannedIPAddresses) {
-						std::string_view key = item.unescaped_key();
-						if (!key.empty()) {
+						std::string_view key;
+						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
 							std::string_view value;
 							item.value().get(value);
 							serverConfig.BannedIPAddresses.emplace(key, value);
