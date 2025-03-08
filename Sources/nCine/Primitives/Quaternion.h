@@ -5,356 +5,363 @@
 
 namespace nCine
 {
-	using Death::Containers::NoInitT;
-
-	/// Quaternion
-	template<class T>
-	class Quaternion
+	inline namespace Primitives
 	{
-	public:
-		T X, Y, Z, W;
+		using Death::Containers::NoInitT;
 
-		constexpr Quaternion() noexcept
-			: X(T(0)), Y(T(0)), Z(T(0)), W(T(1)) {}
-		explicit Quaternion(NoInitT) noexcept
-			{}
-		constexprQuaternion(T x, T y, T z, T w) noexcept
-			: X(x), Y(y), Z(z), W(w) {}
-		explicit Quaternion(const Vector4<T>& v) noexcept
-			: X(v.X), Y(v.Y), Z(v.Z), W(v.W) {}
-		constexpr Quaternion(const Quaternion& other) noexcept
-			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
-		Quaternion& operator=(const Quaternion& other);
+		/// Quaternion
+		template<class T>
+		class Quaternion
+		{
+		public:
+			T X, Y, Z, W;
 
-		void Set(T x, T y, T z, T w);
+			constexpr Quaternion() noexcept
+				: X(T(0)), Y(T(0)), Z(T(0)), W(T(1)) {
+			}
+			explicit Quaternion(NoInitT) noexcept
+			{
+			}
+			constexprQuaternion(T x, T y, T z, T w) noexcept
+				: X(x), Y(y), Z(z), W(w) {
+			}
+			explicit Quaternion(const Vector4<T>& v) noexcept
+				: X(v.X), Y(v.Y), Z(v.Z), W(v.W) {
+			}
+			constexpr Quaternion(const Quaternion& other) noexcept
+				: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {
+			}
+			Quaternion& operator=(const Quaternion& other);
 
-		T* Data();
-		const T* Data() const;
+			void Set(T x, T y, T z, T w);
 
-		T& operator[](std::size_t index);
-		const T& operator[](std::size_t index) const;
+			T* Data();
+			const T* Data() const;
 
-		bool operator==(const Quaternion& q) const;
-		bool operator!=(const Quaternion& q) const;
-		Quaternion operator-() const;
+			T& operator[](std::size_t index);
+			const T& operator[](std::size_t index) const;
 
-		Quaternion& operator+=(const Quaternion& q);
-		Quaternion& operator-=(const Quaternion& q);
-		Quaternion& operator*=(const Quaternion& q);
+			bool operator==(const Quaternion& q) const;
+			bool operator!=(const Quaternion& q) const;
+			Quaternion operator-() const;
 
-		Quaternion& operator*=(T s);
-		Quaternion& operator/=(T s);
+			Quaternion& operator+=(const Quaternion& q);
+			Quaternion& operator-=(const Quaternion& q);
+			Quaternion& operator*=(const Quaternion& q);
 
-		Quaternion operator+(const Quaternion& q) const;
-		Quaternion operator-(const Quaternion& q) const;
-		Quaternion operator*(const Quaternion& q) const;
+			Quaternion& operator*=(T s);
+			Quaternion& operator/=(T s);
 
-		Quaternion operator*(T s) const;
-		Quaternion operator/(T s) const;
+			Quaternion operator+(const Quaternion& q) const;
+			Quaternion operator-(const Quaternion& q) const;
+			Quaternion operator*(const Quaternion& q) const;
 
-		T Magnitude() const;
-		T SqrMagnitude() const;
-		Quaternion Normalized() const;
-		Quaternion& Normalize();
-		Quaternion Conjugated() const;
-		Quaternion& Conjugate();
+			Quaternion operator*(T s) const;
+			Quaternion operator/(T s) const;
 
-		Matrix4x4<T> ToMatrix4x4() const;
-		static Quaternion FromAxisAngle(T xx, T yy, T zz, T degrees);
-		static Quaternion FromAxisAngle(const Vector3<T>& axis, T degrees);
-		static Quaternion FromXAxisAngle(T degrees);
-		static Quaternion FromYAxisAngle(T degrees);
-		static Quaternion FromZAxisAngle(T degrees);
+			T Magnitude() const;
+			T SqrMagnitude() const;
+			Quaternion Normalized() const;
+			Quaternion& Normalize();
+			Quaternion Conjugated() const;
+			Quaternion& Conjugate();
 
-		/// A quaternion with all zero elements
-		static const Quaternion Zero;
-		/// An identity quaternion
-		static const Quaternion Identity;
-	};
+			Matrix4x4<T> ToMatrix4x4() const;
+			static Quaternion FromAxisAngle(T xx, T yy, T zz, T degrees);
+			static Quaternion FromAxisAngle(const Vector3<T>& axis, T degrees);
+			static Quaternion FromXAxisAngle(T degrees);
+			static Quaternion FromYAxisAngle(T degrees);
+			static Quaternion FromZAxisAngle(T degrees);
 
-	/// Quaternion of floats
-	using Quaternionf = Quaternion<float>;
+			/// A quaternion with all zero elements
+			static const Quaternion Zero;
+			/// An identity quaternion
+			static const Quaternion Identity;
+		};
 
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::operator=(const Quaternion<T>& other)
-	{
-		X = other.X;
-		Y = other.Y;
-		Z = other.Z;
-		W = other.W;
+		/// Quaternion of floats
+		using Quaternionf = Quaternion<float>;
 
-		return *this;
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::operator=(const Quaternion<T>& other)
+		{
+			X = other.X;
+			Y = other.Y;
+			Z = other.Z;
+			W = other.W;
+
+			return *this;
+		}
+
+		template<class T>
+		inline void Quaternion<T>::Set(T x, T y, T z, T w)
+		{
+			X = x;
+			Y = y;
+			Z = z;
+			W = w;
+		}
+
+		template<class T>
+		inline T* Quaternion<T>::Data()
+		{
+			return &X;
+		}
+
+		template<class T>
+		inline const T* Quaternion<T>::Data() const
+		{
+			return &X;
+		}
+
+		template<class T>
+		inline T& Quaternion<T>::operator[](std::size_t index)
+		{
+			ASSERT(index < 4);
+			return (&X)[index];
+		}
+
+		template<class T>
+		inline const T& Quaternion<T>::operator[](std::size_t index) const
+		{
+			ASSERT(index < 4);
+			return (&X)[index];
+		}
+
+		template<class T>
+		inline bool Quaternion<T>::operator==(const Quaternion& q) const
+		{
+			return (X == q.X && Y == q.Y && Z == q.Z && W == q.W);
+		}
+
+		template<class T>
+		inline bool Quaternion<T>::operator!=(const Quaternion& q) const
+		{
+			return (X != q.X || Y != q.Y || Z != q.Z || W != q.W);
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::operator-() const
+		{
+			return Quaternion(-X, -Y, -Z, W);
+		}
+
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::operator+=(const Quaternion& q)
+		{
+			X += q.X;
+			Y += q.Y;
+			Z += q.Z;
+			W += q.W;
+
+			return *this;
+		}
+
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::operator-=(const Quaternion& q)
+		{
+			X -= q.X;
+			Y -= q.Y;
+			Z -= q.Z;
+			W -= q.W;
+
+			return *this;
+		}
+
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::operator*=(const Quaternion& q)
+		{
+			const Quaternion<T> q0 = *this;
+
+			X = q0.W * q.X + q0.X * q.W + q0.Y * q.Z - q0.Z * q.Y;
+			Y = q0.W * q.Y + q0.Y * q.W + q0.Z * q.X - q0.X * q.Z;
+			Z = q0.W * q.Z + q0.Z * q.W + q0.X * q.Y - q0.Y * q.X;
+			W = q0.W * q.W - q0.X * q.X - q0.Y * q.Y - q0.Z * q.Z;
+
+			return *this;
+		}
+
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::operator*=(T s)
+		{
+			X *= s;
+			Y *= s;
+			Z *= s;
+			W *= s;
+
+			return *this;
+		}
+
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::operator/=(T s)
+		{
+			X /= s;
+			Y /= s;
+			Z /= s;
+			W /= s;
+
+			return *this;
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::operator+(const Quaternion& q) const
+		{
+			return Quaternion(X + q.X,
+							  Y + q.Y,
+							  Z + q.Z,
+							  W + q.W);
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::operator-(const Quaternion& q) const
+		{
+			return Quaternion(X - q.X,
+							  Y - q.Y,
+							  Z - q.Z,
+							  W - q.W);
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::operator*(const Quaternion& q) const
+		{
+			return Quaternion(W * q.X + X * q.W + Y * q.Z - Z * q.Y,
+							  W * q.Y + Y * q.W + Z * q.X - X * q.Z,
+							  W * q.Z + Z * q.W + X * q.Y - Y * q.X,
+							  W * q.W - X * q.X - Y * q.Y - Z * q.Z);
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::operator*(T s) const
+		{
+			return Quaternion(X * s,
+							  Y * s,
+							  Z * s,
+							  W * s);
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::operator/(T s) const
+		{
+			return Quaternion(X / s,
+							  Y / s,
+							  Z / s,
+							  W / s);
+		}
+
+		template<class T>
+		inline T Quaternion<T>::Magnitude() const
+		{
+			return sqrt(X * X + Y * Y + Z * Z + W * W);
+		}
+
+		template<class T>
+		inline T Quaternion<T>::SqrMagnitude() const
+		{
+			return X * X + Y * Y + Z * Z + W * W;
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::Normalized() const
+		{
+			const T mag = magnitude();
+			return Quaternion(X / mag, Y / mag, Z / mag, W / mag);
+		}
+
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::Normalize()
+		{
+			const T mag = magnitude();
+
+			X /= mag;
+			Y /= mag;
+			Z /= mag;
+			W /= mag;
+
+			return *this;
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::Conjugated() const
+		{
+			return Quaternion(-X, -Y, -Z, W);
+		}
+
+		template<class T>
+		inline Quaternion<T>& Quaternion<T>::Conjugate()
+		{
+			X = -X;
+			Y = -Y;
+			Z = -Z;
+
+			return *this;
+		}
+
+		template<class T>
+		inline Matrix4x4<T> Quaternion<T>::ToMatrix4x4() const
+		{
+			const T x2 = X * 2;
+			const T y2 = Y * 2;
+			const T z2 = Z * 2;
+
+			const T xx = X * x2;
+			const T xy = X * y2;
+			const T xz = X * z2;
+			const T yy = Y * y2;
+			const T yz = Y * z2;
+			const T zz = Z * z2;
+
+			const T xw = W * x2;
+			const T yw = W * y2;
+			const T zw = W * z2;
+
+			return Matrix4x4<T>(Vector4<T>(1 - (yy + zz), xy + zw, xz - yw, 0),
+								Vector4<T>(xy - zw, 1 - (xx + zz), yz + xw, 0),
+								Vector4<T>(xz + yw, yz - xw, 1 - (xx + yy), 0),
+								Vector4<T>(0, 0, 0, 1));
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::FromAxisAngle(T xx, T yy, T zz, T degrees)
+		{
+			const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
+			const T sinus = sin(halfRadians);
+
+			return Quaternion<T>(xx * sinus,
+								 yy * sinus,
+								 zz * sinus,
+								 cos(halfRadians));
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::FromAxisAngle(const Vector3<T>& axis, T degrees)
+		{
+			return fromAxisAngle(axis.X, axis.Y, axis.Z, degrees);
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::FromXAxisAngle(T degrees)
+		{
+			const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
+			return Quaternion<T>(sin(halfRadians), 0, 0, cos(halfRadians));
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::FromYAxisAngle(T degrees)
+		{
+			const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
+			return Quaternion<T>(0, sin(halfRadians), 0, cos(halfRadians));
+		}
+
+		template<class T>
+		inline Quaternion<T> Quaternion<T>::FromZAxisAngle(T degrees)
+		{
+			const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
+			return Quaternion<T>(0, 0, sin(halfRadians), cos(halfRadians));
+		}
+
+		template<class T>
+		const Quaternion<T> Quaternion<T>::Zero(0, 0, 0, 0);
+		template<class T>
+		const Quaternion<T> Quaternion<T>::Identity(0, 0, 0, 1);
 	}
-
-	template<class T>
-	inline void Quaternion<T>::Set(T x, T y, T z, T w)
-	{
-		X = x;
-		Y = y;
-		Z = z;
-		W = w;
-	}
-
-	template<class T>
-	inline T* Quaternion<T>::Data()
-	{
-		return &X;
-	}
-
-	template<class T>
-	inline const T* Quaternion<T>::Data() const
-	{
-		return &X;
-	}
-
-	template<class T>
-	inline T& Quaternion<T>::operator[](std::size_t index)
-	{
-		ASSERT(index < 4);
-		return (&X)[index];
-	}
-
-	template<class T>
-	inline const T& Quaternion<T>::operator[](std::size_t index) const
-	{
-		ASSERT(index < 4);
-		return (&X)[index];
-	}
-
-	template<class T>
-	inline bool Quaternion<T>::operator==(const Quaternion& q) const
-	{
-		return (X == q.X && Y == q.Y && Z == q.Z && W == q.W);
-	}
-
-	template<class T>
-	inline bool Quaternion<T>::operator!=(const Quaternion& q) const
-	{
-		return (X != q.X || Y != q.Y || Z != q.Z || W != q.W);
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::operator-() const
-	{
-		return Quaternion(-X, -Y, -Z, W);
-	}
-
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::operator+=(const Quaternion& q)
-	{
-		X += q.X;
-		Y += q.Y;
-		Z += q.Z;
-		W += q.W;
-
-		return *this;
-	}
-
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::operator-=(const Quaternion& q)
-	{
-		X -= q.X;
-		Y -= q.Y;
-		Z -= q.Z;
-		W -= q.W;
-
-		return *this;
-	}
-
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::operator*=(const Quaternion& q)
-	{
-		const Quaternion<T> q0 = *this;
-
-		X = q0.W * q.X + q0.X * q.W + q0.Y * q.Z - q0.Z * q.Y;
-		Y = q0.W * q.Y + q0.Y * q.W + q0.Z * q.X - q0.X * q.Z;
-		Z = q0.W * q.Z + q0.Z * q.W + q0.X * q.Y - q0.Y * q.X;
-		W = q0.W * q.W - q0.X * q.X - q0.Y * q.Y - q0.Z * q.Z;
-
-		return *this;
-	}
-
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::operator*=(T s)
-	{
-		X *= s;
-		Y *= s;
-		Z *= s;
-		W *= s;
-
-		return *this;
-	}
-
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::operator/=(T s)
-	{
-		X /= s;
-		Y /= s;
-		Z /= s;
-		W /= s;
-
-		return *this;
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::operator+(const Quaternion& q) const
-	{
-		return Quaternion(X + q.X,
-						  Y + q.Y,
-						  Z + q.Z,
-						  W + q.W);
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::operator-(const Quaternion& q) const
-	{
-		return Quaternion(X - q.X,
-						  Y - q.Y,
-						  Z - q.Z,
-						  W - q.W);
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::operator*(const Quaternion& q) const
-	{
-		return Quaternion(W * q.X + X * q.W + Y * q.Z - Z * q.Y,
-						  W * q.Y + Y * q.W + Z * q.X - X * q.Z,
-						  W * q.Z + Z * q.W + X * q.Y - Y * q.X,
-						  W * q.W - X * q.X - Y * q.Y - Z * q.Z);
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::operator*(T s) const
-	{
-		return Quaternion(X * s,
-						  Y * s,
-						  Z * s,
-						  W * s);
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::operator/(T s) const
-	{
-		return Quaternion(X / s,
-						  Y / s,
-						  Z / s,
-						  W / s);
-	}
-
-	template<class T>
-	inline T Quaternion<T>::Magnitude() const
-	{
-		return sqrt(X * X + Y * Y + Z * Z + W * W);
-	}
-
-	template<class T>
-	inline T Quaternion<T>::SqrMagnitude() const
-	{
-		return X * X + Y * Y + Z * Z + W * W;
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::Normalized() const
-	{
-		const T mag = magnitude();
-		return Quaternion(X / mag, Y / mag, Z / mag, W / mag);
-	}
-
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::Normalize()
-	{
-		const T mag = magnitude();
-
-		X /= mag;
-		Y /= mag;
-		Z /= mag;
-		W /= mag;
-
-		return *this;
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::Conjugated() const
-	{
-		return Quaternion(-X, -Y, -Z, W);
-	}
-
-	template<class T>
-	inline Quaternion<T>& Quaternion<T>::Conjugate()
-	{
-		X = -X;
-		Y = -Y;
-		Z = -Z;
-
-		return *this;
-	}
-
-	template<class T>
-	inline Matrix4x4<T> Quaternion<T>::ToMatrix4x4() const
-	{
-		const T x2 = X * 2;
-		const T y2 = Y * 2;
-		const T z2 = Z * 2;
-
-		const T xx = X * x2;
-		const T xy = X * y2;
-		const T xz = X * z2;
-		const T yy = Y * y2;
-		const T yz = Y * z2;
-		const T zz = Z * z2;
-
-		const T xw = W * x2;
-		const T yw = W * y2;
-		const T zw = W * z2;
-
-		return Matrix4x4<T>(Vector4<T>(1 - (yy + zz), xy + zw, xz - yw, 0),
-							Vector4<T>(xy - zw, 1 - (xx + zz), yz + xw, 0),
-							Vector4<T>(xz + yw, yz - xw, 1 - (xx + yy), 0),
-							Vector4<T>(0, 0, 0, 1));
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::FromAxisAngle(T xx, T yy, T zz, T degrees)
-	{
-		const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
-		const T sinus = sin(halfRadians);
-
-		return Quaternion<T>(xx * sinus,
-							 yy * sinus,
-							 zz * sinus,
-							 cos(halfRadians));
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::FromAxisAngle(const Vector3<T>& axis, T degrees)
-	{
-		return fromAxisAngle(axis.X, axis.Y, axis.Z, degrees);
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::FromXAxisAngle(T degrees)
-	{
-		const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
-		return Quaternion<T>(sin(halfRadians), 0, 0, cos(halfRadians));
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::FromYAxisAngle(T degrees)
-	{
-		const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
-		return Quaternion<T>(0, sin(halfRadians), 0, cos(halfRadians));
-	}
-
-	template<class T>
-	inline Quaternion<T> Quaternion<T>::FromZAxisAngle(T degrees)
-	{
-		const T halfRadians = static_cast<T>(degrees * 0.5f) * (static_cast<T>(Pi) / 180);
-		return Quaternion<T>(0, 0, sin(halfRadians), cos(halfRadians));
-	}
-
-	template<class T>
-	const Quaternion<T> Quaternion<T>::Zero(0, 0, 0, 0);
-	template<class T>
-	const Quaternion<T> Quaternion<T>::Identity(0, 0, 0, 1);
-
 }

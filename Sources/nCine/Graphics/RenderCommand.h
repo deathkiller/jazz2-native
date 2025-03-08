@@ -7,8 +7,6 @@
 
 namespace nCine
 {
-	class Color;
-
 	/// Wraps all the information needed for issuing a draw command
 	class RenderCommand
 	{

@@ -727,7 +727,13 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace nCine::Backends
 	@brief Platform-specific backends
 */
-/** @namespace nCine::Literals
+/** @dir nCine/Primitives
+	@brief Namespace @ref nCine::Primitives
+*/
+/** @namespace nCine::Primitives
+	@brief Primitives
+*/
+/** @namespace nCine::Primitives::Literals
 	@brief Literals for primitives
 */
 

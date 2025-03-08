@@ -18,8 +18,6 @@ class EmscriptenFocusEvent;
 
 namespace nCine
 {
-	class Colorf;
-
 	/// Represents the interface to the graphics device where everything is rendered
 	class IGfxDevice
 	{

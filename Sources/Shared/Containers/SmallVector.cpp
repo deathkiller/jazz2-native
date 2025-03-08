@@ -44,7 +44,7 @@ namespace Death { namespace Containers {
 				  "1 byte elements have word-sized type for size and capacity");
 
 	// Reports that MinSize doesn't fit into this vector's size type
-	static void report_size_overflow(std::size_t minSize, std::size_t maxSize) {
+	static void reportSizeOverflow(std::size_t minSize, std::size_t maxSize) {
 		//std::string reason = "SmallVector unable to grow. Requested capacity (" +
 		//	std::to_string(minSize) +
 		//	") is larger than maximum value for size type (" +
@@ -57,7 +57,7 @@ namespace Death { namespace Containers {
 	}
 
 	// Reports that this vector is already at maximum capacity
-	static void report_at_maximum_capacity(std::size_t maxSize) {
+	static void reportAtMaximumCapacity(std::size_t maxSize) {
 		//std::string reason =
 		//	"SmallVector capacity unable to grow. Already at maximum size " +
 		//	std::to_string(maxSize);
@@ -76,14 +76,14 @@ namespace Death { namespace Containers {
 		// Ensure we can fit the new capacity.
 		// This is only going to be applicable when the capacity is 32 bit.
 		if (minSize > maxSize)
-			report_size_overflow(minSize, maxSize);
+			reportSizeOverflow(minSize, maxSize);
 
 		// Ensure we can meet the guarantee of space for at least one more element.
 		// The above check alone will not catch the case where grow is called with a
 		// default MinSize of 0, but the current capacity cannot be increased.
 		// This is only going to be applicable when the capacity is 32 bit.
 		if (oldCapacity == maxSize)
-			report_at_maximum_capacity(maxSize);
+			reportAtMaximumCapacity(maxSize);
 
 		// In theory 2*capacity can overflow if the capacity is 64 bit, but the
 		// original capacity would never be large enough for this to be a problem.
@@ -92,10 +92,10 @@ namespace Death { namespace Containers {
 	}
 
 	static void* replaceAllocation(void* newElts, std::size_t typeSize, std::size_t newCapacity, std::size_t vSize = 0) {
-		void* newEltsReplace = malloc(newCapacity * typeSize);
+		void* newEltsReplace = std::malloc(newCapacity * typeSize);
 		if (vSize)
-			memcpy(newEltsReplace, newElts, vSize * typeSize);
-		free(newElts);
+			std::memcpy(newEltsReplace, newElts, vSize * typeSize);
+		std::free(newElts);
 		return newEltsReplace;
 	}
 
@@ -105,7 +105,7 @@ namespace Death { namespace Containers {
 		newCapacity = getNewCapacity<Size_T>(minSize, typeSize, this->capacity());
 		// Even if capacity is not 0 now, if the vector was originally created with
 		// capacity 0, it's possible for the malloc to return FirstEl.
-		void* newElts = malloc(newCapacity * typeSize);
+		void* newElts = std::malloc(newCapacity * typeSize);
 		if (newElts == firstEl)
 			newElts = replaceAllocation(newElts, typeSize, newCapacity);
 		return newElts;
@@ -113,24 +113,24 @@ namespace Death { namespace Containers {
 
 	// Note: Moving this function into the header may cause performance regression.
 	template<class Size_T>
-	void SmallVectorBase<Size_T>::growPod(void* firstEl, std::size_t minSize, std::size_t typeSize) {
+	void SmallVectorBase<Size_T>::growTrivial(void* firstEl, std::size_t minSize, std::size_t typeSize) {
 		std::size_t newCapacity = getNewCapacity<Size_T>(minSize, typeSize, this->capacity());
 		void* newElts;
 		if (BeginX == firstEl) {
-			newElts = malloc(newCapacity * typeSize);
+			newElts = std::malloc(newCapacity * typeSize);
 			if (newElts == firstEl)
 				newElts = replaceAllocation(newElts, typeSize, newCapacity);
 
 			// Copy the elements over. No need to run dtors on PODs.
-			memcpy(newElts, this->BeginX, size() * typeSize);
+			std::memcpy(newElts, this->BeginX, size() * typeSize);
 		} else {
 			// If this wasn't grown from the inline copy, grow the allocated space.
-			newElts = realloc(this->BeginX, newCapacity * typeSize);
+			newElts = std::realloc(this->BeginX, newCapacity * typeSize);
 			if (newElts == firstEl)
 				newElts = replaceAllocation(newElts, typeSize, newCapacity, size());
 		}
 
-		this->set_allocation_range(newElts, newCapacity);
+		this->setAllocationRange(newElts, newCapacity);
 	}
 
 	template class SmallVectorBase<uint32_t>;
