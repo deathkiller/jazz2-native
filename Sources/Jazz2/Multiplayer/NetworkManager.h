@@ -30,10 +30,8 @@ namespace Jazz2::Multiplayer
 	public:
 		/** @brief Peer descriptor */
 		struct PeerDesc {
-			/** @brief The first part of the unique Identifier (128-bit) */
-			std::uint64_t Uuid1;
-			/** @brief The second part of the unique Identifier (128-bit) */
-			std::uint64_t Uuid2;
+			/** @brief Unique Player ID */
+			StaticArray<16, std::uint8_t> Uuid;
 			/** @brief Whether the peer is already successfully authenticated */
 			bool IsAuthenticated;
 			/** @brief Preferred player type selected by the peer */

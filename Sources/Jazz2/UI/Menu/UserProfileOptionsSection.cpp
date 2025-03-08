@@ -347,10 +347,10 @@ namespace Jazz2::UI::Menu
 		}
 #if defined(WITH_MULTIPLAYER)
 		if (item.Item.Type == UserProfileOptionsItemType::UniquePlayerID) {
-			auto& id = PreferencesCache::UniquePlayerID;
+			auto& uuid = PreferencesCache::UniquePlayerID;
 			char uniquePlayerId[128];
 			formatString(uniquePlayerId, sizeof(uniquePlayerId), "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
-				id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+				uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 
 			_root->DrawStringShadow(uniquePlayerId, charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
