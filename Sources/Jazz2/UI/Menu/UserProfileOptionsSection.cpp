@@ -84,12 +84,13 @@ namespace Jazz2::UI::Menu
 
 	void UserProfileOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
+#if defined(DEATH_TARGET_ANDROID)
 		if (event.type == TouchEventType::Down) {
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-#if defined(DEATH_TARGET_ANDROID)
+
 				if (x < 0.2f && y < 80.0f && _waitForInput) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					auto& app = static_cast<AndroidApplication&>(theApplication());
@@ -97,9 +98,9 @@ namespace Jazz2::UI::Menu
 					RecalcLayoutForSoftInput();
 					return;
 				}
-#endif
 			}
 		}
+#endif
 
 		ScrollableMenuSection::OnTouchEvent(event, viewSize);
 	}

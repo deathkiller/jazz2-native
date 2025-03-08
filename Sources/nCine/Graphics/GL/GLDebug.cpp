@@ -131,7 +131,11 @@ namespace nCine
 
 #if defined(GL_DEBUG_SUPPORTED)
 	/// Callback for `glDebugMessageCallback()`
-	void __stdcall debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
+	void
+#	if defined(DEATH_TARGET_WINDOWS)
+		__stdcall
+#	endif
+		debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
 	{
 		const char* sourceString;
 		switch (source) {

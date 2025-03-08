@@ -8,94 +8,97 @@
 
 namespace nCine
 {
-	class Color;
-
-	using Death::Containers::NoInitT;
-
-	/// Four-channels normalized color with float per component
-	class Colorf
+	inline namespace Primitives
 	{
-	public:
-		static constexpr std::int32_t NumChannels = 4;
+		class Color;
 
-		static const Colorf Black;
-		static const Colorf White;
-		static const Colorf Red;
-		static const Colorf Green;
-		static const Colorf Blue;
-		static const Colorf Yellow;
-		static const Colorf Magenta;
-		static const Colorf Cyan;
+		using Death::Containers::NoInitT;
 
-		float R;
-		float G;
-		float B;
-		float A;
-
-		/// Default constructor (transparent color)
-		constexpr Colorf() noexcept
-			: Colorf(1.0f, 1.0f, 1.0f, 1.0f)
+		/// Four-channels normalized color with float per component
+		class Colorf
 		{
-		}
-		explicit Colorf(NoInitT) noexcept
-		{
-		}
-		/// Three channels constructor
-		constexpr Colorf(float red, float green, float blue) noexcept
-			: Colorf(red, green, blue, 1.0f)
-		{
-		}
-		/// Four channels constructor
-		constexpr Colorf(float red, float green, float blue, float alpha) noexcept
-			: R(red), G(green), B(blue), A(std::clamp(alpha, 0.0f, 1.0f))
-		{
-		}
-		/// Four channels constructor from an array
-		explicit Colorf(const float channels[NumChannels]) noexcept;
-		explicit Colorf(const Color& color) noexcept;
+		public:
+			static constexpr std::int32_t NumChannels = 4;
 
-		/// Returns color array
-		inline const float* Data() const {
-			return &R;
-		}
-		/// @overload
-		inline float* Data() {
-			return &R;
-		}
+			static const Colorf Black;
+			static const Colorf White;
+			static const Colorf Red;
+			static const Colorf Green;
+			static const Colorf Blue;
+			static const Colorf Yellow;
+			static const Colorf Magenta;
+			static const Colorf Cyan;
 
-		/// Sets four color channels
-		constexpr void Set(float red, float green, float blue, float alpha)
-		{
-			R = red;
-			G = green;
-			B = blue;
-			A = std::clamp(alpha, 0.0f, 1.0f);
-		}
-		/// Sets three color channels
-		void Set(float red, float green, float blue);
-		/// Sets four color channels from an array
-		void SetVec(const float channels[NumChannels]);
-		/// Sets the alpha channel
-		void SetAlpha(float alpha);
+			float R;
+			float G;
+			float B;
+			float A;
 
-		/// Assigns operator from an unsigned char color
-		Colorf& operator=(const Color& color);
+			/// Default constructor (transparent color)
+			constexpr Colorf() noexcept
+				: Colorf(1.0f, 1.0f, 1.0f, 1.0f)
+			{
+			}
+			explicit Colorf(NoInitT) noexcept
+			{
+			}
+			/// Three channels constructor
+			constexpr Colorf(float red, float green, float blue) noexcept
+				: Colorf(red, green, blue, 1.0f)
+			{
+			}
+			/// Four channels constructor
+			constexpr Colorf(float red, float green, float blue, float alpha) noexcept
+				: R(red), G(green), B(blue), A(std::clamp(alpha, 0.0f, 1.0f))
+			{
+			}
+			/// Four channels constructor from an array
+			explicit Colorf(const float channels[NumChannels]) noexcept;
+			explicit Colorf(const Color& color) noexcept;
 
-		bool operator==(const Colorf& color) const;
-		bool operator!=(const Colorf& color) const;
+			/// Returns color array
+			inline const float* Data() const {
+				return &R;
+			}
+			/// @overload
+			inline float* Data() {
+				return &R;
+			}
 
-		Colorf& operator+=(const Colorf& v);
-		Colorf& operator-=(const Colorf& v);
+			/// Sets four color channels
+			constexpr void Set(float red, float green, float blue, float alpha)
+			{
+				R = red;
+				G = green;
+				B = blue;
+				A = std::clamp(alpha, 0.0f, 1.0f);
+			}
+			/// Sets three color channels
+			void Set(float red, float green, float blue);
+			/// Sets four color channels from an array
+			void SetVec(const float channels[NumChannels]);
+			/// Sets the alpha channel
+			void SetAlpha(float alpha);
 
-		Colorf& operator*=(const Colorf& color);
-		/// Multiplies by a constant scalar
-		Colorf& operator*=(float scalar);
+			/// Assigns operator from an unsigned char color
+			Colorf& operator=(const Color& color);
 
-		Colorf operator+(const Colorf& color) const;
-		Colorf operator-(const Colorf& color) const;
+			bool operator==(const Colorf& color) const;
+			bool operator!=(const Colorf& color) const;
 
-		Colorf operator*(const Colorf& color) const;
-		/// Multiplies by a constant scalar
-		Colorf operator*(float scalar) const;
-	};
+			Colorf& operator+=(const Colorf& v);
+			Colorf& operator-=(const Colorf& v);
+
+			Colorf& operator*=(const Colorf& color);
+			/// Multiplies by a constant scalar
+			Colorf& operator*=(float scalar);
+
+			Colorf operator+(const Colorf& color) const;
+			Colorf operator-(const Colorf& color) const;
+
+			Colorf operator*(const Colorf& color) const;
+			/// Multiplies by a constant scalar
+			Colorf operator*(float scalar) const;
+		};
+	}
 }
