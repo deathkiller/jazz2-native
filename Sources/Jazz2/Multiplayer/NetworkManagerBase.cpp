@@ -70,7 +70,7 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port, bool isPrivate)
+	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port)
 	{
 		if (_host != nullptr) {
 			return false;
@@ -82,10 +82,6 @@ namespace Jazz2::Multiplayer
 
 		_host = enet_host_create(&addr, MaxPeerCount, (std::size_t)NetworkChannel::Count, 0, 0);
 		RETURNF_ASSERT_MSG(_host != nullptr, "Failed to create a server");
-
-		if (!isPrivate) {
-			_discovery = std::make_unique<ServerDiscovery>(handler, port);
-		}
 
 		_handler = handler;
 		_state = NetworkState::Listening;
@@ -103,7 +99,6 @@ namespace Jazz2::Multiplayer
 		_thread.Join();
 
 		_host = nullptr;
-		_discovery = nullptr;
 	}
 
 	NetworkState NetworkManagerBase::GetState() const

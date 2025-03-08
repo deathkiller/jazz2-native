@@ -115,9 +115,6 @@ public:
 	bool ConnectToServer(StringView address, std::uint16_t port) override;
 	bool CreateServer(ServerInitialization&& serverInit) override;
 
-	StringView GetServerName() const override;
-	void SetServerName(StringView value) override;
-
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
 	void OnPeerDisconnected(const Peer& peer, Reason reason) override;
 	void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data) override;
@@ -146,7 +143,6 @@ private:
 	char _newestVersion[20];
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
-	String _serverName;
 #endif
 
 	void OnBeforeInitialize();
@@ -427,7 +423,10 @@ void GameEventHandler::OnShutdown()
 
 	_currentHandler = nullptr;
 #if defined(WITH_MULTIPLAYER)
-	_networkManager = nullptr;
+	if (_networkManager != nullptr) {
+		_networkManager->Dispose();
+		_networkManager = nullptr;
+	}
 #endif
 
 	if ((_flags & Flags::IsInitialized) == Flags::IsInitialized) {
@@ -519,7 +518,10 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 		ZoneScopedNC("GameEventHandler::GoToMainMenu", 0x888888);
 
 #if defined(WITH_MULTIPLAYER)
-		_networkManager = nullptr;
+		if (_networkManager != nullptr) {
+			_networkManager->Dispose();
+			_networkManager = nullptr;
+		}
 #endif
 		if (auto* mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
 			mainMenu->Reset();
@@ -540,7 +542,10 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			newHandler = std::make_unique<Menu::MainMenu>(this, false);
 #if defined(WITH_MULTIPLAYER)
 			// TODO: This should show some server console instead of exiting
-			_networkManager = nullptr;
+			if (_networkManager != nullptr) {
+				_networkManager->Dispose();
+				_networkManager = nullptr;
+			}
 #endif
 		} else if (levelInit.LevelName == ":end"_s) {
 			// End of episode
@@ -564,14 +569,20 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 					newHandler = std::move(mainMenu);
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
-					_networkManager = nullptr;
+					if (_networkManager != nullptr) {
+						_networkManager->Dispose();
+						_networkManager = nullptr;
+					}
 #endif
 				}
 			} else {
 				HandleEndOfGame(levelInit, false);
 #if defined(WITH_MULTIPLAYER)
 				// TODO: This should show some server console instead of exiting
-				_networkManager = nullptr;
+				if (_networkManager != nullptr) {
+					_networkManager->Dispose();
+					_networkManager = nullptr;
+				}
 #endif
 			}
 		} else if (levelInit.LevelName == ":credits"_s) {
@@ -612,7 +623,10 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 					newHandler = std::move(mainMenu);
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
-					_networkManager = nullptr;
+					if (_networkManager != nullptr) {
+						_networkManager->Dispose();
+						_networkManager = nullptr;
+					}
 #endif
 				}
 			}
@@ -728,31 +742,25 @@ bool GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
 {
 	LOGI("Connecting to %s:%u...", address.data(), port);
 
-	if (_networkManager == nullptr) {
-		_networkManager = std::make_unique<NetworkManager>();
-	}
+	_networkManager = std::make_unique<NetworkManager>();
 
 	return _networkManager->CreateClient(this, address, port, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
 }
 
 bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 {
-	if (_networkManager == nullptr) {
-		_networkManager = std::make_unique<NetworkManager>();
+	_networkManager = std::make_unique<NetworkManager>();
+
+	if (serverInit.Configuration.ServerName.empty()) {
+		serverInit.Configuration.ServerName = _("Unnamed server");
 	}
 
-	if (!_networkManager->CreateServer(this, serverInit.ServerPort, serverInit.IsPrivate)) {
+	if (!_networkManager->CreateServer(this, std::move(serverInit.Configuration))) {
 		return false;
 	}
 
-	_serverName = std::move(serverInit.ServerName);
-	if (_serverName.empty()) {
-		_serverName = "Unnamed server"_s;
-	}
-
-	LOGI("Creating server \"%s\" on port %u...", _serverName.data(), serverInit.ServerPort);
-
-	_networkManager->GameMode = serverInit.GameMode;
+	auto& serverConfig = _networkManager->GetServerConfiguration();
+	LOGI("Creating server \"%s\" on port %u...", serverConfig.ServerName.data(), serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), true);
@@ -761,16 +769,6 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	}, NCINE_CURRENT_FUNCTION);
 
 	return true;
-}
-
-StringView GameEventHandler::GetServerName() const
-{
-	return _serverName;
-}
-
-void GameEventHandler::SetServerName(StringView value)
-{
-	_serverName = value;
 }
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
@@ -862,7 +860,10 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 	if (_networkManager != nullptr && _networkManager->GetState() != NetworkState::Listening) {
 		InvokeAsync([this, reason]() {
 #if defined(WITH_MULTIPLAYER)
-			_networkManager = nullptr;
+			if (_networkManager != nullptr) {
+				_networkManager->Dispose();
+				_networkManager = nullptr;
+			}
 #endif
 			Menu::MainMenu* mainMenu;
 			if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
@@ -984,7 +985,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					levelInit.IsLocalSession = false;
 					levelInit.LastExitType = lastExitType;
 
-					_networkManager->GameMode = gameMode;
+					auto& clientConfig = _networkManager->GetClientConfiguration();
+					clientConfig.GameMode = gameMode;
 
 					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), enableLedgeClimb);
 					levelHandler->Initialize(levelInit);

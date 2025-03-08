@@ -73,11 +73,6 @@ namespace Jazz2::Multiplayer
 #endif
 	{
 		_isServer = (networkManager->GetState() == NetworkState::Listening);
-
-		if (_isServer) {
-			// TODO: Lobby message
-			_lobbyMessage = "Welcome to the testing server!";
-		}
 	}
 
 	MpLevelHandler::~MpLevelHandler()
@@ -99,6 +94,8 @@ namespace Jazz2::Multiplayer
 			// Reserve first 255 indices for players
 			_lastSpawnedActorId = UINT8_MAX;
 
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+
 			std::uint8_t flags = 0;
 			if (PreferencesCache::EnableReforgedGameplay) {
 				flags |= 0x01;
@@ -109,7 +106,7 @@ namespace Jazz2::Multiplayer
 
 			MemoryStream packet(10 + _episodeName.size() + _levelFileName.size());
 			packet.WriteValue<std::uint8_t>(flags);
-			packet.WriteValue<std::uint8_t>((std::uint8_t)_networkManager->GameMode);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)levelInit.LastExitType);
 			packet.WriteVariableUint32(_episodeName.size());
 			packet.Write(_episodeName.data(), _episodeName.size());
@@ -146,7 +143,17 @@ namespace Jazz2::Multiplayer
 
 	float MpLevelHandler::GetHurtInvulnerableTime() const
 	{
-		return (_networkManager->GameMode == MpGameMode::Cooperation ? 180.0f : 80.0f);
+		MpGameMode gameMode;
+		if (_isServer) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			gameMode = serverConfig.GameMode;
+		} else {
+			auto& clientConfig = _networkManager->GetClientConfiguration();
+			gameMode = clientConfig.GameMode;
+
+		}
+		
+		return (gameMode == MpGameMode::Cooperation ? 180.0f : 80.0f);
 	}
 
 	float MpLevelHandler::GetDefaultAmbientLight() const
@@ -542,8 +549,10 @@ namespace Jazz2::Multiplayer
 					}
 					return true;
 				} else if (line == "/info"_s) {
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
 					char infoBuffer[128];
-					formatString(infoBuffer, sizeof(infoBuffer), "Current Level: %s/%s (\f[w:80]\f[c:#707070]%s\f[/c]\f[/w])", _episodeName.data(), _levelFileName.data(), GameModeToString(_networkManager->GameMode).data());
+					formatString(infoBuffer, sizeof(infoBuffer), "Current Level: %s/%s (\f[w:80]\f[c:#707070]%s\f[/c]\f[/w])", _episodeName.data(), _levelFileName.data(), GameModeToString(serverConfig.GameMode).data());
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
 					formatString(infoBuffer, sizeof(infoBuffer), "Players: \f[w:80]\f[c:#707070]%zu\f[/c]\f[/w]/%zu", _peerDesc.size() + 1, NetworkManagerBase::MaxPeerCount);
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
@@ -578,25 +587,26 @@ namespace Jazz2::Multiplayer
 
 						if (SetGameMode(gameMode)) {
 							char infoBuffer[128];
-							formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", GameModeToString(_networkManager->GameMode).data());
+							formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", GameModeToString(gameMode).data());
 							_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
 							return true;
 						}
 					} else if (variableName == "level"_s) {
 						// TODO: Implement /set level
-					} else if (variableName == "lobby"_s) {
-						SetLobbyMessage(StringUtils::replaceAll(value.trimmed(), "\\n"_s, "\n"_s));
+					} else if (variableName == "welcome"_s) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						SetWelcomeMessage(StringUtils::replaceAll(value.trimmed(), "\\n"_s, "\n"_s));
 						_console->WriteLine(UI::MessageLevel::Info, "Lobby message changed");
 						return true;
 					} else if (variableName == "name"_s) {
-						auto name = value.trimmed();
-						_root->SetServerName(name);
+						auto& serverConfig = _networkManager->GetServerConfiguration();
 
-						name = _root->GetServerName();
+						serverConfig.ServerName = value.trimmed();
+
 						char infoBuffer[128];
-						if (!name.empty()) {
-							formatString(infoBuffer, sizeof(infoBuffer), "Server name set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", String::nullTerminatedView(name).data());
-						} else {
+						if (!serverConfig.ServerName.empty()) {
+							formatString(infoBuffer, sizeof(infoBuffer), "Server name set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", serverConfig.ServerName.data());
+						} else if (!serverConfig.IsPrivate) {
 							formatString(infoBuffer, sizeof(infoBuffer), "Server visibility to \f[w:80]\f[c:#707070]hidden\f[/c]\f[/w]");
 						}
 						_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
@@ -923,7 +933,8 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		if (_networkManager->GameMode == MpGameMode::Race && (flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.GameMode == MpGameMode::Race && (flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
 			// TODO: Increment laps
 		}
 
@@ -1349,17 +1360,26 @@ namespace Jazz2::Multiplayer
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
 
-		ApplyGameModeToAllPlayers(_networkManager->GameMode);
+		ApplyGameModeToAllPlayers(_networkManager->GetServerConfiguration().GameMode);
 	}
 
 	bool MpLevelHandler::IsCheatingAllowed()
 	{
-		return _isServer && PreferencesCache::AllowCheats && _networkManager->GameMode == MpGameMode::Cooperation;
+		if (!_isServer) {
+			return false;
+		}
+
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		return (PreferencesCache::AllowCheats && serverConfig.GameMode == MpGameMode::Cooperation);
 	}
 
 	MpGameMode MpLevelHandler::GetGameMode() const
 	{
-		return _networkManager->GameMode;
+		if (_isServer) {
+			return _networkManager->GetServerConfiguration().GameMode;
+		} else {
+			return _networkManager->GetClientConfiguration().GameMode;
+		}
 	}
 
 	bool MpLevelHandler::SetGameMode(MpGameMode value)
@@ -1368,13 +1388,14 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		_networkManager->GameMode = value;
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		serverConfig.GameMode = value;
 
-		ApplyGameModeToAllPlayers(_networkManager->GameMode);
+		ApplyGameModeToAllPlayers(serverConfig.GameMode);
 
 		// TODO: Send new teamId to each player
 		// TODO: Reset level and broadcast it to players
-		std::uint8_t packet[1] = { (std::uint8_t)_networkManager->GameMode };
+		std::uint8_t packet[1] = { (std::uint8_t)serverConfig.GameMode };
 		_networkManager->SendTo([this](const Peer& peer) {
 			auto it = _peerDesc.find(peer);
 			return (it != _peerDesc.end() && it->second.State >= LevelPeerState::LevelSynchronized);
@@ -1442,6 +1463,8 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			switch ((ClientPacketType)packetType) {
 				case ClientPacketType::Auth: {
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
 					if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", globalPeerDesc->PlayerName.data()));
 
@@ -1466,7 +1489,7 @@ namespace Jazz2::Multiplayer
 
 					MemoryStream packet(10 + _episodeName.size() + _levelFileName.size());
 					packet.WriteValue<std::uint8_t>(flags);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)_networkManager->GameMode);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ExitType::None);
 					packet.WriteVariableUint32(_episodeName.size());
 					packet.Write(_episodeName.data(), _episodeName.size());
@@ -1487,16 +1510,18 @@ namespace Jazz2::Multiplayer
 
 					auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (globalPeerDesc == nullptr || globalPeerDesc->PreferredPlayerType == PlayerType::None) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+
 						// Show in-game lobby only to newly connected players
-						std::uint8_t flags = 0x01 | 0x02 | 0x04; // Set Visibility | Show | SetLobbyMessage
+						std::uint8_t flags = 0x01 | 0x02 | 0x04; // Set Visibility | Show | SetWelcomeMessage
 						// TODO: Allowed characters
 						std::uint8_t allowedCharacters = 0x01 | 0x02 | 0x04; // Jazz | Spaz | Lori
 
-						MemoryStream packet(6 + _lobbyMessage.size());
+						MemoryStream packet(6 + serverConfig.WelcomeMessage.size());
 						packet.WriteValue<std::uint8_t>(flags);
 						packet.WriteValue<std::uint8_t>(allowedCharacters);
-						packet.WriteVariableUint32(_lobbyMessage.size());
-						packet.Write(_lobbyMessage.data(), _lobbyMessage.size());
+						packet.WriteVariableUint32(serverConfig.WelcomeMessage.size());
+						packet.Write(serverConfig.WelcomeMessage.data(), serverConfig.WelcomeMessage.size());
 
 						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowInGameLobby, packet);
 					}
@@ -1755,24 +1780,26 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 				case ServerPacketType::ShowInGameLobby: {
+					auto& clientConfig = _networkManager->GetClientConfiguration();
+					
 					MemoryStream packet(data);
 					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 					std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
 
 					if (flags & 0x04) {
-						// Lobby message
-						std::uint32_t lobbyMessageLength = packet.ReadVariableUint32();
-						_lobbyMessage = String(NoInit, lobbyMessageLength);
-						packet.Read(_lobbyMessage.data(), lobbyMessageLength);
+						// Welcome message
+						std::uint32_t welcomeMessageLength = packet.ReadVariableUint32();
+						clientConfig.WelcomeMessage = String(NoInit, welcomeMessageLength);
+						packet.Read(clientConfig.WelcomeMessage.data(), welcomeMessageLength);
 					}
 					if (flags & 0x08) {
-						// TODO: Lobby server logo
+						// TODO: Welcome server logo
 						std::uint32_t serverLogoLength = packet.ReadVariableUint32();
 						Array<std::uint8_t> serverLogo{NoInit, serverLogoLength};
 						packet.Read(serverLogo.data(), serverLogoLength);
 					}
 
-					LOGD("[MP] ServerPacketType::ShowInGameLobby - flags: 0x%02x, allowedPlayerTypes: 0x%02x, message: \"%s\"", flags, allowedPlayerTypes, _lobbyMessage.data());
+					LOGD("[MP] ServerPacketType::ShowInGameLobby - flags: 0x%02x, allowedPlayerTypes: 0x%02x, message: \"%s\"", flags, allowedPlayerTypes, clientConfig.WelcomeMessage.data());
 
 					if (flags & 0x01) {
 						_root->InvokeAsync([this, flags, allowedPlayerTypes]() {
@@ -1816,7 +1843,8 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::ChangeGameMode - mode: %u", (std::uint32_t)gameMode);
 
-					_networkManager->GameMode = gameMode;
+					auto& clientConfig = _networkManager->GetClientConfiguration();
+					clientConfig.GameMode = gameMode;
 					return true;
 				}
 				case ServerPacketType::PlaySfx: {
@@ -2528,7 +2556,8 @@ namespace Jazz2::Multiplayer
 				AddActor(player);
 				_suppressRemoting = false;
 
-				ApplyGameModeToPlayer(_networkManager->GameMode, ptr);
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
 
 				// Spawn the player also on the remote side
 				{
@@ -2684,23 +2713,24 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::SetLobbyMessage(StringView message)
+	void MpLevelHandler::SetWelcomeMessage(StringView message)
 	{
 		if (!_isServer) {
 			return;
 		}
 
-		_lobbyMessage = message;
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		serverConfig.WelcomeMessage = message;
 
 		for (auto& [peer, peerDesc] : _peerDesc) {
 			if (peerDesc.State >= LevelPeerState::LevelLoaded && peerDesc.State >= LevelPeerState::LevelSynchronized) {
 				std::uint8_t flags = 0x04; // SetLobbyMessage
 
-				MemoryStream packet(6 + _lobbyMessage.size());
+				MemoryStream packet(6 + serverConfig.WelcomeMessage.size());
 				packet.WriteValue<std::uint8_t>(flags);
 				packet.WriteValue<std::uint8_t>(0x00);
-				packet.WriteVariableUint32(_lobbyMessage.size());
-				packet.Write(_lobbyMessage.data(), _lobbyMessage.size());
+				packet.WriteVariableUint32(serverConfig.WelcomeMessage.size());
+				packet.Write(serverConfig.WelcomeMessage.data(), serverConfig.WelcomeMessage.size());
 
 				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowInGameLobby, packet);
 			}

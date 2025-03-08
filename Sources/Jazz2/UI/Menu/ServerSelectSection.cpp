@@ -177,6 +177,11 @@ namespace Jazz2::UI::Menu
 						Alignment::Left, Font::DefaultColor, 0.7f);
 				}
 
+				char playerCount[32];
+				formatString(playerCount, sizeof(playerCount), "%u/%u", _items[i].Desc.CurrentPlayerCount, _items[i].Desc.MaxPlayerCount);
+				_root->DrawStringShadow(playerCount, charOffset, column2 - 6.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
+					Alignment::Right, Font::DefaultColor, 0.7f);
+
 				_root->DrawStringShadow(_items[i].Desc.EndpointString, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
 					Alignment::Left, Font::DefaultColor, 0.7f);
 			}

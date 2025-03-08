@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "INetworkHandler.h"
+#include "MpGameMode.h"
 #include "../../Main.h"
 #include "../../nCine/Base/TimeStamp.h"
 #include "../../nCine/Threading/Thread.h"
@@ -29,6 +29,8 @@ using namespace nCine;
 
 namespace Jazz2::Multiplayer
 {
+	class NetworkManager;
+
 	/** @brief Server description */
 	struct ServerDescription
 	{
@@ -42,12 +44,14 @@ namespace Jazz2::Multiplayer
 		StaticArray<16, std::uint8_t> UniqueIdentifier;
 		/** @brief Server name */
 		String Name;
-		/** @brief Combined multiplayer game mode and flags */
-		std::uint32_t GameModeAndFlags;
+		/** @brief Multiplayer game mode */
+		MpGameMode GameMode;
+		/** @brief Server flags */
+		std::uint32_t Flags;
 		/** @brief Current number of players */
-		std::uint32_t CurrentPlayers;
+		std::uint32_t CurrentPlayerCount;
 		/** @brief Maximum number of players */
-		std::uint32_t MaxPlayers;
+		std::uint32_t MaxPlayerCount;
 		/** @brief Current level name */
 		String LevelName;
 
@@ -81,7 +85,7 @@ namespace Jazz2::Multiplayer
 		static constexpr std::int32_t UniqueIdentifierLength = 16;
 
 		/** @brief Creates an instance to advertise a running local server */
-		ServerDiscovery(INetworkHandler* server, std::uint16_t port);
+		ServerDiscovery(NetworkManager* server);
 		/** @brief Creates an instance to observe remote servers */
 		ServerDiscovery(IServerObserver* observer);
 		~ServerDiscovery();
@@ -92,13 +96,12 @@ namespace Jazz2::Multiplayer
 
 		static constexpr std::uint64_t PacketSignature = 0x2095A59FF0BFBBEF;
 
-		INetworkHandler* _server;
+		NetworkManager* _server;
 		IServerObserver* _observer;
 		ENetSocket _socket;
 		Thread _thread;
 		TimeStamp _lastRequest;
 		ENetAddress _address;
-		std::uint16_t _actualPort;
 
 		static ENetSocket TryCreateSocket(const char* multicastAddress, ENetAddress& parsedAddress);
 

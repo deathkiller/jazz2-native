@@ -91,8 +91,7 @@ namespace Death { namespace Containers {
 		return std::min(std::max(newCapacity, minSize), maxSize);
 	}
 
-	template <class Size_T>
-	void* SmallVectorBase<Size_T>::replaceAllocation(void* newElts, std::size_t typeSize, std::size_t newCapacity, std::size_t vSize) {
+	static void* replaceAllocation(void* newElts, std::size_t typeSize, std::size_t newCapacity, std::size_t vSize = 0) {
 		void* newEltsReplace = malloc(newCapacity * typeSize);
 		if (vSize)
 			memcpy(newEltsReplace, newElts, vSize * typeSize);
@@ -122,7 +121,7 @@ namespace Death { namespace Containers {
 			if (newElts == firstEl)
 				newElts = replaceAllocation(newElts, typeSize, newCapacity);
 
-			// Copy the elements over.  No need to run dtors on PODs.
+			// Copy the elements over. No need to run dtors on PODs.
 			memcpy(newElts, this->BeginX, size() * typeSize);
 		} else {
 			// If this wasn't grown from the inline copy, grow the allocated space.
@@ -131,8 +130,7 @@ namespace Death { namespace Containers {
 				newElts = replaceAllocation(newElts, typeSize, newCapacity, size());
 		}
 
-		this->BeginX = newElts;
-		this->Capacity = (Size_T)newCapacity;
+		this->set_allocation_range(newElts, newCapacity);
 	}
 
 	template class SmallVectorBase<uint32_t>;

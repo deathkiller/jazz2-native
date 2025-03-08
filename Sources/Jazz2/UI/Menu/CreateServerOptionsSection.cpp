@@ -7,6 +7,7 @@
 #include "MultiplayerGameModeSelectSection.h"
 #include "SimpleMessageSection.h"
 #include "../../PreferencesCache.h"
+#include "../../Multiplayer/NetworkManager.h"
 
 #include <Utf8.h>
 
@@ -359,11 +360,9 @@ namespace Jazz2::UI::Menu
 	void CreateServerOptionsSection::OnAfterTransition()
 	{
 		ServerInitialization serverInit;
-		// TODO: Hardcoded name and port
-		//serverInit.ServerName = ""_s;
-		serverInit.ServerPort = 7438;
-		serverInit.GameMode = _gameMode;
-		serverInit.IsPrivate = _privateServer;
+		serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+		serverInit.Configuration.GameMode = _gameMode;
+		serverInit.Configuration.IsPrivate = _privateServer;
 
 		serverInit.InitialLevel.IsLocalSession = false;
 		serverInit.InitialLevel.EpisodeName = _episodeName;
