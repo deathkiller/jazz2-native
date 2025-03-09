@@ -21,26 +21,25 @@ namespace nCine
 	class UwpApplication : public Application, public winrt::implements<UwpApplication, winrtWAC::IFrameworkViewSource, winrtWAC::IFrameworkView>
 	{
 	public:
-		/** @brief Entry point method to be called in the `main()` function */
+		/** @brief Entry point method to be called in the `wWinMain()` function */
 		static int Run(CreateAppEventHandlerDelegate createAppEventHandler);
 
 		UwpApplication() : Application(), _isSuspended(false) { }
 		~UwpApplication() = default;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// IFrameworkViewSource methods
 		winrtWAC::IFrameworkView CreateView() {
 			return *this;
 		}
 
-		//static winrtWUC::CoreDispatcher GetDispatcher() {
-		//	return _dispatcher;
-		//}
-
-		// IFrameworkViewSource and IFrameworkView methods
+		// IFrameworkView methods
 		void Initialize(const winrtWAC::CoreApplicationView& applicationView);
 		void SetWindow(const winrtWUC::CoreWindow& window);
 		void Load(const winrt::hstring& entryPoint);
 		void Run();
 		void Uninitialize();
+#endif
 
 		bool OpenUrl(StringView url) override;
 	

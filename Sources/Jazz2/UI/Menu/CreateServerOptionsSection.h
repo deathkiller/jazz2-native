@@ -24,8 +24,6 @@ namespace Jazz2::UI::Menu
 		enum class Item {
 			Character,
 			GameMode,
-			ServerName,
-			ServerPort,
 			Start,
 
 			Count

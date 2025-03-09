@@ -5,6 +5,7 @@
 
 namespace nCine
 {
+	/** @brief Gamepad buttons */
 	enum class ButtonName : std::int16_t
 	{
 		Unknown = -1,
@@ -33,6 +34,7 @@ namespace nCine
 		Count
 	};
 
+	/** @brief Gamepad axes */
 	enum class AxisName : std::int16_t
 	{
 		Unknown = -1,
@@ -61,6 +63,7 @@ namespace nCine
 		};
 	};
 
+	/** @brief Touch event types */
 	enum class TouchEventType
 	{
 		/// Called every time the first screen touch is made

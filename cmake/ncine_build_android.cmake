@@ -140,6 +140,8 @@ if(NCINE_DYNAMIC_LIBRARY)
 	string(REPLACE "JAVA_NATIVE_LIBRARY_NAME" ${NCINE_APP} JAVA_SYSTEM_LOADLIBRARY_NCINE ${JAVA_SYSTEM_LOADLIBRARY})
 endif()
 
+set(BRIDGE_SOURCE_DIR "{NCINE_SOURCE_DIR}/nCine/Backends/Android/Bridge/app")
+
 set(JAVA_FILES
 	Keep.java
 	MainActivity.java
@@ -148,32 +150,32 @@ set(JAVA_FILES
 
 foreach(FILE ${JAVA_FILES})
 	configure_file(
-		${CMAKE_SOURCE_DIR}/android/app/src/main/java/${FILE}.in
-		${CMAKE_BINARY_DIR}/android/app/src/main/java/${FILE}
+		"${BRIDGE_SOURCE_DIR}/app/java/${FILE}.in"
+		"${CMAKE_BINARY_DIR}/Android/app/src/main/java/${FILE}"
 		@ONLY)
 endforeach()
 
 string(REPLACE "." "_" JNICALL_PACKAGE ${NCINE_REVERSE_DNS})
 string(TOLOWER ${JNICALL_PACKAGE} JNICALL_PACKAGE)
-set(JNICALL_FUNCTIONS_CPP_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/cpp/jnicall_functions.cpp.in)
-set(JNICALL_FUNCTIONS_CPP ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/jnicall_functions.cpp)
+set(JNICALL_FUNCTIONS_CPP_IN ${BRIDGE_SOURCE_DIR}/app/cpp/jnicall_functions.cpp.in)
+set(JNICALL_FUNCTIONS_CPP ${CMAKE_BINARY_DIR}/Android/app/src/main/cpp/jnicall_functions.cpp)
 configure_file(${JNICALL_FUNCTIONS_CPP_IN} ${JNICALL_FUNCTIONS_CPP} @ONLY)
 
-file(COPY ${CMAKE_SOURCE_DIR}/android/build.gradle DESTINATION android)
-file(COPY ${CMAKE_SOURCE_DIR}/android/settings.gradle DESTINATION android)
-set(GRADLE_PROPERTIES_IN ${CMAKE_SOURCE_DIR}/android/gradle.properties.in)
-set(GRADLE_PROPERTIES ${CMAKE_BINARY_DIR}/android/gradle.properties)
+file(COPY ${BRIDGE_SOURCE_DIR}/build.gradle DESTINATION Android)
+file(COPY ${BRIDGE_SOURCE_DIR}/settings.gradle DESTINATION Android)
+set(GRADLE_PROPERTIES_IN ${BRIDGE_SOURCE_DIR}/gradle.properties.in)
+set(GRADLE_PROPERTIES ${CMAKE_BINARY_DIR}/Android/gradle.properties)
 set(GRADLE_CMAKE_COMMAND ${CMAKE_COMMAND})
 set(GRADLE_NDK_DIR ${NDK_DIR})
 configure_file(${GRADLE_PROPERTIES_IN} ${GRADLE_PROPERTIES} @ONLY)
-set(APP_BUILD_GRADLE_IN ${CMAKE_SOURCE_DIR}/android/app/build.gradle.in)
-set(APP_BUILD_GRADLE ${CMAKE_BINARY_DIR}/android/app/build.gradle)
+set(APP_BUILD_GRADLE_IN ${BRIDGE_SOURCE_DIR}/app/build.gradle.in)
+set(APP_BUILD_GRADLE ${CMAKE_BINARY_DIR}/Android/app/build.gradle)
 if(NCINE_WITH_AUDIO)
 	set(GRADLE_JNILIBS_DIRS "'${EXTERNAL_ANDROID_DIR}'")
 endif()
 configure_file(${APP_BUILD_GRADLE_IN} ${APP_BUILD_GRADLE} @ONLY)
-set(APP_PROGUARD_IN ${CMAKE_SOURCE_DIR}/android/app/proguard-project.pro.in)
-set(APP_PROGUARD ${CMAKE_BINARY_DIR}/android/app/proguard-project.pro)
+set(APP_PROGUARD_IN ${BRIDGE_SOURCE_DIR}/app/proguard-project.pro.in)
+set(APP_PROGUARD ${CMAKE_BINARY_DIR}/Android/app/proguard-project.pro)
 configure_file(${APP_PROGUARD_IN} ${APP_PROGUARD} @ONLY)
 
 set(GRADLE_JNILIBS_DIRS "'src/main/cpp/ncine'")
@@ -188,24 +190,15 @@ if(NCINE_WITH_TRACY)
 	string(CONCAT MANIFEST_PERMISSIONS "${MANIFEST_PERMISSIONS}\n"
 		"\t<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />")
 endif()
-set(ANDROID_MANIFEST_XML_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/AndroidManifest.xml.in)
-set(ANDROID_MANIFEST_XML ${CMAKE_BINARY_DIR}/android/app/src/main/AndroidManifest.xml)
+set(ANDROID_MANIFEST_XML_IN ${BRIDGE_SOURCE_DIR}/app/AndroidManifest.xml.in)
+set(ANDROID_MANIFEST_XML ${CMAKE_BINARY_DIR}/Android/app/src/main/AndroidManifest.xml)
 configure_file(${ANDROID_MANIFEST_XML_IN} ${ANDROID_MANIFEST_XML} @ONLY)
 
-set(STRINGS_XML_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/res/values/strings.xml.in)
-set(STRINGS_XML ${CMAKE_BINARY_DIR}/android/app/src/main/res/values/strings.xml)
+set(STRINGS_XML_IN ${BRIDGE_SOURCE_DIR}/app/res/values/strings.xml.in)
+set(STRINGS_XML ${CMAKE_BINARY_DIR}/Android/app/src/main/res/values/strings.xml)
 configure_file(${STRINGS_XML_IN} ${STRINGS_XML} @ONLY)
 
 # Copying data to assets directory to stop requiring the external storage permission
-#file(GLOB FONT_TEXTURE_ASSETS_KTX "${NCINE_DATA_DIR}/android/fonts/*.ktx")
-#file(GLOB FONT_TEXTURE_ASSETS_WEBP "${NCINE_DATA_DIR}/android/fonts/*.webp")
-#file(GLOB FONT_FNT_ASSETS "${NCINE_DATA_DIR}/fonts/*.fnt")
-#file(GLOB SCRIPT_ASSETS "${NCINE_DATA_DIR}/scripts/*.lua")
-#file(GLOB SOUND_ASSETS "${NCINE_DATA_DIR}/sounds/*")
-#file(GLOB_RECURSE TEXTURE_ASSETS_KTX "${NCINE_DATA_DIR}/android/textures/*.ktx")
-#file(GLOB_RECURSE TEXTURE_ASSETS_WEBP "${NCINE_DATA_DIR}/android/textures/*.webp")
-#set(ANDROID_ASSETS ${FONT_TEXTURE_ASSETS_KTX} ${FONT_TEXTURE_ASSETS_WEBP} ${FONT_FNT_ASSETS}
-#	${SCRIPT_ASSETS} ${SOUND_ASSETS} ${TEXTURE_ASSETS_KTX} ${TEXTURE_ASSETS_WEBP})
 file(GLOB_RECURSE ANDROID_ASSETS "${NCINE_DATA_DIR}/*")
 foreach(ASSET ${ANDROID_ASSETS})
 	# Preserving directory structure
@@ -213,22 +206,22 @@ foreach(ASSET ${ANDROID_ASSETS})
 	# Remove the specific Android directory from the path of some assets
 	string(REGEX REPLACE "^[Aa]ndroid\/" "" ASSET_RELPATH ${ASSET_RELPATH})
 	get_filename_component(ASSET_RELPATH ${ASSET_RELPATH} DIRECTORY)
-	file(COPY ${ASSET} DESTINATION android/app/src/main/assets/${ASSET_RELPATH})
+	file(COPY ${ASSET} DESTINATION Android/app/src/main/assets/${ASSET_RELPATH})
 endforeach()
 
-file(COPY android/app/src/main/cpp/main.cpp DESTINATION android/app/src/main/cpp)
-file(COPY android/app/src/main/cpp/CMakeLists.txt DESTINATION android/app/src/main/cpp)
-#file(COPY android/app/src/main/res/values/strings.xml DESTINATION android/app/src/main/res/values)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/cpp/main.cpp DESTINATION Android/app/src/main/cpp)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/cpp/CMakeLists.txt DESTINATION Android/app/src/main/cpp)
+#file(COPY ${BRIDGE_SOURCE_DIR}/app/res/values/strings.xml DESTINATION android/app/src/main/res/values)
 
-file(COPY android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml DESTINATION android/app/src/main/res/mipmap-anydpi-v26)
-file(COPY android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_alt.xml DESTINATION android/app/src/main/res/mipmap-anydpi-v26)
-file(COPY android/app/src/main/res/mipmap-hdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-hdpi)
-file(COPY android/app/src/main/res/mipmap-mdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-mdpi)
-file(COPY android/app/src/main/res/mipmap-xhdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-xhdpi)
-file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
-file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_background.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
-file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_background_alt.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
-file(COPY android/app/src/main/res/mipmap-xxhdpi/ic_foreground.png DESTINATION android/app/src/main/res/mipmap-xxhdpi)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-anydpi-v26/ic_launcher.xml DESTINATION Android/app/src/main/res/mipmap-anydpi-v26)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-anydpi-v26/ic_launcher_alt.xml DESTINATION Android/app/src/main/res/mipmap-anydpi-v26)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-hdpi/ic_launcher.png DESTINATION Android/app/src/main/res/mipmap-hdpi)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-mdpi/ic_launcher.png DESTINATION Android/app/src/main/res/mipmap-mdpi)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-xhdpi/ic_launcher.png DESTINATION Android/app/src/main/res/mipmap-xhdpi)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-xxhdpi/ic_launcher.png DESTINATION Android/app/src/main/res/mipmap-xxhdpi)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-xxhdpi/ic_background.png DESTINATION Android/app/src/main/res/mipmap-xxhdpi)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-xxhdpi/ic_background_alt.png DESTINATION Android/app/src/main/res/mipmap-xxhdpi)
+file(COPY ${BRIDGE_SOURCE_DIR}/app/res/mipmap-xxhdpi/ic_foreground.png DESTINATION Android/app/src/main/res/mipmap-xxhdpi)
 
 #if(EXISTS ${NCINE_ICONS_DIR}/icon48.png)
 #	file(COPY ${NCINE_ICONS_DIR}/icon48.png DESTINATION android/app/src/main/res/mipmap-mdpi)
@@ -259,10 +252,10 @@ if(NCINE_DYNAMIC_LIBRARY)
 	set(ANDROID_LIBNAME "lib${NCINE_APP}.so")
 else()
 	set(ANDROID_LIBNAME "lib${NCINE_APP}.a")
-	set(COPY_SRCINCLUDE_COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PRIVATE_HEADERS} ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include/ncine)
+	set(COPY_SRCINCLUDE_COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PRIVATE_HEADERS} ${CMAKE_BINARY_DIR}/Android/app/src/main/cpp/ncine/include/ncine)
 endif()
 if(NCINE_WITH_TRACY)
-	set(COPY_TRACYINCLUDE_COMMAND ${CMAKE_COMMAND} -E copy_directory ${TRACY_INCLUDE_ONLY_DIR}/tracy ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include/tracy)
+	set(COPY_TRACYINCLUDE_COMMAND ${CMAKE_COMMAND} -E copy_directory ${TRACY_INCLUDE_ONLY_DIR}/tracy ${CMAKE_BINARY_DIR}/Android/app/src/main/cpp/ncine/include/tracy)
 endif()
 
 add_custom_target(${NCINE_APP} ALL)
@@ -275,13 +268,13 @@ if(MSYS)
 endif()
 
 foreach(ARCHITECTURE ${NCINE_NDK_ARCHITECTURES})
-	set(ANDROID_BINARY_DIR ${CMAKE_BINARY_DIR}/android/app/build/${NCINE_APP}/${ARCHITECTURE})
+	set(ANDROID_BINARY_DIR ${CMAKE_BINARY_DIR}/Android/app/build/${NCINE_APP}/${ARCHITECTURE})
 	set(ANDROID_ARCH_ARGS -DANDROID_ABI=${ARCHITECTURE})
 	if("${ARCHITECTURE}" STREQUAL "armeabi-v7a")
 		list(APPEND ANDROID_ARCH_ARGS ${ANDROID_ARM_ARGS})
 	endif()
 	add_custom_command(OUTPUT ${ANDROID_BINARY_DIR}/${ANDROID_LIBNAME} ${ANDROID_BINARY_DIR}/libncine_main.a
-		COMMAND ${MSYS2_DISABLE_PATH_CONV} ${CMAKE_COMMAND} -H${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ -B${ANDROID_BINARY_DIR}
+		COMMAND ${MSYS2_DISABLE_PATH_CONV} ${CMAKE_COMMAND} -H${CMAKE_BINARY_DIR}/Android/app/cpp/ -B${ANDROID_BINARY_DIR}
 			-DCMAKE_TOOLCHAIN_FILE=${NDK_DIR}/build/cmake/android.toolchain.cmake
 			-DANDROID_PLATFORM=${GRADLE_MINSDK_VERSION} -DANDROID_ABI=${ARCHITECTURE}
 			${RESET_FLAGS_ARGS} ${ANDROID_PASSTHROUGH_ARGS} ${ANDROID_CMAKE_ARGS} ${ANDROID_ARCH_ARGS}
@@ -295,7 +288,7 @@ endforeach()
 if(NCINE_WITH_AUDIO)
 	foreach(ARCHITECTURE ${NCINE_NDK_ARCHITECTURES})
 		set(ANDROID_OPENAL_SRC_BINARY_DIR ${EXTERNAL_ANDROID_DIR}/${ARCHITECTURE})
-		set(ANDROID_OPENAL_DEST_BINARY_DIR ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/openal/${ARCHITECTURE})
+		set(ANDROID_OPENAL_DEST_BINARY_DIR ${CMAKE_BINARY_DIR}/Android/app/cpp/openal/${ARCHITECTURE})
 		add_custom_command(OUTPUT ${ANDROID_OPENAL_DEST_BINARY_DIR}/libopenal.so
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ANDROID_OPENAL_SRC_BINARY_DIR}/libopenal.so ${ANDROID_OPENAL_DEST_BINARY_DIR}/libopenal.so
 			COMMENT "Copying OpenAL library for ${ARCHITECTURE}")
@@ -305,18 +298,6 @@ if(NCINE_WITH_AUDIO)
 	endforeach()
 endif()
 
-# Creating an ncine directory inside cpp to allow building external Android applications without installing the engine
-#add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include
-#	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include/ncine/
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${HEADERS} ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include/ncine/
-#	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include/nctl/
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NCTL_HEADERS} ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include/nctl/
-#	# Projects relying on a static and uninstalled version of the engine can use implementation headers
-#	COMMAND ${COPY_SRCINCLUDE_COMMAND}
-#	# If Tracy integration is enabled then projects relying on an uninstalled version of the engine can use its headers
-#	COMMAND ${COPY_TRACYINCLUDE_COMMAND}
-#	COMMENT "Copying Android header files")
-#add_custom_target(ncine_ndkdir_include ALL DEPENDS ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ncine/include)
 add_custom_target(ncine_ndkdir_include ALL)
 set_target_properties(ncine_ndkdir_include PROPERTIES FOLDER "Android")
 add_dependencies(ncine_ndkdir_include ${NCINE_APP})
@@ -337,7 +318,7 @@ if(NCINE_ASSEMBLE_APK)
 		endif()
 
 		foreach(ARCHITECTURE ${NCINE_NDK_ARCHITECTURES})
-			list(APPEND APK_FILES ${CMAKE_BINARY_DIR}/android/app/build/outputs/apk/${APK_BUILDTYPE_DIR}/android-${ARCHITECTURE}-${APK_FILE_SUFFIX}.apk)
+			list(APPEND APK_FILES ${CMAKE_BINARY_DIR}/Android/app/build/outputs/apk/${APK_BUILDTYPE_DIR}/android-${ARCHITECTURE}-${APK_FILE_SUFFIX}.apk)
 		endforeach()
 
 		# Invoking Gradle to create the Android APK
@@ -350,28 +331,3 @@ if(NCINE_ASSEMBLE_APK)
 		message(WARNING "Gradle executable not found, Android APK will not be assembled")
 	endif()
 endif()
-
-#if(NCINE_INSTALL_DEV_SUPPORT)
-#	foreach(ARCHITECTURE ${NCINE_NDK_ARCHITECTURES})
-#		install(FILES ${CMAKE_BINARY_DIR}/android/app/build/ncine/${ARCHITECTURE}/${ANDROID_LIBNAME}
-#			DESTINATION ${ANDROID_INSTALL_DESTINATION}/app/src/main/cpp/ncine/${ARCHITECTURE}/ COMPONENT android)
-#		install(FILES ${CMAKE_BINARY_DIR}/android/app/build/ncine/${ARCHITECTURE}/libncine_main.a
-#			DESTINATION ${ANDROID_INSTALL_DESTINATION}/app/src/main/cpp/ncine/${ARCHITECTURE}/ COMPONENT android)
-#		if(NCINE_WITH_AUDIO)
-#			install(FILES ${EXTERNAL_ANDROID_DIR}/${ARCHITECTURE}/libopenal.so
-#				DESTINATION ${ANDROID_INSTALL_DESTINATION}/app/src/main/cpp/openal/${ARCHITECTURE}/ COMPONENT android)
-#		endif()
-#	endforeach()
-#
-#	install(FILES ${HEADERS} DESTINATION ${ANDROID_INSTALL_DESTINATION}/app/src/main/cpp/ncine/include/ncine COMPONENT android)
-#	install(FILES ${NCTL_HEADERS} DESTINATION ${ANDROID_INSTALL_DESTINATION}/app/src/main/cpp/ncine/include/nctl COMPONENT android)
-#	if(NOT NCINE_DYNAMIC_LIBRARY)
-#		install(FILES ${PRIVATE_HEADERS} DESTINATION ${ANDROID_INSTALL_DESTINATION}/app/src/main/cpp/ncine/include/ncine COMPONENT android)
-#	endif()
-#	if(NCINE_WITH_TRACY)
-#		install(DIRECTORY ${TRACY_INCLUDE_ONLY_DIR}/tracy DESTINATION ${ANDROID_INSTALL_DESTINATION}/app/src/main/cpp/ncine/include/ COMPONENT android)
-#	endif()
-#
-#	install(DIRECTORY ${NCINE_DATA_DIR}/android/fonts DESTINATION ${DATA_INSTALL_DESTINATION}/android COMPONENT android)
-#	install(DIRECTORY ${NCINE_DATA_DIR}/android/textures DESTINATION ${DATA_INSTALL_DESTINATION}/android COMPONENT android)
-#endif()

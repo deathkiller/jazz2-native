@@ -2,6 +2,7 @@
 
 namespace nCine
 {
+	/** @brief Keys */
 	enum class Keys
 	{
 		// Common keysyms
@@ -251,6 +252,7 @@ namespace nCine
 		Unknown = Count
 	};
 
+	/** @brief Key modifiers */
 	enum KeyMod
 	{
 		None = 0x0000,
