@@ -893,6 +893,7 @@ RECURSIVE              = YES
 EXCLUDE                = codingstyle/ \
                          snippets/ \
                          ../Sources/simdjson/ \
+                         ../Sources/nCine/Backends/Android/Bridge/ \
                          ../Sources/nCine/Base/ParallelHashMap/ \
                          ../Sources/nCine/Base/pdqsort/ \
                          ../Sources/Jazz2/Multiplayer/Backends/

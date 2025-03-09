@@ -15,17 +15,20 @@ namespace nCine
 		friend class Material;
 
 	public:
+		/** @brief Load mode */
 		enum class LoadMode {
 			String,
 			File
 		};
 
+		/** @brief Introspection mode */
 		enum class Introspection {
 			Enabled,
 			NoUniformsInBlocks,
 			Disabled
 		};
 
+		/** @brief Built-in vertex shaders */
 		enum class DefaultVertex {
 			SPRITE,
 			SPRITE_NOTEXTURE,
@@ -39,6 +42,7 @@ namespace nCine
 			//BATCHED_TEXTNODES
 		};
 
+		/** @brief Built-in fragment shaders */
 		enum class DefaultFragment {
 			SPRITE,
 			//SPRITE_GRAY,

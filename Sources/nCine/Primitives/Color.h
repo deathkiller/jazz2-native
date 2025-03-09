@@ -26,9 +26,13 @@ namespace nCine
 			static const Color Magenta;
 			static const Color Cyan;
 
+			/** @brief Red */
 			std::uint8_t R;
+			/** @brief Green */
 			std::uint8_t G;
+			/** @brief Blue */
 			std::uint8_t B;
+			/** @brief Alpha */
 			std::uint8_t A;
 
 			/// Default constructor (transparent color)

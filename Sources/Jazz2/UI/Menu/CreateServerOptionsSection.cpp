@@ -33,10 +33,6 @@ namespace Jazz2::UI::Menu
 		_items[(int32_t)Item::Character].Name = _("Character");
 		// TRANSLATORS: Menu item to select game mode
 		_items[(int32_t)Item::GameMode].Name = _("Game Mode");
-		// TRANSLATORS: Menu item to set server name
-		_items[(int32_t)Item::ServerName].Name = _("Server Name");
-		// TRANSLATORS: Menu item to set server port
-		_items[(int32_t)Item::ServerPort].Name = _("Server Port");
 		// TRANSLATORS: Menu item to create server with selected settings
 		_items[(int32_t)Item::Start].Name = _("Create Server");
 	}
@@ -162,9 +158,6 @@ namespace Jazz2::UI::Menu
 
 		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f, 0.88f);
 
-		// TODO
-		center.Y *= 0.7f;
-
 		std::int32_t charOffset = 0;
 		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 		    if (_selectedIndex == i) {
@@ -233,25 +226,11 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
 
 				_items[i].TouchY = center.Y + 28.0f;
-			} else if (i == 2) {
-				// TODO
-				StringView serverName = _("Unnamed server");
-				_root->DrawStringShadow(serverName, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,
-					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
-
-				_items[i].TouchY = center.Y + 28.0f;
-			} else if (i == 3) {
-				// TODO
-				StringView serverPort = "7438"_s;
-				_root->DrawStringShadow(serverPort, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,
-					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
-
-				_items[i].TouchY = center.Y + 28.0f;
 			} else {
 				_items[i].TouchY = center.Y;
 			}
 
-		    center.Y += 52.0f;
+			center.Y += 60.0f;
 		}
 	}
 

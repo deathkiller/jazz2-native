@@ -29,9 +29,13 @@ namespace nCine
 			static const Colorf Magenta;
 			static const Colorf Cyan;
 
+			/** @brief Red */
 			float R;
+			/** @brief Green */
 			float G;
+			/** @brief Blue */
 			float B;
+			/** @brief Alpha */
 			float A;
 
 			/// Default constructor (transparent color)
