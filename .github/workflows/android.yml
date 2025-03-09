@@ -56,7 +56,7 @@ jobs:
       run: |
         export JAVA_HOME=$JAVA_HOME_17_X64
         make -j $(nproc) -C ./_build/
-        cd ./_build/android/
+        cd ./_build/Android/
         gradle assemble${{ matrix.BuildType }}
 
     - name: 'Create Package'
@@ -74,7 +74,7 @@ jobs:
         esac
         
         mkdir ./_package/
-        $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2.apk"
+        $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/Android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2.apk"
         cp -f ./LICENSE ./_package/LICENSE
         
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
@@ -139,7 +139,7 @@ jobs:
       run: |
         export JAVA_HOME=$JAVA_HOME_17_X64
         make -j $(nproc) -C ./_build/
-        cd ./_build/android/
+        cd ./_build/Android/
         gradle assemble${{ matrix.BuildType }}
 
     - name: 'Create Package'
@@ -157,7 +157,7 @@ jobs:
         esac
         
         mkdir ./_package/
-        $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2d.apk"
+        $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/Android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2d.apk"
         cp -f ./LICENSE ./_package/LICENSE
         
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
@@ -220,7 +220,7 @@ jobs:
       run: |
         export JAVA_HOME=$JAVA_HOME_17_X64
         make -j $(nproc) -C ./_build/
-        cd ./_build/android/
+        cd ./_build/Android/
         gradle assemble${{ matrix.BuildType }}
 
     - name: 'Create Package'
@@ -238,7 +238,7 @@ jobs:
         esac
         
         mkdir ./_package/
-        $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2.apk"
+        $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/Android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2.apk"
         cp -f ./LICENSE ./_package/LICENSE
         
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
