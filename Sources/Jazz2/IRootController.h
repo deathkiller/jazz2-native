@@ -53,8 +53,8 @@ namespace Jazz2
 		virtual bool SaveCurrentStateIfAny() = 0;
 
 #if defined(WITH_MULTIPLAYER)
-		/** @brief Sets current state handler to remove multiplayer session */
-		virtual bool ConnectToServer(StringView address, std::uint16_t port) = 0;
+		/** @brief Connects to a multiplayer server asynchronously */
+		virtual void ConnectToServer(StringView address, std::uint16_t port) = 0;
 		/** @brief Creates a multiplayer server */
 		virtual bool CreateServer(Multiplayer::ServerInitialization&& serverInit) = 0;
 #endif

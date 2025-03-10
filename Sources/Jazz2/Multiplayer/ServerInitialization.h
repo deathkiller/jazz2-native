@@ -40,6 +40,8 @@ namespace Jazz2::Multiplayer
 		HashMap<String, String> BannedUniquePlayerIDs;
 		/** @brief List of banned IP addresses, value can contain user-defined reason */
 		HashMap<String, String> BannedIPAddresses;
+		/** @brief Whether Discord authentication is required to join the server */
+		bool RequiresDiscordAuth;
 	};
 
 	/**

@@ -554,7 +554,7 @@ namespace Jazz2::Multiplayer
 					char infoBuffer[128];
 					formatString(infoBuffer, sizeof(infoBuffer), "Current Level: %s/%s (\f[w:80]\f[c:#707070]%s\f[/c]\f[/w])", _episodeName.data(), _levelFileName.data(), GameModeToString(serverConfig.GameMode).data());
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
-					formatString(infoBuffer, sizeof(infoBuffer), "Players: \f[w:80]\f[c:#707070]%zu\f[/c]\f[/w]/%zu", _peerDesc.size() + 1, NetworkManagerBase::MaxPeerCount);
+					formatString(infoBuffer, sizeof(infoBuffer), "Players: \f[w:80]\f[c:#707070]%zu\f[/c]\f[/w]/%u", _peerDesc.size() + 1, serverConfig.MaxPlayerCount);
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
 					formatString(infoBuffer, sizeof(infoBuffer), "Server Load: %i ms", (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
 					_console->WriteLine(UI::MessageLevel::Info, infoBuffer);
@@ -1514,8 +1514,7 @@ namespace Jazz2::Multiplayer
 
 						// Show in-game lobby only to newly connected players
 						std::uint8_t flags = 0x01 | 0x02 | 0x04; // Set Visibility | Show | SetWelcomeMessage
-						// TODO: Allowed characters
-						std::uint8_t allowedCharacters = 0x01 | 0x02 | 0x04; // Jazz | Spaz | Lori
+						std::uint8_t allowedCharacters = serverConfig.AllowedPlayerTypes;
 
 						MemoryStream packet(6 + serverConfig.WelcomeMessage.size());
 						packet.WriteValue<std::uint8_t>(flags);

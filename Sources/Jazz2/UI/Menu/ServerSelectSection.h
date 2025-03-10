@@ -19,6 +19,7 @@ namespace Jazz2::UI::Menu
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnDrawClipped(Canvas* canvas) override;
+		void OnDrawOverlay(Canvas* canvas) override;
 		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
 
 		void OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc) override;
@@ -53,7 +54,13 @@ namespace Jazz2::UI::Menu
 		Jazz2::Multiplayer::ServerDiscovery _discovery;
 		std::int8_t _touchDirection;
 
+		Jazz2::Multiplayer::ServerDescription _selectedServer;
+		float _transitionTime;
+		bool _shouldStart;
+		bool _isConnecting;
+
 		void ExecuteSelected();
+		void OnAfterTransition();
 		void EnsureVisibleSelected(std::int32_t offset = 0);
 	};
 }

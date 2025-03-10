@@ -112,7 +112,7 @@ public:
 	bool SaveCurrentStateIfAny() override;
 
 #if defined(WITH_MULTIPLAYER)
-	bool ConnectToServer(StringView address, std::uint16_t port) override;
+	void ConnectToServer(StringView address, std::uint16_t port) override;
 	bool CreateServer(ServerInitialization&& serverInit) override;
 
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
@@ -738,13 +738,12 @@ void GameEventHandler::ApplyActivityIcon()
 #endif
 
 #if defined(WITH_MULTIPLAYER)
-bool GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
+void GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
 {
 	LOGI("Connecting to %s:%u...", address.data(), port);
 
 	_networkManager = std::make_unique<NetworkManager>();
-
-	return _networkManager->CreateClient(this, address, port, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
+	_networkManager->CreateClient(this, address, port, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
 }
 
 bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
@@ -935,12 +934,12 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(uuid.data(), uuid.size());
 
 				String uniquePlayerId{NoInit, 39};
-				std:int32_t uniquePlayerIdLength = formatString(uniquePlayerId.data(), uniquePlayerId.size(), "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+				std::int32_t uniquePlayerIdLength = formatString(uniquePlayerId.data(), uniquePlayerId.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
 					uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 				DEATH_DEBUG_ASSERT(uniquePlayerId.size() == uniquePlayerIdLength);
 
-				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: %s",
-					peer._enet, 4, gameID, gameVersion, uniquePlayerId);
+				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: \"%s\"",
+					peer._enet, 4, gameID, gameVersion, uniquePlayerId.data());
 
 				const auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
@@ -965,7 +964,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
 				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-					LOGD("[MP] ClientPacketType::PlayerReady - player name length out of bounds (%u)", playerNameLength);
+					LOGD("[MP] ClientPacketType::Auth - player name length out of bounds (%u)", playerNameLength);
 					_networkManager->Kick(peer, Reason::InvalidPlayerName);
 					return;
 				}
@@ -974,7 +973,12 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(playerName.data(), playerNameLength);
 
 				std::uint64_t playerUserId = packet.ReadVariableUint64();
-				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist) / (Reason::Requires3rdPartyAuthProvider)
+				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
+					LOGD("[MP] ClientPacketType::Auth - Discord auth is required");
+					_networkManager->Kick(peer, Reason::Requires3rdPartyAuthProvider);
+					return;
+				}
+				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist)
 
 				if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
 					globalPeerDesc->Uuid = std::move(uuid);

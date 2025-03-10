@@ -39,14 +39,19 @@ namespace Jazz2::Multiplayer
 		ReleaseBackend();
 	}
 
-	bool NetworkManagerBase::CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData)
+	void NetworkManagerBase::CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData)
 	{
 		if (_host != nullptr) {
-			return false;
+			LOGE("[MP] Client already created");
+			return;
 		}
 
 		_host = enet_host_create(nullptr, 1, std::size_t(NetworkChannel::Count), 0, 0);
-		RETURNF_ASSERT_MSG(_host != nullptr, "Failed to create client");
+		if (_host == nullptr) {
+			LOGE("[MP] Failed to create client");
+			OnPeerDisconnected({}, Reason::InvalidParameter);
+			return;
+		}
 
 		_state = NetworkState::Connecting;
 
@@ -60,14 +65,14 @@ namespace Jazz2::Multiplayer
 			_state = NetworkState::None;
 			enet_host_destroy(_host);
 			_host = nullptr;
-			return false;
+			OnPeerDisconnected({}, Reason::InvalidParameter);
+			return;
 		}
 
 		_peers.push_back(peer);
 
 		_handler = handler;
 		_thread = Thread(NetworkManagerBase::OnClientThread, this);
-		return true;
 	}
 
 	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port)

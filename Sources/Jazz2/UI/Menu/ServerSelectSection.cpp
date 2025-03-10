@@ -5,6 +5,7 @@
 #include "StartGameOptionsSection.h"
 #include "MainMenu.h"
 #include "MenuResources.h"
+#include "SimpleMessageSection.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
@@ -16,7 +17,7 @@ namespace Jazz2::UI::Menu
 	ServerSelectSection::ServerSelectSection()
 		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f), _pressedCount(0),
 			_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(this),
-			_touchDirection(0)
+			_touchDirection(0), _transitionTime(0.0f), _shouldStart(false), _isConnecting(false)
 	{
 	}
 
@@ -64,58 +65,65 @@ namespace Jazz2::UI::Menu
 			_noiseCooldown -= timeMult;
 		}
 
-		if (_root->ActionHit(PlayerAction::Menu)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_root->LeaveSection();
-			return;
-		} else if (!_items.empty()) {
-			if (_root->ActionHit(PlayerAction::Fire)) {
-				ExecuteSelected();
-			} else if (_items.size() > 1) {
-				if (_root->ActionPressed(PlayerAction::Up)) {
-					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Up)) {
-						if (_noiseCooldown <= 0.0f) {
-							_noiseCooldown = 10.0f;
-							_root->PlaySfx("MenuSelect"_s, 0.5f);
-						}
-						_animation = 0.0f;
+		if (!_shouldStart) {
+			if (_root->ActionHit(PlayerAction::Menu)) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_root->LeaveSection();
+				return;
+			} else if (!_items.empty()) {
+				if (_root->ActionHit(PlayerAction::Fire)) {
+					ExecuteSelected();
+				} else if (_items.size() > 1) {
+					if (_root->ActionPressed(PlayerAction::Up)) {
+						if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Up)) {
+							if (_noiseCooldown <= 0.0f) {
+								_noiseCooldown = 10.0f;
+								_root->PlaySfx("MenuSelect"_s, 0.5f);
+							}
+							_animation = 0.0f;
 
-						std::int32_t offset;
-						if (_selectedIndex > 0) {
-							_selectedIndex--;
-							offset = -ItemHeight / 2;
-						} else {
-							_selectedIndex = (std::int32_t)(_items.size() - 1);
-							offset = 0;
+							std::int32_t offset;
+							if (_selectedIndex > 0) {
+								_selectedIndex--;
+								offset = -ItemHeight / 2;
+							} else {
+								_selectedIndex = (std::int32_t)(_items.size() - 1);
+								offset = 0;
+							}
+							EnsureVisibleSelected(offset);
+							_pressedCount = std::min(_pressedCount + 6, 10);
 						}
-						EnsureVisibleSelected(offset);
-						_pressedCount = std::min(_pressedCount + 6, 10);
-					}
-				} else if (_root->ActionPressed(PlayerAction::Down)) {
-					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Down)) {
-						if (_noiseCooldown <= 0.0f) {
-							_noiseCooldown = 10.0f;
-							_root->PlaySfx("MenuSelect"_s, 0.5f);
-						}
-						_animation = 0.0f;
+					} else if (_root->ActionPressed(PlayerAction::Down)) {
+						if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Down)) {
+							if (_noiseCooldown <= 0.0f) {
+								_noiseCooldown = 10.0f;
+								_root->PlaySfx("MenuSelect"_s, 0.5f);
+							}
+							_animation = 0.0f;
 
-						std::int32_t offset;
-						if (_selectedIndex < _items.size() - 1) {
-							_selectedIndex++;
-							offset = ItemHeight / 2;
-						} else {
-							_selectedIndex = 0;
-							offset = 0;
+							std::int32_t offset;
+							if (_selectedIndex < _items.size() - 1) {
+								_selectedIndex++;
+								offset = ItemHeight / 2;
+							} else {
+								_selectedIndex = 0;
+								offset = 0;
+							}
+							EnsureVisibleSelected(offset);
+							_pressedCount = std::min(_pressedCount + 6, 10);
 						}
-						EnsureVisibleSelected(offset);
-						_pressedCount = std::min(_pressedCount + 6, 10);
+					} else {
+						_pressedCount = 0;
 					}
-				} else {
-					_pressedCount = 0;
 				}
-			}
 
-			_touchTime += timeMult;
+				_touchTime += timeMult;
+			}
+		} else {
+			_transitionTime -= 0.025f * timeMult;
+			if (_transitionTime <= 0.0f) {
+				OnAfterTransition();
+			}
 		}
 	}
 
@@ -199,8 +207,35 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void ServerSelectSection::OnDrawOverlay(Canvas* canvas)
+	{
+		if (_shouldStart) {
+			auto command = canvas->RentRenderCommand();
+			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(canvas->ViewSize.X), static_cast<float>(canvas->ViewSize.Y)).Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+
+			command->setTransformation(Matrix4x4f::Identity);
+			command->setLayer(999);
+
+			canvas->DrawRenderCommand(command);
+		}
+	}
+
 	void ServerSelectSection::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
+		if (_shouldStart) {
+			return;
+		}
+
 		switch (event.type) {
 			case TouchEventType::Down: {
 				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
@@ -290,7 +325,19 @@ namespace Jazz2::UI::Menu
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		auto& selectedItem = _items[_selectedIndex];
-		_root->ConnectToServer(selectedItem.Desc.EndpointString, selectedItem.Desc.Endpoint.port);
+		_selectedServer = selectedItem.Desc;
+		_shouldStart = true;
+		_transitionTime = 1.0f;
+	}
+
+	void ServerSelectSection::OnAfterTransition()
+	{
+		if (_isConnecting) {
+			return;
+		}
+
+		_isConnecting = true;
+		_root->ConnectToServer(_selectedServer.EndpointString, _selectedServer.Endpoint.port);
 	}
 
 	void ServerSelectSection::EnsureVisibleSelected(std::int32_t offset)

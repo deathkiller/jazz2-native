@@ -406,9 +406,9 @@ namespace Jazz2::UI::Menu
 	}
 
 #if defined(WITH_MULTIPLAYER)
-	bool MainMenu::ConnectToServer(const StringView address, std::uint16_t port)
+	void MainMenu::ConnectToServer(const StringView address, std::uint16_t port)
 	{
-		return _root->ConnectToServer(address, port);
+		_root->ConnectToServer(address, port);
 	}
 
 	bool MainMenu::CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit)

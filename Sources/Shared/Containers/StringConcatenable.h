@@ -21,7 +21,7 @@ namespace Death { namespace Containers {
 		{ typedef String ConvertTo; };
 	}
 
-	/** @brief Resulting base object of a deferred string concatenation */
+	/** @brief Resulting base class of a deferred string concatenation */
 	template<typename Builder, typename T>
 	struct StringBuilderBase
 	{
@@ -31,7 +31,7 @@ namespace Death { namespace Containers {
 		}
 	};
 
-	/** @brief Resulting template object of a deferred string concatenation */
+	/** @brief Resulting template class of a deferred string concatenation */
 	template<typename A, typename B>
 	class StringBuilder : public StringBuilderBase<StringBuilder<A, B>,
 		typename Implementation::ConvertToTypeHelper<
