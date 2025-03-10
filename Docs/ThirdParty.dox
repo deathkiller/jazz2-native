@@ -6,6 +6,7 @@ namespace Death {
 
 This page lists third-party libraries that are used directly or through the API by **Jazz² Resurrection**.
 The project itself is licensed under the terms of the [GNU General Public License v3.0](https://github.com/deathkiller/jazz2-native/blob/master/LICENSE).
+It has been developed in @m_class{m-icon} ![](https://resources.jetbrains.com/storage/products/company/brand/logos/CLion_icon.svg) CLion using the open-source license.
 
 - - -
 

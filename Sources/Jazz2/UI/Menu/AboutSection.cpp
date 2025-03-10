@@ -269,7 +269,7 @@ namespace Jazz2::UI::Menu
 		float padding = (contentBounds.W > 450.0f ? 60.0f : 20.0f);
 
 		Vector2f headerSize = _textBlockHeaderOnly.MeasureSize(Vector2f(contentBounds.W - padding * 2.0f, 1000000.0f));
-		_root->DrawElement(MenuGlow, 0, centerX, topLine + viewHeight + headerSize.Y + 14.0f - roundf(_scrollOffset),
+		_root->DrawElement(MenuGlow, 0, centerX, topLine + viewHeight + headerSize.Y + 14.0f + 2.0f - roundf(_scrollOffset),
 			IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f), 10.0f, 5.0f, true, true);
 
 		int32_t charOffset = 0;

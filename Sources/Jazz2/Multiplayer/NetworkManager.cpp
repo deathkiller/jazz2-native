@@ -28,10 +28,10 @@ namespace Jazz2::Multiplayer
 	{
 	}
 
-	bool NetworkManager::CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData)
+	void NetworkManager::CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData)
 	{
 		_clientConfig = std::make_unique<ClientConfiguration>();
-		return NetworkManagerBase::CreateClient(handler, address, port, clientData);
+		NetworkManagerBase::CreateClient(handler, address, port, clientData);
 	}
 
 	bool NetworkManager::CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)
@@ -77,7 +77,7 @@ namespace Jazz2::Multiplayer
 
 	ServerConfiguration NetworkManager::CreateDefaultServerConfiguration()
 	{
-		ServerConfiguration serverConfig;
+		ServerConfiguration serverConfig{};
 
 		// Try to load configuration from "Jazz2.Server.config" file
 		auto configPath = fs::CombinePath(PreferencesCache::GetDirectory(), "Jazz2.Server.config"_s);
@@ -91,6 +91,8 @@ namespace Jazz2::Multiplayer
 			ondemand::parser parser;
 			ondemand::document doc;
 			if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+				LOGI("Loaded server configuration template from \"%s\"", configPath.data());
+
 				std::string_view serverName;
 				if (doc["ServerName"].get(serverName) == SUCCESS) {
 					serverConfig.ServerName = serverName;
@@ -164,7 +166,7 @@ namespace Jazz2::Multiplayer
 				}
 
 				ondemand::object bannedUniquePlayerIDs;
-				if (doc["bannedUniquePlayerIDs"].get(bannedUniquePlayerIDs) == SUCCESS) {
+				if (doc["BannedUniquePlayerIDs"].get(bannedUniquePlayerIDs) == SUCCESS) {
 					for (auto item : bannedUniquePlayerIDs) {
 						std::string_view key;
 						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
@@ -186,8 +188,13 @@ namespace Jazz2::Multiplayer
 						}
 					}
 				}
+
+				bool requiresDiscordAuth;
+				if (doc["RequiresDiscordAuth"].get(requiresDiscordAuth) == SUCCESS) {
+					serverConfig.RequiresDiscordAuth = requiresDiscordAuth;
+				}
 			} else {
-				LOGE("Server configuration file cannot be parsed");
+				LOGE("Server configuration template from \"%s\" cannot be parsed", configPath.data());
 			}
 		}
 		

@@ -19,7 +19,7 @@ namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
-		@brief @ref SmallVector base class
+		@brief Base class of @ref SmallVector
 		@tparam SizeT   Type of the size parameter
 
 		The template parameter specifies the type which should be used to hold the Size
@@ -354,7 +354,7 @@ namespace Death { namespace Containers {
 	*/
 	template<typename T, bool = std::is_trivially_copy_constructible<T>::value &&
 		std::is_trivially_move_constructible<T>::value && std::is_trivially_destructible<T>::value>
-	class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T>
+	class SmallVectorTemplate : public SmallVectorTemplateCommon<T>
 	{
 		friend class SmallVectorTemplateCommon<T>;
 
@@ -364,7 +364,7 @@ namespace Death { namespace Containers {
 		/** @brief Either `const T&` or `T`, depending on whether it's cheap enough to take parameters by value, always `const T&` for non-trivial types */
 		using ValueParamT = const T&;
 
-		SmallVectorTemplateBase(std::size_t size) : SmallVectorTemplateCommon<T>(size) {}
+		SmallVectorTemplate(std::size_t size) : SmallVectorTemplateCommon<T>(size) {}
 
 		/** @brief Calls destructor on every element in the specified range if needed */
 		static void destroyRange(T* s, T* e) {
@@ -465,7 +465,7 @@ namespace Death { namespace Containers {
 
 	// Define this out-of-line to dissuade the C++ compiler from inlining it
 	template<typename T, bool TriviallyCopyable>
-	void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(std::size_t minSize) {
+	void SmallVectorTemplate<T, TriviallyCopyable>::grow(std::size_t minSize) {
 		std::size_t newCapacity;
 		T* newElts = mallocForGrow(minSize, newCapacity);
 		moveElementsForGrow(newElts);
@@ -473,7 +473,7 @@ namespace Death { namespace Containers {
 	}
 
 	template<typename T, bool TriviallyCopyable>
-	T* SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(std::size_t minSize, std::size_t& newCapacity) {
+	T* SmallVectorTemplate<T, TriviallyCopyable>::mallocForGrow(std::size_t minSize, std::size_t& newCapacity) {
 		return static_cast<T*>(
 			SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
 				this->getFirstElement(), minSize, sizeof(T), newCapacity));
@@ -481,7 +481,7 @@ namespace Death { namespace Containers {
 
 	// Define this out-of-line to dissuade the C++ compiler from inlining it
 	template<typename T, bool TriviallyCopyable>
-	void SmallVectorTemplateBase<T, TriviallyCopyable>::moveElementsForGrow(T* newElts) {
+	void SmallVectorTemplate<T, TriviallyCopyable>::moveElementsForGrow(T* newElts) {
 		// Move the elements over
 		this->uninitializedMove(this->begin(), this->end(), newElts);
 
@@ -491,7 +491,7 @@ namespace Death { namespace Containers {
 
 	// Define this out-of-line to dissuade the C++ compiler from inlining it
 	template<typename T, bool TriviallyCopyable>
-	void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(T* newElts, std::size_t newCapacity) {
+	void SmallVectorTemplate<T, TriviallyCopyable>::takeAllocationForGrow(T* newElts, std::size_t newCapacity) {
 		// If this wasn't grown from the inline copy, deallocate the old space
 		if (!this->isSmall())
 			std::free(this->begin());
@@ -501,11 +501,11 @@ namespace Death { namespace Containers {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
-		@brief @ref SmallVector method implementations that are designed to work with trivially copyable types
+		@brief Template method specializations of @ref SmallVector designed to work with trivially copyable types
 		@tparam T   Element type
 	*/
 	template<typename T>
-	class SmallVectorTemplateBase<T, true> : public SmallVectorTemplateCommon<T>
+	class SmallVectorTemplate<T, true> : public SmallVectorTemplateCommon<T>
 	{
 		friend class SmallVectorTemplateCommon<T>;
 
@@ -516,7 +516,7 @@ namespace Death { namespace Containers {
 		/** @brief Either `const T&` or `T`, depending on whether it's cheap enough to take parameters by value */
 		using ValueParamT = std::conditional_t<TakesParamByValue, T, const T&>;
 
-		SmallVectorTemplateBase(std::size_t size) : SmallVectorTemplateCommon<T>(size) {}
+		SmallVectorTemplate(std::size_t size) : SmallVectorTemplateCommon<T>(size) {}
 
 		// No need to do a destroy loop for trivial types
 		/** @brief Calls destructor on every element in the specified range if needed */
@@ -608,9 +608,9 @@ namespace Death { namespace Containers {
 		@tparam T   Element type
 	*/
 	template<typename T>
-	class SmallVectorImpl : public SmallVectorTemplateBase<T>
+	class SmallVectorImpl : public SmallVectorTemplate<T>
 	{
-		using BaseClass = SmallVectorTemplateBase<T>;
+		using BaseClass = SmallVectorTemplate<T>;
 
 	public:
 		/** @brief Iterator type */
@@ -623,12 +623,12 @@ namespace Death { namespace Containers {
 		using size_type = typename BaseClass::size_type;
 
 	protected:
-		using SmallVectorTemplateBase<T>::TakesParamByValue;
+		using SmallVectorTemplate<T>::TakesParamByValue;
 		/** @brief Either `const T&` or `T`, depending on whether it's cheap enough to take parameters by value, always `const T&` for non-trivial types */
 		using ValueParamT = typename BaseClass::ValueParamT;
 
 		explicit SmallVectorImpl(unsigned n)
-			: SmallVectorTemplateBase<T>(n) {}
+			: SmallVectorTemplate<T>(n) {}
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief Assigns the content of the specified vector */
@@ -1420,8 +1420,8 @@ namespace Death { namespace Containers {
 		using SmallVectorImpl::resize_for_overwrite;
 		using SmallVectorImpl::truncate;
 		using SmallVectorImpl::reserve;
-		using SmallVectorTemplateBase::push_back;
-		using SmallVectorTemplateBase::pop_back;
+		using SmallVectorTemplate::push_back;
+		using SmallVectorTemplate::pop_back;
 		using SmallVectorImpl::pop_back_n;
 		using SmallVectorImpl::pop_back_val;
 		using SmallVectorImpl::swap;
