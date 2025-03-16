@@ -174,6 +174,7 @@ namespace Death { namespace Containers {
 			return (_ptr != nullptr);
 		}
 
+#if defined(DEATH_TARGET_MSVC) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Tries to cast the instance to another type */
 		template<class U, std::enable_if_t<std::is_convertible<T, U>::value, int> = 0>
 		HRESULT as(U** result) const noexcept {
@@ -182,18 +183,17 @@ namespace Death { namespace Containers {
 			return S_OK;
 		}
 
-#if defined(DEATH_TARGET_MSVC) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @overload */
 		template<class U, std::enable_if_t<!std::is_convertible<T, U>::value, int> = 0>
 		HRESULT as(U** result) const noexcept {
 			return _ptr->QueryInterface(DEATH_IID_PPV_ARGS(result));
 		}
-#endif
 
 		/** @overload */
 		HRESULT as(REFIID riid, void** result) const noexcept {
 			return _ptr->QueryInterface(riid, result);
 		}
+#endif
 
 	private:
 		T* _ptr;
