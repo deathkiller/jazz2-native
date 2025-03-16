@@ -10,6 +10,7 @@
 #include "../Containers/StringUtils.h"
 
 #include <atomic>
+#include <cstdio>
 #include <map>
 
 #if defined(DEATH_TARGET_WINDOWS)
