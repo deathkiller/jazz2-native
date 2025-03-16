@@ -28,10 +28,10 @@ namespace Jazz2::Multiplayer
 	{
 	}
 
-	void NetworkManager::CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData)
+	void NetworkManager::CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData)
 	{
 		_clientConfig = std::make_unique<ClientConfiguration>();
-		NetworkManagerBase::CreateClient(handler, address, port, clientData);
+		NetworkManagerBase::CreateClient(handler, endpoint, defaultPort, clientData);
 	}
 
 	bool NetworkManager::CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)

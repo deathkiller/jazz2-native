@@ -16,6 +16,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/PakFile.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/Stream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/WebRequest.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/Compression/DeflateStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/Compression/Lz4Stream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/Compression/ZstdStream.cpp

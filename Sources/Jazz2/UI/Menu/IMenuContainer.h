@@ -64,7 +64,7 @@ namespace Jazz2::UI::Menu
 		virtual void ResumeSavedState() = 0;
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Connects to a multiplayer server asynchronously */
-		virtual void ConnectToServer(const StringView address, std::uint16_t port) = 0;
+		virtual void ConnectToServer(StringView endpoint, std::uint16_t defaultPort) = 0;
 		/** @brief Creates a multiplayer server */
 		virtual bool CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit) = 0;
 #endif

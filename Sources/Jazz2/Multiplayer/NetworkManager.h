@@ -48,7 +48,7 @@ namespace Jazz2::Multiplayer
 		NetworkManager(const NetworkManager&) = delete;
 		NetworkManager& operator=(const NetworkManager&) = delete;
 
-		void CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData) override;
+		void CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData) override;
 
 		/** @brief Creates a server that accepts incoming connections */
 		virtual bool CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig);

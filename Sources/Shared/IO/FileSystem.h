@@ -205,6 +205,8 @@ namespace Death { namespace IO {
 		static bool SetWorkingDirectory(Containers::StringView path);
 		/** @brief Returns the path of the user home directory */
 		static Containers::String GetHomeDirectory();
+		/** @brief Returns the path of the directory for temporary files */
+		static Containers::String GetTempDirectory();
 
 #if defined(DEATH_TARGET_ANDROID) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**

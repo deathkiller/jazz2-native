@@ -972,4 +972,9 @@ namespace nCine::Backends
 		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strAndroidId, androidId);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strAndroidId);
 	}
+
+	StringView AndroidJniWrap_Secure::getAndroidId()
+	{
+		return androidId_;
+	}
 }

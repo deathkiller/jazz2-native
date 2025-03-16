@@ -54,7 +54,7 @@ namespace Jazz2
 
 #if defined(WITH_MULTIPLAYER)
 		/** @brief Connects to a multiplayer server asynchronously */
-		virtual void ConnectToServer(StringView address, std::uint16_t port) = 0;
+		virtual void ConnectToServer(StringView endpoint, std::uint16_t defaultPort) = 0;
 		/** @brief Creates a multiplayer server */
 		virtual bool CreateServer(Multiplayer::ServerInitialization&& serverInit) = 0;
 #endif

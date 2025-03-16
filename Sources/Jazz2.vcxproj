@@ -317,6 +317,8 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\ComPtr.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\WebRequest.h" />
     <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Input\ControlScheme.h" />
     <ClInclude Include="Jazz2\Input\RgbLights.h" />
@@ -744,6 +746,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\DeflateStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\Lz4Stream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\WebRequest.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />

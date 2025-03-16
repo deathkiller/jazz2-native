@@ -273,9 +273,9 @@ typedef std::int32_t ssize_t;
 typedef SSIZE_T ssize_t;
 #endif
 
-#include <CommonWindows.h>
-#include <Containers/StringStl.h>
-#include <Utf8.h>
+#include "../CommonWindows.h"
+#include "../Containers/StringStl.h"
+#include "../Utf8.h"
 
 #include <psapi.h>
 #include <signal.h>
@@ -4574,7 +4574,7 @@ namespace Death { namespace Backward {
 
 		static bool WriteMinidumpWithException(std::size_t requestingThreadId, ExceptionContext* ctx) {
 			wchar_t processPath[MAX_PATH];
-			if (!::GetModuleFileNameW(NULL, processPath, DWORD(arraySize(processPath)))) {
+			if (!::GetModuleFileNameW(NULL, processPath, DWORD(Containers::arraySize(processPath)))) {
 				return false;
 			}
 
@@ -4602,7 +4602,7 @@ namespace Death { namespace Backward {
 			std::int32_t pathPrefixLength = swprintf_s(minidumpPath, L"%s\\CrashDumps\\", processPathLength > 0 ? processPath : L".");
 			::CreateDirectory(minidumpPath, NULL);
 			TryEnableFileCompression(minidumpPath);
-			swprintf_s(minidumpPath + pathPrefixLength, arraySize(minidumpPath) - pathPrefixLength,
+			swprintf_s(minidumpPath + pathPrefixLength, Containers::arraySize(minidumpPath) - pathPrefixLength,
 				L"%s (%02i-%02i-%02i-%02i-%02i-%02i).dmp", &processPath[processPathLength], lt.wYear % 100,
 				lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
 

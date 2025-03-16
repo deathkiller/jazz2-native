@@ -5111,8 +5111,7 @@ extern "C" {
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = AF_UNSPEC;
 
-		if (nodns)
-		{
+		if (nodns) {
 			hints.ai_flags = AI_NUMERICHOST; /* prevent actual DNS lookups! */
 		}
 
@@ -5128,7 +5127,6 @@ extern "C" {
 					out->sin6_scope_id = 0;
 					freeaddrinfo(resultList);
 					return 0;
-
 				} else if (result->ai_family == AF_INET6 || (result->ai_family == AF_UNSPEC && result->ai_addrlen == sizeof(struct sockaddr_in6))) {
 					memcpy(&out->host, &((struct sockaddr_in6*)result->ai_addr)->sin6_addr, sizeof(struct in6_addr));
 					out->sin6_scope_id = (enet_uint16) ((struct sockaddr_in6*)result->ai_addr)->sin6_scope_id;

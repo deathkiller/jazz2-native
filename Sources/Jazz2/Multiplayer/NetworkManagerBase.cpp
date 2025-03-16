@@ -27,6 +27,38 @@ namespace Jazz2::Multiplayer
 {
 	static std::atomic_int32_t _initializeCount{0};
 
+	bool TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port)
+	{
+		if (auto portSep = input.findLast(':')) {
+			auto portString = input.suffix(portSep.begin() + 1);
+			if (portString.contains(']')) {
+				// Probably only IPv6 address (or some garbage)
+				address = input;
+				port = 0;
+				return true;
+			} else {
+				// Address (or hostname) and port
+				address = input.prefix(portSep.begin());
+				if (address.empty()) {
+					return false;
+				}
+
+				auto portString = input.suffix(portSep.begin() + 1);
+				port = (std::uint16_t)stou32(portString.data(), portString.size());
+				return true;
+			}
+		} else {
+			// Address (or hostname) only
+			if (input.empty()) {
+				return false;
+			}
+
+			address = input;
+			port = 0;
+			return true;
+		}
+	}
+
 	NetworkManagerBase::NetworkManagerBase()
 		: _host(nullptr), _state(NetworkState::None), _handler(nullptr)
 	{
@@ -39,11 +71,23 @@ namespace Jazz2::Multiplayer
 		ReleaseBackend();
 	}
 
-	void NetworkManagerBase::CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData)
+	void NetworkManagerBase::CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData)
 	{
 		if (_host != nullptr) {
 			LOGE("[MP] Client already created");
 			return;
+		}
+
+		// TODO: Cycle through all the endpoints
+		StringView firstEndpoint = endpoint.prefix(endpoint.findOr('|', endpoint.end()).begin());
+		StringView address; std::uint16_t port;
+		if (!TrySplitAddressAndPort(firstEndpoint, address, port)) {
+			LOGE("[MP] Failed to create client");
+			OnPeerDisconnected({}, Reason::InvalidParameter);
+			return;
+		}
+		if (port == 0) {
+			port = defaultPort;
 		}
 
 		_host = enet_host_create(nullptr, 1, std::size_t(NetworkChannel::Count), 0, 0);

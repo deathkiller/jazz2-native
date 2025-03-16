@@ -5,16 +5,26 @@
 #include "NetworkManager.h"
 #include "PacketTypes.h"
 #include "../PreferencesCache.h"
+#include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Threading/Thread.h"
 
 #include <Containers/String.h>
+#include <Containers/StringConcatenable.h>
+#include <Containers/StringStlView.h>
+#include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include <net/if.h>
 #endif
 
+#include "../../simdjson/simdjson.h"
+
+using namespace Death::Containers::Literals;
 using namespace Death::IO;
+
+using namespace std::string_view_literals;
+using namespace simdjson;
 
 namespace Jazz2::Multiplayer
 {
@@ -48,6 +58,7 @@ namespace Jazz2::Multiplayer
 	{
 		_server = nullptr;
 		_observer = nullptr;
+
 		_thread.Join();
 
 		NetworkManagerBase::ReleaseBackend();
@@ -57,7 +68,7 @@ namespace Jazz2::Multiplayer
 	{
 		ENetSocket socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
 		if (socket == ENET_SOCKET_NULL) {
-			LOGE("Failed to create socket for server discovery");
+			LOGE("[MP] Failed to create socket for server discovery");
 			return ENET_SOCKET_NULL;
 		}
 
@@ -72,7 +83,7 @@ namespace Jazz2::Multiplayer
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_IF, (const char*)&ifidx, sizeof(ifidx)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (const char*)&hops, sizeof(hops)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (const char*)&on, sizeof(on)) != 0) {
-			LOGE("Failed to enable multicast on socket for server discovery");
+			LOGE("[MP] Failed to enable multicast on socket for server discovery");
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -84,7 +95,7 @@ namespace Jazz2::Multiplayer
 		saddr.sin6_addr = in6addr_any;
 
 		if (bind(socket, (struct sockaddr*)&saddr, sizeof(saddr))) {
-			LOGE("Failed to bind socket for server discovery");
+			LOGE("[MP] Failed to bind socket for server discovery");
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -97,7 +108,7 @@ namespace Jazz2::Multiplayer
 		mreq.ipv6mr_interface = ifidx;
 
 		if (setsockopt(socket, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char*)&mreq, sizeof(mreq))) {
-			LOGE("Failed to join multicast group on socket for server discovery");
+			LOGE("[MP] Failed to join multicast group on socket for server discovery");
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -105,7 +116,7 @@ namespace Jazz2::Multiplayer
 		return socket;
 	}
 
-	void ServerDiscovery::TrySendRequest(ENetSocket socket, const ENetAddress& address)
+	void ServerDiscovery::TrySendLocalRequest(ENetSocket socket, const ENetAddress& address)
 	{
 		MemoryStream packet(9);
 		packet.WriteValue<std::uint64_t>(PacketSignature);
@@ -115,11 +126,55 @@ namespace Jazz2::Multiplayer
 		sendbuf.data = (void*)packet.GetBuffer();
 		sendbuf.dataLength = packet.GetSize();
 		if (enet_socket_send(socket, &address, &sendbuf, 1) != (std::int32_t)sendbuf.dataLength) {
-			LOGE("Failed to send discovery request");
+			LOGE("[MP] Failed to send discovery request");
 		}
 	}
 
-	bool ServerDiscovery::ProcessResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs)
+	void ServerDiscovery::TrySendOnlineRequest()
+	{
+		if (_onlineRequest.IsValid()) {
+			return;
+		}
+
+		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
+		_onlineRequest = WebSession::GetDefault().CreateRequest(url);
+		_onlineRequest.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
+		if (_onlineRequest.Execute()) {
+			auto s = _onlineRequest.GetResponse().GetStream();
+			auto size = s->GetSize();
+			auto buffer = std::make_unique<char[]>(size + simdjson::SIMDJSON_PADDING);
+			s->Read(buffer.get(), size);
+			buffer[size] = '\0';
+
+			ondemand::parser parser;
+			ondemand::document doc;
+			if (parser.iterate(buffer.get(), size, size + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+				ondemand::array servers;
+				if (doc["s"].get(servers) == SUCCESS) {
+					for (auto serverItem : servers) {
+						std::string_view serverName, serverUuid, serverEndpoints;
+						if (serverItem["n"].get(serverName) == SUCCESS && !serverName.empty() &&
+							serverItem["u"].get(serverUuid) == SUCCESS && !serverUuid.empty() &&
+							serverItem["e"].get(serverEndpoints) == SUCCESS && !serverEndpoints.empty()) {
+
+							ServerDescription discoveredServer {};
+							discoveredServer.Name = serverName;
+							discoveredServer.EndpointString = serverEndpoints;
+							discoveredServer.Name = serverName;
+
+							LOGD("[MP] Found server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+							_observer->OnServerFound(std::move(discoveredServer));
+						}
+					}
+				}
+			}
+		} else {
+			LOGE("[MP] Failed to download public server list");
+		}
+		_onlineRequest = {};
+	}
+
+	bool ServerDiscovery::ProcessLocalResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs)
 	{
 		ENetSocketSet set;
 		ENET_SOCKETSET_EMPTY(set);
@@ -128,17 +183,13 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
+		ENetAddress endpoint;
 		std::uint8_t buffer[512];
 		ENetBuffer recvbuf;
 		recvbuf.data = buffer;
 		recvbuf.dataLength = sizeof(buffer);
-		const std::int32_t bytesRead = enet_socket_receive(socket, &discoveredServer.Endpoint, &recvbuf, 1);
+		const std::int32_t bytesRead = enet_socket_receive(socket, &endpoint, &recvbuf, 1);
 		if (bytesRead <= 0) {
-			return false;
-		}
-
-		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(discoveredServer.Endpoint.host, discoveredServer.Endpoint.port);
-		if (discoveredServer.EndpointString.empty()) {
 			return false;
 		}
 
@@ -149,7 +200,13 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		discoveredServer.Endpoint.port = packet.ReadValue<std::uint16_t>();
+		std::uint16_t port = packet.ReadValue<std::uint16_t>();
+
+		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(endpoint.host, port);
+		if (discoveredServer.EndpointString.empty()) {
+			return false;
+		}
+
 		packet.Read(discoveredServer.UniqueIdentifier, sizeof(discoveredServer.UniqueIdentifier));
 
 		std::uint8_t nameLength = packet.ReadValue<std::uint8_t>();
@@ -165,11 +222,11 @@ namespace Jazz2::Multiplayer
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
 
-		LOGD("[MP] Found server at %s (%s)", discoveredServer.EndpointString.data(), discoveredServer.LevelName.data());
+		LOGD("[MP] Found server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
 		return true;
 	}
 
-	bool ServerDiscovery::ProcessRequests(ENetSocket socket, std::int32_t timeoutMs)
+	bool ServerDiscovery::ProcessLocalRequests(ENetSocket socket, std::int32_t timeoutMs)
 	{
 		ENetSocketSet set;
 		ENET_SOCKETSET_EMPTY(set);
@@ -198,19 +255,72 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+	void ServerDiscovery::PublishOnline()
+	{
+		if (_onlineRequest.IsValid()) {
+			return;
+		}
+
+		auto& serverConfig = _server->GetServerConfiguration();
+		if (serverConfig.ServerName.empty()) {
+			return;
+		}
+
+		String serverName = StringUtils::replaceAll(serverConfig.ServerName.data(), "\""_s, "\\\""_s);
+
+		char input[2048];
+		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"",
+			serverName.data(), PreferencesCache::UniquePlayerID.data());
+
+		auto& id = PreferencesCache::UniquePlayerID;
+		length += formatString(input + length, sizeof(input) - length, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+
+		length += formatString(input + length, sizeof(input) - length, "\",\"e\":\"");
+
+		bool isFirst = true;
+		auto endpoints = _server->GetServerEndpoints();
+		for (auto& endpoint : endpoints) {
+			if (isFirst) {
+				isFirst = false;
+			} else {
+				length += formatString(input + length, sizeof(input) - length, "|");
+			}
+
+			length += formatString(input + length, sizeof(input) - length, "%s", endpoint.data());
+		}
+
+		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u}",
+			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), _server->GetPeerCount(), serverConfig.MaxPlayerCount);
+
+		_onlineRequest = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers");
+		_onlineRequest.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
+		_onlineRequest.SetMethod("POST"_s);
+		_onlineRequest.SetData(StringView(input, length), "application/json"_s);
+		if (!_onlineRequest.Execute()) {
+			LOGW("[MP] Failed to publish the server");
+		}
+		_onlineRequest = {};
+	}
+
 	void ServerDiscovery::OnClientThread(void* param)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
 		ENetSocket socket = _this->_socket;
 
 		while (_this->_observer != nullptr) {
-			if (_this->_lastRequest.secondsSince() > 10) {
-				_this->_lastRequest = TimeStamp::now();
-				TrySendRequest(socket, _this->_address);
+			if (_this->_lastLocalRequest.secondsSince() > 10) {
+				_this->_lastLocalRequest = TimeStamp::now();
+				_this->TrySendLocalRequest(socket, _this->_address);
+			}
+
+			if (_this->_lastOnlineRequest.secondsSince() > 60) {
+				_this->_lastOnlineRequest = TimeStamp::now();
+				_this->TrySendOnlineRequest();
 			}
 
 			ServerDescription discoveredServer;
-			if (ProcessResponses(socket, discoveredServer, 0)) {
+			if (_this->ProcessLocalResponses(socket, discoveredServer, 0)) {
 				_this->_observer->OnServerFound(std::move(discoveredServer));
 			} else {
 				// No responses, sleep for a while
@@ -237,9 +347,9 @@ namespace Jazz2::Multiplayer
 			if (delayCount <= 0) {
 				delayCount = 10;
 
-				while (_this->_address.port != 0 && ProcessRequests(socket, 0)) {
-					if (_this->_lastRequest.secondsSince() > 15) {
-						_this->_lastRequest = TimeStamp::now();
+				while (_this->_address.port != 0 && _this->ProcessLocalRequests(socket, 0)) {
+					if (_this->_lastLocalRequest.secondsSince() > 15) {
+						_this->_lastLocalRequest = TimeStamp::now();
 
 						// If server name is empty, it's private and shouldn't respond to discovery messages
 						auto& serverConfig = _this->_server->GetServerConfiguration();
@@ -275,10 +385,15 @@ namespace Jazz2::Multiplayer
 							sendbuf.data = (void*)packet.GetBuffer();
 							sendbuf.dataLength = packet.GetSize();
 							if (enet_socket_send(socket, &_this->_address, &sendbuf, 1) != (std::int32_t)sendbuf.dataLength) {
-								LOGE("Failed to send discovery response");
+								LOGE("[MP] Failed to send discovery response");
 							}
 						}
 					}
+				}
+
+				if (_this->_lastOnlineRequest.secondsSince() > 600) {
+					_this->_lastOnlineRequest = TimeStamp::now();
+					_this->PublishOnline();
 				}
 			}
 
