@@ -37,6 +37,7 @@ namespace Death { namespace IO {
 	class WebAuthChallengeImpl;
 	class WebRequestImpl;
 	class WebResponseImpl;
+	class WebSessionAsync;
 	class WebSessionImpl;
 
 	typedef Containers::ComPtr<WebAuthChallengeImpl> WebAuthChallengeImplPtr;
