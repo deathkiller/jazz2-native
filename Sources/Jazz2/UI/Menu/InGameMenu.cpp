@@ -322,9 +322,9 @@ namespace Jazz2::UI::Menu
 	}
 
 #if defined(WITH_MULTIPLAYER)
-	void InGameMenu::ConnectToServer(const StringView address, std::uint16_t port)
+	void InGameMenu::ConnectToServer(StringView endpoint, std::uint16_t defaultPort)
 	{
-		_root->_root->ConnectToServer(address, port);
+		_root->_root->ConnectToServer(endpoint, defaultPort);
 	}
 
 	bool InGameMenu::CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit)

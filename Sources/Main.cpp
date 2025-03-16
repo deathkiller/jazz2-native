@@ -57,16 +57,12 @@ using namespace Jazz2::Multiplayer;
 
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
-#include <Cpu.h>
 #include <Environment.h>
 #include <Utf8.h>
 #include <IO/FileSystem.h>
 #include <IO/PakFile.h>
 #include <IO/Compression/DeflateStream.h>
-
-#if !defined(DEATH_DEBUG)
-#	include <IO/HttpRequest.h>
-#endif
+#include <IO/WebRequest.h>
 
 /** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
@@ -112,7 +108,7 @@ public:
 	bool SaveCurrentStateIfAny() override;
 
 #if defined(WITH_MULTIPLAYER)
-	void ConnectToServer(StringView address, std::uint16_t port) override;
+	void ConnectToServer(StringView endpoint, std::uint16_t defaultPort) override;
 	bool CreateServer(ServerInitialization&& serverInit) override;
 
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
@@ -140,7 +136,7 @@ private:
 	Flags _flags = Flags::None;
 	std::unique_ptr<IStateHandler> _currentHandler;
 	SmallVector<Function<void()>> _pendingCallbacks;
-	char _newestVersion[20];
+	String _newestVersion;
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
 #endif
@@ -161,7 +157,6 @@ private:
 	static void WriteCacheDescriptor(StringView path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
-	static bool TryParseAddressAndPort(StringView input, String& address, std::uint16_t& port);
 	static void ExtractPakFile(StringView pakFile, StringView targetPath);
 };
 
@@ -265,16 +260,12 @@ void GameEventHandler::OnInitialize()
 			// TODO: Hardcoded port
 			CreateServer(MultiplayerDefaultPort);*/
 		} else if (arg == "/connect"_s && i + 1 < config.argc()) {
-			String address; std::uint16_t port;
-			if (TryParseAddressAndPort(config.argv(i + 1), address, port)) {
-				if (port == 0) {
-					port = MultiplayerDefaultPort;
-				}
-
+			auto endpoint = config.argv(i + 1);
+			if (!endpoint.empty()) {
 				thread.Join();
 
 				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
-				ConnectToServer(address.data(), (std::uint16_t)port);
+				ConnectToServer(endpoint, MultiplayerDefaultPort);
 				return;
 			}
 		}
@@ -335,14 +326,10 @@ void GameEventHandler::OnInitialize()
 			// TODO: Hardcoded port
 			CreateServer(MultiplayerDefaultPort);*/
 		} else if (arg == "/connect"_s && i + 1 < config.argc()) {
-			String address; std::uint16_t port;
-			if (TryParseAddressAndPort(config.argv(i + 1), address, port)) {
-				if (port == 0) {
-					port = MultiplayerDefaultPort;
-				}
-
+			auto endpoint = config.argv(i + 1);
+			if (!endpoint.empty()) {
 				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
-				ConnectToServer(address.data(), (std::uint16_t)port);
+				ConnectToServer(endpoint, MultiplayerDefaultPort);
 				return;
 			}
 		}
@@ -738,12 +725,12 @@ void GameEventHandler::ApplyActivityIcon()
 #endif
 
 #if defined(WITH_MULTIPLAYER)
-void GameEventHandler::ConnectToServer(StringView address, std::uint16_t port)
+void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort)
 {
-	LOGI("Connecting to %s:%u...", address.data(), port);
+	LOGI("Connecting to %s...", endpoint.data());
 
 	_networkManager = std::make_unique<NetworkManager>();
-	_networkManager->CreateClient(this, address, port, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
+	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
 }
 
 bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
@@ -823,6 +810,15 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		}
 		packet.WriteValue<std::uint8_t>((std::uint8_t)playerName.size());
 		packet.Write(playerName.data(), (std::uint32_t)playerName.size());
+
+#if defined(DEATH_TARGET_ANDROID)
+		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
+		std::size_t androidIdLength = std::min(androidId.size(), (std::size_t)UINT8_MAX);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)androidIdLength);
+		packet.Write(androidId.data(), (std::uint32_t)androidIdLength);
+#else
+		packet.WriteValue<std::uint8_t>(0);	// Device ID
+#endif
 
 		packet.WriteVariableUint64(playerUserId);
 
@@ -972,6 +968,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				String playerName{NoInit, playerNameLength};
 				packet.Read(playerName.data(), playerNameLength);
 
+				std::uint8_t deviceIdLength = packet.ReadValue<std::uint8_t>();
+				String deviceId{NoInit, deviceIdLength};
+				packet.Read(deviceId.data(), deviceIdLength);
+
 				std::uint64_t playerUserId = packet.ReadVariableUint64();
 				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
 					LOGD("[MP] ClientPacketType::Auth - Discord auth is required");
@@ -1046,8 +1046,6 @@ void GameEventHandler::OnBeforeInitialize()
 #endif
 
 	_flags |= Flags::IsInitialized;
-
-	std::memset(_newestVersion, 0, sizeof(_newestVersion));
 
 	auto& resolver = ContentResolver::Get();
 
@@ -1557,189 +1555,15 @@ void GameEventHandler::CheckUpdates()
 #if !defined(DEATH_DEBUG)
 	ZoneScopedC(0x888888);
 
-#if defined(DEATH_TARGET_X86)
-	std::int32_t arch = 1;
-	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
-	if (cpuFeatures & Cpu::Avx) {
-		arch |= 0x400;
-	}
-	if (cpuFeatures & Cpu::Avx2) {
-		arch |= 0x800;
-	}
-	if (cpuFeatures & Cpu::Avx512f) {
-		arch |= 0x1000;
-	}
-#elif defined(DEATH_TARGET_ARM)
-	std::int32_t arch = 2;
-	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
-	if (cpuFeatures & Cpu::Neon) {
-		arch |= 0x2000;
-	}
-#elif defined(DEATH_TARGET_POWERPC)
-	std::int32_t arch = 3;
-#elif defined(DEATH_TARGET_RISCV)
-	std::int32_t arch = 5;
-#elif defined(DEATH_TARGET_WASM)
-	std::int32_t arch = 4;
-	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
-	if (cpuFeatures & Cpu::Simd128) {
-		arch |= 0x4000;
-	}
-#else
-	std::int32_t arch = 0;
-#endif
-#if defined(DEATH_TARGET_32BIT)
-	arch |= 0x100;
-#endif
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-	arch |= 0x200;
-#endif
-#if defined(DEATH_TARGET_CYGWIN)
-	arch |= 0x200000;
-#endif
-#if defined(DEATH_TARGET_MINGW)
-	arch |= 0x400000;
-#endif
-
-#if defined(DEATH_TARGET_ANDROID)
-	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, StringView name, bool isBrand) {
-		bool wasSpace = true;
-		std::size_t lowercaseLength = 0;
-
-		if (isBrand) {
-			for (char c : name) {
-				if (c == '\0' || c == ' ') {
-					break;
-				}
-				lowercaseLength++;
-			}
-			if (lowercaseLength < 5 || name[0] < 'A' || name[0] > 'Z' || name[lowercaseLength - 1] < 'A' || name[lowercaseLength - 1] > 'Z') {
-				lowercaseLength = 0;
-			}
-		}
-		
-		for (char c : name) {
-			if (c == '\0' || dstLength >= dstMaxLength) {
-				break;
-			}
-			if (isalnum(c) || c == ' ' || c == '.' || c == ',' || c == ':' || c == '_' || c == '-' || c == '+' || c == '/' || c == '*' ||
-				c == '!' || c == '(' || c == ')' || c == '[' || c == ']' || c == '@' || c == '&' || c == '#' || c == '\'' || c == '"') {
-				if (wasSpace && c >= 'a' && c <= 'z') {
-					c &= ~0x20;
-					if (lowercaseLength > 0) {
-						lowercaseLength--;
-					}
-				} else if (lowercaseLength > 0) {
-					if (c >= 'A' && c <= 'Z') {
-						c |= 0x20;
-					}
-					lowercaseLength--;
-				}
-				dst[dstLength++] = c;
-			}
-			wasSpace = (c == ' ');
-		}
-	};
-
-	auto sdkVersion = Backends::AndroidJniHelper::SdkVersion();
-	auto androidId = Backends::AndroidJniWrap_Secure::AndroidId();
-	auto deviceBrand = Backends::AndroidJniClass_Version::deviceBrand();
-	auto deviceModel = Backends::AndroidJniClass_Version::deviceModel();
-
-	char deviceName[64];
-	std::size_t deviceNameLength = 0;
-	if (deviceModel.empty()) {
-		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceBrand, false);
-	} else if (deviceModel.hasPrefix(deviceBrand)) {
-		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel, true);
-	} else {
-		if (!deviceBrand.empty()) {
-			sanitizeName(deviceName, arraySize(deviceName) - 8, deviceNameLength, deviceBrand, true);
-			deviceName[deviceNameLength++] = ' ';
-		}
-		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel, false);
-	}
-	deviceName[deviceNameLength] = '\0';
-
-	char DeviceDesc[128];
-	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, deviceName, arch);
-#elif defined(DEATH_TARGET_APPLE)
-	char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
-	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
-		DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
-		DeviceDescLength = std::strlen(DeviceDesc);
-	} else {
-		DeviceDescLength = 0;
-	}
-	String appleVersion = Environment::GetAppleVersion();
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|macOS %s||5|%i", appleVersion.data(), arch);
-#elif defined(DEATH_TARGET_SWITCH)
-	std::uint32_t switchVersion = Environment::GetSwitchVersion();
-	bool isAtmosphere = Environment::HasSwitchAtmosphere();
-
-	char DeviceDesc[128];
-	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "|Nintendo Switch %u.%u.%u%s||9|%i",
-		((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)" : "", arch);
-#elif defined(DEATH_TARGET_UNIX)
-#	if defined(DEATH_TARGET_CLANG)
-	arch |= 0x100000;
-#	endif
-
-	char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
-	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
-		DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
-		DeviceDescLength = std::strlen(DeviceDesc);
-	} else {
-		DeviceDescLength = 0;
-	}
-	String unixVersion = Environment::GetUnixVersion();
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
-		unixVersion.empty() ? "Unix" : unixVersion.data(), arch);
-#elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
-#	if defined(DEATH_TARGET_CLANG)
-	arch |= 0x100000;
-#	endif
-
-	auto osVersion = Environment::WindowsVersion;
-	wchar_t deviceNameW[128]; DWORD DeviceDescLength = (DWORD)arraySize(deviceNameW);
-	if (!::GetComputerNameW(deviceNameW, &DeviceDescLength)) {
-		DeviceDescLength = 0;
-	}
-	
-	char DeviceDesc[256];
-	DeviceDescLength = Utf8::FromUtf16(DeviceDesc, deviceNameW, DeviceDescLength);
-
-#	if defined(DEATH_TARGET_WINDOWS_RT)
-	const char* deviceType;
-	switch (Environment::CurrentDeviceType) {
-		case DeviceType::Desktop: deviceType = "Desktop"; break;
-		case DeviceType::Mobile: deviceType = "Mobile"; break;
-		case DeviceType::Iot: deviceType = "Iot"; break;
-		case DeviceType::Xbox: deviceType = "Xbox"; break;
-		default: deviceType = "Unknown"; break;
-	}
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
-		(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), deviceType, arch);
-#	else
-	HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
-	bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength,
-		isWine ? "|Windows %i.%i.%i (Wine)||3|%i" : "|Windows %i.%i.%i||3|%i",
-		(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), arch);
-#	endif
-#else
-	static const char DeviceDesc[] = "||||"; std::int32_t DeviceDescLength = sizeof(DeviceDesc) - 1;
-#endif
-	using namespace Death::IO;
-	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
-	Http::Request req(url, Http::InternetProtocol::V4);
-	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
-	if (resp.Status.Code == Http::HttpStatus::Ok && !resp.Body.empty() && resp.Body.size() < sizeof(_newestVersion) - 1) {
+	String url = "https://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
+	auto request = WebSession::GetDefault().CreateRequest(url);
+	request.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
+	if (request.Execute()) {
+		auto s = request.GetResponse().AsString();
 		constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
-		std::uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.Body.data()), resp.Body.size()));
+		std::uint64_t latestVersion = parseVersion(s);
 		if (currentVersion < latestVersion) {
-			std::memcpy(_newestVersion, resp.Body.data(), resp.Body.size());
-			_newestVersion[resp.Body.size()] = '\0';
+			_newestVersion = s;
 		}
 	}
 #endif
@@ -1885,39 +1709,6 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 	} else if (!PreferencesCache::TutorialCompleted) {
 		PreferencesCache::TutorialCompleted = true;
 		PreferencesCache::Save();
-	}
-}
-
-bool GameEventHandler::TryParseAddressAndPort(StringView input, String& address, std::uint16_t& port)
-{
-	auto portSep = input.findLast(':');
-	if (portSep) {
-		auto portString = input.suffix(portSep.begin() + 1);
-		if (portString.contains(']')) {
-			// Probably only IPv6 address (or some garbage)
-			address = input;
-			port = 0;
-			return true;
-		} else {
-			// Address (or hostname) and port
-			address = input.prefix(portSep.begin());
-			if (address.empty()) {
-				return false;
-			}
-
-			auto portString = input.suffix(portSep.begin() + 1);
-			port = (std::uint16_t)stou32(portString.data(), portString.size());
-			return true;
-		}
-	} else {
-		// Address (or hostname) only
-		if (input.empty()) {
-			return false;
-		}
-
-		address = input;
-		port = 0;
-		return true;
 	}
 }
 

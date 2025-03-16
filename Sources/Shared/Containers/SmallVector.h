@@ -64,7 +64,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Returns whether the container is empty */
-		[[nodiscard]] bool empty() const {
+		bool empty() const {
 			return !Size;
 		}
 
@@ -188,11 +188,8 @@ namespace Death { namespace Containers {
 			this->assertSafeToReferenceAfterResize(to - 1, 0);
 		}
 		/** @overload */
-		template<
-			class ItTy,
-			std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T*>::value,
-			bool> = false>
-			void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
+		template<class ItTy, std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T*>::value, int> = 0>
+		void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
 		/** @brief Checks whether any part of the range will be invalidated by growing */
 		void assertSafeToAddRange(const T* from, const T* to) {
@@ -202,11 +199,8 @@ namespace Death { namespace Containers {
 			this->assertSafeToAdd(to - 1, to - from);
 		}
 		/** @overload */
-		template<
-			class ItTy,
-			std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T*>::value,
-			bool> = false>
-			void assertSafeToAddRange(ItTy, ItTy) {}
+		template<class ItTy, std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T*>::value, int> = 0>
+		void assertSafeToAddRange(ItTy, ItTy) {}
 
 		/** @brief Reserves enough space to add one element, and return the updated element pointer in case it was a reference to the storage */
 		template<class U>
@@ -538,9 +532,7 @@ namespace Death { namespace Containers {
 
 		/** @brief Copies the range [I, E) onto the uninitialized memory starting with @p dest, constructing elements into it as needed */
 		template<typename T1, typename T2>
-		static void uninitializedCopy(
-			T1* i, T1* e, T2* dest,
-			std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * = nullptr) {
+		static void uninitializedCopy(T1* i, T1* e, T2* dest, std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value>* = nullptr) {
 			// Use memcpy for PODs iterated by pointers (which includes SmallVector iterators):
 			// std::uninitialized_copy optimizes to memmove, but we can use memcpy here. Note that
 			// I and E are iterators and thus might be invalid for memcpy if they are equal
@@ -728,7 +720,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Removes the last element and returns it */
-		[[nodiscard]] T pop_back_val() {
+		/*[[nodiscard]]*/ T pop_back_val() {
 			T result = ::std::move(this->back());
 			this->pop_back();
 			return result;
@@ -738,11 +730,8 @@ namespace Death { namespace Containers {
 		void swap(SmallVectorImpl& other);
 
 		/** @brief Adds the specified range to the end of the vector */
-		template<typename in_iter,
-			typename = std::enable_if_t<std::is_convertible<
-			typename std::iterator_traits<in_iter>::iterator_category,
-			std::input_iterator_tag>::value>>
-			void append(in_iter inStart, in_iter inEnd) {
+		template<typename in_iter, std::enable_if_t<std::is_convertible<typename std::iterator_traits<in_iter>::iterator_category, std::input_iterator_tag>::value, int> = 0>
+		void append(in_iter inStart, in_iter inEnd) {
 			this->assertSafeToAddRange(inStart, inEnd);
 			size_type numInputs = std::distance(inStart, inEnd);
 			this->reserve(this->size() + numInputs);
@@ -785,11 +774,8 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Assigns the specified range */
-		template<typename in_iter,
-			typename = std::enable_if_t<std::is_convertible<
-			typename std::iterator_traits<in_iter>::iterator_category,
-			std::input_iterator_tag>::value>>
-			void assign(in_iter inStart, in_iter inEnd) {
+		template<typename in_iter, std::enable_if_t<std::is_convertible<typename std::iterator_traits<in_iter>::iterator_category, std::input_iterator_tag>::value, int> = 0>
+		void assign(in_iter inStart, in_iter inEnd) {
 			this->assertSafeToReferenceAfterClear(inStart, inEnd);
 			clear();
 			append(inStart, inEnd);
@@ -960,11 +946,8 @@ namespace Death { namespace Containers {
 			return i;
 		}
 		/** @overload */
-		template<typename ItTy,
-			typename = std::enable_if_t<std::is_convertible<
-			typename std::iterator_traits<ItTy>::iterator_category,
-			std::input_iterator_tag>::value>>
-			iterator insert(iterator i, ItTy from, ItTy to) {
+		template<typename ItTy, std::enable_if_t<std::is_convertible<typename std::iterator_traits<ItTy>::iterator_category, std::input_iterator_tag>::value, int> = 0>
+		iterator insert(iterator i, ItTy from, ItTy to) {
 			// Convert iterator to elt# to avoid invalidating iterator when we reserve()
 			std::size_t insertElt = i - this->begin();
 
@@ -1317,10 +1300,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @overload */
-		template <typename ItTy,
-			typename = std::enable_if_t<std::is_convertible<
-			typename std::iterator_traits<ItTy>::iterator_category,
-			std::input_iterator_tag>::value>>
+		template<typename ItTy, std::enable_if_t<std::is_convertible<typename std::iterator_traits<ItTy>::iterator_category, std::input_iterator_tag>::value, int> = 0>
 		/*implicit*/ SmallVector(InPlaceInitT, ItTy s, ItTy e) : SmallVectorImpl<T>(N) {
 			this->append(s, e);
 		}

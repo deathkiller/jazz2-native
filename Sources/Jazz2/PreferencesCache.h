@@ -235,6 +235,9 @@ namespace Jazz2
 		/** @brief Returns directory path of the preferences file */
 		static StringView GetDirectory();
 
+		/** @brief Returns device ID of the device currently running this application */
+		static String GetDeviceID();
+
 		/** @brief Returns information about episode completion */
 		static EpisodeContinuationState* GetEpisodeEnd(StringView episodeName, bool createIfNotFound = false);
 		/** @brief Returns information about episode continuation */

@@ -173,7 +173,7 @@ namespace Jazz2::UI::Menu
 
 			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				if (_selectedIndex == i) {
-					float xMultiplier = _items[i].Desc.EndpointString.size() * 0.5f;
+					float xMultiplier = _items[i].Desc.Name.size() * 0.5f;
 					float easing = IMenuContainer::EaseOutElastic(_animation);
 					float x = column1 + xMultiplier - easing * xMultiplier;
 					float size = 0.7f + easing * 0.12f;
@@ -185,12 +185,17 @@ namespace Jazz2::UI::Menu
 						Alignment::Left, Font::DefaultColor, 0.7f);
 				}
 
-				char playerCount[32];
-				formatString(playerCount, sizeof(playerCount), "%u/%u", _items[i].Desc.CurrentPlayerCount, _items[i].Desc.MaxPlayerCount);
-				_root->DrawStringShadow(playerCount, charOffset, column2 - 6.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
-					Alignment::Right, Font::DefaultColor, 0.7f);
+				if (_items[i].Desc.MaxPlayerCount > 0) {
+					char playerCount[32];
+					formatString(playerCount, sizeof(playerCount), "%u/%u", _items[i].Desc.CurrentPlayerCount, _items[i].Desc.MaxPlayerCount);
+					_root->DrawStringShadow(playerCount, charOffset, column2 - 6.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
+						Alignment::Right, Font::DefaultColor, 0.7f);
+				}
 
-				_root->DrawStringShadow(_items[i].Desc.EndpointString, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
+				StringView firstEndpoint = _items[i].Desc.EndpointString;
+				firstEndpoint = firstEndpoint.prefix(firstEndpoint.findOr('|', firstEndpoint.end()).begin());
+
+				_root->DrawStringShadow(firstEndpoint, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
 					Alignment::Left, Font::DefaultColor, 0.7f);
 			}
 
@@ -337,7 +342,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		_isConnecting = true;
-		_root->ConnectToServer(_selectedServer.EndpointString, _selectedServer.Endpoint.port);
+		_root->ConnectToServer(_selectedServer.EndpointString, 0);
 	}
 
 	void ServerSelectSection::EnsureVisibleSelected(std::int32_t offset)

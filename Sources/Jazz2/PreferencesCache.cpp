@@ -6,10 +6,17 @@
 #include "../nCine/Base/Random.h"
 
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringStl.h>
+#include <Cpu.h>
 #include <Environment.h>
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
+#include <Utf8.h>
+
+#if defined(DEATH_TARGET_ANDROID)
+#	include "nCine/Backends/Android/AndroidJniHelper.h"
+#endif
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
@@ -556,6 +563,227 @@ namespace Jazz2
 	StringView PreferencesCache::GetDirectory()
 	{
 		return fs::GetDirectoryName(_configPath);
+	}
+
+	template<class Iterator>
+	static std::string ToBase64(const Iterator begin, const Iterator end)
+	{
+		static const StaticArray<64, char> chars {
+			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+			'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'
+		};
+
+		std::string result;
+		std::size_t c = 0;
+		StaticArray<3, std::uint8_t> charArray;
+
+		for (auto i = begin; i != end; ++i) {
+			charArray[c++] = static_cast<std::uint8_t>(*i);
+			if (c == 3) {
+				result += chars[static_cast<std::uint8_t>((charArray[0] & 0xFC) >> 2)];
+				result += chars[static_cast<std::uint8_t>(((charArray[0] & 0x03) << 4) + ((charArray[1] & 0xF0) >> 4))];
+				result += chars[static_cast<std::uint8_t>(((charArray[1] & 0x0F) << 2) + ((charArray[2] & 0xC0) >> 6))];
+				result += chars[static_cast<std::uint8_t>(charArray[2] & 0x3f)];
+				c = 0;
+			}
+		}
+
+		if (c != 0) {
+			result += chars[static_cast<std::uint8_t>((charArray[0] & 0xFC) >> 2)];
+			if (c == 1) {
+				result += chars[static_cast<std::uint8_t>((charArray[0] & 0x03) << 4)];
+			} else { // c == 2
+				result += chars[static_cast<std::uint8_t>(((charArray[0] & 0x03) << 4) + ((charArray[1] & 0xF0) >> 4))];
+				result += chars[static_cast<std::uint8_t>((charArray[1] & 0x0F) << 2)];
+			}
+
+			while (++c < 4) {
+				result += '='; // Padding
+			}
+		}
+
+		return result;
+	}
+
+	String PreferencesCache::GetDeviceID()
+	{
+#if defined(DEATH_TARGET_X86)
+		std::int32_t arch = 1;
+		Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
+		if (cpuFeatures & Cpu::Avx) {
+			arch |= 0x400;
+		}
+		if (cpuFeatures & Cpu::Avx2) {
+			arch |= 0x800;
+		}
+		if (cpuFeatures & Cpu::Avx512f) {
+			arch |= 0x1000;
+		}
+#elif defined(DEATH_TARGET_ARM)
+		std::int32_t arch = 2;
+		Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
+		if (cpuFeatures & Cpu::Neon) {
+			arch |= 0x2000;
+		}
+#elif defined(DEATH_TARGET_POWERPC)
+		std::int32_t arch = 3;
+#elif defined(DEATH_TARGET_RISCV)
+		std::int32_t arch = 5;
+#elif defined(DEATH_TARGET_WASM)
+		std::int32_t arch = 4;
+		Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
+		if (cpuFeatures & Cpu::Simd128) {
+			arch |= 0x4000;
+		}
+#else
+		std::int32_t arch = 0;
+#endif
+#if defined(DEATH_TARGET_32BIT)
+		arch |= 0x100;
+#endif
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		arch |= 0x200;
+#endif
+#if defined(DEATH_TARGET_CYGWIN)
+		arch |= 0x200000;
+#endif
+#if defined(DEATH_TARGET_MINGW)
+		arch |= 0x400000;
+#endif
+
+#if defined(DEATH_TARGET_ANDROID)
+		auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, StringView name, bool isBrand) {
+			bool wasSpace = true;
+			std::size_t lowercaseLength = 0;
+
+			if (isBrand) {
+				for (char c : name) {
+					if (c == '\0' || c == ' ') {
+						break;
+					}
+					lowercaseLength++;
+				}
+				if (lowercaseLength < 5 || name[0] < 'A' || name[0] > 'Z' || name[lowercaseLength - 1] < 'A' || name[lowercaseLength - 1] > 'Z') {
+					lowercaseLength = 0;
+				}
+			}
+
+			for (char c : name) {
+				if (c == '\0' || dstLength >= dstMaxLength) {
+					break;
+				}
+				if (isalnum(c) || c == ' ' || c == '.' || c == ',' || c == ':' || c == '_' || c == '-' || c == '+' || c == '/' || c == '*' ||
+					c == '!' || c == '(' || c == ')' || c == '[' || c == ']' || c == '@' || c == '&' || c == '#' || c == '\'' || c == '"') {
+					if (wasSpace && c >= 'a' && c <= 'z') {
+						c &= ~0x20;
+						if (lowercaseLength > 0) {
+							lowercaseLength--;
+						}
+					} else if (lowercaseLength > 0) {
+						if (c >= 'A' && c <= 'Z') {
+							c |= 0x20;
+						}
+						lowercaseLength--;
+					}
+					dst[dstLength++] = c;
+				}
+				wasSpace = (c == ' ');
+			}
+		};
+
+		auto sdkVersion = Backends::AndroidJniHelper::SdkVersion();
+		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
+		auto deviceBrand = Backends::AndroidJniClass_Version::deviceBrand();
+		auto deviceModel = Backends::AndroidJniClass_Version::deviceModel();
+
+		char deviceName[64];
+		std::size_t deviceNameLength = 0;
+		if (deviceModel.empty()) {
+			sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceBrand, false);
+		} else if (deviceModel.hasPrefix(deviceBrand)) {
+			sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel, true);
+		} else {
+			if (!deviceBrand.empty()) {
+				sanitizeName(deviceName, arraySize(deviceName) - 8, deviceNameLength, deviceBrand, true);
+				deviceName[deviceNameLength++] = ' ';
+			}
+			sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel, false);
+		}
+		deviceName[deviceNameLength] = '\0';
+
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, deviceName, arch);
+#elif defined(DEATH_TARGET_APPLE)
+		char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
+		if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
+			DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
+			DeviceDescLength = std::strlen(DeviceDesc);
+		} else {
+			DeviceDescLength = 0;
+		}
+		String appleVersion = Environment::GetAppleVersion();
+		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|macOS %s||5|%i", appleVersion.data(), arch);
+#elif defined(DEATH_TARGET_SWITCH)
+		std::uint32_t switchVersion = Environment::GetSwitchVersion();
+		bool isAtmosphere = Environment::HasSwitchAtmosphere();
+
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "|Nintendo Switch %u.%u.%u%s||9|%i",
+			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)" : "", arch);
+#elif defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_CLANG)
+		arch |= 0x100000;
+#	endif
+
+		char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
+		if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
+			DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
+			DeviceDescLength = std::strlen(DeviceDesc);
+		} else {
+			DeviceDescLength = 0;
+		}
+		String unixVersion = Environment::GetUnixVersion();
+		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
+			unixVersion.empty() ? "Unix" : unixVersion.data(), arch);
+#elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
+#	if defined(DEATH_TARGET_CLANG)
+		arch |= 0x100000;
+#	endif
+
+		auto osVersion = Environment::WindowsVersion;
+		wchar_t deviceNameW[128]; DWORD DeviceDescLength = (DWORD)arraySize(deviceNameW);
+		if (!::GetComputerNameW(deviceNameW, &DeviceDescLength)) {
+			DeviceDescLength = 0;
+		}
+
+		char DeviceDesc[256];
+		DeviceDescLength = Utf8::FromUtf16(DeviceDesc, deviceNameW, DeviceDescLength);
+
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		const char* deviceType;
+		switch (Environment::CurrentDeviceType) {
+			case DeviceType::Desktop: deviceType = "Desktop"; break;
+			case DeviceType::Mobile: deviceType = "Mobile"; break;
+			case DeviceType::Iot: deviceType = "Iot"; break;
+			case DeviceType::Xbox: deviceType = "Xbox"; break;
+			default: deviceType = "Unknown"; break;
+		}
+		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
+			(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), deviceType, arch);
+#	else
+		HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
+		bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
+		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength,
+			isWine ? "|Windows %i.%i.%i (Wine)||3|%i" : "|Windows %i.%i.%i||3|%i",
+			(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), arch);
+#	endif
+#else
+		static const char DeviceDesc[] = "||||"; std::int32_t DeviceDescLength = sizeof(DeviceDesc) - 1;
+#endif
+		return ToBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
 	}
 
 	EpisodeContinuationState* PreferencesCache::GetEpisodeEnd(StringView episodeName, bool createIfNotFound)

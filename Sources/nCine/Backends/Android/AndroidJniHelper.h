@@ -294,9 +294,7 @@ namespace nCine::Backends
 	public:
 		static void init(struct android_app* state);
 
-		inline static String AndroidId() {
-			return androidId_;
-		}
+		static StringView getAndroidId();
 
 	private:
 		static String androidId_;

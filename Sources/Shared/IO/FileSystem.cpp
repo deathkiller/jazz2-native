@@ -1258,6 +1258,37 @@ namespace Death { namespace IO {
 #endif
 	}
 
+	String FileSystem::GetTempDirectory()
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		wchar_t buffer[MaxPathLength];
+		UINT requiredLength = ::GetTempPathW(static_cast<DWORD>(MaxPathLength), buffer);
+		if (requiredLength == 0 || requiredLength >= MaxPathLength) return "."_s;
+		return Utf8::FromUtf16(buffer, requiredLength);
+#else
+		StringView tmpDir = ::getenv("TMPDIR");
+		if (DirectoryExists(tmpDir)) {
+			return tmpDir;
+		}
+
+		tmpDir = ::getenv("TMP");
+		if (DirectoryExists(tmpDir)) {
+			return tmpDir;
+		}
+
+		tmpDir = ::getenv("TEMP");
+		if (DirectoryExists(tmpDir)) {
+			return tmpDir;
+		}
+
+		if (DirectoryExists("/tmp"_s)) {
+			return "/tmp"_s;
+		}
+
+		return "."_s;
+#endif
+	}
+
 #if defined(DEATH_TARGET_ANDROID)
 	String FileSystem::GetExternalStorage()
 	{
@@ -1291,7 +1322,7 @@ namespace Death { namespace IO {
 		wchar_t buffer[MaxPathLength];
 		UINT requiredLength = ::GetSystemWindowsDirectoryW(buffer, static_cast<UINT>(MaxPathLength));
 		if (requiredLength == 0 || requiredLength >= MaxPathLength) return {};
-		return Utf8::FromUtf16(buffer);
+		return Utf8::FromUtf16(buffer, requiredLength);
 	}
 #endif
 

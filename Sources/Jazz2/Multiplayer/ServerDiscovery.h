@@ -23,8 +23,10 @@
 #include <Containers/StaticArray.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
+#include <IO/WebRequest.h>
 
 using namespace Death::Containers;
+using namespace Death::IO;
 using namespace nCine;
 
 namespace Jazz2::Multiplayer
@@ -34,10 +36,6 @@ namespace Jazz2::Multiplayer
 	/** @brief Server description */
 	struct ServerDescription
 	{
-#ifndef DOXYGEN_GENERATING_OUTPUT
-		/** @brief Server endpoint */
-		ENetAddress Endpoint;
-#endif
 		/** @brief Server endpoint in text format */
 		String EndpointString;
 		/** @brief Server unique identifier */
@@ -100,14 +98,18 @@ namespace Jazz2::Multiplayer
 		IServerObserver* _observer;
 		ENetSocket _socket;
 		Thread _thread;
-		TimeStamp _lastRequest;
+		TimeStamp _lastLocalRequest;
+		TimeStamp _lastOnlineRequest;
 		ENetAddress _address;
+		WebRequest _onlineRequest;
 
 		static ENetSocket TryCreateSocket(const char* multicastAddress, ENetAddress& parsedAddress);
 
-		static void TrySendRequest(ENetSocket socket, const ENetAddress& address);
-		static bool ProcessResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs = 0);
-		static bool ProcessRequests(ENetSocket socket, std::int32_t timeoutMs = 0);
+		void TrySendLocalRequest(ENetSocket socket, const ENetAddress& address);
+		void TrySendOnlineRequest();
+		bool ProcessLocalResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs = 0);
+		bool ProcessLocalRequests(ENetSocket socket, std::int32_t timeoutMs = 0);
+		void PublishOnline();
 
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);

@@ -79,7 +79,7 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase& operator=(const NetworkManagerBase&) = delete;
 
 		/** @brief Creates a client connection to a remote server */
-		virtual void CreateClient(INetworkHandler* handler, StringView address, std::uint16_t port, std::uint32_t clientData);
+		virtual void CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData);
 		/** @brief Creates a server that accepts incoming connections */
 		virtual bool CreateServer(INetworkHandler* handler, std::uint16_t port);
 		/** @brief Disposes all active connections */
