@@ -112,7 +112,7 @@ namespace Death { namespace IO {
 
 		virtual Result Execute() = 0;
 
-		virtual void Start() = 0;
+		virtual void Run() = 0;
 
 		void Cancel();
 
@@ -665,12 +665,12 @@ namespace Death { namespace IO {
 		return _impl->Execute();
 	}
 
-	void WebRequestAsync::Start()
+	void WebRequestAsync::Run()
 	{
 		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", );
 		DEATH_ASSERT(_impl->GetState() == State::Idle, "Completed requests cannot be restarted", );
 
-		_impl->Start();
+		_impl->Run();
 	}
 
 	void WebRequestAsync::Cancel()
@@ -1091,7 +1091,7 @@ namespace Death { namespace IO {
 
 		WebRequest::Result Execute() override;
 
-		void Start() override;
+		void Run() override;
 
 		WebResponseImplPtr GetResponse() const override {
 			return _response;
@@ -1271,7 +1271,7 @@ namespace Death { namespace IO {
 
 		WebRequest::Result Execute() override;
 
-		void Start() override;
+		void Run() override;
 
 		WebResponseImplPtr GetResponse() const override;
 
@@ -2121,7 +2121,7 @@ namespace Death { namespace IO {
 		return Result::Ok();
 	}
 
-	void WebRequestWinHTTP::Start()
+	void WebRequestWinHTTP::Run()
 	{
 		if (!CheckResult(DoPrepareRequest())) {
 			return;
@@ -2772,7 +2772,7 @@ namespace Death { namespace IO {
 		return DoHandleCompletion();
 	}
 
-	void WebRequestCURL::Start()
+	void WebRequestCURL::Run()
 	{
 		if (!CheckResult(DoFinishPrepare())) {
 			return;

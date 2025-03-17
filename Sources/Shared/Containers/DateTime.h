@@ -18,9 +18,6 @@ struct _FILETIME;
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	// Forward declarations for the Death::Containers namespace
-	class TimeSpan;
-
 	/**
 		@brief Instant in time, typically expressed as a date and time of day
 	*/

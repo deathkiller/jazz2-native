@@ -41,7 +41,7 @@ namespace Death { namespace IO {
 	{
 		switch (error) {
 			case EPERM: return " (Operation not permitted)"; break;
-			case ENOENT: return " (	No such file or directory)"; break;
+			case ENOENT: return " (No such file or directory)"; break;
 			case EIO: return " (Input/output error)"; break;
 			case ENXIO: return " (No such device or address)"; break;
 			case EACCES: return " (Permission denied)"; break;

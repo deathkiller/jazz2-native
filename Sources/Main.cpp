@@ -218,8 +218,6 @@ void GameEventHandler::OnInitialize()
 {
 	ZoneScopedC(0x888888);
 
-	LOGI("Using temporary directory: %s", fs::GetTempDirectory().data());
-
 	OnBeforeInitialize();
 
 #if !defined(SHAREWARE_DEMO_ONLY)
