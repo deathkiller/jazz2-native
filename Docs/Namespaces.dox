@@ -565,6 +565,9 @@ See also @ref third-party for the licenses of the libraries used.
 /** @file Shared/Containers/ArrayView.h
 	@brief Class @ref Death::Containers::ArrayView, @ref Death::Containers::StaticArrayView
 */
+/** @file Shared/Containers/ComPtr.h
+	@brief Class @ref Death::Containers::ComPtr
+*/
 /** @file Shared/Containers/DateTime.h
 	@brief Class @ref Death::Containers::DateTime, @ref Death::Containers::TimeSpan
 */
@@ -652,6 +655,9 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @file Shared/IO/Stream.h
 	@brief Class @ref Death::IO::Stream
+*/
+/** @file Shared/IO/WebRequest.h
+	@brief Class @ref Death::IO:::WebAuthChallenge @ref Death::IO::WebCredentials, @ref Death::IO::WebProxy, @ref Death::IO::WebRequest, @ref Death::IO::WebRequestAsync, @ref Death::IO::WebResponse, @ref Death::IO::WebSession, @ref Death::IO::WebSessionAsync
 */
 
 /** @dir Shared/IO/Compression

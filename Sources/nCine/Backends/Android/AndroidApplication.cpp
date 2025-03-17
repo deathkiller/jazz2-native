@@ -63,7 +63,6 @@ namespace nCine
 		};
 
 		state->activity->callbacks->onContentRectChanged = [](ANativeActivity* act, const ARect* rect) {
-			LOGW("CALLED onContentRectChanged");
 			nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
 			if (androidApp.IsInitialized()) {
 				androidApp.HandleContentBoundsChanged(nc::Recti(rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top));
@@ -228,7 +227,7 @@ namespace nCine
 
 	void AndroidApplication::HandleContentBoundsChanged(Recti bounds)
 	{
-		LOGI("Received content bounds: %i | %i | %i | %i", bounds.X, bounds.Y, bounds.W, bounds.H);
+		LOGI("Received new content bounds: {X: %i, Y: %i, W: %i, H: %i}", bounds.X, bounds.Y, bounds.W, bounds.H);
 	}
 
 	void AndroidApplication::ToggleSoftInput()

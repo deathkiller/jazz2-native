@@ -9,15 +9,19 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/** @brief Contains the username and password to use for authenticating */
 	class WebCredentials
 	{
 	public:
 		WebCredentials(Containers::StringView user = {}, Containers::StringView password = {})
 			: _user(user), _password(password) {}
 
+		/** @brief Returns user name */
 		Containers::StringView GetUser() const {
 			return _user;
 		}
+
+		/** @brief Returns password */
 		Containers::StringView GetPassword() const {
 			return _password;
 		}
@@ -30,10 +34,10 @@ namespace Death { namespace IO {
 	class WebSessionFactory;
 	class WebRequestEvent;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	typedef struct WebRequestHandleOpaque* WebRequestHandle;
 	typedef struct WebSessionHandleOpaque* WebSessionHandle;
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
 	class WebAuthChallengeImpl;
 	class WebRequestImpl;
 	class WebResponseImpl;
@@ -46,14 +50,16 @@ namespace Death { namespace IO {
 	typedef Containers::ComPtr<WebSessionImpl> WebSessionImplPtr;
 #endif
 
+	/** @brief Contains the authentication challenge information */
 	class WebAuthChallenge
 	{
 		friend class WebRequestAsync;
 
 	public:
+		/** @brief Authentication challenge information source */
 		enum class Source {
-			Server,
-			Proxy
+			Server,			/**< Server */
+			Proxy			/**< Proxy */
 		};
 
 		WebAuthChallenge();
@@ -75,6 +81,7 @@ namespace Death { namespace IO {
 		explicit WebAuthChallenge(const WebAuthChallengeImplPtr& impl);
 	};
 
+	/** @brief Describes the server response of the web request */
 	class WebResponse
 	{
 		friend class WebRequestBase;
@@ -105,30 +112,35 @@ namespace Death { namespace IO {
 		Containers::String GetDataFile() const;
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		WebResponseImplPtr _impl;
+#endif
 
 		explicit WebResponse(const WebResponseImplPtr& impl);
 	};
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
+	/** @brief Base class of web requests */
 	class WebRequestBase
 	{
 	public:
+		/** @brief Request state */
 		enum class State {
-			Idle,
-			Unauthorized,
-			Active,
-			Completed,
-			Failed,
-			Cancelled
+			Idle,			/**< Idle */
+			Unauthorized,	/**< Unauthorized */
+			Active,			/**< Active */
+			Completed,		/**< Completed */
+			Failed,			/**< Failed */
+			Cancelled		/**< Cancelled */
 		};
 
+		/** @brief Storage for response data */
 		enum class Storage {
-			Memory,
-			File,
-			None
+			Memory,			/**< Memory */
+			File,			/**< File */
+			None			/**< None */
 		};
 
+		/** @brief Result of synchronous operation */
 		struct Result
 		{
 			static Result Ok(State state = State::Active) {
@@ -194,11 +206,12 @@ namespace Death { namespace IO {
 
 		WebRequestHandle GetNativeHandle() const;
 
+		/** @brief Security bypass flags */
 		enum class Ignore {
-			None = 0,
-			Certificate = 1,
-			Host = 2,
-			All = Certificate | Host
+			None = 0,					/**< None */
+			Certificate = 1,			/**< Certificate */
+			Host = 2,					/**< Host */
+			All = Certificate | Host	/**< All */
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(Ignore);
@@ -215,7 +228,9 @@ namespace Death { namespace IO {
 		}
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		WebRequestImplPtr _impl;
+#endif
 
 		WebRequestBase();
 		explicit WebRequestBase(const WebRequestImplPtr& impl);
@@ -223,8 +238,8 @@ namespace Death { namespace IO {
 		WebRequestBase& operator=(const WebRequestBase& other);
 		~WebRequestBase();
 	};
-#endif
 
+	/** @brief Represents web request */
 	class WebRequest : public WebRequestBase
 	{
 		friend class WebSession;
@@ -241,6 +256,7 @@ namespace Death { namespace IO {
 			: WebRequestBase(impl) {}
 	};
 
+	/** @brief Represents asynchronous web request */
 	class WebRequestAsync : public WebRequestBase
 	{
 		friend class WebSessionAsync;
@@ -252,7 +268,7 @@ namespace Death { namespace IO {
 		WebRequestAsync(const WebRequestAsync& other) = default;
 		WebRequestAsync& operator=(const WebRequestAsync& other) = default;
 
-		void Start();
+		void Run();
 		void Cancel();
 		WebAuthChallenge GetAuthChallenge() const;
 		std::int32_t GetId() const;
@@ -264,30 +280,38 @@ namespace Death { namespace IO {
 			: WebRequestBase(impl) {}
 	};
 
+	/** @brief Describes the proxy settings to be used by the session */
 	class WebProxy
 	{
 	public:
+		/** @brief Creates proxy settings from the specified URL */
 		static WebProxy FromURL(Containers::StringView url) {
 			return WebProxy(Type::URL, url);
 		}
 
+		/** @brief Creates proxy settings to disable proxy even if one is configured */
 		static WebProxy Disable() {
 			return WebProxy(Type::Disabled);
 		}
+
+		/** @brief Creates default proxy settings */
 		static WebProxy Default() {
 			return WebProxy(Type::Default);
 		}
 
+		/** @brief Proxy type */
 		enum class Type {
-			URL,
-			Disabled,
-			Default
+			URL,			/**< URL */
+			Disabled,		/**< Disabled */
+			Default			/**< Default */
 		};
 
+		/** @brief Returns proxy type */
 		Type GetType() const {
 			return _type;
 		}
 
+		/** @brief Returns proxy URL if @ref Type::URL */
 		Containers::StringView GetURL() const {
 			DEATH_DEBUG_ASSERT(_type == Type::URL);
 			return _url;
@@ -301,6 +325,7 @@ namespace Death { namespace IO {
 			: _type(type), _url(url) {}
 	};
 
+	/** @brief Base class of web sessions */
 	class WebSessionBase
 	{
 	public:
@@ -310,6 +335,7 @@ namespace Death { namespace IO {
 		WebSessionBase& operator=(const WebSessionBase& other);
 		~WebSessionBase();
 
+		/** @brief Returns `true` if the network backend is available */
 		static bool IsBackendAvailable();
 
 		void AddCommonHeader(Containers::StringView name, Containers::StringView value);
@@ -322,13 +348,16 @@ namespace Death { namespace IO {
 		WebSessionHandle GetNativeHandle() const;
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		WebSessionImplPtr _impl;
+#endif
 
 		static WebSessionFactory* FindFactory();
 
 		explicit WebSessionBase(const WebSessionImplPtr& impl);
 	};
 
+	/** @brief Represents web session that allows @ref WebRequest to be created */
 	class WebSession : public WebSessionBase
 	{
 	public:
@@ -337,10 +366,13 @@ namespace Death { namespace IO {
 		WebSession(const WebSession& other) = default;
 		WebSession& operator=(const WebSession& other) = default;
 
+		/** @brief Returns the default session for synchronous requests */
 		static WebSession& GetDefault();
 
+		/** @brief Creates a new session for synchronous requests */
 		static WebSession New();
 
+		/** @brief Creates a new synchronous request */
 		WebRequest CreateRequest(Containers::StringView url);
 
 	private:
@@ -348,6 +380,7 @@ namespace Death { namespace IO {
 			: WebSessionBase(impl) {}
 	};
 
+	/** @brief Represents asynchronous web session that allows @ref WebRequestAsync to be created */
 	class WebSessionAsync : public WebSessionBase
 	{
 	public:
@@ -356,10 +389,13 @@ namespace Death { namespace IO {
 		WebSessionAsync(const WebSessionAsync& other) = default;
 		WebSessionAsync& operator=(const WebSessionAsync& other) = default;
 
+		/** @brief Returns the default session for asynchronous requests */
 		static WebSessionAsync& GetDefault();
 
+		/** @brief Creates a new session for asynchronous requests */
 		static WebSessionAsync New();
 
+		/** @brief Creates a new asynchronous request */
 		WebRequestAsync CreateRequest(Containers::StringView url, Containers::Function<void(WebRequestEvent& e)>&& callback, std::int32_t id = -1);
 
 	private:
@@ -367,6 +403,7 @@ namespace Death { namespace IO {
 			: WebSessionBase(impl) {}
 	};
 
+	/** @brief Result of asynchronous web request */
 	class WebRequestEvent
 	{
 	public:

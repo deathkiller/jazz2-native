@@ -14,6 +14,7 @@ namespace Death { namespace Implementation {
 	inline void PPV_ARGS_CHECK(void*) {}
 }}
 
+/** @brief Used to retrieve an interface pointer, supplying the IID value of the requested interface automatically based on the type of the interface pointer used */
 #define DEATH_IID_PPV_ARGS(pType)																				\
 	__uuidof(**(pType)),																						\
 	(Death::Implementation::PPV_ARGS_CHECK(static_cast<::IUnknown*>(*pType)), reinterpret_cast<void**>(pType))
@@ -83,7 +84,7 @@ namespace Death { namespace Containers {
 			return _pointer;
 		}
 
-		/** @brief Releases the pointer and sets it specified value (or `nullptr`) */
+		/** @brief Releases the pointer and sets it specified value (or `nullptr` by default) */
 		void reset(T* ptr = nullptr) noexcept {
 			if (_pointer == ptr) {
 				return;
@@ -175,6 +176,11 @@ namespace Death { namespace Containers {
 		}
 
 #if defined(DEATH_TARGET_MSVC) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	ifdef DOXYGEN_GENERATING_OUTPUT
+		/** @brief Tries to cast the instance to another type */
+		template<class U>
+		HRESULT as(U** result) const noexcept;
+#	else
 		/** @brief Tries to cast the instance to another type */
 		template<class U, std::enable_if_t<std::is_convertible<T, U>::value, int> = 0>
 		HRESULT as(U** result) const noexcept {
@@ -188,6 +194,7 @@ namespace Death { namespace Containers {
 		HRESULT as(U** result) const noexcept {
 			return _pointer->QueryInterface(DEATH_IID_PPV_ARGS(result));
 		}
+#	endif
 
 		/** @overload */
 		HRESULT as(REFIID riid, void** result) const noexcept {

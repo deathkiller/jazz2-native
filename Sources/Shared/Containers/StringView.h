@@ -33,12 +33,6 @@
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	// Forward declarations for the Death::Containers namespace
-	template<std::size_t, class> class StaticArray;
-	class String;
-	template<class> class BasicStringView;
-	typedef BasicStringView<const char> StringView;
-
 	namespace Implementation
 	{
 		template<class, class> struct StringViewConverter;
