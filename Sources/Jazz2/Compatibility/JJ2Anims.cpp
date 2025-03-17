@@ -3,6 +3,7 @@
 #include "JJ2Block.h"
 #include "AnimSetMapping.h"
 
+#include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 #include <IO/FileStream.h>

@@ -617,7 +617,7 @@ namespace Jazz2::Actors
 				part.Brightness -= timeMult * 0.04f;
 				part.RadiusFar -= timeMult * 0.4f;
 				if (part.RadiusFar <= 0.0f) {
-					arrayRemoveUnordered(_trail, i);
+					_trail.eraseUnordered(i);
 					i--;
 				}
 			}
@@ -631,7 +631,7 @@ namespace Jazz2::Actors
 					while (trailDistance-- > 0) {
 						_trailLastPos += trailDelta * TrailDivision;
 
-						auto& light = arrayAppend(_trail, InPlaceInit);
+						auto& light = _trail.emplace_back();
 						light.Pos = _trailLastPos;
 						light.Intensity = 0.5f;
 						light.Brightness = 0.8f;

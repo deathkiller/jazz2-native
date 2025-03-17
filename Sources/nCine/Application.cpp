@@ -59,6 +59,7 @@ extern "C"
 #include "tracy.h"
 #include "tracy_opengl.h"
 
+#include <Containers/DateTime.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
 

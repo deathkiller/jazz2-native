@@ -1,5 +1,6 @@
 #include "StringUtils.h"
 #include "GrowableArray.h"
+#include "Pair.h"
 #include "../Asserts.h"
 #include "../Cpu.h"
 
@@ -21,7 +22,7 @@ namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	// Forward declarations for the Death::Utf8 namespace
-	std::pair<char32_t, std::size_t> NextChar(Containers::ArrayView<const char> text, std::size_t cursor);
+	Containers::Pair<char32_t, std::size_t> NextChar(Containers::ArrayView<const char> text, std::size_t cursor);
 
 }}
 

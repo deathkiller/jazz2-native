@@ -6,6 +6,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
+#include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>

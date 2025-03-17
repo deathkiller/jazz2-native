@@ -16,6 +16,7 @@
 #if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"
 #else
+#	include <Containers/DateTime.h>
 #	include <IO/FileSystem.h>
 using namespace Death::IO;
 #endif

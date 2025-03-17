@@ -83,8 +83,8 @@ namespace Jazz2::UI
 				s->Read(c + 1, remainingBytes);
 				std::uint8_t charWidth = s->ReadValue<std::uint8_t>();
 
-				std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(c, 0);
-				_unicodeChars[cursor.first] = Rectf(
+				Pair<char32_t, std::size_t> cursor = Utf8::NextChar(c, 0);
+				_unicodeChars[cursor.first()] = Rectf(
 					(float)(i % cols) / cols,
 					(float)(i / cols) / rows,
 					charWidth,
@@ -148,36 +148,36 @@ namespace Jazz2::UI
 
 		std::int32_t idx = 0;
 		do {
-			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
+			Pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
-			if (cursor.first == '\n') {
+			if (cursor.first() == '\n') {
 				// New line
 				if (totalWidth < lastWidth) {
 					totalWidth = lastWidth;
 				}
 				lastWidth = 0.0f;
 				totalHeight += (_charSize.Y * scale * lineSpacing);
-			} else if (cursor.first == '\f') {
+			} else if (cursor.first() == '\f') {
 				// Formatting
-				cursor = Utf8::NextChar(text, cursor.second);
-				if (cursor.first == '[') {
-					idx = cursor.second;
+				cursor = Utf8::NextChar(text, cursor.second());
+				if (cursor.first() == '[') {
+					idx = cursor.second();
 					do {
 						cursor = Utf8::NextChar(text, idx);
-						if (cursor.first == ']') {
+						if (cursor.first() == ']') {
 							break;
 						}
-						idx = cursor.second;
+						idx = cursor.second();
 					} while (idx < textLength);
 				}
 			} else {
-				Vector2f charSize = MeasureChar(cursor.first);
+				Vector2f charSize = MeasureChar(cursor.first());
 				if (charSize.X > 0 && charSize.Y > 0) {
 					lastWidth += (charSize.X + _baseSpacing) * charSpacingPre * scalePre;
 				}
 			}
 
-			idx = cursor.second;
+			idx = cursor.second();
 		} while (idx < textLength);
 
 		if (totalWidth < lastWidth) {
@@ -254,9 +254,9 @@ namespace Jazz2::UI
 		std::int32_t idx = 0;
 		std::int32_t line = 0;
 		do {
-			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
+			Pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
-			if (cursor.first == '\n') {
+			if (cursor.first() == '\n') {
 				// New line
 				if (totalWidth < lastWidth) {
 					totalWidth = lastWidth;
@@ -265,29 +265,29 @@ namespace Jazz2::UI
 				line++;
 				lastWidth = 0.0f;
 				totalHeight += (_charSize.Y * scale * lineSpacing);
-			} else if (cursor.first == '\f') {
+			} else if (cursor.first() == '\f') {
 				// Formatting
-				cursor = Utf8::NextChar(text, cursor.second);
-				if (cursor.first == '[') {
-					idx = cursor.second;
+				cursor = Utf8::NextChar(text, cursor.second());
+				if (cursor.first() == '[') {
+					idx = cursor.second();
 					cursor = Utf8::NextChar(text, idx);
 
-					if (cursor.first == 'w') {
-						idx = cursor.second;
+					if (cursor.first() == 'w') {
+						idx = cursor.second();
 						cursor = Utf8::NextChar(text, idx);
-						if (cursor.first == ':') {
-							idx = cursor.second;
+						if (cursor.first() == ':') {
+							idx = cursor.second();
 							std::int32_t paramLength = 0;
 							char param[9];
 							do {
 								cursor = Utf8::NextChar(text, idx);
-								if (cursor.first == ']') {
+								if (cursor.first() == ']') {
 									break;
 								}
 								if (paramLength < std::int32_t(arraySize(param)) - 1) {
-									param[paramLength++] = (char)cursor.first;
+									param[paramLength++] = (char)cursor.first();
 								}
-								idx = cursor.second;
+								idx = cursor.second();
 							} while (idx < textLength);
 
 							if (paramLength > 0) {
@@ -298,26 +298,26 @@ namespace Jazz2::UI
 									charSpacing = paramValue * 0.01f;
 								}
 							}
-						} else if (cursor.first == ']') {
+						} else if (cursor.first() == ']') {
 							// Reset char spacing
 							charSpacing = charSpacingPre;
 						}
 					} else {
 						do {
-							if (cursor.first == ']') {
+							if (cursor.first() == ']') {
 								break;
 							}
-							idx = cursor.second;
+							idx = cursor.second();
 							cursor = Utf8::NextChar(text, idx);
 						} while (idx < textLength);
 					}
 				}
 			} else {
 				Rectf uvRect;
-				if (cursor.first < 128) {
-					uvRect = _asciiChars[cursor.first];
+				if (cursor.first() < 128) {
+					uvRect = _asciiChars[cursor.first()];
 				} else {
-					auto it = _unicodeChars.find(cursor.first);
+					auto it = _unicodeChars.find(cursor.first());
 					if (it != _unicodeChars.end()) {
 						uvRect = it->second;
 					} else {
@@ -330,7 +330,7 @@ namespace Jazz2::UI
 				}
 			}
 
-			idx = cursor.second;
+			idx = cursor.second();
 		} while (idx < textLength);
 
 		if (totalWidth < lastWidth) {
@@ -379,9 +379,9 @@ namespace Jazz2::UI
 		idx = 0;
 		line = 0;
 		do {
-			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
+			Pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
-			if (cursor.first == '\n') {
+			if (cursor.first() == '\n') {
 				// New line
 				line++;
 				originPos.X = lineStart;
@@ -390,32 +390,32 @@ namespace Jazz2::UI
 					case Alignment::Right: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]); break;
 				}
 				originPos.Y += (_charSize.Y * scale * lineSpacing);
-			} else if (cursor.first == '\f') {
+			} else if (cursor.first() == '\f') {
 				// Formatting
-				cursor = Utf8::NextChar(text, cursor.second);
-				if (cursor.first == '[') {
-					idx = cursor.second;
+				cursor = Utf8::NextChar(text, cursor.second());
+				if (cursor.first() == '[') {
+					idx = cursor.second();
 					cursor = Utf8::NextChar(text, idx);
-					if (cursor.first == 'c') {
-						idx = cursor.second;
+					if (cursor.first() == 'c') {
+						idx = cursor.second();
 						cursor = Utf8::NextChar(text, idx);
-						if (cursor.first == ':') {
+						if (cursor.first() == ':') {
 							// Set custom color
-							idx = cursor.second;
+							idx = cursor.second();
 							cursor = Utf8::NextChar(text, idx);
-							if (cursor.first == '#') {
-								idx = cursor.second;
+							if (cursor.first() == '#') {
+								idx = cursor.second();
 								std::int32_t paramLength = 0;
 								char param[9];
 								do {
 									cursor = Utf8::NextChar(text, idx);
-									if (cursor.first == ']') {
+									if (cursor.first() == ']') {
 										break;
 									}
 									if (paramLength < std::int32_t(arraySize(param)) - 1) {
-										param[paramLength++] = (char)cursor.first;
+										param[paramLength++] = (char)cursor.first();
 									}
-									idx = cursor.second;
+									idx = cursor.second();
 								} while (idx < textLength);
 
 								if (paramLength > 0 && !useRandomColor && !isShadow) {
@@ -432,22 +432,22 @@ namespace Jazz2::UI
 								}
 							}
 						}
-					} else if (cursor.first == 'w') {
-						idx = cursor.second;
+					} else if (cursor.first() == 'w') {
+						idx = cursor.second();
 						cursor = Utf8::NextChar(text, idx);
-						if (cursor.first == ':') {
-							idx = cursor.second;
+						if (cursor.first() == ':') {
+							idx = cursor.second();
 							std::int32_t paramLength = 0;
 							char param[9];
 							do {
 								cursor = Utf8::NextChar(text, idx);
-								if (cursor.first == ']') {
+								if (cursor.first() == ']') {
 									break;
 								}
 								if (paramLength < std::int32_t(arraySize(param)) - 1) {
-									param[paramLength++] = (char)cursor.first;
+									param[paramLength++] = (char)cursor.first();
 								}
-								idx = cursor.second;
+								idx = cursor.second();
 							} while (idx < textLength);
 
 							if (paramLength > 0) {
@@ -459,31 +459,31 @@ namespace Jazz2::UI
 								}
 							}
 						}
-					} else if (cursor.first == '/') {
-						idx = cursor.second;
+					} else if (cursor.first() == '/') {
+						idx = cursor.second();
 						cursor = Utf8::NextChar(text, idx);
-						if (cursor.first == 'c') {
+						if (cursor.first() == 'c') {
 							// Reset color
 							if (!useRandomColor && !isShadow) {
 								color = Colorf(1.0f, 1.0f, 1.0f, alpha);
 								colorizeShader = nullptr;
 							}
-						} else if (cursor.first == 'w') {
+						} else if (cursor.first() == 'w') {
 							// Reset char spacing
 							charSpacing = charSpacingPre;
 						}
 					}
 				}
 
-				while (cursor.first != ']' && cursor.second < text.size()) {
-					cursor = Utf8::NextChar(text, cursor.second);
+				while (cursor.first() != ']' && cursor.second() < text.size()) {
+					cursor = Utf8::NextChar(text, cursor.second());
 				}
 			} else {
 				Rectf uvRect;
-				if (cursor.first < 128) {
-					uvRect = _asciiChars[cursor.first];
+				if (cursor.first() < 128) {
+					uvRect = _asciiChars[cursor.first()];
 				} else {
-					auto it = _unicodeChars.find(cursor.first);
+					auto it = _unicodeChars.find(cursor.first());
 					if (it != _unicodeChars.end()) {
 						uvRect = it->second;
 					} else {
@@ -559,7 +559,7 @@ namespace Jazz2::UI
 				}
 			}
 
-			idx = cursor.second;
+			idx = cursor.second();
 		} while (idx < textLength);
 		charOffset++;
 	}

@@ -2,6 +2,7 @@
 
 #include "../CommonWindows.h"
 #include "../Asserts.h"
+#include "../Containers/Array.h"
 #include "../Utf8.h"
 
 #include <cstring>

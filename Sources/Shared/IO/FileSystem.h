@@ -2,10 +2,7 @@
 
 #include "Stream.h"
 #include "FileAccess.h"
-#include "../Common.h"
-#include "../Containers/DateTime.h"
 #include "../Containers/String.h"
-#include "../Containers/StringView.h"
 
 #include <memory>
 #include <optional>
@@ -77,18 +74,7 @@ namespace Death { namespace IO {
 		{
 		public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			class Proxy
-			{
-				friend class Directory;
-
-			public:
-				Containers::StringView operator*() const & noexcept;
-
-			private:
-				explicit Proxy(Containers::StringView path);
-
-				Containers::String _path;
-			};
+			class Proxy;
 
 			// Iterator defines
 			using iterator_category = std::input_iterator_tag;
@@ -108,12 +94,7 @@ namespace Death { namespace IO {
 
 			Containers::StringView operator*() const & noexcept;
 			Directory& operator++();
-
-			Proxy operator++(int) {
-				Proxy p{**this};
-				++*this;
-				return p;
-			}
+			Proxy operator++(int);
 
 			bool operator==(const Directory& other) const;
 			bool operator!=(const Directory& other) const;

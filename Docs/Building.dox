@@ -18,6 +18,8 @@ The project requires following tools and libraries to build it successfully:
 -   **GLEW** (required only on Windows)
 -   **GLFW** or **SDL2** (not required on Android and UWP, because these
     platforms use a custom backend)
+-   **libcurl** (not required on Android, Emscripten, macOS and Windows,
+    because these platforms use a custom backend)
 -   **zlib**
 
 @m_class{m-noindent}

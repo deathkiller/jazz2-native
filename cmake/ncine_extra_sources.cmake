@@ -463,6 +463,11 @@ endif()
 #	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/RenderDocCapture.cpp)
 #endif()
 
+if(CURL_FOUND)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_CURL")
+	target_link_libraries(${NCINE_APP} PRIVATE CURL::libcurl)
+endif()
+
 if(ZLIB_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ZLIB")
 	target_link_libraries(${NCINE_APP} PRIVATE ZLIB::ZLIB)

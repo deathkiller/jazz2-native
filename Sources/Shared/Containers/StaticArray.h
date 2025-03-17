@@ -26,9 +26,6 @@
 #include "Array.h"
 #include "SequenceHelpers.h"
 
-#include <new>
-#include <type_traits>
-
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 

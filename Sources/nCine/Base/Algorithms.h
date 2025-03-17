@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <Containers/ArrayView.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 

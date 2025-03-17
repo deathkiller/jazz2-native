@@ -6,8 +6,8 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 
-#include <Utf8.h>
 #include <Containers/StringConcatenable.h>
+#include <Utf8.h>
 
 namespace Jazz2::UI
 {

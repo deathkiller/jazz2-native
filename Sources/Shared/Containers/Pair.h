@@ -24,9 +24,8 @@
 
 #pragma once
 
-#include "../CommonBase.h"
-#include "../Base/Move.h"
 #include "Tags.h"
+#include "../Base/Move.h"
 
 #include <type_traits>
 

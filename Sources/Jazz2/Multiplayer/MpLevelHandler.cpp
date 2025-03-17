@@ -48,12 +48,12 @@
 
 #include <float.h>
 
-#include <Utf8.h>
 #include <Containers/StaticArray.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
+#include <Utf8.h>
 
 using namespace Death::IO::Compression;
 using namespace nCine;

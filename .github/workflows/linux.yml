@@ -54,7 +54,7 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt update -y
-        sudo apt install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
+        sudo apt install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev libcurl4-openssl-dev rpm
 
     - if: matrix.CC == 'clang'
       name: 'Configure Clang Compiler'
@@ -126,7 +126,7 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew2.2 libglfw3 libsdl2-2.0-0 libopenal1 libvorbisfile3 libopenmpt-dev fuse
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew2.2 libglfw3 libsdl2-2.0-0 libopenal1 libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev fuse
         
     - name: 'Configure CMake'
       run: |
@@ -188,7 +188,7 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev libcurl4-openssl-dev
     
     - name: 'Configure CMake and Build'
       run: |

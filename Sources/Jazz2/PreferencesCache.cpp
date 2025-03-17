@@ -15,7 +15,7 @@
 #include <Utf8.h>
 
 #if defined(DEATH_TARGET_ANDROID)
-#	include "nCine/Backends/Android/AndroidJniHelper.h"
+#	include "../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
 
 using namespace Death::Containers::Literals;

@@ -473,6 +473,11 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	# Look for both GLFW and SDL2 to make the fallback logic work
 	find_package(GLFW)
 	find_package(SDL2)
+	
+	#if(NOT APPLE)
+		find_package(CURL)
+	#endif()
+	
 	#if(NCINE_WITH_PNG)
 	#	find_package(PNG)
 	#endif()

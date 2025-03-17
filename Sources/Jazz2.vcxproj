@@ -295,7 +295,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Environment.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\IO\HttpRequest.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStlView.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Asserts.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\AndroidAssetStream.h" />
@@ -319,6 +318,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\ComPtr.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\WebRequest.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h" />
     <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Input\ControlScheme.h" />
     <ClInclude Include="Jazz2\Input\RgbLights.h" />

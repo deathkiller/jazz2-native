@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include "../Common.h"
-#include "Array.h"
+#include "Containers.h"
+#include "../Asserts.h"
+#include "../Base/Move.h"
 
 #include <initializer_list>
 #include <type_traits>
@@ -276,7 +277,7 @@ namespace Death { namespace Containers {
 		   overload resolution works in copy initialization as opposed to a direct constructor/function call. If it would take ArrayView<T>
 		   directly, `Array<char> -> ArrayView<const char> -> StringView` wouldn't work because it's one custom conversion sequence more than
 		   allowed in a copy initialization, and to make that work, this class would have to replicate all ArrayView constructors including
-		   conversion from Array etc., which isn't feasible. Similar approach is chosen in Iterable and StringIterable.
+		   conversion from Array etc., which isn't feasible.
 		   It's also explicitly disallowing T[] arguments (which are implicitly convertible to an ArrayView), because those should be picking the T*
 		   overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
 		   because it'd get preferred over the implicit copy constructor. */
