@@ -15,7 +15,7 @@
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <winhttp.h>
-#else
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 #	include <thread>
 #	include <unordered_map>
 #	include <unistd.h>
@@ -1460,7 +1460,7 @@ namespace Death { namespace IO {
 				return nullptr;
 			}
 			_factory = Death::move(factory);
-#elif defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 			std::unique_ptr<WebSessionFactory> factory = std::make_unique<WebSessionFactoryCURL>();
 			if (!factory->Initialize()) {
 				return nullptr;
@@ -2400,7 +2400,7 @@ namespace Death { namespace IO {
 		return WebSessionImpl::SetProxy(proxy);
 	}
 
-#else
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL : public WebAuthChallengeImpl
 	{
