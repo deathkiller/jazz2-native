@@ -1,10 +1,6 @@
 #include "Utf8.h"
 #include "CommonWindows.h"
 #include "Asserts.h"
-#include "Containers/Array.h"
-#include "Containers/ArrayView.h"
-#include "Containers/Pair.h"
-#include "Containers/String.h"
 
 namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -82,7 +78,7 @@ namespace Death { namespace Utf8 {
 
 		return { prev.first(), cursor - i };
 	}
-
+	
 	std::size_t FromCodePoint(char32_t character, Containers::StaticArrayView<4, char> result)
 	{
 		if (character < U'\x00000080') {
@@ -133,11 +129,6 @@ namespace Death { namespace Utf8 {
 		return Containers::Array<wchar_t>(result.release(), lengthNeeded);
 	}
 
-	Containers::Array<wchar_t> ToUtf16(Containers::StringView source)
-	{
-		return ToUtf16(source.data(), std::int32_t(source.size()));
-	}
-
 	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize)
 	{
 		if (sourceSize == 0) return 0;
@@ -161,11 +152,6 @@ namespace Death { namespace Utf8 {
 		return result;
 	}
 
-	Containers::String FromUtf16(Containers::ArrayView<const wchar_t> source)
-	{
-		return FromUtf16(source.data(), std::int32_t(source.size()));
-	}
-
 	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize)
 	{
 		if (sourceSize == 0) return 0;
@@ -179,4 +165,5 @@ namespace Death { namespace Utf8 {
 	}
 
 #endif
+
 }}

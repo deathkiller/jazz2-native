@@ -5,6 +5,9 @@
 */
 
 #include "Containers/Containers.h"
+#include "Containers/Array.h"
+#include "Containers/Pair.h"
+#include "Containers/String.h"
 
 namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -69,7 +72,9 @@ namespace Death { namespace Utf8 {
 	Containers::Array<wchar_t> ToUtf16(const char* source, std::int32_t sourceSize);
 
 	/** @overload */
-	Containers::Array<wchar_t> ToUtf16(Containers::StringView source);
+	inline Containers::Array<wchar_t> ToUtf16(Containers::StringView source) {
+		return ToUtf16(source.data(), std::int32_t(source.size()));
+	}
 
 	/** @overload */
 #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -102,7 +107,9 @@ namespace Death { namespace Utf8 {
 	Containers::String FromUtf16(const wchar_t* source, std::int32_t sourceSize);
 
 	/** @overload */
-	Containers::String FromUtf16(Containers::ArrayView<const wchar_t> source);
+	inline Containers::String FromUtf16(Containers::ArrayView<const wchar_t> source) {
+		return FromUtf16(source.data(), std::int32_t(source.size()));
+	}
 
 	/** @overload */
 #ifdef DOXYGEN_GENERATING_OUTPUT
