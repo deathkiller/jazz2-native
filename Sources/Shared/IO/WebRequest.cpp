@@ -1215,7 +1215,7 @@ namespace Death { namespace IO {
 		}
 	};
 
-#else
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL;
 	class WebRequestCURL;
