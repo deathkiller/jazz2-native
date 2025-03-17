@@ -118,7 +118,7 @@ This section contains only a brief explanation of the build process. For a more 
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
   * System libraries always have higher priority, there is no need to download them separately if your system already contains all dependencies
-  * In case of build errors, install following packages (or equivalent for your distribution):<br>`libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g-dev`
+  * In case of build errors, install following packages (or equivalent for your distribution):<br>`libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev libcurl4-openssl-dev zlib1g-dev`
 * Build the project with *CMake*
 
 ### macOS

@@ -3,10 +3,9 @@
 
 #pragma once
 
-#include "../Common.h"
-#include "../Asserts.h"
 #include "ArrayView.h"
 #include "Tags.h"
+#include "../Asserts.h"
 
 #include <initializer_list>
 #include <limits>

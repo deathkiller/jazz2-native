@@ -23,8 +23,6 @@
 
 #pragma once
 
-#include "../CommonBase.h"
-#include "../Asserts.h"
 #include "ArrayView.h"
 #include "Tags.h"
 
@@ -34,9 +32,6 @@
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
-
-	// Forward declarations for the Death::Containers namespace
-	template<class T, class = void(*)(T*, std::size_t)> class Array;
 
 	namespace Implementation
 	{

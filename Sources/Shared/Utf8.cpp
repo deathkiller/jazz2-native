@@ -1,5 +1,10 @@
 #include "Utf8.h"
 #include "CommonWindows.h"
+#include "Asserts.h"
+#include "Containers/Array.h"
+#include "Containers/ArrayView.h"
+#include "Containers/Pair.h"
+#include "Containers/String.h"
 
 namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -16,7 +21,7 @@ namespace Death { namespace Utf8 {
 		return result;
 	}
 
-	std::pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
+	Containers::Pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
 		DEATH_DEBUG_ASSERT(cursor < text.size(), ("Expected cursor to be less than %zu but got %zu", text.size(), cursor), {});
 
@@ -58,7 +63,7 @@ namespace Death { namespace Utf8 {
 		return { result, end };
 	}
 
-	std::pair<char32_t, std::size_t> PrevChar(const Containers::ArrayView<const char> text, std::size_t cursor)
+	Containers::Pair<char32_t, std::size_t> PrevChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
 		DEATH_DEBUG_ASSERT(cursor > 0 && cursor <= text.size(), ("Expected cursor to be greater than 0 and less than or equal to %zu but got %zu", text.size(), cursor), {});
 
@@ -71,11 +76,11 @@ namespace Death { namespace Utf8 {
 
 		// Delegate to NextChar() for the actual codepoint calculation and validation. It's also invalid
 		// if the next UTF-8 character isn't *exactly* this cursor position.
-		const std::pair<char32_t, std::size_t> prev = NextChar(text, cursor - i);
-		if (prev.first == U'\xffffffff' || prev.second != cursor)
+		const Containers::Pair<char32_t, std::size_t> prev = NextChar(text, cursor - i);
+		if (prev.first() == U'\xffffffff' || prev.second() != cursor)
 			return { U'\xffffffff', cursor - 1 };
 
-		return { prev.first, cursor - i };
+		return { prev.first(), cursor - i };
 	}
 
 	std::size_t FromCodePoint(char32_t character, Containers::StaticArrayView<4, char> result)
@@ -112,18 +117,6 @@ namespace Death { namespace Utf8 {
 
 #if defined(DEATH_TARGET_WINDOWS)
 
-	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize)
-	{
-		if (sourceSize == 0) return 0;
-
-		std::int32_t length = ::MultiByteToWideChar(CP_UTF8, 0, source, sourceSize, destination, destinationSize);
-		if (length > 0 && sourceSize == -1) {
-			length--;	// Return the size without the null terminator
-		}
-		destination[length] = L'\0';
-		return length;
-	}
-
 	Containers::Array<wchar_t> ToUtf16(const char* source, std::int32_t sourceSize)
 	{
 		// MBtoWC counts the trailing \0 into the size, which we have to cut. It also can't be called with a zero
@@ -140,15 +133,20 @@ namespace Death { namespace Utf8 {
 		return Containers::Array<wchar_t>(result.release(), lengthNeeded);
 	}
 
-	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize)
+	Containers::Array<wchar_t> ToUtf16(Containers::StringView source)
+	{
+		return ToUtf16(source.data(), std::int32_t(source.size()));
+	}
+
+	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize)
 	{
 		if (sourceSize == 0) return 0;
 
-		std::int32_t length = ::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, destination, destinationSize, NULL, NULL);
+		std::int32_t length = ::MultiByteToWideChar(CP_UTF8, 0, source, sourceSize, destination, destinationSize);
 		if (length > 0 && sourceSize == -1) {
 			length--;	// Return the size without the null terminator
 		}
-		destination[length] = '\0';
+		destination[length] = L'\0';
 		return length;
 	}
 
@@ -161,6 +159,23 @@ namespace Death { namespace Utf8 {
 		Containers::String result { Containers::NoInit, std::size_t(::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, nullptr, 0, nullptr, nullptr) - (sourceSize == -1 ? 1 : 0)) };
 		::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, result.data(), (std::int32_t)result.size(), nullptr, nullptr);
 		return result;
+	}
+
+	Containers::String FromUtf16(Containers::ArrayView<const wchar_t> source)
+	{
+		return FromUtf16(source.data(), std::int32_t(source.size()));
+	}
+
+	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize)
+	{
+		if (sourceSize == 0) return 0;
+
+		std::int32_t length = ::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, destination, destinationSize, NULL, NULL);
+		if (length > 0 && sourceSize == -1) {
+			length--;	// Return the size without the null terminator
+		}
+		destination[length] = '\0';
+		return length;
 	}
 
 #endif

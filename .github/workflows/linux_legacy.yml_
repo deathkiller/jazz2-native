@@ -41,7 +41,7 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt update -y
-        sudo apt install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev rpm
+        sudo apt install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev libcurl4-openssl-dev rpm
 
     - name: 'Configure CMake'
       run: |

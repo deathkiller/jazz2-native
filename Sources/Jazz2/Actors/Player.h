@@ -318,7 +318,7 @@ namespace Jazz2::Actors
 		float _dizzyTime;
 		std::shared_ptr<Environment::Bird> _spawnedBird;
 		std::shared_ptr<ActorBase> _activeModifierDecor;
-		Array<LightEmitter> _trail;
+		SmallVector<LightEmitter, 0> _trail;
 		Vector2f _trailLastPos;
 		ShieldType _activeShield;
 		float _activeShieldTime;

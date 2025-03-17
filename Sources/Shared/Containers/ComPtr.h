@@ -32,20 +32,20 @@ namespace Death { namespace Containers {
 
 	public:
 		/** @brief Default constructor */
-		constexpr ComPtr(std::nullptr_t = nullptr) noexcept : _ptr(nullptr) {}
+		constexpr ComPtr(std::nullptr_t = nullptr) noexcept : _pointer(nullptr) {}
 
 		/** @brief Construct from the pointer */
-		explicit ComPtr(T* ptr) noexcept : _ptr(ptr) {
-			if (_ptr != nullptr) {
-				_ptr->AddRef();
+		explicit ComPtr(T* ptr) noexcept : _pointer(ptr) {
+			if (_pointer != nullptr) {
+				_pointer->AddRef();
 			}
 		}
 		
 #if defined(DEATH_TARGET_MSVC) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Construct from the pointer of a related type */
 		template<class U, std::enable_if_t<!std::is_same<::IUnknown*, U*>::value && !std::is_base_of<T, U>::value, int> = 0>
-		explicit ComPtr(U* ptr) noexcept : _ptr(nullptr) {
-			HRESULT result = ptr->QueryInterface(DEATH_IID_PPV_ARGS(&_ptr));
+		explicit ComPtr(U* ptr) noexcept : _pointer(nullptr) {
+			HRESULT result = ptr->QueryInterface(DEATH_IID_PPV_ARGS(&_pointer));
 			DEATH_ASSERT(result >= 0, ("ComPtr::QueryInterface() failed with error 0x%08x", result), );
 		}
 #endif
@@ -58,40 +58,40 @@ namespace Death { namespace Containers {
 		ComPtr(const ComPtr<U>& other) noexcept : ComPtr(static_cast<T*>(other.get())) {}
 
 		/** @brief Move constructor */
-		ComPtr(ComPtr&& other) noexcept : _ptr(other.detach()) {}
+		ComPtr(ComPtr&& other) noexcept : _pointer(other.detach()) {}
 
 		/** @overload */
 		template<typename U, std::enable_if_t<std::is_convertible<U*, T*>::value, int> = 0>
-		ComPtr(ComPtr<U>&& other) noexcept : _ptr(other.detach()) {}
+		ComPtr(ComPtr<U>&& other) noexcept : _pointer(other.detach()) {}
 
 		/** @brief Destructor */
 		~ComPtr() noexcept {
-			if (_ptr != nullptr) {
-				_ptr->Release();
+			if (_pointer != nullptr) {
+				_pointer->Release();
 			}
 		}
 
 		/** @brief Relinquishes ownership and returns the internal interface pointer */
 		/*[[nodiscard]]*/ T* detach() noexcept {
-			auto prev = _ptr;
-			_ptr = nullptr;
+			auto prev = _pointer;
+			_pointer = nullptr;
 			return prev;
 		}
 
 		/** @brief Returns the pointer */
 		DEATH_CONSTEXPR14 T* get() const noexcept {
-			return _ptr;
+			return _pointer;
 		}
 
-		/** @brief Releases the pointer and sets it specified value (or nullptr) */
+		/** @brief Releases the pointer and sets it specified value (or `nullptr`) */
 		void reset(T* ptr = nullptr) noexcept {
-			if (_ptr == ptr) {
+			if (_pointer == ptr) {
 				return;
 			}
-			auto prev = _ptr;
-			_ptr = ptr;
-			if (_ptr != nullptr) {
-				_ptr->AddRef();
+			auto prev = _pointer;
+			_pointer = ptr;
+			if (_pointer != nullptr) {
+				_pointer->AddRef();
 			}
 			if (prev != nullptr) {
 				prev->Release();
@@ -125,11 +125,11 @@ namespace Death { namespace Containers {
 
 		/** @brief Move assignment */
 		ComPtr& operator=(ComPtr&& other) noexcept {
-			if (_ptr != other._ptr) {
-				if (_ptr != nullptr) {
-					_ptr->Release();
+			if (_pointer != other._pointer) {
+				if (_pointer != nullptr) {
+					_pointer->Release();
 				}
-				_ptr = other.detach();
+				_pointer = other.detach();
 			}
 
 			return *this;
@@ -138,11 +138,11 @@ namespace Death { namespace Containers {
 		/** @overload */
 		template<typename U, std::enable_if_t<std::is_convertible<U*, T*>::value, int> = 0>
 		ComPtr& operator=(ComPtr<U>&& other) noexcept {
-			if (_ptr != other._ptr) {
-				if (_ptr != nullptr) {
-					_ptr->Release();
+			if (_pointer != other._pointer) {
+				if (_pointer != nullptr) {
+					_pointer->Release();
 				}
-				_ptr = other.detach();
+				_pointer = other.detach();
 			}
 
 			return *this;
@@ -150,35 +150,35 @@ namespace Death { namespace Containers {
 
 		/** @brief Returns the pointer */
 		DEATH_CONSTEXPR14 operator T*() const noexcept {
-			return _ptr;
+			return _pointer;
 		}
 
 		/** @brief Dereferences the pointer */
 		DEATH_CONSTEXPR14 T& operator*() const noexcept {
-			return *_ptr;
+			return *_pointer;
 		}
 
 		/** @brief Allows direct calls against the pointer */
 		DEATH_CONSTEXPR14 T* operator->() const noexcept {
-			return _ptr;
+			return _pointer;
 		}
 
 		/** @brief Returns the address of the internal pointer if the pointer is not initialized yet to be populated by external call */
 		DEATH_CONSTEXPR14 T** operator&() {
-			DEATH_DEBUG_ASSERT(_ptr == nullptr, "Cannot get direct access to initialized pointer", nullptr);
-			return &_ptr;
+			DEATH_DEBUG_ASSERT(_pointer == nullptr, "Cannot get direct access to initialized pointer", nullptr);
+			return &_pointer;
 		}
 
 		/** @brief Whether the pointer is assigned */
 		explicit operator bool() const noexcept {
-			return (_ptr != nullptr);
+			return (_pointer != nullptr);
 		}
 
 #if defined(DEATH_TARGET_MSVC) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Tries to cast the instance to another type */
 		template<class U, std::enable_if_t<std::is_convertible<T, U>::value, int> = 0>
 		HRESULT as(U** result) const noexcept {
-			*result = _ptr;
+			*result = _pointer;
 			(*result)->AddRef();
 			return S_OK;
 		}
@@ -186,22 +186,22 @@ namespace Death { namespace Containers {
 		/** @overload */
 		template<class U, std::enable_if_t<!std::is_convertible<T, U>::value, int> = 0>
 		HRESULT as(U** result) const noexcept {
-			return _ptr->QueryInterface(DEATH_IID_PPV_ARGS(result));
+			return _pointer->QueryInterface(DEATH_IID_PPV_ARGS(result));
 		}
 
 		/** @overload */
 		HRESULT as(REFIID riid, void** result) const noexcept {
-			return _ptr->QueryInterface(riid, result);
+			return _pointer->QueryInterface(riid, result);
 		}
 #endif
 
 	private:
-		T* _ptr;
+		T* _pointer;
 	};
 
 	// Comparison with another ComPtr<T> instances
 	template<typename TLeft, typename TRight>
-	inline bool operator==(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
+	bool operator==(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
 	{
 		static_assert(std::is_convertible<TLeft*, TRight*>::value || std::is_convertible<TRight*, TLeft*>::value,
 			"Comparison operator requires left and right pointers to be compatible");
@@ -210,19 +210,19 @@ namespace Death { namespace Containers {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	template<typename TLeft>
-	inline bool operator==(const ComPtr<TLeft>& left, std::nullptr_t) noexcept
+	bool operator==(const ComPtr<TLeft>& left, std::nullptr_t) noexcept
 	{
 		return (left.get() == nullptr);
 	}
 
 	template<typename TLeft, typename TRight>
-	inline bool operator!=(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
+	bool operator!=(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
 	{
 		return (!(left == right));
 	}
 
 	template<typename TLeft, typename TRight>
-	inline bool operator<(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
+	bool operator<(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
 	{
 		static_assert(std::is_convertible<TLeft*, TRight*>::value || std::is_convertible<TRight*, TLeft*>::value,
 			"Comparison operator requires left and right pointers to be compatible");
@@ -230,44 +230,44 @@ namespace Death { namespace Containers {
 	}
 
 	template<typename TLeft, typename TRight>
-	inline bool operator>=(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
+	bool operator>=(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
 	{
 		return (!(left < right));
 	}
 
 	template<typename TLeft, typename TRight>
-	inline bool operator>(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
+	bool operator>(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
 	{
 		return (right < left);
 	}
 
 	template<typename TLeft, typename TRight>
-	inline bool operator<=(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
+	bool operator<=(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
 	{
 		return (!(right < left));
 	}
 
 	template<typename TRight>
-	inline bool operator==(std::nullptr_t, const ComPtr<TRight>& right) noexcept
+	bool operator==(std::nullptr_t, const ComPtr<TRight>& right) noexcept
 	{
 		return (right.get() == nullptr);
 	}
 
 	template<typename TLeft>
-	inline bool operator!=(const ComPtr<TLeft>& left, std::nullptr_t) noexcept
+	bool operator!=(const ComPtr<TLeft>& left, std::nullptr_t) noexcept
 	{
 		return (left.get() != nullptr);
 	}
 
 	template<typename TRight>
-	inline bool operator!=(std::nullptr_t, const ComPtr<TRight>& right) noexcept
+	bool operator!=(std::nullptr_t, const ComPtr<TRight>& right) noexcept
 	{
 		return (right.get() != nullptr);
 	}
 
 	// Comparison with raw pointers
 	template<typename TLeft, typename TRight>
-	inline bool operator==(const ComPtr<TLeft>& left, TRight* right) noexcept
+	bool operator==(const ComPtr<TLeft>& left, TRight* right) noexcept
 	{
 		static_assert(std::is_convertible<TLeft*, TRight*>::value || std::is_convertible<TRight*, TLeft*>::value,
 			"Comparison operator requires left and right pointers to be compatible");
@@ -275,7 +275,7 @@ namespace Death { namespace Containers {
 	}
 
 	template <typename TLeft, typename TRight>
-	inline bool operator<(const ComPtr<TLeft>& left, TRight* right) noexcept
+	bool operator<(const ComPtr<TLeft>& left, TRight* right) noexcept
 	{
 		static_assert(std::is_convertible<TLeft*, TRight*>::value || std::is_convertible<TRight*, TLeft*>::value,
 			"Comparison operator requires left and right pointers to be compatible");
@@ -283,31 +283,31 @@ namespace Death { namespace Containers {
 	}
 
 	template <typename TLeft, typename ErrLeft, typename TRight>
-	inline bool operator!=(const ComPtr<TLeft>& left, TRight* right) noexcept
+	bool operator!=(const ComPtr<TLeft>& left, TRight* right) noexcept
 	{
 		return (!(left == right));
 	}
 
 	template <typename TLeft, typename ErrLeft, typename TRight>
-	inline bool operator>=(const ComPtr<TLeft>& left, TRight* right) noexcept
+	bool operator>=(const ComPtr<TLeft>& left, TRight* right) noexcept
 	{
 		return (!(left < right));
 	}
 
 	template <typename TLeft, typename ErrLeft, typename TRight>
-	inline bool operator>(const ComPtr<TLeft>& left, TRight* right) noexcept
+	bool operator>(const ComPtr<TLeft>& left, TRight* right) noexcept
 	{
 		return (right < left);
 	}
 
 	template <typename TLeft, typename ErrLeft, typename TRight>
-	inline bool operator<=(const ComPtr<TLeft>& left, TRight* right) noexcept
+	bool operator<=(const ComPtr<TLeft>& left, TRight* right) noexcept
 	{
 		return (!(right < left));
 	}
 
 	template <typename TLeft, typename TRight>
-	inline bool operator==(TLeft* left, const ComPtr<TRight>& right) noexcept
+	bool operator==(TLeft* left, const ComPtr<TRight>& right) noexcept
 	{
 		static_assert(std::is_convertible<TLeft*, TRight*>::value || std::is_convertible<TRight*, TLeft*>::value,
 			"Comparison operator requires left and right pointers to be compatible");
@@ -315,7 +315,7 @@ namespace Death { namespace Containers {
 	}
 
 	template <typename TLeft, typename TRight>
-	inline bool operator<(TLeft* left, const ComPtr<TRight>& right) noexcept
+	bool operator<(TLeft* left, const ComPtr<TRight>& right) noexcept
 	{
 		static_assert(std::is_convertible<TLeft*, TRight*>::value || std::is_convertible<TRight*, TLeft*>::value,
 			"Comparison operator requires left and right pointers to be compatible");
@@ -323,25 +323,25 @@ namespace Death { namespace Containers {
 	}
 
 	template <typename TLeft, typename TRight>
-	inline bool operator!=(TLeft* left, const ComPtr<TRight>& right) noexcept
+	bool operator!=(TLeft* left, const ComPtr<TRight>& right) noexcept
 	{
 		return (!(left == right));
 	}
 
 	template <typename TLeft, typename TRight>
-	inline bool operator>=(TLeft* left, const ComPtr<TRight>& right) noexcept
+	bool operator>=(TLeft* left, const ComPtr<TRight>& right) noexcept
 	{
 		return (!(left < right));
 	}
 
 	template <typename TLeft, typename TRight>
-	inline bool operator>(TLeft* left, const ComPtr<TRight>& right) noexcept
+	bool operator>(TLeft* left, const ComPtr<TRight>& right) noexcept
 	{
 		return (right < left);
 	}
 
 	template <typename TLeft, typename TRight>
-	inline bool operator<=(TLeft* left, const ComPtr<TRight>& right) noexcept
+	bool operator<=(TLeft* left, const ComPtr<TRight>& right) noexcept
 	{
 		return (!(right < left));
 	}

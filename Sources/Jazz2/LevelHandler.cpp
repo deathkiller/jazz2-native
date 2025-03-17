@@ -1266,9 +1266,9 @@ namespace Jazz2
 			std::int32_t start = 0;
 			std::int32_t idx = 0;
 			do {
-				std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
+				Pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
 
-				if (cursor.first == delimiter) {
+				if (cursor.first() == delimiter) {
 					if (delimiterCount == index - 1) {
 						start = idx + 1;
 					} else if (delimiterCount == index) {
@@ -1277,7 +1277,7 @@ namespace Jazz2
 					delimiterCount++;
 				}
 
-				idx = (std::int32_t)cursor.second;
+				idx = (std::int32_t)cursor.second();
 			} while (idx < textSize);
 
 			if (delimiterCount == index) {

@@ -47,8 +47,8 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt install -y cmake curl
-        sudo apt install -y libgl1-mesa-dev:arm64 libglfw3-dev:arm64 libsdl2-dev:arm64 libopenal-dev:arm64 libopenmpt-dev:arm64 zlib1g:arm64
-        #sudo apt install -y libgl1-mesa-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g
+        sudo apt install -y libgl1-mesa-dev:arm64 libglfw3-dev:arm64 libsdl2-dev:arm64 libopenal-dev:arm64 libopenmpt-dev:arm64 libcurl4-openssl-dev:arm64 zlib1g:arm64
+        #sudo apt install -y libgl1-mesa-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev libcurl4-openssl-dev zlib1g
 
     - name: 'Configure CMake'
       run: |

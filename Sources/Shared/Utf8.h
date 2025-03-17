@@ -4,11 +4,7 @@
 	@brief Namespace @ref Death::Utf8
 */
 
-#include "CommonBase.h"
-#include "Containers/Array.h"
-#include "Containers/String.h"
-
-#include <utility>
+#include "Containers/Containers.h"
 
 namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -24,12 +20,12 @@ namespace Death { namespace Utf8 {
 		Returns Unicode codepoint of character on the cursor and position of the following character.
 		If an error occurs, returns position of next byte and @cpp 0xffffffffu @ce as codepoint.
 	*/
-	std::pair<char32_t, std::size_t> NextChar(Containers::ArrayView<const char> text, std::size_t cursor);
+	Containers::Pair<char32_t, std::size_t> NextChar(Containers::ArrayView<const char> text, std::size_t cursor);
 
 	/** @overload */
 	/* To fix ambiguity when passing char array in */
 	template<std::size_t size>
-	inline std::pair<char32_t, std::size_t> NextChar(const char(&text)[size], const std::size_t cursor) {
+	inline Containers::Pair<char32_t, std::size_t> NextChar(const char(&text)[size], const std::size_t cursor) {
 		return NextChar(Containers::ArrayView<const char>{text, size - 1}, cursor);
 	}
 
@@ -40,12 +36,12 @@ namespace Death { namespace Utf8 {
 		returns position of the previous byte and @cpp 0xffffffffu @ce as the codepoint, it's then up to the caller
 		whether it gets treated as a fatal error or if the invalid character is simply skipped or replaced.
 	*/
-	std::pair<char32_t, std::size_t> PrevChar(Containers::ArrayView<const char> text, std::size_t cursor);
+	Containers::Pair<char32_t, std::size_t> PrevChar(Containers::ArrayView<const char> text, std::size_t cursor);
 
 	/** @overload */
 	/* To fix ambiguity when passing char array in */
 	template<std::size_t size>
-	inline std::pair<char32_t, std::size_t> PrevChar(const char(&text)[size], const std::size_t cursor) {
+	inline Containers::Pair<char32_t, std::size_t> PrevChar(const char(&text)[size], const std::size_t cursor) {
 		return PrevChar(Containers::ArrayView<const char>{text, size - 1}, cursor);
 	}
 
@@ -73,9 +69,7 @@ namespace Death { namespace Utf8 {
 	Containers::Array<wchar_t> ToUtf16(const char* source, std::int32_t sourceSize);
 
 	/** @overload */
-	inline Containers::Array<wchar_t> ToUtf16(Containers::StringView source) {
-		return ToUtf16(source.data(), std::int32_t(source.size()));
-	}
+	Containers::Array<wchar_t> ToUtf16(Containers::StringView source);
 
 	/** @overload */
 #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -108,9 +102,7 @@ namespace Death { namespace Utf8 {
 	Containers::String FromUtf16(const wchar_t* source, std::int32_t sourceSize);
 
 	/** @overload */
-	inline Containers::String FromUtf16(Containers::ArrayView<const wchar_t> source) {
-		return FromUtf16(source.data(), std::int32_t(source.size()));
-	}
+	Containers::String FromUtf16(Containers::ArrayView<const wchar_t> source);
 
 	/** @overload */
 #ifdef DOXYGEN_GENERATING_OUTPUT

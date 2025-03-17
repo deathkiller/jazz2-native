@@ -1,4 +1,5 @@
 #include "DateTime.h"
+#include "ArrayView.h"
 #include "String.h"
 #include "../CommonWindows.h"
 #include "../Asserts.h"

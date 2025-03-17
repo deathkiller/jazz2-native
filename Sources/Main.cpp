@@ -55,6 +55,7 @@ using namespace Jazz2::Multiplayer;
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
+#include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
 #include <Environment.h>
@@ -216,6 +217,8 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 void GameEventHandler::OnInitialize()
 {
 	ZoneScopedC(0x888888);
+
+	LOGI("Using temporary directory: %s", fs::GetTempDirectory().data());
 
 	OnBeforeInitialize();
 

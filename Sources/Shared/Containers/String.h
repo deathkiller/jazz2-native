@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include "../CommonBase.h"
+#include "Containers.h"
 #include "StringView.h" /* needs to be included for comparison operators */
+#include "Tags.h"
 
 #include <cstddef>
 #include <type_traits>

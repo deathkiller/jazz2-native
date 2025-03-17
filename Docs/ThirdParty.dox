@@ -28,6 +28,7 @@ It has been developed in @m_class{m-icon} ![](https://resources.jetbrains.com/st
     -   @m_class{m-doc} [ANGLE](https://github.com/google/angle) library --- licensed under [BSD-3-Clause License](https://github.com/google/angle/blob/main/LICENSE)
     -   @m_class{m-doc} [Dear ImGui](https://github.com/ocornut/imgui) library --- licensed under [MIT License](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
     -   @m_class{m-doc} [ENet](https://github.com/lsalzman/enet) library --- licensed under [MIT License](https://github.com/lsalzman/enet/blob/master/LICENSE)
+    -   @m_class{m-doc} [libcurl](https://github.com/curl/curl) library --- licensed under [CURL License](https://github.com/curl/curl/blob/master/COPYING)
     -   @m_class{m-doc} [libopenmpt](https://lib.openmpt.org/libopenmpt/) library --- licensed under [BSD-3-Clause License](https://github.com/OpenMPT/openmpt/blob/master/LICENSE)
     -   @m_class{m-doc} [libvorbis](https://github.com/xiph/vorbis) library --- licensed under [BSD-3-Clause License](https://github.com/xiph/vorbis/blob/master/COPYING)
     -   @m_class{m-doc} [libwebp](https://github.com/webmproject/libwebp) library --- licensed under [BSD-3-Clause License](https://github.com/webmproject/libwebp/blob/main/COPYING)

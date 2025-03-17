@@ -5,6 +5,7 @@
 #include "../Asserts.h"
 #include "../Environment.h"
 #include "../Utf8.h"
+#include "../Containers/DateTime.h"
 #include "../Containers/GrowableArray.h"
 #include "../Containers/StringConcatenable.h"
 
@@ -634,6 +635,19 @@ namespace Death { namespace IO {
 #endif
 	};
 
+	class FileSystem::Directory::Proxy
+	{
+		friend class Directory;
+
+	public:
+		Containers::StringView operator*() const & noexcept;
+
+	private:
+		explicit Proxy(Containers::StringView path);
+
+		Containers::String _path;
+	};
+
 	FileSystem::Directory::Directory() noexcept
 	{
 	}
@@ -678,6 +692,13 @@ namespace Death { namespace IO {
 	{
 		_impl->Increment();
 		return *this;
+	}
+
+	FileSystem::Directory::Proxy FileSystem::Directory::operator++(int)
+	{
+		Proxy p{**this};
+		++*this;
+		return p;
 	}
 
 	bool FileSystem::Directory::operator==(const Directory& other) const
