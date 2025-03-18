@@ -42,22 +42,16 @@ namespace Jazz2::UI::Menu
 		if (seriesIndex >= 0 && seriesIndex < (std::int32_t)SeriesName::Count) {
 			_selectedSeries = seriesIndex;
 
-			String playerName;
 			std::uint64_t userId = 0;
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			if (PreferencesCache::EnableDiscordIntegration && DiscordRpcClient::Get().IsSupported()) {
-				playerName = DiscordRpcClient::Get().GetUserDisplayName();
 				userId = DiscordRpcClient::Get().GetUserId();
 			}
 #endif
+
+			auto playerName = PreferencesCache::GetEffectivePlayerName();
 			if (playerName.empty()) {
-				playerName = PreferencesCache::PlayerName;
-				if (playerName.empty()) {
-					playerName = theApplication().GetUserName();
-					if (playerName.empty()) {
-						playerName = "Me"_s;
-					}
-				}
+				playerName = "Me"_s;
 			}
 			if (playerName.size() > MaxPlayerNameLength) {
 				auto [_, prevChar] = Utf8::PrevChar(playerName, MaxPlayerNameLength);

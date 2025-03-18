@@ -10,7 +10,7 @@
 namespace Jazz2::Multiplayer
 {
 	/**
-		@brief Client configuration
+		@brief Client configuration received from the server
 	*/
 	struct ClientConfiguration
 	{
@@ -66,6 +66,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns global (session) peer descriptor for the specified connected peer */
 		PeerDesc* GetPeerDescriptor(const Peer& peer);
 
+		/** @brief Creates a default server configuration from the template file */
 		static ServerConfiguration CreateDefaultServerConfiguration();
 
 	protected:

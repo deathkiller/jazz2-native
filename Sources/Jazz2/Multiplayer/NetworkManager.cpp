@@ -4,7 +4,6 @@
 
 #include "ServerDiscovery.h"
 #include "../PreferencesCache.h"
-#include "../UI/DiscordRpcClient.h"
 
 #include "../../simdjson/simdjson.h"
 
@@ -213,15 +212,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		// Replace variables in parameters
-		String playerName;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
-			playerName = UI::DiscordRpcClient::Get().GetUserDisplayName();
-		}
-#endif
-		if (playerName.empty()) {
-			playerName = PreferencesCache::PlayerName;
-		}
+		auto playerName = PreferencesCache::GetEffectivePlayerName();
 
 		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
 

@@ -56,6 +56,7 @@ namespace Jazz2::UI::Menu
 		String _localPlayerName;
 		String _prevPlayerName;
 #if defined(DEATH_TARGET_ANDROID)
+		String _deviceId;
 		Vector2i _initialVisibleSize;
 		Recti _currentVisibleBounds;
 		float _recalcVisibleBoundsTimeLeft;

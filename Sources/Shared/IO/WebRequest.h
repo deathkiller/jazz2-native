@@ -67,12 +67,15 @@ namespace Death { namespace IO {
 		WebAuthChallenge& operator=(const WebAuthChallenge& other);
 		~WebAuthChallenge();
 
+		/** @brief Returns `true` if the object is valid */
 		bool IsValid() const {
-			return (_impl.get() != nullptr);
+			return _impl;
 		}
 
+		/** @brief Returns authentication challenge source */
 		Source GetSource() const;
 
+		/** @brief Sets credentials */
 		void SetCredentials(const WebCredentials& cred);
 
 	private:
@@ -94,21 +97,34 @@ namespace Death { namespace IO {
 		WebResponse& operator=(const WebResponse& other);
 		~WebResponse();
 
+		/** @brief Returns `true` if the object is valid */
 		bool IsValid() const {
-			return (_impl.get() != nullptr);
+			return _impl;
 		}
 
+		/** @brief Returns the content length of the response data */
 		std::int64_t GetContentLength() const;
+		/** @brief Returns the effective URL of the request */
 		Containers::String GetURL() const;
+		/** @brief Returns value of the specified header */
 		Containers::String GetHeader(Containers::StringView name) const;
+		/** @brief Returns all values of the specified header */
 		Containers::Array<Containers::String> GetAllHeaderValues(Containers::StringView name) const;
+		/** @brief Returns the MIME type of the response */
 		Containers::String GetMimeType() const;
+		/** @brief Returns the value of the "Content-Type" header */
 		Containers::String GetContentType() const;
+		/** @brief Returns the status code returned by the server */
 		std::int32_t GetStatus() const;
+		/** @brief Returns the status text returned by the server */
 		Containers::String GetStatusText() const;
+		/** @brief Returns a stream which represents the response data sent by the server */
 		Stream* GetStream() const;
+		/** @brief Returns a suggested filename for the response data */
 		Containers::String GetSuggestedFileName() const;
+		/** @brief Returns all response data as a string */
 		Containers::String AsString() const;
+		/** @brief Returns the full path of the file to which data is being saved */
 		Containers::String GetDataFile() const;
 
 	protected:
@@ -177,33 +193,37 @@ namespace Death { namespace IO {
 			Containers::String error;
 		};
 
+		/** @brief Returns `true` if the object is valid */
 		bool IsValid() const {
-			return (_impl.get() != nullptr);
+			return _impl;
 		}
 
+		/** @brief Sets a request header which will be sent to the server by this request */
 		void SetHeader(Containers::StringView name, Containers::StringView value);
-
+		/** @brief Sets the HTTP request method */
 		void SetMethod(Containers::StringView method);
-
+		/** @brief Sets the text to be posted to the server in this request */
 		void SetData(Containers::StringView text, Containers::StringView contentType);
-
+		/** @brief Sets the binary data to be posted to the server in this request */
 		bool SetData(std::unique_ptr<Stream> dataStream, Containers::StringView contentType, std::int64_t dataSize = -1);
-
-		bool SetData(Stream* dataStream, Containers::StringView contentType, std::int64_t dataSize = -1) {
-			return SetData(std::unique_ptr<Stream>(dataStream), contentType, dataSize);
-		}
-
+		/** @brief Returns the destination storage where the response data will be stored */
+		Storage GetStorage() const;
+		/** @brief Sets the destination storage where the response data will be stored */
 		void SetStorage(Storage storage);
 
-		Storage GetStorage() const;
-
+		/** @brief Returns the server response */
 		WebResponse GetResponse() const;
 
+		/** @brief Returns the number of bytes sent to the server */
 		std::int64_t GetBytesSent() const;
+		/** @brief Returns the total number of bytes expected to be sent to the server */
 		std::int64_t GetBytesExpectedToSend() const;
+		/** @brief Returns the number of bytes received from the server */
 		std::int64_t GetBytesReceived() const;
+		/** @brief Returns the number of bytes expected to be received from the server */
 		std::int64_t GetBytesExpectedToReceive() const;
 
+		/** @brief Returns the native handle corresponding to this request object */
 		WebRequestHandle GetNativeHandle() const;
 
 		/** @brief Security bypass flags */
@@ -216,13 +236,17 @@ namespace Death { namespace IO {
 
 		DEATH_PRIVATE_ENUM_FLAGS(Ignore);
 
+		/** @brief Makes the connection insecure by disabling security checks */
 		void MakeInsecure(Ignore flags = Ignore::All);
+		/** @brief Returns security bypass flags */
 		Ignore GetSecurityFlags() const;
 
+		/** @brief Disables SSL certificate verification */
 		void DisablePeerVerify(bool disable = true) {
 			MakeInsecure(disable ? Ignore::Certificate : Ignore::None);
 		}
 
+		/** @brief Returns `true` if SSL certificate verification is disabled */
 		bool IsPeerVerifyDisabled() const {
 			return (GetSecurityFlags() & Ignore::Certificate) != Ignore::None;
 		}
@@ -249,6 +273,7 @@ namespace Death { namespace IO {
 		WebRequest(const WebRequest& other) = default;
 		WebRequest& operator=(const WebRequest& other) = default;
 
+		/** @brief Executes the request synchronously */
 		Result Execute() const;
 
 	private:
@@ -268,11 +293,17 @@ namespace Death { namespace IO {
 		WebRequestAsync(const WebRequestAsync& other) = default;
 		WebRequestAsync& operator=(const WebRequestAsync& other) = default;
 
+		/** @brief Sends the request to the server asynchronously */
 		void Run();
+		/** @brief Cancels the active request */
 		void Cancel();
+		/** @brief Returns the current authentication challenge while the request is in @ref State::Unauthorized */
 		WebAuthChallenge GetAuthChallenge() const;
+		/** @brief Returns the ID specified while creating the request */
 		std::int32_t GetId() const;
+		/** @brief Returns the underlying session */
 		WebSessionAsync& GetSession() const;
+		/** @brief Returns the current state of the request */
 		State GetState() const;
 
 	private:
@@ -307,22 +338,15 @@ namespace Death { namespace IO {
 		};
 
 		/** @brief Returns proxy type */
-		Type GetType() const {
-			return _type;
-		}
-
+		Type GetType() const;
 		/** @brief Returns proxy URL if @ref Type::URL */
-		Containers::StringView GetURL() const {
-			DEATH_DEBUG_ASSERT(_type == Type::URL);
-			return _url;
-		}
+		Containers::StringView GetURL() const;
 
 	private:
 		Type _type;
 		Containers::String _url;
 
-		WebProxy(Type type, Containers::StringView url = {})
-			: _type(type), _url(url) {}
+		WebProxy(Type type, Containers::StringView url = {});
 	};
 
 	/** @brief Base class of web sessions */
@@ -338,13 +362,21 @@ namespace Death { namespace IO {
 		/** @brief Returns `true` if the network backend is available */
 		static bool IsBackendAvailable();
 
+		/** @brief Sets a request header in every request created from this session after it has been set. */
 		void AddCommonHeader(Containers::StringView name, Containers::StringView value);
+		/** @brief Returns the current temporary directory */
 		Containers::String GetTempDirectory() const;
+		/** @brief Sets the current temporary directory */
 		void SetTempDirectory(Containers::StringView dir);
+		/** @brief Sets the proxy to use for all requests initiated by this session */
 		bool SetProxy(const WebProxy& proxy);
+		/** @brief Returns `true` if the session was successfully opened and can be used */
 		bool IsOpened() const;
+		/** @brief Closes the session */
 		void Close();
+		/** @brief Allows to enable persistent storage for the session */
 		bool EnablePersistentStorage(bool enable);
+		/** @brief Returns the native handle corresponding to this session object */
 		WebSessionHandle GetNativeHandle() const;
 
 	protected:
@@ -352,6 +384,7 @@ namespace Death { namespace IO {
 		WebSessionImplPtr _impl;
 #endif
 
+		/** @brief Returns the internal session factory */
 		static WebSessionFactory* FindFactory();
 
 		explicit WebSessionBase(const WebSessionImplPtr& impl);
@@ -403,47 +436,30 @@ namespace Death { namespace IO {
 			: WebSessionBase(impl) {}
 	};
 
-	/** @brief Result of asynchronous web request */
+	/** @brief Result of the asynchronous web request */
 	class WebRequestEvent
 	{
 	public:
 		WebRequestEvent(std::int32_t id = -1, WebRequest::State state = WebRequest::State::Idle,
-						const WebRequestAsync& request = {}, const WebResponse& response = {}, Containers::StringView errorDesc = {})
-			: _id(id), _state(state), _request(request), _response(response), _errorDescription(errorDesc)
-		{
-		}
+						const WebRequestAsync& request = {}, const WebResponse& response = {}, Containers::StringView errorDesc = {});
 
-		WebRequestAsync::State GetState() const {
-			return _state;
-		}
+		/** @brief Returns the current state of the request */
+		WebRequestAsync::State GetState() const;
+		/** @brief 	Returns a reference to the @ref WebRequestAsync object which initiated this event */
+		const WebRequestAsync& GetRequest() const;
+		/** @brief Returns the response when the state is @relativeref{WebRequestBase,State::Complete} */
+		const WebResponse& GetResponse() const;
+		/** @brief Returns a textual error description when the state is @relativeref{WebRequestBase,State::Failed} */
+		Containers::StringView GetErrorDescription() const;
+		/** @brief Returns the full path of a temporary file containing the response data when the state is @relativeref{WebRequestBase,State::Complete} and storage is @relativeref{WebRequestBase,Storage::File} */
+		Containers::StringView GetDataFile() const;
+		/** @brief Returns the buffer */
+		Containers::ArrayView<char> GetDataBuffer() const;
 
-		const WebRequestAsync& GetRequest() const {
-			return _request;
-		}
-
-		const WebResponse& GetResponse() const {
-			return _response;
-		}
-
-		Containers::StringView GetErrorDescription() const {
-			return _errorDescription;
-		}
-
-		Containers::StringView GetDataFile() const {
-			return _dataFile;
-		}
-
-		void SetDataFile(Containers::StringView dataFile) {
-			_dataFile = dataFile;
-		}
-
-		Containers::ArrayView<char> GetDataBuffer() const {
-			return _dataBuffer;
-		}
-
-		void SetDataBuffer(Containers::ArrayView<char> dataBuffer) {
-			_dataBuffer = dataBuffer;
-		}
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		void SetDataFile(Containers::StringView dataFile);
+		void SetDataBuffer(Containers::ArrayView<char> dataBuffer);
+#endif
 
 	private:
 		std::int32_t _id;

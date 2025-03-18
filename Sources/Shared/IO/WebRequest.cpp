@@ -644,18 +644,18 @@ namespace Death { namespace IO {
 		return _impl->SetData(Death::move(dataStream), contentType, dataSize);
 	}
 
-	void WebRequestBase::SetStorage(Storage storage)
-	{
-		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", );
-
-		_impl->SetStorage(storage);
-	}
-
 	WebRequestBase::Storage WebRequestBase::GetStorage() const
 	{
 		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", Storage::None);
 
 		return _impl->GetStorage();
+	}
+
+	void WebRequestBase::SetStorage(Storage storage)
+	{
+		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", );
+
+		_impl->SetStorage(storage);
 	}
 
 	WebRequest::Result WebRequest::Execute() const
@@ -1019,6 +1019,20 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", {});
 
 		return _impl->GetDataFile();
+	}
+
+	WebProxy::WebProxy(Type type, Containers::StringView url)
+		: _type(type), _url(url) {}
+
+	WebProxy::Type WebProxy::GetType() const
+	{
+		return _type;
+	}
+
+	Containers::StringView WebProxy::GetURL() const
+	{
+		DEATH_DEBUG_ASSERT(_type == Type::URL);
+		return _url;
 	}
 
 	namespace
@@ -1566,6 +1580,50 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", false);
 
 		return _impl->EnablePersistentStorage(enable);
+	}
+
+	WebRequestEvent::WebRequestEvent(std::int32_t id, WebRequest::State state, const WebRequestAsync& request,
+		const WebResponse& response, Containers::StringView errorDesc)
+		: _id(id), _state(state), _request(request), _response(response), _errorDescription(errorDesc) {}
+
+	WebRequestAsync::State WebRequestEvent::GetState() const
+	{
+		return _state;
+	}
+
+	const WebRequestAsync& WebRequestEvent::GetRequest() const
+	{
+		return _request;
+	}
+
+	const WebResponse& WebRequestEvent::GetResponse() const
+	{
+		return _response;
+	}
+
+	Containers::StringView WebRequestEvent::GetErrorDescription() const
+	{
+		return _errorDescription;
+	}
+
+	Containers::StringView WebRequestEvent::GetDataFile() const
+	{
+		return _dataFile;
+	}
+
+	void WebRequestEvent::SetDataFile(Containers::StringView dataFile)
+	{
+		_dataFile = dataFile;
+	}
+
+	Containers::ArrayView<char> WebRequestEvent::GetDataBuffer() const
+	{
+		return _dataBuffer;
+	}
+
+	void WebRequestEvent::SetDataBuffer(Containers::ArrayView<char> dataBuffer)
+	{
+		_dataBuffer = dataBuffer;
 	}
 
 #if defined(DEATH_TARGET_WINDOWS)
