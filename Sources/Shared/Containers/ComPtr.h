@@ -84,7 +84,7 @@ namespace Death { namespace Containers {
 			return _pointer;
 		}
 
-		/** @brief Releases the pointer and sets it specified value (or `nullptr` by default) */
+		/** @brief Releases the pointer and sets it to the specified value (or `nullptr` by default) */
 		void reset(T* ptr = nullptr) noexcept {
 			if (_pointer == ptr) {
 				return;

@@ -2,6 +2,7 @@
 #include "ContentResolver.h"
 #include "LevelHandler.h"
 #include "Input/ControlScheme.h"
+#include "UI/DiscordRpcClient.h"
 #include "../nCine/Application.h"
 #include "../nCine/Base/Random.h"
 
@@ -369,7 +370,7 @@ namespace Jazz2
 			// Config file doesn't exist or reset is requested
 			FirstRun = true;
 			Random().Uuid(UniquePlayerID);
-			PlayerName = theApplication().GetUserName();
+			PlayerName = GetEffectivePlayerName();
 			TryLoadPreferredLanguage();
 
 			fs::CreateDirectories(configDir);
@@ -566,14 +567,14 @@ namespace Jazz2
 	}
 
 	template<class Iterator>
-	static std::string ToBase64(const Iterator begin, const Iterator end)
+	static std::string ToBase64Url(const Iterator begin, const Iterator end)
 	{
 		static const StaticArray<64, char> chars {
 			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
 			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
 			'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'
 		};
 
 		std::string result;
@@ -598,10 +599,6 @@ namespace Jazz2
 			} else { // c == 2
 				result += chars[static_cast<std::uint8_t>(((charArray[0] & 0x03) << 4) + ((charArray[1] & 0xF0) >> 4))];
 				result += chars[static_cast<std::uint8_t>((charArray[1] & 0x0F) << 2)];
-			}
-
-			while (++c < 4) {
-				result += '='; // Padding
 			}
 		}
 
@@ -783,7 +780,27 @@ namespace Jazz2
 #else
 		static const char DeviceDesc[] = "||||"; std::int32_t DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif
-		return ToBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
+		return ToBase64Url(DeviceDesc, DeviceDesc + DeviceDescLength);
+	}
+
+	String PreferencesCache::GetEffectivePlayerName()
+	{
+		// Discord display name has the highest priority, then the player name set in the preferences, and finally the system user name
+
+		String playerName;
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
+			playerName = UI::DiscordRpcClient::Get().GetUserDisplayName();
+		}
+#endif
+		if (playerName.empty()) {
+			playerName = PreferencesCache::PlayerName;
+			if (playerName.empty()) {
+				playerName = theApplication().GetUserName();
+			}
+		}
+
+		return playerName;
 	}
 
 	EpisodeContinuationState* PreferencesCache::GetEpisodeEnd(StringView episodeName, bool createIfNotFound)

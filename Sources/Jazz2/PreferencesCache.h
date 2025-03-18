@@ -237,6 +237,8 @@ namespace Jazz2
 
 		/** @brief Returns device ID of the device currently running this application */
 		static String GetDeviceID();
+		/** @brief Returns effective player name */
+		static String GetEffectivePlayerName();
 
 		/** @brief Returns information about episode completion */
 		static EpisodeContinuationState* GetEpisodeEnd(StringView episodeName, bool createIfNotFound = false);

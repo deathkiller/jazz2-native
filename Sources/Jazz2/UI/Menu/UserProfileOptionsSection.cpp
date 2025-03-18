@@ -33,6 +33,11 @@ namespace Jazz2::UI::Menu
 		}
 
 #if defined(DEATH_TARGET_ANDROID)
+		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
+		if (!androidId.empty()) {
+			_deviceId = "A:"_s + androidId;
+		}
+
 		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 		_initialVisibleSize.X = _currentVisibleBounds.W;
 		_initialVisibleSize.Y = _currentVisibleBounds.H;
@@ -355,7 +360,10 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow(uniquePlayerId, charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID)
+			_root->DrawStringShadow(_deviceId, charOffset, centerX, item.Y + 22.0f + 16.0f, IMenuContainer::FontLayer - 10,
+				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
+#	elif (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			if (DiscordRpcClient::Get().IsSupported()) {
 				std::uint64_t userId = DiscordRpcClient::Get().GetUserId();
 				if (userId != 0) {
@@ -365,7 +373,7 @@ namespace Jazz2::UI::Menu
 						Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 				}
 			}
-#endif
+#	endif
 		}
 #endif
 		else if (item.Item.HasBooleanValue) {

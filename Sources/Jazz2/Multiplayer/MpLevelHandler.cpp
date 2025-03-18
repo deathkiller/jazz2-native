@@ -2460,15 +2460,7 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 					
 					if (otherPlayer->_playerIndex == 0) {
-						StringView playerName;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-						if (UI::DiscordRpcClient::Get().IsSupported()) {
-							playerName = UI::DiscordRpcClient::Get().GetUserDisplayName();
-						}
-#endif
-						if (playerName.empty()) {
-							playerName = PreferencesCache::PlayerName;
-						}
+						auto playerName = PreferencesCache::GetEffectivePlayerName();
 
 						MemoryStream packet(5 + playerName.size());
 						packet.WriteVariableUint32(otherPlayer->_playerIndex);

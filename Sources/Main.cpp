@@ -789,22 +789,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		// TODO: Password
 		packet.WriteVariableUint32(0);
 
-		// TODO: Player name
-		String playerName; std::uint64_t playerUserId = 0;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
-			playerName = UI::DiscordRpcClient::Get().GetUserDisplayName();
-			playerUserId = UI::DiscordRpcClient::Get().GetUserId();
-		}
-#endif
-		if (playerName.empty()) {
-			playerName = PreferencesCache::PlayerName;
-		}
-		/*if (playerName.empty()) {
-			char buffer[64];
-			formatString(buffer, sizeof(buffer), "%X", Random().Next());
-			playerName = buffer;
-		}*/
+		auto playerName = PreferencesCache::GetEffectivePlayerName();
 		if (playerName.size() > MaxPlayerNameLength) {
 			auto [_, prevChar] = Utf8::PrevChar(playerName, MaxPlayerNameLength);
 			playerName = playerName.prefix(prevChar);
@@ -821,6 +806,12 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		packet.WriteValue<std::uint8_t>(0);	// Device ID
 #endif
 
+		std::uint64_t playerUserId = 0;
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
+			playerUserId = UI::DiscordRpcClient::Get().GetUserId();
+		}
+#endif
 		packet.WriteVariableUint64(playerUserId);
 
 		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
