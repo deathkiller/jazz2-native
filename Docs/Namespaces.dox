@@ -657,7 +657,7 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Class @ref Death::IO::Stream
 */
 /** @file Shared/IO/WebRequest.h
-	@brief Class @ref Death::IO:::WebAuthChallenge @ref Death::IO::WebCredentials, @ref Death::IO::WebProxy, @ref Death::IO::WebRequest, @ref Death::IO::WebRequestAsync, @ref Death::IO::WebResponse, @ref Death::IO::WebSession, @ref Death::IO::WebSessionAsync
+	@brief Class @ref Death::IO::WebAuthChallenge @ref Death::IO::WebCredentials, @ref Death::IO::WebProxy, @ref Death::IO::WebRequest, @ref Death::IO::WebRequestAsync, @ref Death::IO::WebResponse, @ref Death::IO::WebSession, @ref Death::IO::WebSessionAsync
 */
 
 /** @dir Shared/IO/Compression

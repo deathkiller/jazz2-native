@@ -9,7 +9,7 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	/** @brief Contains the username and password to use for authenticating */
+	/** @brief Contains the user name and password to use for authenticating */
 	class WebCredentials
 	{
 	public:
@@ -56,7 +56,7 @@ namespace Death { namespace IO {
 		friend class WebRequestAsync;
 
 	public:
-		/** @brief Authentication challenge information source */
+		/** @brief Authentication challenge source */
 		enum class Source {
 			Server,			/**< Server */
 			Proxy			/**< Proxy */
@@ -380,7 +380,7 @@ namespace Death { namespace IO {
 			: WebSessionBase(impl) {}
 	};
 
-	/** @brief Represents asynchronous web session that allows @ref WebRequestAsync to be created */
+	/** @brief Represents web session that allows @ref WebRequestAsync to be created */
 	class WebSessionAsync : public WebSessionBase
 	{
 	public:
