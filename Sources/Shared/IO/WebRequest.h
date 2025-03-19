@@ -226,7 +226,7 @@ namespace Death { namespace IO {
 		/** @brief Returns the native handle corresponding to this request object */
 		WebRequestHandle GetNativeHandle() const;
 
-		/** @brief Security bypass flags */
+		/** @brief Security bypass flags, supports a bitwise combination of its member values */
 		enum class Ignore {
 			None = 0,					/**< None */
 			Certificate = 1,			/**< Certificate */
@@ -293,11 +293,11 @@ namespace Death { namespace IO {
 		WebRequestAsync(const WebRequestAsync& other) = default;
 		WebRequestAsync& operator=(const WebRequestAsync& other) = default;
 
-		/** @brief Sends the request to the server asynchronously */
+		/** @brief Executes the request to the server asynchronously */
 		void Run();
 		/** @brief Cancels the active request */
 		void Cancel();
-		/** @brief Returns the current authentication challenge while the request is in @ref State::Unauthorized */
+		/** @brief Returns the current authentication challenge while the state of the request is @ref State::Unauthorized */
 		WebAuthChallenge GetAuthChallenge() const;
 		/** @brief Returns the ID specified while creating the request */
 		std::int32_t GetId() const;
@@ -339,7 +339,7 @@ namespace Death { namespace IO {
 
 		/** @brief Returns proxy type */
 		Type GetType() const;
-		/** @brief Returns proxy URL if @ref Type::URL */
+		/** @brief Returns proxy URL if @ref Type::URL is selected */
 		Containers::StringView GetURL() const;
 
 	private:
@@ -367,13 +367,13 @@ namespace Death { namespace IO {
 		/** @brief Returns the current temporary directory */
 		Containers::String GetTempDirectory() const;
 		/** @brief Sets the current temporary directory */
-		void SetTempDirectory(Containers::StringView dir);
+		void SetTempDirectory(Containers::StringView path);
 		/** @brief Sets the proxy to use for all requests initiated by this session */
 		bool SetProxy(const WebProxy& proxy);
 		/** @brief Returns `true` if the session was successfully opened and can be used */
 		bool IsOpened() const;
 		/** @brief Closes the session */
-		void Close();
+		void Dispose();
 		/** @brief Allows to enable persistent storage for the session */
 		bool EnablePersistentStorage(bool enable);
 		/** @brief Returns the native handle corresponding to this session object */
@@ -447,11 +447,11 @@ namespace Death { namespace IO {
 		WebRequestAsync::State GetState() const;
 		/** @brief 	Returns a reference to the @ref WebRequestAsync object which initiated this event */
 		const WebRequestAsync& GetRequest() const;
-		/** @brief Returns the response when the state is @relativeref{WebRequestBase,State::Complete} */
+		/** @brief Returns the response when the state is @relativeref{WebRequestBase,State::Completed} */
 		const WebResponse& GetResponse() const;
 		/** @brief Returns a textual error description when the state is @relativeref{WebRequestBase,State::Failed} */
 		Containers::StringView GetErrorDescription() const;
-		/** @brief Returns the full path of a temporary file containing the response data when the state is @relativeref{WebRequestBase,State::Complete} and storage is @relativeref{WebRequestBase,Storage::File} */
+		/** @brief Returns the full path of a temporary file containing the response data when the state is @relativeref{WebRequestBase,State::Completed} and storage is @relativeref{WebRequestBase,Storage::File} */
 		Containers::StringView GetDataFile() const;
 		/** @brief Returns the buffer */
 		Containers::ArrayView<char> GetDataBuffer() const;

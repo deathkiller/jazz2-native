@@ -11,17 +11,12 @@
 #endif
 
 #include "../nCine/MainApplication.h"
-#include "../nCine/IAppEventHandler.h"
 #include "../nCine/ServiceLocator.h"
 #include "../nCine/tracy.h"
-#include "../nCine/Input/IInputEventHandler.h"
 #include "../nCine/Base/Random.h"
 #include "../nCine/Graphics/Camera.h"
-#include "../nCine/Graphics/Sprite.h"
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
-#include "../nCine/Graphics/RenderQueue.h"
-#include "../nCine/Audio/AudioReaderMpt.h"
 
 #include "Actors/Player.h"
 #include "Actors/SolidObjectBase.h"

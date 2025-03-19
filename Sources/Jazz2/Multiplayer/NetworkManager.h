@@ -56,10 +56,10 @@ namespace Jazz2::Multiplayer
 		void Dispose() override;
 
 		/** @brief Returns client configuration */
-		ClientConfiguration& GetClientConfiguration();
+		ClientConfiguration& GetClientConfiguration() const;
 
 		/** @brief Returns server configuration */
-		ServerConfiguration& GetServerConfiguration();
+		ServerConfiguration& GetServerConfiguration() const;
 
 		/** @brief Returns connected peer count */
 		std::uint32_t GetPeerCount() const;

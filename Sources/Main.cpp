@@ -23,7 +23,6 @@
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
 #include "Jazz2/PreferencesCache.h"
-#include "Jazz2/Input/ControlScheme.h"
 #include "Jazz2/UI/Cinematics.h"
 #include "Jazz2/UI/DiscordRpcClient.h"
 #include "Jazz2/UI/LoadingHandler.h"
@@ -59,11 +58,11 @@ using namespace Jazz2::Multiplayer;
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
 #include <Environment.h>
-#include <Utf8.h>
 #include <IO/FileSystem.h>
 #include <IO/PakFile.h>
 #include <IO/Compression/DeflateStream.h>
 #include <IO/WebRequest.h>
+#include <Utf8.h>
 
 /** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
@@ -247,7 +246,7 @@ void GameEventHandler::OnInitialize()
 #	endif
 	}, this);
 
-#	if defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)
+#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
@@ -314,7 +313,7 @@ void GameEventHandler::OnInitialize()
 	CheckUpdates();
 #	endif
 
-#	if defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)
+#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
@@ -1451,10 +1450,9 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 			}
 		} else if (extension == "j2l"_s) {
 			// Level
-			String levelName = fs::GetFileName(item);
+			String levelName = fs::GetFileNameWithoutExtension(item);
 			if (levelName.find("-MLLE-Data-"_s) == nullptr) {
 				if (!recreateAll) {
-					String levelName = fs::GetFileNameWithoutExtension(item);
 					StringUtils::lowercaseInPlace(levelName);
 
 					String fullPath;
@@ -1550,13 +1548,16 @@ void GameEventHandler::CheckUpdates()
 	String url = "https://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
 	auto request = WebSession::GetDefault().CreateRequest(url);
 	request.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
-	if (request.Execute()) {
+	auto result = request.Execute();
+	if (result) {
 		auto s = request.GetResponse().AsString();
 		constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 		std::uint64_t latestVersion = parseVersion(s);
 		if (currentVersion < latestVersion) {
 			_newestVersion = s;
 		}
+	} else {
+		LOGW("Failed to check for updates: %s", result.error.data());
 	}
 #endif
 }
@@ -1637,7 +1638,7 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 		bool shouldSaveEpisodeEnd = (prevEnd == nullptr);
 		if (!shouldSaveEpisodeEnd) {
 			switch (PreferencesCache::OverwriteEpisodeEnd) {
-				// Don't overwrite existing data in multiplayer/splitscreen
+				// Don't overwrite existing data in multiplayer/split-screen
 				default: shouldSaveEpisodeEnd = (playerCount == 1); break;
 				case EpisodeEndOverwriteMode::NoCheatsOnly: shouldSaveEpisodeEnd = (playerCount == 1 && !levelInit.CheatsUsed); break;
 				case EpisodeEndOverwriteMode::HigherScoreOnly: shouldSaveEpisodeEnd = (playerCount == 1 && !levelInit.CheatsUsed && firstPlayer->Score >= prevEnd->Score); break;

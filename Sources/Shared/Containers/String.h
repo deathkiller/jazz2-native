@@ -27,7 +27,6 @@
 #include "StringView.h" /* needs to be included for comparison operators */
 #include "Tags.h"
 
-#include <cstddef>
 #include <type_traits>
 
 namespace Death { namespace Containers {

@@ -139,7 +139,8 @@ namespace Jazz2::Multiplayer
 		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		_onlineRequest = WebSession::GetDefault().CreateRequest(url);
 		_onlineRequest.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
-		if (_onlineRequest.Execute()) {
+		auto result = _onlineRequest.Execute();
+		if (result) {
 			auto s = _onlineRequest.GetResponse().GetStream();
 			auto size = s->GetSize();
 			auto buffer = std::make_unique<char[]>(size + simdjson::SIMDJSON_PADDING);
@@ -167,9 +168,11 @@ namespace Jazz2::Multiplayer
 						}
 					}
 				}
+			} else {
+				LOGE("[MP] Failed to parse public server list");
 			}
 		} else {
-			LOGE("[MP] Failed to download public server list");
+			LOGE("[MP] Failed to download public server list: %s", result.error.data());
 		}
 		_onlineRequest = {};
 	}
@@ -266,7 +269,8 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		String serverName = StringUtils::replaceAll(serverConfig.ServerName.data(), "\""_s, "\\\""_s);
+		String serverName = StringUtils::replaceAll(StringUtils::replaceAll(serverConfig.ServerName.data(),
+			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
 
 		char input[2048];
 		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"",
@@ -297,8 +301,9 @@ namespace Jazz2::Multiplayer
 		_onlineRequest.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
 		_onlineRequest.SetMethod("POST"_s);
 		_onlineRequest.SetData(StringView(input, length), "application/json"_s);
-		if (!_onlineRequest.Execute()) {
-			LOGW("[MP] Failed to publish the server");
+		auto result = _onlineRequest.Execute();
+		if (!result) {
+			LOGW("[MP] Failed to publish the server: %s", result.error.data());
 		}
 		_onlineRequest = {};
 	}
