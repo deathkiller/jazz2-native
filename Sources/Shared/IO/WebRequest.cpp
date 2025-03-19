@@ -15,7 +15,7 @@
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <winhttp.h>
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 #	include <thread>
 #	include <unordered_map>
 #	include <unistd.h>
@@ -290,8 +290,8 @@ namespace Death { namespace IO {
 
 		String GetTempDirectory() const;
 
-		void SetTempDirectory(StringView dir) {
-			_tempDir = dir;
+		void SetTempDirectory(StringView path) {
+			_tempDir = path;
 		}
 
 		virtual bool SetProxy(const WebProxy& proxy) {
@@ -1229,7 +1229,7 @@ namespace Death { namespace IO {
 		}
 	};
 
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL;
 	class WebRequestCURL;
@@ -1474,7 +1474,7 @@ namespace Death { namespace IO {
 				return nullptr;
 			}
 			_factory = Death::move(factory);
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 			std::unique_ptr<WebSessionFactory> factory = std::make_unique<WebSessionFactoryCURL>();
 			if (!factory->Initialize()) {
 				return nullptr;
@@ -1546,11 +1546,11 @@ namespace Death { namespace IO {
 		return _impl->GetTempDirectory();
 	}
 
-	void WebSessionBase::SetTempDirectory(StringView dir)
+	void WebSessionBase::SetTempDirectory(StringView path)
 	{
 		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", );
 
-		_impl->SetTempDirectory(dir);
+		_impl->SetTempDirectory(path);
 	}
 
 	bool WebSessionBase::SetProxy(const WebProxy& proxy)
@@ -1565,7 +1565,7 @@ namespace Death { namespace IO {
 		return _impl.get() != nullptr;
 	}
 
-	void WebSessionBase::Close()
+	void WebSessionBase::Dispose()
 	{
 		_impl.reset(nullptr);
 	}
@@ -2458,7 +2458,7 @@ namespace Death { namespace IO {
 		return WebSessionImpl::SetProxy(proxy);
 	}
 
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL : public WebAuthChallengeImpl
 	{
@@ -2587,8 +2587,10 @@ namespace Death { namespace IO {
 		} else
 #endif
 		{
+			DEATH_IGNORE_DEPRECATED_PUSH
 			CURLSetOpt(GetHandle(), CURLOPT_PROGRESSFUNCTION, CURLProgress);
 			CURLSetOpt(GetHandle(), CURLOPT_PROGRESSDATA, this);
+			DEATH_IGNORE_DEPRECATED_POP
 		}
 
 		CURLSetOpt(GetHandle(), CURLOPT_NOPROGRESS, 0L);
@@ -2727,7 +2729,9 @@ namespace Death { namespace IO {
 		} else
 #endif
 		{
+			DEATH_IGNORE_DEPRECATED_PUSH
 			CURLSetOpt(_handle, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+			DEATH_IGNORE_DEPRECATED_POP
 		}
 
 		const WebProxy& proxy = GetSessionImpl().GetProxy();

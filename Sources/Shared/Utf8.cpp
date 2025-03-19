@@ -147,7 +147,7 @@ namespace Death { namespace Utf8 {
 
 		// WCtoMB counts the trailing \0 into the size, which we have to cut. Containers::String takes
 		// care of allocating extra for the null terminator so we don't need to do that explicitly.
-		Containers::String result { Containers::NoInit, std::size_t(::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, nullptr, 0, nullptr, nullptr) - (sourceSize == -1 ? 1 : 0)) };
+		Containers::String result{Containers::NoInit, std::size_t(::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, nullptr, 0, nullptr, nullptr) - (sourceSize == -1 ? 1 : 0))};
 		::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, result.data(), (std::int32_t)result.size(), nullptr, nullptr);
 		return result;
 	}

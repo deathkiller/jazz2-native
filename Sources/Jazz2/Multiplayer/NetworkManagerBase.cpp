@@ -27,7 +27,7 @@ namespace Jazz2::Multiplayer
 {
 	static std::atomic_int32_t _initializeCount{0};
 
-	bool TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port)
+	static bool TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port)
 	{
 		if (auto portSep = input.findLast(':')) {
 			auto portString = input.suffix(portSep.begin() + 1);
@@ -44,7 +44,7 @@ namespace Jazz2::Multiplayer
 				}
 
 				auto portString = input.suffix(portSep.begin() + 1);
-				port = (std::uint16_t)stou32(portString.data(), portString.size());
+				port = std::uint16_t(stou32(portString.data(), portString.size()));
 				return true;
 			}
 		} else {

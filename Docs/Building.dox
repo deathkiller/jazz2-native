@@ -18,8 +18,8 @@ The project requires following tools and libraries to build it successfully:
 -   **GLEW** (required only on Windows)
 -   **GLFW** or **SDL2** (not required on Android and UWP, because these
     platforms use a different backend)
--   **libcurl** (not required on Android, Emscripten and Windows,
-    because these platforms use a different backend)
+-   **libcurl** (not required on Emscripten and Windows, because these
+    platforms use a different backend)
 -   **zlib**
 
 @m_class{m-noindent}
@@ -243,7 +243,7 @@ The following parameters can be used to customize the build:
 
 -   `DISABLE_RESCALE_SHADERS` (default @cpp OFF @ce) --- Disable rescale shaders and use only nearest neighbor
 -   `SHAREWARE_DEMO_ONLY` (default @cpp OFF @ce) --- Shareware Demo only, usually used on **Emscripten** platform
--   `WITH_MULTIPLAYER` (default @cpp OFF @ce) --- Enable experimental multiplayer support
+-   `WITH_MULTIPLAYER` (default @cpp OFF @ce) --- Enable experimental online multiplayer support
 
 */
 

@@ -52,20 +52,20 @@ namespace Jazz2::Multiplayer
 		_discovery = nullptr;
 	}
 
-	ClientConfiguration& NetworkManager::GetClientConfiguration()
+	ClientConfiguration& NetworkManager::GetClientConfiguration() const
 	{
-		return *_clientConfig.get();
+		return *_clientConfig;
 	}
 
-	ServerConfiguration& NetworkManager::GetServerConfiguration()
+	ServerConfiguration& NetworkManager::GetServerConfiguration() const
 	{
-		return *_serverConfig.get();
+		return *_serverConfig;
 	}
 
 	std::uint32_t NetworkManager::GetPeerCount() const
 	{
 		// TODO: Include server itself
-		return (std::uint32_t)_peerDesc.size() + 1;
+		return std::uint32_t(_peerDesc.size()) + 1;
 	}
 
 	NetworkManager::PeerDesc* NetworkManager::GetPeerDescriptor(const Peer& peer)
@@ -109,7 +109,7 @@ namespace Jazz2::Multiplayer
 
 				std::int64_t maxPlayerCount;
 				if (doc["MaxPlayerCount"].get(maxPlayerCount) == SUCCESS && maxPlayerCount > 0 && maxPlayerCount <= UINT32_MAX) {
-					serverConfig.MaxPlayerCount = (std::uint32_t)maxPlayerCount;
+					serverConfig.MaxPlayerCount = std::uint32_t(maxPlayerCount);
 				}
 
 				std::string_view gameMode;
@@ -134,7 +134,7 @@ namespace Jazz2::Multiplayer
 
 				std::int64_t serverPort;
 				if (doc["ServerPort"].get(serverPort) == SUCCESS && serverPort > 0 && serverPort <= UINT16_MAX) {
-					serverConfig.ServerPort = (std::uint16_t)serverPort;
+					serverConfig.ServerPort = std::uint16_t(serverPort);
 				}
 
 				bool isPrivate;
@@ -144,12 +144,12 @@ namespace Jazz2::Multiplayer
 
 				std::int64_t allowedPlayerTypes;
 				if (doc["AllowedPlayerTypes"].get(allowedPlayerTypes) == SUCCESS && allowedPlayerTypes > 0 && allowedPlayerTypes <= UINT8_MAX) {
-					serverConfig.AllowedPlayerTypes = (std::uint8_t)allowedPlayerTypes;
+					serverConfig.AllowedPlayerTypes = std::uint8_t(allowedPlayerTypes);
 				}
 
 				std::int64_t idleKickTimeSecs;
 				if (doc["IdleKickTimeSecs"].get(idleKickTimeSecs) == SUCCESS && idleKickTimeSecs >= INT32_MIN && idleKickTimeSecs <= INT32_MAX) {
-					serverConfig.IdleKickTimeSecs = (std::int16_t)idleKickTimeSecs;
+					serverConfig.IdleKickTimeSecs = std::int16_t(idleKickTimeSecs);
 				}
 
 				ondemand::object whitelistedUniquePlayerIDs;

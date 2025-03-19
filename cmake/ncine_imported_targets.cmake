@@ -7,7 +7,7 @@ if(NCINE_DOWNLOAD_DEPENDENCIES AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH)
 				set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/raw/2.0.1-macos/jazz2-libraries-macos.tar.gz")
 			endif()
 		else()
-			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/2.8.0.tar.gz")
+			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/3.3.1.tar.gz")
 		endif()
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
@@ -217,6 +217,12 @@ if(ANDROID)
 		IMPORTED_LOCATION "${ZLIB_LIBRARY}")
 	set(ZLIB_FOUND 1)
 	message(STATUS "Found ZLIB: ${ZLIB_LIBRARY}")
+	
+	add_library(CURL::libcurl STATIC IMPORTED)
+	set_target_properties(CURL::libcurl PROPERTIES
+		IMPORTED_LOCATION "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libcurl.a")
+	set(CURL_FOUND 1)
+	message(STATUS "Found CURL: ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libcurl.a")
 	
 	#if(NCINE_WITH_PNG AND EXISTS "${EXTERNAL_ANDROID_DIR}/png/${ANDROID_ABI}/libpng16.a")
 	#	add_library(PNG::PNG STATIC IMPORTED)

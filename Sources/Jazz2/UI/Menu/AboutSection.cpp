@@ -77,39 +77,45 @@
 #	define _i10 ""
 #endif
 
-#if defined(WITH_ZLIB)
-#	define _i11 "\nzlib \f[c:#707070]· \f[h:80]https://www.zlib.net/\f[/h]\f[/c]"
+#if defined(WITH_CURL)
+#	define _i11 "\nlibcurl \f[c:#707070]· \f[h:80]https://curl.se/libcurl/\f[/h]\f[/c]"
 #else
 #	define _i11 ""
 #endif
 
-#if defined(WITH_IMGUI)
-#	define _i12 "\nImGui \f[c:#707070]· \f[h:80]https://github.com/ocornut/imgui\f[/h]\f[/c]"
+#if defined(WITH_ZLIB)
+#	define _i12 "\nzlib \f[c:#707070]· \f[h:80]https://www.zlib.net/\f[/h]\f[/c]"
 #else
 #	define _i12 ""
 #endif
 
-#if defined(WITH_ANGELSCRIPT)
-#	define _i13 "\nAngelScript \f[c:#707070]· \f[h:80]https://www.angelcode.com/angelscript/\f[/h]\f[/c]"
+#if defined(WITH_IMGUI)
+#	define _i13 "\nImGui \f[c:#707070]· \f[h:80]https://github.com/ocornut/imgui\f[/h]\f[/c]"
 #else
 #	define _i13 ""
 #endif
 
-#if defined(WITH_MULTIPLAYER)
-#	define _i14 "\nENet \f[c:#707070]· \f[h:80]https://github.com/lsalzman/enet\f[/h]\f[/c]"
+#if defined(WITH_ANGELSCRIPT)
+#	define _i14 "\nAngelScript \f[c:#707070]· \f[h:80]https://www.angelcode.com/angelscript/\f[/h]\f[/c]"
 #else
 #	define _i14 ""
 #endif
 
-#define _i15 "\n\f[h:80]Parts of \f[/h]Corrade \f[c:#707070]· \f[h:80]https://github.com/mosra/corrade\f[/h]\f[/c]\nParallel Hashmap \f[c:#707070]· \f[h:80]https://github.com/greg7mdp/parallel-hashmap\f[/h]\f[/c]\nPattern-defeating quicksort \f[c:#707070]· \f[h:80]https://github.com/orlp/pdqsort\f[/h]\f[/c]\nsimdjson \f[c:#707070]· \f[h:80]https://github.com/simdjson/simdjson\f[/h]\f[/c]"
-
-#if defined(WITH_TRACY)
-#	define _i16 "\n\n\f[h:86]Tracy integration is enabled.\f[/h]"
+#if defined(WITH_MULTIPLAYER)
+#	define _i15 "\nENet \f[c:#707070]· \f[h:80]https://github.com/lsalzman/enet\f[/h]\f[/c]"
 #else
-#	define _i16 ""
+#	define _i15 ""
 #endif
 
-#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15 _i16
+#define _i16 "\n\f[h:80]Parts of \f[/h]Corrade \f[c:#707070]· \f[h:80]https://github.com/mosra/corrade\f[/h]\f[/c]\nParallel Hashmap \f[c:#707070]· \f[h:80]https://github.com/greg7mdp/parallel-hashmap\f[/h]\f[/c]\nPattern-defeating quicksort \f[c:#707070]· \f[h:80]https://github.com/orlp/pdqsort\f[/h]\f[/c]\nsimdjson \f[c:#707070]· \f[h:80]https://github.com/simdjson/simdjson\f[/h]\f[/c]"
+
+#if defined(WITH_TRACY)
+#	define _i17 "\n\n\f[h:86]Tracy integration is enabled.\f[/h]"
+#else
+#	define _i17 ""
+#endif
+
+#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15 _i16 _i17
 
 using namespace Jazz2::UI::Menu::Resources;
 

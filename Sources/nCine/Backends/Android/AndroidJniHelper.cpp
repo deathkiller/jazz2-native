@@ -851,7 +851,7 @@ namespace nCine::Backends
 			result = AndroidJniHelper::jniEnv->CallBooleanMethod(inputMethodManagerObject_, midShowSoftInput_, decorViewObject, 0);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(decorViewObject);
 		}
-		return false;
+		return result;
 	}
 
 	bool AndroidJniWrap_InputMethodManager::hideSoftInput()

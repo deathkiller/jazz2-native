@@ -11,7 +11,6 @@
 #include <Cpu.h>
 #include <Environment.h>
 #include <IO/FileSystem.h>
-#include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 #include <Utf8.h>
 

@@ -4,9 +4,7 @@
 
 #include "PacketTypes.h"
 #include "../PreferencesCache.h"
-#include "../Input/ControlScheme.h"
 #include "../UI/HUD.h"
-#include "../UI/DiscordRpcClient.h"
 #include "../UI/InGameConsole.h"
 #include "../UI/Multiplayer/MpInGameCanvasLayer.h"
 #include "../UI/Multiplayer/MpInGameLobby.h"
@@ -16,16 +14,7 @@
 #	include "../Scripting/LevelScriptLoader.h"
 #endif
 
-#include "../../nCine/MainApplication.h"
-#include "../../nCine/IAppEventHandler.h"
-#include "../../nCine/ServiceLocator.h"
-#include "../../nCine/Input/IInputEventHandler.h"
-#include "../../nCine/Graphics/Camera.h"
-#include "../../nCine/Graphics/Sprite.h"
-#include "../../nCine/Graphics/Texture.h"
-#include "../../nCine/Graphics/Viewport.h"
-#include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/Audio/AudioReaderMpt.h"
+#include "../../nCine/Application.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Primitives/Half.h"
 
@@ -34,8 +23,6 @@
 #include "../Actors/Multiplayer/RemotablePlayer.h"
 #include "../Actors/Multiplayer/RemotePlayerOnServer.h"
 #include "../Actors/Multiplayer/RemoteActor.h"
-#include "../Actors/SolidObjectBase.h"
-#include "../Actors/Enemies/Bosses/BossBase.h"
 
 #include "../Actors/Environment/AirboardGenerator.h"
 #include "../Actors/Environment/SteamNote.h"
@@ -1993,7 +1980,6 @@ namespace Jazz2::Multiplayer
 					std::int32_t tileY = packet.ReadVariableInt32();
 					std::int32_t posZ = packet.ReadVariableInt32();
 
-					//LOGD("Mirrored actor %u created on [%i;%i] with event %u", actorId, tileX * 32 + 16, tileY * 32 + 16, (std::uint32_t)eventType);
 					LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: %u, event: %u, x: %i, y: %i", actorId, (std::uint32_t)eventType, tileX * 32 + 16, tileY * 32 + 16);
 
 					_root->InvokeAsync([this, actorId, eventType, eventParams = std::move(eventParams), actorFlags, tileX, tileY, posZ]() {
@@ -2015,7 +2001,6 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t actorId = packet.ReadVariableUint32();
 
-					//LOGD("Remote actor %u destroyed", actorId);
 					LOGD("[MP] ServerPacketType::DestroyRemoteActor - actorId: %u", actorId);
 
 					_root->InvokeAsync([this, actorId]() {
