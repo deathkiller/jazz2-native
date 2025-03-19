@@ -7,7 +7,7 @@ if(NCINE_DOWNLOAD_DEPENDENCIES AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH)
 				set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/raw/2.0.1-macos/jazz2-libraries-macos.tar.gz")
 			endif()
 		else()
-			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/3.3.1.tar.gz")
+			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/3.3.2.tar.gz")
 		endif()
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
@@ -220,7 +220,8 @@ if(ANDROID)
 	
 	add_library(CURL::libcurl STATIC IMPORTED)
 	set_target_properties(CURL::libcurl PROPERTIES
-		IMPORTED_LOCATION "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libcurl.a")
+		IMPORTED_LOCATION "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libcurl.a"
+		IMPORTED_LINK_INTERFACE_LIBRARIES "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libnghttp2.a;${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libnghttp3.a;${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libngtcp2.a;${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libngtcp2_crypto.a")
 	set(CURL_FOUND 1)
 	message(STATUS "Found CURL: ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libcurl.a")
 	
