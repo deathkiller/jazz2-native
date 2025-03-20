@@ -25,7 +25,7 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 
 #if defined(WITH_THREADS)
-		_thread.Run([](void* arg) {
+		_thread = Thread([](void* arg) {
 			auto _this = static_cast<RefreshCacheSection*>(arg);
 			if (auto mainMenu = runtime_cast<MainMenu*>(_this->_root)) {
 				mainMenu->_root->RefreshCacheLevels(true);

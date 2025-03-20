@@ -24,7 +24,7 @@ namespace Jazz2::UI::Menu
 			_noiseCooldown(0.0f), _touchDirection(0)
 	{
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		_indexingThread.Run([](void* arg) {
+		_indexingThread = Thread([](void* arg) {
 			auto* _this = static_cast<CustomLevelSelectSection*>(arg);
 			_this->AddCustomLevels();
 		}, this);

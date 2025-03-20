@@ -12,11 +12,24 @@ namespace Death { namespace IO {
 	class MemoryStream : public Stream
 	{
 	public:
-		explicit MemoryStream(std::int64_t initialCapacity = 0);
+		/** @brief Default constructor */
+		MemoryStream();
+		/** @brief Construct a growable stream with the specified initial capacity */
+		explicit MemoryStream(std::int64_t initialCapacity);
+
+		/** @brief Construct a writable stream that references the specified region of memory */
 		MemoryStream(void* bufferPtr, std::int64_t bufferSize);
+		/** @brief Construct a read-only stream that references the specified region of memory */
 		MemoryStream(const void* bufferPtr, std::int64_t bufferSize);
+		/** @overload */
 		MemoryStream(Containers::ArrayView<const char> buffer);
+		/** @overload */
 		MemoryStream(Containers::ArrayView<const std::uint8_t> buffer);
+
+		/** @brief Construct a growable stream with a copy of the specified region of memory */
+		explicit MemoryStream(Containers::InPlaceInitT, Containers::ArrayView<const char> buffer);
+		/** @overload */
+		explicit MemoryStream(Containers::InPlaceInitT, Containers::ArrayView<const std::uint8_t> buffer);
 
 		MemoryStream(const MemoryStream&) = delete;
 		MemoryStream& operator=(const MemoryStream&) = delete;

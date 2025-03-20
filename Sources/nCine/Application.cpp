@@ -445,10 +445,18 @@ namespace nCine
 #else
 		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
 #endif
-		
+
 #if defined(WITH_TRACY)
 		TracyAppInfo(NCINE_APP, sizeof(NCINE_APP) - 1);
 		LOGW("Tracy integration is enabled");
+#endif
+
+		// Initialization of the static random generator seeds
+		Random().Initialize(TimeStamp::now().ticks(), profileStartTime_.ticks());
+
+		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
+#if 0 //defined(DEATH_TARGET_WINDOWS)
+		_waitableTimer = ::CreateWaitableTimerW(NULL, TRUE, NULL);
 #endif
 
 #if defined(WITH_AUDIO)
@@ -462,61 +470,62 @@ namespace nCine
 		}
 #endif
 
-		theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
-		const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
-		GLDebug::init(gfxCapabilities);
+		if (appCfg_.withGraphics) {
+			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
+			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
+			GLDebug::init(gfxCapabilities);
 
 #if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
-		LOGI("Using fixed batch size: %u", appCfg_.fixedBatchSize);
+			LOGI("Using fixed batch size: %u", appCfg_.fixedBatchSize);
 #elif defined(DEATH_TARGET_ANDROID)
-		const StringView vendor = gfxCapabilities.glInfoStrings().vendor;
-		const StringView renderer = gfxCapabilities.glInfoStrings().renderer;
-		// Some GPUs doesn't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
-		if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
-			(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
-			const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
-			if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
-				LOGW("Detected %s: Using fixed batch size", renderer.data());
-			} else {
-				LOGW("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
+			const StringView vendor = gfxCapabilities.glInfoStrings().vendor;
+			const StringView renderer = gfxCapabilities.glInfoStrings().renderer;
+			// Some GPUs doesn't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
+			if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
+				(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
+				const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
+				if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
+					LOGW("Detected %s: Using fixed batch size", renderer.data());
+				} else {
+					LOGW("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
+				}
+				appCfg_.fixedBatchSize = 10;
 			}
-			appCfg_.fixedBatchSize = 10;
-		}
 #endif
 
 #if defined(WITH_RENDERDOC)
-		RenderDocCapture::init();
+			RenderDocCapture::init();
 #endif
 
-		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
-#if 0 //defined(DEATH_TARGET_WINDOWS)
-		_waitableTimer = ::CreateWaitableTimerW(NULL, TRUE, NULL);
-#endif
+			LOGI("Creating rendering resources...");
 
-		LOGI("Creating rendering resources...");
+			// Create a minimal set of render resources before compiling the first shader
+			RenderResources::createMinimal(); // they are required for rendering even without a scenegraph
 
-		// Create a minimal set of render resources before compiling the first shader
-		RenderResources::createMinimal(); // they are required for rendering even without a scenegraph
-	
-		if (appCfg_.withScenegraph) {
-			gfxDevice_->setupGL();
-			RenderResources::create();
-			rootNode_ = std::make_unique<SceneNode>();
-			screenViewport_ = std::make_unique<ScreenViewport>();
-			screenViewport_->setRootNode(rootNode_.get());
-		}
+			if (appCfg_.withScenegraph) {
+				gfxDevice_->setupGL();
+				RenderResources::create();
+				rootNode_ = std::make_unique<SceneNode>();
+				screenViewport_ = std::make_unique<ScreenViewport>();
+				screenViewport_->setRootNode(rootNode_.get());
+			}
 
 #if defined(WITH_IMGUI)
-		imguiDrawing_ = std::make_unique<ImGuiDrawing>(appCfg_.withScenegraph);
+			imguiDrawing_ = std::make_unique<ImGuiDrawing>(appCfg_.withScenegraph);
 
-		// Debug overlay is available even when scenegraph is not
-		if (appCfg_.withDebugOverlay) {
-			debugOverlay_ = std::make_unique<ImGuiDebugOverlay>(0.5f);	// 2 updates per second
-		}
+			// Debug overlay is available even when scenegraph is not
+			if (appCfg_.withDebugOverlay) {
+				debugOverlay_ = std::make_unique<ImGuiDebugOverlay>(0.5f);	// 2 updates per second
+			}
 #endif
-
-		// Initialization of the static random generator seeds
-		Random().Initialize(TimeStamp::now().ticks(), profileStartTime_.ticks());
+		} else {
+			// Create scenegraph even without graphics to update nodes properly
+			if (appCfg_.withScenegraph) {
+				rootNode_ = std::make_unique<SceneNode>();
+				screenViewport_ = std::make_unique<ScreenViewport>();
+				screenViewport_->setRootNode(rootNode_.get());
+			}
+		}
 
 		LOGI("Application initialized");
 #if defined(NCINE_PROFILING)
@@ -534,14 +543,15 @@ namespace nCine
 			LOGI("IAppEventHandler::OnInitialize() invoked");
 		}
 
+		if (appCfg_.withGraphics) {
 #if defined(WITH_IMGUI)
-		imguiDrawing_->buildFonts();
+			imguiDrawing_->buildFonts();
 #endif
-
-		// Swapping frame now for a cleaner API trace capture when debugging
-		gfxDevice_->update();
-		FrameMark;
-		TracyGpuCollect;
+			// Swapping frame now for a cleaner API trace capture when debugging
+			gfxDevice_->update();
+			FrameMark;
+			TracyGpuCollect;
+		}
 	}
 
 	void Application::Step()
@@ -549,7 +559,7 @@ namespace nCine
 		frameTimer_->AddFrame();
 
 #if defined(WITH_IMGUI)
-		{
+		if (appCfg_.withGraphics) {
 			ZoneScopedN("ImGui newFrame");
 #	if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
@@ -605,45 +615,47 @@ namespace nCine
 #endif
 			}
 
-			{
-				ZoneScopedNC("Visit", 0x81A861);
+			if (appCfg_.withGraphics) {
+				{
+					ZoneScopedNC("Visit", 0x81A861);
 #if defined(NCINE_PROFILING)
-				profileStartTime_ = TimeStamp::now();
+					profileStartTime_ = TimeStamp::now();
 #endif
-				screenViewport_->visit();
+					screenViewport_->visit();
 #if defined(NCINE_PROFILING)
-				timings_[(std::int32_t)Timings::Visit] = profileStartTime_.secondsSince();
+					timings_[(std::int32_t)Timings::Visit] = profileStartTime_.secondsSince();
 #endif
-			}
+				}
 
 #if defined(WITH_IMGUI)
-			{
-				ZoneScopedN("ImGui endFrame");
+				{
+					ZoneScopedN("ImGui endFrame");
 #	if defined(NCINE_PROFILING)
-				profileStartTime_ = TimeStamp::now();
+					profileStartTime_ = TimeStamp::now();
 #	endif
-				RenderQueue* imguiRenderQueue = (guiSettings_.imguiViewport ? guiSettings_.imguiViewport->renderQueue_.get() : screenViewport_->renderQueue_.get());
-				imguiDrawing_->endFrame(*imguiRenderQueue);
+					RenderQueue* imguiRenderQueue = (guiSettings_.imguiViewport ? guiSettings_.imguiViewport->renderQueue_.get() : screenViewport_->renderQueue_.get());
+					imguiDrawing_->endFrame(*imguiRenderQueue);
 #	if defined(NCINE_PROFILING)
-				timings_[(std::int32_t)Timings::ImGui] += profileStartTime_.secondsSince();
+					timings_[(std::int32_t)Timings::ImGui] += profileStartTime_.secondsSince();
 #	endif
-			}
+				}
 #endif
 
-			{
-				ZoneScopedNC("Draw", 0x81A861);
+				{
+					ZoneScopedNC("Draw", 0x81A861);
 #if defined(NCINE_PROFILING)
-				profileStartTime_ = TimeStamp::now();
+					profileStartTime_ = TimeStamp::now();
 #endif
-				screenViewport_->sortAndCommitQueue();
-				screenViewport_->draw();
+					screenViewport_->sortAndCommitQueue();
+					screenViewport_->draw();
 #if defined(NCINE_PROFILING)
-				timings_[(std::int32_t)Timings::Draw] = profileStartTime_.secondsSince();
+					timings_[(std::int32_t)Timings::Draw] = profileStartTime_.secondsSince();
 #endif
+				}
 			}
 		} else {
 #if defined(WITH_IMGUI)
-			{
+			if (appCfg_.withGraphics) {
 				ZoneScopedN("ImGui endFrame");
 #	if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
@@ -677,9 +689,11 @@ namespace nCine
 		}
 #endif
 
-		gfxDevice_->update();
-		FrameMark;
-		TracyGpuCollect;
+		if (appCfg_.withGraphics) {
+			gfxDevice_->update();
+			FrameMark;
+			TracyGpuCollect;
+		}
 
 		if (appCfg_.frameLimit > 0) {
 			FrameMarkStart("Frame limiting");
@@ -713,19 +727,22 @@ namespace nCine
 		LOGI("IAppEventHandler::OnShutdown() invoked");
 		appEventHandler_ = nullptr;
 
+		rootNode_ = nullptr;
+
+		if (appCfg_.withGraphics) {
 #if defined(WITH_IMGUI)
-		imguiDrawing_ = nullptr;
-		debugOverlay_ = nullptr;
+			imguiDrawing_ = nullptr;
+			debugOverlay_ = nullptr;
 #endif
 #if defined(WITH_RENDERDOC)
-		RenderDocCapture::removeHooks();
+			RenderDocCapture::removeHooks();
 #endif
+			RenderResources::dispose();
+			gfxDevice_ = nullptr;
+		}
 
-		rootNode_ = nullptr;
-		RenderResources::dispose();
 		frameTimer_ = nullptr;
 		inputManager_ = nullptr;
-		gfxDevice_ = nullptr;
 
 #if 0 //defined(DEATH_TARGET_WINDOWS)
 		::CloseHandle(_waitableTimer);
@@ -983,8 +1000,10 @@ namespace nCine
 			appEventHandler_->OnSuspend();
 		}
 #if defined(WITH_AUDIO)
-		IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
-		audioDevice.suspendDevice();
+		if (appCfg_.withAudio) {
+			IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
+			audioDevice.suspendDevice();
+		}
 #endif
 
 		LOGI("IAppEventHandler::OnSuspend() invoked");
@@ -996,11 +1015,13 @@ namespace nCine
 			appEventHandler_->OnResume();
 		}
 #if defined(WITH_AUDIO)
-		IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
-		audioDevice.resumeDevice();
+		if (appCfg_.withAudio) {
+			IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
+			audioDevice.resumeDevice();
+		}
 #endif
 
-		const TimeStamp suspensionDuration = frameTimer_->Resume();
+		TimeStamp suspensionDuration = frameTimer_->Resume();
 		LOGD("Suspended for %.3f seconds", suspensionDuration.seconds());
 #if defined(NCINE_PROFILING)
 		profileStartTime_ += suspensionDuration;

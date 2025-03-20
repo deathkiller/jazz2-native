@@ -96,6 +96,9 @@ namespace nCine
 		/// Contains the attributes to create an OpenGL context
 		struct GLContextInfo
 		{
+			GLContextInfo()
+				: majorVersion(0), minorVersion(0), coreProfile(false), forwardCompatible(false), debugContext(false) { }
+
 			explicit GLContextInfo(const AppConfiguration& appCfg)
 				: majorVersion(appCfg.glMajorVersion()), minorVersion(appCfg.glMinorVersion()),
 				  coreProfile(appCfg.glCoreProfile()), forwardCompatible(appCfg.glForwardCompatible()),
@@ -241,4 +244,34 @@ namespace nCine
 #endif
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/// A fake graphics device which doesn't render anything
+	class NullGfxDevice : public IGfxDevice
+	{
+	public:
+		NullGfxDevice()
+			: IGfxDevice(WindowMode{}, GLContextInfo{}, DisplayMode{}) {}
+
+		void setSwapInterval(int interval) override {}
+
+		void setResolution(bool fullscreen, int width = 0, int height = 0) override {}
+
+		void setWindowPosition(int x, int y) override {}
+		void setWindowTitle(StringView windowTitle) override {}
+		void setWindowIcon(StringView iconFilename) override {}
+
+		void setWindowSize(int width, int height) override {}
+
+		void flashWindow() const override {}
+
+		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override { return currentVideoMode_; }
+
+	protected:
+		void setResolutionInternal(int width, int height) override {}
+
+	private:
+		void setupGL() override {}
+		void update() override {}
+	};
+#endif
 }

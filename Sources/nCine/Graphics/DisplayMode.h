@@ -16,6 +16,8 @@ namespace nCine
 			Enabled
 		};
 
+		DisplayMode()
+			: DisplayMode(0, 0, 0, 0, 0, 0, DoubleBuffering::Disabled, VSync::Disabled) {}
 		DisplayMode(std::uint8_t redBits, std::uint8_t greenBits, std::uint8_t blueBits)
 			: DisplayMode(redBits, greenBits, blueBits, 0, 0, 0, DoubleBuffering::Enabled, VSync::Disabled) {}
 		DisplayMode(std::uint8_t redBits, std::uint8_t greenBits, std::uint8_t blueBits, std::uint8_t alphaBits)

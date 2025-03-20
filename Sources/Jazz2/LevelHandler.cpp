@@ -555,68 +555,73 @@ namespace Jazz2
 		ZoneScopedC(0x4876AF);
 
 		float timeMult = theApplication().GetTimeMult();
+		auto& resolver = ContentResolver::Get();
 
 		_tileMap->OnEndFrame();
 
 		if (!IsPausable() || _pauseMenu == nullptr) {
 			ResolveCollisions(timeMult);
 
+			if (!resolver.IsHeadless()) {
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
-			_rumble.OnEndFrame(timeMult);
+				_rumble.OnEndFrame(timeMult);
 #endif
 
-			for (auto& viewport : _assignedViewports) {
-				viewport->UpdateCamera(timeMult);
-			}
+				for (auto& viewport : _assignedViewports) {
+					viewport->UpdateCamera(timeMult);
+				}
 
 #if defined(WITH_AUDIO)
-			if (!_assignedViewports.empty()) {
-				// Update audio listener position
-				IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
-				if (_assignedViewports.size() == 1) {
-					audioDevice.updateListener(Vector3f(_assignedViewports[0]->_cameraPos, 0.0f),
-						Vector3f(_assignedViewports[0]->_targetPlayer->GetSpeed(), 0.0f));
-				} else {
-					audioDevice.updateListener(Vector3f::Zero, Vector3f::Zero);
+				if (!_assignedViewports.empty()) {
+					// Update audio listener position
+					IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
+					if (_assignedViewports.size() == 1) {
+						audioDevice.updateListener(Vector3f(_assignedViewports[0]->_cameraPos, 0.0f),
+							Vector3f(_assignedViewports[0]->_targetPlayer->GetSpeed(), 0.0f));
+					} else {
+						audioDevice.updateListener(Vector3f::Zero, Vector3f::Zero);
 
-					// All audio players must be updated to the nearest listener
-					for (auto& current : _playingSounds) {
-						if (auto* current2 = runtime_cast<AudioBufferPlayerForSplitscreen*>(current)) {
-							current2->updatePosition();
+						// All audio players must be updated to the nearest listener
+						for (auto& current : _playingSounds) {
+							if (auto* current2 = runtime_cast<AudioBufferPlayerForSplitscreen*>(current)) {
+								current2->updatePosition();
+							}
 						}
 					}
 				}
-			}
 #endif
+			}
 
 			_elapsedFrames += timeMult;
 		}
 
-		for (auto& viewport : _assignedViewports) {
-			viewport->OnEndFrame();
-		}
+		if (!resolver.IsHeadless()) {
+			for (auto& viewport : _assignedViewports) {
+				viewport->OnEndFrame();
+			}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
-		if (PreferencesCache::ShowPerformanceMetrics) {
-			ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+			if (PreferencesCache::ShowPerformanceMetrics) {
+				ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 
-			std::size_t actorsCount = _actors.size();
-			for (std::size_t i = 0; i < actorsCount; i++) {
-				auto* actor = _actors[i].get();
+				std::size_t actorsCount = _actors.size();
+				for (std::size_t i = 0; i < actorsCount; i++) {
+					auto* actor = _actors[i].get();
 
-				auto pos = WorldPosToScreenSpace(actor->_pos);
-				auto aabbMin = WorldPosToScreenSpace({ actor->AABB.L, actor->AABB.T });
-				auto aabbMax = WorldPosToScreenSpace({ actor->AABB.R, actor->AABB.B });
-				auto aabbInnerMin = WorldPosToScreenSpace({ actor->AABBInner.L, actor->AABBInner.T });
-				auto aabbInnerMax = WorldPosToScreenSpace({ actor->AABBInner.R, actor->AABBInner.B });
+					auto pos = WorldPosToScreenSpace(actor->_pos);
+					auto aabbMin = WorldPosToScreenSpace({ actor->AABB.L, actor->AABB.T });
+					auto aabbMax = WorldPosToScreenSpace({ actor->AABB.R, actor->AABB.B });
+					auto aabbInnerMin = WorldPosToScreenSpace({ actor->AABBInner.L, actor->AABBInner.T });
+					auto aabbInnerMax = WorldPosToScreenSpace({ actor->AABBInner.R, actor->AABBInner.B });
 
-				drawList->AddRect(ImVec2(pos.x - 2.4f, pos.y - 2.4f), ImVec2(pos.x + 2.4f, pos.y + 2.4f), ImColor(0, 0, 0, 220));
-				drawList->AddRect(ImVec2(pos.x - 1.0f, pos.y - 1.0f), ImVec2(pos.x + 1.0f, pos.y + 1.0f), ImColor(120, 255, 200, 220));
-				drawList->AddRect(aabbMin, aabbMax, ImColor(120, 200, 255, 180));
-				drawList->AddRect(aabbInnerMin, aabbInnerMax, ImColor(255, 255, 255));
+					drawList->AddRect(ImVec2(pos.x - 2.4f, pos.y - 2.4f), ImVec2(pos.x + 2.4f, pos.y + 2.4f), ImColor(0, 0, 0, 220));
+					drawList->AddRect(ImVec2(pos.x - 1.0f, pos.y - 1.0f), ImVec2(pos.x + 1.0f, pos.y + 1.0f), ImColor(120, 255, 200, 220));
+					drawList->AddRect(aabbMin, aabbMax, ImColor(120, 200, 255, 180));
+					drawList->AddRect(aabbInnerMin, aabbInnerMax, ImColor(255, 255, 255));
+				}
 			}
-		}
 #endif
+		}
 
 		TracyPlot("Actors", static_cast<std::int64_t>(_actors.size()));
 	}
@@ -624,6 +629,13 @@ namespace Jazz2
 	void LevelHandler::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
 		ZoneScopedC(0x4876AF);
+
+		auto& resolver = ContentResolver::Get();
+		if (resolver.IsHeadless()) {
+			// Use only the main viewport in headless mode
+			_rootNode->setParent(&theApplication().GetRootNode());
+			return;
+		}
 
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
@@ -644,8 +656,6 @@ namespace Jazz2
 		_upscalePass.Initialize(w, h, width, height);
 
 		bool notInitialized = (_combineShader == nullptr);
-
-		auto& resolver = ContentResolver::Get();
 		if (notInitialized) {
 			LOGI("Acquiring required shaders");
 

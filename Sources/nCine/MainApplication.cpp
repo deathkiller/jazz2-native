@@ -236,29 +236,36 @@ namespace nCine
 			return;
 		}
 
-		// Graphics device should always be created before the input manager!
-		IGfxDevice::GLContextInfo glContextInfo(appCfg_);
-		const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
-		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
+		if (appCfg_.withGraphics) {
+			// Graphics device should always be created before the input manager!
+			IGfxDevice::GLContextInfo glContextInfo(appCfg_);
+			const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
+			DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 
-		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.windowPosition.X, appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
+			const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.windowPosition.X,
+				appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
+
 #if defined(WITH_SDL)
-		gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, glContextInfo, displayMode);
-		inputManager_ = std::make_unique<SdlInputManager>();
+			gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, glContextInfo, displayMode);
+			inputManager_ = std::make_unique<SdlInputManager>();
 #elif defined(WITH_GLFW)
-		gfxDevice_ = std::make_unique<GlfwGfxDevice>(windowMode, glContextInfo, displayMode);
-		inputManager_ = std::make_unique<GlfwInputManager>();
+			gfxDevice_ = std::make_unique<GlfwGfxDevice>(windowMode, glContextInfo, displayMode);
+			inputManager_ = std::make_unique<GlfwInputManager>();
 #elif defined(WITH_QT5)
-		FATAL_ASSERT_MSG(qt5Widget_, "The Qt5 widget has not been assigned");
-		gfxDevice_ = std::make_unique<Qt5GfxDevice>(windowMode, glContextInfo, displayMode, *qt5Widget_);
-		inputManager_ = std::make_unique<Qt5InputManager>(*qt5Widget_);
+			FATAL_ASSERT_MSG(qt5Widget_, "The Qt5 widget has not been assigned");
+			gfxDevice_ = std::make_unique<Qt5GfxDevice>(windowMode, glContextInfo, displayMode, *qt5Widget_);
+			inputManager_ = std::make_unique<Qt5InputManager>(*qt5Widget_);
 #endif
-		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
-		if (!appCfg_.windowIconFilename.empty()) {
-			String windowIconFilePath = fs::CombinePath(theApplication().GetDataPath(), appCfg_.windowIconFilename);
-			if (fs::IsReadableFile(windowIconFilePath)) {
-				gfxDevice_->setWindowIcon(windowIconFilePath);
+			gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
+			if (!appCfg_.windowIconFilename.empty()) {
+				String windowIconFilePath = fs::CombinePath(GetDataPath(), appCfg_.windowIconFilename);
+				if (fs::IsReadableFile(windowIconFilePath)) {
+					gfxDevice_->setWindowIcon(windowIconFilePath);
+				}
 			}
+		} else {
+			gfxDevice_ = std::make_unique<NullGfxDevice>();
+			inputManager_ = std::make_unique<NullInputManager>();
 		}
 
 #if defined(NCINE_PROFILING)
@@ -275,7 +282,9 @@ namespace nCine
 #if !defined(WITH_QT5)
 		ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
-		static_cast<Qt5InputManager&>(*inputManager_).updateJoystickStates();
+		if (appCfg_.withGraphics) {
+			static_cast<Qt5InputManager&>(*inputManager_).updateJoystickStates();
+		}
 #endif
 
 		const bool suspended = ShouldSuspend();
@@ -339,7 +348,9 @@ namespace nCine
 					}
 					break;
 				default:
-					SdlInputManager::parseEvent(event);
+					if (appCfg_.withGraphics) {
+						SdlInputManager::parseEvent(event);
+					}
 					break;
 			}
 		}
@@ -357,7 +368,10 @@ namespace nCine
 		} else {
 			glfwPollEvents();
 		}
-		GlfwInputManager::updateJoystickStates();
+
+		if (appCfg_.withGraphics) {
+			GlfwInputManager::updateJoystickStates();
+		}
 	}
 #endif
 

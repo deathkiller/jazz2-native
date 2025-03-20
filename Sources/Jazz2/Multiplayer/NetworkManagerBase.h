@@ -15,11 +15,13 @@
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
 #include <IO/MemoryStream.h>
+#include <Threading/Spinlock.h>
 
 struct _ENetHost;
 
 using namespace Death::Containers;
 using namespace Death::IO;
+using namespace Death::Threading;
 using namespace nCine;
 
 namespace Jazz2::Multiplayer
@@ -79,7 +81,7 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase& operator=(const NetworkManagerBase&) = delete;
 
 		/** @brief Creates a client connection to a remote server */
-		virtual void CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData);
+		virtual void CreateClient(INetworkHandler* handler, StringView endpoints, std::uint16_t defaultPort, std::uint32_t clientData);
 		/** @brief Creates a server that accepts incoming connections */
 		virtual bool CreateServer(INetworkHandler* handler, std::uint16_t port);
 		/** @brief Disposes all active connections */
@@ -122,7 +124,9 @@ namespace Jazz2::Multiplayer
 		NetworkState _state;
 		SmallVector<_ENetPeer*, 1> _peers;
 		INetworkHandler* _handler;
-		Mutex _lock;
+		Spinlock _lock;
+		SmallVector<ENetAddress, 0> _desiredEndpoints;
+		std::uint32_t _clientData;
 
 		static void InitializeBackend();
 		static void ReleaseBackend();

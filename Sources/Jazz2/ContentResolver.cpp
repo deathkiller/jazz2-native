@@ -1410,6 +1410,11 @@ namespace Jazz2
 			return nullptr;
 		}
 
+		// Don't load fonts in headless mode
+		if (_isHeadless) {
+			return nullptr;
+		}
+
 		auto& font = _fonts[(std::int32_t)fontType];
 		if (font == nullptr) {
 			switch (fontType) {
@@ -1433,6 +1438,11 @@ namespace Jazz2
 
 	void ContentResolver::CompileShaders()
 	{
+		// Don't load shaders in headless mode
+		if (_isHeadless) {
+			return;
+		}
+
 		ZoneScoped;
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", Shaders::LightingVs, Shaders::LightingFs);
@@ -1613,6 +1623,11 @@ namespace Jazz2
 
 	std::unique_ptr<Texture> ContentResolver::GetNoiseTexture()
 	{
+		// Don't load textures in headless mode
+		if (_isHeadless) {
+			return nullptr;
+		}
+
 		std::uint32_t texels[64 * 64];
 
 		for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(arraySize(texels)); i++) {

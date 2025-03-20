@@ -418,7 +418,7 @@ namespace Death { namespace IO {
 	{
 		_dataText = text;
 
-		SetData(std::make_unique<MemoryStream>(_dataText.data(), _dataText.size()), contentType);
+		SetData(std::make_unique<MemoryStream>(InPlaceInit, _dataText), contentType);
 	}
 
 	bool WebRequestImpl::SetData(std::unique_ptr<Stream> dataStream, StringView contentType, std::int64_t dataSize)

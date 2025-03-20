@@ -264,6 +264,22 @@ namespace nCine
 		return *this;
 	}
 
+	Thread::operator bool() const
+	{
+		if (_sharedBlock != nullptr) {
+			return false;
+		}
+
+#if defined(DEATH_TARGET_WINDOWS)
+		DWORD exitCode = 0;
+		::GetExitCodeThread(_sharedBlock->_handle, &exitCode);
+		return (exitCode == STILL_ACTIVE);
+#else
+		pthread_t handle = _sharedBlock->_handle;
+		return (handle != 0 && pthread_kill(handle, 0) == 0);
+#endif
+	}
+
 	std::uint32_t Thread::GetProcessorCount()
 	{
 #if defined(DEATH_TARGET_WINDOWS)

@@ -138,4 +138,60 @@ namespace nCine
 #endif
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/// A fake input manager which doesn't process any input
+	class NullInputManager : public IInputManager
+	{
+	public:
+		NullInputManager() : mouseState_{}, keyState_{}, joyState_{} {}
+
+		virtual const MouseState& mouseState() const override { return mouseState_; }
+		virtual const KeyboardState& keyboardState() const override { return keyState_; }
+
+		String getClipboardText() const override { return {}; }
+		StringView getKeyName(Keys key) const override { return {}; }
+
+		bool isJoyPresent(int joyId) const override { return false; }
+		const char* joyName(int joyId) const override { return nullptr; }
+		const JoystickGuid joyGuid(int joyId) const override { return {}; }
+		int joyNumButtons(int joyId) const override { return 0; }
+		int joyNumHats(int joyId) const override { return 0; }
+		int joyNumAxes(int joyId) const override { return 0; }
+
+		const JoystickState& joystickState(int joyId) const override { return joyState_; }
+		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override { return false; }
+		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override { return false; }
+
+		void setCursor(Cursor cursor) override {}
+
+	private:
+		class NullMouseState : public MouseState
+		{
+		public:
+			bool isLeftButtonDown() const override { return false; }
+			bool isMiddleButtonDown() const override { return false; }
+			bool isRightButtonDown() const override { return false; }
+			bool isFourthButtonDown() const override { return false; }
+			bool isFifthButtonDown() const override { return false; }
+		};
+
+		class NullKeyboardState : public KeyboardState
+		{
+		public:
+			bool isKeyDown(Keys key) const override { return false; }
+		};
+
+		class NullJoystickState : public JoystickState
+		{
+		public:
+			bool isButtonPressed(int buttonId) const override { return false; }
+			unsigned char hatState(int hatId) const override { return 0; }
+			float axisValue(int axisId) const override { return 0.0f; }
+		};
+
+		NullMouseState mouseState_;
+		NullKeyboardState keyState_;
+		NullJoystickState joyState_;
+	};
+#endif
 }

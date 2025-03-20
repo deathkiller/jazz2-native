@@ -8,6 +8,12 @@ using namespace Death::Containers;
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	MemoryStream::MemoryStream()
+		: _pos(0), _mode(AccessMode::Growable)
+	{
+		_size = 0;
+	}
+
 	MemoryStream::MemoryStream(std::int64_t initialCapacity)
 		: _pos(0), _mode(AccessMode::Growable)
 	{
@@ -38,6 +44,20 @@ namespace Death { namespace IO {
 	MemoryStream::MemoryStream(ArrayView<const std::uint8_t> buffer)
 		: MemoryStream(buffer.data(), static_cast<std::int64_t>(buffer.size()))
 	{
+	}
+
+	MemoryStream::MemoryStream(InPlaceInitT, ArrayView<const char> buffer)
+		: MemoryStream(static_cast<std::int64_t>(buffer.size()))
+	{
+		arrayResize(_data, NoInit, buffer.size());
+		std::memcpy(_data.data(), buffer.data(), buffer.size());
+	}
+
+	MemoryStream::MemoryStream(InPlaceInitT, ArrayView<const std::uint8_t> buffer)
+		: MemoryStream(static_cast<std::int64_t>(buffer.size()))
+	{
+		arrayResize(_data, NoInit, buffer.size());
+		std::memcpy(_data.data(), buffer.data(), buffer.size());
 	}
 
 	void MemoryStream::Dispose()

@@ -66,6 +66,8 @@ namespace nCine
 #endif
 		/** @brief Whether the audio subsystem is enabled */
 		bool withAudio;
+		/** @brief Whether the graphics subsystem is enabled */
+		bool withGraphics;
 		/** @brief Whether the threading subsystem is enabled */
 		bool withThreads;
 		/** @brief Whether the scenegraph based rendering is enabled */

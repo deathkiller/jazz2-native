@@ -183,34 +183,48 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			theApplication().Quit();
 			return;
 		}
+#	if defined(WITH_MULTIPLAYER)
+		if (arg == "/server"_s) {
+			config.withGraphics = false;
+			config.withAudio = false;
+		}
+#	endif
 	}
 #endif
 
 	PreferencesCache::Initialize(config);
 
 	config.windowTitle = NCINE_APP_NAME;
-	if (PreferencesCache::MaxFps == PreferencesCache::UseVsync) {
-		config.withVSync = true;
-	} else {
-		config.withVSync = false;
-		config.frameLimit = PreferencesCache::MaxFps;
-	}
+	if (config.withGraphics) {
+		if (PreferencesCache::MaxFps == PreferencesCache::UseVsync) {
+			config.withVSync = true;
+		} else {
+			config.withVSync = false;
+			config.frameLimit = PreferencesCache::MaxFps;
+		}
 #if !defined(DEATH_TARGET_SWITCH)
-	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
+		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-	auto& resolver = ContentResolver::Get();
-	config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
+		auto& resolver = ContentResolver::Get();
+		config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
 #endif
 
-	if (PreferencesCache::PlayStationExtendedSupport) {
-		theApplication().EnablePlayStationExtendedSupport(true);
-	}
+		if (PreferencesCache::PlayStationExtendedSupport) {
+			theApplication().EnablePlayStationExtendedSupport(true);
+		}
 
 #if defined(WITH_IMGUI)
-	config.withDebugOverlay = true;
+		config.withDebugOverlay = true;
 #endif
+	} else {
+		config.withVSync = false;
+		config.frameLimit = std::uint32_t(FrameTimer::FramesPerSecond);
+
+		auto& resolver = ContentResolver::Get();
+		resolver.SetHeadless(true);
+	}
 }
 
 void GameEventHandler::OnInitialize()
@@ -246,20 +260,12 @@ void GameEventHandler::OnInitialize()
 #	endif
 	}, this);
 
-#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)))
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
 #		if defined(WITH_MULTIPLAYER)
-		if (arg == "/server"_s) { //
-			// TODO: Create dedicated server
-			/*thread.Join();
-			auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-			mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
-			SetStateHandler(std::move(mainMenu));
-			// TODO: Hardcoded port
-			CreateServer(MultiplayerDefaultPort);*/
-		} else if (arg == "/connect"_s && i + 1 < config.argc()) {
+		if (arg == "/connect"_s && i + 1 < config.argc()) {
 			auto endpoint = config.argv(i + 1);
 			if (!endpoint.empty()) {
 				thread.Join();
@@ -268,6 +274,23 @@ void GameEventHandler::OnInitialize()
 				ConnectToServer(endpoint, MultiplayerDefaultPort);
 				return;
 			}
+		} else if (arg == "/server"_s) {
+			thread.Join();
+
+			// TODO: Allow to configure server settings from command line
+			ServerInitialization serverInit;
+			serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+			serverInit.Configuration.GameMode = MpGameMode::Battle;
+			//serverInit.Configuration.IsPrivate = _privateServer;
+
+			serverInit.InitialLevel.IsLocalSession = false;
+			serverInit.InitialLevel.EpisodeName = "unknown"_s;
+			serverInit.InitialLevel.LevelName = "battle1"_s;
+			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
+			serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
+
+			CreateServer(std::move(serverInit));
+			return;
 		}
 #		endif
 #		if defined(DEATH_DEBUG)
@@ -313,25 +336,33 @@ void GameEventHandler::OnInitialize()
 	CheckUpdates();
 #	endif
 
-#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)))
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
 #		if defined(WITH_MULTIPLAYER)
-		if (arg == "/server"_s) { //
-			// TODO: Create dedicated server
-			/*auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-			mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
-			SetStateHandler(std::move(mainMenu));
-			// TODO: Hardcoded port
-			CreateServer(MultiplayerDefaultPort);*/
-		} else if (arg == "/connect"_s && i + 1 < config.argc()) {
+		if (arg == "/connect"_s && i + 1 < config.argc()) {
 			auto endpoint = config.argv(i + 1);
 			if (!endpoint.empty()) {
 				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
 				ConnectToServer(endpoint, MultiplayerDefaultPort);
 				return;
 			}
+		} else if (arg == "/server"_s) {
+			// TODO: Allow to configure server settings from command line
+			ServerInitialization serverInit;
+			serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+			serverInit.Configuration.GameMode = MpGameMode::Battle;
+			//serverInit.Configuration.IsPrivate = _privateServer;
+
+			serverInit.InitialLevel.IsLocalSession = false;
+			serverInit.InitialLevel.EpisodeName = "unknown"_s;
+			serverInit.InitialLevel.LevelName = "battle1"_s;
+			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
+			serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
+
+			CreateServer(std::move(serverInit));
+			return;
 		}
 #		endif
 #		if defined(DEATH_DEBUG)
@@ -727,7 +758,7 @@ void GameEventHandler::ApplyActivityIcon()
 #if defined(WITH_MULTIPLAYER)
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort)
 {
-	LOGI("Connecting to %s...", endpoint.data());
+	LOGI("[MP] Connecting to %s...", endpoint.data());
 
 	_networkManager = std::make_unique<NetworkManager>();
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
@@ -746,7 +777,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	}
 
 	auto& serverConfig = _networkManager->GetServerConfiguration();
-	LOGI("Creating server \"%s\" on port %u...", serverConfig.ServerName.data(), serverConfig.ServerPort);
+	LOGI("[MP] Creating server \"%s\" on port %u...", serverConfig.ServerName.data(), serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), true);
@@ -1547,7 +1578,6 @@ void GameEventHandler::CheckUpdates()
 
 	String url = "https://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
 	auto request = WebSession::GetDefault().CreateRequest(url);
-	request.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
 	auto result = request.Execute();
 	if (result) {
 		auto s = request.GetResponse().AsString();
