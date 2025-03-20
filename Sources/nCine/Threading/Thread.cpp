@@ -12,6 +12,7 @@
 #	include <Utf8.h>
 #else
 #	include <pthread.h>
+#	include <signal.h>
 #	include <sched.h>		// for sched_yield()
 #	include <unistd.h>		// for sysconf()
 #	include <utility>
