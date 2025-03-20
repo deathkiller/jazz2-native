@@ -42,8 +42,9 @@ namespace nCine
 		withDebugOverlay(false),
 #endif
 		withAudio(true),
-		withThreads(false),
+		withGraphics(true),
 		withScenegraph(true),
+		withThreads(false),
 		withVSync(true),
 		withGlDebugContext(false),
 

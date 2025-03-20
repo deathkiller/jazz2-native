@@ -71,49 +71,34 @@ namespace Jazz2::Multiplayer
 		ReleaseBackend();
 	}
 
-	void NetworkManagerBase::CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData)
+	void NetworkManagerBase::CreateClient(INetworkHandler* handler, StringView endpoints, std::uint16_t defaultPort, std::uint32_t clientData)
 	{
-		if (_host != nullptr) {
+		if (_handler != nullptr) {
 			LOGE("[MP] Client already created");
 			return;
 		}
 
-		// TODO: Cycle through all the endpoints
-		StringView firstEndpoint = endpoint.prefix(endpoint.findOr('|', endpoint.end()).begin());
-		StringView address; std::uint16_t port;
-		if (!TrySplitAddressAndPort(firstEndpoint, address, port)) {
-			LOGE("[MP] Failed to create client");
-			OnPeerDisconnected({}, Reason::InvalidParameter);
-			return;
-		}
-		if (port == 0) {
-			port = defaultPort;
-		}
-
-		_host = enet_host_create(nullptr, 1, std::size_t(NetworkChannel::Count), 0, 0);
-		if (_host == nullptr) {
-			LOGE("[MP] Failed to create client");
-			OnPeerDisconnected({}, Reason::InvalidParameter);
-			return;
-		}
-
 		_state = NetworkState::Connecting;
+		_clientData = clientData;
+		_desiredEndpoints.clear();
 
-		ENetAddress addr = {};
-		enet_address_set_host(&addr, String::nullTerminatedView(address).data());
-		addr.port = port;
+		while (endpoints) {
+			auto p = endpoints.partition('|');
+			if (p[0]) {
+				StringView address; std::uint16_t port;
+				if (TrySplitAddressAndPort(p[0], address, port)) {
+					ENetAddress addr = {};
+					enet_address_set_host(&addr, String::nullTerminatedView(address).data());
+					addr.port = (port != 0 ? port : defaultPort);
 
-		ENetPeer* peer = enet_host_connect(_host, &addr, std::size_t(NetworkChannel::Count), clientData);
-		if (peer == nullptr) {
-			LOGE("[MP] Failed to create peer");
-			_state = NetworkState::None;
-			enet_host_destroy(_host);
-			_host = nullptr;
-			OnPeerDisconnected({}, Reason::InvalidParameter);
-			return;
+					_desiredEndpoints.push_back(std::move(addr));
+				} else {
+					LOGW("Cannot parse specified endpoint \"%s\"", p[0].data());
+				}
+			}
+
+			endpoints = p[2];
 		}
-
-		_peers.push_back(peer);
 
 		_handler = handler;
 		_thread = Thread(NetworkManagerBase::OnClientThread, this);
@@ -121,7 +106,7 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port)
 	{
-		if (_host != nullptr) {
+		if (_handler != nullptr) {
 			return false;
 		}
 
@@ -148,6 +133,7 @@ namespace Jazz2::Multiplayer
 		_thread.Join();
 
 		_host = nullptr;
+		_handler = nullptr;
 	}
 
 	NetworkState NetworkManagerBase::GetState() const
@@ -250,12 +236,12 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
-		_lock.Lock();
+		_lock.lock();
 		bool success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
 		if (success && channel == NetworkChannel::UnreliableUpdates) {
 			enet_host_flush(_host);
 		}
-		_lock.Unlock();
+		_lock.unlock();
 
 		if (!success) {
 			enet_packet_destroy(packet);
@@ -277,7 +263,7 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
-		_lock.Lock();
+		_lock.lock();
 		bool success = false;
 		for (ENetPeer* peer : _peers) {
 			if (predicate(Peer(peer))) {
@@ -289,7 +275,7 @@ namespace Jazz2::Multiplayer
 		if (success && channel == NetworkChannel::UnreliableUpdates) {
 			enet_host_flush(_host);
 		}
-		_lock.Unlock();
+		_lock.unlock();
 
 		if (!success) {
 			enet_packet_destroy(packet);
@@ -311,7 +297,7 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
-		_lock.Lock();
+		_lock.lock();
 		bool success = false;
 		for (ENetPeer* peer : _peers) {
 			if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
@@ -321,7 +307,7 @@ namespace Jazz2::Multiplayer
 		if (success && channel == NetworkChannel::UnreliableUpdates) {
 			enet_host_flush(_host);
 		}
-		_lock.Unlock();
+		_lock.unlock();
 
 		if (!success) {
 			enet_packet_destroy(packet);
@@ -417,25 +403,46 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(param);
 		INetworkHandler* handler = _this->_handler;
-		ENetHost* host = _this->_host;
 
+		ENetHost* host = enet_host_create(nullptr, 1, std::size_t(NetworkChannel::Count), 0, 0);
+		if (host == nullptr) {
+			LOGE("[MP] Failed to create client");
+			_this->OnPeerDisconnected({}, Reason::InvalidParameter);
+			return;
+		}
+		_this->_host = host;
+
+		// Try to connect to each specified endpoint
 		ENetEvent ev;
-		std::int32_t n = 10;
-		while (n > 0) {
-			if (_this->_state == NetworkState::None) {
-				n = 0;
-				break;
+		for (std::int32_t i = 0; i < _this->_desiredEndpoints.size(); i++) {
+			ENetAddress addr = _this->_desiredEndpoints[i];
+			ENetPeer* peer = enet_host_connect(host, &addr, std::size_t(NetworkChannel::Count), _this->_clientData);
+			if (peer == nullptr) {
+				continue;
 			}
 
-			if (enet_host_service(host, &ev, 1000) >= 0 && ev.type == ENET_EVENT_TYPE_CONNECT) {
-				break;
+			std::int32_t n = 10;
+			while (n > 0) {
+				if (_this->_state == NetworkState::None) {
+					n = 0;
+					break;
+				}
+
+				if (enet_host_service(host, &ev, 1000) >= 0 && ev.type == ENET_EVENT_TYPE_CONNECT) {
+					break;
+				}
+
+				n--;
 			}
 
-			n--;
+			if (n > 0) {
+				_this->_peers.push_back(ev.peer);
+				break;
+			}
 		}
 
 		Reason reason;
-		if (n <= 0) {
+		if (_this->_peers.empty()) {
 			LOGE("[MP] Failed to connect to the server");
 			_this->_state = NetworkState::None;
 			reason = Reason::ConnectionTimedOut;
@@ -445,9 +452,9 @@ namespace Jazz2::Multiplayer
 			reason = Reason::Unknown;
 
 			while (_this->_state != NetworkState::None) {
-				_this->_lock.Lock();
+				_this->_lock.lock();
 				std::int32_t result = enet_host_service(host, &ev, 0);
-				_this->_lock.Unlock();
+				_this->_lock.unlock();
 				if (result <= 0) {
 					if (result < 0) {
 						LOGE("[MP] enet_host_service() returned %i", result);
@@ -503,15 +510,15 @@ namespace Jazz2::Multiplayer
 
 		ENetEvent ev;
 		while (_this->_state != NetworkState::None) {
-			_this->_lock.Lock();
+			_this->_lock.lock();
 			std::int32_t result = enet_host_service(host, &ev, 0);
-			_this->_lock.Unlock();
+			_this->_lock.unlock();
 			if (result <= 0) {
 				if (result < 0) {
 					LOGE("[MP] enet_host_service() returned %i", result);
 
 					// Server failed, try to recreate it
-					_this->_lock.Lock();
+					_this->_lock.lock();
 
 					for (auto& peer : _this->_peers) {
 						_this->OnPeerDisconnected(peer, Reason::ConnectionLost);
@@ -523,7 +530,7 @@ namespace Jazz2::Multiplayer
 					host = enet_host_create(&addr, MaxPeerCount, std::size_t(NetworkChannel::Count), 0, 0);
 					_this->_host = host;
 
-					_this->_lock.Unlock();
+					_this->_lock.unlock();
 
 					if (host == nullptr) {
 						LOGE("[MP] Failed to recreate the server");

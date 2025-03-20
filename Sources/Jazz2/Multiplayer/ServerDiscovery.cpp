@@ -37,7 +37,7 @@ namespace Jazz2::Multiplayer
 
 		_socket = TryCreateSocket("ff1e::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
-			_thread.Run(ServerDiscovery::OnServerThread, this);
+			_thread = Thread(ServerDiscovery::OnServerThread, this);
 		}
 	}
 
@@ -50,7 +50,7 @@ namespace Jazz2::Multiplayer
 
 		_socket = TryCreateSocket("ff1e::333", _address);
 		if (_socket != ENET_SOCKET_NULL) {
-			_thread.Run(ServerDiscovery::OnClientThread, this);
+			_thread = Thread(ServerDiscovery::OnClientThread, this);
 		}
 	}
 
@@ -138,7 +138,6 @@ namespace Jazz2::Multiplayer
 
 		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		_onlineRequest = WebSession::GetDefault().CreateRequest(url);
-		_onlineRequest.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
 		auto result = _onlineRequest.Execute();
 		if (result) {
 			auto s = _onlineRequest.GetResponse().GetStream();
@@ -285,6 +284,9 @@ namespace Jazz2::Multiplayer
 		bool isFirst = true;
 		auto endpoints = _server->GetServerEndpoints();
 		for (auto& endpoint : endpoints) {
+			if (length > 1228) {
+				break;
+			}
 			if (isFirst) {
 				isFirst = false;
 			} else {
@@ -297,12 +299,31 @@ namespace Jazz2::Multiplayer
 		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u}",
 			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), _server->GetPeerCount(), serverConfig.MaxPlayerCount);
 
-		_onlineRequest = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers");
-		_onlineRequest.SetHeader("User-Agent"_s, "Jazz2 Resurrection"_s);
+		_onlineRequest = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		_onlineRequest.SetMethod("POST"_s);
 		_onlineRequest.SetData(StringView(input, length), "application/json"_s);
 		auto result = _onlineRequest.Execute();
-		if (!result) {
+		if (result) {
+			auto s = _onlineRequest.GetResponse().GetStream();
+			auto size = s->GetSize();
+			auto buffer = std::make_unique<char[]>(size + simdjson::SIMDJSON_PADDING);
+			s->Read(buffer.get(), size);
+			buffer[size] = '\0';
+
+			ondemand::parser parser;
+			ondemand::document doc;
+			if (parser.iterate(buffer.get(), size, size + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+				bool success; std::string_view endpoints;
+				if (doc["r"].get(success) == SUCCESS && success &&
+					doc["e"].get(endpoints) == SUCCESS && !endpoints.empty()) {
+					LOGI("[MP] Server published with following endpoints: %s", String(endpoints).data());
+				} else {
+					LOGW("[MP] Failed to publish the server: Request rejected");
+				}
+			} else {
+				LOGE("[MP] Failed to publish the server: Response cannot be parsed");
+			}
+		} else {
 			LOGW("[MP] Failed to publish the server: %s", result.error.data());
 		}
 		_onlineRequest = {};

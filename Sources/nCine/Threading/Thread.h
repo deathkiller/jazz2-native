@@ -56,13 +56,13 @@ namespace nCine
 	class Thread
 	{
 	public:
-		/// Puts the current thread to sleep for the specified number of milliseconds
+		/** @brief Puts the current thread to sleep for the specified number of milliseconds */
 		static void Sleep(std::uint32_t milliseconds);
 
 #if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		using ThreadFuncDelegate = void (*)(void*);
 
-		/** @brief A default constructor for an object without the associated function */
+		/** @brief Default constructor */
 		Thread();
 		/** @brief Creates a thread around a function and runs it immediately */
 		Thread(ThreadFuncDelegate threadFunc, void* threadArg);
@@ -74,11 +74,12 @@ namespace nCine
 		Thread(Thread&& other) noexcept;
 		Thread& operator=(Thread&& other) noexcept;
 
+		/** @brief Whether the thread is running */
+		explicit operator bool() const;
+
 		/** @brief Returns the number of processors in the machine */
 		static std::uint32_t GetProcessorCount();
 
-		/** @brief Spawns a new thread if the object hasn't one already associated */
-		void Run(ThreadFuncDelegate threadFunc, void* threadArg);
 		/** @brief Joins the thread */
 		bool Join();
 		/** @brief Detaches the running thread from the object */
@@ -120,6 +121,9 @@ namespace nCine
 		Thread(SharedBlock* sharedBlock);
 
 		SharedBlock* _sharedBlock;
+
+		/** @brief Spawns a new thread if the object hasn't one already associated */
+		void Run(ThreadFuncDelegate threadFunc, void* threadArg);
 
 #	if defined(DEATH_TARGET_WINDOWS)
 #		if defined(DEATH_TARGET_MINGW)

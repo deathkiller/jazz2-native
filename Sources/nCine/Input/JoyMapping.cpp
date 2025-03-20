@@ -155,7 +155,7 @@ namespace nCine
 		DWORD envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", nullptr, 0);
 		if (envLength > 0) {
 			Array<wchar_t> envGameControllerConfig(NoInit, envLength);
-			envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", envGameControllerConfig, envGameControllerConfig.size());
+			envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", envGameControllerConfig, DWORD(envGameControllerConfig.size()));
 			if (envLength > 0) {
 				AddMappingsFromStringInternal(Utf8::FromUtf16(envGameControllerConfig, envLength), "SDL_GAMECONTROLLERCONFIG variable"_s);
 			}
@@ -691,7 +691,7 @@ namespace nCine
 	{
 		std::int32_t index = -1;
 
-		std::int32_t size = mappings_.size();
+		std::int32_t size = std::int32_t(mappings_.size());
 		for (std::int32_t i = 0; i < size; i++) {
 			if (mappings_[i].guid == guid) {
 				index = static_cast<std::int32_t>(i);
@@ -706,7 +706,7 @@ namespace nCine
 	{
 		std::int32_t index = -1;
 
-		std::int32_t size = mappings_.size();
+		std::int32_t size = std::int32_t(mappings_.size());
 		for (std::int32_t i = 0; i < size; i++) {
 			if (strncmp(mappings_[i].name, name, MaxNameLength) == 0) {
 				index = static_cast<std::int32_t>(i);
