@@ -12,7 +12,9 @@
 #include <Containers/GrowableArray.h>
 #include <Containers/String.h>
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_SWITCH)
+#	include <net/if.h>
+#elif defined(DEATH_TARGET_WINDOWS)
 #	include <iphlpapi.h>
 #elif defined(DEATH_TARGET_ANDROID)
 #	include "Backends/ifaddrs-android.h"
@@ -151,7 +153,36 @@ namespace Jazz2::Multiplayer
 		Array<String> result;
 
 		if (_state == NetworkState::Listening) {
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_SWITCH)
+			struct ifconf ifc;
+			struct ifreq ifr[8];
+			ifc.ifc_len = sizeof(ifr);
+			ifc.ifc_req = ifr;
+
+			if (ioctl(_host->socket, SIOCGIFCONF, &ifc) >= 0) {
+				std::int32_t count = ifc.ifc_len / sizeof(struct ifreq);
+				LOGI("Found %d interfaces:", count);
+				for (std::int32_t i = 0; i < count; i++) {
+					if (ifr[i].ifr_addr.sa_family == AF_INET) { // IPv4
+						auto* addrPtr = (struct sockaddr_in*)&ifr[i].ifr_addr;
+						String addressString = AddressToString(*addrPtr, _host->address.port);
+						LOGI(" - %s: %s", ifr[i].ifr_name, addressString.data());
+						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
+							arrayAppend(result, std::move(addressString));
+						}
+					} else if (ifr[i].ifr_addr.sa_family == AF_INET6) { // IPv6
+						auto* addrPtr = (struct sockaddr_in6*)&ifr[i].ifr_addr;
+						String addressString = AddressToString(*addrPtr, _host->address.port);
+						LOGI(" - %s: %s", ifr[i].ifr_name, addressString.data());
+						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
+							arrayAppend(result, std::move(addressString));
+						}
+					}
+				}
+			} else {
+				LOGW("Failed to get server endpoints");
+			}
+#elif defined(DEATH_TARGET_WINDOWS)
 			ULONG bufferSize = 15000;
 			std::unique_ptr<std::uint8_t[]> buffer = std::make_unique<std::uint8_t[]>(bufferSize);
 			PIP_ADAPTER_ADDRESSES adapterAddresses = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.get());
@@ -177,6 +208,8 @@ namespace Jazz2::Multiplayer
 						}
 					}
 				}
+			} else {
+				LOGW("Failed to get server endpoints");
 			}
 #else
 			struct ifaddrs* ifAddrStruct = nullptr;
@@ -201,6 +234,8 @@ namespace Jazz2::Multiplayer
 					}
 				}
 				freeifaddrs(ifAddrStruct);
+			} else {
+				LOGW("Failed to get server endpoints");
 			}
 #endif
 		} else {
