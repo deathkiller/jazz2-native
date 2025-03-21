@@ -5797,7 +5797,11 @@ extern "C" {
 	}
 
 	enet_uint64 enet_host_random_seed(void) {
+#ifdef DEATH_TARGET_WINDOWS_RT
+		return (enet_uint64) GetTickCount();
+#else
 		return (enet_uint64) timeGetTime();
+#endif
 	}
 
 #ifndef ENET_FEATURE_ADDRESS_MAPPING

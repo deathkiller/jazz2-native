@@ -16,6 +16,12 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include <net/if.h>
+#elif defined(DEATH_TARGET_SWITCH)
+// `ipv6_mreq` is not defined in Switch SDK
+struct ipv6_mreq {
+	struct in6_addr ipv6mr_multiaddr; /* IPv6 multicast address */
+	unsigned int    ipv6mr_interface; /* Interface index */
+};
 #endif
 
 #include "../../simdjson/simdjson.h"
