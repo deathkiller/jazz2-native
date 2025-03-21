@@ -164,14 +164,14 @@ namespace Jazz2::Multiplayer
 				LOGI("Found %d interfaces:", count);
 				for (std::int32_t i = 0; i < count; i++) {
 					if (ifr[i].ifr_addr.sa_family == AF_INET) { // IPv4
-						auto* addrPtr = (struct sockaddr_in*)&ifr[i].ifr_addr;
+						auto* addrPtr = &((struct sockaddr_in*)&ifr[i].ifr_addr)->sin_addr;
 						String addressString = AddressToString(*addrPtr, _host->address.port);
 						LOGI(" - %s: %s", ifr[i].ifr_name, addressString.data());
 						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
 					} else if (ifr[i].ifr_addr.sa_family == AF_INET6) { // IPv6
-						auto* addrPtr = (struct sockaddr_in6*)&ifr[i].ifr_addr;
+						auto* addrPtr = &((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_addr;
 						String addressString = AddressToString(*addrPtr, _host->address.port);
 						LOGI(" - %s: %s", ifr[i].ifr_name, addressString.data());
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
