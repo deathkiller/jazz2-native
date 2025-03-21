@@ -22,7 +22,7 @@ jobs:
 
     runs-on: 'ubuntu-latest'
     container: 
-      #image: devkitpro/devkita64:20240120
+      #image: devkitpro/devkita64:20241023
       image: devkitpro/devkita64:latest
       options: --user root
 
@@ -38,7 +38,7 @@ jobs:
         
         git config --global --add safe.directory '*'
         # DEATH_TRACE_ASYNC is causing crashes on startup, so it's disabled for now
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D DEATH_TRACE_ASYNC=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D DEATH_TRACE_ASYNC=OFF
 
     - name: 'Build'
       run: |
@@ -54,4 +54,49 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Jazz2_Switch
+        path: ./_package/
+
+
+  # Testing builds with online multiplayer
+  MultiplayerPreview:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+    container: 
+      #image: devkitpro/devkita64:20241023
+      image: devkitpro/devkita64:latest
+      options: --user root
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+        
+        git config --global --add safe.directory '*'
+        # DEATH_TRACE_ASYNC is causing crashes on startup, so it's disabled for now
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D WITH_MULTIPLAYER=ON -D DEATH_TRACE_ASYNC=OFF
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        mkdir ./_package/
+        cp -f ./_build/jazz2.nro ./_package/Jazz2.nro
+        cp -f ./LICENSE ./_package/LICENSE
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Jazz2_Switch_MultiplayerPreview
         path: ./_package/
