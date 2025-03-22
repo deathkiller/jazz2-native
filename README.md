@@ -131,7 +131,7 @@ This section contains only a brief explanation of the build process. For a more 
 * Install Android NDK (preferably to `../android-ndk/`)
 * Install Gradle (preferably to `../gradle/`)
 * Build dependencies will be downloaded automatically by *CMake*
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries/tree/android) manually to `./Libs/`
 * Build the project with *CMake* and `NCINE_BUILD_ANDROID` option
 
 ### Nintendo Switch

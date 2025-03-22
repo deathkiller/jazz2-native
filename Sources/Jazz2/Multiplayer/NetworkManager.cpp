@@ -77,6 +77,8 @@ namespace Jazz2::Multiplayer
 	ServerConfiguration NetworkManager::CreateDefaultServerConfiguration()
 	{
 		ServerConfiguration serverConfig{};
+		serverConfig.GameMode = MpGameMode::Cooperation;
+		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 
 		// Try to load configuration from "Jazz2.Server.config" file
 		auto configPath = fs::CombinePath(PreferencesCache::GetDirectory(), "Jazz2.Server.config"_s);

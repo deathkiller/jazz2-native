@@ -15,11 +15,11 @@ The project requires following tools and libraries to build it successfully:
     should work, **MinGW** and **Clang-CL** toolchains should be also supported
 -   **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 library (alternatively **ANGLE**
     or **Mesa** translation library)
--   **GLEW** (required only on Windows)
--   **GLFW** or **SDL2** (not required on Android and UWP, because these
-    platforms use a different backend)
--   **libcurl** (not required on Emscripten and Windows, because these
-    platforms use a different backend)
+-   **GLEW** @m_span{m-text m-dim} (required only on Windows) @m_endspan
+-   **GLFW** or **SDL2** @m_span{m-text m-dim} (not required on Android and UWP, because these
+    platforms use a different backend) @m_endspan
+-   **libcurl** @m_span{m-text m-dim} (not required on Emscripten and Windows, because these
+    platforms use a different backend) @m_endspan
 -   **zlib**
 
 @m_class{m-noindent}
@@ -28,10 +28,10 @@ In addition, these libraries are required for an optimal experience:
 
 -   **OpenAL** --- audio support
 -   **libopenmpt** --- module music playback
--   **libogg** / **libvorbis** --- `.ogg` file support (not needed for original levels)
--   **libwebp** --- `.webp` file support (not needed for original levels)
+-   **libogg** / **libvorbis** --- `.ogg` file support @m_span{m-text m-dim} (not needed for original levels) @m_endspan
+-   **libwebp** --- `.webp` file support @m_span{m-text m-dim} (not needed for original levels) @m_endspan
 -   **AngelScript** --- [AngelScript](https://www.angelcode.com/angelscript/) scripting support
--   **liblua** --- [Lua](https://www.lua.org/) scripting support (currently not supported)
+-   **liblua** --- [Lua](https://www.lua.org/) scripting support @m_span{m-text m-dim} (currently not supported) @m_endspan
 
 It tries to download or compile all libraries automatically, but in case of
 build errors a manual download is necessary. Also, system-wide libraries have
