@@ -784,7 +784,7 @@ namespace Jazz2
 
 	String PreferencesCache::GetEffectivePlayerName()
 	{
-		// Discord display name has the highest priority, then the player name set in the preferences, and finally the system user name
+		// Discord display name has the highest priority, then the player name set in the preferences, and finally the system username
 
 		String playerName;
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
