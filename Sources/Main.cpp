@@ -778,8 +778,8 @@ void GameEventHandler::ApplyActivityIcon()
 void GameEventHandler::StartProcessingStdin()
 {
 	Thread thread([](void* arg) {
-		auto handler = static_cast<GameEventHandler*>(arg);
-		ASSERT(handler != nullptr);
+		auto _this = static_cast<GameEventHandler*>(arg);
+		ASSERT(_this != nullptr);
 
 		char buffer[4096];
 		while (true) {
@@ -792,9 +792,14 @@ void GameEventHandler::StartProcessingStdin()
 			line = line.trimmed();
 
 			if (!line.empty()) {
-				if (line == "exit"_s || line == "quit"_s) {
+				if (line == "/exit"_s || line == "/quit"_s) {
+					if (_this->_networkManager != nullptr) {
+						_this->_networkManager->Dispose();
+						_this->_networkManager = nullptr;
+					}
 					theApplication().Quit();
-				} else if (auto* levelHandler = runtime_cast<MpLevelHandler*>(handler->_currentHandler)) {
+					break;
+				} else if (auto* levelHandler = runtime_cast<MpLevelHandler*>(_this->_currentHandler)) {
 					levelHandler->ProcessCommand({}, line);
 				}
 			}
