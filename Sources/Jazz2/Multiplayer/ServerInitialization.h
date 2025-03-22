@@ -34,6 +34,8 @@ namespace Jazz2::Multiplayer
 		std::uint8_t AllowedPlayerTypes;
 		/** @brief Time after which inactive players will be kicked, in seconds, `-1` to disable */
 		std::int32_t IdleKickTimeSecs;
+		/** @brief List of unique player IDs with admin rights, value contains list of privileges, or `*` for all privileges */
+		HashMap<String, String> AdminUniquePlayerIDs;
 		/** @brief List of whitelisted unique player IDs, value can contain user-defined comment */
 		HashMap<String, String> WhitelistedUniquePlayerIDs;
 		/** @brief List of banned unique player IDs, value can contain user-defined reason */

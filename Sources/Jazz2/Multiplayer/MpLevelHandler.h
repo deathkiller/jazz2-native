@@ -5,6 +5,7 @@
 #include "../LevelHandler.h"
 #include "MpGameMode.h"
 #include "NetworkManager.h"
+#include "../UI/InGameConsole.h"
 
 #include <Threading/Spinlock.h>
 
@@ -111,6 +112,12 @@ namespace Jazz2::Multiplayer
 		MpGameMode GetGameMode() const;
 		/** @brief Sets current game mode */
 		bool SetGameMode(MpGameMode value);
+
+		// Server-only methods
+		/** @brief Processes the specified server command */
+		bool ProcessCommand(const Peer& peer, StringView line);
+		/** @brief Sends the message to the specified peer */
+		void SendMessage(const Peer& peer, UI::MessageLevel level, StringView message);
 
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);

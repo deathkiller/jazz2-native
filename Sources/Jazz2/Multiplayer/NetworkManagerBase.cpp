@@ -519,12 +519,16 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		_this->OnPeerDisconnected(_this->_peers[0], reason);
+		if (!_this->_peers.empty()) {
+			_this->OnPeerDisconnected(_this->_peers[0], reason);
 
-		for (ENetPeer* peer : _this->_peers) {
-			enet_peer_disconnect_now(peer, (std::uint32_t)Reason::Disconnected);
+			for (ENetPeer* peer : _this->_peers) {
+				enet_peer_disconnect_now(peer, (std::uint32_t)Reason::Disconnected);
+			}
+			_this->_peers.clear();
+		} else {
+			_this->OnPeerDisconnected({}, reason);
 		}
-		_this->_peers.clear();
 
 		enet_host_destroy(_this->_host);
 		_this->_host = nullptr;
@@ -553,7 +557,7 @@ namespace Jazz2::Multiplayer
 					LOGE("[MP] enet_host_service() returned %i", result);
 
 					// Server failed, try to recreate it
-					_this->_lock.lock();
+					//_this->_lock.lock();
 
 					for (auto& peer : _this->_peers) {
 						_this->OnPeerDisconnected(peer, Reason::ConnectionLost);
@@ -565,7 +569,7 @@ namespace Jazz2::Multiplayer
 					host = enet_host_create(&addr, MaxPeerCount, std::size_t(NetworkChannel::Count), 0, 0);
 					_this->_host = host;
 
-					_this->_lock.unlock();
+					//_this->_lock.unlock();
 
 					if (host == nullptr) {
 						LOGE("[MP] Failed to recreate the server");

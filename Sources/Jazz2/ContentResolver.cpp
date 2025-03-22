@@ -1154,7 +1154,7 @@ namespace Jazz2
 		}
 
 		auto s = fs::Open(descriptor.FullPath, FileAccess::Read);
-		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
+		if (!s->IsValid()) return false;
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
@@ -1749,7 +1749,7 @@ namespace Jazz2
 
 				// Write to .aura file
 				auto so = fs::Open(auraPath, FileAccess::Write);
-				ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
+				if (!so->IsValid()) return;
 
 				std::uint8_t flags = 0x80;
 				if (palette == nullptr) {

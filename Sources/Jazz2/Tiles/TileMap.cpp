@@ -1065,7 +1065,7 @@ namespace Jazz2::Tiles
 		}
 
 		TileSet* tileSet = ResolveTileSet(tileId);
-		if (tileSet == nullptr) {
+		if (tileSet == nullptr || tileSet->TextureDiffuse == nullptr) {
 			return;
 		}
 
@@ -1119,6 +1119,10 @@ namespace Jazz2::Tiles
 	{
 		constexpr std::int32_t DebrisSize = 3;
 
+		if (res->Base->TextureDiffuse == nullptr) {
+			return;
+		}
+
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
 		Vector2i texSize = res->Base->TextureDiffuse->size();
@@ -1158,6 +1162,10 @@ namespace Jazz2::Tiles
 
 	void TileMap::CreateSpriteDebris(const GraphicResource* res, Vector3f pos, std::int32_t count)
 	{
+		if (res->Base->TextureDiffuse == nullptr) {
+			return;
+		}
+
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
 		Vector2i texSize = res->Base->TextureDiffuse->size();

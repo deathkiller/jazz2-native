@@ -1183,12 +1183,17 @@ namespace Jazz2::Actors
 
 		_rendererType = type;
 
+		auto& resolver = ContentResolver::Get();
+		if (resolver.IsHeadless()) {
+			return;
+		}
+
 		bool shaderChanged;
 		switch (type) {
-			case ActorRendererType::Outline: shaderChanged = renderCommand_.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Outline)); break;
-			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::WhiteMask)); break;
-			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::PartialWhiteMask)); break;
-			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::FrozenMask)); break;
+			case ActorRendererType::Outline: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::Outline)); break;
+			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::WhiteMask)); break;
+			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::PartialWhiteMask)); break;
+			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::FrozenMask)); break;
 			default: shaderChanged = renderCommand_.material().setShaderProgramType(Material::ShaderProgramType::Sprite); break;
 		}
 		if (shaderChanged) {

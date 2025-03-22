@@ -1053,7 +1053,7 @@ namespace nCine
 		if (targetPath == ConsoleTarget) {
 			if (__consoleType == ConsoleType::None) {
 				bool hasVirtualTerminal = false;
-				if (CreateTraceConsole(NCINE_APP_NAME " [Console]", hasVirtualTerminal)) {
+				if (CreateTraceConsole(NCINE_APP_NAME, hasVirtualTerminal)) {
 					__consoleType = (hasVirtualTerminal ? ConsoleType::EscapeCodes24bit : ConsoleType::WinApi);
 
 					CONSOLE_SCREEN_BUFFER_INFO csbi;

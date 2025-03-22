@@ -385,7 +385,7 @@ namespace Jazz2::Actors
 					auto* tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
 						auto* res = _metadata->FindAnimation(Shield);
-						if (res != nullptr) {
+						if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 							Vector2i texSize = res->Base->TextureDiffuse->size();
 							Vector2i size = res->Base->FrameDimensions;
 
@@ -537,7 +537,7 @@ namespace Jazz2::Actors
 					auto* tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
 						auto* res = _metadata->FindAnimation(SugarRush);
-						if (res != nullptr) {
+						if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 							Vector2i texSize = res->Base->TextureDiffuse->size();
 							Vector2i size = res->Base->FrameDimensions;
 							Vector2i frameConf = res->Base->FrameConfiguration;

@@ -152,6 +152,18 @@ namespace Jazz2::Multiplayer
 					serverConfig.IdleKickTimeSecs = std::int16_t(idleKickTimeSecs);
 				}
 
+				ondemand::object adminUniquePlayerIDs;
+				if (doc["AdminUniquePlayerIDs"].get(adminUniquePlayerIDs) == SUCCESS) {
+					for (auto item : adminUniquePlayerIDs) {
+						std::string_view key;
+						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
+							std::string_view value;
+							item.value().get(value);
+							serverConfig.AdminUniquePlayerIDs.emplace(key, value);
+						}
+					}
+				}
+
 				ondemand::object whitelistedUniquePlayerIDs;
 				if (doc["WhitelistedUniquePlayerIDs"].get(whitelistedUniquePlayerIDs) == SUCCESS) {
 					for (auto item : whitelistedUniquePlayerIDs) {
@@ -243,7 +255,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	NetworkManager::PeerDesc::PeerDesc()
-		: IsAuthenticated(false), PreferredPlayerType(PlayerType::None)
+		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None)
 	{
 	}
 }

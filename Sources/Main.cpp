@@ -154,6 +154,9 @@ private:
 #if defined(DEATH_TARGET_ANDROID)
 	void ApplyActivityIcon();
 #endif
+#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS)
+	void StartProcessingStdin();
+#endif
 	static void WriteCacheDescriptor(StringView path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
@@ -283,13 +286,21 @@ void GameEventHandler::OnInitialize()
 			serverInit.Configuration.GameMode = MpGameMode::Battle;
 			//serverInit.Configuration.IsPrivate = _privateServer;
 
+			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
+				auto level = config.argv(i + 1).partition('/');
+				serverInit.InitialLevel.EpisodeName = !level[2].empty() ? level[0] : "unknown"_s;
+				serverInit.InitialLevel.LevelName = !level[2].empty() ? level[2] : level[0];
+			} else {
+				serverInit.InitialLevel.EpisodeName = "prince"_s;
+				serverInit.InitialLevel.LevelName = "01_castle1"_s;
+			}
+
 			serverInit.InitialLevel.IsLocalSession = false;
-			serverInit.InitialLevel.EpisodeName = "unknown"_s;
-			serverInit.InitialLevel.LevelName = "battle1"_s;
 			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
-			serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
+			//serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
 
 			CreateServer(std::move(serverInit));
+			StartProcessingStdin();
 			return;
 		}
 #		endif
@@ -355,11 +366,18 @@ void GameEventHandler::OnInitialize()
 			serverInit.Configuration.GameMode = MpGameMode::Battle;
 			//serverInit.Configuration.IsPrivate = _privateServer;
 
+			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
+				auto level = config.argv(i + 1).partition('/');
+				serverInit.InitialLevel.EpisodeName = !level[2].empty() ? level[0] : "unknown"_s;
+				serverInit.InitialLevel.LevelName = !level[2].empty() ? level[2] : level[0];
+			} else {
+				serverInit.InitialLevel.EpisodeName = "prince"_s;
+				serverInit.InitialLevel.LevelName = "01_castle1"_s;
+			}
+
 			serverInit.InitialLevel.IsLocalSession = false;
-			serverInit.InitialLevel.EpisodeName = "unknown"_s;
-			serverInit.InitialLevel.LevelName = "battle1"_s;
 			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
-			serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
+			//serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
 
 			CreateServer(std::move(serverInit));
 			return;
@@ -756,6 +774,35 @@ void GameEventHandler::ApplyActivityIcon()
 #endif
 
 #if defined(WITH_MULTIPLAYER)
+#	if defined(WITH_THREADS)
+void GameEventHandler::StartProcessingStdin()
+{
+	Thread thread([](void* arg) {
+		auto handler = static_cast<GameEventHandler*>(arg);
+		ASSERT(handler != nullptr);
+
+		char buffer[4096];
+		while (true) {
+			if (!::fgets(buffer, sizeof(buffer), stdin)) {
+				LOGW("Failed to read from stdin");
+				break;
+			}
+
+			StringView line = buffer;
+			line = line.trimmed();
+
+			if (!line.empty()) {
+				if (line == "exit"_s || line == "quit"_s) {
+					theApplication().Quit();
+				} else if (auto* levelHandler = runtime_cast<MpLevelHandler*>(handler->_currentHandler)) {
+					levelHandler->ProcessCommand({}, line);
+				}
+			}
+		}
+	}, this);
+}
+#	endif
+
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort)
 {
 	LOGI("[MP] Connecting to %s...", endpoint.data());
@@ -1006,6 +1053,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					globalPeerDesc->Uuid = std::move(uuid);
 					globalPeerDesc->PlayerName = std::move(playerName);
 					globalPeerDesc->IsAuthenticated = true;
+
+					if (serverConfig.AdminUniquePlayerIDs.contains(uniquePlayerId)) {
+						globalPeerDesc->IsAdmin = true;
+					}
 				} else {
 					DEATH_ASSERT_UNREACHABLE();
 				}

@@ -34,6 +34,8 @@ namespace Jazz2::Multiplayer
 			StaticArray<16, std::uint8_t> Uuid;
 			/** @brief Whether the peer is already successfully authenticated */
 			bool IsAuthenticated;
+			/** @brief Whether the peer has admin rights */
+			bool IsAdmin;
 			/** @brief Preferred player type selected by the peer */
 			PlayerType PreferredPlayerType;
 			/** @brief Player display name */
