@@ -73,7 +73,7 @@ namespace Death { namespace IO {
 		}
 		
 		/** @brief Returns `true` if the object is valid */
-		bool IsValid() const {
+		bool IsValid() const noexcept {
 			return _impl;
 		}
 
@@ -108,7 +108,7 @@ namespace Death { namespace IO {
 		}
 		
 		/** @brief Returns `true` if the object is valid */
-		bool IsValid() const {
+		bool IsValid() const noexcept {
 			return _impl;
 		}
 
@@ -151,36 +151,39 @@ namespace Death { namespace IO {
 	public:
 		/** @brief Request state */
 		enum class State {
-			Idle,			/**< Idle */
-			Unauthorized,	/**< Unauthorized */
-			Active,			/**< Active */
-			Completed,		/**< Completed */
-			Failed,			/**< Failed */
-			Cancelled		/**< Cancelled */
+			Idle,			/**< The request has just been created and @ref WebRequestAsync::Run() has not been called */
+			Unauthorized,	/**< The request is currently unauthorized */
+			Active,			/**< The request is about to start */
+			Completed,		/**< The request completed successfully and all data has been received */
+			Failed,			/**< The request failed */
+			Cancelled		/**< The request has been cancelled before completion by calling @ref WebRequestAsync::Cancel() */
 		};
 
 		/** @brief Storage for response data */
 		enum class Storage {
-			Memory,			/**< Memory */
-			File,			/**< File */
-			None			/**< None */
+			Memory,			/**< Response is collected in memory until the request is complete */
+			File,			/**< Response is written to a file on disk as it is received */
+			None			/**< Response is not stored by the request */
 		};
 
 		/** @brief Result of synchronous operation */
 		struct Result
 		{
+			/** @brief Creates a successful result */
 			static Result Ok(State state = State::Active) {
 				Result result;
 				result.state = state;
 				return result;
 			}
 
+			/** @brief Creates a cancelled result */
 			static Result Cancelled() {
 				Result result;
 				result.state = State::Cancelled;
 				return result;
 			}
 
+			/** @brief Creates a failed result */
 			static Result Error(Containers::StringView error) {
 				Result result;
 				result.state = State::Failed;
@@ -188,6 +191,7 @@ namespace Death { namespace IO {
 				return result;
 			}
 
+			/** @brief Creates a result waiting for authorization */
 			static Result Unauthorized(Containers::StringView error) {
 				Result result;
 				result.state = State::Unauthorized;
@@ -195,11 +199,14 @@ namespace Death { namespace IO {
 				return result;
 			}
 
-			explicit operator bool() const {
+			/** @brief Whether the request did not fail */
+			explicit operator bool() const noexcept {
 				return (state != State::Failed);
 			}
 
+			/** @brief The state of the request */
 			State state = State::Idle;
+			/** @brief The error message in case of a failure */
 			Containers::String error;
 		};
 
@@ -209,7 +216,7 @@ namespace Death { namespace IO {
 		}
 		
 		/** @brief Returns `true` if the object is valid */
-		bool IsValid() const {
+		bool IsValid() const noexcept {
 			return _impl;
 		}
 
@@ -239,14 +246,14 @@ namespace Death { namespace IO {
 		std::int64_t GetBytesExpectedToReceive() const;
 
 		/** @brief Returns the native handle corresponding to this request object */
-		WebRequestHandle GetNativeHandle() const;
+		WebRequestHandle GetNativeHandle() const noexcept;
 
-		/** @brief Security bypass flags, supports a bitwise combination of its member values */
+		/** @brief Flags for disabling security features, supports a bitwise combination of its member values */
 		enum class Ignore {
 			None = 0,					/**< None */
-			Certificate = 1,			/**< Certificate */
-			Host = 2,					/**< Host */
-			All = Certificate | Host	/**< All */
+			Certificate = 1,			/**< Disable SSL certificate verification */
+			Host = 2,					/**< Disable hostname verification */
+			All = Certificate | Host	/**< Disable all security checks for maximum insecurity */
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(Ignore);
@@ -379,7 +386,7 @@ namespace Death { namespace IO {
 			return IsOpened();
 		}
 
-		/** @brief Returns `true` if the network backend is available */
+		/** @brief Returns `true` if the network backend is available and web requests can be made */
 		static bool IsBackendAvailable();
 
 		/** @brief Sets a request header in every request created from this session after it has been set. */
@@ -397,7 +404,7 @@ namespace Death { namespace IO {
 		/** @brief Allows to enable persistent storage for the session */
 		bool EnablePersistentStorage(bool enable);
 		/** @brief Returns the native handle corresponding to this session object */
-		WebSessionHandle GetNativeHandle() const;
+		WebSessionHandle GetNativeHandle() const noexcept;
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT

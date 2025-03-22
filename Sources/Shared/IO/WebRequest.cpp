@@ -301,11 +301,11 @@ namespace Death { namespace IO {
 			return _proxy;
 		}
 
-		const WebRequestHeaderMap& GetHeaders() const {
+		const WebRequestHeaderMap& GetHeaders() const noexcept {
 			return _headers;
 		}
 
-		virtual WebSessionHandle GetNativeHandle() const = 0;
+		virtual WebSessionHandle GetNativeHandle() const noexcept = 0;
 
 		virtual bool EnablePersistentStorage(bool enable) {
 			return false;
@@ -744,9 +744,9 @@ namespace Death { namespace IO {
 		return _impl->GetBytesExpectedToReceive();
 	}
 
-	WebRequestHandle WebRequestBase::GetNativeHandle() const
+	WebRequestHandle WebRequestBase::GetNativeHandle() const noexcept
 	{
-		return _impl ? _impl->GetNativeHandle() : nullptr;
+		return (_impl ? _impl->GetNativeHandle() : nullptr);
 	}
 
 	void WebRequestBase::MakeInsecure(Ignore flags)
@@ -1125,11 +1125,11 @@ namespace Death { namespace IO {
 
 		void HandleCallback(DWORD dwInternetStatus, LPVOID lpvStatusInformation, DWORD dwStatusInformationLength);
 
-		HINTERNET GetHandle() const {
+		HINTERNET GetHandle() const noexcept {
 			return _request;
 		}
 
-		WebRequestHandle GetNativeHandle() const override {
+		WebRequestHandle GetNativeHandle() const noexcept override {
 			return (WebRequestHandle)GetHandle();
 		}
 
@@ -1189,11 +1189,11 @@ namespace Death { namespace IO {
 
 		bool SetProxy(const WebProxy& proxy) override;
 
-		HINTERNET GetHandle() const {
+		HINTERNET GetHandle() const noexcept {
 			return _handle;
 		}
 
-		WebSessionHandle GetNativeHandle() const override {
+		WebSessionHandle GetNativeHandle() const noexcept override {
 			return (WebSessionHandle)GetHandle();
 		}
 
@@ -1295,11 +1295,11 @@ namespace Death { namespace IO {
 
 		std::int64_t GetBytesExpectedToSend() const override;
 
-		CURL* GetHandle() const {
+		CURL* GetHandle() const noexcept {
 			return _handle;
 		}
 
-		WebRequestHandle GetNativeHandle() const override {
+		WebRequestHandle GetNativeHandle() const noexcept override {
 			return (WebRequestHandle)GetHandle();
 		}
 
@@ -1355,7 +1355,7 @@ namespace Death { namespace IO {
 		WebRequestImplPtr CreateRequest(WebSession& session, StringView url) override;
 		WebRequestImplPtr CreateRequestAsync(WebSessionAsync& session, StringView url, Function<void(WebRequestEvent&)>&& callback, std::int32_t id) override;
 
-		WebSessionHandle GetNativeHandle() const override {
+		WebSessionHandle GetNativeHandle() const noexcept override {
 			return (WebSessionHandle)_handle;
 		}
 
@@ -1379,7 +1379,7 @@ namespace Death { namespace IO {
 		WebRequestImplPtr CreateRequest(WebSession& session, StringView url) override;
 		WebRequestImplPtr CreateRequestAsync(WebSessionAsync& session, StringView url, Function<void(WebRequestEvent&)>&& callback, std::int32_t id = -1) override;
 
-		WebSessionHandle GetNativeHandle() const override {
+		WebSessionHandle GetNativeHandle() const noexcept override {
 			return (WebSessionHandle)_handle;
 		}
 
@@ -1570,7 +1570,7 @@ namespace Death { namespace IO {
 		_impl.reset(nullptr);
 	}
 
-	WebSessionHandle WebSessionBase::GetNativeHandle() const
+	WebSessionHandle WebSessionBase::GetNativeHandle() const noexcept
 	{
 		return (_impl ? _impl->GetNativeHandle() : nullptr);
 	}
