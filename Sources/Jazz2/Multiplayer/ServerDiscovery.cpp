@@ -16,6 +16,7 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include <net/if.h>
+#	include "Backends/ifaddrs-android.h"
 #elif defined(DEATH_TARGET_SWITCH)
 // `ipv6_mreq` is not defined in Switch SDK
 struct ipv6_mreq {
@@ -72,24 +73,53 @@ namespace Jazz2::Multiplayer
 
 	ENetSocket ServerDiscovery::TryCreateSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{
-		ENetSocket socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
-		if (socket == ENET_SOCKET_NULL) {
-			LOGE("[MP] Failed to create socket for server discovery");
-			return ENET_SOCKET_NULL;
-		}
-
 #if defined(DEATH_TARGET_ANDROID)
-		std::int32_t ifidx = if_nametoindex("wlan0");
+		//std::int32_t ifidx = if_nametoindex("wlan0");
+
+		std::int32_t ifidx = 0;
+		struct ifaddrs* ifaddr;
+		struct ifaddrs* ifa;
+		if (getifaddrs(&ifaddr) == 0) {
+			for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+				if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
+					ifidx = if_nametoindex(ifa->ifa_name);
+					if (ifidx > 0) {
+						LOGI("[MP] Using interface %s (%i) for discovery", ifa->ifa_name, ifidx);
+						break;
+					}
+				}
+			}
+			freeifaddrs(ifaddr);
+		}
+		if (ifidx == 0) {
+			LOGI("[MP] No suitable interface found for discovery");
+		}
 #else
 		std::int32_t ifidx = 0;
 #endif
+
+		ENetSocket socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
+		if (socket == ENET_SOCKET_NULL) {
+#if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#else
+			std::int32_t error = errno;
+#endif
+			LOGE("[MP] Failed to create socket for server discovery (error: %i)", error);
+			return ENET_SOCKET_NULL;
+		}
 
 		std::int32_t on = 1, hops = 3;
 		if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_IF, (const char*)&ifidx, sizeof(ifidx)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (const char*)&hops, sizeof(hops)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (const char*)&on, sizeof(on)) != 0) {
-			LOGE("[MP] Failed to enable multicast on socket for server discovery");
+#if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#else
+			std::int32_t error = errno;
+#endif
+			LOGE("[MP] Failed to enable multicast on socket for server discovery (error: %i)", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -101,12 +131,28 @@ namespace Jazz2::Multiplayer
 		saddr.sin6_addr = in6addr_any;
 
 		if (bind(socket, (struct sockaddr*)&saddr, sizeof(saddr))) {
-			LOGE("[MP] Failed to bind socket for server discovery");
+#if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#else
+			std::int32_t error = errno;
+#endif
+			LOGE("[MP] Failed to bind socket for server discovery (error: %i)", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
 
-		inet_pton(AF_INET6, multicastAddress, &parsedAddress.host);
+		std::int32_t result = inet_pton(AF_INET6, multicastAddress, &parsedAddress.host);
+		if (result != 1) {
+#if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#else
+			std::int32_t error = errno;
+#endif
+			LOGE("[MP] Failed to parse multicast address for server discovery (result: %i, error: %i)", result, error);
+			enet_socket_destroy(socket);
+			return ENET_SOCKET_NULL;
+		}
+
 		parsedAddress.port = DiscoveryPort;
 
 		struct ipv6_mreq mreq;
@@ -114,7 +160,12 @@ namespace Jazz2::Multiplayer
 		mreq.ipv6mr_interface = ifidx;
 
 		if (setsockopt(socket, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char*)&mreq, sizeof(mreq))) {
-			LOGE("[MP] Failed to join multicast group on socket for server discovery");
+#if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#else
+			std::int32_t error = errno;
+#endif
+			LOGE("[MP] Failed to join multicast group on socket for server discovery (error: %i)", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -131,8 +182,14 @@ namespace Jazz2::Multiplayer
 		ENetBuffer sendbuf;
 		sendbuf.data = (void*)packet.GetBuffer();
 		sendbuf.dataLength = packet.GetSize();
-		if (enet_socket_send(socket, &address, &sendbuf, 1) != (std::int32_t)sendbuf.dataLength) {
-			LOGE("[MP] Failed to send discovery request");
+		std::int32_t result = enet_socket_send(socket, &address, &sendbuf, 1);
+		if (result != (std::int32_t)sendbuf.dataLength) {
+#if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#else
+			std::int32_t error = errno;
+#endif
+			LOGE("[MP] Failed to send discovery request (result: %i, error: %i)", result, error);
 		}
 	}
 
@@ -416,8 +473,14 @@ namespace Jazz2::Multiplayer
 							ENetBuffer sendbuf;
 							sendbuf.data = (void*)packet.GetBuffer();
 							sendbuf.dataLength = packet.GetSize();
-							if (enet_socket_send(socket, &_this->_address, &sendbuf, 1) != (std::int32_t)sendbuf.dataLength) {
-								LOGE("[MP] Failed to send discovery response");
+							std::int32_t result = enet_socket_send(socket, &_this->_address, &sendbuf, 1);
+							if (result != (std::int32_t)sendbuf.dataLength) {
+#if defined(DEATH_TARGET_WINDOWS)
+								std::int32_t error = ::WSAGetLastError();
+#else
+								std::int32_t error = errno;
+#endif
+								LOGE("[MP] Failed to send discovery response (result: %i, error: %i)", result, error);
 							}
 						}
 					}
