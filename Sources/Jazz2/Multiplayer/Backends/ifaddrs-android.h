@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <unistd.h>
 
 #include <Containers/SmallVector.h>
 
