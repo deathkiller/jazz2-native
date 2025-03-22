@@ -72,3 +72,57 @@ jobs:
       with:
         name: Jazz2_MacOS_${{ matrix.Platform }}_${{ matrix.Backend }}
         path: ./_package/
+
+
+  # Testing builds with online multiplayer
+  MultiplayerPreview:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Platform: ARM64
+          Backend: SDL2
+          
+        - BuildType: Release
+          Platform: x64
+          Backend: SDL2
+
+    runs-on: 'macos-latest'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 'Configure CMake'
+      run: |
+        case "${{ matrix.Platform }}" in
+          ARM64 ) architecture="arm64"
+                  withVorbis="OFF" ;;
+          x64 ) architecture="x86_64"
+                withVorbis="ON" ;;
+          * ) exit 1 ;;
+        esac
+        
+        rm -f ./Content/Translations/*.po
+        
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_OSX_ARCHITECTURES="$architecture" -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_VORBIS=$withVorbis -D WITH_MULTIPLAYER=ON
+
+    - name: 'Build'
+      run: |
+        make -j 3 -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        make package -C ./_build/
+        mkdir ./_package/
+        cp -f ./_build/*.dmg ./_package/
+        cp -f ./LICENSE ./_package/LICENSE
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Jazz2_MacOS_MultiplayerPreview_${{ matrix.Platform }}_${{ matrix.Backend }}
+        path: ./_package/

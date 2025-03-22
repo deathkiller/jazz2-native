@@ -127,12 +127,12 @@ namespace nCine
 
 #	if defined(DEATH_TARGET_WINDOWS)
 #		if defined(DEATH_TARGET_MINGW)
-		static unsigned int(__attribute__((__stdcall__)) WrapperFunction)(void* arg);
+		static unsigned int(__attribute__((__stdcall__)) Process)(void* arg);
 #		else
-		static unsigned int __stdcall WrapperFunction(void* arg);
+		static unsigned int __stdcall Process(void* arg);
 #		endif
 #	else
-		static void* WrapperFunction(void* arg);
+		static void* Process(void* arg);
 #	endif
 #else
 		Thread() = delete;

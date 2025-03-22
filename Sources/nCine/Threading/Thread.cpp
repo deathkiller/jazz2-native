@@ -308,11 +308,11 @@ namespace nCine
 		}
 
 		_sharedBlock = new SharedBlock();
-		_sharedBlock->_refCount = 2;	// Ref. count is decreased in WrapperFunction()
+		_sharedBlock->_refCount = 2;	// Ref. count is decreased in Process()
 		_sharedBlock->_threadFunc = threadFunc;
 		_sharedBlock->_threadArg = threadArg;
 #if defined(DEATH_TARGET_WINDOWS)
-		_sharedBlock->_handle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, Thread::WrapperFunction, _sharedBlock, 0, nullptr));
+		_sharedBlock->_handle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, Thread::Process, _sharedBlock, 0, nullptr));
 		if (_sharedBlock->_handle == NULL) {
 			DWORD error = ::GetLastError();
 			delete _sharedBlock;
@@ -320,7 +320,7 @@ namespace nCine
 			FATAL_MSG("_beginthreadex() failed with error 0x%08x", error);
 		}
 #else
-		const int error = pthread_create(&_sharedBlock->_handle, nullptr, Thread::WrapperFunction, _sharedBlock);
+		const int error = pthread_create(&_sharedBlock->_handle, nullptr, Thread::Process, _sharedBlock);
 		if (error != 0) {
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
@@ -552,9 +552,9 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS)
-	unsigned int Thread::WrapperFunction(void* arg)
+	unsigned int Thread::Process(void* arg)
 #else
-	void* Thread::WrapperFunction(void* arg)
+	void* Thread::Process(void* arg)
 #endif
 	{
 		Thread t(static_cast<SharedBlock*>(arg));

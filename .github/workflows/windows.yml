@@ -112,3 +112,80 @@ jobs:
       with:
         name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}
         path: ./_package/
+
+
+  # Testing builds with online multiplayer
+  MultiplayerPreview:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Platform: x64
+          ArchExts: SSE2
+          Backend: SDL2
+
+    runs-on: 'windows-latest'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 'Setup MSBuild'
+      uses: microsoft/setup-msbuild@v1.3.2
+
+    - if: matrix.Platform != 'ARM64'
+      name: 'Download Build Dependencies'
+      run: |
+        mkdir Libs
+        cd Libs
+        
+        #Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL5/releases/download/v5.0.9/VC-LTL-5.0.9-Binary.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
+        Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL/releases/download/v4.1.3/VC-LTL-4.1.3-Binary-VS2019.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
+        7z x ".\VC-LTL-Binary.7z" -o"VC-LTL"
+        
+    - name: 'Configure CMake'
+      run: |
+        $archexts = '${{ matrix.ArchExts }}'
+        switch('${{ matrix.Platform }}') {
+          'x86' { $arch = 'Win32' }
+          'x64' {
+            $arch = 'x64'
+            if(($archexts -eq 'SSE') -or ($archexts -eq 'SSE2')) {
+              $archexts = ''
+            }
+          }
+          'ARM64' { $arch = 'ARM64EC' }
+        }
+        
+        rm -force ".\Content\Translations\*.po"
+        
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_COPY_DEPENDENCIES=ON -D CMAKE_GENERATOR_TOOLSET=v142 -D WITH_MULTIPLAYER=ON
+
+    - name: 'Build'
+      run: |
+        switch('${{ matrix.Platform }}') {
+          'x86' { $arch = 'Win32' }
+          'x64' { $arch = 'x64' }
+          'ARM64' { $arch = 'ARM64EC' }
+        }
+        
+        cd .\_build\
+        msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=$arch
+
+    - name: 'Create Package'
+      run: |
+        mkdir _package
+        Move-Item -Path ".\_build\Release\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
+        Move-Item -Path ".\_build\Release\Jazz2.pdb" -Destination ".\_package\Jazz2.pdb"
+        Move-Item -Path ".\_build\Release\*.dll" -Destination ".\_package\"
+        Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
+        Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Jazz2_Windows_MultiplayerPreview_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}
+        path: ./_package/

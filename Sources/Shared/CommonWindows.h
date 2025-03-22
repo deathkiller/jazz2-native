@@ -276,6 +276,13 @@ DEATH_ALWAYS_INLINE BOOL WINAPI RemoveDirectory(LPCWSTR lpPathName) {
 }
 #endif
 
+#if defined(SendMessage)
+#	undef SendMessage
+DEATH_ALWAYS_INLINE LRESULT WINAPI SendMessage(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
+	return ::SendMessageW(hWnd, Msg, wParam, lParam);
+}
+#endif
+
 #if defined(StartDoc)
 #	undef StartDoc
 DEATH_ALWAYS_INLINE int WINAPI StartDoc(HDC hdc, CONST DOCINFOW* lpdi) {
