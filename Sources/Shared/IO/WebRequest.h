@@ -169,7 +169,7 @@ namespace Death { namespace IO {
 		/** @brief Result of synchronous operation */
 		struct Result
 		{
-			/** @brief Creates a successful result */
+			/** @brief Creates a successful or partial result */
 			static Result Ok(State state = State::Active) {
 				Result result;
 				result.state = state;
@@ -398,7 +398,7 @@ namespace Death { namespace IO {
 		/** @brief Sets the proxy to use for all requests initiated by this session */
 		bool SetProxy(const WebProxy& proxy);
 		/** @brief Returns `true` if the session was successfully opened and can be used */
-		bool IsOpened() const;
+		bool IsOpened() const noexcept;
 		/** @brief Closes the session */
 		void Dispose();
 		/** @brief Allows to enable persistent storage for the session */

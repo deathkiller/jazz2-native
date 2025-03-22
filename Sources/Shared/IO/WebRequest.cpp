@@ -1560,9 +1560,9 @@ namespace Death { namespace IO {
 		return _impl->SetProxy(proxy);
 	}
 
-	bool WebSessionBase::IsOpened() const
+	bool WebSessionBase::IsOpened() const noexcept
 	{
-		return _impl.get() != nullptr;
+		return _impl;
 	}
 
 	void WebSessionBase::Dispose()

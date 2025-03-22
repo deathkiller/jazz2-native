@@ -51,6 +51,7 @@ namespace Death { namespace IO {
 	{
 		arrayResize(_data, NoInit, buffer.size());
 		std::memcpy(_data.data(), buffer.data(), buffer.size());
+		_size = std::int64_t(buffer.size());
 	}
 
 	MemoryStream::MemoryStream(InPlaceInitT, ArrayView<const std::uint8_t> buffer)
@@ -58,6 +59,7 @@ namespace Death { namespace IO {
 	{
 		arrayResize(_data, NoInit, buffer.size());
 		std::memcpy(_data.data(), buffer.data(), buffer.size());
+		_size = std::int64_t(buffer.size());
 	}
 
 	void MemoryStream::Dispose()

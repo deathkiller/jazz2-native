@@ -829,7 +829,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	}
 
 	auto& serverConfig = _networkManager->GetServerConfiguration();
-	LOGI("[MP] Creating server \"%s\" on port %u...", serverConfig.ServerName.data(), serverConfig.ServerPort);
+	LOGI("[MP] Creating %s server \"%s\" on port %u...", serverConfig.IsPrivate ? "private" : "public", serverConfig.ServerName.data(), serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), true);
