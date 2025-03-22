@@ -9,14 +9,14 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	/** @brief Contains the user name and password to use for authenticating */
+	/** @brief Contains the username and password to use for authenticating */
 	class WebCredentials
 	{
 	public:
 		WebCredentials(Containers::StringView user = {}, Containers::StringView password = {})
 			: _user(user), _password(password) {}
 
-		/** @brief Returns user name */
+		/** @brief Returns username */
 		Containers::StringView GetUser() const {
 			return _user;
 		}
@@ -58,8 +58,8 @@ namespace Death { namespace IO {
 	public:
 		/** @brief Authentication challenge source */
 		enum class Source {
-			Server,			/**< Server */
-			Proxy			/**< Proxy */
+			Server,			/**< Server requested authentication */
+			Proxy			/**< Proxy requested authentication */
 		};
 
 		WebAuthChallenge();
@@ -67,12 +67,17 @@ namespace Death { namespace IO {
 		WebAuthChallenge& operator=(const WebAuthChallenge& other);
 		~WebAuthChallenge();
 
+		/** @brief Whether the object is valid */
+		explicit operator bool() const noexcept {
+			return IsValid();
+		}
+		
 		/** @brief Returns `true` if the object is valid */
 		bool IsValid() const {
 			return _impl;
 		}
 
-		/** @brief Returns authentication challenge source */
+		/** @brief Returns which source requested credentials with this challenge */
 		Source GetSource() const;
 
 		/** @brief Sets credentials */
@@ -97,6 +102,11 @@ namespace Death { namespace IO {
 		WebResponse& operator=(const WebResponse& other);
 		~WebResponse();
 
+		/** @brief Whether the object is valid */
+		explicit operator bool() const noexcept {
+			return IsValid();
+		}
+		
 		/** @brief Returns `true` if the object is valid */
 		bool IsValid() const {
 			return _impl;
@@ -124,15 +134,15 @@ namespace Death { namespace IO {
 		Containers::String GetSuggestedFileName() const;
 		/** @brief Returns all response data as a string */
 		Containers::String AsString() const;
-		/** @brief Returns the full path of the file to which data is being saved */
+		/** @brief Returns the full path of the file to which data is being saved when the storage is @relativeref{WebRequestBase,Storage::File} */
 		Containers::String GetDataFile() const;
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		WebResponseImplPtr _impl;
-#endif
 
 		explicit WebResponse(const WebResponseImplPtr& impl);
+#endif
 	};
 
 	/** @brief Base class of web requests */
@@ -193,6 +203,11 @@ namespace Death { namespace IO {
 			Containers::String error;
 		};
 
+		/** @brief Whether the object is valid */
+		explicit operator bool() const noexcept {
+			return IsValid();
+		}
+		
 		/** @brief Returns `true` if the object is valid */
 		bool IsValid() const {
 			return _impl;
@@ -254,13 +269,13 @@ namespace Death { namespace IO {
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		WebRequestImplPtr _impl;
-#endif
 
 		WebRequestBase();
 		explicit WebRequestBase(const WebRequestImplPtr& impl);
 		WebRequestBase(const WebRequestBase& other);
 		WebRequestBase& operator=(const WebRequestBase& other);
 		~WebRequestBase();
+#endif
 	};
 
 	/** @brief Represents web request */
@@ -358,6 +373,11 @@ namespace Death { namespace IO {
 		WebSessionBase(const WebSessionBase& other);
 		WebSessionBase& operator=(const WebSessionBase& other);
 		~WebSessionBase();
+		
+		/** @brief Whether the session was successfully opened and can be used */
+		explicit operator bool() const noexcept {
+			return IsOpened();
+		}
 
 		/** @brief Returns `true` if the network backend is available */
 		static bool IsBackendAvailable();
@@ -382,12 +402,12 @@ namespace Death { namespace IO {
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		WebSessionImplPtr _impl;
-#endif
 
 		/** @brief Returns the internal session factory */
 		static WebSessionFactory* FindFactory();
 
 		explicit WebSessionBase(const WebSessionImplPtr& impl);
+#endif
 	};
 
 	/** @brief Represents web session that allows @ref WebRequest to be created */
@@ -453,7 +473,7 @@ namespace Death { namespace IO {
 		Containers::StringView GetErrorDescription() const;
 		/** @brief Returns the full path of a temporary file containing the response data when the state is @relativeref{WebRequestBase,State::Completed} and storage is @relativeref{WebRequestBase,Storage::File} */
 		Containers::StringView GetDataFile() const;
-		/** @brief Returns the buffer */
+		/** @brief Returns the underlying buffer */
 		Containers::ArrayView<char> GetDataBuffer() const;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

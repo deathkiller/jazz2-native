@@ -43,7 +43,11 @@ namespace Death { namespace Containers {
 		}
 		
 #if defined(DEATH_TARGET_MSVC) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/** @brief Construct from the pointer of a related type */
+		/**
+		 * @brief Construct from the pointer of a related type
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+		 */
 		template<class U, std::enable_if_t<!std::is_same<::IUnknown*, U*>::value && !std::is_base_of<T, U>::value, int> = 0>
 		explicit ComPtr(U* ptr) noexcept : _pointer(nullptr) {
 			HRESULT result = ptr->QueryInterface(DEATH_IID_PPV_ARGS(&_pointer));
@@ -177,11 +181,19 @@ namespace Death { namespace Containers {
 
 #if defined(DEATH_TARGET_MSVC) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	ifdef DOXYGEN_GENERATING_OUTPUT
-		/** @brief Tries to cast the instance to another type */
+		/**
+		 * @brief Tries to cast the instance to another type
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+		 */
 		template<class U>
 		HRESULT as(U** result) const noexcept;
 #	else
-		/** @brief Tries to cast the instance to another type */
+		/**
+		 * @brief Tries to cast the instance to another type
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+		 */
 		template<class U, std::enable_if_t<std::is_convertible<T, U>::value, int> = 0>
 		HRESULT as(U** result) const noexcept {
 			*result = _pointer;
