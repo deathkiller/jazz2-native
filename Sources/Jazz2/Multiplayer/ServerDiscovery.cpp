@@ -81,10 +81,11 @@ namespace Jazz2::Multiplayer
 		struct ifaddrs* ifa;
 		if (getifaddrs(&ifaddr) == 0) {
 			for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
-				if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
+				if (ifa->ifa_addr != nullptr && (ifa->ifa_addr->sa_family == AF_INET || ifa->ifa_addr->sa_family == AF_INET6)) {
 					ifidx = if_nametoindex(ifa->ifa_name);
 					if (ifidx > 0) {
-						LOGI("[MP] Using interface %s (%i) for discovery", ifa->ifa_name, ifidx);
+						LOGI("[MP] Using %s interface %s (%i) for discovery", ifa->ifa_addr->sa_family == AF_INET6
+							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
 						break;
 					}
 				}
@@ -93,6 +94,7 @@ namespace Jazz2::Multiplayer
 		}
 		if (ifidx == 0) {
 			LOGI("[MP] No suitable interface found for discovery");
+			ifidx = if_nametoindex("wlan0");
 		}
 #else
 		std::int32_t ifidx = 0;
