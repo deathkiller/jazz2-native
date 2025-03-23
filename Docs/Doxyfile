@@ -277,6 +277,7 @@ ALIASES                = \
     "m_since_latest=@since @m_class{m-label m-success m-flat} @ref death-changelog-latest \"new&nbsp;in&nbsp;Git&nbsp;master\"" \
     "m_deprecated_since{2}=@since deprecated&nbsp;in&nbsp;\1.\2 @deprecated" \
     "m_deprecated_since_latest=@since deprecated&nbsp;in&nbsp;Git&nbsp;master @deprecated" \
+    "m_highlight_lines{1}=@xmlonly<mcss:highlight xmlns:mcss=\"http://mcss.mosra.cz/doxygen/\" mcss:lines=\"\1\" />@endxmlonly" \
     "relativeref{2}=@ref \1::\2 \"\2\""
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only).

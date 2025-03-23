@@ -32,6 +32,8 @@
 #include "../Actors/Solid/PinballBumper.h"
 #include "../Actors/Solid/PinballPaddle.h"
 #include "../Actors/Solid/SpikeBall.h"
+#include "../Actors/Weapons/ShotBase.h"
+#include "../Actors/Weapons/TNT.h"
 
 #include <float.h>
 
@@ -50,7 +52,7 @@ namespace Jazz2::Multiplayer
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, bool enableLedgeClimb)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f),
 			_initialUpdateSent(false), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0), _seqNumWarped(0), _suppressRemoting(false),
-			_ignorePackets(false), _enableLedgeClimb(enableLedgeClimb)
+			_ignorePackets(false), _enableLedgeClimb(enableLedgeClimb), _currentLaps(0), _totalLaps(0)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
 #endif
@@ -751,14 +753,40 @@ namespace Jazz2::Multiplayer
 		// TODO
 		//return LevelHandler::HandlePlayerDied(player, collider);
 
-		if (_isServer && _enableSpawning) {
-			for (const auto& [peer, peerDesc] : _peerDesc) {
+		if (_isServer) {
+			// TODO: Handle also server-local player
+			for (auto& [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
-					MemoryStream packet(12);
-					packet.WriteVariableUint32(player->_playerIndex);
-					packet.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.X * 512.0f));
-					packet.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.Y * 512.0f));
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet);
+					peerDesc.Deaths++;
+
+					MemoryStream packet1(9);
+					packet1.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Deaths);
+					packet1.WriteVariableUint32(player->_playerIndex);
+					packet1.WriteVariableUint32(peerDesc.Deaths);
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet1);
+
+					if (auto* attacker = GetWeaponOwner(collider)) {
+						for (auto& [attackerPeer, attackerPeerDesc] : _peerDesc) {
+							if (attackerPeerDesc.Player == attacker) {
+								attackerPeerDesc.Kills++;
+								
+								MemoryStream packet2(9);
+								packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Kills);
+								packet2.WriteVariableUint32(attacker->_playerIndex);
+								packet2.WriteVariableUint32(attackerPeerDesc.Kills);
+								_networkManager->SendTo(attackerPeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+								break;
+							}
+						}
+					}
+
+					if (_enableSpawning) {
+						MemoryStream packet3(12);
+						packet3.WriteVariableUint32(player->_playerIndex);
+						packet3.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.X * 512.0f));
+						packet3.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.Y * 512.0f));
+						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet3);
+					}
 					break;
 				}
 			}
@@ -864,11 +892,12 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			for (const auto& [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
-					MemoryStream packet(7);
+					MemoryStream packet(8);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
 					packet.WriteValue<std::uint16_t>((std::uint16_t)player->_weaponAmmo[(std::uint8_t)player->_currentWeapon]);
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRefreshAmmo, packet);
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					break;
 				}
 			}
@@ -881,11 +910,12 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			for (const auto& [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
-					MemoryStream packet(6);
+					MemoryStream packet(7);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponUpgrades);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_weaponUpgrades[(std::uint8_t)player->_currentWeapon]);
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRefreshWeaponUpgrades, packet);
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					break;
 				}
 			}
@@ -930,6 +960,19 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	Actors::Player* MpLevelHandler::GetWeaponOwner(Actors::ActorBase* actor)
+	{
+		if (auto* player = runtime_cast<Actors::Player*>(actor)) {
+			return player;
+		} else if (auto* shotBase = runtime_cast<Actors::Weapons::ShotBase*>(actor)) {
+			return shotBase->GetOwner();
+		} else if (auto* tnt = runtime_cast<Actors::Weapons::TNT*>(actor)) {
+			return tnt->GetOwner();
+		} else {
+			return nullptr;
+		}
+	}
+
 	void MpLevelHandler::HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags)
 	{
 		LevelHandler::HandlePlayerWarped(player, prevPos, flags);
@@ -944,8 +987,21 @@ namespace Jazz2::Multiplayer
 		}*/
 
 		if (_isServer) {
-			for (const auto& [peer, peerDesc] : _peerDesc) {
+			for (auto& [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
+					if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
+						peerDesc.Laps++;
+
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+
+						MemoryStream packet2(13);
+						packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Laps);
+						packet2.WriteVariableUint32(player->_playerIndex);
+						packet2.WriteVariableUint32(peerDesc.Laps + 1);
+						packet2.WriteVariableUint32(serverConfig.TotalLaps);
+						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+					}
+
 					MemoryStream packet(16);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
@@ -966,10 +1022,11 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			for (const auto& [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
-					MemoryStream packet(8);
+					MemoryStream packet(9);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Coins);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteVariableInt32(newCount);
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRefreshCoins, packet);
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					break;
 				}
 			}
@@ -981,13 +1038,18 @@ namespace Jazz2::Multiplayer
 		LevelHandler::HandlePlayerGems(player, gemType, prevCount, newCount);
 
 		if (_isServer) {
-			for (const auto& [peer, peerDesc] : _peerDesc) {
+			for (auto& [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
-					MemoryStream packet(9);
+					if (newCount > prevCount) {
+						peerDesc.TreasureCollected = (newCount - prevCount);
+					}
+
+					MemoryStream packet(10);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Gems);
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::uint8_t>(gemType);
 					packet.WriteVariableInt32(newCount);
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRefreshGems, packet);
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					break;
 				}
 			}
@@ -1305,16 +1367,36 @@ namespace Jazz2::Multiplayer
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
 			char infoBuffer[128];
-			formatString(infoBuffer, sizeof(infoBuffer), "Current Level: %s/%s (\f[w:80]\f[c:#707070]%s\f[/c]\f[/w])", _episodeName.data(), _levelFileName.data(), GameModeToString(serverConfig.GameMode).data());
+			formatString(infoBuffer, sizeof(infoBuffer), "Current Level: %s/%s (%s)",
+				_episodeName.data(), _levelFileName.data(), NetworkManager::GameModeToLocalizedString(serverConfig.GameMode).data());
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
-			formatString(infoBuffer, sizeof(infoBuffer), "Players: \f[w:80]\f[c:#707070]%zu\f[/c]\f[/w]/%u", _peerDesc.size() + 1, serverConfig.MaxPlayerCount);
+			formatString(infoBuffer, sizeof(infoBuffer), "Players: %u/%u",
+				(std::uint32_t)_peerDesc.size() + 1, serverConfig.MaxPlayerCount);
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			if (!_players.empty()) {
-				formatString(infoBuffer, sizeof(infoBuffer), "Server Load: %i ms", (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
+				formatString(infoBuffer, sizeof(infoBuffer), "Server Load: %i ms",
+					(std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
 			} else {
 				formatString(infoBuffer, sizeof(infoBuffer), "Server Load: - ms");
 			}
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+			if (!serverConfig.Playlist.empty()) {
+				formatString(infoBuffer, sizeof(infoBuffer), "Playlist active: %u/%u", (std::uint32_t)serverConfig.PlaylistIndex, (std::uint32_t)serverConfig.Playlist.size());
+				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+			}
+			return true;
+		} else if (line == "/players"_s) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+
+			char infoBuffer[128];
+			for (auto& [peer, peerDesc] : _peerDesc) {
+				if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
+					formatString(infoBuffer, sizeof(infoBuffer), "%s - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u - Treasure: %u",
+						globalPeerDesc->PlayerName.data(), globalPeerDesc->Points, peerDesc.Kills, peerDesc.Deaths, peerDesc.Laps,
+						serverConfig.TotalLaps, peerDesc.TreasureCollected);
+					SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+				}
+			}
 			return true;
 		} else if (line.hasPrefix("/kick "_s)) {
 			// TODO: Implement /kick
@@ -1344,7 +1426,8 @@ namespace Jazz2::Multiplayer
 
 				if (SetGameMode(gameMode)) {
 					char infoBuffer[128];
-					formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", GameModeToString(gameMode).data());
+					formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]",
+						NetworkManager::GameModeToLocalizedString(gameMode).data());
 					SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 					return true;
 				}
@@ -2171,6 +2254,101 @@ namespace Jazz2::Multiplayer
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
+				case ServerPacketType::PlayerSetProperty: {
+					MemoryStream packet(data);
+					PlayerPropertyType propertyType = (PlayerPropertyType)packet.ReadValue<std::uint8_t>();
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerSetProperty - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
+						return true;
+					}
+
+					switch (propertyType) {
+						case PlayerPropertyType::Health: {
+							// TODO
+							std::int32_t health = packet.ReadVariableInt32();
+							_players[0]->SetHealth(health);
+							break;
+						}
+						case PlayerPropertyType::Controllable: {
+							// TODO
+							break;
+						}
+						case PlayerPropertyType::Invulnerable: {
+							// TODO
+							break;
+						}
+						case PlayerPropertyType::Modifier: {
+							// TODO
+							break;
+						}
+						case PlayerPropertyType::DizzyTime: {
+							// TODO
+							std::uint32_t dizzyTime = packet.ReadVariableUint32();
+							_players[0]->SetDizzyTime(float(dizzyTime));
+							break;
+						}
+						case PlayerPropertyType::WeaponAmmo: {
+							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+							std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
+							_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
+							break;
+						}
+						case PlayerPropertyType::WeaponUpgrades: {
+							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+							std::uint8_t weaponUpgrades = packet.ReadValue<std::uint8_t>();
+							_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
+							break;
+						}
+						case PlayerPropertyType::Coins: {
+							std::int32_t newCount = packet.ReadVariableInt32();
+							_players[0]->_coins = newCount;
+							_hud->ShowCoins(newCount);
+							break;
+						}
+						case PlayerPropertyType::Gems: {
+							std::uint8_t gemType = packet.ReadValue<std::uint8_t>();
+							std::int32_t newCount = packet.ReadVariableInt32();
+							if (gemType < arraySize(_players[0]->_gems)) {
+								_players[0]->_gems[gemType] = newCount;
+								_hud->ShowGems(gemType, newCount);
+							}
+							break;
+						}
+						case PlayerPropertyType::Points: {
+							// TODO
+							break;
+						}
+						case PlayerPropertyType::Deaths: {
+							// TODO: Show deaths in HUD
+							std::uint32_t deaths = packet.ReadVariableUint32();
+							_console->WriteLine(UI::MessageLevel::Info, _f("Deaths: %u", deaths));
+							break;
+						}
+						case PlayerPropertyType::Kills: {
+							// TODO: Show kills in HUD
+							std::uint32_t kills = packet.ReadVariableUint32();
+							_console->WriteLine(UI::MessageLevel::Info, _f("Kills: %u", kills));
+							break;
+						}
+						case PlayerPropertyType::Laps: {
+							_currentLaps = packet.ReadVariableUint32();
+							_totalLaps = packet.ReadVariableUint32();
+							// TODO: Show laps in HUD
+							_console->WriteLine(UI::MessageLevel::Info, _f("Laps: %u/%u", _currentLaps, _totalLaps));
+							break;
+						}
+						case PlayerPropertyType::TreasureCollected: {
+							// TODO
+							break;
+						}
+						default: {
+							LOGD("[MP] ServerPacketType::PlayerSetProperty - received unknown property %u", (std::uint32_t)propertyType);
+							break;
+						}
+					}
+					return true;
+				}
 				case ServerPacketType::PlayerRespawn: {
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
@@ -2247,73 +2425,6 @@ namespace Jazz2::Multiplayer
 					remotablePlayer->ChangingWeaponFromServer = true;
 					static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon((WeaponType)weaponType);
 					remotablePlayer->ChangingWeaponFromServer = false;
-					return true;
-				}
-				case ServerPacketType::PlayerRefreshAmmo: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerRefreshAmmo - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
-					std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
-
-					LOGD("[MP] ServerPacketType::PlayerRefreshAmmo - playerIndex: %u, weaponType: %u, weaponAmmo: %u", playerIndex, weaponType, weaponAmmo);
-
-					_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
-					return true;
-				}
-				case ServerPacketType::PlayerRefreshWeaponUpgrades: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerRefreshWeaponUpgrades - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
-					std::uint8_t weaponUpgrades = packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ServerPacketType::PlayerRefreshWeaponUpgrades - playerIndex: %u, weaponType: %u, weaponUpgrades: %u", playerIndex, weaponType, weaponUpgrades);
-
-					_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
-					return true;
-				}
-				case ServerPacketType::PlayerRefreshCoins: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerRefreshCoins - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					std::int32_t newCount = packet.ReadVariableInt32();
-
-					LOGD("[MP] ServerPacketType::PlayerRefreshCoins - playerIndex: %u, newCount: %i", playerIndex, newCount);
-
-					_players[0]->_coins = newCount;
-					_hud->ShowCoins(newCount);
-					return true;
-				}
-				case ServerPacketType::PlayerRefreshGems: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerRefreshGems - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					std::uint8_t gemType = packet.ReadValue<std::uint8_t>();
-					std::int32_t newCount = packet.ReadVariableInt32();
-
-					LOGD("[MP] ServerPacketType::PlayerRefreshGems - playerIndex: %u, gemType: %u, newCount: %i", playerIndex, gemType, newCount);
-
-					if (gemType < arraySize(_players[0]->_gems)) {
-						_players[0]->_gems[gemType] = newCount;
-						_hud->ShowGems(gemType, newCount);
-					}
 					return true;
 				}
 				case ServerPacketType::PlayerTakeDamage: {
@@ -2796,20 +2907,6 @@ namespace Jazz2::Multiplayer
 				runtime_cast<Actors::Environment::SwingingVine*>(actor) || runtime_cast<Actors::Solid::Bridge*>(actor) ||
 				runtime_cast<Actors::Solid::MovingPlatform*>(actor) || runtime_cast<Actors::Solid::PinballBumper*>(actor) ||
 				runtime_cast<Actors::Solid::PinballPaddle*>(actor) || runtime_cast<Actors::Solid::SpikeBall*>(actor));
-	}
-
-	StringView MpLevelHandler::GameModeToString(MpGameMode mode)
-	{
-		switch (mode) {
-			case MpGameMode::Battle: return _("Battle");
-			case MpGameMode::TeamBattle: return _("Team Battle");
-			case MpGameMode::CaptureTheFlag: return _("Capture The Flag");
-			case MpGameMode::Race: return _("Race");
-			case MpGameMode::TeamRace: return _("Team Race");
-			case MpGameMode::TreasureHunt: return _("Treasure Hunt");
-			case MpGameMode::Cooperation: return _("Cooperation");
-			default: return _("Unknown");
-		}
 	}
 
 	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor)

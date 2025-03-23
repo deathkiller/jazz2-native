@@ -341,8 +341,7 @@ See also @ref third-party for the licenses of the libraries used.
 		defined(DEATH_ENABLE_POPCNT) && \
 		defined(DEATH_ENABLE_LZCNT)
 	DEATH_ENABLE(SSE41,POPCNT,LZCNT) int lookup(
-		DEATH_CPU_DECLARE(Cpu::Sse41|Cpu::Popcnt|Cpu::Lzcnt), …)
-	{
+		DEATH_CPU_DECLARE(Cpu::Sse41|Cpu::Popcnt|Cpu::Lzcnt), …) {
 		…
 	}
 	#endif

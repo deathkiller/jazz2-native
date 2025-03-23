@@ -4,6 +4,7 @@
 
 #include "ServerDiscovery.h"
 #include "../PreferencesCache.h"
+#include "../../nCine/I18n.h"
 
 #include "../../simdjson/simdjson.h"
 
@@ -37,7 +38,7 @@ namespace Jazz2::Multiplayer
 	bool NetworkManager::CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)
 	{
 		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
-		_serverConfig->StartUnixTime = DateTime::Now().ToUnixMilliseconds() / 1000;
+		_serverConfig->StartUnixTimestamp = DateTime::Now().ToUnixMilliseconds() / 1000;
 		bool result = NetworkManagerBase::CreateServer(handler, _serverConfig->ServerPort);
 
 		if (result && !_serverConfig->IsPrivate) {
@@ -82,6 +83,12 @@ namespace Jazz2::Multiplayer
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 
+		serverConfig.TotalPlayerPoints = 50;
+		serverConfig.InitialPlayerHealth = 5;
+		serverConfig.TotalKills = 10;
+		serverConfig.TotalLaps = 3;
+		serverConfig.TotalTreasureCollected = 100;
+
 		// Try to load configuration from "Jazz2.Server.config" file
 		auto configPath = fs::CombinePath(PreferencesCache::GetDirectory(), "Jazz2.Server.config"_s);
 		auto s = fs::Open(configPath, FileAccess::Read);
@@ -116,24 +123,14 @@ namespace Jazz2::Multiplayer
 					serverConfig.MaxPlayerCount = std::uint32_t(maxPlayerCount);
 				}
 
+				std::int64_t minPlayerCount;
+				if (doc["MinPlayerCount"].get(minPlayerCount) == SUCCESS && minPlayerCount >= 0 && minPlayerCount <= UINT32_MAX) {
+					serverConfig.MinPlayerCount = std::uint32_t(minPlayerCount);
+				}
+
 				std::string_view gameMode;
 				if (doc["GameMode"].get(gameMode) == SUCCESS) {
-					auto gameModeString = StringUtils::lowercase(StringView(gameMode));
-					if (gameModeString == "battle"sv || gameModeString == "b"sv) {
-						serverConfig.GameMode = MpGameMode::Battle;
-					} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
-						serverConfig.GameMode = MpGameMode::TeamBattle;
-					} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
-						serverConfig.GameMode = MpGameMode::CaptureTheFlag;
-					} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
-						serverConfig.GameMode = MpGameMode::Race;
-					} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
-						serverConfig.GameMode = MpGameMode::TeamRace;
-					} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
-						serverConfig.GameMode = MpGameMode::TreasureHunt;
-					} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
-						serverConfig.GameMode = MpGameMode::Cooperation;
-					}
+					serverConfig.GameMode = StringToGameMode(gameMode);
 				}
 
 				std::int64_t serverPort;
@@ -144,6 +141,11 @@ namespace Jazz2::Multiplayer
 				bool isPrivate;
 				if (doc["IsPrivate"].get(isPrivate) == SUCCESS) {
 					serverConfig.IsPrivate = isPrivate;
+				}
+
+				bool requiresDiscordAuth;
+				if (doc["RequiresDiscordAuth"].get(requiresDiscordAuth) == SUCCESS) {
+					serverConfig.RequiresDiscordAuth = requiresDiscordAuth;
 				}
 
 				std::int64_t allowedPlayerTypes;
@@ -204,9 +206,104 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				bool requiresDiscordAuth;
-				if (doc["RequiresDiscordAuth"].get(requiresDiscordAuth) == SUCCESS) {
-					serverConfig.RequiresDiscordAuth = requiresDiscordAuth;
+				// Game mode specific settings
+				bool randomizePlaylist;
+				if (doc["RandomizePlaylist"].get(randomizePlaylist) == SUCCESS) {
+					serverConfig.RandomizePlaylist = randomizePlaylist;
+				}
+
+				bool isElimination;
+				if (doc["IsElimination"].get(isElimination) == SUCCESS) {
+					serverConfig.IsElimination = isElimination;
+				}
+
+				std::int64_t totalPlayerPoints;
+				if (doc["TotalPlayerPoints"].get(totalPlayerPoints) == SUCCESS && totalPlayerPoints >= 0 && totalPlayerPoints <= INT32_MAX) {
+					serverConfig.TotalPlayerPoints = std::uint32_t(totalPlayerPoints);
+				}
+
+				std::int64_t initialPlayerHealth;
+				if (doc["InitialPlayerHealth"].get(initialPlayerHealth) == SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
+					serverConfig.InitialPlayerHealth = std::uint32_t(initialPlayerHealth);
+				}
+
+				std::int64_t maxGameTimeSecs;
+				if (doc["MaxGameTimeSecs"].get(maxGameTimeSecs) == SUCCESS && maxGameTimeSecs >= 0 && maxGameTimeSecs <= INT32_MAX) {
+					serverConfig.MaxGameTimeSecs = std::uint32_t(maxGameTimeSecs);
+				}
+
+				std::int64_t totalKills;
+				if (doc["TotalKills"].get(totalKills) == SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
+					serverConfig.TotalKills = std::uint32_t(totalKills);
+				}
+
+				std::int64_t totalLaps;
+				if (doc["TotalLaps"].get(totalLaps) == SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
+					serverConfig.TotalLaps = std::uint32_t(totalLaps);
+				}
+
+				std::int64_t totalTreasureCollected;
+				if (doc["TotalTreasureCollected"].get(totalTreasureCollected) == SUCCESS && totalTreasureCollected >= 0 && totalTreasureCollected <= INT32_MAX) {
+					serverConfig.TotalTreasureCollected = std::uint32_t(totalTreasureCollected);
+				}
+
+				// Playlist
+				serverConfig.Playlist.clear();
+
+				ondemand::array playlist;
+				if (doc["Playlist"].get(playlist) == SUCCESS) {
+					for (auto entry : playlist) {
+						PlaylistEntry playlistEntry{};
+
+						std::string_view levelName;
+						if (entry["LevelName"].get(levelName) == SUCCESS) {
+							playlistEntry.LevelName = levelName;
+						}
+
+						std::string_view gameMode;
+						if (entry["GameMode"].get(gameMode) == SUCCESS) {
+							playlistEntry.GameMode = StringToGameMode(gameMode);
+						}
+
+						bool isElimination;
+						if (entry["IsElimination"].get(isElimination) == SUCCESS) {
+							playlistEntry.IsElimination = isElimination;
+						}
+
+						std::int64_t initialPlayerHealth;
+						if (entry["InitialPlayerHealth"].get(initialPlayerHealth) == SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
+							playlistEntry.InitialPlayerHealth = std::uint32_t(initialPlayerHealth);
+						}
+
+						std::int64_t maxGameTimeSecs;
+						if (entry["MaxGameTimeSecs"].get(maxGameTimeSecs) == SUCCESS && maxGameTimeSecs >= 0 && maxGameTimeSecs <= INT32_MAX) {
+							playlistEntry.MaxGameTimeSecs = std::uint32_t(maxGameTimeSecs);
+						}
+
+						std::int64_t totalKills;
+						if (entry["TotalKills"].get(totalKills) == SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
+							playlistEntry.TotalKills = std::uint32_t(totalKills);
+						}
+
+						std::int64_t totalLaps;
+						if (entry["TotalLaps"].get(totalLaps) == SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
+							playlistEntry.TotalLaps = std::uint32_t(totalLaps);
+						}
+
+						std::int64_t totalTreasureCollected;
+						if (entry["TotalTreasureCollected"].get(totalTreasureCollected) == SUCCESS && totalTreasureCollected >= 0 && totalTreasureCollected <= INT32_MAX) {
+							playlistEntry.TotalTreasureCollected = std::uint32_t(totalTreasureCollected);
+						}
+
+						if (!playlistEntry.LevelName.empty() && serverConfig.GameMode != MpGameMode::Unknown) {
+							serverConfig.Playlist.push_back(std::move(playlistEntry));
+						}
+					}
+				}
+
+				std::int64_t playlistIndex;
+				if (doc["PlaylistIndex"].get(playlistIndex) == SUCCESS && playlistIndex >= -1 && playlistIndex < serverConfig.Playlist.size()) {
+					serverConfig.PlaylistIndex = std::uint32_t(playlistIndex);
 				}
 			} else {
 				LOGE("Server configuration template from \"%s\" cannot be parsed", configPath.data());
@@ -241,6 +338,42 @@ namespace Jazz2::Multiplayer
 		return serverConfig;
 	}
 
+	StringView NetworkManager::GameModeToLocalizedString(MpGameMode mode)
+	{
+		switch (mode) {
+			case MpGameMode::Battle: return _("Battle");
+			case MpGameMode::TeamBattle: return _("Team Battle");
+			case MpGameMode::CaptureTheFlag: return _("Capture The Flag");
+			case MpGameMode::Race: return _("Race");
+			case MpGameMode::TeamRace: return _("Team Race");
+			case MpGameMode::TreasureHunt: return _("Treasure Hunt");
+			case MpGameMode::Cooperation: return _("Cooperation");
+			default: return _("Unknown");
+		}
+	}
+
+	MpGameMode NetworkManager::StringToGameMode(StringView value)
+	{
+		auto gameModeString = StringUtils::lowercase(value);
+		if (gameModeString == "battle"sv || gameModeString == "b"sv) {
+			return MpGameMode::Battle;
+		} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
+			return MpGameMode::TeamBattle;
+		} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
+			return MpGameMode::CaptureTheFlag;
+		} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
+			return MpGameMode::Race;
+		} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
+			return MpGameMode::TeamRace;
+		} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
+			return MpGameMode::TreasureHunt;
+		} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
+			return MpGameMode::Cooperation;
+		} else {
+			return MpGameMode::Unknown;
+		}
+	}
+
 	ConnectionResult NetworkManager::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 	{
 		ConnectionResult result = NetworkManagerBase::OnPeerConnected(peer, clientData);
@@ -262,7 +395,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	NetworkManager::PeerDesc::PeerDesc()
-		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None)
+		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0)
 	{
 	}
 }

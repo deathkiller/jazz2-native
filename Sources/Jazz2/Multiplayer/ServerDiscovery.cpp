@@ -371,7 +371,7 @@ namespace Jazz2::Multiplayer
 
 		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u,\"s\":%llu,\"l\":%i,\"g\":%u}",
 			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), _server->GetPeerCount(), serverConfig.MaxPlayerCount,
-			serverConfig.StartUnixTime, serverLoad, std::uint32_t(serverConfig.GameMode));
+			serverConfig.StartUnixTimestamp, serverLoad, std::uint32_t(serverConfig.GameMode));
 
 		_onlineRequest = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		_onlineRequest.SetMethod("POST"_s);

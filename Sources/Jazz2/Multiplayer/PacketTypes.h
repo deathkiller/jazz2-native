@@ -61,26 +61,42 @@ namespace Jazz2::Multiplayer
 		UpdateAllActors,
 		MarkRemoteActorAsPlayer,
 
+		PlayerSetProperty,
 		PlayerRespawn,
 		PlayerMoveInstantly,
 		PlayerAckWarped,			// TODO
 		PlayerActivateForce,		// TODO
-		PlayerAddHealth,			// TODO
 		PlayerEmitWeaponFlare,
 		PlayerChangeWeapon,
-		PlayerRefreshAmmo,
-		PlayerRefreshWeaponUpgrades,
-		PlayerRefreshCoins,
-		PlayerRefreshGems,
-		PlayerSetControllable,		// TODO
-		PlayerSetDizzyTime,			// TODO
-		PlayerSetInvulnerability,	// TODO
-		PlayerSetLaps,				// TODO
-		PlayerSetModifier,			// TODO
-		PlayerSetStats,				// TODO
 		PlayerTakeDamage,
 		PlayerActivateSpring,
 		PlayerWarpIn
+	};
+
+	/** @brief Player property type from @ref ServerPacketType::PlayerSetProperty */
+	enum class PlayerPropertyType
+	{
+		Unknown,
+
+		Health = 1,
+		Controllable,
+		Invulnerable,
+		Modifier,
+		DizzyTime,
+
+		WeaponAmmo = 10,
+		WeaponUpgrades,
+
+		Coins = 20,
+		Gems,
+
+		Points = 30,
+		Deaths,
+		Kills,
+		Laps,
+		TreasureCollected,
+
+		Count
 	};
 }
 
