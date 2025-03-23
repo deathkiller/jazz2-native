@@ -359,7 +359,7 @@ namespace Jazz2::Actors
 		virtual void OnHitWall(float timeMult);
 
 		/** @brief Called when an event is triggered */
-		virtual void OnTriggeredEvent(EventType eventType, uint8_t* eventParams);
+		virtual void OnTriggeredEvent(EventType eventType, std::uint8_t* eventParams);
 
 		/** @brief Performs standard movement behavior */
 		void TryStandardMovement(float timeMult, Tiles::TileCollisionParams& params);

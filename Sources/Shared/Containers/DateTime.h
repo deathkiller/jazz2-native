@@ -86,8 +86,7 @@ namespace Death { namespace Containers {
 			constexpr TimeZone(std::int32_t offset = 0) noexcept : _offset(offset) { }
 
 			/** @brief Returns `true` if it describes local timezone */
-			constexpr bool IsLocal() const noexcept
-			{
+			constexpr bool IsLocal() const noexcept {
 				return (_offset == INT32_MIN);
 			}
 
@@ -113,8 +112,7 @@ namespace Death { namespace Containers {
 			explicit operator bool() const noexcept { return IsValid(); }
 
 			/** @brief Returns the day of the week */
-			std::int32_t GetWeekDay() noexcept
-			{
+			std::int32_t GetWeekDay() noexcept {
 				if (_dayOfWeek == -1) {
 					ComputeWeekDay();
 				}
@@ -139,8 +137,7 @@ namespace Death { namespace Containers {
 		static DateTime UtcNow() noexcept;
 
 		/** @brief Returns @ref DateTime created from number of milliseconds since 00:00, Jan 1 1970 UTC */
-		static constexpr DateTime FromUnixMilliseconds(std::int64_t value) noexcept
-		{
+		static constexpr DateTime FromUnixMilliseconds(std::int64_t value) noexcept {
 			DateTime dt;
 			dt._time = value;
 			return dt;
@@ -297,16 +294,14 @@ namespace Death { namespace Containers {
 		String ToString() const noexcept;
 
 		constexpr DateTime& operator+=(const TimeSpan& ts) noexcept;
-		constexpr DateTime operator+(const TimeSpan& ts) const noexcept
-		{
+		constexpr DateTime operator+(const TimeSpan& ts) const noexcept {
 			DateTime dt(*this);
 			dt += ts;
 			return dt;
 		}
 
 		constexpr DateTime& operator-=(const TimeSpan& ts) noexcept;
-		constexpr DateTime operator-(const TimeSpan& ts) const noexcept
-		{
+		constexpr DateTime operator-(const TimeSpan& ts) const noexcept {
 			DateTime dt(*this);
 			dt -= ts;
 			return dt;
@@ -314,28 +309,22 @@ namespace Death { namespace Containers {
 
 		constexpr TimeSpan operator-(const DateTime& dt) const noexcept;
 
-		constexpr bool operator<(const DateTime& dt) const noexcept
-		{
+		constexpr bool operator<(const DateTime& dt) const noexcept {
 			return (_time < dt._time);
 		}
-		constexpr bool operator<=(const DateTime& dt) const noexcept
-		{
+		constexpr bool operator<=(const DateTime& dt) const noexcept {
 			return (_time <= dt._time);
 		}
-		constexpr bool operator>(const DateTime& dt) const noexcept
-		{
+		constexpr bool operator>(const DateTime& dt) const noexcept {
 			return (_time > dt._time);
 		}
-		constexpr bool operator>=(const DateTime& dt) const noexcept
-		{
+		constexpr bool operator>=(const DateTime& dt) const noexcept {
 			return (_time >= dt._time);
 		}
-		constexpr bool operator==(const DateTime& dt) const noexcept
-		{
+		constexpr bool operator==(const DateTime& dt) const noexcept {
 			return (_time == dt._time);
 		}
-		constexpr bool operator!=(const DateTime& dt) const noexcept
-		{
+		constexpr bool operator!=(const DateTime& dt) const noexcept {
 			return (_time != dt._time);
 		}
 
@@ -352,38 +341,32 @@ namespace Death { namespace Containers {
 	{
 	public:
 		/** @brief Returns @ref TimeSpan that represents a specified number of milliseconds */
-		static constexpr TimeSpan FromMilliseconds(std::int64_t milliseconds) noexcept
-		{
+		static constexpr TimeSpan FromMilliseconds(std::int64_t milliseconds) noexcept {
 			return TimeSpan(milliseconds);
 		}
 
 		/** @brief Returns @ref TimeSpan that represents a specified number of seconds */
-		static constexpr TimeSpan FromSeconds(std::int64_t seconds) noexcept
-		{
+		static constexpr TimeSpan FromSeconds(std::int64_t seconds) noexcept {
 			return TimeSpan(0, 0, seconds);
 		}
 
 		/** @brief Returns @ref TimeSpan that represents a specified number of minutes */
-		static constexpr TimeSpan FromMinutes(std::int32_t minutes) noexcept
-		{
+		static constexpr TimeSpan FromMinutes(std::int32_t minutes) noexcept {
 			return TimeSpan(0, minutes, 0);
 		}
 
 		/** @brief Returns @ref TimeSpan that represents a specified number of hours */
-		static constexpr TimeSpan FromHours(std::int32_t hours) noexcept
-		{
+		static constexpr TimeSpan FromHours(std::int32_t hours) noexcept {
 			return TimeSpan(hours, 0, 0);
 		}
 
 		/** @brief Returns @ref TimeSpan that represents a specified number of days */
-		static constexpr TimeSpan FromDays(std::int32_t days) noexcept
-		{
+		static constexpr TimeSpan FromDays(std::int32_t days) noexcept {
 			return FromHours(24 * days);
 		}
 
 		/** @brief Returns @ref TimeSpan that represents a specified number of weeks */
-		static constexpr TimeSpan FromWeeks(std::int32_t days) noexcept
-		{
+		static constexpr TimeSpan FromWeeks(std::int32_t days) noexcept {
 			return FromDays(7 * days);
 		}
 
@@ -422,69 +405,55 @@ namespace Death { namespace Containers {
 		/** @brief Converts this instance to the string representation */
 		String ToString() const noexcept;
 
-		constexpr TimeSpan& operator+=(const TimeSpan& ts) noexcept
-		{
+		constexpr TimeSpan& operator+=(const TimeSpan& ts) noexcept {
 			_value += ts.GetValue();
 			return *this;
 		}
-		constexpr TimeSpan operator+(const TimeSpan& ts) const noexcept
-		{
+		constexpr TimeSpan operator+(const TimeSpan& ts) const noexcept {
 			return TimeSpan(GetValue() + ts.GetValue());
 		}
 
-		constexpr TimeSpan& operator-=(const TimeSpan& ts) noexcept
-		{
+		constexpr TimeSpan& operator-=(const TimeSpan& ts) noexcept {
 			_value -= ts.GetValue();
 			return *this;
 		}
-		constexpr TimeSpan operator-(const TimeSpan& ts) const noexcept
-		{
+		constexpr TimeSpan operator-(const TimeSpan& ts) const noexcept {
 			return TimeSpan(GetValue() - ts.GetValue());
 		}
 
-		constexpr TimeSpan& operator*=(std::int32_t n) noexcept
-		{
+		constexpr TimeSpan& operator*=(std::int32_t n) noexcept {
 			_value *= n;
 			return *this;
 		}
-		constexpr TimeSpan operator*(std::int32_t n) const noexcept
-		{
+		constexpr TimeSpan operator*(std::int32_t n) const noexcept {
 			return TimeSpan(GetValue() * n);
 		}
 
-		constexpr TimeSpan& operator-() noexcept
-		{
+		constexpr TimeSpan& operator-() noexcept {
 			_value = -GetValue();
 			return *this;
 		}
 
-		constexpr bool operator!() const noexcept
-		{
+		constexpr bool operator!() const noexcept {
 			return (_value == 0);
 		}
 
-		constexpr bool operator<(const TimeSpan& ts) const noexcept
-		{
+		constexpr bool operator<(const TimeSpan& ts) const noexcept {
 			return GetValue() < ts.GetValue();
 		}
-		constexpr bool operator<=(const TimeSpan& ts) const noexcept
-		{
+		constexpr bool operator<=(const TimeSpan& ts) const noexcept {
 			return GetValue() <= ts.GetValue();
 		}
-		constexpr bool operator>(const TimeSpan& ts) const noexcept
-		{
+		constexpr bool operator>(const TimeSpan& ts) const noexcept {
 			return GetValue() > ts.GetValue();
 		}
-		constexpr bool operator>=(const TimeSpan& ts) const noexcept
-		{
+		constexpr bool operator>=(const TimeSpan& ts) const noexcept {
 			return GetValue() >= ts.GetValue();
 		}
-		constexpr bool operator==(const TimeSpan& ts) const noexcept
-		{
+		constexpr bool operator==(const TimeSpan& ts) const noexcept {
 			return GetValue() == ts.GetValue();
 		}
-		constexpr bool operator!=(const TimeSpan& ts) const noexcept
-		{
+		constexpr bool operator!=(const TimeSpan& ts) const noexcept {
 			return GetValue() != ts.GetValue();
 		}
 

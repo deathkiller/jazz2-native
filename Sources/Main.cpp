@@ -283,8 +283,9 @@ void GameEventHandler::OnInitialize()
 			// TODO: Allow to configure server settings from command line
 			ServerInitialization serverInit;
 			serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
-			serverInit.Configuration.GameMode = MpGameMode::Battle;
-			//serverInit.Configuration.IsPrivate = _privateServer;
+			serverInit.InitialLevel.IsLocalSession = false;
+			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
+			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
 
 			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
 				auto level = config.argv(i + 1).partition('/');
@@ -294,10 +295,6 @@ void GameEventHandler::OnInitialize()
 				serverInit.InitialLevel.EpisodeName = "prince"_s;
 				serverInit.InitialLevel.LevelName = "01_castle1"_s;
 			}
-
-			serverInit.InitialLevel.IsLocalSession = false;
-			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
-			//serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
 
 			CreateServer(std::move(serverInit));
 			StartProcessingStdin();
@@ -363,8 +360,9 @@ void GameEventHandler::OnInitialize()
 			// TODO: Allow to configure server settings from command line
 			ServerInitialization serverInit;
 			serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
-			serverInit.Configuration.GameMode = MpGameMode::Battle;
-			//serverInit.Configuration.IsPrivate = _privateServer;
+			serverInit.InitialLevel.IsLocalSession = false;
+			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
+			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
 
 			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
 				auto level = config.argv(i + 1).partition('/');
@@ -374,10 +372,6 @@ void GameEventHandler::OnInitialize()
 				serverInit.InitialLevel.EpisodeName = "prince"_s;
 				serverInit.InitialLevel.LevelName = "01_castle1"_s;
 			}
-
-			serverInit.InitialLevel.IsLocalSession = false;
-			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
-			//serverInit.InitialLevel.PlayerCarryOvers[0].Type = PlayerType::Jazz;
 
 			CreateServer(std::move(serverInit));
 			return;

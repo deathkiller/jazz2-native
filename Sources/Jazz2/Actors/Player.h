@@ -242,6 +242,8 @@ namespace Jazz2::Actors
 			Closing
 		};
 
+		/** @{ @name Constants */
+
 		static constexpr float MaxDashingSpeed = 9.0f;
 		static constexpr float MaxRunningSpeed = 4.0f;
 		static constexpr float MaxVineSpeed = 2.0f;
@@ -262,6 +264,8 @@ namespace Jazz2::Actors
 			"Electro",
 			"Thunderbolt"
 		};
+
+		/** @} */
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring

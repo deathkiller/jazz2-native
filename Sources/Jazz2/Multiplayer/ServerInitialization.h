@@ -44,6 +44,9 @@ namespace Jazz2::Multiplayer
 		HashMap<String, String> BannedIPAddresses;
 		/** @brief Whether Discord authentication is required to join the server */
 		bool RequiresDiscordAuth;
+
+		/** @brief Start time of the server as Unix timestamp */
+		std::uint64_t StartUnixTime;
 	};
 
 	/**
