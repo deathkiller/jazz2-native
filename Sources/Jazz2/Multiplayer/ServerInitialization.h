@@ -63,7 +63,7 @@ namespace Jazz2::Multiplayer
 		bool RequiresDiscordAuth;
 		/** @brief Allowed player types as bitmask of @ref PlayerType */
 		std::uint8_t AllowedPlayerTypes;
-		/** @brief Time after which inactive players will be kicked, in seconds, `-1` to disable */
+		/** @brief Time after which inactive players will be kicked, in seconds, -1 to disable */
 		std::int32_t IdleKickTimeSecs;
 		/** @brief List of unique player IDs with admin rights, value contains list of privileges, or `*` for all privileges */
 		HashMap<String, String> AdminUniquePlayerIDs;

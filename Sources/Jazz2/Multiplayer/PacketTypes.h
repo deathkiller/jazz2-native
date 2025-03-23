@@ -25,7 +25,7 @@ namespace Jazz2::Multiplayer
 		LevelReady,
 		ChatMessage,
 
-		PlayerReady = 10,
+		PlayerReady = 30,
 		PlayerUpdate,
 		PlayerKeyPress,
 		PlayerChangeWeaponRequest

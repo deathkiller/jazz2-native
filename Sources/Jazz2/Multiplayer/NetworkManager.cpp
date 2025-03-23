@@ -253,7 +253,15 @@ namespace Jazz2::Multiplayer
 				ondemand::array playlist;
 				if (doc["Playlist"].get(playlist) == SUCCESS) {
 					for (auto entry : playlist) {
+						// Playlist entry inherits all properties from the main server configuration
 						PlaylistEntry playlistEntry{};
+						playlistEntry.GameMode = serverConfig.GameMode;
+						playlistEntry.IsElimination = serverConfig.IsElimination;
+						playlistEntry.InitialPlayerHealth = serverConfig.InitialPlayerHealth;
+						playlistEntry.MaxGameTimeSecs = serverConfig.MaxGameTimeSecs;
+						playlistEntry.TotalKills = serverConfig.TotalKills;
+						playlistEntry.TotalLaps = serverConfig.TotalLaps;
+						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
 
 						std::string_view levelName;
 						if (entry["LevelName"].get(levelName) == SUCCESS) {
