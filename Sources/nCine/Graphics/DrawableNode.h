@@ -16,12 +16,16 @@ namespace nCine
 		friend class Viewport;
 
 	public:
+		/** @{ @name Constants */
+
 		// Notable anchor points for a drawable node
 		static const Vector2f AnchorCenter;
 		static const Vector2f AnchorBottomLeft;
 		static const Vector2f AnchorTopLeft;
 		static const Vector2f AnchorBottomRight;
 		static const Vector2f AnchorTopRight;
+
+		/** @} */
 
 		/// Presets for blending factors
 		enum class BlendingPreset

@@ -83,8 +83,7 @@ namespace Jazz2::Input
 	class RgbLights
 	{
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Maximum number of individual lights */
 		static constexpr std::int32_t ColorsSize = AURA_COLORS_SIZE;

@@ -14,8 +14,7 @@ namespace Jazz2::UI
 	class Font
 	{
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Default (yellow) font color */
 		static constexpr Colorf DefaultColor = Colorf(333.0f, 333.0f, 333.0f, 1.0f);

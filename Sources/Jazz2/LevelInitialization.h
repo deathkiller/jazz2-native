@@ -15,8 +15,7 @@ namespace Jazz2
 	/** @brief Player carry over between levels */
 	struct PlayerCarryOver
 	{
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Number of weapons */
 		static constexpr std::int32_t WeaponCount = (std::int32_t)WeaponType::Count;
@@ -44,8 +43,7 @@ namespace Jazz2
 	/** @brief Level initialization parameters */
 	struct LevelInitialization
 	{
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Maximum player count */
 		static constexpr std::int32_t MaxPlayerCount = 4;

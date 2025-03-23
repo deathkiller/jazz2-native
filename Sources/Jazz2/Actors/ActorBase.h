@@ -293,8 +293,7 @@ namespace Jazz2::Actors
 			static std::int32_t NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max);
 		};
 
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Alpha transparency threshold */
 		static constexpr std::uint8_t AlphaThreshold = 40;

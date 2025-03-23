@@ -28,8 +28,12 @@ namespace nCine
 			SameAsParent
 		};
 
+		/** @{ @name Constants */
+
 		/// Minimum amount of rotation to trigger a sine and cosine calculation
 		static constexpr float MinRotation = 0.5f * fDegToRad;
+
+		/** @} */
 
 		/// Constructor for a node with a parent and a specified relative position
 		SceneNode(SceneNode* parent, float x, float y);

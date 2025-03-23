@@ -58,6 +58,8 @@ namespace nCine
 			Custom
 		};
 
+		/** @{ @name Constants */
+
 		// Shader uniform block and model matrix uniform names
 		static constexpr char InstanceBlockName[] = "InstanceBlock";
 		static constexpr char InstancesBlockName[] = "InstancesBlock"; // for batched shaders
@@ -79,6 +81,8 @@ namespace nCine
 		static constexpr char TexCoordsAttributeName[] = "aTexCoords";
 		static constexpr char MeshIndexAttributeName[] = "aMeshIndex";
 		static constexpr char ColorAttributeName[] = "aColor";
+
+		/** @} */
 
 		/// Default constructor
 		Material();

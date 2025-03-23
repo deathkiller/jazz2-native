@@ -93,8 +93,12 @@ namespace nCine
 			Count
 		};
 
+		/** @{ @name Constants */
+
 		/** @brief Can be used in @ref AttachTraceTarget() to attach to a console */
 		static constexpr char const* ConsoleTarget = "\n";
+
+		/** @} */
 
 		/** @brief Returns the configuration used to initialize the application */
 		inline const AppConfiguration& GetAppConfiguration() const { return appCfg_; }

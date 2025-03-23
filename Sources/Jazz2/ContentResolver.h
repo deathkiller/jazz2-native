@@ -41,8 +41,7 @@ namespace Jazz2
 	class ContentResolver
 	{
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Maximum number of palettes */
 		static constexpr std::int32_t PaletteCount = 256;

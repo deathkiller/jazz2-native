@@ -18,7 +18,14 @@ namespace nCine
 		class Colorf
 		{
 		public:
+			/** @{ @name Constants */
+
+			/** @brief Number of channels */
 			static constexpr std::int32_t NumChannels = 4;
+
+			/** @} */
+
+			/** @{ @name Predefined colors */
 
 			static const Colorf Black;
 			static const Colorf White;
@@ -28,6 +35,8 @@ namespace nCine
 			static const Colorf Yellow;
 			static const Colorf Magenta;
 			static const Colorf Cyan;
+
+			/** @} */
 
 			/** @brief Red */
 			float R;

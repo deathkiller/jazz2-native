@@ -97,10 +97,14 @@ namespace nCine
 			static Matrix4x4 Frustum(T left, T right, T bottom, T top, T near, T far);
 			static Matrix4x4 Perspective(T fovY, T aspect, T near, T far);
 
+			/** @{ @name Constants */
+
 			/// A matrix with all zero elements
 			static const Matrix4x4 Zero;
 			/// An identity matrix
 			static const Matrix4x4 Identity;
+
+			/** @} */
 
 		private:
 			Vector4<T> vecs_[4];

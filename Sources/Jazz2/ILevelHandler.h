@@ -41,8 +41,7 @@ namespace Jazz2
 		DEATH_RUNTIME_OBJECT();
 
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Layer of the main plane */
 		static constexpr std::int32_t MainPlaneZ = 500;

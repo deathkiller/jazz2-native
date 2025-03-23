@@ -40,6 +40,10 @@ namespace nCine
 #endif
 
 	public:
+		/** @{ @name Constants */
+
 		static const std::uint32_t HeaderSize = sizeof(WavHeader);
+
+		/** @} */
 	};
 }

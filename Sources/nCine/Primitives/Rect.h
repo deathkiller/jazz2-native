@@ -115,8 +115,12 @@ namespace nCine
 			bool operator==(const Rect& rect) const;
 			bool operator!=(const Rect& rect) const;
 
+			/** @{ @name Constants */
+
 			/// Empty rectangle
 			static const Rect Empty;
+
+			/** @} */
 		};
 
 		/// Rectangle in a two dimensional space of floats

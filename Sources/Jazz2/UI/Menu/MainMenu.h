@@ -37,8 +37,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Default width of viewport */
 		static constexpr int32_t DefaultWidth = 720;

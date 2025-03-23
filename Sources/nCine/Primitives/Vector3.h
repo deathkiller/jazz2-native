@@ -99,6 +99,8 @@ namespace nCine
 			static Vector3 Cross(Vector3 v1, Vector3 v2);
 			static Vector3 Lerp(Vector3 a, Vector3 b, float t);
 
+			/** @{ @name Constants */
+
 			/// A vector with all zero elements
 			static const Vector3 Zero;
 			/// A unit vector on the X axis
@@ -107,6 +109,8 @@ namespace nCine
 			static const Vector3 YAxis;
 			/// A unit vector on the Z axis
 			static const Vector3 ZAxis;
+
+			/** @} */
 		};
 
 		/// Three-component vector of floats

@@ -163,8 +163,7 @@ namespace Jazz2::Tiles
 #endif
 
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Maximum number of triggers */
 		static constexpr std::int32_t TriggerCount = 32;
