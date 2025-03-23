@@ -65,8 +65,7 @@ namespace Jazz2::Input
 		ControlScheme() = delete;
 		~ControlScheme() = delete;
 
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Maximum number of supported local players */
 		static constexpr std::int32_t MaxSupportedPlayers = 4;

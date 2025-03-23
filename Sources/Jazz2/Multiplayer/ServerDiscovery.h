@@ -77,8 +77,7 @@ namespace Jazz2::Multiplayer
 	class ServerDiscovery
 	{
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief UDP port for server discovery broadcast */
 		static constexpr std::uint16_t DiscoveryPort = 7439;

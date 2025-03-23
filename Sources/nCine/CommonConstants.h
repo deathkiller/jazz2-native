@@ -4,6 +4,8 @@
 
 namespace nCine
 {
+	/** @{ @name Constants */
+
 	/** @brief 3.1415... (double) */
 	constexpr double Pi = 3.141592653589793;
 	/** @brief 3.1415... */
@@ -43,4 +45,6 @@ namespace nCine
 	constexpr float fRadAngle270 = fPi + fPiOver2;
 	/** @brief 360 degrees as radians */
 	constexpr float fRadAngle360 = fTwoPi;
+
+	/** @} */
 }

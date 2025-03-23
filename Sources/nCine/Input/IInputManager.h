@@ -57,6 +57,9 @@ namespace nCine
 			HiddenLocked
 		};
 
+		/** @{ @name Constants */
+
+		/** @brief Maximum number of joysticks */
 		static const std::int32_t MaxNumJoysticks;
 
 		// From `XInput.h` in DirectX SDK
@@ -65,6 +68,8 @@ namespace nCine
 		static constexpr float TriggerDeadZone = 30 / 32767.0f;
 		static constexpr float AnalogButtonDeadZone = 0.4f;
 		static constexpr float TriggerButtonDeadZone = 0.02f;
+
+		/** @} */
 
 		IInputManager() {}
 		virtual ~IInputManager() {}

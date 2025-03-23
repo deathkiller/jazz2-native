@@ -90,12 +90,16 @@ namespace nCine
 			static Vector2 Lerp(Vector2 a, Vector2 b, float t);
 			static Vector2 FromAngleLength(T angle, T length);
 
+			/** @{ @name Constants */
+
 			/// A vector with all zero elements
 			static const Vector2 Zero;
 			/// A unit vector on the X axis
 			static const Vector2 XAxis;
 			/// A unit vector on the Y axis
 			static const Vector2 YAxis;
+
+			/** @} */
 		};
 
 		/// Two-component vector of floats

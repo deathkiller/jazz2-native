@@ -34,8 +34,7 @@ namespace Jazz2::Collisions
 	using nCine::AABBf;
 	using nCine::Vector2f;
 
-	/** @defgroup constants Constants
-		@{ */
+	/** @{ @name Constants */
 
 	/** @brief Invalid node */
 	constexpr std::int32_t NullNode = -1;

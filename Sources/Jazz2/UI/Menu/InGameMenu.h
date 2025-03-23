@@ -19,8 +19,7 @@ namespace Jazz2::UI::Menu
 		DEATH_RUNTIME_OBJECT(IMenuContainer);
 
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Default width of viewport */
 		static constexpr std::int32_t DefaultWidth = 720;

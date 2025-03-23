@@ -12,8 +12,7 @@ namespace Jazz2::UI
 	class LoadingHandler : public IStateHandler
 	{
 	public:
-		/** @defgroup constants Constants
-			@{ */
+		/** @{ @name Constants */
 
 		/** @brief Default width of viewport */
 		static constexpr std::int32_t DefaultWidth = 720;

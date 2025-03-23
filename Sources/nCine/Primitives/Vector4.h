@@ -106,6 +106,8 @@ namespace nCine
 			static T Dot(const Vector4& v1, const Vector4& v2);
 			static Vector4 Lerp(const Vector4& a, const Vector4& b, float t);
 
+			/** @{ @name Constants */
+
 			/// A vector with all zero elements
 			static const Vector4 Zero;
 			/// A unit vector on the X axis
@@ -116,6 +118,8 @@ namespace nCine
 			static const Vector4 ZAxis;
 			/// A unit vector on the W axis
 			static const Vector4 WAxis;
+
+			/** @} */
 		};
 
 		/// Four-component vector of floats

@@ -6,8 +6,7 @@
 
 namespace Jazz2::UI::Menu::Resources
 {
-	/** @defgroup constants Constants
-		@{ */
+	/** @{ @name Constants */
 
 	static constexpr AnimState MenuCarrot = (AnimState)0;
 	static constexpr AnimState Snow = (AnimState)1;

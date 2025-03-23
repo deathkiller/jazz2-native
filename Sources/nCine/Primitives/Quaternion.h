@@ -73,10 +73,14 @@ namespace nCine
 			static Quaternion FromYAxisAngle(T degrees);
 			static Quaternion FromZAxisAngle(T degrees);
 
+			/** @{ @name Constants */
+
 			/// A quaternion with all zero elements
 			static const Quaternion Zero;
 			/// An identity quaternion
 			static const Quaternion Identity;
+
+			/** @} */
 		};
 
 		/// Quaternion of floats

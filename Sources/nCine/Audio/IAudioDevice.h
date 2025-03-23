@@ -11,12 +11,16 @@ namespace nCine
 	class IAudioDevice
 	{
 	public:
+		/** @{ @name Constants */
+
 		static constexpr std::uint32_t UnavailableSource = ~0u;
 
 		static constexpr float LengthToPhysical = 1.0f / 100.0f;
 		static constexpr float VelocityToPhysical = FrameTimer::FramesPerSecond / 100.0f;
 		static constexpr float ReferenceDistance = 200.0f * LengthToPhysical;
 		static constexpr float MaxDistance = 900.0f * LengthToPhysical;
+
+		/** @} */
 
 		enum class PlayerType {
 			Buffer,
