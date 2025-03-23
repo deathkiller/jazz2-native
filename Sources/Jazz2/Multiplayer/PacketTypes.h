@@ -25,7 +25,7 @@ namespace Jazz2::Multiplayer
 		LevelReady,
 		ChatMessage,
 
-		PlayerReady,
+		PlayerReady = 10,
 		PlayerUpdate,
 		PlayerKeyPress,
 		PlayerChangeWeaponRequest
@@ -40,7 +40,7 @@ namespace Jazz2::Multiplayer
 
 		PeerStateChanged,
 
-		LoadLevel,
+		LoadLevel = 10,
 		ShowInGameLobby,
 		FadeOut,
 		ChangeGameMode,
@@ -54,14 +54,14 @@ namespace Jazz2::Multiplayer
 		AdvanceTileAnimation,
 		RevertTileAnimation,		// TODO
 
-		CreateControllablePlayer,
+		CreateControllablePlayer = 30,
 		CreateRemoteActor,
 		CreateMirroredActor,
 		DestroyRemoteActor,
 		UpdateAllActors,
 		MarkRemoteActorAsPlayer,
 
-		PlayerSetProperty,
+		PlayerSetProperty = 50,
 		PlayerRespawn,
 		PlayerMoveInstantly,
 		PlayerAckWarped,			// TODO
