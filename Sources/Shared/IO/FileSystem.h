@@ -32,6 +32,8 @@ namespace Death { namespace IO {
 	class FileSystem
 	{
 	public:
+		/** @{ @name Constants */
+
 #if defined(DEATH_TARGET_WINDOWS)
 		// Windows 10 supports long paths everywhere, so increase it a bit
 		static constexpr std::size_t MaxPathLength = /*MAX_PATH*/2048;
@@ -40,6 +42,8 @@ namespace Death { namespace IO {
 		static constexpr std::size_t MaxPathLength = PATH_MAX;
 		static constexpr char PathSeparator[] = "/";
 #endif
+
+		/** @} */
 
 		/** @brief Available permissions to check or set, supports a bitwise combination of its member values */
 		enum class Permission

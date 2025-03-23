@@ -4,7 +4,8 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	enum class FoodType {
+	enum class FoodType
+	{
 		Apple = 1,
 		Banana = 2,
 		Cherry = 3,

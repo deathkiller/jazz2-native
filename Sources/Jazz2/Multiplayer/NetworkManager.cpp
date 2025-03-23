@@ -7,6 +7,7 @@
 
 #include "../../simdjson/simdjson.h"
 
+#include <Containers/DateTime.h>
 #include <Containers/StringUtils.h>
 #include <Containers/StringStlView.h>
 #include <IO/FileSystem.h>
@@ -36,6 +37,7 @@ namespace Jazz2::Multiplayer
 	bool NetworkManager::CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)
 	{
 		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
+		_serverConfig->StartUnixTime = DateTime::Now().ToUnixMilliseconds() / 1000;
 		bool result = NetworkManagerBase::CreateServer(handler, _serverConfig->ServerPort);
 
 		if (result && !_serverConfig->IsPrivate) {
@@ -227,6 +229,9 @@ namespace Jazz2::Multiplayer
 
 		// Replace variables in parameters
 		auto playerName = PreferencesCache::GetEffectivePlayerName();
+		if (playerName.empty()) {
+			playerName = "Unknown"_s;
+		}
 
 		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
 

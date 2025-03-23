@@ -20,7 +20,11 @@ namespace Jazz2::Actors::Collectibles
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	protected:
+		/** @{ @name Constants */
+
 		static constexpr std::int32_t IlluminateLightCount = 20;
+
+		/** @} */
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring

@@ -5,7 +5,9 @@
 #include "NetworkManager.h"
 #include "PacketTypes.h"
 #include "../PreferencesCache.h"
+#include "../../nCine/Application.h"
 #include "../../nCine/Base/Algorithms.h"
+#include "../../nCine/Base/FrameTimer.h"
 #include "../../nCine/Threading/Thread.h"
 
 #include <Containers/String.h>
@@ -29,6 +31,7 @@ struct ipv6_mreq {
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+using namespace nCine;
 
 using namespace std::string_view_literals;
 using namespace simdjson;
@@ -361,8 +364,14 @@ namespace Jazz2::Multiplayer
 			length += formatString(input + length, sizeof(input) - length, "%s", endpoint.data());
 		}
 
-		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u}",
-			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), _server->GetPeerCount(), serverConfig.MaxPlayerCount);
+		std::int32_t serverLoad = (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f);
+		if (serverLoad > 400) {
+			serverLoad = -1;
+		}
+
+		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u,\"s\":%llu,\"l\":%i,\"g\":%u}",
+			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), _server->GetPeerCount(), serverConfig.MaxPlayerCount,
+			serverConfig.StartUnixTime, serverLoad, std::uint32_t(serverConfig.GameMode));
 
 		_onlineRequest = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		_onlineRequest.SetMethod("POST"_s);
