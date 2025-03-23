@@ -41,6 +41,9 @@ namespace Jazz2
 	class ContentResolver
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Maximum number of palettes */
 		static constexpr std::int32_t PaletteCount = 256;
 		/** @brief Number of colors per palette */
@@ -57,6 +60,8 @@ namespace Jazz2
 		static constexpr std::uint8_t SfxListFile = 6;
 		static constexpr std::uint8_t HighscoresFile = 7;
 #endif
+
+		/** @} */
 
 		/** @brief Returns static instance of main content resolver */
 		static ContentResolver& Get();

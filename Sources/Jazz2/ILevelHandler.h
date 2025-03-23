@@ -41,12 +41,17 @@ namespace Jazz2
 		DEATH_RUNTIME_OBJECT();
 
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Layer of the main plane */
 		static constexpr std::int32_t MainPlaneZ = 500;
 		/** @brief Layer of sprites */
 		static constexpr std::int32_t SpritePlaneZ = MainPlaneZ + 10;
 		/** @brief Layer of players */
 		static constexpr std::int32_t PlayerZ = MainPlaneZ + 20;
+
+		/** @} */
 
 		/** @brief Initializes the level handler from @ref LevelInitialization */
 		virtual bool Initialize(const LevelInitialization& levelInit) = 0;

@@ -22,8 +22,7 @@ namespace Jazz2::Input
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		struct ActiveRumble
-		{
+		struct ActiveRumble {
 			std::shared_ptr<RumbleDescription> Desc;
 			std::int32_t JoyId;
 			float Progress;

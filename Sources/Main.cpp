@@ -810,7 +810,7 @@ void GameEventHandler::StartProcessingStdin()
 
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort)
 {
-	LOGI("[MP] Connecting to %s...", endpoint.data());
+	LOGI("[MP] Preparing connection to %s...", endpoint.data());
 
 	_networkManager = std::make_unique<NetworkManager>();
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
@@ -842,11 +842,12 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 {
-	LOGI("[MP] Peer connected");
+	LOGI("[MP] Peer connected (%s)", NetworkManagerBase::AddressToString(peer).data());
 
 	if (_networkManager->GetState() == NetworkState::Listening) {
 		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
 			// Connected client is newer than server, reject it
+			LOGI("[MP] Peer kicked \"<unknown>\" (%s): Incompatible version", NetworkManagerBase::AddressToString(peer).data());
 			return Reason::IncompatibleVersion;
 		}
 
@@ -857,6 +858,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 
 		auto address = NetworkManagerBase::AddressToString(peer);
 		if (serverConfig.BannedIPAddresses.contains(address)) {
+			LOGI("[MP] Peer kicked \"<unknown>\" (%s): Banned", address.data());
 			return Reason::Banned;
 		}
 	} else {
@@ -928,7 +930,13 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 		default: reasonStr = "Unknown reason"; break;
 	}
 
-	LOGI("[MP] Peer disconnected: %s (%u)", reasonStr, (std::uint32_t)reason);
+	if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
+		LOGI("[MP] Peer disconnected \"%s\" (%s): %s (%u)", globalPeerDesc->PlayerName.data(),
+			NetworkManagerBase::AddressToString(peer).data(), reasonStr, (std::uint32_t)reason);
+	} else {
+		LOGI("[MP] Peer disconnected \"<unknown>\" (%s): %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
+			reasonStr, (std::uint32_t)reason);
+	}
 
 	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
 		if (multiLevelHandler->OnPeerDisconnected(peer)) {
@@ -1011,24 +1019,9 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: \"%s\"",
 					peer._enet, 4, gameID, gameVersion, uniquePlayerId.data());
 
-				const auto& serverConfig = _networkManager->GetServerConfiguration();
-				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					_networkManager->Kick(peer, Reason::Banned);
-					return;
-				}
-				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
-					_networkManager->Kick(peer, Reason::NotInWhitelist);
-					return;
-				}
-
 				std::uint32_t passwordLength = packet.ReadVariableUint32();
-				String password = String(NoInit, passwordLength);
+				String password{NoInit, passwordLength};
 				packet.Read(password.data(), passwordLength);
-
-				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
-					_networkManager->Kick(peer, Reason::InvalidPassword);
-					return;
-				}
 
 				std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
 
@@ -1042,13 +1035,31 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				String playerName{NoInit, playerNameLength};
 				packet.Read(playerName.data(), playerNameLength);
 
+				const auto& serverConfig = _networkManager->GetServerConfiguration();
+				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
+					LOGI("[MP] Peer kicked \"%s\" (%s): Banned", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					_networkManager->Kick(peer, Reason::Banned);
+					return;
+				}
+				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
+					LOGI("[MP] Peer kicked \"%s\" (%s): Not in whitelist", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					_networkManager->Kick(peer, Reason::NotInWhitelist);
+					return;
+				}
+
+				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
+					LOGI("[MP] Peer kicked \"%s\" (%s): Invalid password", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					_networkManager->Kick(peer, Reason::InvalidPassword);
+					return;
+				}
+
 				std::uint8_t deviceIdLength = packet.ReadValue<std::uint8_t>();
 				String deviceId{NoInit, deviceIdLength};
 				packet.Read(deviceId.data(), deviceIdLength);
 
 				std::uint64_t playerUserId = packet.ReadVariableUint64();
 				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
-					LOGD("[MP] ClientPacketType::Auth - Discord auth is required");
+					LOGI("[MP] Peer kicked \"%s\" (%s): Discord authentication is required", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
 					_networkManager->Kick(peer, Reason::Requires3rdPartyAuthProvider);
 					return;
 				}
@@ -1062,6 +1073,9 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					if (serverConfig.AdminUniquePlayerIDs.contains(uniquePlayerId)) {
 						globalPeerDesc->IsAdmin = true;
 					}
+
+					LOGI("[MP] Peer authenticated as \"%s\" (%s)%s", globalPeerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peer).data(),
+						globalPeerDesc->IsAdmin ? " [Admin]" : "");
 				} else {
 					DEATH_ASSERT_UNREACHABLE();
 				}

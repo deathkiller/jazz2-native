@@ -16,8 +16,7 @@ namespace Jazz2::Rendering
 	{
 	public:
 		UpscaleRenderPass()
-			:
-			_resizeShader(nullptr)
+			: _resizeShader(nullptr)
 		{
 			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}

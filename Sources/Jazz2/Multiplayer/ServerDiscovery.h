@@ -77,10 +77,15 @@ namespace Jazz2::Multiplayer
 	class ServerDiscovery
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief UDP port for server discovery broadcast */
 		static constexpr std::uint16_t DiscoveryPort = 7439;
 		/** @brief Length of server unique identifier */
 		static constexpr std::int32_t UniqueIdentifierLength = 16;
+
+		/** @} */
 
 		/** @brief Creates an instance to advertise a running local server */
 		ServerDiscovery(NetworkManager* server);

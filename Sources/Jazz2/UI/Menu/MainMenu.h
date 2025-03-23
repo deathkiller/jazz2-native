@@ -37,10 +37,15 @@ namespace Jazz2::UI::Menu
 #endif
 
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Default width of viewport */
 		static constexpr int32_t DefaultWidth = 720;
 		/** @brief Default height of viewport */
 		static constexpr int32_t DefaultHeight = 405;
+
+		/** @} */
 
 		MainMenu(IRootController* root, bool afterIntro);
 		~MainMenu() override;

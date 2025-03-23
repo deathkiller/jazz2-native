@@ -25,8 +25,13 @@ namespace Jazz2::Compatibility
 	class AnimSetMapping
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Specifies that the entry should be discarded */
 		static constexpr char Discard[] = ":discard";
+
+		/** @} */
 
 		/** @brief Mapped entry */
 		struct Entry {

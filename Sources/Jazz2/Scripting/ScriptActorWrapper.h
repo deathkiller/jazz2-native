@@ -33,8 +33,7 @@ namespace Jazz2::Scripting
 		void Release();
 
 		// Assignment operator
-		ScriptActorWrapper& operator=(const ScriptActorWrapper& o)
-		{
+		ScriptActorWrapper& operator=(const ScriptActorWrapper& o) {
 			// Copy only the content, not the script proxy class
 			//_value = o._value;
 			return *this;
@@ -84,7 +83,7 @@ namespace Jazz2::Scripting
 		void asSetAnimationState(int state);
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 
 		asIScriptFunction* _onTileDeactivated;
 		asIScriptFunction* _onHealthChanged;

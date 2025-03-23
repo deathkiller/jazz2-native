@@ -19,8 +19,13 @@ namespace Jazz2::Actors
 		float Push(bool left, float timeMult);
 
 	protected:
+		/** @defgroup constants Constants
+			@{ */
+
 		static constexpr float PushSpeed = 0.5f;
 		static constexpr float PushDecayTime = 6.0f;
+
+		/** @} */
 
 		void OnUpdate(float timeMult) override;
 

@@ -65,6 +65,9 @@ namespace Jazz2::Input
 		ControlScheme() = delete;
 		~ControlScheme() = delete;
 
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Maximum number of supported local players */
 		static constexpr std::int32_t MaxSupportedPlayers = 4;
 		/** @brief Maximum number of supported connected gamepads */
@@ -73,6 +76,8 @@ namespace Jazz2::Input
 #else
 		static constexpr std::int32_t MaxConnectedGamepads = 6;
 #endif
+
+		/** @} */
 
 		/** @brief Resets all bindings to default */
 		static void Reset();
