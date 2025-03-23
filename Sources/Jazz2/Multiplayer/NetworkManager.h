@@ -18,6 +18,9 @@ namespace Jazz2::Multiplayer
 		MpGameMode GameMode;
 		/** @brief Welcome message in the lobby */
 		String WelcomeMessage;
+
+		/** @brief Earned points in the current session (championship) */
+		std::uint32_t Points;
 	};
 
 	/**
@@ -40,6 +43,8 @@ namespace Jazz2::Multiplayer
 			PlayerType PreferredPlayerType;
 			/** @brief Player display name */
 			String PlayerName;
+			/** @brief Earned points in the current session (championship) */
+			std::uint32_t Points;
 
 			PeerDesc();
 		};
@@ -70,6 +75,10 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Creates a default server configuration from the template file */
 		static ServerConfiguration CreateDefaultServerConfiguration();
+		/** @brief Converts @ref MpGameMode to the localized string representation */
+		static StringView GameModeToLocalizedString(MpGameMode mode);
+		/** @brief Converts the non-localized string representation back to @ref MpGameMode */
+		static MpGameMode StringToGameMode(StringView value);
 
 	protected:
 		using NetworkManagerBase::CreateServer;

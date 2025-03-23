@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../Weapons/ShotBase.h"
+#include "../../Multiplayer/MpLevelHandler.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
 namespace Jazz2::Actors::Multiplayer
@@ -14,6 +15,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool PlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
+		// TODO: Handle also TNT, use MpLevelHandler::GetWeaponOwner()
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 			std::int32_t strength = shotBase->GetStrength();
 			PlayerOnServer* shotOwner = static_cast<PlayerOnServer*>(shotBase->GetOwner());
@@ -25,7 +27,7 @@ namespace Jazz2::Actors::Multiplayer
 				} else {
 					TakeDamage(strength, 4 * (_pos.X > shotBase->GetPos().X ? 1.0f : -1.0f));
 				}
-				shotBase->DecreaseHealth(INT32_MAX);
+				shotBase->DecreaseHealth(INT32_MAX, shotBase);
 				return true;
 			}
 		}
