@@ -113,10 +113,15 @@ namespace Jazz2
 	class PreferencesCache
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Value of @ref MaxFps that specifies unlimited frame rate */
 		static constexpr std::int32_t UnlimitedFps = 0;
 		/** @brief Value of @ref MaxFps that specifies the frame rate of the monitor being used */
 		static constexpr std::int32_t UseVsync = -1;
+
+		/** @} */
 
 		/** @brief Whether the application is running for the first time */
 		static bool FirstRun;

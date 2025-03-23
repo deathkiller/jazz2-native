@@ -163,10 +163,15 @@ namespace Jazz2::Tiles
 #endif
 
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Maximum number of triggers */
 		static constexpr std::int32_t TriggerCount = 32;
 		/** @brief Hardcoded offset for layer positioning */
 		static constexpr std::int32_t HardcodedOffset = 70;
+
+		/** @} */
 
 		/** @brief Flags that modify behaviour of @ref DestructibleDebris, supports a bitwise combination of its member values */
 		enum class DebrisFlags {

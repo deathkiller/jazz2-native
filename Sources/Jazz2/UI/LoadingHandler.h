@@ -12,10 +12,15 @@ namespace Jazz2::UI
 	class LoadingHandler : public IStateHandler
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Default width of viewport */
 		static constexpr std::int32_t DefaultWidth = 720;
 		/** @brief Default height of viewport */
 		static constexpr std::int32_t DefaultHeight = 405;
+
+		/** @} */
 
 		LoadingHandler(IRootController* root, bool darkMode);
 		LoadingHandler(IRootController* root, bool darkMode, Function<bool(IRootController*)>&& callback);

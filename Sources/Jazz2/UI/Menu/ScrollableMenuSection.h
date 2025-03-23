@@ -34,11 +34,11 @@ namespace Jazz2::UI::Menu
 			ListViewItem(TItem item) : Item(item) { }
 		};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::int32_t ItemHeight = 40;
 		static constexpr std::int32_t TopLine = 31;
 		static constexpr std::int32_t BottomLine = 42;
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
 		SmallVector<ListViewItem> _items;
 		std::int32_t _selectedIndex;
 		float _animation;

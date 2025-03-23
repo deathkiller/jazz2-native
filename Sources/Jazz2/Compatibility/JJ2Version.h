@@ -5,7 +5,8 @@
 namespace Jazz2::Compatibility
 {
 	/** @brief Version of the original game, supports a bitwise combination of its member values */
-	enum class JJ2Version : std::uint16_t {
+	enum class JJ2Version : std::uint16_t
+	{
 		Unknown = 0x0000,
 
 		BaseGame = 0x0001,

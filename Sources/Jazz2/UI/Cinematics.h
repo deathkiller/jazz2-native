@@ -23,6 +23,9 @@ namespace Jazz2::UI
 	class Cinematics : public IStateHandler
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Default width of viewport */
 		static constexpr std::int32_t DefaultWidth = 720;
 		/** @brief Default height of viewport */
@@ -31,6 +34,8 @@ namespace Jazz2::UI
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint8_t SfxListVersion = 1;
 #endif
+
+		/** @} */
 
 		Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;

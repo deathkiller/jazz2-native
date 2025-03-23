@@ -83,8 +83,15 @@ namespace Jazz2::Input
 	class RgbLights
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
+		/** @brief Maximum number of individual lights */
 		static constexpr std::int32_t ColorsSize = AURA_COLORS_SIZE;
+		/** @brief Refresh rate of the lighting */
 		static constexpr std::int32_t RefreshRate = (std::int32_t)(FrameTimer::FramesPerSecond / (1000 / AURA_REFRESH_INTERVAL));
+
+		/** @} */
 
 		RgbLights();
 		~RgbLights();

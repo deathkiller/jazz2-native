@@ -34,6 +34,9 @@ namespace Jazz2::Collisions
 	using nCine::AABBf;
 	using nCine::Vector2f;
 
+	/** @defgroup constants Constants
+		@{ */
+
 	/** @brief Invalid node */
 	constexpr std::int32_t NullNode = -1;
 	/** @brief Length units per meter */
@@ -42,6 +45,8 @@ namespace Jazz2::Collisions
 	constexpr float AabbExtension = 0.1f * LengthUnitsPerMeter;
 	/** @brief AABB movement multiplier */
 	constexpr float AabbMultiplier = 4.0f;
+
+	/** @} */
 
 	/**
 		@brief Node in the dynamic tree

@@ -47,8 +47,7 @@ namespace Jazz2::Compatibility
 
 		static void ConvertParamInt(std::uint32_t paramInt, const ArrayView<const Pair<std::int32_t, std::int32_t>>& paramTypes, std::uint8_t eventParams[16]);
 
-		static void ConvertParamInt(std::uint32_t paramInt, const std::initializer_list<const Pair<std::int32_t, std::int32_t>> paramTypes, std::uint8_t eventParams[16])
-		{
+		static void ConvertParamInt(std::uint32_t paramInt, const std::initializer_list<const Pair<std::int32_t, std::int32_t>> paramTypes, std::uint8_t eventParams[16]) {
 			ConvertParamInt(paramInt, arrayView(paramTypes), eventParams);
 		}
 

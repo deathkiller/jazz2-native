@@ -33,8 +33,7 @@ namespace Jazz2::Scripting
 		void Release();
 
 		// Assignment operator
-		ScriptPlayerWrapper& operator=(const ScriptPlayerWrapper& o)
-		{
+		ScriptPlayerWrapper& operator=(const ScriptPlayerWrapper& o) {
 			// Copy only the content, not the script proxy class
 			//_value = o._value;
 			return *this;
@@ -77,7 +76,7 @@ namespace Jazz2::Scripting
 		void asMorphRevert();
 
 	private:
-		int _refCount;
+		std::int32_t _refCount;
 
 	};
 }

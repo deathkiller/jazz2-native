@@ -293,6 +293,9 @@ namespace Jazz2::Actors
 			static std::int32_t NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max);
 		};
 
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Alpha transparency threshold */
 		static constexpr std::uint8_t AlphaThreshold = 40;
 		/** @brief Step for collision checking */
@@ -301,6 +304,8 @@ namespace Jazz2::Actors
 		static constexpr std::int32_t PerPixelCollisionStep = 3;
 		/** @brief Maximum number of animation candidates */
 		static constexpr std::int32_t AnimationCandidatesCount = 5;
+
+		/** @} */
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring

@@ -16,7 +16,13 @@ namespace Jazz2::Events
 		/** @brief Delegate to preload assets for an object */
 		using PreloadDelegate = void (*)(const Actors::ActorActivationDetails& details);
 
+		/** @defgroup constants Constants
+			@{ */
+
+		/** @brief Size of event parameters */
 		static constexpr std::int32_t SpawnParamsSize = 16;
+
+		/** @} */
 
 		EventSpawner(ILevelHandler* levelHandler);
 

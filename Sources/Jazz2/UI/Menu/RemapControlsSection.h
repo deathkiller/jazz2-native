@@ -18,7 +18,13 @@ namespace Jazz2::UI::Menu
 	class RemapControlsSection : public ScrollableMenuSection<RemapControlsItem>
 	{
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
+		/** @brief Maximum number of mapping targets */
 		static constexpr std::int32_t MaxTargetCount = 6;
+
+		/** @} */
 
 		RemapControlsSection(std::int32_t playerIndex);
 		~RemapControlsSection() override;

@@ -71,8 +71,13 @@ namespace Jazz2::Multiplayer
 		friend class ServerDiscovery;
 
 	public:
+		/** @defgroup constants Constants
+			@{ */
+
 		/** @brief Maximum connected peer count */
 		static constexpr std::uint32_t MaxPeerCount = 128;
+
+		/** @} */
 
 		NetworkManagerBase();
 		~NetworkManagerBase();

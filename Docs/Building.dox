@@ -13,12 +13,12 @@ The project requires following tools and libraries to build it successfully:
 -   **CMake** 3.15 or newer
 -   C++ compiler with C++17 support --- any newer version of **GCC**, **Clang** and **MSVC**
     should work, **MinGW** and **Clang-CL** toolchains should be also supported
--   **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 library (alternatively **ANGLE**
-    or **Mesa** translation library)
--   **GLEW** @m_span{m-text m-dim} (required only on Windows) @m_endspan
--   **GLFW** or **SDL2** @m_span{m-text m-dim} (not required on Android and UWP, because these
+-   **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 library @m_span{m-text m-dim} (alternatively
+    **ANGLE** or **Mesa** translation library) @m_endspan
+-   **GLEW** @m_span{m-text m-dim} (required only on **Windows**) @m_endspan
+-   **GLFW** or **SDL2** @m_span{m-text m-dim} (not required on **Android** and **UWP**, because these
     platforms use a different backend) @m_endspan
--   **libcurl** @m_span{m-text m-dim} (not required on Emscripten and Windows, because these
+-   **libcurl** @m_span{m-text m-dim} (not required on **Emscripten** and **Windows**, because these
     platforms use a different backend) @m_endspan
 -   **zlib**
 
@@ -28,8 +28,8 @@ In addition, these libraries are required for an optimal experience:
 
 -   **OpenAL** --- audio support
 -   **libopenmpt** --- module music playback
--   **libogg** / **libvorbis** --- `.ogg` file support @m_span{m-text m-dim} (not needed for original levels) @m_endspan
--   **libwebp** --- `.webp` file support @m_span{m-text m-dim} (not needed for original levels) @m_endspan
+-   **libogg** / **libvorbis** --- `.ogg` file support @m_span{m-text m-dim} (not needed for the original assets) @m_endspan
+-   **libwebp** --- `.webp` file support @m_span{m-text m-dim} (not needed for the original assets) @m_endspan
 -   **AngelScript** --- [AngelScript](https://www.angelcode.com/angelscript/) scripting support
 -   **liblua** --- [Lua](https://www.lua.org/) scripting support @m_span{m-text m-dim} (currently not supported) @m_endspan
 

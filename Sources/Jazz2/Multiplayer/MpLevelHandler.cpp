@@ -508,6 +508,11 @@ namespace Jazz2::Multiplayer
 			}*/
 		}
 #endif
+
+		if (_isServer && _players.empty()) {
+			// If no players are connected, slow the server down to save resources
+			Thread::Sleep(500);
+		}
 	}
 
 	void MpLevelHandler::OnInitializeViewport(std::int32_t width, std::int32_t height)
@@ -1304,7 +1309,11 @@ namespace Jazz2::Multiplayer
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			formatString(infoBuffer, sizeof(infoBuffer), "Players: \f[w:80]\f[c:#707070]%zu\f[/c]\f[/w]/%u", _peerDesc.size() + 1, serverConfig.MaxPlayerCount);
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
-			formatString(infoBuffer, sizeof(infoBuffer), "Server Load: %i ms", (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
+			if (!_players.empty()) {
+				formatString(infoBuffer, sizeof(infoBuffer), "Server Load: %i ms", (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
+			} else {
+				formatString(infoBuffer, sizeof(infoBuffer), "Server Load: - ms");
+			}
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			return true;
 		} else if (line.hasPrefix("/kick "_s)) {

@@ -35,11 +35,13 @@ namespace Jazz2::UI::Menu
 		DEATH_RUNTIME_OBJECT();
 
 	public:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint16_t MainLayer = 600;
 		static constexpr std::uint16_t ShadowLayer = 580;
 		static constexpr std::uint16_t BackgroundLayer = 550;
 		static constexpr std::uint16_t FontLayer = 700;
 		static constexpr std::uint16_t FontShadowLayer = 620;
+#endif
 
 		virtual ~IMenuContainer() { }
 

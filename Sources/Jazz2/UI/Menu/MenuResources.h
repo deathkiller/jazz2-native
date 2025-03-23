@@ -6,6 +6,9 @@
 
 namespace Jazz2::UI::Menu::Resources
 {
+	/** @defgroup constants Constants
+		@{ */
+
 	static constexpr AnimState MenuCarrot = (AnimState)0;
 	static constexpr AnimState Snow = (AnimState)1;
 	static constexpr AnimState MenuLine = (AnimState)2;
@@ -99,6 +102,8 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState Menu128 = (AnimState)112;
 
 	static constexpr AnimState LoriExistsCheck = (AnimState)120;
+
+	/** @} */
 
 	/** @brief Returns animation resource for the specified gamepad axis */
 	inline AnimState GetResourceForAxisName(AxisName axis, Containers::StringView& axisName)
