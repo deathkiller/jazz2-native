@@ -9,8 +9,8 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	StartGameOptionsSection::StartGameOptionsSection(const StringView episodeName, const StringView levelName, const StringView previousEpisodeName)
-		: _episodeName(episodeName), _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(3),
+	StartGameOptionsSection::StartGameOptionsSection(const StringView levelName, const StringView previousEpisodeName)
+		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(3),
 			_availableCharacters(3), _playerCount(1), _lastPlayerType(0), _lastDifficulty(0), _selectedPlayerType{},
 			_selectedDifficulty(1), _imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
 	{
@@ -412,14 +412,14 @@ namespace Jazz2::UI::Menu
 
 	void StartGameOptionsSection::OnAfterTransition()
 	{
-		bool playTutorial = (!PreferencesCache::TutorialCompleted && _episodeName == "prince"_s && _levelName == "01_castle1"_s);
+		bool playTutorial = (!PreferencesCache::TutorialCompleted && _levelName == "prince/01_castle1"_s);
 
 		SmallVector<PlayerType, ControlScheme::MaxSupportedPlayers> players(_playerCount);
 		for (std::int32_t i = 0; i < _playerCount; i++) {
 			players[i] = (PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType[i]);
 		}
 
-		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((std::int32_t)GameDifficulty::Easy + _selectedDifficulty),
+		LevelInitialization levelInit((playTutorial ? "prince/trainer"_s : StringView(_levelName)), (GameDifficulty)((std::int32_t)GameDifficulty::Easy + _selectedDifficulty),
 			PreferencesCache::EnableReforgedGameplay, false, players);
 
 		if (!_previousEpisodeName.empty()) {

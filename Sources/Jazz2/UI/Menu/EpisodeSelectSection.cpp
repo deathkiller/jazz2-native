@@ -10,6 +10,7 @@
 #	include "CreateServerOptionsSection.h"
 #endif
 
+#include <Containers/StringConcatenable.h>
 #include <Utf8.h>
 
 using namespace Jazz2::UI::Menu::Resources;
@@ -400,7 +401,7 @@ namespace Jazz2::UI::Menu
 					return;
 				}
 
-				_root->SwitchToSection<CreateServerOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel,
+				_root->SwitchToSection<CreateServerOptionsSection>(String(selectedItem.Item.Description.Name + '/' + selectedItem.Item.Description.FirstLevel),
 					selectedItem.Item.Description.PreviousEpisode, _privateServer);
 				return;
 			}
@@ -427,7 +428,8 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			_root->SwitchToSection<StartGameOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel, selectedItem.Item.Description.PreviousEpisode);
+			_root->SwitchToSection<StartGameOptionsSection>(String(selectedItem.Item.Description.Name + '/' + selectedItem.Item.Description.FirstLevel),
+				selectedItem.Item.Description.PreviousEpisode);
 		}
 	}
 
@@ -437,7 +439,7 @@ namespace Jazz2::UI::Menu
 		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(selectedItem.Item.Description.Name);
 
 		PlayerType players[] = { (PlayerType)((episodeContinue->State.DifficultyAndPlayerType >> 4) & 0x0f) };
-		LevelInitialization levelInit(selectedItem.Item.Description.Name, episodeContinue->LevelName, (GameDifficulty)(episodeContinue->State.DifficultyAndPlayerType & 0x0f),
+		LevelInitialization levelInit(String(selectedItem.Item.Description.Name + '/' + episodeContinue->LevelName), (GameDifficulty)(episodeContinue->State.DifficultyAndPlayerType & 0x0f),
 			PreferencesCache::EnableReforgedGameplay, false, players);
 
 		if ((episodeContinue->State.Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
@@ -482,9 +484,9 @@ namespace Jazz2::UI::Menu
 				episode.Item.Flags |= EpisodeDataFlags::RedirectToCustomLevels | EpisodeDataFlags::IsAvailable;
 				episode.Item.Description.DisplayName = _("Play Custom Levels");
 			} else {
-				if (!resolver.LevelExists(episode.Item.Description.Name, episode.Item.Description.FirstLevel)) {
+				if (!resolver.LevelExists(String(episode.Item.Description.Name + '/' + episode.Item.Description.FirstLevel))) {
 					// Cannot find the first level of episode in dedicated directory, try to search also "unknown" directory
-					if (resolver.LevelExists("unknown"_s, episode.Item.Description.FirstLevel)) {
+					if (resolver.LevelExists(String("unknown/"_s + episode.Item.Description.FirstLevel))) {
 						episode.Item.Flags |= EpisodeDataFlags::LevelsInUnknownDirectory;
 					} else {
 						episode.Item.Flags |= EpisodeDataFlags::IsMissing;

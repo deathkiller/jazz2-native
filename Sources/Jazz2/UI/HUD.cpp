@@ -1,5 +1,4 @@
 ﻿#include "HUD.h"
-#include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 #include "../Actors/Enemies/Bosses/BossBase.h"
 
@@ -490,16 +489,18 @@ namespace Jazz2::UI
 		std::int32_t charOffsetShadow = 0;
 
 		// If drawing of lives if overriden, fallback to legacy HUD
+		std::int32_t health = player->GetHealth();
+		std::int32_t lives = player->GetLives();
 		if (PreferencesCache::EnableReforgedHUD && shouldDrawLives) {
-			if (player->_lives > 0) {
+			if (lives > 0) {
 				if (shouldDrawHealth) {
-					DrawHealthCarrots(adjustedView.X + 24.0f, bottom - 30.0f, player->_health);
+					DrawHealthCarrots(adjustedView.X + 24.0f, bottom - 30.0f, health);
 				}
 
 				if (shouldDrawLives) {
-					if (player->_lives < UINT8_MAX) {
+					if (lives < UINT8_MAX) {
 						stringBuffer[0] = 'x';
-						i32tos(player->_lives, stringBuffer + 1);
+						i32tos(lives, stringBuffer + 1);
 
 						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
 							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
@@ -514,7 +515,7 @@ namespace Jazz2::UI
 				}
 			} else {
 				if (shouldDrawHealth) {
-					DrawHealthCarrots(adjustedView.X + 24.0f, bottom - 20.0f, player->_health);
+					DrawHealthCarrots(adjustedView.X + 24.0f, bottom - 20.0f, health);
 				}
 			}
 
@@ -531,17 +532,17 @@ namespace Jazz2::UI
 			}
 		} else {
 			if (shouldDrawHealth) {
-				for (std::int32_t i = 0; i < player->_health; i++) {
+				for (std::int32_t i = 0; i < health; i++) {
 					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f + 1.6f, ShadowLayer, Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
 					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f, MainLayer, Alignment::TopRight, Colorf::White);
 				}
 			}
 
 			if (shouldDrawLives) {
-				if (player->_lives > 0) {
-					if (player->_lives < UINT8_MAX) {
+				if (lives > 0) {
+					if (lives < UINT8_MAX) {
 						stringBuffer[0] = 'x';
-						i32tos(player->_lives, stringBuffer + 1);
+						i32tos(lives, stringBuffer + 1);
 						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
 							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
 						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
@@ -560,10 +561,10 @@ namespace Jazz2::UI
 				DrawElement(PickupStopwatch, -1, view.X + view.W * 0.5f - 30.0f, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
 				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor);
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f + 1.0f,
+					FontShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f,
+					FontLayer, Alignment::TopLeft, Font::DefaultColor);
 			}
 		}
 	}
@@ -658,13 +659,13 @@ namespace Jazz2::UI
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
-			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->_score);
+			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->GetScore());
 			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 		} else {
-			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->_score);
+			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->GetScore());
 			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,

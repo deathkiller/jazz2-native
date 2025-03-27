@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Solid
 	{
 		_morphType = (MorphType)details.Params[0];
 
-		SetState(ActorState::TriggersTNT | ActorState::CanBeFrozen, true);
+		SetState(ActorState::CanBeFrozen, true);
 		Movable = true;
 
 		switch (_morphType) {
@@ -95,6 +95,11 @@ namespace Jazz2::Actors::Solid
 		}
 
 		return SolidObjectBase::OnHandleCollision(other);
+	}
+
+	bool PowerUpMorphMonitor::CanCauseDamage(ActorBase* collider)
+	{
+		return true;
 	}
 
 	bool PowerUpMorphMonitor::OnPerish(ActorBase* collider)

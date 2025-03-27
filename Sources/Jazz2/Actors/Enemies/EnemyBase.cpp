@@ -23,7 +23,6 @@ namespace Jazz2::Actors::Enemies
 	EnemyBase::EnemyBase()
 		: CanCollideWithShots(true), _canHurtPlayer(true), _scoreValue(0), _lastHitDir(Direction::None), _blinkingTimeout(0.0f)
 	{
-		SetState(ActorState::TriggersTNT, true);
 	}
 
 	void EnemyBase::OnUpdate(float timeMult)
@@ -198,6 +197,11 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		return ActorBase::OnHandleCollision(other);
+	}
+
+	bool EnemyBase::CanCauseDamage(ActorBase* collider)
+	{
+		return !IsInvulnerable() && CanCollideWithShots;
 	}
 
 	void EnemyBase::OnHealthChanged(ActorBase* collider)

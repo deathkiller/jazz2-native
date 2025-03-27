@@ -1602,6 +1602,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Multiplayer\MpHUD.h">
+      <Filter>Header Files\Jazz2\UI\Multiplayer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2620,6 +2623,9 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\WebRequest.cpp">
       <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Multiplayer\MpHUD.cpp">
+      <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

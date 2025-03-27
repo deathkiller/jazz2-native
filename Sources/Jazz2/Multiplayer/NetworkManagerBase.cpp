@@ -404,7 +404,11 @@ namespace Jazz2::Multiplayer
 
 	String NetworkManagerBase::AddressToString(const Peer& peer)
 	{
-		return AddressToString(peer._enet->address.host);
+		if (peer._enet != nullptr) {
+			return AddressToString(peer._enet->address.host);
+		}
+
+		return {};
 	}
 
 	ConnectionResult NetworkManagerBase::OnPeerConnected(const Peer& peer, std::uint32_t clientData)

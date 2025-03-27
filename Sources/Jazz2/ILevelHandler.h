@@ -133,7 +133,7 @@ namespace Jazz2
 		/** @brief Called when the game is over */
 		virtual void HandleGameOver(Actors::Player* player) = 0;
 		/** @brief Called when a player dies */
-		virtual bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) = 0;
+		virtual bool HandlePlayerDied(Actors::Player* player) = 0;
 		/** @brief Called when a player warps */
 		virtual void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) = 0;
 		/** @brief Called when a player collects or losts coins */

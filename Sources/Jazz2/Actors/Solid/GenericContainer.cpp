@@ -11,7 +11,11 @@ namespace Jazz2::Actors::Solid
 {
 	GenericContainer::GenericContainer()
 	{
-		SetState(ActorState::TriggersTNT, true);
+	}
+
+	bool GenericContainer::CanCauseDamage(ActorBase* collider)
+	{
+		return true;
 	}
 
 	bool GenericContainer::OnPerish(ActorBase* collider)

@@ -36,7 +36,6 @@ namespace Jazz2::Actors::Environment
 		_type = details.Params[0];
 		_activated = (details.Params[1] != 0);
 
-		SetState(ActorState::TriggersTNT, true);
 		SetState(ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, !_activated);
 
 		switch (_type) {
@@ -77,6 +76,11 @@ namespace Jazz2::Actors::Environment
 		}
 
 		return ActorBase::OnHandleCollision(other);
+	}
+
+	bool BirdCage::CanCauseDamage(ActorBase* collider)
+	{
+		return true;
 	}
 
 	bool BirdCage::TryApplyToPlayer(Player* player)

@@ -165,18 +165,28 @@ namespace Jazz2::Actors
 		/** @brief Sets invulnerability */
 		void SetInvulnerability(float time, InvulnerableType type);
 
+		/** @brief Returns score */
+		std::int32_t GetScore() const;
 		/** @brief Adds score */
-		void AddScore(std::uint32_t amount);
+		void AddScore(std::int32_t amount);
 		/** @brief Adds health */
 		bool AddHealth(std::int32_t amount);
+		/** @brief Returns lives */
+		std::int32_t GetLives() const;
 		/** @brief Adds lives */
 		bool AddLives(std::int32_t count);
+		/** @brief Returns coins */
+		std::int32_t GetCoins() const;
 		/** @brief Adds coins */
 		void AddCoins(std::int32_t count);
 		/** @brief Adds coins without notification (internal use only) */
 		void AddCoinsInternal(std::int32_t count);
+		/** @brief Returns gems */
+		std::int32_t GetGems(std::uint8_t gemType) const;
 		/** @brief Adds gems */
 		void AddGems(std::uint8_t gemType, std::int32_t count);
+		/** @brief Returns food eaten */
+		std::int32_t GetConsumedFood() const;
 		/** @brief Consumes food */
 		void ConsumeFood(bool isDrinkable);
 		/** @brief Activates sugar rush */
@@ -394,7 +404,7 @@ namespace Jazz2::Actors
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed);
 
-		void OnPerishInner(ActorBase* collider);
+		void OnPerishInner();
 
 		void SwitchToNextWeapon();
 		template<typename T, WeaponType weaponType>

@@ -58,7 +58,7 @@ namespace Jazz2::UI
 		/** @brief Returns `true` if weapon wheel is visible */
 		bool IsWeaponWheelVisible(std::int32_t playerIndex) const;
 
-	private:
+	protected:
 		enum class TransitionState {
 			None,
 			FadeIn,
@@ -105,21 +105,15 @@ namespace Jazz2::UI
 		};
 #endif
 
-		static constexpr std::uint32_t VertexBytes = sizeof(Vertex);
-		static constexpr std::uint32_t VertexFloats = VertexBytes / sizeof(float);
-
-		static constexpr Alignment Fixed = (Alignment)0x40;
-		static constexpr Alignment AllowRollover = (Alignment)0x80;
+		/** @{ @name Constants */
 
 		static constexpr std::uint16_t MainLayer = 100;
 		static constexpr std::uint16_t ShadowLayer = 80;
 		static constexpr std::uint16_t FontLayer = 200;
 		static constexpr std::uint16_t FontShadowLayer = 120;
 		static constexpr std::uint16_t TouchButtonsLayer = 400;
-		static constexpr std::int32_t TouchButtonsCount = 11;
 
-		static constexpr float WeaponWheelAnimDuration = 20.0f;
-		static constexpr std::int32_t WeaponWheelMaxVertices = 512;
+		/** @} */
 		
 		LevelHandler* _levelHandler;
 		Metadata* _metadata;
@@ -133,6 +127,31 @@ namespace Jazz2::UI
 		float _gemsTime;
 		std::uint8_t _gemsLastType;
 		float _activeBossTime;
+
+		void DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
+		void DrawHealthCarrots(float x, float y, std::int32_t health);
+		virtual void DrawScore(const Rectf& view, Actors::Player* player);
+		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
+		void DrawActiveBoss(const Rectf& adjustedView);
+		void DrawLevelText(std::int32_t& charOffset);
+		void DrawViewportSeparators();
+		void DrawCoins(const Rectf& view, std::int32_t& charOffset);
+		void DrawGems(const Rectf& view, std::int32_t& charOffset);
+
+		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
+		void DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
+	
+	private:
+		static constexpr std::uint32_t VertexBytes = sizeof(Vertex);
+		static constexpr std::uint32_t VertexFloats = VertexBytes / sizeof(float);
+
+		static constexpr Alignment Fixed = (Alignment)0x40;
+		static constexpr Alignment AllowRollover = (Alignment)0x80;
+
+		static constexpr std::int32_t TouchButtonsCount = 11;
+		static constexpr float WeaponWheelAnimDuration = 20.0f;
+		static constexpr std::int32_t WeaponWheelMaxVertices = 512;
+
 		float _rgbAmbientLight;
 		float _rgbHealthLast;
 
@@ -145,20 +164,7 @@ namespace Jazz2::UI
 		TouchButtonInfo _touchButtons[TouchButtonsCount];
 		float _touchButtonsTimer;
 
-		void DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
-		void DrawHealthCarrots(float x, float y, std::int32_t health);
-		void DrawScore(const Rectf& view, Actors::Player* player);
-		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
-		void DrawActiveBoss(const Rectf& adjustedView);
-		void DrawLevelText(std::int32_t& charOffset);
-		void DrawViewportSeparators();
-		void DrawCoins(const Rectf& view, std::int32_t& charOffset);
-		void DrawGems(const Rectf& view, std::int32_t& charOffset);
-
-		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
-		void DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
 		AnimState GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
-
 		void DrawWeaponWheel(const Rectf& view, Actors::Player* player);
 		void UpdateWeaponWheel(float timeMult);
 		bool PrepareWeaponWheel(Actors::Player* player, std::int32_t& weaponCount);

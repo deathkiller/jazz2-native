@@ -13,6 +13,7 @@ namespace Jazz2::Actors::Solid
 		PowerUpMorphMonitor();
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool CanCauseDamage(ActorBase* collider) override;
 
 		static void Preload(const ActorActivationDetails& details);
 

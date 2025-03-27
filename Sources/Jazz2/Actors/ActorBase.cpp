@@ -164,6 +164,11 @@ namespace Jazz2::Actors
 		return false;
 	}
 
+	bool ActorBase::CanCauseDamage(ActorBase* collider)
+	{
+		return false;
+	}
+
 	void ActorBase::OnTriggeredEvent(EventType eventType, std::uint8_t* eventParams)
 	{
 		// Can be overridden

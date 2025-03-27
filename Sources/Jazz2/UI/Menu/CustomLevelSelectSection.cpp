@@ -9,6 +9,7 @@
 #	include "CreateServerOptionsSection.h"
 #endif
 
+#include <Containers/StringConcatenable.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 
@@ -293,11 +294,11 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_MULTIPLAYER)
 		if (_multiplayer) {
-			_root->SwitchToSection<CreateServerOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr, _privateServer);
+			_root->SwitchToSection<CreateServerOptionsSection>(String("unknown/"_s + selectedItem.LevelName), nullptr, _privateServer);
 			return;
 		}
 #endif
-		_root->SwitchToSection<StartGameOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr);
+		_root->SwitchToSection<StartGameOptionsSection>(String("unknown/"_s + selectedItem.LevelName), nullptr);
 	}
 
 	void CustomLevelSelectSection::EnsureVisibleSelected(std::int32_t offset)

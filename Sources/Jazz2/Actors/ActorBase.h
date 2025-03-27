@@ -85,8 +85,9 @@ namespace Jazz2::Actors
 		CanBeFrozen = 0x0800,
 		/** @brief Actor is facing left */
 		IsFacingLeft = 0x1000,
-		/** @brief Actor triggers TNT explosion */
-		TriggersTNT = 0x2000,
+
+		//Reserved = 0x2000,
+
 		/** @brief Actor should be preserved when state is rolled back to checkpoint */
 		PreserveOnRollback = 0x4000,
 
@@ -183,12 +184,12 @@ namespace Jazz2::Actors
 		/** @brief Returns `true` if the object is currently facing left */
 		bool IsFacingLeft() const;
 
-		/** @brief Sets internal parent node */
-		void SetParent(SceneNode* parent);
 		/** @brief Called after the object is created */
 		Task<bool> OnActivated(const ActorActivationDetails& details);
 		/** @brief Called when the object collides with another object */
 		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+		/** @brief Called to check whether @p collider can cause damage to the object */
+		virtual bool CanCauseDamage(ActorBase* collider);
 
 		/** @brief Returns `true` if the object is invulnerable */
 		bool IsInvulnerable();
@@ -329,6 +330,9 @@ namespace Jazz2::Actors
 		GraphicResource* _currentTransition;
 		bool _currentTransitionCancellable;
 #endif
+
+		/** @brief Sets internal parent node */
+		void SetParent(SceneNode* parent);
 
 		/** @brief Sets whether the object is facing left */
 		void SetFacingLeft(bool value);

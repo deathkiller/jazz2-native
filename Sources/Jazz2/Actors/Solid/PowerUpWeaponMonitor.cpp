@@ -35,7 +35,7 @@ namespace Jazz2::Actors::Solid
 	{
 		_weaponType = (WeaponType)details.Params[0];
 
-		SetState(ActorState::TriggersTNT | ActorState::CanBeFrozen, true);
+		SetState(ActorState::CanBeFrozen, true);
 		Movable = true;
 
 		switch (_weaponType) {
@@ -108,6 +108,11 @@ namespace Jazz2::Actors::Solid
 		}
 
 		return SolidObjectBase::OnHandleCollision(other);
+	}
+
+	bool PowerUpWeaponMonitor::CanCauseDamage(ActorBase* collider)
+	{
+		return true;
 	}
 
 	bool PowerUpWeaponMonitor::OnPerish(ActorBase* collider)

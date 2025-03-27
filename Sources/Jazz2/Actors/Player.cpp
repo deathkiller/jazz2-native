@@ -1432,11 +1432,11 @@ namespace Jazz2::Actors
 			SetAnimation(prevState);
 
 			// Morph to original type with animation and then trigger death
-			SetPlayerTransition(AnimState::TransitionFromFrog, false, true, SpecialMoveType::None, [this, collider]() {
-				OnPerishInner(collider);
+			SetPlayerTransition(AnimState::TransitionFromFrog, false, true, SpecialMoveType::None, [this]() {
+				OnPerishInner();
 			});
 		} else {
-			OnPerishInner(collider);
+			OnPerishInner();
 		}
 
 		return false;
@@ -2595,7 +2595,7 @@ namespace Jazz2::Actors
 		return _levelHandler->IsPositionEmpty(this, aabb, params);
 	}
 
-	void Player::OnPerishInner(ActorBase* collider)
+	void Player::OnPerishInner()
 	{
 		_trailLastPos = _pos;
 
@@ -2629,7 +2629,7 @@ namespace Jazz2::Actors
 		SetModifier(Modifier::None);
 		SetShield(ShieldType::None, 0.0f);
 
-		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this, collider]() {
+		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this]() {
 			_speed.X = 0.0f;
 			_speed.Y = 0.0f;
 			_externalForce.X = 0.0f;
@@ -2680,7 +2680,7 @@ namespace Jazz2::Actors
 
 				SetAnimation(AnimState::Idle);
 
-				if (_levelHandler->HandlePlayerDied(this, collider)) {
+				if (_levelHandler->HandlePlayerDied(this)) {
 					// Reset health
 					_health = _maxHealth;
 
@@ -3697,7 +3697,7 @@ namespace Jazz2::Actors
 			_health++;
 		}
 
-		DecreaseHealth(amount, nullptr);
+		DecreaseHealth(amount);
 
 		_speed.X = 0.0f;
 		_internalForceY = 0.0f;
@@ -3787,9 +3787,14 @@ namespace Jazz2::Actors
 		_currentSpecialMove = SpecialMoveType::None;
 	}
 
-	void Player::AddScore(std::uint32_t amount)
+	std::int32_t Player::GetScore() const
 	{
-		_score = std::min(_score + amount, 999999999u);
+		return _score;
+	}
+
+	void Player::AddScore(std::int32_t amount)
+	{
+		_score = std::min(std::max(_score + amount, 0), 999999999);
 	}
 
 	bool Player::AddHealth(std::int32_t amount)
@@ -3814,6 +3819,11 @@ namespace Jazz2::Actors
 		return true;
 	}
 
+	std::int32_t Player::GetLives() const
+	{
+		return _lives;
+	}
+
 	bool Player::AddLives(std::int32_t count)
 	{
 		constexpr std::int32_t LivesLimit = 99;
@@ -3825,6 +3835,11 @@ namespace Jazz2::Actors
 		_lives = std::min(_lives + count, LivesLimit);
 		PlayPlayerSfx("PickupOneUp"_s);
 		return true;
+	}
+
+	std::int32_t Player::GetCoins() const
+	{
+		return _coins;
 	}
 
 	void Player::AddCoins(std::int32_t count)
@@ -3840,6 +3855,15 @@ namespace Jazz2::Actors
 		_coins += count;
 	}
 
+	std::int32_t Player::GetGems(std::uint8_t gemType) const
+	{
+		if (gemType >= arraySize(_gems)) {
+			return 0;
+		}
+
+		return _gems[gemType];
+	}
+
 	void Player::AddGems(std::uint8_t gemType, std::int32_t count)
 	{
 		if (gemType >= arraySize(_gems)) {
@@ -3853,6 +3877,11 @@ namespace Jazz2::Actors
 
 		_gemsTimer = 120.0f;
 		_gemsPitch++;
+	}
+
+	std::int32_t Player::GetConsumedFood() const
+	{
+		return _foodEaten;
 	}
 
 	void Player::ConsumeFood(bool isDrinkable)
