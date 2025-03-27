@@ -288,12 +288,14 @@ void GameEventHandler::OnInitialize()
 			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
 
 			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
-				auto level = config.argv(i + 1).partition('/');
-				serverInit.InitialLevel.EpisodeName = !level[2].empty() ? level[0] : "unknown"_s;
-				serverInit.InitialLevel.LevelName = !level[2].empty() ? level[2] : level[0];
+				auto levelName = config.argv(i + 1);
+				if (levelName.contains('/')) {
+					serverInit.InitialLevel.LevelName = levelName;
+				} else {
+					serverInit.InitialLevel.LevelName = "unknown/"_s + levelName;
+				}
 			} else {
-				serverInit.InitialLevel.EpisodeName = "prince"_s;
-				serverInit.InitialLevel.LevelName = "01_castle1"_s;
+				serverInit.InitialLevel.LevelName = "prince/01_castle1"_s;
 			}
 
 			CreateServer(std::move(serverInit));
@@ -303,8 +305,11 @@ void GameEventHandler::OnInitialize()
 #		endif
 #		if defined(DEATH_DEBUG)
 		if (arg == "/level"_s && i + 1 < config.argc()) {
-			auto level = config.argv(i + 1).partition('/');
-			LevelInitialization levelInit(!level[2].empty() ? level[0] : "unknown"_s, !level[2].empty() ? level[2] : level[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+			String levelName = config.argv(i + 1);
+			if (!levelName.contains('/')) {
+				levelName = "unknown/"_s + levelName;
+			}
+			LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
 				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
 
 			thread.Join();
@@ -365,12 +370,14 @@ void GameEventHandler::OnInitialize()
 			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
 
 			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
-				auto level = config.argv(i + 1).partition('/');
-				serverInit.InitialLevel.EpisodeName = !level[2].empty() ? level[0] : "unknown"_s;
-				serverInit.InitialLevel.LevelName = !level[2].empty() ? level[2] : level[0];
+				auto levelName = config.argv(i + 1);
+				if (levelName.contains('/')) {
+					serverInit.InitialLevel.LevelName = levelName;
+				} else {
+					serverInit.InitialLevel.LevelName = "unknown/"_s + levelName;
+				}
 			} else {
-				serverInit.InitialLevel.EpisodeName = "prince"_s;
-				serverInit.InitialLevel.LevelName = "01_castle1"_s;
+				serverInit.InitialLevel.LevelName = "prince/01_castle1"_s;
 			}
 
 			CreateServer(std::move(serverInit));
@@ -379,8 +386,11 @@ void GameEventHandler::OnInitialize()
 #		endif
 #		if defined(DEATH_DEBUG)
 		if (arg == "/level"_s && i + 1 < config.argc()) {
-			auto level = config.argv(i + 1).partition('/');
-			LevelInitialization levelInit(!level[2].empty() ? level[0] : "unknown"_s, !level[2].empty() ? level[2] : level[0], (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+			String levelName = config.argv(i + 1);
+			if (!levelName.contains('/')) {
+				levelName = "unknown/"_s + levelName;
+			}
+			LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
 				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
 
 			ChangeLevel(std::move(levelInit));
@@ -585,10 +595,8 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			std::optional<Episode> lastEpisode = resolver.GetEpisode(levelInit.LastEpisodeName);
 			if (lastEpisode) {
 				// Redirect to next episode
-				std::optional<Episode> nextEpisode = resolver.GetEpisode(lastEpisode->NextEpisode);
-				if (nextEpisode) {
-					levelInit.EpisodeName = lastEpisode->NextEpisode;
-					levelInit.LevelName = nextEpisode->FirstLevel;
+				if (std::optional<Episode> nextEpisode = resolver.GetEpisode(lastEpisode->NextEpisode)) {
+					levelInit.LevelName = lastEpisode->NextEpisode + '/' + nextEpisode->FirstLevel;
 				}
 			}
 
@@ -1084,19 +1092,16 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 				MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
 				ExitType lastExitType = (ExitType)packet.ReadValue<std::uint8_t>();
-				std::uint32_t episodeLength = packet.ReadVariableUint32();
-				String episodeName = String(NoInit, episodeLength);
-				packet.Read(episodeName.data(), episodeLength);
-				std::uint32_t levelLength = packet.ReadVariableUint32();
-				String levelName = String(NoInit, levelLength);
-				packet.Read(levelName.data(), levelLength);
+				std::uint32_t levelNameLength = packet.ReadVariableUint32();
+				String levelName{NoInit, levelNameLength};
+				packet.Read(levelName.data(), levelNameLength);
 
-				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, episode: %s, level: %s", flags, (std::uint32_t)gameMode, episodeName.data(), levelName.data());
+				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: %s", flags, (std::uint32_t)gameMode, levelName.data());
 
-				InvokeAsync([this, flags, gameMode, lastExitType, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
+				InvokeAsync([this, flags, gameMode, lastExitType, levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
-					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Normal, isReforged);
+					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
 					levelInit.LastExitType = lastExitType;
 
@@ -1760,14 +1765,17 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 
 void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 {
-	if (levelInit.EpisodeName.empty() || levelInit.LevelName.empty() ||
-		!levelInit.IsLocalSession || levelInit.EpisodeName == "unknown"_s ||
-		(levelInit.EpisodeName == "prince"_s && levelInit.LevelName == "trainer"_s)) {
+	if (levelInit.LevelName.empty()) {
 		return;
 	}
 
-	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(levelInit.EpisodeName);
-	if (!currentEpisode || currentEpisode->FirstLevel == levelInit.LevelName) {
+	auto p = levelInit.LevelName.partition('/');
+	if (!levelInit.IsLocalSession || p[0] == "unknown"_s || levelInit.LevelName == "prince/trainer"_s) {
+		return;
+	}
+
+	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(p[0]);
+	if (!currentEpisode || currentEpisode->FirstLevel == p[2]) {
 		return;
 	}
 
@@ -1776,7 +1784,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 
 	// Don't save continue in multiplayer
 	if (playerCount == 1) {
-		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(levelInit.EpisodeName, true);
+		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(p[0], true);
 		episodeContinue->LevelName = levelInit.LevelName;
 		episodeContinue->State.Flags = EpisodeContinuationFlags::None;
 		if (levelInit.CheatsUsed) {

@@ -6,6 +6,8 @@
 #include "../../Multiplayer/MpLevelHandler.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+using namespace Jazz2::Multiplayer;
+
 namespace Jazz2::Actors::Multiplayer
 {
 	PlayerOnServer::PlayerOnServer()
@@ -15,24 +17,47 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool PlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		// TODO: Handle also TNT, use MpLevelHandler::GetWeaponOwner()
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
-			std::int32_t strength = shotBase->GetStrength();
-			PlayerOnServer* shotOwner = static_cast<PlayerOnServer*>(shotBase->GetOwner());
-			// Ignore players in the same team
-			if (strength > 0 && _sugarRushLeft <= 0.0f && shotOwner->_teamId != _teamId) {
+		// TODO: Check player special move here
+		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(other.get())) {
+			auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
+			if (_teamId != otherPlayerOnServer->_teamId) {
+				bool otherIsPlayer = false;
+				if (auto* anotherPlayer = runtime_cast<PlayerOnServer*>(other)) {
+					bool isAttacking = IsAttacking();
+					if (!isAttacking && !anotherPlayer->IsAttacking()) {
+						return true;
+					}
+					if (isAttacking) {
+						return false;
+					}
+					otherIsPlayer = true;
+				}
+
+				_lastAttacker = otherPlayerOnServer->shared_from_this();
+
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 				} else {
-					TakeDamage(strength, 4 * (_pos.X > shotBase->GetPos().X ? 1.0f : -1.0f));
+					TakeDamage(1, 4 * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
 				}
-				shotBase->DecreaseHealth(INT32_MAX, shotBase);
+				if (!otherIsPlayer) {
+					other->DecreaseHealth(INT32_MAX);
+				}
 				return true;
 			}
 		}
 
 		return Player::OnHandleCollision(other);
+	}
+
+	bool PlayerOnServer::CanCauseDamage(ActorBase* collider)
+	{
+		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(collider)) {
+			return (static_cast<PlayerOnServer*>(weaponOwner)->_teamId != _teamId);
+		}
+
+		return false;
 	}
 
 	std::uint8_t PlayerOnServer::GetTeamId() const
@@ -43,6 +68,15 @@ namespace Jazz2::Actors::Multiplayer
 	void PlayerOnServer::SetTeamId(std::uint8_t value)
 	{
 		_teamId = value;
+	}
+
+	bool PlayerOnServer::IsAttacking() const
+	{
+		if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
+			return false;
+		}
+
+		return (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f);
 	}
 }
 

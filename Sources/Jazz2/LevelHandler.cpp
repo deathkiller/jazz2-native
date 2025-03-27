@@ -126,8 +126,7 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		_levelFileName = levelInit.LevelName;
-		_episodeName = levelInit.EpisodeName;
+		_levelName = levelInit.LevelName;
 		_difficulty = levelInit.Difficulty;
 		_isReforged = levelInit.IsReforged;
 		_cheatsUsed = levelInit.CheatsUsed;
@@ -143,11 +142,13 @@ namespace Jazz2
 
 		_console = std::make_unique<UI::InGameConsole>(this);
 
+		auto p = _levelName.partition('/');
+
 		// Try to search also "unknown" directory
 		LevelDescriptor descriptor;
-		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor) &&
-			(_episodeName == "unknown"_s || !resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ "unknown"_s, _levelFileName }), _difficulty, descriptor))) {
-			LOGE("Cannot load level \"%s/%s\"", _episodeName.data(), _levelFileName.data());
+		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor) &&
+			(p[0] == "unknown"_s || !resolver.TryLoadLevel(String("unknown/"_s + p[2]), _difficulty, descriptor))) {
+			LOGE("Cannot load level \"%s\"", _levelName.data());
 			return false;
 		}
 
@@ -173,12 +174,14 @@ namespace Jazz2
 		std::uint8_t flags = src.ReadValue<std::uint8_t>();
 
 		std::uint8_t stringSize = src.ReadValue<std::uint8_t>();
-		_episodeName = String(NoInit, stringSize);
-		src.Read(_episodeName.data(), stringSize);
+		String episodeName(NoInit, stringSize);
+		src.Read(episodeName.data(), stringSize);
 
 		stringSize = src.ReadValue<std::uint8_t>();
-		_levelFileName = String(NoInit, stringSize);
-		src.Read(_levelFileName.data(), stringSize);
+		String levelFileName(NoInit, stringSize);
+		src.Read(levelFileName.data(), stringSize);
+
+		_levelName = episodeName + '/' + levelFileName;
 
 		_difficulty = (GameDifficulty)src.ReadValue<std::uint8_t>();
 		_isReforged = (flags & 0x01) != 0;
@@ -199,8 +202,8 @@ namespace Jazz2
 		_console = std::make_unique<UI::InGameConsole>(this);
 
 		LevelDescriptor descriptor;
-		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor)) {
-			LOGE("Cannot load level \"%s/%s\"", _episodeName.data(), _levelFileName.data());
+		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor)) {
+			LOGE("Cannot load level \"%s\"", _levelName.data());
 			return false;
 		}
 
@@ -246,7 +249,7 @@ namespace Jazz2
 		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
 		resolver.PreloadMetadataAsync("Common/Explosions"_s);
 
-		_hud = std::make_unique<UI::HUD>(this);
+		_hud = CreateHUD();
 
 		_eventMap->PreloadEventsAsync();
 
@@ -374,7 +377,7 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		LOGI("Level \"%s\" (%s/%s.j2l) loaded", descriptor.DisplayName.data(), _episodeName.data(), _levelFileName.data());
+		LOGI("Level \"%s\" (%s.j2l) loaded", descriptor.DisplayName.data(), _levelName.data());
 
 		if (!descriptor.DisplayName.empty()) {
 			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + descriptor.DisplayName));
@@ -434,6 +437,11 @@ namespace Jazz2
 			}
 		}
 #endif
+	}
+
+	std::unique_ptr<UI::HUD> LevelHandler::CreateHUD()
+	{
+		return std::make_unique<UI::HUD>(this);
 	}
 
 	void LevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
@@ -1101,11 +1109,12 @@ namespace Jazz2
 		HandleLevelChange(std::move(levelInit));
 	}
 
-	bool LevelHandler::HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider)
+	bool LevelHandler::HandlePlayerDied(Actors::Player* player)
 	{
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
-			_scripts->OnPlayerDied(player, collider);
+			// TODO: killer
+			_scripts->OnPlayerDied(player, nullptr);
 		}
 #endif
 
@@ -1260,7 +1269,7 @@ namespace Jazz2
 	StringView LevelHandler::GetLevelText(std::uint32_t textId, std::int32_t index, std::uint32_t delimiter)
 	{
 		if (textId >= _levelTexts.size()) {
-			return { };
+			return {};
 		}
 
 		StringView text = _levelTexts[textId];
@@ -1288,13 +1297,11 @@ namespace Jazz2
 			if (delimiterCount == index) {
 				return StringView(text.data() + start, text.size() - start);
 			} else {
-				return { };
+				return {};
 			}
-		} else {
-			return _x("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), text.data());
 		}
 
-		return text;
+		return _x(_levelName, text.data());
 	}
 
 	void LevelHandler::OverrideLevelText(std::uint32_t textId, StringView value)
@@ -1396,10 +1403,12 @@ namespace Jazz2
 		if (_cheatsUsed) flags |= 0x02;
 		dest.WriteValue<std::uint8_t>(flags);
 
-		dest.WriteValue<std::uint8_t>((std::uint8_t)_episodeName.size());
-		dest.Write(_episodeName.data(), (std::uint32_t)_episodeName.size());
-		dest.WriteValue<std::uint8_t>((std::uint8_t)_levelFileName.size());
-		dest.Write(_levelFileName.data(), (std::uint32_t)_levelFileName.size());
+		auto p = _levelName.partition('/');
+
+		dest.WriteValue<std::uint8_t>((std::uint8_t)p[0].size());
+		dest.Write(p[0].data(), (std::uint32_t)p[0].size());
+		dest.WriteValue<std::uint8_t>((std::uint8_t)p[2].size());
+		dest.Write(p[2].data(), (std::uint32_t)p[2].size());
 
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_difficulty);
 		dest.WriteVariableUint64(_elapsedMillisecondsBegin);
@@ -1536,14 +1545,12 @@ namespace Jazz2
 			realNextLevel = ((_nextLevelType & ExitType::TypeMask) == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
 		}
 
+		auto p = _levelName.partition('/');
 		if (!realNextLevel.empty()) {
-			auto found = realNextLevel.partition('/');
-			if (found[2].empty()) {
-				levelInit.EpisodeName = _episodeName;
+			if (realNextLevel.contains('/')) {
 				levelInit.LevelName = realNextLevel;
 			} else {
-				levelInit.EpisodeName = found[0];
-				levelInit.LevelName = found[2];
+				levelInit.LevelName = p[0] + '/' + realNextLevel;
 			}
 		}
 
@@ -1551,7 +1558,7 @@ namespace Jazz2
 		levelInit.IsReforged = _isReforged;
 		levelInit.CheatsUsed = _cheatsUsed;
 		levelInit.LastExitType = _nextLevelType;
-		levelInit.LastEpisodeName = _episodeName;
+		levelInit.LastEpisodeName = p[0];
 		levelInit.ElapsedMilliseconds = _elapsedMillisecondsBegin + (std::uint64_t)(_elapsedFrames * FrameTimer::SecondsPerFrame * 1000.0f);
 
 		for (std::int32_t i = 0; i < _players.size(); i++) {
@@ -2023,50 +2030,52 @@ namespace Jazz2
 			return;
 		}
 
+		auto p = _levelName.partition('/');
+
 		UI::DiscordRpcClient::RichPresence richPresence;
-		if (_episodeName == "prince"_s) {
-			if (_levelFileName == "01_castle1"_s || _levelFileName == "02_castle1n"_s) {
+		if (p[0] == "prince"_s) {
+			if (p[2] == "01_castle1"_s || p[2] == "02_castle1n"_s) {
 				richPresence.LargeImage = "level-prince-01"_s;
-			} else if (_levelFileName == "03_carrot1"_s || _levelFileName == "04_carrot1n"_s) {
+			} else if (p[2] == "03_carrot1"_s || p[2] == "04_carrot1n"_s) {
 				richPresence.LargeImage = "level-prince-02"_s;
-			} else if (_levelFileName == "05_labrat1"_s || _levelFileName == "06_labrat2"_s || _levelFileName == "bonus_labrat3"_s) {
+			} else if (p[2] == "05_labrat1"_s || p[2] == "06_labrat2"_s || p[2] == "bonus_labrat3"_s) {
 				richPresence.LargeImage = "level-prince-03"_s;
 			}
-		} else if (_episodeName == "rescue"_s) {
-			if (_levelFileName == "01_colon1"_s || _levelFileName == "02_colon2"_s) {
+		} else if (p[0] == "rescue"_s) {
+			if (p[2] == "01_colon1"_s || p[2] == "02_colon2"_s) {
 				richPresence.LargeImage = "level-rescue-01"_s;
-			} else if (_levelFileName == "03_psych1"_s || _levelFileName == "04_psych2"_s || _levelFileName == "bonus_psych3"_s) {
+			} else if (p[2] == "03_psych1"_s || p[2] == "04_psych2"_s || p[2] == "bonus_psych3"_s) {
 				richPresence.LargeImage = "level-rescue-02"_s;
-			} else if (_levelFileName == "05_beach"_s || _levelFileName == "06_beach2"_s) {
+			} else if (p[2] == "05_beach"_s || p[2] == "06_beach2"_s) {
 				richPresence.LargeImage = "level-rescue-03"_s;
 			}
-		} else if (_episodeName == "flash"_s) {
-			if (_levelFileName == "01_diam1"_s || _levelFileName == "02_diam3"_s) {
+		} else if (p[0] == "flash"_s) {
+			if (p[2] == "01_diam1"_s || p[2] == "02_diam3"_s) {
 				richPresence.LargeImage = "level-flash-01"_s;
-			} else if (_levelFileName == "03_tube1"_s || _levelFileName == "04_tube2"_s || _levelFileName == "bonus_tube3"_s) {
+			} else if (p[2] == "03_tube1"_s || p[2] == "04_tube2"_s || p[2] == "bonus_tube3"_s) {
 				richPresence.LargeImage = "level-flash-02"_s;
-			} else if (_levelFileName == "05_medivo1"_s || _levelFileName == "06_medivo2"_s || _levelFileName == "bonus_garglair"_s) {
+			} else if (p[2] == "05_medivo1"_s || p[2] == "06_medivo2"_s || p[2] == "bonus_garglair"_s) {
 				richPresence.LargeImage = "level-flash-03"_s;
 			}
-		} else if (_episodeName == "monk"_s) {
-			if (_levelFileName == "01_jung1"_s || _levelFileName == "02_jung2"_s) {
+		} else if (p[0] == "monk"_s) {
+			if (p[2] == "01_jung1"_s || p[2] == "02_jung2"_s) {
 				richPresence.LargeImage = "level-monk-01"_s;
-			} else if (_levelFileName == "03_hell"_s || _levelFileName == "04_hell2"_s) {
+			} else if (p[2] == "03_hell"_s || p[2] == "04_hell2"_s) {
 				richPresence.LargeImage = "level-monk-02"_s;
-			} else if (_levelFileName == "05_damn"_s || _levelFileName == "06_damn2"_s) {
+			} else if (p[2] == "05_damn"_s || p[2] == "06_damn2"_s) {
 				richPresence.LargeImage = "level-monk-03"_s;
 			}
-		} else if (_episodeName == "secretf"_s) {
-			if (_levelFileName == "01_easter1"_s || _levelFileName == "02_easter2"_s || _levelFileName == "03_easter3"_s) {
+		} else if (p[0] == "secretf"_s) {
+			if (p[2] == "01_easter1"_s || p[2] == "02_easter2"_s || p[2] == "03_easter3"_s) {
 				richPresence.LargeImage = "level-secretf-01"_s;
-			} else if (_levelFileName == "04_haunted1"_s || _levelFileName == "05_haunted2"_s || _levelFileName == "06_haunted3"_s) {
+			} else if (p[2] == "04_haunted1"_s || p[2] == "05_haunted2"_s || p[2] == "06_haunted3"_s) {
 				richPresence.LargeImage = "level-secretf-02"_s;
-			} else if (_levelFileName == "07_town1"_s || _levelFileName == "08_town2"_s || _levelFileName == "09_town3"_s) {
+			} else if (p[2] == "07_town1"_s || p[2] == "08_town2"_s || p[2] == "09_town3"_s) {
 				richPresence.LargeImage = "level-secretf-03"_s;
 			}
-		} else if (_episodeName == "xmas98"_s || _episodeName == "xmas99"_s) {
+		} else if (p[0] == "xmas98"_s || p[0] == "xmas99"_s) {
 			richPresence.LargeImage = "level-xmas"_s;
-		} else if (_episodeName == "share"_s) {
+		} else if (p[0] == "share"_s) {
 			richPresence.LargeImage = "level-share"_s;
 		}
 

@@ -47,6 +47,17 @@ namespace Jazz2::Actors::Weapons
 		async_return true;
 	}
 
+	bool TNT::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (auto* tnt = runtime_cast<TNT*>(other)) {
+			if (tnt->_isExploded && _timeLeft > 35.0f) {
+				_timeLeft = 35.0f;
+			}
+		}
+
+		return ActorBase::OnHandleCollision(other);
+	}
+
 	Player* TNT::GetOwner()
 	{
 		return runtime_cast<Player*>(_owner);
@@ -66,7 +77,7 @@ namespace Jazz2::Actors::Weapons
 
 			if (_timeLeft > 35.0f) {
 				_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 64.0f, [this](ActorBase* actor) {
-					if (actor->GetState(ActorState::TriggersTNT)) {
+					if (actor->CanCauseDamage(this)) {
 						_timeLeft = 35.0f;
 						return false;
 					}
@@ -90,7 +101,6 @@ namespace Jazz2::Actors::Weapons
 			_isExploded = true;
 			_lightIntensity = 0.8f;
 
-			SetState(ActorState::TriggersTNT, true);
 			SetTransition(AnimState::TransitionActivate, false, [this]() {
 				DecreaseHealth(INT32_MAX);
 			});
@@ -130,16 +140,5 @@ namespace Jazz2::Actors::Weapons
 			light.RadiusNear = 5.0f;
 			light.RadiusFar = 120.0f;
 		}
-	}
-
-	bool TNT::OnHandleCollision(std::shared_ptr<ActorBase> other)
-	{
-		if (auto* tnt = runtime_cast<TNT*>(other)) {
-			if (tnt->_isExploded && _timeLeft > 35.0f) {
-				_timeLeft = 35.0f;
-			}
-		}
-
-		return ActorBase::OnHandleCollision(other);
 	}
 }

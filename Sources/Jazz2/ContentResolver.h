@@ -104,7 +104,7 @@ namespace Jazz2
 		/** @brief Loads specified tile set and its palette */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr);
 		/** @brief Returns `true` if specified level exists */
-		bool LevelExists(StringView episodeName, StringView levelName);
+		bool LevelExists(StringView levelName);
 		/** @brief Loads specified level into a level descriptor */
 		bool TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
 		/** @brief Loads default (sprite) palette */

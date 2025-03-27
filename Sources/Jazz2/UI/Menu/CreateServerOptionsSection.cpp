@@ -16,12 +16,12 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	CreateServerOptionsSection::CreateServerOptionsSection(const StringView episodeName, const StringView levelName, const StringView previousEpisodeName, bool privateServer)
-		: _episodeName(episodeName), _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(2),
+	CreateServerOptionsSection::CreateServerOptionsSection(const StringView levelName, const StringView previousEpisodeName, bool privateServer)
+		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(2),
 			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _privateServer(privateServer), _shouldStart(false)
 	{
-		if (episodeName == "unknown"_s) {
+		if (levelName.hasPrefix("unknown/"_s)) {
 			// Custom level
 			_gameMode = MpGameMode::Battle;
 		} else {
@@ -320,7 +320,7 @@ namespace Jazz2::UI::Menu
 	{
 		switch (_selectedIndex) {
 			case (std::int32_t)Item::GameMode: {
-				if (_episodeName == "unknown"_s) {
+				if (_levelName.hasPrefix("unknown/"_s)) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<MultiplayerGameModeSelectSection>();
 				}
@@ -344,7 +344,6 @@ namespace Jazz2::UI::Menu
 		serverInit.Configuration.IsPrivate = _privateServer;
 
 		serverInit.InitialLevel.IsLocalSession = false;
-		serverInit.InitialLevel.EpisodeName = _episodeName;
 		serverInit.InitialLevel.LevelName = _levelName;
 		serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 		serverInit.InitialLevel.PlayerCarryOvers[0].Type = (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType);

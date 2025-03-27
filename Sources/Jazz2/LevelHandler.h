@@ -147,7 +147,7 @@ namespace Jazz2
 
 		void HandleLevelChange(LevelInitialization&& levelInit) override;
 		void HandleGameOver(Actors::Player* player) override;
-		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
+		bool HandlePlayerDied(Actors::Player* player) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
@@ -214,8 +214,7 @@ namespace Jazz2
 		SmallVector<std::shared_ptr<Actors::ActorBase>, 0> _actors;
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
 
-		String _levelFileName;
-		String _episodeName;
+		String _levelName;
 		String _defaultNextLevel;
 		String _defaultSecretLevel;
 		GameDifficulty _difficulty;
@@ -265,6 +264,8 @@ namespace Jazz2
 
 		/** @brief Attaches all required level components to the handler */
 		virtual void AttachComponents(LevelDescriptor&& descriptor);
+		/** @brief Creates HUD */
+		virtual std::unique_ptr<UI::HUD> CreateHUD();
 		/** @brief Spawns all players */
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);
 		/** @brief Returns `true` if cheats are enabled */

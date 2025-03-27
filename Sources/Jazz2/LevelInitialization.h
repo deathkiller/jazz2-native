@@ -52,10 +52,8 @@ namespace Jazz2
 
 		/** @} */
 
-		/** @brief Level name */
+		/** @brief Level name in `<episode>/<level>` format */
 		String LevelName;
-		/** @brief Episode name */
-		String EpisodeName;
 		/** @brief Last episode name */
 		String LastEpisodeName;
 
@@ -77,9 +75,9 @@ namespace Jazz2
 
 		LevelInitialization();
 
-		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged);
-		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType);
-		LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes);
+		LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged);
+		LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType);
+		LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes);
 
 		LevelInitialization(const LevelInitialization& copy) noexcept;
 		LevelInitialization(LevelInitialization&& move) noexcept;

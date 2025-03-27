@@ -13,6 +13,8 @@ namespace Jazz2::Actors::Solid
 	public:
 		GenericContainer();
 
+		bool CanCauseDamage(ActorBase* collider) override;
+
 	protected:
 		/** @brief Container content item */
 		struct ContainerContent {

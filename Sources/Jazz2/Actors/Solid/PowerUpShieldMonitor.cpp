@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Solid
 	{
 		_shieldType = (ShieldType)details.Params[0];
 
-		SetState(ActorState::TriggersTNT | ActorState::CanBeFrozen, true);
+		SetState(ActorState::CanBeFrozen, true);
 		Movable = true;
 
 		switch (_shieldType) {
@@ -96,6 +96,11 @@ namespace Jazz2::Actors::Solid
 		}
 
 		return SolidObjectBase::OnHandleCollision(other);
+	}
+
+	bool PowerUpShieldMonitor::CanCauseDamage(ActorBase* collider)
+	{
+		return true;
 	}
 
 	bool PowerUpShieldMonitor::OnPerish(ActorBase* collider)

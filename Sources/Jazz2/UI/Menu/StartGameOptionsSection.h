@@ -8,7 +8,7 @@ namespace Jazz2::UI::Menu
 	class StartGameOptionsSection : public MenuSection
 	{
 	public:
-		StartGameOptionsSection(const StringView episodeName, const StringView levelName, const StringView previousEpisodeName);
+		StartGameOptionsSection(const StringView levelName, const StringView previousEpisodeName);
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -33,7 +33,6 @@ namespace Jazz2::UI::Menu
 		};
 #endif
 
-		String _episodeName;
 		String _levelName;
 		String _previousEpisodeName;
 

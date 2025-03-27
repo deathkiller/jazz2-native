@@ -741,9 +741,9 @@ namespace Jazz2
 		} else {
 			DeviceDescLength = 0;
 		}
-		String unixVersion = Environment::GetUnixVersion();
+		String unixFlavor = Environment::GetUnixFlavor();
 		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
-			unixVersion.empty() ? "Unix" : unixVersion.data(), arch);
+			unixFlavor.empty() ? "Unix" : unixFlavor.data(), arch);
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;

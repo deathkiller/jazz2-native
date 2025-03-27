@@ -69,7 +69,7 @@ namespace Death { namespace Environment {
 	 *
 	 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
 	 */
-	Containers::String GetUnixVersion();
+	Containers::String GetUnixFlavor();
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)

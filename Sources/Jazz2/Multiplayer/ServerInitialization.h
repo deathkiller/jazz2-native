@@ -19,7 +19,7 @@ namespace Jazz2::Multiplayer
 	*/
 	struct PlaylistEntry
 	{
-		/** @brief Level name */
+		/** @brief Level name in `<episode>/<level>` format */
 		String LevelName;
 		/** @brief Game mode */
 		MpGameMode GameMode;

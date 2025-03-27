@@ -20,6 +20,7 @@ namespace Jazz2::UI::Multiplayer
 {
 	class MpInGameCanvasLayer;
 	class MpInGameLobby;
+	class MpHUD;
 }
 
 namespace Jazz2::Multiplayer
@@ -41,6 +42,7 @@ namespace Jazz2::Multiplayer
 		friend class Actors::Multiplayer::RemotePlayerOnServer;
 		friend class UI::Multiplayer::MpInGameCanvasLayer;
 		friend class UI::Multiplayer::MpInGameLobby;
+		friend class UI::Multiplayer::MpHUD;
 
 	public:
 		MpLevelHandler(IRootController* root, NetworkManager* networkManager, bool enableLedgeClimb);
@@ -79,7 +81,7 @@ namespace Jazz2::Multiplayer
 
 		void HandleLevelChange(LevelInitialization&& levelInit) override;
 		void HandleGameOver(Actors::Player* player) override;
-		bool HandlePlayerDied(Actors::Player* player, Actors::ActorBase* collider) override;
+		bool HandlePlayerDied(Actors::Player* player) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
@@ -113,6 +115,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Sets current game mode */
 		bool SetGameMode(MpGameMode value);
 
+		/** @brief Returns owner of the specified object or the player itself */
+		static Actors::Player* GetWeaponOwner(Actors::ActorBase* actor);
+
 		// Server-only methods
 		/** @brief Processes the specified server command */
 		bool ProcessCommand(const Peer& peer, StringView line);
@@ -126,6 +131,7 @@ namespace Jazz2::Multiplayer
 
 	protected:
 		void AttachComponents(LevelDescriptor&& descriptor) override;
+		std::unique_ptr<UI::HUD> CreateHUD() override;
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
 		bool IsCheatingAllowed() override;
 
@@ -150,9 +156,6 @@ namespace Jazz2::Multiplayer
 		/** @brief Called when a player changes their current weapon */
 		void HandlePlayerWeaponChanged(Actors::Player* player);
 
-		/** @brief Returns owner of the specified object or the player itself */
-		static Actors::Player* GetWeaponOwner(Actors::ActorBase* actor);
-
 	private:
 		enum class LevelPeerState {
 			Unknown,
@@ -170,15 +173,9 @@ namespace Jazz2::Multiplayer
 			std::uint64_t LastUpdated;
 			bool EnableLedgeClimb;
 
-			std::uint32_t Deaths;
-			std::uint32_t Kills;
-			std::uint32_t Laps;
-			std::uint32_t TreasureCollected;
-
 			LevelPeerDesc() {}
 			LevelPeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, LevelPeerState state, bool enableLedgeClimb)
-				: Player(player), State(state), LastUpdated(0), EnableLedgeClimb(enableLedgeClimb), Deaths(0), Kills(0),
-					Laps(0), TreasureCollected(0) {}
+				: Player(player), State(state), LastUpdated(0), EnableLedgeClimb(enableLedgeClimb) {}
 		};
 #endif
 
@@ -253,10 +250,6 @@ namespace Jazz2::Multiplayer
 		bool _enableLedgeClimb;
 		Threading::Spinlock _lock;
 
-		// TODO: Client-side game mode properties
-		std::uint32_t _currentLaps;
-		std::uint32_t _totalLaps;
-
 #if defined(DEATH_DEBUG)
 		std::int32_t _debugAverageUpdatePacketSize;
 #endif
@@ -271,6 +264,7 @@ namespace Jazz2::Multiplayer
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
 
+		bool ApplyFromPlaylist();
 		void SetWelcomeMessage(StringView message);
 		void SetPlayerReady(PlayerType playerType);
 

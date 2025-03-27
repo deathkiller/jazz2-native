@@ -2,14 +2,14 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../Player.h"
+#include "PlayerOnServer.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
 	/** @brief Remotable player in online session */
-	class RemotablePlayer : public Player
+	class RemotablePlayer : public Player, public IPlayerStatsProvider
 	{
-		DEATH_RUNTIME_OBJECT(Player);
+		DEATH_RUNTIME_OBJECT(Player, IPlayerStatsProvider);
 
 	public:
 		RemotablePlayer();

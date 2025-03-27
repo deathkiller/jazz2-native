@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Collectibles
 		};
 
 		bool _untouched;
-		std::uint32_t _scoreValue;
+		std::int32_t _scoreValue;
 		float _timeLeft;
 #endif
 

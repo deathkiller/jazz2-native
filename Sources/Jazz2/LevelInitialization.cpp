@@ -11,8 +11,8 @@ namespace Jazz2
 	{
 	}
 
-	LevelInitialization::LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged)
-		: LevelName(level), EpisodeName(episode), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
+	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged)
+		: LevelName(level), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
 			CheatsUsed(false), LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
 		for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
@@ -20,8 +20,8 @@ namespace Jazz2
 		}
 	}
 
-	LevelInitialization::LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
-		: LevelName(level), EpisodeName(episode), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
+	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
+		: LevelName(level), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
 			CheatsUsed(cheatsUsed), LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
 		PlayerCarryOvers[0].Type = playerType;
@@ -32,8 +32,8 @@ namespace Jazz2
 		}
 	}
 
-	LevelInitialization::LevelInitialization(StringView episode, StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
-		: LevelName(level), EpisodeName(episode), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
+	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
+		: LevelName(level), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
 			CheatsUsed(cheatsUsed), LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
 		std::int32_t playerCount = std::min((std::int32_t)playerTypes.size(), MaxPlayerCount);
@@ -50,7 +50,6 @@ namespace Jazz2
 	LevelInitialization::LevelInitialization(const LevelInitialization& copy) noexcept
 	{
 		LevelName = copy.LevelName;
-		EpisodeName = copy.EpisodeName;
 		IsLocalSession = copy.IsLocalSession;
 		Difficulty = copy.Difficulty;
 		IsReforged = copy.IsReforged;
@@ -65,7 +64,6 @@ namespace Jazz2
 	LevelInitialization::LevelInitialization(LevelInitialization&& move) noexcept
 	{
 		LevelName = std::move(move.LevelName);
-		EpisodeName = std::move(move.EpisodeName);
 		IsLocalSession = move.IsLocalSession;
 		Difficulty = move.Difficulty;
 		IsReforged = move.IsReforged;

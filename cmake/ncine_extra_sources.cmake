@@ -709,6 +709,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpHUD.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.h
 	)
@@ -728,6 +729,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpHUD.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.cpp
 	)

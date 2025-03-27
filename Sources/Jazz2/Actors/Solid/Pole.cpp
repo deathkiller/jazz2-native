@@ -37,7 +37,6 @@ namespace Jazz2::Actors::Solid
 		_pos.Y += y;
 		_renderer.setLayer(_renderer.layer() - 20);
 
-		SetState(ActorState::TriggersTNT, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
 		bool isSolid = true;
@@ -140,6 +139,11 @@ namespace Jazz2::Actors::Solid
 		}
 
 		return false;
+	}
+
+	bool Pole::CanCauseDamage(ActorBase* collider)
+	{
+		return true;
 	}
 
 	void Pole::Fall(FallDirection dir)
