@@ -31,7 +31,7 @@ namespace Death { namespace Environment {
 
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-	 * @brief Returns whether the application is embedded in another application (or in an `iframe` element)
+	 * @brief Returns whether the application is embedded in another application (or in an `<iframe>` element)
 	 *
 	 * @partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
 	 */
