@@ -14,6 +14,7 @@ namespace Jazz2::Actors::Multiplayer
 	public:
 		RemotablePlayer();
 
+		/** @brief Whether current weapon is being changed by the server */
 		bool ChangingWeaponFromServer;
 
 		/** @brief Returns team ID */

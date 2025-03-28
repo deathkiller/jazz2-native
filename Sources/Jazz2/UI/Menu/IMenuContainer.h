@@ -83,7 +83,7 @@ namespace Jazz2::UI::Menu
 		virtual Recti GetContentBounds() const = 0;
 
 		/** @brief Draws a textured element */
-		virtual void DrawElement(AnimState state, int32_t frame, float x, float y, std::uint16_t z, Alignment align,
+		virtual void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align,
 			const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false) = 0;
 		/** @overload */
 		virtual void DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align,

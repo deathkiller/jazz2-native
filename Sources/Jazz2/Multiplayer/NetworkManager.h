@@ -81,7 +81,9 @@ namespace Jazz2::Multiplayer
 		static MpGameMode StringToGameMode(StringView value);
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		using NetworkManagerBase::CreateServer;
+#endif
 
 		ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
 		void OnPeerDisconnected(const Peer& peer, Reason reason) override;

@@ -56,6 +56,7 @@ namespace Jazz2::UI::Menu
 		bool _alreadyStarted;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		String _sourcePath;
+		bool _isEmbedded;
 #endif
 
 		void ExecuteSelected();

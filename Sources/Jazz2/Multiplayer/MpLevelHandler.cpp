@@ -700,7 +700,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::GetCollidingPlayers(aabb, std::move(callback));
 	}
 
-	void MpLevelHandler::BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams)
+	void MpLevelHandler::BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams)
 	{
 		LevelHandler::BroadcastTriggeredEvent(initiator, eventType, eventParams);
 	}
@@ -984,6 +984,7 @@ namespace Jazz2::Multiplayer
 			auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
 			if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
 				playerOnServer->Laps++;
+				playerOnServer->LapStarted = TimeStamp::now();
 			}
 
 			for (auto& [peer, peerDesc] : _peerDesc) {
@@ -1304,6 +1305,7 @@ namespace Jazz2::Multiplayer
 				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
 				playerParams
 			));
+			player->LapStarted = TimeStamp::now();
 
 			Actors::Multiplayer::LocalPlayerOnServer* ptr = player.get();
 			_players.push_back(ptr);
@@ -2102,6 +2104,7 @@ namespace Jazz2::Multiplayer
 						));
 						player->SetTeamId(teamId);
 						player->SetHealth(health);
+						player->LapStarted = TimeStamp::now();
 
 						Actors::Multiplayer::RemotablePlayer* ptr = player.get();
 						_players.push_back(ptr);
@@ -2304,6 +2307,12 @@ namespace Jazz2::Multiplayer
 					}
 
 					switch (propertyType) {
+						case PlayerPropertyType::Lives: {
+							// TODO
+							std::int32_t lives = packet.ReadVariableInt32();
+							_players[0]->_lives = lives;
+							break;
+						}
 						case PlayerPropertyType::Health: {
 							// TODO
 							std::int32_t health = packet.ReadVariableInt32();
@@ -2380,6 +2389,7 @@ namespace Jazz2::Multiplayer
 							std::uint32_t totalLaps = packet.ReadVariableUint32();
 							auto* player = static_cast<RemotablePlayer*>(_players[0]);
 							player->Laps = currentLaps;
+							player->LapStarted = TimeStamp::now();
 							// TODO: Show laps in HUD
 							_console->WriteLine(UI::MessageLevel::Info, _f("Laps: %u/%u", currentLaps, totalLaps));
 							break;
@@ -2739,6 +2749,7 @@ namespace Jazz2::Multiplayer
 					Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
 					playerParams
 				));
+				player->LapStarted = TimeStamp::now();
 
 				Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();
 				_players.push_back(ptr);

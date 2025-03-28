@@ -23,6 +23,8 @@ namespace Jazz2::Actors::Multiplayer
 		std::uint32_t Kills;
 		/** @brief Laps of the player */
 		std::uint32_t Laps;
+		/** @brief  */
+		TimeStamp LapStarted;
 		/** @brief Treasure collected of the player */
 		std::uint32_t TreasureCollected;
 

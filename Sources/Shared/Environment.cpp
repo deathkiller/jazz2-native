@@ -1,6 +1,8 @@
 #include "Environment.h"
 
-#if defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <emscripten.h>
+#elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include <winrt/Windows.System.Profile.h>
@@ -18,6 +20,15 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 
 namespace Death { namespace Environment {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+	bool IsEmbedded()
+	{
+		return EM_ASM_INT({
+			return window.self !== window.top;
+		});
+	}
+#endif
 
 	bool IsSandboxed()
 	{

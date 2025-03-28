@@ -200,18 +200,18 @@ namespace Jazz2::UI
 			adjustedScopedView.X = left;
 			adjustedScopedView.W = right - left;
 
-			DrawHealth(scopedView, adjustedScopedView, player);
-			DrawScore(scopedView, player);
-			DrawWeaponAmmo(adjustedScopedView, player);
+			OnDrawHealth(scopedView, adjustedScopedView, player);
+			OnDrawScore(scopedView, player);
+			OnDrawWeaponAmmo(adjustedScopedView, player);
 
 			DrawWeaponWheel(scopedView, player);
 		}
 
 		DrawViewportSeparators();
-		DrawCoins(view, charOffset);
-		DrawGems(view, charOffset);
-		DrawActiveBoss(adjustedView);
-		DrawLevelText(charOffset);
+		OnDrawCoins(view, charOffset);
+		OnDrawGems(view, charOffset);
+		OnDrawActiveBoss(adjustedView);
+		OnDrawLevelText(charOffset);
 
 		// Touch Controls
 		if (_touchButtonsTimer > 0.0f) {
@@ -457,7 +457,7 @@ namespace Jazz2::UI
 		return (_weaponWheel[playerIndex].Anim > 0.0f);
 	}
 
-	void HUD::DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
+	void HUD::OnDrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
 	{
 		PlayerType playerType = player->_playerType;
 
@@ -569,6 +569,240 @@ namespace Jazz2::UI
 		}
 	}
 
+	void HUD::OnDrawScore(const Rectf& view, Actors::Player* player)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Score)) {
+			return;
+		}
+#endif
+
+		char stringBuffer[32];
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+
+		if (PreferencesCache::EnableReforgedHUD) {
+			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
+
+			formatString(stringBuffer, sizeof(stringBuffer), "%08i", player->GetScore());
+			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+		} else {
+			formatString(stringBuffer, sizeof(stringBuffer), "%08i", player->GetScore());
+			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
+				Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+		}
+	}
+
+	void HUD::OnDrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, player, adjustedView, Scripting::DrawType::WeaponAmmo)) {
+			return;
+		}
+#endif
+
+		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog) {
+			return;
+		}
+
+		float right = adjustedView.X + adjustedView.W;
+		float bottom = adjustedView.Y + adjustedView.H;
+
+		WeaponType weapon = player->_currentWeapon;
+		Vector2f pos = Vector2f(right - 40.0f, bottom - 2.0f);
+		AnimState currentWeaponAnim = GetCurrentWeapon(player, weapon, pos);
+
+		char stringBuffer[32];
+		StringView ammoCount;
+		if (player->_weaponAmmo[(int32_t)weapon] == UINT16_MAX) {
+			ammoCount = "x\u221E"_s;
+		} else {
+			stringBuffer[0] = 'x';
+			i32tos(player->_weaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
+			ammoCount = stringBuffer;
+		}
+
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+		_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40.0f, bottom - 2.0f + 1.0f, FontShadowLayer,
+			Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+		_smallFont->DrawString(this, ammoCount, charOffset, right - 40.0f, bottom - 2.0f, FontLayer,
+			Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+
+		auto* res = _metadata->FindAnimation(currentWeaponAnim);
+		if (res != nullptr) {
+			if (res->Base->FrameDimensions.Y < 20) {
+				pos.Y -= std::round((20 - res->Base->FrameDimensions.Y) * 0.5f);
+			}
+
+			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White);
+		}
+	}
+
+	void HUD::OnDrawActiveBoss(const Rectf& adjustedView)
+	{
+		if (_levelHandler->_activeBoss == nullptr || _levelHandler->_activeBoss->GetMaxHealth() == INT32_MAX) {
+			return;
+		}
+
+		float bottom = adjustedView.Y + adjustedView.H;
+
+		constexpr float TransitionTime = 60.0f;
+		float y, alpha;
+		if (_activeBossTime < TransitionTime) {
+			y = (TransitionTime - _activeBossTime) / 8.0f;
+			y = bottom * 0.1f - (y * y);
+			alpha = std::max(_activeBossTime / TransitionTime, 0.0f);
+		} else {
+			y = bottom * 0.1f;
+			alpha = 1.0f;
+		}
+
+		float perc = 0.08f + 0.84f * _levelHandler->_activeBoss->GetHealth() / _levelHandler->_activeBoss->GetMaxHealth();
+
+		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
+		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
+
+		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
+		DrawElementClipped(BossHealthBar, 1, ViewSize.X * 0.5f, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
+	}
+
+	void HUD::OnDrawLevelText(int32_t& charOffset)
+	{
+		constexpr float StillTime = 350.0f;
+		constexpr float TransitionTime = 100.0f;
+		constexpr float TotalTime = StillTime + TransitionTime * 2.0f;
+
+		if (_levelTextTime < 0.0f) {
+			return;
+		}
+
+		float offset;
+		if (_levelTextTime < TransitionTime) {
+			offset = powf((TransitionTime - _levelTextTime) / 12.0f, 3);
+		} else if (_levelTextTime > TransitionTime + StillTime) {
+			offset = -powf((_levelTextTime - TransitionTime - StillTime) / 12.0f, 3);
+		} else {
+			offset = 0;
+		}
+
+		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f);
+
+		std::int32_t charOffsetShadow = charOffset;
+		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, FontShadowLayer,
+			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
+
+		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, FontLayer,
+			Alignment::Top, Font::DefaultColor, textScale, 0.72f, 0.8f, 0.8f);
+
+		if (_levelTextTime > TotalTime) {
+			_levelTextTime = -1.0f;
+			_levelText = { };
+		}
+	}
+
+	void HUD::OnDrawCoins(const Rectf& view, std::int32_t& charOffset)
+	{
+		constexpr float StillTime = 120.0f;
+		constexpr float TransitionTime = 60.0f;
+		constexpr float TotalTime = StillTime + TransitionTime * 2.0f;
+
+		if (_coinsTime < 0.0f) {
+			return;
+		}
+
+		float offset, alpha;
+		if (_coinsTime < TransitionTime) {
+			offset = (TransitionTime - _coinsTime) / 10.0f;
+			offset = -(offset * offset);
+			alpha = std::max(_coinsTime / TransitionTime, 0.1f);
+		} else if (_coinsTime > TransitionTime + StillTime) {
+			offset = (_coinsTime - TransitionTime - StillTime) / 10.0f;
+			offset = (offset * offset);
+			alpha = (TotalTime - _coinsTime) / TransitionTime;
+		} else {
+			offset = 0.0f;
+			alpha = 1.0f;
+		}
+
+		float alpha2 = alpha * alpha;
+		DrawElement(PickupCoin, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer,
+			Alignment::Right, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha), 0.8f, 0.8f);
+		DrawElement(PickupCoin, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer,
+			Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, alpha2), 0.8f, 0.8f);
+
+		char stringBuffer[32];
+		formatString(stringBuffer, sizeof(stringBuffer), "x%i", _coins);
+
+		std::int32_t charOffsetShadow = charOffset;
+		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
+			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+
+		Colorf fontColor = Font::DefaultColor;
+		fontColor.SetAlpha(alpha2);
+		_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
+			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
+
+		if (_coinsTime > TotalTime) {
+			_coinsTime = -1.0f;
+		}
+	}
+
+	void HUD::OnDrawGems(const Rectf& view, std::int32_t& charOffset)
+	{
+		constexpr float StillTime = 120.0f;
+		constexpr float TransitionTime = 60.0f;
+		constexpr float TotalTime = StillTime + TransitionTime * 2.0f;
+
+		if (_gemsTime < 0.0f) {
+			return;
+		}
+
+		float offset, alpha;
+		if (_gemsTime < TransitionTime) {
+			offset = (TransitionTime - _gemsTime) / 10.0f;
+			offset = -(offset * offset);
+			alpha = std::max(_gemsTime / TransitionTime, 0.1f);
+		} else if (_gemsTime > TransitionTime + StillTime) {
+			offset = (_gemsTime - TransitionTime - StillTime) / 10.0f;
+			offset = (offset * offset);
+			alpha = (TotalTime - _gemsTime) / TransitionTime;
+		} else {
+			offset = 0.0f;
+			alpha = 1.0f;
+		}
+
+		AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + _gemsLastType);
+		float alpha2 = alpha * alpha;
+		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer, Alignment::Right,
+			Colorf(0.0f, 0.0f, 0.0f, 0.4f * alpha2), 0.8f, 0.8f);
+		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer, Alignment::Right,
+			Colorf(1.0f, 1.0f, 1.0f, 0.8f * alpha2), 0.8f, 0.8f);
+
+		char stringBuffer[32];
+		formatString(stringBuffer, sizeof(stringBuffer), "x%i", _gems);
+
+		std::int32_t charOffsetShadow = charOffset;
+		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
+			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+
+		Colorf fontColor = Font::DefaultColor;
+		fontColor.SetAlpha(alpha2);
+		_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
+			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
+
+		if (_gemsTime > TotalTime) {
+			_gemsTime = -1.0f;
+		}
+	}
+
 	void HUD::DrawHealthCarrots(float x, float y, std::int32_t health)
 	{
 		constexpr Colorf CarrotShadowColor = Colorf(0.0f, 0.0f, 0.0f, 0.5f);
@@ -643,145 +877,6 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawScore(const Rectf& view, Actors::Player* player)
-	{
-#if defined(WITH_ANGELSCRIPT)
-		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Score)) {
-			return;
-		}
-#endif
-
-		char stringBuffer[32];
-		std::int32_t charOffset = 0;
-		std::int32_t charOffsetShadow = 0;
-
-		if (PreferencesCache::EnableReforgedHUD) {
-			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
-
-			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->GetScore());
-			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-		} else {
-			snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->GetScore());
-			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
-				Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-		}
-	}
-
-	void HUD::DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player)
-	{
-#if defined(WITH_ANGELSCRIPT)
-		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, player, adjustedView, Scripting::DrawType::WeaponAmmo)) {
-			return;
-		}
-#endif
-
-		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog) {
-			return;
-		}
-
-		float right = adjustedView.X + adjustedView.W;
-		float bottom = adjustedView.Y + adjustedView.H;
-
-		WeaponType weapon = player->_currentWeapon;
-		Vector2f pos = Vector2f(right - 40.0f, bottom - 2.0f);
-		AnimState currentWeaponAnim = GetCurrentWeapon(player, weapon, pos);
-
-		char stringBuffer[32];
-		StringView ammoCount;
-		if (player->_weaponAmmo[(int32_t)weapon] == UINT16_MAX) {
-			ammoCount = "x\u221E"_s;
-		} else {
-			stringBuffer[0] = 'x';
-			i32tos(player->_weaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
-			ammoCount = stringBuffer;
-		}
-
-		std::int32_t charOffset = 0;
-		std::int32_t charOffsetShadow = 0;
-		_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40.0f, bottom - 2.0f + 1.0f, FontShadowLayer,
-			Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
-		_smallFont->DrawString(this, ammoCount, charOffset, right - 40.0f, bottom - 2.0f, FontLayer,
-			Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
-
-		auto* res = _metadata->FindAnimation(currentWeaponAnim);
-		if (res != nullptr) {
-			if (res->Base->FrameDimensions.Y < 20) {
-				pos.Y -= std::round((20 - res->Base->FrameDimensions.Y) * 0.5f);
-			}
-
-			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White);
-		}
-	}
-
-	void HUD::DrawActiveBoss(const Rectf& adjustedView)
-	{
-		if (_levelHandler->_activeBoss == nullptr || _levelHandler->_activeBoss->GetMaxHealth() == INT32_MAX) {
-			return;
-		}
-
-		float bottom = adjustedView.Y + adjustedView.H;
-
-		constexpr float TransitionTime = 60.0f;
-		float y, alpha;
-		if (_activeBossTime < TransitionTime) {
-			y = (TransitionTime - _activeBossTime) / 8.0f;
-			y = bottom * 0.1f - (y * y);
-			alpha = std::max(_activeBossTime / TransitionTime, 0.0f);
-		} else {
-			y = bottom * 0.1f;
-			alpha = 1.0f;
-		}
-
-		float perc = 0.08f + 0.84f * _levelHandler->_activeBoss->GetHealth() / _levelHandler->_activeBoss->GetMaxHealth();
-
-		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
-		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
-
-		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
-		DrawElementClipped(BossHealthBar, 1, ViewSize.X * 0.5f, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
-	}
-
-	void HUD::DrawLevelText(int32_t& charOffset)
-	{
-		constexpr float StillTime = 350.0f;
-		constexpr float TransitionTime = 100.0f;
-		constexpr float TotalTime = StillTime + TransitionTime * 2.0f;
-
-		if (_levelTextTime < 0.0f) {
-			return;
-		}
-
-		float offset;
-		if (_levelTextTime < TransitionTime) {
-			offset = powf((TransitionTime - _levelTextTime) / 12.0f, 3);
-		} else if (_levelTextTime > TransitionTime + StillTime) {
-			offset = -powf((_levelTextTime - TransitionTime - StillTime) / 12.0f, 3);
-		} else {
-			offset = 0;
-		}
-
-		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f);
-
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, FontShadowLayer,
-			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
-
-		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, FontLayer,
-			Alignment::Top, Font::DefaultColor, textScale, 0.72f, 0.8f, 0.8f);
-
-		if (_levelTextTime > TotalTime) {
-			_levelTextTime = -1.0f;
-			_levelText = { };
-		}
-	}
-
 	void HUD::DrawViewportSeparators()
 	{
 		switch (_levelHandler->_assignedViewports.size()) {
@@ -812,101 +907,6 @@ namespace Jazz2::UI
 				DrawSolid(Vector2f(0.0f, halfH), ShadowLayer, Vector2f(ViewSize.X, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 				break;
 			}
-		}
-	}
-
-	void HUD::DrawCoins(const Rectf& view, std::int32_t& charOffset)
-	{
-		constexpr float StillTime = 120.0f;
-		constexpr float TransitionTime = 60.0f;
-		constexpr float TotalTime = StillTime + TransitionTime * 2.0f;
-
-		if (_coinsTime < 0.0f) {
-			return;
-		}
-
-		float offset, alpha;
-		if (_coinsTime < TransitionTime) {
-			offset = (TransitionTime - _coinsTime) / 10.0f;
-			offset = -(offset * offset);
-			alpha = std::max(_coinsTime / TransitionTime, 0.1f);
-		} else if (_coinsTime > TransitionTime + StillTime) {
-			offset = (_coinsTime - TransitionTime - StillTime) / 10.0f;
-			offset = (offset * offset);
-			alpha = (TotalTime - _coinsTime) / TransitionTime;
-		} else {
-			offset = 0.0f;
-			alpha = 1.0f;
-		}
-
-		float alpha2 = alpha * alpha;
-		DrawElement(PickupCoin, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer,
-			Alignment::Right, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha), 0.8f, 0.8f);
-		DrawElement(PickupCoin, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer,
-			Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, alpha2), 0.8f, 0.8f);
-
-		char stringBuffer[32];
-		snprintf(stringBuffer, arraySize(stringBuffer), "x%i", _coins);
-
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
-
-		Colorf fontColor = Font::DefaultColor;
-		fontColor.SetAlpha(alpha2);
-		_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
-			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
-
-		if (_coinsTime > TotalTime) {
-			_coinsTime = -1.0f;
-		}
-	}
-
-	void HUD::DrawGems(const Rectf& view, std::int32_t& charOffset)
-	{
-		constexpr float StillTime = 120.0f;
-		constexpr float TransitionTime = 60.0f;
-		constexpr float TotalTime = StillTime + TransitionTime * 2.0f;
-
-		if (_gemsTime < 0.0f) {
-			return;
-		}
-
-		float offset, alpha;
-		if (_gemsTime < TransitionTime) {
-			offset = (TransitionTime - _gemsTime) / 10.0f;
-			offset = -(offset * offset);
-			alpha = std::max(_gemsTime / TransitionTime, 0.1f);
-		} else if (_gemsTime > TransitionTime + StillTime) {
-			offset = (_gemsTime - TransitionTime - StillTime) / 10.0f;
-			offset = (offset * offset);
-			alpha = (TotalTime - _gemsTime) / TransitionTime;
-		} else {
-			offset = 0.0f;
-			alpha = 1.0f;
-		}
-
-		AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + _gemsLastType);
-		float alpha2 = alpha * alpha;
-		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer, Alignment::Right,
-			Colorf(0.0f, 0.0f, 0.0f, 0.4f * alpha2), 0.8f, 0.8f);
-		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer, Alignment::Right,
-			Colorf(1.0f, 1.0f, 1.0f, 0.8f * alpha2), 0.8f, 0.8f);
-
-		char stringBuffer[32];
-		snprintf(stringBuffer, arraySize(stringBuffer), "x%i", _gems);
-
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
-
-		Colorf fontColor = Font::DefaultColor;
-		fontColor.SetAlpha(alpha2);
-		_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
-			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
-
-		if (_gemsTime > TotalTime) {
-			_gemsTime = -1.0f;
 		}
 	}
 

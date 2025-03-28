@@ -12,6 +12,7 @@
 #endif
 
 #include <Containers/StringConcatenable.h>
+#include <Environment.h>
 #include <Utf8.h>
 
 #if defined(SHAREWARE_DEMO_ONLY)
@@ -42,7 +43,9 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		_isEmbedded = Environment::IsEmbedded();
+#else
 		if (auto* mainMenu = runtime_cast<MainMenu*>(_root)) {
 			_isPlayable = ((mainMenu->_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 		}
@@ -192,7 +195,15 @@ namespace Jazz2::UI::Menu
 
 		std::int32_t charOffset = 0;
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		if (_isEmbedded) {
+			// Show additional label under the logo if the game is embedded in an <iframe> element
+			_root->DrawStringShadow(_f("For more information, visit %s and \uE000 Discord!", "\f[c:#707070]https://deat.tk/jazz2/\f[/c]"), charOffset, center.X, center.Y - 30.0f, IMenuContainer::FontLayer,
+				Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+			itemCount++;
+			center.Y += (0.4f * (float)canvas->ViewSize.Y / itemCount);
+		}
+#else
 		if (!_isPlayable) {
 #	if defined(DEATH_TARGET_ANDROID)
 			if (permissionGranted) {
