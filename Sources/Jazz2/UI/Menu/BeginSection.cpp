@@ -344,7 +344,7 @@ namespace Jazz2::UI::Menu
 					if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 						_root->SwitchToSection<EpisodeSelectSection>();
 					} else {
-						_root->SwitchToSection<StartGameOptionsSection>("share"_s, "01_share1"_s, nullptr);
+						_root->SwitchToSection<StartGameOptionsSection>("share/01_share1"_s, nullptr);
 					}
 #else
 					_root->SwitchToSection<EpisodeSelectSection>();
