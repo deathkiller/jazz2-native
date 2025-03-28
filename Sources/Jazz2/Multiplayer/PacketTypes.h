@@ -78,7 +78,8 @@ namespace Jazz2::Multiplayer
 	{
 		Unknown,
 
-		Health = 1,
+		Lives = 1,
+		Health,
 		Controllable,
 		Invulnerable,
 		Modifier,

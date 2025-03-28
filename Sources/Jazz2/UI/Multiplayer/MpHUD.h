@@ -7,18 +7,17 @@
 
 namespace Jazz2::UI::Multiplayer
 {
-	/** @brief Player MpHUD */
+	/** @brief Player HUD for multiplayer */
 	class MpHUD : public HUD
 	{
-#if defined(WITH_ANGELSCRIPT)
-		friend struct Scripting::Legacy::jjCANVAS;
-#endif
-
 	public:
 		MpHUD(Jazz2::Multiplayer::MpLevelHandler* levelHandler);
 
+	protected:
+		void OnDrawScore(const Rectf& view, Actors::Player* player) override;
+
 	private:
-		void DrawScore(const Rectf& view, Actors::Player* player) override;
+		Font* _mediumFont;
 	};
 }
 

@@ -68,9 +68,11 @@ namespace Jazz2::UI::Multiplayer
 	MpHUD::MpHUD(Jazz2::Multiplayer::MpLevelHandler* levelHandler)
 		: HUD(levelHandler)
 	{
+		auto& resolver = ContentResolver::Get();
+		_mediumFont = resolver.GetFont(FontType::Medium);
 	}
 
-	void MpHUD::DrawScore(const Rectf& view, Actors::Player* player)
+	void MpHUD::OnDrawScore(const Rectf& view, Actors::Player* player)
 	{
 #if defined(WITH_ANGELSCRIPT)
 		/*if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Score)) {
@@ -108,18 +110,18 @@ namespace Jazz2::UI::Multiplayer
 			case MpGameMode::Battle:
 			case MpGameMode::TeamBattle: {
 
-				snprintf(stringBuffer, arraySize(stringBuffer), "K: %u D: %u / %u", statsProvider->Kills, statsProvider->Deaths, totalKills);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				formatString(stringBuffer, sizeof(stringBuffer), "K: %u  D: %u  /%u", statsProvider->Kills, statsProvider->Deaths, totalKills);
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}
 			case MpGameMode::CaptureTheFlag: {
 
 				// TODO
-				/*snprintf(stringBuffer, arraySize(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
+				/*formatString(stringBuffer, sizeof(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
@@ -130,21 +132,32 @@ namespace Jazz2::UI::Multiplayer
 			case MpGameMode::Race:
 			case MpGameMode::TeamRace: {
 
-				snprintf(stringBuffer, arraySize(stringBuffer), "%u / %u", statsProvider->Laps, totalLaps);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", statsProvider->Laps + 1, totalLaps);
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 20.0f, view.Y + 5.0f + 1.4f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.88f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 20.0f, view.Y + 5.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
+
+				float sinceLapStarted = statsProvider->LapStarted.secondsSince();
+				std::int32_t minutes = (std::int32_t)(sinceLapStarted / 60);
+				std::int32_t seconds = (std::int32_t)fmod(sinceLapStarted, 60);
+				std::int32_t milliseconds = (std::int32_t)(fmod(sinceLapStarted, 1) * 100);
+
+				formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f + 80.0f, view.Y + 8.0f + 1.4f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f + 80.0f, view.Y + 8.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}
 			case MpGameMode::TreasureHunt: {
 
-				snprintf(stringBuffer, arraySize(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", statsProvider->TreasureCollected, totalTreasureCollected);
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}
@@ -153,13 +166,13 @@ namespace Jazz2::UI::Multiplayer
 					DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 					DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
-					snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->GetScore());
+					formatString(stringBuffer, sizeof(stringBuffer), "%08i", player->GetScore());
 					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 					_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 						Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 				} else {
-					snprintf(stringBuffer, arraySize(stringBuffer), "%08i", player->GetScore());
+					formatString(stringBuffer, sizeof(stringBuffer), "%08i", player->GetScore());
 					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
 						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 					_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,

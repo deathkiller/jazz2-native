@@ -41,7 +41,7 @@ namespace Jazz2::UI
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
-		void OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions);
+		void OnTouchEvent(const TouchEvent& event, std::uint32_t& overrideActions);
 
 		/** @brief Shows a text notification */
 		void ShowLevelText(StringView text);
@@ -59,13 +59,6 @@ namespace Jazz2::UI
 		bool IsWeaponWheelVisible(std::int32_t playerIndex) const;
 
 	protected:
-		enum class TransitionState {
-			None,
-			FadeIn,
-			FadeOut,
-			WaitingForFadeOut
-		};
-
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct TouchButtonInfo {
@@ -115,6 +108,7 @@ namespace Jazz2::UI
 
 		/** @} */
 		
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		LevelHandler* _levelHandler;
 		Metadata* _metadata;
 		Font* _smallFont;
@@ -127,21 +121,42 @@ namespace Jazz2::UI
 		float _gemsTime;
 		std::uint8_t _gemsLastType;
 		float _activeBossTime;
+#endif
 
-		void DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
+		/** @brief Called when health of the player needs to be drawn */
+		virtual void OnDrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
+		/** @brief Called when score of the player needs to be drawn */
+		virtual void OnDrawScore(const Rectf& view, Actors::Player* player);
+		/** @brief Called when weapon ammo of the player needs to be drawn */
+		virtual void OnDrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
+		/** @brief Called when health of the active boss needs to be drawn */
+		virtual void OnDrawActiveBoss(const Rectf& adjustedView);
+		/** @brief Called when a text notification needs to be drawn */
+		virtual void OnDrawLevelText(std::int32_t& charOffset);
+		/** @brief Called when a notification about coins of the player needs to be drawn */
+		virtual void OnDrawCoins(const Rectf& view, std::int32_t& charOffset);
+		/** @brief Called when a notification about gems of the player needs to be drawn */
+		virtual void OnDrawGems(const Rectf& view, std::int32_t& charOffset);
+
+		/** @brief Draws carrotized health bar (Reforged) */
 		void DrawHealthCarrots(float x, float y, std::int32_t health);
-		virtual void DrawScore(const Rectf& view, Actors::Player* player);
-		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
-		void DrawActiveBoss(const Rectf& adjustedView);
-		void DrawLevelText(std::int32_t& charOffset);
+		/** @brief Draws separators of split-screen viewports */
 		void DrawViewportSeparators();
-		void DrawCoins(const Rectf& view, std::int32_t& charOffset);
-		void DrawGems(const Rectf& view, std::int32_t& charOffset);
-
-		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
-		void DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
+		/** @brief Draws a textured element */
+		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
+			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
+		/** @brief Draws a textured element with clipping */
+		void DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align,
+			const Colorf& color, float clipX, float clipY);
 	
 	private:
+		enum class TransitionState {
+			None,
+			FadeIn,
+			FadeOut,
+			WaitingForFadeOut
+		};
+
 		static constexpr std::uint32_t VertexBytes = sizeof(Vertex);
 		static constexpr std::uint32_t VertexFloats = VertexBytes / sizeof(float);
 
