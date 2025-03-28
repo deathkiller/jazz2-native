@@ -1,4 +1,7 @@
 ﻿#include "MpHUD.h"
+
+#if defined(WITH_MULTIPLAYER)
+
 #include "../../Actors/Multiplayer/PlayerOnServer.h"
 #include "../../Multiplayer/MpLevelHandler.h"
 #include "../../PreferencesCache.h"
@@ -82,17 +85,19 @@ namespace Jazz2::UI::Multiplayer
 		}
 
 		MpGameMode gameMode;
-		std::uint32_t totalKills, totalLaps;
+		std::uint32_t totalKills, totalLaps, totalTreasureCollected;
 		if (mpLevelHandler->_isServer) {
 			const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
 			gameMode = serverConfig.GameMode;
 			totalKills = serverConfig.TotalKills;
 			totalLaps = serverConfig.TotalLaps;
+			totalTreasureCollected = serverConfig.TotalTreasureCollected;
 		} else {
 			const auto& clientConfig = mpLevelHandler->_networkManager->GetClientConfiguration();
 			gameMode = clientConfig.GameMode;
 			totalKills = /*clientConfig.TotalKills*/666;
 			totalLaps = /*clientConfig.TotalLaps*/666;
+			totalTreasureCollected = /*clientConfig.TotalTreasureCollected*/666;
 		}
 
 		char stringBuffer[32];
@@ -100,7 +105,8 @@ namespace Jazz2::UI::Multiplayer
 		std::int32_t charOffsetShadow = 0;
 
 		switch (gameMode) {
-			case MpGameMode::Battle: {
+			case MpGameMode::Battle:
+			case MpGameMode::TeamBattle: {
 
 				snprintf(stringBuffer, arraySize(stringBuffer), "K: %u D: %u / %u", statsProvider->Kills, statsProvider->Deaths, totalKills);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
@@ -110,9 +116,31 @@ namespace Jazz2::UI::Multiplayer
 
 				break;
 			}
-			case MpGameMode::Race: {
+			case MpGameMode::CaptureTheFlag: {
+
+				// TODO
+				/*snprintf(stringBuffer, arraySize(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);*/
+
+				break;
+			}
+			case MpGameMode::Race:
+			case MpGameMode::TeamRace: {
 
 				snprintf(stringBuffer, arraySize(stringBuffer), "%u / %u", statsProvider->Laps, totalLaps);
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+
+				break;
+			}
+			case MpGameMode::TreasureHunt: {
+
+				snprintf(stringBuffer, arraySize(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
@@ -142,3 +170,5 @@ namespace Jazz2::UI::Multiplayer
 		}
 	}
 }
+
+#endif

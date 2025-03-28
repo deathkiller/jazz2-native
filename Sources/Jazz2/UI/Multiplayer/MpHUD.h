@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
+
 #include "../HUD.h"
 #include "../../Multiplayer/MpLevelHandler.h"
 
@@ -19,3 +21,5 @@ namespace Jazz2::UI::Multiplayer
 		void DrawScore(const Rectf& view, Actors::Player* player) override;
 	};
 }
+
+#endif
