@@ -82,6 +82,7 @@ namespace Jazz2::Multiplayer
 		ServerConfiguration serverConfig{};
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
+		serverConfig.MinPlayerCount = 1;
 
 		serverConfig.TotalPlayerPoints = 50;
 		serverConfig.InitialPlayerHealth = 5;
@@ -124,7 +125,7 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::int64_t minPlayerCount;
-				if (doc["MinPlayerCount"].get(minPlayerCount) == SUCCESS && minPlayerCount >= 0 && minPlayerCount <= UINT32_MAX) {
+				if (doc["MinPlayerCount"].get(minPlayerCount) == SUCCESS && minPlayerCount >= 1 && minPlayerCount <= UINT32_MAX) {
 					serverConfig.MinPlayerCount = std::uint32_t(minPlayerCount);
 				}
 

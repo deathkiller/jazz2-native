@@ -82,12 +82,25 @@ namespace Death { namespace Environment {
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/** @{ @name Properties */
+
 	/**
 	 * @brief Version of Windows® operating system currently running this application
 	 * 
 	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 	 */
 	extern const std::uint64_t WindowsVersion;
+
+#	if defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+	 * @brief Type of device currently running this application
+	 *
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS_RT "Windows RT" platform.
+	 */
+	extern const DeviceType CurrentDeviceType;
+#	endif
+
+	/** @} */
 
 	/**
 	 * @brief Returns `true` if this application is currently running on Windows® Vista or later
@@ -133,15 +146,6 @@ namespace Death { namespace Environment {
 	DEATH_ALWAYS_INLINE bool IsWindows11() noexcept {
 		return WindowsVersion >= 0x0a0000000055f0; // 10.0.22000
 	}
-
-#	if defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
-	/**
-	 * @brief Type of device currently running this application
-	 * 
-	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS_RT "Windows RT" platform.
-	 */
-	extern const DeviceType CurrentDeviceType;
-#	endif
 #endif
 
 	/**

@@ -17,6 +17,7 @@
 #define WINRT_LEAN_AND_MEAN
 #include <windows.h>
 
+// Retrieves the address of an exported function using the type information from the specified function
 #define GetProcAddressByFunctionDeclaration(hinst, fn) reinterpret_cast<decltype(::fn)*>(::GetProcAddress(hinst, #fn))
 
 // Undefine `far` and `near` keywords, not used anymore (but still exist in some headers)

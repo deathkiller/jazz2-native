@@ -11,6 +11,7 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
+	class PlayerOnServer;
 	class RemotablePlayer;
 	class RemoteActor;
 	class RemotePlayerOnServer;
@@ -157,6 +158,18 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerWeaponChanged(Actors::Player* player);
 
 	private:
+		enum class LevelState {
+			Unknown,
+			InitialUpdatePending,
+			PreGame,
+			WaitingForMinPlayers,
+			Countdown3,
+			Countdown2,
+			Countdown1,
+			Running,
+			Ending,
+			Ended
+		};
 		enum class LevelPeerState {
 			Unknown,
 			LevelLoaded,
@@ -230,11 +243,14 @@ namespace Jazz2::Multiplayer
 		//static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
 		static constexpr float UpdatesPerSecond = 30.0f; // ~33 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
+		static constexpr float PreGameDuration = 60 * FrameTimer::FramesPerSecond;
+		static constexpr float EndingDuration = 10 * FrameTimer::FramesPerSecond;
 
 		NetworkManager* _networkManager;
 		float _updateTimeLeft;
+		float _gameTimeLeft;
+		LevelState _levelState;
 		bool _isServer;
-		bool _initialUpdateSent;
 		bool _enableSpawning;
 		HashMap<Peer, LevelPeerDesc> _peerDesc; // Server: Per peer description
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
@@ -263,6 +279,12 @@ namespace Jazz2::Multiplayer
 		bool IsLocalPlayer(Actors::ActorBase* actor);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
+		void ShowAlertToAllPlayers(StringView message);
+		void SetControllableToAllPlayers(bool enable);
+		void ResetAllPlayerStats();
+		void WarpAllPlayersToStart();
+		void CheckGameEnds();
+		void EndGame(Actors::Multiplayer::PlayerOnServer* winner);
 
 		bool ApplyFromPlaylist();
 		void SetWelcomeMessage(StringView message);

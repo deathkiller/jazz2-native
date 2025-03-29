@@ -53,8 +53,10 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool PlayerOnServer::CanCauseDamage(ActorBase* collider)
 	{
-		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(collider)) {
-			return (static_cast<PlayerOnServer*>(weaponOwner)->_teamId != _teamId);
+		if (_health > 0) {
+			if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(collider)) {
+				return (static_cast<PlayerOnServer*>(weaponOwner)->_teamId != _teamId);
+			}
 		}
 
 		return false;

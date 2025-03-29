@@ -51,9 +51,9 @@ using namespace Jazz2::Actors::Multiplayer;
 namespace Jazz2::Multiplayer
 {
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, bool enableLedgeClimb)
-		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f),
-			_initialUpdateSent(false), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0), _seqNumWarped(0), _suppressRemoting(false),
-			_ignorePackets(false), _enableLedgeClimb(enableLedgeClimb)
+		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
+			_levelState(LevelState::InitialUpdatePending), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0),
+			_seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
 #endif
@@ -194,23 +194,122 @@ namespace Jazz2::Multiplayer
 		}
 
 		_updateTimeLeft -= timeMult;
+		_gameTimeLeft -= timeMult;
+
 		if (_updateTimeLeft < 0.0f) {
 			_updateTimeLeft = FrameTimer::FramesPerSecond / UpdatesPerSecond;
 
-			if (!_initialUpdateSent) {
-				_initialUpdateSent = true;
+			switch (_levelState) {
+				case LevelState::InitialUpdatePending: {
+					LOGD("[MP] Level \"%s\" is ready", _levelName.data());
 
-				LOGD("[MP] Level \"%s\" is ready", _levelName.data());
+					if (_isServer) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						if (serverConfig.GameMode == MpGameMode::Cooperation) {
+							// Skip pre-game and countdown in cooperation
+							_levelState = LevelState::Running;
+						} else {
+							_levelState = LevelState::PreGame;
+							_gameTimeLeft = PreGameDuration;
+							ShowAlertToAllPlayers(_("\n\nThe game will begin shortly!"));
+						}
+					} else {
+						_levelState = LevelState::Running;
 
-				if (!_isServer) {
-					std::uint8_t flags = 0;
-					if (PreferencesCache::EnableLedgeClimb) {
-						flags |= 0x02;
+						std::uint8_t flags = 0;
+						if (PreferencesCache::EnableLedgeClimb) {
+							flags |= 0x02;
+						}
+
+						MemoryStream packet(1);
+						packet.WriteValue<std::uint8_t>(flags);
+						_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::LevelReady, packet);
 					}
+					break;
+				}
+				case LevelState::PreGame: {
+					if (_isServer && _gameTimeLeft <= 0.0f) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						if (_players.size() >= serverConfig.MinPlayerCount) {
+							_levelState = LevelState::Countdown3;
+							_gameTimeLeft = FrameTimer::FramesPerSecond;
+							SetControllableToAllPlayers(false);
+							WarpAllPlayersToStart();
+							ResetAllPlayerStats();
+							ShowAlertToAllPlayers("\n\n3"_s);
+							// TODO: Respawn all events and tilemap
+						} else {
+							_levelState = LevelState::WaitingForMinPlayers;
+							ShowAlertToAllPlayers(_("\n\nWaiting for minimum number of players!"));
+						}
+					}
+					break;
+				}
+				case LevelState::WaitingForMinPlayers: {
+					if (_isServer) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						if (_players.size() >= serverConfig.MinPlayerCount) {
+							_levelState = LevelState::Countdown3;
+							_gameTimeLeft = FrameTimer::FramesPerSecond;
+							SetControllableToAllPlayers(false);
+							WarpAllPlayersToStart();
+							ResetAllPlayerStats();
+							ShowAlertToAllPlayers("\n\n3"_s);
+							// TODO: Respawn all events and tilemap
+						}
+					}
+					break;
+				}
+				case LevelState::Countdown3: {
+					if (_isServer && _gameTimeLeft <= 0.0f) {
+						_levelState = LevelState::Countdown2;
+						_gameTimeLeft = FrameTimer::FramesPerSecond;
+						ShowAlertToAllPlayers("\n\n2"_s);
+					}
+					break;
+				}
+				case LevelState::Countdown2: {
+					if (_isServer && _gameTimeLeft <= 0.0f) {
+						_levelState = LevelState::Countdown1;
+						_gameTimeLeft = FrameTimer::FramesPerSecond;
+						ShowAlertToAllPlayers("\n\n1"_s);
+					}
+					break;
+				}
+				case LevelState::Countdown1: {
+					if (_isServer && _gameTimeLeft <= 0.0f) {
+						_levelState = LevelState::Running;
+						SetControllableToAllPlayers(true);
+						ShowAlertToAllPlayers(_("\n\nGo!"));
 
-					MemoryStream packet(1);
-					packet.WriteValue<std::uint8_t>(flags);
-					_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::LevelReady, packet);
+						for (auto* player : _players) {
+							DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
+							auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
+							playerOnServer->LapStarted = TimeStamp::now();
+						}
+					}
+					break;
+				}
+				case LevelState::Running: {
+					// TODO
+					break;
+				}
+				case LevelState::Ending: {
+					if (_isServer && _gameTimeLeft <= 0.0f) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						if (serverConfig.Playlist.size() > 1) {
+							serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+							ApplyFromPlaylist();
+						} else {
+							// TODO: Reload the level
+							LevelInitialization levelInit;
+							PrepareNextLevelInitialization(levelInit);
+							levelInit.LevelName = _levelName;
+							levelInit.LastExitType = ExitType::Normal;
+							HandleLevelChange(std::move(levelInit));
+						}
+					}
+					break;
 				}
 			}
 
@@ -796,6 +895,8 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
+			CheckGameEnds();
+
 			return true;
 		} else {
 			return false;
@@ -852,11 +953,6 @@ namespace Jazz2::Multiplayer
 	{
 		if (!_isServer) {
 			return;
-		}
-
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (serverConfig.GameMode == MpGameMode::Race && (flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
-			// TODO: Increment laps
 		}
 
 		if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
@@ -985,6 +1081,8 @@ namespace Jazz2::Multiplayer
 			if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
 				playerOnServer->Laps++;
 				playerOnServer->LapStarted = TimeStamp::now();
+
+				CheckGameEnds();
 			}
 
 			for (auto& [peer, peerDesc] : _peerDesc) {
@@ -1053,6 +1151,8 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 			}
+
+			CheckGameEnds();
 		}
 	}
 
@@ -1505,15 +1605,11 @@ namespace Jazz2::Multiplayer
 			}
 		} else if (line.hasPrefix("/alert "_s)) {
 			StringView message = line.exceptPrefix("/alert "_s).trimmed();
-			if (!message.empty()) {
-				MemoryStream packet(4 + message.size());
-				packet.WriteVariableUint32((std::uint32_t)message.size());
-				packet.Write(message.data(), (std::uint32_t)message.size());
-
-				_networkManager->SendTo([this](const Peer& peer) {
-					auto it = _peerDesc.find(peer);
-					return (it != _peerDesc.end() && it->second.State != LevelPeerState::Unknown);
-				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowAlert, packet);
+			ShowAlertToAllPlayers(message);
+		} else if (line == "/skip"_s) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			if (_levelState == LevelState::PreGame && _players.size() >= serverConfig.MinPlayerCount) {
+				_gameTimeLeft = 0.0f;
 			}
 		} else if (line.hasPrefix("/playlist"_s)) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -2094,7 +2190,7 @@ namespace Jazz2::Multiplayer
 
 					_lastSpawnedActorId = playerIndex;
 
-					_root->InvokeAsync([this, playerType, health, teamId, posX, posY]() {
+					_root->InvokeAsync([this, playerType, health, flags, teamId, posX, posY]() {
 						std::shared_ptr<Actors::Multiplayer::RemotablePlayer> player = std::make_shared<Actors::Multiplayer::RemotablePlayer>();
 						std::uint8_t playerParams[2] = { (std::uint8_t)playerType, 0 };
 						player->OnActivated(Actors::ActorActivationDetails(
@@ -2104,6 +2200,8 @@ namespace Jazz2::Multiplayer
 						));
 						player->SetTeamId(teamId);
 						player->SetHealth(health);
+						player->_controllable = (flags & 0x01) != 0;
+						player->_controllableExternal = (flags & 0x02) != 0;
 						player->LapStarted = TimeStamp::now();
 
 						Actors::Multiplayer::RemotablePlayer* ptr = player.get();
@@ -2320,7 +2418,8 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 						case PlayerPropertyType::Controllable: {
-							// TODO
+							std::uint8_t enable = packet.ReadValue<std::uint8_t>();
+							_players[0]->_controllableExternal = (enable != 0);
 							break;
 						}
 						case PlayerPropertyType::Invulnerable: {
@@ -2407,6 +2506,35 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 					}
+					return true;
+				}
+				case ServerPacketType::PlayerResetProperties: {
+					MemoryStream packet(data);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerSetProperty - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
+						return true;
+					}
+
+					auto* player = static_cast<RemotablePlayer*>(_players[0]);
+					player->Deaths = 0;
+					player->Kills = 0;
+					player->Laps = 0;
+					player->TreasureCollected = 0;
+
+					player->_coins = 0;
+					std::memset(player->_gems, 0, sizeof(player->_gems));
+					std::memset(player->_weaponAmmo, 0, sizeof(player->_weaponAmmo));
+					std::memset(player->_weaponAmmoCheckpoint, 0, sizeof(player->_weaponAmmoCheckpoint));
+
+					player->_coinsCheckpoint = 0;
+					std::memset(player->_gemsCheckpoint, 0, sizeof(player->_gemsCheckpoint));
+					std::memset(player->_weaponUpgrades, 0, sizeof(player->_weaponUpgrades));
+					std::memset(player->_weaponUpgradesCheckpoint, 0, sizeof(player->_weaponUpgradesCheckpoint));
+
+					player->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+					player->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+
 					return true;
 				}
 				case ServerPacketType::PlayerRespawn: {
@@ -2769,6 +2897,9 @@ namespace Jazz2::Multiplayer
 					if (player->_controllable) {
 						flags |= 0x01;
 					}
+					if (player->_controllableExternal) {
+						flags |= 0x02;
+					}
 
 					MemoryStream packet(16);
 					packet.WriteVariableUint32(playerIndex);
@@ -2854,7 +2985,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::ApplyGameModeToAllPlayers(MpGameMode gameMode)
 	{
-		if (gameMode == MpGameMode::Cooperation) {
+		if (_levelState <= LevelState::Countdown1 || gameMode == MpGameMode::Cooperation) {
 			// Everyone in single team
 			for (auto* player : _players) {
 				static_cast<Actors::Multiplayer::PlayerOnServer*>(player)->SetTeamId(0);
@@ -2916,6 +3047,185 @@ namespace Jazz2::Multiplayer
 			DEATH_DEBUG_ASSERT(0 <= playerIdx && playerIdx < UINT8_MAX);
 			static_cast<Actors::Multiplayer::PlayerOnServer*>(player)->SetTeamId((std::uint8_t)playerIdx);
 		}
+	}
+
+	void MpLevelHandler::ShowAlertToAllPlayers(StringView message)
+	{
+		if (message.empty()) {
+			return;
+		}
+
+		ShowLevelText(message);
+
+		MemoryStream packet(4 + message.size());
+		packet.WriteVariableUint32((std::uint32_t)message.size());
+		packet.Write(message.data(), (std::uint32_t)message.size());
+
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto it = _peerDesc.find(peer);
+			return (it != _peerDesc.end() && it->second.State != LevelPeerState::Unknown);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowAlert, packet);
+	}
+
+	void MpLevelHandler::SetControllableToAllPlayers(bool enable)
+	{
+		for (auto* player : _players) {
+			player->_controllableExternal = enable;
+		}
+
+		for (auto& [peer, peerDesc] : _peerDesc) {
+			if (peerDesc.Player != nullptr) {
+				MemoryStream packet(6);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Controllable);
+				packet.WriteVariableUint32(peerDesc.Player->_playerIndex);
+				packet.WriteValue<std::uint8_t>(enable ? 1 : 0);
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::ResetAllPlayerStats()
+	{
+		for (auto* player : _players) {
+			DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
+			auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
+
+			playerOnServer->Deaths = 0;
+			playerOnServer->Kills = 0;
+			playerOnServer->Laps = 0;
+			playerOnServer->TreasureCollected = 0;
+
+			playerOnServer->_coins = 0;
+			std::memset(playerOnServer->_gems, 0, sizeof(playerOnServer->_gems));
+			std::memset(playerOnServer->_weaponAmmo, 0, sizeof(playerOnServer->_weaponAmmo));
+			std::memset(playerOnServer->_weaponAmmoCheckpoint, 0, sizeof(playerOnServer->_weaponAmmoCheckpoint));
+
+			playerOnServer->_coinsCheckpoint = 0;
+			std::memset(playerOnServer->_gemsCheckpoint, 0, sizeof(playerOnServer->_gemsCheckpoint));
+			std::memset(playerOnServer->_weaponUpgrades, 0, sizeof(playerOnServer->_weaponUpgrades));
+			std::memset(playerOnServer->_weaponUpgradesCheckpoint, 0, sizeof(playerOnServer->_weaponUpgradesCheckpoint));
+
+			playerOnServer->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+			playerOnServer->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			playerOnServer->_health = serverConfig.InitialPlayerHealth;
+		}
+
+		for (auto& [peer, peerDesc] : _peerDesc) {
+			if (peerDesc.Player != nullptr) {
+				MemoryStream packet1(4);
+				packet1.WriteVariableUint32(peerDesc.Player->_playerIndex);
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerResetProperties, packet1);
+
+				MemoryStream packet2(9);
+				packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Health);
+				packet2.WriteVariableUint32(peerDesc.Player->_playerIndex);
+				packet2.WriteVariableInt32(peerDesc.Player->_health);
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+			}
+		}
+	}
+
+	void MpLevelHandler::WarpAllPlayersToStart()
+	{
+		for (auto* player : _players) {
+			Vector2f spawnPosition;
+			if (!_multiplayerSpawnPoints.empty()) {
+				// TODO: Select spawn according to team
+				spawnPosition = _multiplayerSpawnPoints[Random().Next(0, _multiplayerSpawnPoints.size())].Pos;
+			} else {
+				// TODO: Spawn on the last checkpoint
+				spawnPosition = EventMap()->GetSpawnPosition(PlayerType::Jazz);
+				if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
+					continue;
+				}
+			}
+
+			player->WarpToPosition(spawnPosition, WarpFlags::Default);
+		}
+	}
+
+	void MpLevelHandler::CheckGameEnds()
+	{
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		switch (serverConfig.GameMode) {
+			case MpGameMode::Battle:
+			case MpGameMode::TeamBattle: {
+				for (auto* player : _players) {
+					DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
+					auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
+					if (playerOnServer->Kills >= serverConfig.TotalKills) {
+						EndGame(playerOnServer);
+						break;
+					}
+				}
+				break;
+			}
+
+			case MpGameMode::Race:
+			case MpGameMode::TeamRace: {
+				for (auto* player : _players) {
+					DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
+					auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
+					if (playerOnServer->Laps >= serverConfig.TotalLaps) {
+						EndGame(playerOnServer);
+						break;
+					}
+				}
+				break;
+			}
+			case MpGameMode::TreasureHunt: {
+				for (auto* player : _players) {
+					DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
+					auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
+					if (playerOnServer->TreasureCollected >= serverConfig.TotalTreasureCollected) {
+						EndGame(playerOnServer);
+						break;
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	void MpLevelHandler::EndGame(Actors::Multiplayer::PlayerOnServer* winner)
+	{
+		_levelState = LevelState::Ending;
+		_gameTimeLeft = EndingDuration;
+
+		SetControllableToAllPlayers(false);
+
+		// Fade out
+		{
+			float fadeOutDelay = EndingDuration - 2 * FrameTimer::FramesPerSecond;
+
+			_hud->BeginFadeOut(fadeOutDelay);
+
+			MemoryStream packet(4);
+			packet.WriteVariableInt32((std::int32_t)fadeOutDelay);
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto it = _peerDesc.find(peer);
+				return (it != _peerDesc.end() && it->second.State >= LevelPeerState::LevelLoaded);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::FadeOut, packet);
+		}
+
+		String playerName;
+		if (runtime_cast<LocalPlayerOnServer*>(winner)) {
+			playerName = PreferencesCache::GetEffectivePlayerName();
+		} else {
+			for (auto& [peer, peerDesc] : _peerDesc) {
+				if (peerDesc.Player == winner) {
+					if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
+						playerName = globalPeerDesc->PlayerName;
+					}
+					break;
+				}
+			}
+		}
+
+		ShowAlertToAllPlayers(_f("\n\nWinner is %s", playerName.data()));
 	}
 
 	bool MpLevelHandler::ApplyFromPlaylist()

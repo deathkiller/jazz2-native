@@ -41,9 +41,11 @@ namespace Jazz2::Multiplayer
 		PeerStateChanged,
 
 		LoadLevel = 10,
+		LevelSetProperty,			// TODO
+		LevelResetProperties,		// TODO
 		ShowInGameLobby,
 		FadeOut,
-		ChangeGameMode,
+		ChangeGameMode,				// TODO: Obsolete - Will be replaced by LevelSetProperty > GameMode
 		PlaySfx,
 		PlayCommonSfx,
 		ShowAlert,					// TODO
@@ -62,6 +64,7 @@ namespace Jazz2::Multiplayer
 		MarkRemoteActorAsPlayer,
 
 		PlayerSetProperty = 50,
+		PlayerResetProperties,
 		PlayerRespawn,
 		PlayerMoveInstantly,
 		PlayerAckWarped,			// TODO
@@ -71,6 +74,24 @@ namespace Jazz2::Multiplayer
 		PlayerTakeDamage,
 		PlayerActivateSpring,
 		PlayerWarpIn
+	};
+
+	/** @brief Level property type from @ref ServerPacketType::LevelSetProperty */
+	enum class LevelPropertyType
+	{
+		Unknown,
+
+		State = 1,
+		GameMode,
+
+		MaxGameTimeSecs = 10,
+		IsElimination,
+
+		TotalKills = 30,
+		TotalLaps,
+		TotalTreasureCollected,
+
+		Count
 	};
 
 	/** @brief Player property type from @ref ServerPacketType::PlayerSetProperty */
