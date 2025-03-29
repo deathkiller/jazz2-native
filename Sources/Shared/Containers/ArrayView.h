@@ -211,6 +211,7 @@ namespace Death { namespace Containers {
 		}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
+		/* Disabled on MSVC without `/permissive-` to avoid ambiguous operator+() when doing pointer arithmetic. */
 		/** @brief Whether the view is non-empty */
 		constexpr explicit operator bool() const { return _data; }
 #endif
@@ -470,6 +471,7 @@ namespace Death { namespace Containers {
 		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> constexpr /*implicit*/ ArrayView(T&& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(other)} {}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
+		/* Disabled on MSVC without `/permissive-` to avoid ambiguous operator+() when doing pointer arithmetic. */
 		/** @brief Whether the view is non-empty */
 		constexpr explicit operator bool() const { return _data; }
 #endif
@@ -558,6 +560,7 @@ namespace Death { namespace Containers {
 		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<const T>::from(std::declval<const T&>()))> constexpr /*implicit*/ ArrayView(const T& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<const T>::from(other)} {}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
+		/* Disabled on MSVC without `/permissive-` to avoid ambiguous operator+() when doing pointer arithmetic. */
 		/** @brief Whether the view is non-empty */
 		constexpr explicit operator bool() const { return _data; }
 #endif
@@ -808,6 +811,7 @@ namespace Death { namespace Containers {
 		}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
+		/* Disabled on MSVC without `/permissive-` to avoid ambiguous operator+() when doing pointer arithmetic. */
 		/** @brief Whether the view is non-empty */
 		constexpr explicit operator bool() const { return _data; }
 #endif

@@ -416,6 +416,7 @@ namespace Death { namespace Containers {
 		}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
+		/* Disabled on MSVC without `/permissive-` to avoid ambiguous operator+() when doing pointer arithmetic. */
 		/** @brief Whether the array is non-empty */
 		explicit operator bool() const {
 			return _data;

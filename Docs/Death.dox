@@ -51,7 +51,9 @@ namespace Death {
 	depending on target architecture flags being passed to the compiler.
 
 	The actual feature detection and dispatch both in the runtime and compile-time
-	scenario is performed by the @relativeref{Death,Cpu} library.
+	scenario is performed by the @relativeref{Death,Cpu} library. See
+	@ref Cpu-usage-automatic-cached-dispatch for details and information about
+	performance tradeoffs.
 	
 	No need to @cpp #include @ce anything for this macro to be defined,
 	it's supplied via a compiler flag by CMake.
@@ -65,7 +67,8 @@ namespace Death {
 	Defined if the @relativeref{Death,Cpu} library can perform runtime dispatch
 	using [GNU IFUNC](https://sourceware.org/glibc/wiki/GNU_IFUNC), exposing the
 	@ref DEATH_CPU_DISPATCHED_IFUNC() macro. Supported only on Linux with glibc
-	and on Android with API 30+.
+	and on Android with API 30+. See @ref Cpu-usage-automatic-cached-dispatch for
+	details and information about performance tradeoffs.
 	
 	No need to @cpp #include @ce anything for this macro to be defined,
 	it's supplied via a compiler flag by CMake.
@@ -76,7 +79,7 @@ namespace Death {
 /**
 	@brief MSVC 2015 compatibility
 
-	Defined if compatibility mode for MSVC 2015 is enabled.
+	Defined if compatibility mode for Microsoft Visual C++ 2015 is enabled.
 */
 #define DEATH_MSVC2015_COMPATIBILITY
 #undef DEATH_MSVC2015_COMPATIBILITY
@@ -84,7 +87,7 @@ namespace Death {
 /**
 	@brief MSVC 2017 compatibility
 
-	Defined if compatibility mode for MSVC 2017 is enabled.
+	Defined if compatibility mode for Microsoft Visual C++ 2017 is enabled.
 */
 #define DEATH_MSVC2017_COMPATIBILITY
 #undef DEATH_MSVC2017_COMPATIBILITY
@@ -92,7 +95,8 @@ namespace Death {
 /**
 	@brief MSVC 2019 compatibility
 
-	Defined if compatibility mode for MSVC 2019 is enabled.
+	Defined if compatibility mode for Microsoft Visual C++ 2019 (or later) *without*
+	the `/permissive-` flag set is enabled.
 */
 #define DEATH_MSVC2019_COMPATIBILITY
 #undef DEATH_MSVC2019_COMPATIBILITY

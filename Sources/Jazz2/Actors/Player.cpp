@@ -3678,7 +3678,7 @@ namespace Jazz2::Actors
 
 	bool Player::TakeDamage(std::int32_t amount, float pushForce)
 	{
-		if (amount <= 0 || GetState(ActorState::IsInvulnerable) || _levelExiting != LevelExitingState::None) {
+		if (amount <= 0 || _health <= 0 || GetState(ActorState::IsInvulnerable) || _levelExiting != LevelExitingState::None) {
 			return false;
 		}
 

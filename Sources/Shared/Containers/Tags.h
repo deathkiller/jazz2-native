@@ -31,8 +31,9 @@ namespace Death { namespace Containers {
 	/**
 		@brief Default initialization tag type
 
-		Used to distinguish construction with default initialization. The actual meaning of "default" may vary,
-		see documentation of a particular API using this tag for a detailed behavior description.
+		Used to distinguish construction with default initialization. The actual
+		meaning of "default" may vary, see documentation of a particular API using
+		this tag for a detailed behavior description.
 	*/
 	struct DefaultInitT {
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -44,7 +45,8 @@ namespace Death { namespace Containers {
 	/**
 		@brief Value initialization tag type
 
-		Used to distinguish construction with value initialization (built-in types are zeroed out, others are default-constructed).
+		Used to distinguish construction with value initialization (built-in types
+		are zeroed out, others are default-constructed).
 	*/
 	struct ValueInitT {
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -56,7 +58,8 @@ namespace Death { namespace Containers {
 	/**
 		@brief No initialization tag type
 
-		Used to distinguish construction with no initialization at all, which leaves the data with whatever random values the memory had before.
+		Used to distinguish construction with no initialization at all, which
+		leaves the data with whatever random values the memory had before.
 	*/
 	struct NoInitT {
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -68,8 +71,9 @@ namespace Death { namespace Containers {
 	/**
 		@brief No creation tag type
 
-		Used to distinguish construction with initialization but not creation. Contrary to @ref NoInitT this doesn't keep
-		random values, but makes the instance empty (usually equivalent to a moved-out state).
+		Used to distinguish construction with initialization but not creation.
+		Contrary to @ref NoInitT this doesn't keep random values, but makes
+		the instance empty (usually equivalent to a moved-out state).
 	*/
 	struct NoCreateT {
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -105,15 +109,17 @@ namespace Death { namespace Containers {
 	/**
 		@brief Default initialization tag
 
-		Use for construction with default initialization. The actual meaning of "default" may vary,
-		see documentation of a particular API using this tag for a detailed behavior description.
+		Use for construction with default initialization. The actual meaning
+		of "default" may vary, see documentation of a particular API using
+		this tag for a detailed behavior description.
 	*/
 	constexpr DefaultInitT DefaultInit{DefaultInitT::Init{}};
 
 	/**
 		@brief Value initialization tag
 
-		Use for construction using value initialization (built-in types are zeroed out, others are default-constructed).
+		Use for construction using value initialization (built-in types are
+		zeroed out, others are default-constructed).
 	*/
 	constexpr ValueInitT ValueInit{ValueInitT::Init{}};
 
@@ -127,7 +133,8 @@ namespace Death { namespace Containers {
 	/**
 		@brief No creation tag
 
-		Use for construction with initialization, but keeping the instance empty (usually equivalent to a moved-out state).
+		Use for construction with initialization, but keeping the instance empty
+		(usually equivalent to a moved-out state).
 	*/
 	constexpr NoCreateT NoCreate{NoCreateT::Init{}};
 

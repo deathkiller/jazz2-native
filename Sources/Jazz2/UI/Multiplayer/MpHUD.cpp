@@ -80,7 +80,29 @@ namespace Jazz2::UI::Multiplayer
 		}*/
 #endif
 
+		char stringBuffer[32];
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+		if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::PreGame) {
+			float sinceLapStarted = mpLevelHandler->_gameTimeLeft / FrameTimer::FramesPerSecond;
+			std::int32_t minutes = (std::int32_t)(sinceLapStarted / 60);
+			std::int32_t seconds = (std::int32_t)fmod(sinceLapStarted, 60);
+			std::int32_t milliseconds = (std::int32_t)(fmod(sinceLapStarted, 1) * 100);
+
+			formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
+			auto gameStartsInText = _f("Game starts in %s", stringBuffer);
+			_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 8.0f + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 8.0f, FontLayer,
+				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+			return;
+		} else if (mpLevelHandler->_levelState != MpLevelHandler::LevelState::Running) {
+			return;
+		}
+
 		auto* statsProvider = runtime_cast<IPlayerStatsProvider*>(player);
 		if (!statsProvider) {
 			return;
@@ -102,9 +124,6 @@ namespace Jazz2::UI::Multiplayer
 			totalTreasureCollected = /*clientConfig.TotalTreasureCollected*/666;
 		}
 
-		char stringBuffer[32];
-		std::int32_t charOffset = 0;
-		std::int32_t charOffsetShadow = 0;
 
 		switch (gameMode) {
 			case MpGameMode::Battle:
