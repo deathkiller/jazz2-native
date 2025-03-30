@@ -183,20 +183,31 @@ namespace Jazz2::UI::Menu
 			_items[i].Y = center.Y;
 
 			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
+				StringView levelName, displayName;
+#if defined(WITH_MULTIPLAYER)
+				if (_items[i].LevelName == ":playlist"_s) {
+					levelName = _("Create server from playlist");
+				} else
+#endif
+				{
+					levelName = _items[i].LevelName;
+					displayName = _items[i].DisplayName;
+				}
+
 				if (_selectedIndex == i) {
 					float xMultiplier = _items[i].DisplayName.size() * 0.5f;
 					float easing = IMenuContainer::EaseOutElastic(_animation);
 					float x = column1 + xMultiplier - easing * xMultiplier;
 					float size = 0.7f + easing * 0.12f;
 
-					_root->DrawStringShadow(_items[i].LevelName, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
+					_root->DrawStringShadow(levelName, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Left, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
-					_root->DrawStringShadow(_items[i].LevelName, charOffset, column1, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(levelName, charOffset, column1, center.Y, IMenuContainer::FontLayer,
 						Alignment::Left, Font::DefaultColor, 0.7f);
 				}
 
-				_root->DrawStringShadow(_items[i].DisplayName, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
+				_root->DrawStringShadow(displayName, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
 					Alignment::Left, Font::DefaultColor, 0.7f);
 			}
 
@@ -292,13 +303,20 @@ namespace Jazz2::UI::Menu
 		auto& selectedItem = _items[_selectedIndex];
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
+		String levelName;
+		if (selectedItem.LevelName.hasPrefix(':')) {
+			levelName = selectedItem.LevelName;
+		} else {
+			levelName = "unknown/"_s + selectedItem.LevelName;
+		}
+
 #if defined(WITH_MULTIPLAYER)
 		if (_multiplayer) {
-			_root->SwitchToSection<CreateServerOptionsSection>(String("unknown/"_s + selectedItem.LevelName), nullptr, _privateServer);
+			_root->SwitchToSection<CreateServerOptionsSection>(levelName, nullptr, _privateServer);
 			return;
 		}
 #endif
-		_root->SwitchToSection<StartGameOptionsSection>(String("unknown/"_s + selectedItem.LevelName), nullptr);
+		_root->SwitchToSection<StartGameOptionsSection>(levelName, nullptr);
 	}
 
 	void CustomLevelSelectSection::EnsureVisibleSelected(std::int32_t offset)
@@ -318,6 +336,13 @@ namespace Jazz2::UI::Menu
 	void CustomLevelSelectSection::AddCustomLevels()
 	{
 		auto& resolver = ContentResolver::Get();
+
+#if defined(WITH_MULTIPLAYER)
+		if (_multiplayer) {
+			auto& level = _items.emplace_back();
+			level.LevelName = ":playlist"_s;
+		}
+#endif
 
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
 		for (auto item : fs::Directory(fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories)) {

@@ -294,6 +294,8 @@ void GameEventHandler::OnInitialize()
 				} else {
 					serverInit.InitialLevel.LevelName = "unknown/"_s + levelName;
 				}
+			} else if (!serverInit.Configuration.Playlist.empty()) {
+				serverInit.Configuration.PlaylistIndex = 0;
 			} else {
 				serverInit.InitialLevel.LevelName = "prince/01_castle1"_s;
 			}
@@ -376,6 +378,8 @@ void GameEventHandler::OnInitialize()
 				} else {
 					serverInit.InitialLevel.LevelName = "unknown/"_s + levelName;
 				}
+			} else if (!serverInit.Configuration.Playlist.empty()) {
+				serverInit.Configuration.PlaylistIndex = 0;
 			} else {
 				serverInit.InitialLevel.LevelName = "prince/01_castle1"_s;
 			}
@@ -827,6 +831,32 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		serverInit.Configuration.ServerName = _("Unnamed server");
 	}
 
+	if (serverInit.Configuration.PlaylistIndex >= 0 && serverInit.Configuration.PlaylistIndex < serverInit.Configuration.Playlist.size()) {
+		auto& playlistEntry = serverInit.Configuration.Playlist[serverInit.Configuration.PlaylistIndex];
+
+		auto level = playlistEntry.LevelName.partition('/');
+		if (playlistEntry.LevelName.contains('/')) {
+			serverInit.InitialLevel.LevelName = playlistEntry.LevelName;
+		} else {
+			serverInit.InitialLevel.LevelName = "unknown/"_s + playlistEntry.LevelName;
+		}
+
+		// Override properties
+		serverInit.Configuration.IsElimination = playlistEntry.IsElimination;
+		serverInit.Configuration.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
+		serverInit.Configuration.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
+		serverInit.Configuration.PreGameSecs = playlistEntry.PreGameSecs;
+		serverInit.Configuration.TotalKills = playlistEntry.TotalKills;
+		serverInit.Configuration.TotalLaps = playlistEntry.TotalLaps;
+		serverInit.Configuration.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
+		serverInit.Configuration.GameMode = playlistEntry.GameMode;
+	}
+
+	if (!ContentResolver::Get().LevelExists(serverInit.InitialLevel.LevelName)) {
+		LOGE("Cannot find initial level \"%s\"", serverInit.InitialLevel.LevelName.data());
+		return false;
+	}
+
 	if (!_networkManager->CreateServer(this, std::move(serverInit.Configuration))) {
 		return false;
 	}
@@ -835,7 +865,8 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	LOGI("[MP] Creating %s server \"%s\" on port %u...", serverConfig.IsPrivate ? "private" : "public", serverConfig.ServerName.data(), serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), true);
+		auto levelHandler = std::make_unique<MpLevelHandler>(this,
+			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
 		levelHandler->Initialize(serverInit.InitialLevel);
 		SetStateHandler(std::move(levelHandler));
 	}, NCINE_CURRENT_FUNCTION);
@@ -1091,6 +1122,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 			case ServerPacketType::LoadLevel: {
 				MemoryStream packet(data);
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				MpLevelHandler::LevelState levelState = (MpLevelHandler::LevelState)packet.ReadValue<std::uint8_t>();
 				MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
 				ExitType lastExitType = (ExitType)packet.ReadValue<std::uint8_t>();
 				std::uint32_t levelNameLength = packet.ReadVariableUint32();
@@ -1099,7 +1131,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: %s", flags, (std::uint32_t)gameMode, levelName.data());
 
-				InvokeAsync([this, flags, gameMode, lastExitType, levelName = std::move(levelName)]() {
+				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
 					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
@@ -1109,7 +1141,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					auto& clientConfig = _networkManager->GetClientConfiguration();
 					clientConfig.GameMode = gameMode;
 
-					auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), enableLedgeClimb);
+					auto levelHandler = std::make_unique<MpLevelHandler>(this,
+						_networkManager.get(), levelState, enableLedgeClimb);
 					levelHandler->Initialize(levelInit);
 					SetStateHandler(std::move(levelHandler));
 				}, NCINE_CURRENT_FUNCTION);
@@ -1668,7 +1701,8 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
 		// TODO: Set proper game mode and ledge climb
-		auto levelHandler = std::make_unique<MpLevelHandler>(this, _networkManager.get(), true);
+		auto levelHandler = std::make_unique<MpLevelHandler>(this,
+			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}

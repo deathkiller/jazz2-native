@@ -9,7 +9,7 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	StartGameOptionsSection::StartGameOptionsSection(const StringView levelName, const StringView previousEpisodeName)
+	StartGameOptionsSection::StartGameOptionsSection(StringView levelName, StringView previousEpisodeName)
 		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(3),
 			_availableCharacters(3), _playerCount(1), _lastPlayerType(0), _lastDifficulty(0), _selectedPlayerType{},
 			_selectedDifficulty(1), _imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
