@@ -46,7 +46,21 @@ namespace Jazz2::Multiplayer
 		friend class UI::Multiplayer::MpHUD;
 
 	public:
-		MpLevelHandler(IRootController* root, NetworkManager* networkManager, bool enableLedgeClimb);
+		/** @brief Level state */
+		enum class LevelState {
+			Unknown,
+			InitialUpdatePending,
+			PreGame,
+			WaitingForMinPlayers,
+			Countdown3,
+			Countdown2,
+			Countdown1,
+			Running,
+			Ending,
+			Ended
+		};
+
+		MpLevelHandler(IRootController* root, NetworkManager* networkManager, LevelState levelState, bool enableLedgeClimb);
 		~MpLevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
@@ -158,18 +172,6 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerWeaponChanged(Actors::Player* player);
 
 	private:
-		enum class LevelState {
-			Unknown,
-			InitialUpdatePending,
-			PreGame,
-			WaitingForMinPlayers,
-			Countdown3,
-			Countdown2,
-			Countdown1,
-			Running,
-			Ending,
-			Ended
-		};
 		enum class LevelPeerState {
 			Unknown,
 			LevelLoaded,
@@ -243,8 +245,8 @@ namespace Jazz2::Multiplayer
 		//static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
 		static constexpr float UpdatesPerSecond = 30.0f; // ~33 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
-		static constexpr float PreGameDuration = 60 * FrameTimer::FramesPerSecond;
 		static constexpr float EndingDuration = 10 * FrameTimer::FramesPerSecond;
+		static constexpr float WaitingForMinPlayersAlertPeriod = 15 * FrameTimer::FramesPerSecond;
 
 		NetworkManager* _networkManager;
 		float _updateTimeLeft;
@@ -285,6 +287,7 @@ namespace Jazz2::Multiplayer
 		void WarpAllPlayersToStart();
 		void CheckGameEnds();
 		void EndGame(Actors::Multiplayer::PlayerOnServer* winner);
+		void EndGameOnTimeOut();
 
 		bool ApplyFromPlaylist();
 		void SetWelcomeMessage(StringView message);

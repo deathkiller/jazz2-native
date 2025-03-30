@@ -1131,6 +1131,8 @@ namespace Jazz2
 			}
 		}
 
+		RollbackToCheckpoint(player);
+
 		// Single player can respawn immediately
 		return true;
 	}

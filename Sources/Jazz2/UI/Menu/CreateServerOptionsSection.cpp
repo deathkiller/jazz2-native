@@ -16,7 +16,7 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	CreateServerOptionsSection::CreateServerOptionsSection(const StringView levelName, const StringView previousEpisodeName, bool privateServer)
+	CreateServerOptionsSection::CreateServerOptionsSection(StringView levelName, StringView previousEpisodeName, bool privateServer)
 		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(2),
 			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _privateServer(privateServer), _shouldStart(false)
@@ -348,7 +348,15 @@ namespace Jazz2::UI::Menu
 		serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 		serverInit.InitialLevel.PlayerCarryOvers[0].Type = (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType);
 
-		if (_gameMode == MpGameMode::Cooperation) {
+		if (_levelName == ":playlist"_s) {
+			serverInit.Configuration.PlaylistIndex = 0;
+			if (serverInit.Configuration.Playlist.empty()) {
+				_shouldStart = false;
+				_transitionTime = 0.0f;
+				_root->SwitchToSection<SimpleMessageSection>(_("\f[c:#704a4a]Cannot create the server!\f[/c]\n\n\nPlaylist is not properly configured.\nPlease review server configuration and try it again."), true);
+				return;
+			}
+		} else if (_gameMode == MpGameMode::Cooperation) {
 			if (!_previousEpisodeName.empty()) {
 				auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
 				if (previousEpisodeEnd != nullptr) {

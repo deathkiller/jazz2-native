@@ -2692,8 +2692,6 @@ namespace Jazz2::Actors
 					// Return to the last save point
 					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
 					_levelHandler->SetAmbientLight(this, _checkpointLight);
-
-					_levelHandler->RollbackToCheckpoint(this);
 				} else {
 					// Respawn is delayed
 					_controllable = false;

@@ -28,8 +28,10 @@ namespace Jazz2::Multiplayer
 		bool IsElimination;
 		/** @brief Initial player health, default is 5 */
 		std::uint32_t InitialPlayerHealth;
-		/** @brief Maximum number of seconds for a game (Battle) */
+		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;
+		/** @brief Duration of pre-game before starting the actual game */
+		std::uint32_t PreGameSecs;
 		/** @brief Total number of kills, default is 10 (Battle) */
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */
@@ -83,8 +85,10 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalPlayerPoints;
 		/** @brief Initial player health, default is 5 */
 		std::uint32_t InitialPlayerHealth;
-		/** @brief Maximum number of seconds for a game (Battle) */
+		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;
+		/** @brief Duration of pre-game before starting the actual game (ignored in Cooperation) */
+		std::uint32_t PreGameSecs;
 		/** @brief Total number of kills, default is 10 (Battle) */
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */
