@@ -282,23 +282,14 @@ void GameEventHandler::OnInitialize()
 
 			// TODO: Allow to configure server settings from command line
 			ServerInitialization serverInit;
-			serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+			if (i + 1 < config.argc()) {
+				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(config.argv(i + 1));
+			} else {
+				serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+			}
 			serverInit.InitialLevel.IsLocalSession = false;
 			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
-
-			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
-				auto levelName = config.argv(i + 1);
-				if (levelName.contains('/')) {
-					serverInit.InitialLevel.LevelName = levelName;
-				} else {
-					serverInit.InitialLevel.LevelName = "unknown/"_s + levelName;
-				}
-			} else if (!serverInit.Configuration.Playlist.empty()) {
-				serverInit.Configuration.PlaylistIndex = 0;
-			} else {
-				serverInit.InitialLevel.LevelName = "prince/01_castle1"_s;
-			}
 
 			CreateServer(std::move(serverInit));
 			StartProcessingStdin();
@@ -366,23 +357,14 @@ void GameEventHandler::OnInitialize()
 		} else if (arg == "/server"_s) {
 			// TODO: Allow to configure server settings from command line
 			ServerInitialization serverInit;
-			serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+			if (i + 1 < config.argc()) {
+				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(config.argv(i + 1));
+			} else {
+				serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+			}
 			serverInit.InitialLevel.IsLocalSession = false;
 			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
-
-			if (i + 1 < config.argc() && !config.argv(i + 1).hasPrefix('/')) {
-				auto levelName = config.argv(i + 1);
-				if (levelName.contains('/')) {
-					serverInit.InitialLevel.LevelName = levelName;
-				} else {
-					serverInit.InitialLevel.LevelName = "unknown/"_s + levelName;
-				}
-			} else if (!serverInit.Configuration.Playlist.empty()) {
-				serverInit.Configuration.PlaylistIndex = 0;
-			} else {
-				serverInit.InitialLevel.LevelName = "prince/01_castle1"_s;
-			}
 
 			CreateServer(std::move(serverInit));
 			return;

@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "ServerDiscovery.h"
+#include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../../nCine/I18n.h"
 
@@ -79,6 +80,13 @@ namespace Jazz2::Multiplayer
 
 	ServerConfiguration NetworkManager::CreateDefaultServerConfiguration()
 	{
+		return LoadServerConfigurationFromFile("Jazz2.Server.config"_s);
+	}
+
+	ServerConfiguration NetworkManager::LoadServerConfigurationFromFile(StringView path)
+	{
+		HashMap<String, bool> includedFiles;
+
 		ServerConfiguration serverConfig{};
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
@@ -92,8 +100,45 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalLaps = 3;
 		serverConfig.TotalTreasureCollected = 100;
 
-		// Try to load configuration from "Jazz2.Server.config" file
-		auto configPath = fs::CombinePath(PreferencesCache::GetDirectory(), "Jazz2.Server.config"_s);
+		FillServerConfigurationFromFile(path, serverConfig, includedFiles, 0);
+
+		// Set default values
+		if (serverConfig.ServerName.empty()) {
+			serverConfig.ServerName = "{PlayerName}'s Server"_s;
+		}
+		if (serverConfig.WelcomeMessage.empty()) {
+			serverConfig.WelcomeMessage = "Welcome to the {ServerName}!"_s;
+		}
+		if (serverConfig.ServerPort == 0) {
+			serverConfig.ServerPort = 7438;
+		}
+		if (serverConfig.MaxPlayerCount == 0) {
+			serverConfig.MaxPlayerCount = MaxPeerCount;
+		}
+
+		// Replace variables in parameters
+		auto playerName = PreferencesCache::GetEffectivePlayerName();
+		if (playerName.empty()) {
+			playerName = "Unknown"_s;
+		}
+
+		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
+
+		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{PlayerName}"_s, playerName);
+		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{ServerName}"_s, serverConfig.ServerName);
+
+		return serverConfig;
+	}
+
+	void NetworkManager::FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level)
+	{
+		auto configPath = fs::CombinePath(PreferencesCache::GetDirectory(), path);
+
+		// Skip already included files to avoid infinite loops
+		if (!includedFiles.emplace(configPath, true).second) {
+			return;
+		}
+
 		auto s = fs::Open(configPath, FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize >= 4 && fileSize < 64 * 1024 * 1024) {
@@ -101,10 +146,21 @@ namespace Jazz2::Multiplayer
 			s->Read(buffer.get(), fileSize);
 			buffer[fileSize] = '\0';
 
+			ContentResolver::StripCommentsFromJson(arrayView(buffer.get(), fileSize));
+
 			ondemand::parser parser;
 			ondemand::document doc;
 			if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
-				LOGI("Loaded server configuration template from \"%s\"", configPath.data());
+				if (level == 0) {
+					LOGI("Loaded configuration from \"%s\"", configPath.data());
+				} else {
+					LOGI("Loaded configuration from \"%s\" because of $include directive", configPath.data());
+				}
+
+				std::string_view includeFile;
+				if (doc["$include"].get(includeFile) == SUCCESS && !includeFile.empty()) {
+					FillServerConfigurationFromFile(includeFile, serverConfig, includedFiles, level + 1);
+				}
 
 				std::string_view serverName;
 				if (doc["ServerName"].get(serverName) == SUCCESS) {
@@ -256,17 +312,18 @@ namespace Jazz2::Multiplayer
 				}
 
 				// Playlist
-				serverConfig.Playlist.clear();
-
 				ondemand::array playlist;
 				if (doc["Playlist"].get(playlist) == SUCCESS) {
+					serverConfig.Playlist.clear();
+
 					for (auto entry : playlist) {
 						// Playlist entry inherits all properties from the main server configuration
-						PlaylistEntry playlistEntry{};
+						PlaylistEntry playlistEntry {};
 						playlistEntry.GameMode = serverConfig.GameMode;
 						playlistEntry.IsElimination = serverConfig.IsElimination;
 						playlistEntry.InitialPlayerHealth = serverConfig.InitialPlayerHealth;
 						playlistEntry.MaxGameTimeSecs = serverConfig.MaxGameTimeSecs;
+						playlistEntry.PreGameSecs = serverConfig.PreGameSecs;
 						playlistEntry.TotalKills = serverConfig.TotalKills;
 						playlistEntry.TotalLaps = serverConfig.TotalLaps;
 						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
@@ -297,7 +354,7 @@ namespace Jazz2::Multiplayer
 						}
 
 						std::int64_t preGameSecs;
-						if (doc["PreGameSecs"].get(preGameSecs) == SUCCESS && preGameSecs >= 0 && preGameSecs <= INT32_MAX) {
+						if (entry["PreGameSecs"].get(preGameSecs) == SUCCESS && preGameSecs >= 0 && preGameSecs <= INT32_MAX) {
 							playlistEntry.PreGameSecs = std::uint32_t(preGameSecs);
 						}
 
@@ -327,36 +384,9 @@ namespace Jazz2::Multiplayer
 					serverConfig.PlaylistIndex = std::uint32_t(playlistIndex);
 				}
 			} else {
-				LOGE("Server configuration template from \"%s\" cannot be parsed", configPath.data());
+				LOGE("Configuration from \"%s\" cannot be parsed", configPath.data());
 			}
 		}
-		
-		// Set default values
-		if (serverConfig.ServerName.empty()) {
-			serverConfig.ServerName = "{PlayerName}'s Server"_s;
-		}
-		if (serverConfig.WelcomeMessage.empty()) {
-			serverConfig.WelcomeMessage = "Welcome to the {ServerName}!"_s;
-		}
-		if (serverConfig.ServerPort == 0) {
-			serverConfig.ServerPort = 7438;
-		}
-		if (serverConfig.MaxPlayerCount == 0) {
-			serverConfig.MaxPlayerCount = MaxPeerCount;
-		}
-
-		// Replace variables in parameters
-		auto playerName = PreferencesCache::GetEffectivePlayerName();
-		if (playerName.empty()) {
-			playerName = "Unknown"_s;
-		}
-
-		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
-
-		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{PlayerName}"_s, playerName);
-		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{ServerName}"_s, serverConfig.ServerName);
-
-		return serverConfig;
 	}
 
 	StringView NetworkManager::GameModeToLocalizedString(MpGameMode mode)

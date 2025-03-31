@@ -704,7 +704,7 @@ namespace Jazz2::UI
 
 		if (_levelTextTime > TotalTime) {
 			_levelTextTime = -1.0f;
-			_levelText = { };
+			_levelText = {};
 		}
 	}
 

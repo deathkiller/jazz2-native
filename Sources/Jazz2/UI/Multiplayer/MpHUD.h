@@ -13,11 +13,18 @@ namespace Jazz2::UI::Multiplayer
 	public:
 		MpHUD(Jazz2::Multiplayer::MpLevelHandler* levelHandler);
 
+		void OnUpdate(float timeMult) override;
+		bool OnDraw(RenderQueue& renderQueue) override;
+
+		void ShowCountdown(StringView text);
+
 	protected:
 		void OnDrawScore(const Rectf& view, Actors::Player* player) override;
 
 	private:
 		Font* _mediumFont;
+		String _countdownText;
+		float _countdownTimeLeft;
 	};
 }
 

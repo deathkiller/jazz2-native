@@ -185,7 +185,7 @@ namespace Jazz2::UI::Menu
 			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				StringView levelName, displayName;
 #if defined(WITH_MULTIPLAYER)
-				if (_items[i].LevelName == ":playlist"_s) {
+				if (_items[i].LevelName == CreateServerOptionsSection::FromPlaylist) {
 					levelName = _("Create server from playlist");
 				} else
 #endif
@@ -304,7 +304,7 @@ namespace Jazz2::UI::Menu
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		String levelName;
-		if (selectedItem.LevelName.hasPrefix(':')) {
+		if (selectedItem.LevelName == CreateServerOptionsSection::FromPlaylist) {
 			levelName = selectedItem.LevelName;
 		} else {
 			levelName = "unknown/"_s + selectedItem.LevelName;
@@ -340,7 +340,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_MULTIPLAYER)
 		if (_multiplayer) {
 			auto& level = _items.emplace_back();
-			level.LevelName = ":playlist"_s;
+			level.LevelName = CreateServerOptionsSection::FromPlaylist;
 		}
 #endif
 
@@ -364,7 +364,7 @@ namespace Jazz2::UI::Menu
 		});
 	}
 
-	void CustomLevelSelectSection::AddLevel(const StringView levelFile)
+	void CustomLevelSelectSection::AddLevel(StringView levelFile)
 	{
 		if (fs::GetExtension(levelFile) != "j2l"_s) {
 			return;

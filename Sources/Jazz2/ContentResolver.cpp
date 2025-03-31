@@ -490,6 +490,8 @@ namespace Jazz2
 		s->Read(buffer.get(), fileSize);
 		buffer[fileSize] = '\0';
 
+		StripCommentsFromJson(arrayView(buffer.get(), fileSize));
+
 		bool multipleAnimsNoStatesWarning = false;
 
 		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
@@ -681,6 +683,8 @@ namespace Jazz2
 		s->Read(buffer.get(), fileSize);
 		s->Dispose();
 		buffer[fileSize] = '\0';
+
+		StripCommentsFromJson(arrayView(buffer.get(), fileSize));
 
 		ondemand::parser parser;
 		ondemand::document doc;
@@ -1643,6 +1647,47 @@ namespace Jazz2
 		return tex;
 	}
 
+	void ContentResolver::StripCommentsFromJson(ArrayView<char> content)
+	{
+		char* p = content.begin();
+		char* end = content.end();
+		bool inString = false;
+
+		while (p < end) {
+			if (*p == '"') {
+				const char* prev = p > content.begin() ? (p - 1) : nullptr;
+				if (prev == nullptr || *prev != '\\') {
+					inString = !inString;
+				}
+				++p;
+			} else if (!inString && *p == '/' && (p + 1) < end) {
+				if (*(p + 1) == '/') {
+					// Single-line comment, replace with spaces
+					*p = ' '; ++p;
+					*p = ' '; ++p;
+					while (p < end && *p != '\n') {
+						*p = ' '; ++p;
+					}
+				} else if (*(p + 1) == '*') {
+					// Multi-line comment, replace with spaces
+					*p = ' '; ++p;
+					*p = ' '; ++p;
+					while (p + 1 < end && !(*p == '*' && *(p + 1) == '/')) {
+						*p = ' '; ++p;
+					}
+					if (p + 1 < end) {
+						*p = ' '; ++p;
+						*p = ' '; ++p;
+					}
+				} else {
+					++p;
+				}
+			} else {
+				++p;
+			}
+		}
+	}
+
 	void ContentResolver::RecreateGemPalettes()
 	{
 		constexpr std::int32_t GemColorCount = 4;
@@ -1702,6 +1747,8 @@ namespace Jazz2
 		s->Read(buffer.get(), fileSize);
 		s->Dispose();
 		buffer[fileSize] = '\0';
+
+		StripCommentsFromJson(arrayView(buffer.get(), fileSize));
 
 		ondemand::parser parser;
 		ondemand::document doc;

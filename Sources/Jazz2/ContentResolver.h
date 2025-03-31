@@ -130,6 +130,9 @@ namespace Jazz2
 			return _palettes;
 		}
 
+		/** @brief Strips all `/*` and `//` comments from JSON content */
+		static void StripCommentsFromJson(ArrayView<char> content);
+
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't

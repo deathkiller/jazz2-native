@@ -230,13 +230,14 @@ namespace Jazz2::Multiplayer
 				case LevelState::PreGame: {
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
+						// TODO: Check all players are ready
 						if (_players.size() >= serverConfig.MinPlayerCount) {
 							_levelState = LevelState::Countdown3;
 							_gameTimeLeft = FrameTimer::FramesPerSecond;
 							SetControllableToAllPlayers(false);
 							WarpAllPlayersToStart();
 							ResetAllPlayerStats();
-							ShowAlertToAllPlayers("\n\n3"_s);
+							ShowAlertToAllPlayers("3"_s, true);
 							// TODO: Respawn all events and tilemap
 						} else {
 							_levelState = LevelState::WaitingForMinPlayers;
@@ -249,13 +250,14 @@ namespace Jazz2::Multiplayer
 				case LevelState::WaitingForMinPlayers: {
 					if (_isServer) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
+						// TODO: Check all players are ready
 						if (_players.size() >= serverConfig.MinPlayerCount) {
 							_levelState = LevelState::Countdown3;
 							_gameTimeLeft = FrameTimer::FramesPerSecond;
 							SetControllableToAllPlayers(false);
 							WarpAllPlayersToStart();
 							ResetAllPlayerStats();
-							ShowAlertToAllPlayers("\n\n3"_s);
+							ShowAlertToAllPlayers("3"_s, true);
 							// TODO: Respawn all events and tilemap
 						} else if (_gameTimeLeft <= 0.0f) {
 							_gameTimeLeft = WaitingForMinPlayersAlertPeriod;
@@ -268,7 +270,7 @@ namespace Jazz2::Multiplayer
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						_levelState = LevelState::Countdown2;
 						_gameTimeLeft = FrameTimer::FramesPerSecond;
-						ShowAlertToAllPlayers("\n\n2"_s);
+						ShowAlertToAllPlayers("2"_s, true);
 					}
 					break;
 				}
@@ -276,7 +278,7 @@ namespace Jazz2::Multiplayer
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						_levelState = LevelState::Countdown1;
 						_gameTimeLeft = FrameTimer::FramesPerSecond;
-						ShowAlertToAllPlayers("\n\n1"_s);
+						ShowAlertToAllPlayers("1"_s, true);
 					}
 					break;
 				}
@@ -287,7 +289,7 @@ namespace Jazz2::Multiplayer
 						_gameTimeLeft = serverConfig.MaxGameTimeSecs * FrameTimer::FramesPerSecond;
 
 						SetControllableToAllPlayers(true);
-						ShowAlertToAllPlayers(_("\n\nGo!"));
+						ShowAlertToAllPlayers("Go!"_s, true);
 
 						for (auto* player : _players) {
 							DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
@@ -1504,7 +1506,7 @@ namespace Jazz2::Multiplayer
 			SetControllableToAllPlayers(false);
 			WarpAllPlayersToStart();
 			ResetAllPlayerStats();
-			ShowAlertToAllPlayers("\n\n3"_s);
+			ShowAlertToAllPlayers("3"_s, true);
 		}
 
 		return true;
@@ -2199,13 +2201,18 @@ namespace Jazz2::Multiplayer
 				}
 				case ServerPacketType::ShowAlert: {
 					MemoryStream packet(data);
-					std::uint32_t messageLength = packet.ReadVariableUint32();
-					String message = String(NoInit, messageLength);
-					packet.Read(message.data(), messageLength);
+					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+					std::uint32_t textLength = packet.ReadVariableUint32();
+					String text = String(NoInit, textLength);
+					packet.Read(text.data(), textLength);
 
-					LOGD("[MP] ServerPacketType::ShowAlert - text: \"%s\"", message.data());
+					LOGD("[MP] ServerPacketType::ShowAlert - text: \"%s\"", text.data());
 
-					_hud->ShowLevelText(message);
+					if ((flags & 0x01) != 0) {
+						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(text);
+					} else {
+						_hud->ShowLevelText(text);
+					}
 					return true;
 				}
 				case ServerPacketType::ChatMessage: {
@@ -3105,17 +3112,25 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::ShowAlertToAllPlayers(StringView message)
+	void MpLevelHandler::ShowAlertToAllPlayers(StringView text, bool isCountdown)
 	{
-		if (message.empty()) {
+		if (text.empty()) {
 			return;
 		}
 
-		ShowLevelText(message);
+		std::uint8_t flags = 0;
+		if (isCountdown) {
+			flags |= 0x01;
 
-		MemoryStream packet(4 + message.size());
-		packet.WriteVariableUint32((std::uint32_t)message.size());
-		packet.Write(message.data(), (std::uint32_t)message.size());
+			static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(text);
+		} else {
+			ShowLevelText(text);
+		}
+
+		MemoryStream packet(5 + text.size());
+		packet.WriteValue<std::uint8_t>(flags);
+		packet.WriteVariableUint32((std::uint32_t)text.size());
+		packet.Write(text.data(), (std::uint32_t)text.size());
 
 		_networkManager->SendTo([this](const Peer& peer) {
 			auto it = _peerDesc.find(peer);

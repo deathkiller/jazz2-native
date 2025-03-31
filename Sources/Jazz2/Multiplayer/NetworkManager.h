@@ -73,8 +73,10 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns global (session) peer descriptor for the specified connected peer */
 		PeerDesc* GetPeerDescriptor(const Peer& peer);
 
-		/** @brief Creates a default server configuration from the template file */
+		/** @brief Creates a default server configuration from the default template file */
 		static ServerConfiguration CreateDefaultServerConfiguration();
+		/** @brief Loads a server configuration from the specified file */
+		static ServerConfiguration LoadServerConfigurationFromFile(StringView path);
 		/** @brief Converts @ref MpGameMode to the localized string representation */
 		static StringView GameModeToLocalizedString(MpGameMode mode);
 		/** @brief Converts the non-localized string representation back to @ref MpGameMode */
@@ -93,6 +95,8 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<ServerConfiguration> _serverConfig;
 		std::unique_ptr<ServerDiscovery> _discovery;
 		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer descriptor
+
+		static void FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level);
 	};
 }
 
