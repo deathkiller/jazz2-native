@@ -348,7 +348,7 @@ namespace Jazz2::UI::Menu
 		serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 		serverInit.InitialLevel.PlayerCarryOvers[0].Type = (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType);
 
-		if (_levelName == ":playlist"_s) {
+		if (_levelName == FromPlaylist) {
 			serverInit.Configuration.PlaylistIndex = 0;
 			if (serverInit.Configuration.Playlist.empty()) {
 				_shouldStart = false;

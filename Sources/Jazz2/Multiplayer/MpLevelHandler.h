@@ -281,7 +281,7 @@ namespace Jazz2::Multiplayer
 		bool IsLocalPlayer(Actors::ActorBase* actor);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
-		void ShowAlertToAllPlayers(StringView message);
+		void ShowAlertToAllPlayers(StringView text, bool isCountdown = false);
 		void SetControllableToAllPlayers(bool enable);
 		void ResetAllPlayerStats();
 		void WarpAllPlayersToStart();

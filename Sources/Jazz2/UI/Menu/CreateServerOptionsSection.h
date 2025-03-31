@@ -10,6 +10,9 @@ namespace Jazz2::UI::Menu
 	class CreateServerOptionsSection : public MenuSection
 	{
 	public:
+		/** @brief Special value for LevelName to create a server from configured playlist */
+		static constexpr StringView FromPlaylist = "\0:playlist"_s;
+
 		CreateServerOptionsSection(StringView levelName, StringView previousEpisodeName, bool privateServer);
 
 		void OnShow(IMenuContainer* root) override;

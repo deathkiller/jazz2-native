@@ -66,10 +66,44 @@ namespace Jazz2::UI::Multiplayer
 	using namespace Jazz2::UI::Multiplayer::Resources;
 
 	MpHUD::MpHUD(Jazz2::Multiplayer::MpLevelHandler* levelHandler)
-		: HUD(levelHandler)
+		: HUD(levelHandler), _countdownTimeLeft(0.0f)
 	{
 		auto& resolver = ContentResolver::Get();
 		_mediumFont = resolver.GetFont(FontType::Medium);
+	}
+
+	void MpHUD::OnUpdate(float timeMult)
+	{
+		HUD::OnUpdate(timeMult);
+
+		if (_countdownTimeLeft > 0.0f) {
+			_countdownTimeLeft -= timeMult;
+		}
+	}
+
+	bool MpHUD::OnDraw(RenderQueue& renderQueue)
+	{
+		if (!HUD::OnDraw(renderQueue)) {
+			return false;
+		}
+
+		std::int32_t charOffset = 0;
+
+		if (_countdownTimeLeft > 0.0f) {
+			float textScale = 2.0f - std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 1.0f);
+			Colorf textColor = Font::DefaultColor;
+			textColor.A = std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 0.5f) * 2.0f;
+			_mediumFont->DrawString(this, _countdownText, charOffset, ViewSize.X * 0.5f, ViewSize.Y * 0.5f, FontLayer + 20,
+				Alignment::Center, textColor, textScale, 0.0f, 0.0f, 0.0f);
+		}
+
+		return true;
+	}
+
+	void MpHUD::ShowCountdown(StringView text)
+	{
+		_countdownText = text;
+		_countdownTimeLeft = FrameTimer::FramesPerSecond;
 	}
 
 	void MpHUD::OnDrawScore(const Rectf& view, Actors::Player* player)
