@@ -104,7 +104,7 @@ namespace Death {
 /**
 	@brief Unix target
 
-	Defined if the library is built for some Unix flavor (Linux, BSD, macOS, iOS, Android...).
+	Defined if the library is built for some Unix flavor (Linux, BSD, macOS, iOS, Android, ...).
 	Note that while the behavior of Emscripten is closely emulating Unix systems,
 	@ref DEATH_TARGET_UNIX is not defined there, only @ref DEATH_TARGET_EMSCRIPTEN.
 */

@@ -46,6 +46,7 @@ namespace Death { namespace IO {
 			NotSeekable = -3
 		};
 
+		/** @brief Whether the stream has been sucessfully opened */
 		explicit operator bool() {
 			return IsValid();
 		}

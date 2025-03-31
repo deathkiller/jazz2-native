@@ -272,7 +272,7 @@ namespace Death { namespace Containers {
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
-		 * @brief Returns @ref DateTime structure converted to Windows® `SYSTEMTIME` structure
+		 * @brief Returns @ref DateTime structure converted to Windows® `SYSTEMTIME` structure to be passed to Windows APIs
 		 * 
 		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
 		 */

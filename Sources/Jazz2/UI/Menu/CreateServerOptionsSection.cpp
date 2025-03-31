@@ -9,6 +9,8 @@
 #include "../../PreferencesCache.h"
 #include "../../Multiplayer/NetworkManager.h"
 
+#include "../../../nCine/Base/Random.h"
+
 #include <Utf8.h>
 
 using namespace Jazz2::Multiplayer;
@@ -349,7 +351,13 @@ namespace Jazz2::UI::Menu
 		serverInit.InitialLevel.PlayerCarryOvers[0].Type = (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType);
 
 		if (_levelName == FromPlaylist) {
-			serverInit.Configuration.PlaylistIndex = 0;
+			if (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size()) {
+				if (serverInit.Configuration.RandomizePlaylist) {
+					serverInit.Configuration.PlaylistIndex = Random().Next(0, serverInit.Configuration.Playlist.size());
+				} else {
+					serverInit.Configuration.PlaylistIndex = 0;
+				}
+			}
 			if (serverInit.Configuration.Playlist.empty()) {
 				_shouldStart = false;
 				_transitionTime = 0.0f;

@@ -50,9 +50,10 @@ using namespace Jazz2::Actors::Multiplayer;
 
 namespace Jazz2::Multiplayer
 {
+	// TODO: levelState is unused, it needs to be set after LevelState::InitialUpdatePending is processed
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState, bool enableLedgeClimb)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
-			_levelState(levelState), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0),
+			_levelState(LevelState::InitialUpdatePending), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0),
 			_seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
@@ -94,8 +95,9 @@ namespace Jazz2::Multiplayer
 				flags |= 0x02;
 			}
 
-			MemoryStream packet(10 + _levelName.size());
+			MemoryStream packet(8 + _levelName.size());
 			packet.WriteValue<std::uint8_t>(flags);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)levelInit.LastExitType);
 			packet.WriteVariableUint32(_levelName.size());
@@ -300,9 +302,11 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 				case LevelState::Running: {
-					auto& serverConfig = _networkManager->GetServerConfiguration();
-					if (serverConfig.MaxGameTimeSecs > 0 && _gameTimeLeft <= 0.0f) {
-						EndGameOnTimeOut();
+					if (_isServer) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						if (serverConfig.MaxGameTimeSecs > 0 && _gameTimeLeft <= 0.0f) {
+							EndGameOnTimeOut();
+						}
 					}
 					break;
 				}
@@ -310,7 +314,11 @@ namespace Jazz2::Multiplayer
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
 						if (serverConfig.Playlist.size() > 1) {
-							serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+							if (serverConfig.RandomizePlaylist) {
+								serverConfig.PlaylistIndex = Random().Next(0, serverConfig.Playlist.size());
+							} else {
+								serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+							}
 							ApplyFromPlaylist();
 						} else {
 							// TODO: Reload the level
@@ -818,7 +826,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel)
 	{
-		if (!_isServer || _nextLevelType != ExitType::None) {
+		if (!_isServer || _nextLevelType != ExitType::None || _levelState != LevelState::Running) {
 			// Level can be changed only by server
 			return;
 		}
@@ -897,9 +905,16 @@ namespace Jazz2::Multiplayer
 		//return LevelHandler::HandlePlayerDied(player, collider);
 
 		if (_isServer) {
+			if (_levelState != LevelState::Running) {
+				return true;
+			}
+
 			DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
 			auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
 			playerOnServer->Deaths++;
+
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			bool canRespawn = (_enableSpawning && (!serverConfig.IsElimination || playerOnServer->Deaths < serverConfig.TotalKills));
 
 			// TODO: Handle also server-local player
 			for (auto& [peer, peerDesc] : _peerDesc) {
@@ -911,7 +926,7 @@ namespace Jazz2::Multiplayer
 					packet1.WriteVariableUint32(playerOnServer->Deaths);
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet1);
 
-					if (_enableSpawning) {
+					if (canRespawn) {
 						MemoryStream packet3(12);
 						packet3.WriteVariableUint32(player->_playerIndex);
 						packet3.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.X * 512.0f));
@@ -941,7 +956,7 @@ namespace Jazz2::Multiplayer
 
 			CheckGameEnds();
 
-			return true;
+			return canRespawn;
 		} else {
 			return false;
 		}
@@ -1122,7 +1137,7 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
 			auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
-			if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
+			if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps && _levelState == LevelState::Running) {
 				playerOnServer->Laps++;
 				playerOnServer->LapStarted = TimeStamp::now();
 
@@ -1131,7 +1146,7 @@ namespace Jazz2::Multiplayer
 
 			for (auto& [peer, peerDesc] : _peerDesc) {
 				if (peerDesc.Player == player) {
-					if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps) {
+					if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps && _levelState == LevelState::Running) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
 
 						MemoryStream packet2(13);
@@ -1180,7 +1195,7 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
 			auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
-			if (newCount > prevCount) {
+			if (newCount > prevCount && _levelState == LevelState::Running) {
 				playerOnServer->TreasureCollected += (newCount - prevCount);
 			}
 
@@ -1675,7 +1690,11 @@ namespace Jazz2::Multiplayer
 				}
 			} else {
 				if (serverConfig.Playlist.size() > 1) {
-					serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+					if (serverConfig.RandomizePlaylist) {
+						serverConfig.PlaylistIndex = Random().Next(0, serverConfig.Playlist.size());
+					} else {
+						serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+					}
 					ApplyFromPlaylist();
 				}
 			}
@@ -1794,7 +1813,7 @@ namespace Jazz2::Multiplayer
 						flags |= 0x02;
 					}
 
-					MemoryStream packet(10 + _levelName.size());
+					MemoryStream packet(8 + _levelName.size());
 					packet.WriteValue<std::uint8_t>(flags);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
@@ -3224,15 +3243,38 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::CheckGameEnds()
 	{
 		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		if (serverConfig.IsElimination) {
+			std::int32_t eliminationCount = 0;
+			Actors::Multiplayer::PlayerOnServer* eliminationWinner = nullptr;
+
+			for (auto* player : _players) {
+				DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
+				auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
+				if (playerOnServer->Deaths < serverConfig.TotalKills) {
+					eliminationCount++;
+				} else {
+					eliminationWinner = playerOnServer;
+				}
+			}
+
+			if (eliminationCount >= _players.size() - 1) {
+				EndGame(eliminationWinner);
+				return;
+			}
+		}
+		
 		switch (serverConfig.GameMode) {
 			case MpGameMode::Battle:
 			case MpGameMode::TeamBattle: {
-				for (auto* player : _players) {
-					DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
-					auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
-					if (playerOnServer->Kills >= serverConfig.TotalKills) {
-						EndGame(playerOnServer);
-						break;
+				if (!serverConfig.IsElimination) {
+					for (auto* player : _players) {
+						DEATH_DEBUG_ASSERT(runtime_cast<Actors::Multiplayer::PlayerOnServer*>(player));
+						auto* playerOnServer = static_cast<Actors::Multiplayer::PlayerOnServer*>(player);
+						if (playerOnServer->Kills >= serverConfig.TotalKills) {
+							EndGame(playerOnServer);
+							break;
+						}
 					}
 				}
 				break;

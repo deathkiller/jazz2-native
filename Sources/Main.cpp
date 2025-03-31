@@ -14,6 +14,7 @@
 
 #include "nCine/IAppEventHandler.h"
 #include "nCine/tracy.h"
+#include "nCine/Base/Random.h"
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
@@ -290,6 +291,13 @@ void GameEventHandler::OnInitialize()
 			serverInit.InitialLevel.IsLocalSession = false;
 			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
+			if (!serverInit.Configuration.Playlist.empty() && (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size())) {
+				if (serverInit.Configuration.RandomizePlaylist) {
+					serverInit.Configuration.PlaylistIndex = Random().Next(0, (std::uint32_t)serverInit.Configuration.Playlist.size());
+				} else {
+					serverInit.Configuration.PlaylistIndex = 0;
+				}
+			}
 
 			CreateServer(std::move(serverInit));
 			StartProcessingStdin();
@@ -365,6 +373,13 @@ void GameEventHandler::OnInitialize()
 			serverInit.InitialLevel.IsLocalSession = false;
 			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
+			if (!serverInit.Configuration.Playlist.empty() && (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size())) {
+				if (serverInit.Configuration.RandomizePlaylist) {
+					serverInit.Configuration.PlaylistIndex = Random().Next(0, (std::uint32_t)serverInit.Configuration.Playlist.size());
+				} else {
+					serverInit.Configuration.PlaylistIndex = 0;
+				}
+			}
 
 			CreateServer(std::move(serverInit));
 			return;

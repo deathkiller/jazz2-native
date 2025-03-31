@@ -7,7 +7,7 @@
 #include <memory>
 #include <optional>
 
-#if !defined(DEATH_TARGET_WINDOWS)
+#if !defined(DEATH_TARGET_WINDOWS) && !defined(DOXYGEN_GENERATING_OUTPUT)
 #	include <climits> // for `PATH_MAX`
 #	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH)
 #		include <dirent.h>
@@ -36,10 +36,14 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS)
 		// Windows 10 supports long paths everywhere, so increase it a bit
+		/** @brief Maximum path length supported */
 		static constexpr std::size_t MaxPathLength = /*MAX_PATH*/2048;
+		/** @brief Native path separator */
 		static constexpr char PathSeparator[] = "\\";
 #else
+		/** @brief Maximum path length supported */
 		static constexpr std::size_t MaxPathLength = PATH_MAX;
+		/** @brief Native path separator */
 		static constexpr char PathSeparator[] = "/";
 #endif
 
@@ -121,7 +125,7 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
 		/**
-		 * @brief Returns path with correct case on case-sensitive platforms (or nothing if path not found)
+		 * @brief Returns path with correct case on case-sensitive platforms (or `{}` if path not found)
 		 * 
 		 * Windows® is already case-insensitive by default, so no validation is performed.
 		 */
@@ -135,7 +139,7 @@ namespace Death { namespace IO {
 		}
 #else
 		/**
-		 * @brief Returns path with correct case on case-sensitive platforms (or nothing if path not found)
+		 * @brief Returns path with correct case on case-sensitive platforms (or `{}` if path not found)
 		 */
 		static Containers::String FindPathCaseInsensitive(Containers::StringView path);
 
@@ -182,9 +186,9 @@ namespace Death { namespace IO {
 		/** @brief Returns `true` if the specified path is not empty and is absolute */
 		static bool IsAbsolutePath(Containers::StringView path);
 
-		/** @brief Returns the path of executable */
+		/** @brief Returns the path to the executable file for the running application */
 		static Containers::String GetExecutablePath();
-		/** @brief Returns the path of current working directory */
+		/** @brief Returns the path of the current working directory */
 		static Containers::String GetWorkingDirectory();
 		/** @brief Sets the current working directory, the starting point for interpreting relative paths */
 		static bool SetWorkingDirectory(Containers::StringView path);
@@ -203,7 +207,7 @@ namespace Death { namespace IO {
 #endif
 #if defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
-		 * @brief Returns the path pointing to `$XDG_DATA_HOME` or `~/.local/share/` in the most cases
+		 * @brief Returns the path pointing to `$XDG_DATA_HOME` or `"~/.local/share/"` in the most cases
 		 *
 		 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
 		 */

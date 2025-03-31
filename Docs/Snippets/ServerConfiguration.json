@@ -1,0 +1,65 @@
+{
+	"ServerName": "My Game Server",
+	"WelcomeMessage": "Welcome to the {PlayerName}'s server!",
+	"MaxPlayerCount": 16,
+	"MinPlayerCount": 2,
+	"ServerPort": 7438,
+	"IsPrivate": false,
+	"RequiresDiscordAuth": false,
+	"AllowedPlayerTypes": 7,	/* Jazz + Spaz + Lori */
+	"IdleKickTimeSecs": 600,
+	"WhitelistedUniquePlayerIDs": {
+		"8C0D:9387:CDE3:F357:8D8B:8667:3123:1645": "User-defined comment 1"
+	},
+	"AdminUniquePlayerIDs": {
+		"370D:9320:3785:3216:9876:8843:323C:1401": "*"
+	},
+	"BannedUniquePlayerIDs": {
+		"8C0D:8887:CDE3:F357:8D8B:8837:3123:1645": "User-defined comment 1",
+		"990D:9320:3755:3216:9876:8843:323C:1401": "User-defined comment 2"
+	},
+	"BannedIPAddresses": {
+		"192.168.1.2": "User-defined comment 1",
+		"111.222.333.444": "User-defined comment 2"
+	},
+
+	"RandomizePlaylist": false,
+	"TotalPlayerPoints": 50,
+	
+	/* These properties are redundant, because they are be overriden by the playlist */
+	"GameMode": "battle",
+	"IsElimination": false,
+	"InitialPlayerHealth": 5,
+	"MaxGameTimeSecs": 900,
+	"PreGameSecs": 60,
+	"TotalKills": 10,
+	"TotalLaps": 3,
+	"TotalTreasureCollected": 100,
+
+	"Playlist": [
+		{
+			"LevelName": "unknown/arace1",
+			"GameMode": "race",
+			"IsElimination": false,
+			"InitialPlayerHealth": 5,
+			"MaxGameTimeSecs": 900,
+			"PreGameSecs": 60,
+			"TotalKills": 10,
+			"TotalLaps": 3,
+			"TotalTreasureCollected": 100
+		},
+		{
+			"LevelName": "unknown/battle1",
+			"GameMode": "battle",
+			"IsElimination": false,
+			"InitialPlayerHealth": 5,
+			"MaxGameTimeSecs": 900,
+			"PreGameSecs": 60,
+			"TotalKills": 10,
+			"TotalLaps": 3,
+			"TotalTreasureCollected": 100
+		}
+	],
+	
+	"PlaylistIndex": 0
+}
