@@ -394,10 +394,11 @@ namespace Jazz2::Multiplayer
 		switch (mode) {
 			case MpGameMode::Battle: return _("Battle");
 			case MpGameMode::TeamBattle: return _("Team Battle");
-			case MpGameMode::CaptureTheFlag: return _("Capture The Flag");
 			case MpGameMode::Race: return _("Race");
 			case MpGameMode::TeamRace: return _("Team Race");
 			case MpGameMode::TreasureHunt: return _("Treasure Hunt");
+			case MpGameMode::TeamTreasureHunt: return _("Team Treasure Hunt");
+			case MpGameMode::CaptureTheFlag: return _("Capture The Flag");
 			case MpGameMode::Cooperation: return _("Cooperation");
 			default: return _("Unknown");
 		}
@@ -410,14 +411,16 @@ namespace Jazz2::Multiplayer
 			return MpGameMode::Battle;
 		} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
 			return MpGameMode::TeamBattle;
-		} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
-			return MpGameMode::CaptureTheFlag;
 		} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
 			return MpGameMode::Race;
 		} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
 			return MpGameMode::TeamRace;
 		} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
 			return MpGameMode::TreasureHunt;
+		} else if (gameModeString == "teamtreasurehunt"_s || gameModeString == "tth"_s) {
+			return MpGameMode::TeamTreasureHunt;
+		} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
+			return MpGameMode::CaptureTheFlag;
 		} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
 			return MpGameMode::Cooperation;
 		} else {

@@ -30,7 +30,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t InitialPlayerHealth;
 		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;
-		/** @brief Duration of pre-game before starting the actual game */
+		/** @brief Duration of pre-game before starting a round */
 		std::uint32_t PreGameSecs;
 		/** @brief Total number of kills, default is 10 (Battle) */
 		std::uint32_t TotalKills;
@@ -42,6 +42,68 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Server configuration
+
+		The server configuration is read from a JSON file, which may contain the following fields:
+		- @cpp "ServerName" @ce : (string) Name of the server
+		- @cpp "ServerPassword" @ce : (string) Password to join the server
+		- @cpp "WelcomeMessage" @ce : (string) Message displayed to players upon joining
+		- @cpp "MaxPlayerCount" @ce : (integer) Maximum number of players allowed to join
+		- @cpp "MinPlayerCount" @ce : (integer) Minimum number of players required to start a round
+		- @cpp "ServerPort" @ce : (integer) UDP port number on which the server runs
+		- @cpp "IsPrivate" @ce : (bool) Whether the server is private and hidden in the server list
+		- @cpp "RequiresDiscordAuth" @ce : (bool) If `true`, the server requires Discord authentication
+		- @cpp "AllowedPlayerTypes" @ce : (integer) Bitmask for allowed player types (1 = Jazz, 2 = Spaz, 4 = Lori)
+		- @cpp "IdleKickTimeSecs" @ce : (integer) Time in seconds after idle players are kicked (default is **never**)
+		- @cpp "AdminUniquePlayerIDs" @ce : (object) Map of admin player IDs
+		  - Key specifies player ID, value contains privileges
+		- @cpp "WhitelistedUniquePlayerIDs" @ce : (object) Map of whitelisted player IDs
+		  - Key specifies player ID, value can contain a user-defined comment
+		  - If at least one entry is specified, only whitelisted players can join the server
+		- @cpp "BannedUniquePlayerIDs" @ce : (object) Map of banned player IDs
+		  - Key specifies player ID, value can contain a user-defined comment (e.g., reason)
+		- @cpp "BannedIPAddresses" @ce : (object) Map of banned IP addresses
+		  - Key specifies IP address, value can contain a user-defined comment (e.g., reason)
+		- @cpp "RandomizePlaylist" @ce : (bool) Whether to play the playlist in random order
+		- @cpp "TotalPlayerPoints" @ce : (integer) Total points to win the championship
+		- @cpp "GameMode" @ce : (string) Game mode
+		  - @cpp "b" @ce / @cpp "battle" @ce - Battle
+		  - @cpp "tb" @ce / @cpp "teambattle" @ce - Team Battle
+		  - @cpp "r" @ce / @cpp "race" @ce - Race
+		  - @cpp "tr" @ce / @cpp "teamrace" @ce - Team Race
+		  - @cpp "th" @ce / @cpp "treasurehunt" @ce - Treasure Hunt
+		  - @cpp "tth" @ce / @cpp "teamtreasurehunt" @ce - Team Treasure Hunt
+		  - @cpp "ctf" @ce / @cpp "capturetheflag" @ce - Capture the Flag
+		  - @cpp "c" @ce / @cpp "coop" @ce / @cpp "cooperation" @ce - Cooperation
+		- @cpp "IsElimination" @ce : (bool) Whether elimination mode is enabled
+		  - If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce
+		  - Elimination can be combined with any game mode
+		- @cpp "InitialPlayerHealth" @ce : (integer) Initial health of players (default is **5**)
+		- @cpp "MaxGameTimeSecs" @ce : (integer) Maximum allowed game time in seconds per level (default is **unlimited**)
+		- @cpp "PreGameSecs" @ce : (integer) Pre-game duration in seconds (default is **60**)
+		  - Pre-game is skipped in Cooperation
+		- @cpp "TotalKills" @ce : (integer) Number of kills required to win (Battle)
+		- @cpp "TotalLaps" @ce : (integer) Number of laps required to win (Race)
+		- @cpp "TotalTreasureCollected" @ce : (integer) Number of treasures required to win (Tresure Hunt)
+		- @cpp "Playlist" @ce : (array) List of game configurations per round, each entry may contain:
+		  - @cpp "LevelName" @ce : (string) Name of the level
+		  - @cpp "GameMode" @ce : (string) Specific game mode for this round
+		  - @cpp "IsElimination" @ce : (bool) Whether elimination mode is enabled for this round
+		  - @cpp "InitialPlayerHealth" @ce : (integer) Initial health of players for this round
+		  - @cpp "MaxGameTimeSecs" @ce : (integer) Maximum game duration for this round
+		  - @cpp "PreGameSecs" @ce : (integer) Pre-game duration before this round starts
+		  - @cpp "TotalKills" @ce : (integer) Number of kills required to win this round (Battle)
+		  - @cpp "TotalLaps" @ce : (integer) Number of laps required to win this round (Race)
+		  - @cpp "TotalTreasureCollected" @ce : (integer) Total treasure required to win this round (Tresure Hunt)
+		- @cpp "PlaylistIndex" @ce : (integer) Index of the current playlist entry
+		
+		If the JSON contains a @cpp "$include" @ce directive, it recursively loads the referenced files.
+		If a property is missing in a playlist entry, it will inherit the value from the root configuration.
+		If a property is missing in the root configuration, the default value is used. `{PlayerName}` and
+		`{ServerName}` variables can be used in @cpp "ServerName" @ce and @cpp "WelcomeMessage" @ce properties.
+		
+		Example server configuration:
+		
+		@include ServerConfiguration.json
 	*/
 	struct ServerConfiguration
 	{
@@ -49,13 +111,13 @@ namespace Jazz2::Multiplayer
 		String ServerName;
 		/** @brief Password of the server */
 		String ServerPassword;
-		/** @brief Welcome message in the lobby */
+		/** @brief Welcome message displayed to players upon joining */
 		String WelcomeMessage;
-		/** @brief Maximum number of players allowed on the server */
+		/** @brief Maximum number of players allowed to join */
 		std::uint32_t MaxPlayerCount;
-		/** @brief Minimum number of players to start the game */
+		/** @brief Minimum number of players to start a round */
 		std::uint32_t MinPlayerCount;
-		/** @brief Multiplayer game mode */
+		/** @brief Game mode */
 		MpGameMode GameMode;
 		/** @brief Server port */
 		std::uint16_t ServerPort;
@@ -87,7 +149,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t InitialPlayerHealth;
 		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;
-		/** @brief Duration of pre-game before starting the actual game (ignored in Cooperation) */
+		/** @brief Duration of pre-game before starting a round */
 		std::uint32_t PreGameSecs;
 		/** @brief Total number of kills, default is 10 (Battle) */
 		std::uint32_t TotalKills;
@@ -98,7 +160,7 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Playlist */
 		SmallVector<PlaylistEntry, 0> Playlist;
-		/** @brief Index of the current playlist entry, or -1 to disable playlist */
+		/** @brief Index of the current playlist entry */
 		std::int32_t PlaylistIndex;
 
 		// Pure runtime information

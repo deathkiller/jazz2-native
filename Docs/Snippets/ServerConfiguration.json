@@ -6,8 +6,10 @@
 	"ServerPort": 7438,
 	"IsPrivate": false,
 	"RequiresDiscordAuth": false,
-	"AllowedPlayerTypes": 7,	/* Jazz + Spaz + Lori */
+	"AllowedPlayerTypes": 7, /* Jazz + Spaz + Lori */
 	"IdleKickTimeSecs": 600,
+	
+	/* Only whitelisted players can join if the whitelist is specified */
 	"WhitelistedUniquePlayerIDs": {
 		"8C0D:9387:CDE3:F357:8D8B:8667:3123:1645": "User-defined comment 1"
 	},
@@ -36,6 +38,7 @@
 	"TotalLaps": 3,
 	"TotalTreasureCollected": 100,
 
+	/* Playlist can contain unlimited number of entries */
 	"Playlist": [
 		{
 			"LevelName": "unknown/arace1",
