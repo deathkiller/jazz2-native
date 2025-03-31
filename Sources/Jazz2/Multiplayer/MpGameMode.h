@@ -10,11 +10,12 @@ namespace Jazz2::Multiplayer
 		Unknown = 0,		/**< Unspecified */
 
 		Battle,				/**< Battle */
-		TeamBattle,			/**< Team battle */
-		CaptureTheFlag,		/**< Capture the flag */
+		TeamBattle,			/**< Team Battle */
 		Race,				/**< Race */
-		TeamRace,			/**< Team race */
-		TreasureHunt,		/**< Treasure hunt */
+		TeamRace,			/**< Team Race */
+		TreasureHunt,		/**< Treasure Hunt */
+		TeamTreasureHunt,	/**< Team Treasure Hunt */
+		CaptureTheFlag,		/**< Capture The Flag */
 		Cooperation			/**< Cooperation */
 	};
 }

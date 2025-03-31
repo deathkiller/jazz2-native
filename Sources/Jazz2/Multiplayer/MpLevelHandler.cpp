@@ -1600,14 +1600,16 @@ namespace Jazz2::Multiplayer
 					gameMode = MpGameMode::Battle;
 				} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
 					gameMode = MpGameMode::TeamBattle;
-				} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
-					gameMode = MpGameMode::CaptureTheFlag;
 				} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
 					gameMode = MpGameMode::Race;
 				} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
 					gameMode = MpGameMode::TeamRace;
 				} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
 					gameMode = MpGameMode::TreasureHunt;
+				} else if (gameModeString == "teamtreasurehunt"_s || gameModeString == "tth"_s) {
+					gameMode = MpGameMode::TeamTreasureHunt;
+				} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
+					gameMode = MpGameMode::CaptureTheFlag;
 				} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
 					gameMode = MpGameMode::Cooperation;
 				} else {

@@ -125,10 +125,10 @@ namespace Death { namespace Containers {
 		@par
 			@code{.cpp}
 			std::initializer_list<int> a{1, 2, 3, 4};
-			foo(a[2]);  // okay
+			foo(a[2]);  // Okay
 
-			Containers::ArrayView<const int> b{1, 2, 3, 4}; // hypothetical, doesn't compile
-			foo(b[2]);  // crash, initializer_list already destructed here
+			Containers::ArrayView<const int> b{1, 2, 3, 4}; // Hypothetical, doesn't compile
+			foo(b[2]);  // Crash, initializer_list already destructed here
 			@endcode
 	*/
 	template<class T> class ArrayView

@@ -171,17 +171,6 @@ namespace Jazz2::UI::Multiplayer
 
 				break;
 			}
-			case MpGameMode::CaptureTheFlag: {
-
-				// TODO
-				/*formatString(stringBuffer, sizeof(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);*/
-
-				break;
-			}
 			case MpGameMode::Race:
 			case MpGameMode::TeamRace: {
 
@@ -204,13 +193,25 @@ namespace Jazz2::UI::Multiplayer
 
 				break;
 			}
-			case MpGameMode::TreasureHunt: {
+			case MpGameMode::TreasureHunt:
+			case MpGameMode::TeamTreasureHunt: {
 
 				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", statsProvider->TreasureCollected, totalTreasureCollected);
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+				break;
+			}
+			case MpGameMode::CaptureTheFlag: {
+
+				// TODO
+				/*formatString(stringBuffer, sizeof(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);*/
 
 				break;
 			}
