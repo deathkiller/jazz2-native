@@ -130,7 +130,7 @@ namespace Jazz2
 			return _palettes;
 		}
 
-		/** @brief Strips all `/*` and `//` comments from JSON content */
+		/** @brief Strips all comments from JSON content */
 		static void StripCommentsFromJson(ArrayView<char> content);
 
 	private:
