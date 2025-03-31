@@ -12,7 +12,7 @@
 
 namespace nCine
 {
-#if defined(WITH_THREADS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#if (defined(WITH_THREADS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 	/** @brief CPU affinity mask for a thread */
 	class ThreadAffinityMask

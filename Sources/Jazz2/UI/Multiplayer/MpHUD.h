@@ -16,6 +16,7 @@ namespace Jazz2::UI::Multiplayer
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
+		/** @brief Shows countdown text in the middle of the screen */
 		void ShowCountdown(StringView text);
 
 	protected:
