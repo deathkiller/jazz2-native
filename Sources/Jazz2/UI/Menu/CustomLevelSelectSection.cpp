@@ -304,9 +304,12 @@ namespace Jazz2::UI::Menu
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		String levelName;
+#if defined(WITH_MULTIPLAYER)
 		if (selectedItem.LevelName == CreateServerOptionsSection::FromPlaylist) {
 			levelName = selectedItem.LevelName;
-		} else {
+		} else
+#endif
+		{
 			levelName = "unknown/"_s + selectedItem.LevelName;
 		}
 
