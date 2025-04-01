@@ -133,6 +133,16 @@ namespace Jazz2::UI::Multiplayer
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 			return;
+		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::WaitingForMinPlayers) {
+			const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
+			std::int32_t playersNeeded = (std::int32_t)(serverConfig.MinPlayerCount - mpLevelHandler->_players.size());
+			auto waitingText = _fn("Waiting for %i more player", "Waiting for %i more players", playersNeeded, playersNeeded);
+			_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 8.0f + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 8.0f, FontLayer,
+				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+			return;
 		} else if (mpLevelHandler->_levelState != MpLevelHandler::LevelState::Running) {
 			return;
 		}

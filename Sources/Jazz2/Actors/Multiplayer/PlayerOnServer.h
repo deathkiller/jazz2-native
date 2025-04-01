@@ -19,14 +19,16 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		DEATH_RUNTIME_OBJECT(Player);
 
-		friend class MpLevelHandler;
+		friend class Jazz2::Multiplayer::MpLevelHandler;
 
 	public:
 		/** @brief Returns session peer descriptor */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor();
 
 	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		std::shared_ptr<PeerDescriptor> _peerDesc;
+#endif
 	};
 
 	/** @brief Player on the server in online session */
@@ -34,7 +36,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		DEATH_RUNTIME_OBJECT(MpPlayer);
 
-		friend class MpLevelHandler;
+		friend class Jazz2::Multiplayer::MpLevelHandler;
 
 	public:
 		PlayerOnServer();
