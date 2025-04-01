@@ -1430,35 +1430,35 @@ namespace Jazz2::Scripting
 
 		bool jjPLAYER::get_playerKeyLeftPressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::Left);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Left);
 		}
 		bool jjPLAYER::get_playerKeyRightPressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::Right);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Right);
 		}
 		bool jjPLAYER::get_playerKeyUpPressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::Up);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Up);
 		}
 		bool jjPLAYER::get_playerKeyDownPressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::Down);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Down);
 		}
 		bool jjPLAYER::get_playerKeyFirePressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::Fire);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Fire);
 		}
 		bool jjPLAYER::get_playerKeySelectPressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::ChangeWeapon);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::ChangeWeapon);
 		}
 		bool jjPLAYER::get_playerKeyJumpPressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::Jump);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Jump);
 		}
 		bool jjPLAYER::get_playerKeyRunPressed() {
 			noop();
-			return _player->_levelHandler->PlayerActionPressed(_player->_playerIndex, PlayerAction::Run);
+			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Run);
 		}
 		void jjPLAYER::set_playerKeyLeftPressed(bool value) {
 			noop();

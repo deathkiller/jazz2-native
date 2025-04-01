@@ -109,8 +109,8 @@ namespace Jazz2::UI::Multiplayer
 
 			Vector2i center = ViewSize / 2;
 
-			auto& clientConfig = _levelHandler->_networkManager->GetClientConfiguration();
-			DrawStringShadow(clientConfig.WelcomeMessage, charOffset, center.X, center.Y / 2, MainLayer,
+			const auto& serverConfig = _levelHandler->_networkManager->GetServerConfiguration();
+			DrawStringShadow(serverConfig.WelcomeMessage, charOffset, center.X, center.Y / 2, MainLayer,
 				Alignment::Center, Font::DefaultColor, 1.0f, 0.7f, 0.6f, 0.6f, 0.4f, 1.0f);
 
 			DrawStringShadow(_("Character"), charOffset, center.X, center.Y + 10.0f, MainLayer,

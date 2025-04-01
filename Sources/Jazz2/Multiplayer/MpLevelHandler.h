@@ -11,6 +11,7 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
+	class MpPlayer;
 	class PlayerOnServer;
 	class RemotablePlayer;
 	class RemoteActor;
@@ -113,13 +114,13 @@ namespace Jazz2::Multiplayer
 		void SetWeather(WeatherType type, std::uint8_t intensity) override;
 		bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) override;
 
-		bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads = true) override;
-		bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
-		bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads = true) override;
-		bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
-		float PlayerHorizontalMovement(std::int32_t index) override;
-		float PlayerVerticalMovement(std::int32_t index) override;
-		void PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect) override;
+		bool PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads = true) override;
+		bool PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
+		bool PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads = true) override;
+		bool PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
+		float PlayerHorizontalMovement(Actors::Player* player) override;
+		float PlayerVerticalMovement(Actors::Player* player) override;
+		void PlayerExecuteRumble(Actors::Player* player, StringView rumbleEffect) override;
 
 		bool SerializeResumableToStream(Stream& dest) override;
 
@@ -131,7 +132,7 @@ namespace Jazz2::Multiplayer
 		bool SetGameMode(MpGameMode value);
 
 		/** @brief Returns owner of the specified object or the player itself */
-		static Actors::Player* GetWeaponOwner(Actors::ActorBase* actor);
+		static Actors::Multiplayer::MpPlayer* GetWeaponOwner(Actors::ActorBase* actor);
 
 		// Server-only methods
 		/** @brief Processes the specified server command */
@@ -172,56 +173,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerWeaponChanged(Actors::Player* player);
 
 	private:
-		enum class LevelPeerState {
-			Unknown,
-			LevelLoaded,
-			LevelSynchronized,
-			PlayerReady,
-			PlayerSpawned
-		};
-
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		struct LevelPeerDesc {
-			Actors::Multiplayer::RemotePlayerOnServer* Player;
-			LevelPeerState State;
-			std::uint64_t LastUpdated;
-			bool EnableLedgeClimb;
-
-			LevelPeerDesc() {}
-			LevelPeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, LevelPeerState state, bool enableLedgeClimb)
-				: Player(player), State(state), LastUpdated(0), EnableLedgeClimb(enableLedgeClimb) {}
-		};
-#endif
-
-		enum class PlayerFlags {
-			None = 0,
-
-			SpecialMoveMask = 0x07,
-
-			IsFacingLeft = 0x10,
-			IsVisible = 0x20,
-			IsActivelyPushing = 0x40,
-
-			JustWarped = 0x100
-		};
-
-		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		struct PlayerState {
-			PlayerFlags Flags;
-			std::uint64_t PressedKeys;
-			std::uint64_t PressedKeysLast;
-			std::uint32_t UpdatedFrame;
-			//std::uint64_t WarpSeqNum;
-			//float WarpTimeLeft;
-
-			PlayerState();
-			PlayerState(Vector2f pos, Vector2f speed);
-		};
-
 		struct RemotingActorInfo {
 			std::uint32_t ActorID;
 			std::int32_t LastPosX;
@@ -254,8 +207,6 @@ namespace Jazz2::Multiplayer
 		LevelState _levelState;
 		bool _isServer;
 		bool _enableSpawning;
-		HashMap<Peer, LevelPeerDesc> _peerDesc; // Server: Per peer description
-		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
 		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
@@ -283,10 +234,11 @@ namespace Jazz2::Multiplayer
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
 		void ShowAlertToAllPlayers(StringView text, bool isCountdown = false);
 		void SetControllableToAllPlayers(bool enable);
+		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();
 		void WarpAllPlayersToStart();
 		void CheckGameEnds();
-		void EndGame(Actors::Multiplayer::PlayerOnServer* winner);
+		void EndGame(Actors::Multiplayer::MpPlayer* winner);
 		void EndGameOnTimeOut();
 
 		bool ApplyFromPlaylist();

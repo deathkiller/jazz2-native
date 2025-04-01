@@ -12,7 +12,31 @@ namespace Jazz2::Actors::Multiplayer
 		DEATH_RUNTIME_OBJECT(PlayerOnServer);
 
 	public:
-		RemotePlayerOnServer(bool enableLedgeClimb);
+		/** @brief State flags of the remote player */
+		enum class PlayerFlags {
+			None = 0,
+
+			SpecialMoveMask = 0x07,
+
+			IsFacingLeft = 0x10,
+			IsVisible = 0x20,
+			IsActivelyPushing = 0x40,
+
+			JustWarped = 0x100
+		};
+
+		/** @brief State flags */
+		PlayerFlags Flags;
+		/** @brief Pressed keys */
+		std::uint64_t PressedKeys;
+		/** @brief Previously pressed keys */
+		std::uint64_t PressedKeysLast;
+		/** @brief Last frame when pressed keys were updated */
+		std::uint32_t UpdatedFrame;
+
+		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
+
+		RemotePlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 		bool IsLedgeClimbAllowed() const override;
 
@@ -33,7 +57,6 @@ namespace Jazz2::Actors::Multiplayer
 		StateFrame _stateBuffer[8];
 		std::int32_t _stateBufferPos;
 		Vector2f _displayPos;
-		bool _enableLedgeClimb;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

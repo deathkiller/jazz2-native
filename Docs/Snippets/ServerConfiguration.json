@@ -1,5 +1,11 @@
 {
-	"ServerName": "My Game Server",
+	/* The file can contain both multi-line comments */
+	// and single-line comments
+	
+	/* "$include" directive can be used to include base configuration from another file */
+	"$include": "BaseConfig.json",
+	
+	"ServerName": "{PlayerName}'s Server",
 	"WelcomeMessage": "Welcome to the {PlayerName}'s server!",
 	"MaxPlayerCount": 16,
 	"MinPlayerCount": 2,
@@ -13,9 +19,11 @@
 	"WhitelistedUniquePlayerIDs": {
 		"8C0D:9387:CDE3:F357:8D8B:8667:3123:1645": "User-defined comment 1"
 	},
+	/* Admins can use server commands in the console */
 	"AdminUniquePlayerIDs": {
 		"370D:9320:3785:3216:9876:8843:323C:1401": "*"
 	},
+	
 	"BannedUniquePlayerIDs": {
 		"8C0D:8887:CDE3:F357:8D8B:8837:3123:1645": "User-defined comment 1",
 		"990D:9320:3755:3216:9876:8843:323C:1401": "User-defined comment 2"
@@ -26,9 +34,9 @@
 	},
 
 	"RandomizePlaylist": false,
-	"TotalPlayerPoints": 50,
+	"TotalPlayerPoints": 100,
 	
-	/* These properties are redundant, because they are be overriden by the playlist */
+	/* These properties are redundant, because they are overriden by the playlist */
 	"GameMode": "battle",
 	"IsElimination": false,
 	"InitialPlayerHealth": 5,

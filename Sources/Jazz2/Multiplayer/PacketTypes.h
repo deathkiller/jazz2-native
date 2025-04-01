@@ -41,15 +41,13 @@ namespace Jazz2::Multiplayer
 		PeerStateChanged,
 
 		LoadLevel = 10,
-		LevelSetProperty,			// TODO
+		LevelSetProperty,
 		LevelResetProperties,		// TODO
 		ShowInGameLobby,
 		FadeOut,
-		ChangeGameMode,				// TODO: Obsolete - Will be replaced by LevelSetProperty > GameMode
 		PlaySfx,
 		PlayCommonSfx,
 		ShowAlert,					// TODO
-		OverrideLevelText,			// TODO
 		ChatMessage,
 		SyncTileMap,
 		SetTrigger,
@@ -83,13 +81,8 @@ namespace Jazz2::Multiplayer
 
 		State = 1,
 		GameMode,
-
-		MaxGameTimeSecs = 10,
-		IsElimination,
-
-		TotalKills = 30,
-		TotalLaps,
-		TotalTreasureCollected,
+		
+		LevelText = 10,
 
 		Count
 	};

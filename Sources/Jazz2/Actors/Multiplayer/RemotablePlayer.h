@@ -7,25 +7,25 @@
 namespace Jazz2::Actors::Multiplayer
 {
 	/** @brief Remotable player in online session */
-	class RemotablePlayer : public Player, public IPlayerStatsProvider
+	class RemotablePlayer : public MpPlayer
 	{
-		DEATH_RUNTIME_OBJECT(Player, IPlayerStatsProvider);
+		DEATH_RUNTIME_OBJECT(MpPlayer);
 
 	public:
-		RemotablePlayer();
-
 		/** @brief Whether current weapon is being changed by the server */
 		bool ChangingWeaponFromServer;
 
-		/** @brief Returns team ID */
-		std::uint8_t GetTeamId() const;
-		/** @brief Sets team ID */
-		void SetTeamId(std::uint8_t value);
+		/** @brief Whether the player should be respawned */
+		bool RespawnPending;
+
+		RemotablePlayer();
 
 		/** @brief Warps the player in */
 		void WarpIn(ExitType exitType);
 		/** @brief Moves the player remotely */
 		void MoveRemotely(Vector2f pos, Vector2f speed);
+
+		bool Respawn(Vector2f pos) override;
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -38,7 +38,6 @@ namespace Jazz2::Actors::Multiplayer
 		void SetCurrentWeapon(WeaponType weaponType) override;
 
 	private:
-		std::uint8_t _teamId;
 		bool _warpPending;
 	};
 }

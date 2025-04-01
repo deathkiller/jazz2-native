@@ -1605,6 +1605,9 @@
     <ClInclude Include="Jazz2\UI\Multiplayer\MpHUD.h">
       <Filter>Header Files\Jazz2\UI\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\PeerDescriptor.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

@@ -701,6 +701,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PacketTypes.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PeerDescriptor.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Reason.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerInitialization.h

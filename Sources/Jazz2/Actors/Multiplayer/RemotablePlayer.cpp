@@ -9,8 +9,10 @@
 namespace Jazz2::Actors::Multiplayer
 {
 	RemotablePlayer::RemotablePlayer()
-		: ChangingWeaponFromServer(false), _teamId(0), _warpPending(false)
+		: ChangingWeaponFromServer(false), RespawnPending(false), _warpPending(false)
 	{
+		_peerDesc = std::make_unique<PeerDescriptor>();
+		_peerDesc->Player = this;
 	}
 
 	Task<bool> RemotablePlayer::OnActivatedAsync(const ActorActivationDetails& details)
@@ -57,16 +59,6 @@ namespace Jazz2::Actors::Multiplayer
 		if (!ChangingWeaponFromServer) {
 			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
 		}
-	}
-
-	std::uint8_t RemotablePlayer::GetTeamId() const
-	{
-		return _teamId;
-	}
-
-	void RemotablePlayer::SetTeamId(std::uint8_t value)
-	{
-		_teamId = value;
 	}
 
 	void RemotablePlayer::WarpIn(ExitType exitType)
@@ -127,6 +119,17 @@ namespace Jazz2::Actors::Multiplayer
 		} else {
 			_levelHandler->HandlePlayerWarped(this, posPrev, WarpFlags::Fast);
 		}
+	}
+
+	bool RemotablePlayer::Respawn(Vector2f pos)
+	{
+		bool success = MpPlayer::Respawn(pos);
+		if (!success) {
+			// Player didn't have enough time to die completely, respawn it when HandlePlayerDied() will be called
+			RespawnPending = true;
+		}
+
+		return true;
 	}
 }
 

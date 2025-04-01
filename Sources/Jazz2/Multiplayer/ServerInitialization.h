@@ -52,7 +52,9 @@ namespace Jazz2::Multiplayer
 		- @cpp "ServerPort" @ce : (integer) UDP port number on which the server runs
 		- @cpp "IsPrivate" @ce : (bool) Whether the server is private and hidden in the server list
 		- @cpp "RequiresDiscordAuth" @ce : (bool) If `true`, the server requires Discord authentication
-		- @cpp "AllowedPlayerTypes" @ce : (integer) Bitmask for allowed player types (1 = Jazz, 2 = Spaz, 4 = Lori)
+		  - Discord authentication requires a running Discord client
+		  - Supported platforms are Linux, macOS and Windows
+		- @cpp "AllowedPlayerTypes" @ce : (integer) Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
 		- @cpp "IdleKickTimeSecs" @ce : (integer) Time in seconds after idle players are kicked (default is **never**)
 		- @cpp "AdminUniquePlayerIDs" @ce : (object) Map of admin player IDs
 		  - Key specifies player ID, value contains privileges
@@ -64,7 +66,8 @@ namespace Jazz2::Multiplayer
 		- @cpp "BannedIPAddresses" @ce : (object) Map of banned IP addresses
 		  - Key specifies IP address, value can contain a user-defined comment (e.g., reason)
 		- @cpp "RandomizePlaylist" @ce : (bool) Whether to play the playlist in random order
-		- @cpp "TotalPlayerPoints" @ce : (integer) Total points to win the championship
+		- @cpp "TotalPlayerPoints" @ce : (integer) Total points to win the championship (default is **0**)
+		  - Player can score a maximum of 20 points per round
 		- @cpp "GameMode" @ce : (string) Game mode
 		  - @cpp "b" @ce / @cpp "battle" @ce - Battle
 		  - @cpp "tb" @ce / @cpp "teambattle" @ce - Team Battle
@@ -72,10 +75,11 @@ namespace Jazz2::Multiplayer
 		  - @cpp "tr" @ce / @cpp "teamrace" @ce - Team Race
 		  - @cpp "th" @ce / @cpp "treasurehunt" @ce - Treasure Hunt
 		  - @cpp "tth" @ce / @cpp "teamtreasurehunt" @ce - Team Treasure Hunt
-		  - @cpp "ctf" @ce / @cpp "capturetheflag" @ce - Capture the Flag
+		  - @cpp "ctf" @ce / @cpp "capturetheflag" @ce - Capture The Flag
 		  - @cpp "c" @ce / @cpp "coop" @ce / @cpp "cooperation" @ce - Cooperation
 		- @cpp "IsElimination" @ce : (bool) Whether elimination mode is enabled
-		  - If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce
+		  - If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
+		  - The game ends when only one player remains, or when the conditions of the specified game mode are met
 		  - Elimination can be combined with any game mode
 		- @cpp "InitialPlayerHealth" @ce : (integer) Initial health of players (default is **5**)
 		- @cpp "MaxGameTimeSecs" @ce : (integer) Maximum allowed game time in seconds per level (default is **unlimited**)
@@ -85,7 +89,7 @@ namespace Jazz2::Multiplayer
 		- @cpp "TotalLaps" @ce : (integer) Number of laps required to win (Race)
 		- @cpp "TotalTreasureCollected" @ce : (integer) Number of treasures required to win (Tresure Hunt)
 		- @cpp "Playlist" @ce : (array) List of game configurations per round, each entry may contain:
-		  - @cpp "LevelName" @ce : (string) Name of the level
+		  - @cpp "LevelName" @ce : (string) Name of the level in `<episode>/<level>` format
 		  - @cpp "GameMode" @ce : (string) Specific game mode for this round
 		  - @cpp "IsElimination" @ce : (bool) Whether elimination mode is enabled for this round
 		  - @cpp "InitialPlayerHealth" @ce : (integer) Initial health of players for this round
@@ -107,6 +111,8 @@ namespace Jazz2::Multiplayer
 	*/
 	struct ServerConfiguration
 	{
+		/** @{ @name Server settings */
+
 		/** @brief Server name */
 		String ServerName;
 		/** @brief Password of the server */
@@ -138,12 +144,15 @@ namespace Jazz2::Multiplayer
 		/** @brief List of banned IP addresses, value can contain user-defined reason */
 		HashMap<String, String> BannedIPAddresses;
 
-		// Game mode specific settings
+		/** @} */
+
+		/** @{ @name Game-specific settings */
+
 		/** @brief Whether to play the playlist in random order */
 		bool RandomizePlaylist;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool IsElimination;
-		/** @brief Total player points to win the championship, default is 50 */
+		/** @brief Total player points to win the championship */
 		std::uint32_t TotalPlayerPoints;
 		/** @brief Initial player health, default is 5 */
 		std::uint32_t InitialPlayerHealth;
@@ -163,9 +172,14 @@ namespace Jazz2::Multiplayer
 		/** @brief Index of the current playlist entry */
 		std::int32_t PlaylistIndex;
 
-		// Pure runtime information
+		/** @} */
+
+		/** @{ @name Pure runtime information */
+
 		/** @brief Start time of the server as Unix timestamp */
 		std::uint64_t StartUnixTimestamp;
+
+		/** @} */
 	};
 
 	/**

@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Multiplayer
 {
 	LocalPlayerOnServer::LocalPlayerOnServer()
 	{
+		_peerDesc = std::make_unique<PeerDescriptor>();
+		_peerDesc->Player = this;
 	}
 
 	void LocalPlayerOnServer::EmitWeaponFlare()

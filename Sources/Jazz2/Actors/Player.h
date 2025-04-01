@@ -151,7 +151,7 @@ namespace Jazz2::Actors
 		void SerializeResumableToStream(Stream& dest);
 
 		/** @brief Respawns the player */
-		void Respawn(Vector2f pos);
+		virtual bool Respawn(Vector2f pos);
 		/** @brief Warps to a given position */
 		virtual void WarpToPosition(Vector2f pos, WarpFlags flags);
 		/** @brief Warps to the last checkpoint */

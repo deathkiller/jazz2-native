@@ -961,8 +961,8 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 		default: reasonStr = "Unknown reason"; break;
 	}
 
-	if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
-		LOGI("[MP] Peer disconnected \"%s\" (%s): %s (%u)", globalPeerDesc->PlayerName.data(),
+	if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
+		LOGI("[MP] Peer disconnected \"%s\" (%s): %s (%u)", peerDesc->PlayerName.data(),
 			NetworkManagerBase::AddressToString(peer).data(), reasonStr, (std::uint32_t)reason);
 	} else {
 		LOGI("[MP] Peer disconnected \"<unknown>\" (%s): %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
@@ -1096,17 +1096,17 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				}
 				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist)
 
-				if (auto* globalPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
-					globalPeerDesc->Uuid = std::move(uuid);
-					globalPeerDesc->PlayerName = std::move(playerName);
-					globalPeerDesc->IsAuthenticated = true;
+				if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
+					peerDesc->Uuid = std::move(uuid);
+					peerDesc->PlayerName = std::move(playerName);
+					peerDesc->IsAuthenticated = true;
 
 					if (serverConfig.AdminUniquePlayerIDs.contains(uniquePlayerId)) {
-						globalPeerDesc->IsAdmin = true;
+						peerDesc->IsAdmin = true;
 					}
 
-					LOGI("[MP] Peer authenticated as \"%s\" (%s)%s", globalPeerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peer).data(),
-						globalPeerDesc->IsAdmin ? " [Admin]" : "");
+					LOGI("[MP] Peer authenticated as \"%s\" (%s)%s", peerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peer).data(),
+						peerDesc->IsAdmin ? " [Admin]" : "");
 				} else {
 					DEATH_ASSERT_UNREACHABLE();
 				}
@@ -1125,18 +1125,31 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t levelNameLength = packet.ReadVariableUint32();
 				String levelName{NoInit, levelNameLength};
 				packet.Read(levelName.data(), levelNameLength);
+				std::uint32_t initialPlayerHealth = packet.ReadVariableUint32();
+				std::uint32_t maxGameTimeSecs = packet.ReadVariableUint32();
+				std::uint32_t totalKills = packet.ReadVariableUint32();
+				std::uint32_t totalLaps = packet.ReadVariableUint32();
+				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
 
 				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: %s", flags, (std::uint32_t)gameMode, levelName.data());
 
-				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName)]() {
+				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
+					bool isElimination = (flags & 0x04) != 0;
+
 					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
 					levelInit.LastExitType = lastExitType;
 
-					auto& clientConfig = _networkManager->GetClientConfiguration();
-					clientConfig.GameMode = gameMode;
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+					serverConfig.GameMode = gameMode;
+					serverConfig.IsElimination = isElimination;
+					serverConfig.InitialPlayerHealth = initialPlayerHealth;
+					serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
+					serverConfig.TotalKills = totalKills;
+					serverConfig.TotalLaps = totalLaps;
+					serverConfig.TotalTreasureCollected = totalTreasureCollected;
 
 					auto levelHandler = std::make_unique<MpLevelHandler>(this,
 						_networkManager.get(), levelState, enableLedgeClimb);
