@@ -325,6 +325,7 @@
     <ClInclude Include="Jazz2\Input\RumbleDescription.h" />
     <ClInclude Include="Jazz2\Input\RumbleProcessor.h" />
     <ClInclude Include="Jazz2\Multiplayer\NetworkManagerBase.h" />
+    <ClInclude Include="Jazz2\Multiplayer\PeerDescriptor.h" />
     <ClInclude Include="Jazz2\Multiplayer\ServerInitialization.h" />
     <ClInclude Include="Jazz2\Rendering\BlurRenderPass.h" />
     <ClInclude Include="Jazz2\Rendering\CombineRenderer.h" />

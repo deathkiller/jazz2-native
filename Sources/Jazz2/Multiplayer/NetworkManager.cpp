@@ -22,6 +22,13 @@ using namespace simdjson;
 
 namespace Jazz2::Multiplayer
 {
+	PeerDescriptor::PeerDescriptor()
+		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0), Player(nullptr),
+			LevelState(PeerLevelState::Unknown), LastUpdated(0), EnableLedgeClimb(false), Team(0), Deaths(0), Kills(0),
+			Laps(0), LapStarted{}, TreasureCollected(0), DeathElapsedFrames(FLT_MAX)
+	{
+	}
+
 	NetworkManager::NetworkManager()
 	{
 	}
@@ -32,7 +39,7 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData)
 	{
-		_clientConfig = std::make_unique<ClientConfiguration>();
+		_serverConfig = std::make_unique<ServerConfiguration>();
 		NetworkManagerBase::CreateClient(handler, endpoint, defaultPort, clientData);
 	}
 
@@ -56,11 +63,6 @@ namespace Jazz2::Multiplayer
 		_discovery = nullptr;
 	}
 
-	ClientConfiguration& NetworkManager::GetClientConfiguration() const
-	{
-		return *_clientConfig;
-	}
-
 	ServerConfiguration& NetworkManager::GetServerConfiguration() const
 	{
 		return *_serverConfig;
@@ -72,10 +74,20 @@ namespace Jazz2::Multiplayer
 		return std::uint32_t(_peerDesc.size()) + 1;
 	}
 
-	NetworkManager::PeerDesc* NetworkManager::GetPeerDescriptor(const Peer& peer)
+	const HashMap<Peer, std::shared_ptr<PeerDescriptor>>& NetworkManager::GetPeers() const
+	{
+		return _peerDesc;
+	}
+
+	std::shared_ptr<PeerDescriptor> NetworkManager::GetPeerDescriptor(const Peer& peer)
 	{
 		auto it = _peerDesc.find(peer);
-		return (it != _peerDesc.end() ? &it->second : nullptr);
+		return (it != _peerDesc.end() ? it->second : nullptr);
+	}
+
+	bool NetworkManager::HasInboundConnections() const
+	{
+		return !_peerDesc.empty();
 	}
 
 	ServerConfiguration NetworkManager::CreateDefaultServerConfiguration()
@@ -383,8 +395,8 @@ namespace Jazz2::Multiplayer
 				if (doc["PlaylistIndex"].get(playlistIndex) == SUCCESS && playlistIndex >= -1 && playlistIndex < serverConfig.Playlist.size()) {
 					serverConfig.PlaylistIndex = std::uint32_t(playlistIndex);
 				}
-			} else {
-				LOGE("Configuration from \"%s\" cannot be parsed", configPath.data());
+				} else {
+					LOGE("Configuration from \"%s\" cannot be parsed", configPath.data());
 			}
 		}
 	}
@@ -433,7 +445,8 @@ namespace Jazz2::Multiplayer
 		ConnectionResult result = NetworkManagerBase::OnPeerConnected(peer, clientData);
 
 		if (result && GetState() == NetworkState::Listening) {
-			_peerDesc[peer] = {};
+			auto [peerDesc, inserted] = _peerDesc.emplace(peer, std::make_shared<PeerDescriptor>());
+			peerDesc->second->RemotePeer = peer;
 		}
 
 		return result;
@@ -444,13 +457,12 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase::OnPeerDisconnected(peer, reason);
 
 		if (GetState() == NetworkState::Listening) {
-			_peerDesc.erase(peer);
+			auto it = _peerDesc.find(peer);
+			if (it != _peerDesc.end()) {
+				it->second->RemotePeer = {};
+				_peerDesc.erase(it);
+			}
 		}
-	}
-
-	NetworkManager::PeerDesc::PeerDesc()
-		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0)
-	{
 	}
 }
 

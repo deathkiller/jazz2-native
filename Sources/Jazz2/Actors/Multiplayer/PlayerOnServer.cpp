@@ -10,8 +10,12 @@ using namespace Jazz2::Multiplayer;
 
 namespace Jazz2::Actors::Multiplayer
 {
+	std::shared_ptr<PeerDescriptor> MpPlayer::GetPeerDescriptor()
+	{
+		return _peerDesc;
+	}
+
 	PlayerOnServer::PlayerOnServer()
-		: _teamId(0)
 	{
 	}
 
@@ -20,7 +24,7 @@ namespace Jazz2::Actors::Multiplayer
 		// TODO: Check player special move here
 		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(other.get())) {
 			auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
-			if (_teamId != otherPlayerOnServer->_teamId) {
+			if (GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team) {
 				bool otherIsPlayer = false;
 				if (auto* anotherPlayer = runtime_cast<PlayerOnServer*>(other)) {
 					bool isAttacking = IsAttacking();
@@ -55,21 +59,11 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		if (_health > 0) {
 			if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(collider)) {
-				return (static_cast<PlayerOnServer*>(weaponOwner)->_teamId != _teamId);
+				return (static_cast<PlayerOnServer*>(weaponOwner)->GetPeerDescriptor()->Team != GetPeerDescriptor()->Team);
 			}
 		}
 
 		return false;
-	}
-
-	std::uint8_t PlayerOnServer::GetTeamId() const
-	{
-		return _teamId;
-	}
-
-	void PlayerOnServer::SetTeamId(std::uint8_t value)
-	{
-		_teamId = value;
 	}
 
 	bool PlayerOnServer::IsAttacking() const

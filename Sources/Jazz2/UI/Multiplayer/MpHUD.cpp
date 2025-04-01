@@ -137,33 +137,15 @@ namespace Jazz2::UI::Multiplayer
 			return;
 		}
 
-		auto* statsProvider = runtime_cast<IPlayerStatsProvider*>(player);
-		if (!statsProvider) {
-			return;
-		}
+		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
+		auto* mpPlayer = static_cast<MpPlayer*>(player);
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-		MpGameMode gameMode;
-		std::uint32_t totalKills, totalLaps, totalTreasureCollected;
-		if (mpLevelHandler->_isServer) {
-			const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
-			gameMode = serverConfig.GameMode;
-			totalKills = serverConfig.TotalKills;
-			totalLaps = serverConfig.TotalLaps;
-			totalTreasureCollected = serverConfig.TotalTreasureCollected;
-		} else {
-			const auto& clientConfig = mpLevelHandler->_networkManager->GetClientConfiguration();
-			gameMode = clientConfig.GameMode;
-			totalKills = /*clientConfig.TotalKills*/666;
-			totalLaps = /*clientConfig.TotalLaps*/666;
-			totalTreasureCollected = /*clientConfig.TotalTreasureCollected*/666;
-		}
-
-
-		switch (gameMode) {
+		switch (serverConfig.GameMode) {
 			case MpGameMode::Battle:
 			case MpGameMode::TeamBattle: {
 
-				formatString(stringBuffer, sizeof(stringBuffer), "K: %u  D: %u  /%u", statsProvider->Kills, statsProvider->Deaths, totalKills);
+				formatString(stringBuffer, sizeof(stringBuffer), "K: %u  D: %u  /%u", peerDesc->Kills, peerDesc->Deaths, serverConfig.TotalKills);
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
@@ -174,13 +156,13 @@ namespace Jazz2::UI::Multiplayer
 			case MpGameMode::Race:
 			case MpGameMode::TeamRace: {
 
-				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", statsProvider->Laps + 1, totalLaps);
+				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", peerDesc->Laps + 1, serverConfig.TotalLaps);
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 20.0f, view.Y + 5.0f + 1.4f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.88f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 20.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
 
-				float sinceLapStarted = statsProvider->LapStarted.secondsSince();
+				float sinceLapStarted = peerDesc->LapStarted.secondsSince();
 				std::int32_t minutes = (std::int32_t)(sinceLapStarted / 60);
 				std::int32_t seconds = (std::int32_t)fmod(sinceLapStarted, 60);
 				std::int32_t milliseconds = (std::int32_t)(fmod(sinceLapStarted, 1) * 100);
@@ -196,7 +178,7 @@ namespace Jazz2::UI::Multiplayer
 			case MpGameMode::TreasureHunt:
 			case MpGameMode::TeamTreasureHunt: {
 
-				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", statsProvider->TreasureCollected, totalTreasureCollected);
+				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", peerDesc->TreasureCollected, serverConfig.TotalTreasureCollected);
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
@@ -207,7 +189,7 @@ namespace Jazz2::UI::Multiplayer
 			case MpGameMode::CaptureTheFlag: {
 
 				// TODO
-				/*formatString(stringBuffer, sizeof(stringBuffer), "%u / %u", statsProvider->TreasureCollected, totalTreasureCollected);
+				/*formatString(stringBuffer, sizeof(stringBuffer), "%u / %u", peerDesc->FlagsCaptured, serverConfig.TotalFlagsCaptured);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,

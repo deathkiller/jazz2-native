@@ -172,18 +172,18 @@ namespace Jazz2
 		virtual bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) = 0;
 
 		/** @brief Returns `true` if player action is pressed */
-		virtual bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads = true) = 0;
+		virtual bool PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads = true) = 0;
 		/** @overload */
-		virtual bool PlayerActionPressed(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) = 0;
+		virtual bool PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad) = 0;
 		/** @brief Returns `true` if player action is hit (newly pressed) */
-		virtual bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads = true) = 0;
+		virtual bool PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads = true) = 0;
 		/** @overload */
-		virtual bool PlayerActionHit(std::int32_t index, PlayerAction action, bool includeGamepads, bool& isGamepad) = 0;
+		virtual bool PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad) = 0;
 		/** @brief Returns value of desired horizontal player movement */
-		virtual float PlayerHorizontalMovement(std::int32_t index) = 0;
+		virtual float PlayerHorizontalMovement(Actors::Player* player) = 0;
 		/** @brief Returns value of desired vertical player movement */
-		virtual float PlayerVerticalMovement(std::int32_t index) = 0;
+		virtual float PlayerVerticalMovement(Actors::Player* player) = 0;
 		/** @brief Executes a rumble effect */
-		virtual void PlayerExecuteRumble(std::int32_t index, StringView rumbleEffect) = 0;
+		virtual void PlayerExecuteRumble(Actors::Player* player, StringView rumbleEffect) = 0;
 	};
 }

@@ -3,6 +3,9 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Player.h"
+#include "../../Multiplayer/PeerDescriptor.h"
+
+using namespace Jazz2::Multiplayer;
 
 namespace Jazz2::Multiplayer
 {
@@ -11,33 +14,27 @@ namespace Jazz2::Multiplayer
 
 namespace Jazz2::Actors::Multiplayer
 {
-	/** @brief Interface that allows to access various player statistics */
-	class IPlayerStatsProvider
+	/** @brief Player in online session */
+	class MpPlayer : public Player
 	{
-		DEATH_RUNTIME_OBJECT();
+		DEATH_RUNTIME_OBJECT(Player);
+
+		friend class MpLevelHandler;
 
 	public:
-		/** @brief Deaths of the player */
-		std::uint32_t Deaths;
-		/** @brief Kills of the player */
-		std::uint32_t Kills;
-		/** @brief Laps of the player */
-		std::uint32_t Laps;
-		/** @brief Timestamp when the last lap started */
-		TimeStamp LapStarted;
-		/** @brief Treasure collected of the player */
-		std::uint32_t TreasureCollected;
+		/** @brief Returns session peer descriptor */
+		std::shared_ptr<PeerDescriptor> GetPeerDescriptor();
 
-		IPlayerStatsProvider()
-			: Deaths(0), Kills(0), Laps(0), TreasureCollected(0) {}
+	protected:
+		std::shared_ptr<PeerDescriptor> _peerDesc;
 	};
 
-	/** @brief Player in online session */
-	class PlayerOnServer : public Player, public IPlayerStatsProvider
+	/** @brief Player on the server in online session */
+	class PlayerOnServer : public MpPlayer
 	{
-		DEATH_RUNTIME_OBJECT(Player, IPlayerStatsProvider);
+		DEATH_RUNTIME_OBJECT(MpPlayer);
 
-		friend class Jazz2::Multiplayer::MpLevelHandler;
+		friend class MpLevelHandler;
 
 	public:
 		PlayerOnServer();
@@ -45,13 +42,7 @@ namespace Jazz2::Actors::Multiplayer
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
 
-		/** @brief Returns team ID */
-		std::uint8_t GetTeamId() const;
-		/** @brief Sets team ID */
-		void SetTeamId(std::uint8_t value);
-
 	private:
-		std::uint8_t _teamId;
 		std::shared_ptr<ActorBase> _lastAttacker;
 
 		bool IsAttacking() const;

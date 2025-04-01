@@ -195,18 +195,18 @@ namespace Jazz2::Actors
 		ZoneScoped;
 
 #if defined(DEATH_DEBUG)
-		if (PreferencesCache::AllowCheats && _levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::ChangeWeapon)) {
-			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Run) ? 400.0f : 100.0f);
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Left)) {
+		if (PreferencesCache::AllowCheats && _levelHandler->PlayerActionPressed(this, PlayerAction::ChangeWeapon)) {
+			float moveDistance = (_levelHandler->PlayerActionPressed(this, PlayerAction::Run) ? 400.0f : 100.0f);
+			if (_levelHandler->PlayerActionHit(this, PlayerAction::Left)) {
 				MoveInstantly(Vector2f(-moveDistance, 0.0f), MoveType::Relative | MoveType::Force);
 			}
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Right)) {
+			if (_levelHandler->PlayerActionHit(this, PlayerAction::Right)) {
 				MoveInstantly(Vector2f(moveDistance, 0.0f), MoveType::Relative | MoveType::Force);
 			}
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Up)) {
+			if (_levelHandler->PlayerActionHit(this, PlayerAction::Up)) {
 				MoveInstantly(Vector2f(0.0f, -moveDistance), MoveType::Relative | MoveType::Force);
 			}
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Down)) {
+			if (_levelHandler->PlayerActionHit(this, PlayerAction::Down)) {
 				MoveInstantly(Vector2f(0.0f, moveDistance), MoveType::Relative | MoveType::Force);
 			}
 		}
@@ -238,7 +238,7 @@ namespace Jazz2::Actors
 
 			_renderer.setDrawEnabled(true);
 			PlayPlayerSfx("WarpOut"_s, 1.0f / _levelHandler->GetPlayers().size());
-			_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
+			_levelHandler->PlayerExecuteRumble(this, "Warp"_s);
 
 			_lastExitType = ExitType::None;
 		}
@@ -275,13 +275,13 @@ namespace Jazz2::Actors
 		// Handle weapon switching
 		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog) {
 			bool isGamepad;
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::ChangeWeapon, true, isGamepad)) {
+			if (_levelHandler->PlayerActionHit(this, PlayerAction::ChangeWeapon, true, isGamepad)) {
 				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
 					SwitchToNextWeapon();
 				}
 			} else {
 				for (std::uint32_t i = 0; i <= (std::uint32_t)PlayerAction::SwitchToThunderbolt - (std::uint32_t)PlayerAction::SwitchToBlaster; i++) {
-					if (_levelHandler->PlayerActionHit(_playerIndex, (PlayerAction)(i + (std::uint32_t)PlayerAction::SwitchToBlaster))) {
+					if (_levelHandler->PlayerActionHit(this, (PlayerAction)(i + (std::uint32_t)PlayerAction::SwitchToBlaster))) {
 						SwitchToWeaponByIndex(i);
 					}
 				}
@@ -339,7 +339,7 @@ namespace Jazz2::Actors
 
 		if (params.TilesDestroyed > 0) {
 			AddScore(params.TilesDestroyed * 50);
-			_levelHandler->PlayerExecuteRumble(_playerIndex, "BreakTile"_s);
+			_levelHandler->PlayerExecuteRumble(this, "BreakTile"_s);
 		}
 
 		OnUpdateHitbox();
@@ -357,7 +357,7 @@ namespace Jazz2::Actors
 				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
 
 				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
-				_levelHandler->PlayerExecuteRumble(_playerIndex, "Hurt"_s);
+				_levelHandler->PlayerExecuteRumble(this, "Hurt"_s);
 			} else {
 				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
 				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
@@ -668,18 +668,22 @@ namespace Jazz2::Actors
 	{
 		// Move
 		if (PreferencesCache::ToggleRunAction) {
-			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerAction::Run)) {
+			if (_levelHandler->PlayerActionHit(this, PlayerAction::Run)) {
 				_isRunPressed = !_isRunPressed;
 			}
 		} else {
-			_isRunPressed = _levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Run);
+			_isRunPressed = _levelHandler->PlayerActionPressed(this, PlayerAction::Run);
+		}
+
+		if (_health <= 0) {
+			return;
 		}
 
 		if (_keepRunningTime <= 0.0f) {
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
-				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Fire)));
+				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
 
-			float playerMovement = _levelHandler->PlayerHorizontalMovement(_playerIndex);
+			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
 				_speed.X = 0.2f * playerMovement;
@@ -767,7 +771,7 @@ namespace Jazz2::Actors
 		}
 
 		if (_inWater || _activeModifier != Modifier::None) {
-			float playerMovement = _levelHandler->PlayerVerticalMovement(_playerIndex);
+			float playerMovement = _levelHandler->PlayerVerticalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (playerMovementVelocity > 0.5f) {
 				float mult;
@@ -783,7 +787,7 @@ namespace Jazz2::Actors
 			}
 		} else {
 			// Look-up
-			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Up)) {
+			if (_levelHandler->PlayerActionPressed(this, PlayerAction::Up)) {
 				if (!_wasUpPressed && _dizzyTime <= 0.0f) {
 					// Check also previous CanJump to avoid animation glitches on Springs
 					if (((canJumpPrev && CanJump()) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
@@ -799,7 +803,7 @@ namespace Jazz2::Actors
 			}
 
 			// Crouch / Buttstomp - Uses different bindings whether it's in the air or not
-			if (_levelHandler->PlayerActionPressed(_playerIndex, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
+			if (_levelHandler->PlayerActionPressed(this, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
 				if (_suspendType == SuspendType::SwingingVine) {
 					// TODO: Swinging vine
 				} else if (_suspendType != SuspendType::None) {
@@ -847,7 +851,7 @@ namespace Jazz2::Actors
 			}
 
 			// Jump
-			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Jump)) {
+			if (_levelHandler->PlayerActionPressed(this, PlayerAction::Jump)) {
 				if (!_wasJumpPressed) {
 					_wasJumpPressed = true;
 
@@ -981,7 +985,7 @@ namespace Jazz2::Actors
 						if (_copterFramesLeft > 0.0f) {
 							_copterFramesLeft = 70.0f;
 						}
-					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Down) && _jumpTime <= 0.0f) {
+					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(this, PlayerAction::Down) && _jumpTime <= 0.0f) {
 						// Standard jump
 						SetState(ActorState::CanJump, false);
 						_isFreefall = false;
@@ -1023,7 +1027,7 @@ namespace Jazz2::Actors
 
 		// Fire
 		bool weaponInUse = false;
-		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(_playerIndex, PlayerAction::Fire)) {
+		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(this, PlayerAction::Fire)) {
 			if (!_isLifting && _suspendType != SuspendType::SwingingVine && !_canPushFurther) {
 				if (_playerType == PlayerType::Frog) {
 					if (_currentTransition == nullptr && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {
@@ -1056,7 +1060,7 @@ namespace Jazz2::Actors
 							if (_currentAnimation->LoopMode == AnimationLoopMode::Once) {
 								_renderer.AnimTime = 0.0f;
 							}
-							_levelHandler->PlayerExecuteRumble(_playerIndex, "Fire"_s);
+							_levelHandler->PlayerExecuteRumble(this, "Fire"_s);
 						}
 
 						_fireFramesLeft = 20.0f;
@@ -1516,7 +1520,7 @@ namespace Jazz2::Actors
 						SetState(ActorState::CanJump, false);
 					}
 
-					_levelHandler->PlayerExecuteRumble(_playerIndex, "Land"_s);
+					_levelHandler->PlayerExecuteRumble(this, "Land"_s);
 				}
 			} else if (enemy->CanHurtPlayer()) {
 				if (!IsInvulnerable()) {
@@ -1613,7 +1617,7 @@ namespace Jazz2::Actors
 				PlaySfx("Land"_s, 0.8f);
 				if (PreferencesCache::GamepadRumble >= 2) {
 					// "Land" effect is enabled only for Strong preset
-					_levelHandler->PlayerExecuteRumble(_playerIndex, "Land"_s);
+					_levelHandler->PlayerExecuteRumble(this, "Land"_s);
 				}
 
 				if (Random().NextFloat() < 0.6f) {
@@ -1792,7 +1796,7 @@ namespace Jazz2::Actors
 
 			SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
 			SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
-			_levelHandler->PlayerExecuteRumble(_playerIndex, "Spring"_s);
+			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
 			_controllableTimeout = 2.0f;
 		} else if (std::abs(force.Y) > 0.0f) {
 			MoveInstantly(Vector2f(lerp(_pos.X, pos.X, 0.3f), _pos.Y), MoveType::Absolute);
@@ -1835,7 +1839,7 @@ namespace Jazz2::Actors
 				SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
 			}
 
-			_levelHandler->PlayerExecuteRumble(_playerIndex, "Spring"_s);
+			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
 			PlayPlayerSfx("Spring"_s);
 		}
 	}
@@ -2709,7 +2713,7 @@ namespace Jazz2::Actors
 		});
 
 		PlayPlayerSfx("Die"_s, 1.3f);
-		_levelHandler->PlayerExecuteRumble(_playerIndex, "Die"_s);
+		_levelHandler->PlayerExecuteRumble(this, "Die"_s);
 	}
 
 	void Player::SwitchToNextWeapon()
@@ -3100,7 +3104,7 @@ namespace Jazz2::Actors
 						_levelExiting = LevelExitingState::Ready;
 					});
 					PlayPlayerSfx("WarpIn"_s, 1.0f / _levelHandler->GetPlayers().size());
-					_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
+					_levelHandler->PlayerExecuteRumble(this, "Warp"_s);
 
 					SetState(ActorState::ApplyGravitation, false);
 					_speed.X = 0.0f;
@@ -3141,7 +3145,7 @@ namespace Jazz2::Actors
 						_levelExiting = LevelExitingState::Ready;
 					});
 					PlayPlayerSfx("WarpIn"_s, 1.0f / _levelHandler->GetPlayers().size());
-					_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
+					_levelHandler->PlayerExecuteRumble(this, "Warp"_s);
 
 					SetState(ActorState::ApplyGravitation, false);
 					_speed.X = 0.0f;
@@ -3372,10 +3376,10 @@ namespace Jazz2::Actors
 		dest.Write(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
 	}
 
-	void Player::Respawn(Vector2f pos)
+	bool Player::Respawn(Vector2f pos)
 	{
 		if ((GetState() & (ActorState::IsInvulnerable | ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors)) != ActorState::IsInvulnerable) {
-			return;
+			return false;
 		}
 
 		_health = _maxHealth;
@@ -3386,6 +3390,8 @@ namespace Jazz2::Actors
 		_renderer.setDrawEnabled(true);
 		SetState(ActorState::IsInvulnerable, false);
 		SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors, true);
+
+		return true;
 	}
 
 	void Player::WarpToPosition(Vector2f pos, WarpFlags flags)
@@ -3421,7 +3427,7 @@ namespace Jazz2::Actors
 				DoWarpOut(pos, flags);
 			} else {
 				PlayPlayerSfx("WarpIn"_s);
-				_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
+				_levelHandler->PlayerExecuteRumble(this, "Warp"_s);
 
 				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, pos, flags]() {
 					DoWarpOut(pos, flags);
@@ -3436,7 +3442,7 @@ namespace Jazz2::Actors
 		MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 		_trailLastPos = _pos;
 		PlayPlayerSfx("WarpOut"_s);
-		_levelHandler->PlayerExecuteRumble(_playerIndex, "Warp"_s);
+		_levelHandler->PlayerExecuteRumble(this, "Warp"_s);
 
 		_levelHandler->HandlePlayerWarped(this, posPrev, flags);
 
@@ -3722,7 +3728,7 @@ namespace Jazz2::Actors
 			float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 			SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 			PlayPlayerSfx("Hurt"_s);
-			_levelHandler->PlayerExecuteRumble(_playerIndex, "Hurt"_s);
+			_levelHandler->PlayerExecuteRumble(this, "Hurt"_s);
 		} else {
 			_externalForce.X = 0.0f;
 			_speed.Y = 0.0f;

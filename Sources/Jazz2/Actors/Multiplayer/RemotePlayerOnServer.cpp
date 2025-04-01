@@ -8,9 +8,12 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
-	RemotePlayerOnServer::RemotePlayerOnServer(bool enableLedgeClimb)
-		: _stateBufferPos(0), _enableLedgeClimb(enableLedgeClimb)
+	RemotePlayerOnServer::RemotePlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc)
+		: _stateBufferPos(0), Flags(PlayerFlags::None), PressedKeys(0),
+			PressedKeysLast(0), UpdatedFrame(0)
 	{
+		_peerDesc = std::move(peerDesc);
+		_peerDesc->Player = this;
 	}
 
 	Task<bool> RemotePlayerOnServer::OnActivatedAsync(const ActorActivationDetails& details)
@@ -72,7 +75,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotePlayerOnServer::IsLedgeClimbAllowed() const
 	{
-		return (_enableLedgeClimb && PlayerOnServer::IsLedgeClimbAllowed());
+		return (_peerDesc->EnableLedgeClimb && PlayerOnServer::IsLedgeClimbAllowed());
 	}
 
 	bool RemotePlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
