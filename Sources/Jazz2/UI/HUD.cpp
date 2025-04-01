@@ -1208,7 +1208,7 @@ namespace Jazz2::UI
 		}
 
 		bool isGamepad;
-		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerAction::ChangeWeapon, true, isGamepad) || !isGamepad) {
+		if (!_levelHandler->PlayerActionPressed(player, PlayerAction::ChangeWeapon, true, isGamepad) || !isGamepad) {
 			if (state.Anim > 0.0f) {
 				if (state.Anim < WeaponWheelAnimDuration * 0.5f) {
 					// Switch to the next weapon on short press
