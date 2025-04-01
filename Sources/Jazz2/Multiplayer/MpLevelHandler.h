@@ -49,16 +49,16 @@ namespace Jazz2::Multiplayer
 	public:
 		/** @brief Level state */
 		enum class LevelState {
-			Unknown,
-			InitialUpdatePending,
-			PreGame,
-			WaitingForMinPlayers,
-			Countdown3,
-			Countdown2,
-			Countdown1,
-			Running,
-			Ending,
-			Ended
+			Unknown,				/**< Unknown */
+			InitialUpdatePending,	/**< Level was just created and initial update needs to be sent */
+			PreGame,				/**< Pre-game is active */
+			WaitingForMinPlayers,	/**< Pre-game ended, but not enough players connected yet */
+			Countdown3,				/**< Countdown started (3) */
+			Countdown2,				/**< Countdown continues (2) */
+			Countdown1,				/**< Countdown continues (1) */
+			Running,				/**< Round started */
+			Ending,					/**< Round is ending */
+			Ended					/**< Round ended */
 		};
 
 		MpLevelHandler(IRootController* root, NetworkManager* networkManager, LevelState levelState, bool enableLedgeClimb);

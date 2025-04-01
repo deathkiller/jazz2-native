@@ -79,7 +79,7 @@ namespace Jazz2::Multiplayer
 		  - @cpp "c" @ce / @cpp "coop" @ce / @cpp "cooperation" @ce - Cooperation
 		- @cpp "IsElimination" @ce : (bool) Whether elimination mode is enabled
 		  - If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
-		  - The game ends when only one player remains, or when the conditions of the specified game mode are met
+		  - Game ends when only one player remains, or when the conditions of the specified game mode are met
 		  - Elimination can be combined with any game mode
 		- @cpp "InitialPlayerHealth" @ce : (integer) Initial health of players (default is **5**)
 		- @cpp "MaxGameTimeSecs" @ce : (integer) Maximum allowed game time in seconds per level (default is **unlimited**)
