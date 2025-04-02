@@ -44,7 +44,7 @@
 	"PreGameSecs": 60,
 	"TotalKills": 10,
 	"TotalLaps": 3,
-	"TotalTreasureCollected": 100,
+	"TotalTreasureCollected": 60,
 
 	/* Playlist can contain unlimited number of entries */
 	"Playlist": [
@@ -57,7 +57,7 @@
 			"PreGameSecs": 60,
 			"TotalKills": 10,
 			"TotalLaps": 3,
-			"TotalTreasureCollected": 100
+			"TotalTreasureCollected": 60
 		},
 		{
 			"LevelName": "unknown/battle1",
@@ -68,7 +68,7 @@
 			"PreGameSecs": 60,
 			"TotalKills": 10,
 			"TotalLaps": 3,
-			"TotalTreasureCollected": 100
+			"TotalTreasureCollected": 60
 		}
 	],
 	
