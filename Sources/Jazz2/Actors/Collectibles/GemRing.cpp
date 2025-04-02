@@ -1,4 +1,5 @@
 ﻿#include "GemRing.h"
+#include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -32,18 +33,21 @@ namespace Jazz2::Actors::Collectibles
 
 		async_await RequestMetadataAsync("Collectible/Gems"_s);
 
-		for (int i = 0; i < length; i++) {
-			ChainPiece& piece = _pieces.emplace_back();
-			piece.Scale = 0.8f;
-			piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-			piece.Command->material().setBlendingEnabled(true);
-			piece.Command->material().reserveUniformsDataMemory();
-			piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		auto& resolver = ContentResolver::Get();
+		if (!resolver.IsHeadless()) {
+			for (int i = 0; i < length; i++) {
+				ChainPiece& piece = _pieces.emplace_back();
+				piece.Scale = 0.8f;
+				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
+				piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
+				piece.Command->material().setBlendingEnabled(true);
+				piece.Command->material().reserveUniformsDataMemory();
+				piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-			auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+				auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
 			}
 		}
 

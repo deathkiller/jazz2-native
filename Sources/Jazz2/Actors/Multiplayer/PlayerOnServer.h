@@ -25,6 +25,9 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Returns session peer descriptor */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor();
 
+		/** @brief Returns session peer descriptor */
+		std::shared_ptr<const PeerDescriptor> GetPeerDescriptor() const;
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		std::shared_ptr<PeerDescriptor> _peerDesc;

@@ -362,7 +362,7 @@ namespace Jazz2::UI::Menu
 			AddLevel(item);
 		}
 
-		sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
+		nCine::sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
 			return (a.LevelName < b.LevelName);
 		});
 	}

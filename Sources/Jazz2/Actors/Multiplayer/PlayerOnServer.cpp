@@ -15,6 +15,11 @@ namespace Jazz2::Actors::Multiplayer
 		return _peerDesc;
 	}
 
+	std::shared_ptr<const PeerDescriptor> MpPlayer::GetPeerDescriptor() const
+	{
+		return _peerDesc;
+	}
+
 	PlayerOnServer::PlayerOnServer()
 	{
 	}

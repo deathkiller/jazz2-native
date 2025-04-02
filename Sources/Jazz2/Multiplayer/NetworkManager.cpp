@@ -23,9 +23,10 @@ using namespace simdjson;
 namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
-		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0), Player(nullptr),
-			LevelState(PeerLevelState::Unknown), LastUpdated(0), EnableLedgeClimb(false), Team(0), Deaths(0), Kills(0),
-			Laps(0), LapStarted{}, TreasureCollected(0), DeathElapsedFrames(FLT_MAX)
+		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0), PositionInRound(0),
+			Player(nullptr), LevelState(PeerLevelState::Unknown), LastUpdated(0), EnableLedgeClimb(false), Team(0),
+			Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), DeathElapsedFrames(FLT_MAX),
+			LapsElapsedFrames(0.0f)
 	{
 	}
 
@@ -39,12 +40,14 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData)
 	{
+		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>();
 		NetworkManagerBase::CreateClient(handler, endpoint, defaultPort, clientData);
 	}
 
 	bool NetworkManager::CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)
 	{
+		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
 		_serverConfig->StartUnixTimestamp = DateTime::Now().ToUnixMilliseconds() / 1000;
 		bool result = NetworkManagerBase::CreateServer(handler, _serverConfig->ServerPort);
@@ -79,8 +82,18 @@ namespace Jazz2::Multiplayer
 		return _peerDesc;
 	}
 
+	std::shared_ptr<PeerDescriptor> NetworkManager::GetPeerDescriptor(LocalPeerT)
+	{
+		auto it = _peerDesc.find(Peer{});
+		return (it != _peerDesc.end() ? it->second : nullptr);
+	}
+
 	std::shared_ptr<PeerDescriptor> NetworkManager::GetPeerDescriptor(const Peer& peer)
 	{
+		if (!peer) {
+			return nullptr;
+		}
+
 		auto it = _peerDesc.find(peer);
 		return (it != _peerDesc.end() ? it->second : nullptr);
 	}

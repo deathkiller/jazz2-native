@@ -57,11 +57,27 @@ namespace Jazz2::Multiplayer
 	};
 
 	/**
+		@brief Local peer tag type
+	*/
+	struct LocalPeerT {
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		struct Init {};
+		// Explicit constructor to avoid ambiguous calls when using {}
+		constexpr explicit LocalPeerT(Init) {}
+#endif
+	};
+
+	/**
 		@brief All connected peers tag
 
 		Use in @ref NetworkManagerBase::SendTo() to send to all connected peers or the remote server peer.
 	*/
 	constexpr AllPeersT AllPeers{AllPeersT::Init{}};
+
+	/**
+		@brief Local peer tag
+	*/
+	constexpr LocalPeerT LocalPeer{LocalPeerT::Init{}};
 
 	/**
 		@brief Allows to create generic network clients and servers

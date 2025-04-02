@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Whether the player should be respawned */
 		bool RespawnPending;
 
-		RemotablePlayer();
+		RemotablePlayer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 		/** @brief Warps the player in */
 		void WarpIn(ExitType exitType);

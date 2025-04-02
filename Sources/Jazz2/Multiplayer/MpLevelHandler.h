@@ -199,7 +199,6 @@ namespace Jazz2::Multiplayer
 		static constexpr float UpdatesPerSecond = 30.0f; // ~33 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
 		static constexpr float EndingDuration = 10 * FrameTimer::FramesPerSecond;
-		static constexpr float WaitingForMinPlayersAlertPeriod = 15 * FrameTimer::FramesPerSecond;
 
 		NetworkManager* _networkManager;
 		float _updateTimeLeft;
@@ -236,7 +235,9 @@ namespace Jazz2::Multiplayer
 		void SetControllableToAllPlayers(bool enable);
 		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();
+		Vector2f GetSpawnPoint(PlayerType playerType);
 		void WarpAllPlayersToStart();
+		void CalculatePositionInRound();
 		void CheckGameEnds();
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
 		void EndGameOnTimeOut();

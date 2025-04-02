@@ -44,31 +44,31 @@ namespace Jazz2::Multiplayer
 		@brief Server configuration
 
 		The server configuration is read from a JSON file, which may contain the following fields:
-		- @cpp "ServerName" @ce : (string) Name of the server
-		- @cpp "ServerPassword" @ce : (string) Password to join the server
-		- @cpp "WelcomeMessage" @ce : (string) Message displayed to players upon joining
-		- @cpp "MaxPlayerCount" @ce : (integer) Maximum number of players allowed to join
-		- @cpp "MinPlayerCount" @ce : (integer) Minimum number of players required to start a round
-		- @cpp "ServerPort" @ce : (integer) UDP port number on which the server runs
-		- @cpp "IsPrivate" @ce : (bool) Whether the server is private and hidden in the server list
-		- @cpp "RequiresDiscordAuth" @ce : (bool) If `true`, the server requires Discord authentication
+		- @cpp "ServerName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the server
+		- @cpp "ServerPassword" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Password to join the server
+		- @cpp "WelcomeMessage" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Message displayed to players upon joining
+		- @cpp "MaxPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum number of players allowed to join
+		- @cpp "MinPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Minimum number of players required to start a round
+		- @cpp "ServerPort" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan UDP port number on which the server runs
+		- @cpp "IsPrivate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the server is private and hidden in the server list
+		- @cpp "RequiresDiscordAuth" @ce : @m_span{m-label m-default m-flat} bool @m_endspan If `true`, the server requires Discord authentication
 		  - Discord authentication requires a running Discord client
 		  - Supported platforms are Linux, macOS and Windows
-		- @cpp "AllowedPlayerTypes" @ce : (integer) Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
-		- @cpp "IdleKickTimeSecs" @ce : (integer) Time in seconds after idle players are kicked (default is **never**)
-		- @cpp "AdminUniquePlayerIDs" @ce : (object) Map of admin player IDs
+		- @cpp "AllowedPlayerTypes" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
+		- @cpp "IdleKickTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are kicked (default is **never**)
+		- @cpp "AdminUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of admin player IDs
 		  - Key specifies player ID, value contains privileges
-		- @cpp "WhitelistedUniquePlayerIDs" @ce : (object) Map of whitelisted player IDs
+		- @cpp "WhitelistedUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of whitelisted player IDs
 		  - Key specifies player ID, value can contain a user-defined comment
 		  - If at least one entry is specified, only whitelisted players can join the server
-		- @cpp "BannedUniquePlayerIDs" @ce : (object) Map of banned player IDs
+		- @cpp "BannedUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of banned player IDs
 		  - Key specifies player ID, value can contain a user-defined comment (e.g., reason)
-		- @cpp "BannedIPAddresses" @ce : (object) Map of banned IP addresses
+		- @cpp "BannedIPAddresses" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of banned IP addresses
 		  - Key specifies IP address, value can contain a user-defined comment (e.g., reason)
-		- @cpp "RandomizePlaylist" @ce : (bool) Whether to play the playlist in random order
-		- @cpp "TotalPlayerPoints" @ce : (integer) Total points to win the championship (default is **0**)
+		- @cpp "RandomizePlaylist" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether to play the playlist in random order
+		- @cpp "TotalPlayerPoints" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total points to win the championship (default is **0**)
 		  - Player can score a maximum of 20 points per round
-		- @cpp "GameMode" @ce : (string) Game mode
+		- @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Game mode
 		  - @cpp "b" @ce / @cpp "battle" @ce - Battle
 		  - @cpp "tb" @ce / @cpp "teambattle" @ce - Team Battle
 		  - @cpp "r" @ce / @cpp "race" @ce - Race
@@ -77,28 +77,28 @@ namespace Jazz2::Multiplayer
 		  - @cpp "tth" @ce / @cpp "teamtreasurehunt" @ce - Team Treasure Hunt
 		  - @cpp "ctf" @ce / @cpp "capturetheflag" @ce - Capture The Flag
 		  - @cpp "c" @ce / @cpp "coop" @ce / @cpp "cooperation" @ce - Cooperation
-		- @cpp "IsElimination" @ce : (bool) Whether elimination mode is enabled
+		- @cpp "IsElimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled
 		  - If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
 		  - Game ends when only one player remains, or when the conditions of the specified game mode are met
 		  - Elimination can be combined with any game mode
-		- @cpp "InitialPlayerHealth" @ce : (integer) Initial health of players (default is **5**)
-		- @cpp "MaxGameTimeSecs" @ce : (integer) Maximum allowed game time in seconds per level (default is **unlimited**)
-		- @cpp "PreGameSecs" @ce : (integer) Pre-game duration in seconds (default is **60**)
+		- @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players (default is **5**)
+		- @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum allowed game time in seconds per level (default is **unlimited**)
+		- @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60**)
 		  - Pre-game is skipped in Cooperation
-		- @cpp "TotalKills" @ce : (integer) Number of kills required to win (Battle)
-		- @cpp "TotalLaps" @ce : (integer) Number of laps required to win (Race)
-		- @cpp "TotalTreasureCollected" @ce : (integer) Number of treasures required to win (Tresure Hunt)
+		- @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
+		- @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
+		- @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of treasures required to win (Tresure Hunt)
 		- @cpp "Playlist" @ce : (array) List of game configurations per round, each entry may contain:
-		  - @cpp "LevelName" @ce : (string) Name of the level in `<episode>/<level>` format
-		  - @cpp "GameMode" @ce : (string) Specific game mode for this round
-		  - @cpp "IsElimination" @ce : (bool) Whether elimination mode is enabled for this round
-		  - @cpp "InitialPlayerHealth" @ce : (integer) Initial health of players for this round
-		  - @cpp "MaxGameTimeSecs" @ce : (integer) Maximum game duration for this round
-		  - @cpp "PreGameSecs" @ce : (integer) Pre-game duration before this round starts
-		  - @cpp "TotalKills" @ce : (integer) Number of kills required to win this round (Battle)
-		  - @cpp "TotalLaps" @ce : (integer) Number of laps required to win this round (Race)
-		  - @cpp "TotalTreasureCollected" @ce : (integer) Total treasure required to win this round (Tresure Hunt)
-		- @cpp "PlaylistIndex" @ce : (integer) Index of the current playlist entry
+		  - @cpp "LevelName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the level in `<episode>/<level>` format
+		  - @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Specific game mode for this round
+		  - @cpp "IsElimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled for this round
+		  - @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players for this round
+		  - @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum game duration for this round
+		  - @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration before this round starts
+		  - @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win this round (Battle)
+		  - @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
+		  - @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total treasure required to win this round (Tresure Hunt)
+		- @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
 		
 		If the JSON contains a @cpp "$include" @ce directive, it recursively loads the referenced files.
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.

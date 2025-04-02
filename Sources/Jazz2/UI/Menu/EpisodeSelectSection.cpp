@@ -46,7 +46,7 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		sort(_items.begin(), _items.end(), [](const ListViewItem& a, const ListViewItem& b) -> bool {
+		nCine::sort(_items.begin(), _items.end(), [](const ListViewItem& a, const ListViewItem& b) -> bool {
 			return (a.Item.Description.Position < b.Item.Description.Position);
 		});
 	}
