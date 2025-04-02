@@ -260,7 +260,7 @@ namespace Death { namespace Containers {
 		Convernience alternative to @ref Pair::Pair(const F&, const S&) and overloads.
 	*/
 	template<class F, class S> constexpr Pair<typename std::decay<F>::type, typename std::decay<S>::type> pair(F&& first, S&& second) {
-		return Pair<typename std::decay<F>::type, typename std::decay<S>::type>{forward<F>(first), Death::forward<S>(second)};
+		return Pair<typename std::decay<F>::type, typename std::decay<S>::type>{Death::forward<F>(first), Death::forward<S>(second)};
 	}
 
 	namespace Implementation

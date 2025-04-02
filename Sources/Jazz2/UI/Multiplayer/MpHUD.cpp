@@ -119,6 +119,18 @@ namespace Jazz2::UI::Multiplayer
 		std::int32_t charOffsetShadow = 0;
 
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
+		auto* mpPlayer = static_cast<MpPlayer*>(player);
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+		if (serverConfig.GameMode != MpGameMode::Cooperation) {
+			auto pointsText = _f("Points: %u", peerDesc->Points);
+			_smallFont->DrawString(this, pointsText, charOffsetShadow, view.X + view.W - 10.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
+				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+			_smallFont->DrawString(this, pointsText, charOffset, view.X + view.W - 10.0f, view.Y + 20.0f, FontLayer,
+				Alignment::TopRight, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		}
+
 		if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::PreGame) {
 			float sinceLapStarted = mpLevelHandler->_gameTimeLeft / FrameTimer::FramesPerSecond;
 			std::int32_t minutes = (std::int32_t)(sinceLapStarted / 60);
@@ -127,9 +139,9 @@ namespace Jazz2::UI::Multiplayer
 
 			formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
 			auto gameStartsInText = _f("Game starts in %s", stringBuffer);
-			_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 8.0f + 1.0f, FontShadowLayer,
+			_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 8.0f, FontLayer,
+			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 			return;
@@ -137,19 +149,15 @@ namespace Jazz2::UI::Multiplayer
 			const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
 			std::int32_t playersNeeded = (std::int32_t)(serverConfig.MinPlayerCount - mpLevelHandler->_players.size());
 			auto waitingText = _fn("Waiting for %i more player", "Waiting for %i more players", playersNeeded, playersNeeded);
-			_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 8.0f + 1.0f, FontShadowLayer,
+			_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 8.0f, FontLayer,
+			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 			return;
 		} else if (mpLevelHandler->_levelState != MpLevelHandler::LevelState::Running) {
 			return;
 		}
-
-		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
-		auto* mpPlayer = static_cast<MpPlayer*>(player);
-		auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 		switch (serverConfig.GameMode) {
 			case MpGameMode::Battle:
@@ -160,6 +168,12 @@ namespace Jazz2::UI::Multiplayer
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}
@@ -183,6 +197,12 @@ namespace Jazz2::UI::Multiplayer
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f + 80.0f, view.Y + 8.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
 
+				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+
 				break;
 			}
 			case MpGameMode::TreasureHunt:
@@ -193,6 +213,12 @@ namespace Jazz2::UI::Multiplayer
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}

@@ -1,4 +1,5 @@
 ﻿#include "SwingingVine.h"
+#include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../Player.h"
@@ -31,21 +32,24 @@ namespace Jazz2::Actors::Environment
 
 		_renderer.AnimPaused = true;
 
-		if (_currentAnimation != nullptr) {
-			_currentAnimation->Base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
-		}
+		auto& resolver = ContentResolver::Get();
+		if (!resolver.IsHeadless()) {
+			if (_currentAnimation != nullptr) {
+				_currentAnimation->Base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
+			}
 
-		for (std::int32_t i = 0; i < ChunkCount; i++) {
-			_chunks[i] = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-			_chunks[i]->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-			_chunks[i]->material().setBlendingEnabled(true);
-			_chunks[i]->material().reserveUniformsDataMemory();
-			_chunks[i]->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-			_chunks[i]->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			for (std::int32_t i = 0; i < ChunkCount; i++) {
+				_chunks[i] = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
+				_chunks[i]->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
+				_chunks[i]->material().setBlendingEnabled(true);
+				_chunks[i]->material().reserveUniformsDataMemory();
+				_chunks[i]->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				_chunks[i]->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			auto* textureUniform = _chunks[i]->material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+				auto* textureUniform = _chunks[i]->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
 			}
 		}
 

@@ -47,6 +47,8 @@ namespace Jazz2::Multiplayer
 		String PlayerName;
 		/** @brief Earned points in the current session (championship) */
 		std::uint32_t Points;
+		/** @brief Position in a round */
+		std::uint32_t PositionInRound;
 
 		/** @brief Spawned player in the current level */
 		Actors::Multiplayer::MpPlayer* Player;
@@ -72,6 +74,8 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Elapsed frames when the player lost all lives */
 		float DeathElapsedFrames;
+		/** @brief Elapsed frames of all completed laps */
+		float LapsElapsedFrames;
 
 		PeerDescriptor();
 	};

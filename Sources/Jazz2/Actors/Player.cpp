@@ -1089,7 +1089,7 @@ namespace Jazz2::Actors
 	{
 		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr) {
 			auto* res = _metadata->FindAnimation(WeaponFlare);
-			if (res != nullptr) {
+			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				auto& command = _weaponFlareCommand;
 				if (command == nullptr) {
 					command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
@@ -1168,7 +1168,7 @@ namespace Jazz2::Actors
 		switch (_activeShield) {
 			case ShieldType::Fire: {
 				auto* res = _metadata->FindAnimation(ShieldFire);
-				if (res != nullptr) {
+				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 					constexpr float PosMultiplier = 0.003f;
 					float frames = _levelHandler->GetElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
@@ -1250,7 +1250,7 @@ namespace Jazz2::Actors
 			}
 			case ShieldType::Water: {
 				auto* res = _metadata->FindAnimation(ShieldWater);
-				if (res != nullptr) {
+				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 					float frames = _levelHandler->GetElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
@@ -1304,7 +1304,7 @@ namespace Jazz2::Actors
 			}
 			case ShieldType::Lightning: {
 				auto* res = _metadata->FindAnimation(ShieldLightning);
-				if (res != nullptr) {
+				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 					constexpr float PosMultiplier = 0.001f;
 					float frames = _levelHandler->GetElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);

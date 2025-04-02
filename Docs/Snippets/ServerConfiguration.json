@@ -2,7 +2,7 @@
 	/* The file can contain both multi-line comments */
 	// and single-line comments
 	
-	/* "$include" directive can be used to include base configuration from another file */
+	/* "$include" directive can be used to include configuration from another file */
 	"$include": "BaseConfig.json",
 	
 	"ServerName": "{PlayerName}'s Server",

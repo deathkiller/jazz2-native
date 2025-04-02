@@ -222,7 +222,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_ADDRESS_SANITIZER` (default @cpp OFF @ce) --- Enable `AddressSanitizer` memory error detector
 -   `NCINE_ARCH_EXTENSIONS` --- Target CPU architecture extensions (instruction sets)
     -   Depends on target CPU and compiler support
-    -   See documentation of `/arch` ([MSVC](https://learn.microsoft.com/en-us/cpp/build/reference/arch-minimum-cpu-architecture?view=msvc-170)) and `-m` ([GCC](https://gcc.gnu.org/onlinedocs/gcc-8.4.0/gcc/Submodel-Options.html)) for more details
+    -   See documentation of `/arch` in MSVC ([docs](https://learn.microsoft.com/en-us/cpp/build/reference/arch-minimum-cpu-architecture?view=msvc-170)) and `-m` in GCC ([docs](https://gcc.gnu.org/onlinedocs/gcc-8.4.0/gcc/Submodel-Options.html)) for more details
 -   `NCINE_CODE_COVERAGE` (default @cpp OFF @ce) --- Enable `gcov` instrumentation for testing code coverage
 -   `NCINE_GCC_HARDENING` (default @cpp OFF @ce) --- Enable memory corruption mitigation methods of GCC
 -   `NCINE_LINKTIME_OPTIMIZATION` (default @cpp ON @ce) --- Compile with link-time optimization

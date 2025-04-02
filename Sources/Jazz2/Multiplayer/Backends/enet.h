@@ -1462,8 +1462,12 @@ extern "C" {
 		if (newData == NULL)
 		  return -1;
 
-		memcpy(newData, packet->data, packet->dataLength);
-		enet_free(packet->data);
+		if (packet->data != NULL) {
+			if (packet->dataLength > 0)
+				memcpy(newData, packet->data, packet->dataLength);
+
+			enet_free(packet->data);
+		}
 		
 		packet->data = newData;
 		packet->dataLength = dataLength;
@@ -2181,7 +2185,7 @@ extern "C" {
 
 		fragmentLength = ENET_NET_TO_HOST_16(command->sendFragment.dataLength);
 		*currentData  += fragmentLength;
-		if (fragmentLength > host->maximumPacketSize || *currentData < host->receivedData || *currentData > &host->receivedData[host->receivedDataLength]) {
+		if (fragmentLength <= 0 || fragmentLength > host->maximumPacketSize || *currentData < host->receivedData || *currentData > &host->receivedData[host->receivedDataLength]) {
 			return -1;
 		}
 
@@ -2212,6 +2216,7 @@ extern "C" {
 		if (fragmentCount > ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT ||
 			fragmentNumber >= fragmentCount ||
 			totalLength > host->maximumPacketSize ||
+			totalLength < fragmentCount ||
 			fragmentOffset >= totalLength ||
 			fragmentLength > totalLength - fragmentOffset
 		) {
@@ -3744,12 +3749,12 @@ extern "C" {
 		}
 
 		enet_free(incomingCommand);
-		peer->totalWaitingData -= packet->dataLength;
+		peer->totalWaitingData -= ENET_MIN(peer->totalWaitingData, packet->dataLength);
 
 		return packet;
 	}
 
-	static void enet_peer_reset_outgoing_commands(ENetList *queue) {
+	static void enet_peer_reset_outgoing_commands(ENetPeer* peer, ENetList* queue) {
 		ENetOutgoingCommand *outgoingCommand;
 
 		while (!enet_list_empty(queue)) {
@@ -3767,7 +3772,7 @@ extern "C" {
 		}
 	}
 
-	static void enet_peer_remove_incoming_commands(ENetList *queue, ENetListIterator startCommand, ENetListIterator endCommand) {
+	static void enet_peer_remove_incoming_commands(ENetPeer* peer, ENetList* queue, ENetListIterator startCommand, ENetListIterator endCommand) {
 		ENET_UNUSED(queue)
 
 		ENetListIterator currentCommand;
@@ -3780,6 +3785,8 @@ extern "C" {
 
 			if (incomingCommand->packet != NULL) {
 				--incomingCommand->packet->referenceCount;
+
+				peer->totalWaitingData -= ENET_MIN(peer->totalWaitingData, incomingCommand->packet->dataLength);
 
 				if (incomingCommand->packet->referenceCount == 0) {
 					callbacks.packet_destroy(incomingCommand->packet);
@@ -3794,8 +3801,8 @@ extern "C" {
 		}
 	}
 
-	static void enet_peer_reset_incoming_commands(ENetList *queue) {
-		enet_peer_remove_incoming_commands(queue, enet_list_begin(queue), enet_list_end(queue));
+	static void enet_peer_reset_incoming_commands(ENetPeer* peer, ENetList* queue) {
+		enet_peer_remove_incoming_commands(peer, queue, enet_list_begin(queue), enet_list_end(queue));
 	}
 
 	void enet_peer_reset_queues(ENetPeer *peer) {
@@ -3810,16 +3817,16 @@ extern "C" {
 			enet_free(enet_list_remove(enet_list_begin(&peer->acknowledgements)));
 		}
 
-		enet_peer_reset_outgoing_commands(&peer->sentReliableCommands);
-		enet_peer_reset_outgoing_commands(&peer->sentUnreliableCommands);
-		enet_peer_reset_outgoing_commands(&peer->outgoingReliableCommands);
-		enet_peer_reset_outgoing_commands(&peer->outgoingUnreliableCommands);
-		enet_peer_reset_incoming_commands(&peer->dispatchedCommands);
+		enet_peer_reset_outgoing_commands(peer, &peer->sentReliableCommands);
+		enet_peer_reset_outgoing_commands(peer, &peer->sentUnreliableCommands);
+		enet_peer_reset_outgoing_commands(peer, &peer->outgoingReliableCommands);
+		enet_peer_reset_outgoing_commands(peer, &peer->outgoingUnreliableCommands);
+		enet_peer_reset_incoming_commands(peer, &peer->dispatchedCommands);
 
 		if (peer->channels != NULL && peer->channelCount > 0) {
 			for (channel = peer->channels; channel < &peer->channels[peer->channelCount]; ++channel) {
-				enet_peer_reset_incoming_commands(&channel->incomingReliableCommands);
-				enet_peer_reset_incoming_commands(&channel->incomingUnreliableCommands);
+				enet_peer_reset_incoming_commands(peer, &channel->incomingReliableCommands);
+				enet_peer_reset_incoming_commands(peer, &channel->incomingUnreliableCommands);
 			}
 
 			enet_free(peer->channels);
@@ -4231,7 +4238,7 @@ extern "C" {
 			droppedCommand = currentCommand;
 		}
 
-		enet_peer_remove_incoming_commands(&channel->incomingUnreliableCommands,enet_list_begin(&channel->incomingUnreliableCommands), droppedCommand);
+		enet_peer_remove_incoming_commands(peer, &channel->incomingUnreliableCommands,enet_list_begin(&channel->incomingUnreliableCommands), droppedCommand);
 	}
 
 	void enet_peer_dispatch_incoming_reliable_commands(ENetPeer *peer, ENetChannel *channel) {

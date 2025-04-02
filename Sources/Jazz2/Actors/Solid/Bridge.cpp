@@ -1,4 +1,5 @@
 ﻿#include "Bridge.h"
+#include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -60,22 +61,25 @@ namespace Jazz2::Actors::Solid
 
 		SetAnimation(AnimState::Default);
 
-		std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
-		for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
-			BridgePiece& piece = _pieces.emplace_back();
-			piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
-			piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-			piece.Command->material().setBlendingEnabled(true);
-			piece.Command->material().reserveUniformsDataMemory();
-			piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		auto& resolver = ContentResolver::Get();
+		if (!resolver.IsHeadless()) {
+			std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
+			for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+				BridgePiece& piece = _pieces.emplace_back();
+				piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
+				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
+				piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
+				piece.Command->material().setBlendingEnabled(true);
+				piece.Command->material().reserveUniformsDataMemory();
+				piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-			auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+				auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
+
+				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
 			}
-
-			widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
 		}
 
 		async_return true;

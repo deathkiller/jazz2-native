@@ -602,7 +602,7 @@ namespace Jazz2
 				}
 
 				// Animation states must be sorted, so binary search can be used
-				sort(metadata->Animations.begin(), metadata->Animations.end());
+				nCine::sort(metadata->Animations.begin(), metadata->Animations.end());
 			}
 
 #if defined(WITH_AUDIO)

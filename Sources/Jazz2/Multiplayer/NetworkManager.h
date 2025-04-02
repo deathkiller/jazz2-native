@@ -44,7 +44,10 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns all connected peers */
 		const HashMap<Peer, std::shared_ptr<PeerDescriptor>>& GetPeers() const;
 
-		/** @brief Returns session peer descriptor for the specified connected peer */
+		/** @brief Returns session peer descriptor for the local peer */
+		std::shared_ptr<PeerDescriptor> GetPeerDescriptor(LocalPeerT);
+
+		/** @brief Returns session peer descriptor for the specified connected remote peer */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor(const Peer& peer);
 
 		/** @brief Returns `true` if there are any inbound connections */

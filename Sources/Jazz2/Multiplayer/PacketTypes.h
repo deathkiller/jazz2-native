@@ -106,6 +106,7 @@ namespace Jazz2::Multiplayer
 		Gems,
 
 		Points = 30,
+		PositionInRound,
 		Deaths,
 		Kills,
 		Laps,

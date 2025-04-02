@@ -4,9 +4,9 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
-	LocalPlayerOnServer::LocalPlayerOnServer()
+	LocalPlayerOnServer::LocalPlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc)
 	{
-		_peerDesc = std::make_unique<PeerDescriptor>();
+		_peerDesc = std::move(peerDesc);
 		_peerDesc->Player = this;
 	}
 

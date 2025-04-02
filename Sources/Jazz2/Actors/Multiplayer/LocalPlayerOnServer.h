@@ -12,7 +12,7 @@ namespace Jazz2::Actors::Multiplayer
 		DEATH_RUNTIME_OBJECT(PlayerOnServer);
 
 	public:
-		LocalPlayerOnServer();
+		LocalPlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 	protected:
 		/** @brief Emits weapon flare */
