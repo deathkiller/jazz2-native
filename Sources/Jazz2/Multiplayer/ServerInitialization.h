@@ -44,6 +44,7 @@ namespace Jazz2::Multiplayer
 		@brief Server configuration
 
 		The server configuration is read from a JSON file, which may contain the following fields:
+		- @cpp "$include" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Include configuration from another file by path
 		- @cpp "ServerName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the server
 		- @cpp "ServerPassword" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Password to join the server
 		- @cpp "WelcomeMessage" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Message displayed to players upon joining
@@ -88,7 +89,7 @@ namespace Jazz2::Multiplayer
 		- @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		- @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
 		- @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of treasures required to win (Tresure Hunt)
-		- @cpp "Playlist" @ce : (array) List of game configurations per round, each entry may contain:
+		- @cpp "Playlist" @ce : @m_span{m-label m-success m-flat} array @m_endspan List of game configurations per round, each entry may contain:
 		  - @cpp "LevelName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the level in `<episode>/<level>` format
 		  - @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Specific game mode for this round
 		  - @cpp "IsElimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled for this round

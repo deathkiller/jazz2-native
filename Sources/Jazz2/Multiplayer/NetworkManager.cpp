@@ -73,8 +73,7 @@ namespace Jazz2::Multiplayer
 
 	std::uint32_t NetworkManager::GetPeerCount() const
 	{
-		// TODO: Include server itself
-		return std::uint32_t(_peerDesc.size()) + 1;
+		return std::uint32_t(_peerDesc.size());
 	}
 
 	const HashMap<Peer, std::shared_ptr<PeerDescriptor>>& NetworkManager::GetPeers() const
@@ -100,7 +99,8 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManager::HasInboundConnections() const
 	{
-		return !_peerDesc.empty();
+		// Local peer is always present
+		return (_peerDesc.size() > 1);
 	}
 
 	ServerConfiguration NetworkManager::CreateDefaultServerConfiguration()
