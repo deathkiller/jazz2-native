@@ -873,6 +873,9 @@ namespace Jazz2::Multiplayer
 				mpPlayer->WarpToPosition(spawnPosition, WarpFlags::Default);
 			}
 			return;
+		} else if (serverConfig.GameMode != MpGameMode::Cooperation) {
+			// Ignore end of the level in all game modes except cooperation
+			return;
 		}
 
 		LOGD("[MP] Changing level to \"%s\" (0x%02x)", nextLevel.data(), (std::uint32_t)exitType);
@@ -1212,7 +1215,24 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 			if (newCount > prevCount && _levelState == LevelState::Running) {
-				peerDesc->TreasureCollected += (newCount - prevCount);
+				std::int32_t weightedCount;
+				switch (gemType) {
+					default:
+					case 0: // Red (+1)
+						weightedCount = 1;
+						break;
+					case 1: // Green (+5)
+						weightedCount = 5;
+						break;
+					case 2: // Blue (+10)
+						weightedCount = 10;
+						break;
+					case 3: // Purple
+						weightedCount = 1;
+						break;
+				}
+
+				peerDesc->TreasureCollected += (newCount - prevCount) * weightedCount;
 			}
 
 			if (peerDesc->RemotePeer) {
@@ -1222,6 +1242,12 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>(gemType);
 				packet.WriteVariableInt32(newCount);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+
+				MemoryStream packet2(9);
+				packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::TreasureCollected);
+				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet2.WriteVariableUint32(peerDesc->TreasureCollected);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
 			}
 
 			CheckGameEnds();
@@ -3416,6 +3442,10 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::CheckGameEnds()
 	{
+		if (_levelState != LevelState::Running) {
+			return;
+		}
+
 		CalculatePositionInRound();
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
