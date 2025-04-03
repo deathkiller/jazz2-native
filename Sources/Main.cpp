@@ -964,9 +964,11 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 	if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 		LOGI("[MP] Peer disconnected \"%s\" (%s): %s (%u)", peerDesc->PlayerName.data(),
 			NetworkManagerBase::AddressToString(peer).data(), reasonStr, (std::uint32_t)reason);
-	} else {
+	} else if (peer) {
 		LOGI("[MP] Peer disconnected \"<unknown>\" (%s): %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
 			reasonStr, (std::uint32_t)reason);
+	} else {
+		LOGI("[MP] Peer disconnected: %s (%u)", reasonStr, (std::uint32_t)reason);
 	}
 
 	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {

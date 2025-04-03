@@ -455,7 +455,7 @@ namespace Jazz2::Multiplayer
 		ENetEvent ev;
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()); i++) {
 			ENetAddress addr = _this->_desiredEndpoints[i];
-			LOGD("[MP] Connecting to %s (%i/%i)", AddressToString(addr.host, addr.port).data(), i, std::int32_t(_this->_desiredEndpoints.size()));
+			LOGD("[MP] Connecting to %s (%i/%i)", AddressToString(addr.host, addr.port).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
 			ENetPeer* peer = enet_host_connect(host, &addr, std::size_t(NetworkChannel::Count), _this->_clientData);
 			if (peer == nullptr) {
 				continue;

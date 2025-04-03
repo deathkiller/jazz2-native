@@ -1263,7 +1263,8 @@ namespace Jazz2::UI
 		state.VerticesCount += vertexCount;
 
 		if (state.VerticesCount > WeaponWheelMaxVertices) {
-			// This shouldn't happen, 512 vertices should be enough
+			// This shouldn't happen, 768 vertices should be enough
+			DEATH_DEBUG_ASSERT(state.VerticesCount <= WeaponWheelMaxVertices);
 			return;
 		}
 
