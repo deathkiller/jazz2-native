@@ -411,6 +411,9 @@
 		"WeaponThunderboltStart": {
 			"Paths": [ "Cinematics/opening_shot.wav" ]
 		},
+		"WeaponThunderboltEnd": {
+			"Paths": [ "Pickup/shield_lightning_bullet_1.wav" ]
+		},
 		"HookAttach": {
 			"Paths": [ "Common/swish_9.wav" ]
 		},

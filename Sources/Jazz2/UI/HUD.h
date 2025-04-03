@@ -165,7 +165,7 @@ namespace Jazz2::UI
 
 		static constexpr std::int32_t TouchButtonsCount = 11;
 		static constexpr float WeaponWheelAnimDuration = 20.0f;
-		static constexpr std::int32_t WeaponWheelMaxVertices = 512;
+		static constexpr std::int32_t WeaponWheelMaxVertices = 768;
 
 		float _rgbAmbientLight;
 		float _rgbHealthLast;

@@ -167,7 +167,7 @@ namespace Jazz2::Multiplayer
 		auto s = fs::Open(configPath, FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize >= 4 && fileSize < 64 * 1024 * 1024) {
-			auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
+			auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
 			s->Read(buffer.get(), fileSize);
 			buffer[fileSize] = '\0';
 
@@ -175,7 +175,7 @@ namespace Jazz2::Multiplayer
 
 			ondemand::parser parser;
 			ondemand::document doc;
-			if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+			if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
 				if (level == 0) {
 					LOGI("Loaded configuration from \"%s\"", configPath.data());
 				} else {

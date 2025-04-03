@@ -2142,6 +2142,10 @@ namespace Jazz2
 			fire->AddToTimeline(4, 0.0f, 0.0f, 0.0f, 0.3f);
 		}
 
+		if (auto* fireWeak = RegisterRumbleEffect("FireWeak"_s)) {
+			fireWeak->AddToTimeline(16, 0.0f, 0.0f, 0.0f, 0.04f);
+		}
+
 		if (auto* warp = RegisterRumbleEffect("Warp"_s)) {
 			warp->AddToTimeline(2, 0.0f, 0.0f, 0.02f, 0.01f);
 			warp->AddToTimeline(6, 0.3f, 0.0f, 0.04f, 0.02f);

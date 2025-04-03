@@ -486,7 +486,7 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
+		auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
 		buffer[fileSize] = '\0';
 
@@ -500,7 +500,7 @@ namespace Jazz2
 
 		ondemand::parser parser;
 		ondemand::document doc;
-		if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+		if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
 			metadata->BoundingBox = GetVector2iFromJson(doc["BoundingBox"], Vector2i(InvalidValue, InvalidValue));
 
 			ondemand::object animations;
@@ -679,7 +679,7 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
+		auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
 		s->Dispose();
 		buffer[fileSize] = '\0';
@@ -688,7 +688,7 @@ namespace Jazz2
 
 		ondemand::parser parser;
 		ondemand::document doc;
-		if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+		if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
 			// Try to load it
 			std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
@@ -1743,7 +1743,7 @@ namespace Jazz2
 		}
 
 
-		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
+		auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
 		s->Dispose();
 		buffer[fileSize] = '\0';
@@ -1752,7 +1752,7 @@ namespace Jazz2
 
 		ondemand::parser parser;
 		ondemand::document doc;
-		if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+		if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
 			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path });
 			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 			if (texLoader->hasLoaded()) {

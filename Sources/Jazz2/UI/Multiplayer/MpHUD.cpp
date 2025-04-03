@@ -123,7 +123,7 @@ namespace Jazz2::UI::Multiplayer
 		auto* mpPlayer = static_cast<MpPlayer*>(player);
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-		if (serverConfig.GameMode != MpGameMode::Cooperation) {
+		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.TotalPlayerPoints > 0) {
 			auto pointsText = _f("Points: %u", peerDesc->Points);
 			_smallFont->DrawString(this, pointsText, charOffsetShadow, view.X + view.W - 10.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
 				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -171,9 +171,9 @@ namespace Jazz2::UI::Multiplayer
 
 				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}
@@ -199,9 +199,9 @@ namespace Jazz2::UI::Multiplayer
 
 				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}
@@ -216,9 +216,9 @@ namespace Jazz2::UI::Multiplayer
 
 				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}

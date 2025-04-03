@@ -1060,7 +1060,8 @@ namespace Jazz2::Actors
 							if (_currentAnimation->LoopMode == AnimationLoopMode::Once) {
 								_renderer.AnimTime = 0.0f;
 							}
-							_levelHandler->PlayerExecuteRumble(this, "Fire"_s);
+							auto rumbleEffect = (_currentWeapon == WeaponType::Toaster || _currentWeapon == WeaponType::Thunderbolt ? "FireWeak"_s : "Fire"_s);
+							_levelHandler->PlayerExecuteRumble(this, rumbleEffect);
 						}
 
 						_fireFramesLeft = 20.0f;
@@ -1080,6 +1081,11 @@ namespace Jazz2::Actors
 			} else {
 				_weaponSound->stop();
 				_weaponSound = nullptr;
+
+				if (_currentWeapon == WeaponType::Thunderbolt) {
+					PlayPlayerSfx("WeaponThunderboltEnd"_s, 0.8f);
+					_levelHandler->PlayerExecuteRumble(this, "Fire"_s);
+				}
 			}
 		}
 #endif
@@ -2880,6 +2886,8 @@ namespace Jazz2::Actors
 		tnt->OnFire(shared_from_this());
 		_levelHandler->AddActor(tnt);
 
+		_levelHandler->PlayerExecuteRumble(this, "FireWeak"_s);
+
 		_weaponCooldown = 60.0f;
 	}
 
@@ -2993,7 +3001,7 @@ namespace Jazz2::Actors
 					if (!FireWeaponThunderbolt()) {
 						return false;
 					}
-					ammoDecrease = ((_weaponUpgrades[(std::int32_t)WeaponType::Thunderbolt] & 0x1) != 0 ? 30 : 50); // Lower ammo consumption with upgrade
+					ammoDecrease = ((_weaponUpgrades[(std::int32_t)WeaponType::Thunderbolt] & 0x1) != 0 ? 40 : 80); // Lower ammo consumption with upgrade
 					break;
 				}
 
