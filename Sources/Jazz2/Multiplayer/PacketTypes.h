@@ -21,7 +21,7 @@ namespace Jazz2::Multiplayer
 		Ping,
 		Reserved,
 
-		Auth,
+		Auth = 10,
 		LevelReady,
 		ChatMessage,
 
@@ -38,9 +38,9 @@ namespace Jazz2::Multiplayer
 		Pong,
 		Reserved,
 
-		PeerStateChanged,
+		PeerStateChanged = 70,
 
-		LoadLevel = 10,
+		LoadLevel = 80,
 		LevelSetProperty,
 		LevelResetProperties,		// TODO
 		ShowInGameLobby,
@@ -54,14 +54,14 @@ namespace Jazz2::Multiplayer
 		AdvanceTileAnimation,
 		RevertTileAnimation,		// TODO
 
-		CreateControllablePlayer = 30,
+		CreateControllablePlayer = 110,
 		CreateRemoteActor,
 		CreateMirroredActor,
 		DestroyRemoteActor,
 		UpdateAllActors,
 		MarkRemoteActorAsPlayer,
 
-		PlayerSetProperty = 50,
+		PlayerSetProperty = 130,
 		PlayerResetProperties,
 		PlayerRespawn,
 		PlayerMoveInstantly,

@@ -42,6 +42,10 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Server configuration
+		
+		This structure contains the server configuration, which is usually loaded from a file and partially also transferred to connected clients.
+
+		@section Multiplayer-ServerConfiguration-format File format description
 
 		The server configuration is read from a JSON file, which may contain the following fields:
 		- @cpp "$include" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Include configuration from another file by path
@@ -106,7 +110,7 @@ namespace Jazz2::Multiplayer
 		If a property is missing in the root configuration, the default value is used. `{PlayerName}` and
 		`{ServerName}` variables can be used in @cpp "ServerName" @ce and @cpp "WelcomeMessage" @ce properties.
 		
-		Example server configuration:
+		@subsection Multiplayer-ServerConfiguration-format-example Example server configuration
 		
 		@include ServerConfiguration.json
 	*/
@@ -176,6 +180,9 @@ namespace Jazz2::Multiplayer
 		/** @} */
 
 		/** @{ @name Pure runtime information */
+
+		/** @brief Path to the configuration file */
+		String FilePath;
 
 		/** @brief Start time of the server as Unix timestamp */
 		std::uint64_t StartUnixTimestamp;

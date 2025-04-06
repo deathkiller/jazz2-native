@@ -281,10 +281,10 @@ void GameEventHandler::OnInitialize()
 		} else if (arg == "/server"_s) {
 			thread.Join();
 
-			// TODO: Allow to configure server settings from command line
 			ServerInitialization serverInit;
 			if (i + 1 < config.argc()) {
-				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(config.argv(i + 1));
+				auto filePath = config.argv(i + 1);
+				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(filePath);
 			} else {
 				serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
 			}
@@ -363,10 +363,10 @@ void GameEventHandler::OnInitialize()
 				return;
 			}
 		} else if (arg == "/server"_s) {
-			// TODO: Allow to configure server settings from command line
 			ServerInitialization serverInit;
 			if (i + 1 < config.argc()) {
-				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(config.argv(i + 1));
+				auto filePath = config.argv(i + 1);
+				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(filePath);
 			} else {
 				serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
 			}
@@ -886,12 +886,6 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		if (_networkManager->GetPeerCount() > serverConfig.MaxPlayerCount) {
 			return Reason::ServerIsFull;
 		}
-
-		auto address = NetworkManagerBase::AddressToString(peer);
-		if (serverConfig.BannedIPAddresses.contains(address)) {
-			LOGI("[MP] Peer kicked \"<unknown>\" (%s): Banned", address.data());
-			return Reason::Banned;
-		}
 	} else {
 		MemoryStream packet(64 + MaxPlayerNameLength);
 		packet.Write("J2R ", 4);
@@ -1043,11 +1037,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				StaticArray<16, std::uint8_t> uuid;
 				packet.Read(uuid.data(), uuid.size());
-
-				String uniquePlayerId{NoInit, 39};
-				std::int32_t uniquePlayerIdLength = formatString(uniquePlayerId.data(), uniquePlayerId.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
-					uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
-				DEATH_DEBUG_ASSERT(uniquePlayerId.size() == uniquePlayerIdLength);
+				String uniquePlayerId = NetworkManager::UuidToString(uuid);
 
 				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: \"%s\"",
 					peer._enet, 4, gameID, gameVersion, uniquePlayerId.data());
@@ -1070,7 +1060,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				const auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"%s\" (%s): Banned", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					LOGI("[MP] Peer kicked \"%s\" (%s): Banned by unique player ID", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
 					_networkManager->Kick(peer, Reason::Banned);
 					return;
 				}

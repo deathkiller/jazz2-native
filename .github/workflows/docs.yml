@@ -45,7 +45,7 @@ jobs:
     - name: 'Build'
       run: |
         mkdir -p ./build/docs/
-        ./m.css/documentation/doxygen.py ./Docs/conf.py
+        ./m.css/documentation/doxygen.py ./Docs/Config.py
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v4

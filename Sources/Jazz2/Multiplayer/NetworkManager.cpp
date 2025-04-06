@@ -103,6 +103,37 @@ namespace Jazz2::Multiplayer
 		return (_peerDesc.size() > 1);
 	}
 
+	void NetworkManager::RefreshServerConfiguration()
+	{
+		if (_serverConfig->FilePath.empty()) {
+			return;
+		}
+
+		HashMap<String, bool> includedFiles;
+
+		FillServerConfigurationFromFile(_serverConfig->FilePath, *_serverConfig, includedFiles, 0);
+		VerifyServerConfiguration(*_serverConfig);
+
+		// Check if any newly banned player should be kicked
+		for (auto& pair : _peerDesc) {
+			if (pair.second->RemotePeer) {
+				auto address = NetworkManagerBase::AddressToString(pair.second->RemotePeer);
+				if (_serverConfig->BannedIPAddresses.contains(address)) {
+					LOGI("[MP] Peer kicked \"%s\" (%s): Banned by IP address", pair.second->PlayerName.data(), address.data());
+					Kick(pair.second->RemotePeer, Reason::Banned);
+					continue;
+				}
+
+				auto uniquePlayerId = UuidToString(pair.second->Uuid);
+				if (_serverConfig->BannedUniquePlayerIDs.contains(uniquePlayerId)) {
+					LOGI("[MP] Peer kicked \"%s\" (%s): Banned by unique player ID", pair.second->PlayerName.data(), address.data());
+					Kick(pair.second->RemotePeer, Reason::Banned);
+					continue;
+				}
+			}
+		}
+	}
+
 	ServerConfiguration NetworkManager::CreateDefaultServerConfiguration()
 	{
 		return LoadServerConfigurationFromFile("Jazz2.Server.config"_s);
@@ -127,30 +158,9 @@ namespace Jazz2::Multiplayer
 
 		FillServerConfigurationFromFile(path, serverConfig, includedFiles, 0);
 
-		// Set default values
-		if (serverConfig.ServerName.empty()) {
-			serverConfig.ServerName = "{PlayerName}'s Server"_s;
-		}
-		if (serverConfig.WelcomeMessage.empty()) {
-			serverConfig.WelcomeMessage = "Welcome to the {ServerName}!"_s;
-		}
-		if (serverConfig.ServerPort == 0) {
-			serverConfig.ServerPort = 7438;
-		}
-		if (serverConfig.MaxPlayerCount == 0) {
-			serverConfig.MaxPlayerCount = MaxPeerCount;
-		}
+		serverConfig.FilePath = path;
 
-		// Replace variables in parameters
-		auto playerName = PreferencesCache::GetEffectivePlayerName();
-		if (playerName.empty()) {
-			playerName = "Unknown"_s;
-		}
-
-		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
-
-		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{PlayerName}"_s, playerName);
-		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{ServerName}"_s, serverConfig.ServerName);
+		VerifyServerConfiguration(serverConfig);
 
 		return serverConfig;
 	}
@@ -414,6 +424,34 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void NetworkManager::VerifyServerConfiguration(ServerConfiguration& serverConfig)
+	{
+		// Set default values
+		if (serverConfig.ServerName.empty()) {
+			serverConfig.ServerName = "{PlayerName}'s Server"_s;
+		}
+		if (serverConfig.WelcomeMessage.empty()) {
+			serverConfig.WelcomeMessage = "Welcome to the {ServerName}!"_s;
+		}
+		if (serverConfig.ServerPort == 0) {
+			serverConfig.ServerPort = 7438;
+		}
+		if (serverConfig.MaxPlayerCount == 0) {
+			serverConfig.MaxPlayerCount = MaxPeerCount;
+		}
+
+		// Replace variables in parameters
+		auto playerName = PreferencesCache::GetEffectivePlayerName();
+		if (playerName.empty()) {
+			playerName = "Unknown"_s;
+		}
+
+		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
+
+		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{PlayerName}"_s, playerName);
+		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{ServerName}"_s, serverConfig.ServerName);
+	}
+
 	StringView NetworkManager::GameModeToLocalizedString(MpGameMode mode)
 	{
 		switch (mode) {
@@ -453,11 +491,30 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	String NetworkManager::UuidToString(ArrayView<std::uint8_t> uuid)
+	{
+		String uuidStr{NoInit, 39};
+		std::int32_t uuidStrLength = formatString(uuidStr.data(), uuidStr.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+			uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
+		DEATH_DEBUG_ASSERT(uuidStr.size() == uuidStrLength);
+		return uuidStr;
+	}
+
 	ConnectionResult NetworkManager::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 	{
+		bool isListening = (GetState() == NetworkState::Listening);
+
+		if (isListening) {
+			auto address = NetworkManagerBase::AddressToString(peer);
+			if (_serverConfig->BannedIPAddresses.contains(address)) {
+				LOGI("[MP] Peer kicked \"<unknown>\" (%s): Banned by IP address", address.data());
+				return Reason::Banned;
+			}
+		}
+
 		ConnectionResult result = NetworkManagerBase::OnPeerConnected(peer, clientData);
 
-		if (result && GetState() == NetworkState::Listening) {
+		if (result && isListening) {
 			auto [peerDesc, inserted] = _peerDesc.emplace(peer, std::make_shared<PeerDescriptor>());
 			peerDesc->second->RemotePeer = peer;
 		}

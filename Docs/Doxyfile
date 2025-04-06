@@ -171,7 +171,7 @@ STRIP_FROM_PATH        = . \
 # using the -I flag.
 
 STRIP_FROM_INC_PATH    = ../Sources/Shared/ \
-                        	../Sources/
+                         ../Sources/
 
 # If the SHORT_NAMES tag is set to YES, doxygen will generate much shorter (but
 # less readable) file names. This can be useful is your file systems doesn't
@@ -223,7 +223,6 @@ MULTILINE_CPP_IS_BRIEF = NO
 # documentation from any documented member that it re-implements.
 # The default value is: YES.
 
-#INHERIT_DOCS          = NO
 INHERIT_DOCS           = YES
 
 # If the SEPARATE_MEMBER_PAGES tag is set to YES then doxygen will produce a new
@@ -257,7 +256,7 @@ TAB_SIZE               = 4
 ALIASES                = \
     "partialsupport=@xrefitem death-partialsupport \"Partially supported\" \"List of partially supported features\"" \
     "thirdparty=@xrefitem credits-third-party \"Third-party components\" \"Third-party components\"" \
-    "todoc=@xrefitem todoc \"Documentation todo\" \"Documentation-related todo list\"" \
+    "todoc=@xrefitem todoc \"Documentation TODO\" \"Documentation-related TODO list\"" \
     "experimental=@attention This functionality is still experimental and may change in the future without keeping full backwards compatibility." \
     "cb{1}=@code{\1}" \
     "cpp=@code{.cpp}" \
@@ -933,9 +932,9 @@ EXCLUDE_SYMBOLS        = Death::*Implementation \
 # that contain example code fragments that are included (see the \include
 # command).
 
-EXAMPLE_PATH           = ../Sources/Examples/ \
-                         CodingStyle/ \
-                         Snippets/
+EXAMPLE_PATH           = CodingStyle/ \
+                         Snippets/ \
+                         ../Sources/Examples/
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and
@@ -2159,7 +2158,7 @@ INCLUDE_FILE_PATTERNS  =
 
 PREDEFINED             = DOXYGEN_GENERATING_OUTPUT \
     DEATH_TRACE=DEATH_TRACE \
-    DEATH_BUILD_DEPRECATED DEATH_DEPRECATED(message)= \
+    DEATH_DEPRECATED(message)= \
     DEATH_DEPRECATED_ALIAS(message)= DEATH_DEPRECATED_ENUM(message)= \
     DEATH_DEPRECATED_NAMESPACE(message)= DEATH_DEPRECATED_FILE(message)= \
     DEATH_CONSTEXPR14=constexpr DEATH_CONSTEXPR20=constexpr
@@ -2200,7 +2199,8 @@ SKIP_FUNCTION_MACROS   = YES
 # the path). If a tag file is not located in the directory in which doxygen is
 # run, you must also specify the path to the tagfile here.
 
-TAGFILES               = "stl.tag=http://en.cppreference.com/w/"
+TAGFILES               = stl.tag=http://en.cppreference.com/w/ \
+                         angelscript.tag=http://www.angelcode.com/angelscript/sdk/docs/manual/
 
 # When a file name is specified after GENERATE_TAGFILE, doxygen will create a
 # tag file that is based on the input files it reads. See section "Linking to

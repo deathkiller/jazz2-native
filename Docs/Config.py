@@ -1,8 +1,11 @@
 DOXYFILE = 'Doxyfile'
-#FAVICON = 'favicon.ico'
 MAIN_PROJECT_URL = 'https://deat.tk/jazz2/'
 SHOW_UNDOCUMENTED = True
 VERSION_LABELS = True
+
+SEARCH_DOWNLOAD_BINARY = True
+SEARCH_BASE_URL = "https://deat.tk/jazz2/docs/"
+SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:deat.tk+jazz2+docs+{query}"
 
 STYLESHEETS = [
     'https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400i,600,600i%7CSource+Code+Pro:400,400i,600&subset=latin-ext',
@@ -13,10 +16,6 @@ LINKS_NAVBAR2 = [
     (None, 'annotated', []),
     (None, 'files', [])
 ]
-
-SEARCH_DOWNLOAD_BINARY = True
-SEARCH_BASE_URL = "https://deat.tk/jazz2/docs/"
-SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:deat.tk+jazz2+docs+{query}"
 
 # Code wrapped in DOXYGEN_ELLIPSIS() will get replaced by an (Unicode) ellipsis
 # in the output; code wrapped in DOXYGEN_IGNORE() will get replaced by nothing.
