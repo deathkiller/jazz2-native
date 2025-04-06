@@ -10,8 +10,9 @@ namespace Death { namespace Utf8 {
 		std::size_t size = text.size();
 		std::size_t result = 0;
 		for (std::size_t i = 0; i < size; i++) {
-			if ((text[i] & 0xc0) != 0x80)
+			if ((text[i] & 0xc0) != 0x80) {
 				result++;
+			}
 		}
 		return result;
 	}
