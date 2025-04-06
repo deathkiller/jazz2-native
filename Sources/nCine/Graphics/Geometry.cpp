@@ -17,10 +17,10 @@ namespace nCine
 	{
 #if defined(NCINE_PROFILING)
 		if (vbo_ != nullptr) {
-			RenderStatistics::removeCustomVbo(vbo_->size());
+			RenderStatistics::removeCustomVbo(vbo_->GetSize());
 		}
 		if (ibo_ != nullptr) {
-			RenderStatistics::removeCustomIbo(ibo_->size());
+			RenderStatistics::removeCustomIbo(ibo_->GetSize());
 		}
 #endif
 	}
@@ -44,7 +44,7 @@ namespace nCine
 		vboParams_.mapBase = nullptr;
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::addCustomVbo(vbo_->size());
+		RenderStatistics::addCustomVbo(vbo_->GetSize());
 #endif
 	}
 
@@ -118,7 +118,7 @@ namespace nCine
 		iboParams_.mapBase = nullptr;
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::addCustomIbo(ibo_->size());
+		RenderStatistics::addCustomIbo(ibo_->GetSize());
 #endif
 	}
 
