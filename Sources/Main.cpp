@@ -558,6 +558,8 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 	InvokeAsync([this, afterIntro]() {
 		ZoneScopedNC("GameEventHandler::GoToMainMenu", 0x888888);
 
+		LOGI("Going to main menu");
+
 #if defined(WITH_MULTIPLAYER)
 		if (_networkManager != nullptr) {
 			_networkManager->Dispose();
@@ -577,6 +579,9 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
 		ZoneScopedNC("GameEventHandler::ChangeLevel", 0x888888);
 
+		auto p = levelInit.LevelName.partition('/');
+		auto levelName = (!p[2].empty() ? p[2] : p[0]);
+
 		std::unique_ptr<IStateHandler> newHandler;
 		if (levelInit.LevelName.empty()) {
 			// Next level not specified, so show main menu
@@ -584,11 +589,13 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 			// TODO: This should show some server console instead of exiting
 			if (_networkManager != nullptr) {
+				LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+
 				_networkManager->Dispose();
 				_networkManager = nullptr;
 			}
 #endif
-		} else if (levelInit.LevelName == ":end"_s) {
+		} else if (levelName == ":end"_s) {
 			// End of episode
 			SaveEpisodeEnd(levelInit);
 
@@ -598,10 +605,13 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 				// Redirect to next episode
 				if (std::optional<Episode> nextEpisode = resolver.GetEpisode(lastEpisode->NextEpisode)) {
 					levelInit.LevelName = lastEpisode->NextEpisode + '/' + nextEpisode->FirstLevel;
+
+					p = levelInit.LevelName.partition('/');
+					levelName = (!p[2].empty() ? p[2] : p[0]);
 				}
 			}
 
-			if (levelInit.LevelName != ":end"_s) {
+			if (levelName != ":end"_s) {
 				if (!SetLevelHandler(levelInit)) {
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
@@ -609,6 +619,8 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
 					if (_networkManager != nullptr) {
+						LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+
 						_networkManager->Dispose();
 						_networkManager = nullptr;
 					}
@@ -619,12 +631,14 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 				// TODO: This should show some server console instead of exiting
 				if (_networkManager != nullptr) {
+					LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+
 					_networkManager->Dispose();
 					_networkManager = nullptr;
 				}
 #endif
 			}
-		} else if (levelInit.LevelName == ":credits"_s) {
+		} else if (levelName == ":credits"_s) {
 			// End of game
 			SaveEpisodeEnd(levelInit);
 
@@ -635,7 +649,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 				});
 				return true;
 			});
-		} else if (levelInit.LevelName == ":gameover"_s) {
+		} else if (levelName == ":gameover"_s) {
 			// Player died
 			HandleEndOfGame(levelInit, true);
 		} else {
@@ -643,7 +657,6 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 #if defined(SHAREWARE_DEMO_ONLY)
 			// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
-			auto p = levelInit.LevelName.partition('/');
 			bool isEpisodeLocked = (p[0] == "unknown"_s) ||
 				(p[0] == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) ||
 				(p[0] == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) ||
@@ -664,6 +677,8 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
 					if (_networkManager != nullptr) {
+						LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+
 						_networkManager->Dispose();
 						_networkManager = nullptr;
 					}

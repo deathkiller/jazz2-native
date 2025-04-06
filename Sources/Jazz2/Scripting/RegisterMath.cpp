@@ -19,19 +19,19 @@ namespace Jazz2::Scripting
 {
 	void RegisterMembers_Vector2i(asIScriptEngine* engine, const char* className)
 	{
-		engine->RegisterObjectMethod(className, "int get_length() const", asMETHODPR(Vector2i, Length, () const, int), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec2i opMul(int) const", asMETHODPR(Vector2i, operator*, (int) const, Vector2i), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "int get_length() const", asMETHODPR(Vector2i, Length, () const, std::int32_t), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec2i opMul(int) const", asMETHODPR(Vector2i, operator*, (std::int32_t) const, Vector2i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i opMul(const vec2i&in) const", asMETHODPR(Vector2i, operator*, (const Vector2i&) const, Vector2i), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec2i& opMulAssign(int)", asMETHODPR(Vector2i, operator*=, (int), Vector2i&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec2i& opMulAssign(int)", asMETHODPR(Vector2i, operator*=, (std::int32_t), Vector2i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i& opMulAssign(const vec2i&in)", asMETHODPR(Vector2i, operator*=, (const Vector2i&), Vector2i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i opAdd(const vec2i&in) const", asMETHODPR(Vector2i, operator+, (const Vector2i&) const, Vector2i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i& opAddAssign(const vec2i&in)", asMETHODPR(Vector2i, operator+=, (const Vector2i&), Vector2i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i opNeg() const", asMETHODPR(Vector2i, operator-, () const, Vector2i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i opSub(const vec2i&in) const", asMETHODPR(Vector2i, operator-, (const Vector2i&) const, Vector2i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i& opSubAssign(const vec2i&in)", asMETHODPR(Vector2i, operator-=, (const Vector2i&), Vector2i&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec2i opDiv(int) const", asMETHODPR(Vector2i, operator/, (int) const, Vector2i), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec2i opDiv(int) const", asMETHODPR(Vector2i, operator/, (std::int32_t) const, Vector2i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i opDiv(const vec2i&in) const", asMETHODPR(Vector2i, operator/, (const Vector2i&) const, Vector2i), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec2i& opDivAssign(int)", asMETHODPR(Vector2i, operator/=, (int), Vector2i&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec2i& opDivAssign(int)", asMETHODPR(Vector2i, operator/=, (std::int32_t), Vector2i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i& opDivAssign(const vec2i&in)", asMETHODPR(Vector2i, operator/=, (const Vector2i&), Vector2i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec2i& opAssign(const vec2i&in)", asMETHODPR(Vector2i, operator=, (const Vector2i&), Vector2i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "bool opEquals(const vec2i&in) const", asMETHODPR(Vector2i, operator==, (const Vector2i&) const, bool), asCALL_THISCALL);
@@ -42,19 +42,19 @@ namespace Jazz2::Scripting
 
 	void RegisterMembers_Vector3i(asIScriptEngine* engine, const char* className)
 	{
-		engine->RegisterObjectMethod(className, "int get_length() const", asMETHODPR(Vector3i, Length, () const, int), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec3i opMul(int) const", asMETHODPR(Vector3i, operator*, (int) const, Vector3i), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "int get_length() const", asMETHODPR(Vector3i, Length, () const, std::int32_t), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec3i opMul(int) const", asMETHODPR(Vector3i, operator*, (std::int32_t) const, Vector3i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i opMul(const vec3i&in) const", asMETHODPR(Vector3i, operator*, (const Vector3i&) const, Vector3i), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec3i& opMulAssign(int)", asMETHODPR(Vector3i, operator*=, (int), Vector3i&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec3i& opMulAssign(int)", asMETHODPR(Vector3i, operator*=, (std::int32_t), Vector3i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i& opMulAssign(const vec3i&in)", asMETHODPR(Vector3i, operator*=, (const Vector3i&), Vector3i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i opAdd(const vec3i&in) const", asMETHODPR(Vector3i, operator+, (const Vector3i&) const, Vector3i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i& opAddAssign(const vec3i&in)", asMETHODPR(Vector3i, operator+=, (const Vector3i&), Vector3i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i opNeg() const", asMETHODPR(Vector3i, operator-, () const, Vector3i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i opSub(const vec3i&in) const", asMETHODPR(Vector3i, operator-, (const Vector3i&) const, Vector3i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i& opSubAssign(const vec3i&in)", asMETHODPR(Vector3i, operator-=, (const Vector3i&), Vector3i&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec3i opDiv(int) const", asMETHODPR(Vector3i, operator/, (int) const, Vector3i), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec3i opDiv(int) const", asMETHODPR(Vector3i, operator/, (std::int32_t) const, Vector3i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i opDiv(const vec3i&in) const", asMETHODPR(Vector3i, operator/, (const Vector3i&) const, Vector3i), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec3i& opDivAssign(int)", asMETHODPR(Vector3i, operator/=, (int), Vector3i&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec3i& opDivAssign(int)", asMETHODPR(Vector3i, operator/=, (std::int32_t), Vector3i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i& opDivAssign(const vec3i&in)", asMETHODPR(Vector3i, operator/=, (const Vector3i&), Vector3i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec3i& opAssign(const vec3i&in)", asMETHODPR(Vector3i, operator=, (const Vector3i&), Vector3i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "bool opEquals(const vec3i&in) const", asMETHODPR(Vector3i, operator==, (const Vector3i&) const, bool), asCALL_THISCALL);
@@ -66,19 +66,19 @@ namespace Jazz2::Scripting
 
 	void RegisterMembers_Vector4i(asIScriptEngine* engine, const char* className)
 	{
-		engine->RegisterObjectMethod(className, "int get_length() const", asMETHODPR(Vector4i, Length, () const, int), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec4i opMul(int) const", asMETHODPR(Vector4i, operator*, (int) const, Vector4i), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "int get_length() const", asMETHODPR(Vector4i, Length, () const, std::int32_t), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec4i opMul(int) const", asMETHODPR(Vector4i, operator*, (std::int32_t) const, Vector4i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i opMul(const vec4i&in) const", asMETHODPR(Vector4i, operator*, (const Vector4i&) const, Vector4i), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec4i& opMulAssign(int)", asMETHODPR(Vector4i, operator*=, (int), Vector4i&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec4i& opMulAssign(int)", asMETHODPR(Vector4i, operator*=, (std::int32_t), Vector4i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i& opMulAssign(const vec4i&in)", asMETHODPR(Vector4i, operator*=, (const Vector4i&), Vector4i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i opAdd(const vec4i&in) const", asMETHODPR(Vector4i, operator+, (const Vector4i&) const, Vector4i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i& opAddAssign(const vec4i&in)", asMETHODPR(Vector4i, operator+=, (const Vector4i&), Vector4i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i opNeg() const", asMETHODPR(Vector4i, operator-, () const, Vector4i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i opSub(const vec4i&in) const", asMETHODPR(Vector4i, operator-, (const Vector4i&) const, Vector4i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i& opSubAssign(const vec4i&in)", asMETHODPR(Vector4i, operator-=, (const Vector4i&), Vector4i&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec4i opDiv(int) const", asMETHODPR(Vector4i, operator/, (int) const, Vector4i), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec4i opDiv(int) const", asMETHODPR(Vector4i, operator/, (std::int32_t) const, Vector4i), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i opDiv(const vec4i&in) const", asMETHODPR(Vector4i, operator/, (const Vector4i&) const, Vector4i), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "vec4i& opDivAssign(int)", asMETHODPR(Vector4i, operator/=, (int), Vector4i&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "vec4i& opDivAssign(int)", asMETHODPR(Vector4i, operator/=, (std::int32_t), Vector4i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i& opDivAssign(const vec4i&in)", asMETHODPR(Vector4i, operator/=, (const Vector4i&), Vector4i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "vec4i& opAssign(const vec4i&in)", asMETHODPR(Vector4i, operator=, (const Vector4i&), Vector4i&), asCALL_THISCALL);
 		engine->RegisterObjectMethod(className, "bool opEquals(const vec4i&in) const", asMETHODPR(Vector4i, operator==, (const Vector4i&) const, bool), asCALL_THISCALL);

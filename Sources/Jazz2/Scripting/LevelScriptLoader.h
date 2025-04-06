@@ -180,8 +180,6 @@ namespace Jazz2::Scripting
 		static void asShowLevelText(const String& text);
 		static void asSetWeather(std::uint8_t weatherType, std::uint8_t intensity);
 
-		static std::int32_t jjGameTicks();
-
 		static std::int32_t GetDifficulty();
 		static std::int32_t SetDifficulty(std::int32_t value);
 

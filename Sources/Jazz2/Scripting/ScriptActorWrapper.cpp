@@ -171,7 +171,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		r = module->AddScriptSection("__" AsClassName, AsLibrary, arraySize(AsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
 	}
 
-	ScriptActorWrapper* ScriptActorWrapper::Factory(int actorType)
+	ScriptActorWrapper* ScriptActorWrapper::Factory(std::int32_t actorType)
 	{
 		auto ctx = asGetActiveContext();
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -240,10 +240,11 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->Prepare(func);
 		ctx->SetObject(_obj);
 		ctx->SetArgObject(0, eventParams);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);
@@ -266,10 +267,11 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		ctx->Prepare(_onTileDeactivated);
 		ctx->SetObject(_obj);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);
@@ -291,9 +293,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		ctx->Prepare(_onHealthChanged);
 		ctx->SetObject(_obj);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -315,10 +318,11 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		ctx->Prepare(func);
 		ctx->SetObject(_obj);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);
@@ -341,9 +345,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->Prepare(_onUpdate);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -362,9 +367,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		ctx->Prepare(_onUpdateHitbox);
 		ctx->SetObject(_obj);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -382,11 +388,12 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 					CScriptHandle handle(otherWrapper->_obj, typeInfo);
 					ctx->Prepare(_onHandleCollision);
 					ctx->SetObject(_obj);
-					int p = ctx->SetArgObject(0, &handle);
-					int r = ctx->Execute();
+					std::int32_t p = ctx->SetArgObject(0, &handle);
+					std::int32_t r = ctx->Execute();
 					bool result;
 					if (r == asEXECUTION_EXCEPTION) {
-						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+							ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 						result = true;
 					} else {
 						result = (ctx->GetReturnByte() != 0);
@@ -410,11 +417,12 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 					CScriptHandle handle(playerWrapper, typeInfo);
 					ctx->Prepare(_onHandleCollision);
 					ctx->SetObject(_obj);
-					int p = ctx->SetArgObject(0, &handle);
-					int r = ctx->Execute();
+					std::int32_t p = ctx->SetArgObject(0, &handle);
+					std::int32_t r = ctx->Execute();
 					bool result;
 					if (r == asEXECUTION_EXCEPTION) {
-						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+							ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 						result = true;
 					} else {
 						result = (ctx->GetReturnByte() != 0);
@@ -452,9 +460,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->Prepare(_onHitFloor);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -472,9 +481,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->Prepare(_onHitCeiling);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -492,9 +502,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->Prepare(_onHitWall);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -511,9 +522,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		ctx->Prepare(_onAnimationStarted);
 		ctx->SetObject(_obj);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -533,9 +545,10 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		ctx->Prepare(_onAnimationFinished);
 		ctx->SetObject(_obj);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -556,12 +569,12 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		return _renderer.layer();
 	}
 
-	void ScriptActorWrapper::asSetLayer(uint16_t value)
+	void ScriptActorWrapper::asSetLayer(std::uint16_t value)
 	{
 		_renderer.setLayer(value);
 	}
 
-	void ScriptActorWrapper::asDecreaseHealth(int amount)
+	void ScriptActorWrapper::asDecreaseHealth(std::int32_t amount)
 	{
 		DecreaseHealth(amount);
 	}
@@ -592,18 +605,13 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		PlaySfx(identifier, gain, pitch);
 	}
 
-	void ScriptActorWrapper::asSetAnimationState(int state)
+	void ScriptActorWrapper::asSetAnimationState(std::int32_t state)
 	{
 		SetAnimation((AnimState)state);
 	}
 
 	ScriptCollectibleWrapper::ScriptCollectibleWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj)
-		:
-		ScriptActorWrapper(levelScripts, obj),
-		_untouched(true),
-		_phase(0.0f),
-		_timeLeft(0.0f),
-		_startingY(0.0f)
+		: ScriptActorWrapper(levelScripts, obj), _untouched(true), _phase(0.0f), _timeLeft(0.0f), _startingY(0.0f)
 	{
 		_onCollect = _obj->GetObjectType()->GetMethodByDecl("bool OnCollect(Player@)");
 	}
@@ -641,7 +649,8 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 				return true;
 			}
 		} else {
-			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase*>(other) || runtime_cast<Weapons::TNT*>(other) || runtime_cast<Enemies::TurtleShell*>(other));
+			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase*>(other) ||
+				runtime_cast<Weapons::TNT*>(other) || runtime_cast<Enemies::TurtleShell*>(other));
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
 				_externalForce.X += speed.X / 2.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
@@ -670,7 +679,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->Prepare(_onCollect);
 		ctx->SetObject(_obj);
 		ctx->SetArgObject(0, playerWrapper);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
 			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
@@ -685,7 +694,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		if (result) {
 			player->AddScore(_scoreValue);
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
 			DecreaseHealth(INT32_MAX);
 			return true;
 		} else {

@@ -19,7 +19,7 @@ namespace Jazz2::Scripting
 	}
 
 	// This one is not static because it needs to be friend with the CScriptHandle class
-	void Construct(CScriptHandle* self, void* ref, int typeId)
+	void Construct(CScriptHandle* self, void* ref, std::int32_t typeId)
 	{
 		new(self) CScriptHandle(ref, typeId);
 	}
@@ -53,7 +53,7 @@ namespace Jazz2::Scripting
 
 	// This constructor shouldn't be called from the application 
 	// directly as it requires an active script context
-	CScriptHandle::CScriptHandle(void* ref, int typeId)
+	CScriptHandle::CScriptHandle(void* ref, std::int32_t typeId)
 	{
 		m_ref = nullptr;
 		m_type = nullptr;
@@ -129,7 +129,7 @@ namespace Jazz2::Scripting
 
 	// This method shouldn't be called from the application 
 	// directly as it requires an active script context
-	CScriptHandle& CScriptHandle::Assign(void* ref, int typeId)
+	CScriptHandle& CScriptHandle::Assign(void* ref, std::int32_t typeId)
 	{
 		// When receiving a null handle we just clear our memory
 		if (typeId == 0) {
@@ -177,7 +177,7 @@ namespace Jazz2::Scripting
 		return !(*this == o);
 	}
 
-	bool CScriptHandle::Equals(void* ref, int typeId) const
+	bool CScriptHandle::Equals(void* ref, std::int32_t typeId) const
 	{
 		// Null handles are received as reference to a null handle
 		if (typeId == 0)
@@ -199,7 +199,7 @@ namespace Jazz2::Scripting
 	}
 
 	// AngelScript: used as '@obj = cast<obj>(ref);'
-	void CScriptHandle::Cast(void** outRef, int typeId)
+	void CScriptHandle::Cast(void** outRef, std::int32_t typeId)
 	{
 		// If we hold a null handle, then just return null
 		if (m_type == nullptr) {
@@ -240,7 +240,7 @@ namespace Jazz2::Scripting
 
 	void RegisterRef(asIScriptEngine* engine)
 	{
-		int r;
+		std::int32_t r;
 
 #if AS_CAN_USE_CPP11
 		// With C++11 it is possible to use asGetTypeTraits to automatically determine the flags that represent the C++ class
@@ -250,15 +250,15 @@ namespace Jazz2::Scripting
 #endif
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR(Construct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ref &in)", asFUNCTIONPR(Construct, (CScriptHandle*, const CScriptHandle&), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ?&in)", asFUNCTIONPR(Construct, (CScriptHandle*, void*, int), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ?&in)", asFUNCTIONPR(Construct, (CScriptHandle*, void*, std::int32_t), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_DESTRUCT, "void f()", asFUNCTIONPR(Destruct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_ENUMREFS, "void f(int&in)", asMETHOD(CScriptHandle, EnumReferences), asCALL_THISCALL); ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_RELEASEREFS, "void f(int&in)", asMETHOD(CScriptHandle, ReleaseReferences), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("ref", "void opCast(?&out)", asMETHODPR(CScriptHandle, Cast, (void**, int), void), asCALL_THISCALL); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("ref", "void opCast(?&out)", asMETHODPR(CScriptHandle, Cast, (void**, std::int32_t), void), asCALL_THISCALL); ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ref &in)", asMETHOD(CScriptHandle, operator=), asCALL_THISCALL); ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ?&in)", asMETHOD(CScriptHandle, Assign), asCALL_THISCALL); ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ref &in) const", asMETHODPR(CScriptHandle, operator==, (const CScriptHandle&) const, bool), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ?&in) const", asMETHODPR(CScriptHandle, Equals, (void*, int) const, bool), asCALL_THISCALL); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ?&in) const", asMETHODPR(CScriptHandle, Equals, (void*, std::int32_t) const, bool), asCALL_THISCALL); ASSERT(r >= 0);
 	}
 }
 

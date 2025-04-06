@@ -25,14 +25,14 @@ namespace Jazz2::Scripting
 		// Compare equalness
 		bool operator==(const CScriptHandle& o) const;
 		bool operator!=(const CScriptHandle& o) const;
-		bool Equals(void* ref, int typeId) const;
+		bool Equals(void* ref, std::int32_t typeId) const;
 
 		// Dynamic cast to desired handle type
-		void Cast(void** outRef, int typeId);
+		void Cast(void** outRef, std::int32_t typeId);
 
 		// Returns the type of the reference held
 		asITypeInfo* GetType() const;
-		int GetTypeId() const;
+		std::int32_t GetTypeId() const;
 
 		// Get the reference
 		void* GetRef();
@@ -43,15 +43,15 @@ namespace Jazz2::Scripting
 
 	protected:
 		// These functions need to have access to protected members in order to call them from the script engine
-		friend void Construct(CScriptHandle* self, void* ref, int typeId);
+		friend void Construct(CScriptHandle* self, void* ref, std::int32_t typeId);
 		friend void RegisterRef(asIScriptEngine* engine);
 
 		void ReleaseHandle();
 		void AddRefHandle();
 
 		// These shouldn't be called directly by the application as they requires an active context
-		CScriptHandle(void* ref, int typeId);
-		CScriptHandle &Assign(void* ref, int typeId);
+		CScriptHandle(void* ref, std::int32_t typeId);
+		CScriptHandle &Assign(void* ref, std::int32_t typeId);
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		void* m_ref;

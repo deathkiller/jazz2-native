@@ -22,12 +22,12 @@ namespace Jazz2::Scripting
 	class ScriptPlayerWrapper
 	{
 	public:
-		ScriptPlayerWrapper(LevelScriptLoader* levelScripts, int playerIndex);
+		ScriptPlayerWrapper(LevelScriptLoader* levelScripts, std::int32_t playerIndex);
 		ScriptPlayerWrapper(LevelScriptLoader* levelScripts, Actors::Player* player);
 		~ScriptPlayerWrapper();
 
 		static void RegisterFactory(asIScriptEngine* engine);
-		static ScriptPlayerWrapper* Factory(int playerIndex);
+		static ScriptPlayerWrapper* Factory(std::int32_t playerIndex);
 
 		void AddRef();
 		void Release();
@@ -46,33 +46,32 @@ namespace Jazz2::Scripting
 #endif
 
 		bool asIsInGame() const;
-		int asGetIndex() const;
-		int asGetPlayerType() const;
+		std::int32_t asGetIndex() const;
+		std::int32_t asGetPlayerType() const;
 		float asGetX() const;
 		float asGetY() const;
 		float asGetSpeedX() const;
 		float asGetSpeedY() const;
-		int asGetHealth() const;
-		int asGetLives() const;
-		int asGetFoodEaten() const;
-		int asGetScore() const;
-		void asSetScore(int value);
-		uint16_t asGetLayer() const;
+		std::int32_t asGetHealth() const;
+		std::int32_t asGetLives() const;
+		std::int32_t asGetFoodEaten() const;
+		std::int32_t asGetScore() const;
+		void asSetScore(std::int32_t value);
+		std::uint16_t asGetLayer() const;
 		void asSetLayer(uint16_t value);
 		bool asGetWeaponAllowed() const;
 		void asSetWeaponAllowed(bool value);
-		int asGetWeaponAmmo(int weaponType) const;
-		void asSetWeaponAmmo(int weaponType, int value);
+		std::int32_t asGetWeaponAmmo(std::int32_t weaponType) const;
+		void asSetWeaponAmmo(std::int32_t weaponType, std::int32_t value);
 
-		void asDecreaseHealth(int amount);
+		void asDecreaseHealth(std::int32_t amount);
 		void asMoveTo(float x, float y);
 		void asWarpTo(float x, float y);
 		void asMoveBy(float x, float y);
 		void asPlaySfx(const String& identifier, float gain, float pitch);
-		void asSetAnimation(const String& name);
-		void asSetAnimationState(int state);
+		void asSetAnimationState(std::int32_t state);
 
-		void asMorphTo(int playerType);
+		void asMorphTo(std::int32_t playerType);
 		void asMorphRevert();
 
 	private:

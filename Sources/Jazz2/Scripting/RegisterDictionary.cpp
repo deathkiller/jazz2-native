@@ -106,7 +106,7 @@ namespace Jazz2::Scripting
 		bool keyAsRef = cache.keyType->GetFlags() & asOBJ_REF ? true : false;
 
 		// Initialize the dictionary from the buffer
-		asUINT length = *(asUINT*)buffer;
+		std::uint32_t length = *(std::uint32_t*)buffer;
 		buffer += 4;
 
 		while (length--) {
@@ -126,25 +126,25 @@ namespace Jazz2::Scripting
 			}
 
 			// Get the type id of the value
-			int typeId = *(int*)buffer;
-			buffer += sizeof(int);
+			std::int32_t typeId = *(std::int32_t*)buffer;
+			buffer += sizeof(std::int32_t);
 
 			// Depending on the type id, the value will inline in the buffer or a pointer
 			void* ref = (void*)buffer;
 
 			if (typeId >= asTYPEID_INT8 && typeId <= asTYPEID_DOUBLE) {
 				// Convert primitive values to either int64 or double, so we can use the overloaded Set methods
-				asINT64 i64;
+				std::int64_t i64;
 				double d;
 				switch (typeId) {
-					case asTYPEID_INT8:   i64 = *(char*)ref; break;
-					case asTYPEID_INT16:  i64 = *(short*)ref; break;
-					case asTYPEID_INT32:  i64 = *(int*)ref; break;
-					case asTYPEID_INT64:  i64 = *(asINT64*)ref; break;
-					case asTYPEID_UINT8:  i64 = *(unsigned char*)ref; break;
-					case asTYPEID_UINT16: i64 = *(unsigned short*)ref; break;
-					case asTYPEID_UINT32: i64 = *(unsigned int*)ref; break;
-					case asTYPEID_UINT64: i64 = *(asINT64*)ref; break;
+					case asTYPEID_INT8:   i64 = *(std::int8_t*)ref; break;
+					case asTYPEID_INT16:  i64 = *(std::int16_t*)ref; break;
+					case asTYPEID_INT32:  i64 = *(std::int32_t*)ref; break;
+					case asTYPEID_INT64:  i64 = *(std::int64_t*)ref; break;
+					case asTYPEID_UINT8:  i64 = *(std::uint8_t*)ref; break;
+					case asTYPEID_UINT16: i64 = *(std::uint16_t*)ref; break;
+					case asTYPEID_UINT32: i64 = *(std::uint32_t*)ref; break;
+					case asTYPEID_UINT64: i64 = *(std::uint64_t*)ref; break;
 					case asTYPEID_FLOAT:  d = *(float*)ref; break;
 					case asTYPEID_DOUBLE: d = *(double*)ref; break;
 				}
@@ -291,7 +291,7 @@ namespace Jazz2::Scripting
 		return 0;
 	}
 
-	void CScriptDictionary::Set(const dictKey_t& key, void* value, int typeId)
+	void CScriptDictionary::Set(const dictKey_t& key, void* value, std::int32_t typeId)
 	{
 		dictMap_t::iterator it;
 		it = dict.find(key);
@@ -306,9 +306,9 @@ namespace Jazz2::Scripting
 	// through implicit conversions. This simplifies the management of the
 	// numeric types when the script retrieves the stored value using a
 	// different type.
-	void CScriptDictionary::Set(const dictKey_t& key, const asINT64& value)
+	void CScriptDictionary::Set(const dictKey_t& key, const std::int64_t& value)
 	{
-		Set(key, const_cast<asINT64*>(&value), asTYPEID_INT64);
+		Set(key, const_cast<std::int64_t*>(&value), asTYPEID_INT64);
 	}
 
 	// This overloaded method is implemented so that all floating point types
@@ -321,7 +321,7 @@ namespace Jazz2::Scripting
 	}
 
 	// Returns true if the value was successfully retrieved
-	bool CScriptDictionary::Get(const dictKey_t& key, void* value, int typeId) const
+	bool CScriptDictionary::Get(const dictKey_t& key, void* value, std::int32_t typeId) const
 	{
 		dictMap_t::const_iterator it;
 		it = dict.find(key);
@@ -346,7 +346,7 @@ namespace Jazz2::Scripting
 		return -1;
 	}
 
-	bool CScriptDictionary::Get(const dictKey_t& key, asINT64& value) const
+	bool CScriptDictionary::Get(const dictKey_t& key, std::int64_t& value) const
 	{
 		return Get(key, &value, asTYPEID_INT64);
 	}
@@ -374,9 +374,9 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
-	asUINT CScriptDictionary::GetSize() const
+	std::uint32_t CScriptDictionary::GetSize() const
 	{
-		return asUINT(dict.size());
+		return std::uint32_t(dict.size());
 	}
 
 	bool CScriptDictionary::Delete(const dictKey_t& key)
@@ -408,8 +408,8 @@ namespace Jazz2::Scripting
 		asITypeInfo* ti = cache->arrayType;
 
 		// Create the array object
-		CScriptArray* array = CScriptArray::Create(ti, asUINT(dict.size()));
-		long current = -1;
+		CScriptArray* array = CScriptArray::Create(ti, std::uint32_t(dict.size()));
+		std::int32_t current = -1;
 		dictMap_t::const_iterator it;
 		for (it = dict.begin(); it != dict.end(); it++) {
 			current++;
@@ -425,7 +425,7 @@ namespace Jazz2::Scripting
 		m_typeId = 0;
 	}
 
-	CScriptDictValue::CScriptDictValue(asIScriptEngine* engine, void* value, int typeId)
+	CScriptDictValue::CScriptDictValue(asIScriptEngine* engine, void* value, std::int32_t typeId)
 	{
 		m_valueObj = 0;
 		m_typeId = 0;
@@ -470,7 +470,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void CScriptDictValue::Set(asIScriptEngine* engine, void* value, int typeId)
+	void CScriptDictValue::Set(asIScriptEngine* engine, void* value, std::int32_t typeId)
 	{
 		FreeValue(engine);
 
@@ -491,7 +491,7 @@ namespace Jazz2::Scripting
 		} else {
 			// Copy the primitive value
 			// We receive a pointer to the value.
-			int size = engine->GetSizeOfPrimitiveType(typeId);
+			std::int32_t size = engine->GetSizeOfPrimitiveType(typeId);
 			memcpy(&m_valueInt, value, size);
 		}
 	}
@@ -512,9 +512,9 @@ namespace Jazz2::Scripting
 	// through implicit conversions. This simplifies the management of the
 	// numeric types when the script retrieves the stored value using a
 	// different type.
-	void CScriptDictValue::Set(asIScriptEngine* engine, const asINT64& value)
+	void CScriptDictValue::Set(asIScriptEngine* engine, const std::int64_t& value)
 	{
-		Set(engine, const_cast<asINT64*>(&value), asTYPEID_INT64);
+		Set(engine, const_cast<std::int64_t*>(&value), asTYPEID_INT64);
 	}
 
 	// This overloaded method is implemented so that all floating point types
@@ -558,7 +558,7 @@ namespace Jazz2::Scripting
 			}
 		} else {
 			if (m_typeId == typeId) {
-				int size = engine->GetSizeOfPrimitiveType(typeId);
+				std::int32_t size = engine->GetSizeOfPrimitiveType(typeId);
 				std::memcpy(value, &m_valueInt, size);
 				return true;
 			}
@@ -571,12 +571,12 @@ namespace Jazz2::Scripting
 				else if (m_typeId == asTYPEID_BOOL) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					char localValue;
-					std::memcpy(&localValue, &m_valueInt, sizeof(char));
+					std::memcpy(&localValue, &m_valueInt, sizeof(std::int8_t));
 					*(double*)value = localValue ? 1.0 : 0.0;
 				} else if (m_typeId > asTYPEID_DOUBLE && (m_typeId & asTYPEID_MASK_OBJECT) == 0) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
 					int localValue;
-					std::memcpy(&localValue, &m_valueInt, sizeof(int));
+					std::memcpy(&localValue, &m_valueInt, sizeof(std::int32_t));
 					*(double*)value = double(localValue); // enums are 32bit
 				} else {
 					// The stored type is an object
@@ -587,58 +587,58 @@ namespace Jazz2::Scripting
 				return true;
 			} else if (typeId == asTYPEID_INT64) {
 				if (m_typeId == asTYPEID_DOUBLE)
-					*(asINT64*)value = asINT64(m_valueFlt);
+					*(std::int64_t*)value = std::int64_t(m_valueFlt);
 				else if (m_typeId == asTYPEID_BOOL) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
-					char localValue;
-					std::memcpy(&localValue, &m_valueInt, sizeof(char));
-					*(asINT64*)value = localValue ? 1 : 0;
+					std::int8_t localValue;
+					std::memcpy(&localValue, &m_valueInt, sizeof(std::int8_t));
+					*(std::int64_t*)value = localValue ? 1 : 0;
 				} else if (m_typeId > asTYPEID_DOUBLE && (m_typeId & asTYPEID_MASK_OBJECT) == 0) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
-					int localValue;
-					std::memcpy(&localValue, &m_valueInt, sizeof(int));
-					*(asINT64*)value = localValue; // enums are 32bit
+					std::int32_t localValue;
+					std::memcpy(&localValue, &m_valueInt, sizeof(std::int32_t));
+					*(std::int64_t*)value = localValue; // enums are 32bit
 				} else {
 					// The stored type is an object
 					// TODO: Check if the object has a conversion operator to a primitive value
-					*(asINT64*)value = 0;
+					*(std::int64_t*)value = 0;
 					return false;
 				}
 				return true;
 			} else if (typeId > asTYPEID_DOUBLE && (m_typeId & asTYPEID_MASK_OBJECT) == 0) {
 				// The desired type is an enum. These are always 32bit integers
 				if (m_typeId == asTYPEID_DOUBLE) {
-					*(int*)value = int(m_valueFlt);
+					*(std::int32_t*)value = std::int32_t(m_valueFlt);
 				} else if (m_typeId == asTYPEID_INT64) {
-					*(int*)value = int(m_valueInt);
+					*(std::int32_t*)value = std::int32_t(m_valueInt);
 				} else if (m_typeId == asTYPEID_BOOL) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
-					char localValue;
-					std::memcpy(&localValue, &m_valueInt, sizeof(char));
-					*(int*)value = localValue ? 1 : 0;
+					std::int8_t localValue;
+					std::memcpy(&localValue, &m_valueInt, sizeof(std::int8_t));
+					*(std::int32_t*)value = localValue ? 1 : 0;
 				} else if (m_typeId > asTYPEID_DOUBLE && (m_typeId & asTYPEID_MASK_OBJECT) == 0) {
 					// Use memcpy instead of type cast to make sure the code is endianess agnostic
-					int localValue;
-					std::memcpy(&localValue, &m_valueInt, sizeof(int));
-					*(int*)value = localValue; // enums are 32bit
+					std::int32_t localValue;
+					std::memcpy(&localValue, &m_valueInt, sizeof(std::int32_t));
+					*(std::int32_t*)value = localValue; // enums are 32bit
 				} else {
 					// The stored type is an object
 					// TODO: Check if the object has a conversion operator to a primitive value
-					*(int*)value = 0;
+					*(std::int32_t*)value = 0;
 					return false;
 				}
 				return true;
 			} else if (typeId == asTYPEID_BOOL) {
 				if (m_typeId & asTYPEID_OBJHANDLE) {
 					// TODO: Check if the object has a conversion operator to a primitive value
-					*(bool*)value = m_valueObj ? true : false;
+					*(bool*)value = (m_valueObj ? true : false);
 				} else if (m_typeId & asTYPEID_MASK_OBJECT) {
 					// TODO: Check if the object has a conversion operator to a primitive value
 					*(bool*)value = true;
 				} else {
 					// Compare only the bytes that were actually set
 					asQWORD zero = 0;
-					int size = engine->GetSizeOfPrimitiveType(m_typeId);
+					std::int32_t size = engine->GetSizeOfPrimitiveType(m_typeId);
 					*(bool*)value = std::memcmp(&m_valueInt, &zero, size) == 0 ? false : true;
 				}
 				return true;
@@ -660,7 +660,7 @@ namespace Jazz2::Scripting
 		return static_cast<const void*>(&m_valueObj);
 	}
 
-	bool CScriptDictValue::Get(asIScriptEngine* engine, asINT64& value) const
+	bool CScriptDictValue::Get(asIScriptEngine* engine, std::int64_t& value) const
 	{
 		return Get(engine, &value, asTYPEID_INT64);
 	}
@@ -690,7 +690,7 @@ namespace Jazz2::Scripting
 		obj->~CScriptDictValue();
 	}
 
-	static CScriptDictValue& CScriptDictValue_opAssign(void* ref, int typeId, CScriptDictValue* obj)
+	static CScriptDictValue& CScriptDictValue_opAssign(void* ref, std::int32_t typeId, CScriptDictValue* obj)
 	{
 		asIScriptContext* ctx = asGetActiveContext();
 		if (ctx != nullptr) {
@@ -716,12 +716,12 @@ namespace Jazz2::Scripting
 		return CScriptDictValue_opAssign(&val, asTYPEID_DOUBLE, obj);
 	}
 
-	static CScriptDictValue& CScriptDictValue_opAssign(asINT64 val, CScriptDictValue* obj)
+	static CScriptDictValue& CScriptDictValue_opAssign(std::int64_t val, CScriptDictValue* obj)
 	{
 		return CScriptDictValue_opAssign(&val, asTYPEID_INT64, obj);
 	}
 
-	static void CScriptDictValue_opCast(void* ref, int typeId, CScriptDictValue* obj)
+	static void CScriptDictValue_opCast(void* ref, std::int32_t typeId, CScriptDictValue* obj)
 	{
 		asIScriptContext* ctx = asGetActiveContext();
 		if (ctx != nullptr) {
@@ -730,9 +730,9 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	static asINT64 CScriptDictValue_opConvInt(CScriptDictValue* obj)
+	static std::int64_t CScriptDictValue_opConvInt(CScriptDictValue* obj)
 	{
-		asINT64 value;
+		std::int64_t value;
 		CScriptDictValue_opCast(&value, asTYPEID_INT64, obj);
 		return value;
 	}
@@ -757,7 +757,7 @@ namespace Jazz2::Scripting
 
 	void RegisterDictionary(asIScriptEngine* engine)
 	{
-		int r;
+		std::int32_t r;
 
 		// The array<string> type must be available
 		RETURN_ASSERT(engine->GetTypeInfoByDecl("array<string>"));
@@ -777,10 +777,10 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectMethod("dictionaryValue", "dictionaryValue &opHndlAssign(const dictionaryValue &in)", asFUNCTIONPR(CScriptDictValue_opAssign, (const CScriptDictValue&, CScriptDictValue*), CScriptDictValue&), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("dictionaryValue", "dictionaryValue &opAssign(const ?&in)", asFUNCTIONPR(CScriptDictValue_opAssign, (void*, int, CScriptDictValue*), CScriptDictValue&), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("dictionaryValue", "dictionaryValue &opAssign(double)", asFUNCTIONPR(CScriptDictValue_opAssign, (double, CScriptDictValue*), CScriptDictValue&), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("dictionaryValue", "dictionaryValue &opAssign(int64)", asFUNCTIONPR(CScriptDictValue_opAssign, (asINT64, CScriptDictValue*), CScriptDictValue&), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("dictionaryValue", "dictionaryValue &opAssign(int64)", asFUNCTIONPR(CScriptDictValue_opAssign, (std::int64_t, CScriptDictValue*), CScriptDictValue&), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("dictionaryValue", "void opCast(?&out)", asFUNCTIONPR(CScriptDictValue_opCast, (void*, int, CScriptDictValue*), void), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("dictionaryValue", "void opConv(?&out)", asFUNCTIONPR(CScriptDictValue_opCast, (void*, int, CScriptDictValue*), void), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("dictionaryValue", "int64 opConv()", asFUNCTIONPR(CScriptDictValue_opConvInt, (CScriptDictValue*), asINT64), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("dictionaryValue", "int64 opConv()", asFUNCTIONPR(CScriptDictValue_opConvInt, (CScriptDictValue*), std::int64_t), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("dictionaryValue", "double opConv()", asFUNCTIONPR(CScriptDictValue_opConvDouble, (CScriptDictValue*), double), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterObjectType("dictionary", sizeof(CScriptDictionary), asOBJ_REF | asOBJ_GC); RETURN_ASSERT(r >= 0);
@@ -795,8 +795,8 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectMethod("dictionary", "void set(const string &in, const ?&in)", asMETHODPR(CScriptDictionary, Set, (const dictKey_t&, void*, int), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("dictionary", "bool get(const string &in, ?&out) const", asMETHODPR(CScriptDictionary, Get, (const dictKey_t&, void*, int) const, bool), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
-		r = engine->RegisterObjectMethod("dictionary", "void set(const string &in, const int64&in)", asMETHODPR(CScriptDictionary, Set, (const dictKey_t&, const asINT64&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("dictionary", "bool get(const string &in, int64&out) const", asMETHODPR(CScriptDictionary, Get, (const dictKey_t&, asINT64&) const, bool), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("dictionary", "void set(const string &in, const int64&in)", asMETHODPR(CScriptDictionary, Set, (const dictKey_t&, const std::int64_t&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("dictionary", "bool get(const string &in, int64&out) const", asMETHODPR(CScriptDictionary, Get, (const dictKey_t&, std::int64_t&) const, bool), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterObjectMethod("dictionary", "void set(const string &in, const double&in)", asMETHODPR(CScriptDictionary, Set, (const dictKey_t&, const double&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("dictionary", "bool get(const string &in, double&out) const", asMETHODPR(CScriptDictionary, Get, (const dictKey_t&, double&) const, bool), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
@@ -891,7 +891,7 @@ namespace Jazz2::Scripting
 		return m_it->second.m_typeId;
 	}
 
-	bool CScriptDictionary::CIterator::GetValue(asINT64& value) const
+	bool CScriptDictionary::CIterator::GetValue(std::int64_t& value) const
 	{
 		return m_it->second.Get(m_dict.engine, &value, asTYPEID_INT64);
 	}
@@ -901,7 +901,7 @@ namespace Jazz2::Scripting
 		return m_it->second.Get(m_dict.engine, &value, asTYPEID_DOUBLE);
 	}
 
-	bool CScriptDictionary::CIterator::GetValue(void* value, int typeId) const
+	bool CScriptDictionary::CIterator::GetValue(void* value, std::int32_t typeId) const
 	{
 		return m_it->second.Get(m_dict.engine, value, typeId);
 	}

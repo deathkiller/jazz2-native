@@ -6,6 +6,7 @@
 #include "MpGameMode.h"
 #include "ServerInitialization.h"
 #include "PeerDescriptor.h"
+#include "../../nCine/Threading/LockedPtr.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
@@ -42,7 +43,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t GetPeerCount() const;
 
 		/** @brief Returns all connected peers */
-		const HashMap<Peer, std::shared_ptr<PeerDescriptor>>& GetPeers() const;
+		LockedPtr<const HashMap<Peer, std::shared_ptr<PeerDescriptor>>, Spinlock> GetPeers();
 
 		/** @brief Returns session peer descriptor for the local peer */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor(LocalPeerT);
@@ -77,7 +78,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Converts the non-localized string representation back to @ref MpGameMode */
 		static MpGameMode StringToGameMode(StringView value);
 		/** @brief Converts UUID to the string representation */
-		static String UuidToString(ArrayView<std::uint8_t> uuid);
+		static String UuidToString(StaticArrayView<16, std::uint8_t> uuid);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -91,6 +92,7 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<ServerConfiguration> _serverConfig;
 		std::unique_ptr<ServerDiscovery> _discovery;
 		HashMap<Peer, std::shared_ptr<PeerDescriptor>> _peerDesc;
+		Spinlock _lock;
 
 		static void FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level);
 		static void VerifyServerConfiguration(ServerConfiguration& serverConfig);

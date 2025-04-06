@@ -1608,6 +1608,9 @@
     <ClInclude Include="Jazz2\Multiplayer\PeerDescriptor.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Threading\LockedPtr.h">
+      <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

@@ -30,27 +30,27 @@ namespace Jazz2::Scripting
 		// to receive the script engine pointer in all operations. The engine pointer
 		// is not kept as member in order to keep the size down
 		CScriptDictValue();
-		CScriptDictValue(asIScriptEngine* engine, void* value, int typeId);
+		CScriptDictValue(asIScriptEngine* engine, void* value, std::int32_t typeId);
 
 		// Destructor must not be called without first calling FreeValue, otherwise a memory leak will occur
 		~CScriptDictValue();
 
 		// Replace the stored value
-		void Set(asIScriptEngine* engine, void* value, int typeId);
-		void Set(asIScriptEngine* engine, const asINT64& value);
+		void Set(asIScriptEngine* engine, void* value, std::int32_t typeId);
+		void Set(asIScriptEngine* engine, const std::int64_t& value);
 		void Set(asIScriptEngine* engine, const double& value);
 		void Set(asIScriptEngine* engine, CScriptDictValue& value);
 
 		// Gets the stored value. Returns false if the value isn't compatible with the informed typeId
-		bool Get(asIScriptEngine* engine, void* value, int typeId) const;
-		bool Get(asIScriptEngine* engine, asINT64& value) const;
+		bool Get(asIScriptEngine* engine, void* value, std::int32_t typeId) const;
+		bool Get(asIScriptEngine* engine, std::int64_t& value) const;
 		bool Get(asIScriptEngine* engine, double& value) const;
 
 		// Returns the address of the stored value for inspection
 		const void* GetAddressOfValue() const;
 
 		// Returns the type id of the stored value
-		int  GetTypeId() const;
+		std::int32_t GetTypeId() const;
 
 		// Free the stored value
 		void FreeValue(asIScriptEngine* engine);
@@ -66,7 +66,7 @@ namespace Jazz2::Scripting
 			double  m_valueFlt;
 			void* m_valueObj;
 		};
-		int m_typeId;
+		std::int32_t m_typeId;
 #endif
 	};
 
@@ -88,13 +88,13 @@ namespace Jazz2::Scripting
 		CScriptDictionary& operator=(const CScriptDictionary& other);
 
 		// Sets a key/value pair
-		void Set(const dictKey_t& key, void* value, int typeId);
-		void Set(const dictKey_t& key, const asINT64& value);
+		void Set(const dictKey_t& key, void* value, std::int32_t typeId);
+		void Set(const dictKey_t& key, const std::int64_t& value);
 		void Set(const dictKey_t& key, const double& value);
 
 		// Gets the stored value. Returns false if the value isn't compatible with the informed typeId
-		bool Get(const dictKey_t& key, void* value, int typeId) const;
-		bool Get(const dictKey_t& key, asINT64& value) const;
+		bool Get(const dictKey_t& key, void* value, std::int32_t typeId) const;
+		bool Get(const dictKey_t& key, std::int64_t& value) const;
 		bool Get(const dictKey_t& key, double& value) const;
 
 		// Index accessors. If the dictionary is not const it inserts the value if it doesn't already exist
@@ -103,7 +103,7 @@ namespace Jazz2::Scripting
 		const CScriptDictValue* operator[](const dictKey_t& key) const;
 
 		// Returns the type id of the stored value, or negative if it doesn't exist
-		int GetTypeId(const dictKey_t& key) const;
+		std::int32_t GetTypeId(const dictKey_t& key) const;
 
 		// Returns true if the key is set
 		bool Exists(const dictKey_t& key) const;
@@ -140,10 +140,10 @@ namespace Jazz2::Scripting
 
 			// Accessors
 			const dictKey_t& GetKey() const;
-			int GetTypeId() const;
-			bool GetValue(asINT64& value) const;
+			std::int32_t GetTypeId() const;
+			bool GetValue(std::int64_t& value) const;
 			bool GetValue(double& value) const;
-			bool GetValue(void* value, int typeId) const;
+			bool GetValue(void* value, std::int32_t typeId) const;
 			const void* GetAddressOfValue() const;
 
 		protected:
@@ -163,7 +163,7 @@ namespace Jazz2::Scripting
 		CIterator find(const dictKey_t& key) const;
 
 		// Garbage collections behaviours
-		int GetRefCount();
+		std::int32_t GetRefCount();
 		void SetGCFlag();
 		bool GetGCFlag();
 		void EnumReferences(asIScriptEngine* engine);
@@ -185,7 +185,7 @@ namespace Jazz2::Scripting
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Our properties
 		asIScriptEngine* engine;
-		mutable int refCount;
+		mutable std::int32_t refCount;
 		mutable bool gcFlag;
 		dictMap_t dict;
 #endif

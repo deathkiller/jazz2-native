@@ -100,10 +100,25 @@ namespace Jazz2::UI::Multiplayer
 		return true;
 	}
 
-	void MpHUD::ShowCountdown(StringView text)
+	void MpHUD::ShowCountdown(std::int32_t secsLeft)
 	{
-		_countdownText = text;
+		StringView sfxName;
+		if (secsLeft > 0) {
+			char buffer[16];
+			u32tos(secsLeft, buffer);
+			_countdownText = buffer;
+			sfxName = "Countdown"_s;
+		} else {
+			_countdownText = "Go!"_s;
+			sfxName = "CountdownEnd"_s;
+
+		}
 		_countdownTimeLeft = FrameTimer::FramesPerSecond;
+
+		auto it = _metadata->Sounds.find(String::nullTerminatedView(sfxName));
+		if (it != _metadata->Sounds.end() && !it->second.Buffers.empty()) {
+			_levelHandler->PlaySfx(nullptr, sfxName, &it->second.Buffers[0]->Buffer, Vector3f::Zero, true, 1.0f, 1.0f);
+		}
 	}
 
 	void MpHUD::OnDrawScore(const Rectf& view, Actors::Player* player)
@@ -140,9 +155,9 @@ namespace Jazz2::UI::Multiplayer
 			formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
 			auto gameStartsInText = _f("Game starts in %s", stringBuffer);
 			_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
-				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			return;
 		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::WaitingForMinPlayers) {
@@ -150,9 +165,9 @@ namespace Jazz2::UI::Multiplayer
 			std::int32_t playersNeeded = (std::int32_t)(serverConfig.MinPlayerCount - mpLevelHandler->_players.size());
 			auto waitingText = _fn("Waiting for %i more player", "Waiting for %i more players", playersNeeded, playersNeeded);
 			_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
-				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			return;
 		} else if (mpLevelHandler->_levelState != MpLevelHandler::LevelState::Running) {

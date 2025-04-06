@@ -27,7 +27,7 @@ namespace Jazz2::Scripting
 		~ScriptActorWrapper();
 
 		static void RegisterFactory(asIScriptEngine* engine, asIScriptModule* module);
-		static ScriptActorWrapper* Factory(int actorType);
+		static ScriptActorWrapper* Factory(std::int32_t actorType);
 
 		void AddRef();
 		void Release();
@@ -71,16 +71,15 @@ namespace Jazz2::Scripting
 		float asGetAlpha() const;
 		void asSetAlpha(float value);
 		uint16_t asGetLayer() const;
-		void asSetLayer(uint16_t value);
+		void asSetLayer(std::uint16_t value);
 
-		void asDecreaseHealth(int amount);
+		void asDecreaseHealth(std::int32_t amount);
 		bool asMoveTo(float x, float y, bool force);
 		bool asMoveBy(float x, float y, bool force);
 		void asTryStandardMovement(float timeMult);
 		void asRequestMetadata(const String& path);
 		void asPlaySfx(const String& identifier, float gain, float pitch);
-		void asSetAnimation(const String& name);
-		void asSetAnimationState(int state);
+		void asSetAnimationState(std::int32_t state);
 
 	private:
 		std::int32_t _refCount;
