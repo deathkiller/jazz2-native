@@ -680,6 +680,7 @@
     <ClInclude Include="nCine\ServiceLocator.h" />
     <ClInclude Include="nCine\Threading\IThreadCommand.h" />
     <ClInclude Include="nCine\Threading\IThreadPool.h" />
+    <ClInclude Include="nCine\Threading\LockedPtr.h" />
     <ClInclude Include="nCine\Threading\Thread.h" />
     <ClInclude Include="nCine\Threading\ThreadPool.h" />
     <ClInclude Include="nCine\Threading\ThreadSync.h" />

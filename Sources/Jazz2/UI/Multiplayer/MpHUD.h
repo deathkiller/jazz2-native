@@ -17,7 +17,7 @@ namespace Jazz2::UI::Multiplayer
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 		/** @brief Shows countdown text in the middle of the screen */
-		void ShowCountdown(StringView text);
+		void ShowCountdown(std::int32_t secsLeft);
 
 	protected:
 		void OnDrawScore(const Rectf& view, Actors::Player* player) override;

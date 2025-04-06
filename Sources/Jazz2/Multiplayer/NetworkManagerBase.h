@@ -142,11 +142,11 @@ namespace Jazz2::Multiplayer
 		_ENetHost* _host;
 		Thread _thread;
 		NetworkState _state;
+		std::uint32_t _clientData;
 		SmallVector<_ENetPeer*, 1> _peers;
 		INetworkHandler* _handler;
-		Spinlock _lock;
 		SmallVector<ENetAddress, 0> _desiredEndpoints;
-		std::uint32_t _clientData;
+		Spinlock _lock;
 
 		static void InitializeBackend();
 		static void ReleaseBackend();

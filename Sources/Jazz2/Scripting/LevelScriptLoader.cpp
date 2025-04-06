@@ -47,12 +47,12 @@ namespace Jazz2::Scripting
 		return modff(v, &intPart);
 	}
 
-	static int asRandom()
+	static std::int32_t asRandom()
 	{
 		return Random().Next();
 	}
 
-	static int asRandom(int max)
+	static std::int32_t asRandom(std::int32_t max)
 	{
 		return Random().Fast(0, max);
 	}
@@ -3604,7 +3604,7 @@ namespace Jazz2::Scripting
 		ContentResolver::Get().PreloadMetadataAsync(path);
 	}
 
-	void LevelScriptLoader::asRegisterSpawnable(int eventType, const String& typeName)
+	void LevelScriptLoader::asRegisterSpawnable(std::int32_t eventType, const String& typeName)
 	{
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
@@ -3639,7 +3639,7 @@ namespace Jazz2::Scripting
 		return nullptr;
 	}
 
-	void LevelScriptLoader::asSpawnEvent(int eventType, int x, int y)
+	void LevelScriptLoader::asSpawnEvent(std::int32_t eventType, std::int32_t x, std::int32_t y)
 	{
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
@@ -3650,7 +3650,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void LevelScriptLoader::asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams)
+	void LevelScriptLoader::asSpawnEventParams(std::int32_t eventType, std::int32_t x, std::int32_t y, const CScriptArray& eventParams)
 	{
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
@@ -3664,7 +3664,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void LevelScriptLoader::asSpawnType(const String& typeName, int x, int y)
+	void LevelScriptLoader::asSpawnType(const String& typeName, std::int32_t x, std::int32_t y)
 	{
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
@@ -3682,7 +3682,7 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
 	}
 
-	void LevelScriptLoader::asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams)
+	void LevelScriptLoader::asSpawnTypeParams(const String& typeName, std::int32_t x, std::int32_t y, const CScriptArray& eventParams)
 	{
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
@@ -3703,7 +3703,7 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
 	}
 
-	void LevelScriptLoader::asChangeLevel(int exitType, const String& path)
+	void LevelScriptLoader::asChangeLevel(std::int32_t exitType, const String& path)
 	{
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->BeginLevelChange(nullptr, (ExitType)exitType, path);
@@ -3715,7 +3715,7 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->ShowLevelText(text);
 	}
 
-	void LevelScriptLoader::asSetWeather(uint8_t weatherType, uint8_t intensity)
+	void LevelScriptLoader::asSetWeather(std::uint8_t weatherType, std::uint8_t intensity)
 	{
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->SetWeather((WeatherType)weatherType, intensity);

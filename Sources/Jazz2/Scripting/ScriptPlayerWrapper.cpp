@@ -11,7 +11,7 @@ using namespace Jazz2::Actors;
 
 namespace Jazz2::Scripting
 {
-	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScriptLoader* levelScripts, int playerIndex)
+	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScriptLoader* levelScripts, std::int32_t playerIndex)
 		: _levelScripts(levelScripts), _refCount(1)
 	{
 		auto players = levelScripts->GetPlayers();
@@ -29,7 +29,7 @@ namespace Jazz2::Scripting
 
 	void ScriptPlayerWrapper::RegisterFactory(asIScriptEngine* engine)
 	{
-		int r;
+		std::int32_t r;
 		r = engine->RegisterObjectType(AsClassName, 0, asOBJ_REF); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour(AsClassName, asBEHAVE_FACTORY, AsClassName " @f(int = 0)", asFUNCTION(ScriptPlayerWrapper::Factory), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour(AsClassName, asBEHAVE_ADDREF, "void f()", asMETHOD(ScriptPlayerWrapper, AddRef), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
@@ -66,7 +66,7 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectMethod(AsClassName, "void MorphRevert()", asMETHOD(ScriptPlayerWrapper, asMorphRevert), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 	}
 
-	ScriptPlayerWrapper* ScriptPlayerWrapper::Factory(int playerIndex)
+	ScriptPlayerWrapper* ScriptPlayerWrapper::Factory(std::int32_t playerIndex)
 	{
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 
@@ -92,14 +92,14 @@ namespace Jazz2::Scripting
 		return (_player != nullptr);
 	}
 
-	int ScriptPlayerWrapper::asGetIndex() const
+	std::int32_t ScriptPlayerWrapper::asGetIndex() const
 	{
 		return (_player != nullptr ? _player->_playerIndex : -1);
 	}
 
-	int ScriptPlayerWrapper::asGetPlayerType() const
+	std::int32_t ScriptPlayerWrapper::asGetPlayerType() const
 	{
-		return (_player != nullptr ? (int)_player->_playerType : -1);
+		return (_player != nullptr ? (std::int32_t)_player->_playerType : -1);
 	}
 
 	float ScriptPlayerWrapper::asGetX() const
@@ -122,22 +122,22 @@ namespace Jazz2::Scripting
 		return (_player != nullptr ? _player->_speed.Y : -1);
 	}
 
-	int ScriptPlayerWrapper::asGetHealth() const
+	std::int32_t ScriptPlayerWrapper::asGetHealth() const
 	{
 		return (_player != nullptr ? _player->_health : -1);
 	}
 
-	int ScriptPlayerWrapper::asGetLives() const
+	std::int32_t ScriptPlayerWrapper::asGetLives() const
 	{
 		return (_player != nullptr ? _player->_lives : -1);
 	}
 
-	int ScriptPlayerWrapper::asGetFoodEaten() const
+	std::int32_t ScriptPlayerWrapper::asGetFoodEaten() const
 	{
 		return (_player != nullptr ? _player->_foodEaten : -1);
 	}
 
-	int ScriptPlayerWrapper::asGetScore() const
+	std::int32_t ScriptPlayerWrapper::asGetScore() const
 	{
 		return (_player != nullptr ? _player->_score : -1);
 	}
@@ -149,12 +149,12 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	uint16_t ScriptPlayerWrapper::asGetLayer() const
+	std::uint16_t ScriptPlayerWrapper::asGetLayer() const
 	{
 		return (_player != nullptr ? _player->_renderer.layer() : 0);
 	}
 
-	void ScriptPlayerWrapper::asSetLayer(uint16_t value)
+	void ScriptPlayerWrapper::asSetLayer(std::uint16_t value)
 	{
 		if (_player != nullptr) {
 			_player->_renderer.setLayer(value);
@@ -173,19 +173,19 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	int ScriptPlayerWrapper::asGetWeaponAmmo(int weaponType) const
+	std::int32_t ScriptPlayerWrapper::asGetWeaponAmmo(std::int32_t weaponType) const
 	{
-		return (_player != nullptr && weaponType >= 0 && weaponType < (int)WeaponType::Count ? _player->_weaponAmmo[weaponType] : -1);
+		return (_player != nullptr && weaponType >= 0 && weaponType < (std::int32_t)WeaponType::Count ? _player->_weaponAmmo[weaponType] : -1);
 	}
 
-	void ScriptPlayerWrapper::asSetWeaponAmmo(int weaponType, int value)
+	void ScriptPlayerWrapper::asSetWeaponAmmo(std::int32_t weaponType, std::int32_t value)
 	{
-		if (_player != nullptr && weaponType >= 0 && weaponType < (int)WeaponType::Count) {
+		if (_player != nullptr && weaponType >= 0 && weaponType < (std::int32_t)WeaponType::Count) {
 			_player->_weaponAmmo[weaponType] = value;
 		}
 	}
 
-	void ScriptPlayerWrapper::asDecreaseHealth(int amount)
+	void ScriptPlayerWrapper::asDecreaseHealth(std::int32_t amount)
 	{
 		if (_player != nullptr) {
 			_player->DecreaseHealth(amount);
@@ -220,14 +220,14 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void ScriptPlayerWrapper::asSetAnimationState(int state)
+	void ScriptPlayerWrapper::asSetAnimationState(std::int32_t state)
 	{
 		if (_player != nullptr) {
 			_player->SetAnimation((AnimState)state);
 		}
 	}
 
-	void ScriptPlayerWrapper::asMorphTo(int playerType)
+	void ScriptPlayerWrapper::asMorphTo(std::int32_t playerType)
 	{
 		if (_player != nullptr) {
 			_player->MorphTo((PlayerType)playerType);

@@ -76,13 +76,14 @@ namespace Jazz2::Multiplayer
 		return std::uint32_t(_peerDesc.size());
 	}
 
-	const HashMap<Peer, std::shared_ptr<PeerDescriptor>>& NetworkManager::GetPeers() const
+	LockedPtr<const HashMap<Peer, std::shared_ptr<PeerDescriptor>>, Spinlock> NetworkManager::GetPeers()
 	{
-		return _peerDesc;
+		return LockedPtr<const HashMap<Peer, std::shared_ptr<PeerDescriptor>>, Spinlock>(&_peerDesc, std::unique_lock<Spinlock>(_lock));
 	}
 
 	std::shared_ptr<PeerDescriptor> NetworkManager::GetPeerDescriptor(LocalPeerT)
 	{
+		std::unique_lock<Spinlock> l(_lock);
 		auto it = _peerDesc.find(Peer{});
 		return (it != _peerDesc.end() ? it->second : nullptr);
 	}
@@ -93,6 +94,7 @@ namespace Jazz2::Multiplayer
 			return nullptr;
 		}
 
+		std::unique_lock<Spinlock> l(_lock);
 		auto it = _peerDesc.find(peer);
 		return (it != _peerDesc.end() ? it->second : nullptr);
 	}
@@ -115,6 +117,7 @@ namespace Jazz2::Multiplayer
 		VerifyServerConfiguration(*_serverConfig);
 
 		// Check if any newly banned player should be kicked
+		std::unique_lock<Spinlock> l(_lock);
 		for (auto& pair : _peerDesc) {
 			if (pair.second->RemotePeer) {
 				auto address = NetworkManagerBase::AddressToString(pair.second->RemotePeer);
@@ -491,7 +494,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	String NetworkManager::UuidToString(ArrayView<std::uint8_t> uuid)
+	String NetworkManager::UuidToString(StaticArrayView<16, std::uint8_t> uuid)
 	{
 		String uuidStr{NoInit, 39};
 		std::int32_t uuidStrLength = formatString(uuidStr.data(), uuidStr.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
@@ -515,6 +518,7 @@ namespace Jazz2::Multiplayer
 		ConnectionResult result = NetworkManagerBase::OnPeerConnected(peer, clientData);
 
 		if (result && isListening) {
+			std::unique_lock<Spinlock> l(_lock);
 			auto [peerDesc, inserted] = _peerDesc.emplace(peer, std::make_shared<PeerDescriptor>());
 			peerDesc->second->RemotePeer = peer;
 		}
@@ -527,6 +531,7 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase::OnPeerDisconnected(peer, reason);
 
 		if (GetState() == NetworkState::Listening) {
+			std::unique_lock<Spinlock> l(_lock);
 			auto it = _peerDesc.find(peer);
 			if (it != _peerDesc.end()) {
 				it->second->RemotePeer = {};

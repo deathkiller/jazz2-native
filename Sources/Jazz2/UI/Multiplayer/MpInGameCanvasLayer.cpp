@@ -24,7 +24,7 @@ namespace Jazz2::UI::Multiplayer
 		Canvas::OnDraw(renderQueue);
 
 		if (_levelHandler->_isServer) {
-			for (auto& [peer, peerDesc] : _levelHandler->_networkManager->GetPeers()) {
+			for (auto& [peer, peerDesc] : *_levelHandler->_networkManager->GetPeers()) {
 				if (peerDesc->Player != nullptr && peerDesc->Player->_renderer.isEnabled()) {
 					auto pos = peerDesc->Player->GetPos();
 					DrawStringShadow(peerDesc->PlayerName, pos.X - 4.0f, pos.Y - 42.0f);

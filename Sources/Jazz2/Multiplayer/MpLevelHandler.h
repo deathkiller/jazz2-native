@@ -5,6 +5,7 @@
 #include "../LevelHandler.h"
 #include "MpGameMode.h"
 #include "NetworkManager.h"
+#include "../Actors/Player.h"
 #include "../UI/InGameConsole.h"
 
 #include <Threading/Spinlock.h>
@@ -161,12 +162,16 @@ namespace Jazz2::Multiplayer
 		bool HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY);
 		/** @brief Called when a player is going to warp */
 		void HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags);
+		/** @brief Called when a player changed modifier */
+		void HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor);
 		/** @brief Called when a player takes a damage */
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		/** @brief Called when a player requests to synchronize weapon ammo */
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		/** @brief Called when a player requests to synchronize weapon upgrades */
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);
+		/** @brief Called when a player changed dizzy duration */
+		void HandlePlayerSetDizzyTime(Actors::Player* player, float timeLeft);
 		/** @brief Called when a player emits a weapon flare */
 		void HandlePlayerEmitWeaponFlare(Actors::Player* player);
 		/** @brief Called when a player changes their current weapon */
@@ -231,7 +236,7 @@ namespace Jazz2::Multiplayer
 		bool IsLocalPlayer(Actors::ActorBase* actor);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
-		void ShowAlertToAllPlayers(StringView text, bool isCountdown = false);
+		void ShowAlertToAllPlayers(StringView text);
 		void SetControllableToAllPlayers(bool enable);
 		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();

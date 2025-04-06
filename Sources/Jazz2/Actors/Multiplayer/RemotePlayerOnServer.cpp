@@ -157,6 +157,17 @@ namespace Jazz2::Actors::Multiplayer
 		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerBeforeWarp(this, pos, flags);
 	}
 
+	bool RemotePlayerOnServer::SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor)
+	{
+		if (!PlayerOnServer::SetModifier(modifier, decor)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetModifier(this, modifier, decor);
+
+		return true;
+	}
+
 	bool RemotePlayerOnServer::TakeDamage(std::int32_t amount, float pushForce)
 	{
 		if (!PlayerOnServer::TakeDamage(amount, pushForce)) {
@@ -184,6 +195,15 @@ namespace Jazz2::Actors::Multiplayer
 		PlayerOnServer::AddWeaponUpgrade(weaponType, upgrade);
 
 		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerRefreshWeaponUpgrades(this, weaponType);
+	}
+
+	bool RemotePlayerOnServer::SetDizzyTime(float timeLeft)
+	{
+		bool success = PlayerOnServer::SetDizzyTime(timeLeft);
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetDizzyTime(this, timeLeft);
+
+		return success;
 	}
 
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)

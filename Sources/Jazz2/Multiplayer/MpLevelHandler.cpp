@@ -91,7 +91,7 @@ namespace Jazz2::Multiplayer
 			// Reserve first 255 indices for players
 			_lastSpawnedActorId = UINT8_MAX;
 
-			for (auto& [peer, peerDesc] : _networkManager->GetPeers()) {
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 				peerDesc->LevelState = PeerLevelState::Unknown;
 				peerDesc->LastUpdated = 0;
 				if (peerDesc->RemotePeer) {
@@ -254,7 +254,7 @@ namespace Jazz2::Multiplayer
 							SetControllableToAllPlayers(false);
 							WarpAllPlayersToStart();
 							ResetAllPlayerStats();
-							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("3"_s);
+							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 							// TODO: Respawn all events and tilemap
 						} else {
 							_levelState = LevelState::WaitingForMinPlayers;
@@ -273,7 +273,7 @@ namespace Jazz2::Multiplayer
 							SetControllableToAllPlayers(false);
 							WarpAllPlayersToStart();
 							ResetAllPlayerStats();
-							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("3"_s);
+							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 							SendLevelStateToAllPlayers();
 							// TODO: Respawn all events and tilemap
 						}
@@ -284,7 +284,7 @@ namespace Jazz2::Multiplayer
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						_levelState = LevelState::Countdown2;
 						_gameTimeLeft = FrameTimer::FramesPerSecond;
-						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("2"_s);
+						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(2);
 						SendLevelStateToAllPlayers();
 					}
 					break;
@@ -293,7 +293,7 @@ namespace Jazz2::Multiplayer
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						_levelState = LevelState::Countdown1;
 						_gameTimeLeft = FrameTimer::FramesPerSecond;
-						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("1"_s);
+						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(1);
 						SendLevelStateToAllPlayers();
 					}
 					break;
@@ -305,7 +305,7 @@ namespace Jazz2::Multiplayer
 						_gameTimeLeft = serverConfig.MaxGameTimeSecs * FrameTimer::FramesPerSecond;
 
 						SetControllableToAllPlayers(true);
-						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("Go!"_s);
+						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(0);
 						SendLevelStateToAllPlayers();
 
 						for (auto* player : _players) {
@@ -766,15 +766,30 @@ namespace Jazz2::Multiplayer
 
 	std::shared_ptr<AudioBufferPlayer> MpLevelHandler::PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
+		Vector3f adjustedPos = pos;
+
 		if (_isServer) {
+			// TODO: Player weapon SFX doesn't work
 			std::uint32_t actorId;
-			auto it = _remotingActors.find(self);
 			if (auto* player = runtime_cast<Actors::Player*>(self)) {
 				actorId = player->_playerIndex;
-			} else if (it != _remotingActors.end()) {
-				actorId = it->second.ActorID;
+
+				if (sourceRelative) {
+					// Remote players don't have local viewport, so SFX cannot be relative to them
+					if (auto* remotePlayer = runtime_cast<RemotePlayerOnServer*>(self)) {
+						sourceRelative = false;
+						Vector2f pos = remotePlayer->GetPos();
+						adjustedPos.X += pos.X;
+						adjustedPos.Y += pos.Y;
+					}
+				}
 			} else {
-				actorId = UINT32_MAX;
+				auto it = _remotingActors.find(self);
+				if (it != _remotingActors.end()) {
+					actorId = it->second.ActorID;
+				} else {
+					actorId = UINT32_MAX;
+				}
 			}
 
 			if (actorId != UINT32_MAX) {
@@ -794,7 +809,7 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		return LevelHandler::PlaySfx(self, identifier, buffer, pos, sourceRelative, gain, pitch);
+		return LevelHandler::PlaySfx(self, identifier, buffer, adjustedPos, sourceRelative, gain, pitch);
 	}
 
 	std::shared_ptr<AudioBufferPlayer> MpLevelHandler::PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain, float pitch)
@@ -1048,6 +1063,32 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				std::uint32_t actorId;
+				auto it = _remotingActors.find(decor.get());
+				if (it != _remotingActors.end()) {
+					actorId = it->second.ActorID;
+				} else {
+					actorId = UINT32_MAX;
+				}
+
+				MemoryStream packet(10);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Modifier);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)modifier);
+				packet.WriteVariableUint32(actorId);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
 	void MpLevelHandler::HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce)
 	{
 		// TODO: Only called by RemotePlayerOnServer
@@ -1078,6 +1119,23 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
 				packet.WriteValue<std::uint16_t>((std::uint16_t)player->_weaponAmmo[(std::uint8_t)player->_currentWeapon]);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetDizzyTime(Actors::Player* player, float timeLeft)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::DizzyTime);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)timeLeft);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
@@ -1539,7 +1597,7 @@ namespace Jazz2::Multiplayer
 			flags |= 0x04;
 		}
 
-		for (auto& [peer, peerDesc] : _networkManager->GetPeers()) {
+		for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 			if (peerDesc->LevelState < PeerLevelState::LevelSynchronized) {
 				continue;
 			}
@@ -1564,7 +1622,7 @@ namespace Jazz2::Multiplayer
 			SetControllableToAllPlayers(false);
 			WarpAllPlayersToStart();
 			ResetAllPlayerStats();
-			static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("3"_s);
+			static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 			SendLevelStateToAllPlayers();
 		}
 
@@ -1620,7 +1678,7 @@ namespace Jazz2::Multiplayer
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
 			char infoBuffer[128];
-			for (auto& [playerPeer, peerDesc] : _networkManager->GetPeers()) {
+			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 				formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u - Treasure: %u",
 					peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
 					peerDesc->Laps + 1, serverConfig.TotalLaps, peerDesc->TreasureCollected);
@@ -1711,14 +1769,20 @@ namespace Jazz2::Multiplayer
 				return true;
 			}
 		} else if (line == "/refresh"_s) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			auto prevGameMode = serverConfig.GameMode;
+
 			_networkManager->RefreshServerConfiguration();
+
 			// Refresh all affected properties
-			SetWelcomeMessage(_networkManager->GetServerConfiguration().WelcomeMessage);
-			// TODO: Game mode
+			SetWelcomeMessage(serverConfig.WelcomeMessage);
+			if (serverConfig.GameMode != prevGameMode) {
+				SetGameMode(serverConfig.GameMode);
+			}
 			SendMessage(peer, UI::MessageLevel::Info, "Server configuration reloaded"_s);
 			return true;
 		} else if (line == "/reset points"_s) {
-			for (auto& [playerPeer, peerDesc] : _networkManager->GetPeers()) {
+			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 				peerDesc->Points = 0;
 
 				if (peerDesc->RemotePeer) {
@@ -2177,21 +2241,21 @@ namespace Jazz2::Multiplayer
 
 								switch (_levelState) {
 									case LevelState::Countdown3: {
-										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("3"_s);
+										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 										break;
 									}
 									case LevelState::Countdown2: {
-										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("2"_s);
+										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(2);
 										break;
 									}
 									case LevelState::Countdown1: {
-										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("1"_s);
+										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(1);
 										break;
 									}
 									case LevelState::Running: {
 										const auto& serverConfig = _networkManager->GetServerConfiguration();
 										if (serverConfig.GameMode != MpGameMode::Cooperation) {
-											static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown("Go!"_s);
+											static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(0);
 										}
 										break;
 									}
@@ -2333,11 +2397,7 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::ShowAlert - text: \"%s\"", text.data());
 
-					if ((flags & 0x01) != 0) {
-						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(text);
-					} else {
-						_hud->ShowLevelText(text);
-					}
+					_hud->ShowLevelText(text);
 					return true;
 				}
 				case ServerPacketType::ChatMessage: {
@@ -2614,12 +2674,18 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 						case PlayerPropertyType::Modifier: {
-							// TODO
+							Actors::Player::Modifier modifier = (Actors::Player::Modifier)packet.ReadValue<std::uint8_t>();
+							std::uint32_t decorActorId = packet.ReadVariableUint32();
+
+							_root->InvokeAsync([this, modifier, decorActorId]() {
+								std::unique_lock lock(_lock);
+								auto it = _remoteActors.find(decorActorId);
+								_players[0]->SetModifier(modifier, it != _remoteActors.end() ? it->second : nullptr);
+							}, NCINE_CURRENT_FUNCTION);
 							break;
 						}
 						case PlayerPropertyType::DizzyTime: {
-							// TODO
-							std::uint32_t dizzyTime = packet.ReadVariableUint32();
+							std::int32_t dizzyTime = packet.ReadVariableInt32();
 							_players[0]->SetDizzyTime(float(dizzyTime));
 							break;
 						}
@@ -2964,7 +3030,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::SynchronizePeers()
 	{
-		for (auto& [peer, peerDesc] : _networkManager->GetPeers()) {
+		for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 			if (peerDesc->LevelState == PeerLevelState::LevelLoaded) {
 				if (peerDesc != nullptr && peerDesc->PreferredPlayerType != PlayerType::None) {
 					peerDesc->LevelState = PeerLevelState::PlayerReady;
@@ -3227,20 +3293,15 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::ShowAlertToAllPlayers(StringView text, bool isCountdown)
+	void MpLevelHandler::ShowAlertToAllPlayers(StringView text)
 	{
 		if (text.empty()) {
 			return;
 		}
 
-		std::uint8_t flags = 0;
-		if (isCountdown) {
-			flags |= 0x01;
+		ShowLevelText(text);
 
-			static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(text);
-		} else {
-			ShowLevelText(text);
-		}
+		std::uint8_t flags = 0;
 
 		MemoryStream packet(5 + text.size());
 		packet.WriteValue<std::uint8_t>(flags);

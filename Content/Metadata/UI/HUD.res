@@ -212,5 +212,14 @@
 			"Path": "UI/touch_pause.aura",
 			"States": [ 105 ]
 		}
+	},
+
+	"Sounds": {
+		"Countdown": {
+			"Paths": [ "Common/powerup_shield_damage_2.wav" ]
+		},
+		"CountdownEnd": {
+			"Paths": [ "Common/powerup_shield_damage_1.wav" ]
+		}
 	}
 }

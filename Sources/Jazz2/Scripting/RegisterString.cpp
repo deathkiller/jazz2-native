@@ -43,7 +43,7 @@ namespace Jazz2::Scripting
 			ASSERT(_stringCache.size() == 0);
 		}
 
-		const void* GetStringConstant(const char* data, asUINT length)
+		const void* GetStringConstant(const char* data, std::uint32_t length)
 		{
 			// The string factory might be modified from multiple threads, so it is necessary to use a mutex
 			asAcquireExclusiveLock();
@@ -68,7 +68,7 @@ namespace Jazz2::Scripting
 		{
 			if (str == nullptr) return asERROR;
 
-			int ret = asSUCCESS;
+			std::int32_t ret = asSUCCESS;
 
 			// The string factory might be modified from multiple threads, so it is necessary to use a mutex
 			asAcquireExclusiveLock();
@@ -90,13 +90,13 @@ namespace Jazz2::Scripting
 			return ret;
 		}
 
-		int GetRawStringData(const void* str, char* data, asUINT* length) const
+		int GetRawStringData(const void* str, char* data, std::uint32_t* length) const
 		{
 			if (str == nullptr) return asERROR;
 
 			const String& stringView = *static_cast<const String*>(str);
 			if (length) {
-				*length = (asUINT)stringView.size();
+				*length = (std::uint32_t)stringView.size();
 			}
 			if (data != nullptr) {
 				std::memcpy(data, stringView.data(), stringView.size());
@@ -177,7 +177,7 @@ namespace Jazz2::Scripting
 		return str.empty();
 	}
 
-	static String& AssignUInt64ToString(asQWORD i, String& dest)
+	static String& AssignUInt64ToString(std::uint64_t i, String& dest)
 	{
 		char tmpBuffer[32];
 		u64tos(i, tmpBuffer);
@@ -185,7 +185,7 @@ namespace Jazz2::Scripting
 		return dest;
 	}
 
-	static String& AddAssignUInt64ToString(asQWORD i, String& dest)
+	static String& AddAssignUInt64ToString(std::uint64_t i, String& dest)
 	{
 		char tmpBuffer[32];
 		u64tos(i, tmpBuffer);
@@ -193,21 +193,21 @@ namespace Jazz2::Scripting
 		return dest;
 	}
 
-	static String AddStringUInt64(const String& str, asQWORD i)
+	static String AddStringUInt64(const String& str, std::uint64_t i)
 	{
 		char tmpBuffer[32];
 		u64tos(i, tmpBuffer);
 		return str + StringView(tmpBuffer);
 	}
 
-	static String AddInt64String(asINT64 i, const String& str)
+	static String AddInt64String(std::int64_t i, const String& str)
 	{
 		char tmpBuffer[32];
 		i64tos(i, tmpBuffer);
 		return StringView(tmpBuffer) + str;
 	}
 
-	static String& AssignInt64ToString(asINT64 i, String& dest)
+	static String& AssignInt64ToString(std::int64_t i, String& dest)
 	{
 		char tmpBuffer[32];
 		i64tos(i, tmpBuffer);
@@ -215,7 +215,7 @@ namespace Jazz2::Scripting
 		return dest;
 	}
 
-	static String& AddAssignInt64ToString(asINT64 i, String& dest)
+	static String& AddAssignInt64ToString(std::int64_t i, String& dest)
 	{
 		char tmpBuffer[32];
 		i64tos(i, tmpBuffer);
@@ -223,14 +223,14 @@ namespace Jazz2::Scripting
 		return dest;
 	}
 
-	static String AddStringInt64(const String& str, asINT64 i)
+	static String AddStringInt64(const String& str, std::int64_t i)
 	{
 		char tmpBuffer[32];
 		i64tos(i, tmpBuffer);
 		return str + StringView(tmpBuffer);
 	}
 
-	static String AddUInt64String(asQWORD i, const String& str)
+	static String AddUInt64String(std::uint64_t i, const String& str)
 	{
 		char tmpBuffer[32];
 		u64tos(i, tmpBuffer);
@@ -331,9 +331,9 @@ namespace Jazz2::Scripting
 	}
 
 	// int string::opCmp(const string &in) const
-	static int StringCmp(const String& a, const String& b)
+	static std::int32_t StringCmp(const String& a, const String& b)
 	{
-		int cmp = 0;
+		std::int32_t cmp = 0;
 		if (a < b) cmp = -1;
 		else if (a > b) cmp = 1;
 		return cmp;
@@ -344,10 +344,10 @@ namespace Jazz2::Scripting
 	// string -1 is returned.
 	//
 	// int string::findFirst(const string &in sub, uint start = 0) const
-	static int StringFindFirst(const String& sub, asUINT start, const String& str)
+	static std::int32_t StringFindFirst(const String& sub, std::uint32_t start, const String& str)
 	{
 		auto found = str.exceptPrefix(start).find(sub);
-		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
+		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 
 	// This function returns the index of the first position where the one of the bytes in substring
@@ -355,10 +355,10 @@ namespace Jazz2::Scripting
 	// string -1 is returned.
 	//
 	// int string::findFirstOf(const string &in sub, uint start = 0) const
-	static int StringFindFirstOf(const String& sub, asUINT start, const String& str)
+	static std::int32_t StringFindFirstOf(const String& sub, std::uint32_t start, const String& str)
 	{
 		auto found = str.exceptPrefix(start).findAny(sub);
-		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
+		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 
 	// This function returns the index of the last position where the one of the bytes in substring
@@ -366,10 +366,10 @@ namespace Jazz2::Scripting
 	// string -1 is returned.
 	//
 	// int string::findLastOf(const string &in sub, uint start = 0) const
-	static int StringFindLastOf(const String& sub, asUINT start, const String& str)
+	static std::int32_t StringFindLastOf(const String& sub, std::uint32_t start, const String& str)
 	{
 		auto found = str.exceptSuffix(start).findLastAny(sub);
-		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
+		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 
 	/*
@@ -377,7 +377,7 @@ namespace Jazz2::Scripting
 	// exists in the input string. If none is found -1 is returned.
 	//
 	// int string::findFirstNotOf(const string &in sub, uint start = 0) const
-	static int StringFindFirstNotOf(const String& sub, asUINT start, const String& str)
+	static int StringFindFirstNotOf(const String& sub, std::uint32_t start, const String& str)
 	{
 		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
 		return (int)str.find_first_not_of(sub, (size_t)(start < 0 ? string::npos : start));
@@ -387,7 +387,7 @@ namespace Jazz2::Scripting
 	// exists in the input string. If none is found -1 is returned.
 	//
 	// int string::findLastNotOf(const string &in sub, uint start = -1) const
-	static int StringFindLastNotOf(const String& sub, asUINT start, const String& str)
+	static int StringFindLastNotOf(const String& sub, std::uint32_t start, const String& str)
 	{
 		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
 		return (int)str.find_last_not_of(sub, (size_t)(start < 0 ? string::npos : start));
@@ -398,10 +398,10 @@ namespace Jazz2::Scripting
 	// string -1 is returned.
 	//
 	// int string::findLast(const string &in sub, int start = 0) const
-	static int StringFindLast(const String& sub, int start, const String& str)
+	static std::int32_t StringFindLast(const String& sub, std::int32_t start, const String& str)
 	{
 		auto found = str.exceptSuffix(start).findLast(sub);
-		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
+		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 
 	/*
@@ -420,21 +420,21 @@ namespace Jazz2::Scripting
 	}*/
 
 	// uint string::size() const
-	static asUINT StringSize(const String& str)
+	static std::uint32_t StringSize(const String& str)
 	{
 		// We don't register the method directly because the return type changes between 32-bit and 64-bit platforms
-		return (asUINT)str.size();
+		return (std::uint32_t)str.size();
 	}
 
 	// void string::resize(uint l)
-	/*static void StringResize(asUINT l, String& str)
+	/*static void StringResize(std::uint32_t l, String& str)
 	{
 		// We don't register the method directly because the argument types change between 32bit and 64bit platforms
 		str.resize(l);
 	}*/
 
 	// string formatInt(int64 val, const string &in options, uint width)
-	static String formatInt(asINT64 value, const String& options, asUINT width)
+	static String formatInt(std::int64_t value, const String& options, std::uint32_t width)
 	{
 		bool leftJustify = options.find("l") != nullptr;
 		bool padWithZero = options.find("0") != nullptr;
@@ -472,7 +472,7 @@ namespace Jazz2::Scripting
 	}
 
 	// string formatUInt(uint64 val, const string &in options, uint width)
-	static String formatUInt(asQWORD value, const String& options, asUINT width)
+	static String formatUInt(std::uint64_t value, const String& options, std::uint32_t width)
 	{
 		bool leftJustify = options.find('l') != nullptr;
 		bool padWithZero = options.find('0') != nullptr;
@@ -510,7 +510,7 @@ namespace Jazz2::Scripting
 	}
 
 	// string formatFloat(double val, const string &in options, uint width, uint precision)
-	static String formatFloat(double value, const String& options, asUINT width, asUINT precision)
+	static String formatFloat(double value, const String& options, std::uint32_t width, std::uint32_t precision)
 	{
 		bool leftJustify = options.find("l") != nullptr;
 		bool padWithZero = options.find("0") != nullptr;
@@ -542,7 +542,7 @@ namespace Jazz2::Scripting
 	}
 
 	// int64 parseInt(const string &in val, uint base = 10, uint &out byteCount = 0)
-	static asINT64 parseInt(const String& val, asUINT base, asUINT* byteCount)
+	static std::int64_t parseInt(const String& val, std::uint32_t base, std::uint32_t* byteCount)
 	{
 		if (base != 10 && base != 16) {
 			if (byteCount) *byteCount = 0;
@@ -559,7 +559,7 @@ namespace Jazz2::Scripting
 			end++;
 		}
 
-		asINT64 res = 0;
+		std::int64_t res = 0;
 		if (base == 10) {
 			while (*end >= '0' && *end <= '9') {
 				res *= 10;
@@ -581,7 +581,7 @@ namespace Jazz2::Scripting
 		}
 
 		if (byteCount) {
-			*byteCount = asUINT(size_t(end - val.data()));
+			*byteCount = std::uint32_t(size_t(end - val.data()));
 		}
 		if (sign) {
 			res = -res;
@@ -590,7 +590,7 @@ namespace Jazz2::Scripting
 	}
 
 	// uint64 parseUInt(const string &in val, uint base = 10, uint &out byteCount = 0)
-	static asQWORD parseUInt(const String& val, asUINT base, asUINT* byteCount)
+	static std::uint64_t parseUInt(const String& val, std::uint32_t base, std::uint32_t* byteCount)
 	{
 		if (base != 10 && base != 16) {
 			if (byteCount) *byteCount = 0;
@@ -599,7 +599,7 @@ namespace Jazz2::Scripting
 
 		const char* end = val.data();
 
-		asQWORD res = 0;
+		std::uint64_t res = 0;
 		if (base == 10) {
 			while (*end >= '0' && *end <= '9') {
 				res *= 10;
@@ -621,13 +621,13 @@ namespace Jazz2::Scripting
 		}
 
 		if (byteCount) {
-			*byteCount = asUINT(size_t(end - val.data()));
+			*byteCount = std::uint32_t(size_t(end - val.data()));
 		}
 		return res;
 	}
 
 	// double parseFloat(const string &in val, uint &out byteCount = 0)
-	double parseFloat(const String& val, asUINT* byteCount)
+	double parseFloat(const String& val, std::uint32_t* byteCount)
 	{
 		char* end;
 
@@ -648,7 +648,7 @@ namespace Jazz2::Scripting
 #endif
 
 		if (byteCount) {
-			*byteCount = asUINT(size_t(end - val.data()));
+			*byteCount = std::uint32_t(size_t(end - val.data()));
 		}
 		return res;
 	}
@@ -657,7 +657,7 @@ namespace Jazz2::Scripting
 	// determined by the starting index and count of characters.
 	//
 	// string string::substr(uint start = 0, int count = -1) const
-	static String StringSubString(asUINT start, int count, const String& str)
+	static String StringSubString(std::uint32_t start, std::int32_t count, const String& str)
 	{
 		String ret;
 		if (start < str.size() && count != 0) {
@@ -682,7 +682,7 @@ namespace Jazz2::Scripting
 
 	void RegisterString(asIScriptEngine* engine)
 	{
-		int r;
+		std::int32_t r;
 
 		// Register the string type
 		r = engine->RegisterObjectType("string", sizeof(String), asOBJ_VALUE | asGetTypeTraits<String>()); RETURN_ASSERT(r >= 0);
@@ -693,7 +693,7 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(ConstructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f(const string &in)", asFUNCTION(CopyConstructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("string", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(DestructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string &opAssign(const string &in)", asMETHODPR(String, operator =, (const String&), String&), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAssign(const string &in)", asMETHODPR(String, operator=, (const String&), String&), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// Need to use a wrapper on Mac OS X 10.7/XCode 4.3 and CLang/LLVM, otherwise the linker fails
 		r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asFUNCTION(AddAssignStringToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		//r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asMETHODPR(string, operator+=, (const string&), string&), asCALL_THISCALL); RETURN_ASSERT( r >= 0 );

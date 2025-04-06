@@ -4074,10 +4074,10 @@ namespace Jazz2::Actors
 		MorphTo(_playerTypeOriginal);
 	}
 
-	bool Player::SetDizzyTime(float time)
+	bool Player::SetDizzyTime(float timeLeft)
 	{
 		bool wasNotDizzy = (_dizzyTime <= 0.0f);
-		_dizzyTime = time;
+		_dizzyTime = timeLeft;
 		return wasNotDizzy;
 	}
 

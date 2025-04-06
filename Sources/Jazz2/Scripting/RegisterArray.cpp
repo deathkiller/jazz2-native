@@ -18,16 +18,16 @@ using namespace Death::Containers::Literals;
 namespace Jazz2::Scripting
 {
 	struct SArrayBuffer {
-		asDWORD maxElements;
-		asDWORD numElements;
-		asBYTE  data[1];
+		std::uint32_t maxElements;
+		std::uint32_t numElements;
+		std::uint8_t  data[1];
 	};
 
 	struct SArrayCache {
 		asIScriptFunction* cmpFunc;
 		asIScriptFunction* eqFunc;
-		int cmpFuncReturnCode; // To allow better error message in case of multiple matches
-		int eqFuncReturnCode;
+		std::int32_t cmpFuncReturnCode; // To allow better error message in case of multiple matches
+		std::int32_t eqFuncReturnCode;
 	};
 
 	// We just define a number here that we assume nobody else is using for
@@ -44,7 +44,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	CScriptArray* CScriptArray::Create(asITypeInfo* ti, asUINT length)
+	CScriptArray* CScriptArray::Create(asITypeInfo* ti, std::uint32_t length)
 	{
 		// Allocate the memory
 		void* mem = asAllocMem(sizeof(CScriptArray));
@@ -80,7 +80,7 @@ namespace Jazz2::Scripting
 		return a;
 	}
 
-	CScriptArray* CScriptArray::Create(asITypeInfo* ti, asUINT length, void* defVal)
+	CScriptArray* CScriptArray::Create(asITypeInfo* ti, std::uint32_t length, void* defVal)
 	{
 		// Allocate the memory
 		void* mem = asAllocMem(sizeof(CScriptArray));
@@ -100,7 +100,7 @@ namespace Jazz2::Scripting
 
 	CScriptArray* CScriptArray::Create(asITypeInfo* ti)
 	{
-		return CScriptArray::Create(ti, asUINT(0));
+		return CScriptArray::Create(ti, std::uint32_t(0));
 	}
 
 	// This optional callback is called when the template type is first used by the compiler.
@@ -112,17 +112,17 @@ namespace Jazz2::Scripting
 	{
 		// Make sure the subtype can be instantiated with a default factory/constructor,
 		// otherwise we won't be able to instantiate the elements.
-		int typeId = ti->GetSubTypeId();
+		std::int32_t typeId = ti->GetSubTypeId();
 		if (typeId == asTYPEID_VOID)
 			return false;
 
 		if ((typeId & asTYPEID_MASK_OBJECT) && !(typeId & asTYPEID_OBJHANDLE)) {
 			asITypeInfo* subtype = ti->GetEngine()->GetTypeInfoById(typeId);
-			asDWORD flags = subtype->GetFlags();
+			std::uint32_t flags = subtype->GetFlags();
 			if ((flags & asOBJ_VALUE) && !(flags & asOBJ_POD)) {
 				// Verify that there is a default constructor
 				bool found = false;
-				for (asUINT n = 0; n < subtype->GetBehaviourCount(); n++) {
+				for (std::uint32_t n = 0; n < subtype->GetBehaviourCount(); n++) {
 					asEBehaviours beh;
 					asIScriptFunction* func = subtype->GetBehaviourByIndex(n, &beh);
 					if (beh != asBEHAVE_CONSTRUCT) continue;
@@ -147,7 +147,7 @@ namespace Jazz2::Scripting
 				// can be created if the type has a default factory function
 				if (!ti->GetEngine()->GetEngineProperty(asEP_DISALLOW_VALUE_ASSIGN_FOR_REF_TYPE)) {
 					// Verify that there is a default factory
-					for (asUINT n = 0; n < subtype->GetFactoryCount(); n++) {
+					for (std::uint32_t n = 0; n < subtype->GetFactoryCount(); n++) {
 						asIScriptFunction* func = subtype->GetFactoryByIndex(n);
 						if (func->GetParamCount() == 0) {
 							// Found the default factory
@@ -182,7 +182,7 @@ namespace Jazz2::Scripting
 			// that can potentially form a circular reference with the array then it is not
 			// necessary to make the array garbage collected.
 			asITypeInfo* subtype = ti->GetEngine()->GetTypeInfoById(typeId);
-			asDWORD flags = subtype->GetFlags();
+			std::uint32_t flags = subtype->GetFlags();
 			if (!(flags & asOBJ_GC)) {
 				if ((flags & asOBJ_SCRIPT_OBJECT)) {
 					// Even if a script class is by itself not garbage collected, it is possible
@@ -208,7 +208,7 @@ namespace Jazz2::Scripting
 
 	void RegisterArray(asIScriptEngine* engine)
 	{
-		int r;
+		std::int32_t r;
 
 		// Register the object type user data clean up
 		engine->SetTypeInfoUserDataCleanupCallback(CleanupTypeInfoArrayCache, ARRAY_CACHE);
@@ -221,8 +221,8 @@ namespace Jazz2::Scripting
 
 		// Templates receive the object type as the first parameter. To the script writer this is hidden
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in)", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in, uint length) explicit", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, asUINT), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in, uint length, const T &in value)", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, asUINT, void*), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in, uint length) explicit", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, std::uint32_t), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in, uint length, const T &in value)", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, std::uint32_t, void*), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		// Register the factory that will be used for initialization lists
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_LIST_FACTORY, "array<T>@ f(int&in type, int&in list) {repeat T}", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, void*), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
@@ -232,15 +232,15 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_RELEASE, "void f()", asMETHOD(CScriptArray, Release), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// The index operator returns the template subtype
-		r = engine->RegisterObjectMethod("array<T>", "T &opIndex(uint index)", asMETHODPR(CScriptArray, At, (asUINT), void*), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "const T &opIndex(uint index) const", asMETHODPR(CScriptArray, At, (asUINT) const, const void*), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "T &opIndex(uint index)", asMETHODPR(CScriptArray, At, (std::uint32_t), void*), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "const T &opIndex(uint index) const", asMETHODPR(CScriptArray, At, (std::uint32_t) const, const void*), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// The assignment operator
 		r = engine->RegisterObjectMethod("array<T>", "array<T> &opAssign(const array<T>&in)", asMETHOD(CScriptArray, operator=), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// Other methods
-		r = engine->RegisterObjectMethod("array<T>", "void insertAt(uint index, const T&in value)", asMETHODPR(CScriptArray, InsertAt, (asUINT, void*), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "void insertAt(uint index, const array<T>& arr)", asMETHODPR(CScriptArray, InsertAt, (asUINT, const CScriptArray&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void insertAt(uint index, const T&in value)", asMETHODPR(CScriptArray, InsertAt, (std::uint32_t, void*), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void insertAt(uint index, const array<T>& arr)", asMETHODPR(CScriptArray, InsertAt, (std::uint32_t, const CScriptArray&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "void insertLast(const T&in value)", asMETHOD(CScriptArray, InsertLast), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "void removeAt(uint index)", asMETHOD(CScriptArray, RemoveAt), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "void removeLast()", asMETHOD(CScriptArray, RemoveLast), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
@@ -251,19 +251,19 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectMethod("array<T>", "uint length() const", asMETHOD(CScriptArray, GetSize), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 #endif
 		r = engine->RegisterObjectMethod("array<T>", "void reserve(uint length)", asMETHOD(CScriptArray, Reserve), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "void resize(uint length)", asMETHODPR(CScriptArray, Resize, (asUINT), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void resize(uint length)", asMETHODPR(CScriptArray, Resize, (std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "void sortAsc()", asMETHODPR(CScriptArray, SortAsc, (), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "void sortAsc(uint startAt, uint count)", asMETHODPR(CScriptArray, SortAsc, (asUINT, asUINT), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void sortAsc(uint startAt, uint count)", asMETHODPR(CScriptArray, SortAsc, (std::uint32_t, std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "void sortDesc()", asMETHODPR(CScriptArray, SortDesc, (), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "void sortDesc(uint startAt, uint count)", asMETHODPR(CScriptArray, SortDesc, (asUINT, asUINT), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void sortDesc(uint startAt, uint count)", asMETHODPR(CScriptArray, SortDesc, (std::uint32_t, std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "void reverse()", asMETHOD(CScriptArray, Reverse), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// The token 'if_handle_then_const' tells the engine that if the type T is a handle, then it should refer to a read-only object
 		r = engine->RegisterObjectMethod("array<T>", "int find(const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, Find, (void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// TODO: It should be "int find(const T&in value, uint startAt = 0) const"
-		r = engine->RegisterObjectMethod("array<T>", "int find(uint startAt, const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, Find, (asUINT, void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "int find(uint startAt, const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, Find, (std::uint32_t, void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "int findByRef(const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, FindByRef, (void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// TODO: It should be "int findByRef(const T&in value, uint startAt = 0) const"
-		r = engine->RegisterObjectMethod("array<T>", "int findByRef(uint startAt, const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, FindByRef, (asUINT, void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "int findByRef(uint startAt, const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, FindByRef, (std::uint32_t, void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("array<T>", "bool opEquals(const array<T>&in) const", asMETHOD(CScriptArray, operator==), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		
 		r = engine->RegisterObjectMethod("array<T>", "bool isEmpty() const", asMETHOD(CScriptArray, IsEmpty), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
@@ -271,12 +271,12 @@ namespace Jazz2::Scripting
 
 		// Sort with callback for comparison
 		r = engine->RegisterFuncdef("bool array<T>::less(const T&in if_handle_then_const a, const T&in if_handle_then_const b)"); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "void sort(const less &in, uint startAt = 0, uint count = uint(-1))", asMETHODPR(CScriptArray, Sort, (asIScriptFunction*, asUINT, asUINT), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void sort(const less &in, uint startAt = 0, uint count = uint(-1))", asMETHODPR(CScriptArray, Sort, (asIScriptFunction*, std::uint32_t, std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 #if AS_USE_STLNAMES != 1 && AS_USE_ACCESSORS == 1
 		// Register virtual properties
 		r = engine->RegisterObjectMethod("array<T>", "uint get_length() const property", asMETHOD(CScriptArray, GetSize), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "void set_length(uint) property", asMETHODPR(CScriptArray, Resize, (asUINT), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void set_length(uint) property", asMETHODPR(CScriptArray, Resize, (std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 #endif
 
 		// Register GC behaviours in case the array needs to be garbage collected
@@ -296,8 +296,8 @@ namespace Jazz2::Scripting
 		// Same as removeLast
 		r = engine->RegisterObjectMethod("array<T>", "void pop_back()", asMETHOD(CScriptArray, RemoveLast), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// Same as insertAt
-		r = engine->RegisterObjectMethod("array<T>", "void insert(uint index, const T&in value)", asMETHODPR(CScriptArray, InsertAt, (asUINT, void*), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("array<T>", "void insert(uint index, const array<T>& arr)", asMETHODPR(CScriptArray, InsertAt, (asUINT, const CScriptArray&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void insert(uint index, const T&in value)", asMETHODPR(CScriptArray, InsertAt, (std::uint32_t, void*), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("array<T>", "void insert(uint index, const array<T>& arr)", asMETHODPR(CScriptArray, InsertAt, (std::uint32_t, const CScriptArray&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// Same as removeAt
 		r = engine->RegisterObjectMethod("array<T>", "void erase(uint)", asMETHOD(CScriptArray, RemoveAt), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 #endif
@@ -342,7 +342,7 @@ namespace Jazz2::Scripting
 		}
 
 		// Determine the initial size from the buffer
-		asUINT length = *(asUINT*)buf;
+		std::uint32_t length = *(std::uint32_t*)buf;
 
 		// Make sure the array size isn't too large for us to handle
 		if (!CheckMaxSize(length)) {
@@ -356,21 +356,21 @@ namespace Jazz2::Scripting
 
 			// Copy the values of the primitive type into the internal buffer
 			if (length > 0) {
-				std::memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
+				std::memcpy(At(0), (((std::uint32_t*)buf) + 1), length * elementSize);
 			}
 		} else if (ti->GetSubTypeId() & asTYPEID_OBJHANDLE) {
 			CreateBuffer(&buffer, length);
 
 			// Copy the handles into the internal buffer
 			if (length > 0) {
-				std::memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
+				std::memcpy(At(0), (((std::uint32_t*)buf) + 1), length * elementSize);
 			}
 
 			// With object handles it is safe to clear the memory in the received buffer
 			// instead of increasing the ref count. It will save time both by avoiding the
 			// call the increase ref, and also relieve the engine from having to release
 			// its references too
-			std::memset((((asUINT*)buf) + 1), 0, length * elementSize);
+			std::memset((((std::uint32_t*)buf) + 1), 0, length * elementSize);
 		} else if (ti->GetSubType()->GetFlags() & asOBJ_REF) {
 			// Only allocate the buffer, but not the objects
 			subTypeId |= asTYPEID_OBJHANDLE;
@@ -379,12 +379,12 @@ namespace Jazz2::Scripting
 
 			// Copy the handles into the internal buffer
 			if (length > 0) {
-				std::memcpy(buffer->data, (((asUINT*)buf) + 1), length * elementSize);
+				std::memcpy(buffer->data, (((std::uint32_t*)buf) + 1), length * elementSize);
 			}
 
 			// For ref types we can do the same as for handles, as they are
 			// implicitly stored as handles.
-			std::memset((((asUINT*)buf) + 1), 0, length * elementSize);
+			std::memset((((std::uint32_t*)buf) + 1), 0, length * elementSize);
 		} else {
 			// TODO: Optimize by calling the copy constructor of the object instead of
 			//       constructing with the default constructor and then assigning the value
@@ -394,9 +394,9 @@ namespace Jazz2::Scripting
 			CreateBuffer(&buffer, length);
 
 			// For value types we need to call the opAssign for each individual object
-			for (asUINT n = 0; n < length; n++) {
+			for (std::uint32_t n = 0; n < length; n++) {
 				void* obj = At(n);
-				asBYTE* srcObj = (asBYTE*)buf;
+				std::uint8_t* srcObj = (std::uint8_t*)buf;
 				srcObj += 4 + n * ti->GetSubType()->GetSize();
 				engine->AssignScriptObject(obj, srcObj, ti->GetSubType());
 			}
@@ -408,7 +408,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	CScriptArray::CScriptArray(asUINT length, asITypeInfo* ti)
+	CScriptArray::CScriptArray(std::uint32_t length, asITypeInfo* ti)
 	{
 		// The object type should be the template instance of the array
 		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
@@ -464,7 +464,7 @@ namespace Jazz2::Scripting
 		*this = other;
 	}
 
-	CScriptArray::CScriptArray(asUINT length, void* defVal, asITypeInfo* ti)
+	CScriptArray::CScriptArray(std::uint32_t length, void* defVal, asITypeInfo* ti)
 	{
 		// The object type should be the template instance of the array
 		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
@@ -498,12 +498,12 @@ namespace Jazz2::Scripting
 		}
 
 		// Initialize the elements with the default value
-		for (asUINT n = 0; n < GetSize(); n++) {
+		for (std::uint32_t n = 0; n < GetSize(); n++) {
 			SetValue(n, defVal);
 		}
 	}
 
-	void CScriptArray::SetValue(asUINT index, void* value)
+	void CScriptArray::SetValue(std::uint32_t index, void* value)
 	{
 		// At() will take care of the out-of-bounds checking, though
 		// if called from the application then nothing will be done
@@ -569,7 +569,7 @@ namespace Jazz2::Scripting
 		if (objType != nullptr) objType->Release();
 	}
 
-	asUINT CScriptArray::GetSize() const
+	std::uint32_t CScriptArray::GetSize() const
 	{
 		return buffer->numElements;
 	}
@@ -579,7 +579,7 @@ namespace Jazz2::Scripting
 		return buffer->numElements == 0;
 	}
 
-	void CScriptArray::Reserve(asUINT maxElements)
+	void CScriptArray::Reserve(std::uint32_t maxElements)
 	{
 		if (maxElements <= buffer->maxElements)
 			return;
@@ -611,15 +611,15 @@ namespace Jazz2::Scripting
 		buffer = newBuffer;
 	}
 
-	void CScriptArray::Resize(asUINT numElements)
+	void CScriptArray::Resize(std::uint32_t numElements)
 	{
 		if (!CheckMaxSize(numElements)) {
 			return;
 		}
-		Resize((int)numElements - (int)buffer->numElements, (asUINT)-1);
+		Resize((std::int32_t)numElements - (std::int32_t)buffer->numElements, (std::uint32_t)-1);
 	}
 
-	void CScriptArray::RemoveRange(asUINT start, asUINT count)
+	void CScriptArray::RemoveRange(std::uint32_t start, std::uint32_t count)
 	{
 		if (count == 0) {
 			return;
@@ -650,11 +650,11 @@ namespace Jazz2::Scripting
 	}
 
 	// Internal
-	void CScriptArray::Resize(int delta, asUINT at)
+	void CScriptArray::Resize(std::int32_t delta, std::uint32_t at)
 	{
 		if (delta < 0) {
-			if (-delta > (int)buffer->numElements) {
-				delta = -(int)buffer->numElements;
+			if (-delta > (std::int32_t)buffer->numElements) {
+				delta = -(std::int32_t)buffer->numElements;
 			}
 			if (at > buffer->numElements + delta) {
 				at = buffer->numElements + delta;
@@ -715,12 +715,12 @@ namespace Jazz2::Scripting
 	}
 
 	// internal
-	bool CScriptArray::CheckMaxSize(asUINT numElements)
+	bool CScriptArray::CheckMaxSize(std::uint32_t numElements)
 	{
 		// This code makes sure the size of the buffer that is allocated
 		// for the array doesn't overflow and becomes smaller than requested
 
-		asUINT maxSize = 0xFFFFFFFFul - sizeof(SArrayBuffer) + 1;
+		std::uint32_t maxSize = 0xFFFFFFFFul - sizeof(SArrayBuffer) + 1;
 		if (elementSize > 0) {
 			maxSize /= elementSize;
 		}
@@ -750,7 +750,7 @@ namespace Jazz2::Scripting
 		return subTypeId;
 	}
 
-	void CScriptArray::InsertAt(asUINT index, void* value)
+	void CScriptArray::InsertAt(std::uint32_t index, void* value)
 	{
 		if (index > buffer->numElements) {
 			// If this is called from a script we raise a script exception
@@ -768,7 +768,7 @@ namespace Jazz2::Scripting
 		SetValue(index, value);
 	}
 
-	void CScriptArray::InsertAt(asUINT index, const CScriptArray& arr)
+	void CScriptArray::InsertAt(std::uint32_t index, const CScriptArray& arr)
 	{
 		if (index > buffer->numElements) {
 			asIScriptContext* ctx = asGetActiveContext();
@@ -788,10 +788,10 @@ namespace Jazz2::Scripting
 			return;
 		}
 
-		asUINT elements = arr.GetSize();
+		std::uint32_t elements = arr.GetSize();
 		Resize(elements, index);
 		if (&arr != this) {
-			for (asUINT n = 0; n < arr.GetSize(); n++) {
+			for (std::uint32_t n = 0; n < arr.GetSize(); n++) {
 				// This const cast is allowed, since we know the
 				// value will only be used to make a copy of it
 				void* value = const_cast<void*>(arr.At(n));
@@ -801,14 +801,14 @@ namespace Jazz2::Scripting
 			// The array that is being inserted is the same as this one.
 			// So we should iterate over the elements before the index,
 			// and then the elements after
-			for (asUINT n = 0; n < index; n++) {
+			for (std::uint32_t n = 0; n < index; n++) {
 				// This const cast is allowed, since we know the
 				// value will only be used to make a copy of it
 				void* value = const_cast<void*>(arr.At(n));
 				SetValue(index + n, value);
 			}
 
-			for (asUINT n = index + elements, m = 0; n < arr.GetSize(); n++, m++) {
+			for (std::uint32_t n = index + elements, m = 0; n < arr.GetSize(); n++, m++) {
 				// This const cast is allowed, since we know the
 				// value will only be used to make a copy of it
 				void* value = const_cast<void*>(arr.At(n));
@@ -822,7 +822,7 @@ namespace Jazz2::Scripting
 		InsertAt(buffer->numElements, value);
 	}
 
-	void CScriptArray::RemoveAt(asUINT index)
+	void CScriptArray::RemoveAt(std::uint32_t index)
 	{
 		if (index >= buffer->numElements) {
 			// If this is called from a script we raise a script exception
@@ -843,7 +843,7 @@ namespace Jazz2::Scripting
 	}
 
 	// Return a pointer to the array element. Returns 0 if the index is out of bounds
-	const void* CScriptArray::At(asUINT index) const
+	const void* CScriptArray::At(std::uint32_t index) const
 	{
 		if (buffer == nullptr || index >= buffer->numElements) {
 			// If this is called from a script we raise a script exception
@@ -860,7 +860,7 @@ namespace Jazz2::Scripting
 			return buffer->data + elementSize * index;
 		}
 	}
-	void* CScriptArray::At(asUINT index)
+	void* CScriptArray::At(std::uint32_t index)
 	{
 		return const_cast<void*>(const_cast<const CScriptArray*>(this)->At(index));
 	}
@@ -872,7 +872,7 @@ namespace Jazz2::Scripting
 
 
 	// internal
-	void CScriptArray::CreateBuffer(SArrayBuffer** buf, asUINT numElements)
+	void CScriptArray::CreateBuffer(SArrayBuffer** buf, std::uint32_t numElements)
 	{
 		*buf = static_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * numElements));
 
@@ -899,7 +899,7 @@ namespace Jazz2::Scripting
 	}
 
 	// internal
-	void CScriptArray::Construct(SArrayBuffer* buf, asUINT start, asUINT end)
+	void CScriptArray::Construct(SArrayBuffer* buf, std::uint32_t start, std::uint32_t end)
 	{
 		if ((subTypeId & asTYPEID_MASK_OBJECT) && !(subTypeId & asTYPEID_OBJHANDLE)) {
 			// Create an object using the default constructor/factory for each element
@@ -929,7 +929,7 @@ namespace Jazz2::Scripting
 	}
 
 	// internal
-	void CScriptArray::Destruct(SArrayBuffer* buf, asUINT start, asUINT end)
+	void CScriptArray::Destruct(SArrayBuffer* buf, std::uint32_t start, std::uint32_t end)
 	{
 		if (subTypeId & asTYPEID_MASK_OBJECT) {
 			asIScriptEngine* engine = objType->GetEngine();
@@ -961,14 +961,14 @@ namespace Jazz2::Scripting
 			switch (subTypeId) {
 				#define COMPARE(T) *((T*)a) < *((T*)b)
 				case asTYPEID_BOOL:   return COMPARE(bool);
-				case asTYPEID_INT8:   return COMPARE(asINT8);
-				case asTYPEID_INT16:  return COMPARE(asINT16);
-				case asTYPEID_INT32:  return COMPARE(/*asINT32*/int);
-				case asTYPEID_INT64:  return COMPARE(asINT64);
-				case asTYPEID_UINT8:  return COMPARE(asBYTE);
-				case asTYPEID_UINT16: return COMPARE(asWORD);
-				case asTYPEID_UINT32: return COMPARE(asDWORD);
-				case asTYPEID_UINT64: return COMPARE(asQWORD);
+				case asTYPEID_INT8:   return COMPARE(std::int8_t);
+				case asTYPEID_INT16:  return COMPARE(std::int16_t);
+				case asTYPEID_INT32:  return COMPARE(std::int32_t);
+				case asTYPEID_INT64:  return COMPARE(std::int64_t);
+				case asTYPEID_UINT8:  return COMPARE(std::uint8_t);
+				case asTYPEID_UINT16: return COMPARE(std::uint16_t);
+				case asTYPEID_UINT32: return COMPARE(std::uint32_t);
+				case asTYPEID_UINT64: return COMPARE(std::uint64_t);
 				case asTYPEID_FLOAT:  return COMPARE(float);
 				case asTYPEID_DOUBLE: return COMPARE(double);
 				default: return COMPARE(signed int); // All enums fall in this case
@@ -981,12 +981,12 @@ namespace Jazz2::Scripting
 
 	void CScriptArray::Reverse()
 	{
-		asUINT size = GetSize();
+		std::uint32_t size = GetSize();
 
 		if (size >= 2) {
-			asBYTE TEMP[16];
+			std::uint8_t TEMP[16];
 
-			for (asUINT i = 0; i < size / 2; i++) {
+			for (std::uint32_t i = 0; i < size / 2; i++) {
 				Copy(TEMP, GetArrayItemPointer(i));
 				Copy(GetArrayItemPointer(i), GetArrayItemPointer(size - i - 1));
 				Copy(GetArrayItemPointer(size - i - 1), TEMP);
@@ -1027,7 +1027,7 @@ namespace Jazz2::Scripting
 		// Check if all elements are equal
 		bool isEqual = true;
 		SArrayCache* cache = static_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
-		for (asUINT n = 0; n < GetSize(); n++)
+		for (std::uint32_t n = 0; n < GetSize(); n++)
 			if (!Equals(At(n), other.At(n), cmpContext, cache)) {
 				isEqual = false;
 				break;
@@ -1056,21 +1056,21 @@ namespace Jazz2::Scripting
 			switch (subTypeId) {
 				#define COMPARE(T) *((T*)a) == *((T*)b)
 				case asTYPEID_BOOL:   return COMPARE(bool);
-				case asTYPEID_INT8:   return COMPARE(asINT8);
-				case asTYPEID_INT16:  return COMPARE(asINT16);
-				case asTYPEID_INT32:  return COMPARE(/*asINT32*/int);
-				case asTYPEID_INT64:  return COMPARE(asINT64);
-				case asTYPEID_UINT8:  return COMPARE(asBYTE);
-				case asTYPEID_UINT16: return COMPARE(asWORD);
-				case asTYPEID_UINT32: return COMPARE(asDWORD);
-				case asTYPEID_UINT64: return COMPARE(asQWORD);
+				case asTYPEID_INT8:   return COMPARE(std::int8_t);
+				case asTYPEID_INT16:  return COMPARE(std::int16_t);
+				case asTYPEID_INT32:  return COMPARE(std::int32_t);
+				case asTYPEID_INT64:  return COMPARE(std::int64_t);
+				case asTYPEID_UINT8:  return COMPARE(std::uint8_t);
+				case asTYPEID_UINT16: return COMPARE(std::uint16_t);
+				case asTYPEID_UINT32: return COMPARE(std::uint32_t);
+				case asTYPEID_UINT64: return COMPARE(std::uint64_t);
 				case asTYPEID_FLOAT:  return COMPARE(float);
 				case asTYPEID_DOUBLE: return COMPARE(double);
 				default: return COMPARE(signed int); // All enums fall here. TODO: update this when enums can have different sizes and types
 				#undef COMPARE
 			}
 		} else {
-			int r = 0;
+			std::int32_t r = 0;
 
 			if (subTypeId & asTYPEID_OBJHANDLE) {
 				// Allow the find to work even if the array contains null handles
@@ -1128,21 +1128,21 @@ namespace Jazz2::Scripting
 		return FindByRef(0, ref);
 	}
 
-	int CScriptArray::FindByRef(asUINT startAt, void* ref) const
+	int CScriptArray::FindByRef(std::uint32_t startAt, void* ref) const
 	{
 		// Find the matching element by its reference
-		asUINT size = GetSize();
+		std::uint32_t size = GetSize();
 		if (subTypeId & asTYPEID_OBJHANDLE) {
 			// Dereference the pointer
 			ref = *(void**)ref;
-			for (asUINT i = startAt; i < size; i++) {
+			for (std::uint32_t i = startAt; i < size; i++) {
 				if (*(void**)At(i) == ref) {
 					return i;
 				}
 			}
 		} else {
 			// Compare the reference directly
-			for (asUINT i = startAt; i < size; i++) {
+			for (std::uint32_t i = startAt; i < size; i++) {
 				if (At(i) == ref) {
 					return i;
 				}
@@ -1157,7 +1157,7 @@ namespace Jazz2::Scripting
 		return Find(0, value);
 	}
 
-	int CScriptArray::Find(asUINT startAt, void* value) const
+	int CScriptArray::Find(std::uint32_t startAt, void* value) const
 	{
 		// Check if the subtype really supports find()
 		// TODO: Can't this be done at compile time too by the template callback
@@ -1214,13 +1214,13 @@ namespace Jazz2::Scripting
 		}
 
 		// Find the matching element
-		int ret = -1;
-		asUINT size = GetSize();
+		std::int32_t ret = -1;
+		std::uint32_t size = GetSize();
 
-		for (asUINT i = startAt; i < size; i++) {
+		for (std::uint32_t i = startAt; i < size; i++) {
 			// value passed by reference
 			if (Equals(At(i), value, cmpContext, cache)) {
-				ret = (int)i;
+				ret = (std::int32_t)i;
 				break;
 			}
 		}
@@ -1257,7 +1257,7 @@ namespace Jazz2::Scripting
 	// the heap and the array stores the pointers to the objects.
 	void CScriptArray::Swap(void* a, void* b)
 	{
-		asBYTE tmp[16];
+		std::uint8_t tmp[16];
 		Copy(tmp, a);
 		Copy(a, b);
 		Copy(b, tmp);
@@ -1265,7 +1265,7 @@ namespace Jazz2::Scripting
 
 	// internal
 	// Return pointer to array item (object handle or primitive value)
-	void* CScriptArray::GetArrayItemPointer(int index)
+	void* CScriptArray::GetArrayItemPointer(std::int32_t index)
 	{
 		return buffer->data + index * elementSize;
 	}
@@ -1291,7 +1291,7 @@ namespace Jazz2::Scripting
 	}
 
 	// Sort ascending
-	void CScriptArray::SortAsc(asUINT startAt, asUINT count)
+	void CScriptArray::SortAsc(std::uint32_t startAt, std::uint32_t count)
 	{
 		Sort(startAt, count, true);
 	}
@@ -1303,13 +1303,13 @@ namespace Jazz2::Scripting
 	}
 
 	// Sort descending
-	void CScriptArray::SortDesc(asUINT startAt, asUINT count)
+	void CScriptArray::SortDesc(std::uint32_t startAt, std::uint32_t count)
 	{
 		Sort(startAt, count, false);
 	}
 
 	// Internal
-	void CScriptArray::Sort(asUINT startAt, asUINT count, bool asc)
+	void CScriptArray::Sort(std::uint32_t startAt, std::uint32_t count, bool asc)
 	{
 		// Subtype isn't primitive and doesn't have opCmp
 		SArrayCache* cache = static_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
@@ -1347,11 +1347,11 @@ namespace Jazz2::Scripting
 			return;
 		}
 
-		int start = startAt;
-		int end = startAt + count;
+		std::int32_t start = startAt;
+		std::int32_t end = startAt + count;
 
 		// Check if we could access invalid item while sorting
-		if (start >= (int)buffer->numElements || end > (int)buffer->numElements) {
+		if (start >= (std::int32_t)buffer->numElements || end > (std::int32_t)buffer->numElements) {
 			asIScriptContext* ctx = asGetActiveContext();
 
 			// Throw an exception
@@ -1392,7 +1392,7 @@ namespace Jazz2::Scripting
 						b = TEMP;
 					}
 
-					int r = 0;
+					std::int32_t r = 0;
 
 					// Allow sort to work even if the array contains null handles
 					if (a == 0) return true;
@@ -1407,7 +1407,7 @@ namespace Jazz2::Scripting
 						r = cmpContext->Execute();
 
 						if (r == asEXECUTION_FINISHED) {
-							return (int)cmpContext->GetReturnDWord() < 0;
+							return (std::int32_t)cmpContext->GetReturnDWord() < 0;
 						}
 					}
 
@@ -1433,11 +1433,11 @@ namespace Jazz2::Scripting
 			// TODO: Use std::sort for primitive types too
 
 			// Insertion sort
-			asBYTE tmp[16];
-			for (int i = start + 1; i < end; i++) {
+			std::uint8_t tmp[16];
+			for (std::int32_t i = start + 1; i < end; i++) {
 				Copy(tmp, GetArrayItemPointer(i));
 
-				int j = i - 1;
+				std::int32_t j = i - 1;
 
 				while (j >= start && Less(GetDataPointer(tmp), At(j), asc)) {
 					Copy(GetArrayItemPointer(j + 1), GetArrayItemPointer(j));
@@ -1450,7 +1450,7 @@ namespace Jazz2::Scripting
 	}
 
 	// Sort with script callback for comparing elements
-	void CScriptArray::Sort(asIScriptFunction* func, asUINT startAt, asUINT count)
+	void CScriptArray::Sort(asIScriptFunction* func, std::uint32_t startAt, std::uint32_t count)
 	{
 		// No need to sort
 		if (count < 2) {
@@ -1458,8 +1458,8 @@ namespace Jazz2::Scripting
 		}
 
 		// Check if we could access invalid item while sorting
-		asUINT start = startAt;
-		asUINT end = asQWORD(startAt) + asQWORD(count) >= (asQWORD(1) << 32) ? 0xFFFFFFFF : startAt + count;
+		std::uint32_t start = startAt;
+		std::uint32_t end = std::uint64_t(startAt) + std::uint64_t(count) >= (std::uint64_t(1) << 32) ? 0xFFFFFFFF : startAt + count;
 		if (end > buffer->numElements) {
 			end = buffer->numElements;
 		}
@@ -1495,13 +1495,13 @@ namespace Jazz2::Scripting
 
 		// Bubble sort
 		// TODO: optimize: Use an efficient sort algorithm
-		for (asUINT i = start; i + 1 < end; i++) {
-			asUINT best = i;
-			for (asUINT j = i + 1; j < end; j++) {
+		for (std::uint32_t i = start; i + 1 < end; i++) {
+			std::uint32_t best = i;
+			for (std::uint32_t j = i + 1; j < end; j++) {
 				cmpContext->Prepare(func);
 				cmpContext->SetArgAddress(0, At(j));
 				cmpContext->SetArgAddress(1, At(best));
-				int r = cmpContext->Execute();
+				std::int32_t r = cmpContext->Execute();
 				if (r != asEXECUTION_FINISHED) {
 					break;
 				}
@@ -1537,7 +1537,7 @@ namespace Jazz2::Scripting
 		if (subTypeId & asTYPEID_OBJHANDLE) {
 			// Copy the references and increase the reference counters
 			if (dst->numElements > 0 && src->numElements > 0) {
-				int count = dst->numElements > src->numElements ? src->numElements : dst->numElements;
+				std::int32_t count = dst->numElements > src->numElements ? src->numElements : dst->numElements;
 
 				void** max = (void**)(dst->data + count * sizeof(void*));
 				void** d = (void**)dst->data;
@@ -1557,7 +1557,7 @@ namespace Jazz2::Scripting
 			}
 		} else {
 			if (dst->numElements > 0 && src->numElements > 0) {
-				int count = dst->numElements > src->numElements ? src->numElements : dst->numElements;
+				std::int32_t count = dst->numElements > src->numElements ? src->numElements : dst->numElements;
 				if (subTypeId & asTYPEID_MASK_OBJECT) {
 					// Call the assignment operator on all of the objects
 					void** max = (void**)(dst->data + count * sizeof(void*));
@@ -1648,12 +1648,12 @@ namespace Jazz2::Scripting
 
 		asITypeInfo* subType = objType->GetEngine()->GetTypeInfoById(subTypeId);
 		if (subType != nullptr) {
-			for (asUINT i = 0; i < subType->GetMethodCount(); i++) {
+			for (std::uint32_t i = 0; i < subType->GetMethodCount(); i++) {
 				asIScriptFunction* func = subType->GetMethodByIndex(i);
 
 				if (func->GetParamCount() == 1 && (!mustBeConst || func->IsReadOnly())) {
 					asDWORD flags = 0;
-					int returnTypeId = func->GetReturnTypeId(&flags);
+					std::int32_t returnTypeId = func->GetReturnTypeId(&flags);
 
 					// The method must not return a reference
 					if (flags != asTM_NONE) {
@@ -1671,7 +1671,7 @@ namespace Jazz2::Scripting
 						continue;
 
 					// The parameter must either be a reference to the subtype or a handle to the subtype
-					int paramTypeId;
+					std::int32_t paramTypeId;
 					func->GetParam(0, &paramTypeId, &flags);
 
 					if ((paramTypeId & ~(asTYPEID_OBJHANDLE | asTYPEID_HANDLETOCONST)) != (subTypeId & ~(asTYPEID_OBJHANDLE | asTYPEID_HANDLETOCONST)))
@@ -1730,7 +1730,7 @@ namespace Jazz2::Scripting
 			asITypeInfo* subType = engine->GetTypeInfoById(subTypeId);
 			if ((subType->GetFlags() & asOBJ_REF)) {
 				// For reference types we need to notify the GC of each instance
-				for (asUINT n = 0; n < buffer->numElements; n++) {
+				for (std::uint32_t n = 0; n < buffer->numElements; n++) {
 					if (d[n]) {
 						engine->GCEnumCallback(d[n]);
 					}
@@ -1738,7 +1738,7 @@ namespace Jazz2::Scripting
 			} else if ((subType->GetFlags() & asOBJ_VALUE) && (subType->GetFlags() & asOBJ_GC)) {
 				// For value types we need to forward the enum callback
 				// to the object so it can decide what to do
-				for (asUINT n = 0; n < buffer->numElements; n++) {
+				for (std::uint32_t n = 0; n < buffer->numElements; n++) {
 					if (d[n]) {
 						engine->ForwardGCEnumReferences(d[n], subType);
 					}
@@ -1774,7 +1774,7 @@ namespace Jazz2::Scripting
 	}
 
 	// GC behaviour
-	int CScriptArray::GetRefCount()
+	std::int32_t CScriptArray::GetRefCount()
 	{
 		return refCount;
 	}

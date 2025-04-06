@@ -159,7 +159,7 @@ namespace Jazz2::Actors
 		/** @brief Returns current modifier */
 		Modifier GetModifier() const;
 		/** @brief Sets current modifier */
-		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
+		virtual bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
 		/** @brief Takes damage */
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
 		/** @brief Sets invulnerability */
@@ -202,7 +202,7 @@ namespace Jazz2::Actors
 		/** @brief Reverts morpth to the original player type */
 		void MorphRevert();
 		/** @brief Sets dizzy time left */
-		bool SetDizzyTime(float time);
+		virtual bool SetDizzyTime(float timeLeft);
 
 		/** @brief Returns active shield */
 		ShieldType GetActiveShield() const {

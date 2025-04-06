@@ -95,7 +95,7 @@ namespace Jazz2::Scripting
 		std::int32_t pos = 0;
 		std::int32_t nested = 0;
 		while (pos < scriptSize) {
-			asUINT len = 0;
+			std::uint32_t len = 0;
 			asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
 			if (t == asTC_UNKNOWN && scriptContent[pos] == '#' && (pos + 1 < scriptSize)) {
 				std::int32_t start = pos++;
@@ -148,7 +148,7 @@ namespace Jazz2::Scripting
 
 		pos = 0;
 		while (pos < scriptSize) {
-			asUINT len = 0;
+			std::uint32_t len = 0;
 			asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
 			if (t == asTC_COMMENT || t == asTC_WHITESPACE) {
 				pos += len;
@@ -424,7 +424,7 @@ namespace Jazz2::Scripting
 
 						asITypeInfo* objectType = _engine->GetTypeInfoById(typeId);
 						std::int32_t idx = -1;
-						for (asUINT i = 0; i < (asUINT)objectType->GetPropertyCount(); i++) {
+						for (std::uint32_t i = 0; i < (std::uint32_t)objectType->GetPropertyCount(); i++) {
 							const char* name;
 							objectType->GetProperty(i, &name);
 							if (decl.Declaration == StringView(name)) {
@@ -462,7 +462,7 @@ namespace Jazz2::Scripting
 
 						asITypeInfo* objectType = _engine->GetTypeInfoById(typeId);
 						std::int32_t idx = -1;
-						for (asUINT i = 0; i < (asUINT)objectType->GetPropertyCount(); i++) {
+						for (std::uint32_t i = 0; i < (std::uint32_t)objectType->GetPropertyCount(); i++) {
 							const char* name;
 							objectType->GetProperty(i, &name);
 							if (decl.Name == StringView(name)) {
@@ -503,7 +503,7 @@ namespace Jazz2::Scripting
 	std::int32_t ScriptLoader::ExcludeCode(String& scriptContent, std::int32_t pos)
 	{
 		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
-		asUINT len = 0;
+		std::uint32_t len = 0;
 		std::int32_t nested = 0;
 
 		while (pos < scriptSize) {
@@ -547,7 +547,7 @@ namespace Jazz2::Scripting
 	std::int32_t ScriptLoader::SkipStatement(String& scriptContent, std::int32_t pos)
 	{
 		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
-		asUINT len = 0;
+		std::uint32_t len = 0;
 
 		// Skip until ; or { whichever comes first
 		while (pos < scriptSize && scriptContent[pos] != ';' && scriptContent[pos] != '{') {
@@ -574,7 +574,7 @@ namespace Jazz2::Scripting
 					if (identifier == "length"_s) {
 						std::int32_t pos1 = pos + len;
 						std::int32_t pos2 = pos1;
-						asUINT len2 = 0;
+						std::uint32_t len2 = 0;
 						asETokenClass t2 = asTC_UNKNOWN;
 						while (pos2 < scriptSize) {
 							t2 = _engine->ParseToken(&scriptContent[pos2], scriptSize - pos2, &len2);
@@ -585,7 +585,7 @@ namespace Jazz2::Scripting
 						}
 						if (t2 == asTC_KEYWORD && scriptContent[pos2] == '(') {
 							std::int32_t pos3 = pos2 + len2;
-							asUINT len3 = 0;
+							std::uint32_t len3 = 0;
 							asETokenClass t3 = asTC_UNKNOWN;
 							while (pos3 < scriptSize) {
 								t3 = _engine->ParseToken(&scriptContent[pos3], scriptSize - pos3, &len3);
@@ -626,7 +626,7 @@ namespace Jazz2::Scripting
 			scriptContent[pos++] = ' ';
 
 			std::int32_t level = 1;
-			asUINT len = 0;
+			std::uint32_t len = 0;
 			while (level > 0 && pos < scriptSize) {
 				asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
 				if (t == asTC_KEYWORD) {
@@ -675,11 +675,11 @@ namespace Jazz2::Scripting
 		std::int32_t scriptSize = (std::int32_t)scriptContent.size();
 		std::int32_t start = pos;
 
-		declaration = { };
+		declaration = {};
 		type = MetadataType::Unknown;
 
 		StringView token;
-		asUINT len = 0;
+		std::uint32_t len = 0;
 		asETokenClass t = asTC_WHITESPACE;
 
 		// Skip white spaces, comments and leading decorators
@@ -827,7 +827,7 @@ namespace Jazz2::Scripting
 		if (path.empty() || path.size() > fs::MaxPathLength) return { };
 
 		char result[fs::MaxPathLength + 1];
-		size_t length = 0;
+		std::size_t length = 0;
 
 		if (path[0] == '/' || path[0] == '\\') {
 			// Absolute path from "Content" directory
