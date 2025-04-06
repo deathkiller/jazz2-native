@@ -14,7 +14,7 @@ namespace nCine
 			if (blockName != nullptr && blockName[0] != '\0') {
 				GLUniformBlockCache* uniformBlock = material.uniformBlock(blockName);
 				if (uniformBlock != nullptr) {
-					uniform = uniformBlock->uniform(name);
+					uniform = uniformBlock->GetUniform(name);
 				}
 			} else {
 				uniform = material.uniform(name);
@@ -127,7 +127,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setIntVector(vector);
+			result = uniform->SetIntVector(vector);
 		}
 
 		return result;
@@ -142,7 +142,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setIntValue(value0);
+			result = uniform->SetIntValue(value0);
 		}
 
 		return result;
@@ -157,7 +157,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setIntValue(value0, value1);
+			result = uniform->SetIntValue(value0, value1);
 		}
 
 		return result;
@@ -172,7 +172,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setIntValue(value0, value1, value2);
+			result = uniform->SetIntValue(value0, value1, value2);
 		}
 
 		return result;
@@ -187,7 +187,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setIntValue(value0, value1, value2, value3);
+			result = uniform->SetIntValue(value0, value1, value2, value3);
 		}
 
 		return result;
@@ -217,7 +217,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setFloatVector(vector);
+			result = uniform->SetFloatVector(vector);
 		}
 
 		return result;
@@ -232,7 +232,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setFloatValue(value0);
+			result = uniform->SetFloatValue(value0);
 		}
 
 		return result;
@@ -247,7 +247,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setFloatValue(value0, value1);
+			result = uniform->SetFloatValue(value0, value1);
 		}
 
 		return result;
@@ -262,7 +262,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setFloatValue(value0, value1, value2);
+			result = uniform->SetFloatValue(value0, value1, value2);
 		}
 
 		return result;
@@ -277,7 +277,7 @@ namespace nCine
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
 		if (uniform != nullptr) {
-			result = uniform->setFloatValue(value0, value1, value2, value3);
+			result = uniform->SetFloatValue(value0, value1, value2, value3);
 		}
 
 		return result;
@@ -312,7 +312,7 @@ namespace nCine
 		std::uint32_t size = 0;
 		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
 		if (uniformBlock != nullptr) {
-			size = static_cast<std::uint32_t>(uniformBlock->size());
+			size = static_cast<std::uint32_t>(uniformBlock->GetSize());
 		}
 
 		return size;
@@ -327,7 +327,7 @@ namespace nCine
 		bool result = false;
 		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
 		if (uniformBlock != nullptr) {
-			result = uniformBlock->copyData(destIndex, src, numBytes);
+			result = uniformBlock->CopyData(destIndex, src, numBytes);
 		}
 
 		return result;
@@ -347,7 +347,7 @@ namespace nCine
 		bool result = false;
 		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
 		if (uniformBlock != nullptr) {
-			result = uniformBlock->copyData(src);
+			result = uniformBlock->CopyData(src);
 		}
 
 		return result;

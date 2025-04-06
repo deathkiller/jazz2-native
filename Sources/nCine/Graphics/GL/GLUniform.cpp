@@ -17,13 +17,13 @@ namespace nCine
 		glGetActiveUniform(program, index, MaxNameLength, &length, &size_, &type_, name_);
 		ASSERT(length <= MaxNameLength);
 
-		if (!hasReservedPrefix()) {
+		if (!HasReservedPrefix()) {
 			location_ = glGetUniformLocation(program, name_);
 		}
 		GL_LOG_ERRORS();
 	}
 
-	GLenum GLUniform::basicType() const
+	GLenum GLUniform::GetBasicType() const
 	{
 		switch (type_) {
 			case GL_FLOAT:
@@ -61,7 +61,7 @@ namespace nCine
 		}
 	}
 
-	std::uint32_t GLUniform::numComponents() const
+	std::uint32_t GLUniform::GetComponentCount() const
 	{
 		switch (type_) {
 			case GL_FLOAT:
@@ -102,7 +102,7 @@ namespace nCine
 		}
 	}
 
-	bool GLUniform::hasReservedPrefix() const
+	bool GLUniform::HasReservedPrefix() const
 	{
 		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');
 	}

@@ -74,8 +74,8 @@ namespace Jazz2::Actors::Solid
 				piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 				auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->intValue(0) != 0) {
-					textureUniform->setIntValue(0); // GL_TEXTURE0
+				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
 
 				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
@@ -205,9 +205,9 @@ namespace Jazz2::Actors::Solid
 				float texBiasY = (float(_currentAnimation->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
 				auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)_currentAnimation->Base->FrameDimensions.X, (float)_currentAnimation->Base->FrameDimensions.Y);
-				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)_currentAnimation->Base->FrameDimensions.X, (float)_currentAnimation->Base->FrameDimensions.Y);
+				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				auto pos = _pieces[i].Pos;
 				command->setTransformation(Matrix4x4f::Translation(pos.X - _currentAnimation->Base->FrameDimensions.X / 2, pos.Y - _currentAnimation->Base->FrameDimensions.Y / 2, 0.0f));

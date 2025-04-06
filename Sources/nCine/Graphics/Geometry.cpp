@@ -35,11 +35,11 @@ namespace nCine
 	void Geometry::createCustomVbo(std::uint32_t numFloats, GLenum usage)
 	{
 		vbo_ = std::make_unique<GLBufferObject>(GL_ARRAY_BUFFER);
-		vbo_->bufferData(numFloats * sizeof(GLfloat), nullptr, usage);
+		vbo_->BufferData(numFloats * sizeof(GLfloat), nullptr, usage);
 
 		vboUsageFlags_ = usage;
 		vboParams_.object = vbo_.get();
-		vboParams_.size = vbo_->size();
+		vboParams_.size = vbo_->GetSize();
 		vboParams_.offset = 0;
 		vboParams_.mapBase = nullptr;
 
@@ -74,7 +74,7 @@ namespace nCine
 		if (vboParams_.mapBase == nullptr) {
 			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
-			vboParams_.mapBase = static_cast<GLubyte*>(vbo_->mapBufferRange(0, vbo_->size(), mapFlags));
+			vboParams_.mapBase = static_cast<GLubyte*>(vbo_->MapBufferRange(0, vbo_->GetSize(), mapFlags));
 		}
 
 		return reinterpret_cast<GLfloat*>(vboParams_.mapBase);
@@ -84,8 +84,8 @@ namespace nCine
 	{
 		// Don't flush and unmap if the VBO is not custom
 		if (vbo_ != nullptr && vboParams_.mapBase != nullptr) {
-			vboParams_.object->flushMappedBufferRange(vboParams_.offset, vboParams_.size);
-			vboParams_.object->unmap();
+			vboParams_.object->FlushMappedBufferRange(vboParams_.offset, vboParams_.size);
+			vboParams_.object->Unmap();
 		}
 		vboParams_.mapBase = nullptr;
 	}
@@ -109,11 +109,11 @@ namespace nCine
 	void Geometry::createCustomIbo(std::uint32_t numIndices, GLenum usage)
 	{
 		ibo_ = std::make_unique<GLBufferObject>(GL_ELEMENT_ARRAY_BUFFER);
-		ibo_->bufferData(numIndices * sizeof(GLushort), nullptr, usage);
+		ibo_->BufferData(numIndices * sizeof(GLushort), nullptr, usage);
 
 		iboUsageFlags_ = usage;
 		iboParams_.object = ibo_.get();
-		iboParams_.size = ibo_->size();
+		iboParams_.size = ibo_->GetSize();
 		iboParams_.offset = 0;
 		iboParams_.mapBase = nullptr;
 
@@ -148,7 +148,7 @@ namespace nCine
 		if (iboParams_.mapBase == nullptr) {
 			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
-			iboParams_.mapBase = static_cast<GLubyte*>(ibo_->mapBufferRange(0, ibo_->size(), mapFlags));
+			iboParams_.mapBase = static_cast<GLubyte*>(ibo_->MapBufferRange(0, ibo_->GetSize(), mapFlags));
 		}
 
 		return reinterpret_cast<GLushort*>(iboParams_.mapBase);
@@ -158,8 +158,8 @@ namespace nCine
 	{
 		// Don't flush and unmap if the IBO is not custom
 		if (ibo_ != nullptr && iboParams_.mapBase != nullptr) {
-			iboParams_.object->flushMappedBufferRange(iboParams_.offset, iboParams_.size);
-			iboParams_.object->unmap();
+			iboParams_.object->FlushMappedBufferRange(iboParams_.offset, iboParams_.size);
+			iboParams_.object->Unmap();
 		}
 		iboParams_.mapBase = nullptr;
 	}
@@ -183,7 +183,7 @@ namespace nCine
 	void Geometry::bind()
 	{
 		if (vboParams_.object != nullptr) {
-			vboParams_.object->bind();
+			vboParams_.object->Bind();
 		}
 	}
 
@@ -228,8 +228,8 @@ namespace nCine
 
 			if (mapFlags == 0 && vbo_ != nullptr) {
 				// Using buffer orphaning + `glBufferSubData()` when having a custom VBO with no mapping available
-				vbo_->bufferData(vboParams_.size, nullptr, vboUsageFlags_);
-				vbo_->bufferSubData(vboParams_.offset, vboParams_.size, hostVertexPointer_);
+				vbo_->BufferData(vboParams_.size, nullptr, vboUsageFlags_);
+				vbo_->BufferSubData(vboParams_.offset, vboParams_.size, hostVertexPointer_);
 			} else {
 				GLfloat* vertices = vbo_ ? acquireVertexPointer() : acquireVertexPointer(numFloats, numElementsPerVertex_);
 				memcpy(vertices, hostVertexPointer_, numFloats * sizeof(GLfloat));
@@ -251,8 +251,8 @@ namespace nCine
 
 			if (mapFlags == 0 && ibo_ != nullptr) {
 				// Using buffer orphaning + `glBufferSubData()` when having a custom IBO with no mapping available
-				ibo_->bufferData(iboParams_.size, nullptr, iboUsageFlags_);
-				ibo_->bufferSubData(iboParams_.offset, iboParams_.size, hostIndexPointer_);
+				ibo_->BufferData(iboParams_.size, nullptr, iboUsageFlags_);
+				ibo_->BufferSubData(iboParams_.offset, iboParams_.size, hostIndexPointer_);
 			} else {
 				GLushort* indices = ibo_ ? acquireIndexPointer() : acquireIndexPointer(numIndices_);
 				memcpy(indices, hostIndexPointer_, numIndices_ * sizeof(GLushort));

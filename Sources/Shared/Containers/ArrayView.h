@@ -147,7 +147,7 @@ namespace Death { namespace Containers {
 		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
 #else
 		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
-		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
+		template<class U, typename std::enable_if<std::is_same<std::nullptr_t, U>::value, int>::type = 0> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 #endif
@@ -168,7 +168,7 @@ namespace Death { namespace Containers {
 		*/
 		template<class U, std::size_t size
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type
+			, typename std::enable_if<std::is_convertible<U*, T*>::value, int>::type = 0
 #endif
 		> constexpr /*implicit*/ ArrayView(U(&data)[size]) noexcept : _data{data}, _size{size} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
@@ -182,7 +182,7 @@ namespace Death { namespace Containers {
 		*/
 		template<class U
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type
+			, typename std::enable_if<std::is_convertible<U*, T*>::value, int>::type = 0
 #endif
 		> constexpr /*implicit*/ ArrayView(ArrayView<U> view) noexcept : _data{view}, _size{view.size()} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
@@ -196,7 +196,7 @@ namespace Death { namespace Containers {
 		*/
 		template<std::size_t size, class U
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type
+			, typename std::enable_if<std::is_convertible<U*, T*>::value, int>::type = 0
 #endif
 		> constexpr /*implicit*/ ArrayView(StaticArrayView<size, U> view) noexcept : _data{view}, _size{size} {
 			static_assert(sizeof(U) == sizeof(T), "Type sizes are not compatible");
@@ -260,7 +260,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr T& operator[](std::size_t i) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr T& operator[](U i) const;
+		template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr T& operator[](U i) const;
 #endif
 
 		/**
@@ -280,7 +280,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr ArrayView<T> sliceSize(T* begin, std::size_t size) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
 			return slice(begin, begin + size);
 		}
 #endif
@@ -298,7 +298,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<std::size_t size_> constexpr StaticArrayView<size_, T> slice(T* begin) const;
 #else
-		template<std::size_t size_, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size_, T> slice(U begin) const;
+		template<std::size_t size_, class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr StaticArrayView<size_, T> slice(U begin) const;
 #endif
 		/** @overload */
 		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(std::size_t begin) const;
@@ -329,7 +329,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr ArrayView<T> prefix(T* end) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> prefix(U end) const {
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr ArrayView<T> prefix(U end) const {
 			return static_cast<T*>(end) ? slice(_data, end) : nullptr;
 		}
 #endif
@@ -420,7 +420,7 @@ namespace Death { namespace Containers {
 		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
 #else
 		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
-		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
+		template<class U, typename std::enable_if<std::is_same<std::nullptr_t, U>::value, int>::type = 0> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 #endif
@@ -449,21 +449,21 @@ namespace Death { namespace Containers {
 		 */
 		template<class T, std::size_t size
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			, class = typename std::enable_if<!std::is_const<T>::value>::type
+			, typename std::enable_if<!std::is_const<T>::value, int>::type = 0
 #endif
 		> constexpr /*implicit*/ ArrayView(T(&data)[size]) noexcept : _data(data), _size(size * sizeof(T)) {}
 
 		/** @brief Construct a void view on any @ref ArrayView */
 		template<class T
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			, class = typename std::enable_if<!std::is_const<T>::value>::type
+			, typename std::enable_if<!std::is_const<T>::value, int>::type = 0
 #endif
 		> constexpr /*implicit*/ ArrayView(ArrayView<T> array) noexcept : _data(array), _size(array.size() * sizeof(T)) {}
 
 		/** @brief Construct a void view on any @ref StaticArrayView */
 		template<std::size_t size, class T
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			, class = typename std::enable_if<!std::is_const<T>::value>::type
+			, typename std::enable_if<!std::is_const<T>::value, int>::type = 0
 #endif
 		> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
@@ -518,7 +518,7 @@ namespace Death { namespace Containers {
 		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept;
 #else
 		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
-		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
+		template<class U, typename std::enable_if<std::is_same<std::nullptr_t, U>::value, int>::type = 0> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 #endif
@@ -752,7 +752,7 @@ namespace Death { namespace Containers {
 		constexpr /*implicit*/ StaticArrayView(std::nullptr_t = nullptr) noexcept;
 #else
 		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either an ArrayView or std::size_t */
-		template<class U, class = U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ StaticArrayView(U) noexcept : _data{} {}
+		template<class U, class = U, typename std::enable_if<std::is_same<std::nullptr_t, U>::value, int>::type = 0> constexpr /*implicit*/ StaticArrayView(U) noexcept : _data{} {}
 
 		constexpr /*implicit*/ StaticArrayView() noexcept : _data{} {}
 #endif
@@ -769,7 +769,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr explicit StaticArrayView(T* data)
 #else
-		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && !std::is_same<U, T(&)[size_]>::value>::type> constexpr explicit StaticArrayView(U data)
+		template<class U, typename std::enable_if<std::is_pointer<U>::value && !std::is_same<U, T(&)[size_]>::value, int>::type = 0> constexpr explicit StaticArrayView(U data)
 #endif
 			noexcept : _data(data) {}
 
@@ -780,12 +780,11 @@ namespace Death { namespace Containers {
 		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
 		* Expects that both types have the same size.
 		*/
-#ifdef DOXYGEN_GENERATING_OUTPUT
-		template<class U>
-#else
-		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
+		template<class U
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, typename std::enable_if<std::is_convertible<U*, T*>::value, int>::type = 0
 #endif
-		constexpr /*implicit*/ StaticArrayView(U(&data)[size_]) noexcept : _data{data} {}
+		> constexpr /*implicit*/ StaticArrayView(U(&data)[size_]) noexcept : _data{data} {}
 
 		/**
 		 * @brief Construct a static view on an @ref StaticArrayView
@@ -793,12 +792,11 @@ namespace Death { namespace Containers {
 		 * Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
 		 * Expects that both types have the same size.
 		 */
-#ifdef DOXYGEN_GENERATING_OUTPUT
-		template<class U>
-#else
-		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
+		template<class U
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, typename std::enable_if<std::is_convertible<U*, T*>::value, int>::type = 0
 #endif
-		constexpr /*implicit*/ StaticArrayView(StaticArrayView<size_, U> view) noexcept : _data{view} {
+		> constexpr /*implicit*/ StaticArrayView(StaticArrayView<size_, U> view) noexcept : _data{view} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
@@ -862,7 +860,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr T& operator[](std::size_t i) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr T& operator[](U i) const;
+		template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr T& operator[](U i) const;
 #endif
 
 		/** @copydoc ArrayView::slice(T*, T*) const */
@@ -878,7 +876,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr ArrayView<T> sliceSize(T* begin, std::size_t size) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
 			return ArrayView<T>(*this).sliceSize(begin, size);
 		}
 #endif
@@ -891,7 +889,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<std::size_t size__> constexpr StaticArrayView<size__, T> slice(T* begin) const;
 #else
-		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size__, T> slice(U begin) const {
+		template<std::size_t size__, class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr StaticArrayView<size__, T> slice(U begin) const {
 			return ArrayView<T>(*this).template slice<size__>(begin);
 		}
 #endif
@@ -922,7 +920,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr ArrayView<T> prefix(T* end) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> prefix(U end) const {
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr ArrayView<T> prefix(U end) const {
 			return ArrayView<T>(*this).prefix(end);
 		}
 #endif
@@ -1056,7 +1054,7 @@ namespace Death { namespace Containers {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(_size != 0, "View is empty"), _data[_size - 1];
 	}
 
-	template<class T> template<class U, class> constexpr T& ArrayView<T>::operator[](const U i) const {
+	template<class T> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> constexpr T& ArrayView<T>::operator[](const U i) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < _size, ("Index %zu out of range for %zu elements", std::size_t(i), _size)),
 				_data[i];
 	}
@@ -1084,13 +1082,13 @@ namespace Death { namespace Containers {
 		return _data[size_ - 1];
 	}
 
-	template<std::size_t size_, class T> template<class U, class> constexpr T& StaticArrayView<size_, T>::operator[](const U i) const {
+	template<std::size_t size_, class T> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> constexpr T& StaticArrayView<size_, T>::operator[](const U i) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, ("Index %zu out of range for %zu elements", std::size_t(i), size_)),
 				_data[i];
 	}
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	template<class T> template<std::size_t size_, class U, class> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(const U begin) const {
+	template<class T> template<std::size_t size_, class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(const U begin) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(_data <= begin && begin + size_ <= _data + _size,
 					("Slice [%zu:%zu] out of range for %zu elements",
 					 std::size_t(begin - _data), std::size_t(begin + size_ - _data), _size)),

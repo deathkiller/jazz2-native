@@ -1520,7 +1520,7 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
 		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
@@ -1539,12 +1539,12 @@ namespace Jazz2
 
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
-			GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
+			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
-				batchSize = maxUniformBlockSize / block->size();
+				batchSize = maxUniformBlockSize / block->GetSize();
 				LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
-					block->size() - block->alignAmount(), block->alignAmount(), batchSize);
+					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
 				
 				bool hasLinked = false;
 				while (batchSize > 0) {
@@ -1578,7 +1578,7 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
 		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
@@ -1597,12 +1597,12 @@ namespace Jazz2
 
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
-			GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
+			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
-				batchSize = maxUniformBlockSize / block->size();
+				batchSize = maxUniformBlockSize / block->GetSize();
 				LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
-					block->size() - block->alignAmount(), block->alignAmount(), batchSize);
+					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
 
 				bool hasLinked = false;
 				while (batchSize > 0) {

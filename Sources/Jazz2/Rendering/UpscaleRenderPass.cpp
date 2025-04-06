@@ -41,8 +41,8 @@ namespace Jazz2::Rendering
 		if (_camera == nullptr) {
 			_camera = std::make_unique<Camera>();
 		}
-		_camera->setOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
-		_camera->setView(0, 0, 0, 1);
+		_camera->SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
+		_camera->SetView(0, 0, 0, 1);
 
 		if (_view == nullptr) {
 			_node = std::make_unique<SceneNode>();
@@ -50,13 +50,13 @@ namespace Jazz2::Rendering
 
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
-			_view->setRootNode(_node.get());
-			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::Never);
+			_view->SetRootNode(_node.get());
+			_view->SetCamera(_camera.get());
+			_view->SetClearMode(Viewport::ClearMode::Never);
 		} else {
-			_view->removeAllTextures();
+			_view->RemoveAllTextures();
 			_target->init(nullptr, Texture::Format::RGB8, width, height);
-			_view->setTexture(_target.get());
+			_view->SetTexture(_target.get());
 		}
 		_target->setMinFiltering(SamplerFilter::Nearest);
 		_target->setMagFiltering(SamplerFilter::Nearest);
@@ -66,12 +66,12 @@ namespace Jazz2::Rendering
 			if (_antialiasing._camera == nullptr) {
 				_antialiasing._camera = std::make_unique<Camera>();
 			}
-			_antialiasing._camera->setOrthoProjection(0.0f, _targetSize.X, _targetSize.Y, 0.0f);
-			_antialiasing._camera->setView(0, 0, 0, 1);
+			_antialiasing._camera->SetOrthoProjection(0.0f, _targetSize.X, _targetSize.Y, 0.0f);
+			_antialiasing._camera->SetView(0, 0, 0, 1);
 
 			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::None);
-			_antialiasing._view->setRootNode(this);
-			_antialiasing._view->setCamera(_antialiasing._camera.get());
+			_antialiasing._view->SetRootNode(this);
+			_antialiasing._view->SetCamera(_antialiasing._camera.get());
 			//_antialiasing._view->setClearMode(Viewport::ClearMode::Never);
 
 			SceneNode& rootNode = theApplication().GetRootNode();
@@ -85,8 +85,8 @@ namespace Jazz2::Rendering
 				_antialiasing._renderCommand.setTransformation(_antialiasing._renderCommand.transformation());
 
 				auto* textureUniform = _antialiasing._renderCommand.material().uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->intValue(0) != 0) {
-					textureUniform->setIntValue(0); // GL_TEXTURE0
+				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
 			}
 		} else {
@@ -123,8 +123,8 @@ namespace Jazz2::Rendering
 			_renderCommand.setTransformation(_renderCommand.transformation());
 
 			auto* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
 	}
@@ -133,7 +133,7 @@ namespace Jazz2::Rendering
 	{
 		_antialiasing.Register();
 
-		Viewport::chain().push_back(_view.get());
+		Viewport::GetChain().push_back(_view.get());
 	}
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
@@ -143,15 +143,15 @@ namespace Jazz2::Rendering
 		if (_resizeShader != nullptr) {
 			// TexRectUniformName is reused for input texture size
 			Vector2i size = _target->size();
-			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
+			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
 		} else
 #endif
 		{
-			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		}
 
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		_renderCommand.material().setTexture(0, *_target);
 
@@ -168,7 +168,7 @@ namespace Jazz2::Rendering
 	void UpscaleRenderPass::AntialiasingSubpass::Register()
 	{
 		if (_view != nullptr) {
-			Viewport::chain().push_back(_view.get());
+			Viewport::GetChain().push_back(_view.get());
 		}
 	}
 
@@ -176,9 +176,9 @@ namespace Jazz2::Rendering
 	{
 		Vector2i size = _target->size();
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		_renderCommand.material().setTexture(0, *_target);
 
@@ -195,10 +195,10 @@ namespace Jazz2::Rendering
 	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
 	{
 		if (_clippedView != nullptr) {
-			_clippedView->removeAllTextures();
+			_clippedView->RemoveAllTextures();
 		}
 		if (_overlayView != nullptr) {
-			_overlayView->removeAllTextures();
+			_overlayView->RemoveAllTextures();
 		}
 
 		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight);
@@ -208,11 +208,11 @@ namespace Jazz2::Rendering
 			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_clippedView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
-			_clippedView->setRootNode(_clippedNode.get());
-			_clippedView->setCamera(_camera.get());
-			_clippedView->setClearMode(Viewport::ClearMode::Never);
+			_clippedView->SetRootNode(_clippedNode.get());
+			_clippedView->SetCamera(_camera.get());
+			_clippedView->SetClearMode(Viewport::ClearMode::Never);
 		} else {
-			_clippedView->setTexture(_target.get());
+			_clippedView->SetTexture(_target.get());
 		}
 
 		if (_overlayView == nullptr) {
@@ -220,11 +220,11 @@ namespace Jazz2::Rendering
 			_overlayNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_overlayView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
-			_overlayView->setRootNode(_overlayNode.get());
-			_overlayView->setCamera(_camera.get());
-			_overlayView->setClearMode(Viewport::ClearMode::Never);
+			_overlayView->SetRootNode(_overlayNode.get());
+			_overlayView->SetCamera(_camera.get());
+			_overlayView->SetClearMode(Viewport::ClearMode::Never);
 		} else {
-			_overlayView->setTexture(_target.get());
+			_overlayView->SetTexture(_target.get());
 		}
 	}
 
@@ -232,8 +232,9 @@ namespace Jazz2::Rendering
 	{
 		_antialiasing.Register();
 
-		Viewport::chain().push_back(_overlayView.get());
-		Viewport::chain().push_back(_clippedView.get());
-		Viewport::chain().push_back(_view.get());
+		auto& chain = Viewport::GetChain();
+		chain.push_back(_overlayView.get());
+		chain.push_back(_clippedView.get());
+		chain.push_back(_view.get());
 	}
 }

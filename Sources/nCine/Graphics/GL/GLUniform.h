@@ -21,35 +21,35 @@ namespace nCine
 		GLUniform();
 		GLUniform(GLuint program, GLuint index);
 
-		inline GLuint index() const {
+		inline GLuint GetIndex() const {
 			return index_;
 		}
-		inline GLint blockIndex() const {
+		inline GLint GetBlockIndex() const {
 			return blockIndex_;
 		}
-		inline GLint location() const {
+		inline GLint GetLocation() const {
 			return location_;
 		}
-		inline GLint size() const {
+		inline GLint GetSize() const {
 			return size_;
 		}
-		inline GLenum type() const {
+		inline GLenum GetType() const {
 			return type_;
 		}
-		inline GLint offset() const {
+		inline GLint GetOffset() const {
 			return offset_;
 		}
-		inline const char* name() const {
+		inline const char* GetName() const {
 			return name_;
 		}
-		GLenum basicType() const;
-		std::uint32_t numComponents() const;
-		inline std::uint32_t memorySize() const {
-			return size() * numComponents() * sizeof(basicType());
+		GLenum GetBasicType() const;
+		std::uint32_t GetComponentCount() const;
+		inline std::uint32_t GetMemorySize() const {
+			return GetSize() * GetComponentCount() * sizeof(GetBasicType());
 		}
 
 		/// Returns true if the uniform name starts with `gl_`
-		bool hasReservedPrefix() const;
+		bool HasReservedPrefix() const;
 
 	private:
 		GLuint index_;

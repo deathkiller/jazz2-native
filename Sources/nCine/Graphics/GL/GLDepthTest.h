@@ -21,22 +21,22 @@ namespace nCine
 			bool depthMaskEnabled = true;
 		};
 
-		static bool isEnabled() {
+		static bool IsEnabled() {
 			return state_.enabled;
 		}
-		static void enable();
-		static void disable();
+		static void Enable();
+		static void Disable();
 
-		static bool isDepthMaskEnabled() {
+		static bool IsDepthMaskEnabled() {
 			return state_.depthMaskEnabled;
 		}
-		static void enableDepthMask();
-		static void disableDepthMask();
+		static void EnableDepthMask();
+		static void DisableDepthMask();
 
-		static State state() {
+		static State GetState() {
 			return state_;
 		}
-		static void setState(State newState);
+		static void SetState(State newState);
 
 	private:
 		static State state_;

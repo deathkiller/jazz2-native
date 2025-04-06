@@ -4,7 +4,7 @@ namespace nCine
 {
 	GLCullFace::State GLCullFace::state_;
 
-	void GLCullFace::enable()
+	void GLCullFace::Enable()
 	{
 		if (state_.enabled == false) {
 			glEnable(GL_CULL_FACE);
@@ -12,7 +12,7 @@ namespace nCine
 		}
 	}
 
-	void GLCullFace::disable()
+	void GLCullFace::Disable()
 	{
 		if (state_.enabled == true) {
 			glDisable(GL_CULL_FACE);
@@ -20,7 +20,7 @@ namespace nCine
 		}
 	}
 
-	void GLCullFace::setMode(GLenum mode)
+	void GLCullFace::SetMode(GLenum mode)
 	{
 		if (mode != state_.mode) {
 			glCullFace(mode);
@@ -28,14 +28,14 @@ namespace nCine
 		}
 	}
 
-	void GLCullFace::setState(State newState)
+	void GLCullFace::SetState(State newState)
 	{
 		if (newState.enabled) {
-			enable();
+			Enable();
 		} else {
-			disable();
+			Disable();
 		}
-		setMode(newState.mode);
+		SetMode(newState.mode);
 
 		state_ = newState;
 	}

@@ -7,39 +7,41 @@ namespace nCine
 	/// Handles OpenGL buffer objects of different kinds
 	class GLBufferObject
 	{
+		friend class RenderVaoPool;
+
 	public:
 		explicit GLBufferObject(GLenum target);
 		~GLBufferObject();
 
-		inline GLuint glHandle() const {
+		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
-		inline GLenum target() const {
+		inline GLenum GetTarget() const {
 			return target_;
 		}
-		inline GLsizeiptr size() const {
+		inline GLsizeiptr GetSize() const {
 			return size_;
 		}
 
-		bool bind() const;
-		bool unbind() const;
+		bool Bind() const;
+		bool Unbind() const;
 
-		void bufferData(GLsizeiptr size, const GLvoid* data, GLenum usage);
-		void bufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data);
+		void BufferData(GLsizeiptr size, const GLvoid* data, GLenum usage);
+		void BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data);
 #if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
-		void bufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags);
+		void BufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags);
 #endif
 
-		void bindBufferBase(GLuint index);
-		void bindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize);
-		void* mapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access);
-		void flushMappedBufferRange(GLintptr offset, GLsizeiptr length);
-		GLboolean unmap();
+		void BindBufferBase(GLuint index);
+		void BindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize);
+		void* MapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access);
+		void FlushMappedBufferRange(GLintptr offset, GLsizeiptr length);
+		GLboolean Unmap();
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
-		void texBuffer(GLenum internalformat);
+		void TexBuffer(GLenum internalformat);
 #endif
 
-		void setObjectLabel(const char* label);
+		void SetObjectLabel(const char* label);
 
 	private:
 		static class GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> boundBuffers_;
@@ -73,11 +75,10 @@ namespace nCine
 		/// Deleted assignment operator
 		GLBufferObject& operator=(const GLBufferObject&) = delete;
 
-		inline static void setBoundHandle(GLenum target, GLuint glHandle) {
+		inline static void SetBoundHandle(GLenum target, GLuint glHandle) {
 			boundBuffers_[target] = glHandle;
 		}
-		static bool bindHandle(GLenum target, GLuint glHandle);
-		friend class RenderVaoPool;
+		static bool BindHandle(GLenum target, GLuint glHandle);
 	};
 
 }

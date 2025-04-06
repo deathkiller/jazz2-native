@@ -172,7 +172,7 @@ namespace Jazz2::Tiles
 		ZoneScopedC(0xA09359);
 
 		const Viewport* viewport = RenderResources::currentViewport();
-		Rectf cullingRect = viewport->cullingRect();
+		Rectf cullingRect = viewport->GetCullingRect();
 		Vector2f viewCenter = cullingRect.Center();
 
 		for (auto& layer : _layers) {
@@ -191,8 +191,8 @@ namespace Jazz2::Tiles
 					command->setType(RenderCommand::Type::TileMap);
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(w, cullingRect.H);
-					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(w, cullingRect.H);
+					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
 
 					command->setTransformation(Matrix4x4f::Translation(cullingRect.X, cullingRect.Y, 0.0f));
 					command->setLayer(spriteLayer.Description.Depth);
@@ -205,8 +205,8 @@ namespace Jazz2::Tiles
 					command->setType(RenderCommand::Type::TileMap);
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(w, cullingRect.H);
-					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(w, cullingRect.H);
+					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
 
 					command->setTransformation(Matrix4x4f::Translation(cullingRect.X + cullingRect.W - w, cullingRect.Y, 0.0f));
 					command->setLayer(spriteLayer.Description.Depth);
@@ -559,7 +559,7 @@ namespace Jazz2::Tiles
 			if (tile.DestructFrameIndex >= max) {
 				if (!soundName.empty()) {
 					_owner->PlayCommonSfx(soundName, Vector3f(tx * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2),
-						ty * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f));
+						ty * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f), 1.0f, Random().FastFloat(0.9f, 1.1f));
 				}
 				CreateTileDebris(anim.Tiles[anim.Tiles.size() - 1].TileID, tx, ty);
 			}
@@ -782,12 +782,12 @@ namespace Jazz2::Tiles
 					}
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 
 					Vector4f color = layer.Description.Color;
 					color.W *= tile.Alpha / 255.0f;
-					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
+					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
 					float x2r = x2, y2r = y2;
 					if (!PreferencesCache::UnalignedViewport) {
@@ -835,8 +835,8 @@ namespace Jazz2::Tiles
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 			auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
 
@@ -1287,7 +1287,7 @@ namespace Jazz2::Tiles
 
 		constexpr float MaxDebrisSize = 128.0f;
 
-		Rectf viewportRect = RenderResources::currentViewport()->cullingRect();
+		Rectf viewportRect = RenderResources::currentViewport()->GetCullingRect();
 		viewportRect.X -= MaxDebrisSize;
 		viewportRect.Y -= MaxDebrisSize;
 		viewportRect.W += MaxDebrisSize * 2.0f;
@@ -1308,9 +1308,9 @@ namespace Jazz2::Tiles
 			}
 
 			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
-			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(debris.Size.X, debris.Size.Y);
-			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
+			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
+			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(debris.Size.X, debris.Size.Y);
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
 			worldMatrix.RotateZ(debris.Angle);
@@ -1408,14 +1408,14 @@ namespace Jazz2::Tiles
 		auto* command = RentRenderCommand(layer.Description.RendererType);
 
 		auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)cullingRect.W, (float)cullingRect.H);
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		command->material().uniform("uViewSize")->setFloatValue((float)cullingRect.W, (float)cullingRect.H);
-		command->material().uniform("uCameraPos")->setFloatVector(viewCenter.Data());
-		command->material().uniform("uShift")->setFloatValue(x, y);
-		command->material().uniform("uHorizonColor")->setFloatVector(layer.Description.Color.Data());
+		command->material().uniform("uViewSize")->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
+		command->material().uniform("uCameraPos")->SetFloatVector(viewCenter.Data());
+		command->material().uniform("uShift")->SetFloatValue(x, y);
+		command->material().uniform("uHorizonColor")->SetFloatVector(layer.Description.Color.Data());
 
 		command->setTransformation(Matrix4x4f::Translation(cullingRect.X, cullingRect.Y, 0.0f));
 		command->setLayer(layer.Description.Depth);
@@ -1469,12 +1469,12 @@ namespace Jazz2::Tiles
 			std::int32_t height = layoutSize.Y * TileSet::DefaultTileSize;
 
 			_camera = std::make_unique<Camera>();
-			_camera->setOrthoProjection(0.0f, (float)width, 0.0f, (float)height);
-			_camera->setView(0, 0, 0, 1);
+			_camera->SetOrthoProjection(0.0f, (float)width, 0.0f, (float)height);
+			_camera->SetView(0, 0, 0, 1);
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
-			_view->setRootNode(this);
-			_view->setCamera(_camera.get());
+			_view->SetRootNode(this);
+			_view->SetCamera(_camera.get());
 			//_view->setClearMode(Viewport::ClearMode::Never);
 			_target->setMagFiltering(SamplerFilter::Linear);
 			_target->setWrap(SamplerWrapping::Repeat);
@@ -1489,13 +1489,13 @@ namespace Jazz2::Tiles
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 				auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->intValue(0) != 0) {
-					textureUniform->setIntValue(0); // GL_TEXTURE0
+				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
 			}
 		}
 
-		Viewport::chain().push_back(_view.get());
+		Viewport::GetChain().push_back(_view.get());
 	}
 
 	bool TileMap::TexturedBackgroundPass::OnDraw(RenderQueue& renderQueue)
@@ -1538,9 +1538,9 @@ namespace Jazz2::Tiles
 				}
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
 				command->material().setTexture(*tileSet->TextureDiffuse);
@@ -1551,10 +1551,11 @@ namespace Jazz2::Tiles
 
 		if (!isAnimated && _alreadyRendered) {
 			// If it's not animated, it can be rendered only once
-			for (std::int32_t i = Viewport::chain().size() - 1; i >= 0; i--) {
-				auto& item = Viewport::chain()[i];
+			auto& chain = Viewport::GetChain();
+			for (std::int32_t i = chain.size() - 1; i >= 0; i--) {
+				auto& item = chain[i];
 				if (item == _view.get()) {
-					Viewport::chain().erase(&item);
+					chain.erase(&item);
 					break;
 				}
 			}

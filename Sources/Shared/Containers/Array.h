@@ -274,7 +274,7 @@ namespace Death { namespace Containers {
 		/*implicit*/ Array(std::nullptr_t = nullptr) noexcept;
 #else
 		/* To avoid ambiguity either when calling Array{0} or in certain cases of passing 0 to overloads that take either an Array or std::size_t */
-		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> /*implicit*/ Array(U) noexcept : _data{nullptr}, _size{0}, _deleter{} {}
+		template<class U, typename std::enable_if<std::is_same<std::nullptr_t, U>::value, int>::type = 0> /*implicit*/ Array(U) noexcept : _data{nullptr}, _size{0}, _deleter{} {}
 
 		/*implicit*/ Array() noexcept : _data(nullptr), _size(0), _deleter{} {}
 #endif
@@ -492,9 +492,9 @@ namespace Death { namespace Containers {
 		const T& operator[](std::size_t i) const;
 #else
 		/* Has to be done this way because otherwise it causes ambiguity with a builtin operator[] for pointers if an int or ssize_t is used due to the implicit pointer conversion */
-		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> T& operator[](U i);
+		template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type = 0> T& operator[](U i);
 		/** @overload */
-		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> const T& operator[](U i) const;
+		template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type = 0> const T& operator[](U i) const;
 #endif
 
 		/**
@@ -527,7 +527,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		ArrayView<T> sliceSize(T* begin, std::size_t size);
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<T> sliceSize(U begin, std::size_t size) {
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> ArrayView<T> sliceSize(U begin, std::size_t size) {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
 		}
 #endif
@@ -535,7 +535,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		ArrayView<const T> sliceSize(const T* begin, std::size_t size) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
+		template<class U, typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
 			return ArrayView<const T>{*this}.sliceSize(begin, size);
 		}
 #endif
@@ -556,7 +556,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<std::size_t size_> StaticArrayView<size_, T> slice(T* begin);
 #else
-		template<std::size_t size_, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> StaticArrayView<size_, T> slice(U begin) {
+		template<std::size_t size_, class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> StaticArrayView<size_, T> slice(U begin) {
 			return ArrayView<T>(*this).template slice<size_>(begin);
 		}
 #endif
@@ -564,7 +564,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<std::size_t size_> StaticArrayView<size_, const T> slice(const T* begin) const;
 #else
-		template<std::size_t size_, class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> StaticArrayView<size_, const T> slice(U begin) const {
+		template<std::size_t size_, class U, typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> StaticArrayView<size_, const T> slice(U begin) const {
 			return ArrayView<const T>(*this).template slice<size_>(begin);
 		}
 #endif
@@ -598,7 +598,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		ArrayView<T> prefix(T* end);
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type>
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0>
 		ArrayView<T> prefix(U end) {
 			return ArrayView<T>(*this).prefix(end);
 		}
@@ -607,7 +607,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		ArrayView<const T> prefix(const T* end) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type>
+		template<class U, typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0>
 		ArrayView<const T> prefix(U end) const {
 			return ArrayView<const T>(*this).prefix(end);
 		}
@@ -798,7 +798,7 @@ namespace Death { namespace Containers {
 	}
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	template<class T, class D> template<class U, class> const T& Array<T, D>::operator[](const U i) const {
+	template<class T, class D> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> const T& Array<T, D>::operator[](const U i) const {
 		DEATH_DEBUG_ASSERT(std::size_t(i) < _size, ("Index %zu out of range for %zu elements", std::size_t(i), _size), _data[0]);
 		return _data[i];
 	}
@@ -815,7 +815,7 @@ namespace Death { namespace Containers {
 	}
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	template<class T, class D> template<class U, class> T& Array<T, D>::operator[](const U i) {
+	template<class T, class D> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> T& Array<T, D>::operator[](const U i) {
 		return const_cast<T&>(static_cast<const Array<T, D>&>(*this)[i]);
 	}
 #endif

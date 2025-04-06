@@ -17,7 +17,7 @@ namespace nCine
 		};
 
 		/// OpenGL information strings
-		struct GlInfoStrings
+		struct GLInfoStrings
 		{
 			const char* vendor = nullptr;
 			const char* renderer = nullptr;
@@ -73,15 +73,15 @@ namespace nCine
 		virtual ~IGfxCapabilities() = 0;
 
 		/// Returns the OpenGL version numbers
-		virtual std::int32_t glVersion(GLVersion version) const = 0;
+		virtual std::int32_t GetGLVersion(GLVersion version) const = 0;
 		/// Returns the OpenGL information strings structure
-		virtual const GlInfoStrings& glInfoStrings() const = 0;
+		virtual const GLInfoStrings& GetGLInfoStrings() const = 0;
 		/// Returns the value of a runtime OpenGL integer value
-		virtual std::int32_t value(GLIntValues valueName) const = 0;
+		virtual std::int32_t GetValue(GLIntValues valueName) const = 0;
 		/// Returns the value of a runtime OpenGL integer value from an array
-		virtual std::int32_t arrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const = 0;
+		virtual std::int32_t GetArrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const = 0;
 		/// Returns true if the specified OpenGL extension is available
-		virtual bool hasExtension(GLExtensions extensionName) const = 0;
+		virtual bool HasExtension(GLExtensions extensionName) const = 0;
 	};
 
 	inline IGfxCapabilities::~IGfxCapabilities() {}
@@ -91,24 +91,24 @@ namespace nCine
 	class NullGfxCapabilities : public IGfxCapabilities
 	{
 	public:
-		inline std::int32_t glVersion(GLVersion version) const override {
+		inline std::int32_t GetGLVersion(GLVersion version) const override {
 			return 0;
 		}
-		inline const GlInfoStrings& glInfoStrings() const override {
+		inline const GLInfoStrings& GetGLInfoStrings() const override {
 			return glInfoStrings_;
 		}
-		inline std::int32_t value(GLIntValues valueName) const override {
+		inline std::int32_t GetValue(GLIntValues valueName) const override {
 			return 0;
 		}
-		inline std::int32_t arrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const override {
+		inline std::int32_t GetArrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const override {
 			return 0;
 		}
-		inline bool hasExtension(GLExtensions extensionName) const override {
+		inline bool HasExtension(GLExtensions extensionName) const override {
 			return false;
 		}
 
 	private:
-		GlInfoStrings glInfoStrings_;
+		GLInfoStrings glInfoStrings_;
 	};
 #endif
 }

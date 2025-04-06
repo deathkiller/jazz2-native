@@ -61,21 +61,21 @@ namespace nCine
 	GLuint GLDebug::debugGroupId_ = 0;
 	std::int32_t GLDebug::maxLabelLength_ = 0;
 
-	void GLDebug::init(const IGfxCapabilities& gfxCaps)
+	void GLDebug::Init(const IGfxCapabilities& gfxCaps)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		debugAvailable_ = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG) &&
+		debugAvailable_ = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG) &&
 			theApplication().GetGfxDevice().glContextInfo().debugContext;
 
 		glGetIntegerv(GL_MAX_LABEL_LENGTH, &maxLabelLength_);
 
 		if (debugAvailable_) {
-			enableDebugOutput();
+			EnableDebugOutput();
 		}
 #endif
 	}
 
-	void GLDebug::pushGroup(const char* message)
+	void GLDebug::PushGroup(const char* message)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
@@ -84,7 +84,7 @@ namespace nCine
 #endif
 	}
 
-	void GLDebug::popGroup()
+	void GLDebug::PopGroup()
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
@@ -93,7 +93,7 @@ namespace nCine
 #endif
 	}
 
-	void GLDebug::messageInsert(const char* message)
+	void GLDebug::MessageInsert(const char* message)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
@@ -102,7 +102,7 @@ namespace nCine
 #endif
 	}
 
-	void GLDebug::objectLabel(LabelTypes identifier, GLuint name, const char* label)
+	void GLDebug::SetObjectLabel(LabelTypes identifier, GLuint name, const char* label)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
@@ -111,7 +111,7 @@ namespace nCine
 #endif
 	}
 
-	void GLDebug::objectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label)
+	void GLDebug::SetObjectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
@@ -120,7 +120,7 @@ namespace nCine
 #endif
 	}
 
-	void GLDebug::getObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label)
+	void GLDebug::GetObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
@@ -135,7 +135,7 @@ namespace nCine
 #	if defined(DEATH_TARGET_WINDOWS)
 		__stdcall
 #	endif
-		debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
+		DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
 	{
 		const char* sourceString;
 		switch (source) {
@@ -175,11 +175,11 @@ namespace nCine
 	}
 #endif
 
-	void GLDebug::enableDebugOutput()
+	void GLDebug::EnableDebugOutput()
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-		glDebugMessageCallback(static_cast<GLDEBUGPROC>(debugCallback), nullptr);
+		glDebugMessageCallback(static_cast<GLDEBUGPROC>(DebugCallback), nullptr);
 		LOGI("OpenGL debug callback initialized");
 #endif
 	}

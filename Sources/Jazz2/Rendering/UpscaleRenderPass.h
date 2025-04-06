@@ -31,7 +31,7 @@ namespace Jazz2::Rendering
 		}
 
 		Vector2i GetViewSize() const {
-			return _view->size();
+			return _view->GetSize();
 		}
 
 		Vector2f GetTargetSize() const {
@@ -94,7 +94,7 @@ namespace Jazz2::Rendering
 		}
 
 		void SetClipRectangle(const Recti& scissorRect) {
-			_clippedView->setScissorRect(scissorRect);
+			_clippedView->SetScissorRect(scissorRect);
 		}
 
 	private:

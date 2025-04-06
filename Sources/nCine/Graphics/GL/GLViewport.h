@@ -24,20 +24,20 @@ namespace nCine
 			Recti rect = Recti(0, 0, 0, 0);
 		};
 
-		static Recti rect() {
+		static Recti GetRect() {
 			return state_.rect;
 		}
-		static void setRect(const Recti& rect);
-		static void setRect(GLint x, GLint y, GLsizei width, GLsizei height);
+		static void SetRect(const Recti& rect);
+		static void SetRect(GLint x, GLint y, GLsizei width, GLsizei height);
 
-		static State state() {
+		static State GetState() {
 			return state_;
 		}
-		static void setState(State newState);
+		static void SetState(State newState);
 
 	private:
 		static State state_;
 
-		static void initRect(GLint x, GLint y, GLsizei width, GLsizei height);
+		static void InitRect(GLint x, GLint y, GLsizei width, GLsizei height);
 	};
 }

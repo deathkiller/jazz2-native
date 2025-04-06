@@ -35,29 +35,29 @@ namespace Jazz2::Rendering
 
 			_camera = std::make_unique<Camera>();
 
-			_view->setCamera(_camera.get());
-			_view->setRootNode(sceneNode);
+			_view->SetCamera(_camera.get());
+			_view->SetRootNode(sceneNode);
 		} else {
-			_view->removeAllTextures();
+			_view->RemoveAllTextures();
 			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
-			_view->setTexture(_viewTexture.get());
+			_view->SetTexture(_viewTexture.get());
 		}
 
 		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
 		_viewTexture->setWrap(SamplerWrapping::ClampToEdge);
 
-		_camera->setOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
+		_camera->SetOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
 
 		if (notInitialized) {
 			_lightingRenderer = std::make_unique<LightingRenderer>(this);
 			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
 			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::None);
-			_lightingView->setRootNode(_lightingRenderer.get());
-			_lightingView->setCamera(_camera.get());
+			_lightingView->SetRootNode(_lightingRenderer.get());
+			_lightingView->SetCamera(_camera.get());
 		} else {
-			_lightingView->removeAllTextures();
+			_lightingView->RemoveAllTextures();
 			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
-			_lightingView->setTexture(_lightingBuffer.get());
+			_lightingView->SetTexture(_lightingBuffer.get());
 		}
 
 		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
@@ -87,8 +87,9 @@ namespace Jazz2::Rendering
 		_blurPass1.Register();
 		_downsamplePass.Register();
 
-		Viewport::chain().push_back(_lightingView.get());
-		Viewport::chain().push_back(_view.get());
+		auto& chain = Viewport::GetChain();
+		chain.push_back(_lightingView.get());
+		chain.push_back(_view.get());
 	}
 
 	Rectf PlayerViewport::GetBounds() const
@@ -108,7 +109,7 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::OnEndFrame()
 	{
-		_lightingView->setClearColor(_ambientLight.W, 0.0f, 0.0f, 1.0f);
+		_lightingView->SetClearColor(_ambientLight.W, 0.0f, 0.0f, 1.0f);
 	}
 
 	void PlayerViewport::UpdateCamera(float timeMult)
@@ -138,7 +139,7 @@ namespace Jazz2::Rendering
 		}
 
 		// The position to focus on
-		Vector2i halfView = _view->size() / 2;
+		Vector2i halfView = _view->GetSize() / 2;
 		Vector2f focusPos = _targetPlayer->GetPos();
 
 		bool overridePosX = false, overridePosY = false;
@@ -229,7 +230,7 @@ namespace Jazz2::Rendering
 			_cameraPos.Y = std::floor(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
 		}
 
-		_camera->setView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);
+		_camera->SetView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);
 	}
 
 	void PlayerViewport::ShakeCameraView(float duration)

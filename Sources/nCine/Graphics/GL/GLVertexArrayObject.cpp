@@ -15,14 +15,14 @@ namespace nCine
 	GLVertexArrayObject::~GLVertexArrayObject()
 	{
 		if (boundVAO_ == glHandle_) {
-			unbind();
+			Unbind();
 		}
 
 		glDeleteVertexArrays(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
 
-	bool GLVertexArrayObject::bind() const
+	bool GLVertexArrayObject::Bind() const
 	{
 		if (boundVAO_ != glHandle_) {
 			glBindVertexArray(glHandle_);
@@ -33,7 +33,7 @@ namespace nCine
 		return false;
 	}
 
-	bool GLVertexArrayObject::unbind()
+	bool GLVertexArrayObject::Unbind()
 	{
 		if (boundVAO_ != 0) {
 			glBindVertexArray(0);
@@ -44,8 +44,8 @@ namespace nCine
 		return false;
 	}
 
-	void GLVertexArrayObject::setObjectLabel(const char* label)
+	void GLVertexArrayObject::SetObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::VertexArray, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::VertexArray, glHandle_, label);
 	}
 }

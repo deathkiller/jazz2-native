@@ -296,7 +296,7 @@ namespace Death { namespace Containers {
 		/*implicit*/ String(const char* data);
 #else
 		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a String or std::size_t */
-		template<class T, class = typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value>::type> /*implicit*/ String(T data) : String{nullptr, nullptr, nullptr, data} {}
+		template<class T, typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> /*implicit*/ String(T data) : String{nullptr, nullptr, nullptr, data} {}
 #endif
 
 		/**
@@ -411,7 +411,7 @@ namespace Death { namespace Containers {
 		explicit String(const char* data, Deleter deleter) noexcept;
 #else
 		/* Gets ambigous when calling String{ptr, 0}. FFS, zero as null pointer was deprecated in C++11 already, why is this still a problem?! */
-		template<class T, class = typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, const char*>::type> String(const char* data, T deleter) noexcept : String{deleter, nullptr, const_cast<char*>(data)} {}
+		template<class T, typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> String(const char* data, T deleter) noexcept : String{deleter, nullptr, const_cast<char*>(data)} {}
 #endif
 
 		/**
@@ -680,7 +680,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		MutableStringView sliceSize(char* begin, std::size_t size);
 #else
-		template<class T, class = typename std::enable_if<std::is_convertible<T, char*>::value && !std::is_convertible<T, std::size_t>::value>::type> MutableStringView sliceSize(T begin, std::size_t size) {
+		template<class T, typename std::enable_if<std::is_convertible<T, char*>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> MutableStringView sliceSize(T begin, std::size_t size) {
 			return sliceSizePointerInternal(begin, size);
 		}
 #endif
@@ -688,7 +688,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		StringView sliceSize(const char* begin, std::size_t size) const;
 #else
-		template<class T, class = typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value>::type> StringView sliceSize(T begin, std::size_t size) const {
+		template<class T, typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> StringView sliceSize(T begin, std::size_t size) const {
 			return sliceSizePointerInternal(begin, size);
 		}
 #endif
@@ -707,7 +707,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		MutableStringView prefix(char* end);
 #else
-		template<class T, class = typename std::enable_if<std::is_convertible<T, char*>::value && !std::is_convertible<T, std::size_t>::value>::type> MutableStringView prefix(T end) {
+		template<class T, typename std::enable_if<std::is_convertible<T, char*>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> MutableStringView prefix(T end) {
 			return prefixPointerInternal(end);
 		}
 #endif
@@ -715,7 +715,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		StringView prefix(const char* end) const;
 #else
-		template<class T, class = typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value>::type> StringView prefix(T end) const {
+		template<class T, typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value, int>::type = 0> StringView prefix(T end) const {
 			return prefixPointerInternal(end);
 		}
 #endif
@@ -885,9 +885,9 @@ namespace Death { namespace Containers {
 		/** @overload */
 		StringView exceptPrefix(char prefix) const = delete;
 #else
-		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> MutableStringView exceptPrefix(T&& prefix) = delete;
+		template<class T, typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value, int>::type = 0> MutableStringView exceptPrefix(T&& prefix) = delete;
 		/** @overload */
-		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> StringView exceptPrefix(T&& prefix) const = delete;
+		template<class T, typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value, int>::type = 0> StringView exceptPrefix(T&& prefix) const = delete;
 #endif
 
 		/**
@@ -911,9 +911,9 @@ namespace Death { namespace Containers {
 		/** @overload */
 		StringView exceptSuffix(char suffix) const = delete;
 #else
-		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> MutableStringView exceptSuffix(T&& suffix) = delete;
+		template<class T, typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value, int>::type = 0> MutableStringView exceptSuffix(T&& suffix) = delete;
 		/** @overload */
-		template<class T, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> StringView exceptSuffix(T&& suffix) const = delete;
+		template<class T, typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value, int>::type = 0> StringView exceptSuffix(T&& suffix) const = delete;
 #endif
 
 		/**

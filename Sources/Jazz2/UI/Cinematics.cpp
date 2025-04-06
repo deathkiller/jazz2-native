@@ -348,8 +348,8 @@ namespace Jazz2::UI
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 		auto* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->intValue(0) != 0) {
-			textureUniform->setIntValue(0); // GL_TEXTURE0
+		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
 	}
 
@@ -381,9 +381,9 @@ namespace Jazz2::UI
 		frameOffset.Y = std::round(frameOffset.Y);
 
 		auto* instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(frameSize.Data());
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(frameSize.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.setTransformation(Matrix4x4f::Translation(frameOffset.X, frameOffset.Y, 0.0f));
 		_renderCommand.material().setTexture(*_owner->_texture);

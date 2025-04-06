@@ -19,30 +19,31 @@ namespace nCine
 		GLShaderUniforms();
 		explicit GLShaderUniforms(GLShaderProgram* shaderProgram);
 		GLShaderUniforms(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
-		inline void setProgram(GLShaderProgram* shaderProgram) {
-			setProgram(shaderProgram, nullptr, nullptr);
-		}
-		void setProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
-		void setUniformsDataPointer(GLubyte* dataPointer);
-		void setDirty(bool isDirty);
 
-		inline std::uint32_t numUniforms() const {
+		inline void SetProgram(GLShaderProgram* shaderProgram) {
+			SetProgram(shaderProgram, nullptr, nullptr);
+		}
+		void SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
+		void SetUniformsDataPointer(GLubyte* dataPointer);
+		void SetDirty(bool isDirty);
+
+		inline std::uint32_t GetUniformCount() const {
 			return uniformCaches_.size();
 		}
-		inline bool hasUniform(const char* name) const {
+		inline bool HasUniform(const char* name) const {
 			return (uniformCaches_.find(String::nullTerminatedView(name)) != nullptr);
 		}
-		GLUniformCache* uniform(const char* name);
-		inline const UniformHashMapType allUniforms() const {
+		GLUniformCache* GetUniform(const char* name);
+		inline const UniformHashMapType GetAllUniforms() const {
 			return uniformCaches_;
 		}
-		void commitUniforms();
+		void CommitUniforms();
 
 	private:
 		GLShaderProgram* shaderProgram_;
 		UniformHashMapType uniformCaches_;
 
 		/// Imports the uniforms with the option of including only some or excluding others
-		void importUniforms(const char* includeOnly, const char* exclude);
+		void ImportUniforms(const char* includeOnly, const char* exclude);
 	};
 }

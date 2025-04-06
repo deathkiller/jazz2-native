@@ -18,39 +18,39 @@ namespace nCine
 		GLUniformCache();
 		explicit GLUniformCache(const GLUniform* uniform);
 
-		inline const GLUniform* uniform() const {
+		inline const GLUniform* GetUniform() const {
 			return uniform_;
 		}
-		inline const GLubyte* dataPointer() const {
+		inline const GLubyte* GetDataPointer() const {
 			return dataPointer_;
 		}
-		inline void setDataPointer(GLubyte* dataPointer) {
+		inline void SetDataPointer(GLubyte* dataPointer) {
 			dataPointer_ = dataPointer;
 		}
 
-		const GLfloat* floatVector() const;
-		GLfloat floatValue(std::uint32_t index) const;
-		const GLint* intVector() const;
-		GLint intValue(std::uint32_t index) const;
+		const GLfloat* GetFloatVector() const;
+		GLfloat GetFloatValue(std::uint32_t index) const;
+		const GLint* GetIntVector() const;
+		GLint GetIntValue(std::uint32_t index) const;
 
-		bool setFloatVector(const GLfloat* vec);
-		bool setFloatValue(GLfloat v0);
-		bool setFloatValue(GLfloat v0, GLfloat v1);
-		bool setFloatValue(GLfloat v0, GLfloat v1, GLfloat v2);
-		bool setFloatValue(GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
-		bool setIntVector(const GLint* vec);
-		bool setIntValue(GLint v0);
-		bool setIntValue(GLint v0, GLint v1);
-		bool setIntValue(GLint v0, GLint v1, GLint v2);
-		bool setIntValue(GLint v0, GLint v1, GLint v2, GLint v3);
+		bool SetFloatVector(const GLfloat* vec);
+		bool SetFloatValue(GLfloat v0);
+		bool SetFloatValue(GLfloat v0, GLfloat v1);
+		bool SetFloatValue(GLfloat v0, GLfloat v1, GLfloat v2);
+		bool SetFloatValue(GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+		bool SetIntVector(const GLint* vec);
+		bool SetIntValue(GLint v0);
+		bool SetIntValue(GLint v0, GLint v1);
+		bool SetIntValue(GLint v0, GLint v1, GLint v2);
+		bool SetIntValue(GLint v0, GLint v1, GLint v2, GLint v3);
 
-		inline bool isDirty() const {
+		inline bool IsDirty() const {
 			return isDirty_;
 		}
-		inline void setDirty(bool isDirty) {
+		inline void SetDirty(bool isDirty) {
 			isDirty_ = isDirty;
 		}
-		bool commitValue();
+		bool CommitValue();
 
 	private:
 		const GLUniform* uniform_;
@@ -58,9 +58,9 @@ namespace nCine
 		/// A flag to signal if the uniform needs to be committed
 		bool isDirty_;
 
-		bool checkFloat() const;
-		bool checkInt() const;
-		bool checkComponents(std::uint32_t requiredComponents) const;
+		bool CheckFloat() const;
+		bool CheckInt() const;
+		bool CheckComponents(std::uint32_t requiredComponents) const;
 	};
 
 }

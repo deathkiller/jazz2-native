@@ -55,8 +55,8 @@ namespace nCine
 		shaderProgramType_ = ShaderProgramType::Custom;
 		shaderProgram_ = program;
 		// The camera uniforms are handled separately as they have a different update frequency
-		shaderUniforms_.setProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);
-		shaderUniformBlocks_.setProgram(shaderProgram_);
+		shaderUniforms_.SetProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);
+		shaderUniformBlocks_.SetProgram(shaderProgram_);
 
 		RenderResources::setDefaultAttributesParameters(*shaderProgram_);
 	}
@@ -82,14 +82,14 @@ namespace nCine
 		ASSERT(shaderProgram_);
 
 		// Total memory size for all uniforms and uniform blocks
-		const std::uint32_t uniformsSize = shaderProgram_->uniformsSize() + shaderProgram_->uniformBlocksSize();
+		const std::uint32_t uniformsSize = shaderProgram_->GetUniformsSize() + shaderProgram_->GetUniformBlocksSize();
 		if (uniformsSize > uniformsHostBufferSize_) {
 			uniformsHostBuffer_ = std::make_unique<GLubyte[]>(uniformsSize);
 			uniformsHostBufferSize_ = uniformsSize;
 		}
 		GLubyte* dataPointer = uniformsHostBuffer_.get();
-		shaderUniforms_.setUniformsDataPointer(dataPointer);
-		shaderUniformBlocks_.setUniformsDataPointer(&dataPointer[shaderProgram_->uniformsSize()]);
+		shaderUniforms_.SetUniformsDataPointer(dataPointer);
+		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
 	}
 
 	void Material::setUniformsDataPointer(GLubyte* dataPointer)
@@ -99,8 +99,8 @@ namespace nCine
 
 		uniformsHostBuffer_.reset(nullptr);
 		uniformsHostBufferSize_ = 0;
-		shaderUniforms_.setUniformsDataPointer(dataPointer);
-		shaderUniformBlocks_.setUniformsDataPointer(&dataPointer[shaderProgram_->uniformsSize()]);
+		shaderUniforms_.SetUniformsDataPointer(dataPointer);
+		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
 	}
 
 	const GLTexture* Material::texture(std::uint32_t unit) const
@@ -131,21 +131,21 @@ namespace nCine
 	{
 		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			if (textures_[i] != nullptr) {
-				textures_[i]->bind(i);
+				textures_[i]->Bind(i);
 			} else {
-				GLTexture::unbind(i);
+				GLTexture::Unbind(i);
 			}
 		}
 
 		if (shaderProgram_) {
-			shaderProgram_->use();
-			shaderUniformBlocks_.bind();
+			shaderProgram_->Use();
+			shaderUniformBlocks_.Bind();
 		}
 	}
 
 	void Material::defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset)
 	{
-		shaderProgram_->defineVertexFormat(vbo, ibo, vboOffset);
+		shaderProgram_->DefineVertexFormat(vbo, ibo, vboOffset);
 	}
 
 	namespace
@@ -188,9 +188,9 @@ namespace nCine
 		static SortHashData hashData alignas(8);
 
 		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
-			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->glHandle() : 0;
+			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->GetGLHandle() : 0;
 		}
-		hashData.shaderProgram = shaderProgram_->glHandle();
+		hashData.shaderProgram = shaderProgram_->GetGLHandle();
 		hashData.srcBlendingFactor = glBlendingFactorToInt(srcBlendingFactor_);
 		hashData.destBlendingFactor = glBlendingFactorToInt(destBlendingFactor_);
 

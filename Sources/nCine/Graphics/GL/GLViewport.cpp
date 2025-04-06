@@ -4,7 +4,7 @@ namespace nCine
 {
 	GLViewport::State GLViewport::state_;
 
-	void GLViewport::setRect(const Recti& rect)
+	void GLViewport::SetRect(const Recti& rect)
 	{
 		if (rect.X != state_.rect.X || rect.Y != state_.rect.Y ||
 			rect.W != state_.rect.W || rect.H != state_.rect.H) {
@@ -14,18 +14,18 @@ namespace nCine
 		}
 	}
 
-	void GLViewport::setRect(GLint x, GLint y, GLsizei width, GLsizei height)
+	void GLViewport::SetRect(GLint x, GLint y, GLsizei width, GLsizei height)
 	{
-		setRect(Recti(x, y, width, height));
+		SetRect(Recti(x, y, width, height));
 	}
 
-	void GLViewport::setState(State newState)
+	void GLViewport::SetState(State newState)
 	{
-		setRect(newState.rect);
+		SetRect(newState.rect);
 		state_ = newState;
 	}
 
-	void GLViewport::initRect(GLint x, GLint y, GLsizei width, GLsizei height)
+	void GLViewport::InitRect(GLint x, GLint y, GLsizei width, GLsizei height)
 	{
 		state_.rect.X = x;
 		state_.rect.Y = y;

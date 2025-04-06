@@ -43,31 +43,31 @@ namespace nCine
 		/// Creates a camera with default matrices
 		Camera();
 
-		inline const ProjectionValues& projectionValues() const {
+		inline const ProjectionValues& GetProjectionValues() const {
 			return projectionValues_;
 		}
-		inline const ViewValues& viewValues() const {
+		inline const ViewValues& GetViewValues() const {
 			return viewValues_;
 		}
 
-		inline const Matrix4x4f& projection() const {
+		inline const Matrix4x4f& GetProjection() const {
 			return projection_;
 		}
-		inline const Matrix4x4f& view() const {
+		inline const Matrix4x4f& GetView() const {
 			return view_;
 		}
 
-		void setOrthoProjection(float left, float right, float top, float bottom);
-		void setOrthoProjection(const ProjectionValues& values);
+		void SetOrthoProjection(float left, float right, float top, float bottom);
+		void SetOrthoProjection(const ProjectionValues& values);
 
-		void setView(Vector2f pos, float rotation, float scale);
-		void setView(float x, float y, float rotation, float scale);
-		void setView(const ViewValues& values);
+		void SetView(Vector2f pos, float rotation, float scale);
+		void SetView(float x, float y, float rotation, float scale);
+		void SetView(const ViewValues& values);
 
-		inline std::uint32_t updateFrameProjectionMatrix() const {
+		inline std::uint32_t UpdateFrameProjectionMatrix() const {
 			return updateFrameProjectionMatrix_;
 		}
-		inline std::uint32_t updateFrameViewMatrix() const {
+		inline std::uint32_t UpdateFrameViewMatrix() const {
 			return updateFrameViewMatrix_;
 		}
 

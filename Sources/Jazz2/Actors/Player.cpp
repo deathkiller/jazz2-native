@@ -1109,8 +1109,8 @@ namespace Jazz2::Actors
 					command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 					auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-					if (textureUniform && textureUniform->intValue(0) != 0) {
-						textureUniform->setIntValue(0); // GL_TEXTURE0
+					if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+						textureUniform->SetIntValue(0); // GL_TEXTURE0
 					}
 				}
 
@@ -1154,9 +1154,9 @@ namespace Jazz2::Actors
 				}
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
-				instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
+				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
+				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
 
 				Matrix4x4f worldMatrix = Matrix4x4f::Translation(gunspotPosX, gunspotPosY, 0.0f);
 				if (lookUp) {
@@ -1202,17 +1202,17 @@ namespace Jazz2::Actors
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-							if (textureUniform && textureUniform->intValue(0) != 0) {
-								textureUniform->setIntValue(0); // GL_TEXTURE0
+							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f),
 							-sinf(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
-						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
+						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
 						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
@@ -1233,17 +1233,17 @@ namespace Jazz2::Actors
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-							if (textureUniform && textureUniform->intValue(0) != 0) {
-								textureUniform->setIntValue(0); // GL_TEXTURE0
+							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * 0.006f, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							sinf(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
-						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
+						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
 						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() + 4);
@@ -1273,8 +1273,8 @@ namespace Jazz2::Actors
 						command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 						auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-						if (textureUniform && textureUniform->intValue(0) != 0) {
-							textureUniform->setIntValue(0); // GL_TEXTURE0
+						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+							textureUniform->SetIntValue(0); // GL_TEXTURE0
 						}
 					}
 
@@ -1296,9 +1296,9 @@ namespace Jazz2::Actors
 					}
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
-					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
+					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
+					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
 
 					command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 					command->setLayer(_renderer.layer() + 4);
@@ -1338,17 +1338,17 @@ namespace Jazz2::Actors
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-							if (textureUniform && textureUniform->intValue(0) != 0) {
-								textureUniform->setIntValue(0); // GL_TEXTURE0
+							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							-sinf(frames * 0.015f), frames * 0.006f);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
-						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
+						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
 						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
@@ -1369,17 +1369,17 @@ namespace Jazz2::Actors
 							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 							auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-							if (textureUniform && textureUniform->intValue(0) != 0) {
-								textureUniform->setIntValue(0); // GL_TEXTURE0
+							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
 						auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(
+						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * 0.006f + _pos.X * PosMultiplier, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							sinf(frames * 0.015f), frames * -0.006f);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
-						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
+						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 
 						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() + 4);

@@ -14,14 +14,14 @@ namespace nCine
 		GLVertexArrayObject(const GLVertexArrayObject&) = delete;
 		GLVertexArrayObject& operator=(const GLVertexArrayObject&) = delete;
 
-		inline GLuint glHandle() const {
+		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
 
-		bool bind() const;
-		static bool unbind();
+		bool Bind() const;
+		static bool Unbind();
 
-		void setObjectLabel(const char* label);
+		void SetObjectLabel(const char* label);
 
 	private:
 		static GLuint boundVAO_;

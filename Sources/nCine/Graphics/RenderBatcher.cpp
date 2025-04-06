@@ -16,7 +16,7 @@ namespace nCine
 	RenderBatcher::RenderBatcher()
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		UboMaxSize = std::uint32_t(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
+		UboMaxSize = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
 
 		// Create the first buffer right away
 		createBuffer(UboMaxSize);
@@ -61,7 +61,7 @@ namespace nCine
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
 						std::uint32_t currentMaxBatchSize = maxBatchSize;
-						const std::uint32_t shaderBatchSize = batchedShader->batchSize();
+						const std::uint32_t shaderBatchSize = batchedShader->GetBatchSize();
 						if (shaderBatchSize > 0 && currentMaxBatchSize > shaderBatchSize) {
 							currentMaxBatchSize = shaderBatchSize;
 						}
@@ -135,7 +135,7 @@ namespace nCine
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
 		const GLUniformBlockCache* singleInstanceBlock = (*start)->material().uniformBlock(Material::InstanceBlockName);
-		const std::uint32_t singleInstanceBlockSizePacked = singleInstanceBlock->size() - singleInstanceBlock->alignAmount(); // remove the uniform buffer offset alignment
+		const std::uint32_t singleInstanceBlockSizePacked = singleInstanceBlock->GetSize() - singleInstanceBlock->GetAlignAmount(); // remove the uniform buffer offset alignment
 		const std::uint32_t singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
 #if defined(NCINE_PROFILING)
@@ -144,12 +144,12 @@ namespace nCine
 		instancesBlock = batchCommand->material().uniformBlock(Material::InstancesBlockName);
 		FATAL_ASSERT_MSG(instancesBlock != nullptr, "Batched shader does not have an \"%s\" uniform block", Material::InstancesBlockName);
 
-		const std::uint32_t nonBlockUniformsSize = batchCommand->material().shaderProgram()->uniformsSize();
+		const std::uint32_t nonBlockUniformsSize = batchCommand->material().shaderProgram()->GetUniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
 		std::uint32_t nonInstancesBlocksSize = 0;
 		const GLShaderUniformBlocks::UniformHashMapType allUniformBlocks = refCommand->material().allUniformBlocks();
 		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
-			const char* uniformBlockName = uniformBlockCache.uniformBlock()->name();
+			const char* uniformBlockName = uniformBlockCache.uniformBlock()->GetName();
 			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0) {
 				continue;
 			}
@@ -157,7 +157,7 @@ namespace nCine
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			ASSERT(batchBlock);
 			if (batchBlock) {
-				nonInstancesBlocksSize += uniformBlockCache.size() - uniformBlockCache.alignAmount();
+				nonInstancesBlocksSize += uniformBlockCache.GetSize() - uniformBlockCache.GetAlignAmount();
 			}
 		}
 
@@ -172,7 +172,7 @@ namespace nCine
 
 			// Don't request more bytes than an instances block or an UBO can hold (also protects against big `RenderingSettings::maxBatchSize` values)
 			const std::uint32_t currentSize = nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize;
-			if (instancesBlockSize + singleInstanceBlockSize > instancesBlock->size() || currentSize + singleInstanceBlockSize > UboMaxSize) {
+			if (instancesBlockSize + singleInstanceBlockSize > instancesBlock->GetSize() || currentSize + singleInstanceBlockSize > UboMaxSize) {
 				break;
 			}
 			
@@ -184,28 +184,28 @@ namespace nCine
 		batchCommand->material().setUniformsDataPointer(acquireMemory(nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize));
 		// Copying data for non-instances uniform blocks from the first command in the batch
 		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
-			const char* uniformBlockName = uniformBlockCache.uniformBlock()->name();
+			const char* uniformBlockName = uniformBlockCache.uniformBlock()->GetName();
 			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0) {
 				continue;
 			}
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
-			const bool dataCopied = batchBlock->copyData(uniformBlockCache.dataPointer());
+			const bool dataCopied = batchBlock->CopyData(uniformBlockCache.GetDataPointer());
 			ASSERT(dataCopied);
-			batchBlock->setUsedSize(uniformBlockCache.usedSize());
+			batchBlock->SetUsedSize(uniformBlockCache.usedSize());
 		}
 
 		// Setting sampler uniforms for GL_TEXTURE* units
 		const GLShaderUniforms::UniformHashMapType allUniforms = refCommand->material().allUniforms();
 		for (const GLUniformCache& uniformCache : allUniforms) {
-			if (uniformCache.uniform()->type() == GL_SAMPLER_2D) {
-				GLUniformCache* batchUniformCache = batchCommand->material().uniform(uniformCache.uniform()->name());
-				const std::int32_t refValue = uniformCache.intValue(0);
-				const std::int32_t batchValue = batchUniformCache->intValue(0);
+			if (uniformCache.GetUniform()->GetType() == GL_SAMPLER_2D) {
+				GLUniformCache* batchUniformCache = batchCommand->material().uniform(uniformCache.GetUniform()->GetName());
+				const std::int32_t refValue = uniformCache.GetIntValue(0);
+				const std::int32_t batchValue = batchUniformCache->GetIntValue(0);
 				// Also checking if the command has just been added, as the memory at the
 				// uniforms data pointer is not cleared and might contain the reference value
 				if (batchValue != refValue || commandAdded) {
-					batchUniformCache->setIntValue(refValue);
+					batchUniformCache->SetIntValue(refValue);
 				}
 			}
 		}
@@ -214,7 +214,7 @@ namespace nCine
 		const std::uint32_t maxIndexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
 		// Sum the amount of VBO and IBO memory required by the batch
 		it = start;
-		const bool refShaderHasAttributes = (refShader->numAttributes() > 0);
+		const bool refShaderHasAttributes = (refShader->GetAttributeCount() > 0);
 		while (it != nextStart) {
 			std::uint32_t vertexDataSize = 0;
 			std::uint32_t numIndices = (*it)->geometry().numIndices();
@@ -261,7 +261,7 @@ namespace nCine
 		float* destVtx = nullptr;
 		GLushort* destIdx = nullptr;
 
-		const bool batchedShaderHasAttributes = (batchedShader->numAttributes() > 1);
+		const bool batchedShaderHasAttributes = (batchedShader->GetAttributeCount() > 1);
 		if (batchedShaderHasAttributes) {
 			const std::uint32_t numFloats = instancesVertexDataSize / sizeof(GLfloat);
 			destVtx = batchCommand->geometry().acquireVertexPointer(numFloats, NumFloatsVertexFormat + 1); // aligned to vertex format with index
@@ -279,7 +279,7 @@ namespace nCine
 			command->commitNodeTransformation();
 
 			const GLUniformBlockCache* singleInstanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-			const bool dataCopied = instancesBlock->copyData(instancesBlockOffset, singleInstanceBlock->dataPointer(), singleInstanceBlockSize);
+			const bool dataCopied = instancesBlock->CopyData(instancesBlockOffset, singleInstanceBlock->GetDataPointer(), singleInstanceBlockSize);
 			ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
 
@@ -342,7 +342,7 @@ namespace nCine
 
 			++it;
 		}
-		instancesBlock->setUsedSize(instancesBlockOffset);
+		instancesBlock->SetUsedSize(instancesBlockOffset);
 
 		if (batchedShaderHasAttributes) {
 			batchCommand->geometry().releaseVertexPointer();

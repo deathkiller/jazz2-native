@@ -28,53 +28,53 @@ namespace nCine
 		public:
 			Attribute();
 
-			void init(std::uint32_t index, GLint size, GLenum type);
+			void Init(std::uint32_t index, GLint size, GLenum type);
 			bool operator==(const Attribute& other) const;
 			bool operator!=(const Attribute& other) const;
 
-			inline bool isEnabled() const {
+			inline bool IsEnabled() const {
 				return enabled_;
 			}
-			inline const GLBufferObject* vbo() const {
+			inline const GLBufferObject* GetVbo() const {
 				return vbo_;
 			}
-			inline unsigned int index() const {
+			inline std::uint32_t GetIndex() const {
 				return index_;
 			}
-			inline GLint size() const {
+			inline GLint GetSize() const {
 				return size_;
 			}
-			inline GLenum type() const {
+			inline GLenum GetType() const {
 				return type_;
 			}
-			inline bool isNormalized() const {
+			inline bool IsNormalized() const {
 				return normalized_ == GL_TRUE;
 			}
-			inline GLsizei stride() const {
+			inline GLsizei GetStride() const {
 				return stride_;
 			}
-			inline const GLvoid* pointer() const {
+			inline const GLvoid* GetPointer() const {
 				return pointer_;
 			}
-			inline std::uint32_t baseOffset() const {
+			inline std::uint32_t GetBaseOffset() const {
 				return baseOffset_;
 			}
 
-			void setVboParameters(GLsizei stride, const GLvoid* pointer);
+			void SetVboParameters(GLsizei stride, const GLvoid* pointer);
 			inline void setVbo(const GLBufferObject* vbo) {
 				vbo_ = vbo;
 			}
-			inline void setBaseOffset(std::uint32_t baseOffset) {
+			inline void SetBaseOffset(std::uint32_t baseOffset) {
 				baseOffset_ = baseOffset;
 			}
 
-			inline void setSize(GLint size) {
+			inline void SetSize(GLint size) {
 				size_ = size;
 			}
 			inline void setType(GLenum type) {
 				type_ = type;
 			}
-			inline void setNormalized(bool normalized) {
+			inline void SetNormalized(bool normalized) {
 				normalized_ = normalized;
 			}
 
@@ -95,18 +95,18 @@ namespace nCine
 		GLVertexFormat(const GLVertexFormat& other) = default;
 		GLVertexFormat& operator=(const nCine::GLVertexFormat& other) = default;
 
-		inline std::uint32_t numAttributes() const {
+		inline std::uint32_t GetAttributeCount() const {
 			return std::uint32_t(attributes_.size());
 		}
 
-		inline const GLBufferObject* ibo() const {
+		inline const GLBufferObject* GetIbo() const {
 			return ibo_;
 		}
-		inline void setIbo(const GLBufferObject* ibo) {
+		inline void SetIbo(const GLBufferObject* ibo) {
 			ibo_ = ibo;
 		}
-		void define();
-		void reset();
+		void Define();
+		void Reset();
 
 		inline Attribute& operator[](std::uint32_t index) {
 			return attributes_[index];

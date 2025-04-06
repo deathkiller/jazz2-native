@@ -336,7 +336,7 @@ namespace Jazz2::UI::Menu
 	void InGameMenu::ApplyPreferencesChanges(ChangedPreferencesType type)
 	{
 		if ((type & ChangedPreferencesType::Graphics) == ChangedPreferencesType::Graphics) {
-			Viewport::chain().clear();
+			Viewport::GetChain().clear();
 			Vector2i res = theApplication().GetResolution();
 			_root->OnInitializeViewport(res.X, res.Y);
 		}

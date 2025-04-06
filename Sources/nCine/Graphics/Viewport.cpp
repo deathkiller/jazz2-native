@@ -29,7 +29,7 @@ namespace nCine
 	}*/
 #endif
 
-	GLenum depthStencilFormatToGLFormat(Viewport::DepthStencilFormat format)
+	static GLenum DepthStencilFormatToGLFormat(Viewport::DepthStencilFormat format)
 	{
 		switch (format) {
 			case Viewport::DepthStencilFormat::Depth16:
@@ -42,7 +42,7 @@ namespace nCine
 		}
 	}
 
-	GLenum depthStencilFormatToGLAttachment(Viewport::DepthStencilFormat format)
+	static GLenum DepthStencilFormatToGLAttachment(Viewport::DepthStencilFormat format)
 	{
 		switch (format) {
 			case Viewport::DepthStencilFormat::Depth16:
@@ -67,13 +67,13 @@ namespace nCine
 		}
 
 		if (texture != nullptr) {
-			const bool texAdded = setTexture(texture);
+			const bool texAdded = SetTexture(texture);
 			if (texAdded) {
-				fbo_->setObjectLabel(name);
+				fbo_->SetObjectLabel(name);
 				if (depthStencilFormat != DepthStencilFormat::None) {
-					const bool depthStencilAdded = setDepthStencilFormat(depthStencilFormat);
+					const bool depthStencilAdded = SetDepthStencilFormat(depthStencilFormat);
 					if (!depthStencilAdded) {
-						setTexture(nullptr);
+						SetTexture(nullptr);
 					}
 				}
 			}
@@ -103,14 +103,14 @@ namespace nCine
 	Viewport::~Viewport() = default;
 
 	/*! \note Adding more textures enables the use of multiple render targets (MRTs) */
-	bool Viewport::setTexture(std::uint32_t index, Texture* texture)
+	bool Viewport::SetTexture(std::uint32_t index, Texture* texture)
 	{
 		if (type_ == Type::Screen) {
 			return false;
 		}
 
 		if (type_ != Type::NoTexture) {
-			static const std::int32_t MaxColorAttachments = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
+			static const std::int32_t MaxColorAttachments = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
 			const bool indexOutOfRange = (index >= std::uint32_t(MaxColorAttachments) || index >= MaxNumTextures);
 			const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->width() != width_);
 			const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->height() != height_);
@@ -125,8 +125,8 @@ namespace nCine
 				fbo_ = std::make_unique<GLFramebuffer>();
 			}
 
-			fbo_->attachTexture(*texture->glTexture_, GL_COLOR_ATTACHMENT0 + index);
-			const bool isStatusComplete = fbo_->isStatusComplete();
+			fbo_->AttachTexture(*texture->glTexture_, GL_COLOR_ATTACHMENT0 + index);
+			const bool isStatusComplete = fbo_->IsStatusComplete();
 			if (isStatusComplete) {
 				type_ = Type::WithTexture;
 				textures_[index] = texture;
@@ -142,14 +142,14 @@ namespace nCine
 		} else {
 			// Remove an existing texture
 			if (fbo_ != nullptr) {
-				fbo_->detachTexture(GL_COLOR_ATTACHMENT0 + index);
+				fbo_->DetachTexture(GL_COLOR_ATTACHMENT0 + index);
 				textures_[index] = nullptr;
 				numColorAttachments_--;
 
 				if (numColorAttachments_ == 0) {
 					// Removing the depth/stencil render target
 					if (depthStencilFormat_ != DepthStencilFormat::None) {
-						fbo_->detachRenderbuffer(depthStencilFormatToGLAttachment(depthStencilFormat_));
+						fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 						depthStencilFormat_ = Viewport::DepthStencilFormat::None;
 					}
 
@@ -165,7 +165,7 @@ namespace nCine
 	}
 
 	/*! \note It can remove the depth and stencil render buffer of the viewport's FBO by specifying `DepthStencilFormat::NONE` */
-	bool Viewport::setDepthStencilFormat(DepthStencilFormat depthStencilFormat)
+	bool Viewport::SetDepthStencilFormat(DepthStencilFormat depthStencilFormat)
 	{
 		if (depthStencilFormat_ == depthStencilFormat || type_ == Type::NoTexture)
 			return false;
@@ -177,11 +177,11 @@ namespace nCine
 				fbo_ = std::make_unique<GLFramebuffer>();
 			}
 			if (depthStencilFormat_ != Viewport::DepthStencilFormat::None) {
-				fbo_->detachRenderbuffer(depthStencilFormatToGLAttachment(depthStencilFormat_));
+				fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 			}
-			fbo_->attachRenderbuffer(depthStencilFormatToGLFormat(depthStencilFormat), width_, height_, depthStencilFormatToGLAttachment(depthStencilFormat));
+			fbo_->AttachRenderbuffer(DepthStencilFormatToGLFormat(depthStencilFormat), width_, height_, DepthStencilFormatToGLAttachment(depthStencilFormat));
 
-			const bool isStatusComplete = fbo_->isStatusComplete();
+			const bool isStatusComplete = fbo_->IsStatusComplete();
 			if (isStatusComplete) {
 				depthStencilFormat_ = depthStencilFormat;
 			}
@@ -189,7 +189,7 @@ namespace nCine
 		} else {
 			// Removing the depth/stencil render target
 			if (fbo_ != nullptr) {
-				fbo_->detachRenderbuffer(depthStencilFormatToGLAttachment(depthStencilFormat_));
+				fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 				depthStencilFormat_ = Viewport::DepthStencilFormat::None;
 			}
 
@@ -199,7 +199,7 @@ namespace nCine
 		return result;
 	}
 
-	bool Viewport::removeAllTextures()
+	bool Viewport::RemoveAllTextures()
 	{
 		if (type_ == Type::Screen) {
 			return false;
@@ -208,14 +208,14 @@ namespace nCine
 		if (fbo_ != nullptr) {
 			for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
 				if (textures_[i] != nullptr) {
-					fbo_->detachTexture(GL_COLOR_ATTACHMENT0 + i);
+					fbo_->DetachTexture(GL_COLOR_ATTACHMENT0 + i);
 					textures_[i] = nullptr;
 				}
 			}
 			numColorAttachments_ = 0;
 
 			if (depthStencilFormat_ != DepthStencilFormat::None) {
-				fbo_->detachRenderbuffer(depthStencilFormatToGLAttachment(depthStencilFormat_));
+				fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 				depthStencilFormat_ = DepthStencilFormat::None;
 			}
 		}
@@ -226,7 +226,7 @@ namespace nCine
 		return true;
 	}
 
-	Texture* Viewport::texture(std::uint32_t index)
+	Texture* Viewport::GetTexture(std::uint32_t index)
 	{
 		ASSERT(index < MaxNumTextures);
 
@@ -238,14 +238,14 @@ namespace nCine
 		return texture;
 	}
 
-	void Viewport::setGLFramebufferLabel(const char* label)
+	void Viewport::SetGLFramebufferLabel(const char* label)
 	{
 		if (fbo_ != nullptr) {
-			fbo_->setObjectLabel(label);
+			fbo_->SetObjectLabel(label);
 		}
 	}
 
-	void Viewport::calculateCullingRect()
+	void Viewport::CalculateCullingRect()
 	{
 		ZoneScopedC(0x81A861);
 
@@ -253,7 +253,7 @@ namespace nCine
 		const std::int32_t height = (height_ != 0 ? height_ : viewportRect_.H);
 
 		const Camera* vieportCamera = (camera_ != nullptr ? camera_ : RenderResources::currentCamera());
-		Camera::ProjectionValues projValues = vieportCamera->projectionValues();
+		Camera::ProjectionValues projValues = vieportCamera->GetProjectionValues();
 		if (projValues.top > projValues.bottom) std::swap(projValues.top, projValues.bottom);
 
 		const float projWidth = projValues.right - projValues.left;
@@ -285,7 +285,7 @@ namespace nCine
 			cullingRect_.Intersect(scissorRectFloat);
 		}
 
-		const Camera::ViewValues viewValues = vieportCamera->viewValues();
+		const Camera::ViewValues viewValues = vieportCamera->GetViewValues();
 		if (viewValues.scale != 0.0f && viewValues.scale != 1.0f) {
 			const float invScale = 1.0f / viewValues.scale;
 			cullingRect_.X = (cullingRect_.X + viewValues.position.X) * invScale;
@@ -312,7 +312,7 @@ namespace nCine
 		}
 	}
 
-	void Viewport::update()
+	void Viewport::Update()
 	{
 		RenderResources::setCurrentViewport(this);
 		RenderResources::setCurrentCamera(camera_);
@@ -323,17 +323,17 @@ namespace nCine
 				rootNode_->OnUpdate(theApplication().GetTimeMult());
 			}
 			// AABBs should update after nodes have been transformed
-			updateCulling(rootNode_);
+			UpdateCulling(rootNode_);
 		}
 
 		stateBits_.set(StateBitPositions::UpdatedBit);
 	}
 
-	void Viewport::visit()
+	void Viewport::Visit()
 	{
 		RenderResources::setCurrentViewport(this);
 
-		calculateCullingRect();
+		CalculateCullingRect();
 
 		if (rootNode_ != nullptr) {
 			ZoneScopedC(0x81A861);
@@ -344,7 +344,7 @@ namespace nCine
 		stateBits_.set(StateBitPositions::VisitedBit);
 	}
 
-	void Viewport::sortAndCommitQueue()
+	void Viewport::SortAndCommitQueue()
 	{
 		RenderResources::setCurrentViewport(this);
 
@@ -356,13 +356,13 @@ namespace nCine
 		stateBits_.set(StateBitPositions::CommittedBit);
 	}
 
-	void Viewport::draw(std::uint32_t nextIndex)
+	void Viewport::Draw(std::uint32_t nextIndex)
 	{
 		Viewport* nextViewport = (nextIndex < chain_.size()) ? chain_[nextIndex] : nullptr;
 		FATAL_ASSERT(nextViewport == nullptr || nextViewport->type_ != Type::Screen);
 
 		if (nextViewport && nextViewport->type_ == Type::WithTexture) {
-			nextViewport->draw(nextIndex + 1);
+			nextViewport->Draw(nextIndex + 1);
 		}
 
 		ZoneScopedC(0x81A861);
@@ -385,21 +385,21 @@ namespace nCine
 		}
 
 		if (type_ == Type::WithTexture) {
-			fbo_->bind(GL_DRAW_FRAMEBUFFER);
-			fbo_->drawBuffers(numColorAttachments_);
+			fbo_->Bind(GL_DRAW_FRAMEBUFFER);
+			fbo_->DrawBuffers(numColorAttachments_);
 		}
 
 		if (type_ == Type::Screen || type_ == Type::WithTexture) {
 			const unsigned long int numFrames = theApplication().GetFrameCount();
 			if ((lastFrameCleared_ < numFrames && (clearMode_ == ClearMode::EveryFrame || clearMode_ == ClearMode::ThisFrameOnly)) ||
 				clearMode_ == ClearMode::EveryDraw) {
-				const GLClearColor::State clearColorState = GLClearColor::state();
-				GLClearColor::setColor(clearColor_);
+				const GLClearColor::State clearColorState = GLClearColor::GetState();
+				GLClearColor::SetColor(clearColor_);
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 				lastFrameCleared_ = numFrames;
 
-				GLClearColor::setState(clearColorState);
+				GLClearColor::SetState(clearColorState);
 			}
 		}
 
@@ -410,7 +410,7 @@ namespace nCine
 				nextViewport->viewportRect_ = viewportRect_;
 			nextViewport->clearMode_ = ClearMode::Never;
 
-			nextViewport->draw(nextIndex + 1);
+			nextViewport->Draw(nextIndex + 1);
 		}
 
 		RenderResources::setCurrentCamera(camera_);
@@ -418,32 +418,32 @@ namespace nCine
 
 		if (!renderQueue_->empty()) {
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);
-			const GLViewport::State viewportState = GLViewport::state();
+			const GLViewport::State viewportState = GLViewport::GetState();
 			if (viewportRectNonZeroArea) {
-				GLViewport::setRect(viewportRect_.X, viewportRect_.Y, viewportRect_.W, viewportRect_.H);
+				GLViewport::SetRect(viewportRect_.X, viewportRect_.Y, viewportRect_.W, viewportRect_.H);
 			}
 
 			const bool scissorRectNonZeroArea = (scissorRect_.W > 0 && scissorRect_.H > 0);
-			GLScissorTest::State scissorTestState = GLScissorTest::state();
+			GLScissorTest::State scissorTestState = GLScissorTest::GetState();
 			if (scissorRectNonZeroArea) {
-				GLScissorTest::enable(scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
+				GLScissorTest::Enable(scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
 			}
 
 			renderQueue_->draw();
 
 			if (scissorRectNonZeroArea) {
-				GLScissorTest::setState(scissorTestState);
+				GLScissorTest::SetState(scissorTestState);
 			}
 			if (viewportRectNonZeroArea) {
-				GLViewport::setState(viewportState);
+				GLViewport::SetState(viewportState);
 			}
 		}
 
 #if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		if (type_ == Type::WithTexture && depthStencilFormat_ != DepthStencilFormat::None &&
 			!theApplication().GetAppConfiguration().withGlDebugContext) {
-			const GLenum invalidAttachment = depthStencilFormatToGLAttachment(depthStencilFormat_);
-			fbo_->invalidate(1, &invalidAttachment);
+			const GLenum invalidAttachment = DepthStencilFormatToGLAttachment(depthStencilFormat_);
+			fbo_->Invalidate(1, &invalidAttachment);
 		}
 #endif
 
@@ -458,15 +458,15 @@ namespace nCine
 			Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(theApplication().gfxDevice());
 			gfxDevice.bindDefaultDrawFramebufferObject();
 #else
-			fbo_->unbind(GL_DRAW_FRAMEBUFFER);
+			fbo_->Unbind(GL_DRAW_FRAMEBUFFER);
 #endif
 		}
 	}
 
-	void Viewport::updateCulling(SceneNode* node)
+	void Viewport::UpdateCulling(SceneNode* node)
 	{
 		for (SceneNode* child : node->children()) {
-			updateCulling(child);
+			UpdateCulling(child);
 		}
 
 		if (node->type() != Object::ObjectType::SceneNode &&

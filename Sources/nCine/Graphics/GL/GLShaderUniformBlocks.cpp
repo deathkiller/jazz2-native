@@ -21,60 +21,60 @@ namespace nCine
 	GLShaderUniformBlocks::GLShaderUniformBlocks(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 		: GLShaderUniformBlocks()
 	{
-		setProgram(shaderProgram, includeOnly, exclude);
+		SetProgram(shaderProgram, includeOnly, exclude);
 	}
 
-	void GLShaderUniformBlocks::bind()
+	void GLShaderUniformBlocks::Bind()
 	{
 #if defined(DEATH_DEBUG)
-		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
 		if (uboParams_.object) {
-			uboParams_.object->bind();
+			uboParams_.object->Bind();
 
 			GLintptr moreOffset = 0;
 			for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
-				uniformBlockCache.setBlockBinding(uniformBlockCache.index());
+				uniformBlockCache.SetBlockBinding(uniformBlockCache.GetIndex());
 				const GLintptr offset = static_cast<GLintptr>(uboParams_.offset) + moreOffset;
 #if defined(DEATH_DEBUG)
 				ASSERT(offset % offsetAlignment == 0);
 #endif
-				uboParams_.object->bindBufferRange(uniformBlockCache.bindingIndex(), offset, uniformBlockCache.usedSize());
+				uboParams_.object->BindBufferRange(uniformBlockCache.GetBindingIndex(), offset, uniformBlockCache.usedSize());
 				moreOffset += uniformBlockCache.usedSize();
 			}
 		}
 	}
 
-	void GLShaderUniformBlocks::setProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
+	void GLShaderUniformBlocks::SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
 		ASSERT(shaderProgram);
 
 		shaderProgram_ = shaderProgram;
-		shaderProgram_->deferredQueries();
+		shaderProgram_->ProcessDeferredQueries();
 		uniformBlockCaches_.clear();
 
-		if (shaderProgram->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
-			importUniformBlocks(includeOnly, exclude);
+		if (shaderProgram->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+			ImportUniformBlocks(includeOnly, exclude);
 		}
 	}
 
-	void GLShaderUniformBlocks::setUniformsDataPointer(GLubyte* dataPointer)
+	void GLShaderUniformBlocks::SetUniformsDataPointer(GLubyte* dataPointer)
 	{
 		ASSERT(dataPointer);
 
-		if (shaderProgram_->status() != GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (shaderProgram_->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
 		dataPointer_ = dataPointer;
 		std::int32_t offset = 0;
 		for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
-			uniformBlockCache.setDataPointer(dataPointer + offset);
-			offset += uniformBlockCache.uniformBlock()->size() - uniformBlockCache.uniformBlock()->alignAmount();
+			uniformBlockCache.SetDataPointer(dataPointer + offset);
+			offset += uniformBlockCache.uniformBlock()->GetSize() - uniformBlockCache.uniformBlock()->GetAlignAmount();
 		}
 	}
 
-	GLUniformBlockCache* GLShaderUniformBlocks::uniformBlock(const char* name)
+	GLUniformBlockCache* GLShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
 		ASSERT(name);
 		GLUniformBlockCache* uniformBlockCache = nullptr;
@@ -87,15 +87,15 @@ namespace nCine
 		return uniformBlockCache;
 	}
 
-	void GLShaderUniformBlocks::commitUniformBlocks()
+	void GLShaderUniformBlocks::CommitUniformBlocks()
 	{
 		if (shaderProgram_ != nullptr) {
-			if (shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
+			if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 				std::int32_t totalUsedSize = 0;
 				bool hasMemoryGaps = false;
 				for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 					// There is a gap if at least one block cache (not in last position) uses less memory than its size
-					if (uniformBlockCache.dataPointer() != dataPointer_ + totalUsedSize) {
+					if (uniformBlockCache.GetDataPointer() != dataPointer_ + totalUsedSize) {
 						hasMemoryGaps = true;
 					}
 					totalUsedSize += uniformBlockCache.usedSize();
@@ -108,7 +108,7 @@ namespace nCine
 						if (hasMemoryGaps) {
 							std::int32_t offset = 0;
 							for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
-								std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.dataPointer(), uniformBlockCache.usedSize());
+								std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.GetDataPointer(), uniformBlockCache.usedSize());
 								offset += uniformBlockCache.usedSize();
 							}
 						} else {
@@ -122,13 +122,13 @@ namespace nCine
 		}
 	}
 
-	void GLShaderUniformBlocks::importUniformBlocks(const char* includeOnly, const char* exclude)
+	void GLShaderUniformBlocks::ImportUniformBlocks(const char* includeOnly, const char* exclude)
 	{
 		const std::uint32_t MaxUniformBlockName = 128;
 
 		std::uint32_t importedCount = 0;
 		for (GLUniformBlock& uniformBlock : shaderProgram_->uniformBlocks_) {
-			const char* uniformBlockName = uniformBlock.name();
+			const char* uniformBlockName = uniformBlock.GetName();
 			const char* currentIncludeOnly = includeOnly;
 			const char* currentExclude = exclude;
 			bool shouldImport = true;

@@ -186,19 +186,19 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		glShaderProgram_->reset(); // reset before attaching new shaders
-		glShaderProgram_->setBatchSize(batchSize);
-		glShaderProgram_->setObjectLabel(shaderName);
+		glShaderProgram_->Reset(); // reset before attaching new shaders
+		glShaderProgram_->SetBatchSize(batchSize);
+		glShaderProgram_->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
 
 		stringsCount = populateShaderStrings(strings, backingStore, fragment, -1, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
 
-		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
+		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
 	}
@@ -221,17 +221,17 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		glShaderProgram_->reset(); // reset before attaching new shaders
-		glShaderProgram_->setBatchSize(batchSize);
-		glShaderProgram_->setObjectLabel(shaderName);
+		glShaderProgram_->Reset(); // reset before attaching new shaders
+		glShaderProgram_->SetBatchSize(batchSize);
+		glShaderProgram_->SetObjectLabel(shaderName);
 		loadDefaultShader(vertex, batchSize);
 
 		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, fragment, -1, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
 
-		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
+		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
 	}
@@ -255,17 +255,17 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		glShaderProgram_->reset(); // reset before attaching new shaders
-		glShaderProgram_->setBatchSize(batchSize);
-		glShaderProgram_->setObjectLabel(shaderName);
+		glShaderProgram_->Reset(); // reset before attaching new shaders
+		glShaderProgram_->SetBatchSize(batchSize);
+		glShaderProgram_->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
 
 		loadDefaultShader(fragment);
-		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
+		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
 	}
@@ -288,19 +288,19 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		glShaderProgram_->reset(); // reset before attaching new shaders
-		glShaderProgram_->setBatchSize(batchSize);
-		glShaderProgram_->setObjectLabel(shaderName);
+		glShaderProgram_->Reset(); // reset before attaching new shaders
+		glShaderProgram_->SetBatchSize(batchSize);
+		glShaderProgram_->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, -1, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
 
-		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
+		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
 	}
@@ -323,17 +323,17 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		glShaderProgram_->reset(); // reset before attaching new shaders
-		glShaderProgram_->setBatchSize(batchSize);
-		glShaderProgram_->setObjectLabel(shaderName);
+		glShaderProgram_->Reset(); // reset before attaching new shaders
+		glShaderProgram_->SetBatchSize(batchSize);
+		glShaderProgram_->SetObjectLabel(shaderName);
 		loadDefaultShader(vertex, batchSize);
 
 		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, -1, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
 
-		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
+		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
 	}
@@ -357,17 +357,17 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		glShaderProgram_->reset(); // reset before attaching new shaders
-		glShaderProgram_->setBatchSize(batchSize);
-		glShaderProgram_->setObjectLabel(shaderName);
+		glShaderProgram_->Reset(); // reset before attaching new shaders
+		glShaderProgram_->SetBatchSize(batchSize);
+		glShaderProgram_->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
-		glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
 
 		loadDefaultShader(fragment);
-		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
+		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
 	}
@@ -390,53 +390,53 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		glShaderProgram_->reset();
-		glShaderProgram_->setObjectLabel(shaderName);
-		return RenderResources::binaryShaderCache().loadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
+		glShaderProgram_->Reset();
+		glShaderProgram_->SetObjectLabel(shaderName);
+		return RenderResources::binaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
 	bool Shader::saveToCache(const char* shaderName, std::uint64_t shaderVersion) const
 	{
-		return RenderResources::binaryShaderCache().saveToCache(shaderName, shaderVersion, glShaderProgram_.get());
+		return RenderResources::binaryShaderCache().SaveToCache(shaderName, shaderVersion, glShaderProgram_.get());
 	}
 
 	bool Shader::setAttribute(const char* name, std::int32_t stride, void* pointer)
 	{
-		GLVertexFormat::Attribute* attribute = glShaderProgram_->attribute(name);
+		GLVertexFormat::Attribute* attribute = glShaderProgram_->GetAttribute(name);
 		if (attribute != nullptr) {
-			attribute->setVboParameters(stride, pointer);
+			attribute->SetVboParameters(stride, pointer);
 		}
 		return (attribute != nullptr);
 	}
 
 	bool Shader::isLinked() const
 	{
-		return glShaderProgram_->isLinked();
+		return glShaderProgram_->IsLinked();
 	}
 
 	unsigned int Shader::retrieveInfoLogLength() const
 	{
-		return glShaderProgram_->retrieveInfoLogLength();
+		return glShaderProgram_->RetrieveInfoLogLength();
 	}
 
 	void Shader::retrieveInfoLog(std::string& infoLog) const
 	{
-		glShaderProgram_->retrieveInfoLog(infoLog);
+		glShaderProgram_->RetrieveInfoLog(infoLog);
 	}
 
 	bool Shader::logOnErrors() const
 	{
-		return glShaderProgram_->logOnErrors();
+		return glShaderProgram_->GetLogOnErrors();
 	}
 
 	void Shader::setLogOnErrors(bool shouldLogOnErrors)
 	{
-		glShaderProgram_->setLogOnErrors(shouldLogOnErrors);
+		glShaderProgram_->SetLogOnErrors(shouldLogOnErrors);
 	}
 
 	void Shader::setGLShaderProgramLabel(const char* label)
 	{
-		glShaderProgram_->setObjectLabel(label);
+		glShaderProgram_->SetObjectLabel(label);
 	}
 
 	void Shader::registerBatchedShader(Shader& batchedShader)
@@ -485,9 +485,9 @@ namespace nCine
 			char sourceString[48];
 			std::int32_t length = formatString(sourceString, sizeof(sourceString), DefineFormatString, BatchSizeDefine, batchSize);
 			StringView vertexStrings[2] = { StringView(sourceString, length), ResetLineString };
-			return glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
+			return glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
 		} else {
-			return glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
+			return glShaderProgram_->AttachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
 		}
 #else
 		const char* vertexShader = nullptr;
@@ -529,9 +529,9 @@ namespace nCine
 			char sourceString[48];
 			std::int32_t length = formatString(sourceString, sizeof(sourceString), DefineFormatString, BatchSizeDefine, batchSize);
 			StringView vertexStrings[3] = { StringView(sourceString, length), ResetLineString, vertexShader };
-			return glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, {});
+			return glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, {});
 		} else {
-			return glShaderProgram_->attachShaderFromString(GL_VERTEX_SHADER, vertexShader);
+			return glShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, vertexShader);
 		}
 #endif
 	}
@@ -557,7 +557,7 @@ namespace nCine
 			//	fragmentShader = "textnode_red_fs.glsl"_s;
 			//	break;
 		}
-		return glShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, fragmentShader }));
+		return glShaderProgram_->AttachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, fragmentShader }));
 #else
 		const char* fragmentShader = nullptr;
 		// Skipping the initial new line character of the raw string literal
@@ -578,7 +578,7 @@ namespace nCine
 			//	fragmentShader = ShaderStrings::textnode_red_fs + 1;
 			//	break;
 		}
-		return glShaderProgram_->attachShaderFromString(GL_FRAGMENT_SHADER, fragmentShader);
+		return glShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, fragmentShader);
 #endif
 	}
 }

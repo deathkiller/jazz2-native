@@ -4,7 +4,7 @@ namespace nCine
 {
 	GLDepthTest::State GLDepthTest::state_;
 
-	void GLDepthTest::enable()
+	void GLDepthTest::Enable()
 	{
 		if (state_.enabled == false) {
 			glEnable(GL_DEPTH_TEST);
@@ -12,7 +12,7 @@ namespace nCine
 		}
 	}
 
-	void GLDepthTest::disable()
+	void GLDepthTest::Disable()
 	{
 		if (state_.enabled == true) {
 			glDisable(GL_DEPTH_TEST);
@@ -20,7 +20,7 @@ namespace nCine
 		}
 	}
 
-	void GLDepthTest::enableDepthMask()
+	void GLDepthTest::EnableDepthMask()
 	{
 		if (state_.depthMaskEnabled == false) {
 			glDepthMask(GL_TRUE);
@@ -28,7 +28,7 @@ namespace nCine
 		}
 	}
 
-	void GLDepthTest::disableDepthMask()
+	void GLDepthTest::DisableDepthMask()
 	{
 		if (state_.depthMaskEnabled == true) {
 			glDepthMask(GL_FALSE);
@@ -36,17 +36,17 @@ namespace nCine
 		}
 	}
 
-	void GLDepthTest::setState(State newState)
+	void GLDepthTest::SetState(State newState)
 	{
 		if (newState.enabled) {
-			enable();
+			Enable();
 		} else {
-			disable();
+			Disable();
 		}
 		if (newState.depthMaskEnabled) {
-			enableDepthMask();
+			EnableDepthMask();
 		} else {
-			disableDepthMask();
+			DisableDepthMask();
 		}
 		state_ = newState;
 	}

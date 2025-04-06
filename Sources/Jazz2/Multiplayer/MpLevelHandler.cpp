@@ -3405,6 +3405,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::WarpAllPlayersToStart()
 	{
+		// TODO: Reset ambient lighting
 		for (auto* player : _players) {
 			Vector2f spawnPosition = GetSpawnPoint(player->_playerTypeOriginal);
 			player->WarpToPosition(spawnPosition, WarpFlags::Default);

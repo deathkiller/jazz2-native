@@ -30,28 +30,28 @@ namespace nCine
 		GLUniformBlock(GLuint program, GLuint blockIndex, DiscoverUniforms discover);
 		GLUniformBlock(GLuint program, GLuint blockIndex);
 
-		inline GLuint index() const {
+		inline GLuint GetIndex() const {
 			return index_;
 		}
-		inline GLint bindingIndex() const {
+		inline GLint GetBindingIndex() const {
 			return bindingIndex_;
 		}
 		/// Returns the size of the block aligned to the uniform buffer offset
-		inline GLint size() const {
+		inline GLint GetSize() const {
 			return size_;
 		}
 		/// Returns the uniform buffer offset alignment added to the original size
-		inline std::uint8_t alignAmount() const {
+		inline std::uint8_t GetAlignAmount() const {
 			return alignAmount_;
 		}
-		inline const char* name() const {
+		inline const char* GetName() const {
 			return name_;
 		}
 
-		inline GLUniform* uniform(const char* name) {
+		inline GLUniform* GetUniform(const char* name) {
 			return blockUniforms_.find(String::nullTerminatedView(name));
 		}
-		void setBlockBinding(GLuint blockBinding);
+		void SetBlockBinding(GLuint blockBinding);
 
 	private:
 		/// Max number of discoverable uniforms per block

@@ -16,23 +16,23 @@ namespace nCine
 		GLAttribute();
 		GLAttribute(GLuint program, GLuint index);
 
-		inline GLint location() const {
+		inline GLint GetLocation() const {
 			return location_;
 		}
-		inline GLint size() const {
+		inline GLint GetSize() const {
 			return size_;
 		}
-		inline GLenum type() const {
+		inline GLenum GetType() const {
 			return type_;
 		}
-		inline const char* name() const {
+		inline const char* GetName() const {
 			return name_;
 		}
-		GLenum basicType() const;
-		std::int32_t numComponents() const;
+		GLenum GetBasicType() const;
+		std::int32_t GetComponentCount() const;
 
 		/// Returns true if the attribute name starts with `gl_`
-		bool hasReservedPrefix() const;
+		bool HasReservedPrefix() const;
 
 	private:
 		GLint location_;

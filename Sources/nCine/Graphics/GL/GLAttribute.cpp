@@ -17,7 +17,7 @@ namespace nCine
 		glGetActiveAttrib(program, index, MaxNameLength, &length, &size_, &type_, name_);
 		ASSERT(length <= MaxNameLength);
 
-		if (!hasReservedPrefix()) {
+		if (!HasReservedPrefix()) {
 			location_ = glGetAttribLocation(program, name_);
 			if (location_ == -1) {
 				LOGW("Attribute location not found for attribute \"%s\" (%u) in shader program %u", name_, index, program);
@@ -26,7 +26,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-	GLenum GLAttribute::basicType() const
+	GLenum GLAttribute::GetBasicType() const
 	{
 		switch (type_) {
 			case GL_FLOAT:
@@ -55,7 +55,7 @@ namespace nCine
 		}
 	}
 
-	std::int32_t GLAttribute::numComponents() const
+	std::int32_t GLAttribute::GetComponentCount() const
 	{
 		switch (type_) {
 			case GL_BYTE:
@@ -89,7 +89,7 @@ namespace nCine
 		}
 	}
 
-	bool GLAttribute::hasReservedPrefix() const
+	bool GLAttribute::HasReservedPrefix() const
 	{
 		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');
 	}

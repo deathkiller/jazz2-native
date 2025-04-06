@@ -64,79 +64,79 @@ namespace nCine
 		GLShaderProgram(const GLShaderProgram&) = delete;
 		GLShaderProgram& operator=(const GLShaderProgram&) = delete;
 
-		inline GLuint glHandle() const {
+		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
-		inline Status status() const {
+		inline Status GetStatus() const {
 			return status_;
 		}
-		inline Introspection introspection() const {
+		inline Introspection GetIntrospection() const {
 			return introspection_;
 		}
-		inline QueryPhase queryPhase() const {
+		inline QueryPhase GetQueryPhase() const {
 			return queryPhase_;
 		}
-		inline std::uint32_t batchSize() const {
+		inline std::uint32_t GetBatchSize() const {
 			return batchSize_;
 		}
-		inline void setBatchSize(std::uint32_t value) {
+		inline void SetBatchSize(std::uint32_t value) {
 			batchSize_ = value;
 		}
 
-		bool isLinked() const;
+		bool IsLinked() const;
 
 		/// Returns the length of the information log including the null termination character
-		std::uint32_t retrieveInfoLogLength() const;
+		std::uint32_t RetrieveInfoLogLength() const;
 		/// Retrieves the information log and copies it in the provided string object
-		void retrieveInfoLog(std::string& infoLog) const;
+		void RetrieveInfoLog(std::string& infoLog) const;
 
 		/// Returns the total memory needed for all uniforms outside of blocks
-		inline std::uint32_t uniformsSize() const {
+		inline std::uint32_t GetUniformsSize() const {
 			return uniformsSize_;
 		}
 		/// Returns the total memory needed for all uniforms inside of blocks
-		inline std::uint32_t uniformBlocksSize() const {
+		inline std::uint32_t GetUniformBlocksSize() const {
 			return uniformBlocksSize_;
 		}
 
-		bool attachShaderFromFile(GLenum type, StringView filename);
-		bool attachShaderFromString(GLenum type, StringView string);
-		bool attachShaderFromStrings(GLenum type, ArrayView<const StringView> strings);
-		bool attachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename);
-		bool link(Introspection introspection);
-		void use();
-		bool validate();
+		bool AttachShaderFromFile(GLenum type, StringView filename);
+		bool AttachShaderFromString(GLenum type, StringView string);
+		bool AttachShaderFromStrings(GLenum type, ArrayView<const StringView> strings);
+		bool AttachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename);
+		bool Link(Introspection introspection);
+		void Use();
+		bool Validate();
 
-		bool finalizeAfterLinking(Introspection introspection);
+		bool FinalizeAfterLinking(Introspection introspection);
 
-		inline std::uint32_t numAttributes() const {
+		inline std::uint32_t GetAttributeCount() const {
 			return attributeLocations_.size();
 		}
-		inline bool hasAttribute(const char* name) const {
+		inline bool HasAttribute(const char* name) const {
 			return (attributeLocations_.find(String::nullTerminatedView(name)) != nullptr);
 		}
-		GLVertexFormat::Attribute* attribute(const char* name);
+		GLVertexFormat::Attribute* GetAttribute(const char* name);
 
-		inline void defineVertexFormat(const GLBufferObject* vbo) {
-			defineVertexFormat(vbo, nullptr, 0);
+		inline void DefineVertexFormat(const GLBufferObject* vbo) {
+			DefineVertexFormat(vbo, nullptr, 0);
 		}
-		inline void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo) {
-			defineVertexFormat(vbo, ibo, 0);
+		inline void DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo) {
+			DefineVertexFormat(vbo, ibo, 0);
 		}
-		void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, unsigned int vboOffset);
+		void DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset);
 
 		/// Deletes the current OpenGL shader program so that new shaders can be attached
-		void reset();
+		void Reset();
 
-		void setObjectLabel(const char* label);
+		void SetObjectLabel(const char* label);
 
 		/// Returns the automatic log on errors flag
-		inline bool logOnErrors() const {
+		inline bool GetLogOnErrors() const {
 			return shouldLogOnErrors_;
 		}
 		/// Sets the automatic log on errors flag
 		/*! If the flag is true the shader program will automatically log compilation and linking errors. */
-		inline void setLogOnErrors(bool shouldLogOnErrors) {
+		inline void SetLogOnErrors(bool shouldLogOnErrors) {
 			shouldLogOnErrors_ = shouldLogOnErrors;
 		}
 
@@ -177,13 +177,13 @@ namespace nCine
 		StaticHashMap<String, std::int32_t, GLVertexFormat::MaxAttributes> attributeLocations_;
 		GLVertexFormat vertexFormat_;
 
-		bool deferredQueries();
-		bool checkLinking();
-		void performIntrospection();
+		bool ProcessDeferredQueries();
+		bool CheckLinking();
+		void PerformIntrospection();
 
-		void discoverUniforms();
-		void discoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover);
-		void discoverAttributes();
-		void initVertexFormat();
+		void DiscoverUniforms();
+		void DiscoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover);
+		void DiscoverAttributes();
+		void InitVertexFormat();
 	};
 }

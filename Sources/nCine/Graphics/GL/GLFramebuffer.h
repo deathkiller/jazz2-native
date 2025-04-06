@@ -31,33 +31,33 @@ namespace nCine
 		GLFramebuffer(const GLFramebuffer&) = delete;
 		GLFramebuffer& operator=(const GLFramebuffer&) = delete;
 
-		inline GLuint glHandle() const {
+		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
 
-		bool bind() const;
-		static bool unbind();
+		bool Bind() const;
+		static bool Unbind();
 
-		bool bind(GLenum target) const;
-		static bool unbind(GLenum target);
+		bool Bind(GLenum target) const;
+		static bool Unbind(GLenum target);
 
-		inline std::uint32_t numDrawbuffers() const { return numDrawBuffers_; }
-		bool drawBuffers(unsigned int numDrawBuffers);
+		inline std::uint32_t GetDrawbufferCount() const { return numDrawBuffers_; }
+		bool DrawBuffers(std::uint32_t numDrawBuffers);
 
-		inline std::uint32_t numRenderbuffers() const { return std::uint32_t(attachedRenderbuffers_.size()); }
-		bool attachRenderbuffer(const char *label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
-		bool attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
-		bool detachRenderbuffer(GLenum internalFormat);
+		inline std::uint32_t GetRenderbufferCount() const { return std::uint32_t(attachedRenderbuffers_.size()); }
+		bool AttachRenderbuffer(const char *label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
+		bool AttachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
+		bool DetachRenderbuffer(GLenum internalFormat);
 
-		void attachTexture(GLTexture& texture, GLenum attachment);
-		void detachTexture(GLenum attachment);
+		void AttachTexture(GLTexture& texture, GLenum attachment);
+		void DetachTexture(GLenum attachment);
 #if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
-		void invalidate(GLsizei numAttachments, const GLenum* attachments);
+		void Invalidate(GLsizei numAttachments, const GLenum* attachments);
 #endif
 
-		bool isStatusComplete();
+		bool IsStatusComplete();
 
-		void setObjectLabel(const char* label);
+		void SetObjectLabel(const char* label);
 
 	private:
 		static std::uint32_t readBoundBuffer_;
@@ -67,6 +67,6 @@ namespace nCine
 		SmallVector<std::unique_ptr<GLRenderbuffer>, MaxRenderbuffers> attachedRenderbuffers_;
 		GLuint glHandle_;
 
-		static bool bindHandle(GLenum target, GLuint glHandle);
+		static bool BindHandle(GLenum target, GLuint glHandle);
 	};
 }

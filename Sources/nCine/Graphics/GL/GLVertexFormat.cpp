@@ -20,7 +20,7 @@ namespace nCine
 	{
 		return ((other.enabled_ == false && enabled_ == false) ||
 				((other.enabled_ == true && enabled_ == true) &&
-					(other.vbo_ && vbo_ && other.vbo_->glHandle() == vbo_->glHandle()) &&
+					(other.vbo_ && vbo_ && other.vbo_->GetGLHandle() == vbo_->GetGLHandle()) &&
 					other.index_ == index_ &&
 					other.size_ == size_ &&
 					other.type_ == type_ &&
@@ -35,7 +35,7 @@ namespace nCine
 		return !operator==(other);
 	}
 
-	void GLVertexFormat::Attribute::init(std::uint32_t index, GLint size, GLenum type)
+	void GLVertexFormat::Attribute::Init(std::uint32_t index, GLint size, GLenum type)
 	{
 		enabled_ = true;
 		vbo_ = nullptr;
@@ -48,10 +48,10 @@ namespace nCine
 		baseOffset_ = 0;
 	}
 
-	void GLVertexFormat::Attribute::setVboParameters(GLsizei stride, const GLvoid* pointer)
+	void GLVertexFormat::Attribute::SetVboParameters(GLsizei stride, const GLvoid* pointer)
 	{
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
-		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetGfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE);
+		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE);
 
 		if (stride > MaxVertexAttribStride) {
 			stride_ = MaxVertexAttribStride;
@@ -65,11 +65,11 @@ namespace nCine
 		pointer_ = pointer;
 	}
 
-	void GLVertexFormat::define()
+	void GLVertexFormat::Define()
 	{
 		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
 			if (attributes_[i].enabled_) {
-				attributes_[i].vbo_->bind();
+				attributes_[i].vbo_->Bind();
 				glEnableVertexAttribArray(attributes_[i].index_);
 
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
@@ -100,11 +100,11 @@ namespace nCine
 		}
 
 		if (ibo_) {
-			ibo_->bind();
+			ibo_->Bind();
 		}
 	}
 
-	void GLVertexFormat::reset()
+	void GLVertexFormat::Reset()
 	{
 		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
 			attributes_[i].enabled_ = false;
