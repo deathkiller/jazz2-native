@@ -47,8 +47,8 @@ namespace Jazz2::Actors::Environment
 				_chunks[i]->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 				auto* textureUniform = _chunks[i]->material().uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->intValue(0) != 0) {
-					textureUniform->setIntValue(0); // GL_TEXTURE0
+				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
 			}
 		}
@@ -121,9 +121,9 @@ namespace Jazz2::Actors::Environment
 				float chunkAngle = sinf(_phase - i * 0.08f) * 1.2f;
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
-				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(texSize.X, ChunkSize);
-				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
+				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(texSize.X, ChunkSize);
+				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				Matrix4x4f worldMatrix = Matrix4x4f::Translation(_chunkPos[i].X - texSize.X / 2, _chunkPos[i].Y - ChunkSize / 2, 0.0f);
 				worldMatrix.RotateZ(chunkAngle);

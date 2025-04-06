@@ -24,30 +24,30 @@ namespace nCine
 		BinaryShaderCache(const BinaryShaderCache&) = delete;
 		BinaryShaderCache& operator=(const BinaryShaderCache&) = delete;
 
-		inline bool isAvailable() const {
+		inline bool IsAvailable() const {
 			return isAvailable_;
 		}
 
-		inline std::uint64_t platformHash() const {
+		inline std::uint64_t GetPlatformHash() const {
 			return platformHash_;
 		}
 
-		String getCachedShaderPath(const char* shaderName);
+		String GetCachedShaderPath(const char* shaderName);
 
-		bool loadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection);
-		bool saveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program);
+		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection);
+		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program);
 
 		/// Deletes all binary shaders that not belong to this platform from the cache directory
-		std::uint32_t prune();
+		std::uint32_t Prune();
 		/// Deletes all binary shaders from the cache directory
-		bool clear();
+		bool Clear();
 
 		/// Returns the current cache directory for binary shaders
-		inline const StringView path() {
+		inline const StringView Path() {
 			return path_;
 		}
 		/// Sets a new directory as the cache for binary shaders
-		bool setPath(StringView path);
+		bool SetPath(StringView path);
 
 	private:
 		using glGetProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);

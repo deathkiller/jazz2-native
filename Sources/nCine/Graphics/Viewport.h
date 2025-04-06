@@ -78,134 +78,134 @@ namespace nCine
 		Viewport& operator=(const Viewport&) = delete;
 
 		/// Returns the viewport type
-		inline Type type() const {
+		inline Type GetType() const {
 			return type_;
 		}
 
 		/// Returns the texture at the specified viewport's FBO color attachment index, if any
-		Texture* texture(std::uint32_t index);
+		Texture* GetTexture(std::uint32_t index);
 		/// Returns the texture at the first viewport's FBO color attachment index
-		inline Texture* texture() {
+		inline Texture* GetTexture() {
 			return textures_[0];
 		}
 		/// Adds or removes a texture at the specified viewport's FBO color attachment index
-		bool setTexture(std::uint32_t index, Texture* texture);
+		bool SetTexture(std::uint32_t index, Texture* texture);
 		/// Adds or removes a texture at the first viewport's FBO color attachment index
-		inline bool setTexture(Texture* texture) {
-			return setTexture(0, texture);
+		inline bool SetTexture(Texture* texture) {
+			return SetTexture(0, texture);
 		}
 
 		/// Returns the depth and stencil format of the viewport's FBO renderbuffer
-		inline DepthStencilFormat depthStencilFormat() const {
+		inline DepthStencilFormat GetDepthStencilFormat() const {
 			return depthStencilFormat_;
 		}
 		/// Sets the depth and stencil format of the viewport's FBO renderbuffer
-		bool setDepthStencilFormat(DepthStencilFormat depthStencilFormat);
+		bool SetDepthStencilFormat(DepthStencilFormat depthStencilFormat);
 
 		/// Removes all textures and the depth stencil renderbuffer from the viewport's FBO
-		bool removeAllTextures();
+		bool RemoveAllTextures();
 
 		/// Returns viewport's FBO size as a `Vector2i` object, or a zero vector if no texture is present
-		inline Vector2i size() const {
+		inline Vector2i GetSize() const {
 			return Vector2i(width_, height_);
 		}
 		/// Returns viewport's FBO width or zero if no texture is present
-		inline std::int32_t width() const {
+		inline std::int32_t GetWidth() const {
 			return width_;
 		}
 		/// Returns viewport's FBO height or zero if no texture is present
-		inline std::int32_t height() const {
+		inline std::int32_t GetHeight() const {
 			return height_;
 		}
 
 		/// Returns the number of color attachments of the viewport's FBO
-		inline std::uint32_t numColorAttachments() const {
+		inline std::uint32_t GetColorAttachmentCount() const {
 			return numColorAttachments_;
 		}
 
 		/// Returns the OpenGL viewport rectangle
-		inline Recti viewportRect() const {
+		inline Recti GetViewportRect() const {
 			return viewportRect_;
 		}
 		/// Sets the OpenGL viewport rectangle through a `Recti` object
-		inline void setViewportRect(const Recti& viewportRect) {
+		inline void SetViewportRect(const Recti& viewportRect) {
 			viewportRect_ = viewportRect;
 		}
 
 		/// Returns the OpenGL scissor test rectangle
-		inline Recti scissorRect() const {
+		inline Recti GetScissorRect() const {
 			return scissorRect_;
 		}
 		/// Sets the OpenGL scissor test rectangle through a `Recti` object
-		inline void setScissorRect(const Recti& scissorRect) {
+		inline void SetScissorRect(const Recti& scissorRect) {
 			scissorRect_ = scissorRect;
 		}
 
 		/// Returns the rectangle for screen culling
-		inline Rectf cullingRect() const {
+		inline Rectf GetCullingRect() const {
 			return cullingRect_;
 		}
 
 		/// Returns the last frame this viewport was cleared
-		inline unsigned long int lastFrameCleared() const {
+		inline unsigned long int GetLastFrameCleared() const {
 			return lastFrameCleared_;
 		}
 
 		/// Returns the viewport clear mode
-		inline ClearMode clearMode() const {
+		inline ClearMode GetClearMode() const {
 			return clearMode_;
 		}
 		/// Sets the viewport clear mode
-		inline void setClearMode(ClearMode clearMode) {
+		inline void SetClearMode(ClearMode clearMode) {
 			clearMode_ = clearMode;
 		}
 
 		/// Returns the viewport clear color as a `Colorf` object
-		inline Colorf clearColor() const {
+		inline Colorf GetClearColor() const {
 			return clearColor_;
 		}
 		/// Sets the viewport clear color through four floats
-		inline void setClearColor(float red, float green, float blue, float alpha) {
+		inline void SetClearColor(float red, float green, float blue, float alpha) {
 			clearColor_.Set(red, green, blue, alpha);
 		}
 		/// Sets the viewport clear color through a `Colorf` object
-		inline void setClearColor(const Colorf& color) {
+		inline void SetClearColor(const Colorf& color) {
 			clearColor_ = color;
 		}
 
 		/// Returns the root node as a constant
-		inline const SceneNode* rootNode() const {
+		inline const SceneNode* GetRootNode() const {
 			return rootNode_;
 		}
 		/// Returns the root node
-		inline SceneNode* rootNode() {
+		inline SceneNode* GetRootNode() {
 			return rootNode_;
 		}
 		/// Sets the root node
-		inline void setRootNode(SceneNode* rootNode) {
+		inline void SetRootNode(SceneNode* rootNode) {
 			rootNode_ = rootNode;
 		}
 
 		/// Returns the reverse ordered array of viewports to be drawn before the screen
-		static SmallVectorImpl<Viewport*>& chain() {
+		static SmallVectorImpl<Viewport*>& GetChain() {
 			return chain_;
 		}
 
 		/// Returns the camera used for rendering as a constant
-		inline const Camera* camera() const {
+		inline const Camera* GetCamera() const {
 			return camera_;
 		}
 		/// Returns the camera used for rendering
-		inline Camera* camera() {
+		inline Camera* GetCamera() {
 			return camera_;
 		}
 		/// Sets the camera to be used for rendering
-		inline void setCamera(Camera* camera) {
+		inline void SetCamera(Camera* camera) {
 			camera_ = camera;
 		}
 
 		/// Sets the OpenGL object label for the viewport framebuffer object
-		void setGLFramebufferLabel(const char* label);
+		void SetGLFramebufferLabel(const char* label);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -254,16 +254,16 @@ namespace nCine
 		BitSet<std::uint8_t> stateBits_;
 #endif
 
-		void calculateCullingRect();
+		void CalculateCullingRect();
 
-		void update();
-		void visit();
-		void sortAndCommitQueue();
-		void draw(std::uint32_t nextIndex);
+		void Update();
+		void Visit();
+		void SortAndCommitQueue();
+		void Draw(std::uint32_t nextIndex);
 
 	private:
 		std::uint32_t numColorAttachments_;
 
-		void updateCulling(SceneNode* node);
+		void UpdateCulling(SceneNode* node);
 	};
 }

@@ -22,16 +22,16 @@ namespace nCine
 			Colorf color = Colorf(0.0f, 0.0f, 0.0f, 0.0f);
 		};
 
-		static Colorf color() {
+		static Colorf GetColor() {
 			return state_.color;
 		}
-		static void setColor(const Colorf& color);
-		static void setColor(float red, float green, float blue, float alpha);
+		static void SetColor(const Colorf& color);
+		static void SetColor(float red, float green, float blue, float alpha);
 
-		static State state() {
+		static State GetState() {
 			return state_;
 		}
-		static void setState(State newState);
+		static void SetState(State newState);
 
 	private:
 		static State state_;

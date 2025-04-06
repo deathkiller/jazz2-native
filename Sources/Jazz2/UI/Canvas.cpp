@@ -43,8 +43,8 @@ namespace Jazz2::UI
 			//command->setTransformation(command->transformation());
 
 			auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
 
@@ -55,9 +55,9 @@ namespace Jazz2::UI
 		}
 
 		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
 		Matrix4x4f worldMatrix = Matrix4x4f::Translation(pos.X, pos.Y, 0.0f);
 		if (std::abs(angle) > 0.01f) {
@@ -89,8 +89,8 @@ namespace Jazz2::UI
 		}
 
 		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
 		command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 		command->setLayer(z);

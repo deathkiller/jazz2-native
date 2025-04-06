@@ -39,9 +39,9 @@ namespace nCine
 		material_.bind();
 		material_.commitUniforms();
 
-		GLScissorTest::State scissorTestState = GLScissorTest::state();
+		GLScissorTest::State scissorTestState = GLScissorTest::GetState();
 		if (scissorRect_.W > 0 && scissorRect_.H > 0) {
-			GLScissorTest::enable(scissorRect_);
+			GLScissorTest::Enable(scissorRect_);
 		}
 
 		std::uint32_t offset = 0;
@@ -55,7 +55,7 @@ namespace nCine
 		geometry_.bind();
 		geometry_.draw(numInstances_);
 
-		GLScissorTest::setState(scissorTestState);
+		GLScissorTest::SetState(scissorTestState);
 	}
 
 	void RenderCommand::setScissor(GLint x, GLint y, GLsizei width, GLsizei height)
@@ -77,17 +77,17 @@ namespace nCine
 
 		ZoneScopedC(0x81A861);
 
-		const Camera::ProjectionValues cameraValues = RenderResources::currentCamera()->projectionValues();
+		const Camera::ProjectionValues cameraValues = RenderResources::currentCamera()->GetProjectionValues();
 		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
-		if (material_.shaderProgram_ && material_.shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			GLUniformBlockCache* instanceBlock = material_.uniformBlock(Material::InstanceBlockName);
 			GLUniformCache* matrixUniform = instanceBlock
-				? instanceBlock->uniform(Material::ModelMatrixUniformName)
+				? instanceBlock->GetUniform(Material::ModelMatrixUniformName)
 				: material_.uniform(Material::ModelMatrixUniformName);
 			if (matrixUniform) {
 				//ZoneScopedNC("Set model matrix", 0x81A861);
-				matrixUniform->setFloatVector(modelMatrix_.Data());
+				matrixUniform->SetFloatVector(modelMatrix_.Data());
 			}
 		}
 
@@ -101,17 +101,17 @@ namespace nCine
 		RenderResources::CameraUniformData* cameraUniformData = RenderResources::findCameraUniformData(material_.shaderProgram_);
 		if (cameraUniformData == nullptr) {
 			RenderResources::CameraUniformData newCameraUniformData;
-			newCameraUniformData.shaderUniforms.setProgram(material_.shaderProgram_, Material::ProjectionViewMatrixExcludeString, nullptr);
-			if (newCameraUniformData.shaderUniforms.numUniforms() == 2) {
-				newCameraUniformData.shaderUniforms.setUniformsDataPointer(RenderResources::cameraUniformsBuffer());
-				newCameraUniformData.shaderUniforms.uniform(Material::ProjectionMatrixUniformName)->setDirty(true);
-				newCameraUniformData.shaderUniforms.uniform(Material::ViewMatrixUniformName)->setDirty(true);
-				newCameraUniformData.shaderUniforms.commitUniforms();
+			newCameraUniformData.shaderUniforms.SetProgram(material_.shaderProgram_, Material::ProjectionViewMatrixExcludeString, nullptr);
+			if (newCameraUniformData.shaderUniforms.GetUniformCount() == 2) {
+				newCameraUniformData.shaderUniforms.SetUniformsDataPointer(RenderResources::cameraUniformsBuffer());
+				newCameraUniformData.shaderUniforms.GetUniform(Material::ProjectionMatrixUniformName)->SetDirty(true);
+				newCameraUniformData.shaderUniforms.GetUniform(Material::ViewMatrixUniformName)->SetDirty(true);
+				newCameraUniformData.shaderUniforms.CommitUniforms();
 
 				RenderResources::insertCameraUniformData(material_.shaderProgram_, std::move(newCameraUniformData));
 			}
 		} else {
-			cameraUniformData->shaderUniforms.commitUniforms();
+			cameraUniformData->shaderUniforms.CommitUniforms();
 		}
 	}
 

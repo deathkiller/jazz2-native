@@ -9,20 +9,20 @@ namespace nCine
 		: glHandle_(0), attachment_(GL_NONE)
 	{
 		glGenRenderbuffers(1, &glHandle_);
-		storage(internalFormat, width, height);
+		Storage(internalFormat, width, height);
 		GL_LOG_ERRORS();
 	}
 
 	GLRenderbuffer::~GLRenderbuffer()
 	{
 		if (boundBuffer_ == glHandle_) {
-			unbind();
+			Unbind();
 		}
 		glDeleteRenderbuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
 
-	bool GLRenderbuffer::bind() const
+	bool GLRenderbuffer::Bind() const
 	{
 		if (boundBuffer_ != glHandle_) {
 			glBindRenderbuffer(GL_RENDERBUFFER, glHandle_);
@@ -33,7 +33,7 @@ namespace nCine
 		return false;
 	}
 
-	bool GLRenderbuffer::unbind()
+	bool GLRenderbuffer::Unbind()
 	{
 		if (boundBuffer_ != 0) {
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -44,16 +44,16 @@ namespace nCine
 		return false;
 	}
 
-	void GLRenderbuffer::setObjectLabel(const char* label)
+	void GLRenderbuffer::SetObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::RenderBuffer, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::RenderBuffer, glHandle_, label);
 	}
 
-	void GLRenderbuffer::storage(GLenum internalFormat, GLsizei width, GLsizei height)
+	void GLRenderbuffer::Storage(GLenum internalFormat, GLsizei width, GLsizei height)
 	{
-		bind();
+		Bind();
 		glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
-		unbind();
+		Unbind();
 		GL_LOG_ERRORS();
 	}
 }

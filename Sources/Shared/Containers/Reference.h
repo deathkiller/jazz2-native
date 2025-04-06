@@ -66,7 +66,11 @@ namespace Death { namespace Containers {
 		 *
 		 * Expects that @p T is a base of @p U.
 		 */
-		template<class U, class = typename std::enable_if<std::is_base_of<T, U>::value>::type> constexpr /*implicit*/ Reference(Reference<U> other) noexcept : _reference{other._reference} { }
+		template<class U
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, typename std::enable_if<std::is_base_of<T, U>::value, int>::type = 0
+#endif
+		> constexpr /*implicit*/ Reference(Reference<U> other) noexcept : _reference{other._reference} { }
 
 		/**
 		 * @brief Convert the reference to external representation

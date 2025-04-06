@@ -45,8 +45,8 @@ namespace Jazz2::Actors::Solid
 				piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 				auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->intValue(0) != 0) {
-					textureUniform->setIntValue(0); // GL_TEXTURE0
+				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
 			}
 		}
@@ -113,12 +113,12 @@ namespace Jazz2::Actors::Solid
 					float texBiasY = (float(chainAnim->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)chainAnim->Base->FrameDimensions.X, (float)chainAnim->Base->FrameDimensions.Y);
+					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)chainAnim->Base->FrameDimensions.X, (float)chainAnim->Base->FrameDimensions.Y);
 					if (_shade) {
-						instanceBlock->uniform(Material::ColorUniformName)->setFloatVector((scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White).Data());
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector((scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White).Data());
 					} else {
-						instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 					}
 
 					auto& pos = _pieces[i].Pos;

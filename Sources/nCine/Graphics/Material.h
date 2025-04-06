@@ -119,29 +119,29 @@ namespace nCine
 
 		/// Wrapper around `GLShaderUniforms::hasUniform()`
 		inline bool hasUniform(const char* name) const {
-			return shaderUniforms_.hasUniform(name);
+			return shaderUniforms_.HasUniform(name);
 		}
 		/// Wrapper around `GLShaderUniformBlocks::hasUniformBlock()`
 		inline bool hasUniformBlock(const char* name) const {
-			return shaderUniformBlocks_.hasUniformBlock(name);
+			return shaderUniformBlocks_.HasUniformBlock(name);
 		}
 
 		/// Wrapper around `GLShaderUniforms::uniform()`
 		inline GLUniformCache* uniform(const char* name) {
-			return shaderUniforms_.uniform(name);
+			return shaderUniforms_.GetUniform(name);
 		}
 		/// Wrapper around `GLShaderUniformBlocks::uniformBlock()`
 		inline GLUniformBlockCache* uniformBlock(const char* name) {
-			return shaderUniformBlocks_.uniformBlock(name);
+			return shaderUniformBlocks_.GetUniformBlock(name);
 		}
 
 		/// Wrapper around `GLShaderUniforms::allUniforms()`
 		inline const GLShaderUniforms::UniformHashMapType allUniforms() const {
-			return shaderUniforms_.allUniforms();
+			return shaderUniforms_.GetAllUniforms();
 		}
 		/// Wrapper around `GLShaderUniformBlocks::allUniformBlocks()`
 		inline const GLShaderUniformBlocks::UniformHashMapType allUniformBlocks() const {
-			return shaderUniformBlocks_.allUniformBlocks();
+			return shaderUniformBlocks_.GetAllUniformBlocks();
 		}
 
 		const GLTexture* texture(std::uint32_t unit) const;
@@ -177,11 +177,11 @@ namespace nCine
 		void bind();
 		/// Wrapper around `GLShaderUniforms::commitUniforms()`
 		inline void commitUniforms() {
-			shaderUniforms_.commitUniforms();
+			shaderUniforms_.CommitUniforms();
 		}
 		/// Wrapper around `GLShaderUniformBlocks::commitUniformBlocks()`
 		inline void commitUniformBlocks() {
-			shaderUniformBlocks_.commitUniformBlocks();
+			shaderUniformBlocks_.CommitUniformBlocks();
 		}
 		/// Wrapper around `GLShaderProgram::defineVertexFormat()`
 		void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset);

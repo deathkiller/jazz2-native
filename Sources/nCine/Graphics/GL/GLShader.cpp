@@ -45,7 +45,7 @@ namespace nCine
 	GLShader::GLShader(GLenum type, StringView filename)
 		: GLShader(type)
 	{
-		loadFromFile(filename);
+		LoadFromFile(filename);
 	}
 
 	GLShader::~GLShader()
@@ -53,22 +53,22 @@ namespace nCine
 		glDeleteShader(glHandle_);
 	}
 
-	bool GLShader::loadFromString(StringView string)
+	bool GLShader::LoadFromString(StringView string)
 	{
-		return loadFromStringsAndFile(arrayView({ string }), {});
+		return LoadFromStringsAndFile(arrayView({ string }), {});
 	}
 	
-	bool GLShader::loadFromStringAndFile(StringView string, StringView filename)
+	bool GLShader::LoadFromStringAndFile(StringView string, StringView filename)
 	{
-		return loadFromStringsAndFile(arrayView({ string }), filename);
+		return LoadFromStringsAndFile(arrayView({ string }), filename);
 	}
 
-	bool GLShader::loadFromStrings(ArrayView<const StringView> strings)
+	bool GLShader::LoadFromStrings(ArrayView<const StringView> strings)
 	{
-		return loadFromStringsAndFile(strings, {});
+		return LoadFromStringsAndFile(strings, {});
 	}
 
-	bool GLShader::loadFromStringsAndFile(ArrayView<const StringView> strings, StringView filename)
+	bool GLShader::LoadFromStringsAndFile(ArrayView<const StringView> strings, StringView filename)
 	{
 		if (strings.empty() && filename.empty()) {
 			return false;
@@ -101,7 +101,7 @@ namespace nCine
 			sourceStrings.push_back(fileSource.data());
 			sourceLengths.push_back(static_cast<GLint>(fileLength));
 
-			setObjectLabel(filename.data());
+			SetObjectLabel(filename.data());
 		}
 
 		std::size_t count = sourceStrings.size();
@@ -109,24 +109,24 @@ namespace nCine
 		return (count > 1);
 	}
 	
-	bool GLShader::loadFromFile(StringView filename)
+	bool GLShader::LoadFromFile(StringView filename)
 	{
-		return loadFromStringsAndFile({}, filename);
+		return LoadFromStringsAndFile({}, filename);
 	}
 
-	bool GLShader::compile(ErrorChecking errorChecking, bool logOnErrors)
+	bool GLShader::Compile(ErrorChecking errorChecking, bool logOnErrors)
 	{
 		glCompileShader(glHandle_);
 
 		if (errorChecking == ErrorChecking::Immediate) {
-			return checkCompilation(logOnErrors);
+			return CheckCompilation(logOnErrors);
 		} else {
 			status_ = Status::CompiledWithDeferredChecks;
 			return true;
 		}
 	}
 
-	bool GLShader::checkCompilation(bool logOnErrors)
+	bool GLShader::CheckCompilation(bool logOnErrors)
 	{
 		if (status_ == Status::Compiled) {
 			return true;
@@ -155,8 +155,8 @@ namespace nCine
 		return true;
 	}
 
-	void GLShader::setObjectLabel(const char* label)
+	void GLShader::SetObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::Shader, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Shader, glHandle_, label);
 	}
 }

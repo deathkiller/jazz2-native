@@ -4,7 +4,6 @@
 	@brief Namespace @ref Death::Utf8
 */
 
-#include "Containers/Containers.h"
 #include "Containers/Array.h"
 #include "Containers/Pair.h"
 #include "Containers/String.h"
@@ -80,7 +79,7 @@ namespace Death { namespace Utf8 {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 	Containers::Array<wchar_t> ToUtf16(const char* source);
 #else
-	template<class T, class R = Containers::Array<wchar_t>, std::enable_if_t<std::is_same<typename std::decay<T>::type, const char*>::value || std::is_same<typename std::decay<T>::type, char*>::value, int> = 0>
+	template<class T, class R = Containers::Array<wchar_t>, typename std::enable_if<std::is_same<typename std::decay<T>::type, const char*>::value || std::is_same<typename std::decay<T>::type, char*>::value, int>::type = 0>
 	inline R ToUtf16(T&& source) {
 		return ToUtf16(source, -1);
 	}
@@ -115,7 +114,7 @@ namespace Death { namespace Utf8 {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 	Containers::String FromUtf16(const wchar_t* source);
 #else
-	template<class T, class R = Containers::String, std::enable_if_t<std::is_same<typename std::decay<T>::type, const wchar_t*>::value || std::is_same<typename std::decay<T>::type, wchar_t*>::value, int> = 0>
+	template<class T, class R = Containers::String, typename std::enable_if<std::is_same<typename std::decay<T>::type, const wchar_t*>::value || std::is_same<typename std::decay<T>::type, wchar_t*>::value, int>::type = 0>
 	inline R FromUtf16(T&& source) {
 		return FromUtf16(source, -1);
 	}

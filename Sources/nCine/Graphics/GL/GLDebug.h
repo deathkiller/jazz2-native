@@ -71,31 +71,31 @@ namespace nCine
 		{
 		public:
 			explicit ScopedGroup(const char* message) {
-				pushGroup(message);
+				PushGroup(message);
 			}
 			~ScopedGroup() {
-				popGroup();
+				PopGroup();
 			}
 		};
 
-		static void init(const IGfxCapabilities& gfxCaps);
-		static inline void reset() {
+		static void Init(const IGfxCapabilities& gfxCaps);
+		static inline void Reset() {
 			debugGroupId_ = 0;
 		}
 
-		static inline bool isAvailable() {
+		static inline bool IsAvailable() {
 			return debugAvailable_;
 		}
 
-		static void pushGroup(const char* message);
-		static void popGroup();
-		static void messageInsert(const char* message);
+		static void PushGroup(const char* message);
+		static void PopGroup();
+		static void MessageInsert(const char* message);
 
-		static void objectLabel(LabelTypes identifier, GLuint name, const char* label);
-		static void objectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label);
-		static void getObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label);
+		static void SetObjectLabel(LabelTypes identifier, GLuint name, const char* label);
+		static void SetObjectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label);
+		static void GetObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label);
 
-		static inline int maxLabelLength() {
+		static inline std::int32_t GetMaxLabelLength() {
 			return maxLabelLength_;
 		}
 
@@ -105,7 +105,7 @@ namespace nCine
 		static std::int32_t maxLabelLength_;
 
 		/// Enables OpenGL debug output and setup a callback function to log messages
-		static void enableDebugOutput();
+		static void EnableDebugOutput();
 	};
 
 }

@@ -20,20 +20,20 @@ namespace Jazz2::Rendering
 			_renderCommand.material().reserveUniformsDataMemory();
 			_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			auto* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 			auto* lightTexUniform = _renderCommand.material().uniform("uTextureLighting");
-			if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
-				lightTexUniform->setIntValue(1); // GL_TEXTURE1
+			if (lightTexUniform && lightTexUniform->GetIntValue(0) != 1) {
+				lightTexUniform->SetIntValue(1); // GL_TEXTURE1
 			}
 			auto* blurHalfTexUniform = _renderCommand.material().uniform("uTextureBlurHalf");
-			if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
-				blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
+			if (blurHalfTexUniform && blurHalfTexUniform->GetIntValue(0) != 2) {
+				blurHalfTexUniform->SetIntValue(2); // GL_TEXTURE2
 			}
 			auto* blurQuarterTexUniform = _renderCommand.material().uniform("uTextureBlurQuarter");
-			if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
-				blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
+			if (blurQuarterTexUniform && blurQuarterTexUniform->GetIntValue(0) != 3) {
+				blurQuarterTexUniform->SetIntValue(3); // GL_TEXTURE3
 			}
 		}
 
@@ -41,24 +41,24 @@ namespace Jazz2::Rendering
 			_renderCommandWithWater.material().reserveUniformsDataMemory();
 			_renderCommandWithWater.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			auto* textureUniform = _renderCommandWithWater.material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
+			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 			auto* lightTexUniform = _renderCommandWithWater.material().uniform("uTextureLighting");
-			if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
-				lightTexUniform->setIntValue(1); // GL_TEXTURE1
+			if (lightTexUniform && lightTexUniform->GetIntValue(0) != 1) {
+				lightTexUniform->SetIntValue(1); // GL_TEXTURE1
 			}
 			auto* blurHalfTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurHalf");
-			if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
-				blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
+			if (blurHalfTexUniform && blurHalfTexUniform->GetIntValue(0) != 2) {
+				blurHalfTexUniform->SetIntValue(2); // GL_TEXTURE2
 			}
 			auto* blurQuarterTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurQuarter");
-			if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
-				blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
+			if (blurQuarterTexUniform && blurQuarterTexUniform->GetIntValue(0) != 3) {
+				blurQuarterTexUniform->SetIntValue(3); // GL_TEXTURE3
 			}
 			auto* displacementTexUniform = _renderCommandWithWater.material().uniform("uTextureDisplacement");
-			if (displacementTexUniform && displacementTexUniform->intValue(0) != 4) {
-				displacementTexUniform->setIntValue(4); // GL_TEXTURE4
+			if (displacementTexUniform && displacementTexUniform->GetIntValue(0) != 4) {
+				displacementTexUniform->SetIntValue(4); // GL_TEXTURE4
 			}
 		}
 
@@ -86,16 +86,16 @@ namespace Jazz2::Rendering
 		}
 
 		auto* instanceBlock = command.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_bounds.W, _bounds.H);
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(_bounds.W, _bounds.H);
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
-		command.material().uniform("uAmbientColor")->setFloatVector(_owner->_ambientLight.Data());
-		command.material().uniform("uTime")->setFloatValue(_owner->_levelHandler->_elapsedFrames * 0.0018f);
+		command.material().uniform("uAmbientColor")->SetFloatVector(_owner->_ambientLight.Data());
+		command.material().uniform("uTime")->SetFloatValue(_owner->_levelHandler->_elapsedFrames * 0.0018f);
 
 		if (viewHasWater) {
-			command.material().uniform("uWaterLevel")->setFloatValue(viewWaterLevel / _bounds.H);
-			command.material().uniform("uCameraPos")->setFloatVector(_owner->_cameraPos.Data());
+			command.material().uniform("uWaterLevel")->SetFloatValue(viewWaterLevel / _bounds.H);
+			command.material().uniform("uCameraPos")->SetFloatVector(_owner->_cameraPos.Data());
 		}
 
 		renderQueue.addCommand(&command);

@@ -1607,7 +1607,7 @@ namespace Jazz2
 		SmallVector<Rectf, ControlScheme::MaxSupportedPlayers> playerZones;
 		playerZones.reserve(playerCount);
 		for (std::size_t i = 0; i < playerCount; i++) {
-			Rectf cullingRect = _assignedViewports[i]->_view->cullingRect();
+			Rectf cullingRect = _assignedViewports[i]->_view->GetCullingRect();
 
 			bool found = false;
 			for (std::size_t j = 0; j < playerZones.size(); j++) {
@@ -1795,7 +1795,7 @@ namespace Jazz2
 
 		// The position to focus on
 		Vector2f focusPos = viewport._targetPlayer->_pos;
-		Vector2i halfView = viewport._view->size() / 2;
+		Vector2i halfView = viewport._view->GetSize() / 2;
 
 		// Clamp camera position to level bounds
 		if (viewport._viewBounds.W > halfView.X * 2) {
@@ -1810,7 +1810,7 @@ namespace Jazz2
 		}
 
 		viewport._cameraLastPos = viewport._cameraPos;
-		viewport._camera->setView(viewport._cameraPos, 0.0f, 1.0f);
+		viewport._camera->SetView(viewport._cameraPos, 0.0f, 1.0f);
 	}
 
 	Vector2f LevelHandler::GetCameraPos(Actors::Player* player) const

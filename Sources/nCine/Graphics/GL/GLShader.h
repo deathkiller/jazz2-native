@@ -38,28 +38,28 @@ namespace nCine
 		GLShader(const GLShader&) = delete;
 		GLShader& operator=(const GLShader&) = delete;
 
-		inline GLuint glHandle() const {
+		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
-		inline Status status() const {
+		inline Status GetStatus() const {
 			return status_;
 		}
 
 		/// Loads a shader from the given string
-		bool loadFromString(StringView string);
+		bool LoadFromString(StringView string);
 		/// Loads a shader from the given string and then append the specified file
-		bool loadFromStringAndFile(StringView string, StringView filename);
+		bool LoadFromStringAndFile(StringView string, StringView filename);
 		/// Loads a shader by concatenating the given strings in order
-		bool loadFromStrings(ArrayView<const StringView> strings);
+		bool LoadFromStrings(ArrayView<const StringView> strings);
 		/// Loads a shader by concatenating the given strings in order, then appending the specified file
-		bool loadFromStringsAndFile(ArrayView<const StringView> strings, StringView filename);
+		bool LoadFromStringsAndFile(ArrayView<const StringView> strings, StringView filename);
 		/// Loads a shader from the specified file
-		bool loadFromFile(StringView filename);
+		bool LoadFromFile(StringView filename);
 
-		bool compile(ErrorChecking errorChecking, bool logOnErrors);
-		bool checkCompilation(bool logOnErrors);
+		bool Compile(ErrorChecking errorChecking, bool logOnErrors);
+		bool CheckCompilation(bool logOnErrors);
 
-		void setObjectLabel(const char* label);
+		void SetObjectLabel(const char* label);
 
 	private:
 		static constexpr std::uint32_t MaxShaderSourceLength = 32 * 1024;

@@ -196,9 +196,9 @@ namespace Jazz2::UI::Multiplayer
 			case MpGameMode::TeamRace: {
 
 				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", peerDesc->Laps + 1, serverConfig.TotalLaps);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 20.0f, view.Y + 5.0f + 1.4f, FontShadowLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 20.0f, view.Y + 7.0f + 1.4f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.88f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 20.0f, view.Y + 5.0f, FontLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 20.0f, view.Y + 7.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
 
 				float sinceLapStarted = peerDesc->LapStarted.secondsSince();

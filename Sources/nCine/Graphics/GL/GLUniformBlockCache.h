@@ -24,35 +24,35 @@ namespace nCine
 			return uniformBlock_;
 		}
 		/// Wrapper around `GLUniformBlock::index()`
-		GLuint index() const;
+		GLuint GetIndex() const;
 		/// Wrapper around `GLUniformBlock::bindingIndex()`
-		GLuint bindingIndex() const;
+		GLuint GetBindingIndex() const;
 		/// Wrapper around `GLUniformBlock::size()`
-		GLint size() const;
+		GLint GetSize() const;
 		/// Wrapper around `GLUniformBlock::alignAmount()`
-		std::uint8_t alignAmount() const;
+		std::uint8_t GetAlignAmount() const;
 
-		inline GLubyte* dataPointer() {
+		inline GLubyte* GetDataPointer() {
 			return dataPointer_;
 		}
-		inline const GLubyte* dataPointer() const {
+		inline const GLubyte* GetDataPointer() const {
 			return dataPointer_;
 		}
-		void setDataPointer(GLubyte* dataPointer);
+		void SetDataPointer(GLubyte* dataPointer);
 
 		inline GLint usedSize() const {
 			return usedSize_;
 		}
-		void setUsedSize(GLint usedSize);
+		void SetUsedSize(GLint usedSize);
 
-		bool copyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes);
-		inline bool copyData(const GLubyte* src) {
-			return copyData(0, src, usedSize_);
+		bool CopyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes);
+		inline bool CopyData(const GLubyte* src) {
+			return CopyData(0, src, usedSize_);
 		}
 
-		GLUniformCache* uniform(StringView name);
-		/// Wrapper around `GLUniformBlock::setBlockBinding()`
-		void setBlockBinding(GLuint blockBinding);
+		GLUniformCache* GetUniform(StringView name);
+		/// Wrapper around `GLUniformBlock::SetBlockBinding()`
+		void SetBlockBinding(GLuint blockBinding);
 
 	private:
 		GLUniformBlock* uniformBlock_;

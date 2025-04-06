@@ -21,25 +21,25 @@ namespace nCine
 		explicit GLShaderUniformBlocks(GLShaderProgram* shaderProgram);
 		GLShaderUniformBlocks(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
 
-		inline void setProgram(GLShaderProgram* shaderProgram) {
-			setProgram(shaderProgram, nullptr, nullptr);
+		inline void SetProgram(GLShaderProgram* shaderProgram) {
+			SetProgram(shaderProgram, nullptr, nullptr);
 		}
-		void setProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
-		void setUniformsDataPointer(GLubyte* dataPointer);
+		void SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
+		void SetUniformsDataPointer(GLubyte* dataPointer);
 
-		inline unsigned int numUniformBlocks() const {
+		inline unsigned int GetUniformBlockCount() const {
 			return uniformBlockCaches_.size();
 		}
-		inline bool hasUniformBlock(const char* name) const {
+		inline bool HasUniformBlock(const char* name) const {
 			return (uniformBlockCaches_.find(String::nullTerminatedView(name)) != nullptr);
 		}
-		GLUniformBlockCache* uniformBlock(const char* name);
-		inline const UniformHashMapType allUniformBlocks() const {
+		GLUniformBlockCache* GetUniformBlock(const char* name);
+		inline const UniformHashMapType GetAllUniformBlocks() const {
 			return uniformBlockCaches_;
 		}
-		void commitUniformBlocks();
+		void CommitUniformBlocks();
 
-		void bind();
+		void Bind();
 
 	private:
 		GLShaderProgram* shaderProgram_;
@@ -52,6 +52,6 @@ namespace nCine
 		UniformHashMapType uniformBlockCaches_;
 
 		/// Imports the uniform blocks with the option of including only some or excluding others
-		void importUniformBlocks(const char* includeOnly, const char* exclude);
+		void ImportUniformBlocks(const char* includeOnly, const char* exclude);
 	};
 }

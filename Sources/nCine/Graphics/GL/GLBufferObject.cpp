@@ -22,13 +22,13 @@ namespace nCine
 	GLBufferObject::~GLBufferObject()
 	{
 		if (boundBuffers_[target_] == glHandle_)
-			unbind();
+			Unbind();
 
 		glDeleteBuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
 
-	bool GLBufferObject::bind() const
+	bool GLBufferObject::Bind() const
 	{
 		if (boundBuffers_[target_] != glHandle_) {
 			glBindBuffer(target_, glHandle_);
@@ -39,7 +39,7 @@ namespace nCine
 		return false;
 	}
 
-	bool GLBufferObject::unbind() const
+	bool GLBufferObject::Unbind() const
 	{
 		if (boundBuffers_[target_] != 0) {
 			glBindBuffer(target_, 0);
@@ -50,35 +50,35 @@ namespace nCine
 		return false;
 	}
 
-	void GLBufferObject::bufferData(GLsizeiptr size, const GLvoid* data, GLenum usage)
+	void GLBufferObject::BufferData(GLsizeiptr size, const GLvoid* data, GLenum usage)
 	{
 		TracyGpuZone("glBufferData");
-		bind();
+		Bind();
 		glBufferData(target_, size, data, usage);
 		GL_LOG_ERRORS();
 		size_ = size;
 	}
 
-	void GLBufferObject::bufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data)
+	void GLBufferObject::BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data)
 	{
 		TracyGpuZone("glBufferSubData");
-		bind();
+		Bind();
 		glBufferSubData(target_, offset, size, data);
 		GL_LOG_ERRORS();
 	}
 
 #if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
-	void GLBufferObject::bufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags)
+	void GLBufferObject::BufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags)
 	{
 		TracyGpuZone("glBufferStorage");
-		bind();
+		Bind();
 		glBufferStorage(target_, size, data, flags);
 		GL_LOG_ERRORS();
 		size_ = size;
 	}
 #endif
 
-	void GLBufferObject::bindBufferBase(GLuint index)
+	void GLBufferObject::BindBufferBase(GLuint index)
 	{
 		ASSERT(target_ == GL_UNIFORM_BUFFER);
 		ASSERT(index < MaxIndexBufferRange);
@@ -95,7 +95,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-	void GLBufferObject::bindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
+	void GLBufferObject::BindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
 	{
 		ASSERT(target_ == GL_UNIFORM_BUFFER);
 		ASSERT(index < MaxIndexBufferRange);
@@ -114,36 +114,36 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-	void* GLBufferObject::mapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access)
+	void* GLBufferObject::MapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access)
 	{
 		FATAL_ASSERT(mapped_ == false);
 		mapped_ = true;
-		bind();
+		Bind();
 		void* result = glMapBufferRange(target_, offset, length, access);
 		GL_LOG_ERRORS();
 		return result;
 	}
 
-	void GLBufferObject::flushMappedBufferRange(GLintptr offset, GLsizeiptr length)
+	void GLBufferObject::FlushMappedBufferRange(GLintptr offset, GLsizeiptr length)
 	{
 		FATAL_ASSERT(mapped_ == true);
-		bind();
+		Bind();
 		glFlushMappedBufferRange(target_, offset, length);
 		GL_LOG_ERRORS();
 	}
 
-	GLboolean GLBufferObject::unmap()
+	GLboolean GLBufferObject::Unmap()
 	{
 		FATAL_ASSERT(mapped_ == true);
 		mapped_ = false;
-		bind();
+		Bind();
 		GLboolean result = glUnmapBuffer(target_);
 		GL_LOG_ERRORS();
 		return result;
 	}
 
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
-	void GLBufferObject::texBuffer(GLenum internalformat)
+	void GLBufferObject::TexBuffer(GLenum internalformat)
 	{
 		FATAL_ASSERT(target_ == GL_TEXTURE_BUFFER);
 		glTexBuffer(GL_TEXTURE_BUFFER, internalformat, glHandle_);
@@ -151,12 +151,12 @@ namespace nCine
 	}
 #endif
 
-	void GLBufferObject::setObjectLabel(const char* label)
+	void GLBufferObject::SetObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::Buffer, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Buffer, glHandle_, label);
 	}
 
-	bool GLBufferObject::bindHandle(GLenum target, GLuint glHandle)
+	bool GLBufferObject::BindHandle(GLenum target, GLuint glHandle)
 	{
 		if (boundBuffers_[target] != glHandle) {
 			glBindBuffer(target, glHandle);

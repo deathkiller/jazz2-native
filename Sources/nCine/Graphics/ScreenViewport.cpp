@@ -29,7 +29,7 @@ namespace nCine
 		type_ = Type::Screen;
 	}
 
-	void ScreenViewport::resize(std::int32_t width, std::int32_t height)
+	void ScreenViewport::Resize(std::int32_t width, std::int32_t height)
 	{
 		if (width == width_ && height == height_) {
 			return;
@@ -38,35 +38,35 @@ namespace nCine
 		viewportRect_.Set(0, 0, width, height);
 
 		if (camera_ != nullptr) {
-			camera_->setOrthoProjection(0.0f, float(width), 0.0f, float(height));
+			camera_->SetOrthoProjection(0.0f, float(width), 0.0f, float(height));
 		}
-		RenderResources::defaultCamera_->setOrthoProjection(0.0f, float(width), 0.0f, float(height));
+		RenderResources::defaultCamera_->SetOrthoProjection(0.0f, float(width), 0.0f, float(height));
 
 		width_ = width;
 		height_ = height;
 	}
 
-	void ScreenViewport::update()
+	void ScreenViewport::Update()
 	{
 		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::UpdatedBit)) {
-				chain_[i]->update();
+				chain_[i]->Update();
 			}
 		}
-		Viewport::update();
+		Viewport::Update();
 	}
 
-	void ScreenViewport::visit()
+	void ScreenViewport::Visit()
 	{
 		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::VisitedBit)) {
-				chain_[i]->visit();
+				chain_[i]->Visit();
 			}
 		}
-		Viewport::visit();
+		Viewport::Visit();
 	}
 
-	void ScreenViewport::sortAndCommitQueue()
+	void ScreenViewport::SortAndCommitQueue()
 	{
 #if defined(NCINE_PROFILING)
 		// Reset all rendering statistics
@@ -75,19 +75,19 @@ namespace nCine
 
 		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::CommittedBit)) {
-				chain_[i]->sortAndCommitQueue();
+				chain_[i]->SortAndCommitQueue();
 			}
 		}
-		Viewport::sortAndCommitQueue();
+		Viewport::SortAndCommitQueue();
 
 		// Now that UBOs and VBOs have been updated, they can be flushed and unmapped
 		RenderResources::buffersManager().flushUnmap();
 	}
 
-	void ScreenViewport::draw()
+	void ScreenViewport::Draw()
 	{
 		// Recursive calls into the chain
-		Viewport::draw(0);
+		Viewport::Draw(0);
 
 		for (std::size_t i = 0; i < chain_.size(); i++) {
 			if (chain_[i]) {
@@ -100,6 +100,6 @@ namespace nCine
 
 		RenderResources::buffersManager().remap();
 		RenderResources::renderCommandPool().reset();
-		GLDebug::reset();
+		GLDebug::Reset();
 	}
 }

@@ -25,10 +25,10 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxProgramBinaryFormats; i++) {
 			programBinaryFormats_[i] = -1;
 		}
-		init();
+		Initialize();
 	}
 
-	std::int32_t GfxCapabilities::glVersion(IGfxCapabilities::GLVersion version) const
+	std::int32_t GfxCapabilities::GetGLVersion(IGfxCapabilities::GLVersion version) const
 	{
 		switch (version) {
 			case GLVersion::Major: return glMajorVersion_;
@@ -38,7 +38,7 @@ namespace nCine
 		}
 	}
 
-	std::int32_t GfxCapabilities::value(GLIntValues valueName) const
+	std::int32_t GfxCapabilities::GetValue(GLIntValues valueName) const
 	{
 		std::int32_t value = 0;
 		if (valueName >= (GLIntValues)0 && valueName < GLIntValues::Count) {
@@ -47,7 +47,7 @@ namespace nCine
 		return value;
 	}
 
-	std::int32_t GfxCapabilities::arrayValue(GLArrayIntValues valueName, std::uint32_t index) const
+	std::int32_t GfxCapabilities::GetArrayValue(GLArrayIntValues valueName, std::uint32_t index) const
 	{
 		std::int32_t value = 0;
 		if (valueName == GLArrayIntValues::PROGRAM_BINARY_FORMATS && index < std::uint32_t(glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS])) {
@@ -56,7 +56,7 @@ namespace nCine
 		return value;
 	}
 
-	bool GfxCapabilities::hasExtension(GLExtensions extensionName) const
+	bool GfxCapabilities::HasExtension(GLExtensions extensionName) const
 	{
 		bool extensionAvailable = false;
 		if (extensionName >= (GLExtensions)0 && extensionName < GLExtensions::Count) {
@@ -65,7 +65,7 @@ namespace nCine
 		return extensionAvailable;
 	}
 
-	void GfxCapabilities::init()
+	void GfxCapabilities::Initialize()
 	{
 		const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 
@@ -128,52 +128,31 @@ namespace nCine
 		};
 		static_assert(std::int32_t(arraySize(ExtensionNames)) == (std::int32_t)GLExtensions::Count, "GLExtensions count mismatch");
 
-		checkGLExtensions(ExtensionNames, glExtensions_, (std::int32_t)GLExtensions::Count);
+		CheckGLExtensions(ExtensionNames, glExtensions_, (std::int32_t)GLExtensions::Count);
 
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-		if (hasExtension(GLExtensions::OES_GET_PROGRAM_BINARY)) {
+		if (HasExtension(GLExtensions::OES_GET_PROGRAM_BINARY)) {
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
 			ASSERT(glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS_OES, programBinaryFormats_);
 		} else
 #endif
-		if (hasExtension(GLExtensions::ARB_GET_PROGRAM_BINARY)) {
+		if (HasExtension(GLExtensions::ARB_GET_PROGRAM_BINARY)) {
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
 			ASSERT(glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
 		}
 
 #if defined(DEATH_TRACE)
-		logGLInfo();
-		logGLCaps();
-		//logGLExtensions();
-#endif
-	}
-
-	void GfxCapabilities::logGLInfo() const
-	{
+		// Log OpenGL device info
 		LOGI("--- OpenGL device info ---");
 		LOGI("Vendor: %s", glInfoStrings_.vendor);
 		LOGI("Renderer: %s", glInfoStrings_.renderer);
 		LOGI("OpenGL Version: %s", glInfoStrings_.glVersion);
 		LOGI("GLSL Version: %s", glInfoStrings_.glslVersion);
 		//LOGI("--- OpenGL device info ---");
-	}
 
-	void GfxCapabilities::logGLExtensions() const
-	{
-		GLint numExtensions;
-		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
-
-		LOGI("--- OpenGL extensions ---");
-		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++) {
-			LOGI("Extension %u: %s", i, glGetStringi(GL_EXTENSIONS, i));
-		}
-		LOGI("--- OpenGL extensions ---");
-	}
-
-	void GfxCapabilities::logGLCaps() const
-	{
+		// Capabilities
 		LOGI("--- OpenGL device capabilities ---");
 		LOGI("GL_MAX_TEXTURE_SIZE: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_SIZE]);
 		LOGI("GL_MAX_TEXTURE_IMAGE_UNITS: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_IMAGE_UNITS]);
@@ -207,9 +186,20 @@ namespace nCine
 		LOGI("GL_KHR_texture_compression_astc_ldr: %d", glExtensions_[(std::int32_t)GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR]);
 		//LOGI("--- OpenGL device capabilities ---");
 		LOGI("---");
+
+		// Extensions
+		/*GLint numExtensions;
+		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+
+		LOGI("--- OpenGL extensions ---");
+		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++) {
+			LOGI("Extension %u: %s", i, glGetStringi(GL_EXTENSIONS, i));
+		}
+		LOGI("--- OpenGL extensions ---");*/
+#endif
 	}
 
-	void GfxCapabilities::checkGLExtensions(const char* extensionNames[], bool results[], std::uint32_t numExtensionsToCheck) const
+	void GfxCapabilities::CheckGLExtensions(const char* extensionNames[], bool results[], std::uint32_t numExtensionsToCheck) const
 	{
 		GLint numExtensions;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);

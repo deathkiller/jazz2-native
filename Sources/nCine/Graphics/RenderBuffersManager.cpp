@@ -29,8 +29,8 @@ namespace nCine
 		iboSpecs.alignment = sizeof(GLushort);
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		const std::int32_t offsetAlignment = gfxCaps.value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
-		const std::int32_t uboMaxSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		const std::int32_t uboMaxSize = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		BufferSpecifications& uboSpecs = specs_[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type = BufferTypes::Uniform;
@@ -114,13 +114,13 @@ namespace nCine
 
 			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
 				if (usedSize > 0) {
-					buffer.object->bufferSubData(0, usedSize, buffer.hostBuffer.get());
+					buffer.object->BufferSubData(0, usedSize, buffer.hostBuffer.get());
 				}
 			} else {
 				if (usedSize > 0) {
-					buffer.object->flushMappedBufferRange(0, usedSize);
+					buffer.object->FlushMappedBufferRange(0, usedSize);
 				}
-				buffer.object->unmap();
+				buffer.object->Unmap();
 			}
 
 			buffer.mapBase = nullptr;
@@ -137,10 +137,10 @@ namespace nCine
 			ASSERT(buffer.mapBase == nullptr);
 
 			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
-				buffer.object->bufferData(buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
+				buffer.object->BufferData(buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
 				buffer.mapBase = buffer.hostBuffer.get();
 			} else {
-				buffer.mapBase = static_cast<GLubyte*>(buffer.object->mapBufferRange(0, buffer.size, specs_[std::int32_t(buffer.type)].mapFlags));
+				buffer.mapBase = static_cast<GLubyte*>(buffer.object->MapBufferRange(0, buffer.size, specs_[std::int32_t(buffer.type)].mapFlags));
 			}
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
@@ -153,19 +153,19 @@ namespace nCine
 		managedBuffer.type = specs.type;
 		managedBuffer.size = specs.maxSize;
 		managedBuffer.object = std::make_unique<GLBufferObject>(specs.target);
-		managedBuffer.object->bufferData(managedBuffer.size, nullptr, specs.usageFlags);
+		managedBuffer.object->BufferData(managedBuffer.size, nullptr, specs.usageFlags);
 		managedBuffer.freeSpace = managedBuffer.size;
 
 		switch (managedBuffer.type) {
 			default:
 			case BufferTypes::Array:
-				managedBuffer.object->setObjectLabel("Vertex_ManagedBuffer");
+				managedBuffer.object->SetObjectLabel("Vertex_ManagedBuffer");
 				break;
 			case BufferTypes::ElementArray:
-				managedBuffer.object->setObjectLabel("Index_ManagedBuffer");
+				managedBuffer.object->SetObjectLabel("Index_ManagedBuffer");
 				break;
 			case BufferTypes::Uniform:
-				managedBuffer.object->setObjectLabel("Uniform_ManagedBuffer");
+				managedBuffer.object->SetObjectLabel("Uniform_ManagedBuffer");
 				break;
 		}
 
@@ -173,7 +173,7 @@ namespace nCine
 			managedBuffer.hostBuffer = std::make_unique<GLubyte[]>(specs.maxSize);
 			managedBuffer.mapBase = managedBuffer.hostBuffer.get();
 		} else {
-			managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->mapBufferRange(0, managedBuffer.size, specs.mapFlags));
+			managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->MapBufferRange(0, managedBuffer.size, specs.mapFlags));
 		}
 
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);

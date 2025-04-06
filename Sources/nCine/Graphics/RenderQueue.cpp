@@ -162,8 +162,8 @@ namespace nCine
 			opaqueRenderCommand->issue();
 		}
 
-		GLBlending::enable();
-		GLDepthTest::disableDepthMask();
+		GLBlending::Enable();
+		GLDepthTest::DisableDepthMask();
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
@@ -190,15 +190,15 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			RenderStatistics::gatherStatistics(*transparentRenderCommand);
 #endif
-			GLBlending::setBlendFunc(transparentRenderCommand->material().srcBlendingFactor(), transparentRenderCommand->material().destBlendingFactor());
+			GLBlending::SetBlendFunc(transparentRenderCommand->material().srcBlendingFactor(), transparentRenderCommand->material().destBlendingFactor());
 			transparentRenderCommand->commitCameraTransformation();
 			transparentRenderCommand->issue();
 		}
 		// Depth mask has to be enabled again before exiting this method or glClear(GL_DEPTH_BUFFER_BIT) won't have any effect
-		GLDepthTest::enableDepthMask();
-		GLBlending::disable();
+		GLDepthTest::EnableDepthMask();
+		GLBlending::Disable();
 
-		GLScissorTest::disable();
+		GLScissorTest::Disable();
 	}
 
 	void RenderQueue::clear()

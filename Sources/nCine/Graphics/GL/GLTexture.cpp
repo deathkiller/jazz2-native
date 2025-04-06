@@ -5,7 +5,7 @@
 namespace nCine
 {
 	GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> GLTexture::boundTextures_[MaxTextureUnits];
-	unsigned int GLTexture::boundUnit_ = 0;
+	std::uint32_t GLTexture::boundUnit_ = 0;
 
 	GLTexture::GLTexture(GLenum target)
 		: glHandle_(0), target_(target), textureUnit_(0)
@@ -17,107 +17,107 @@ namespace nCine
 	GLTexture::~GLTexture()
 	{
 		if (boundTextures_[boundUnit_][target_] == glHandle_) {
-			unbind();
+			Unbind();
 		}
 
 		glDeleteTextures(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
 
-	bool GLTexture::bind(unsigned int textureUnit) const
+	bool GLTexture::Bind(std::uint32_t textureUnit) const
 	{
-		const bool hasBound = bindHandle(target_, glHandle_, textureUnit);
+		const bool hasBound = BindHandle(target_, glHandle_, textureUnit);
 		if (hasBound) {
 			textureUnit_ = textureUnit;
 		}
 		return hasBound;
 	}
 
-	bool GLTexture::unbind() const
+	bool GLTexture::Unbind() const
 	{
-		return bindHandle(target_, 0, textureUnit_);
+		return BindHandle(target_, 0, textureUnit_);
 	}
 
-	bool GLTexture::unbind(GLenum target, unsigned int textureUnit)
+	bool GLTexture::Unbind(GLenum target, std::uint32_t textureUnit)
 	{
-		return bindHandle(target, 0, textureUnit);
+		return BindHandle(target, 0, textureUnit);
 	}
 
-	bool GLTexture::unbind(unsigned int textureUnit)
+	bool GLTexture::Unbind(std::uint32_t textureUnit)
 	{
-		return bindHandle(GL_TEXTURE_2D, 0, textureUnit);
+		return BindHandle(GL_TEXTURE_2D, 0, textureUnit);
 	}
 
-	void GLTexture::texImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data)
+	void GLTexture::TexImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data)
 	{
 		TracyGpuZone("glTexImage2D");
-		bind();
+		Bind();
 		glTexImage2D(target_, level, internalFormat, width, height, 0, format, type, data);
 		GL_LOG_ERRORS();
 	}
 
-	void GLTexture::texSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data)
+	void GLTexture::TexSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data)
 	{
 		TracyGpuZone("glTexSubImage2D");
-		bind();
+		Bind();
 		glTexSubImage2D(target_, level, xoffset, yoffset, width, height, format, type, data);
 		GL_LOG_ERRORS();
 	}
 
-	void GLTexture::compressedTexImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei imageSize, const void* data)
+	void GLTexture::CompressedTexImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei imageSize, const void* data)
 	{
 		TracyGpuZone("glCompressedTexImage2D");
-		bind();
+		Bind();
 		glCompressedTexImage2D(target_, level, internalFormat, width, height, 0, imageSize, data);
 		GL_LOG_ERRORS();
 	}
 
-	void GLTexture::compressedTexSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void* data)
+	void GLTexture::CompressedTexSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void* data)
 	{
 		TracyGpuZone("glCompressedTexSubImage2D");
-		bind();
+		Bind();
 		glCompressedTexSubImage2D(target_, level, xoffset, yoffset, width, height, format, imageSize, data);
 		GL_LOG_ERRORS();
 	}
 
-	void GLTexture::texStorage2D(GLsizei levels, GLint internalFormat, GLsizei width, GLsizei height)
+	void GLTexture::TexStorage2D(GLsizei levels, GLint internalFormat, GLsizei width, GLsizei height)
 	{
 		TracyGpuZone("glTexStorage2D");
-		bind();
+		Bind();
 		glTexStorage2D(target_, levels, internalFormat, width, height);
 		GL_LOG_ERRORS();
 	}
 
 #if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
-	void GLTexture::getTexImage(GLint level, GLenum format, GLenum type, void* pixels)
+	void GLTexture::GetTexImage(GLint level, GLenum format, GLenum type, void* pixels)
 	{
 		TracyGpuZone("glGetTexImage");
-		bind();
+		Bind();
 		glGetTexImage(target_, level, format, type, pixels);
 		GL_LOG_ERRORS();
 	}
 #endif
 
-	void GLTexture::texParameterf(GLenum pname, GLfloat param)
+	void GLTexture::TexParameterf(GLenum pname, GLfloat param)
 	{
-		bind();
+		Bind();
 		glTexParameterf(target_, pname, param);
 		GL_LOG_ERRORS();
 	}
 
-	void GLTexture::texParameteri(GLenum pname, GLint param)
+	void GLTexture::TexParameteri(GLenum pname, GLint param)
 	{
-		bind();
+		Bind();
 		glTexParameteri(target_, pname, param);
 		GL_LOG_ERRORS();
 	}
 
-	void GLTexture::setObjectLabel(const char* label)
+	void GLTexture::SetObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::Texture, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Texture, glHandle_, label);
 	}
 
-	bool GLTexture::bindHandle(GLenum target, GLuint glHandle, unsigned int textureUnit)
+	bool GLTexture::BindHandle(GLenum target, GLuint glHandle, std::uint32_t textureUnit)
 	{
 		FATAL_ASSERT(textureUnit < MaxTextureUnits);
 

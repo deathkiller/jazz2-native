@@ -98,8 +98,8 @@ namespace nCine
 		renderCommand_.material().reserveUniformsDataMemory();
 		instanceBlock_ = renderCommand_.material().uniformBlock(Material::InstanceBlockName);
 		GLUniformCache* textureUniform = renderCommand_.material().uniform(Material::TextureUniformName);
-		if (textureUniform != nullptr && textureUniform->intValue(0) != 0) {
-			textureUniform->setIntValue(0); // GL_TEXTURE0
+		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
+			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
 
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
@@ -117,16 +117,16 @@ namespace nCine
 			dirtyBits_.reset(DirtyBitPositions::TransformationBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
-			GLUniformCache* colorUniform = instanceBlock_->uniform(Material::ColorUniformName);
+			GLUniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
 			if (colorUniform != nullptr) {
-				colorUniform->setFloatVector(absColor().Data());
+				colorUniform->SetFloatVector(absColor().Data());
 			}
 			dirtyBits_.reset(DirtyBitPositions::ColorBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
-			GLUniformCache* spriteSizeUniform = instanceBlock_->uniform(Material::SpriteSizeUniformName);
+			GLUniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
 			if (spriteSizeUniform != nullptr) {
-				spriteSizeUniform->setFloatValue(width_, height_);
+				spriteSizeUniform->SetFloatValue(width_, height_);
 			}
 			dirtyBits_.reset(DirtyBitPositions::SizeBit);
 		}
@@ -135,7 +135,7 @@ namespace nCine
 			if (texture_ != nullptr) {
 				renderCommand_.material().setTexture(*texture_);
 
-				GLUniformCache* texRectUniform = instanceBlock_->uniform(Material::TexRectUniformName);
+				GLUniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
 				if (texRectUniform != nullptr) {
 					const Vector2i texSize = texture_->size();
 					const float texScaleX = texRect_.W / float(texSize.X);
@@ -143,7 +143,7 @@ namespace nCine
 					const float texScaleY = texRect_.H / float(texSize.Y);
 					const float texBiasY = texRect_.Y / float(texSize.Y);
 
-					texRectUniform->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					texRectUniform->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				}
 			} else {
 				renderCommand_.material().setTexture(nullptr);

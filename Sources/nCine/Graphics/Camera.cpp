@@ -18,7 +18,7 @@ namespace nCine
 										projectionValues_.nearClip, projectionValues_.farClip);
 	}
 
-	void Camera::setOrthoProjection(float left, float right, float top, float bottom)
+	void Camera::SetOrthoProjection(float left, float right, float top, float bottom)
 	{
 		projectionValues_.left = left;
 		projectionValues_.right = right;
@@ -31,12 +31,12 @@ namespace nCine
 		updateFrameProjectionMatrix_ = theApplication().GetFrameCount();
 	}
 
-	void Camera::setOrthoProjection(const ProjectionValues& values)
+	void Camera::SetOrthoProjection(const ProjectionValues& values)
 	{
-		setOrthoProjection(values.left, values.right, values.top, values.bottom);
+		SetOrthoProjection(values.left, values.right, values.top, values.bottom);
 	}
 
-	void Camera::setView(Vector2f position, float rotation, float scale)
+	void Camera::SetView(Vector2f position, float rotation, float scale)
 	{
 		viewValues_.position = position;
 		viewValues_.rotation = rotation;
@@ -48,13 +48,13 @@ namespace nCine
 		updateFrameViewMatrix_ = theApplication().GetFrameCount();
 	}
 
-	void Camera::setView(float x, float y, float rotation, float scale)
+	void Camera::SetView(float x, float y, float rotation, float scale)
 	{
-		setView(Vector2f(x, y), rotation, scale);
+		SetView(Vector2f(x, y), rotation, scale);
 	}
 
-	void Camera::setView(const ViewValues& values)
+	void Camera::SetView(const ViewValues& values)
 	{
-		setView(values.position, values.rotation, values.scale);
+		SetView(values.position, values.rotation, values.scale);
 	}
 }

@@ -93,9 +93,9 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value&& std::is_nothrow_constructible<S, NoInitT>::value);
 #else
-		template<class F_ = F, class = typename std::enable_if<std::is_standard_layout<F_>::value && std::is_standard_layout<S>::value && std::is_trivial<F_>::value && std::is_trivial<S>::value>::type> explicit Pair(NoInitT) noexcept {}
+		template<class F_ = F, typename std::enable_if<std::is_standard_layout<F_>::value && std::is_standard_layout<S>::value && std::is_trivial<F_>::value && std::is_trivial<S>::value, int>::type = 0> explicit Pair(NoInitT) noexcept {}
 		/** @overload */
-		template<class F_ = F, class S_ = S, class = typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_constructible<S_, NoInitT>::value>::type> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value && std::is_nothrow_constructible<S, NoInitT>::value) : _first{NoInit}, _second{NoInit} {}
+		template<class F_ = F, typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_constructible<S, NoInitT>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value && std::is_nothrow_constructible<S, NoInitT>::value) : _first{NoInit}, _second{NoInit} {}
 #endif
 
 		/**
@@ -154,7 +154,11 @@ namespace Death { namespace Containers {
 		{}
 
 		/** @brief Copy-construct a pair from another of different type */
-		template<class OtherF, class OtherS, class = typename std::enable_if<std::is_constructible<F, const OtherF&>::value&& std::is_constructible<S, const OtherS&>::value>::type> constexpr explicit Pair(const Pair<OtherF, OtherS>& other) noexcept(std::is_nothrow_constructible<F, const OtherF&>::value && std::is_nothrow_constructible<S, const OtherS&>::value) :
+		template<class OtherF, class OtherS
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, typename std::enable_if<std::is_constructible<F, const OtherF&>::value&& std::is_constructible<S, const OtherS&>::value, int>::type = 0
+#endif
+		> constexpr explicit Pair(const Pair<OtherF, OtherS>& other) noexcept(std::is_nothrow_constructible<F, const OtherF&>::value && std::is_nothrow_constructible<S, const OtherS&>::value) :
 			// Explicit T() to avoid warnings for int-to-float conversion etc., as that's a desirable use case here (and the constructor
 			// is explicit because of that). Using () instead of {} alone doesn't help as Clang still warns for float-to-double conversion.
 			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
@@ -166,7 +170,11 @@ namespace Death { namespace Containers {
 		{}
 
 		/** @brief Move-construct a pair from another of different type */
-		template<class OtherF, class OtherS, class = typename std::enable_if<std::is_constructible<F, OtherF&&>::value&& std::is_constructible<S, OtherS&&>::value>::type> constexpr explicit Pair(Pair<OtherF, OtherS>&& other) noexcept(std::is_nothrow_constructible<F, OtherF&&>::value && std::is_nothrow_constructible<S, OtherS&&>::value) :
+		template<class OtherF, class OtherS
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, typename std::enable_if<std::is_constructible<F, OtherF&&>::value&& std::is_constructible<S, OtherS&&>::value, int>::type = 0
+#endif
+		> constexpr explicit Pair(Pair<OtherF, OtherS>&& other) noexcept(std::is_nothrow_constructible<F, OtherF&&>::value && std::is_nothrow_constructible<S, OtherS&&>::value) :
 			// Explicit T() to avoid conversion warnings, similar to above; GCC 4.8 special case also similarly to above although
 			// copyMoveConstructPlainStruct() cannot really test it (see there for details).
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
@@ -230,22 +238,22 @@ namespace Death { namespace Containers {
 #if DEATH_CXX_STANDARD > 201402
 		// There doesn't seem to be a way to call those directly, and I can't find any practical use of std::tuple_size,
 		// tuple_element etc. on C++11 and C++14, so this is defined only for newer standards.
-		template<std::size_t index, typename std::enable_if<index == 0, F>::type* = nullptr> constexpr friend const F& get(const Pair<F, S>& value) {
+		template<std::size_t index, typename std::enable_if<index == 0, int>::type = 0> constexpr friend const F& get(const Pair<F, S>& value) {
 			return value._first;
 		}
-		template<std::size_t index, typename std::enable_if<index == 0, F>::type* = nullptr> DEATH_CONSTEXPR14 friend F& get(Pair<F, S>& value) {
+		template<std::size_t index, typename std::enable_if<index == 0, int>::type = 0> DEATH_CONSTEXPR14 friend F& get(Pair<F, S>& value) {
 			return value._first;
 		}
-		template<std::size_t index, typename std::enable_if<index == 0, F>::type* = nullptr> DEATH_CONSTEXPR14 friend F&& get(Pair<F, S>&& value) {
+		template<std::size_t index, typename std::enable_if<index == 0, int>::type = 0> DEATH_CONSTEXPR14 friend F&& get(Pair<F, S>&& value) {
 			return Death::move(value._first);
 		}
-		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> constexpr friend const S& get(const Pair<F, S>& value) {
+		template<std::size_t index, typename std::enable_if<index == 1, int>::type = 0> constexpr friend const S& get(const Pair<F, S>& value) {
 			return value._second;
 		}
-		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> DEATH_CONSTEXPR14 friend S& get(Pair<F, S>& value) {
+		template<std::size_t index, typename std::enable_if<index == 1, int>::type = 0> DEATH_CONSTEXPR14 friend S& get(Pair<F, S>& value) {
 			return value._second;
 		}
-		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> DEATH_CONSTEXPR14 friend S&& get(Pair<F, S>&& value) {
+		template<std::size_t index, typename std::enable_if<index == 1, int>::type = 0> DEATH_CONSTEXPR14 friend S&& get(Pair<F, S>&& value) {
 			return Death::move(value._second);
 		}
 #endif

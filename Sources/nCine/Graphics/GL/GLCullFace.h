@@ -21,17 +21,17 @@ namespace nCine
 			GLenum mode = GL_BACK;
 		};
 
-		static bool isEnabled() {
+		static bool IsEnabled() {
 			return state_.enabled;
 		}
-		static void enable();
-		static void disable();
-		static void setMode(GLenum mode);
+		static void Enable();
+		static void Disable();
+		static void SetMode(GLenum mode);
 
-		static State state() {
+		static State GetState() {
 			return state_;
 		}
-		static void setState(State newState);
+		static void SetState(State newState);
 
 	private:
 		static State state_;

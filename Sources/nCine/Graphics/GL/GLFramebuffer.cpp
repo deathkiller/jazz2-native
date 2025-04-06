@@ -6,8 +6,8 @@
 
 namespace nCine
 {
-	unsigned int GLFramebuffer::readBoundBuffer_ = 0;
-	unsigned int GLFramebuffer::drawBoundBuffer_ = 0;
+	std::uint32_t GLFramebuffer::readBoundBuffer_ = 0;
+	std::uint32_t GLFramebuffer::drawBoundBuffer_ = 0;
 
 	GLFramebuffer::GLFramebuffer()
 		: glHandle_(0), numDrawBuffers_(0)
@@ -19,36 +19,36 @@ namespace nCine
 	GLFramebuffer::~GLFramebuffer()
 	{
 		if (readBoundBuffer_ == glHandle_) {
-			unbind(GL_READ_FRAMEBUFFER);
+			Unbind(GL_READ_FRAMEBUFFER);
 		}
 		if (drawBoundBuffer_ == glHandle_) {
-			unbind(GL_DRAW_FRAMEBUFFER);
+			Unbind(GL_DRAW_FRAMEBUFFER);
 		}
 		glDeleteFramebuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
 
-	bool GLFramebuffer::bind() const
+	bool GLFramebuffer::Bind() const
 	{
-		return bind(GL_FRAMEBUFFER);
+		return Bind(GL_FRAMEBUFFER);
 	}
 
-	bool GLFramebuffer::unbind()
+	bool GLFramebuffer::Unbind()
 	{
-		return unbind(GL_FRAMEBUFFER);
+		return Unbind(GL_FRAMEBUFFER);
 	}
 
-	bool GLFramebuffer::bind(GLenum target) const
+	bool GLFramebuffer::Bind(GLenum target) const
 	{
-		return bindHandle(target, glHandle_);
+		return BindHandle(target, glHandle_);
 	}
 
-	bool GLFramebuffer::unbind(GLenum target)
+	bool GLFramebuffer::Unbind(GLenum target)
 	{
-		return bindHandle(target, 0);
+		return BindHandle(target, 0);
 	}
 
-	bool GLFramebuffer::drawBuffers(unsigned int numDrawBuffers)
+	bool GLFramebuffer::DrawBuffers(std::uint32_t numDrawBuffers)
 	{
 		static const GLenum drawBuffers[MaxDrawbuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3,
 															GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
@@ -61,37 +61,37 @@ namespace nCine
 		return false;
 	}
 
-	bool GLFramebuffer::attachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
+	bool GLFramebuffer::AttachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
 	{
 		if (attachedRenderbuffers_.size() >= MaxRenderbuffers - 1) {
 			return false;
 		}
-		for (unsigned int i = 0; i < attachedRenderbuffers_.size(); i++) {
-			if (attachedRenderbuffers_[i]->attachment() == attachment) {
+		for (std::uint32_t i = 0; i < attachedRenderbuffers_.size(); i++) {
+			if (attachedRenderbuffers_[i]->GetAttachment() == attachment) {
 				return false;
 			}
 		}
 
 		std::unique_ptr<GLRenderbuffer>& buffer = attachedRenderbuffers_.emplace_back(std::make_unique<GLRenderbuffer>(internalFormat, width, height));
-		buffer->setObjectLabel(label);
-		buffer->setAttachment(attachment);
+		buffer->SetObjectLabel(label);
+		buffer->SetAttachment(attachment);
 
-		bind(GL_FRAMEBUFFER);
+		Bind(GL_FRAMEBUFFER);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, buffer->glHandle_);
 		GL_LOG_ERRORS();
 		return true;
 	}
 
-	bool GLFramebuffer::attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
+	bool GLFramebuffer::AttachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
 	{
-		return attachRenderbuffer(nullptr, internalFormat, width, height, attachment);
+		return AttachRenderbuffer(nullptr, internalFormat, width, height, attachment);
 	}
 
-	bool GLFramebuffer::detachRenderbuffer(GLenum attachment)
+	bool GLFramebuffer::DetachRenderbuffer(GLenum attachment)
 	{
-		for (unsigned int i = 0; i < attachedRenderbuffers_.size(); i++) {
-			if (attachedRenderbuffers_[i]->attachment() == attachment) {
-				bind(GL_FRAMEBUFFER);
+		for (std::uint32_t i = 0; i < attachedRenderbuffers_.size(); i++) {
+			if (attachedRenderbuffers_[i]->GetAttachment() == attachment) {
+				Bind(GL_FRAMEBUFFER);
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, 0);
 				GL_LOG_ERRORS();
 				attachedRenderbuffers_.eraseUnordered(i);
@@ -101,44 +101,44 @@ namespace nCine
 		return false;
 	}
 
-	void GLFramebuffer::attachTexture(GLTexture& texture, GLenum attachment)
+	void GLFramebuffer::AttachTexture(GLTexture& texture, GLenum attachment)
 	{
-		bind(GL_FRAMEBUFFER);
+		Bind(GL_FRAMEBUFFER);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, texture.target_, texture.glHandle_, 0);
 		GL_LOG_ERRORS();
 	}
 
-	void GLFramebuffer::detachTexture(GLenum attachment)
+	void GLFramebuffer::DetachTexture(GLenum attachment)
 	{
-		bind(GL_FRAMEBUFFER);
+		Bind(GL_FRAMEBUFFER);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, 0, 0);
 		GL_LOG_ERRORS();
 	}
 
 #if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
-	void GLFramebuffer::invalidate(GLsizei numAttachments, const GLenum* attachments)
+	void GLFramebuffer::Invalidate(GLsizei numAttachments, const GLenum* attachments)
 	{
-		bind(GL_FRAMEBUFFER);
+		Bind(GL_FRAMEBUFFER);
 		glInvalidateFramebuffer(GL_FRAMEBUFFER, numAttachments, attachments);
 		GL_LOG_ERRORS();
 	}
 #endif
 
-	bool GLFramebuffer::isStatusComplete()
+	bool GLFramebuffer::IsStatusComplete()
 	{
-		bind(GL_FRAMEBUFFER);
+		Bind(GL_FRAMEBUFFER);
 		const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		unbind(GL_FRAMEBUFFER);
+		Unbind(GL_FRAMEBUFFER);
 
 		return (status == GL_FRAMEBUFFER_COMPLETE);
 	}
 
-	void GLFramebuffer::setObjectLabel(const char* label)
+	void GLFramebuffer::SetObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::FrameBuffer, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::FrameBuffer, glHandle_, label);
 	}
 
-	bool GLFramebuffer::bindHandle(GLenum target, GLuint glHandle)
+	bool GLFramebuffer::BindHandle(GLenum target, GLuint glHandle)
 	{
 		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
 

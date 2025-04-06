@@ -13,86 +13,86 @@ namespace nCine
 		: uniformBlock_(uniformBlock), dataPointer_(nullptr), usedSize_(0)
 	{
 		ASSERT(uniformBlock);
-		usedSize_ = uniformBlock->size();
+		usedSize_ = uniformBlock->GetSize();
 
 		static_assert(UniformHashSize >= GLUniformBlock::BlockUniformHashSize, "Uniform cache is smaller than the number of uniforms");
 
 		for (const GLUniform& uniform : uniformBlock->blockUniforms_) {
 			GLUniformCache uniformCache(&uniform);
-			uniformCaches_[uniform.name()] = uniformCache;
+			uniformCaches_[uniform.GetName()] = uniformCache;
 		}
 	}
 
-	GLuint GLUniformBlockCache::index() const
+	GLuint GLUniformBlockCache::GetIndex() const
 	{
 		GLuint index = 0;
 		if (uniformBlock_ != nullptr) {
-			index = uniformBlock_->index();
+			index = uniformBlock_->GetIndex();
 		}
 		return index;
 	}
 
-	GLuint GLUniformBlockCache::bindingIndex() const
+	GLuint GLUniformBlockCache::GetBindingIndex() const
 	{
 		GLuint bindingIndex = 0;
 		if (uniformBlock_ != nullptr) {
-			bindingIndex = uniformBlock_->bindingIndex();
+			bindingIndex = uniformBlock_->GetBindingIndex();
 		}
 		return bindingIndex;
 	}
 
-	GLint GLUniformBlockCache::size() const
+	GLint GLUniformBlockCache::GetSize() const
 	{
 		GLint size = 0;
 		if (uniformBlock_ != nullptr) {
-			size = uniformBlock_->size();
+			size = uniformBlock_->GetSize();
 		}
 		return size;
 	}
 
-	std::uint8_t GLUniformBlockCache::alignAmount() const
+	std::uint8_t GLUniformBlockCache::GetAlignAmount() const
 	{
 		std::uint8_t alignAmount = 0;
 		if (uniformBlock_ != nullptr) {
-			alignAmount = uniformBlock_->alignAmount();
+			alignAmount = uniformBlock_->GetAlignAmount();
 		}
 		return alignAmount;
 	}
 
-	void GLUniformBlockCache::setDataPointer(GLubyte* dataPointer)
+	void GLUniformBlockCache::SetDataPointer(GLubyte* dataPointer)
 	{
 		dataPointer_ = dataPointer;
 
 		for (GLUniformCache& uniformCache : uniformCaches_) {
-			uniformCache.setDataPointer(dataPointer_ + uniformCache.uniform()->offset());
+			uniformCache.SetDataPointer(dataPointer_ + uniformCache.GetUniform()->GetOffset());
 		}
 	}
 
-	void GLUniformBlockCache::setUsedSize(GLint usedSize)
+	void GLUniformBlockCache::SetUsedSize(GLint usedSize)
 	{
 		if (usedSize >= 0) {
 			usedSize_ = usedSize;
 		}
 	}
 
-	bool GLUniformBlockCache::copyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes)
+	bool GLUniformBlockCache::CopyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes)
 	{
-		if (destIndex + numBytes > std::uint32_t(size()) || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
+		if (destIndex + numBytes > std::uint32_t(GetSize()) || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
 			return false;
 		}
 		std::memcpy(&dataPointer_[destIndex], src, numBytes);
 		return true;
 	}
 
-	GLUniformCache* GLUniformBlockCache::uniform(StringView name)
+	GLUniformCache* GLUniformBlockCache::GetUniform(StringView name)
 	{
 		return uniformCaches_.find(String::nullTerminatedView(name));
 	}
 
-	void GLUniformBlockCache::setBlockBinding(GLuint blockBinding)
+	void GLUniformBlockCache::SetBlockBinding(GLuint blockBinding)
 	{
 		if (uniformBlock_) {
-			uniformBlock_->setBlockBinding(blockBinding);
+			uniformBlock_->SetBlockBinding(blockBinding);
 		}
 	}
 }

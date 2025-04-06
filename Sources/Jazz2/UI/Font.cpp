@@ -536,17 +536,17 @@ namespace Jazz2::UI
 						//command->setTransformation(command->transformation());
 
 						auto* textureUniform = command->material().uniform(Material::TextureUniformName);
-						if (textureUniform && textureUniform->intValue(0) != 0) {
-							textureUniform->setIntValue(0); // GL_TEXTURE0
+						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+							textureUniform->SetIntValue(0); // GL_TEXTURE0
 						}
 					}
 
 					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 					auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-					instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(charWidth * scale, uvRect.H * scale);
-					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
+					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * scale, uvRect.H * scale);
+					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
 					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 					command->setLayer(z - (charOffset & 1));

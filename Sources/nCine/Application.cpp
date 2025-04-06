@@ -401,7 +401,7 @@ namespace nCine
 	{
 		if (screenViewport_ != nullptr) {
 			bool sizeChanged = (width != screenViewport_->width_ || height != screenViewport_->height_);
-			screenViewport_->resize(width, height);
+			screenViewport_->Resize(width, height);
 			if (sizeChanged && width > 0 && height > 0) {
 				appEventHandler_->OnResizeWindow(width, height);
 			}
@@ -473,7 +473,7 @@ namespace nCine
 		if (appCfg_.withGraphics) {
 			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
-			GLDebug::init(gfxCapabilities);
+			GLDebug::Init(gfxCapabilities);
 
 #if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
 			LOGI("Using fixed batch size: %u", appCfg_.fixedBatchSize);
@@ -507,7 +507,7 @@ namespace nCine
 				RenderResources::create();
 				rootNode_ = std::make_unique<SceneNode>();
 				screenViewport_ = std::make_unique<ScreenViewport>();
-				screenViewport_->setRootNode(rootNode_.get());
+				screenViewport_->SetRootNode(rootNode_.get());
 			}
 
 #if defined(WITH_IMGUI)
@@ -523,7 +523,7 @@ namespace nCine
 			if (appCfg_.withScenegraph) {
 				rootNode_ = std::make_unique<SceneNode>();
 				screenViewport_ = std::make_unique<ScreenViewport>();
-				screenViewport_->setRootNode(rootNode_.get());
+				screenViewport_->SetRootNode(rootNode_.get());
 			}
 		}
 
@@ -598,7 +598,7 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
 #endif
-				screenViewport_->update();
+				screenViewport_->Update();
 #if defined(NCINE_PROFILING)
 				timings_[(std::int32_t)Timings::Update] = profileStartTime_.secondsSince();
 #endif
@@ -621,7 +621,7 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 					profileStartTime_ = TimeStamp::now();
 #endif
-					screenViewport_->visit();
+					screenViewport_->Visit();
 #if defined(NCINE_PROFILING)
 					timings_[(std::int32_t)Timings::Visit] = profileStartTime_.secondsSince();
 #endif
@@ -646,8 +646,8 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 					profileStartTime_ = TimeStamp::now();
 #endif
-					screenViewport_->sortAndCommitQueue();
-					screenViewport_->draw();
+					screenViewport_->SortAndCommitQueue();
+					screenViewport_->Draw();
 #if defined(NCINE_PROFILING)
 					timings_[(std::int32_t)Timings::Draw] = profileStartTime_.secondsSince();
 #endif

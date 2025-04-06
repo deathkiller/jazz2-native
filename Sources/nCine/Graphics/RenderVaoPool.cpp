@@ -31,17 +31,17 @@ namespace nCine
 		for (VaoBinding& binding : vaoPool_) {
 			if (binding.format == vertexFormat) {
 				vaoFound = true;
-				const bool bindChanged = binding.object->bind();
-				const GLuint iboHandle = vertexFormat.ibo() ? vertexFormat.ibo()->glHandle() : 0;
+				const bool bindChanged = binding.object->Bind();
+				const GLuint iboHandle = vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0;
 				if (bindChanged) {
-					if (GLDebug::isAvailable()) {
+					if (GLDebug::IsAvailable()) {
 						insertGLDebugMessage(binding);
 					}
 					// Binding a VAO changes the current bound element array buffer
-					GLBufferObject::setBoundHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
+					GLBufferObject::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 				} else {
 					// The VAO was already bound but it is not known if the bound element array buffer changed in the meantime
-					GLBufferObject::bindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
+					GLBufferObject::BindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 				}
 				binding.lastBindTime = TimeStamp::now();
 #if defined(NCINE_PROFILING)
@@ -78,20 +78,20 @@ namespace nCine
 
 #if defined(DEATH_DEBUG)
 				formatString(debugString, sizeof(debugString), "Reuse and define VAO 0x%lx (%u)", std::uintptr_t(vaoPool_[index].object.get()), index);
-				GLDebug::messageInsert(debugString);
+				GLDebug::MessageInsert(debugString);
 #endif
 #if defined(NCINE_PROFILING)
 				RenderStatistics::addVaoPoolReuse();
 #endif
 			}
 
-			const bool bindChanged = vaoPool_[index].object->bind();
+			const bool bindChanged = vaoPool_[index].object->Bind();
 			ASSERT(bindChanged || vaoPool_.size() == 1);
 			// Binding a VAO changes the current bound element array buffer
-			const GLuint oldIboHandle = vaoPool_[index].format.ibo() ? vaoPool_[index].format.ibo()->glHandle() : 0;
-			GLBufferObject::setBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);
+			const GLuint oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
+			GLBufferObject::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);
 			vaoPool_[index].format = vertexFormat;
-			vaoPool_[index].format.define();
+			vaoPool_[index].format.Define();
 			vaoPool_[index].lastBindTime = TimeStamp::now();
 #if defined(NCINE_PROFILING)
 			RenderStatistics::addVaoPoolBinding();
@@ -124,7 +124,7 @@ namespace nCine
 			debugString.formatAppend(", ibo: 0x%lx", std::uintptr_t(binding.format.ibo()));
 		debugString.formatAppend(")");*/
 
-		GLDebug::messageInsert(debugString);
+		GLDebug::MessageInsert(debugString);
 #endif
 	}
 }

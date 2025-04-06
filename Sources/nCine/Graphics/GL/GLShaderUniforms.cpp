@@ -15,55 +15,55 @@ namespace nCine
 	GLShaderUniforms::GLShaderUniforms(GLShaderProgram* shaderProgram)
 		: GLShaderUniforms(shaderProgram, nullptr, nullptr)
 	{
-		setProgram(shaderProgram);
+		SetProgram(shaderProgram);
 	}
 
 	GLShaderUniforms::GLShaderUniforms(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 		: GLShaderUniforms()
 	{
-		setProgram(shaderProgram, includeOnly, exclude);
+		SetProgram(shaderProgram, includeOnly, exclude);
 	}
 
-	void GLShaderUniforms::setProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
+	void GLShaderUniforms::SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
 		ASSERT(shaderProgram != nullptr);
 
 		shaderProgram_ = shaderProgram;
-		shaderProgram_->deferredQueries();
+		shaderProgram_->ProcessDeferredQueries();
 		uniformCaches_.clear();
 
-		if (shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
-			importUniforms(includeOnly, exclude);
+		if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+			ImportUniforms(includeOnly, exclude);
 		}
 	}
 
-	void GLShaderUniforms::setUniformsDataPointer(GLubyte* dataPointer)
+	void GLShaderUniforms::SetUniformsDataPointer(GLubyte* dataPointer)
 	{
 		ASSERT(dataPointer != nullptr);
 
-		if (shaderProgram_->status() != GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (shaderProgram_->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
 		std::uint32_t offset = 0;
 		for (GLUniformCache& uniformCache : uniformCaches_) {
-			uniformCache.setDataPointer(dataPointer + offset);
-			offset += uniformCache.uniform()->memorySize();
+			uniformCache.SetDataPointer(dataPointer + offset);
+			offset += uniformCache.GetUniform()->GetMemorySize();
 		}
 	}
 
-	void GLShaderUniforms::setDirty(bool isDirty)
+	void GLShaderUniforms::SetDirty(bool isDirty)
 	{
-		if (shaderProgram_->status() != GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (shaderProgram_->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
 		for (auto& uniform : uniformCaches_) {
-			uniform.setDirty(isDirty);
+			uniform.SetDirty(isDirty);
 		}
 	}
 
-	GLUniformCache* GLShaderUniforms::uniform(const char* name)
+	GLUniformCache* GLShaderUniforms::GetUniform(const char* name)
 	{
 		ASSERT(name != nullptr);
 		GLUniformCache* uniformCache = nullptr;
@@ -76,13 +76,13 @@ namespace nCine
 		return uniformCache;
 	}
 
-	void GLShaderUniforms::commitUniforms()
+	void GLShaderUniforms::CommitUniforms()
 	{
 		if (shaderProgram_ != nullptr) {
-			if (shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
-				shaderProgram_->use();
+			if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+				shaderProgram_->Use();
 				for (auto& uniform : uniformCaches_) {
-					uniform.commitValue();
+					uniform.CommitValue();
 				}
 			}
 		} else {
@@ -90,13 +90,13 @@ namespace nCine
 		}
 	}
 
-	void GLShaderUniforms::importUniforms(const char* includeOnly, const char* exclude)
+	void GLShaderUniforms::ImportUniforms(const char* includeOnly, const char* exclude)
 	{
 		constexpr std::uint32_t MaxUniformName = 128;
 
 		std::uint32_t importedCount = 0;
 		for (const GLUniform& uniform : shaderProgram_->uniforms_) {
-			const char* uniformName = uniform.name();
+			const char* uniformName = uniform.GetName();
 			const char* currentIncludeOnly = includeOnly;
 			const char* currentExclude = exclude;
 			bool shouldImport = true;

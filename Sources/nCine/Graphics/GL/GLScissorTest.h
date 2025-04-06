@@ -23,21 +23,21 @@ namespace nCine
 			Recti rect = Recti(0, 0, 0, 0);
 		};
 
-		static bool isEnabled() {
+		static bool IsEnabled() {
 			return state_.enabled;
 		}
-		static Recti rect() {
+		static Recti GetRect() {
 			return state_.rect;
 		}
-		static void enable(const Recti& rect);
-		static void enable(GLint x, GLint y, GLsizei width, GLsizei height);
-		static void enable();
-		static void disable();
+		static void Enable(const Recti& rect);
+		static void Enable(GLint x, GLint y, GLsizei width, GLsizei height);
+		static void Enable();
+		static void Disable();
 
-		static State state() {
+		static State GetState() {
 			return state_;
 		}
-		static void setState(State newState);
+		static void SetState(State newState);
 
 	private:
 		static State state_;

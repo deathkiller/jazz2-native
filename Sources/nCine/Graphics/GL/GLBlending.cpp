@@ -4,7 +4,7 @@ namespace nCine
 {
 	GLBlending::State GLBlending::state_;
 
-	void GLBlending::enable()
+	void GLBlending::Enable()
 	{
 		if (state_.enabled == false) {
 			glEnable(GL_BLEND);
@@ -12,7 +12,7 @@ namespace nCine
 		}
 	}
 
-	void GLBlending::disable()
+	void GLBlending::Disable()
 	{
 		if (state_.enabled == true) {
 			glDisable(GL_BLEND);
@@ -20,7 +20,7 @@ namespace nCine
 		}
 	}
 
-	void GLBlending::setBlendFunc(GLenum sfactor, GLenum dfactor)
+	void GLBlending::SetBlendFunc(GLenum sfactor, GLenum dfactor)
 	{
 		if (sfactor != state_.srcRgb || dfactor != state_.dstRgb ||
 			sfactor != state_.srcAlpha || dfactor != state_.dstAlpha) {
@@ -32,7 +32,7 @@ namespace nCine
 		}
 	}
 
-	void GLBlending::setBlendFunc(GLenum srcRgb, GLenum dstRgb, GLenum srcAlpha, GLenum dstAlpha)
+	void GLBlending::SetBlendFunc(GLenum srcRgb, GLenum dstRgb, GLenum srcAlpha, GLenum dstAlpha)
 	{
 		if (srcRgb != state_.srcRgb || dstRgb != state_.dstRgb ||
 			srcAlpha != state_.srcAlpha || dstAlpha != state_.dstAlpha) {
@@ -44,17 +44,17 @@ namespace nCine
 		}
 	}
 
-	void GLBlending::setState(State newState)
+	void GLBlending::SetState(State newState)
 	{
 		if (newState.enabled)
-			enable();
+			Enable();
 		else
-			disable();
+			Disable();
 
 		if (newState.srcRgb == newState.srcAlpha && newState.dstRgb == newState.dstAlpha)
-			setBlendFunc(newState.srcRgb, newState.dstRgb);
+			SetBlendFunc(newState.srcRgb, newState.dstRgb);
 		else
-			setBlendFunc(newState.srcRgb, newState.dstRgb, newState.srcAlpha, newState.dstAlpha);
+			SetBlendFunc(newState.srcRgb, newState.dstRgb, newState.srcAlpha, newState.dstAlpha);
 
 		state_ = newState;
 	}

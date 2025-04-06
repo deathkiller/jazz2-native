@@ -439,7 +439,7 @@ void GameEventHandler::OnPostUpdate()
 void GameEventHandler::OnResizeWindow(std::int32_t width, std::int32_t height)
 {
 	// Resolution was changed, all viewports have to be recreated
-	Viewport::chain().clear();
+	Viewport::GetChain().clear();
 
 	Vector2i viewSize;
 	if (_currentHandler != nullptr) {
@@ -1265,7 +1265,7 @@ void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)
 {
 	_currentHandler = std::move(handler);
 
-	Viewport::chain().clear();
+	Viewport::GetChain().clear();
 	Vector2i res = theApplication().GetResolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
 }
@@ -1341,7 +1341,7 @@ void GameEventHandler::RefreshCache()
 
 			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
-			std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();
+			std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
 			LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
 		} else {
 			LOGI("Cache is already up-to-date");
@@ -1405,7 +1405,7 @@ RecreateCache:
 	std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
 	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
-	std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();
+	std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
 	LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
 
 	resolver.RemountPaks();

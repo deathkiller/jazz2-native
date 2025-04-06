@@ -34,9 +34,9 @@ namespace Death { namespace Containers {
 		template<std::size_t size_, class T, bool trivial> struct StaticArrayData;
 		template<std::size_t size_, class T> struct StaticArrayData<size_, T, true> {
 			// Here we additionally deal with types that have a NoInit constructor
-			template<class U = T, typename std::enable_if<!std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT) {}
-			template<class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT) : StaticArrayData{NoInit, typename GenerateSequence<size_>::Type{}} {}
-			template<std::size_t ...sequence, class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT noInit, Sequence<sequence...>) : _data{T{(&noInit)[0 * sequence]}...} {}
+			template<class U = T, typename std::enable_if<!std::is_constructible<U, NoInitT>::value, int>::type = 0> explicit StaticArrayData(NoInitT) {}
+			template<class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value, int>::type = 0> explicit StaticArrayData(NoInitT) : StaticArrayData{NoInit, typename GenerateSequence<size_>::Type{}} {}
+			template<std::size_t ...sequence, class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value, int>::type = 0> explicit StaticArrayData(NoInitT noInit, Sequence<sequence...>) : _data{T{(&noInit)[0 * sequence]}...} {}
 
 			// Compared to StaticArrayData<size_, T, false> it does the right thing by default. MSVC 2015, 2019 and 2022
 			// (but not 2017, _MSC_VER=191x) complains that the constexpr constructor doesn't initialize all members
@@ -46,8 +46,8 @@ namespace Death { namespace Containers {
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG) || (_MSC_VER >= 1910 && _MSC_VER < 1920)
 			constexpr explicit StaticArrayData(DefaultInitT) {}
 #else
-			template<class U = T, typename std::enable_if<std::is_trivially_constructible<U>::value>::type* = nullptr> explicit StaticArrayData(DefaultInitT) {}
-			template<class U = T, typename std::enable_if<!std::is_trivially_constructible<U>::value>::type* = nullptr> constexpr explicit StaticArrayData(DefaultInitT) : _data{} {}
+			template<class U = T, typename std::enable_if<std::is_trivially_constructible<U>::value, int>::type = 0> explicit StaticArrayData(DefaultInitT) {}
+			template<class U = T, typename std::enable_if<!std::is_trivially_constructible<U>::value, int>::type = 0> constexpr explicit StaticArrayData(DefaultInitT) : _data{} {}
 #endif
 
 			// Same as in StaticArrayData<size_, T, false>. The () instead of {} works around a featurebug in C++
@@ -341,7 +341,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<class ...Args> constexpr /*implicit*/ StaticArray(Args&&... args);
 #else
-		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, Death::forward<First>(first), Death::forward<Next>(next)...} {
+		template<class First, class ...Next, typename std::enable_if<std::is_convertible<First&&, T>::value, int>::type = 0> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, Death::forward<First>(first), Death::forward<Next>(next)...} {
 			static_assert(sizeof...(next) + 1 == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #endif
@@ -453,9 +453,9 @@ namespace Death { namespace Containers {
 		/** @overload */
 		constexpr const T& operator[](std::size_t i) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> T& operator[](U i);
+		template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type = 0> T& operator[](U i);
 		/** @overload */
-		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr const T& operator[](U i) const;
+		template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr const T& operator[](U i) const;
 #endif
 
 		/**
@@ -489,7 +489,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		ArrayView<T> sliceSize(T* begin, std::size_t size);
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<T> sliceSize(U begin, std::size_t size) {
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> ArrayView<T> sliceSize(U begin, std::size_t size) {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
 		}
 #endif
@@ -497,7 +497,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr ArrayView<const T> sliceSize(const T* begin, std::size_t size) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
+		template<class U, typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
 			return ArrayView<const T>{*this}.sliceSize(begin, size);
 		}
 #endif
@@ -518,7 +518,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<std::size_t size__> StaticArrayView<size__, T> slice(T* begin);
 #else
-		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> StaticArrayView<size__, T> slice(U begin) {
+		template<std::size_t size__, class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> StaticArrayView<size__, T> slice(U begin) {
 			return ArrayView<T>(*this).template slice<size__>(begin);
 		}
 #endif
@@ -526,7 +526,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		template<std::size_t size__> constexpr StaticArrayView<size__, const T> slice(const T* begin) const;
 #else
-		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size__, const T> slice(U begin) const {
+		template<std::size_t size__, class U, typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr StaticArrayView<size__, const T> slice(U begin) const {
 			return ArrayView<const T>(*this).template slice<size__>(begin);
 		}
 #endif
@@ -573,7 +573,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		ArrayView<T> prefix(T* end);
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<T> prefix(U end) {
+		template<class U, typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> ArrayView<T> prefix(U end) {
 			return ArrayView<T>(*this).prefix(end);
 		}
 #endif
@@ -581,7 +581,7 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		constexpr ArrayView<const T> prefix(const T* end) const;
 #else
-		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<const T> prefix(U end) const {
+		template<class U, typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0> constexpr ArrayView<const T> prefix(U end) const {
 			return ArrayView<const T>(*this).prefix(end);
 		}
 #endif
@@ -804,23 +804,23 @@ namespace Death { namespace Containers {
 	}
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	template<std::size_t size_, class T> template<class U, class> constexpr const T& StaticArray<size_, T>::operator[](const U i) const {
+	template<std::size_t size_, class T> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> constexpr const T& StaticArray<size_, T>::operator[](const U i) const {
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, ("Index %zu out of range for %zu elements", std::size_t(i), size_)), this->_data[i];
 	}
 
-	template<std::size_t size_, class T> template<class U, class> T& StaticArray<size_, T>::operator[](const U i) {
+	template<std::size_t size_, class T> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> T& StaticArray<size_, T>::operator[](const U i) {
 		return const_cast<T&>(static_cast<const StaticArray<size_, T>&>(*this)[i]);
 	}
 #endif
 
-	template<std::size_t size_, class T> template<std::size_t viewSize> StaticArrayView<viewSize, T> StaticArray<size_, T>::prefix() {
-		static_assert(viewSize <= size_, "Prefix size too large");
-		return StaticArrayView<viewSize, T>{this->_data};
+	template<std::size_t size_, class T> template<std::size_t size__> StaticArrayView<size__, T> StaticArray<size_, T>::prefix() {
+		static_assert(size__ <= size_, "Prefix size too large");
+		return StaticArrayView<size__, T>{this->_data};
 	}
 
-	template<std::size_t size_, class T> template<std::size_t viewSize> constexpr StaticArrayView<viewSize, const T> StaticArray<size_, T>::prefix() const {
-		static_assert(viewSize <= size_, "Prefix size too large");
-		return StaticArrayView<viewSize, const T>{this->_data};
+	template<std::size_t size_, class T> template<std::size_t size__> constexpr StaticArrayView<size__, const T> StaticArray<size_, T>::prefix() const {
+		static_assert(size__ <= size_, "Prefix size too large");
+		return StaticArrayView<size__, const T>{this->_data};
 	}
 
 	namespace Implementation

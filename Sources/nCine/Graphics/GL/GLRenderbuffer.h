@@ -19,21 +19,21 @@ namespace nCine
 		GLRenderbuffer(const GLRenderbuffer&) = delete;
 		GLRenderbuffer& operator=(const GLRenderbuffer&) = delete;
 
-		inline GLuint glHandle() const {
+		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
 
-		inline void setAttachment(GLenum attachment) {
+		inline void SetAttachment(GLenum attachment) {
 			attachment_ = attachment;
 		}
-		inline GLenum attachment() const {
+		inline GLenum GetAttachment() const {
 			return attachment_;
 		}
 
-		bool bind() const;
-		static bool unbind();
+		bool Bind() const;
+		static bool Unbind();
 
-		void setObjectLabel(const char* label);
+		void SetObjectLabel(const char* label);
 
 	private:
 		static GLuint boundBuffer_;
@@ -41,7 +41,7 @@ namespace nCine
 		GLuint glHandle_;
 		GLenum attachment_;
 
-		void storage(GLenum internalFormat, GLsizei width, GLsizei height);
+		void Storage(GLenum internalFormat, GLsizei width, GLsizei height);
 	};
 
 }
