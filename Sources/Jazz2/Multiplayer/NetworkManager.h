@@ -53,6 +53,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns `true` if there are any inbound connections */
 		bool HasInboundConnections() const;
 
+		/** @brief Reloads server configuration from the source file */
+		void RefreshServerConfiguration();
+
 		/**
 		 * @brief Creates a default server configuration from the default template file
 		 *
@@ -73,6 +76,8 @@ namespace Jazz2::Multiplayer
 		static StringView GameModeToLocalizedString(MpGameMode mode);
 		/** @brief Converts the non-localized string representation back to @ref MpGameMode */
 		static MpGameMode StringToGameMode(StringView value);
+		/** @brief Converts UUID to the string representation */
+		static String UuidToString(ArrayView<std::uint8_t> uuid);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -88,6 +93,7 @@ namespace Jazz2::Multiplayer
 		HashMap<Peer, std::shared_ptr<PeerDescriptor>> _peerDesc;
 
 		static void FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level);
+		static void VerifyServerConfiguration(ServerConfiguration& serverConfig);
 	};
 }
 

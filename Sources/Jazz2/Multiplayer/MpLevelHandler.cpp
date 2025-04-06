@@ -1586,9 +1586,7 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::ProcessCommand(const Peer& peer, StringView line)
 	{
-		if (line.hasPrefix("/ban "_s)) {
-			// TODO: Implement /ban
-		} else if (line == "/endpoints"_s) {
+		if (line == "/endpoints"_s) {
 			auto endpoints = _networkManager->GetServerEndpoints();
 			for (const auto& endpoint : endpoints) {
 				SendMessage(peer, UI::MessageLevel::Info, endpoint);
@@ -1598,17 +1596,17 @@ namespace Jazz2::Multiplayer
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
 			char infoBuffer[128];
-			formatString(infoBuffer, sizeof(infoBuffer), "Current Level: %s (%s)",
+			formatString(infoBuffer, sizeof(infoBuffer), "Current level: %s (%s)",
 				_levelName.data(), NetworkManager::GameModeToLocalizedString(serverConfig.GameMode).data());
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			formatString(infoBuffer, sizeof(infoBuffer), "Players: %u/%u",
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			if (!_players.empty()) {
-				formatString(infoBuffer, sizeof(infoBuffer), "Server Load: %i ms",
+				formatString(infoBuffer, sizeof(infoBuffer), "Server load: %i ms",
 					(std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
 			} else {
-				formatString(infoBuffer, sizeof(infoBuffer), "Server Load: - ms");
+				formatString(infoBuffer, sizeof(infoBuffer), "Server load: - ms");
 			}
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			if (!serverConfig.Playlist.empty()) {
@@ -1616,6 +1614,8 @@ namespace Jazz2::Multiplayer
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}
 			return true;
+		} else if (line.hasPrefix("/kick "_s)) {
+			// TODO: Implement /kick
 		} else if (line == "/players"_s) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
@@ -1627,8 +1627,6 @@ namespace Jazz2::Multiplayer
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}
 			return true;
-		} else if (line.hasPrefix("/kick "_s)) {
-			// TODO: Implement /kick
 		} else if (line.hasPrefix("/set "_s)) {
 			auto [variableName, sep, value] = line.exceptPrefix("/set "_s).trimmedPrefix().partition(' ');
 			if (variableName == "mode"_s) {
@@ -1712,6 +1710,13 @@ namespace Jazz2::Multiplayer
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 				return true;
 			}
+		} else if (line == "/refresh"_s) {
+			_networkManager->RefreshServerConfiguration();
+			// Refresh all affected properties
+			SetWelcomeMessage(_networkManager->GetServerConfiguration().WelcomeMessage);
+			// TODO: Game mode
+			SendMessage(peer, UI::MessageLevel::Info, "Server configuration reloaded"_s);
+			return true;
 		} else if (line == "/reset points"_s) {
 			for (auto& [playerPeer, peerDesc] : _networkManager->GetPeers()) {
 				peerDesc->Points = 0;

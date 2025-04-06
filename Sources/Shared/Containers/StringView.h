@@ -981,6 +981,7 @@ namespace Death { namespace Containers {
 		// the space there, so until GCC 4.8 support is dropped, we suppress this warning instead of removing the space.
 		#if defined(DEATH_TARGET_CLANG) && __clang_major__ >= 17
 		#	pragma clang diagnostic push
+		#	pragma clang diagnostic ignored "-Wunknown-warning-option"
 		#	pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
 		#endif
 
