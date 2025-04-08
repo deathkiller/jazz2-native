@@ -7,6 +7,7 @@
 #if defined(WITH_SDL)
 #	include "Backends/SdlGfxDevice.h"
 #	include "Backends/SdlInputManager.h"
+#	include "SDL2/SDL_syswm.h"
 #elif defined(WITH_GLFW)
 #	include "Backends/GlfwGfxDevice.h"
 #	include "Backends/GlfwInputManager.h"
@@ -36,6 +37,48 @@ using namespace nCine::Backends;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 #	error "For DEATH_TARGET_WINDOWS_RT, UwpApplication should be used instead of MainApplication"
+#endif
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	include <shellapi.h>
+#	include <unknwn.h>
+
+// {4ce576fa-83dc-4F88-951c-9d0782b4e376}
+static const GUID CLSID_UIHostNoLaunch = { 0x4CE576FA, 0x83DC, 0x4f88, { 0x95, 0x1C, 0x9D, 0x07, 0x82, 0xB4, 0xE3, 0x76 } };
+// {37c994e7_432b_4834_a2f7_dce1f13b834b}
+static const GUID IID_ITipInvocation = { 0x37c994e7, 0x432b, 0x4834, { 0xa2, 0xf7, 0xdc, 0xe1, 0xf1, 0x3b, 0x83, 0x4b } };
+
+struct ITipInvocation : IUnknown
+{
+	virtual HRESULT STDMETHODCALLTYPE Toggle(HWND wnd) = 0;
+};
+
+static DWORD GetTabTipPathFromRegistry(wchar_t* dstPath, DWORD dstSize)
+{
+	HKEY hKey;
+	if (::RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Classes\\CLSID\\{054AAE20-4BEA-4347-8A35-64A533254A9D}\\LocalServer32"), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+		return 0;
+	}
+
+	DWORD type, cbData;
+	if (::RegQueryValueEx(hKey, NULL, NULL, &type, NULL, &cbData) != ERROR_SUCCESS) {
+		::RegCloseKey(hKey);
+		return 0;
+	}
+
+	if ((type != REG_SZ && type != REG_EXPAND_SZ) || dstSize <= (cbData / sizeof(wchar_t))) {
+		::RegCloseKey(hKey);
+		return 0;
+	}
+
+	if (::RegQueryValueEx(hKey, NULL, NULL, NULL, reinterpret_cast<LPBYTE>(dstPath), &cbData) != ERROR_SUCCESS) {
+		::RegCloseKey(hKey);
+		return 0;
+	}
+
+	::RegCloseKey(hKey);
+	return DWORD(wcsnlen(dstPath, dstSize));
+}
 #endif
 
 namespace nCine
@@ -203,6 +246,93 @@ namespace nCine
 		}
 
 		// TODO: Not implemented in GLFW
+		return false;
+	}
+	
+	bool MainApplication::CanShowScreenKeyboard()
+	{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		return true;
+#else
+		return false;
+#endif
+	}
+
+	bool MainApplication::ToggleScreenKeyboard()
+	{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		if (HideScreenKeyboard()) {
+			return true;
+		}
+
+		return ShowScreenKeyboard();
+#else
+		return false;
+#endif
+	}
+
+	bool MainApplication::ShowScreenKeyboard()
+	{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		if (::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL) != NULL) {
+			// IID_ITipInvocation is supported only on Windows 10 and later
+			ITipInvocation* tip;
+			if (::CoCreateInstance(CLSID_UIHostNoLaunch, nullptr,
+				CLSCTX_INPROC_HANDLER | CLSCTX_LOCAL_SERVER, IID_ITipInvocation, (void**)&tip) == S_OK) {
+				HRESULT hr = tip->Toggle(::GetDesktopWindow());
+				tip->Release();
+				return SUCCEEDED(hr);
+			}
+		}
+
+		// Create the process directly if the above fails on Windows 7
+#	if defined(DEATH_TARGET_32BIT)
+		PVOID redirectOldValue = nullptr;
+		BOOL redirectSuccess = ::Wow64DisableWow64FsRedirection(&redirectOldValue);
+#	endif
+		bool success = false;
+		wchar_t rawPath[MAX_PATH];
+		if (GetTabTipPathFromRegistry(rawPath, DWORD(arraySize(rawPath))) == 0) {
+			wcscpy_s(rawPath, L"\"%CommonProgramFiles%\\Microsoft Shared\\Ink\\TabTip.exe\"");
+		}
+		wchar_t path[MAX_PATH];
+		DWORD pathLength = ::ExpandEnvironmentStringsW(rawPath, path, DWORD(arraySize(path)));
+		if (pathLength > 0 && pathLength < DWORD(arraySize(path))) {
+			HINSTANCE hinst = ::ShellExecuteW(NULL, L"open", path,
+				nullptr, nullptr, SW_SHOWNORMAL);
+			success = ((std::int32_t)hinst > 32);
+		}
+#	if defined(DEATH_TARGET_32BIT)
+		if (redirectSuccess) {
+			::Wow64RevertWow64FsRedirection(redirectOldValue);
+		}
+#	endif
+		return success;
+#else
+		return false;
+#endif
+	}
+
+	bool MainApplication::HideScreenKeyboard()
+	{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		HWND hwnd = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
+		if (hwnd != NULL && ::IsWindowVisible(hwnd)) {
+			// IID_ITipInvocation is supported only on Windows 10 and later
+			ITipInvocation* tip;
+			if (::CoCreateInstance(CLSID_UIHostNoLaunch, nullptr,
+				CLSCTX_INPROC_HANDLER | CLSCTX_LOCAL_SERVER, IID_ITipInvocation, (void**)&tip) == S_OK) {
+				HRESULT hr = tip->Toggle(::GetDesktopWindow());
+				tip->Release();
+				return SUCCEEDED(hr);
+			}
+
+			// Close the window if the above fails on Windows 7
+			::PostMessage(hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+			return true;
+		}
+#endif
+
 		return false;
 	}
 

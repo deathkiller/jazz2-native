@@ -10,11 +10,13 @@ using namespace Death::Containers;
 #include <winrt/Windows.Gaming.Input.h>
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.UI.Core.h>
+#include <winrt/Windows.UI.Text.Core.h>
 
 namespace winrtWF = winrt::Windows::Foundation;
 namespace winrtWGI = winrt::Windows::Gaming::Input;
 namespace winrtWS = winrt::Windows::System;
 namespace winrtWUC = winrt::Windows::UI::Core;
+namespace winrtWUTC = winrt::Windows::UI::Text::Core;
 
 namespace nCine::Backends
 {
@@ -174,6 +176,7 @@ namespace nCine::Backends
 		static UwpJoystickState nullJoystickState_;
 		static JoyConnectionEvent joyConnectionEvent_;
 
+		//static winrtWUTC::CoreTextEditContext _editContext;
 		static UwpGamepadInfo _gamepads[MaxNumJoysticks];
 		static ReadWriteLock _gamepadsSync;
 

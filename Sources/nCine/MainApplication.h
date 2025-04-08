@@ -27,6 +27,11 @@ namespace nCine
 		bool EnablePlayStationExtendedSupport(bool enable) override;
 		String GetUserName() override;
 		bool OpenUrl(StringView url) override;
+		
+		bool CanShowScreenKeyboard() override;
+		bool ToggleScreenKeyboard() override;
+		bool ShowScreenKeyboard() override;
+		bool HideScreenKeyboard() override;
 
 	private:
 		bool wasSuspended_;

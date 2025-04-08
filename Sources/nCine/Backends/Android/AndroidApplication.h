@@ -35,12 +35,10 @@ namespace nCine
 		/// Handles changes of content bounds
 		void HandleContentBoundsChanged(Recti bounds);
 
-		/// Toggles the software keyboard
-		void ToggleSoftInput();
-		/// Shows the software keyboard
-		bool ShowSoftInput();
-		/// Hides the software keyboard
-		bool HideSoftInput();
+		bool CanShowScreenKeyboard() override;
+		bool ToggleScreenKeyboard() override;
+		bool ShowScreenKeyboard() override;
+		bool HideScreenKeyboard() override;
 
 	private:
 		bool isInitialized_;

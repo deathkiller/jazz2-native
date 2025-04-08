@@ -229,20 +229,28 @@ namespace nCine
 	{
 		LOGI("Received new content bounds: {X: %i, Y: %i, W: %i, H: %i}", bounds.X, bounds.Y, bounds.W, bounds.H);
 	}
+	
+	bool AndroidApplication::CanShowScreenKeyboard()
+	{
+		return isInitialized_;
+	}
 
-	void AndroidApplication::ToggleSoftInput()
+	bool AndroidApplication::ToggleScreenKeyboard()
 	{
 		if (isInitialized_) {
 			AndroidJniWrap_InputMethodManager::toggleSoftInput();
+			return true;
+		} else {
+			return false;
 		}
 	}
 
-	bool AndroidApplication::ShowSoftInput()
+	bool AndroidApplication::ShowScreenKeyboard()
 	{
 		return isInitialized_ && AndroidJniWrap_InputMethodManager::showSoftInput();
 	}
 
-	bool AndroidApplication::HideSoftInput()
+	bool AndroidApplication::HideScreenKeyboard()
 	{
 		return isInitialized_ && AndroidJniWrap_InputMethodManager::hideSoftInput();
 	}

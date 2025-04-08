@@ -177,6 +177,15 @@ namespace nCine
 		virtual String GetUserName();
 		/** @brief Opens the specified URL in a default web browser */
 		virtual bool OpenUrl(StringView url);
+		
+		/** @brief Returns `true` if screen (software) keyboard is supported and @ref ShowScreenKeyboard() should succeed */ 
+		virtual bool CanShowScreenKeyboard();
+		/** @brief Toggles the screen (software) keyboard */
+		virtual bool ToggleScreenKeyboard();
+		/** @brief Shows the screen (software) keyboard */
+		virtual bool ShowScreenKeyboard();
+		/** @brief Hides the screen (software) keyboard */
+		virtual bool HideScreenKeyboard();
 
 		/** @brief Adds the specified target as a sink for tracing */
 		void AttachTraceTarget(Containers::StringView targetPath);
