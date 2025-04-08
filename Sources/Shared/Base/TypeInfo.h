@@ -2,10 +2,11 @@
 
 #include "../Common.h"
 
+#include <memory>
+
 // If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used instead of optimized runtime_cast<T>()
 #if !defined(DEATH_NO_RUNTIME_CAST) && !defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include <memory>
 #include <type_traits>
 #if DEATH_CXX_STANDARD < 201402
 #	include <cstring>	// for std::strcmp()

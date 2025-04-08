@@ -7,7 +7,6 @@
 #if defined(WITH_SDL)
 #	include "Backends/SdlGfxDevice.h"
 #	include "Backends/SdlInputManager.h"
-#	include "SDL2/SDL_syswm.h"
 #elif defined(WITH_GLFW)
 #	include "Backends/GlfwGfxDevice.h"
 #	include "Backends/GlfwInputManager.h"
