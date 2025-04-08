@@ -149,6 +149,20 @@ namespace Jazz2::Compatibility
 			std::uint8_t FrameCount;
 			std::uint16_t Frames[64];
 		};
+
+		struct OffGridEvent {
+			std::uint16_t X;
+			std::uint16_t Y;
+			
+			JJ2Event EventType;
+			std::uint8_t GeneratorFlags;
+			std::uint8_t Difficulty;
+			bool Illuminate;
+			std::uint32_t TileParams;		// Partially supported
+
+			std::int32_t GeneratorDelay;
+			ConversionResult Converted;
+		};
 #endif
 
 		JJ2Version _version;
@@ -170,6 +184,7 @@ namespace Jazz2::Compatibility
 		std::unique_ptr<AnimatedTileSection[]> _animatedTiles;
 		std::unique_ptr<TileEventSection[]> _events;
 		SmallVector<std::uint8_t, TextEventStringsCount> _levelTokenTextIds;
+		SmallVector<OffGridEvent, 0> _offGridEvents;
 
 		void LoadMetadata(JJ2Block& block, bool strictParser);
 		void LoadStaticTileData(JJ2Block& block, bool strictParser);

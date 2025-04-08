@@ -1543,6 +1543,8 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 			return "Holiday Hare '17"_s;
 		} else if (episode->Name == "hh18"_s && episode->DisplayName == "Holiday Hare 18"_s) {
 			return "Holiday Hare '18"_s;
+		} else if (episode->Name == "hh24"_s && episode->DisplayName == "HH24"_s) {
+			return "Holiday Hare '24"_s;
 		} else {
 			// Strip formatting
 			return Compatibility::JJ2Strings::RecodeString(episode->DisplayName, true);
@@ -1837,7 +1839,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 	// Don't save continue in multiplayer
 	if (playerCount == 1) {
 		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(p[0], true);
-		episodeContinue->LevelName = levelInit.LevelName;
+		episodeContinue->LevelName = p[2];
 		episodeContinue->State.Flags = EpisodeContinuationFlags::None;
 		if (levelInit.CheatsUsed) {
 			episodeContinue->State.Flags |= EpisodeContinuationFlags::CheatsUsed;
