@@ -46,6 +46,28 @@ namespace nCine::Backends
 		winrtWGI::Gamepad::GamepadAdded({ this, &UwpInputManager::OnGamepadAdded });
 		winrtWGI::Gamepad::GamepadRemoved({ this, &UwpInputManager::OnGamepadRemoved });
 
+		// Screen keyboard handling
+		/*auto textManager = winrtWUTC::CoreTextServicesManager::GetForCurrentView();
+		_editContext = textManager.CreateEditContext();
+
+		_editContext.TextRequested([this](auto const&, winrtWUTC::CoreTextTextRequestedEventArgs const& args) {
+			args.Request().Text(_text);
+		});
+
+		_editContext.SelectionRequested([this](auto const&, winrtWUTC::CoreTextSelectionRequestedEventArgs const& args) {
+			args.Request().Selection(_selection);
+		});
+
+		_editContext.TextUpdating([this](auto const&, winrtWUTC::CoreTextTextUpdatingEventArgs const& args) {
+			_text = args.Text();
+			_selection = args.Range();
+		});
+
+		_editContext.FocusRemoved([this](auto const&, auto const&) {
+			// TODO: Handle blur
+		});*/
+
+		// Gamepads
 		_gamepadsSync.EnterWriteLock();
 
 		auto gamepads = winrtWGI::Gamepad::Gamepads();

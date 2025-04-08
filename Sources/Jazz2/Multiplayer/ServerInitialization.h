@@ -49,6 +49,7 @@ namespace Jazz2::Multiplayer
 
 		The server configuration is read from a JSON file, which may contain the following fields:
 		- @cpp "$include" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Include configuration from another file by path
+		  - If the JSON contains a @cpp "$include" @ce directive, it will load the referenced files recursively, but only once to avoid infinite loops
 		- @cpp "ServerName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the server
 		- @cpp "ServerPassword" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Password to join the server
 		- @cpp "WelcomeMessage" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Message displayed to players upon joining
@@ -58,7 +59,7 @@ namespace Jazz2::Multiplayer
 		- @cpp "IsPrivate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the server is private and hidden in the server list
 		- @cpp "RequiresDiscordAuth" @ce : @m_span{m-label m-default m-flat} bool @m_endspan If `true`, the server requires Discord authentication
 		  - Discord authentication requires a running Discord client
-		  - Supported platforms are Linux, macOS and Windows
+		  - Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join
 		- @cpp "AllowedPlayerTypes" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
 		- @cpp "IdleKickTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are kicked (default is **never**)
 		- @cpp "AdminUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of admin player IDs
@@ -105,7 +106,6 @@ namespace Jazz2::Multiplayer
 		  - @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total treasure required to win this round (Tresure Hunt)
 		- @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
 		
-		If the JSON contains a @cpp "$include" @ce directive, it recursively loads the referenced files.
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.
 		If a property is missing in the root configuration, the default value is used. `{PlayerName}` and
 		`{ServerName}` variables can be used in @cpp "ServerName" @ce and @cpp "WelcomeMessage" @ce properties.

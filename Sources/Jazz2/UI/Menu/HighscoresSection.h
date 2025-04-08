@@ -83,8 +83,6 @@ namespace Jazz2::UI::Menu
 		Vector2i _initialVisibleSize;
 		Recti _currentVisibleBounds;
 		float _recalcVisibleBoundsTimeLeft;
-
-		void RecalcLayoutForSoftInput();
 #endif
 
 		void FillDefaultsIfEmpty();
@@ -92,5 +90,6 @@ namespace Jazz2::UI::Menu
 		void SerializeToFile();
 		void AddItemAndFocus(HighscoreItem&& item);
 		void RefreshList();
+		void RecalcLayoutForScreenKeyboard();
 	};
 }

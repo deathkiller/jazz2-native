@@ -89,23 +89,20 @@ namespace Jazz2::UI::Menu
 
 	void UserProfileOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-#if defined(DEATH_TARGET_ANDROID)
 		if (event.type == TouchEventType::Down) {
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
-				if (x < 0.2f && y < 80.0f && _waitForInput) {
+				if (x < 0.2f && y < 80.0f && _waitForInput && theApplication().CanShowScreenKeyboard()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					auto& app = static_cast<AndroidApplication&>(theApplication());
-					app.ShowSoftInput();
-					RecalcLayoutForSoftInput();
+					theApplication().ShowScreenKeyboard();
+					RecalcLayoutForScreenKeyboard();
 					return;
 				}
 			}
 		}
-#endif
 
 		ScrollableMenuSection::OnTouchEvent(event, viewSize);
 	}
@@ -131,15 +128,12 @@ namespace Jazz2::UI::Menu
 				_recalcVisibleBoundsTimeLeft = 60.0f;
 				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 			}
-
-			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
-				_root->PlaySfx("MenuSelect"_s, 0.5f);
-				auto& app = static_cast<AndroidApplication&>(theApplication());
-				app.ToggleSoftInput();
-				RecalcLayoutForSoftInput();
-			} else
 #endif
-			if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
+			if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				theApplication().ToggleScreenKeyboard();
+				RecalcLayoutForScreenKeyboard();
+			} else if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				_localPlayerName = std::move(_prevPlayerName);
@@ -176,10 +170,10 @@ namespace Jazz2::UI::Menu
 
 	void UserProfileOptionsSection::OnDrawOverlay(Canvas* canvas)
 	{
-#if defined(DEATH_TARGET_ANDROID)
-		if (_waitForInput) {
+		if (_waitForInput && theApplication().CanShowScreenKeyboard()) {
 			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer, Alignment::TopLeft, Colorf::White);
 
+#if defined(DEATH_TARGET_ANDROID)
 			if (_currentVisibleBounds.W < _initialVisibleSize.X || _currentVisibleBounds.H < _initialVisibleSize.Y) {
 				Vector2i viewSize = _root->GetViewSize();
 				if (_currentVisibleBounds.Y * viewSize.Y / _initialVisibleSize.Y < 32.0f) {
@@ -194,8 +188,8 @@ namespace Jazz2::UI::Menu
 						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 				}
 			}
-		}
 #endif
+		}
 	}
 
 	void UserProfileOptionsSection::OnKeyPressed(const KeyboardEvent& event)
@@ -206,11 +200,8 @@ namespace Jazz2::UI::Menu
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_waitForInput = false;
 					_localPlayerName = std::move(_prevPlayerName);
-#if defined(DEATH_TARGET_ANDROID)
-					auto& app = static_cast<AndroidApplication&>(theApplication());
-					app.HideSoftInput();
-					RecalcLayoutForSoftInput();
-#endif
+					theApplication().HideScreenKeyboard();
+					RecalcLayoutForScreenKeyboard();
 					break;
 				}
 				case Keys::Return: {
@@ -218,11 +209,8 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_waitForInput = false;
 						_isDirty = true;
-#if defined(DEATH_TARGET_ANDROID)
-						auto& app = static_cast<AndroidApplication&>(theApplication());
-						app.HideSoftInput();
-						RecalcLayoutForSoftInput();
-#endif
+						theApplication().HideScreenKeyboard();
+						RecalcLayoutForScreenKeyboard();
 					}
 					break;
 				}
@@ -423,9 +411,7 @@ namespace Jazz2::UI::Menu
 				_prevPlayerName = _localPlayerName;
 				_textCursor = _localPlayerName.size();
 				_waitForInput = true;
-#if defined(DEATH_TARGET_ANDROID)
-				RecalcLayoutForSoftInput();
-#endif
+				RecalcLayoutForScreenKeyboard();
 				break;
 			}
 		}
@@ -437,25 +423,24 @@ namespace Jazz2::UI::Menu
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_waitForInput = false;
 			_localPlayerName = std::move(_prevPlayerName);
-#if defined(DEATH_TARGET_ANDROID)
-			auto& app = static_cast<AndroidApplication&>(theApplication());
-			app.HideSoftInput();
-			RecalcLayoutForSoftInput();
-#endif
+
+			theApplication().HideScreenKeyboard();
+			RecalcLayoutForScreenKeyboard();
 			return;
 		}
 
 		ScrollableMenuSection::OnBackPressed();
 	}
 
-#if defined(DEATH_TARGET_ANDROID)
-	void UserProfileOptionsSection::RecalcLayoutForSoftInput()
+
+	void UserProfileOptionsSection::RecalcLayoutForScreenKeyboard()
 	{
+#if defined(DEATH_TARGET_ANDROID)
 		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 
 		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
 			_recalcVisibleBoundsTimeLeft = 30.0f;
 		}
-	}
 #endif
+	}
 }

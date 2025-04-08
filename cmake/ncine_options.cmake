@@ -100,7 +100,7 @@ endif()
 # Shared library options
 option(DEATH_TRACE "Enable runtime event tracing" ON)
 cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS" OFF)
-option(DEATH_RUNTIME_CAST "Enable runtime_cast<T>() optimization" ON)
+option(DEATH_USE_RUNTIME_CAST "Enable runtime_cast<T>() optimization" ON)
 cmake_dependent_option(DEATH_WITH_VC_LTL "Build with VC-LTL on Windows" ON "WIN32" OFF)
 
 # Check if we can use IFUNC for CPU dispatch. Linux with glibc and Android with API 18+ has it,

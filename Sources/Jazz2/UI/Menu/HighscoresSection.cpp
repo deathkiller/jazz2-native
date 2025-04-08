@@ -82,15 +82,12 @@ namespace Jazz2::UI::Menu
 				_recalcVisibleBoundsTimeLeft = 60.0f;
 				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 			}
-
-			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
-				_root->PlaySfx("MenuSelect"_s, 0.5f);
-				auto& app = static_cast<AndroidApplication&>(theApplication());
-				app.ToggleSoftInput();
-				RecalcLayoutForSoftInput();
-			} else
 #endif
-			if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
+			if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				theApplication().ToggleScreenKeyboard();
+				RecalcLayoutForScreenKeyboard();
+			} else if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				auto& selectedItem = _items[_selectedIndex];
@@ -150,10 +147,10 @@ namespace Jazz2::UI::Menu
 
 	void HighscoresSection::OnDrawOverlay(Canvas* canvas)
 	{
-#if defined(DEATH_TARGET_ANDROID)
-		if (_waitForInput) {
+		if (_waitForInput && theApplication().CanShowScreenKeyboard()) {
 			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer, Alignment::TopLeft, Colorf::White);
 
+#if defined(DEATH_TARGET_ANDROID)
 			if (_currentVisibleBounds.W < _initialVisibleSize.X || _currentVisibleBounds.H < _initialVisibleSize.Y) {
 				Vector2i viewSize = _root->GetViewSize();
 				if (_currentVisibleBounds.Y * viewSize.Y / _initialVisibleSize.Y < 32.0f) {
@@ -170,8 +167,8 @@ namespace Jazz2::UI::Menu
 						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 				}
 			}
-		}
 #endif
+		}
 	}
 
 	void HighscoresSection::OnKeyPressed(const KeyboardEvent& event)
@@ -185,11 +182,8 @@ namespace Jazz2::UI::Menu
 					if (!selectedItem.Item->PlayerName.empty()) {
 						SerializeToFile();
 					}
-#if defined(DEATH_TARGET_ANDROID)
-					auto& app = static_cast<AndroidApplication&>(theApplication());
-					app.HideSoftInput();
-					RecalcLayoutForSoftInput();
-#endif
+					theApplication().HideScreenKeyboard();
+					RecalcLayoutForScreenKeyboard();
 					break;
 				}
 				case Keys::Return: {
@@ -429,16 +423,12 @@ namespace Jazz2::UI::Menu
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-#if defined(DEATH_TARGET_ANDROID)
-				if (x < 0.2f && y < 80.0f && _waitForInput) {
+				if (x < 0.2f && y < 80.0f && _waitForInput && theApplication().CanShowScreenKeyboard()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					auto& app = static_cast<AndroidApplication&>(theApplication());
-					app.ShowSoftInput();
-					RecalcLayoutForSoftInput();
+					theApplication().ShowScreenKeyboard();
+					RecalcLayoutForScreenKeyboard();
 					return;
-				} else
-#endif
-				if (y >= 80.0f) {
+				} else if (y >= 80.0f) {
 					Recti contentBounds = _root->GetContentBounds();
 					float topLine = contentBounds.Y + TopLine;
 					if (std::abs(x - 0.5f) > (y > topLine ? 0.35f : 0.1f)) {
@@ -494,11 +484,9 @@ namespace Jazz2::UI::Menu
 			if (!selectedItem.Item->PlayerName.empty()) {
 				SerializeToFile();
 			}
-#if defined(DEATH_TARGET_ANDROID)
-			auto& app = static_cast<AndroidApplication&>(theApplication());
-			app.HideSoftInput();
-			RecalcLayoutForSoftInput();
-#endif
+
+			theApplication().HideScreenKeyboard();
+			RecalcLayoutForScreenKeyboard();
 			return;
 		}
 
@@ -683,14 +671,14 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-#if defined(DEATH_TARGET_ANDROID)
-	void HighscoresSection::RecalcLayoutForSoftInput()
+	void HighscoresSection::RecalcLayoutForScreenKeyboard()
 	{
+#if defined(DEATH_TARGET_ANDROID)
 		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 
 		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
 			_recalcVisibleBoundsTimeLeft = 30.0f;
 		}
-	}
 #endif
+	}
 }

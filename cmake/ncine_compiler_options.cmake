@@ -36,11 +36,6 @@ if(DEATH_USE_GMTOFF_IN_TM)
 	target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_USE_GMTOFF_IN_TM")
 endif()
 
-if(NOT DEATH_RUNTIME_CAST)
-	target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_NO_RUNTIME_CAST")
-	message(STATUS "runtime_cast<T>() optimization is disabled")
-endif()
-
 if(NCINE_PROFILING)
 	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_PROFILING")
 	message(STATUS "Runtime profiling is enabled")

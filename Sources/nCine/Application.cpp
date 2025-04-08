@@ -1046,6 +1046,26 @@ namespace nCine
 		// Not implemented in base class
 		return false;
 	}
+	
+	bool Application::CanShowScreenKeyboard()
+	{
+		return false;
+	}
+	
+	bool Application::ToggleScreenKeyboard()
+	{
+		return false;
+	}
+	
+	bool Application::ShowScreenKeyboard()
+	{
+		return false;
+	}
+	
+	bool Application::HideScreenKeyboard()
+	{
+		return false;
+	}
 
 	void Application::AttachTraceTarget(Containers::StringView targetPath)
 	{
