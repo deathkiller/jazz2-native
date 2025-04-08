@@ -308,7 +308,7 @@ function(ncine_apply_compiler_options target)
 	endif()
 
 	if(NOT DEATH_USE_RUNTIME_CAST)
-		target_compile_definitions(${NCINE_APP} PRIVATE "DEATH_NO_RUNTIME_CAST")
+		target_compile_definitions(${target} PRIVATE "DEATH_NO_RUNTIME_CAST")
 		message(STATUS "runtime_cast<T>() optimization is disabled")
 	endif()
 
