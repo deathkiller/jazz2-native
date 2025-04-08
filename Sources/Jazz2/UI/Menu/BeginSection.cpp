@@ -349,8 +349,6 @@ namespace Jazz2::UI::Menu
 				break;
 #endif
 			case Item::PlaySingleplayer:
-				theApplication().ToggleScreenKeyboard();
-
 				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #if defined(SHAREWARE_DEMO_ONLY)

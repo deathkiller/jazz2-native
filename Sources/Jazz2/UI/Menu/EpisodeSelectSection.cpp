@@ -512,7 +512,7 @@ namespace Jazz2::UI::Menu
 							}
 						}
 
-						auto episodeContinue = PreferencesCache::GetEpisodeContinue(episode.Item.Description.Name);
+						auto* episodeContinue = PreferencesCache::GetEpisodeContinue(episode.Item.Description.Name);
 						if (episodeContinue != nullptr) {
 							episode.Item.Flags |= EpisodeDataFlags::CanContinue;
 						}

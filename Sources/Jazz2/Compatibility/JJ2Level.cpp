@@ -340,7 +340,7 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser)
 	{
-		if (version > 0x106) {
+		if (version > 0x107) {
 			LOGW("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
 			return;
 		}
@@ -388,7 +388,7 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Additional palettes
+		// TODO: Additional palettes for SPRITE::MAPPING
 		if (version >= 0x106) {
 			std::uint8_t extraPaletteCount = block.ReadByte();
 			while (extraPaletteCount-- != 0) {
@@ -509,8 +509,70 @@ namespace Jazz2::Compatibility
 			}
 
 			// TODO: Edited tiles were added in MLLE-Include-1.3
+			if (version >= 0x103) {
+				std::int16_t editedTilesCount = block.ReadInt16();
+				for (std::int32_t i = 0; i < editedTilesCount; i++) {
+					std::int16_t tileId = block.ReadInt16();
+					block.DiscardBytes(32 * 32);		// Pixels
+				}
+
+				editedTilesCount = block.ReadInt16();
+				for (std::int32_t i = 0; i < editedTilesCount; i++) {
+					std::int16_t tileId = block.ReadInt16();
+					block.DiscardBytes(32 * 32);		// Collision mask
+				}
+			}
+
 			// TODO: Weapons were added in MLLE-Include-1.5(w)
+			if (version >= 0x105) {
+				// TODO: DefaultWeaponHook constructor argument was added in MLLE-Include-1.6(w)
+				if (version >= 0x106) {
+					std::int16_t weaponHookPrefix = block.ReadInt16();
+				}
+				for (std::int32_t weaponId = 0; weaponId < 9; weaponId++) {
+					bool customWeapon = block.ReadBool();
+					std::int32_t maximum = block.ReadInt32();
+
+					// comesFromBirds, comesFromBirdsPowerup, comesFromGunCrates, gemsLost, gemsLostPowerup, infinite, replenishes
+					constexpr std::int32_t NumberOfCommonOptions = 5;
+					for (std::int32_t optionId = 0; optionId < NumberOfCommonOptions; optionId++) {
+						std::uint8_t optionValue = block.ReadByte();
+					}
+
+					if (weaponId >= 6) {
+						std::uint8_t ammoCrate = block.ReadByte();
+					}
+
+					if (customWeapon) {
+						std::int32_t weaponNameLength = block.ReadUint7bitEncoded();
+						String weaponName{NoInit, (std::size_t)weaponNameLength};
+						block.ReadRawBytes((std::uint8_t*)weaponName.data(), weaponNameLength);
+
+						std::int32_t weaponParamsLength = block.ReadInt32();
+						block.DiscardBytes(weaponParamsLength);
+					} else if (weaponId == 7) {
+						std::uint8_t gun8Style = block.ReadByte(); // Pepper style
+					}
+				}
+			}
+
 			// TODO: Off-grid objects were added in MLLE-Include-1.6
+			if (version >= 0x106) {
+				std::int16_t objectCount = block.ReadInt16();
+				for (std::int32_t i = 0; i < objectCount; i++) {
+					std::int16_t x = block.ReadInt16();
+					std::int16_t y = block.ReadInt16();
+					std::uint32_t eventData = block.ReadUInt32();
+
+					auto& offGridEvent = _offGridEvents.emplace_back();
+					offGridEvent.X = x;
+					offGridEvent.Y = y;
+					offGridEvent.EventType = (JJ2Event)(std::uint8_t)(eventData & 0x000000FF);
+					offGridEvent.Difficulty = (std::uint8_t)((eventData & 0x00000300) >> 8);
+					offGridEvent.Illuminate = ((eventData & 0x00000400) >> 10 == 1);
+					offGridEvent.TileParams = ((eventData & 0xFFFFF000) >> 12);
+				}
+			}
 		}
 	}
 
@@ -553,6 +615,31 @@ namespace Jazz2::Compatibility
 
 				tileEvent.Converted = eventConverter.TryConvert(this, eventType, tileEvent.TileParams);
 			}
+		}
+
+		for (std::size_t i = 0; i < _offGridEvents.size(); i++) {
+			auto& offGridEvent = _offGridEvents[i];
+
+			JJ2Event eventType;
+			if (offGridEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
+				// Generators are converted differently
+				std::uint8_t eventParams[8];
+				EventConverter::ConvertParamInt(offGridEvent.TileParams, {
+					{ JJ2ParamUInt, 8 },	// Event
+					{ JJ2ParamUInt, 8 },	// Delay
+					{ JJ2ParamBool, 1 }		// Initial Delay
+				}, eventParams);
+
+				eventType = (JJ2Event)eventParams[0];
+				offGridEvent.GeneratorDelay = eventParams[1];
+				offGridEvent.GeneratorFlags = (std::uint8_t)eventParams[2];
+			} else {
+				eventType = offGridEvent.EventType;
+				offGridEvent.GeneratorDelay = -1;
+				offGridEvent.GeneratorFlags = 0;
+			}
+
+			offGridEvent.Converted = eventConverter.TryConvert(this, eventType, offGridEvent.TileParams);
 		}
 
 		CheckWaterLevelAroundStart();
@@ -988,6 +1075,64 @@ namespace Jazz2::Compatibility
 
 						co.Write(tileEvent.Converted.Params, sizeof(tileEvent.Converted.Params));
 					}
+				}
+			}
+
+			co.WriteVariableUint32((std::uint32_t)_offGridEvents.size());
+			for (std::size_t i = 0; i < _offGridEvents.size(); i++) {
+				auto& offGridEvent = _offGridEvents[i];
+
+				co.WriteVariableUint32(offGridEvent.X);
+				co.WriteVariableUint32(offGridEvent.Y);
+
+				// TODO: Flag 0x08 not used
+				std::int32_t flags = 0;
+				if (offGridEvent.Illuminate) {
+					flags |= 0x04; // Illuminated
+				}
+				if (offGridEvent.Difficulty != 2 /*Hard*/) {
+					flags |= 0x10; // Difficulty: Easy
+				}
+				if (offGridEvent.Difficulty == 0 /*All*/) {
+					flags |= 0x20; // Difficulty: Normal
+				}
+				if (offGridEvent.Difficulty != 1 /*Easy*/) {
+					flags |= 0x40; // Difficulty: Hard
+				}
+				if (offGridEvent.Difficulty == 3 /*Multiplayer*/) {
+					flags |= 0x80; // Multiplayer Only
+				}
+
+				co.WriteValue<std::uint16_t>((std::uint16_t)offGridEvent.Converted.Type);
+
+				bool allZeroes = true;
+				if (offGridEvent.Converted.Type != EventType::Empty) {
+					for (std::int32_t i = 0; i < std::int32_t(arraySize(offGridEvent.Converted.Params)); i++) {
+						if (offGridEvent.Converted.Params[i] != 0) {
+							allZeroes = false;
+							break;
+						}
+					}
+				}
+
+				if (allZeroes) {
+					if (offGridEvent.GeneratorDelay == -1) {
+						co.WriteValue<std::uint8_t>(flags | 0x01 /*NoParams*/);
+					} else {
+						co.WriteValue<std::uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
+						co.WriteValue<std::uint8_t>(offGridEvent.GeneratorFlags);
+						co.WriteValue<std::uint8_t>(offGridEvent.GeneratorDelay);
+					}
+				} else {
+					if (offGridEvent.GeneratorDelay == -1) {
+						co.WriteValue<std::uint8_t>(flags);
+					} else {
+						co.WriteValue<std::uint8_t>(flags | 0x02 /*Generator*/);
+						co.WriteValue<std::uint8_t>(offGridEvent.GeneratorFlags);
+						co.WriteValue<std::uint8_t>(offGridEvent.GeneratorDelay);
+					}
+
+					co.Write(offGridEvent.Converted.Params, sizeof(offGridEvent.Converted.Params));
 				}
 			}
 		}
