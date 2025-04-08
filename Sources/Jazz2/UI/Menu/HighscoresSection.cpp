@@ -192,11 +192,8 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_waitForInput = false;
 						SerializeToFile();
-#if defined(DEATH_TARGET_ANDROID)
-						auto& app = static_cast<AndroidApplication&>(theApplication());
-						app.HideSoftInput();
-						RecalcLayoutForSoftInput();
-#endif
+						theApplication().HideScreenKeyboard();
+						RecalcLayoutForScreenKeyboard();
 					}
 					break;
 				}
