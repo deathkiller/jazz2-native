@@ -2363,6 +2363,11 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::jjChat(const String& text, bool teamchat) {
 		LOGW("%s", text.data());
 
+		if (text.hasPrefix('/')) {
+			// TODO: Process command
+			return;
+		}
+
 		// TODO: teamchat
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Info, text);
