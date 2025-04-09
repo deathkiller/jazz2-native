@@ -949,6 +949,56 @@ namespace Jazz2
 		}
 	}
 
+	void ContentResolver::ExpandTileDiffuse(std::uint32_t* pixelsOffset, std::uint32_t widthWithPadding)
+	{
+		// Top
+		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+			std::uint32_t from = 1 * widthWithPadding + (x + 1);
+			std::uint32_t to = 0 * widthWithPadding + (x + 1);
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+		// Bottom
+		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+			std::uint32_t from = (TileSet::DefaultTileSize)*widthWithPadding + (x + 1);
+			std::uint32_t to = (TileSet::DefaultTileSize + 1) * widthWithPadding + (x + 1);
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+		// Left
+		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+			std::uint32_t from = (y + 1) * widthWithPadding + (1);
+			std::uint32_t to = (y + 1) * widthWithPadding + (0);
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+		// Right
+		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+			std::uint32_t from = (y + 1) * widthWithPadding + (TileSet::DefaultTileSize);
+			std::uint32_t to = (y + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1);
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+
+		// Corners (TL, LR, BL, BR)
+		{
+			std::uint32_t from = 0 * widthWithPadding + 1;
+			std::uint32_t to = 0 * widthWithPadding;
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+		{
+			std::uint32_t from = 0 * widthWithPadding + TileSet::DefaultTileSize;
+			std::uint32_t to = 0 * widthWithPadding + (TileSet::DefaultTileSize + 1);
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+		{
+			std::uint32_t from = (TileSet::DefaultTileSize + 1) * widthWithPadding + 1;
+			std::uint32_t to = (TileSet::DefaultTileSize + 1) * widthWithPadding;
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+		{
+			std::uint32_t from = (TileSet::DefaultTileSize + 1) * widthWithPadding + TileSet::DefaultTileSize;
+			std::uint32_t to = (TileSet::DefaultTileSize + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1);
+			pixelsOffset[to] = pixelsOffset[from];
+		}
+	}
+
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping)
 	{
 		// Try "Content" directory first, then "Cache" directory
@@ -1038,75 +1088,31 @@ namespace Jazz2
 				for (std::uint32_t j = 0; j < tilesPerRow; j++) {
 					std::uint32_t xf = j * TileSet::DefaultTileSize;
 					std::uint32_t xt = j * (TileSet::DefaultTileSize + 2);
+					std::uint32_t* pixelsOffset = &pixelsWithPadding[yt * widthWithPadding + xt];
 
 					if (paletteRemapping != nullptr) {
 						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 								std::uint32_t from = yf * width + xf + y * width + x;
-								std::uint32_t to = yt * widthWithPadding + xt + (y + 1) * widthWithPadding + (x + 1);
+								std::uint32_t to = (y + 1) * widthWithPadding + (x + 1);
 
 								std::uint32_t color = _palettes[paletteRemapping[pixels[from] & 0xff]];
-								pixelsWithPadding[to] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[from] >> 24) & 0xff) / 255) << 24);
+								pixelsOffset[to] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[from] >> 24) & 0xff) / 255) << 24);
 							}
 						}
 					} else {
 						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 								std::uint32_t from = yf * width + xf + y * width + x;
-								std::uint32_t to = yt * widthWithPadding + xt + (y + 1) * widthWithPadding + (x + 1);
+								std::uint32_t to = (y + 1) * widthWithPadding + (x + 1);
 
 								std::uint32_t color = _palettes[pixels[from] & 0xff];
-								pixelsWithPadding[to] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[from] >> 24) & 0xff) / 255) << 24);
+								pixelsOffset[to] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[from] >> 24) & 0xff) / 255) << 24);
 							}
 						}
 					}
 
-					// Top
-					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-						std::uint32_t from = yt * widthWithPadding + xt + 1 * widthWithPadding + (x + 1);
-						std::uint32_t to = yt * widthWithPadding + xt + 0 * widthWithPadding + (x + 1);
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
-					// Bottom
-					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-						std::uint32_t from = yt * widthWithPadding + xt + (TileSet::DefaultTileSize) * widthWithPadding + (x + 1);
-						std::uint32_t to = yt * widthWithPadding + xt + (TileSet::DefaultTileSize + 1) * widthWithPadding + (x + 1);
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
-					// Left
-					for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-						std::uint32_t from = yt * widthWithPadding + xt + (y + 1) * widthWithPadding + (1);
-						std::uint32_t to = yt * widthWithPadding + xt + (y + 1) * widthWithPadding + (0);
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
-					// Right
-					for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-						std::uint32_t from = yt * widthWithPadding + xt + (y + 1) * widthWithPadding + (TileSet::DefaultTileSize);
-						std::uint32_t to = yt * widthWithPadding + xt + (y + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1);
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
-
-					// Corners (TL, LR, BL, BR)
-					{
-						std::uint32_t from = yt * widthWithPadding + xt + 0 * widthWithPadding + 1;
-						std::uint32_t to = yt * widthWithPadding + xt + 0 * widthWithPadding;
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
-					{
-						std::uint32_t from = yt * widthWithPadding + xt + 0 * widthWithPadding + TileSet::DefaultTileSize;
-						std::uint32_t to = yt * widthWithPadding + xt + 0 * widthWithPadding + (TileSet::DefaultTileSize + 1);
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
-					{
-						std::uint32_t from = yt * widthWithPadding + xt + (TileSet::DefaultTileSize + 1) * widthWithPadding + 1;
-						std::uint32_t to = yt * widthWithPadding + xt + (TileSet::DefaultTileSize + 1) * widthWithPadding;
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
-					{
-						std::uint32_t from = yt * widthWithPadding + xt + (TileSet::DefaultTileSize + 1) * widthWithPadding + TileSet::DefaultTileSize;
-						std::uint32_t to = yt * widthWithPadding + xt + (TileSet::DefaultTileSize + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1);
-						pixelsWithPadding[to] = pixelsWithPadding[from];
-					}
+					ExpandTileDiffuse(pixelsOffset, widthWithPadding);
 				}
 			}
 
@@ -1264,6 +1270,41 @@ namespace Jazz2
 		if (!descriptor.TileMap->IsValid()) {
 			// Cannot load one of required tilesets (errors already logged by TileMap)
 			return false;
+		}
+
+		// Overriden tiles (diffuse and mask)
+		std::uint32_t overridenTilesCount = uc.ReadVariableUint32();
+		if (!_isHeadless) {
+			for (std::uint32_t i = 0; i < overridenTilesCount; i++) {
+				std::uint16_t tileId = uc.ReadValue<std::uint16_t>();
+				std::uint8_t tileDiffuseRaw[TileSet::DefaultTileSize * TileSet::DefaultTileSize];
+				uc.Read(tileDiffuseRaw, sizeof(tileDiffuseRaw));
+
+				std::uint32_t tileDiffuse[(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2)];
+				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+						std::uint32_t from = y * TileSet::DefaultTileSize + x;
+						std::uint32_t to = (y + 1) * (TileSet::DefaultTileSize + 2) + (x + 1);
+
+						std::uint32_t color = _palettes[tileDiffuseRaw[from]];
+						tileDiffuse[to] = color;
+					}
+				}
+
+				ExpandTileDiffuse(tileDiffuse, TileSet::DefaultTileSize + 2);
+				descriptor.TileMap->OverrideTileDiffuse(tileId, tileDiffuse);
+			}
+		} else {
+			uc.Seek(overridenTilesCount * (2 + TileSet::DefaultTileSize * TileSet::DefaultTileSize), SeekOrigin::Current);
+		}
+
+		overridenTilesCount = uc.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < overridenTilesCount; i++) {
+			std::uint16_t tileId = uc.ReadValue<std::uint16_t>();
+			std::uint8_t tileMask[32 * 32];
+			uc.Read(tileMask, sizeof(tileMask));
+
+			descriptor.TileMap->OverrideTileMask(tileId, tileMask);
 		}
 
 		// Text Event Strings

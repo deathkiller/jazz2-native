@@ -1011,6 +1011,28 @@ namespace Jazz2::Tiles
 		}
 	}
 
+	/** @brief Overrides the diffuse texture of the specified tile */
+	bool TileMap::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2), std::uint32_t> tileDiffuse)
+	{
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return false;
+		}
+
+		return tileSet->OverrideTileDiffuse(tileId, tileDiffuse);
+	}
+
+	/** @brief Overrides the collision mask of the specified tile */
+	bool TileMap::OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask)
+	{
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return false;
+		}
+
+		return tileSet->OverrideTileMask(tileId, tileMask);
+	}
+
 	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, std::uint16_t tileParams)
 	{
 		if ((tile.Flags & LayerTileFlags::Animated) != LayerTileFlags::Animated) {

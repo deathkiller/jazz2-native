@@ -508,18 +508,20 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			// TODO: Edited tiles were added in MLLE-Include-1.3
+			// Edited tiles were added in MLLE-Include-1.3
 			if (version >= 0x103) {
 				std::int16_t editedTilesCount = block.ReadInt16();
 				for (std::int32_t i = 0; i < editedTilesCount; i++) {
-					std::int16_t tileId = block.ReadInt16();
-					block.DiscardBytes(32 * 32);		// Pixels
+					auto& tile = _overridenTileDiffuses.emplace_back();
+					tile.TileID = block.ReadInt16();
+					block.ReadRawBytes(tile.Diffuse, 32 * 32);
 				}
 
 				editedTilesCount = block.ReadInt16();
 				for (std::int32_t i = 0; i < editedTilesCount; i++) {
-					std::int16_t tileId = block.ReadInt16();
-					block.DiscardBytes(32 * 32);		// Collision mask
+					auto& tile = _overridenTileMasks.emplace_back();
+					tile.TileID = block.ReadInt16();
+					block.ReadRawBytes(tile.Mask, 32 * 32);
 				}
 			}
 
@@ -556,7 +558,7 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			// TODO: Off-grid objects were added in MLLE-Include-1.6
+			// Off-grid objects were added in MLLE-Include-1.6
 			if (version >= 0x106) {
 				std::int16_t objectCount = block.ReadInt16();
 				for (std::int32_t i = 0; i < objectCount; i++) {
@@ -763,6 +765,19 @@ namespace Jazz2::Compatibility
 				if (tileset.HasPaletteRemapping) {
 					co.Write(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
 				}
+			}
+
+			// Overriden tiles
+			co.WriteVariableUint32((std::uint32_t)_overridenTileDiffuses.size());
+			for (auto& tile : _overridenTileDiffuses) {
+				co.WriteValue<std::int16_t>(tile.TileID);
+				co.Write(tile.Diffuse, sizeof(tile.Diffuse));
+			}
+
+			co.WriteVariableUint32((std::uint32_t)_overridenTileMasks.size());
+			for (auto& tile : _overridenTileMasks) {
+				co.WriteValue<std::int16_t>(tile.TileID);
+				co.Write(tile.Mask, sizeof(tile.Mask));
 			}
 
 			// Text Event Strings

@@ -22,7 +22,7 @@ namespace Jazz2::Compatibility
 	{
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		static constexpr std::uint16_t CacheVersion = 25;
+		static constexpr std::uint16_t CacheVersion = 26;
 #endif
 
 		static JJ2Version Convert(StringView path, PakWriter& pakWriter, bool isPlus = false);

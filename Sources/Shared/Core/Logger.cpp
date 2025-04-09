@@ -54,9 +54,9 @@ namespace Death { namespace Trace {
 		}
 
 		RdtscClock::RdtscClock(std::chrono::nanoseconds resyncInterval)
-			: _resyncIntervalTicks(static_cast<std::int64_t>(static_cast<double>(resyncInterval.count())*
+			: _resyncIntervalTicks(static_cast<std::int64_t>(static_cast<double>(resyncInterval.count()) *
 				RdtscTicks::instance().nanosecondsPerTick())), _resyncIntervalOriginal(_resyncIntervalTicks),
-			_nanosecondsPerTick(RdtscTicks::instance().nanosecondsPerTick())
+				_nanosecondsPerTick(RdtscTicks::instance().nanosecondsPerTick()), _version(0) 
 
 		{
 			if (!resync(2500)) {
