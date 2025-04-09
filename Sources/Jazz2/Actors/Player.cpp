@@ -2514,7 +2514,7 @@ namespace Jazz2::Actors
 		// float events, so checking for a wider box is necessary.
 		constexpr float ExtendedHitbox = 2.0f;
 
-		if (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) {
+		if (!_isAttachedToPole && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb)) {
 			if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
 				if ((events->GetEventByPosition(_pos.X, _pos.Y, &p) == EventType::AreaFloatUp) ||
 					(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaFloatUp) ||

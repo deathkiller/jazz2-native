@@ -2064,31 +2064,31 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("void jjSetModSpeed(uint8 speed)", asFUNCTION(jjSetModSpeed), asCALL_CDECL);
 
 		// TODO
-		/*engine->RegisterObjectType("jjPLAYERDRAW", sizeof(DrawPlayerElements), asOBJ_REF | asOBJ_NOCOUNT);
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool name", asOFFSET(DrawPlayerElements, Name));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool sprite", asOFFSET(DrawPlayerElements, Sprite));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool sugarRush", asOFFSET(DrawPlayerElements, SugarRush));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool gunFlash", asOFFSET(DrawPlayerElements, Flare));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool invincibility", asOFFSET(DrawPlayerElements, Invincibility));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool trail", asOFFSET(DrawPlayerElements, Trail));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool morphingExplosions", asOFFSET(DrawPlayerElements, Morph));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool airboardBouncingMotion", asOFFSET(DrawPlayerElements, AirboardOffset));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool airboardPuff", asOFFSET(DrawPlayerElements, AirboardPuff));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "SPRITE::Mode spriteMode", asOFFSET(DrawPlayerElements, SpriteMode));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "uint8 spriteParam", asOFFSET(DrawPlayerElements, SpriteParam));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "LIGHT::Type lightType", asOFFSET(DrawPlayerElements, LightType));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "int8 light", asOFFSET(DrawPlayerElements, LightIntensity));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "int layer", asOFFSET(DrawPlayerElements, Layer));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "uint curFrame", asOFFSET(DrawPlayerElements, CurFrame));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "int angle", asOFFSET(DrawPlayerElements, Angle));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "float xOffset", asOFFSET(DrawPlayerElements, XOffset));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "float yOffset", asOFFSET(DrawPlayerElements, YOffset));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "float xScale", asOFFSET(DrawPlayerElements, XScale));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "float yScale", asOFFSET(DrawPlayerElements, YScale));
-		engine->RegisterObjectProperty("jjPLAYERDRAW", "TEAM::Color flag", asOFFSET(DrawPlayerElements, FlagTeam));
-		engine->RegisterObjectMethod("jjPLAYERDRAW", "bool get_shield(SHIELD::Shield) const", asMETHOD(DrawPlayerElements, getShield1Index), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYERDRAW", "bool set_shield(SHIELD::Shield, bool)", asMETHOD(DrawPlayerElements, setShield1Index), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYERDRAW", "jjPLAYER@ get_player() const", asMETHOD(DrawPlayerElements, getPlayer), asCALL_THISCALL);*/
+		engine->RegisterObjectType("jjPLAYERDRAW", sizeof(jjPLAYERDRAW), asOBJ_REF | asOBJ_NOCOUNT);
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool name", asOFFSET(jjPLAYERDRAW, name));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool sprite", asOFFSET(jjPLAYERDRAW, sprite));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool sugarRush", asOFFSET(jjPLAYERDRAW, sugarRush));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool gunFlash", asOFFSET(jjPLAYERDRAW, gunFlash));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool invincibility", asOFFSET(jjPLAYERDRAW,invincibility));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool trail", asOFFSET(jjPLAYERDRAW, trail));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool morphingExplosions", asOFFSET(jjPLAYERDRAW, morphingExplosions));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool airboardBouncingMotion", asOFFSET(jjPLAYERDRAW, airboardBouncingMotion));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "bool airboardPuff", asOFFSET(jjPLAYERDRAW, airboardPuff));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "SPRITE::Mode spriteMode", asOFFSET(jjPLAYERDRAW, spriteMode));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "uint8 spriteParam", asOFFSET(jjPLAYERDRAW, spriteParam));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "LIGHT::Type lightType", asOFFSET(jjPLAYERDRAW, lightType));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "int8 light", asOFFSET(jjPLAYERDRAW, light));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "int layer", asOFFSET(jjPLAYERDRAW, layer));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "uint curFrame", asOFFSET(jjPLAYERDRAW, curFrame));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "int angle", asOFFSET(jjPLAYERDRAW, angle));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "float xOffset", asOFFSET(jjPLAYERDRAW, xOffset));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "float yOffset", asOFFSET(jjPLAYERDRAW, yOffset));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "float xScale", asOFFSET(jjPLAYERDRAW, xScale));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "float yScale", asOFFSET(jjPLAYERDRAW, yScale));
+		engine->RegisterObjectProperty("jjPLAYERDRAW", "TEAM::Color flag", asOFFSET(jjPLAYERDRAW, flag));
+		engine->RegisterObjectMethod("jjPLAYERDRAW", "bool get_shield(SHIELD::Shield) const", asMETHOD(jjPLAYERDRAW, get_shield), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYERDRAW", "bool set_shield(SHIELD::Shield, bool)", asMETHOD(jjPLAYERDRAW, set_shield), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYERDRAW", "jjPLAYER@ get_player() const", asMETHOD(jjPLAYERDRAW, get_player), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("STATE");
 		engine->RegisterEnumValue("State", "START", sSTART);
@@ -3438,6 +3438,9 @@ namespace Jazz2::Scripting
 		// Create fake MLLE namespace, because "MLLE-Include-xxx.asc" includes are blocked
 		engine->SetDefaultNamespace("MLLE");
 		engine->RegisterGlobalFunction("bool Setup()", asFUNCTION(mlleSetup), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void ReapplyPalette()", asFUNCTION(mlleReapplyPalette), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void SpawnOffgrids()", asFUNCTION(mlleSpawnOffgrids), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void SpawnOffgridsLocal()", asFUNCTION(mlleSpawnOffgridsLocal), asCALL_CDECL);
 		engine->RegisterGlobalProperty("const jjPAL Palette", &jjBackupPalette);
 	}
 

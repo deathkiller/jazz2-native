@@ -11,6 +11,11 @@
 #include "../../nCine/Input/InputEvents.h"
 
 #if defined(WITH_ANGELSCRIPT)
+namespace Jazz2::Scripting
+{
+	struct LevelScriptLoader;
+}
+
 namespace Jazz2::Scripting::Legacy
 {
 	struct jjCANVAS;
@@ -23,6 +28,7 @@ namespace Jazz2::UI
 	class HUD : public Canvas
 	{
 #if defined(WITH_ANGELSCRIPT)
+		friend struct Scripting::LevelScriptLoader;
 		friend struct Scripting::Legacy::jjCANVAS;
 #endif
 

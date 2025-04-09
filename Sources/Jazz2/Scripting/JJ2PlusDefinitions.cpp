@@ -251,7 +251,7 @@ namespace Jazz2::Scripting
 
 		bool jjSTREAM::save(const String& tilename) const {
 			noop();
-			return false;
+			return true;
 		}
 
 		void jjSTREAM::clear() {
@@ -264,11 +264,11 @@ namespace Jazz2::Scripting
 
 		bool jjSTREAM::write(const String& value) {
 			noop();
-			return false;
+			return true;
 		}
 		bool jjSTREAM::write(const jjSTREAM& value) {
 			noop();
-			return false;
+			return true;
 		}
 		bool jjSTREAM::get(String& value, std::uint32_t count) {
 			noop();
@@ -678,11 +678,11 @@ namespace Jazz2::Scripting
 			switch (size) {
 				default:
 				case 0:	// MEDIUM
-					scale = 1.0f;
-				case 1:	// SMALL
 					scale = 0.8f;
+				case 1:	// SMALL
+					scale = 0.6f;
 				case 2:	// LARGE
-					scale = 1.6f;
+					scale = 1.1f;
 			}
 
 			std::int32_t charOffset = 0;
@@ -702,11 +702,11 @@ namespace Jazz2::Scripting
 			switch (size) {
 				default:
 				case 0:	// MEDIUM
-					scale = 1.0f;
-				case 1:	// SMALL
 					scale = 0.8f;
+				case 1:	// SMALL
+					scale = 0.6f;
 				case 2:	// LARGE
-					scale = 1.6f;
+					scale = 1.1f;
 			}
 
 			std::int32_t charOffset = 0;
@@ -2087,6 +2087,19 @@ namespace Jazz2::Scripting
 		void jjLAYER::generateSettableTileAreaAll() {
 			noop();
 		}
+
+		bool jjPLAYERDRAW::get_shield(std::int32_t shield) const {
+			noop();
+			return false;
+		}
+		bool jjPLAYERDRAW::set_shield(std::int32_t shield, bool enable) {
+			noop();
+			return false;
+		}
+		jjPLAYER* jjPLAYERDRAW::get_player() const {
+			noop();
+			return nullptr;
+		}
 	}
 
 	jjOBJ* get_jjObjects(std::int32_t index)
@@ -2164,6 +2177,18 @@ namespace Jazz2::Scripting
 	bool mlleSetup() {
 		noop();
 		return true;
+	}
+
+	void mlleReapplyPalette() {
+		noop();
+	}
+
+	void mlleSpawnOffgrids() {
+		noop();
+	}
+
+	void mlleSpawnOffgridsLocal() {
+		noop();
 	}
 
 	float get_sinTable(std::uint32_t angle) {
@@ -2662,56 +2687,71 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	void jjDrawPixel(float xPixel, float yPixel, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawPixel(float xPixel, float yPixel, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawRectangle(float xPixel, float yPixel, std::int32_t width, std::int32_t height, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawRectangle(float xPixel, float yPixel, std::int32_t width, std::int32_t height, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawTile(float xPixel, float yPixel, std::uint16_t tile, std::uint32_t tileQuadrant, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawTile(float xPixel, float yPixel, std::uint16_t tile, std::uint32_t tileQuadrant, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawString(float xPixel, float yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawString(float xPixel, float yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	void jjDrawStringEx(float xPixel, float yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, spriteType spriteMode, std::uint8_t param2, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
+	void LevelScriptLoader::jjDrawStringEx(float xPixel, float yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, spriteType spriteMode, std::uint8_t param2, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		noop();
 	}
 
-	std::int32_t jjGetStringWidth(const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& style) {
-		noop(); return 0;
+	std::int32_t LevelScriptLoader::jjGetStringWidth(const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& style) {
+		//noop();
+		
+		float scale;
+		switch (size) {
+			default:
+			case 0:	// MEDIUM
+				scale = 0.8f;
+			case 1:	// SMALL
+				scale = 0.6f;
+			case 2:	// LARGE
+				scale = 1.1f;
+		}
+
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		auto measuredSize = _this->_levelHandler->_hud->_smallFont->MeasureString(text, scale);
+		return (std::int32_t)measuredSize.X;
 	}
 
 	void jjSetDarknessColor(jjPALCOLOR color) {
@@ -2880,17 +2920,21 @@ namespace Jazz2::Scripting
 	}
 
 	bool getEnabledTeam(std::uint8_t team) {
-		noop(); return false;
+		noop();
+		return false;
 	}
 
 	bool getKeyDown(std::uint8_t key) {
-		noop(); return false;
+		//noop();
+		return false;
 	}
 	std::int32_t getCursorX() {
-		noop(); return 0;
+		//noop();
+		return 0;
 	}
 	std::int32_t getCursorY() {
-		noop(); return 0;
+		//noop();
+		return 0;
 	}
 
 	bool LevelScriptLoader::jjMusicLoad(const String& filename, bool forceReload, bool temporary) {
