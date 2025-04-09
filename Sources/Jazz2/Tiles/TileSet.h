@@ -67,6 +67,11 @@ namespace Jazz2::Tiles
 			return staticArrayView<DefaultTileSize * DefaultTileSize>(_captionTile.get());
 		}
 
+		/** @brief Overrides the diffuse texture of the specified tile */
+		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(DefaultTileSize + 2) * (DefaultTileSize + 2), std::uint32_t> tileDiffuse);
+		/** @brief Overrides the collision mask of the specified tile */
+		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, std::uint8_t> tileMask);
+
 	private:
 		std::unique_ptr<uint8_t[]> _mask;
 		std::unique_ptr<Color[]> _captionTile;

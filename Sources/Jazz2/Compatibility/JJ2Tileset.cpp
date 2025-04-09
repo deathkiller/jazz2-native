@@ -42,14 +42,14 @@ namespace Jazz2::Compatibility
 
 		// Read the lengths, uncompress the blocks and bail if any block could not be uncompressed
 		// This could look better without all the copy-paste, but meh.
-		int infoBlockPackedSize = headerBlock.ReadInt32();
-		int infoBlockUnpackedSize = headerBlock.ReadInt32();
-		int imageBlockPackedSize = headerBlock.ReadInt32();
-		int imageBlockUnpackedSize = headerBlock.ReadInt32();
-		int alphaBlockPackedSize = headerBlock.ReadInt32();
-		int alphaBlockUnpackedSize = headerBlock.ReadInt32();
-		int maskBlockPackedSize = headerBlock.ReadInt32();
-		int maskBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t infoBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t infoBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t imageBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t imageBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t alphaBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t alphaBlockUnpackedSize = headerBlock.ReadInt32();
+		std::int32_t maskBlockPackedSize = headerBlock.ReadInt32();
+		std::int32_t maskBlockUnpackedSize = headerBlock.ReadInt32();
 
 		JJ2Block infoBlock(s, infoBlockPackedSize, infoBlockUnpackedSize);
 		JJ2Block imageBlock(s, imageBlockPackedSize, imageBlockUnpackedSize);
@@ -218,6 +218,9 @@ namespace Jazz2::Compatibility
 				}
 			}
 
+			// The first palette entry is fixed to transparent black
+			palette[0] = 0x00000000;
+
 			co.Write(palette, sizeof(palette));
 
 			// Mask
@@ -231,7 +234,7 @@ namespace Jazz2::Compatibility
 		so->WriteValue<std::int32_t>(ms.GetSize());
 		so->Write(ms.GetBuffer(), ms.GetSize());
 
-		// Image
+		// Diffuse
 		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
 
 		for (std::int32_t i = 0; i < _tileCount; i++) {

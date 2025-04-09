@@ -150,6 +150,16 @@ namespace Jazz2::Compatibility
 			std::uint16_t Frames[64];
 		};
 
+		struct OverridenTileDiffuse {
+			std::uint16_t TileID;
+			std::uint8_t Diffuse[32 * 32];
+		};
+
+		struct OverridenTileMask {
+			std::uint16_t TileID;
+			std::uint8_t Mask[32 * 32];
+		};
+
 		struct OffGridEvent {
 			std::uint16_t X;
 			std::uint16_t Y;
@@ -182,6 +192,8 @@ namespace Jazz2::Compatibility
 		SmallVector<LayerSection, JJ2LayerCount> _layers;
 		std::unique_ptr<TilePropertiesSection[]> _staticTiles;
 		std::unique_ptr<AnimatedTileSection[]> _animatedTiles;
+		SmallVector<OverridenTileDiffuse, 0> _overridenTileDiffuses;
+		SmallVector<OverridenTileMask, 0> _overridenTileMasks;
 		std::unique_ptr<TileEventSection[]> _events;
 		SmallVector<std::uint8_t, TextEventStringsCount> _levelTokenTextIds;
 		SmallVector<OffGridEvent, 0> _offGridEvents;

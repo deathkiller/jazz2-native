@@ -26,9 +26,9 @@ namespace Jazz2::Tiles
 			bool maskFilled = true;
 
 			if (i < maskMaxTiles) {
-				auto maskOffset = &_mask[i * DefaultTileSize * DefaultTileSize];
-				for (std::int32_t x = 0; x < DefaultTileSize * DefaultTileSize; x++) {
-					bool masked = (maskOffset[x] > 0);
+				auto* maskOffset = &_mask[i * DefaultTileSize * DefaultTileSize];
+				for (std::int32_t j = 0; j < DefaultTileSize * DefaultTileSize; j++) {
+					bool masked = (maskOffset[j] > 0);
 					maskEmpty &= !masked;
 					maskFilled &= masked;
 				}
@@ -40,9 +40,47 @@ namespace Jazz2::Tiles
 			if (maskFilled) {
 				_isMaskFilled.set(i);
 			}
+
+			// TODO: _isTileFilled is not properly set
 			if (/*tileFilled ||*/ !maskEmpty) {
 				_isTileFilled.set(i);
 			}
 		}
+	}
+
+	bool TileSet::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(DefaultTileSize + 2) * (DefaultTileSize + 2), std::uint32_t> tileDiffuse)
+	{
+		if (tileId >= TileCount) {
+			return false;
+		}
+
+		std::int32_t x = (tileId % TilesPerRow) * (DefaultTileSize + 2);
+		std::int32_t y = (tileId / TilesPerRow) * (DefaultTileSize + 2);
+
+		// TODO: _isTileFilled is not properly set
+		return TextureDiffuse->loadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+	}
+
+	bool TileSet::OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, std::uint8_t> tileMask)
+	{
+		if (tileId >= TileCount) {
+			return false;
+		}
+
+		auto* maskOffset = &_mask[tileId * DefaultTileSize * DefaultTileSize];
+
+		bool maskEmpty = true;
+		bool maskFilled = true;
+		for (std::int32_t j = 0; j < DefaultTileSize * DefaultTileSize; j++) {
+			maskOffset[j] = tileMask[j];
+			bool masked = (tileMask[j] > 0);
+			maskEmpty &= !masked;
+			maskFilled &= masked;
+		}
+
+		_isMaskEmpty.set(tileId, maskEmpty);
+		_isMaskFilled.set(tileId, maskFilled);
+
+		return true;
 	}
 }

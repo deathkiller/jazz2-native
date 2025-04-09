@@ -248,8 +248,7 @@ namespace Death { namespace Trace {
 			public:
 				static RdtscTicks& instance();
 
-				double nanosecondsPerTick() const noexcept
-				{
+				double nanosecondsPerTick() const noexcept {
 					return _nanosecondsPerTick;
 				}
 
@@ -267,30 +266,30 @@ namespace Death { namespace Trace {
 
 			bool resync(std::uint32_t lag) const noexcept;
 
-			double nanosecondsPerTick() const noexcept
-			{
+			double nanosecondsPerTick() const noexcept {
 				return _nanosecondsPerTick;
 			}
 
 		private:
 			struct BaseTimeTsc
 			{
-				BaseTimeTsc() = default;
+				BaseTimeTsc()
+					: BaseTime(0), BaseTsc(0) {}
+
 				/** @brief Initial base time in nanoseconds since epoch */
-				std::int64_t BaseTime{0};
+				std::int64_t BaseTime;
 				/** @brief Initial base tsc time */
-				std::uint64_t BaseTsc{0};
+				std::uint64_t BaseTsc;
 			};
 
 			mutable std::int64_t _resyncIntervalTicks;
 			std::int64_t _resyncIntervalOriginal;
 			double _nanosecondsPerTick;
 
-			alignas(CacheLineAligned) mutable std::atomic<std::uint32_t> _version{0};
-			mutable Containers::StaticArray<2, BaseTimeTsc> _base{};
+			alignas(CacheLineAligned) mutable std::atomic<std::uint32_t> _version;
+			mutable Containers::StaticArray<2, BaseTimeTsc> _base;
 
-			static inline std::uint64_t fastAverage(std::uint64_t x, std::uint64_t y) noexcept
-			{
+			static inline std::uint64_t fastAverage(std::uint64_t x, std::uint64_t y) noexcept {
 				return (x & y) + ((x ^ y) >> 1);
 			}
 		};
@@ -304,9 +303,9 @@ namespace Death { namespace Trace {
 		public:
 			explicit BoundedSPSCQueueImpl(T capacity, bool hugesPagesEnabled = false, T readerStorePercent = 5)
 				: _capacity(NextPowerOfTwo(capacity)), _mask(_capacity - 1),
-				_bytesPerBatch(static_cast<T>(_capacity* static_cast<double>(readerStorePercent) / 100.0)),
-				_storage(static_cast<std::byte*>(allocAligned(2ull * static_cast<std::uint64_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
-				_hugePagesEnabled(hugesPagesEnabled)
+					_bytesPerBatch(static_cast<T>(_capacity* static_cast<double>(readerStorePercent) / 100.0)),
+					_storage(static_cast<std::byte*>(allocAligned(2ull * static_cast<std::uint64_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
+					_hugePagesEnabled(hugesPagesEnabled)
 			{
 				std::memset(_storage, 0, 2ull * static_cast<std::uint64_t>(_capacity));
 

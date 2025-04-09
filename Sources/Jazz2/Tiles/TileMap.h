@@ -270,6 +270,10 @@ namespace Jazz2::Tiles
 		void ReadAnimatedTiles(Stream& s);
 		/** @brief Sets tile event flags */
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);
+		/** @brief Overrides the diffuse texture of the specified tile */
+		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2), std::uint32_t> tileDiffuse);
+		/** @brief Overrides the collision mask of the specified tile */
+		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask);
 
 		/** @brief Returns a caption tile */
 		StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, Color> GetCaptionTile() const

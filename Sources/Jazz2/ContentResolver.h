@@ -153,7 +153,8 @@ namespace Jazz2
 
 		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
-		
+		static void ExpandTileDiffuse(std::uint32_t* pixelsOffset, std::uint32_t widthWithPadding);
+
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
 		
