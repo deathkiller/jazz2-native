@@ -2163,6 +2163,35 @@ namespace Jazz2::Scripting
 			std::int32_t _refCount;
 		};
 
+		struct jjPLAYERDRAW
+		{
+			bool name;
+			bool sprite;
+			bool sugarRush;
+			bool gunFlash;
+			bool invincibility;
+			bool trail;
+			bool morphingExplosions;
+			bool airboardBouncingMotion;
+			bool airboardPuff;
+			std::int32_t spriteMode;
+			std::uint8_t spriteParam;
+			std::int32_t lightType;
+			std::int8_t light;
+			std::int32_t layer;
+			std::uint32_t curFrame;
+			std::int32_t angle;
+			float xOffset;
+			float yOffset;
+			float xScale;
+			float yScale;
+			std::int32_t flag;
+
+			bool get_shield(std::int32_t shield) const;
+			bool set_shield(std::int32_t shield, bool enable);
+			jjPLAYER* get_player() const;
+		};
+
 		enum waterInteraction_ {
 			waterInteraction_POSITIONBASED,
 			waterInteraction_SWIM,
@@ -2209,6 +2238,9 @@ namespace Jazz2::Scripting
 	jjPLAYER* get_jjLocalPlayers(std::uint8_t index);
 
 	bool mlleSetup();
+	void mlleReapplyPalette();
+	void mlleSpawnOffgrids();
+	void mlleSpawnOffgridsLocal();
 
 	float get_sinTable(std::uint32_t angle);
 	float get_cosTable(std::uint32_t angle);
@@ -2248,32 +2280,6 @@ namespace Jazz2::Scripting
 	std::int32_t GetStartHealth();
 
 	// TODO
-
-	void jjDrawPixel(float xPixel, float yPixel, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawRectangle(float xPixel, float yPixel, std::int32_t width, std::int32_t height, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawTile(float xPixel, float yPixel, std::uint16_t tile, std::uint32_t tileQuadrant, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawString(float xPixel, float yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	void jjDrawStringEx(float xPixel, float yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, spriteType spriteMode, std::uint8_t param2, int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
-
-	std::int32_t jjGetStringWidth(const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& style);
 
 	void jjSetDarknessColor(jjPALCOLOR color);
 	void jjSetFadeColors(std::uint8_t red, std::uint8_t green, std::uint8_t blue);
