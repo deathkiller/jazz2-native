@@ -737,7 +737,8 @@ namespace Jazz2::Compatibility
 			if (_useLevelPalette) {
 				for (std::int32_t i = 0; i < sizeof(_levelPalette); i += 3) {
 					// Expand JJ2+ RGB palette to RGBA
-					std::uint32_t color = (std::uint32_t)_levelPalette[i] | ((std::uint32_t)_levelPalette[i + 1] << 8) | ((std::uint32_t)_levelPalette[i + 2] << 16) | 0xff000000;
+					// The first palette entry is fixed to transparent black
+					std::uint32_t color = (i != 0 ? ((std::uint32_t)_levelPalette[i] | ((std::uint32_t)_levelPalette[i + 1] << 8) | ((std::uint32_t)_levelPalette[i + 2] << 16) | 0xff000000) : 0x00000000);
 					co.WriteValue<std::uint32_t>(color);
 				}
 			}
