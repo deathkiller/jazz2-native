@@ -129,6 +129,10 @@ namespace Jazz2::Multiplayer
 		static String AddressToString(const struct in6_addr& address, std::uint16_t port = 0);
 		/** @brief Converts the endpoint of the specified peer to the string representation */
 		static String AddressToString(const Peer& peer);
+		/** @brief Returns `true` if the specified string representation of the address is valid */
+		static bool IsAddressValid(StringView address);
+		/** @brief Attempts to split the specified endpoint into address and port */
+		static bool TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port);
 
 	protected:
 		/** @brief Called when a peer connects to the local server or the local client connects to a server */

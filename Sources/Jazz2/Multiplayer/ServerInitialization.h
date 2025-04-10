@@ -51,6 +51,7 @@ namespace Jazz2::Multiplayer
 		- @cpp "$include" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Include configuration from another file by path
 		  - If the JSON contains a @cpp "$include" @ce directive, it will load the referenced files recursively, but only once to avoid infinite loops
 		- @cpp "ServerName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the server
+		- @cpp "ServerAddressOverride" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Address override allows to specify an alternate address under which the server will be listed in the public list
 		- @cpp "ServerPassword" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Password to join the server
 		- @cpp "WelcomeMessage" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Message displayed to players upon joining
 		- @cpp "MaxPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum number of players allowed to join
@@ -120,6 +121,8 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Server name */
 		String ServerName;
+		/** @brief Server address override allows to specify an alternate address under which the server will be listed in the public list */
+		String ServerAddressOverride;
 		/** @brief Password of the server */
 		String ServerPassword;
 		/** @brief Welcome message displayed to players upon joining */

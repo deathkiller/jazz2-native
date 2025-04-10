@@ -299,8 +299,12 @@ void GameEventHandler::OnInitialize()
 				}
 			}
 
-			CreateServer(std::move(serverInit));
-			StartProcessingStdin();
+			if (!CreateServer(std::move(serverInit))) {
+				LOGE("Server cannot be started because of invalid configuration");
+				theApplication().Quit();
+			} else {
+				StartProcessingStdin();
+			}
 			return;
 		}
 #		endif
@@ -381,7 +385,10 @@ void GameEventHandler::OnInitialize()
 				}
 			}
 
-			CreateServer(std::move(serverInit));
+			if (!CreateServer(std::move(serverInit))) {
+				LOGE("Server cannot be started because of invalid configuration");
+				theApplication().Quit();
+			}
 			return;
 		}
 #		endif
@@ -864,7 +871,10 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		serverInit.Configuration.GameMode = playlistEntry.GameMode;
 	}
 
-	if (!ContentResolver::Get().LevelExists(serverInit.InitialLevel.LevelName)) {
+	if (serverInit.InitialLevel.LevelName.empty()) {
+		LOGE("Initial level is not specified");
+		return false;
+	} else if (!ContentResolver::Get().LevelExists(serverInit.InitialLevel.LevelName)) {
 		LOGE("Cannot find initial level \"%s\"", serverInit.InitialLevel.LevelName.data());
 		return false;
 	}

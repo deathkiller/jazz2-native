@@ -411,6 +411,47 @@ namespace Jazz2::Multiplayer
 		return {};
 	}
 
+	bool NetworkManagerBase::IsAddressValid(StringView address)
+	{
+		struct sockaddr_in sa;
+		struct sockaddr_in6 sa6;
+		auto nullTerminatedAddress = String::nullTerminatedView(address);
+		return (inet_pton(AF_INET6, nullTerminatedAddress.data(), &(sa6.sin6_addr)) == 1)
+			|| (inet_pton(AF_INET, nullTerminatedAddress.data(), &(sa.sin_addr)) == 1);
+	}
+
+	bool NetworkManagerBase::TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port)
+	{
+		if (auto portSep = input.findLast(':')) {
+			auto portString = input.suffix(portSep.begin() + 1);
+			if (portString.contains(']')) {
+				// Probably only IPv6 address (or some garbage)
+				address = input;
+				port = 0;
+				return true;
+			} else {
+				// Address (or hostname) and port
+				address = input.prefix(portSep.begin());
+				if (address.empty()) {
+					return false;
+				}
+
+				auto portString = input.suffix(portSep.begin() + 1);
+				port = std::uint16_t(stou32(portString.data(), portString.size()));
+				return true;
+			}
+		} else {
+			// Address (or hostname) only
+			if (input.empty()) {
+				return false;
+			}
+
+			address = input;
+			port = 0;
+			return true;
+		}
+	}
+
 	ConnectionResult NetworkManagerBase::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 	{
 		return _handler->OnPeerConnected(peer, clientData);

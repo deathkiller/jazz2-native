@@ -205,6 +205,21 @@ namespace Jazz2::Multiplayer
 					serverConfig.ServerName = serverName;
 				}
 
+				std::string_view serverAddressOverride;
+				if (doc["ServerAddressOverride"].get(serverAddressOverride) == SUCCESS) {
+					serverConfig.ServerAddressOverride = StringView(serverAddressOverride).trimmed();
+					if (!serverConfig.ServerAddressOverride.empty()) {
+						StringView address; std::uint16_t port;
+						if (!TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port) ||
+							!IsAddressValid(address)) {
+							LOGW("Specified server address override \"%s\" is invalid, ignoring", serverConfig.ServerAddressOverride.data());
+							serverConfig.ServerAddressOverride = {};
+						} else {
+							LOGI("Using server address override \"%s\"", serverConfig.ServerAddressOverride.data());
+						}
+					}
+				}
+
 				std::string_view serverPassword;
 				if (doc["ServerPassword"].get(serverPassword) == SUCCESS) {
 					serverConfig.ServerPassword = serverPassword;
@@ -421,9 +436,11 @@ namespace Jazz2::Multiplayer
 				if (doc["PlaylistIndex"].get(playlistIndex) == SUCCESS && playlistIndex >= -1 && playlistIndex < serverConfig.Playlist.size()) {
 					serverConfig.PlaylistIndex = std::uint32_t(playlistIndex);
 				}
-				} else {
-					LOGE("Configuration from \"%s\" cannot be parsed", configPath.data());
+			} else {
+				LOGE("Configuration from \"%s\" cannot be parsed", configPath.data());
 			}
+		} else {
+			LOGE("Configuration file \"%s\" cannot be opened", configPath.data());
 		}
 	}
 
