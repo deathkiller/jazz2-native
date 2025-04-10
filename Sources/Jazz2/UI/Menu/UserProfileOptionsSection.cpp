@@ -171,7 +171,14 @@ namespace Jazz2::UI::Menu
 	void UserProfileOptionsSection::OnDrawOverlay(Canvas* canvas)
 	{
 		if (_waitForInput && theApplication().CanShowScreenKeyboard()) {
-			_root->DrawElement(ShowKeyboard, -1, 36.0f, 24.0f, IMenuContainer::MainLayer, Alignment::TopLeft, Colorf::White);
+			auto contentBounds = _root->GetContentBounds();
+			float titleY = contentBounds.Y - (canvas->ViewSize.Y >= 300 ? 30.0f : 12.0f) - 2.0f;
+
+			_root->DrawElement(MenuGlow, 0, 72.0f, titleY - 2.0f, IMenuContainer::MainLayer - 20, Alignment::Center,
+				Colorf(1.0f, 1.0f, 1.0f, 0.16f), 4.0f, 8.0f, true, true);
+
+			_root->DrawElement(ShowKeyboard, -1, 72.0f, titleY - 2.0f + 2.0f, IMenuContainer::MainLayer - 10, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f));
+			_root->DrawElement(ShowKeyboard, -1, 72.0f, titleY - 2.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
 #if defined(DEATH_TARGET_ANDROID)
 			if (_currentVisibleBounds.W < _initialVisibleSize.X || _currentVisibleBounds.H < _initialVisibleSize.Y) {
@@ -180,11 +187,11 @@ namespace Jazz2::UI::Menu
 					_root->DrawSolid(0.0f, 0.0f, IMenuContainer::MainLayer - 10, Alignment::TopLeft, Vector2f(viewSize.X, viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
 
 					std::int32_t charOffset = 0;
-					_root->DrawStringShadow(_localPlayerName, charOffset, 120.0f, 52.0f, IMenuContainer::MainLayer,
+					_root->DrawStringShadow(_localPlayerName, charOffset, 120.0f, titleY, IMenuContainer::MainLayer,
 						Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
 
 					Vector2f textToCursorSize = _root->MeasureString(_localPlayerName.prefix(_textCursor), 1.0f);
-					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, 52.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
+					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
 						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 				}
 			}
