@@ -1464,9 +1464,14 @@ namespace Jazz2
 		auto& font = _fonts[(std::int32_t)fontType];
 		if (font == nullptr) {
 			switch (fontType) {
-				case FontType::Small: font = std::make_unique<UI::Font>(fs::CombinePath({ GetContentPath(), "Animations"_s, "UI"_s, "font_small.png"_s }), _palettes); break;
-				case FontType::Medium: font = std::make_unique<UI::Font>(fs::CombinePath({ GetContentPath(), "Animations"_s, "UI"_s, "font_medium.png"_s }), _palettes); break;
-				default: return nullptr;
+				case FontType::Small: font = std::make_unique<UI::Font>(fs::CombinePath(
+					{ GetContentPath(), "Animations"_s, "UI"_s, "font_small.png"_s }), _palettes);
+					break;
+				case FontType::Medium: font = std::make_unique<UI::Font>(fs::CombinePath(
+					{ GetContentPath(), "Animations"_s, "UI"_s, "font_medium.png"_s }), _palettes);
+					break;
+				default:
+					return nullptr;
 			}
 		}
 

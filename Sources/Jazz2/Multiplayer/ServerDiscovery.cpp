@@ -336,7 +336,7 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		String serverName = StringUtils::replaceAll(StringUtils::replaceAll(serverConfig.ServerName.data(),
+		String serverName = StringUtils::replaceAll(StringUtils::replaceAll(serverConfig.ServerName,
 			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
 
 		char input[2048];
@@ -344,24 +344,35 @@ namespace Jazz2::Multiplayer
 			serverName.data(), PreferencesCache::UniquePlayerID.data());
 
 		auto& id = PreferencesCache::UniquePlayerID;
-		length += formatString(input + length, sizeof(input) - length, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+		length += formatString(input + length, sizeof(input) - length,
+			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
 			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
 
 		length += formatString(input + length, sizeof(input) - length, "\",\"e\":\"");
 
-		bool isFirst = true;
-		auto endpoints = _server->GetServerEndpoints();
-		for (auto& endpoint : endpoints) {
-			if (length > 1228) {
-				break;
+		StringView address; std::uint16_t port;
+		if (NetworkManagerBase::TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port)) {
+			String addressEscaped = StringUtils::replaceAll(StringUtils::replaceAll(address,
+				"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
+			if (port == 0) {
+				port = _server->_host->address.port;
 			}
-			if (isFirst) {
-				isFirst = false;
-			} else {
-				length += formatString(input + length, sizeof(input) - length, "|");
-			}
+			length += formatString(input + length, sizeof(input) - length, "%s:%u", addressEscaped.data(), port);
+		} else {
+			bool isFirst = true;
+			auto endpoints = _server->GetServerEndpoints();
+			for (auto& endpoint : endpoints) {
+				if (length > 1228) {
+					break;
+				}
+				if (isFirst) {
+					isFirst = false;
+				} else {
+					length += formatString(input + length, sizeof(input) - length, "|");
+				}
 
-			length += formatString(input + length, sizeof(input) - length, "%s", endpoint.data());
+				length += formatString(input + length, sizeof(input) - length, "%s", endpoint.data());
+			}
 		}
 
 		std::int32_t serverLoad = (std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f);

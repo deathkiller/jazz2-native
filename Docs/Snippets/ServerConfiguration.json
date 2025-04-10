@@ -6,6 +6,10 @@
 	"$include": "BaseConfig.json",
 	
 	"ServerName": "{PlayerName}'s Server",
+
+	/* "ServerAddressOverride" allows to specify alternative public server address if specified */
+	/*"ServerAddressOverride": "123.123.123.123",*/
+	
 	"WelcomeMessage": "Welcome to the {PlayerName}'s server!",
 	"MaxPlayerCount": 16,
 	"MinPlayerCount": 2,
@@ -16,9 +20,10 @@
 	"IdleKickTimeSecs": 600,
 	
 	/* Only whitelisted players can join if the whitelist is specified */
-	"WhitelistedUniquePlayerIDs": {
+	/*"WhitelistedUniquePlayerIDs": {
 		"8C0D:9387:CDE3:F357:8D8B:8667:3123:1645": "User-defined comment 1"
-	},
+	},*/
+	
 	/* Admins can use server commands in the console */
 	"AdminUniquePlayerIDs": {
 		"370D:9320:3785:3216:9876:8843:323C:1401": "*"
@@ -49,7 +54,7 @@
 	/* Playlist can contain unlimited number of entries */
 	"Playlist": [
 		{
-			"LevelName": "unknown/arace1",
+			"LevelName": "arace1",
 			"GameMode": "race",
 			"IsElimination": false,
 			"InitialPlayerHealth": 5,
@@ -60,7 +65,7 @@
 			"TotalTreasureCollected": 60
 		},
 		{
-			"LevelName": "unknown/battle1",
+			"LevelName": "battle1",
 			"GameMode": "battle",
 			"IsElimination": false,
 			"InitialPlayerHealth": 5,
