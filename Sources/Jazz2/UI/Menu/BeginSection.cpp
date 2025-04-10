@@ -219,7 +219,8 @@ namespace Jazz2::UI::Menu
 #	endif
 			{
 				if (_selectedIndex == 0) {
-					_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 26.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
+					_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 26.0f, IMenuContainer::MainLayer, Alignment::Center,
+						Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
 				}
 
 				_root->DrawStringShadow(_("\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#704a4a] files!"), charOffset, center.X, center.Y - 40.0f, IMenuContainer::FontLayer,

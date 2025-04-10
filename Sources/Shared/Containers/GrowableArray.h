@@ -1843,9 +1843,11 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayClear(Array<T>& array) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
+		
 		// If not using our growing allocator, simply free the existing contents
 		if(arrayGuts.deleter != Allocator::deleter) {
 			array = {};
+			
 		// Otherwise call the destructor on the excessive elements and update the size
 		} else {
 			Implementation::arrayDestruct<T>(arrayGuts.data, arrayGuts.data + arrayGuts.size);
