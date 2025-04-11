@@ -17,7 +17,6 @@
 #include <IO/MemoryStream.h>
 
 #if defined(DEATH_TARGET_ANDROID)
-#	include <net/if.h>
 #	include "Backends/ifaddrs-android.h"
 #elif defined(DEATH_TARGET_SWITCH)
 // `ipv6_mreq` is not defined in Switch SDK
@@ -77,8 +76,6 @@ namespace Jazz2::Multiplayer
 	ENetSocket ServerDiscovery::TryCreateSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		//std::int32_t ifidx = if_nametoindex("wlan0");
-
 		std::int32_t ifidx = 0;
 		struct ifaddrs* ifaddr;
 		struct ifaddrs* ifa;

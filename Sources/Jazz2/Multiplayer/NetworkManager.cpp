@@ -1,10 +1,5 @@
 ﻿#include "NetworkManager.h"
 
-// TODO: Temporary workaround for MSVC to reduce build time
-#if defined(DEATH_TARGET_MSVC)
-#pragma optimize("", off)
-#endif
-
 #if defined(WITH_MULTIPLAYER)
 
 #include "ServerDiscovery.h"
@@ -172,6 +167,12 @@ namespace Jazz2::Multiplayer
 
 		return serverConfig;
 	}
+
+
+// TODO: Temporary workaround for MSVC to reduce build time
+#if defined(DEATH_TARGET_MSVC)
+#pragma optimize("", off)
+#endif
 
 	void NetworkManager::FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level)
 	{
@@ -448,6 +449,11 @@ namespace Jazz2::Multiplayer
 			LOGE("Configuration file \"%s\" cannot be opened", configPath.data());
 		}
 	}
+
+// TODO: Temporary workaround for MSVC to reduce build time
+#if defined(DEATH_TARGET_MSVC)
+#pragma optimize("", on)
+#endif
 
 	void NetworkManager::VerifyServerConfiguration(ServerConfiguration& serverConfig)
 	{

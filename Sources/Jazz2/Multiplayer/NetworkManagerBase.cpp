@@ -12,12 +12,12 @@
 #include <Containers/GrowableArray.h>
 #include <Containers/String.h>
 
-#if defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_ANDROID)
+#	include "Backends/ifaddrs-android.h"
+#elif defined(DEATH_TARGET_SWITCH)
 #	include <net/if.h>
 #elif defined(DEATH_TARGET_WINDOWS)
 #	include <iphlpapi.h>
-#elif defined(DEATH_TARGET_ANDROID)
-#	include "Backends/ifaddrs-android.h"
 #else
 #	include <ifaddrs.h>
 #endif
@@ -84,6 +84,31 @@ namespace Jazz2::Multiplayer
 		_clientData = clientData;
 		_desiredEndpoints.clear();
 
+#if defined(DEATH_TARGET_ANDROID)
+		std::int32_t ifidx = 0;
+		struct ifaddrs* ifaddr;
+		struct ifaddrs* ifa;
+		if (getifaddrs(&ifaddr) == 0) {
+			for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+				if (ifa->ifa_addr != nullptr && (ifa->ifa_addr->sa_family == AF_INET || ifa->ifa_addr->sa_family == AF_INET6)) {
+					ifidx = if_nametoindex(ifa->ifa_name);
+					if (ifidx > 0) {
+						LOGI("[MP] Using %s interface %s (%i)", ifa->ifa_addr->sa_family == AF_INET6
+							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
+						break;
+					}
+				}
+			}
+			freeifaddrs(ifaddr);
+		}
+		if (ifidx == 0) {
+			LOGI("[MP] No suitable interface found");
+			ifidx = if_nametoindex("wlan0");
+		}
+#else
+		std::int32_t ifidx = 0;
+#endif
+
 		while (endpoints) {
 			auto p = endpoints.partition('|');
 			if (p[0]) {
@@ -94,6 +119,11 @@ namespace Jazz2::Multiplayer
 					std::int32_t r = enet_address_set_host(&addr, nullTerminatedAddress.data());
 					//std::int32_t r = enet_address_set_host_ip(&addr, nullTerminatedAddress.data());
 					if (r == 0) {
+#if defined(DEATH_TARGET_ANDROID)
+						if (addr.sin6_scope_id == 0) {
+							addr.sin6_scope_id = (std::uint16_t)defaultScopeId;
+						}
+#endif
 						addr.port = (port != 0 ? port : defaultPort);
 						_desiredEndpoints.push_back(std::move(addr));
 					} else {
@@ -408,7 +438,7 @@ namespace Jazz2::Multiplayer
 			addressString[0] = '[';
 			addressLength = strnlen(addressString, sizeof(addressString));
 
-			if (scopeId != 0 && IN6_IS_ADDR_LINKLOCAL(&address)) {
+			if (scopeId != 0) {
 				addressLength += formatString(&addressString[addressLength], sizeof(addressString) - addressLength, "%%%u", scopeId);
 			}
 
