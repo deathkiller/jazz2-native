@@ -145,6 +145,7 @@ private:
 	void OnBeginInitialize();
 	void OnAfterInitialize();
 	void SetStateHandler(std::unique_ptr<IStateHandler>&& handler);
+	void WaitForVerify();
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
 	void CheckUpdates();
@@ -156,6 +157,7 @@ private:
 	void ApplyActivityIcon();
 #endif
 #if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS)
+	void RunDedicatedServer(StringView configPath);
 	void StartProcessingStdin();
 #endif
 	static void WriteCacheDescriptor(StringView path, std::uint64_t currentVersion, std::int64_t animsModified);
@@ -190,7 +192,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			theApplication().Quit();
 			return;
 		}
-#	if defined(WITH_MULTIPLAYER)
+#	if defined(WITH_MULTIPLAYER) && !defined(DEATH_TARGET_WINDOWS)
 		if (arg == "/server"_s) {
 			config.withGraphics = false;
 			config.withAudio = false;
@@ -266,7 +268,21 @@ void GameEventHandler::OnInitialize()
 		handler->CheckUpdates();
 #	endif
 	}, this);
+#else
+	OnAfterInitialize();
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+	CheckUpdates();
+#	endif
+#endif
 
+#if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
+	const AppConfiguration& config = theApplication().GetAppConfiguration();
+	StringView configPath;
+	if (config.argc() > 0) {
+		configPath = config.argv(0);
+	}
+	RunDedicatedServer(configPath);
+#else
 #	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)))
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
@@ -275,41 +291,22 @@ void GameEventHandler::OnInitialize()
 		if (arg == "/connect"_s && i + 1 < config.argc()) {
 			auto endpoint = config.argv(i + 1);
 			if (!endpoint.empty()) {
-				thread.Join();
-
+				WaitForVerify();
 				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
 				ConnectToServer(endpoint, MultiplayerDefaultPort);
 				return;
 			}
-		} else if (arg == "/server"_s) {
-			thread.Join();
-
-			ServerInitialization serverInit;
+		}
+#			if !defined(DEATH_TARGET_WINDOWS)
+		else if (arg == "/server"_s) {
+			StringView configPath;
 			if (i + 1 < config.argc()) {
-				auto filePath = config.argv(i + 1);
-				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(filePath);
-			} else {
-				serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+				configPath = config.argv(i + 1);
 			}
-			serverInit.InitialLevel.IsLocalSession = false;
-			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
-			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
-			if (!serverInit.Configuration.Playlist.empty() && (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size())) {
-				if (serverInit.Configuration.RandomizePlaylist) {
-					serverInit.Configuration.PlaylistIndex = Random().Next(0, (std::uint32_t)serverInit.Configuration.Playlist.size());
-				} else {
-					serverInit.Configuration.PlaylistIndex = 0;
-				}
-			}
-
-			if (!CreateServer(std::move(serverInit))) {
-				LOGE("Server cannot be started because of invalid configuration");
-				theApplication().Quit();
-			} else {
-				StartProcessingStdin();
-			}
+			RunDedicatedServer(configPath);
 			return;
 		}
+#			endif
 #		endif
 #		if defined(DEATH_DEBUG)
 		if (arg == "/level"_s && i + 1 < config.argc()) {
@@ -320,8 +317,7 @@ void GameEventHandler::OnInitialize()
 			LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
 				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
 
-			thread.Join();
-
+			WaitForVerify();
 			ChangeLevel(std::move(levelInit));
 			return;
 		}
@@ -329,6 +325,7 @@ void GameEventHandler::OnInitialize()
 	}
 #	endif
 
+#	if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
 			root->GoToMainMenu(endOfStream);
@@ -350,38 +347,13 @@ void GameEventHandler::OnInitialize()
 
 		return true;
 	}));
-#else
-	// Building without threading support is not recommended, so it can look ugly
-	OnAfterInitialize();
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
-	CheckUpdates();
-#	endif
-
-#	if defined(DEATH_DEBUG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)))
-	const AppConfiguration& config = theApplication().GetAppConfiguration();
-	for (std::int32_t i = 0; i < config.argc(); i++) {
-		auto arg = config.argv(i);
-		if (arg == "/level"_s && i + 1 < config.argc()) {
-			String levelName = config.argv(i + 1);
-			if (!levelName.contains('/')) {
-				levelName = "unknown/"_s + levelName;
-			}
-			LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
-				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
-
-			ChangeLevel(std::move(levelInit));
-			return;
-		}
-	}
-#	endif
-
+#	else
 	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
 		root->GoToMainMenu(endOfStream);
 		return true;
 	}));
-#endif
+#	endif
 
-#if !(defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER))
 	Vector2i viewSize;
 	if (_currentHandler != nullptr) {
 		viewSize = _currentHandler->GetViewSize();
@@ -769,6 +741,34 @@ void GameEventHandler::ApplyActivityIcon()
 #endif
 
 #if defined(WITH_MULTIPLAYER)
+void GameEventHandler::RunDedicatedServer(StringView configPath)
+{
+	ServerInitialization serverInit;
+	if (!configPath.empty()) {
+		serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(configPath);
+	} else {
+		serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
+	}
+	serverInit.InitialLevel.IsLocalSession = false;
+	serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
+	serverInit.Configuration.GameMode = MpGameMode::Cooperation;
+	if (!serverInit.Configuration.Playlist.empty() && (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size())) {
+		if (serverInit.Configuration.RandomizePlaylist) {
+			serverInit.Configuration.PlaylistIndex = Random().Next(0, (std::uint32_t)serverInit.Configuration.Playlist.size());
+		} else {
+			serverInit.Configuration.PlaylistIndex = 0;
+		}
+	}
+
+	WaitForVerify();
+	if (!CreateServer(std::move(serverInit))) {
+		LOGE("Server cannot be started because of invalid configuration");
+		theApplication().Quit();
+	} else {
+		StartProcessingStdin();
+	}
+}
+
 #	if defined(WITH_THREADS)
 void GameEventHandler::StartProcessingStdin()
 {
@@ -1247,6 +1247,13 @@ void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)
 	Viewport::GetChain().clear();
 	Vector2i res = theApplication().GetResolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
+}
+
+void GameEventHandler::WaitForVerify()
+{
+	while ((_flags & Flags::IsVerified) != Flags::IsVerified) {
+		Thread::Sleep(33);
+	}
 }
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -1891,12 +1898,21 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 	});
 }
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
+#	if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
+int wmain(int argc, wchar_t* argv[])
+{
+	return MainApplication::Run([]() -> std::unique_ptr<IAppEventHandler> {
+		return std::make_unique<GameEventHandler>();
+	}, argc, argv);
+}
+#	else
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
 	return MainApplication::Run([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	}, __argc, __wargv);
 }
+#	endif
 #else
 #if defined(DEATH_TARGET_UNIX)
 int PrintVersion(bool logoVisible)

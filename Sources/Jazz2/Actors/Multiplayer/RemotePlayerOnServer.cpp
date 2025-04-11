@@ -97,6 +97,12 @@ namespace Jazz2::Actors::Multiplayer
 		return success;
 	}
 
+	PlayerCarryOver RemotePlayerOnServer::PrepareLevelCarryOver()
+	{
+		// Skip all remote players
+		return PlayerCarryOver{};
+	}
+
 	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
 	{
 		if (_health <= 0) {

@@ -69,9 +69,9 @@ namespace Jazz2::Actors::Solid
 		SetAnimation((AnimState)0);
 
 		auto& resolver = ContentResolver::Get();
-		if (!resolver.IsHeadless()) {
-			for (std::int32_t i = 0; i < length; i++) {
-				ChainPiece& piece = _pieces.emplace_back();
+		for (std::int32_t i = 0; i < length; i++) {
+			ChainPiece& piece = _pieces.emplace_back();
+			if (!resolver.IsHeadless()) {
 				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 				piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
 				piece.Command->material().setBlendingEnabled(true);
@@ -242,7 +242,7 @@ namespace Jazz2::Actors::Solid
 	{
 		if (!_pieces.empty()) {
 			auto* chainAnim = _metadata->FindAnimation((AnimState)1); // Chain
-			if (chainAnim != nullptr) {
+			if (chainAnim != nullptr && chainAnim->Base->TextureDiffuse != nullptr) {
 				Vector2i texSize = chainAnim->Base->TextureDiffuse->size();
 
 				for (std::int32_t i = 0; i < (std::int32_t)_pieces.size(); i++) {

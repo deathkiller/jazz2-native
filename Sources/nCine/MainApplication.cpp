@@ -1,5 +1,6 @@
 ﻿#include "MainApplication.h"
 #include "IAppEventHandler.h"
+#include "Input/IInputManager.h"
 #include "../Main.h"
 
 #include <IO/FileSystem.h>
@@ -32,13 +33,15 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+#if defined(WITH_SDL) || defined(WITH_GLFW) || defined(WITH_QT5)
 using namespace nCine::Backends;
+#endif
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 #	error "For DEATH_TARGET_WINDOWS_RT, UwpApplication should be used instead of MainApplication"
 #endif
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS)
 #	include <shellapi.h>
 #	include <unknwn.h>
 
@@ -250,7 +253,7 @@ namespace nCine
 	
 	bool MainApplication::CanShowScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS)
 		return true;
 #else
 		return false;
@@ -259,7 +262,7 @@ namespace nCine
 
 	bool MainApplication::ToggleScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS)
 		if (HideScreenKeyboard()) {
 			return true;
 		}
@@ -272,7 +275,7 @@ namespace nCine
 
 	bool MainApplication::ShowScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS)
 		if (::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL) != NULL) {
 			// IID_ITipInvocation is supported only on Windows 10 and later
 			ITipInvocation* tip;
@@ -314,7 +317,7 @@ namespace nCine
 
 	bool MainApplication::HideScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS)
 		HWND hwnd = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
 		if (hwnd != NULL && ::IsWindowVisible(hwnd)) {
 			// IID_ITipInvocation is supported only on Windows 10 and later
@@ -408,7 +411,7 @@ namespace nCine
 
 	void MainApplication::ProcessStep()
 	{
-#if !defined(WITH_QT5)
+#if defined(WITH_GLFW) || defined(WITH_SDL)
 		ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
 		if (appCfg_.withGraphics) {

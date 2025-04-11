@@ -142,9 +142,9 @@ namespace Jazz2::Actors
 		/** @brief Called when the level is about to change */
 		virtual bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
 		/** @brief Called at the beginning of the next level to reveive carry over information */
-		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
+		virtual void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		/** @brief Returns current carry over information */
-		PlayerCarryOver PrepareLevelCarryOver();
+		virtual PlayerCarryOver PrepareLevelCarryOver();
 		/** @brief Initializes player state from a stream */
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version);
 		/** @brief Serializes player state to a stream */

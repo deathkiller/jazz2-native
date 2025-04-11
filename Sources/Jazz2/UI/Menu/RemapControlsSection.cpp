@@ -4,6 +4,7 @@
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Base/FrameTimer.h"
+#include "../../../nCine/Input/JoyMapping.h"
 
 using namespace Jazz2::UI::Menu::Resources;
 
@@ -75,7 +76,7 @@ namespace Jazz2::UI::Menu
 			MappingTarget newTarget;
 			const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 			std::int32_t joyStatesCount = 0;
-			for (std::uint32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)) && waitingForInput; i++) {
+			for (std::uint32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)) && waitingForInput; i++) {
 				if (input.isJoyMapped(i)) {
 					joyStates[joyStatesCount] = &input.joyMappedState(i);
 					auto& prevState = _joyStatesLast[joyStatesCount];
@@ -499,7 +500,7 @@ namespace Jazz2::UI::Menu
 
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
-		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
+		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
 			if (input.isJoyMapped(i)) {
 				_joyStatesLast[joyStatesCount++] = input.joyMappedState(i);
 			}

@@ -154,7 +154,6 @@ namespace Jazz2::Multiplayer
 
 		void BeforeActorDestroyed(Actors::ActorBase* actor) override;
 		void ProcessEvents(float timeMult) override;
-		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
 		/** @brief Called when a player entered a transition to change the level */
 		void HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType);
