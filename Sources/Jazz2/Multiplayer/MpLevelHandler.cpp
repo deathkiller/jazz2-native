@@ -60,7 +60,8 @@ namespace Jazz2::Multiplayer
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState, bool enableLedgeClimb)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
 			_levelState(LevelState::InitialUpdatePending), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0),
-			_seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb)
+			_seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb),
+			_controllableExternal(true)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
 #endif
@@ -447,6 +448,8 @@ namespace Jazz2::Multiplayer
 						packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
 					}
 
+					// TODO: Does this need to be locked?
+					std::unique_lock lock(_lock);
 					for (auto& [remotingActor, remotingActorInfo] : _remotingActors) {
 						packet.WriteVariableUint32(remotingActorInfo.ActorID);
 
@@ -727,12 +730,17 @@ namespace Jazz2::Multiplayer
 		LevelHandler::AddActor(actor);
 
 		if (!_suppressRemoting && _isServer) {
-			std::uint32_t actorId = FindFreeActorId();
-			Actors::ActorBase* actorPtr = actor.get();
-			_remotingActors[actorPtr] = { actorId };
+			std::uint32_t actorId;
+			Actors::ActorBase* actorPtr;
+			{
+				std::unique_lock lock(_lock);
+				actorId = FindFreeActorId();
+				actorPtr = actor.get();
+				_remotingActors[actorPtr] = { actorId };
 
-			// Store only used IDs on server-side
-			_remoteActors[actorId] = nullptr;
+				// Store only used IDs on server-side
+				_remoteActors[actorId] = nullptr;
+			}
 
 			if (ActorShouldBeMirrored(actorPtr)) {
 				Vector2i originTile = actorPtr->_originTile;
@@ -784,6 +792,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 			} else {
+				std::unique_lock lock(_lock);
 				auto it = _remotingActors.find(self);
 				if (it != _remotingActors.end()) {
 					actorId = it->second.ActorID;
@@ -1072,11 +1081,14 @@ namespace Jazz2::Multiplayer
 
 			if (peerDesc->RemotePeer) {
 				std::uint32_t actorId;
-				auto it = _remotingActors.find(decor.get());
-				if (it != _remotingActors.end()) {
-					actorId = it->second.ActorID;
-				} else {
-					actorId = UINT32_MAX;
+				{
+					std::unique_lock lock(_lock);
+					auto it = _remotingActors.find(decor.get());
+					if (it != _remotingActors.end()) {
+						actorId = it->second.ActorID;
+					} else {
+						actorId = UINT32_MAX;
+					}
 				}
 
 				MemoryStream packet(10);
@@ -2991,12 +3003,18 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		auto it = _remotingActors.find(actor);
-		if (it == _remotingActors.end()) {
-			return;
-		}
+		std::uint32_t actorId;
+		{
+			std::unique_lock lock(_lock);
+			auto it = _remotingActors.find(actor);
+			if (it == _remotingActors.end()) {
+				return;
+			}
 
-		std::uint32_t actorId = it->second.ActorID;
+			actorId = it->second.ActorID;
+			_remotingActors.erase(it);
+			_remoteActors.erase(actorId);
+		}
 
 		MemoryStream packet(4);
 		packet.WriteVariableUint32(actorId);
@@ -3005,9 +3023,6 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
-
-		_remotingActors.erase(it);
-		_remoteActors.erase(actorId);
 	}
 
 	void MpLevelHandler::ProcessEvents(float timeMult)
@@ -3078,6 +3093,8 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet2);
 				}
 
+				// TODO: Does this need to be locked?
+				std::unique_lock lock(_lock);
 				for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
 					if (ActorShouldBeMirrored(remotingActor)) {
 						Vector2i originTile = remotingActor->_originTile;
@@ -3116,6 +3133,7 @@ namespace Jazz2::Multiplayer
 					Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
 					playerParams
 				));
+				player->_controllableExternal = _controllableExternal;
 				peerDesc->LapStarted = TimeStamp::now();
 
 				Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();
@@ -3316,6 +3334,8 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::SetControllableToAllPlayers(bool enable)
 	{
+		_controllableExternal = enable;
+
 		for (auto* player : _players) {
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();

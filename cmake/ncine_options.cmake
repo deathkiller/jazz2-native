@@ -169,3 +169,4 @@ option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF)
 
 # Multiplayer is not supported on Emscripten yet and requires multithreading
 cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" OFF "NCINE_WITH_THREADS;NOT EMSCRIPTEN" OFF)
+cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
