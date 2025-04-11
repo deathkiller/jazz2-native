@@ -85,13 +85,13 @@ if(WIN32)
 	else()
 		# Override output executable name
 		if(DEDICATED_SERVER)
-			set_target_properties(${NCINE_APP} PROPERTIES OUTPUT_NAME "Jazz2.DedicatedServer")
+			set_target_properties(${NCINE_APP} PROPERTIES OUTPUT_NAME "Jazz2.Server")
 		else()
 			set_target_properties(${NCINE_APP} PROPERTIES OUTPUT_NAME "Jazz2")
 		endif()
 		
 		# Link to WinMM for high-precision timers and Windows HTTP library
-		target_link_libraries(${NCINE_APP} PRIVATE winmm winhttp)
+		target_link_libraries(${NCINE_APP} PRIVATE winmm)
 		
 		# Try to use VC-LTL library (if not disabled)
 		if(VC_LTL_FOUND AND MSVC)

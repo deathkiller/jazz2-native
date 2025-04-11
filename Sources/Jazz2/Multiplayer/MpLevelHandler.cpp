@@ -449,65 +449,67 @@ namespace Jazz2::Multiplayer
 					}
 
 					// TODO: Does this need to be locked?
-					std::unique_lock lock(_lock);
-					for (auto& [remotingActor, remotingActorInfo] : _remotingActors) {
-						packet.WriteVariableUint32(remotingActorInfo.ActorID);
+					{
+						std::unique_lock lock(_lock);
+						for (auto& [remotingActor, remotingActorInfo] : _remotingActors) {
+							packet.WriteVariableUint32(remotingActorInfo.ActorID);
 
-						std::int32_t newPosX = (std::int32_t)(remotingActor->_pos.X * 512.0f);
-						std::int32_t newPosY = (std::int32_t)(remotingActor->_pos.Y * 512.0f);
-						bool positionChanged = (newPosX != remotingActorInfo.LastPosX || newPosY != remotingActorInfo.LastPosY);
+							std::int32_t newPosX = (std::int32_t)(remotingActor->_pos.X * 512.0f);
+							std::int32_t newPosY = (std::int32_t)(remotingActor->_pos.Y * 512.0f);
+							bool positionChanged = (newPosX != remotingActorInfo.LastPosX || newPosY != remotingActorInfo.LastPosY);
 
-						std::uint32_t newAnimation = (std::uint32_t)(remotingActor->_currentTransition != nullptr ? remotingActor->_currentTransition->State : (remotingActor->_currentAnimation != nullptr ? remotingActor->_currentAnimation->State : AnimState::Idle));
-						float rotation = remotingActor->_renderer.rotation();
-						if (rotation < 0.0f) rotation += fRadAngle360;
-						std::uint16_t newRotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
-						Vector2f newScale = remotingActor->_renderer.scale();
-						std::uint16_t newScaleX = (std::uint16_t)Half{newScale.X};
-						std::uint16_t newScaleY = (std::uint16_t)Half{newScale.Y};
-						std::uint8_t newRendererType = (std::uint8_t)remotingActor->_renderer.GetRendererType();
-						bool animationChanged = (newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation ||
-							newScaleX != remotingActorInfo.LastScaleX || newScaleY != remotingActorInfo.LastScaleY || newRendererType != remotingActorInfo.LastRendererType);
+							std::uint32_t newAnimation = (std::uint32_t)(remotingActor->_currentTransition != nullptr ? remotingActor->_currentTransition->State : (remotingActor->_currentAnimation != nullptr ? remotingActor->_currentAnimation->State : AnimState::Idle));
+							float rotation = remotingActor->_renderer.rotation();
+							if (rotation < 0.0f) rotation += fRadAngle360;
+							std::uint16_t newRotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
+							Vector2f newScale = remotingActor->_renderer.scale();
+							std::uint16_t newScaleX = (std::uint16_t)Half { newScale.X };
+							std::uint16_t newScaleY = (std::uint16_t)Half { newScale.Y };
+							std::uint8_t newRendererType = (std::uint8_t)remotingActor->_renderer.GetRendererType();
+							bool animationChanged = (newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation ||
+								newScaleX != remotingActorInfo.LastScaleX || newScaleY != remotingActorInfo.LastScaleY || newRendererType != remotingActorInfo.LastRendererType);
 
-						std::uint8_t flags = 0;
-						if (positionChanged) {
-							flags |= 0x01;
-						}
-						if (animationChanged) {
-							flags |= 0x02;
-						}
-						if (remotingActor->_renderer.isDrawEnabled()) {
-							flags |= 0x04;
-						}
-						if (remotingActor->_renderer.AnimPaused) {
-							flags |= 0x08;
-						}
-						if (remotingActor->_renderer.isFlippedX()) {
-							flags |= 0x10;
-						}
-						if (remotingActor->_renderer.isFlippedY()) {
-							flags |= 0x20;
-						}
-						packet.WriteValue<std::uint8_t>(flags);
+							std::uint8_t flags = 0;
+							if (positionChanged) {
+								flags |= 0x01;
+							}
+							if (animationChanged) {
+								flags |= 0x02;
+							}
+							if (remotingActor->_renderer.isDrawEnabled()) {
+								flags |= 0x04;
+							}
+							if (remotingActor->_renderer.AnimPaused) {
+								flags |= 0x08;
+							}
+							if (remotingActor->_renderer.isFlippedX()) {
+								flags |= 0x10;
+							}
+							if (remotingActor->_renderer.isFlippedY()) {
+								flags |= 0x20;
+							}
+							packet.WriteValue<std::uint8_t>(flags);
 
-						if (positionChanged) {
-							packet.WriteValue<std::int32_t>(newPosX);
-							packet.WriteValue<std::int32_t>(newPosY);
+							if (positionChanged) {
+								packet.WriteValue<std::int32_t>(newPosX);
+								packet.WriteValue<std::int32_t>(newPosY);
 
-							remotingActorInfo.LastPosX = newPosX;
-							remotingActorInfo.LastPosY = newPosY;
-						}
-						if (animationChanged) {
-							packet.WriteVariableUint32(newAnimation);
-							packet.WriteValue<std::uint16_t>(newRotation);
-							packet.WriteValue<std::uint16_t>(newScaleX);
-							packet.WriteValue<std::uint16_t>(newScaleY);
-							packet.WriteValue<std::uint8_t>(newRendererType);
+								remotingActorInfo.LastPosX = newPosX;
+								remotingActorInfo.LastPosY = newPosY;
+							}
+							if (animationChanged) {
+								packet.WriteVariableUint32(newAnimation);
+								packet.WriteValue<std::uint16_t>(newRotation);
+								packet.WriteValue<std::uint16_t>(newScaleX);
+								packet.WriteValue<std::uint16_t>(newScaleY);
+								packet.WriteValue<std::uint8_t>(newRendererType);
 
-							remotingActorInfo.LastAnimation = newAnimation;
-							remotingActorInfo.LastRotation = newRotation;
-							remotingActorInfo.LastScaleX = newScaleX;
-							remotingActorInfo.LastScaleY = newScaleY;
-							remotingActorInfo.LastRendererType = newRendererType;
+								remotingActorInfo.LastAnimation = newAnimation;
+								remotingActorInfo.LastRotation = newRotation;
+								remotingActorInfo.LastScaleX = newScaleX;
+								remotingActorInfo.LastScaleY = newScaleY;
+								remotingActorInfo.LastRendererType = newRendererType;
+							}
 						}
 					}
 
@@ -1691,6 +1693,10 @@ namespace Jazz2::Multiplayer
 
 			char infoBuffer[128];
 			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+				if (!peerDesc->RemotePeer && !peerDesc->Player) {
+					continue;
+				}
+
 				formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u - Treasure: %u",
 					peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
 					peerDesc->Laps + 1, serverConfig.TotalLaps, peerDesc->TreasureCollected);
@@ -1741,6 +1747,9 @@ namespace Jazz2::Multiplayer
 				}
 				if (ContentResolver::Get().LevelExists(levelInit.LevelName)) {
 					LOGD("[MP] Changing level to \"%s\"", levelInit.LevelName.data());
+
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+					serverConfig.PlaylistIndex = -1;
 
 					levelInit.LastExitType = ExitType::Normal;
 					HandleLevelChange(std::move(levelInit));
@@ -3030,16 +3039,6 @@ namespace Jazz2::Multiplayer
 		// Process events only by server
 		if (_isServer) {
 			LevelHandler::ProcessEvents(timeMult);
-		}
-	}
-
-	void MpLevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
-	{
-		LevelHandler::PrepareNextLevelInitialization(levelInit);
-
-		// Initialize only local players
-		for (std::int32_t i = 1; i < std::int32_t(arraySize(levelInit.PlayerCarryOvers)); i++) {
-			levelInit.PlayerCarryOvers[i].Type = PlayerType::None;
 		}
 	}
 

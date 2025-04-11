@@ -247,6 +247,7 @@ The following parameters can be used to customize the build:
 -   `DISABLE_RESCALE_SHADERS` (default @cpp OFF @ce) --- Disable rescale shaders and use only nearest neighbor
 -   `SHAREWARE_DEMO_ONLY` (default @cpp OFF @ce) --- Shareware Demo only, usually used on **Emscripten** platform
 -   `WITH_MULTIPLAYER` (default @cpp OFF @ce) --- Enable experimental online multiplayer support
+-   `DEDICATED_SERVER` (default @cpp OFF @ce) --- Build only dedicated server, `WITH_MULTIPLAYER` must be enabled
 
 */
 

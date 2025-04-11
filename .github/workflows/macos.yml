@@ -120,6 +120,7 @@ jobs:
         mkdir ./_package/
         cp -f ./_build/*.dmg ./_package/
         cp -f ./LICENSE ./_package/LICENSE
+        cp -f ./Docs/Snippets/ServerConfiguration.json ./_package/Jazz2.Server.config
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v4

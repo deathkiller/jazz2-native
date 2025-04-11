@@ -1161,8 +1161,18 @@ namespace nCine
 		}
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-		if (::GetFileType(hStdOut) != FILE_TYPE_UNKNOWN) {
-			__consoleType = ConsoleType::Redirect;
+		switch (::GetFileType(hStdOut)) {
+			case FILE_TYPE_CHAR: {
+				bool hasVirtualTerminal = EnableVirtualTerminalProcessing(hStdOut);
+				__consoleType = (hasVirtualTerminal ? ConsoleType::EscapeCodes24bit : ConsoleType::WinApi);
+				break;
+			}
+			case FILE_TYPE_UNKNOWN:
+				// Nothing is attached to stdout
+				break;
+			default:
+				__consoleType = ConsoleType::Redirect;
+				break;
 		}
 #	endif
 

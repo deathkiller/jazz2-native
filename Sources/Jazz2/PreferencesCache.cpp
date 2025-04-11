@@ -168,11 +168,7 @@ namespace Jazz2
 				theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
 			}
 #			if defined(DEATH_TARGET_WINDOWS)
-			else if (arg == "/log"_s
-#				if defined(WITH_MULTIPLAYER)
-					|| arg == "/server"_s
-#				endif
-				) {
+			else if (arg == "/log"_s) {
 				theApplication().AttachTraceTarget(Application::ConsoleTarget);
 			}
 #			endif

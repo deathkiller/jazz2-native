@@ -42,6 +42,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;
+		PlayerCarryOver PrepareLevelCarryOver() override;
 
 		/** @brief Synchronizes the player with client */
 		void SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);

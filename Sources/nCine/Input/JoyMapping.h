@@ -20,6 +20,8 @@ namespace nCine
 	class JoyMapping
 	{
 	public:
+		static const std::int32_t MaxNumJoysticks = 6;
+
 		JoyMapping();
 		~JoyMapping() {}
 
@@ -99,7 +101,6 @@ namespace nCine
 		static const char* AxesStrings[];
 		static const char* ButtonsStrings[];
 
-		static const std::int32_t MaxNumJoysticks = 6;
 		SmallVector<MappedJoystick, 0> mappings_;
 		AssignedMapping assignedMappings_[MaxNumJoysticks];
 

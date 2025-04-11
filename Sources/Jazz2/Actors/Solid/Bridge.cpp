@@ -154,31 +154,34 @@ namespace Jazz2::Actors::Solid
 			_rightHeight = lerpByTime(_rightHeight, 0.0f, 0.1f, timeMult);
 		}
 
-		if (_leftHeight <= 0.001f && _rightHeight <= 0.001f) {
-			// Render straight bridge
-			std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
-			for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
-				BridgePiece& piece = _pieces[i];
-				piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
-				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
-			}
-		} else {
-			// Render deformed bridge
-			std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
-			for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
-				float drop;
-				if (widthCovered < _leftX) {
-					drop = _leftHeight * sinf(fPiOver2 * widthCovered / _leftX);
-				} else if(_rightX < widthCovered) {
-					drop = _rightHeight * sinf(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - _rightX));
-				} else {
-					drop = lerp(_leftHeight, _rightHeight, (widthCovered - _leftX) / (_rightX - _leftX));
+		auto& resolver = ContentResolver::Get();
+		if (!resolver.IsHeadless()) {
+			if (_leftHeight <= 0.001f && _rightHeight <= 0.001f) {
+				// Render straight bridge
+				std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
+				for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+					BridgePiece& piece = _pieces[i];
+					piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
+					widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
 				}
+			} else {
+				// Render deformed bridge
+				std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
+				for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+					float drop;
+					if (widthCovered < _leftX) {
+						drop = _leftHeight * sinf(fPiOver2 * widthCovered / _leftX);
+					} else if (_rightX < widthCovered) {
+						drop = _rightHeight * sinf(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - _rightX));
+					} else {
+						drop = lerp(_leftHeight, _rightHeight, (widthCovered - _leftX) / (_rightX - _leftX));
+					}
 
-				BridgePiece& piece = _pieces[i];
-				piece.Pos.Y = _pos.Y + drop;
+					BridgePiece& piece = _pieces[i];
+					piece.Pos.Y = _pos.Y + drop;
 
-				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
+					widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
+				}
 			}
 		}
 	}

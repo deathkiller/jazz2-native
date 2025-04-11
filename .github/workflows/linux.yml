@@ -254,6 +254,7 @@ jobs:
         cp -f ./_build/jazz2 ./_package/jazz2
         cp -f -r ./Content/ ./_package/Content/
         cp -f ./LICENSE ./_package/LICENSE
+        cp -f ./Docs/Snippets/ServerConfiguration.json ./_package/Jazz2.Server.config
         
         case "${{ matrix.CC }}" in
           gcc ) artifactPath="Jazz2_Linux_MultiplayerPreview_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;

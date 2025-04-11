@@ -44,8 +44,10 @@ namespace nCine
 		void Init(CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv);
 		/** @brief Must be called continuously to keep the application running */
 		void ProcessStep();
+#if defined(WITH_GLFW) || defined(WITH_SDL)
 		/** @brief Processes events inside the game loop */
 		void ProcessEvents();
+#endif
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		static void EmscriptenStep();
 #endif

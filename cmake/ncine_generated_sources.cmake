@@ -91,7 +91,7 @@ if(WIN32)
 		endif()
 	endif()
 	set(PACKAGE_VERSION_REV "0")
-	if(DEFINED GIT_REV_COUNT)
+	if(NOT "${GIT_REV_COUNT}" STREQUAL "")
 		set(PACKAGE_VERSION_REV ${GIT_REV_COUNT})
 	endif()
 

@@ -10,6 +10,7 @@
 #include "../../../nCine/Graphics/RenderQueue.h"
 #include "../../../nCine/Audio/AudioReaderMpt.h"
 #include "../../../nCine/Base/Random.h"
+#include "../../../nCine/Input/JoyMapping.h"
 
 using namespace Jazz2::UI::Menu::Resources;
 
@@ -513,7 +514,7 @@ namespace Jazz2::UI::Menu
 
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
-		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
+		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[joyStatesCount++] = &input.joyMappedState(i);
 			}

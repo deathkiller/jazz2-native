@@ -4,6 +4,7 @@
 #include "../../Input/ControlScheme.h"
 
 #include "../../../nCine/Application.h"
+#include "../../../nCine/Input/JoyMapping.h"
 
 #include <Utf8.h>
 
@@ -33,7 +34,7 @@ namespace Jazz2::UI::Menu
 		bool shouldExit = false;
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t jc = 0;
-		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < std::int32_t(arraySize(joyStates)); i++) {
+		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && jc < std::int32_t(arraySize(joyStates)); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc] = &input.joyMappedState(i);
 				if (joyStates[jc]->isButtonPressed(ButtonName::Start) && joyStates[jc]->isButtonPressed(ButtonName::Back)) {
@@ -77,7 +78,7 @@ namespace Jazz2::UI::Menu
 
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t jc = 0;
-		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < std::int32_t(arraySize(joyStates)); i++) {
+		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && jc < std::int32_t(arraySize(joyStates)); i++) {
 			if (input.isJoyPresent(i)) {
 				jc++;
 			}
