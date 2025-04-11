@@ -90,12 +90,22 @@ namespace Jazz2::Multiplayer
 				StringView address; std::uint16_t port;
 				if (TrySplitAddressAndPort(p[0], address, port)) {
 					ENetAddress addr = {};
-					enet_address_set_host(&addr, String::nullTerminatedView(address).data());
-					addr.port = (port != 0 ? port : defaultPort);
-
-					_desiredEndpoints.push_back(std::move(addr));
+					String nullTerminatedAddress = String::nullTerminatedView(address);
+					std::int32_t r = enet_address_set_host(&addr, nullTerminatedAddress.data());
+					//std::int32_t r = enet_address_set_host_ip(&addr, nullTerminatedAddress.data());
+					if (r == 0) {
+						addr.port = (port != 0 ? port : defaultPort);
+						_desiredEndpoints.push_back(std::move(addr));
+					} else {
+#if defined(DEATH_TARGET_WINDOWS)
+						std::int32_t error = ::WSAGetLastError();
+#else
+						std::int32_t error = errno;
+#endif
+						LOGW("Failed to parse specified address \"%s\" with error %i", nullTerminatedAddress.data(), error);
+					}
 				} else {
-					LOGW("Cannot parse specified endpoint \"%s\"", p[0].data());
+					LOGW("Failed to parse specified endpoint \"%s\"", String::nullTerminatedView(p[0]).data());
 				}
 			}
 
@@ -172,7 +182,8 @@ namespace Jazz2::Multiplayer
 						}
 					} else if (ifr[i].ifr_addr.sa_family == AF_INET6) { // IPv6
 						auto* addrPtr = &((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_addr;
-						String addressString = AddressToString(*addrPtr, _host->address.port);
+						//auto scopeId = ((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_scope_id;
+						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
 						LOGI(" - %s: %s", ifr[i].ifr_name, addressString.data());
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 							arrayAppend(result, std::move(addressString));
@@ -199,7 +210,8 @@ namespace Jazz2::Multiplayer
 							}
 						} else if (address->Address.lpSockaddr->sa_family == AF_INET6) { // IPv6
 							auto* addrPtr = &((struct sockaddr_in6*)address->Address.lpSockaddr)->sin6_addr;
-							String addressString = AddressToString(*addrPtr, _host->address.port);
+							//auto scopeId = ((struct sockaddr_in6*)address->Address.lpSockaddr)->sin6_scope_id;
+							String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
 							if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 								arrayAppend(result, std::move(addressString));
 							}
@@ -227,7 +239,8 @@ namespace Jazz2::Multiplayer
 						}
 					} else if (ifa->ifa_addr->sa_family == AF_INET6) { // IPv6
 						auto* addrPtr = &((struct sockaddr_in6*)ifa->ifa_addr)->sin6_addr;
-						String addressString = AddressToString(*addrPtr, _host->address.port);
+						//auto scopeId = ((struct sockaddr_in6*)ifa->ifa_addr)->sin6_scope_id;
+						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
@@ -240,7 +253,7 @@ namespace Jazz2::Multiplayer
 #endif
 		} else {
 			if (!_peers.empty()) {
-				String addressString = AddressToString(_peers[0]->address.host, _peers[0]->address.port);
+				String addressString = AddressToString(_peers[0]->address.host, _peers[0]->address.sin6_scope_id, _peers[0]->address.port);
 				if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 					arrayAppend(result, std::move(addressString));
 				}
@@ -373,9 +386,9 @@ namespace Jazz2::Multiplayer
 		return String(addressString, addressLength);
 	}
 
-	String NetworkManagerBase::AddressToString(const struct in6_addr& address, std::uint16_t port)
+	String NetworkManagerBase::AddressToString(const struct in6_addr& address, std::uint16_t scopeId, std::uint16_t port)
 	{
-		char addressString[64];
+		char addressString[92];
 		std::size_t addressLength = 0;
 
 		if (IN6_IS_ADDR_V4MAPPED(&address)) {
@@ -394,12 +407,17 @@ namespace Jazz2::Multiplayer
 
 			addressString[0] = '[';
 			addressLength = strnlen(addressString, sizeof(addressString));
+
+			if (scopeId != 0 && IN6_IS_ADDR_LINKLOCAL(&address)) {
+				addressLength += formatString(&addressString[addressLength], sizeof(addressString) - addressLength, "%%%u", scopeId);
+			}
+
 			addressString[addressLength] = ']';
 			addressLength++;
 		}
 
 		if (port != 0) {
-			addressLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
+			addressLength += formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
 		}
 		return String(addressString, addressLength);
 	}
@@ -407,7 +425,7 @@ namespace Jazz2::Multiplayer
 	String NetworkManagerBase::AddressToString(const Peer& peer)
 	{
 		if (peer._enet != nullptr) {
-			return AddressToString(peer._enet->address.host);
+			return AddressToString(peer._enet->address.host, peer._enet->address.sin6_scope_id);
 		}
 
 		return {};
@@ -433,7 +451,10 @@ namespace Jazz2::Multiplayer
 				return true;
 			} else {
 				// Address (or hostname) and port
-				address = input.prefix(portSep.begin());
+				address = input.prefix(portSep.begin()).trimmed();
+				if (address.hasPrefix('[') && address.hasSuffix(']')) {
+					address = address.slice(1, address.size() - 1);
+				}
 				if (address.empty()) {
 					return false;
 				}
@@ -444,11 +465,14 @@ namespace Jazz2::Multiplayer
 			}
 		} else {
 			// Address (or hostname) only
-			if (input.empty()) {
+			address = input.trimmed();
+			if (address.hasPrefix('[') && address.hasSuffix(']')) {
+				address = address.slice(1, address.size() - 1);
+			}
+			if (address.empty()) {
 				return false;
 			}
 
-			address = input;
 			port = 0;
 			return true;
 		}
@@ -498,7 +522,7 @@ namespace Jazz2::Multiplayer
 		ENetEvent ev;
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()); i++) {
 			ENetAddress addr = _this->_desiredEndpoints[i];
-			LOGD("[MP] Connecting to %s (%i/%i)", AddressToString(addr.host, addr.port).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
+			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr.host, addr.sin6_scope_id, addr.port).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
 			ENetPeer* peer = enet_host_connect(host, &addr, std::size_t(NetworkChannel::Count), _this->_clientData);
 			if (peer == nullptr) {
 				continue;
