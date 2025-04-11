@@ -119,11 +119,9 @@ namespace Jazz2::Multiplayer
 					std::int32_t r = enet_address_set_host(&addr, nullTerminatedAddress.data());
 					//std::int32_t r = enet_address_set_host_ip(&addr, nullTerminatedAddress.data());
 					if (r == 0) {
-#if defined(DEATH_TARGET_ANDROID)
 						if (addr.sin6_scope_id == 0) {
-							addr.sin6_scope_id = (std::uint16_t)defaultScopeId;
+							addr.sin6_scope_id = (std::uint16_t)ifidx;
 						}
-#endif
 						addr.port = (port != 0 ? port : defaultPort);
 						_desiredEndpoints.push_back(std::move(addr));
 					} else {
