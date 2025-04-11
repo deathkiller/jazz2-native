@@ -1,5 +1,10 @@
 ﻿#include "NetworkManager.h"
 
+// TODO: Temporary workaround for MSVC to reduce build time
+#if defined(DEATH_TARGET_MSVC)
+#pragma optimize("", off)
+#endif
+
 #if defined(WITH_MULTIPLAYER)
 
 #include "ServerDiscovery.h"

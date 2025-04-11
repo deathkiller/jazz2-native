@@ -272,7 +272,7 @@ namespace Jazz2::Multiplayer
 
 		std::uint16_t port = packet.ReadValue<std::uint16_t>();
 
-		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(endpoint.host, port);
+		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(endpoint.host, endpoint.sin6_scope_id, port);
 		if (discoveredServer.EndpointString.empty()) {
 			return false;
 		}
