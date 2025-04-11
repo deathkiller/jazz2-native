@@ -538,19 +538,27 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(param);
 		INetworkHandler* handler = _this->_handler;
 
-		ENetHost* host = enet_host_create(nullptr, 1, std::size_t(NetworkChannel::Count), 0, 0);
-		if (host == nullptr) {
-			LOGE("[MP] Failed to create client");
-			_this->OnPeerDisconnected({}, Reason::InvalidParameter);
-			return;
-		}
+		ENetHost* host = nullptr;
 		_this->_host = host;
 
 		// Try to connect to each specified endpoint
 		ENetEvent ev;
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()); i++) {
-			ENetAddress addr = _this->_desiredEndpoints[i];
+			ENetAddress& addr = _this->_desiredEndpoints[i];
 			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr.host, addr.sin6_scope_id, addr.port).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
+			
+			if (host != nullptr) {
+				enet_host_destroy(host);
+			}
+
+			host = enet_host_create(nullptr, 1, std::size_t(NetworkChannel::Count), 0, 0);
+			_this->_host = host;
+			if (host == nullptr) {
+				LOGE("[MP] Failed to create client");
+				_this->OnPeerDisconnected({}, Reason::InvalidParameter);
+				return;
+			}
+
 			ENetPeer* peer = enet_host_connect(host, &addr, std::size_t(NetworkChannel::Count), _this->_clientData);
 			if (peer == nullptr) {
 				continue;
@@ -662,9 +670,9 @@ namespace Jazz2::Multiplayer
 					}
 					_this->_peers.clear();
 
-					ENetAddress addr = _this->_host->address;
+					ENetAddress addr = host->address;
 					_this->_lock.lock();
-					enet_host_destroy(_this->_host);
+					enet_host_destroy(host);
 					host = enet_host_create(&addr, MaxPeerCount, std::size_t(NetworkChannel::Count), 0, 0);
 					_this->_host = host;
 					_this->_lock.unlock();

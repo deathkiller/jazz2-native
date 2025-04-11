@@ -1176,7 +1176,7 @@ namespace nCine
 		}
 #	endif
 
-#	if defined(WITH_BACKWARD) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN))
+#	if defined(WITH_BACKWARD)
 		if (__consoleType >= ConsoleType::EscapeCodes) {
 			__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
 		}

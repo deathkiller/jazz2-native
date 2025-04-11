@@ -2055,22 +2055,24 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->LevelState != PeerLevelState::LevelLoaded && peerDesc->LevelState != PeerLevelState::LevelSynchronized) {
-						LOGD("[MP] ClientPacketType::PlayerReady - invalid state");
+						LOGW("[MP] ClientPacketType::PlayerReady - invalid state");
 						return true;
 					}
 
 					if (preferredPlayerType != PlayerType::Jazz && preferredPlayerType != PlayerType::Spaz && preferredPlayerType != PlayerType::Lori) {
-						LOGD("[MP] ClientPacketType::PlayerReady - invalid preferred player type");
+						LOGW("[MP] ClientPacketType::PlayerReady - invalid preferred player type");
 						return true;
 					}
 
 					// Allow to set player name only once
 					peerDesc->PreferredPlayerType = preferredPlayerType;
 
+					LOGI("[MP] ClientPacketType::PlayerReady - type: %x, peer: 0x%p", preferredPlayerType, peer._enet);
+
 					_root->InvokeAsync([this, peer]() {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 						if (!peerDesc || (peerDesc->LevelState != PeerLevelState::LevelLoaded && peerDesc->LevelState != PeerLevelState::LevelSynchronized)) {
-							LOGD("[MP] ClientPacketType::PlayerReady - invalid state");
+							LOGW("[MP] ClientPacketType::PlayerReady - invalid state");
 							return;
 						}
 						if (peerDesc->LevelState == PeerLevelState::LevelSynchronized) {
@@ -2450,7 +2452,7 @@ namespace Jazz2::Multiplayer
 					std::int32_t posX = packet.ReadVariableInt32();
 					std::int32_t posY = packet.ReadVariableInt32();
 
-					LOGD("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: %u, playerType: %u, health: %u, flags: %u, team: %u, x: %i, y: %i",
+					LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: %u, playerType: %u, health: %u, flags: %u, team: %u, x: %i, y: %i",
 						playerIndex, (std::uint32_t)playerType, health, flags, teamId, posX, posY);
 
 					_lastSpawnedActorId = playerIndex;
@@ -3052,7 +3054,7 @@ namespace Jazz2::Multiplayer
 					peerDesc->LevelState = PeerLevelState::LevelSynchronized;
 				}
 
-				LOGD("[MP] Syncing peer (0x%p)", peer._enet);
+				LOGI("[MP] Syncing peer (0x%p)", peer._enet);
 
 				// Synchronize level state
 				{
@@ -3123,7 +3125,7 @@ namespace Jazz2::Multiplayer
 				Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType);
 
 				std::uint8_t playerIndex = FindFreePlayerId();
-				LOGD("[MP] Spawning player %u (0x%p)", playerIndex, peer._enet);
+				LOGI("[MP] Spawning player %u (0x%p)", playerIndex, peer._enet);
 
 				std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
 				std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
