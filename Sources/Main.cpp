@@ -142,7 +142,7 @@ private:
 	std::unique_ptr<NetworkManager> _networkManager;
 #endif
 
-	void OnBeforeInitialize();
+	void OnBeginInitialize();
 	void OnAfterInitialize();
 	void SetStateHandler(std::unique_ptr<IStateHandler>&& handler);
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -168,7 +168,10 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
 
-#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
+	config.withGraphics = false;
+	config.withAudio = false;
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	// Allow `/extract-pak` only on PC platforms
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
@@ -235,9 +238,9 @@ void GameEventHandler::OnInitialize()
 {
 	ZoneScopedC(0x888888);
 
-	OnBeforeInitialize();
+	OnBeginInitialize();
 
-#if !defined(SHAREWARE_DEMO_ONLY)
+#if !defined(SHAREWARE_DEMO_ONLY) && !(defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER))
 	if (PreferencesCache::ResumeOnStart) {
 		LOGI("Resuming last state due to suspended termination");
 		PreferencesCache::ResumeOnStart = false;
@@ -354,45 +357,10 @@ void GameEventHandler::OnInitialize()
 	CheckUpdates();
 #	endif
 
-#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)))
+#	if defined(DEATH_DEBUG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)))
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
-#		if defined(WITH_MULTIPLAYER)
-		if (arg == "/connect"_s && i + 1 < config.argc()) {
-			auto endpoint = config.argv(i + 1);
-			if (!endpoint.empty()) {
-				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
-				ConnectToServer(endpoint, MultiplayerDefaultPort);
-				return;
-			}
-		} else if (arg == "/server"_s) {
-			ServerInitialization serverInit;
-			if (i + 1 < config.argc()) {
-				auto filePath = config.argv(i + 1);
-				serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(filePath);
-			} else {
-				serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
-			}
-			serverInit.InitialLevel.IsLocalSession = false;
-			serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
-			serverInit.Configuration.GameMode = MpGameMode::Cooperation;
-			if (!serverInit.Configuration.Playlist.empty() && (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size())) {
-				if (serverInit.Configuration.RandomizePlaylist) {
-					serverInit.Configuration.PlaylistIndex = Random().Next(0, (std::uint32_t)serverInit.Configuration.Playlist.size());
-				} else {
-					serverInit.Configuration.PlaylistIndex = 0;
-				}
-			}
-
-			if (!CreateServer(std::move(serverInit))) {
-				LOGE("Server cannot be started because of invalid configuration");
-				theApplication().Quit();
-			}
-			return;
-		}
-#		endif
-#		if defined(DEATH_DEBUG)
 		if (arg == "/level"_s && i + 1 < config.argc()) {
 			String levelName = config.argv(i + 1);
 			if (!levelName.contains('/')) {
@@ -404,7 +372,6 @@ void GameEventHandler::OnInitialize()
 			ChangeLevel(std::move(levelInit));
 			return;
 		}
-#		endif
 	}
 #	endif
 
@@ -414,6 +381,7 @@ void GameEventHandler::OnInitialize()
 	}));
 #endif
 
+#if !(defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER))
 	Vector2i viewSize;
 	if (_currentHandler != nullptr) {
 		viewSize = _currentHandler->GetViewSize();
@@ -421,6 +389,7 @@ void GameEventHandler::OnInitialize()
 
 	Vector2i res = theApplication().GetResolution();
 	LOGI("Rendering resolution: %ix%i (%ix%i)", res.X, res.Y, viewSize.X, viewSize.Y);
+#endif
 }
 
 void GameEventHandler::OnBeginFrame()
@@ -1191,7 +1160,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 }
 #endif
 
-void GameEventHandler::OnBeforeInitialize()
+void GameEventHandler::OnBeginInitialize()
 {
 #if defined(WITH_IMGUI)
 	theApplication().GetDebugOverlaySettings().showInterface = true;

@@ -36,126 +36,128 @@ if(GLEW_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE GLEW::GLEW)
 endif()
 
-if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
-	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")
-	target_link_libraries(${NCINE_APP} PRIVATE GLFW::GLFW)
+if(NOT DEDICATED_SERVER)
+	if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")
+		target_link_libraries(${NCINE_APP} PRIVATE GLFW::GLFW)
 
-	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.h
-		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.h
-	)
-	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.cpp
-		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwKeys.cpp
-		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.cpp
-	)
-elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
-	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDL")
-	target_link_libraries(${NCINE_APP} PRIVATE SDL2::SDL2)
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwKeys.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.cpp
+		)
+	elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDL")
+		target_link_libraries(${NCINE_APP} PRIVATE SDL2::SDL2)
 
-	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.h
-		${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.h
-	)
-	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.cpp
-		${NCINE_SOURCE_DIR}/nCine/Backends/SdlKeys.cpp
-		${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.cpp
-	)
-elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
-	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5")
-	target_link_libraries(${NCINE_APP} PUBLIC Qt5::Widgets)
-	if(Qt5Gamepad_FOUND)
-		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5GAMEPAD")
-		target_link_libraries(${NCINE_APP} PRIVATE Qt5::Gamepad)
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/SdlKeys.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.cpp
+		)
+	elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5")
+		target_link_libraries(${NCINE_APP} PUBLIC Qt5::Widgets)
+		if(Qt5Gamepad_FOUND)
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5GAMEPAD")
+			target_link_libraries(${NCINE_APP} PRIVATE Qt5::Gamepad)
+		endif()
+
+		qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
+
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5InputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5GfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5InputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Keys.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5GfxDevice.cpp
+			${MOC_SOURCES}
+		)
+
+		list(REMOVE_ITEM SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Qt5JoyMapping.cpp)
 	endif()
 
-	qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
+	if(OPENAL_FOUND)
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
+		target_link_libraries(${NCINE_APP} PRIVATE OpenAL::OpenAL)
 
-	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.h
-		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5InputManager.h
-		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5GfxDevice.h
-	)
-	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.cpp
-		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5InputManager.cpp
-		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Keys.cpp
-		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5GfxDevice.cpp
-		${MOC_SOURCES}
-	)
-
-	list(REMOVE_ITEM SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp)
-	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Qt5JoyMapping.cpp)
-endif()
-
-if(OPENAL_FOUND)
-	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
-	target_link_libraries(${NCINE_APP} PRIVATE OpenAL::OpenAL)
-
-	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.h
-		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioReader.h
-	)
-
-	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.cpp
-		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.cpp
-	)
-
-	if(VORBIS_FOUND)
-		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_VORBIS")
-		if(VORBIS_DYNAMIC_LINK)
-			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_VORBIS_DYNAMIC")
-			target_include_directories(${NCINE_APP} PRIVATE "${EXTERNAL_INCLUDES_DIR}")
-		else()
-			target_link_libraries(${NCINE_APP} PRIVATE Vorbis::Vorbisfile)
-		endif()
-		
 		list(APPEND HEADERS
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.h)
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioReader.h
+		)
 
 		list(APPEND SOURCES
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.cpp)
-	endif()
-	
-	if(OPENMPT_FOUND)
-		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENMPT")
-		if(OPENMPT_DYNAMIC_LINK)
-			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENMPT_DYNAMIC")
-			target_include_directories(${NCINE_APP} PRIVATE "${EXTERNAL_INCLUDES_DIR}/libopenmpt/")
-			target_link_libraries(${NCINE_APP} PRIVATE ${CMAKE_DL_LIBS})
-		else()
-			target_link_libraries(${NCINE_APP} PRIVATE libopenmpt::libopenmpt)
+			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.cpp
+		)
+
+		if(VORBIS_FOUND)
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_VORBIS")
+			if(VORBIS_DYNAMIC_LINK)
+				target_compile_definitions(${NCINE_APP} PRIVATE "WITH_VORBIS_DYNAMIC")
+				target_include_directories(${NCINE_APP} PRIVATE "${EXTERNAL_INCLUDES_DIR}")
+			else()
+				target_link_libraries(${NCINE_APP} PRIVATE Vorbis::Vorbisfile)
+			endif()
+			
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.h
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.h)
+
+			list(APPEND SOURCES
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.cpp
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.cpp)
 		endif()
 		
-		list(APPEND HEADERS
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.h)
+		if(OPENMPT_FOUND)
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENMPT")
+			if(OPENMPT_DYNAMIC_LINK)
+				target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENMPT_DYNAMIC")
+				target_include_directories(${NCINE_APP} PRIVATE "${EXTERNAL_INCLUDES_DIR}/libopenmpt/")
+				target_link_libraries(${NCINE_APP} PRIVATE ${CMAKE_DL_LIBS})
+			else()
+				target_link_libraries(${NCINE_APP} PRIVATE libopenmpt::libopenmpt)
+			endif()
+			
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.h
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.h)
 
-		list(APPEND SOURCES
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.cpp)
+			list(APPEND SOURCES
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.cpp
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.cpp)
+		endif()
+	elseif(NOT NCINE_BUILD_ANDROID)
+		message(STATUS "Cannot find OpenAL library")
 	endif()
-elseif(NOT NCINE_BUILD_ANDROID)
-	message(STATUS "Cannot find OpenAL library")
 endif()
 
 #if(PNG_FOUND)
@@ -348,7 +350,7 @@ if(ANGELSCRIPT_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE Angelscript)
 endif()
 
-if(NCINE_WITH_IMGUI)
+if(NCINE_WITH_IMGUI AND NOT DEDICATED_SERVER)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_IMGUI")
 
 	# For external projects compiling using an nCine build directory
@@ -680,13 +682,19 @@ if(DISABLE_RESCALE_SHADERS)
 endif()
 
 if(WITH_MULTIPLAYER)
-	message(STATUS "Building the game with multiplayer support")
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
-	
-	if(WIN32)
-		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi)
+	if(DEDICATED_SERVER)
+		message(STATUS "Building the game with multiplayer support as dedicated server")
+		target_compile_definitions(${NCINE_APP} PUBLIC "DEDICATED_SERVER")
+	else()
+		message(STATUS "Building the game with multiplayer support")
 	endif()
 	
+	if(WIN32)
+		# Link to IP Helper API library and Windows Sockets 2 library
+		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi ws2_32)
+	endif()
+
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.h

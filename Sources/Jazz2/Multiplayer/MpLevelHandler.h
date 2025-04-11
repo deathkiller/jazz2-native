@@ -221,6 +221,7 @@ namespace Jazz2::Multiplayer
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 		bool _ignorePackets;
 		bool _enableLedgeClimb;
+		bool _controllableExternal;
 		Threading::Spinlock _lock;
 
 #if defined(DEATH_DEBUG)
