@@ -514,6 +514,15 @@ namespace Jazz2::Multiplayer
 	void NetworkManagerBase::OnPeerDisconnected(const Peer& peer, Reason reason)
 	{
 		_handler->OnPeerDisconnected(peer, reason);
+
+		if (peer && _state == NetworkState::Listening) {
+			for (std::size_t i = 0; i < _peers.size(); i++) {
+				if (peer == _peers[i]) {
+					_peers.eraseUnordered(i);
+					break;
+				}
+			}
+		}
 	}
 
 	void NetworkManagerBase::InitializeBackend()
@@ -655,6 +664,8 @@ namespace Jazz2::Multiplayer
 		INetworkHandler* handler = _this->_handler;
 		ENetHost* host = _this->_host;
 
+		_this->_peers.reserve(16);
+
 		ENetEvent ev;
 		while (_this->_state != NetworkState::None) {
 			_this->_lock.lock();
@@ -708,7 +719,7 @@ namespace Jazz2::Multiplayer
 					_this->OnPeerDisconnected(ev.peer, Reason(ev.data));
 					break;
 				case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-					handler->OnPeerDisconnected(ev.peer, Reason::ConnectionLost);
+					_this->OnPeerDisconnected(ev.peer, Reason::ConnectionLost);
 					break;
 			}
 		}
