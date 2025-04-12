@@ -19,6 +19,9 @@
 #endif
 #if defined(DEATH_ENABLE_NEON) && !defined(DEATH_TARGET_32BIT)
 #	include <arm_neon.h>
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+#		include <intrin.h> /* _CountTrailingZeros64() */
+#	endif
 #endif
 #if defined(DEATH_ENABLE_SIMD128)
 #	include <wasm_simd128.h>
@@ -364,14 +367,6 @@ namespace Death { namespace Containers {
 #endif
 
 #if defined(DEATH_ENABLE_NEON) && !defined(DEATH_TARGET_32BIT)
-#	if defined(DEATH_TARGET_MSVC)
-			// Redirect GCC/Clang intrinsics to MSVC built-in function
-			static DEATH_ALWAYS_INLINE int __builtin_ctzll(uint64_t x) {
-				unsigned long index;
-				_BitScanForward64(&index, x);
-				return (int)index;
-			}
-#	endif
 			// `vshrn_n_u16` and `vaddvq_u8` are missing in `armeabi-v7a` on Android, so enable it only on ARM64.
 			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE(NEON) typename std::decay<decltype(stringFindCharacter)>::type stringFindCharacterImplementation(DEATH_CPU_DECLARE(Cpu::Neon)) {
 				// Can't use trailing return type due to a GCC 9.3 bug, which is the default on Ubuntu 20.04: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90333
@@ -426,7 +421,19 @@ namespace Death { namespace Containers {
 						const uint16x8_t eq16 = vreinterpretq_u16_u8(vceqq_u8(chunk, vn1));
 						const uint64x1_t shrn64 = vreinterpret_u64_u8(vshrn_n_u16(eq16, 4));
 						if (const uint64_t mask = vget_lane_u64(shrn64, 0))
-							return data + (__builtin_ctzll(mask) >> 2);
+							return data +
+								/* https://learn.microsoft.com/en-us/cpp/intrinsics/arm64-intrinsics
+								   which hopefully just compiles down to the clz instruction.
+								   Clang has only _CountLeadingZeros64() and only since version
+								   18 (https://github.com/llvm/llvm-project/pull/66554), so
+								   keeping to use the GCC builtin there (which is documented to
+								   be undefined for 0, but again hoping it just compiles to clz
+								   which is well-defined for 0). */
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+								(_CountTrailingZeros64(mask) >> 2);
+#	else
+								(__builtin_ctzll(mask) >> 2);
+#	endif
 					}
 
 					// Go to the next aligned position. If the pointer was already aligned, we'll go to the next aligned vector;
@@ -456,13 +463,33 @@ namespace Death { namespace Containers {
 						// Which makes it possible to test with just one OR and a horizontal add instead of three ORs and a horizontal add
 						if (vaddvq_u8(vorrq_u8(maskAB, maskCD))) {
 							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskAB), 0))
-								return i + 0 * 16 + (__builtin_ctzll(mask) >> 2);
+								return i + 0 * 16 + /* The clz instruction, see comment above */
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+									(_CountTrailingZeros64(mask) >> 2);
+#	else
+									(__builtin_ctzll(mask) >> 2);
+#	endif
 							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskAB), 1))
-								return i + 1 * 16 + (__builtin_ctzll(mask) >> 2);
+								return i + 1 * 16 +  /* The clz instruction, see comment above */
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+									(_CountTrailingZeros64(mask) >> 2);
+#	else
+									(__builtin_ctzll(mask) >> 2);
+#	endif
 							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskCD), 0))
-								return i + 2 * 16 + (__builtin_ctzll(mask) >> 2);
+								return i + 2 * 16 +  /* The clz instruction, see comment above */
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+									(_CountTrailingZeros64(mask) >> 2);
+#	else
+									(__builtin_ctzll(mask) >> 2);
+#	endif
 							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskCD), 1))
-								return i + 3 * 16 + (__builtin_ctzll(mask) >> 2);
+								return i + 3 * 16 +  /* The clz instruction, see comment above */
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+									(_CountTrailingZeros64(mask) >> 2);
+#	else
+									(__builtin_ctzll(mask) >> 2);
+#	endif
 							// Unreachable
 						}
 					}
@@ -473,7 +500,12 @@ namespace Death { namespace Containers {
 						const uint16x8_t eq16 = vreinterpretq_u16_u8(vceqq_u8(chunk, vn1));
 						const uint64x1_t shrn64 = vreinterpret_u64_u8(vshrn_n_u16(eq16, 4));
 						if (const uint64_t mask = vget_lane_u64(shrn64, 0))
-							return i + (__builtin_ctzll(mask) >> 2);
+							return i +  /* The clz instruction, see comment above */
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+								(_CountTrailingZeros64(mask) >> 2);
+#	else
+								(__builtin_ctzll(mask) >> 2);
+#	endif
 					}
 
 					// Handle remaining less than a vector with an unaligned search, again overlapping back with
@@ -485,7 +517,12 @@ namespace Death { namespace Containers {
 						const uint16x8_t eq16 = vreinterpretq_u16_u8(vceqq_u8(chunk, vn1));
 						const uint64x1_t shrn64 = vreinterpret_u64_u8(vshrn_n_u16(eq16, 4));
 						if (const uint64_t mask = vget_lane_u64(shrn64, 0))
-							return i + (__builtin_ctzll(mask) >> 2);
+							return i +  /* The clz instruction, see comment above */
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+								(_CountTrailingZeros64(mask) >> 2);
+#	else
+								(__builtin_ctzll(mask) >> 2);
+#	endif
 					}
 
 					return static_cast<const char*>(nullptr);
