@@ -1,5 +1,7 @@
-#define NCINE_INCLUDE_OPENAL
-#include "../CommonHeaders.h"
+#if defined(WITH_AUDIO)
+#	define NCINE_INCLUDE_OPENAL
+#	include "../CommonHeaders.h"
+#endif
 
 #include "AudioStream.h"
 #include "IAudioLoader.h"
