@@ -61,6 +61,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/I18n.h
 	${NCINE_SOURCE_DIR}/nCine/IAppEventHandler.h
 	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.h
+	${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.h
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioDevice.h
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h

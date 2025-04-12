@@ -95,28 +95,23 @@ if(NOT DEDICATED_SERVER)
 		target_link_libraries(${NCINE_APP} PRIVATE OpenAL::OpenAL)
 
 		list(APPEND HEADERS
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioReader.h
 		)
 
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
 		)
 
 		if(VORBIS_FOUND)
