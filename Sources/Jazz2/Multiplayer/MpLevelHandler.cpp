@@ -3088,8 +3088,6 @@ namespace Jazz2::Multiplayer
 			_remoteActors.erase(actorId);
 		}
 
-		LOGI("[MP] Sending DestroyRemoteActor with actorId: %u", actorId);
-
 		MemoryStream packet(4);
 		packet.WriteVariableUint32(actorId);
 
