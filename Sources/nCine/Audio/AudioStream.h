@@ -120,6 +120,5 @@ namespace nCine
 
 		void createReader(IAudioLoader& audioLoader);
 
-
 	};
 }

@@ -1,10 +1,13 @@
 #include "IAudioLoader.h"
-#include "AudioLoaderWav.h"
-#if defined(WITH_VORBIS)
-#	include "AudioLoaderOgg.h"
-#endif
-#if defined(WITH_OPENMPT)
-#	include "AudioLoaderMpt.h"
+
+#if defined(WITH_AUDIO)
+#	include "AudioLoaderWav.h"
+#	if defined(WITH_VORBIS)
+#		include "AudioLoaderOgg.h"
+#	endif
+#	if defined(WITH_OPENMPT)
+#		include "AudioLoaderMpt.h"
+#	endif
 #endif
 
 #include <IO/FileSystem.h>
@@ -40,23 +43,24 @@ namespace nCine
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<Stream> fileHandle, StringView path)
 	{
+#if defined(WITH_AUDIO)
 		auto extension = fs::GetExtension(path);
 		if (extension == "wav"_s) {
 			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
 		}
-#if defined(WITH_VORBIS)
+#	if defined(WITH_VORBIS)
 		if (extension == "ogg"_s) {
 			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
 		}
-#endif
-#if defined(WITH_OPENMPT)
+#	endif
+#	if defined(WITH_OPENMPT)
 		if (extension == "it"_s || extension == "j2b"_s || extension == "mo3"_s || extension == "mod"_s || extension == "s3m"_s || extension == "xm"_s) {
 			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
 		}
-#endif
+#	endif
 
 		LOGF("Unknown extension: %s", extension.data());
-		fileHandle.reset(nullptr);
-		return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));
+#endif
+		return std::make_unique<InvalidAudioLoader>();
 	}
 }

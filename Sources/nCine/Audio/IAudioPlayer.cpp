@@ -1,5 +1,7 @@
-#define NCINE_INCLUDE_OPENAL
-#include "../CommonHeaders.h"
+#if defined(WITH_AUDIO)
+#	define NCINE_INCLUDE_OPENAL
+#	include "../CommonHeaders.h"
+#endif
 
 #include "IAudioPlayer.h"
 #include "IAudioDevice.h"
@@ -11,13 +13,13 @@ namespace nCine
 {
 	IAudioPlayer::IAudioPlayer(ObjectType type)
 		: Object(type), sourceId_(IAudioDevice::UnavailableSource), state_(PlayerState::Stopped), flags_(PlayerFlags::None),
-		gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f), filterHandle_(0)
+			gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f), filterHandle_(0)
 	{
 	}
 
 	IAudioPlayer::~IAudioPlayer()
 	{
-#if defined(OPENAL_FILTERS_SUPPORTED)
+#if defined(WITH_AUDIO) && defined(OPENAL_FILTERS_SUPPORTED)
 		if (filterHandle_ != 0) {
 			alDeleteFilters(1, &filterHandle_);
 			filterHandle_ = 0;
@@ -27,14 +29,20 @@ namespace nCine
 
 	std::int32_t IAudioPlayer::sampleOffset() const
 	{
+#if defined(WITH_AUDIO)
 		ALint byteOffset = 0;
 		alGetSourcei(sourceId_, AL_SAMPLE_OFFSET, &byteOffset);
 		return byteOffset;
+#else
+		return 0;
+#endif
 	}
 
 	void IAudioPlayer::setSampleOffset(std::int32_t byteOffset)
 	{
+#if defined(WITH_AUDIO)
 		alSourcei(sourceId_, AL_SAMPLE_OFFSET, byteOffset);
+#endif
 	}
 
 	/*! The change is applied to the OpenAL source only when playing. */
@@ -42,9 +50,11 @@ namespace nCine
 	{
 		if (GetFlags(PlayerFlags::SourceRelative) != value) {
 			SetFlags(PlayerFlags::SourceRelative, value);
+#if defined(WITH_AUDIO)
 			if (state_ == PlayerState::Playing) {
 				alSourcei(sourceId_, AL_SOURCE_RELATIVE, value ? AL_TRUE : AL_FALSE);
 			}
+#endif
 		}
 	}
 
@@ -52,18 +62,22 @@ namespace nCine
 	void IAudioPlayer::setGain(float gain)
 	{
 		gain_ = gain;
+#if defined(WITH_AUDIO)
 		if (state_ == PlayerState::Playing) {
 			alSourcef(sourceId_, AL_GAIN, gain_);
 		}
+#endif
 	}
 
 	/*! The change is applied to the OpenAL source only when playing. */
 	void IAudioPlayer::setPitch(float pitch)
 	{
 		pitch_ = pitch;
+#if defined(WITH_AUDIO)
 		if (state_ == PlayerState::Playing) {
 			alSourcef(sourceId_, AL_PITCH, pitch_);
 		}
+#endif
 	}
 
 	void IAudioPlayer::setLowPass(float value)
@@ -88,7 +102,7 @@ namespace nCine
 
 	void IAudioPlayer::updateFilters()
 	{
-#if defined(OPENAL_FILTERS_SUPPORTED)
+#if defined(WITH_AUDIO) && defined(OPENAL_FILTERS_SUPPORTED)
 		if (lowPass_ < 1.0f) {
 			if (filterHandle_ == 0) {
 				alGenFilters(1, &filterHandle_);
@@ -110,7 +124,9 @@ namespace nCine
 
 	void IAudioPlayer::setPositionInternal(const Vector3f& position)
 	{
+#if defined(WITH_AUDIO)
 		alSource3f(sourceId_, AL_POSITION, position.X, position.Y, position.Z);
+#endif
 	}
 
 	Vector3f IAudioPlayer::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)

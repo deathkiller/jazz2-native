@@ -1,5 +1,7 @@
-#define NCINE_INCLUDE_OPENAL
-#include "../CommonHeaders.h"
+#if defined(WITH_AUDIO)
+#	define NCINE_INCLUDE_OPENAL
+#	include "../CommonHeaders.h"
+#endif
 
 #include "AudioBuffer.h"
 #include "IAudioLoader.h"
@@ -28,7 +30,8 @@ namespace nCine
 #endif
 
 	AudioBuffer::AudioBuffer()
-		: Object(ObjectType::AudioBuffer), bufferId_(0), bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0), duration_(0.0f)
+		: Object(ObjectType::AudioBuffer), bufferId_(0), bytesPerSample_(0), numChannels_(0), frequency_(0),
+			numSamples_(0), duration_(0.0f)
 	{
 #if defined(WITH_AUDIO)
 		alGetError();
@@ -134,71 +137,57 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferPtr, bufferSize);
-		if (!audioLoader->hasLoaded()) {
-			return false;
+		if (audioLoader->hasLoaded()) {
+			return load(*audioLoader.get());
 		}
-
-		const bool samplesHaveLoaded = load(*audioLoader.get());
-		return samplesHaveLoaded;
 #endif
+		return false;
 	}*/
 
 	bool AudioBuffer::loadFromFile(StringView filename)
 	{
 #if defined(WITH_AUDIO)
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
-		if (!audioLoader->hasLoaded()) {
-			return false;
+		if (audioLoader->hasLoaded()) {
+			return load(*audioLoader);
 		}
-
-		const bool samplesHaveLoaded = load(*audioLoader);
-		return samplesHaveLoaded;
-#else
-		return false;
 #endif
+		return false;
 	}
 
 	bool AudioBuffer::loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename)
 	{
 #if defined(WITH_AUDIO)
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromStream(std::move(fileHandle), filename);
-		if (!audioLoader->hasLoaded()) {
-			return false;
+		if (audioLoader->hasLoaded()) {
+			return load(*audioLoader);
 		}
-
-		const bool samplesHaveLoaded = load(*audioLoader);
-		return samplesHaveLoaded;
-#else
-		return false;
 #endif
+		return false;
 	}
 
 	bool AudioBuffer::loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize)
 	{
 #if defined(WITH_AUDIO)
-		if (bytesPerSample_ == 0 || numChannels_ == 0 || frequency_ == 0) {
-			return false;
+		if (bytesPerSample_ != 0 && numChannels_ != 0 && frequency_ != 0) {
+			if (bufferSize % (bytesPerSample_ * numChannels_) != 0) {
+				LOGW("Buffer size is incompatible with format");
+			}
+			const ALenum format = alFormat(bytesPerSample_, numChannels_);
+			alGetError();
+
+			// On iOS `alBufferDataStatic()` could be used instead
+			alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
+			const ALenum error = alGetError();
+			RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData() failed with error 0x%x", error);
+
+			numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
+			duration_ = float(numSamples_) / frequency_;
+
+			return (error == AL_NO_ERROR);
 		}
-
-		if (bufferSize % (bytesPerSample_ * numChannels_) != 0) {
-			LOGW("Buffer size is incompatible with format");
-		}
-		const ALenum format = alFormat(bytesPerSample_, numChannels_);
-
-		alGetError();
-
-		// On iOS `alBufferDataStatic()` could be used instead
-		alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
-		const ALenum error = alGetError();
-		RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData() failed with error 0x%x", error);
-
-		numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
-		duration_ = float(numSamples_) / frequency_;
-
-		return (error == AL_NO_ERROR);
-#else
-		return false;
 #endif
+		return false;
 	}
 
 	bool AudioBuffer::load(IAudioLoader& audioLoader)
