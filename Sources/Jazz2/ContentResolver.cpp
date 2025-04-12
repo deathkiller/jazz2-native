@@ -605,7 +605,6 @@ namespace Jazz2
 				nCine::sort(metadata->Animations.begin(), metadata->Animations.end());
 			}
 
-			// Don't load sounds in headless mode
 			ondemand::object sounds;
 			if (doc["Sounds"].get(sounds) == SUCCESS) {
 				std::size_t count;
@@ -625,6 +624,7 @@ namespace Jazz2
 
 					SoundResource sound;
 #if defined(WITH_AUDIO)
+					// Don't load sounds in headless mode
 					if (!_isHeadless) {
 						for (auto assetPathItem : assetPaths) {
 							std::string_view assetPath;

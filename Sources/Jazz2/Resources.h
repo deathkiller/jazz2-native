@@ -128,10 +128,8 @@ namespace Jazz2::Resources
 		MetadataFlags Flags;
 		/** @brief Animations */
 		SmallVector<GraphicResource, 0> Animations;
-#if defined(WITH_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Sounds */
 		HashMap<String, SoundResource> Sounds;
-#endif
 		/** @brief Bounding box */
 		Vector2i BoundingBox;
 
