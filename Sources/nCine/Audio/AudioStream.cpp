@@ -15,6 +15,7 @@ namespace nCine
 		: nextAvailableBufferIndex_(0), currentBufferId_(0), bytesPerSample_(0), numChannels_(0), isLooping_(false),
 			frequency_(0), numSamples_(0), duration_(0.0f), buffersIds_(NumBuffers)
 	{
+#if defined(WITH_AUDIO)
 		alGetError();
 		alGenBuffers(NumBuffers, buffersIds_.data());
 		const ALenum error = alGetError();
@@ -22,24 +23,29 @@ namespace nCine
 			LOGW("alGenBuffers() failed with error 0x%x", error);
 		}
 		memBuffer_ = std::make_unique<char[]>(BufferSize);
+#endif
 	}
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
 	AudioStream::AudioStream(StringView filename)
 		: AudioStream()
 	{
+#if defined(WITH_AUDIO)
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
 			LOGE("Audio file \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
 		}
+#endif
 	}
 
 	AudioStream::~AudioStream()
 	{
+#if defined(WITH_AUDIO)
 		// Don't delete buffers if this is a moved out object
 		if (buffersIds_.size() == NumBuffers) {
 			alDeleteBuffers(NumBuffers, buffersIds_.data());
 		}
+#endif
 	}
 
 	AudioStream::AudioStream(AudioStream&&) = default;
@@ -47,15 +53,18 @@ namespace nCine
 
 	std::int32_t AudioStream::numStreamSamples() const
 	{
+#if defined(WITH_AUDIO)
 		if (numChannels_ * bytesPerSample_ > 0) {
 			return BufferSize / (numChannels_ * bytesPerSample_);
 		}
+#endif
 		return 0UL;
 	}
 
 	/*! \return A flag indicating whether the stream has been entirely decoded and played or not. */
 	bool AudioStream::enqueue(std::uint32_t source, bool looping)
 	{
+#if defined(WITH_AUDIO)
 		if (audioReader_ == nullptr) {
 			return false;
 		}
@@ -118,10 +127,14 @@ namespace nCine
 		}
 
 		return shouldKeepPlaying;
+#else
+		return false;
+#endif
 	}
 
 	void AudioStream::stop(std::uint32_t source)
 	{
+#if defined(WITH_AUDIO)
 		// In order to unqueue all the buffers, the source must be stopped first
 		alSourceStop(source);
 
@@ -139,29 +152,35 @@ namespace nCine
 
 		audioReader_->rewind();
 		currentBufferId_ = 0;
+#endif
 	}
 
 	void AudioStream::setLooping(bool value)
 	{
 		isLooping_ = value;
 
+#if defined(WITH_AUDIO)
 		if (audioReader_ != nullptr) {
 			audioReader_->setLooping(value);
 		}
+#endif
 	}
 
 	bool AudioStream::loadFromFile(StringView filename)
 	{
+#if defined(WITH_AUDIO)
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
-		if (!audioLoader->hasLoaded()) {
-			return false;
-		}
-		createReader(*audioLoader);
-		return true;
+		if (audioLoader->hasLoaded()) {
+			createReader(*audioLoader);
+			return true;
+		}	
+#endif
+		return false;
 	}
 
 	void AudioStream::createReader(IAudioLoader& audioLoader)
 	{
+#if defined(WITH_AUDIO)
 		bytesPerSample_ = audioLoader.bytesPerSample();
 		numChannels_ = audioLoader.numChannels();
 
@@ -181,5 +200,6 @@ namespace nCine
 
 		audioReader_ = audioLoader.createReader();
 		audioReader_->setLooping(isLooping_);
+#endif
 	}
 }

@@ -95,7 +95,6 @@ if(NOT DEDICATED_SERVER)
 		target_link_libraries(${NCINE_APP} PRIVATE OpenAL::OpenAL)
 
 		list(APPEND HEADERS
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.h
@@ -105,9 +104,6 @@ if(NOT DEDICATED_SERVER)
 
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp

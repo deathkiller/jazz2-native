@@ -84,8 +84,8 @@ namespace nCine
 	class InvalidAudioLoader : public IAudioLoader
 	{
 	public:
-		explicit InvalidAudioLoader(std::unique_ptr<Death::IO::Stream> fileHandle)
-			: IAudioLoader(std::move(fileHandle)) { }
+		explicit InvalidAudioLoader()
+			: IAudioLoader(nullptr) { }
 
 		std::unique_ptr<IAudioReader> createReader() override {
 			return nullptr;
