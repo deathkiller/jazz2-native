@@ -222,10 +222,20 @@ namespace Jazz2::Multiplayer
 							serverItem["u"].get(serverUuid) == SUCCESS && !serverUuid.empty() &&
 							serverItem["e"].get(serverEndpoints) == SUCCESS && !serverEndpoints.empty()) {
 
-							ServerDescription discoveredServer {};
+							std::int64_t currentPlayers, maxPlayers;
+							serverItem["c"].get(currentPlayers);
+							serverItem["m"].get(maxPlayers);
+
+							std::string_view version;
+							serverItem["v"].get(version);
+
+							ServerDescription discoveredServer{};
+							discoveredServer.Version = version;
 							discoveredServer.Name = serverName;
 							discoveredServer.EndpointString = serverEndpoints;
 							discoveredServer.Name = serverName;
+							discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
+							discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 
 							LOGD("[MP] Found server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
 							_observer->OnServerFound(std::move(discoveredServer));
@@ -275,6 +285,10 @@ namespace Jazz2::Multiplayer
 		}
 
 		packet.Read(discoveredServer.UniqueIdentifier, sizeof(discoveredServer.UniqueIdentifier));
+
+		std::uint8_t versionLength = packet.ReadValue<std::uint8_t>();
+		discoveredServer.Version = String(NoInit, versionLength);
+		packet.Read(discoveredServer.Version.data(), versionLength);
 
 		std::uint8_t nameLength = packet.ReadValue<std::uint8_t>();
 		discoveredServer.Name = String(NoInit, nameLength);
@@ -337,10 +351,9 @@ namespace Jazz2::Multiplayer
 			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
 
 		char input[2048];
-		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"",
-			serverName.data(), PreferencesCache::UniquePlayerID.data());
+		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"", serverName.data());
 
-		auto& id = PreferencesCache::UniquePlayerID;
+		auto& id = PreferencesCache::UniqueServerID;
 		length += formatString(input + length, sizeof(input) - length,
 			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
 			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
@@ -384,8 +397,7 @@ namespace Jazz2::Multiplayer
 		_onlineRequest = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		_onlineRequest.SetMethod("POST"_s);
 		_onlineRequest.SetData(StringView(input, length), "application/json"_s);
-		auto result = _onlineRequest.Execute();
-		if (result) {
+		if (auto result = _onlineRequest.Execute()) {
 			auto s = _onlineRequest.GetResponse().GetStream();
 			auto size = s->GetSize();
 			auto buffer = std::make_unique<char[]>(size + simdjson::SIMDJSON_PADDING);
@@ -398,7 +410,7 @@ namespace Jazz2::Multiplayer
 				bool success; std::string_view endpoints;
 				if (doc["r"].get(success) == SUCCESS && success &&
 					doc["e"].get(endpoints) == SUCCESS && !endpoints.empty()) {
-					LOGI("[MP] Server published with following endpoints: %s", String(endpoints).data());
+					//LOGI("[MP] Server published with following endpoints: %s", String(endpoints).data());
 				} else {
 					LOGW("[MP] Failed to publish the server: Request rejected");
 				}
@@ -466,7 +478,12 @@ namespace Jazz2::Multiplayer
 							packet.WriteValue<std::uint64_t>(PacketSignature);
 							packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
 							packet.WriteValue<std::uint16_t>(serverConfig.ServerPort);
-							packet.Write(PreferencesCache::UniquePlayerID.data(), PreferencesCache::UniquePlayerID.size());
+							packet.Write(PreferencesCache::UniqueServerID.data(), PreferencesCache::UniqueServerID.size());
+
+							StringView serverVersion = NCINE_VERSION;
+							serverVersion = serverVersion.prefix(serverVersion.findOr('-', serverVersion.end()).begin());
+							packet.WriteValue<std::uint8_t>((std::uint8_t)serverVersion.size());
+							packet.Write(serverVersion.data(), (std::uint8_t)serverVersion.size());
 
 							packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.ServerName.size());
 							packet.Write(serverConfig.ServerName.data(), (std::uint8_t)serverConfig.ServerName.size());
@@ -505,7 +522,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				if (_this->_lastOnlineRequest.secondsSince() > 600) {
+				if (_this->_lastOnlineRequest.secondsSince() > 300) {
 					_this->_lastOnlineRequest = TimeStamp::now();
 					_this->PublishOnline();
 				}

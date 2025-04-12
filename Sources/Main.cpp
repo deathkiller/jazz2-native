@@ -795,7 +795,7 @@ void GameEventHandler::StartProcessingStdin()
 					theApplication().Quit();
 					break;
 				} else if (auto* levelHandler = runtime_cast<MpLevelHandler*>(_this->_currentHandler)) {
-					levelHandler->ProcessCommand({}, line);
+					levelHandler->ProcessCommand({}, line, true);
 				}
 			}
 		}
@@ -975,7 +975,9 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 #endif
 			Menu::MainMenu* mainMenu;
 			if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
+				if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
 				mainMenu->Reset();
+				}
 			} else {
 				auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
 				mainMenu = newHandler.get();
@@ -1139,8 +1141,28 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 					auto levelHandler = std::make_unique<MpLevelHandler>(this,
 						_networkManager.get(), levelState, enableLedgeClimb);
-					levelHandler->Initialize(levelInit);
+					if (levelHandler->Initialize(levelInit)) {
 					SetStateHandler(std::move(levelHandler));
+						return;
+					}
+
+					if (_networkManager != nullptr) {
+						_networkManager->Dispose();
+						_networkManager = nullptr;
+					}
+
+					Menu::MainMenu* mainMenu;
+					if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
+						if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
+							mainMenu->Reset();
+						}
+					} else {
+						auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
+						mainMenu = newHandler.get();
+						SetStateHandler(std::move(newHandler));
+					}
+
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"%s\".\nPlease download the required files and try it again.", levelInit.LevelName.data()), true);
 				}, NCINE_CURRENT_FUNCTION);
 				break;
 			}

@@ -681,7 +681,7 @@ namespace Jazz2::Multiplayer
 
 		if (_isServer) {
 			if (line.hasPrefix('/')) {
-				return ProcessCommand({}, line);
+				return ProcessCommand({}, line, true);
 			}
 
 			// Chat message
@@ -1656,14 +1656,16 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool MpLevelHandler::ProcessCommand(const Peer& peer, StringView line)
+	bool MpLevelHandler::ProcessCommand(const Peer& peer, StringView line, bool isAdmin)
 	{
 		if (line == "/endpoints"_s) {
-			auto endpoints = _networkManager->GetServerEndpoints();
-			for (const auto& endpoint : endpoints) {
-				SendMessage(peer, UI::MessageLevel::Info, endpoint);
+			if (isAdmin) {
+				auto endpoints = _networkManager->GetServerEndpoints();
+				for (const auto& endpoint : endpoints) {
+					SendMessage(peer, UI::MessageLevel::Info, endpoint);
+				}
+				return true;
 			}
-			return true;
 		} else if (line == "/info"_s) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
@@ -1687,7 +1689,9 @@ namespace Jazz2::Multiplayer
 			}
 			return true;
 		} else if (line.hasPrefix("/kick "_s)) {
-			// TODO: Implement /kick
+			if (isAdmin) {
+				// TODO: Implement /kick
+			}
 		} else if (line == "/players"_s) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
@@ -1704,148 +1708,160 @@ namespace Jazz2::Multiplayer
 			}
 			return true;
 		} else if (line.hasPrefix("/set "_s)) {
-			auto [variableName, sep, value] = line.exceptPrefix("/set "_s).trimmedPrefix().partition(' ');
-			if (variableName == "mode"_s) {
-				auto gameModeString = StringUtils::lowercase(value.trimmed());
+			if (isAdmin) {
+				auto [variableName, sep, value] = line.exceptPrefix("/set "_s).trimmedPrefix().partition(' ');
+				if (variableName == "mode"_s) {
+					auto gameModeString = StringUtils::lowercase(value.trimmed());
 
-				MpGameMode gameMode;
-				if (gameModeString == "battle"_s || gameModeString == "b"_s) {
-					gameMode = MpGameMode::Battle;
-				} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
-					gameMode = MpGameMode::TeamBattle;
-				} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
-					gameMode = MpGameMode::Race;
-				} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
-					gameMode = MpGameMode::TeamRace;
-				} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
-					gameMode = MpGameMode::TreasureHunt;
-				} else if (gameModeString == "teamtreasurehunt"_s || gameModeString == "tth"_s) {
-					gameMode = MpGameMode::TeamTreasureHunt;
-				} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
-					gameMode = MpGameMode::CaptureTheFlag;
-				} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
-					gameMode = MpGameMode::Cooperation;
-				} else {
-					return false;
-				}
+					MpGameMode gameMode;
+					if (gameModeString == "battle"_s || gameModeString == "b"_s) {
+						gameMode = MpGameMode::Battle;
+					} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
+						gameMode = MpGameMode::TeamBattle;
+					} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
+						gameMode = MpGameMode::Race;
+					} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
+						gameMode = MpGameMode::TeamRace;
+					} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
+						gameMode = MpGameMode::TreasureHunt;
+					} else if (gameModeString == "teamtreasurehunt"_s || gameModeString == "tth"_s) {
+						gameMode = MpGameMode::TeamTreasureHunt;
+					} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
+						gameMode = MpGameMode::CaptureTheFlag;
+					} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
+						gameMode = MpGameMode::Cooperation;
+					} else {
+						return false;
+					}
 
-				if (SetGameMode(gameMode)) {
+					if (SetGameMode(gameMode)) {
+						char infoBuffer[128];
+						formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]",
+							NetworkManager::GameModeToLocalizedString(gameMode).data());
+						SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+						return true;
+					}
+				} else if (variableName == "level"_s) {
+					LevelInitialization levelInit;
+					PrepareNextLevelInitialization(levelInit);
+					auto level = value.partition('/');
+					if (value.contains('/')) {
+						levelInit.LevelName = value;
+					} else {
+						levelInit.LevelName = "unknown/"_s + value;
+					}
+					if (ContentResolver::Get().LevelExists(levelInit.LevelName)) {
+						LOGD("[MP] Changing level to \"%s\"", levelInit.LevelName.data());
+
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						serverConfig.PlaylistIndex = -1;
+
+						levelInit.LastExitType = ExitType::Normal;
+						HandleLevelChange(std::move(levelInit));
+					} else {
+						LOGD("[MP] Level \"%s\" doesn't exist", levelInit.LevelName.data());
+					}
+				} else if (variableName == "welcome"_s) {
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+					SetWelcomeMessage(StringUtils::replaceAll(value.trimmed(), "\\n"_s, "\n"_s));
+					SendMessage(peer, UI::MessageLevel::Info, "Lobby message changed");
+					return true;
+				} else if (variableName == "name"_s) {
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
+					serverConfig.ServerName = value.trimmed();
+
 					char infoBuffer[128];
-					formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]",
-						NetworkManager::GameModeToLocalizedString(gameMode).data());
+					if (!serverConfig.ServerName.empty()) {
+						formatString(infoBuffer, sizeof(infoBuffer), "Server name set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", serverConfig.ServerName.data());
+					} else if (!serverConfig.IsPrivate) {
+						formatString(infoBuffer, sizeof(infoBuffer), "Server visibility to \f[w:80]\f[c:#707070]hidden\f[/c]\f[/w]");
+					}
+					SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+					return true;
+				} else if (variableName == "spawning"_s) {
+					auto boolValue = StringUtils::lowercase(value.trimmed());
+					if (boolValue == "false"_s || boolValue == "off"_s || boolValue == "0"_s) {
+						_enableSpawning = false;
+					} else if (boolValue == "true"_s || boolValue == "on"_s || boolValue == "1"_s) {
+						_enableSpawning = true;
+					} else {
+						return false;
+					}
+
+					char infoBuffer[128];
+					formatString(infoBuffer, sizeof(infoBuffer), "Spawning set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", _enableSpawning ? "Enabled" : "Disabled");
 					SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 					return true;
 				}
-			} else if (variableName == "level"_s) {
-				LevelInitialization levelInit;
-				PrepareNextLevelInitialization(levelInit);
-				auto level = value.partition('/');
-				if (value.contains('/')) {
-					levelInit.LevelName = value;
-				} else {
-					levelInit.LevelName = "unknown/"_s + value;
-				}
-				if (ContentResolver::Get().LevelExists(levelInit.LevelName)) {
-					LOGD("[MP] Changing level to \"%s\"", levelInit.LevelName.data());
-
-					auto& serverConfig = _networkManager->GetServerConfiguration();
-					serverConfig.PlaylistIndex = -1;
-
-					levelInit.LastExitType = ExitType::Normal;
-					HandleLevelChange(std::move(levelInit));
-				} else {
-					LOGD("[MP] Level \"%s\" doesn't exist", levelInit.LevelName.data());
-				}
-			} else if (variableName == "welcome"_s) {
-				auto& serverConfig = _networkManager->GetServerConfiguration();
-				SetWelcomeMessage(StringUtils::replaceAll(value.trimmed(), "\\n"_s, "\n"_s));
-				SendMessage(peer, UI::MessageLevel::Info, "Lobby message changed");
-				return true;
-			} else if (variableName == "name"_s) {
-				auto& serverConfig = _networkManager->GetServerConfiguration();
-
-				serverConfig.ServerName = value.trimmed();
-
-				char infoBuffer[128];
-				if (!serverConfig.ServerName.empty()) {
-					formatString(infoBuffer, sizeof(infoBuffer), "Server name set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", serverConfig.ServerName.data());
-				} else if (!serverConfig.IsPrivate) {
-					formatString(infoBuffer, sizeof(infoBuffer), "Server visibility to \f[w:80]\f[c:#707070]hidden\f[/c]\f[/w]");
-				}
-				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
-				return true;
-			} else if (variableName == "spawning"_s) {
-				auto boolValue = StringUtils::lowercase(value.trimmed());
-				if (boolValue == "false"_s || boolValue == "off"_s || boolValue == "0"_s) {
-					_enableSpawning = false;
-				} else if (boolValue == "true"_s || boolValue == "on"_s || boolValue == "1"_s) {
-					_enableSpawning = true;
-				} else {
-					return false;
-				}
-
-				char infoBuffer[128];
-				formatString(infoBuffer, sizeof(infoBuffer), "Spawning set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", _enableSpawning ? "Enabled" : "Disabled");
-				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
-				return true;
 			}
 		} else if (line == "/refresh"_s) {
-			auto& serverConfig = _networkManager->GetServerConfiguration();
-			auto prevGameMode = serverConfig.GameMode;
+			if (isAdmin) {
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				auto prevGameMode = serverConfig.GameMode;
 
-			_networkManager->RefreshServerConfiguration();
+				_networkManager->RefreshServerConfiguration();
 
-			// Refresh all affected properties
-			SetWelcomeMessage(serverConfig.WelcomeMessage);
-			if (serverConfig.GameMode != prevGameMode) {
-				SetGameMode(serverConfig.GameMode);
+				// Refresh all affected properties
+				SetWelcomeMessage(serverConfig.WelcomeMessage);
+				if (serverConfig.GameMode != prevGameMode) {
+					SetGameMode(serverConfig.GameMode);
+				}
+				SendMessage(peer, UI::MessageLevel::Info, "Server configuration reloaded"_s);
+				return true;
 			}
-			SendMessage(peer, UI::MessageLevel::Info, "Server configuration reloaded"_s);
-			return true;
 		} else if (line == "/reset points"_s) {
-			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
-				peerDesc->Points = 0;
+			if (isAdmin) {
+				for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+					peerDesc->Points = 0;
 
-				if (peerDesc->RemotePeer) {
-					MemoryStream packet(9);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Points);
-					packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
-					packet.WriteVariableUint32(peerDesc->Points);
-					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-				}
-			}
-			SendMessage(peer, UI::MessageLevel::Info, "All points reset"_s);
-			return true;
-		} else if (line.hasPrefix("/alert "_s)) {
-			StringView message = line.exceptPrefix("/alert "_s).trimmed();
-			ShowAlertToAllPlayers(message);
-			return true;
-		} else if (line == "/skip"_s) {
-			auto& serverConfig = _networkManager->GetServerConfiguration();
-			if (_levelState == LevelState::PreGame && _players.size() >= serverConfig.MinPlayerCount) {
-				_gameTimeLeft = 0.0f;
-			}
-			return true;
-		} else if (line.hasPrefix("/playlist"_s)) {
-			auto& serverConfig = _networkManager->GetServerConfiguration();
-			StringView value = (line.size() > 10 ? line.exceptPrefix(10).trimmed() : StringView());
-			if (!value.empty()) {
-				std::uint32_t idx = stou32(value.data(), value.size());
-				if (idx < serverConfig.Playlist.size()) {
-					serverConfig.PlaylistIndex = idx;
-					ApplyFromPlaylist();
-				}
-			} else {
-				if (serverConfig.Playlist.size() > 1) {
-					if (serverConfig.RandomizePlaylist) {
-						serverConfig.PlaylistIndex = Random().Next(0, serverConfig.Playlist.size());
-					} else {
-						serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+					if (peerDesc->RemotePeer) {
+						MemoryStream packet(9);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Points);
+						packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
+						packet.WriteVariableUint32(peerDesc->Points);
+						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					}
-					ApplyFromPlaylist();
 				}
+				SendMessage(peer, UI::MessageLevel::Info, "All points reset"_s);
+				return true;
 			}
-			return true;
+		} else if (line.hasPrefix("/alert "_s)) {
+			if (isAdmin) {
+				StringView message = line.exceptPrefix("/alert "_s).trimmed();
+				ShowAlertToAllPlayers(message);
+				return true;
+			}
+		} else if (line == "/skip"_s) {
+			if (isAdmin) {
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				if (_levelState == LevelState::PreGame && _players.size() >= serverConfig.MinPlayerCount) {
+					_gameTimeLeft = 0.0f;
+				}
+				return true;
+			}
+		} else if (line.hasPrefix("/playlist"_s)) {
+			if (isAdmin) {
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				StringView value = (line.size() > 10 ? line.exceptPrefix(10).trimmed() : StringView());
+				if (!value.empty()) {
+					std::uint32_t idx = stou32(value.data(), value.size());
+					if (idx < serverConfig.Playlist.size()) {
+						serverConfig.PlaylistIndex = idx;
+						ApplyFromPlaylist();
+					}
+				} else {
+					if (serverConfig.Playlist.size() > 1) {
+						if (serverConfig.RandomizePlaylist) {
+							serverConfig.PlaylistIndex = Random().Next(0, serverConfig.Playlist.size());
+						} else {
+							serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+						}
+						ApplyFromPlaylist();
+					}
+				}
+				return true;
+			}
 		}
 
 		return false;
@@ -2025,11 +2041,7 @@ namespace Jazz2::Multiplayer
 
 					if (line.hasPrefix('/')) {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if (peerDesc->IsAdmin) {
-							ProcessCommand(peer, line);
-						} else {
-							SendMessage(peer, UI::MessageLevel::Error, _("You don't have enough privileges"));
-						}
+						ProcessCommand(peer, line, peerDesc->IsAdmin);
 						return true;
 					}
 
@@ -2928,9 +2940,16 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - playerIndex: %u", playerIndex);
 
-					if (!_players.empty()) {
-						_players[0]->EmitWeaponFlare();
-					}
+					_root->InvokeAsync([this]() {
+						if (!_players.empty()) {
+							_players[0]->EmitWeaponFlare();
+
+							// TODO: Fix weapon SFX
+							if (_players[0]->_currentWeapon == WeaponType::Blaster) {
+								_players[0]->PlayPlayerSfx("WeaponBlaster"_s);
+							}
+						}
+					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
 				case ServerPacketType::PlayerChangeWeapon: {

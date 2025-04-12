@@ -40,6 +40,8 @@ namespace Jazz2::Multiplayer
 		String EndpointString;
 		/** @brief Server unique identifier */
 		StaticArray<16, std::uint8_t> UniqueIdentifier;
+		/** @brief Server version */
+		String Version;
 		/** @brief Server name */
 		String Name;
 		/** @brief Multiplayer game mode */

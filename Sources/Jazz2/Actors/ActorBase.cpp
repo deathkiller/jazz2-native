@@ -56,6 +56,7 @@ namespace Jazz2::Actors
 		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res != nullptr) {
 			_renderer.Hotspot.X = static_cast<float>(IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
+			_renderer.setAbsAnchorPoint(_renderer.Hotspot.X, _renderer.Hotspot.Y);
 		}
 	}
 
@@ -438,17 +439,20 @@ namespace Jazz2::Actors
 
 	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(StringView identifier, float gain, float pitch)
 	{
-#if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
-			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
-			return _levelHandler->PlaySfx(this, identifier, &it->second.Buffers[idx]->Buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
-		} else {
-			return nullptr;
+			AudioBuffer* buffer;
+			if (!it->second.Buffers.empty()) {
+				std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
+				buffer = &it->second.Buffers[idx]->Buffer;
+			} else {
+				buffer = nullptr;
+			}
+
+			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
 		}
-#else
+
 		return nullptr;
-#endif
 	}
 
 	bool ActorBase::SetAnimation(AnimState state, bool skipAnimation)

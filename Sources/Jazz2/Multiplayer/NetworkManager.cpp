@@ -481,6 +481,11 @@ namespace Jazz2::Multiplayer
 
 		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{PlayerName}"_s, playerName);
 		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{ServerName}"_s, serverConfig.ServerName);
+
+#if defined(DEATH_DEBUG)
+		String uniquePlayerId = NetworkManager::UuidToString(PreferencesCache::UniquePlayerID);
+		serverConfig.AdminUniquePlayerIDs.emplace(uniquePlayerId, "*"_s);
+#endif
 	}
 
 	StringView NetworkManager::GameModeToLocalizedString(MpGameMode mode)

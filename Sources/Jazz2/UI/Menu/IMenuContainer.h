@@ -56,6 +56,8 @@ namespace Jazz2::UI::Menu
 		virtual MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) = 0;
 		/** @brief Leaves current section */
 		virtual void LeaveSection() = 0;
+		/** @brief Returns the current section */
+		virtual MenuSection* GetCurrentSection() const = 0;
 		/** @brief Returns the next section after the top one */
 		virtual MenuSection* GetUnderlyingSection() const = 0;
 		/** @brief Changes current level */

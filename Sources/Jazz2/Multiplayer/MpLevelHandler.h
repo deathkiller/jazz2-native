@@ -137,7 +137,7 @@ namespace Jazz2::Multiplayer
 
 		// Server-only methods
 		/** @brief Processes the specified server command */
-		bool ProcessCommand(const Peer& peer, StringView line);
+		bool ProcessCommand(const Peer& peer, StringView line, bool isAdmin);
 		/** @brief Sends the message to the specified peer */
 		void SendMessage(const Peer& peer, UI::MessageLevel level, StringView message);
 

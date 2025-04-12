@@ -516,12 +516,14 @@ namespace Jazz2::Multiplayer
 		_handler->OnPeerDisconnected(peer, reason);
 
 		if (peer && _state == NetworkState::Listening) {
+			_lock.lock();
 			for (std::size_t i = 0; i < _peers.size(); i++) {
 				if (peer == _peers[i]) {
 					_peers.eraseUnordered(i);
 					break;
 				}
 			}
+			_lock.unlock();
 		}
 	}
 

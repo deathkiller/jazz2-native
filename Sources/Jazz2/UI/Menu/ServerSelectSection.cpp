@@ -9,6 +9,8 @@
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+#include <Containers/StringConcatenable.h>
+
 using namespace Death::IO;
 using namespace Jazz2::UI::Menu::Resources;
 
@@ -164,8 +166,8 @@ namespace Jazz2::UI::Menu
 		_y = (_availableHeight < _height ? std::clamp(_y, _availableHeight - _height, 0.0f) : 0.0f);
 
 		Vector2f center = Vector2f(centerX, topLine + 12.0f + _y);
-		float column1 = contentBounds.X + (contentBounds.W >= 460 ? (contentBounds.W * 0.25f) : 20.0f);
-		float column2 = contentBounds.X + (contentBounds.W >= 460 ? (contentBounds.W * 0.52f) : (contentBounds.W * 0.44f));
+		float column1 = contentBounds.X + (contentBounds.W >= 690 ? (contentBounds.W * 0.2f) : (contentBounds.W >= 440 ? (contentBounds.W * 0.1f) : 20.0f));
+		float column2 = contentBounds.X + (contentBounds.W >= 600 ? (contentBounds.W * 0.66f) : (contentBounds.W * 0.74f));
 
 		std::size_t itemsCount = _items.size();
 		for (std::int32_t i = 0; i < itemsCount; i++) {
@@ -178,6 +180,9 @@ namespace Jazz2::UI::Menu
 					float x = column1 + xMultiplier - easing * xMultiplier;
 					float size = 0.7f + easing * 0.12f;
 
+					_root->DrawElement(MenuGlow, 0, centerX, center.Y, IMenuContainer::MainLayer - 200, Alignment::Center,
+						Colorf(1.0f, 1.0f, 1.0f, 0.2f), 28.0f, 3.0f, true, true);
+
 					_root->DrawStringShadow(_items[i].Desc.Name, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Left, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
@@ -188,12 +193,23 @@ namespace Jazz2::UI::Menu
 				if (_items[i].Desc.MaxPlayerCount > 0) {
 					char playerCount[32];
 					formatString(playerCount, sizeof(playerCount), "%u/%u", _items[i].Desc.CurrentPlayerCount, _items[i].Desc.MaxPlayerCount);
-					_root->DrawStringShadow(playerCount, charOffset, column2 - 6.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
+					_root->DrawStringShadow(playerCount, charOffset, column2 - 90.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
+						Alignment::Right, Font::DefaultColor, 0.7f);
+				}
+
+				if (!_items[i].Desc.Version.empty()) {
+					_root->DrawStringShadow(StringView("v"_s + _items[i].Desc.Version), charOffset, column2 - 14.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
 						Alignment::Right, Font::DefaultColor, 0.7f);
 				}
 
 				StringView firstEndpoint = _items[i].Desc.EndpointString;
 				firstEndpoint = firstEndpoint.prefix(firstEndpoint.findOr('|', firstEndpoint.end()).begin());
+
+				String firstEndpointShort;
+				if (firstEndpoint.size() > 23) {
+					firstEndpointShort = "<"_s + firstEndpoint.slice(firstEndpoint.size() - 23, firstEndpoint.size());
+					firstEndpoint = firstEndpointShort;
+				}
 
 				_root->DrawStringShadow(firstEndpoint, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
 					Alignment::Left, Font::DefaultColor, 0.7f);
