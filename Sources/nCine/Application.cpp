@@ -279,25 +279,61 @@ namespace nCine
 		dest[length++] = ' ';
 	}
 
-	static void AppendMessagePrefixIfAny(char* dest, std::int32_t& length, const char* message, std::int32_t& logMsgFuncLength, TraceLevel level)
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+	// Strip function specifiers, return type and arguments from function name
+	static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
 	{
-		std::int32_t messageBegin = logMsgFuncLength;
-		logMsgFuncLength++;
-
-		while (true) {
-			if (message[logMsgFuncLength] == '\0') {
-				logMsgFuncLength = -1;
-				break;
+		std::int32_t i, parethesisCount = 0;
+		for (i = functionNameLength - 1; i >= 0; i--) {
+			if (functionName[i] == ')') {
+				parethesisCount++;
+			} else if (functionName[i] == '(') {
+				parethesisCount--;
+				if (parethesisCount == 0) {
+					break;
+				}
+			} else if (functionName[i] == ']') {
+				parethesisCount++;
+			} else if (functionName[i] == '[') {
+				parethesisCount--;
 			}
-
-			if (std::memcmp(&message[logMsgFuncLength], " ‡ ", sizeof(" ‡ ") - 1) == 0) {
-				logMsgFuncLength += (std::int32_t)sizeof(" ‡ ") - 1;
-				break;
-			}
-			logMsgFuncLength++;
 		}
 
-		if (logMsgFuncLength > 0) {
+		if (i > 0) {
+			std::size_t end = i;
+			for (; i >= 0; i--) {
+				if (functionName[i] == '>') {
+					parethesisCount++;
+				} else if (functionName[i] == '<') {
+					parethesisCount--;
+				} else if (functionName[i] == ' ' && parethesisCount == 0) {
+					break;
+				}
+			}
+			i++;
+			AppendPart(dest, length, &functionName[i], (std::int32_t)(end - i));
+			AppendPart(dest, length, "()");
+		} else {
+			AppendPart(dest, length, functionName, functionNameLength);
+		}
+	}
+#endif
+
+	static void AppendFunctionName(char* dest, std::int32_t& length, StringView functionName)
+	{
+		if (!functionName.empty()) {
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+			AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
+#else
+			AppendPart(dest, length, functionName.data(), (std::int32_t)functionName.size());
+#endif
+			AppendPart(dest, length, " ‡ ");
+		}
+	}
+
+	static void AppendMessagePrefixIfAny(char* dest, std::int32_t& length, TraceLevel level, StringView functionName)
+	{
+		if (!functionName.empty()) {
 			if (__consoleType >= ConsoleType::EscapeCodes) {
 				AppendPart(dest, length, ColorFaint);
 
@@ -320,9 +356,12 @@ namespace nCine
 				}
 			}
 
-			AppendPart(dest, length, message + messageBegin, logMsgFuncLength - messageBegin);
-		} else {
-			logMsgFuncLength = messageBegin;
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+			AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
+#else
+			AppendPart(dest, length, functionName.data(), functionName.size());
+#endif
+			AppendPart(dest, length, " ‡ ");
 		}
 	}
 
@@ -767,14 +806,15 @@ namespace nCine
 	}
 
 #if defined(DEATH_TRACE)
-	void Application::OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message)
+	void Application::OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView functionName, StringView content)
 	{
 		char logEntryWithColors[MaxLogEntryLength + 24];
 
 #if defined(DEATH_TARGET_ANDROID)
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 
 		android_LogPriority priority;
 		switch (level) {
@@ -796,13 +836,15 @@ namespace nCine
 #elif defined(DEATH_TARGET_SWITCH)
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		svcOutputDebugString(logEntryWithColors, length2);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		if (length2 >= MaxLogEntryLength - 2) {
 			length2 = MaxLogEntryLength - 2;
 		}
@@ -815,8 +857,7 @@ namespace nCine
 #	endif
 			// Colorize the output
 			std::int32_t length2 = 0;
-			std::int32_t logMsgFuncLength = 0;
-			AppendMessagePrefixIfAny(logEntryWithColors, length2, message.data(), logMsgFuncLength, level);
+			AppendMessagePrefixIfAny(logEntryWithColors, length2, level, functionName);
 
 			if (__consoleType >= ConsoleType::EscapeCodes) {
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -828,18 +869,18 @@ namespace nCine
 
 				if (level < TraceLevel::Error && __consoleType >= ConsoleType::EscapeCodes24bit) {
 					std::int32_t prevState = 0;
-					StringView message2 = StringView(message.data() + logMsgFuncLength, message.size() - logMsgFuncLength);
+					StringView contentPart = content;
 					do {
-						StringView quotesBegin = message2.find('"');
+						StringView quotesBegin = contentPart.find('"');
 						if (!quotesBegin) {
 							break;
 						}
-						StringView quotesEnd = message2.suffix(quotesBegin.end()).find('"');
+						StringView quotesEnd = contentPart.suffix(quotesBegin.end()).find('"');
 						if (!quotesEnd) {
 							break;
 						}
 
-						StringView prefix = message2.prefix(quotesBegin.begin());
+						StringView prefix = contentPart.prefix(quotesBegin.begin());
 						if (!prefix.empty()) {
 							AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
 							shouldResetBefore = false;
@@ -859,29 +900,29 @@ namespace nCine
 							prevState = 2;
 						}
 
-						StringView inner = message2.suffix(quotesBegin.begin()).prefix(quotesEnd.end());
+						StringView inner = contentPart.suffix(quotesBegin.begin()).prefix(quotesEnd.end());
 						AppendPart(logEntryWithColors, length2, inner.data(), (std::int32_t)inner.size());
 
-						message2 = message2.suffix(quotesEnd.end());
-					} while (!message2.empty());
+						contentPart = contentPart.suffix(quotesEnd.end());
+					} while (!contentPart.empty());
 
-					if (!message2.empty()) {
+					if (!contentPart.empty()) {
 						AppendMessageColor(logEntryWithColors, length2, level, prevState == 2 || shouldResetBefore);
-						AppendPart(logEntryWithColors, length2, message2.data(), (std::int32_t)message2.size());
+						AppendPart(logEntryWithColors, length2, contentPart.data(), (std::int32_t)contentPart.size());
 					} else if (prevState == 2) {
 						// Always reset color after quotes
 						shouldResetAfter = true;
 					}
 				} else {
 					AppendMessageColor(logEntryWithColors, length2, level, shouldResetBefore);
-					AppendPart(logEntryWithColors, length2, message.data() + logMsgFuncLength, (std::int32_t)message.size() - logMsgFuncLength);
+					AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 				}
 
 				if (shouldResetAfter) {
 					AppendPart(logEntryWithColors, length2, ColorReset);
 				}
 			} else {
-				AppendPart(logEntryWithColors, length2, message.data() + logMsgFuncLength, (std::int32_t)message.size() - logMsgFuncLength);
+				AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 			}
 
 			if (length2 >= MaxLogEntryLength - 2) {
@@ -926,7 +967,8 @@ namespace nCine
 			// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 			std::int32_t length2 = 0;
 			AppendLevel(logEntryWithColors, length2, level, threadId);
-			AppendPart(logEntryWithColors, length2, message.data(), (std::int32_t)message.size());
+			AppendFunctionName(logEntryWithColors, length2, functionName);
+			AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 			if (length2 >= MaxLogEntryLength - 2) {
 				length2 = MaxLogEntryLength - 2;
 			}
@@ -944,7 +986,8 @@ namespace nCine
 			AppendDateTime(logEntryWithColors, length3, timestamp);
 			logEntryWithColors[length3++] = ' ';
 			AppendLevel(logEntryWithColors, length3, level, threadId);
-			AppendPart(logEntryWithColors, length3, message.data(), (std::int32_t)message.size());
+			AppendFunctionName(logEntryWithColors, length3, functionName);
+			AppendPart(logEntryWithColors, length3, content.data(), (std::int32_t)content.size());
 			logEntryWithColors[length3++] = '\n';
 
 #	if !defined(DEATH_TRACE_ASYNC)
@@ -964,7 +1007,7 @@ namespace nCine
 			std::int32_t length4 = 0;
 			AppendDateTime(logEntryWithColors, length4, timestamp);
 
-			debugOverlay->log(level, logEntryWithColors, threadId, message);
+			debugOverlay->log(level, logEntryWithColors, threadId, content);
 		}
 #endif
 
@@ -979,7 +1022,7 @@ namespace nCine
 			default:					colorTracy = 0x969696; break;
 		}
 
-		TracyMessageC(message.data(), message.size(), colorTracy);
+		TracyMessageC(content.data(), content.size(), colorTracy);
 #endif
 	}
 

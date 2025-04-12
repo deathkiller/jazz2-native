@@ -36,7 +36,7 @@ enum class TraceLevel {
 	This function needs to be provided by the target application to enable the event tracing.
 	Alternatively, @relativeref{Death,ITraceSink} interface can be used instead.
 */
-void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
+void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ...);
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
@@ -50,18 +50,18 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	if defined(DEATH_DEBUG)
-#		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
 /** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
-#	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
-#	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
-#	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
-#	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #else
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	define LOGD(fmt, ...) do {} while (false)
@@ -105,7 +105,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
 // Assertions
 #if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE) && !defined(DOXYGEN_GENERATING_OUTPUT)
-#	define __DEATH_ASSERT_BASE(fmt, ...) DEATH_TRACE(TraceLevel::Assert, "%s ‡ " fmt, __DEATH_CURRENT_FUNCTION, ##__VA_ARGS__)
+#	define __DEATH_ASSERT_BASE(fmt, ...) DEATH_TRACE(TraceLevel::Assert, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	define __DEATH_ASSERT_TRACE(...) DEATH_HELPER_EXPAND(__DEATH_ASSERT_BASE(__VA_ARGS__))
 #endif
 

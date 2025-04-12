@@ -244,7 +244,7 @@ namespace nCine
 
 #if defined(DEATH_TRACE)
 		// ITraceSink interface
-		void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView message) override;
+		void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView functionName, StringView content) override;
 		void OnTraceFlushed() override;
 #endif
 

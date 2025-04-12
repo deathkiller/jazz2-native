@@ -59,8 +59,8 @@ namespace Jazz2::Multiplayer
 	// TODO: levelState is unused, it needs to be set after LevelState::InitialUpdatePending is processed
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState, bool enableLedgeClimb)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
-			_levelState(LevelState::InitialUpdatePending), _enableSpawning(true), _lastSpawnedActorId(-1), _seqNum(0),
-			_seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb),
+			_levelState(LevelState::InitialUpdatePending), _enableSpawning(true), _lastSpawnedActorId(-1), _waitingForPlayerCount(0),
+			_seqNum(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb),
 			_controllableExternal(true)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
@@ -259,6 +259,7 @@ namespace Jazz2::Multiplayer
 							// TODO: Respawn all events and tilemap
 						} else {
 							_levelState = LevelState::WaitingForMinPlayers;
+							_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
 						}
 						SendLevelStateToAllPlayers();
 					}
@@ -268,7 +269,7 @@ namespace Jazz2::Multiplayer
 					if (_isServer) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
 						// TODO: Check all players are ready
-						if (_players.size() >= serverConfig.MinPlayerCount) {
+						if (_waitingForPlayerCount <= 0) {
 							_levelState = LevelState::Countdown3;
 							_gameTimeLeft = FrameTimer::FramesPerSecond;
 							SetControllableToAllPlayers(false);
@@ -1928,6 +1929,14 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
 						return (peer != otherPeer);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
+
+					if (_levelState == LevelState::WaitingForMinPlayers) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
+						_root->InvokeAsync([this]() {
+							SendLevelStateToAllPlayers();
+						}, NCINE_CURRENT_FUNCTION);
+					}
 				}
 			}
 			return true;
@@ -2275,6 +2284,11 @@ namespace Jazz2::Multiplayer
 								_gameTimeLeft = (float)gameTimeLeft * 0.01f;
 
 								switch (_levelState) {
+									case LevelState::WaitingForMinPlayers: {
+										// gameTimeLeft is reused for waitingForPlayerCount in this state
+										_waitingForPlayerCount = gameTimeLeft;
+										break;
+									}
 									case LevelState::Countdown3: {
 										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 										break;
@@ -3141,7 +3155,8 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(6);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::State);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
-					packet.WriteVariableInt32((std::int32_t)(_gameTimeLeft * 100.0f));
+					packet.WriteVariableInt32(_levelState == LevelState::WaitingForMinPlayers
+						? _waitingForPlayerCount : (std::int32_t)(_gameTimeLeft * 100.0f));
 
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 				}
@@ -3276,6 +3291,11 @@ namespace Jazz2::Multiplayer
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 						return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet);
+				}
+
+				if (_levelState == LevelState::WaitingForMinPlayers) {
+					_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
+					SendLevelStateToAllPlayers();
 				}
 			}
 		}
@@ -3438,7 +3458,8 @@ namespace Jazz2::Multiplayer
 		MemoryStream packet(6);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::State);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
-		packet.WriteVariableInt32((std::int32_t)(_gameTimeLeft * 100.0f));
+		packet.WriteVariableInt32(_levelState == LevelState::WaitingForMinPlayers
+			? _waitingForPlayerCount : (std::int32_t)(_gameTimeLeft * 100.0f));
 
 		_networkManager->SendTo([this](const Peer& peer) {
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);

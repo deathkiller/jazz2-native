@@ -725,12 +725,15 @@ namespace Death { namespace Trace {
 	struct TransitEvent
 	{
 		std::uint64_t Timestamp;
+		union {
+			const char* FunctionName;
+			std::atomic<bool>* FlushFlag;
+		};
 		std::string Message;
-		std::atomic<bool>* FlushFlag;
 		TraceLevel Level;
 
 		TransitEvent()
-			: Timestamp(0), FlushFlag(nullptr), Level(TraceLevel::Unknown)
+			: Timestamp(0), FunctionName(nullptr), Level(TraceLevel::Unknown)
 		{
 		}
 
@@ -1103,7 +1106,7 @@ namespace Death { namespace Trace {
 		bool IsAlive() const noexcept;
 #else
 		/** @brief Dispatches the specified entry to all sinks */
-		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength);
+		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength);
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void FlushActiveSinks();
 #endif
@@ -1215,7 +1218,7 @@ namespace Death { namespace Trace {
 		void DetachSink(ITraceSink* sink);
 
 		/** @brief Writes the specified entry to all sinks */
-		bool Write(TraceLevel level, const char* fmt, va_list args);
+		bool Write(TraceLevel level, const char* functionName, const char* fmt, va_list args);
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void Flush(std::uint32_t sleepDurationNs = 100);
 
@@ -1230,7 +1233,7 @@ namespace Death { namespace Trace {
 		std::byte* PrepareWriteBuffer(std::size_t totalSize);
 #endif
 
-		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength);
+		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength);
 	};
 
 }}

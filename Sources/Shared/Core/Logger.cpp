@@ -27,7 +27,7 @@ namespace Death { namespace Trace {
 			constexpr std::chrono::milliseconds SpinDuration = std::chrono::milliseconds{10};
 			constexpr std::int32_t Trials = 13;
 
-			Death::Containers::StaticArray<Trials, double> rates(Death::Containers::ValueInit);
+			Containers::StaticArray<Trials, double> rates(Containers::ValueInit);
 
 			for (std::size_t i = 0; i < Trials; i++) {
 				auto begTs =
@@ -399,22 +399,23 @@ namespace Death { namespace Trace {
 			return false;
 		}
 
+		std::uintptr_t functionName;
+		std::memcpy(&functionName, readPos, sizeof(std::uintptr_t));
+		readPos += sizeof(std::uintptr_t);
+
 		std::uint32_t length;
 		std::memcpy(&length, readPos, sizeof(std::uint32_t));
 		readPos += sizeof(std::uint32_t);
 
 		// We need to check and do not try to format the flush events as that wouldn't be valid
 		if (transitEvent->Level != FlushRequired) {
+			transitEvent->FunctionName = reinterpret_cast<const char*>(functionName);
 			transitEvent->Message.resize(length);
 			std::memcpy(&transitEvent->Message[0], readPos, length);
 		} else {
-			// If this is a flush event then we do not need to format anything for the transit_event, but we need
+			// If this is a flush event then we do not need to format anything for the TransitEvent, but we need
 			// to set the transit event's FlushFlag pointer instead
-			DEATH_DEBUG_ASSERT(length == sizeof(std::uintptr_t));
-
-			std::uintptr_t flushFlagPtr;
-			std::memcpy(&flushFlagPtr, readPos, sizeof(std::uintptr_t));
-			transitEvent->FlushFlag = reinterpret_cast<std::atomic<bool>*>(flushFlagPtr);
+			transitEvent->FlushFlag = reinterpret_cast<std::atomic<bool>*>(functionName);
 		}
 
 		readPos += length;
@@ -509,8 +510,11 @@ namespace Death { namespace Trace {
 
 	void LoggerBackend::DispatchTransitEventToSinks(TransitEvent const& transitEvent, Containers::StringView threadId)
 	{
+		Containers::StringView functionNameView{transitEvent.FunctionName};
+		Containers::StringView contentView{transitEvent.Message};
+
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
-			_sinks[i]->OnTraceReceived(transitEvent.Level, transitEvent.Timestamp, threadId, transitEvent.Message);
+			_sinks[i]->OnTraceReceived(transitEvent.Level, transitEvent.Timestamp, threadId, functionNameView, contentView);
 		}
 	}
 
@@ -632,7 +636,7 @@ namespace Death { namespace Trace {
 		}
 	}
 #else
-	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength)
+	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength)
 	{
 		using namespace Implementation;
 
@@ -643,8 +647,11 @@ namespace Death { namespace Trace {
 			threadId[0] = '\0';
 		}
 
+		Containers::StringView functionNameView{ static_cast<const char*>(functionName)};
+		Containers::StringView contentView{static_cast<const char*>(content), std::size_t(contentLength)};
+
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
-			_sinks[i]->OnTraceReceived(level, timestamp, threadId, Containers::StringView(static_cast<const char*>(content), contentLength));
+			_sinks[i]->OnTraceReceived(level, timestamp, threadId, functionNameView, contentView);
 		}
 	}
 
@@ -666,7 +673,7 @@ namespace Death { namespace Trace {
 		_backend.DetachSink(sink);
 	}
 
-	bool Logger::Write(TraceLevel level, const char* fmt, va_list args)
+	bool Logger::Write(TraceLevel level, const char* functionName, const char* fmt, va_list args)
 	{
 		using namespace Implementation;
 
@@ -683,7 +690,7 @@ namespace Death { namespace Trace {
 			return false;
 		}
 
-		bool result = EnqueueEntry(level, timestamp, formattedMessage, length);
+		bool result = EnqueueEntry(level, timestamp, functionName, formattedMessage, length);
 
 		if DEATH_UNLIKELY(level >= TraceLevel::Error) {
 			// Flush all messages with level Error or higher because of potential immediate crash/termination
@@ -711,7 +718,7 @@ namespace Death { namespace Trace {
 		std::atomic<bool>* threadFlushedPtr = &threadFlushed;
 
 		// We do not want to drop the message if a dropping queue is used
-		while (!EnqueueEntry(FlushRequired, timestamp, &threadFlushedPtr, sizeof(threadFlushedPtr))) {
+		while (!EnqueueEntry(FlushRequired, timestamp, threadFlushedPtr, {}, 0)) {
 			if (sleepDurationNs > 0) {
 				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
 			} else {
@@ -750,7 +757,7 @@ namespace Death { namespace Trace {
 		return _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
 	}
 
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength)
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength)
 	{
 		using namespace Implementation;
 
@@ -758,7 +765,8 @@ namespace Death { namespace Trace {
 			_threadContext = GetLocalThreadContext();
 		}
 
-		std::size_t totalSize = /*Level*/ 1 + /*Timestamp*/ 8 + /*Length*/ 4 + /*Content*/ contentLength;
+		std::size_t totalSize = /*Level*/ sizeof(std::byte) + /*Timestamp*/ sizeof(std::uint64_t) +
+			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ contentLength;
 		std::byte* writeBuffer = PrepareWriteBuffer(totalSize);
 
 		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
@@ -796,8 +804,11 @@ namespace Death { namespace Trace {
 		writeBuffer[0] = (std::byte)level;
 		writeBuffer += 1;
 
-		std::memcpy(writeBuffer, &timestamp, sizeof(timestamp));
-		writeBuffer += sizeof(timestamp);
+		std::memcpy(writeBuffer, &timestamp, sizeof(std::uint64_t));
+		writeBuffer += sizeof(std::uint64_t);
+
+		std::memcpy(writeBuffer, &functionName, sizeof(std::uintptr_t));
+		writeBuffer += sizeof(std::uintptr_t);
 
 		std::memcpy(writeBuffer, &contentLength, sizeof(std::uint32_t));
 		writeBuffer += sizeof(std::uint32_t);
@@ -815,9 +826,9 @@ namespace Death { namespace Trace {
 		return true;
 	}
 #else
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* content, std::int32_t contentLength)
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength)
 	{
-		_backend.DispatchEntryToSinks(level, timestamp, content, contentLength);
+		_backend.DispatchEntryToSinks(level, timestamp, functionName, content, contentLength);
 		return true;
 	}
 #endif
@@ -841,11 +852,11 @@ namespace Death { namespace Trace {
 
 }}
 
-void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
+void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	Death::Trace::_internalLogger.Write(level, fmt, args);
+	Death::Trace::_internalLogger.Write(level, functionName, fmt, args);
 	va_end(args);
 }
 
