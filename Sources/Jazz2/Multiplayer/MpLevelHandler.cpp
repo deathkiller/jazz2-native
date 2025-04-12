@@ -732,12 +732,12 @@ namespace Jazz2::Multiplayer
 		LevelHandler::AddActor(actor);
 
 		if (!_suppressRemoting && _isServer) {
+			Actors::ActorBase* actorPtr = actor.get();
+
 			std::uint32_t actorId;
-			Actors::ActorBase* actorPtr;
 			{
 				std::unique_lock lock(_lock);
 				actorId = FindFreeActorId();
-				actorPtr = actor.get();
 				_remotingActors[actorPtr] = { actorId };
 
 				// Store only used IDs on server-side
@@ -2505,6 +2505,14 @@ namespace Jazz2::Multiplayer
 					LOGD("[MP] ServerPacketType::CreateRemoteActor - actorId: %u, metadata: \"%s\", x: %i, y: %i", actorId, metadataPath.data(), posX, posY);
 
 					_root->InvokeAsync([this, actorId, flags, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim, rotation, scaleX, scaleY, rendererType]() {
+						{
+							std::unique_lock lock(_lock);
+							if (_remoteActors.contains(actorId)) {
+								LOGW("[MP] ServerPacketType::CreateRemoteActor - actor (%u) already exists", actorId);
+								return;
+							}
+						}
+
 						std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = std::make_shared<Actors::Multiplayer::RemoteActor>();
 						remoteActor->OnActivated(Actors::ActorActivationDetails(this, Vector3i(posX, posY, posZ)));
 						remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType);
@@ -2531,6 +2539,14 @@ namespace Jazz2::Multiplayer
 					LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: %u, event: %u, x: %i, y: %i", actorId, (std::uint32_t)eventType, tileX * 32 + 16, tileY * 32 + 16);
 
 					_root->InvokeAsync([this, actorId, eventType, eventParams = std::move(eventParams), actorFlags, tileX, tileY, posZ]() {
+						{
+							std::unique_lock lock(_lock);
+							if (_remoteActors.contains(actorId)) {
+								LOGW("[MP] ServerPacketType::CreateMirroredActor - actor (%u) already exists", actorId);
+								return;
+							}
+						}
+						
 						// TODO: Remove const_cast
 						std::shared_ptr<Actors::ActorBase> actor =_eventSpawner.SpawnEvent(eventType, const_cast<std::uint8_t*>(eventParams.data()), actorFlags, tileX, tileY, posZ);
 						if (actor != nullptr) {
@@ -2559,7 +2575,7 @@ namespace Jazz2::Multiplayer
 							_remoteActors.erase(it);
 							_playerNames.erase(actorId);
 						} else {
-							LOGD("[MP] ServerPacketType::DestroyRemoteActor - NOT FOUND - actorId: %u", actorId);
+							LOGW("[MP] ServerPacketType::DestroyRemoteActor - NOT FOUND - actorId: %u", actorId);
 						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
@@ -2678,18 +2694,24 @@ namespace Jazz2::Multiplayer
 						case PlayerPropertyType::Lives: {
 							// TODO
 							std::int32_t lives = packet.ReadVariableInt32();
-							_players[0]->_lives = lives;
+							if (!_players.empty()) {
+								_players[0]->_lives = lives;
+							}
 							break;
 						}
 						case PlayerPropertyType::Health: {
 							// TODO
 							std::int32_t health = packet.ReadVariableInt32();
-							_players[0]->SetHealth(health);
+							if (!_players.empty()) {
+								_players[0]->SetHealth(health);
+							}
 							break;
 						}
 						case PlayerPropertyType::Controllable: {
 							std::uint8_t enable = packet.ReadValue<std::uint8_t>();
-							_players[0]->_controllableExternal = (enable != 0);
+							if (!_players.empty()) {
+								_players[0]->_controllableExternal = (enable != 0);
+							}
 							break;
 						}
 						case PlayerPropertyType::Invulnerable: {
@@ -2702,38 +2724,48 @@ namespace Jazz2::Multiplayer
 
 							_root->InvokeAsync([this, modifier, decorActorId]() {
 								std::unique_lock lock(_lock);
-								auto it = _remoteActors.find(decorActorId);
-								_players[0]->SetModifier(modifier, it != _remoteActors.end() ? it->second : nullptr);
+								if (!_players.empty()) {
+									auto it = _remoteActors.find(decorActorId);
+									_players[0]->SetModifier(modifier, it != _remoteActors.end() ? it->second : nullptr);
+								}
 							}, NCINE_CURRENT_FUNCTION);
 							break;
 						}
 						case PlayerPropertyType::DizzyTime: {
 							std::int32_t dizzyTime = packet.ReadVariableInt32();
-							_players[0]->SetDizzyTime(float(dizzyTime));
+							if (!_players.empty()) {
+								_players[0]->SetDizzyTime(float(dizzyTime));
+							}
 							break;
 						}
 						case PlayerPropertyType::WeaponAmmo: {
 							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 							std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
-							_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
+							if (!_players.empty()) {
+								_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
+							}
 							break;
 						}
 						case PlayerPropertyType::WeaponUpgrades: {
 							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 							std::uint8_t weaponUpgrades = packet.ReadValue<std::uint8_t>();
-							_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
+							if (!_players.empty()) {
+								_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
+							}
 							break;
 						}
 						case PlayerPropertyType::Coins: {
 							std::int32_t newCount = packet.ReadVariableInt32();
-							_players[0]->_coins = newCount;
-							_hud->ShowCoins(newCount);
+							if (!_players.empty()) {
+								_players[0]->_coins = newCount;
+								_hud->ShowCoins(newCount);
+							}
 							break;
 						}
 						case PlayerPropertyType::Gems: {
 							std::uint8_t gemType = packet.ReadValue<std::uint8_t>();
 							std::int32_t newCount = packet.ReadVariableInt32();
-							if (gemType < arraySize(_players[0]->_gems)) {
+							if (!_players.empty() && gemType < arraySize(_players[0]->_gems)) {
 								_players[0]->_gems[gemType] = newCount;
 								_hud->ShowGems(gemType, newCount);
 							}
@@ -2741,41 +2773,53 @@ namespace Jazz2::Multiplayer
 						}
 						case PlayerPropertyType::Points: {
 							std::uint32_t points = packet.ReadVariableUint32();
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->GetPeerDescriptor()->Points = points;
+							if (!_players.empty()) {
+								auto* player = static_cast<RemotablePlayer*>(_players[0]);
+								player->GetPeerDescriptor()->Points = points;
+							}
 							break;
 						}
 						case PlayerPropertyType::PositionInRound: {
 							std::uint32_t positionInRound = packet.ReadVariableUint32();
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->GetPeerDescriptor()->PositionInRound = positionInRound;
+							if (!_players.empty()) {
+								auto* player = static_cast<RemotablePlayer*>(_players[0]);
+								player->GetPeerDescriptor()->PositionInRound = positionInRound;
+							}
 							break;
 						}
 						case PlayerPropertyType::Deaths: {
 							std::uint32_t deaths = packet.ReadVariableUint32();
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->GetPeerDescriptor()->Deaths = deaths;
+							if (!_players.empty()) {
+								auto* player = static_cast<RemotablePlayer*>(_players[0]);
+								player->GetPeerDescriptor()->Deaths = deaths;
+							}
 							break;
 						}
 						case PlayerPropertyType::Kills: {
 							std::uint32_t kills = packet.ReadVariableUint32();
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->GetPeerDescriptor()->Kills = kills;
+							if (!_players.empty()) {
+								auto* player = static_cast<RemotablePlayer*>(_players[0]);
+								player->GetPeerDescriptor()->Kills = kills;
+							}
 							break;
 						}
 						case PlayerPropertyType::Laps: {
 							std::uint32_t currentLaps = packet.ReadVariableUint32();
 							std::uint32_t totalLaps = packet.ReadVariableUint32();
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							auto peerDesc = player->GetPeerDescriptor();
-							peerDesc->Laps = currentLaps;
-							peerDesc->LapStarted = TimeStamp::now();
+							if (!_players.empty()) {
+								auto* player = static_cast<RemotablePlayer*>(_players[0]);
+								auto peerDesc = player->GetPeerDescriptor();
+								peerDesc->Laps = currentLaps;
+								peerDesc->LapStarted = TimeStamp::now();
+							}
 							break;
 						}
 						case PlayerPropertyType::TreasureCollected: {
 							std::uint32_t treasureCollected = packet.ReadVariableUint32();
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->GetPeerDescriptor()->TreasureCollected = treasureCollected;
+							if (!_players.empty()) {
+								auto* player = static_cast<RemotablePlayer*>(_players[0]);
+								player->GetPeerDescriptor()->TreasureCollected = treasureCollected;
+							}
 							break;
 						}
 						default: {
@@ -2793,30 +2837,31 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					auto* player = static_cast<RemotablePlayer*>(_players[0]);
-					auto peerDesc = player->GetPeerDescriptor();
-					peerDesc->PositionInRound = 0;
-					peerDesc->Deaths = 0;
-					peerDesc->Kills = 0;
-					peerDesc->Laps = 0;
-					peerDesc->LapStarted = TimeStamp::now();
-					peerDesc->TreasureCollected = 0;
-					peerDesc->DeathElapsedFrames = FLT_MAX;
+					if (!_players.empty()) {
+						auto* player = static_cast<RemotablePlayer*>(_players[0]);
+						auto peerDesc = player->GetPeerDescriptor();
+						peerDesc->PositionInRound = 0;
+						peerDesc->Deaths = 0;
+						peerDesc->Kills = 0;
+						peerDesc->Laps = 0;
+						peerDesc->LapStarted = TimeStamp::now();
+						peerDesc->TreasureCollected = 0;
+						peerDesc->DeathElapsedFrames = FLT_MAX;
 
-					player->_coins = 0;
-					std::memset(player->_gems, 0, sizeof(player->_gems));
-					std::memset(player->_weaponAmmo, 0, sizeof(player->_weaponAmmo));
-					std::memset(player->_weaponAmmoCheckpoint, 0, sizeof(player->_weaponAmmoCheckpoint));
+						player->_coins = 0;
+						std::memset(player->_gems, 0, sizeof(player->_gems));
+						std::memset(player->_weaponAmmo, 0, sizeof(player->_weaponAmmo));
+						std::memset(player->_weaponAmmoCheckpoint, 0, sizeof(player->_weaponAmmoCheckpoint));
 
-					player->_coinsCheckpoint = 0;
-					std::memset(player->_gemsCheckpoint, 0, sizeof(player->_gemsCheckpoint));
-					std::memset(player->_weaponUpgrades, 0, sizeof(player->_weaponUpgrades));
-					std::memset(player->_weaponUpgradesCheckpoint, 0, sizeof(player->_weaponUpgradesCheckpoint));
+						player->_coinsCheckpoint = 0;
+						std::memset(player->_gemsCheckpoint, 0, sizeof(player->_gemsCheckpoint));
+						std::memset(player->_weaponUpgrades, 0, sizeof(player->_weaponUpgrades));
+						std::memset(player->_weaponUpgradesCheckpoint, 0, sizeof(player->_weaponUpgradesCheckpoint));
 
-					player->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-					player->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-					player->_currentWeapon = WeaponType::Blaster;
-
+						player->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+						player->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+						player->_currentWeapon = WeaponType::Blaster;
+					}
 					return true;
 				}
 				case ServerPacketType::PlayerRespawn: {
@@ -2832,7 +2877,9 @@ namespace Jazz2::Multiplayer
 					LOGD("[MP] ServerPacketType::PlayerRespawn - playerIndex: %u, x: %f, y: %f", playerIndex, posX, posY);
 
 					_root->InvokeAsync([this, posX, posY]() {
-						_players[0]->Respawn(Vector2f(posX, posY));
+						if (!_players.empty()) {
+							_players[0]->Respawn(Vector2f(posX, posY));
+						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
@@ -2852,7 +2899,10 @@ namespace Jazz2::Multiplayer
 						playerIndex, posX, posY, speedX, speedY);
 
 					_root->InvokeAsync([this, posX, posY, speedX, speedY]() {
-						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY));
+						if (!_players.empty()) {
+							auto* player = static_cast<RemotablePlayer*>(_players[0]);
+							player->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY));
+						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
@@ -2878,7 +2928,9 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - playerIndex: %u", playerIndex);
 
-					_players[0]->EmitWeaponFlare();
+					if (!_players.empty()) {
+						_players[0]->EmitWeaponFlare();
+					}
 					return true;
 				}
 				case ServerPacketType::PlayerChangeWeapon: {
@@ -2893,10 +2945,12 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
 
-					auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
-					remotablePlayer->ChangingWeaponFromServer = true;
-					static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon((WeaponType)weaponType);
-					remotablePlayer->ChangingWeaponFromServer = false;
+					if (!_players.empty()) {
+						auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
+						remotablePlayer->ChangingWeaponFromServer = true;
+						static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon((WeaponType)weaponType);
+						remotablePlayer->ChangingWeaponFromServer = false;
+					}
 					return true;
 				}
 				case ServerPacketType::PlayerTakeDamage: {
@@ -2913,7 +2967,9 @@ namespace Jazz2::Multiplayer
 					LOGD("[MP] ServerPacketType::PlayerTakeDamage - playerIndex: %u, health: %i, pushForce: %f", playerIndex, health, pushForce);
 
 					_root->InvokeAsync([this, health, pushForce]() {
-						_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce);
+						if (!_players.empty()) {
+							_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce);
+						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
@@ -2931,11 +2987,13 @@ namespace Jazz2::Multiplayer
 					float forceY = packet.ReadValue<std::int16_t>() / 512.0f;
 					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 					_root->InvokeAsync([this, posX, posY, forceX, forceY, flags]() {
-						bool removeSpecialMove = false;
-						_players[0]->OnHitSpring(Vector2f(posX, posY), Vector2f(forceX, forceY), (flags & 0x01) == 0x01, (flags & 0x02) == 0x02, removeSpecialMove);
-						if (removeSpecialMove) {
-							_players[0]->_controllable = true;
-							_players[0]->EndDamagingMove();
+						if (!_players.empty()) {
+							bool removeSpecialMove = false;
+							_players[0]->OnHitSpring(Vector2f(posX, posY), Vector2f(forceX, forceY), (flags & 0x01) == 0x01, (flags & 0x02) == 0x02, removeSpecialMove);
+							if (removeSpecialMove) {
+								_players[0]->_controllable = true;
+								_players[0]->EndDamagingMove();
+							}
 						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
@@ -2952,7 +3010,10 @@ namespace Jazz2::Multiplayer
 					LOGD("[MP] ServerPacketType::PlayerWarpIn - playerIndex: %u, exitType: 0x%02x", playerIndex, (std::uint32_t)exitType);
 
 					_root->InvokeAsync([this, exitType]() {
-						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn(exitType);
+						if (!_players.empty()) {
+							auto* player = static_cast<RemotablePlayer*>(_players[0]);
+							player->WarpIn(exitType);
+						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
@@ -3026,6 +3087,8 @@ namespace Jazz2::Multiplayer
 			_remotingActors.erase(it);
 			_remoteActors.erase(actorId);
 		}
+
+		LOGI("[MP] Sending DestroyRemoteActor with actorId: %u", actorId);
 
 		MemoryStream packet(4);
 		packet.WriteVariableUint32(actorId);
