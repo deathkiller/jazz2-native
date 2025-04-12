@@ -80,6 +80,7 @@ namespace Jazz2
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
 	StaticArray<16, std::uint8_t> PreferencesCache::UniquePlayerID;
+	StaticArray<16, std::uint8_t> PreferencesCache::UniqueServerID;
 	String PreferencesCache::PlayerName;
 	bool PreferencesCache::EnableDiscordIntegration = true;
 
@@ -276,6 +277,13 @@ namespace Jazz2
 						Random().Uuid(UniquePlayerID);
 					}
 
+					if (version >= 11) {
+						uc.Read(UniqueServerID, sizeof(UniqueServerID));
+					} else {
+						// Generate a new UUID when upgrading from older version
+						Random().Uuid(UniqueServerID);
+					}
+
 					// Controls
 					if (version >= 4) {
 						auto mappings = ControlScheme::GetAllMappings();
@@ -369,6 +377,7 @@ namespace Jazz2
 			// Config file doesn't exist or reset is requested
 			FirstRun = true;
 			Random().Uuid(UniquePlayerID);
+			Random().Uuid(UniqueServerID);
 			PlayerName = GetEffectivePlayerName();
 			TryLoadPreferredLanguage();
 
@@ -511,6 +520,8 @@ namespace Jazz2
 		co.Write(UniquePlayerID, sizeof(UniquePlayerID));
 		co.WriteVariableUint32((std::uint32_t)PlayerName.size());
 		co.Write(PlayerName.data(), (std::int64_t)PlayerName.size());
+
+		co.Write(UniqueServerID, sizeof(UniqueServerID));
 
 		// Controls
 		co.WriteValue<std::uint8_t>((std::uint8_t)ControlScheme::MaxSupportedPlayers);

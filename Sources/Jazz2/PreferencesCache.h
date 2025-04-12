@@ -226,6 +226,8 @@ namespace Jazz2
 		// User Profile
 		/** @brief Unique player ID */
 		static StaticArray<16, std::uint8_t> UniquePlayerID;
+		/** @brief Unique server ID */
+		static StaticArray<16, std::uint8_t> UniqueServerID;
 		/** @brief Player display name */
 		static String PlayerName;
 		/** @brief Whether Discord integration is enabled */
@@ -288,7 +290,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 10;
+		static constexpr std::uint8_t FileVersion = 11;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

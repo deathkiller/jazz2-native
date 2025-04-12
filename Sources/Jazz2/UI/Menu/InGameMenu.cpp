@@ -301,6 +301,12 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	MenuSection* InGameMenu::GetCurrentSection() const
+	{
+		std::size_t count = _sections.size();
+		return (count >= 1 ? _sections[count - 1].get() : nullptr);
+	}
+
 	MenuSection* InGameMenu::GetUnderlyingSection() const
 	{
 		std::size_t count = _sections.size();

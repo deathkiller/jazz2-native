@@ -2574,17 +2574,20 @@ namespace Jazz2::Actors
 
 	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(StringView identifier, float gain, float pitch)
 	{
-#if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
-			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
-			return _levelHandler->PlaySfx(this, identifier, &it->second.Buffers[idx]->Buffer, Vector3f(0.0f, 0.0f, 0.0f), true, gain, pitch);
-		} else {
-			return nullptr;
+			AudioBuffer* buffer;
+			if (!it->second.Buffers.empty()) {
+				std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
+				buffer = &it->second.Buffers[idx]->Buffer;
+			} else {
+				buffer = nullptr;
+			}
+			
+			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f::Zero, true, gain, pitch);
 		}
-#else
+
 		return nullptr;
-#endif
 	}
 
 	bool Player::SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, Function<void()>&& callback)

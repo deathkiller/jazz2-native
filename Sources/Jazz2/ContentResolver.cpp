@@ -605,27 +605,27 @@ namespace Jazz2
 				nCine::sort(metadata->Animations.begin(), metadata->Animations.end());
 			}
 
-#if defined(WITH_AUDIO)
-			if (!_isHeadless) {
-				// Don't load sounds in headless mode
-				ondemand::object sounds;
-				if (doc["Sounds"].get(sounds) == SUCCESS) {
-					std::size_t count;
-					if (sounds.count_fields().get(count) == SUCCESS) {
-						metadata->Sounds.reserve(count);
+			// Don't load sounds in headless mode
+			ondemand::object sounds;
+			if (doc["Sounds"].get(sounds) == SUCCESS) {
+				std::size_t count;
+				if (sounds.count_fields().get(count) == SUCCESS) {
+					metadata->Sounds.reserve(count);
+				}
+
+				for (auto it : sounds) {
+					std::string_view key;
+					ondemand::object value;
+					ondemand::array assetPaths;
+					bool isEmpty;
+					if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
+						value["Paths"].get(assetPaths) != SUCCESS || assetPaths.is_empty().get(isEmpty) != SUCCESS || isEmpty) {
+						continue;
 					}
 
-					for (auto it : sounds) {
-						std::string_view key;
-						ondemand::object value;
-						ondemand::array assetPaths;
-						bool isEmpty;
-						if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
-							value["Paths"].get(assetPaths) != SUCCESS || assetPaths.is_empty().get(isEmpty) != SUCCESS || isEmpty) {
-							continue;
-						}
-
-						SoundResource sound;
+					SoundResource sound;
+#if defined(WITH_AUDIO)
+					if (!_isHeadless) {
 						for (auto assetPathItem : assetPaths) {
 							std::string_view assetPath;
 							if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
@@ -642,14 +642,11 @@ namespace Jazz2
 								}
 							}
 						}
-
-						if (!sound.Buffers.empty()) {
-							metadata->Sounds.emplace(key, std::move(sound));
-						}
 					}
+#endif
+					metadata->Sounds.emplace(key, std::move(sound));
 				}
 			}
-#endif
 		}
 
 		return _cachedMetadata.emplace(metadata->Path, std::move(metadata)).first->second.get();

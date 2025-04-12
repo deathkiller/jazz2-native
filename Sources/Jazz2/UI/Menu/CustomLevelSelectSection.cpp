@@ -200,6 +200,9 @@ namespace Jazz2::UI::Menu
 					float x = column1 + xMultiplier - easing * xMultiplier;
 					float size = 0.7f + easing * 0.12f;
 
+					_root->DrawElement(MenuGlow, 0, centerX, center.Y, IMenuContainer::MainLayer - 200, Alignment::Center,
+						Colorf(1.0f, 1.0f, 1.0f, 0.2f), 26.0f, 3.0f, true, true);
+
 					_root->DrawStringShadow(levelName, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Left, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {

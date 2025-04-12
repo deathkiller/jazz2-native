@@ -208,7 +208,8 @@ namespace Jazz2::UI::Menu
 		const auto& mapping = ControlScheme::GetMappings(_playerIndex)[(std::int32_t)item.Item.Type];
 
 		if (isSelected) {
-			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer - 200, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
+			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer - 200, Alignment::Center,
+				Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
 		}
 
 		Vector2f displayNameSize = _root->MeasureString(item.Item.DisplayName, 0.8f);
