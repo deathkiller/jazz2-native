@@ -28,6 +28,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Application.cpp
 	${NCINE_SOURCE_DIR}/nCine/I18n.cpp
 	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.cpp
+	${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/BitArray.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Clock.cpp
