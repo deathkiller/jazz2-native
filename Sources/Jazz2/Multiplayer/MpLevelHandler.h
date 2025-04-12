@@ -215,6 +215,7 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
+		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
 		std::uint64_t _seqNum; // Client: sequence number of the last update
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players

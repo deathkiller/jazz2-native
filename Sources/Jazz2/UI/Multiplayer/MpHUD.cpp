@@ -150,9 +150,9 @@ namespace Jazz2::UI::Multiplayer
 
 		if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::PreGame) {
 			float sinceLapStarted = mpLevelHandler->_gameTimeLeft / FrameTimer::FramesPerSecond;
-			std::int32_t minutes = (std::int32_t)(sinceLapStarted / 60);
-			std::int32_t seconds = (std::int32_t)fmod(sinceLapStarted, 60);
-			std::int32_t milliseconds = (std::int32_t)(fmod(sinceLapStarted, 1) * 100);
+			std::int32_t minutes = std::max(0, (std::int32_t)(sinceLapStarted / 60));
+			std::int32_t seconds = std::max(0, (std::int32_t)fmod(sinceLapStarted, 60));
+			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
 
 			formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
 			auto gameStartsInText = _f("Game starts in %s", stringBuffer);
@@ -160,17 +160,13 @@ namespace Jazz2::UI::Multiplayer
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-
 			return;
 		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::WaitingForMinPlayers) {
-			const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
-			std::int32_t playersNeeded = (std::int32_t)(serverConfig.MinPlayerCount - mpLevelHandler->_players.size());
-			auto waitingText = _fn("Waiting for %i more player", "Waiting for %i more players", playersNeeded, playersNeeded);
+			auto waitingText = _fn("Waiting for %i more player", "Waiting for %i more players", mpLevelHandler->_waitingForPlayerCount, mpLevelHandler->_waitingForPlayerCount);
 			_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-
 			return;
 		} else if (mpLevelHandler->_levelState != MpLevelHandler::LevelState::Running) {
 			return;
@@ -204,9 +200,9 @@ namespace Jazz2::UI::Multiplayer
 					Alignment::TopLeft, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
 
 				float sinceLapStarted = peerDesc->LapStarted.secondsSince();
-				std::int32_t minutes = (std::int32_t)(sinceLapStarted / 60);
-				std::int32_t seconds = (std::int32_t)fmod(sinceLapStarted, 60);
-				std::int32_t milliseconds = (std::int32_t)(fmod(sinceLapStarted, 1) * 100);
+				std::int32_t minutes = std::max(0, (std::int32_t)(sinceLapStarted / 60));
+				std::int32_t seconds = std::max(0, (std::int32_t)fmod(sinceLapStarted, 60));
+				std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
 
 				formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
 				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f + 80.0f, view.Y + 8.0f + 1.4f, FontShadowLayer,

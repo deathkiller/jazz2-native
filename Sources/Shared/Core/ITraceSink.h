@@ -34,7 +34,8 @@ namespace Death
 
 	protected:
 		/** @brief Called when new trace entry is received and should be written to the sink destination */
-		virtual void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, Containers::StringView threadId, Containers::StringView message) = 0;
+		virtual void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, Containers::StringView threadId,
+			Containers::StringView functionName, Containers::StringView content) = 0;
 		/** @brief Called when all sink buffers should be flushed immediately */
 		virtual void OnTraceFlushed() = 0;
 	};
