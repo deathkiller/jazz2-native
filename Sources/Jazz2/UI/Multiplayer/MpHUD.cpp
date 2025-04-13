@@ -149,10 +149,10 @@ namespace Jazz2::UI::Multiplayer
 		}
 
 		if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::PreGame) {
-			float sinceLapStarted = mpLevelHandler->_gameTimeLeft / FrameTimer::FramesPerSecond;
-			std::int32_t minutes = std::max(0, (std::int32_t)(sinceLapStarted / 60));
-			std::int32_t seconds = std::max(0, (std::int32_t)fmod(sinceLapStarted, 60));
-			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
+			float timeLeftSecs = mpLevelHandler->_gameTimeLeft / FrameTimer::FramesPerSecond;
+			std::int32_t minutes = std::max(0, (std::int32_t)(timeLeftSecs / 60));
+			std::int32_t seconds = std::max(0, (std::int32_t)fmod(timeLeftSecs, 60));
+			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(timeLeftSecs, 1) * 100));
 
 			formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
 			auto gameStartsInText = _f("Game starts in %s", stringBuffer);
