@@ -40,7 +40,7 @@ namespace Jazz2::Multiplayer
 		ServerConfiguration& GetServerConfiguration() const;
 
 		/** @brief Returns connected peer count */
-		std::uint32_t GetPeerCount() const;
+		std::uint32_t GetPeerCount();
 
 		/** @brief Returns all connected peers */
 		LockedPtr<const HashMap<Peer, std::shared_ptr<PeerDescriptor>>, Spinlock> GetPeers();
@@ -73,8 +73,8 @@ namespace Jazz2::Multiplayer
 		 */
 		static ServerConfiguration LoadServerConfigurationFromFile(StringView path);
 
-		/** @brief Converts @ref MpGameMode to the localized string representation */
-		static StringView GameModeToLocalizedString(MpGameMode mode);
+		/** @brief Converts @ref MpGameMode to the string representation */
+		static StringView GameModeToString(MpGameMode mode);
 		/** @brief Converts the non-localized string representation back to @ref MpGameMode */
 		static MpGameMode StringToGameMode(StringView value);
 		/** @brief Converts UUID to the string representation */

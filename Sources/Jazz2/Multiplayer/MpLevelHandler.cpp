@@ -1670,8 +1670,10 @@ namespace Jazz2::Multiplayer
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
 			char infoBuffer[128];
-			formatString(infoBuffer, sizeof(infoBuffer), "Current level: %s (%s)",
-				_levelName.data(), NetworkManager::GameModeToLocalizedString(serverConfig.GameMode).data());
+			formatString(infoBuffer, sizeof(infoBuffer), "Server: %s", serverConfig.ServerName.data());
+			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+			formatString(infoBuffer, sizeof(infoBuffer), "Current level: \"%s\" (%s)",
+				_levelName.data(), NetworkManager::GameModeToString(serverConfig.GameMode).data());
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			formatString(infoBuffer, sizeof(infoBuffer), "Players: %u/%u",
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
@@ -1684,7 +1686,8 @@ namespace Jazz2::Multiplayer
 			}
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			if (!serverConfig.Playlist.empty()) {
-				formatString(infoBuffer, sizeof(infoBuffer), "Playlist active: %u/%u", (std::uint32_t)serverConfig.PlaylistIndex, (std::uint32_t)serverConfig.Playlist.size());
+				formatString(infoBuffer, sizeof(infoBuffer), "Playlist active: %u/%u%s",
+					(std::uint32_t)(serverConfig.PlaylistIndex + 1), (std::uint32_t)serverConfig.Playlist.size(), serverConfig.RandomizePlaylist ? " (random)" : "");
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}
 			return true;
@@ -1694,6 +1697,7 @@ namespace Jazz2::Multiplayer
 			}
 		} else if (line == "/players"_s) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
+			SendMessage(peer, UI::MessageLevel::Info, "List of connected players:"_s);
 
 			char infoBuffer[128];
 			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
@@ -1737,7 +1741,7 @@ namespace Jazz2::Multiplayer
 					if (SetGameMode(gameMode)) {
 						char infoBuffer[128];
 						formatString(infoBuffer, sizeof(infoBuffer), "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]",
-							NetworkManager::GameModeToLocalizedString(gameMode).data());
+							NetworkManager::GameModeToString(gameMode).data());
 						SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 						return true;
 					}
@@ -1872,12 +1876,12 @@ namespace Jazz2::Multiplayer
 		if (!peer.IsValid()) {
 			if (ContentResolver::Get().IsHeadless()) {
 				switch (level) {
-					default: DEATH_TRACE(TraceLevel::Info, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, "[>] %s", message.data()); break;
-					case UI::MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Assert: DEATH_TRACE(TraceLevel::Assert, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, "[<] %s", message.data()); break;
+					default: DEATH_TRACE(TraceLevel::Info, {}, "[<] %s", message.data()); break;
+					case UI::MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, {}, "[>] %s", message.data()); break;
+					case UI::MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, {}, "[<] %s", message.data()); break;
+					case UI::MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, {}, "[<] %s", message.data()); break;
+					case UI::MessageLevel::Assert: DEATH_TRACE(TraceLevel::Assert, {}, "[<] %s", message.data()); break;
+					case UI::MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, {}, "[<] %s", message.data()); break;
 				}
 			} else {
 				_console->WriteLine(UI::MessageLevel::Info, message);

@@ -411,13 +411,13 @@ namespace nCine
 
 	void MainApplication::ProcessStep()
 	{
-#if defined(WITH_GLFW) || defined(WITH_SDL)
-		ProcessEvents();
-#elif defined(WITH_QT5GAMEPAD)
 		if (appCfg_.withGraphics) {
+#if defined(WITH_GLFW) || defined(WITH_SDL)
+			ProcessEvents();
+#elif defined(WITH_QT5GAMEPAD)
 			static_cast<Qt5InputManager&>(*inputManager_).updateJoystickStates();
-		}
 #endif
+		}
 
 		const bool suspended = ShouldSuspend();
 		if (wasSuspended_ != suspended) {

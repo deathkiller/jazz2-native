@@ -750,7 +750,7 @@ namespace nCine
 			}
 #elif defined(DEATH_TARGET_APPLE)
 			const std::int64_t remainingTimeNs = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
-				* 1'000'000'000ULL) / (std::int64_t)clockFreq) - 300'000; // 0.3 ms
+				* 1'000'000'000ULL) / (std::int64_t)clockFreq) - 1'000'000; // 1 ms
 			if (remainingTimeNs > 0) {
 				timespec dueTime{};
 				dueTime.tv_nsec += remainingTimeNs;
@@ -762,7 +762,7 @@ namespace nCine
 			}
 #elif defined(DEATH_TARGET_UNIX)
 			const std::int64_t remainingTimeNs = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
-				* 1'000'000'000ULL) / (std::int64_t)clockFreq) - 300'000; // 0.3 ms
+				* 1'000'000'000ULL) / (std::int64_t)clockFreq) - 1'000'000; // 1 ms
 			if (remainingTimeNs > 0) {
 				timespec dueTime;
 				clock_gettime(CLOCK_MONOTONIC, &dueTime);
