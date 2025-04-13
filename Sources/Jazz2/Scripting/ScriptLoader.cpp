@@ -993,9 +993,9 @@ namespace Jazz2::Scripting
 		}
 
 		if (msg.section != nullptr && msg.section[0] != '\0') {
-			DEATH_TRACE(level, "%s:%i(%i): %s", msg.section, msg.row, msg.col, msg.message);
+			DEATH_TRACE(level, {}, "%s:%i(%i): %s", msg.section, msg.row, msg.col, msg.message);
 		} else {
-			DEATH_TRACE(level, "%s", msg.message);
+			DEATH_TRACE(level, {}, "%s", msg.message);
 		}
 	}
 }

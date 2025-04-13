@@ -71,9 +71,17 @@ namespace Jazz2::Multiplayer
 		return *_serverConfig;
 	}
 
-	std::uint32_t NetworkManager::GetPeerCount() const
+	std::uint32_t NetworkManager::GetPeerCount()
 	{
-		return std::uint32_t(_peerDesc.size());
+		std::uint32_t count = std::uint32_t(_peerDesc.size() - 1);
+
+		std::unique_lock<Spinlock> l(_lock);
+		auto it = _peerDesc.find(Peer{});
+		if (it != _peerDesc.end() && it->second->Player) {
+			count++;
+		}
+
+		return count;
 	}
 
 	LockedPtr<const HashMap<Peer, std::shared_ptr<PeerDescriptor>>, Spinlock> NetworkManager::GetPeers()
@@ -488,18 +496,18 @@ namespace Jazz2::Multiplayer
 #endif
 	}
 
-	StringView NetworkManager::GameModeToLocalizedString(MpGameMode mode)
+	StringView NetworkManager::GameModeToString(MpGameMode mode)
 	{
 		switch (mode) {
-			case MpGameMode::Battle: return _("Battle");
-			case MpGameMode::TeamBattle: return _("Team Battle");
-			case MpGameMode::Race: return _("Race");
-			case MpGameMode::TeamRace: return _("Team Race");
-			case MpGameMode::TreasureHunt: return _("Treasure Hunt");
-			case MpGameMode::TeamTreasureHunt: return _("Team Treasure Hunt");
-			case MpGameMode::CaptureTheFlag: return _("Capture The Flag");
-			case MpGameMode::Cooperation: return _("Cooperation");
-			default: return _("Unknown");
+			case MpGameMode::Battle: return "Battle"_s;
+			case MpGameMode::TeamBattle: return "Team Battle"_s;
+			case MpGameMode::Race: return "Race"_s;
+			case MpGameMode::TeamRace: return "Team Race"_s;
+			case MpGameMode::TreasureHunt: return "Treasure Hunt"_s;
+			case MpGameMode::TeamTreasureHunt: return "Team Treasure Hunt"_s;
+			case MpGameMode::CaptureTheFlag: return "Capture The Flag"_s;
+			case MpGameMode::Cooperation: return "Cooperation"_s;
+			default: return "Unknown"_s;
 		}
 	}
 

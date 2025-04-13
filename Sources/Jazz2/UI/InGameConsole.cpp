@@ -283,12 +283,12 @@ namespace Jazz2::UI
 	{
 #if defined(DEATH_TRACE)
 		switch (level) {
-			//default: DEATH_TRACE(TraceLevel::Info, "[<] %s", line.data()); break;
-			case MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, "[>] %s", line.data()); break;
-			case MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, "[<] %s", line.data()); break;
-			case MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, "[<] %s", line.data()); break;
-			case MessageLevel::Assert: DEATH_TRACE(TraceLevel::Assert, "[<] %s", line.data()); break;
-			case MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, "[<] %s", line.data()); break;
+			//default: DEATH_TRACE(TraceLevel::Info, {}, "[<] %s", line.data()); break;
+			case MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, {}, "[>] %s", line.data()); break;
+			case MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, {}, "[<] %s", line.data()); break;
+			case MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, {}, "[<] %s", line.data()); break;
+			case MessageLevel::Assert: DEATH_TRACE(TraceLevel::Assert, {}, "[<] %s", line.data()); break;
+			case MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, {}, "[<] %s", line.data()); break;
 		}
 #endif
 		_logHistory.emplace_back(level, std::move(line));
