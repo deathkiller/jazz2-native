@@ -831,7 +831,8 @@ namespace Death { namespace Trace {
 			return _writerPos - _readerPos;
 		}
 
-		std::size_t capacity() const noexcept {
+		std::size_t capacity() const noexcept
+		{
 			return _capacity;
 		}
 
@@ -841,6 +842,12 @@ namespace Death { namespace Trace {
 		}
 
 	private:
+		std::size_t _capacity;
+		std::unique_ptr<TransitEvent[]> _storage;
+		std::size_t _mask;
+		std::size_t _readerPos;
+		std::size_t _writerPos;
+
 		void expand()
 		{
 			std::size_t newCapacity = _capacity * 2;
@@ -860,12 +867,6 @@ namespace Death { namespace Trace {
 			_writerPos = currentSize;
 			_readerPos = 0;
 		}
-
-		std::size_t _capacity;
-		std::unique_ptr<TransitEvent[]> _storage;
-		std::size_t _mask;
-		std::size_t _readerPos;
-		std::size_t _writerPos;
 	};
 
 	class LoggerBackend;
