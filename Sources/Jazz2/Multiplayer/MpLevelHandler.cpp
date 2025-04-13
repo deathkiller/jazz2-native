@@ -38,6 +38,7 @@
 
 #include <float.h>
 
+#include <Containers/DateTime.h>
 #include <Containers/StaticArray.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
@@ -1670,10 +1671,10 @@ namespace Jazz2::Multiplayer
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
 			char infoBuffer[128];
-			formatString(infoBuffer, sizeof(infoBuffer), "Server: %s", serverConfig.ServerName.data());
+			formatString(infoBuffer, sizeof(infoBuffer), "Server: %s%s", serverConfig.ServerName.data(), serverConfig.IsPrivate ? " (Private)" : "");
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
-			formatString(infoBuffer, sizeof(infoBuffer), "Current level: \"%s\" (%s)",
-				_levelName.data(), NetworkManager::GameModeToString(serverConfig.GameMode).data());
+			formatString(infoBuffer, sizeof(infoBuffer), "Current level: \"%s\" (%s%s)",
+				_levelName.data(), NetworkManager::GameModeToString(serverConfig.GameMode).data(), serverConfig.IsElimination ? "/Elimination" : "");
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			formatString(infoBuffer, sizeof(infoBuffer), "Players: %u/%u",
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
@@ -1685,9 +1686,22 @@ namespace Jazz2::Multiplayer
 				formatString(infoBuffer, sizeof(infoBuffer), "Server load: - ms");
 			}
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+
+			auto uptimeSecs = (DateTime::Now().ToUnixMilliseconds() / 1000) - serverConfig.StartUnixTimestamp;
+			std::int32_t minutes = std::max(0, (std::int32_t)(uptimeSecs / 60));
+			std::int32_t seconds = std::max(0, (std::int32_t)fmod(uptimeSecs, 60));
+			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(uptimeSecs, 1) * 100));
+			formatString(infoBuffer, sizeof(infoBuffer), "Uptime: %d:%02d:%02d", minutes, seconds, milliseconds);
+			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+
+			if (isAdmin) {
+				formatString(infoBuffer, sizeof(infoBuffer), "Config Path: \"%s\"", serverConfig.FilePath.data());
+				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+			}
+
 			if (!serverConfig.Playlist.empty()) {
 				formatString(infoBuffer, sizeof(infoBuffer), "Playlist active: %u/%u%s",
-					(std::uint32_t)(serverConfig.PlaylistIndex + 1), (std::uint32_t)serverConfig.Playlist.size(), serverConfig.RandomizePlaylist ? " (random)" : "");
+					(std::uint32_t)(serverConfig.PlaylistIndex + 1), (std::uint32_t)serverConfig.Playlist.size(), serverConfig.RandomizePlaylist ? " (Random)" : "");
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}
 			return true;
