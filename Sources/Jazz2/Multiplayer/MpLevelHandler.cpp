@@ -781,9 +781,10 @@ namespace Jazz2::Multiplayer
 
 		if (_isServer) {
 			// TODO: Player weapon SFX doesn't work
-			std::uint32_t actorId;
+			std::uint32_t actorId; bool excludeSelf;
 			if (auto* player = runtime_cast<Actors::Player*>(self)) {
 				actorId = player->_playerIndex;
+				excludeSelf = (!identifier.hasPrefix("EndOfLevel"_s) && !identifier.hasPrefix("Pickup"_s) && !identifier.hasPrefix("Weapon"_s));
 
 				if (sourceRelative) {
 					// Remote players don't have local viewport, so SFX cannot be relative to them
@@ -797,11 +798,8 @@ namespace Jazz2::Multiplayer
 			} else {
 				std::unique_lock lock(_lock);
 				auto it = _remotingActors.find(self);
-				if (it != _remotingActors.end()) {
-					actorId = it->second.ActorID;
-				} else {
-					actorId = UINT32_MAX;
-				}
+				actorId = (it != _remotingActors.end() ? it->second.ActorID : UINT32_MAX);
+				excludeSelf = false;
 			}
 
 			if (actorId != UINT32_MAX) {
@@ -814,9 +812,10 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableUint32((std::uint32_t)identifier.size());
 				packet.Write(identifier.data(), (std::uint32_t)identifier.size());
 
-				_networkManager->SendTo([this, self](const Peer& peer) {
+				Actors::ActorBase* excludedPlayer = (excludeSelf ? self : nullptr);
+				_networkManager->SendTo([this, excludedPlayer](const Peer& peer) {
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && peerDesc->Player != self);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && (excludedPlayer == nullptr || excludedPlayer != peerDesc->Player));
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlaySfx, packet);
 			}
 		}
@@ -1678,8 +1677,8 @@ namespace Jazz2::Multiplayer
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			if (!_players.empty()) {
-				formatString(infoBuffer, sizeof(infoBuffer), "Server load: %i ms",
-					(std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f));
+				formatString(infoBuffer, sizeof(infoBuffer), "Server load: %i ms (%0.1f)",
+					(std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f), theApplication().GetFrameTimer().GetAverageFps());
 			} else {
 				formatString(infoBuffer, sizeof(infoBuffer), "Server load: - ms");
 			}
@@ -2411,11 +2410,17 @@ namespace Jazz2::Multiplayer
 
 					// TODO: Use only lock here
 					_root->InvokeAsync([this, actorId, gain, pitch, identifier = std::move(identifier)]() {
-						std::unique_lock lock(_lock);
-						auto it = _remoteActors.find(actorId);
-						if (it != _remoteActors.end()) {
-							// TODO: gain, pitch, ...
-							it->second->PlaySfx(identifier, gain, pitch);
+						if (_lastSpawnedActorId == actorId) {
+							if (!_players.empty()) {
+								_players[0]->PlaySfx(identifier, gain, pitch);
+							}
+						} else {
+							std::unique_lock lock(_lock);
+							auto it = _remoteActors.find(actorId);
+							if (it != _remoteActors.end()) {
+								// TODO: gain, pitch, ...
+								it->second->PlaySfx(identifier, gain, pitch);
+							}
 						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
@@ -2957,11 +2962,6 @@ namespace Jazz2::Multiplayer
 					_root->InvokeAsync([this]() {
 						if (!_players.empty()) {
 							_players[0]->EmitWeaponFlare();
-
-							// TODO: Fix weapon SFX
-							if (_players[0]->_currentWeapon == WeaponType::Blaster) {
-								_players[0]->PlayPlayerSfx("WeaponBlaster"_s);
-							}
 						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;

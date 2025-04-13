@@ -230,172 +230,169 @@ static void CheckConsoleDarkMode()
 }
 #endif
 
-namespace nCine
+template<std::int32_t N>
+static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char(&newPart)[N])
 {
-	template<std::int32_t N>
-	static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char(&newPart)[N])
-	{
-		length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, newPart, N - 1);
+	length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, newPart, N - 1);
+}
+
+static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char* newPart, std::int32_t newPartLength)
+{
+	length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, newPart, newPartLength);
+}
+
+static void AppendDateTime(char* dest, std::int32_t& length, std::uint64_t timestamp)
+{
+	// Convert nanoseconds to milliseconds
+	auto dt = DateTime::FromUnixMilliseconds(timestamp / 1000000ULL);
+	auto p = dt.Partitioned();
+
+	length += snprintf(dest + length, MaxLogEntryLength - length - 1,
+		"%02u:%02u:%02u.%03u", p.Hour, p.Minute, p.Second, p.Millisecond);
+}
+
+static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, StringView threadId)
+{
+	if (length >= MaxLogEntryLength) {
+		return;
 	}
 
-	static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char* newPart, std::int32_t newPartLength)
-	{
-		length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, newPart, newPartLength);
+	char levelIdentifier;
+	switch (level) {
+		case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
+		case TraceLevel::Assert:	levelIdentifier = 'A'; break;
+		case TraceLevel::Error:		levelIdentifier = 'E'; break;
+		case TraceLevel::Warning:	levelIdentifier = 'W'; break;
+		case TraceLevel::Info:		levelIdentifier = 'I'; break;
+		default:					levelIdentifier = 'D'; break;
 	}
 
-	static void AppendDateTime(char* dest, std::int32_t& length, std::uint64_t timestamp)
-	{
-		// Convert nanoseconds to milliseconds
-		auto dt = DateTime::FromUnixMilliseconds(timestamp / 1000000ULL);
-		auto p = dt.Partitioned();
+	std::int32_t partLength = snprintf(dest + length, MaxLogEntryLength - length - 1, !threadId.empty() ? "[%c]%s}" : "[%c]", levelIdentifier, threadId.data());
+	length += partLength;
 
-		length += snprintf(dest + length, MaxLogEntryLength - length - 1,
-			"%02u:%02u:%02u.%03u", p.Hour, p.Minute, p.Second, p.Millisecond);
-	}
-
-	static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, StringView threadId)
-	{
-		if (length >= MaxLogEntryLength) {
-			return;
-		}
-
-		char levelIdentifier;
-		switch (level) {
-			case TraceLevel::Fatal:		levelIdentifier = 'F'; break;
-			case TraceLevel::Assert:	levelIdentifier = 'A'; break;
-			case TraceLevel::Error:		levelIdentifier = 'E'; break;
-			case TraceLevel::Warning:	levelIdentifier = 'W'; break;
-			case TraceLevel::Info:		levelIdentifier = 'I'; break;
-			default:					levelIdentifier = 'D'; break;
-		}
-
-		std::int32_t partLength = snprintf(dest + length, MaxLogEntryLength - length - 1, !threadId.empty() ? "[%c]%s}" : "[%c]", levelIdentifier, threadId.data());
-		length += partLength;
-
-		while (partLength < 10) {
-			dest[length++] = ' ';
-			partLength++;
-		}
+	while (partLength < 10) {
 		dest[length++] = ' ';
+		partLength++;
 	}
+	dest[length++] = ' ';
+}
 
 #if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-	// Strip function specifiers, return type and arguments from function name
-	static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
-	{
-		std::int32_t i, parethesisCount = 0;
-		for (i = functionNameLength - 1; i >= 0; i--) {
-			if (functionName[i] == ')') {
-				parethesisCount++;
-			} else if (functionName[i] == '(') {
-				parethesisCount--;
-				if (parethesisCount == 0) {
-					break;
-				}
-			} else if (functionName[i] == ']') {
-				parethesisCount++;
-			} else if (functionName[i] == '[') {
-				parethesisCount--;
-			}
-		}
-
-		if (i > 0) {
-			std::size_t end = i;
-			for (; i >= 0; i--) {
-				if (functionName[i] == '>') {
-					parethesisCount++;
-				} else if (functionName[i] == '<') {
-					parethesisCount--;
-				} else if (functionName[i] == ' ' && parethesisCount == 0) {
-					break;
-				}
-			}
-			i++;
-			AppendPart(dest, length, &functionName[i], (std::int32_t)(end - i));
-			AppendPart(dest, length, "()");
-		} else {
-			AppendPart(dest, length, functionName, functionNameLength);
-		}
-	}
-#endif
-
-	static void AppendFunctionName(char* dest, std::int32_t& length, StringView functionName)
-	{
-		if (!functionName.empty()) {
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-			AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
-#else
-			AppendPart(dest, length, functionName.data(), (std::int32_t)functionName.size());
-#endif
-			AppendPart(dest, length, " ‡ ");
-		}
-	}
-
-	static void AppendMessagePrefixIfAny(char* dest, std::int32_t& length, TraceLevel level, StringView functionName)
-	{
-		if (!functionName.empty()) {
-			if (__consoleType >= ConsoleType::EscapeCodes) {
-				AppendPart(dest, length, ColorFaint);
-
-				switch (level) {
-					case TraceLevel::Error:
-					case TraceLevel::Fatal:
-						AppendPart(dest, length, ColorBrightRed);
-						break;
-					case TraceLevel::Assert:
-						AppendPart(dest, length, ColorBrightMagenta);
-						break;
-					case TraceLevel::Warning:
-						AppendPart(dest, length, ColorBrightYellow);
-						break;
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-					case TraceLevel::Debug:
-						AppendPart(dest, length, ColorDarkGray);
-						break;
-#endif
-				}
-			}
-
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-			AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
-#else
-			AppendPart(dest, length, functionName.data(), functionName.size());
-#endif
-			AppendPart(dest, length, " ‡ ");
-		}
-	}
-
-	static void AppendMessageColor(char* dest, std::int32_t& length, TraceLevel level, bool resetBefore)
-	{
-		if (resetBefore) {
-			AppendPart(dest, length, ColorReset);
-		}
-
-		switch (level) {
-			case TraceLevel::Error:
-			case TraceLevel::Fatal:
-				AppendPart(dest, length, ColorBrightRed);
-				if (level == TraceLevel::Fatal) {
-					AppendPart(dest, length, ColorBold);
-				}
+// Strip function specifiers, return type and arguments from function name, because GCC/Clang includes full function signature
+static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
+{
+	std::int32_t i, parethesisCount = 0;
+	for (i = functionNameLength - 1; i >= 0; i--) {
+		if (functionName[i] == ')') {
+			parethesisCount++;
+		} else if (functionName[i] == '(') {
+			parethesisCount--;
+			if (parethesisCount == 0) {
 				break;
-			case TraceLevel::Assert:
-				AppendPart(dest, length, ColorBrightMagenta);
+			}
+		} else if (functionName[i] == ']') {
+			parethesisCount++;
+		} else if (functionName[i] == '[') {
+			parethesisCount--;
+		}
+	}
+
+	if (i > 0) {
+		std::size_t end = i;
+		for (; i >= 0; i--) {
+			if (functionName[i] == '>') {
+				parethesisCount++;
+			} else if (functionName[i] == '<') {
+				parethesisCount--;
+			} else if (functionName[i] == ' ' && parethesisCount == 0) {
 				break;
+			}
+		}
+		i++;
+		AppendPart(dest, length, &functionName[i], (std::int32_t)(end - i));
+		AppendPart(dest, length, "()");
+	} else {
+		AppendPart(dest, length, functionName, functionNameLength);
+	}
+}
+#endif
+
+static void AppendFunctionName(char* dest, std::int32_t& length, StringView functionName)
+{
+	if (!functionName.empty()) {
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+		AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
+#else
+		AppendPart(dest, length, functionName.data(), (std::int32_t)functionName.size());
+#endif
+		AppendPart(dest, length, " ‡ ");
+	}
+}
+
+static void AppendMessagePrefixIfAny(char* dest, std::int32_t& length, TraceLevel level, StringView functionName)
+{
+	if (!functionName.empty()) {
+		if (__consoleType >= ConsoleType::EscapeCodes) {
+			AppendPart(dest, length, ColorFaint);
+
+			switch (level) {
+				case TraceLevel::Error:
+				case TraceLevel::Fatal:
+					AppendPart(dest, length, ColorBrightRed);
+					break;
+				case TraceLevel::Assert:
+					AppendPart(dest, length, ColorBrightMagenta);
+					break;
+				case TraceLevel::Warning:
+					AppendPart(dest, length, ColorBrightYellow);
+					break;
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-			case TraceLevel::Info:
-			case TraceLevel::Warning:
+				case TraceLevel::Debug:
+					AppendPart(dest, length, ColorDarkGray);
+					break;
+#endif
+			}
+		}
+
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+		AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
+#else
+		AppendPart(dest, length, functionName.data(), (std::int32_t)functionName.size());
+#endif
+		AppendPart(dest, length, " ‡ ");
+	}
+}
+
+static void AppendMessageColor(char* dest, std::int32_t& length, TraceLevel level, bool resetBefore)
+{
+	if (resetBefore) {
+		AppendPart(dest, length, ColorReset);
+	}
+
+	switch (level) {
+		case TraceLevel::Error:
+		case TraceLevel::Fatal:
+			AppendPart(dest, length, ColorBrightRed);
+			if (level == TraceLevel::Fatal) {
 				AppendPart(dest, length, ColorBold);
-				break;
+			}
+			break;
+		case TraceLevel::Assert:
+			AppendPart(dest, length, ColorBrightMagenta);
+			break;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		case TraceLevel::Info:
+		case TraceLevel::Warning:
+			AppendPart(dest, length, ColorBold);
+			break;
 #else
-			case TraceLevel::Warning:
-				AppendPart(dest, length, ColorBrightYellow);
-				break;
-			case TraceLevel::Debug:
-				AppendPart(dest, length, ColorDarkGray);
-				break;
+		case TraceLevel::Warning:
+			AppendPart(dest, length, ColorBrightYellow);
+			break;
+		case TraceLevel::Debug:
+			AppendPart(dest, length, ColorDarkGray);
+			break;
 #endif
-		}
 	}
 }
 #endif
@@ -494,7 +491,7 @@ namespace nCine
 		Random().Initialize(TimeStamp::now().ticks(), profileStartTime_.ticks());
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
-#if 0 //defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS)
 		_waitableTimer = ::CreateWaitableTimerW(NULL, TRUE, NULL);
 #endif
 
@@ -736,25 +733,51 @@ namespace nCine
 
 		if (appCfg_.frameLimit > 0) {
 			FrameMarkStart("Frame limiting");
-#if 0 //defined(DEATH_TARGET_WINDOWS)
-			// TODO: This code sometimes doesn't work properly
 			const std::uint64_t clockFreq = static_cast<std::uint64_t>(clock().frequency());
 			const std::uint64_t frameTimeDuration = (clockFreq / static_cast<std::uint64_t>(appCfg_.frameLimit));
-			const std::int64_t remainingTime = (std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->frameDurationAsTicks();
-			if (remainingTime > 0) {
-				LARGE_INTEGER dueTime;
-				dueTime.QuadPart = -(LONGLONG)((10000000ULL * remainingTime) / clockFreq);
 
-				::SetWaitableTimer(_waitableTimer, &dueTime, 0, 0, 0, FALSE);
+#if defined(DEATH_TARGET_WINDOWS)
+			// It waits longer than necessary, so subtract 1 ms to compensate
+			const std::int64_t remainingTime100ns = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
+				* 10'000'000LL) / (std::int64_t)clockFreq) - 10'000; // 1 ms
+			if (remainingTime100ns > 0) {
+				LARGE_INTEGER dueTime;
+				dueTime.QuadPart = -remainingTime100ns;
+
+				::SetWaitableTimer(_waitableTimer, &dueTime, 0, NULL, NULL, FALSE);
 				::WaitForSingleObject(_waitableTimer, 1000);
 				::CancelWaitableTimer(_waitableTimer);
 			}
-#else
-			const float frameDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
-			while (frameTimer_->GetFrameDuration() < frameDuration) {
-				Thread::Sleep(0);
+#elif defined(DEATH_TARGET_APPLE)
+			const std::int64_t remainingTimeNs = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
+				* 1'000'000'000ULL) / (std::int64_t)clockFreq) - 300'000; // 0.3 ms
+			if (remainingTimeNs > 0) {
+				timespec dueTime{};
+				dueTime.tv_nsec += remainingTimeNs;
+				if (dueTime.tv_nsec >= 1'000'000'000L) {
+					dueTime.tv_sec += dueTime.tv_nsec / 1'000'000'000L;
+					dueTime.tv_nsec %= 1'000'000'000L;
+				}
+				nanosleep(&dueTime, &dueTime);
+			}
+#elif defined(DEATH_TARGET_UNIX)
+			const std::int64_t remainingTimeNs = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
+				* 1'000'000'000ULL) / (std::int64_t)clockFreq) - 300'000; // 0.3 ms
+			if (remainingTimeNs > 0) {
+				timespec dueTime;
+				clock_gettime(CLOCK_MONOTONIC, &dueTime);
+				dueTime.tv_nsec += remainingTimeNs;
+				if (dueTime.tv_nsec >= 1'000'000'000L) {
+					dueTime.tv_sec += dueTime.tv_nsec / 1'000'000'000L;
+					dueTime.tv_nsec %= 1'000'000'000L;
+				}
+				clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &dueTime, nullptr);
 			}
 #endif
+
+			while (frameTimer_->GetFrameDurationAsTicks() < frameTimeDuration) {
+				Thread::Sleep(0);
+			}
 			FrameMarkEnd("Frame limiting");
 		}
 	}

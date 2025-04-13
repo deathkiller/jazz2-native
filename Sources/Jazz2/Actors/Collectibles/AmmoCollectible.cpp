@@ -6,8 +6,7 @@
 namespace Jazz2::Actors::Collectibles
 {
 	AmmoCollectible::AmmoCollectible()
-		:
-		_weaponType(WeaponType::Unknown)
+		: _weaponType(WeaponType::Unknown)
 	{
 	}
 
