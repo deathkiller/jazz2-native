@@ -1687,11 +1687,11 @@ namespace Jazz2::Multiplayer
 			}
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 
-			auto uptimeSecs = (DateTime::Now().ToUnixMilliseconds() / 1000) - serverConfig.StartUnixTimestamp;
-			std::int32_t minutes = std::max(0, (std::int32_t)(uptimeSecs / 60));
-			std::int32_t seconds = std::max(0, (std::int32_t)fmod(uptimeSecs, 60));
-			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(uptimeSecs, 1) * 100));
-			formatString(infoBuffer, sizeof(infoBuffer), "Uptime: %d:%02d:%02d", minutes, seconds, milliseconds);
+			auto uptimeSecs = (DateTime::Now().ToUnixMilliseconds() / 1000) - (std::int64_t)serverConfig.StartUnixTimestamp;
+			auto hours = (std::int32_t)(uptimeSecs / 3600);
+			auto minutes = (std::int32_t)(uptimeSecs % 3600) / 60;
+			auto seconds = (std::int32_t)(uptimeSecs % 60);
+			formatString(infoBuffer, sizeof(infoBuffer), "Uptime: %d:%02d:%02d", hours, minutes, seconds);
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 
 			if (isAdmin) {
@@ -1700,7 +1700,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (!serverConfig.Playlist.empty()) {
-				formatString(infoBuffer, sizeof(infoBuffer), "Playlist active: %u/%u%s",
+				formatString(infoBuffer, sizeof(infoBuffer), "Playlist: %u/%u%s",
 					(std::uint32_t)(serverConfig.PlaylistIndex + 1), (std::uint32_t)serverConfig.Playlist.size(), serverConfig.RandomizePlaylist ? " (Random)" : "");
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}

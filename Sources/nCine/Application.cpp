@@ -472,15 +472,19 @@ namespace nCine
 		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
 
+		if (appCfg_.withGraphics) {
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (UWP) initializing...");
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (UWP) initializing...");
 #elif defined(WITH_GLFW)
-		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (GLFW) initializing...");
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (GLFW) initializing...");
 #elif defined(WITH_SDL)
-		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (SDL2) initializing...");
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (SDL2) initializing...");
 #else
-		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
 #endif
+		} else {
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
+		}
 
 #if defined(WITH_TRACY)
 		TracyAppInfo(NCINE_APP, sizeof(NCINE_APP) - 1);
