@@ -171,10 +171,10 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 	ZoneScopedC(0x888888);
 
 #if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
-	config.withGraphics = false;
-	config.withAudio = false;
+	constexpr bool isServer = true;
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	// Allow `/extract-pak` only on PC platforms
+	bool isServer = false;
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
 		if (arg == "/extract-pak"_s && i + 2 < config.argc()) {
@@ -193,9 +193,8 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			return;
 		}
 #	if defined(WITH_MULTIPLAYER) && !defined(DEATH_TARGET_WINDOWS)
-		if (arg == "/server"_s) {
-			config.withGraphics = false;
-			config.withAudio = false;
+		if (arg == "/server"_s || arg == "--server"_s) {
+			isServer = true;
 		}
 #	endif
 	}
@@ -204,7 +203,15 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 	PreferencesCache::Initialize(config);
 
 	config.windowTitle = NCINE_APP_NAME;
-	if (config.withGraphics) {
+	if (isServer) {
+		config.withGraphics = false;
+		config.withAudio = false;
+		config.withVSync = false;
+		config.frameLimit = (std::uint32_t)FrameTimer::FramesPerSecond;
+
+		auto& resolver = ContentResolver::Get();
+		resolver.SetHeadless(true);
+	} else {
 		if (PreferencesCache::MaxFps == PreferencesCache::UseVsync) {
 			config.withVSync = true;
 		} else {
@@ -227,12 +234,6 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 #if defined(WITH_IMGUI)
 		config.withDebugOverlay = true;
 #endif
-	} else {
-		config.withVSync = false;
-		config.frameLimit = std::uint32_t(FrameTimer::FramesPerSecond);
-
-		auto& resolver = ContentResolver::Get();
-		resolver.SetHeadless(true);
 	}
 }
 
@@ -288,7 +289,7 @@ void GameEventHandler::OnInitialize()
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
 #		if defined(WITH_MULTIPLAYER)
-		if (arg == "/connect"_s && i + 1 < config.argc()) {
+		if ((arg == "/connect"_s || arg == "-c"_s) && i + 1 < config.argc()) {
 			auto endpoint = config.argv(i + 1);
 			if (!endpoint.empty()) {
 				WaitForVerify();
@@ -298,7 +299,7 @@ void GameEventHandler::OnInitialize()
 			}
 		}
 #			if !defined(DEATH_TARGET_WINDOWS)
-		else if (arg == "/server"_s) {
+		else if (arg == "/server"_s || arg == "--server"_s) {
 			StringView configPath;
 			if (i + 1 < config.argc()) {
 				configPath = config.argv(i + 1);
