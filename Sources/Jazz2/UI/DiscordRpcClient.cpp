@@ -92,6 +92,11 @@ namespace Jazz2::UI
 			LOGE("Failed to create socket");
 			return false;
 		}
+		
+#	if defined(SO_NOSIGPIPE)
+		std::int32_t optval = 1;
+		::setsockopt(_sockFd, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval));
+#	endif
 
 		struct sockaddr_un addr;
 		addr.sun_family = AF_UNIX;
