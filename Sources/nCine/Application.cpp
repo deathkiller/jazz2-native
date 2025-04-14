@@ -737,11 +737,10 @@ namespace nCine
 
 		if (appCfg_.frameLimit > 0) {
 			FrameMarkStart("Frame limiting");
-			const std::uint64_t clockFreq = static_cast<std::uint64_t>(clock().frequency());
-			const std::uint64_t frameTimeDuration = (clockFreq / static_cast<std::uint64_t>(appCfg_.frameLimit));
+			const std::int64_t frameTimeDuration = clock().frequency() / appCfg_.frameLimit;
 
 #if defined(DEATH_TARGET_WINDOWS)
-			// It waits longer than necessary, so subtract 1 ms to compensate
+			// It can wait longer than necessary, so subtract 1 ms to compensate
 			const std::int64_t remainingTime100ns = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
 				* 10'000'000LL) / (std::int64_t)clockFreq) - 10'000; // 1 ms
 			if (remainingTime100ns > 0) {
@@ -753,8 +752,9 @@ namespace nCine
 				::CancelWaitableTimer(_waitableTimer);
 			}
 #elif defined(DEATH_TARGET_APPLE)
-			const std::int64_t remainingTimeNs = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
-				* 1'000'000'000ULL) / (std::int64_t)clockFreq);
+			// It can wait longer than necessary, so subtract 0.5 ms to compensate
+			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)appCfg_.frameLimit) -
+				((std::int64_t)frameTimer_->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().frequency()) - 500'000LL;
 			if (remainingTimeNs > 0) {
 				timespec dueTime{};
 				dueTime.tv_nsec += remainingTimeNs;
@@ -765,8 +765,9 @@ namespace nCine
 				nanosleep(&dueTime, &dueTime);
 			}
 #elif defined(DEATH_TARGET_UNIX)
-			const std::int64_t remainingTimeNs = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
-				* 1'000'000'000ULL) / (std::int64_t)clockFreq);
+			// It can wait longer than necessary, so subtract 0.5 ms to compensate
+			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)appCfg_.frameLimit) -
+				((std::int64_t)frameTimer_->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().frequency()) - 500'000LL;
 			if (remainingTimeNs > 0) {
 				timespec dueTime;
 				clock_gettime(CLOCK_MONOTONIC, &dueTime);
