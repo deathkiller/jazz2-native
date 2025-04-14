@@ -374,7 +374,7 @@ namespace nCine
 			formatString(debugString, sizeof(debugString), "Draw viewport \"%s\" (0x%lx)", textures_[0]->name(), uintptr_t(this));
 		else
 			formatString(debugString, sizeof(debugString), "Draw viewport (0x%lx)", uintptr_t(this));
-		GLDebug::ScopedGroup(debugString);*/
+		GLDebug::ScopedGroup scoped(debugString);*/
 #endif
 
 		RenderResources::setCurrentViewport(this);
@@ -392,11 +392,23 @@ namespace nCine
 		if (type_ == Type::Screen || type_ == Type::WithTexture) {
 			const unsigned long int numFrames = theApplication().GetFrameCount();
 			if ((lastFrameCleared_ < numFrames && (clearMode_ == ClearMode::EveryFrame || clearMode_ == ClearMode::ThisFrameOnly)) ||
-				clearMode_ == ClearMode::EveryDraw) {
+				 clearMode_ == ClearMode::EveryDraw) {
 				const GLClearColor::State clearColorState = GLClearColor::GetState();
 				GLClearColor::SetColor(clearColor_);
 
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+				switch (depthStencilFormat_) {
+					default:
+					case DepthStencilFormat::Depth24_Stencil8:
+						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+						break;
+					case DepthStencilFormat::Depth24:
+					case DepthStencilFormat::Depth16:
+						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+						break;
+					case DepthStencilFormat::None:
+						glClear(GL_COLOR_BUFFER_BIT);
+						break;
+				}
 				lastFrameCleared_ = numFrames;
 
 				GLClearColor::SetState(clearColorState);

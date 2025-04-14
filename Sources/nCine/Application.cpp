@@ -298,7 +298,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 	}
 
 	if (i > 0) {
-		std::size_t end = i;
+		std::int32_t end = i;
 		for (; i >= 0; i--) {
 			if (functionName[i] == '>') {
 				parethesisCount++;
@@ -309,7 +309,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 			}
 		}
 		i++;
-		AppendPart(dest, length, &functionName[i], (std::int32_t)(end - i));
+		AppendPart(dest, length, &functionName[i], end - i);
 		AppendPart(dest, length, "()");
 	} else {
 		AppendPart(dest, length, functionName, functionNameLength);
@@ -742,7 +742,7 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 			// It can wait longer than necessary, so subtract 1 ms to compensate
 			const std::int64_t remainingTime100ns = ((((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
-				* 10'000'000LL) / (std::int64_t)clockFreq) - 10'000; // 1 ms
+				* 10'000'000LL) / (std::int64_t)clock().frequency()) - 10'000; // 1 ms
 			if (remainingTime100ns > 0) {
 				LARGE_INTEGER dueTime;
 				dueTime.QuadPart = -remainingTime100ns;

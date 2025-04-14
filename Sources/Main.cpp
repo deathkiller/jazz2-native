@@ -173,7 +173,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 #if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
 	constexpr bool isServer = true;
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
-	// Allow `/extract-pak` only on PC platforms
+	// Allow `/extract-pak` and `/server` only on PC platforms
 	bool isServer = false;
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
@@ -198,6 +198,8 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 		}
 #	endif
 	}
+#else
+	constexpr bool isServer = false;
 #endif
 
 	PreferencesCache::Initialize(config);

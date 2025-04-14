@@ -27,7 +27,7 @@ namespace nCine
 			Count
 		};
 
-		explicit RenderCommand(Type profilingType);
+		explicit RenderCommand(Type type);
 		RenderCommand();
 
 		/// Returns the number of instances collected in the command or zero if instancing is not used
@@ -90,7 +90,7 @@ namespace nCine
 		/// Gets the command type (for profiling purposes)
 		inline Type type() const {
 #if defined(NCINE_PROFILING)
-			return profilingType_;
+			return type_;
 #else
 			return Type::Unspecified;
 #endif
@@ -98,7 +98,7 @@ namespace nCine
 		/// Sets the command type (for profiling purposes)
 		inline void setType(Type type) {
 #if defined(NCINE_PROFILING)
-			profilingType_ = type;
+			type_ = type;
 #endif
 		}
 
@@ -154,7 +154,7 @@ namespace nCine
 		bool transformationCommitted_;
 
 #if defined(NCINE_PROFILING)
-		Type profilingType_;
+		Type type_;
 #endif
 
 		Recti scissorRect_;
