@@ -947,23 +947,30 @@ namespace Jazz2::Multiplayer
 		//return LevelHandler::HandlePlayerDied(player, collider);
 
 		if (_isServer) {
-			if (_levelState != LevelState::Running) {
-				return true;
-			}
-
+			auto& serverConfig = _networkManager->GetServerConfiguration();
 			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
-			peerDesc->Deaths++;
 
-			auto& serverConfig = _networkManager->GetServerConfiguration();
-			bool canRespawn = (_enableSpawning && (!serverConfig.IsElimination || peerDesc->Deaths < serverConfig.TotalKills));
-			
-			if (serverConfig.IsElimination && peerDesc->Deaths >= serverConfig.TotalKills) {
-				peerDesc->DeathElapsedFrames = _elapsedFrames;
+			bool canRespawn = (_enableSpawning && (_levelState != LevelState::Running || !serverConfig.IsElimination || peerDesc->Deaths < serverConfig.TotalKills));
+
+			if (canRespawn && serverConfig.GameMode != MpGameMode::Cooperation) {
+				mpPlayer->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType);
 			}
 
-			if (serverConfig.GameMode != MpGameMode::Cooperation) {
-				player->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType);
+			if (_levelState != LevelState::Running) {
+				if (peerDesc->RemotePeer) {
+					MemoryStream packet2(12);
+					packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
+					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
+				}
+				return canRespawn;
+			}
+
+			peerDesc->Deaths++;
+			if (serverConfig.IsElimination && peerDesc->Deaths >= serverConfig.TotalKills) {
+				peerDesc->DeathElapsedFrames = _elapsedFrames;
 			}
 
 			if (peerDesc->RemotePeer) {
@@ -976,8 +983,8 @@ namespace Jazz2::Multiplayer
 				if (canRespawn) {
 					MemoryStream packet2(12);
 					packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-					packet2.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.X * 512.0f));
-					packet2.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.Y * 512.0f));
+					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
+					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
 					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
 				}
 			}
@@ -993,6 +1000,39 @@ namespace Jazz2::Multiplayer
 					packet3.WriteVariableUint32(attackerPeerDesc->Kills);
 					_networkManager->SendTo(attackerPeerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet3);
 				}
+
+				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]",
+					peerDesc->PlayerName.data(), attackerPeerDesc->PlayerName.data()));
+
+				MemoryStream packet(19 + peerDesc->PlayerName.size() + attackerPeerDesc->PlayerName.size());
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
+				packet.WriteVariableUint64((std::uint64_t)peerDesc->RemotePeer._enet);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+				packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+				packet.WriteVariableUint64((std::uint64_t)attackerPeerDesc->RemotePeer._enet);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)attackerPeerDesc->PlayerName.size());
+				packet.Write(attackerPeerDesc->PlayerName.data(), (std::uint32_t)attackerPeerDesc->PlayerName.size());
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->IsAuthenticated);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
+			} else {
+				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by environment",
+					peerDesc->PlayerName.data()));
+
+				MemoryStream packet(19 + peerDesc->PlayerName.size());
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
+				packet.WriteVariableUint64((std::uint64_t)peerDesc->RemotePeer._enet);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+				packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+				packet.WriteVariableUint64(0);
+				packet.WriteValue<std::uint8_t>(0);
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->IsAuthenticated);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
 			}
 
 			CheckGameEnds();
@@ -1919,14 +1959,14 @@ namespace Jazz2::Multiplayer
 				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", peerDesc->PlayerName.data()));
 
 				MemoryStream packet(10 + peerDesc->PlayerName.size());
-				packet.WriteValue<std::uint8_t>(0x02);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Disconnected);
 				packet.WriteVariableUint64((std::uint64_t)peer._enet);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
 				packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
 
 				_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
 					return (peer != otherPeer);
-				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerStateChanged, packet);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
 
 				if (MpPlayer* player = peerDesc->Player) {
 					std::int32_t playerIndex = player->_playerIndex;
@@ -1978,14 +2018,14 @@ namespace Jazz2::Multiplayer
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", peerDesc->PlayerName.data()));
 
 						MemoryStream packet(10 + peerDesc->PlayerName.size());
-						packet.WriteValue<std::uint8_t>(0x01);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Connected);
 						packet.WriteVariableUint64((std::uint64_t)peer._enet);
 						packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
 						packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
 
 						_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
 							return (peer != otherPeer);
-						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerStateChanged, packet);
+						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
 					}
 
 					std::uint8_t flags = 0;
@@ -2024,7 +2064,9 @@ namespace Jazz2::Multiplayer
 					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 						bool enableLedgeClimb = (flags & 0x02) != 0;
 						peerDesc->EnableLedgeClimb = enableLedgeClimb;
-						peerDesc->LevelState = PeerLevelState::LevelLoaded;
+						if (peerDesc->LevelState < PeerLevelState::LevelLoaded) {
+							peerDesc->LevelState = PeerLevelState::LevelLoaded;
+						}
 
 						if (peerDesc->PreferredPlayerType == PlayerType::None) {
 							auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -2102,14 +2144,13 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					// Allow to set player name only once
 					peerDesc->PreferredPlayerType = preferredPlayerType;
 
 					LOGI("[MP] ClientPacketType::PlayerReady - type: %x, peer: 0x%p", preferredPlayerType, peer._enet);
 
 					_root->InvokeAsync([this, peer]() {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if (!peerDesc || (peerDesc->LevelState != PeerLevelState::LevelLoaded && peerDesc->LevelState != PeerLevelState::LevelSynchronized)) {
+						if (!peerDesc || peerDesc->LevelState < PeerLevelState::LevelLoaded || peerDesc->LevelState > PeerLevelState::LevelSynchronized) {
 							LOGW("[MP] ClientPacketType::PlayerReady - invalid state");
 							return;
 						}
@@ -2262,20 +2303,50 @@ namespace Jazz2::Multiplayer
 			}
 		} else {
 			switch ((ServerPacketType)packetType) {
-				case ServerPacketType::PeerStateChanged: {
+				case ServerPacketType::PeerSetProperty: {
 					MemoryStream packet(data);
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+					PeerPropertyType type = (PeerPropertyType)packet.ReadValue<std::uint8_t>();
 					std::uint64_t peerId = packet.ReadVariableUint64();
-					std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
-					String playerName{NoInit, playerNameLength};
-					packet.Read(playerName.data(), playerNameLength);
 
-					LOGD("[MP] ServerPacketType::PeerStateChanged - flags: 0x%02x, peer: 0x%016X, name: \"%s\"", flags, peerId, playerName.data());
+					switch (type) {
+						case PeerPropertyType::Connected:
+						case PeerPropertyType::Disconnected: {
+							std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
+							String playerName{NoInit, playerNameLength};
+							packet.Read(playerName.data(), playerNameLength);
 
-					if ((flags & 0x01) != 0) {
-						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", playerName.data()));
-					} else if ((flags & 0x02) != 0) {
-						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", playerName.data()));
+							LOGD("[MP] ServerPacketType::PeerSetProperty - type: %u, peer: 0x%016X, name: \"%s\"", type, peerId, playerName.data());
+
+							if (type == PeerPropertyType::Connected) {
+								_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", playerName.data()));
+							} else {
+								_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", playerName.data()));
+							}
+							break;
+						}
+						case PeerPropertyType::Roasted: {
+							std::uint8_t victimNameLength = packet.ReadValue<std::uint8_t>();
+							String victimName{NoInit, victimNameLength};
+							packet.Read(victimName.data(), victimNameLength);
+
+							std::uint64_t attackerPeerId = packet.ReadVariableUint64();
+
+							std::uint8_t attackerNameLength = packet.ReadValue<std::uint8_t>();
+							String attackerName{NoInit, attackerNameLength};
+							packet.Read(attackerName.data(), attackerNameLength);
+
+							LOGD("[MP] ServerPacketType::PeerSetProperty - type: %u, victim: 0x%016X, victim-name: \"%s\", attacker: 0x%016X, attacker-name: \"%s\"",
+								type, peerId, victimName.data(), attackerPeerId, attackerName.data());
+
+							if (!attackerName.empty()) {
+								_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]",
+									victimName.data(), attackerName.data()));
+							} else {
+								_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by environment",
+									victimName.data()));
+							}
+							break;
+						}
 					}
 					break;
 				}

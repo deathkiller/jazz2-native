@@ -38,7 +38,7 @@ namespace Jazz2::Multiplayer
 		Pong,
 		Reserved,
 
-		PeerStateChanged = 70,
+		PeerSetProperty = 70,
 
 		LoadLevel = 80,
 		LevelSetProperty,
@@ -72,6 +72,18 @@ namespace Jazz2::Multiplayer
 		PlayerTakeDamage,
 		PlayerActivateSpring,
 		PlayerWarpIn
+	};
+
+	/** @brief Peer property type from @ref ServerPacketType::PeerSetProperty */
+	enum class PeerPropertyType
+	{
+		Unknown,
+
+		Connected,
+		Disconnected,
+		Roasted,
+
+		Count
 	};
 
 	/** @brief Level property type from @ref ServerPacketType::LevelSetProperty */

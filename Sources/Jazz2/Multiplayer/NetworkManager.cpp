@@ -486,9 +486,11 @@ namespace Jazz2::Multiplayer
 		}
 
 		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
+		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "\\f"_s, "\f"_s);
 
 		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{PlayerName}"_s, playerName);
 		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{ServerName}"_s, serverConfig.ServerName);
+		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "\\f"_s, "\f"_s);
 
 #if defined(DEATH_DEBUG)
 		String uniquePlayerId = NetworkManager::UuidToString(PreferencesCache::UniquePlayerID);

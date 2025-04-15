@@ -352,6 +352,10 @@ namespace nCine
 	constexpr std::uint64_t parseVersion(Containers::StringView version)
 	{
 		std::size_t versionLength = version.size();
+		if (versionLength == 0) {
+			return 0;
+		}
+
 		std::size_t dotIndices[3] {};
 		std::size_t foundCount = 0;
 

@@ -14,8 +14,14 @@
 using namespace Death::IO;
 using namespace Jazz2::UI::Menu::Resources;
 
+/** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
+#define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
+
 namespace Jazz2::UI::Menu
 {
+	static constexpr std::uint64_t CurrentVersion = parseVersion(NCINE_VERSION_s);
+	constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL;
+
 	ServerSelectSection::ServerSelectSection()
 		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f), _pressedCount(0),
 			_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(this),
@@ -199,7 +205,7 @@ namespace Jazz2::UI::Menu
 
 				if (!_items[i].Desc.Version.empty()) {
 					_root->DrawStringShadow(StringView("v"_s + _items[i].Desc.Version), charOffset, column2 - 14.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
-						Alignment::Right, Font::DefaultColor, 0.7f);
+						Alignment::Right, _items[i].Desc.IsCompatible ? Font::DefaultColor : Colorf(0.7f, 0.44f, 0.44f, 0.5f), 0.7f);
 				}
 
 				StringView firstEndpoint = _items[i].Desc.EndpointString;
@@ -327,6 +333,9 @@ namespace Jazz2::UI::Menu
 
 	void ServerSelectSection::OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc)
 	{
+		std::uint64_t serverVersion = parseVersion(desc.Version);
+		desc.IsCompatible = ((serverVersion & VersionMask) == (CurrentVersion & VersionMask));
+
 		for (auto& item : _items) {
 			if (item.Desc.EndpointString == desc.EndpointString) {
 				item.Desc = std::move(desc);

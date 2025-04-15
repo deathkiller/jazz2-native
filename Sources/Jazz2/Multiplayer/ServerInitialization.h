@@ -51,7 +51,9 @@ namespace Jazz2::Multiplayer
 		- @cpp "$include" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Include configuration from another file by path
 		  - If the JSON contains a @cpp "$include" @ce directive, it will load the referenced files recursively, but only once to avoid infinite loops
 		- @cpp "ServerName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the server
-		- @cpp "ServerAddressOverride" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Address override allows to specify an alternate address under which the server will be listed in the public list
+		- @cpp "ServerAddressOverride" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Address override allows to specify an alternate address
+		  - The address is used only in the public list to be able to connect to the server from the outside
+		  - It is also possible to specify a different port if it is different from the local port
 		- @cpp "ServerPassword" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Password to join the server
 		- @cpp "WelcomeMessage" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Message displayed to players upon joining
 		- @cpp "MaxPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum number of players allowed to join
@@ -94,7 +96,7 @@ namespace Jazz2::Multiplayer
 		  - Pre-game is skipped in Cooperation
 		- @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		- @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
-		- @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of treasures required to win (Tresure Hunt)
+		- @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of treasures required to win (Treasure Hunt)
 		- @cpp "Playlist" @ce : @m_span{m-label m-success m-flat} array @m_endspan List of game configurations per round, each entry may contain:
 		  - @cpp "LevelName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the level in `<episode>/<level>` format
 		  - @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Specific game mode for this round
@@ -104,12 +106,13 @@ namespace Jazz2::Multiplayer
 		  - @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration before this round starts
 		  - @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win this round (Battle)
 		  - @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
-		  - @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total treasure required to win this round (Tresure Hunt)
+		  - @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total treasure required to win this round (Treasure Hunt)
 		- @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
 		
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.
 		If a property is missing in the root configuration, the default value is used. `{PlayerName}` and
 		`{ServerName}` variables can be used in @cpp "ServerName" @ce and @cpp "WelcomeMessage" @ce properties.
+		Both properties also support text formatting using the @cpp "\f[...]" @ce notation.
 		
 		@subsection Multiplayer-ServerConfiguration-format-example Example server configuration
 		
@@ -121,7 +124,7 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Server name */
 		String ServerName;
-		/** @brief Server address override allows to specify an alternate address under which the server will be listed in the public list */
+		/** @brief Server address override allows to specify an alternate address under which the server will be listed */
 		String ServerAddressOverride;
 		/** @brief Password of the server */
 		String ServerPassword;
