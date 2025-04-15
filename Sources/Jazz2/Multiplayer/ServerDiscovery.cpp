@@ -347,8 +347,8 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		String serverName = StringUtils::replaceAll(StringUtils::replaceAll(serverConfig.ServerName,
-			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
+		String serverName = StringUtils::replaceAll(StringUtils::replaceAll(StringUtils::replaceAll(serverConfig.ServerName,
+			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
 
 		char input[2048];
 		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"", serverName.data());

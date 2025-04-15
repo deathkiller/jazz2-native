@@ -40,9 +40,9 @@ namespace Jazz2::Multiplayer
 	enum class NetworkState
 	{
 		None,				/**< Disconnected */
-		Listening,			/**< Listening */
-		Connecting,			/**< Connecting to server */
-		Connected			/**< Connected to server */
+		Listening,			/**< Listening as server */
+		Connecting,			/**< Connecting to server as client */
+		Connected			/**< Connected to server as client */
 	};
 
 	/**

@@ -42,6 +42,19 @@ namespace Death {
 #undef DEATH_SUPPRESS_EXCEPTIONS
 
 /**
+	@brief Whether @ref Death::runtime_cast() and type information optimization is suppressed
+
+	Type information optimization is usually automatically enabled if the compiler supports
+	it. If @cpp DEATH_SUPPRESS_RUNTIME_CAST @ce is defined, this optimization is explicitly
+	disabled. In this case, the standard @cpp dynamic_cast<T>() @ce is used instead.
+	
+	No need to @cpp #include @ce anything for this macro to be defined,
+	it's supplied via a compiler flag by CMake.
+*/
+#define DEATH_SUPPRESS_RUNTIME_CAST
+#undef DEATH_SUPPRESS_RUNTIME_CAST
+
+/**
 	@brief Build with runtime CPU dispatch
 
 	Defined if the library is built with performance-critical code paths optimized

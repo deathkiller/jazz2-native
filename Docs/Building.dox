@@ -154,7 +154,7 @@ The following parameters can be used to customize the build:
     -   Possible values: `Debug`, `Release`
 -   `CMAKE_INSTALL_PREFIX` (default @cpp "/usr/local" @ce) --- Install prefix on **Unix** systems
 -   `NCINE_DATA_DIR` (default @cpp "./Content" @ce) --- Path to @cpp "Content" @ce game data directory
-    -   Some build targets include @cpp "Content" @ce directory directly inside the executable package
+    -   Some build targets include @cpp "Content" @ce directory directly inside the executable package (e.g., Android)
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
 -   `NCINE_EMBED_SHADERS` (default @cpp ON @ce) --- Embed shader files inside executable
 -   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Preferred backend on desktop

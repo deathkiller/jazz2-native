@@ -54,6 +54,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t MaxPlayerCount;
 		/** @brief Current level name */
 		String LevelName;
+		/** @brief Whether the server is compatible with the local client */
+		bool IsCompatible;
 
 		// TODO: LastPingTime
 		//bool IsLost;

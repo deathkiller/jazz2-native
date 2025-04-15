@@ -4,8 +4,8 @@
 
 #include <memory>
 
-// If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used instead of optimized runtime_cast<T>()
-#if !defined(DEATH_NO_RUNTIME_CAST) && !defined(DOXYGEN_GENERATING_OUTPUT)
+// If `DEATH_SUPPRESS_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used instead of optimized runtime_cast<T>()
+#if !defined(DEATH_SUPPRESS_RUNTIME_CAST) && !defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include <type_traits>
 #if DEATH_CXX_STANDARD < 201402
@@ -274,7 +274,7 @@ namespace Death {
 		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
 		taking ownership.
 		
-		If @cpp DEATH_NO_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
+		If @cpp DEATH_SUPPRESS_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
 		and the standard @cpp dynamic_cast<T>() @ce is used to cast the pointer instead.
 	*/
 	template<typename T, typename U>
@@ -323,7 +323,7 @@ namespace Death {
 		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
 		taking ownership.
 		
-		If @cpp DEATH_NO_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
+		If @cpp DEATH_SUPPRESS_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
 		and the standard @cpp dynamic_cast<T>() @ce is used to cast the pointer instead.
 	*/
 	template<typename T, typename U>
