@@ -15,6 +15,8 @@
 #	include "../../simdjson/simdjson.h"
 #endif
 
+#include <float.h>
+
 #include <Containers/DateTime.h>
 #include <Containers/StringUtils.h>
 #include <Containers/StringStlView.h>

@@ -2952,7 +2952,7 @@ namespace Jazz2::Multiplayer
 						}
 						case PlayerPropertyType::Laps: {
 							std::uint32_t currentLaps = packet.ReadVariableUint32();
-							std::uint32_t totalLaps = packet.ReadVariableUint32();
+							//std::uint32_t totalLaps = packet.ReadVariableUint32();
 							if (!_players.empty()) {
 								auto* player = static_cast<RemotablePlayer*>(_players[0]);
 								auto peerDesc = player->GetPeerDescriptor();
