@@ -111,6 +111,9 @@ list(APPEND SOURCES
 )
 
 list(APPEND SOURCES
+	${NCINE_SOURCE_DIR}/jsoncpp/reader.cpp
+	${NCINE_SOURCE_DIR}/jsoncpp/value.cpp
+	${NCINE_SOURCE_DIR}/jsoncpp/writer.cpp
 	${NCINE_SOURCE_DIR}/simdjson/simdjson.cpp
 )
 

@@ -35,7 +35,6 @@ namespace Death { namespace Containers {
 
 	namespace Implementation
 	{
-		template<class, class> struct ArrayViewConverter;
 		template<class> struct ErasedArrayViewConverter;
 	}
 
@@ -468,7 +467,11 @@ namespace Death { namespace Containers {
 		> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
 		/** @brief Construct a view on an external type / from an external representation */
-		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> constexpr /*implicit*/ ArrayView(T&& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(other)} {}
+		template<class T, class U = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			, typename std::enable_if<!std::is_const<typename U::Type>::value, int>::type = 0
+#endif
+		> constexpr /*implicit*/ ArrayView(T&& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(other)} {}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		/* Disabled on MSVC without `/permissive-` to avoid ambiguous operator+() when doing pointer arithmetic. */
@@ -709,12 +712,6 @@ namespace Death { namespace Containers {
 	*/
 	template<std::size_t size_, class T, class U> constexpr std::size_t arraySize(U(T::*)[size_]) {
 		return size_;
-	}
-
-	namespace Implementation
-	{
-		template<std::size_t, class, class> struct StaticArrayViewConverter;
-		template<class> struct ErasedStaticArrayViewConverter;
 	}
 
 	/**

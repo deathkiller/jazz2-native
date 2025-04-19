@@ -35,6 +35,8 @@ namespace Jazz2::UI
 		void OnKeyPressed(const KeyboardEvent& event);
 		void OnTextInput(const TextInputEvent& event);
 
+		/** @brief Clears the console and its history */
+		static void Clear();
 		/** @brief Returns `true` if the console is visible */
 		bool IsVisible() const;
 		/** @brief Shows the console */
