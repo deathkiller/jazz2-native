@@ -12,8 +12,8 @@ namespace Jazz2::Actors
 		PlayerType playerType = (PlayerType)details.Params[0];
 		SetFacingLeft(details.Params[1] != 0);
 
-		SetState(ActorState::ForceDisableCollisions | ActorState::PreserveOnRollback, true);
-		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::PreserveOnRollback, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithOtherActors, false);
 
 		switch (playerType) {
 			default:

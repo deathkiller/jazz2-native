@@ -331,7 +331,7 @@ namespace Jazz2::Multiplayer
 				case LevelState::Running: {
 					if (_isServer) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
-						if (serverConfig.MaxGameTimeSecs > 0 && _gameTimeLeft <= 0.0f) {
+						if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.MaxGameTimeSecs > 0 && _gameTimeLeft <= 0.0f) {
 							EndGameOnTimeOut();
 						}
 					}
@@ -341,10 +341,12 @@ namespace Jazz2::Multiplayer
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
 						if (serverConfig.Playlist.size() > 1) {
-							if (serverConfig.RandomizePlaylist) {
-								serverConfig.PlaylistIndex = Random().Next(0, serverConfig.Playlist.size());
-							} else {
-								serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+							serverConfig.PlaylistIndex++;
+							if (serverConfig.PlaylistIndex >= serverConfig.Playlist.size()) {
+								serverConfig.PlaylistIndex = 0;
+								if (serverConfig.RandomizePlaylist) {
+									Random().Shuffle<PlaylistEntry>(serverConfig.Playlist);
+								}
 							}
 							ApplyFromPlaylist();
 						} else {
@@ -683,15 +685,20 @@ namespace Jazz2::Multiplayer
 
 		if (_isServer) {
 			if (line.hasPrefix('/')) {
+				_console->WriteLine(UI::MessageLevel::Echo, line);
 				return ProcessCommand({}, line, true);
 			}
 
+			auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer);
+			String prefixedMessage = "\f[c:#907060]"_s + peerDesc->PlayerName + ":\f[/c] "_s + line;
+			_console->WriteLine(UI::MessageLevel::Echo, prefixedMessage);
+
 			// Chat message
-			MemoryStream packet(9 + line.size());
+			MemoryStream packet(9 + prefixedMessage.size());
 			packet.WriteVariableUint32(0); // TODO: Player index
 			packet.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Info);
-			packet.WriteVariableUint32((std::uint32_t)line.size());
-			packet.Write(line.data(), (std::uint32_t)line.size());
+			packet.WriteVariableUint32((std::uint32_t)prefixedMessage.size());
+			packet.Write(prefixedMessage.data(), (std::uint32_t)prefixedMessage.size());
 
 			_networkManager->SendTo([this](const Peer& peer) {
 				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
@@ -1720,8 +1727,8 @@ namespace Jazz2::Multiplayer
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			if (!_players.empty()) {
-				formatString(infoBuffer, sizeof(infoBuffer), "Server load: %i ms (%0.1f)",
-					(std::int32_t)(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f), theApplication().GetFrameTimer().GetAverageFps());
+				formatString(infoBuffer, sizeof(infoBuffer), "Server load: %.1f ms (%.1f)",
+					(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f), theApplication().GetFrameTimer().GetAverageFps());
 			} else {
 				formatString(infoBuffer, sizeof(infoBuffer), "Server load: - ms");
 			}
@@ -1759,9 +1766,16 @@ namespace Jazz2::Multiplayer
 					continue;
 				}
 
-				formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u - Treasure: %u",
-					peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
-					peerDesc->Laps + 1, serverConfig.TotalLaps, peerDesc->TreasureCollected);
+				if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
+					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Laps + 1, serverConfig.TotalLaps);
+				} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
+					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u - Treasure: %u",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->TreasureCollected);
+				} else {
+					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths);
+				}
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}
 			return true;
@@ -1910,10 +1924,12 @@ namespace Jazz2::Multiplayer
 					}
 				} else {
 					if (serverConfig.Playlist.size() > 1) {
-						if (serverConfig.RandomizePlaylist) {
-							serverConfig.PlaylistIndex = Random().Next(0, serverConfig.Playlist.size());
-						} else {
-							serverConfig.PlaylistIndex = (serverConfig.PlaylistIndex + 1) % serverConfig.Playlist.size();
+						serverConfig.PlaylistIndex++;
+						if (serverConfig.PlaylistIndex >= serverConfig.Playlist.size()) {
+							serverConfig.PlaylistIndex = 0;
+							if (serverConfig.RandomizePlaylist) {
+								Random().Shuffle<PlaylistEntry>(serverConfig.Playlist);
+							}
 						}
 						ApplyFromPlaylist();
 					}
@@ -2108,23 +2124,30 @@ namespace Jazz2::Multiplayer
 					packet.Read(line.data(), lineLength);
 
 					if (line.hasPrefix('/')) {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+						SendMessage(peer, UI::MessageLevel::Echo, line);
 						ProcessCommand(peer, line, peerDesc->IsAdmin);
 						return true;
 					}
 
-					MemoryStream packetOut(9 + line.size());
+					String prefixedMessage;
+					if (peerDesc->IsAdmin) {
+						prefixedMessage = "\f[c:#907060]"_s + peerDesc->PlayerName + ":\f[/c] "_s + line;
+					} else {
+						prefixedMessage = "\f[c:#709060]"_s + peerDesc->PlayerName + ":\f[/c] "_s + line;
+					}
+
+					MemoryStream packetOut(9 + prefixedMessage.size());
 					packetOut.WriteVariableUint32(playerIndex);
 					packetOut.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Info);
-					packetOut.WriteVariableUint32((std::uint32_t)line.size());
-					packetOut.Write(line.data(), (std::uint32_t)line.size());
+					packetOut.WriteVariableUint32((std::uint32_t)prefixedMessage.size());
+					packetOut.Write(prefixedMessage.data(), (std::uint32_t)prefixedMessage.size());
 
-					_networkManager->SendTo([this, otherPeer = peer](const Peer& peer) {
+					_networkManager->SendTo([this](const Peer& peer) {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown && peer != otherPeer);
+						return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packetOut);
 
-					_root->InvokeAsync([this, line = std::move(line)]() {
+					_root->InvokeAsync([this, line = std::move(prefixedMessage)]() mutable {
 						_console->WriteLine(UI::MessageLevel::Info, std::move(line));
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
@@ -2556,6 +2579,10 @@ namespace Jazz2::Multiplayer
 
 					String message{NoInit, messageLength};
 					packet.Read(message.data(), messageLength);
+
+					if (level == UI::MessageLevel::Info && playerIndex == _lastSpawnedActorId) {
+						level = UI::MessageLevel::Echo;
+					}
 
 					_root->InvokeAsync([this, level, message = std::move(message)]() mutable {
 						_console->WriteLine(level, std::move(message));

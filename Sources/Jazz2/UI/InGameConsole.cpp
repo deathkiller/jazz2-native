@@ -258,6 +258,11 @@ namespace Jazz2::UI
 		}
 	}
 
+	void InGameConsole::Clear()
+	{
+		_logHistory.clear();
+	}
+
 	bool InGameConsole::IsVisible() const
 	{
 		return _isVisible;
@@ -282,6 +287,7 @@ namespace Jazz2::UI
 	void InGameConsole::WriteLine(MessageLevel level, String line)
 	{
 #if defined(DEATH_TRACE)
+		// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
 		switch (level) {
 			//default: DEATH_TRACE(TraceLevel::Info, {}, "[<] %s", line.data()); break;
 			case MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, {}, "[>] %s", line.data()); break;
@@ -308,10 +314,10 @@ namespace Jazz2::UI
 		_historyIndex = _commandHistory.size();
 
 		if (line == "/clear"_s || line == "/cls"_s) {
-			_logHistory.clear();
+			Clear();
 		} else {
-			WriteLine(MessageLevel::Echo, line);
 			if (!_levelHandler->OnConsoleCommand(line)) {
+				WriteLine(MessageLevel::Echo, line);
 				WriteLine(MessageLevel::Error, _("Unknown command"));
 			}
 		}

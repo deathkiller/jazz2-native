@@ -1154,7 +1154,6 @@ namespace Death { namespace Containers {
 
 	namespace Implementation
 	{
-		template<class, class> struct ArrayViewConverter;
 		template<class> struct ErasedArrayViewConverter;
 
 		// Strangely enough, if the from() functions don't accept T& but just T, it leads to an infinite template recursion depth

@@ -112,7 +112,7 @@ namespace Jazz2::Multiplayer
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.
 		If a property is missing in the root configuration, the default value is used. `{PlayerName}` and
 		`{ServerName}` variables can be used in @cpp "ServerName" @ce and @cpp "WelcomeMessage" @ce properties.
-		Both properties also support text formatting using the @cpp "\f[...]" @ce notation.
+		Both properties also support text formatting using the @cpp "\f[…]" @ce notation.
 		
 		@subsection Multiplayer-ServerConfiguration-format-example Example server configuration
 		

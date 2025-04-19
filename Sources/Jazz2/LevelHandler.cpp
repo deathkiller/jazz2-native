@@ -730,29 +730,41 @@ namespace Jazz2
 	bool LevelHandler::OnConsoleCommand(StringView line)
 	{
 		if (line == "/help"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			_console->WriteLine(UI::MessageLevel::Info, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
 			return true;
 		} else if (line == "jjk"_s || line == "jjkill"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatKill();
 		} else if (line == "jjgod"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatGod();
 		} else if (line == "jjnext"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatNext();
 		} else if (line == "jjguns"_s || line == "jjammo"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatGuns();
 		} else if (line == "jjrush"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatRush();
 		} else if (line == "jjgems"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatGems();
 		} else if (line == "jjbird"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatBird();
 		} else if (line == "jjpower"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatPower();
 		} else if (line == "jjcoins"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatCoins();
 		} else if (line == "jjmorph"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatMorph();
 		} else if (line == "jjshield"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatShield();
 		} else {
 			return false;

@@ -2,12 +2,18 @@
 
 #if defined(WITH_MULTIPLAYER)
 
+#define USE_JSONCPP
+
 #include "ServerDiscovery.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../../nCine/I18n.h"
 
-#include "../../simdjson/simdjson.h"
+#if defined(USE_JSONCPP)
+#	include "../../jsoncpp/json.h"
+#else
+#	include "../../simdjson/simdjson.h"
+#endif
 
 #include <Containers/DateTime.h>
 #include <Containers/StringUtils.h>
@@ -18,7 +24,12 @@ using namespace Death;
 using namespace Death::Containers::Literals;
 
 using namespace std::string_view_literals;
+
+#if defined(USE_JSONCPP)
+using namespace Json;
+#else
 using namespace simdjson;
+#endif
 
 namespace Jazz2::Multiplayer
 {
@@ -176,12 +187,6 @@ namespace Jazz2::Multiplayer
 		return serverConfig;
 	}
 
-
-// TODO: Temporary workaround for MSVC to reduce build time
-#if defined(DEATH_TARGET_MSVC)
-#pragma optimize("", off)
-#endif
-
 	void NetworkManager::FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level)
 	{
 		auto configPath = fs::CombinePath(PreferencesCache::GetDirectory(), path);
@@ -194,15 +199,27 @@ namespace Jazz2::Multiplayer
 		auto s = fs::Open(configPath, FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize >= 4 && fileSize < 64 * 1024 * 1024) {
+#if defined(USE_JSONCPP)
+			auto buffer = std::make_unique<char[]>(fileSize + 1);
+#else
 			auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
+#endif
 			s->Read(buffer.get(), fileSize);
 			buffer[fileSize] = '\0';
 
+#if defined(USE_JSONCPP)
+			Json::CharReaderBuilder builder;
+			auto reader = std::unique_ptr<CharReader>(builder.newCharReader());
+
+			Value doc; std::string errors;
+			if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
+#else
 			ContentResolver::StripCommentsFromJson(arrayView(buffer.get(), fileSize));
 
 			ondemand::parser parser;
 			ondemand::document doc;
 			if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
+#endif
 				if (level == 0) {
 					LOGI("Loaded configuration from \"%s\"", configPath.data());
 				} else {
@@ -284,6 +301,47 @@ namespace Jazz2::Multiplayer
 					serverConfig.IdleKickTimeSecs = std::int16_t(idleKickTimeSecs);
 				}
 
+#if defined(USE_JSONCPP)
+				Value& adminUniquePlayerIDs = doc["AdminUniquePlayerIDs"];
+				for (auto it = adminUniquePlayerIDs.begin(); it != adminUniquePlayerIDs.end(); ++it) {
+					std::string_view key = it.name();
+					if (!key.empty()) {
+						std::string_view value;
+						it->get(value);
+						serverConfig.AdminUniquePlayerIDs.emplace(key, value);
+					}
+				}
+
+				Value& whitelistedUniquePlayerIDs = doc["WhitelistedUniquePlayerIDs"];
+				for (auto it = whitelistedUniquePlayerIDs.begin(); it != whitelistedUniquePlayerIDs.end(); ++it) {
+					std::string_view key = it.name();
+					if (!key.empty()) {
+						std::string_view value;
+						it->get(value);
+						serverConfig.WhitelistedUniquePlayerIDs.emplace(key, value);
+					}
+				}
+
+				Value& bannedUniquePlayerIDs = doc["BannedUniquePlayerIDs"];
+				for (auto it = bannedUniquePlayerIDs.begin(); it != bannedUniquePlayerIDs.end(); ++it) {
+					std::string_view key = it.name();
+					if (!key.empty()) {
+						std::string_view value;
+						it->get(value);
+						serverConfig.BannedUniquePlayerIDs.emplace(key, value);
+					}
+				}
+
+				Value& bannedIPAddresses = doc["BannedIPAddresses"];
+				for (auto it = bannedIPAddresses.begin(); it != bannedIPAddresses.end(); ++it) {
+					std::string_view key = it.name();
+					if (!key.empty()) {
+						std::string_view value;
+						it->get(value);
+						serverConfig.BannedIPAddresses.emplace(key, value);
+					}
+				}
+#else
 				ondemand::object adminUniquePlayerIDs;
 				if (doc["AdminUniquePlayerIDs"].get(adminUniquePlayerIDs) == SUCCESS) {
 					for (auto item : adminUniquePlayerIDs) {
@@ -331,6 +389,7 @@ namespace Jazz2::Multiplayer
 						}
 					}
 				}
+#endif
 
 				// Game mode specific settings
 				bool randomizePlaylist;
@@ -379,13 +438,19 @@ namespace Jazz2::Multiplayer
 				}
 
 				// Playlist
+#if defined(USE_JSONCPP)
+				Value& playlist = doc["Playlist"];
+				if (playlist.isArray()) {
+					serverConfig.Playlist.clear();
+					for (auto& entry : playlist) {
+#else
 				ondemand::array playlist;
 				if (doc["Playlist"].get(playlist) == SUCCESS) {
 					serverConfig.Playlist.clear();
-
 					for (auto entry : playlist) {
+#endif
 						// Playlist entry inherits all properties from the main server configuration
-						PlaylistEntry playlistEntry {};
+						PlaylistEntry playlistEntry{};
 						playlistEntry.GameMode = serverConfig.GameMode;
 						playlistEntry.IsElimination = serverConfig.IsElimination;
 						playlistEntry.InitialPlayerHealth = serverConfig.InitialPlayerHealth;
@@ -447,7 +512,7 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::int64_t playlistIndex;
-				if (doc["PlaylistIndex"].get(playlistIndex) == SUCCESS && playlistIndex >= -1 && playlistIndex < serverConfig.Playlist.size()) {
+				if (doc["PlaylistIndex"].get(playlistIndex) == SUCCESS && playlistIndex >= -1 && playlistIndex < (std::int64_t)serverConfig.Playlist.size()) {
 					serverConfig.PlaylistIndex = std::uint32_t(playlistIndex);
 				}
 			} else {
@@ -457,11 +522,6 @@ namespace Jazz2::Multiplayer
 			LOGE("Configuration file \"%s\" cannot be opened", configPath.data());
 		}
 	}
-
-// TODO: Temporary workaround for MSVC to reduce build time
-#if defined(DEATH_TARGET_MSVC)
-#pragma optimize("", on)
-#endif
 
 	void NetworkManager::VerifyServerConfiguration(ServerConfiguration& serverConfig)
 	{
@@ -486,11 +546,11 @@ namespace Jazz2::Multiplayer
 		}
 
 		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "{PlayerName}"_s, playerName);
-		serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "\\f"_s, "\f"_s);
+		//serverConfig.ServerName = StringUtils::replaceAll(serverConfig.ServerName, "\\f"_s, "\f"_s);
 
 		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{PlayerName}"_s, playerName);
 		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "{ServerName}"_s, serverConfig.ServerName);
-		serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "\\f"_s, "\f"_s);
+		//serverConfig.WelcomeMessage = StringUtils::replaceAll(serverConfig.WelcomeMessage, "\\f"_s, "\f"_s);
 
 #if defined(DEATH_DEBUG)
 		String uniquePlayerId = NetworkManager::UuidToString(PreferencesCache::UniquePlayerID);

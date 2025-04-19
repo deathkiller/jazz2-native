@@ -256,6 +256,12 @@
     <Filter Include="Source Files\Jazz2\UI\Multiplayer">
       <UniqueIdentifier>{dfcad49c-23cc-4162-960a-23fd6033b0c0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\jsoncpp">
+      <UniqueIdentifier>{fb17beb5-a46a-47c8-a04e-af8c49fc7eb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\jsoncpp">
+      <UniqueIdentifier>{a03646cd-077d-46ce-84d2-8d0023de9b50}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1611,6 +1617,42 @@
     <ClInclude Include="nCine\Threading\LockedPtr.h">
       <Filter>Header Files\nCine\Threading</Filter>
     </ClInclude>
+    <ClInclude Include="jsoncpp\reader.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\value.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\version.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\writer.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\allocator.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\assertions.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\config.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\forwards.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\json.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\json_features.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\json_tool.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="jsoncpp\json_valueiterator.h">
+      <Filter>Header Files\jsoncpp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2632,6 +2674,15 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Multiplayer\MpHUD.cpp">
       <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="jsoncpp\reader.cpp">
+      <Filter>Source Files\jsoncpp</Filter>
+    </ClCompile>
+    <ClCompile Include="jsoncpp\value.cpp">
+      <Filter>Source Files\jsoncpp</Filter>
+    </ClCompile>
+    <ClCompile Include="jsoncpp\writer.cpp">
+      <Filter>Source Files\jsoncpp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

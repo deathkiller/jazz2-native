@@ -892,6 +892,7 @@ RECURSIVE              = YES
 
 EXCLUDE                = CodingStyle/ \
                          Snippets/ \
+                         ../Sources/jsoncpp/ \
                          ../Sources/simdjson/ \
                          ../Sources/nCine/Backends/Android/Bridge/ \
                          ../Sources/nCine/Base/ParallelHashMap/ \

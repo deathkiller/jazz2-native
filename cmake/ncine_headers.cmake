@@ -173,6 +173,18 @@ list(APPEND HEADERS
 )
 
 list(APPEND HEADERS
+	${NCINE_SOURCE_DIR}/jsoncpp/allocator.h
+	${NCINE_SOURCE_DIR}/jsoncpp/assertions.h
+	${NCINE_SOURCE_DIR}/jsoncpp/config.h
+	${NCINE_SOURCE_DIR}/jsoncpp/forwards.h
+	${NCINE_SOURCE_DIR}/jsoncpp/json.h
+	${NCINE_SOURCE_DIR}/jsoncpp/json_features.h
+	${NCINE_SOURCE_DIR}/jsoncpp/json_tool.h
+	${NCINE_SOURCE_DIR}/jsoncpp/json_valueiterator.h
+	${NCINE_SOURCE_DIR}/jsoncpp/reader.h
+	${NCINE_SOURCE_DIR}/jsoncpp/value.h
+	${NCINE_SOURCE_DIR}/jsoncpp/version.h
+	${NCINE_SOURCE_DIR}/jsoncpp/writer.h
 	${NCINE_SOURCE_DIR}/simdjson/simdjson.h
 )
 

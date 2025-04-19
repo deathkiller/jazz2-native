@@ -26,6 +26,7 @@
 #include "Jazz2/PreferencesCache.h"
 #include "Jazz2/UI/Cinematics.h"
 #include "Jazz2/UI/DiscordRpcClient.h"
+#include "Jazz2/UI/InGameConsole.h"
 #include "Jazz2/UI/LoadingHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 #include "Jazz2/UI/Menu/HighscoresSection.h"
@@ -517,6 +518,7 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 			_networkManager = nullptr;
 		}
 #endif
+		InGameConsole::Clear();
 		if (auto* mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
 			mainMenu->Reset();
 		} else {
@@ -536,6 +538,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		std::unique_ptr<IStateHandler> newHandler;
 		if (levelInit.LevelName.empty()) {
 			// Next level not specified, so show main menu
+			InGameConsole::Clear();
 			newHandler = std::make_unique<Menu::MainMenu>(this, false);
 #if defined(WITH_MULTIPLAYER)
 			// TODO: This should show some server console instead of exiting
@@ -564,6 +567,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 			if (levelName != ":end"_s) {
 				if (!SetLevelHandler(levelInit)) {
+					InGameConsole::Clear();
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
@@ -622,6 +626,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #endif
 			{
 				if (!SetLevelHandler(levelInit)) {
+					InGameConsole::Clear();
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
@@ -681,6 +686,7 @@ void GameEventHandler::ResumeSavedState()
 			}
 		}
 
+		InGameConsole::Clear();
 		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot resume saved state!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 		SetStateHandler(std::move(mainMenu));
@@ -755,11 +761,12 @@ void GameEventHandler::RunDedicatedServer(StringView configPath)
 	serverInit.InitialLevel.IsLocalSession = false;
 	serverInit.InitialLevel.IsReforged = PreferencesCache::EnableReforgedGameplay;
 	serverInit.Configuration.GameMode = MpGameMode::Cooperation;
-	if (!serverInit.Configuration.Playlist.empty() && (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size())) {
-		if (serverInit.Configuration.RandomizePlaylist) {
-			serverInit.Configuration.PlaylistIndex = Random().Next(0, (std::uint32_t)serverInit.Configuration.Playlist.size());
-		} else {
+	if (!serverInit.Configuration.Playlist.empty()) {
+		if (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size()) {
 			serverInit.Configuration.PlaylistIndex = 0;
+		}
+		if (serverInit.Configuration.RandomizePlaylist) {
+			Random().Shuffle<PlaylistEntry>(serverInit.Configuration.Playlist);
 		}
 	}
 
@@ -976,6 +983,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				_networkManager = nullptr;
 			}
 #endif
+			InGameConsole::Clear();
 			Menu::MainMenu* mainMenu;
 			if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
 				if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
@@ -1145,7 +1153,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					auto levelHandler = std::make_unique<MpLevelHandler>(this,
 						_networkManager.get(), levelState, enableLedgeClimb);
 					if (levelHandler->Initialize(levelInit)) {
-					SetStateHandler(std::move(levelHandler));
+						SetStateHandler(std::move(levelHandler));
 						return;
 					}
 
@@ -1154,6 +1162,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						_networkManager = nullptr;
 					}
 
+					InGameConsole::Clear();
 					Menu::MainMenu* mainMenu;
 					if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
 						if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
@@ -1765,6 +1774,7 @@ void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, boo
 	const PlayerCarryOver* firstPlayer;
 	std::size_t playerCount = levelInit.GetPlayerCount(&firstPlayer);
 
+	InGameConsole::Clear();
 	auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 	if (playerCount == 1 && levelInit.IsLocalSession) {
 		std::int32_t seriesIndex = Menu::HighscoresSection::TryGetSeriesIndex(levelInit.LastEpisodeName, playerDied);

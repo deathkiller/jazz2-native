@@ -58,6 +58,13 @@ namespace Death { namespace Containers {
 	class DateTime;
 	class TimeSpan;
 
+	namespace Implementation
+	{
+		template<class, class, class = void> struct ArrayViewConverter;
+		template<std::size_t, class, class, class = void> struct StaticArrayViewConverter;
+		template<class, class = void> struct ErasedStaticArrayViewConverter;
+	}
+
 }}
 
 #endif
