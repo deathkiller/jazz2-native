@@ -647,8 +647,8 @@ namespace Death { namespace Backward {
 			return _context;
 		}
 
-		void SetErrorAddress(void* error_addr) {
-			_errorAddr = error_addr;
+		void SetErrorAddress(void* errorAddr) {
+			_errorAddr = errorAddr;
 		}
 		void* GetErrorAddress() const {
 			return _errorAddr;
@@ -800,7 +800,7 @@ namespace Death { namespace Backward {
 				_stacktrace[index] = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
 				++index;
 				ctx = *reinterpret_cast<unw_context_t*>(uctx);
-#	elif defined(__arm__)
+#	elif defined(__arm__)	// clang libunwind/arm
 				// libunwind uses its own context type for ARM unwinding.
 				// Copy the registers from the signal handler's context so we can unwind
 				unw_getcontext(&ctx);
@@ -822,10 +822,28 @@ namespace Death { namespace Backward {
 				ctx.regs[UNW_ARM_R15] = uctx->uc_mcontext.arm_pc;
 
 				// If we have crashed in the PC use the LR instead, as this was a bad function dereference
-				if (reinterpret_cast<unsigned long>(error_addr()) == uctx->uc_mcontext.arm_pc) {
+				if (reinterpret_cast<unsigned long>(GetErrorAddress()) == uctx->uc_mcontext.arm_pc) {
 					ctx.regs[UNW_ARM_R15] = uctx->uc_mcontext.arm_lr - sizeof(unsigned long);
 				}
 				_stacktrace[index] = reinterpret_cast<void*>(ctx.regs[UNW_ARM_R15]);
+				++index;
+#	elif defined(__aarch64__)	// gcc libunwind/arm64
+				unw_getcontext(&ctx);
+				// If the IP is the same as the crash address we have a bad function
+				// dereference The caller's address is pointed to by the link pointer, so
+				// we dereference that value and set it to be the next frame's IP.
+				if (uctx->uc_mcontext.pc == reinterpret_cast<__uint64_t>(GetErrorAddress())) {
+					uctx->uc_mcontext.pc = uctx->uc_mcontext.regs[UNW_TDEP_IP];
+				}
+
+				// 29 general purpose registers
+				for (int i = UNW_AARCH64_X0; i <= UNW_AARCH64_X28; i++) {
+					ctx.uc_mcontext.regs[i] = uctx->uc_mcontext.regs[i];
+				}
+				ctx.uc_mcontext.sp = uctx->uc_mcontext.sp;
+				ctx.uc_mcontext.pc = uctx->uc_mcontext.pc;
+				ctx.uc_mcontext.fault_address = uctx->uc_mcontext.fault_address;
+				_stacktrace[index] = reinterpret_cast<void*>(ctx.uc_mcontext.pc);
 				++index;
 #	elif defined(DEATH_TARGET_APPLE) && defined(__x86_64__)
 				unw_getcontext(&ctx);
@@ -851,8 +869,7 @@ namespace Death { namespace Backward {
 
 				// If the IP is the same as the crash address we have a bad function dereference The caller's address
 				// is pointed to by %rsp, so we dereference that value and set it to be the next frame's IP.
-				if (uctx->uc_mcontext->__ss.__rip ==
-					reinterpret_cast<__uint64_t>(GetErrorAddress())) {
+				if (uctx->uc_mcontext->__ss.__rip == reinterpret_cast<__uint64_t>(GetErrorAddress())) {
 					ctx.data[16] = *reinterpret_cast<__uint64_t*>(uctx->uc_mcontext->__ss.__rsp);
 				}
 				_stacktrace[index] = reinterpret_cast<void*>(ctx.data[16]);
@@ -4165,6 +4182,8 @@ namespace Death { namespace Backward {
 #	elif defined(__mips__)
 			errorAddr = reinterpret_cast<void*>(
 				reinterpret_cast<struct sigcontext*>(&uctx->uc_mcontext)->sc_pc);
+#	elif defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_POWERPC)
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__srr0);
 #	elif defined(DEATH_TARGET_POWERPC)
 			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.regs->nip);
 #	elif defined(DEATH_TARGET_RISCV)
@@ -4175,6 +4194,8 @@ namespace Death { namespace Backward {
 			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__rip);
 #	elif defined(DEATH_TARGET_APPLE)
 			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__eip);
+#	elif defined(__loongarch__)
+			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.__pc);
 #	else
 #		warning "Unsupported CPU architecture"
 #	endif

@@ -780,7 +780,7 @@ namespace nCine
 			}
 #endif
 
-			while (frameTimer_->GetFrameDurationAsTicks() < frameTimeDuration) {
+			while ((std::int64_t)frameTimer_->GetFrameDurationAsTicks() < frameTimeDuration) {
 				Thread::Sleep(0);
 			}
 			FrameMarkEnd("Frame limiting");

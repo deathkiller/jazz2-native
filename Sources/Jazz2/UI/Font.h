@@ -20,12 +20,12 @@ namespace Jazz2::UI
 
 		The renderer supports inline text formatting using the @cpp "\f[…]" @ce notation. Unknown attributes are ignored.
 		Following attributes are supported:
-		-   @cpp "\f[c:#RRGGBB]" @ce: Sets the font color that can be specified in a hex value in RGB format
-		    - The game usually uses a colorization shader that uses a different color space to be able to change
-			  the text color more precisely, so the specified color must be adjusted accordingly
-		-   @cpp "\f[/c]" @ce: Resets the font color
-		-   @cpp "\f[w:XX]" @ce: Sets the character spacing as a percentage, recommended range is 80 to 120%
-		-   @cpp "\f[/w]" @ce: Resets the character spacing
+		-   @cpp "\f[c:#RRGGBB]" @ce --- Sets the font color that can be specified in a hex value in RGB format
+		    - The game usually renders text using a colorization shader that uses a different color space to be able
+			  to change the text color more precisely, so the specified color must be adjusted accordingly
+		-   @cpp "\f[/c]" @ce --- Resets the font color
+		-   @cpp "\f[w:XX]" @ce --- Sets the character spacing as a percentage, recommended range is 80% to 120%
+		-   @cpp "\f[/w]" @ce --- Resets the character spacing
 
 	*/
 	class Font
