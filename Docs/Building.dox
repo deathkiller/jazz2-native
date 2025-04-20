@@ -156,7 +156,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_DATA_DIR` (default @cpp "./Content" @ce) --- Path to @cpp "Content" @ce game data directory
     -   Some build targets include @cpp "Content" @ce directory directly inside the executable package (e.g., Android)
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
--   `NCINE_EMBED_SHADERS` (default @cpp ON @ce) --- Embed shader files inside executable
+-   `NCINE_EMBED_SHADERS` (default @cpp ON @ce) --- Embed shader files in executable
 -   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Preferred backend on desktop
     -   Possible values: `GLFW`, `SDL2`
     -   Ignored on **Android** and **UWP** platforms
@@ -218,6 +218,7 @@ The following parameters can be used to customize the build:
     - Uses code paths optimized for multiple architectures with the best-matching variant selected at runtime based on detected CPU features
 -   `DEATH_CPU_USE_IFUNC` (default @cpp ON @ce if supported) --- Allow using
     [GNU IFUNC](https://sourceware.org/glibc/wiki/GNU_IFUNC) for runtime CPU dispatch
+-   `DEATH_DEBUG_SYMBOLS` (default @cpp ON @ce in debug builds) --- Include debug symbols in executable
 -   `DEATH_TRACE` (default @cpp ON @ce) --- Enable runtime event tracing, see @ref Asserts.h
 -   `DEATH_TRACE_ASYNC` (default @cpp ON @ce if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
 -   `DEATH_USE_RUNTIME_CAST` (default @cpp ON @ce) --- Enable @ref Death::runtime_cast() and type information optimization

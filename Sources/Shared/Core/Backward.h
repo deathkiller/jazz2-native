@@ -1421,7 +1421,7 @@ namespace Death { namespace Backward {
 		fobj_bfd_map_t _fobj_bfd_map;
 
 		bfd_fileobject* load_object_with_bfd(const std::string& filename_object) {
-			using namespace details;
+			using namespace Implementation;
 
 			if (!_bfd_loaded) {
 				bfd_init();
@@ -1492,7 +1492,7 @@ namespace Death { namespace Backward {
 		};
 
 		struct find_sym_context {
-			TraceResolverLinuxBase* self;
+			TraceResolver* self;
 			bfd_fileobject* fobj;
 			void* addr;
 			void* base_addr;
@@ -1584,7 +1584,7 @@ namespace Death { namespace Backward {
 						src_loc.filename = result.filename;
 					}
 					if (result.funcname) {
-						src_loc.function = demangle(result.funcname);
+						src_loc.function = Demangle(result.funcname);
 					}
 					results.push_back(src_loc);
 				}
