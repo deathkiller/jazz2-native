@@ -22,8 +22,8 @@
 #pragma pack(push)
 #pragma pack()
 
-namespace Json {
-
+namespace Json
+{
 	class Value;
 
 	/**

@@ -64,8 +64,8 @@
 
 /** @brief JSON (JavaScript Object Notation).
  */
-namespace Json {
-
+namespace Json
+{
 	enum ErrorCode {
 		SUCCESS = 0,                ///< No error
 		CAPACITY,                   ///< This parser can't support a document that big

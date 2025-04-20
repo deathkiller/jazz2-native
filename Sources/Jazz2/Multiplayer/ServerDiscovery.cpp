@@ -26,14 +26,13 @@ struct ipv6_mreq {
 };
 #endif
 
-#include "../../simdjson/simdjson.h"
+#include "../../jsoncpp/json.h"
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 using namespace nCine;
 
 using namespace std::string_view_literals;
-using namespace simdjson;
 
 namespace Jazz2::Multiplayer
 {
@@ -207,43 +206,40 @@ namespace Jazz2::Multiplayer
 		if (result) {
 			auto s = _onlineRequest.GetResponse().GetStream();
 			auto size = s->GetSize();
-			auto buffer = std::make_unique<char[]>(size + simdjson::SIMDJSON_PADDING);
+			auto buffer = std::make_unique<char[]>(size);
 			s->Read(buffer.get(), size);
-			buffer[size] = '\0';
 
-			ondemand::parser parser;
-			ondemand::document doc;
-			if (parser.iterate(buffer.get(), size, size + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
-				ondemand::array servers;
-				if (doc["s"].get(servers) == SUCCESS) {
-					for (auto serverItem : servers) {
-						std::string_view serverName, serverUuid, serverEndpoints;
-						if (serverItem["n"].get(serverName) == SUCCESS && !serverName.empty() &&
-							serverItem["u"].get(serverUuid) == SUCCESS && !serverUuid.empty() &&
-							serverItem["e"].get(serverEndpoints) == SUCCESS && !serverEndpoints.empty()) {
+			Json::CharReaderBuilder builder;
+			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+			Json::Value doc; std::string errors;
+			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
+				for (auto serverItem : doc["s"]) {
+					std::string_view serverName, serverUuid, serverEndpoints;
+					if (serverItem["n"].get(serverName) == Json::SUCCESS && !serverName.empty() &&
+						serverItem["u"].get(serverUuid) == Json::SUCCESS && !serverUuid.empty() &&
+						serverItem["e"].get(serverEndpoints) == Json::SUCCESS && !serverEndpoints.empty()) {
 
-							std::int64_t currentPlayers, maxPlayers;
-							serverItem["c"].get(currentPlayers);
-							serverItem["m"].get(maxPlayers);
+						std::int64_t currentPlayers = 0, maxPlayers = 0;
+						serverItem["c"].get(currentPlayers);
+						serverItem["m"].get(maxPlayers);
 
-							std::string_view version;
-							serverItem["v"].get(version);
+						std::string_view version;
+						serverItem["v"].get(version);
 
-							ServerDescription discoveredServer{};
-							discoveredServer.Version = version;
-							discoveredServer.Name = serverName;
-							discoveredServer.EndpointString = serverEndpoints;
-							discoveredServer.Name = serverName;
-							discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
-							discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
+						ServerDescription discoveredServer{};
+						discoveredServer.Version = version;
+						discoveredServer.Name = serverName;
+						discoveredServer.EndpointString = serverEndpoints;
+						discoveredServer.Name = serverName;
+						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
+						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 
-							LOGD("[MP] Found server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
-							_observer->OnServerFound(std::move(discoveredServer));
-						}
+						LOGD("[MP] Found server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+						_observer->OnServerFound(std::move(discoveredServer));
 					}
 				}
 			} else {
-				LOGE("[MP] Failed to parse public server list");
+				LOGE("[MP] Failed to parse public server list: %s", errors.c_str());
 			}
 		} else {
 			LOGE("[MP] Failed to download public server list: %s", result.error.data());
@@ -400,22 +396,22 @@ namespace Jazz2::Multiplayer
 		if (auto result = _onlineRequest.Execute()) {
 			auto s = _onlineRequest.GetResponse().GetStream();
 			auto size = s->GetSize();
-			auto buffer = std::make_unique<char[]>(size + simdjson::SIMDJSON_PADDING);
+			auto buffer = std::make_unique<char[]>(size);
 			s->Read(buffer.get(), size);
-			buffer[size] = '\0';
 
-			ondemand::parser parser;
-			ondemand::document doc;
-			if (parser.iterate(buffer.get(), size, size + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+			Json::CharReaderBuilder builder;
+			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+			Json::Value doc; std::string errors;
+			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
 				bool success; std::string_view endpoints;
-				if (doc["r"].get(success) == SUCCESS && success &&
-					doc["e"].get(endpoints) == SUCCESS && !endpoints.empty()) {
+				if (doc["r"].get(success) == Json::SUCCESS && success &&
+					doc["e"].get(endpoints) == Json::SUCCESS && !endpoints.empty()) {
 					//LOGI("[MP] Server published with following endpoints: %s", String(endpoints).data());
 				} else {
 					LOGW("[MP] Failed to publish the server: Request rejected");
 				}
 			} else {
-				LOGE("[MP] Failed to publish the server: Response cannot be parsed");
+				LOGE("[MP] Failed to publish the server: Response cannot be parsed: %s", errors.c_str());
 			}
 		} else {
 			LOGW("[MP] Failed to publish the server: %s", result.error.data());

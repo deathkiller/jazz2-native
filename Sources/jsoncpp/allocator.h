@@ -13,7 +13,8 @@
 #pragma pack(push)
 #pragma pack()
 
-namespace Json {
+namespace Json
+{
 	template <typename T> class SecureAllocator {
 	public:
 		// Type definitions

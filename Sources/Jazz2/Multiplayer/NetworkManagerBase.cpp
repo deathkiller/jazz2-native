@@ -29,38 +29,6 @@ namespace Jazz2::Multiplayer
 {
 	static std::atomic_int32_t _initializeCount{0};
 
-	static bool TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port)
-	{
-		if (auto portSep = input.findLast(':')) {
-			auto portString = input.suffix(portSep.begin() + 1);
-			if (portString.contains(']')) {
-				// Probably only IPv6 address (or some garbage)
-				address = input;
-				port = 0;
-				return true;
-			} else {
-				// Address (or hostname) and port
-				address = input.prefix(portSep.begin());
-				if (address.empty()) {
-					return false;
-				}
-
-				auto portString = input.suffix(portSep.begin() + 1);
-				port = std::uint16_t(stou32(portString.data(), portString.size()));
-				return true;
-			}
-		} else {
-			// Address (or hostname) only
-			if (input.empty()) {
-				return false;
-			}
-
-			address = input;
-			port = 0;
-			return true;
-		}
-	}
-
 	NetworkManagerBase::NetworkManagerBase()
 		: _host(nullptr), _state(NetworkState::None), _handler(nullptr)
 	{
