@@ -50,7 +50,8 @@ int JSON_API msvc_pre1900_c99_snprintf(char* outBuf, size_t size,
 
 #define JSON_ASSERT_UNREACHABLE assert(false)
 
-namespace Json {
+namespace Json
+{
 	template <typename T>
 	static std::unique_ptr<T> cloneUnique(const std::unique_ptr<T>& p) {
 		std::unique_ptr<T> r;
@@ -733,9 +734,9 @@ namespace Json {
 				}
 				value = Int64(value_.real_);
 				return SUCCESS;
-			case nullValue:
-				value = 0;
-				return SUCCESS;
+			//case nullValue:
+			//	value = 0;
+			//	return SUCCESS;
 			case booleanValue:
 				value = value_.bool_ ? 1 : 0;
 				return SUCCESS;
@@ -856,9 +857,9 @@ namespace Json {
 			case booleanValue:
 				value = value_.bool_;
 				return SUCCESS;
-			case nullValue:
-				value = false;
-				return SUCCESS;
+			//case nullValue:
+			//	value = false;
+			//	return SUCCESS;
 			case intValue:
 				value = value_.int_ != 0;
 				return SUCCESS;

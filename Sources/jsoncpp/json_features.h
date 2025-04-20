@@ -11,8 +11,8 @@
 #pragma pack(push)
 #pragma pack()
 
-namespace Json {
-
+namespace Json
+{
 	/** \brief Configuration passed to reader and writer.
 	 * This configuration object can be used to force the Reader or Writer
 	 * to behave in a standard conforming way.

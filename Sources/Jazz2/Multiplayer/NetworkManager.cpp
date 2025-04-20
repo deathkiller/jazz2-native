@@ -9,11 +9,7 @@
 #include "../PreferencesCache.h"
 #include "../../nCine/I18n.h"
 
-#if defined(USE_JSONCPP)
-#	include "../../jsoncpp/json.h"
-#else
-#	include "../../simdjson/simdjson.h"
-#endif
+#include "../../jsoncpp/json.h"
 
 #include <float.h>
 
@@ -26,12 +22,6 @@ using namespace Death;
 using namespace Death::Containers::Literals;
 
 using namespace std::string_view_literals;
-
-#if defined(USE_JSONCPP)
-using namespace Json;
-#else
-using namespace simdjson;
-#endif
 
 namespace Jazz2::Multiplayer
 {
@@ -201,27 +191,13 @@ namespace Jazz2::Multiplayer
 		auto s = fs::Open(configPath, FileAccess::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize >= 4 && fileSize < 64 * 1024 * 1024) {
-#if defined(USE_JSONCPP)
-			auto buffer = std::make_unique<char[]>(fileSize + 1);
-#else
-			auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
-#endif
+			auto buffer = std::make_unique<char[]>(fileSize);
 			s->Read(buffer.get(), fileSize);
-			buffer[fileSize] = '\0';
 
-#if defined(USE_JSONCPP)
 			Json::CharReaderBuilder builder;
-			auto reader = std::unique_ptr<CharReader>(builder.newCharReader());
-
-			Value doc; std::string errors;
+			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
-#else
-			ContentResolver::StripCommentsFromJson(arrayView(buffer.get(), fileSize));
-
-			ondemand::parser parser;
-			ondemand::document doc;
-			if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
-#endif
 				if (level == 0) {
 					LOGI("Loaded configuration from \"%s\"", configPath.data());
 				} else {
@@ -229,17 +205,17 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::string_view includeFile;
-				if (doc["$include"].get(includeFile) == SUCCESS && !includeFile.empty()) {
+				if (doc["$include"].get(includeFile) == Json::SUCCESS && !includeFile.empty()) {
 					FillServerConfigurationFromFile(includeFile, serverConfig, includedFiles, level + 1);
 				}
 
 				std::string_view serverName;
-				if (doc["ServerName"].get(serverName) == SUCCESS) {
+				if (doc["ServerName"].get(serverName) == Json::SUCCESS) {
 					serverConfig.ServerName = serverName;
 				}
 
 				std::string_view serverAddressOverride;
-				if (doc["ServerAddressOverride"].get(serverAddressOverride) == SUCCESS) {
+				if (doc["ServerAddressOverride"].get(serverAddressOverride) == Json::SUCCESS) {
 					serverConfig.ServerAddressOverride = StringView(serverAddressOverride).trimmed();
 					if (!serverConfig.ServerAddressOverride.empty()) {
 						StringView address; std::uint16_t port;
@@ -254,57 +230,56 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::string_view serverPassword;
-				if (doc["ServerPassword"].get(serverPassword) == SUCCESS) {
+				if (doc["ServerPassword"].get(serverPassword) == Json::SUCCESS) {
 					serverConfig.ServerPassword = serverPassword;
 				}
 
 				std::string_view welcomeMessage;
-				if (doc["WelcomeMessage"].get(welcomeMessage) == SUCCESS) {
+				if (doc["WelcomeMessage"].get(welcomeMessage) == Json::SUCCESS) {
 					serverConfig.WelcomeMessage = welcomeMessage;
 				}
 
 				std::int64_t maxPlayerCount;
-				if (doc["MaxPlayerCount"].get(maxPlayerCount) == SUCCESS && maxPlayerCount > 0 && maxPlayerCount <= UINT32_MAX) {
+				if (doc["MaxPlayerCount"].get(maxPlayerCount) == Json::SUCCESS && maxPlayerCount > 0 && maxPlayerCount <= UINT32_MAX) {
 					serverConfig.MaxPlayerCount = std::uint32_t(maxPlayerCount);
 				}
 
 				std::int64_t minPlayerCount;
-				if (doc["MinPlayerCount"].get(minPlayerCount) == SUCCESS && minPlayerCount >= 1 && minPlayerCount <= UINT32_MAX) {
+				if (doc["MinPlayerCount"].get(minPlayerCount) == Json::SUCCESS && minPlayerCount >= 1 && minPlayerCount <= UINT32_MAX) {
 					serverConfig.MinPlayerCount = std::uint32_t(minPlayerCount);
 				}
 
 				std::string_view gameMode;
-				if (doc["GameMode"].get(gameMode) == SUCCESS) {
+				if (doc["GameMode"].get(gameMode) == Json::SUCCESS) {
 					serverConfig.GameMode = StringToGameMode(gameMode);
 				}
 
 				std::int64_t serverPort;
-				if (doc["ServerPort"].get(serverPort) == SUCCESS && serverPort > 0 && serverPort <= UINT16_MAX) {
+				if (doc["ServerPort"].get(serverPort) == Json::SUCCESS && serverPort > 0 && serverPort <= UINT16_MAX) {
 					serverConfig.ServerPort = std::uint16_t(serverPort);
 				}
 
 				bool isPrivate;
-				if (doc["IsPrivate"].get(isPrivate) == SUCCESS) {
+				if (doc["IsPrivate"].get(isPrivate) == Json::SUCCESS) {
 					serverConfig.IsPrivate = isPrivate;
 				}
 
 				bool requiresDiscordAuth;
-				if (doc["RequiresDiscordAuth"].get(requiresDiscordAuth) == SUCCESS) {
+				if (doc["RequiresDiscordAuth"].get(requiresDiscordAuth) == Json::SUCCESS) {
 					serverConfig.RequiresDiscordAuth = requiresDiscordAuth;
 				}
 
 				std::int64_t allowedPlayerTypes;
-				if (doc["AllowedPlayerTypes"].get(allowedPlayerTypes) == SUCCESS && allowedPlayerTypes > 0 && allowedPlayerTypes <= UINT8_MAX) {
+				if (doc["AllowedPlayerTypes"].get(allowedPlayerTypes) == Json::SUCCESS && allowedPlayerTypes > 0 && allowedPlayerTypes <= UINT8_MAX) {
 					serverConfig.AllowedPlayerTypes = std::uint8_t(allowedPlayerTypes);
 				}
 
 				std::int64_t idleKickTimeSecs;
-				if (doc["IdleKickTimeSecs"].get(idleKickTimeSecs) == SUCCESS && idleKickTimeSecs >= INT32_MIN && idleKickTimeSecs <= INT32_MAX) {
+				if (doc["IdleKickTimeSecs"].get(idleKickTimeSecs) == Json::SUCCESS && idleKickTimeSecs >= INT32_MIN && idleKickTimeSecs <= INT32_MAX) {
 					serverConfig.IdleKickTimeSecs = std::int16_t(idleKickTimeSecs);
 				}
 
-#if defined(USE_JSONCPP)
-				Value& adminUniquePlayerIDs = doc["AdminUniquePlayerIDs"];
+				Json::Value& adminUniquePlayerIDs = doc["AdminUniquePlayerIDs"];
 				for (auto it = adminUniquePlayerIDs.begin(); it != adminUniquePlayerIDs.end(); ++it) {
 					std::string_view key = it.name();
 					if (!key.empty()) {
@@ -314,7 +289,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				Value& whitelistedUniquePlayerIDs = doc["WhitelistedUniquePlayerIDs"];
+				Json::Value& whitelistedUniquePlayerIDs = doc["WhitelistedUniquePlayerIDs"];
 				for (auto it = whitelistedUniquePlayerIDs.begin(); it != whitelistedUniquePlayerIDs.end(); ++it) {
 					std::string_view key = it.name();
 					if (!key.empty()) {
@@ -324,7 +299,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				Value& bannedUniquePlayerIDs = doc["BannedUniquePlayerIDs"];
+				Json::Value& bannedUniquePlayerIDs = doc["BannedUniquePlayerIDs"];
 				for (auto it = bannedUniquePlayerIDs.begin(); it != bannedUniquePlayerIDs.end(); ++it) {
 					std::string_view key = it.name();
 					if (!key.empty()) {
@@ -334,7 +309,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				Value& bannedIPAddresses = doc["BannedIPAddresses"];
+				Json::Value& bannedIPAddresses = doc["BannedIPAddresses"];
 				for (auto it = bannedIPAddresses.begin(); it != bannedIPAddresses.end(); ++it) {
 					std::string_view key = it.name();
 					if (!key.empty()) {
@@ -343,114 +318,58 @@ namespace Jazz2::Multiplayer
 						serverConfig.BannedIPAddresses.emplace(key, value);
 					}
 				}
-#else
-				ondemand::object adminUniquePlayerIDs;
-				if (doc["AdminUniquePlayerIDs"].get(adminUniquePlayerIDs) == SUCCESS) {
-					for (auto item : adminUniquePlayerIDs) {
-						std::string_view key;
-						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
-							std::string_view value;
-							item.value().get(value);
-							serverConfig.AdminUniquePlayerIDs.emplace(key, value);
-						}
-					}
-				}
-
-				ondemand::object whitelistedUniquePlayerIDs;
-				if (doc["WhitelistedUniquePlayerIDs"].get(whitelistedUniquePlayerIDs) == SUCCESS) {
-					for (auto item : whitelistedUniquePlayerIDs) {
-						std::string_view key;
-						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
-							std::string_view value;
-							item.value().get(value);
-							serverConfig.WhitelistedUniquePlayerIDs.emplace(key, value);
-						}
-					}
-				}
-
-				ondemand::object bannedUniquePlayerIDs;
-				if (doc["BannedUniquePlayerIDs"].get(bannedUniquePlayerIDs) == SUCCESS) {
-					for (auto item : bannedUniquePlayerIDs) {
-						std::string_view key;
-						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
-							std::string_view value;
-							item.value().get(value);
-							serverConfig.BannedUniquePlayerIDs.emplace(key, value);
-						}
-					}
-				}
-
-				ondemand::object bannedIPAddresses;
-				if (doc["BannedIPAddresses"].get(bannedIPAddresses) == SUCCESS) {
-					for (auto item : bannedIPAddresses) {
-						std::string_view key;
-						if (item.unescaped_key().get(key) == SUCCESS && !key.empty()) {
-							std::string_view value;
-							item.value().get(value);
-							serverConfig.BannedIPAddresses.emplace(key, value);
-						}
-					}
-				}
-#endif
 
 				// Game mode specific settings
 				bool randomizePlaylist;
-				if (doc["RandomizePlaylist"].get(randomizePlaylist) == SUCCESS) {
+				if (doc["RandomizePlaylist"].get(randomizePlaylist) == Json::SUCCESS) {
 					serverConfig.RandomizePlaylist = randomizePlaylist;
 				}
 
 				bool isElimination;
-				if (doc["IsElimination"].get(isElimination) == SUCCESS) {
+				if (doc["IsElimination"].get(isElimination) == Json::SUCCESS) {
 					serverConfig.IsElimination = isElimination;
 				}
 
 				std::int64_t totalPlayerPoints;
-				if (doc["TotalPlayerPoints"].get(totalPlayerPoints) == SUCCESS && totalPlayerPoints >= 0 && totalPlayerPoints <= INT32_MAX) {
+				if (doc["TotalPlayerPoints"].get(totalPlayerPoints) == Json::SUCCESS && totalPlayerPoints >= 0 && totalPlayerPoints <= INT32_MAX) {
 					serverConfig.TotalPlayerPoints = std::uint32_t(totalPlayerPoints);
 				}
 
 				std::int64_t initialPlayerHealth;
-				if (doc["InitialPlayerHealth"].get(initialPlayerHealth) == SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
+				if (doc["InitialPlayerHealth"].get(initialPlayerHealth) == Json::SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
 					serverConfig.InitialPlayerHealth = std::uint32_t(initialPlayerHealth);
 				}
 
 				std::int64_t maxGameTimeSecs;
-				if (doc["MaxGameTimeSecs"].get(maxGameTimeSecs) == SUCCESS && maxGameTimeSecs >= 0 && maxGameTimeSecs <= INT32_MAX) {
+				if (doc["MaxGameTimeSecs"].get(maxGameTimeSecs) == Json::SUCCESS && maxGameTimeSecs >= 0 && maxGameTimeSecs <= INT32_MAX) {
 					serverConfig.MaxGameTimeSecs = std::uint32_t(maxGameTimeSecs);
 				}
 
 				std::int64_t preGameSecs;
-				if (doc["PreGameSecs"].get(preGameSecs) == SUCCESS && preGameSecs >= 0 && preGameSecs <= INT32_MAX) {
+				if (doc["PreGameSecs"].get(preGameSecs) == Json::SUCCESS && preGameSecs >= 0 && preGameSecs <= INT32_MAX) {
 					serverConfig.PreGameSecs = std::uint32_t(preGameSecs);
 				}
 
 				std::int64_t totalKills;
-				if (doc["TotalKills"].get(totalKills) == SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
+				if (doc["TotalKills"].get(totalKills) == Json::SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
 					serverConfig.TotalKills = std::uint32_t(totalKills);
 				}
 
 				std::int64_t totalLaps;
-				if (doc["TotalLaps"].get(totalLaps) == SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
+				if (doc["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
 					serverConfig.TotalLaps = std::uint32_t(totalLaps);
 				}
 
 				std::int64_t totalTreasureCollected;
-				if (doc["TotalTreasureCollected"].get(totalTreasureCollected) == SUCCESS && totalTreasureCollected >= 0 && totalTreasureCollected <= INT32_MAX) {
+				if (doc["TotalTreasureCollected"].get(totalTreasureCollected) == Json::SUCCESS && totalTreasureCollected >= 0 && totalTreasureCollected <= INT32_MAX) {
 					serverConfig.TotalTreasureCollected = std::uint32_t(totalTreasureCollected);
 				}
 
 				// Playlist
-#if defined(USE_JSONCPP)
-				Value& playlist = doc["Playlist"];
+				Json::Value& playlist = doc["Playlist"];
 				if (playlist.isArray()) {
 					serverConfig.Playlist.clear();
 					for (auto& entry : playlist) {
-#else
-				ondemand::array playlist;
-				if (doc["Playlist"].get(playlist) == SUCCESS) {
-					serverConfig.Playlist.clear();
-					for (auto entry : playlist) {
-#endif
 						// Playlist entry inherits all properties from the main server configuration
 						PlaylistEntry playlistEntry{};
 						playlistEntry.GameMode = serverConfig.GameMode;
@@ -463,47 +382,47 @@ namespace Jazz2::Multiplayer
 						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
 
 						std::string_view levelName;
-						if (entry["LevelName"].get(levelName) == SUCCESS) {
+						if (entry["LevelName"].get(levelName) == Json::SUCCESS) {
 							playlistEntry.LevelName = levelName;
 						}
 
 						std::string_view gameMode;
-						if (entry["GameMode"].get(gameMode) == SUCCESS) {
+						if (entry["GameMode"].get(gameMode) == Json::SUCCESS) {
 							playlistEntry.GameMode = StringToGameMode(gameMode);
 						}
 
 						bool isElimination;
-						if (entry["IsElimination"].get(isElimination) == SUCCESS) {
+						if (entry["IsElimination"].get(isElimination) == Json::SUCCESS) {
 							playlistEntry.IsElimination = isElimination;
 						}
 
 						std::int64_t initialPlayerHealth;
-						if (entry["InitialPlayerHealth"].get(initialPlayerHealth) == SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
+						if (entry["InitialPlayerHealth"].get(initialPlayerHealth) == Json::SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
 							playlistEntry.InitialPlayerHealth = std::uint32_t(initialPlayerHealth);
 						}
 
 						std::int64_t maxGameTimeSecs;
-						if (entry["MaxGameTimeSecs"].get(maxGameTimeSecs) == SUCCESS && maxGameTimeSecs >= 0 && maxGameTimeSecs <= INT32_MAX) {
+						if (entry["MaxGameTimeSecs"].get(maxGameTimeSecs) == Json::SUCCESS && maxGameTimeSecs >= 0 && maxGameTimeSecs <= INT32_MAX) {
 							playlistEntry.MaxGameTimeSecs = std::uint32_t(maxGameTimeSecs);
 						}
 
 						std::int64_t preGameSecs;
-						if (entry["PreGameSecs"].get(preGameSecs) == SUCCESS && preGameSecs >= 0 && preGameSecs <= INT32_MAX) {
+						if (entry["PreGameSecs"].get(preGameSecs) == Json::SUCCESS && preGameSecs >= 0 && preGameSecs <= INT32_MAX) {
 							playlistEntry.PreGameSecs = std::uint32_t(preGameSecs);
 						}
 
 						std::int64_t totalKills;
-						if (entry["TotalKills"].get(totalKills) == SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
+						if (entry["TotalKills"].get(totalKills) == Json::SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
 							playlistEntry.TotalKills = std::uint32_t(totalKills);
 						}
 
 						std::int64_t totalLaps;
-						if (entry["TotalLaps"].get(totalLaps) == SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
+						if (entry["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
 							playlistEntry.TotalLaps = std::uint32_t(totalLaps);
 						}
 
 						std::int64_t totalTreasureCollected;
-						if (entry["TotalTreasureCollected"].get(totalTreasureCollected) == SUCCESS && totalTreasureCollected >= 0 && totalTreasureCollected <= INT32_MAX) {
+						if (entry["TotalTreasureCollected"].get(totalTreasureCollected) == Json::SUCCESS && totalTreasureCollected >= 0 && totalTreasureCollected <= INT32_MAX) {
 							playlistEntry.TotalTreasureCollected = std::uint32_t(totalTreasureCollected);
 						}
 
@@ -514,11 +433,11 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::int64_t playlistIndex;
-				if (doc["PlaylistIndex"].get(playlistIndex) == SUCCESS && playlistIndex >= -1 && playlistIndex < (std::int64_t)serverConfig.Playlist.size()) {
+				if (doc["PlaylistIndex"].get(playlistIndex) == Json::SUCCESS && playlistIndex >= -1 && playlistIndex < (std::int64_t)serverConfig.Playlist.size()) {
 					serverConfig.PlaylistIndex = std::uint32_t(playlistIndex);
 				}
 			} else {
-				LOGE("Configuration from \"%s\" cannot be parsed", configPath.data());
+				LOGE("Configuration from \"%s\" cannot be parsed: %s", configPath.data(), errors.c_str());
 			}
 		} else {
 			LOGE("Configuration file \"%s\" cannot be opened", configPath.data());

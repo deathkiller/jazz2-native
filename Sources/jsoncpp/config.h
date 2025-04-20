@@ -98,7 +98,8 @@ extern JSON_API int msvc_pre1900_c99_snprintf(char* outBuf, size_t size,
 #include "allocator.h"
 #include "version.h"
 
-namespace Json {
+namespace Json
+{
 	using Int = int;
 	using UInt = unsigned int;
 #if defined(JSON_NO_INT64)

@@ -24,8 +24,8 @@
 #pragma warning(disable : 4996)
 #endif
 
-namespace Json {
-
+namespace Json
+{
 	using StreamWriterPtr = std::unique_ptr<StreamWriter>;
 
 	StringContainer valueToString(LargestInt value) {
@@ -62,7 +62,7 @@ namespace Json {
 		return valueToString(LargestUInt(value));
 	}
 
-#endif // # if defined(JSON_HAS_INT64)
+#endif // #if defined(JSON_HAS_INT64)
 
 	namespace
 	{
@@ -353,9 +353,9 @@ namespace Json {
 			StringContainer endingLineFeedSymbol, bool useSpecialFloats,
 			bool emitUTF8, unsigned int precision, PrecisionType precisionType, bool dropNullPlaceholders)
 		: rightMargin_(74), indentation_(std::move(indentation)), cs_(cs),
-		colonSymbol_(std::move(colonSymbol)), endingLineFeedSymbol_(std::move(endingLineFeedSymbol)),
-		addChildValues_(false), indented_(false), useSpecialFloats_(useSpecialFloats), emitUTF8_(emitUTF8),
-		dropNullPlaceholders_(dropNullPlaceholders), precision_(precision), precisionType_(precisionType) {
+			colonSymbol_(std::move(colonSymbol)), endingLineFeedSymbol_(std::move(endingLineFeedSymbol)),
+			addChildValues_(false), indented_(false), useSpecialFloats_(useSpecialFloats), emitUTF8_(emitUTF8),
+			dropNullPlaceholders_(dropNullPlaceholders), precision_(precision), precisionType_(precisionType) {
 	}
 	int BuiltStyledStreamWriter::write(Value const& root, OStream* sout) {
 		sout_ = sout;
@@ -427,7 +427,6 @@ namespace Json {
 							maxOffset = offset;
 						}
 					}
-					maxOffset++;
 					std::map<std::string, ptrdiff_t> offsets;
 					for (const auto& member : members) {
 						Value const& childValue = value[member];
@@ -435,7 +434,7 @@ namespace Json {
 						if (offset != 0) {
 							offsets[member] = childValue.getOffsetStart();
 						} else {
-							offsets[member] = maxOffset++;
+							offsets[member] = ++maxOffset;
 						}
 					}
 
@@ -458,8 +457,7 @@ namespace Json {
 						}
 
 						writeCommentBeforeValue(childValue);
-						writeWithIndent(
-							valueToQuotedStringN(name.data(), name.length(), emitUTF8_));
+						writeWithIndent(valueToQuotedStringN(name.data(), name.length(), emitUTF8_));
 						*sout_ << colonSymbol_;
 						writeValue(childValue);
 						if (++it == members.end()) {

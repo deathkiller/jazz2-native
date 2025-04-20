@@ -268,7 +268,6 @@ namespace Jazz2::Multiplayer
 				}
 				case LevelState::WaitingForMinPlayers: {
 					if (_isServer) {
-						auto& serverConfig = _networkManager->GetServerConfiguration();
 						// TODO: Check all players are ready
 						if (_waitingForPlayerCount <= 0) {
 							_levelState = LevelState::Countdown3;
@@ -1711,6 +1710,16 @@ namespace Jazz2::Multiplayer
 				auto endpoints = _networkManager->GetServerEndpoints();
 				for (const auto& endpoint : endpoints) {
 					SendMessage(peer, UI::MessageLevel::Info, endpoint);
+				}
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				StringView address; std::uint16_t port;
+				if (NetworkManagerBase::TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port)) {
+					if (port == 0) {
+						port = serverConfig.ServerPort;
+					}
+					char infoBuffer[128];
+					formatString(infoBuffer, sizeof(infoBuffer), "%s:%u (Override)", String::nullTerminatedView(address).data(), port);
+					SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 				}
 				return true;
 			}

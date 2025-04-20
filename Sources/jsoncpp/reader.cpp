@@ -42,12 +42,10 @@
 
 static size_t const stackLimit_g = JSONCPP_DEPRECATED_STACK_LIMIT; // see readValue()
 
-namespace Json {
-
+namespace Json
+{
 	using CharReaderPtr = std::unique_ptr<CharReader>;
 
-	// Originally copied from the Features class (now deprecated), used internally
-	// for features implementation.
 	class OurFeatures {
 	public:
 		static OurFeatures all();
@@ -71,8 +69,6 @@ namespace Json {
 	// Implementation of class Reader
 	// ////////////////////////////////
 
-	// Originally copied from the Reader class (now deprecated), used internally
-	// for implementing JSON reading.
 	class OurReader {
 	public:
 		using Char = char;
@@ -224,9 +220,7 @@ namespace Json {
 				token.type_ = tokenError;
 				token.start_ = beginDoc;
 				token.end_ = endDoc;
-				addError(
-					"A valid JSON document must be either an array or an object value.",
-					token);
+				addError("A valid JSON document must be either an array or an object value.", token);
 				return false;
 			}
 		}
@@ -531,9 +525,10 @@ namespace Json {
 		while (current != end) {
 			char c = *current++;
 			if (c == '\r') {
-				if (current != end && *current == '\n')
+				if (current != end && *current == '\n') {
 					// convert dos EOL
 					++current;
+				}
 				// convert Mac EOL
 				normalized += '\n';
 			} else {
@@ -543,8 +538,7 @@ namespace Json {
 		return normalized;
 	}
 
-	void OurReader::addComment(Location begin, Location end,
-							   CommentPlacement placement) {
+	void OurReader::addComment(Location begin, Location end, CommentPlacement placement) {
 		assert(collectComments_);
 		auto normalized = normalizeEOL(begin, end);
 		if (placement == commentAfterOnSameLine) {
@@ -560,10 +554,12 @@ namespace Json {
 
 		while ((current_ + 1) < end_) {
 			Char c = getNextChar();
-			if (c == '*' && *current_ == '/')
+			if (c == '*' && *current_ == '/') {
 				break;
-			if (c == '\n')
+			}
+			if (c == '\n') {
 				*containsNewLineResult = true;
+			}
 		}
 
 		bool success = (getNextChar() == '/');
@@ -571,10 +567,11 @@ namespace Json {
 		Location current = current_;
 		while (current != end_) {
 			Char c = *current;
-			if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+			if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
 				++current;
-			else
+			} else {
 				break;
+			}
 		}
 
 		if (current + 1 < end_ && *current == '/' && (*(current + 1) == '*' || *(current + 1) == '/')) {
@@ -591,8 +588,9 @@ namespace Json {
 				break;
 			if (c == '\r') {
 				// Consume DOS EOL. It will be normalized in addComment.
-				if (current_ != end_ && *current_ == '\n')
+				if (current_ != end_ && *current_ == '\n') {
 					getNextChar();
+				}
 				// Break on Moc OS 9 EOL.
 				break;
 			}
@@ -601,10 +599,11 @@ namespace Json {
 		Location current = current_;
 		while (current != end_) {
 			Char c = *current;
-			if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+			if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
 				++current;
-			else
+			} else {
 				break;
+			}
 		}
 
 		if (current + 1 < end_ && *current == '/' && (*(current + 1) == '*' || *(current + 1) == '/')) {
@@ -622,21 +621,25 @@ namespace Json {
 		}
 		char c = '0'; // stopgap for already consumed character
 		// integral part
-		while (c >= '0' && c <= '9')
+		while (c >= '0' && c <= '9') {
 			c = (current_ = p) < end_ ? *p++ : '\0';
+		}
 		// fractional part
 		if (c == '.') {
 			c = (current_ = p) < end_ ? *p++ : '\0';
-			while (c >= '0' && c <= '9')
+			while (c >= '0' && c <= '9') {
 				c = (current_ = p) < end_ ? *p++ : '\0';
+			}
 		}
 		// exponential part
 		if (c == 'e' || c == 'E') {
 			c = (current_ = p) < end_ ? *p++ : '\0';
-			if (c == '+' || c == '-')
+			if (c == '+' || c == '-') {
 				c = (current_ = p) < end_ ? *p++ : '\0';
-			while (c >= '0' && c <= '9')
+			}
+			while (c >= '0' && c <= '9') {
 				c = (current_ = p) < end_ ? *p++ : '\0';
+			}
 		}
 		return true;
 	}
@@ -644,10 +647,12 @@ namespace Json {
 		Char c = 0;
 		while (current_ != end_) {
 			c = getNextChar();
-			if (c == '\\')
+			if (c == '\\') {
 				getNextChar();
-			else if (c == '"')
+			}
+			else if (c == '"') {
 				break;
+			}
 		}
 		return c == '"';
 	}
@@ -656,10 +661,12 @@ namespace Json {
 		Char c = 0;
 		while (current_ != end_) {
 			c = getNextChar();
-			if (c == '\\')
+			if (c == '\\') {
 				getNextChar();
-			else if (c == '\'')
+			}
+			else if (c == '\'') {
 				break;
+			}
 		}
 		return c == '\'';
 	}
@@ -671,10 +678,9 @@ namespace Json {
 		currentValue().swapPayload(init);
 		currentValue().setOffsetStart(token.start_ - begin_);
 		while (readTokenSkippingComments(tokenName)) {
-			if (tokenName.type_ == tokenObjectEnd &&
-				(name.empty() ||
-					features_.allowTrailingCommas_)) // empty object or trailing comma
+			if (tokenName.type_ == tokenObjectEnd && (name.empty() || features_.allowTrailingCommas_)) { // empty object or trailing comma
 				return true;
+			}
 			name.clear();
 			if (tokenName.type_ == tokenString) {
 				if (!decodeString(tokenName, name))
@@ -696,15 +702,15 @@ namespace Json {
 
 			Token colon;
 			if (!readToken(colon) || colon.type_ != tokenMemberSeparator) {
-				return addErrorAndRecover("Missing ':' after object member name", colon,
-										  tokenObjectEnd);
+				return addErrorAndRecover("Missing ':' after object member name", colon, tokenObjectEnd);
 			}
 			Value& value = currentValue()[name];
 			nodes_.push(&value);
 			bool ok = readValue();
 			nodes_.pop();
-			if (!ok) // error already set
+			if (!ok) { // error already set
 				return recoverFromError(tokenObjectEnd);
+			}
 
 			Token comma;
 			if (!readTokenSkippingComments(comma) ||
@@ -795,8 +801,7 @@ namespace Json {
 					  "The absolute value of minLargestInt must be only 1 magnitude "
 					  "larger than maxLargest Int");
 
-		static constexpr Value::LargestUInt positive_threshold =
-			Value::maxLargestUInt / 10;
+		static constexpr Value::LargestUInt positive_threshold = Value::maxLargestUInt / 10;
 		static constexpr Value::UInt positive_last_digit = Value::maxLargestUInt % 10;
 
 		// For the negative values, we have to be more careful. Since typically
@@ -809,10 +814,8 @@ namespace Json {
 		static constexpr auto negative_last_digit =
 			Value::UInt(-(Value::minLargestInt % 10));
 
-		const Value::LargestUInt threshold =
-			isNegative ? negative_threshold : positive_threshold;
-		const Value::UInt max_last_digit =
-			isNegative ? negative_last_digit : positive_last_digit;
+		const Value::LargestUInt threshold = (isNegative ? negative_threshold : positive_threshold);
+		const Value::UInt max_last_digit = (isNegative ? negative_last_digit : positive_last_digit);
 
 		Value::LargestUInt value = 0;
 		while (current < token.end_) {
@@ -867,8 +870,7 @@ namespace Json {
 			else if (value == std::numeric_limits<double>::lowest())
 				value = -std::numeric_limits<double>::infinity();
 			else if (!std::isinf(value))
-				return addError(
-					"'" + StringContainer(token.start_, token.end_) + "' is not a number.", token);
+				return addError("'" + StringContainer(token.start_, token.end_) + "' is not a number.", token);
 		}
 		decoded = value;
 		return true;
@@ -927,7 +929,8 @@ namespace Json {
 						if (!decodeUnicodeCodePoint(token, current, end, unicode))
 							return false;
 						decoded += codePointToUTF8(unicode);
-					} break;
+						break;
+					}
 					default:
 						return addError("Bad escape sequence in string", token, current);
 				}
@@ -952,11 +955,11 @@ namespace Json {
 				unsigned int surrogatePair;
 				if (decodeUnicodeEscapeSequence(token, current, end, surrogatePair)) {
 					unicode = 0x10000 + ((unicode & 0x3FF) << 10) + (surrogatePair & 0x3FF);
-				} else
+				} else {
 					return false;
+				}
 			} else
-				return addError("expecting another \\u token to begin the second half of "
-								"a unicode surrogate pair",
+				return addError("expecting another \\u token to begin the second half of a unicode surrogate pair",
 								token, current);
 		}
 		return true;
@@ -964,9 +967,7 @@ namespace Json {
 
 	bool OurReader::decodeUnicodeEscapeSequence(Token& token, Location& current, Location end, unsigned int& ret_unicode) {
 		if (end - current < 4)
-			return addError(
-				"Bad unicode escape sequence in string: four digits expected.", token,
-				current);
+			return addError("Bad unicode escape sequence in string: four digits expected.", token, current);
 		int unicode = 0;
 		for (int index = 0; index < 4; ++index) {
 			Char c = *current++;
