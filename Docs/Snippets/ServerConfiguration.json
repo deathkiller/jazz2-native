@@ -47,6 +47,7 @@
 	"InitialPlayerHealth": 5,
 	"MaxGameTimeSecs": 900,
 	"PreGameSecs": 60,
+	"SpawnInvulnerableSecs": 4,
 	"TotalKills": 10,
 	"TotalLaps": 3,
 	"TotalTreasureCollected": 60,
@@ -60,6 +61,7 @@
 			"InitialPlayerHealth": 5,
 			"MaxGameTimeSecs": 900,
 			"PreGameSecs": 60,
+			"SpawnInvulnerableSecs": 4,
 			"TotalKills": 10,
 			"TotalLaps": 3,
 			"TotalTreasureCollected": 60
@@ -71,6 +73,7 @@
 			"InitialPlayerHealth": 5,
 			"MaxGameTimeSecs": 900,
 			"PreGameSecs": 60,
+			"SpawnInvulnerableSecs": 4,
 			"TotalKills": 10,
 			"TotalLaps": 3,
 			"TotalTreasureCollected": 60

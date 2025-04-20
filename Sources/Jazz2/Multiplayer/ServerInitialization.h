@@ -77,6 +77,7 @@ namespace Jazz2::Multiplayer
 		- @cpp "BannedIPAddresses" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of banned IP addresses
 		  - Key specifies IP address, value can contain a user-defined comment (e.g., reason)
 		- @cpp "RandomizePlaylist" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether to play the playlist in random order
+		  - If enabled, the list is shuffled when the server is started and when the end of the list is reached
 		- @cpp "TotalPlayerPoints" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total points to win the championship (default is **0**)
 		  - Player can score a maximum of 20 points per round
 		- @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Game mode
@@ -94,9 +95,9 @@ namespace Jazz2::Multiplayer
 		  - Elimination can be combined with any game mode
 		- @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players (default is **5**)
 		- @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum allowed game time in seconds per level (default is **unlimited**)
-		- @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60**)
+		- @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60** seconds)
 		  - Pre-game is skipped in Cooperation
-		- @cpp "SpawnInvulnerableSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of invulnerability after (re)spawning (default is **4**)
+		- @cpp "SpawnInvulnerableSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of invulnerability after (re)spawning (default is **4** seconds)
 		  - Invulnerability is skipped in Cooperation
 		- @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		- @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
