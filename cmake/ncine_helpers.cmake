@@ -435,8 +435,12 @@ function(ncine_apply_compiler_options target)
 			target_compile_options(${target} PRIVATE "-march=${NCINE_ARCH_EXTENSIONS}")
 		endif()
 	
-		# Only in Debug - preserve debug information, it's probably added automatically on other platforms
-		if(EMSCRIPTEN)
+		# Preserve debug information
+		if(DEATH_DEBUG_SYMBOLS)
+			target_compile_options(${target} PRIVATE "-g")
+			target_link_options(${target} PRIVATE "-g")
+		elseif(EMSCRIPTEN)
+			# It's probably added automatically on other platforms
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Debug>:-g>)
 			target_link_options(${target} PRIVATE $<$<CONFIG:Debug>:-g>)
 		endif()
