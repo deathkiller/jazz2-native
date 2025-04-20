@@ -1117,7 +1117,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		switch ((ServerPacketType)packetType) {
 			case ServerPacketType::LoadLevel: {
 				MemoryStream packet(data);
-				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				std::uint32_t flags = packet.ReadVariableUint32();
 				MpLevelHandler::LevelState levelState = (MpLevelHandler::LevelState)packet.ReadValue<std::uint8_t>();
 				MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
 				ExitType lastExitType = (ExitType)packet.ReadValue<std::uint8_t>();

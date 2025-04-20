@@ -197,6 +197,16 @@ namespace Jazz2::Multiplayer
 			MultiplayerSpawnPoint(Vector2f pos, std::uint8_t team)
 				: Pos(pos), Team(team) {}
 		};
+
+		struct PendingSfx {
+			Actors::ActorBase* Actor;
+			String Identifier;
+			std::uint16_t Gain;
+			std::uint16_t Pitch;
+
+			PendingSfx(Actors::ActorBase* actor, String identifier, std::uint16_t gain, std::uint16_t pitch)
+				: Actor(actor), Identifier(std::move(identifier)), Gain(gain), Pitch(pitch) {}
+		};
 #endif
 
 		//static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
@@ -214,6 +224,7 @@ namespace Jazz2::Multiplayer
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
 		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
+		SmallVector<PendingSfx, 0> _pendingSfx;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
 		std::uint64_t _seqNum; // Client: sequence number of the last update

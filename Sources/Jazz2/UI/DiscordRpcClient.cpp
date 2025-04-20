@@ -4,8 +4,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
-#define SIMDJSON_EXCEPTIONS 0
-#include "../../simdjson/simdjson.h"
+#include "../../jsoncpp/json.h"
 
 #include <Containers/StringStlView.h>
 
@@ -17,7 +16,6 @@
 
 using namespace Death::Containers::Literals;
 
-using namespace simdjson;
 using namespace std::string_view_literals;
 
 namespace Jazz2::UI
@@ -256,18 +254,21 @@ namespace Jazz2::UI
 	{
 		LOGD("%s", String(json, length).data());
 
-		ondemand::parser parser;
-		ondemand::document doc;
-		if (parser.iterate(json, length, allocated).get(doc) == SUCCESS) {
+		Json::CharReaderBuilder builder;
+		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+		Json::Value doc; std::string errors;
+		if (reader->parse(json, json + length, &doc, &errors)) {
 			std::string_view cmd;
-			ondemand::object data;
-			if (doc["cmd"].get(cmd) == SUCCESS && cmd == "DISPATCH"sv && doc["data"].get(data) == SUCCESS) {
-				ondemand::object user; // {"id":"123456789","username":"nick.name","discriminator":"0","global_name":"Display Name","avatar":"123456789abcdef","avatar_decoration_data":null,"bot":false,"flags":32,"premium_type":0}
-				std::string_view userId, userGlobalName;
-				if (data["user"].get(user) == SUCCESS && user["id"].get(userId) == SUCCESS && user["global_name"].get(userGlobalName) == SUCCESS) {
-					_userId = stou64(userId.data(), userId.size());
-					_userDisplayName = userGlobalName;
-					LOGD("Connected to Discord as user \"%s\" (%llu)", _userDisplayName.data(), _userId);
+			if (doc["cmd"].get(cmd) == Json::SUCCESS && cmd == "DISPATCH"sv) {
+				const auto& data = doc["data"];
+				if (data.isObject()) {
+					const auto& user = data["user"]; // {"id":"123456789","username":"nick.name","discriminator":"0","global_name":"Display Name","avatar":"123456789abcdef","avatar_decoration_data":null,"bot":false,"flags":32,"premium_type":0}
+					std::string_view userId, userGlobalName;
+					if (user.isObject() && user["id"].get(userId) == Json::SUCCESS && user["global_name"].get(userGlobalName) == Json::SUCCESS) {
+						_userId = stou64(userId.data(), userId.size());
+						_userDisplayName = userGlobalName;
+						LOGD("Connected to Discord as user \"%s\" (%llu)", _userDisplayName.data(), _userId);
+					}
 				}
 			}
 		}

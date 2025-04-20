@@ -180,38 +180,6 @@ namespace Json
 		static void ecma404Mode(Json::Value* settings);
 	};
 
-	/** Consume entire stream and use its begin/end.
-	 * Someday we might have a real StreamReader, but for now this
-	 * is convenient.
-	 */
-	bool JSON_API parseFromStream(CharReader::Factory const&, IStream&, Value* root, StringContainer* errs);
-
-	/** \brief Read from 'sin' into 'root'.
-	 *
-	 * Always keep comments from the input JSON.
-	 *
-	 * This can be used to read a file into a particular sub-object.
-	 * For example:
-	 *   \code
-	 *   Json::Value root;
-	 *   cin >> root["dir"]["file"];
-	 *   cout << root;
-	 *   \endcode
-	 * Result:
-	 * \verbatim
-	 * {
-	 * "dir": {
-	 *    "file": {
-	 *    // The input stream JSON would be nested here.
-	 *    }
-	 * }
-	 * }
-	 * \endverbatim
-	 * \throw std::exception on parse error.
-	 * \see Json::operator<<()
-	 */
-	JSON_API IStream& operator>>(IStream&, Value&);
-
 } // namespace Json
 
 #pragma pack(pop)

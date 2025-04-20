@@ -24,6 +24,7 @@ namespace Jazz2::Multiplayer
 		Auth = 10,
 		LevelReady,
 		ChatMessage,
+		RequestLevelFiles,
 
 		PlayerReady = 30,
 		PlayerUpdate,

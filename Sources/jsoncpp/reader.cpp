@@ -140,18 +140,14 @@ namespace Json
 		bool decodeString(Token& token, StringContainer& decoded);
 		bool decodeDouble(Token& token);
 		bool decodeDouble(Token& token, Value& decoded);
-		bool decodeUnicodeCodePoint(Token& token, Location& current, Location end,
-									unsigned int& unicode);
-		bool decodeUnicodeEscapeSequence(Token& token, Location& current,
-										 Location end, unsigned int& unicode);
+		bool decodeUnicodeCodePoint(Token& token, Location& current, Location end, unsigned int& unicode);
+		bool decodeUnicodeEscapeSequence(Token& token, Location& current, Location end, unsigned int& unicode);
 		bool addError(const StringContainer& message, Token& token, Location extra = nullptr);
 		bool recoverFromError(TokenType skipUntilToken);
-		bool addErrorAndRecover(const StringContainer& message, Token& token,
-								TokenType skipUntilToken);
+		bool addErrorAndRecover(const StringContainer& message, Token& token, TokenType skipUntilToken);
 		Value& currentValue();
 		Char getNextChar();
-		void getLocationLineAndColumn(Location location, int& line,
-									  int& column) const;
+		void getLocationLineAndColumn(Location location, int& line, int& column) const;
 		StringContainer getLocationLineAndColumn(Location location) const;
 		void addComment(Location begin, Location end, CommentPlacement placement);
 
@@ -160,16 +156,16 @@ namespace Json
 
 		using Nodes = std::stack<Value*>;
 
-		Nodes nodes_ {};
-		Errors errors_ {};
-		StringContainer document_ {};
+		Nodes nodes_{};
+		Errors errors_{};
+		StringContainer document_{};
 		Location begin_ = nullptr;
 		Location end_ = nullptr;
 		Location current_ = nullptr;
 		Location lastValueEnd_ = nullptr;
 		Value* lastValue_ = nullptr;
 		bool lastValueHasAComment_ = false;
-		StringContainer commentsBefore_ {};
+		StringContainer commentsBefore_{};
 
 		OurFeatures const features_;
 		bool collectComments_ = false;
@@ -181,8 +177,8 @@ namespace Json
 		return std::any_of(begin, end, [](char b) { return b == '\n' || b == '\r'; });
 	}
 
-	OurReader::OurReader(OurFeatures const& features) : features_(features) {
-	}
+	OurReader::OurReader(OurFeatures const& features)
+		: features_(features) {}
 
 	bool OurReader::parse(const char* beginDoc, const char* endDoc, Value& root, bool collectComments) {
 		if (!features_.allowComments_) {
@@ -1079,7 +1075,6 @@ namespace Json
 	}
 
 	class OurCharReader : public CharReader {
-
 	public:
 		OurCharReader(bool collectComments, OurFeatures const& features)
 			: CharReader(std::unique_ptr<OurImpl>(new OurImpl(collectComments, features))) {
@@ -1227,30 +1222,6 @@ namespace Json
 
 	bool CharReader::parse(char const* beginDoc, char const* endDoc, Value* root, StringContainer* errs) {
 		return _impl->parse(beginDoc, endDoc, root, errs);
-	}
-
-	//////////////////////////////////
-	// global functions
-
-	bool parseFromStream(CharReader::Factory const& fact, IStream& sin, Value* root, StringContainer* errs) {
-		OStringStream ssin;
-		ssin << sin.rdbuf();
-		StringContainer doc = std::move(ssin).str();
-		char const* begin = doc.data();
-		char const* end = begin + doc.size();
-		// Note that we do not actually need a null-terminator.
-		CharReaderPtr const reader(fact.newCharReader());
-		return reader->parse(begin, end, root, errs);
-	}
-
-	IStream& operator>>(IStream& sin, Value& root) {
-		CharReaderBuilder b;
-		StringContainer errs;
-		bool ok = parseFromStream(b, sin, &root, &errs);
-		if (!ok) {
-			throwRuntimeError(errs);
-		}
-		return sin;
 	}
 
 } // namespace Json
