@@ -163,6 +163,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.MinPlayerCount = 1;
 		serverConfig.PlaylistIndex = -1;
 		serverConfig.PreGameSecs = 60;
+		serverConfig.SpawnInvulnerableSecs = 4;
 
 		serverConfig.TotalPlayerPoints = 50;
 		serverConfig.InitialPlayerHealth = 5;
@@ -350,6 +351,11 @@ namespace Jazz2::Multiplayer
 					serverConfig.PreGameSecs = std::uint32_t(preGameSecs);
 				}
 
+				std::int64_t spawnInvulnerableSecs;
+				if (doc["SpawnInvulnerableSecs"].get(spawnInvulnerableSecs) == Json::SUCCESS && spawnInvulnerableSecs >= 0 && spawnInvulnerableSecs <= INT32_MAX) {
+					serverConfig.SpawnInvulnerableSecs = std::uint32_t(spawnInvulnerableSecs);
+				}
+
 				std::int64_t totalKills;
 				if (doc["TotalKills"].get(totalKills) == Json::SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
 					serverConfig.TotalKills = std::uint32_t(totalKills);
@@ -409,6 +415,11 @@ namespace Jazz2::Multiplayer
 						std::int64_t preGameSecs;
 						if (entry["PreGameSecs"].get(preGameSecs) == Json::SUCCESS && preGameSecs >= 0 && preGameSecs <= INT32_MAX) {
 							playlistEntry.PreGameSecs = std::uint32_t(preGameSecs);
+						}
+
+						std::int64_t spawnInvulnerableSecs;
+						if (entry["SpawnInvulnerableSecs"].get(spawnInvulnerableSecs) == Json::SUCCESS && spawnInvulnerableSecs >= 0 && spawnInvulnerableSecs <= INT32_MAX) {
+							playlistEntry.SpawnInvulnerableSecs = std::uint32_t(spawnInvulnerableSecs);
 						}
 
 						std::int64_t totalKills;

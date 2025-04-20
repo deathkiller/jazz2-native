@@ -28,23 +28,15 @@
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 
-#define SIMDJSON_EXCEPTIONS 0
-#include "../simdjson/simdjson.h"
+#include "../jsoncpp/json.h"
 
 using namespace Death::IO::Compression;
-using namespace simdjson;
 
-template<class T>
-static Vector2i GetVector2iFromJson(simdjson_result<T> value, Vector2i defaultValue = Vector2i::Zero)
+static Vector2i GetVector2iFromJson(const Json::Value& value, Vector2i defaultValue = Vector2i::Zero)
 {
-	ondemand::array itemArray;
-	ondemand::array_iterator itemIterator;
-	if (value.get(itemArray) == SUCCESS && itemArray.begin().get(itemIterator) == SUCCESS) {
+	if (value.isArray()) {
 		std::int64_t x = 0, y = 0;
-		bool xf = (*itemIterator).get(x) == SUCCESS;
-		++itemIterator;
-		bool yf = (*itemIterator).get(y) == SUCCESS;
-		if (xf && yf) {
+		if (value[0].get(x) == Json::SUCCESS && value[1].get(y) == Json::SUCCESS) {
 			return Vector2i((std::int32_t)x, (std::int32_t)y);
 		}
 	}
@@ -486,11 +478,8 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
+		auto buffer = std::make_unique<char[]>(fileSize);
 		s->Read(buffer.get(), fileSize);
-		buffer[fileSize] = '\0';
-
-		StripCommentsFromJson(arrayView(buffer.get(), fileSize));
 
 		bool multipleAnimsNoStatesWarning = false;
 
@@ -498,23 +487,21 @@ namespace Jazz2
 		metadata->Path = std::move(pathNormalized);
 		metadata->Flags |= MetadataFlags::Referenced;
 
-		ondemand::parser parser;
-		ondemand::document doc;
-		if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
+		Json::CharReaderBuilder builder;
+		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+		Json::Value doc; std::string errors;
+		if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
 			metadata->BoundingBox = GetVector2iFromJson(doc["BoundingBox"], Vector2i(InvalidValue, InvalidValue));
 
-			ondemand::object animations;
-			if (doc["Animations"].get(animations) == SUCCESS) {
-				std::size_t count;
-				if (animations.count_fields().get(count) == SUCCESS) {
-					metadata->Animations.reserve(count);
-				}
+			const auto& animations = doc["Animations"];
+			if (animations.isObject()) {
+				std::size_t count = animations.getMemberCount();
+				metadata->Animations.reserve(count);
 
-				for (auto it : animations) {
+				for (auto it = animations.begin(); it != animations.end(); ++it) {
 					// TODO: Keys are not used
 					std::string_view assetPath;
-					ondemand::object value;
-					if (it.value().get(value) != SUCCESS || value["Path"].get(assetPath) != SUCCESS || assetPath.empty()) {
+					if ((*it)["Path"].get(assetPath) != Json::SUCCESS || assetPath.empty()) {
 						continue;
 					}
 
@@ -523,8 +510,8 @@ namespace Jazz2
 
 					//bool keepIndexed = false;
 
-					std::uint64_t flags;
-					if (value["Flags"].get(flags) == SUCCESS) {
+					std::int64_t flags;
+					if ((*it)["Flags"].get(flags) == Json::SUCCESS) {
 						if ((flags & 0x01) == 0x01) {
 							graphics.LoopMode = AnimationLoopMode::Once;
 						}
@@ -534,35 +521,35 @@ namespace Jazz2
 					}
 
 					// TODO: Implement true indexed sprites
-					std::uint64_t paletteOffset;
-					if (value["PaletteOffset"].get(paletteOffset) != SUCCESS) {
+					std::int64_t paletteOffset;
+					if ((*it)["PaletteOffset"].get(paletteOffset) != Json::SUCCESS || paletteOffset < 0) {
 						paletteOffset = 0;
 					}
 
-					graphics.Base = RequestGraphics(assetPath, (uint16_t)paletteOffset);
+					graphics.Base = RequestGraphics(assetPath, (std::uint16_t)paletteOffset);
 					if (graphics.Base == nullptr) {
 						continue;
 					}
 
 					std::int64_t frameOffset;
-					if (value["FrameOffset"].get(frameOffset) != SUCCESS) {
+					if ((*it)["FrameOffset"].get(frameOffset) != Json::SUCCESS) {
 						frameOffset = 0;
 					}
-					graphics.FrameOffset = (int32_t)frameOffset;
+					graphics.FrameOffset = (std::int32_t)frameOffset;
 
 					graphics.AnimDuration = graphics.Base->AnimDuration;
 					graphics.FrameCount = graphics.Base->FrameCount;
 
 					std::int64_t frameCount;
-					if (value["FrameCount"].get(frameCount) == SUCCESS) {
-						graphics.FrameCount = (int32_t)frameCount;
+					if ((*it)["FrameCount"].get(frameCount) == Json::SUCCESS) {
+						graphics.FrameCount = (std::int32_t)frameCount;
 					} else {
 						graphics.FrameCount -= graphics.FrameOffset;
 					}
 
 					// TODO: Use AnimDuration instead
 					double frameRate;
-					if (value["FrameRate"].get(frameRate) == SUCCESS) {
+					if ((*it)["FrameRate"].get(frameRate) == Json::SUCCESS) {
 						graphics.AnimDuration = (frameRate <= 0 ? -1.0f : (1.0f / (float)frameRate) * 5.0f);
 					}
 
@@ -572,11 +559,11 @@ namespace Jazz2
 						metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
 					}
 
-					ondemand::array states;
-					if (value["States"].get(states) == SUCCESS) {
-						for (auto stateItem : states) {
+					const auto& states = (*it)["States"];
+					if (states.isArray()) {
+						for (const auto& stateItem : states) {
 							std::int64_t state;
-							if (stateItem.get(state) == SUCCESS) {
+							if (stateItem.get(state) == Json::SUCCESS) {
 #if defined(DEATH_DEBUG)
 								// Additional checks only for Debug configuration
 								for (const auto& anim : metadata->Animations) {
@@ -605,20 +592,15 @@ namespace Jazz2
 				nCine::sort(metadata->Animations.begin(), metadata->Animations.end());
 			}
 
-			ondemand::object sounds;
-			if (doc["Sounds"].get(sounds) == SUCCESS) {
-				std::size_t count;
-				if (sounds.count_fields().get(count) == SUCCESS) {
-					metadata->Sounds.reserve(count);
-				}
+			const auto& sounds = doc["Sounds"];
+			if (sounds.isObject()) {
+				std::size_t count = sounds.getMemberCount();
+				metadata->Sounds.reserve(count);
 
-				for (auto it : sounds) {
-					std::string_view key;
-					ondemand::object value;
-					ondemand::array assetPaths;
-					bool isEmpty;
-					if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
-						value["Paths"].get(assetPaths) != SUCCESS || assetPaths.is_empty().get(isEmpty) != SUCCESS || isEmpty) {
+				for (auto it = sounds.begin(); it != sounds.end(); ++it) {
+					std::string_view key = it.memberName();
+					const auto& assetPaths = (*it)["Paths"];
+					if (key.empty() || !assetPaths.isArray() || assetPaths.empty()) {
 						continue;
 					}
 
@@ -628,7 +610,7 @@ namespace Jazz2
 					if (!_isHeadless) {
 						for (auto assetPathItem : assetPaths) {
 							std::string_view assetPath;
-							if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
+							if (assetPathItem.get(assetPath) == Json::SUCCESS && !assetPath.empty()) {
 								auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
 								auto it = _cachedSounds.find(assetPathNormalized);
 								if (it != _cachedSounds.end()) {
@@ -676,16 +658,14 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
+		auto buffer = std::make_unique<char[]>(fileSize);
 		s->Read(buffer.get(), fileSize);
 		s->Dispose();
-		buffer[fileSize] = '\0';
 
-		StripCommentsFromJson(arrayView(buffer.get(), fileSize));
-
-		ondemand::parser parser;
-		ondemand::document doc;
-		if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
+		Json::CharReaderBuilder builder;
+		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+		Json::Value doc; std::string errors;
+		if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
 			// Try to load it
 			std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
@@ -705,8 +685,8 @@ namespace Jazz2
 				bool linearSampling = false;
 				bool needsMask = true;
 
-				std::uint64_t flags;
-				if (doc["Flags"].get(flags) == SUCCESS) {
+				std::int64_t flags;
+				if (doc["Flags"].get(flags) == Json::SUCCESS) {
 					// Palette already applied, keep as is
 					if ((flags & 0x01) != 0x01) {
 						palette = nullptr;
@@ -743,13 +723,13 @@ namespace Jazz2
 				}
 
 				double animDuration;
-				if (doc["Duration"].get(animDuration) != SUCCESS) {
+				if (doc["Duration"].get(animDuration) != Json::SUCCESS) {
 					animDuration = 0.0;
 				}
 				graphics->AnimDuration = (float)animDuration;
 
 				std::int64_t frameCount;
-				if (doc["FrameCount"].get(frameCount) != SUCCESS) {
+				if (doc["FrameCount"].get(frameCount) != Json::SUCCESS) {
 					frameCount = 0;
 				}
 				graphics->FrameCount = (std::int32_t)frameCount;
@@ -1690,47 +1670,6 @@ namespace Jazz2
 		return tex;
 	}
 
-	void ContentResolver::StripCommentsFromJson(ArrayView<char> content)
-	{
-		char* p = content.begin();
-		char* end = content.end();
-		bool inString = false;
-
-		while (p < end) {
-			if (*p == '"') {
-				const char* prev = p > content.begin() ? (p - 1) : nullptr;
-				if (prev == nullptr || *prev != '\\') {
-					inString = !inString;
-				}
-				++p;
-			} else if (!inString && *p == '/' && (p + 1) < end) {
-				if (*(p + 1) == '/') {
-					// Single-line comment, replace with spaces
-					*p = ' '; ++p;
-					*p = ' '; ++p;
-					while (p < end && *p != '\n') {
-						*p = ' '; ++p;
-					}
-				} else if (*(p + 1) == '*') {
-					// Multi-line comment, replace with spaces
-					*p = ' '; ++p;
-					*p = ' '; ++p;
-					while (p + 1 < end && !(*p == '*' && *(p + 1) == '/')) {
-						*p = ' '; ++p;
-					}
-					if (p + 1 < end) {
-						*p = ' '; ++p;
-						*p = ' '; ++p;
-					}
-				} else {
-					++p;
-				}
-			} else {
-				++p;
-			}
-		}
-	}
-
 	void ContentResolver::RecreateGemPalettes()
 	{
 		constexpr std::int32_t GemColorCount = 4;
@@ -1785,17 +1724,14 @@ namespace Jazz2
 			return;
 		}
 
-
-		auto buffer = std::make_unique<char[]>(fileSize + SIMDJSON_PADDING);
+		auto buffer = std::make_unique<char[]>(fileSize);
 		s->Read(buffer.get(), fileSize);
 		s->Dispose();
-		buffer[fileSize] = '\0';
 
-		StripCommentsFromJson(arrayView(buffer.get(), fileSize));
-
-		ondemand::parser parser;
-		ondemand::document doc;
-		if (parser.iterate(buffer.get(), fileSize, fileSize + SIMDJSON_PADDING).get(doc) == SUCCESS) {
+		Json::CharReaderBuilder builder;
+		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+		Json::Value doc; std::string errors;
+		if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
 			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path });
 			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 			if (texLoader->hasLoaded()) {
@@ -1809,8 +1745,8 @@ namespace Jazz2
 				const std::uint32_t* palette = _palettes;
 				bool needsMask = true;
 
-				std::uint64_t originalFlags;
-				if (doc["Flags"].get(originalFlags) == SUCCESS) {
+				std::int64_t originalFlags;
+				if (doc["Flags"].get(originalFlags) == Json::SUCCESS) {
 					// Palette already applied, keep as is
 					if ((originalFlags & 0x01) != 0x01) {
 						palette = nullptr;
@@ -1822,12 +1758,12 @@ namespace Jazz2
 
 				// TODO: Use FrameDuration instead
 				double animDuration;
-				if (doc["Duration"].get(animDuration) != SUCCESS) {
+				if (doc["Duration"].get(animDuration) != Json::SUCCESS) {
 					animDuration = 0.0;
 				}
 
-				std::uint64_t frameCount;
-				if (doc["FrameCount"].get(frameCount) != SUCCESS) {
+				std::int64_t frameCount;
+				if (doc["FrameCount"].get(frameCount) != Json::SUCCESS || frameCount < 0) {
 					frameCount = 0;
 				}
 

@@ -807,6 +807,26 @@ namespace Json {
 #endif
 	}
 
+	ErrorCode Value::get(double& value) const {
+		switch (type()) {
+			case intValue:
+				value = static_cast<double>(value_.int_);
+				return SUCCESS;
+			case uintValue:
+#if !defined(JSON_USE_INT64_DOUBLE_CONVERSION)
+				value = static_cast<double>(value_.uint_);
+#else  // if !defined(JSON_USE_INT64_DOUBLE_CONVERSION)
+				value = integerToDouble(value_.uint_);
+#endif // if !defined(JSON_USE_INT64_DOUBLE_CONVERSION)
+				return SUCCESS;
+			case realValue:
+				value = value_.real_;
+				return SUCCESS;
+			default:
+				return INCORRECT_TYPE;
+		}
+	}
+
 	double Value::asDouble() const {
 		switch (type()) {
 			case intValue:
@@ -1400,6 +1420,14 @@ namespace Json {
 			members.push_back(StringContainer((*it).first.data(), (*it).first.length()));
 		}
 		return members;
+	}
+
+	size_t Value::getMemberCount() const {
+		JSON_ASSERT_MESSAGE(
+			type() == nullValue || type() == objectValue,
+			"in Json::Value::getMemberNames(), value must be objectValue");
+
+		return (type() == nullValue ? 0 : value_.map_->size());
 	}
 
 	static bool IsIntegral(double d) {

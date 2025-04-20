@@ -185,7 +185,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/jsoncpp/value.h
 	${NCINE_SOURCE_DIR}/jsoncpp/version.h
 	${NCINE_SOURCE_DIR}/jsoncpp/writer.h
-	${NCINE_SOURCE_DIR}/simdjson/simdjson.h
 )
 
 list(APPEND HEADERS

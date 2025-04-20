@@ -32,6 +32,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t MaxGameTimeSecs;
 		/** @brief Duration of pre-game before starting a round */
 		std::uint32_t PreGameSecs;
+		/** @brief Duration of invulnerability after (re)spawning */
+		std::uint32_t SpawnInvulnerableSecs;
 		/** @brief Total number of kills, default is 10 (Battle) */
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */
@@ -94,6 +96,8 @@ namespace Jazz2::Multiplayer
 		- @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum allowed game time in seconds per level (default is **unlimited**)
 		- @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60**)
 		  - Pre-game is skipped in Cooperation
+		- @cpp "SpawnInvulnerableSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of invulnerability after (re)spawning (default is **4**)
+		  - Invulnerability is skipped in Cooperation
 		- @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		- @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
 		- @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of treasures required to win (Treasure Hunt)
@@ -104,6 +108,7 @@ namespace Jazz2::Multiplayer
 		  - @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players for this round
 		  - @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum game duration for this round
 		  - @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration before this round starts
+		  - @cpp "SpawnInvulnerableSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of invulnerability after (re)spawning
 		  - @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win this round (Battle)
 		  - @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
 		  - @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total treasure required to win this round (Treasure Hunt)
@@ -112,7 +117,7 @@ namespace Jazz2::Multiplayer
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.
 		If a property is missing in the root configuration, the default value is used. `{PlayerName}` and
 		`{ServerName}` variables can be used in @cpp "ServerName" @ce and @cpp "WelcomeMessage" @ce properties.
-		Both properties also support text formatting using the @cpp "\f[…]" @ce notation.
+		Both properties also support @ref Jazz2-UI-Font-format "text formatting" using the @cpp "\f[…]" @ce notation.
 		
 		@subsection Multiplayer-ServerConfiguration-format-example Example server configuration
 		
@@ -171,6 +176,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t MaxGameTimeSecs;
 		/** @brief Duration of pre-game before starting a round */
 		std::uint32_t PreGameSecs;
+		/** @brief Duration of invulnerability after (re)spawning */
+		std::uint32_t SpawnInvulnerableSecs;
 		/** @brief Total number of kills, default is 10 (Battle) */
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */

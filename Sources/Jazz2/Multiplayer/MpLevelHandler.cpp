@@ -103,7 +103,7 @@ namespace Jazz2::Multiplayer
 
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
-			std::uint8_t flags = 0;
+			std::uint32_t flags = 0;
 			if (PreferencesCache::EnableReforgedGameplay) {
 				flags |= 0x01;
 			}
@@ -115,7 +115,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			MemoryStream packet(28 + _levelName.size());
-			packet.WriteValue<std::uint8_t>(flags);
+			packet.WriteVariableUint32(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)levelInit.LastExitType);
@@ -183,7 +183,35 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::OnBeginFrame();
 
-		if (!_isServer) {
+		if (_isServer) {
+			// Send pending SFX
+			for (const auto& sfx : _pendingSfx) {
+				std::uint32_t actorId;
+				{
+					std::unique_lock lock(_lock);
+					auto it = _remotingActors.find(sfx.Actor);
+					if (it == _remotingActors.end()) {
+						continue;
+					}
+					actorId = it->second.ActorID;
+				}
+
+				MemoryStream packet(12 + sfx.Identifier.size());
+				packet.WriteVariableUint32(actorId);
+				// TODO: sourceRelative
+				// TODO: looping
+				packet.WriteValue<std::uint16_t>(sfx.Gain);
+				packet.WriteValue<std::uint16_t>(sfx.Pitch);
+				packet.WriteVariableUint32((std::uint32_t)sfx.Identifier.size());
+				packet.Write(sfx.Identifier.data(), (std::uint32_t)sfx.Identifier.size());
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlaySfx, packet);
+			}
+			_pendingSfx.clear();
+		} else {
 			auto& input = _playerInputs[0];
 			if (input.PressedActions != input.PressedActionsLast) {
 				MemoryStream packet(12);
@@ -314,6 +342,9 @@ namespace Jazz2::Multiplayer
 							auto* mpPlayer = static_cast<MpPlayer*>(player);
 							auto peerDesc = mpPlayer->GetPeerDescriptor();
 							mpPlayer->GetPeerDescriptor()->LapStarted = TimeStamp::now();
+
+							// The player is invulnerable for a short time after starting a round
+							player->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
 
 							if (peerDesc->RemotePeer) {
 								MemoryStream packet(13);
@@ -824,6 +855,9 @@ namespace Jazz2::Multiplayer
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && (excludedPlayer == nullptr || excludedPlayer != peerDesc->Player));
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlaySfx, packet);
+			} else {
+				// Actor is probably not fully created yet, try it later again
+				_pendingSfx.emplace_back(self, identifier, floatToHalf(gain), floatToHalf(pitch));
 			}
 		}
 
@@ -961,6 +995,9 @@ namespace Jazz2::Multiplayer
 
 			if (canRespawn && serverConfig.GameMode != MpGameMode::Cooperation) {
 				mpPlayer->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType);
+
+				// The player is invulnerable for a short time after respawning
+				mpPlayer->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
 			}
 
 			if (_levelState != LevelState::Running) {
@@ -1595,6 +1632,8 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(levelInit.PlayerCarryOvers)); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
@@ -1621,9 +1660,12 @@ namespace Jazz2::Multiplayer
 			AssignViewport(ptr);
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
+
+			// The player is invulnerable for a short time after spawning
+			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
 		}
 
-		ApplyGameModeToAllPlayers(_networkManager->GetServerConfiguration().GameMode);
+		ApplyGameModeToAllPlayers(serverConfig.GameMode);
 	}
 
 	bool MpLevelHandler::IsCheatingAllowed()
@@ -2053,7 +2095,7 @@ namespace Jazz2::Multiplayer
 						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
 					}
 
-					std::uint8_t flags = 0;
+					std::uint32_t flags = 0;
 					if (PreferencesCache::EnableReforgedGameplay) {
 						flags |= 0x01;
 					}
@@ -2065,7 +2107,7 @@ namespace Jazz2::Multiplayer
 					}
 
 					MemoryStream packet(28 + _levelName.size());
-					packet.WriteValue<std::uint8_t>(flags);
+					packet.WriteVariableUint32(flags);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ExitType::None);
@@ -2798,7 +2840,7 @@ namespace Jazz2::Multiplayer
 
 					LOGD("[MP] ServerPacketType::MarkRemoteActorAsPlayer - id: %u, name: %s", actorId, playerName.data());
 
-					_root->InvokeAsync([this, actorId, playerName = std::move(playerName)]() {
+					_root->InvokeAsync([this, actorId, playerName = std::move(playerName)]() mutable {
 						_playerNames[actorId] = std::move(playerName);
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
@@ -3342,6 +3384,7 @@ namespace Jazz2::Multiplayer
 			} else if (peerDesc->LevelState == PeerLevelState::PlayerReady) {
 				peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 
+				const auto& serverConfig = _networkManager->GetServerConfiguration();
 				Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType);
 
 				std::uint8_t playerIndex = FindFreePlayerId();
@@ -3364,7 +3407,9 @@ namespace Jazz2::Multiplayer
 				AddActor(player);
 				_suppressRemoting = false;
 
-				auto& serverConfig = _networkManager->GetServerConfiguration();
+				// The player is invulnerable for a short time after spawning
+				ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
+
 				ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
 
 				// Spawn the player also on the remote side

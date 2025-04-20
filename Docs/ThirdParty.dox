@@ -11,12 +11,12 @@ It has been developed in @m_class{m-icon} ![](https://resources.jetbrains.com/st
 - - -
 
 -   **Core** and shared parts
+    -   @m_class{m-doc} [jsoncpp](https://github.com/open-source-parsers/jsoncpp) library --- Licensed under [MIT License](https://github.com/open-source-parsers/jsoncpp/blob/master/LICENSE)
     -   @m_class{m-doc} [The Parallel Hashmap](https://github.com/greg7mdp/parallel-hashmap) implementation --- licensed under [Apache-2.0 License](https://github.com/greg7mdp/parallel-hashmap/blob/master/LICENSE)
     -   Parts of @m_class{m-doc} [Corrade](https://github.com/mosra/corrade) library --- licensed under [MIT/Expat License](https://github.com/mosra/corrade/blob/master/COPYING)
     -   Parts of @m_class{m-doc} [nCine](https://github.com/nCine/nCine) game engine --- licensed under [MIT License](https://github.com/nCine/nCine/blob/master/LICENSE)
     -   Parts of @m_class{m-doc} [Quill](https://github.com/odygrd/quill) library --- licensed under [MIT License](https://github.com/odygrd/quill/blob/master/LICENSE)
     -   @m_class{m-doc} [Pattern-defeating quicksort](https://github.com/orlp/pdqsort) implementation --- licensed under [zlib License](https://github.com/orlp/pdqsort/blob/master/license.txt)
-    -   @m_class{m-doc} [simdjson](https://github.com/simdjson/simdjson) library --- Licensed under [Apache-2.0 License](https://github.com/simdjson/simdjson/blob/master/LICENSE) and [MIT License](https://github.com/simdjson/simdjson/blob/master/LICENSE-MIT)
     -   @m_class{m-doc} [zlib](https://www.zlib.net/) library --- licensed under [zlib License](https://www.zlib.net/zlib_license.html)
 -   **Backends**
     -   @m_class{m-doc} [GLEW](https://glew.sourceforge.net/) library --- licensed under Modified BSD License, Mesa 3-D License (MIT) and Khronos License (MIT)

@@ -739,7 +739,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\IDisposable.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Move.h" />
-    <ClInclude Include="simdjson\simdjson.h" />
     <ClInclude Include="TermLogo.h" />
   </ItemGroup>
   <ItemGroup>
@@ -1085,7 +1084,6 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.cpp" />
-    <ClCompile Include="simdjson\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources.rc" />

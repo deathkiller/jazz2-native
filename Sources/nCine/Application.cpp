@@ -811,11 +811,11 @@ namespace nCine
 		frameTimer_ = nullptr;
 		inputManager_ = nullptr;
 
-#if 0 //defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS)
 		::CloseHandle(_waitableTimer);
 #endif
 
-		LOGI("Application shut down");
+		LOGI("Application is shutting down");
 
 		theServiceLocator().UnregisterAll();
 

@@ -10,7 +10,23 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
-	/** @brief Bitmap font */
+	/**
+		@brief Bitmap font renderer
+
+		The renderer loads a bitmap font from a custom file format with full Unicode support and renders it to a canvas.
+
+		@section Jazz2-UI-Font-format Text formatting
+
+		The renderer supports inline text formatting using the @cpp "\f[…]" @ce notation.
+		Following attributes are supported:
+		-   @cpp "\f[c:#RRGGBB]" @ce: Sets the font color. The color can be specified in a hex value in RGB format.
+		    - The game usually uses a colorization shader that uses a different color space to be able to change
+			  the text color more precisely, so the specified color must be adjusted accordingly.
+		-   @cpp "\f[/c]" @ce: Resets the font color.
+		-   @cpp "\f[w:XX]" @ce: Sets the character spacing as a percentage. Recommended range is 80 to 120.
+		-   @cpp "\f[/w]" @ce: Resets the character spacing.
+
+	*/
 	class Font
 	{
 	public:

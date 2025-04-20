@@ -441,8 +441,9 @@ namespace Json
 #endif // if defined(JSON_HAS_INT64)
 		LargestInt asLargestInt() const;
 		LargestUInt asLargestUInt() const;
-		float asFloat() const;
+		ErrorCode get(double& value) const;
 		double asDouble() const;
+		float asFloat() const;
 		ErrorCode get(bool& value) const;
 		bool asBool() const;
 
@@ -665,6 +666,8 @@ namespace Json
 		/// \pre type() is objectValue or nullValue
 		/// \post if type() was nullValue, it remains nullValue
 		Members getMemberNames() const;
+
+		size_t getMemberCount() const;
 
 		/// Comments must be //... or /* ... */
 		void setComment(const char* comment, size_t len, CommentPlacement placement) {

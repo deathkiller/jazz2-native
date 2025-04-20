@@ -2698,7 +2698,9 @@ namespace Jazz2::Actors
 					_health = _maxHealth;
 
 					// Player can be respawned immediately
-					SetState(ActorState::IsInvulnerable, false);
+					if (_invulnerableTime <= 0.0f) {
+						SetState(ActorState::IsInvulnerable, false);
+					}
 					SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
 					_controllable = true;
 
@@ -2710,6 +2712,7 @@ namespace Jazz2::Actors
 					_controllable = false;
 					_renderer.setDrawEnabled(false);
 
+					_invulnerableTime = 0.0f;
 					SetState(ActorState::IsInvulnerable, true);
 					SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors, false);
 				}
