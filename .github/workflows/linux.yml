@@ -227,7 +227,7 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev libcurl4-openssl-dev rpm
-        sudo apt install -y binutils-dev
+        sudo apt install -y libdw-dev
 
     - if: matrix.CC == 'clang'
       name: 'Configure Clang Compiler'
