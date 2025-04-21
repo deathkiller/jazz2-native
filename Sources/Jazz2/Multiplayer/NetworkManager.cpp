@@ -532,7 +532,7 @@ namespace Jazz2::Multiplayer
 	String NetworkManager::UuidToString(StaticArrayView<16, std::uint8_t> uuid)
 	{
 		String uuidStr{NoInit, 39};
-		std::int32_t uuidStrLength = formatString(uuidStr.data(), uuidStr.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+		DEATH_UNUSED std::int32_t uuidStrLength = formatString(uuidStr.data(), uuidStr.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
 			uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 		DEATH_DEBUG_ASSERT(uuidStr.size() == uuidStrLength);
 		return uuidStr;
