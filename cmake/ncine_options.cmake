@@ -98,7 +98,7 @@ endif()
 #set(NCINE_WITH_FIXED_BATCH_SIZE "0" CACHE PATH "Set custom fixed batch size (unsafe)")
 
 # Shared library options
-cmake_dependent_option(DEATH_DEBUG_SYMBOLS "Include debug symbols in executable" OFF "NOT WIN32" OFF)
+option(DEATH_DEBUG_SYMBOLS "Create debug symbols for executable" ${WIN32})
 option(DEATH_TRACE "Enable runtime event tracing" ON)
 cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS" OFF)
 option(DEATH_USE_RUNTIME_CAST "Enable runtime_cast<T>() optimization" ON)

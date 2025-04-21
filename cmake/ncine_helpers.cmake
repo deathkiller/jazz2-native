@@ -361,22 +361,25 @@ function(ncine_apply_compiler_options target)
 
 		# Extra optimizations in Release
 		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
-		# Include PDB debug information in Release and enable hot reloading in Debug
-		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-			# clang-cl doesn't support EditAndContinue
-			if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25.0")
-				set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT ProgramDatabase)
+
+		if(DEATH_DEBUG_SYMBOLS)
+			# Include PDB debug information in Release and enable hot reloading in Debug
+			if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+				# clang-cl doesn't support EditAndContinue
+				if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25.0")
+					set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT ProgramDatabase)
+				else()
+					target_compile_options(${target} PRIVATE /Zi)
+				endif()
 			else()
-				target_compile_options(${target} PRIVATE /Zi)
+				if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25.0")
+					set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT $<IF:$<CONFIG:Debug>,EditAndContinue,ProgramDatabase>)
+				else()
+					target_compile_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/ZI,/Zi>)
+				endif()
 			endif()
-		else()
-			if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25.0")
-				set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT $<IF:$<CONFIG:Debug>,EditAndContinue,ProgramDatabase>)
-			else()
-				target_compile_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/ZI,/Zi>)
-			endif()
+			target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/DEBUG:FULL>)
 		endif()
-		target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/DEBUG:FULL>)
 
 		# Turn off SAFESEH because of OpenAL on x86 and also UAC
 		target_link_options(${target} PRIVATE "/SAFESEH:NO" "/MANIFESTUAC:NO")

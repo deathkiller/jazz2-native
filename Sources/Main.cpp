@@ -309,6 +309,12 @@ void GameEventHandler::OnInitialize()
 			}
 			RunDedicatedServer(configPath);
 			return;
+		} else if (arg == "--crash"_s) {
+			char* cc = (char*)1234;
+			DEATH_ASSERT(false, "Crash1");
+			cc[0] = 0; // This will crash
+			DEATH_ASSERT(cc[0] != 123, "Crash2");
+			return;
 		}
 #			endif
 #		endif
