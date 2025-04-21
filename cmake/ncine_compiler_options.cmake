@@ -194,6 +194,34 @@ else() # GCC and LLVM
 	#if ("${CPU_ARCH}" STREQUAL "x86_64")
 	#	target_compile_options(${NCINE_APP} PRIVATE -mclflushopt)
 	#endif()
+	
+	# Split debug symbols from the executable on Linux
+	if(DEATH_DEBUG_SYMBOLS AND UNIX AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+		get_target_property(_targetPath ${NCINE_APP} RUNTIME_OUTPUT_DIRECTORY)
+		message(STATUS "DEBUG 01 - ${_targetPath}")
+		if(NOT _targetPath)
+			set(_targetPath ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+			message(STATUS "DEBUG 02 - ${_targetPath}")
+		endif()
+		if(NOT _targetPath)
+			set(_targetPath ${CMAKE_CURRENT_BINARY_DIR})
+			message(STATUS "DEBUG 03 - ${_targetPath}")
+		endif()
+		
+		get_target_property(_targetName ${NCINE_APP} OUTPUT_NAME)
+		message(STATUS "DEBUG 04 - ${_targetName}")
+		if(NOT _targetName)
+			set(_targetName ${NCINE_APP})
+			message(STATUS "DEBUG 05 - ${_targetName}")
+		endif()
+
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_OBJCOPY} --only-keep-debug "${_targetPath}/${_targetName}" "${_targetPath}/${_targetName}.pdb"
+			COMMAND ${CMAKE_OBJCOPY} --strip-debug --strip-unneeded "${_targetPath}/${_targetName}"
+			COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink="${_targetName}.pdb" "${_targetPath}/${_targetName}"
+			COMMENT "Splitting symbols and generating debug info"
+		)
+	endif()
 
 	if(NCINE_WITH_TRACY)
 		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-g -fno-omit-frame-pointer>)

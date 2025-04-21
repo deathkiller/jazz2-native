@@ -105,7 +105,7 @@ namespace Jazz2::UI::Menu
 			_sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
 			if (_sourcePath.empty()) {
 				// If `Source` directory doesn't exist, GetAbsolutePath() will fail
-				_sourcePath = resolver.GetSourcePath();
+				_sourcePath = fs::CombinePath(fs::GetWorkingDirectory(), resolver.GetSourcePath());
 			}
 #	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 			String homeDirectory = fs::GetHomeDirectory();

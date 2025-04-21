@@ -1379,7 +1379,13 @@ RecreateCache:
 	if (!fs::IsReadableFile(animsPath)) {
 		animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		if (!fs::IsReadableFile(animsPath)) {
-			LOGE("Cannot open \"…%sSource%sAnims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
+			String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
+			if (sourcePath.empty()) {
+				// If `Source` directory doesn't exist, GetAbsolutePath() will fail
+				sourcePath = fs::CombinePath(fs::GetWorkingDirectory(), resolver.GetSourcePath());
+			}
+
+			LOGE("Cannot open \"…%sSource%sAnims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, sourcePath.data());
 			_flags |= Flags::IsVerified;
 			return;
 		}

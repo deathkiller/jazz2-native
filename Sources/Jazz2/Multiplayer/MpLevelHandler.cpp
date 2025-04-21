@@ -1885,7 +1885,6 @@ namespace Jazz2::Multiplayer
 						LOGD("[MP] Level \"%s\" doesn't exist", levelInit.LevelName.data());
 					}
 				} else if (variableName == "welcome"_s) {
-					auto& serverConfig = _networkManager->GetServerConfiguration();
 					SetWelcomeMessage(StringUtils::replaceAll(value.trimmed(), "\\n"_s, "\n"_s));
 					SendMessage(peer, UI::MessageLevel::Info, "Lobby message changed");
 					return true;
@@ -2163,7 +2162,7 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					std::uint8_t reserved = packet.ReadValue<std::uint8_t>();
+					/*std::uint8_t reserved =*/ packet.ReadValue<std::uint8_t>();
 
 					std::uint32_t lineLength = packet.ReadVariableUint32();
 					if (lineLength == 0 || lineLength > 1024) {
@@ -2380,7 +2379,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::PeerSetProperty: {
 					MemoryStream packet(data);
 					PeerPropertyType type = (PeerPropertyType)packet.ReadValue<std::uint8_t>();
-					std::uint64_t peerId = packet.ReadVariableUint64();
+					DEATH_UNUSED std::uint64_t peerId = packet.ReadVariableUint64();
 
 					switch (type) {
 						case PeerPropertyType::Connected:
@@ -2403,7 +2402,7 @@ namespace Jazz2::Multiplayer
 							String victimName{NoInit, victimNameLength};
 							packet.Read(victimName.data(), victimNameLength);
 
-							std::uint64_t attackerPeerId = packet.ReadVariableUint64();
+							DEATH_UNUSED std::uint64_t attackerPeerId = packet.ReadVariableUint64();
 
 							std::uint8_t attackerNameLength = packet.ReadValue<std::uint8_t>();
 							String attackerName{NoInit, attackerNameLength};
@@ -2494,6 +2493,10 @@ namespace Jazz2::Multiplayer
 							serverConfig.TotalKills = totalKills;
 							serverConfig.TotalLaps = totalLaps;
 							serverConfig.TotalTreasureCollected = totalTreasureCollected;
+
+							if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+								peerDesc->Team = teamId;
+							}
 							break;
 						}
 						default: {
@@ -2607,7 +2610,7 @@ namespace Jazz2::Multiplayer
 				}
 				case ServerPacketType::ShowAlert: {
 					MemoryStream packet(data);
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+					/*std::uint8_t flags =*/ packet.ReadValue<std::uint8_t>();
 					std::uint32_t textLength = packet.ReadVariableUint32();
 					String text = String(NoInit, textLength);
 					packet.Read(text.data(), textLength);
