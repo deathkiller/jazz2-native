@@ -2334,7 +2334,15 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
-				if (_currentTransition == nullptr || _currentTransition->State == (AnimState::Dash | AnimState::Jump) || _currentTransitionCancellable) {
+				// Allow warping only if not in non-cancellable transition, except for some cosmetic but non-cancellable ones
+				if (_currentTransition == nullptr || _currentTransitionCancellable ||
+					   (_currentTransition->State == (AnimState::Dash | AnimState::Jump) ||
+						_currentTransition->State == AnimState::Spring ||
+						_currentTransition->State == AnimState::TransitionCopterShootToCopter ||
+						_currentTransition->State == AnimState::TransitionFallShootToFall ||
+						_currentTransition->State == AnimState::TransitionHookShootToHook ||
+						_currentTransition->State == AnimState::TransitionShootToIdle ||
+						_currentTransition->State == AnimState::TransitionUppercutEnd)) {
 					Vector2f c = events->GetWarpTarget(p[0]);
 					if (c.X >= 0.0f && c.Y >= 0.0f) {
 						WarpFlags flags = WarpFlags::Default;
