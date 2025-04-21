@@ -365,6 +365,8 @@ namespace Jazz2::UI::Menu
 				return;
 			}
 		} else if (_gameMode == MpGameMode::Cooperation) {
+			serverInit.Configuration.PlaylistIndex = -1;
+
 			if (!_previousEpisodeName.empty()) {
 				auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
 				if (previousEpisodeEnd != nullptr) {
@@ -391,6 +393,8 @@ namespace Jazz2::UI::Menu
 			if (PreferencesCache::EnableReforgedGameplay && _levelName == "01_xmas1"_s) {
 				serverInit.InitialLevel.LastExitType = ExitType::Warp | ExitType::Frozen;
 			}
+		} else {
+			serverInit.Configuration.PlaylistIndex = -1;
 		}
 
 		if (!_root->CreateServer(std::move(serverInit))) {

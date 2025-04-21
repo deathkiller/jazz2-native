@@ -4,7 +4,7 @@
 namespace Jazz2::Actors::Collectibles
 {
 	GemCollectible::GemCollectible()
-		: _gemType(0)
+		: _ignoreTime(0.0f), _gemType(0)
 	{
 	}
 
@@ -20,9 +20,13 @@ namespace Jazz2::Actors::Collectibles
 		_gemType = (std::uint8_t)(details.Params[0] & 0x03);
 		bool hasLimitedLifetime = (details.Params[1] & 0x01) == 0x01;
 		bool isFlipped = (details.Params[1] & 0x02) == 0x02;
+		bool isDelayed = (details.Params[1] & 0x04) == 0x04;
 
 		if (hasLimitedLifetime) {
 			_timeLeft = 5.0f * FrameTimer::FramesPerSecond;
+		}
+		if (isDelayed) {
+			_ignoreTime = 90.0f;
 		}
 
 		async_await RequestMetadataAsync("Collectible/Gems"_s);
@@ -53,6 +57,15 @@ namespace Jazz2::Actors::Collectibles
 		async_return true;
 	}
 
+	void GemCollectible::OnUpdate(float timeMult)
+	{
+		CollectibleBase::OnUpdate(timeMult);
+
+		if (_ignoreTime > 0.0f) {
+			_ignoreTime -= timeMult;
+		}
+	}
+
 	void GemCollectible::OnUpdateHitbox()
 	{
 		UpdateHitbox(20, 20);
@@ -60,6 +73,10 @@ namespace Jazz2::Actors::Collectibles
 
 	void GemCollectible::OnCollect(Player* player)
 	{
+		if (_ignoreTime > 0.0f) {
+			return;
+		}
+
 		player->AddGems(_gemType, 1);
 
 		CollectibleBase::OnCollect(player);

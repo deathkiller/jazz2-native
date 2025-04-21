@@ -28,9 +28,9 @@ namespace Jazz2::Events
 		/** @brief Preloads assets for a given event */
 		void PreloadEvent(EventType type, std::uint8_t* spawnParams);
 		/** @brief Spawns an object for a given event */
-		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, std::uint8_t* spawnParams, Actors::ActorState flags, std::int32_t x, std::int32_t y, std::int32_t z);
+		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, const std::uint8_t* spawnParams, Actors::ActorState flags, std::int32_t x, std::int32_t y, std::int32_t z);
 		/** @overload */
-		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, std::uint8_t* spawnParams, Actors::ActorState flags, const Vector3i& pos);
+		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, const std::uint8_t* spawnParams, Actors::ActorState flags, const Vector3i& pos);
 
 		/** @brief Registers a delegate to create an object from an event */
 		void RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload = nullptr);

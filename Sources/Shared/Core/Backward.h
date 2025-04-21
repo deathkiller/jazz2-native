@@ -628,7 +628,6 @@ namespace Death { namespace Backward {
 #	endif
 			if (_threadId == static_cast<std::size_t>(getpid())) {
 				// If the thread is the main one, let's hide that.
-				// I like to keep little secret sometimes.
 				_threadId = 0;
 			}
 #elif defined(BACKWARD_TARGET_APPLE)
@@ -1618,7 +1617,7 @@ namespace Death { namespace Backward {
 				_dwfl_cb.reset(new Dwfl_Callbacks);
 				_dwfl_cb->find_elf = &dwfl_linux_proc_find_elf;
 				_dwfl_cb->find_debuginfo = &dwfl_standard_find_debuginfo;
-				_dwfl_cb->debuginfo_path = 0;
+				_dwfl_cb->debuginfo_path = nullptr;
 
 				_dwfl_handle.reset(dwfl_begin(_dwfl_cb.get()));
 				_dwfl_handle_initialized = true;
@@ -1630,7 +1629,7 @@ namespace Death { namespace Backward {
 				// ...from the current process.
 				dwfl_report_begin(_dwfl_handle.get());
 				int r = dwfl_linux_proc_report(_dwfl_handle.get(), getpid());
-				dwfl_report_end(_dwfl_handle.get(), NULL, NULL);
+				dwfl_report_end(_dwfl_handle.get(), nullptr, nullptr);
 				if (r < 0) {
 					return trace;
 				}
@@ -1753,18 +1752,19 @@ namespace Death { namespace Backward {
 		struct inliners_search_cb {
 			void operator()(Dwarf_Die* die) {
 				switch (dwarf_tag(die)) {
-					const char* name;
-					case DW_TAG_subprogram:
+					case DW_TAG_subprogram: {
+						const char* name;
 						if ((name = dwarf_diename(die))) {
 							trace.source.function = name;
 							trace.source.function += "()";
 						}
 						break;
-
-					case DW_TAG_inlined_subroutine:
+					}
+					case DW_TAG_inlined_subroutine: {
 						ResolvedTrace::SourceLoc sloc;
 						Dwarf_Attribute attr_mem;
 
+						const char* name;
 						if ((name = dwarf_diename(die))) {
 							sloc.function = name;
 							sloc.function += "()";
@@ -1781,6 +1781,7 @@ namespace Death { namespace Backward {
 
 						trace.inliners.push_back(sloc);
 						break;
+					}
 				};
 			}
 			ResolvedTrace& trace;
@@ -1884,23 +1885,23 @@ namespace Death { namespace Backward {
 			dwarf_formudata(dwarf_attr(die, DW_AT_call_file, &attr_mem), &file_idx);
 
 			if (file_idx == 0) {
-				return 0;
+				return nullptr;
 			}
 
 			Dwarf_Die die_mem;
-			Dwarf_Die* cudie = dwarf_diecu(die, &die_mem, 0, 0);
+			Dwarf_Die* cudie = dwarf_diecu(die, &die_mem, nullptr, nullptr);
 			if (!cudie) {
-				return 0;
+				return nullptr;
 			}
 
-			Dwarf_Files* files = 0;
+			Dwarf_Files* files = nullptr;
 			std::size_t nfiles;
 			dwarf_getsrcfiles(cudie, &files, &nfiles);
 			if (!files) {
-				return 0;
+				return nullptr;
 			}
 
-			return dwarf_filesrc(files, file_idx, 0, 0);
+			return dwarf_filesrc(files, file_idx, nullptr, nullptr);
 		}
 	};
 #endif // BACKWARD_HAS_DW

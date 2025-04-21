@@ -432,7 +432,7 @@ namespace nCine
 				mappedButtonEvent_.joyId = event.joyId;
 				mappedButtonEvent_.buttonName = axis.buttonNamePositive;
 				const std::int32_t buttonId = static_cast<std::int32_t>(mappedButtonEvent_.buttonName);
-				bool newState = (event.value >= IInputManager::AnalogButtonDeadZone);
+				bool newState = (event.value >= IInputManager::AnalogOutButtonDeadZone);
 				bool prevState = mappedJoyStates_[event.joyId].buttons_[buttonId];
 				if (newState != prevState) {
 					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;
@@ -453,7 +453,7 @@ namespace nCine
 				mappedButtonEvent_.joyId = event.joyId;
 				mappedButtonEvent_.buttonName = axis.buttonNameNegative;
 				const std::int32_t buttonId = static_cast<std::int32_t>(mappedButtonEvent_.buttonName);
-				bool newState = (event.value <= -IInputManager::AnalogButtonDeadZone);
+				bool newState = (event.value <= -IInputManager::AnalogOutButtonDeadZone);
 				bool prevState = mappedJoyStates_[event.joyId].buttons_[buttonId];
 				if (newState != prevState) {
 					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;

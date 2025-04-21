@@ -161,9 +161,10 @@ namespace Jazz2::Multiplayer
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.MinPlayerCount = 1;
-		serverConfig.PlaylistIndex = -1;
+		serverConfig.ReforgedGameplay = PreferencesCache::EnableReforgedGameplay;
 		serverConfig.PreGameSecs = 60;
 		serverConfig.SpawnInvulnerableSecs = 4;
+		serverConfig.PlaylistIndex = -1;
 
 		serverConfig.TotalPlayerPoints = 50;
 		serverConfig.InitialPlayerHealth = 5;
@@ -320,7 +321,12 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				// Game mode specific settings
+				// Game-specific settings
+				bool reforgedGameplay;
+				if (doc["ReforgedGameplay"].get(reforgedGameplay) == Json::SUCCESS) {
+					serverConfig.ReforgedGameplay = reforgedGameplay;
+				}
+
 				bool randomizePlaylist;
 				if (doc["RandomizePlaylist"].get(randomizePlaylist) == Json::SUCCESS) {
 					serverConfig.RandomizePlaylist = randomizePlaylist;
@@ -379,6 +385,7 @@ namespace Jazz2::Multiplayer
 						// Playlist entry inherits all properties from the main server configuration
 						PlaylistEntry playlistEntry{};
 						playlistEntry.GameMode = serverConfig.GameMode;
+						playlistEntry.ReforgedGameplay = serverConfig.ReforgedGameplay;
 						playlistEntry.IsElimination = serverConfig.IsElimination;
 						playlistEntry.InitialPlayerHealth = serverConfig.InitialPlayerHealth;
 						playlistEntry.MaxGameTimeSecs = serverConfig.MaxGameTimeSecs;
@@ -395,6 +402,11 @@ namespace Jazz2::Multiplayer
 						std::string_view gameMode;
 						if (entry["GameMode"].get(gameMode) == Json::SUCCESS) {
 							playlistEntry.GameMode = StringToGameMode(gameMode);
+						}
+
+						bool reforgedGameplay;
+						if (entry["ReforgedGameplay"].get(reforgedGameplay) == Json::SUCCESS) {
+							playlistEntry.ReforgedGameplay = reforgedGameplay;
 						}
 
 						bool isElimination;

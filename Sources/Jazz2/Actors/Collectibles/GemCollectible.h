@@ -15,10 +15,12 @@ namespace Jazz2::Actors::Collectibles
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
+		float _ignoreTime;
 		std::uint8_t _gemType;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		void OnCollect(Player* player) override;
 	};

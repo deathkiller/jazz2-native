@@ -2100,7 +2100,7 @@ namespace Jazz2::Actors
 						float fx = Random().NextFloat(-12.0f, 12.0f);
 						float fy = Random().NextFloat(-2.0f, 0.2f);
 
-						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
+						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x01 | 0x04 };
 						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorState::None, Vector3i((std::int32_t)(_pos.X + fx * 2.0f), (std::int32_t)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
 						if (actor != nullptr) {
 							actor->AddExternalForce(fx, fy);

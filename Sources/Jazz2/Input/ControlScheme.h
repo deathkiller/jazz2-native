@@ -82,7 +82,7 @@ namespace Jazz2::Input
 		static void Reset();
 
 		/** @brief Fetches processed standard input for specified player according to the current bindings */
-		static ProcessedInput FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons = true);
+		static ProcessedInput FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, std::uint64_t prevPressedActions, bool analogAsButtons = true);
 		/** @brief Fetches navigation input according to the current bindings */
 		static std::uint32_t FetchNavigation(const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, NavigationFlags flags = NavigationFlags::AllowAll);
 

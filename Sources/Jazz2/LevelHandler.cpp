@@ -2012,10 +2012,11 @@ namespace Jazz2
 		}
 
 		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
-			auto processedInput = ControlScheme::FetchProcessedInput(i,
-				_pressedKeys, ArrayView(joyStates, joyStatesCount), _hud == nullptr || !_hud->IsWeaponWheelVisible(i));
-
 			auto& input = _playerInputs[i];
+			auto processedInput = ControlScheme::FetchProcessedInput(i,
+				_pressedKeys, ArrayView(joyStates, joyStatesCount), input.PressedActions,
+				_hud == nullptr || !_hud->IsWeaponWheelVisible(i));
+
 			input.PressedActionsLast = input.PressedActions;
 			input.PressedActions = processedInput.PressedActions;
 			input.RequiredMovement = processedInput.Movement;
