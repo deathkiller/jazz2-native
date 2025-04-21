@@ -224,7 +224,9 @@ namespace Jazz2::Input
 								if (target.Data & GamepadNegativeMask) {
 									axisValue = -axisValue;
 								}
-								if (axisValue >= (axisName >= AxisName::LeftTrigger ? IInputManager::TriggerButtonDeadZone : IInputManager::AnalogInButtonDeadZone)) {
+								if (axisValue >= (axisName >= AxisName::LeftTrigger
+										? IInputManager::TriggerButtonDeadZone
+										: IInputManager::AnalogOutButtonDeadZone)) {
 									pressedActions |= (1 << (std::uint32_t)i);
 								}
 							} else {
