@@ -1189,7 +1189,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce)
 	{
-		// TODO: Only called by RemotePlayerOnServer
+		// TODO: Only called by PlayerOnServer
 		if (_isServer) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
@@ -1806,8 +1806,9 @@ namespace Jazz2::Multiplayer
 			char infoBuffer[128];
 			formatString(infoBuffer, sizeof(infoBuffer), "Server: %s%s", serverConfig.ServerName.data(), serverConfig.IsPrivate ? " (Private)" : "");
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
-			formatString(infoBuffer, sizeof(infoBuffer), "Current level: \"%s\" (%s%s)",
-				_levelName.data(), NetworkManager::GameModeToString(serverConfig.GameMode).data(), serverConfig.IsElimination ? "/Elimination" : "");
+			formatString(infoBuffer, sizeof(infoBuffer), "Current level: \"%s\" (%s%s%s)",
+				_levelName.data(), NetworkManager::GameModeToString(serverConfig.GameMode).data(),
+				serverConfig.IsElimination ? "/Elimination" : "", _isReforged ? "/Reforged" : "");
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			formatString(infoBuffer, sizeof(infoBuffer), "Players: %u/%u",
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
