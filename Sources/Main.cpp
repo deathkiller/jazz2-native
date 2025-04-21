@@ -56,6 +56,7 @@ using namespace Jazz2::Multiplayer;
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
+#include <Asserts.h>
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
@@ -311,9 +312,9 @@ void GameEventHandler::OnInitialize()
 			return;
 		} else if (arg == "--crash"_s) {
 			char* cc = (char*)1234;
-			DEATH_ASSERT(false, "Crash1");
+			DEATH_ASSERT(false, "Crash1", );
 			cc[0] = 0; // This will crash
-			DEATH_ASSERT(cc[0] != 123, "Crash2");
+			DEATH_ASSERT(cc[0] != 123, "Crash2", );
 			return;
 		}
 #			endif
