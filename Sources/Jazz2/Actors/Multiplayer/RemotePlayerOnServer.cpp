@@ -174,17 +174,6 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
-	bool RemotePlayerOnServer::TakeDamage(std::int32_t amount, float pushForce)
-	{
-		if (!PlayerOnServer::TakeDamage(amount, pushForce)) {
-			return false;
-		}
-
-		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerTakeDamage(this, amount, pushForce);
-
-		return true;
-	}
-
 	bool RemotePlayerOnServer::AddAmmo(WeaponType weaponType, std::int16_t count)
 	{
 		if (!PlayerOnServer::AddAmmo(weaponType, count)) {

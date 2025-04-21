@@ -71,6 +71,17 @@ namespace Jazz2::Actors::Multiplayer
 		return false;
 	}
 
+	bool PlayerOnServer::TakeDamage(std::int32_t amount, float pushForce)
+	{
+		if (!MpPlayer::TakeDamage(amount, pushForce)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerTakeDamage(this, amount, pushForce);
+
+		return true;
+	}
+
 	bool PlayerOnServer::IsAttacking() const
 	{
 		if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {

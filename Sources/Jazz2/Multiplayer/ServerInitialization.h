@@ -24,6 +24,8 @@ namespace Jazz2::Multiplayer
 		/** @brief Game mode */
 		MpGameMode GameMode;
 
+		/** @brief Whether reforged gameplay is enabled */
+		bool ReforgedGameplay;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool IsElimination;
 		/** @brief Initial player health, default is 5 */
@@ -76,6 +78,8 @@ namespace Jazz2::Multiplayer
 		  - Key specifies player ID, value can contain a user-defined comment (e.g., reason)
 		- @cpp "BannedIPAddresses" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of banned IP addresses
 		  - Key specifies IP address, value can contain a user-defined comment (e.g., reason)
+		- @cpp "ReforgedGameplay" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether reforged gameplay is enabled
+		  - Has a higher priority than settings of the player
 		- @cpp "RandomizePlaylist" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether to play the playlist in random order
 		  - If enabled, the list is shuffled when the server is started and when the end of the list is reached
 		- @cpp "TotalPlayerPoints" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total points to win the championship (default is **0**)
@@ -165,6 +169,8 @@ namespace Jazz2::Multiplayer
 
 		/** @{ @name Game-specific settings */
 
+		/** @brief Whether reforged gameplay is enabled, see @ref PreferencesCache::EnableReforgedGameplay */
+		bool ReforgedGameplay;
 		/** @brief Whether to play the playlist in random order */
 		bool RandomizePlaylist;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
@@ -186,10 +192,10 @@ namespace Jazz2::Multiplayer
 		/** @brief Total number of treasure collected, default is 60 (Treasure Hunt) */
 		std::uint32_t TotalTreasureCollected;
 
-		/** @brief Playlist */
-		SmallVector<PlaylistEntry, 0> Playlist;
 		/** @brief Index of the current playlist entry */
 		std::int32_t PlaylistIndex;
+		/** @brief Playlist */
+		SmallVector<PlaylistEntry, 0> Playlist;
 
 		/** @} */
 

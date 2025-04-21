@@ -69,7 +69,6 @@ namespace Jazz2::Actors::Multiplayer
 
 		void WarpToPosition(Vector2f pos, WarpFlags flags) override;
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor) override;
-		bool TakeDamage(std::int32_t amount, float pushForce) override;
 
 		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;
 		void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade) override;

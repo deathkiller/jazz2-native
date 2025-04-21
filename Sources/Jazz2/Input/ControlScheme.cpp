@@ -91,9 +91,9 @@ namespace Jazz2::Input
 		}
 	}
 
-	ProcessedInput ControlScheme::FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, bool analogAsButtons)
+	ProcessedInput ControlScheme::FetchProcessedInput(std::int32_t playerIndex, const BitArray& pressedKeys, const ArrayView<const JoyMappedState*> joyStates, std::uint64_t prevPressedActions, bool analogAsButtons)
 	{
-		ProcessedInput result = { };
+		ProcessedInput result = {};
 		std::size_t joyStateCount = joyStates.size();
 
 		auto mappings = GetMappings(playerIndex);
@@ -110,9 +110,14 @@ namespace Jazz2::Input
 							if (target.Data & GamepadNegativeMask) {
 								axisValue = -axisValue;
 							}
-							if (analogAsButtons && axisValue >= (axisName >= AxisName::LeftTrigger ? IInputManager::TriggerButtonDeadZone : IInputManager::AnalogButtonDeadZone)) {
-								result.PressedActions |= (1ull << (std::uint32_t)i) | (1ull << (32 + (std::uint32_t)i));
+
+							std::uint64_t maskedBits = (1ull << (std::uint32_t)i) | (1ull << (32 + (std::uint32_t)i));
+							if (analogAsButtons && axisValue >= (axisName >= AxisName::LeftTrigger
+									? IInputManager::TriggerButtonDeadZone
+									: ((prevPressedActions & maskedBits) != maskedBits ? IInputManager::AnalogInButtonDeadZone : IInputManager::AnalogOutButtonDeadZone))) {
+								result.PressedActions |= maskedBits;
 							}
+
 							if (i < 4 && axisValue > GamepadDeadZone) {
 								switch ((PlayerAction)i) {
 									case PlayerAction::Left: {
@@ -219,7 +224,7 @@ namespace Jazz2::Input
 								if (target.Data & GamepadNegativeMask) {
 									axisValue = -axisValue;
 								}
-								if (axisValue >= (axisName >= AxisName::LeftTrigger ? IInputManager::TriggerButtonDeadZone : IInputManager::AnalogButtonDeadZone)) {
+								if (axisValue >= (axisName >= AxisName::LeftTrigger ? IInputManager::TriggerButtonDeadZone : IInputManager::AnalogInButtonDeadZone)) {
 									pressedActions |= (1 << (std::uint32_t)i);
 								}
 							} else {

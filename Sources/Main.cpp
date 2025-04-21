@@ -56,7 +56,6 @@ using namespace Jazz2::Multiplayer;
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
-#include <Asserts.h>
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
@@ -309,12 +308,6 @@ void GameEventHandler::OnInitialize()
 				configPath = config.argv(i + 1);
 			}
 			RunDedicatedServer(configPath);
-			return;
-		} else if (arg == "--crash"_s) {
-			char* cc = (char*)1234;
-			DEATH_ASSERT(false, "Crash1", );
-			cc[0] = 0; // This will crash
-			DEATH_ASSERT(cc[0] != 123, "Crash2", );
 			return;
 		}
 #			endif
@@ -847,6 +840,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		}
 
 		// Override properties
+		serverInit.Configuration.ReforgedGameplay = playlistEntry.ReforgedGameplay;
 		serverInit.Configuration.IsElimination = playlistEntry.IsElimination;
 		serverInit.Configuration.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
 		serverInit.Configuration.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
@@ -864,6 +858,8 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		LOGE("Cannot find initial level \"%s\"", serverInit.InitialLevel.LevelName.data());
 		return false;
 	}
+
+	serverInit.InitialLevel.IsReforged = serverInit.Configuration.ReforgedGameplay;
 
 	if (!_networkManager->CreateServer(this, std::move(serverInit.Configuration))) {
 		return false;
@@ -1150,6 +1146,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 					serverConfig.GameMode = gameMode;
+					serverConfig.ReforgedGameplay = isReforged;
 					serverConfig.IsElimination = isElimination;
 					serverConfig.InitialPlayerHealth = initialPlayerHealth;
 					serverConfig.MaxGameTimeSecs = maxGameTimeSecs;

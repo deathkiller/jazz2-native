@@ -104,7 +104,7 @@ namespace Jazz2::Multiplayer
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
 			std::uint32_t flags = 0;
-			if (PreferencesCache::EnableReforgedGameplay) {
+			if (_isReforged) {
 				flags |= 0x01;
 			}
 			if (PreferencesCache::EnableLedgeClimb) {
@@ -1191,6 +1191,7 @@ namespace Jazz2::Multiplayer
 	{
 		// TODO: Only called by RemotePlayerOnServer
 		if (_isServer) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
@@ -1200,6 +1201,34 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableInt32(player->_health);
 				packet.WriteValue<std::int16_t>((std::int16_t)(pushForce * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerTakeDamage, packet);
+			}
+
+			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
+				std::uint32_t treasureLost = std::min(peerDesc->TreasureCollected, 3u);
+				if (treasureLost > 0) {
+					peerDesc->TreasureCollected -= treasureLost;
+
+					if (peerDesc->RemotePeer) {
+						MemoryStream packet2(9);
+						packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::TreasureCollected);
+						packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+						packet2.WriteVariableUint32(peerDesc->TreasureCollected);
+						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+					}
+
+					Vector2f pos = mpPlayer->_pos;
+					for (std::uint32_t i = 0; i < treasureLost; i++) {
+						float dir = (Random().NextBool() ? -1.0f : 1.0f);
+						float force = Random().Next(10.0f, 20.0f);
+						Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
+						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x01 | 0x04 };
+						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
+						if (actor != nullptr) {
+							actor->AddExternalForce(dir * force, force);
+							AddActor(actor);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -1696,6 +1725,12 @@ namespace Jazz2::Multiplayer
 		ApplyGameModeToAllPlayers(serverConfig.GameMode);
 
 		std::uint8_t flags = 0;
+		if (_isReforged) {
+			flags |= 0x01;
+		}
+		if (PreferencesCache::EnableLedgeClimb) {
+			flags |= 0x02;
+		}
 		if (serverConfig.IsElimination) {
 			flags |= 0x04;
 		}
@@ -2095,7 +2130,7 @@ namespace Jazz2::Multiplayer
 					}
 
 					std::uint32_t flags = 0;
-					if (PreferencesCache::EnableReforgedGameplay) {
+					if (_isReforged) {
 						flags |= 0x01;
 					}
 					if (PreferencesCache::EnableLedgeClimb) {
@@ -2487,12 +2522,15 @@ namespace Jazz2::Multiplayer
 
 							auto& serverConfig = _networkManager->GetServerConfiguration();
 							serverConfig.GameMode = gameMode;
+							serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
 							serverConfig.IsElimination = (flags & 0x04) != 0;
 							serverConfig.InitialPlayerHealth = initialPlayerHealth;
 							serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
 							serverConfig.TotalKills = totalKills;
 							serverConfig.TotalLaps = totalLaps;
 							serverConfig.TotalTreasureCollected = totalTreasureCollected;
+
+							_isReforged = serverConfig.ReforgedGameplay;
 
 							if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
 								peerDesc->Team = teamId;
@@ -3995,6 +4033,7 @@ namespace Jazz2::Multiplayer
 		auto& playlistEntry = serverConfig.Playlist[serverConfig.PlaylistIndex];
 
 		// Override properties
+		serverConfig.ReforgedGameplay = playlistEntry.ReforgedGameplay;
 		serverConfig.IsElimination = playlistEntry.IsElimination;
 		serverConfig.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
 		serverConfig.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
@@ -4021,6 +4060,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			serverConfig.GameMode = playlistEntry.GameMode;
+			levelInit.IsReforged = serverConfig.ReforgedGameplay;
 			levelInit.LastExitType = ExitType::Normal;
 			HandleLevelChange(std::move(levelInit));
 		}

@@ -46,7 +46,7 @@ namespace nCine
 		void Shuffle(Containers::ArrayView<T> data) noexcept
 		{
 			for (std::size_t i = data.size() - 1; i > 0; --i) {
-				std::swap(data[i], data[Next(0, i + 1)]);
+				std::swap(data[i], data[Next(0, (std::uint32_t)i + 1)]);
 			}
 		}
 
