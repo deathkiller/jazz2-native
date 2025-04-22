@@ -841,7 +841,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 		// Override properties
 		serverInit.Configuration.ReforgedGameplay = playlistEntry.ReforgedGameplay;
-		serverInit.Configuration.IsElimination = playlistEntry.IsElimination;
+		serverInit.Configuration.Elimination = playlistEntry.Elimination;
 		serverInit.Configuration.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
 		serverInit.Configuration.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
 		serverInit.Configuration.PreGameSecs = playlistEntry.PreGameSecs;
@@ -1138,7 +1138,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
-					bool isElimination = (flags & 0x04) != 0;
+					bool elimination = (flags & 0x04) != 0;
 
 					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
@@ -1147,7 +1147,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 					serverConfig.GameMode = gameMode;
 					serverConfig.ReforgedGameplay = isReforged;
-					serverConfig.IsElimination = isElimination;
+					serverConfig.Elimination = elimination;
 					serverConfig.InitialPlayerHealth = initialPlayerHealth;
 					serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
 					serverConfig.TotalKills = totalKills;

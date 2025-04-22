@@ -110,7 +110,7 @@ namespace Jazz2::Multiplayer
 			if (PreferencesCache::EnableLedgeClimb) {
 				flags |= 0x02;
 			}
-			if (serverConfig.IsElimination) {
+			if (serverConfig.Elimination) {
 				flags |= 0x04;
 			}
 
@@ -991,7 +991,7 @@ namespace Jazz2::Multiplayer
 			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-			bool canRespawn = (_enableSpawning && (_levelState != LevelState::Running || !serverConfig.IsElimination || peerDesc->Deaths < serverConfig.TotalKills));
+			bool canRespawn = (_enableSpawning && (_levelState != LevelState::Running || !serverConfig.Elimination || peerDesc->Deaths < serverConfig.TotalKills));
 
 			if (canRespawn && serverConfig.GameMode != MpGameMode::Cooperation) {
 				mpPlayer->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType);
@@ -1012,7 +1012,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			peerDesc->Deaths++;
-			if (serverConfig.IsElimination && peerDesc->Deaths >= serverConfig.TotalKills) {
+			if (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills) {
 				peerDesc->DeathElapsedFrames = _elapsedFrames;
 			}
 
@@ -1731,7 +1731,7 @@ namespace Jazz2::Multiplayer
 		if (PreferencesCache::EnableLedgeClimb) {
 			flags |= 0x02;
 		}
-		if (serverConfig.IsElimination) {
+		if (serverConfig.Elimination) {
 			flags |= 0x04;
 		}
 
@@ -1808,7 +1808,7 @@ namespace Jazz2::Multiplayer
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			formatString(infoBuffer, sizeof(infoBuffer), "Current level: \"%s\" (%s%s%s)",
 				_levelName.data(), NetworkManager::GameModeToString(serverConfig.GameMode).data(),
-				serverConfig.IsElimination ? "/Elimination" : "", _isReforged ? "/Reforged" : "");
+				serverConfig.Elimination ? "/Elimination" : "", _isReforged ? "/Reforged" : "");
 			SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			formatString(infoBuffer, sizeof(infoBuffer), "Players: %u/%u",
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
@@ -2137,7 +2137,7 @@ namespace Jazz2::Multiplayer
 					if (PreferencesCache::EnableLedgeClimb) {
 						flags |= 0x02;
 					}
-					if (serverConfig.IsElimination) {
+					if (serverConfig.Elimination) {
 						flags |= 0x04;
 					}
 
@@ -2524,7 +2524,7 @@ namespace Jazz2::Multiplayer
 							auto& serverConfig = _networkManager->GetServerConfiguration();
 							serverConfig.GameMode = gameMode;
 							serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
-							serverConfig.IsElimination = (flags & 0x04) != 0;
+							serverConfig.Elimination = (flags & 0x04) != 0;
 							serverConfig.InitialPlayerHealth = initialPlayerHealth;
 							serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
 							serverConfig.TotalKills = totalKills;
@@ -3773,7 +3773,7 @@ namespace Jazz2::Multiplayer
 					break;
 			}
 
-			bool isDead = (serverConfig.IsElimination && peerDesc->Deaths >= serverConfig.TotalKills);
+			bool isDead = (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills);
 			if (isDead) {
 				sortedDeadPlayers.push_back(pair(mpPlayer, roundPoints));
 			} else {
@@ -3851,7 +3851,7 @@ namespace Jazz2::Multiplayer
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 
-		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.IsElimination) {
+		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.Elimination) {
 			std::int32_t eliminationCount = 0;
 			MpPlayer* eliminationWinner = nullptr;
 
@@ -3875,7 +3875,7 @@ namespace Jazz2::Multiplayer
 		switch (serverConfig.GameMode) {
 			case MpGameMode::Battle:
 			case MpGameMode::TeamBattle: {
-				if (!serverConfig.IsElimination) {
+				if (!serverConfig.Elimination) {
 					for (auto* player : _players) {
 						auto* mpPlayer = static_cast<MpPlayer*>(player);
 						auto peerDesc = mpPlayer->GetPeerDescriptor();
@@ -4035,7 +4035,7 @@ namespace Jazz2::Multiplayer
 
 		// Override properties
 		serverConfig.ReforgedGameplay = playlistEntry.ReforgedGameplay;
-		serverConfig.IsElimination = playlistEntry.IsElimination;
+		serverConfig.Elimination = playlistEntry.Elimination;
 		serverConfig.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
 		serverConfig.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
 		serverConfig.PreGameSecs = playlistEntry.PreGameSecs;

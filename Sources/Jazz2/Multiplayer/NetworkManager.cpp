@@ -332,9 +332,9 @@ namespace Jazz2::Multiplayer
 					serverConfig.RandomizePlaylist = randomizePlaylist;
 				}
 
-				bool isElimination;
-				if (doc["IsElimination"].get(isElimination) == Json::SUCCESS) {
-					serverConfig.IsElimination = isElimination;
+				bool elimination;
+				if (doc["Elimination"].get(elimination) == Json::SUCCESS) {
+					serverConfig.Elimination = elimination;
 				}
 
 				std::int64_t totalPlayerPoints;
@@ -386,7 +386,7 @@ namespace Jazz2::Multiplayer
 						PlaylistEntry playlistEntry{};
 						playlistEntry.GameMode = serverConfig.GameMode;
 						playlistEntry.ReforgedGameplay = serverConfig.ReforgedGameplay;
-						playlistEntry.IsElimination = serverConfig.IsElimination;
+						playlistEntry.Elimination = serverConfig.Elimination;
 						playlistEntry.InitialPlayerHealth = serverConfig.InitialPlayerHealth;
 						playlistEntry.MaxGameTimeSecs = serverConfig.MaxGameTimeSecs;
 						playlistEntry.PreGameSecs = serverConfig.PreGameSecs;
@@ -409,9 +409,9 @@ namespace Jazz2::Multiplayer
 							playlistEntry.ReforgedGameplay = reforgedGameplay;
 						}
 
-						bool isElimination;
-						if (entry["IsElimination"].get(isElimination) == Json::SUCCESS) {
-							playlistEntry.IsElimination = isElimination;
+						bool elimination;
+						if (entry["Elimination"].get(elimination) == Json::SUCCESS) {
+							playlistEntry.Elimination = elimination;
 						}
 
 						std::int64_t initialPlayerHealth;
