@@ -157,7 +157,9 @@ namespace Jazz2::Actors::Solid
 
 				_levelHandler->GetCollidingPlayers(aabb2, [this](Actors::ActorBase* actor) {
 					if (auto* player = runtime_cast<Player*>(actor)) {
-						player->TakeDamage(1, 2.0f);
+						if (player->GetSpeed().Y < 0.0f) {
+							player->TakeDamage(1, 2.0f);
+						}
 					}
 					return true;
 				});
@@ -200,39 +202,39 @@ namespace Jazz2::Actors::Solid
 
 		switch (_type) {
 			case PlatformType::CarrotusFruit:
-				AABBInner.L += 10.0f;
-				AABBInner.T += 2.0f;
-				AABBInner.R -= 10.0f;
+				AABBInner.L -= 10.0f;
+				AABBInner.T -= 14.0f;
+				AABBInner.R += 10.0f;
 				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 			case PlatformType::Lab:
-				AABBInner.L += 4.0f;
-				AABBInner.T -= 4.0f;
-				AABBInner.R -= 4.0f;
+				AABBInner.L -= 18.0f;
+				AABBInner.T -= 2.0f;
+				AABBInner.R += 18.0f;
 				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 			case PlatformType::Sonic:
-				AABBInner.L += 8.0f;
-				AABBInner.T -= 4.0f;
-				AABBInner.R -= 8.0f;
+				AABBInner.L -= 14.0f;
+				AABBInner.T -= 16.0f;
+				AABBInner.R += 14.0f;
 				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 			case PlatformType::Spike:
-				AABBInner.L += 4.0f;
-				AABBInner.T -= 2.0f;
-				AABBInner.R -= 4.0f;
-				AABBInner.B = AABBInner.T + 16.0f;
+				AABBInner.L -= 16.0f;
+				AABBInner.T -= 30.0f;
+				AABBInner.R += 16.0f;
+				AABBInner.B = AABBInner.T + 20.0f;
 				break;
 			case PlatformType::SpikeBall:
-				AABBInner.L += 8.0f;
-				AABBInner.T += 8.0f;
-				AABBInner.R -= 8.0f;
-				AABBInner.B -= 8.0f;
+				AABBInner.L -= 8.0f;
+				AABBInner.T -= 8.0f;
+				AABBInner.R += 8.0f;
+				AABBInner.B += 8.0f;
 				break;
 			default:
-				AABBInner.L += 4.0f;
-				AABBInner.T += 2.0f;
-				AABBInner.R -= 4.0f;
+				AABBInner.L -= 8.0f;
+				AABBInner.T -= 10.0f;
+				AABBInner.R += 8.0f;
 				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 		}

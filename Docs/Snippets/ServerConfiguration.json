@@ -44,7 +44,7 @@
 	
 	/* These properties are redundant, because they are overriden by the playlist */
 	"GameMode": "battle",
-	"IsElimination": false,
+	"Elimination": false,
 	"InitialPlayerHealth": 5,
 	"MaxGameTimeSecs": 900,
 	"PreGameSecs": 60,
@@ -54,11 +54,12 @@
 	"TotalTreasureCollected": 60,
 
 	/* Playlist can contain unlimited number of entries */
-	"Playlist": [
+	"Playlist":
+	[
 		{
 			"LevelName": "arace1",
 			"GameMode": "race",
-			"IsElimination": false,
+			"Elimination": false,
 			"InitialPlayerHealth": 5,
 			"MaxGameTimeSecs": 900,
 			"PreGameSecs": 60,
@@ -70,7 +71,7 @@
 		{
 			"LevelName": "battle1",
 			"GameMode": "battle",
-			"IsElimination": false,
+			"Elimination": false,
 			"InitialPlayerHealth": 5,
 			"MaxGameTimeSecs": 900,
 			"PreGameSecs": 60,

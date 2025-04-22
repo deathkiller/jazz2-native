@@ -213,12 +213,17 @@ The following parameters can be used to customize the build:
 
 @subsubsection building-config-params-adv Advanced parameters
 
--   `DEATH_CPU_USE_RUNTIME_DISPATCH` (default @cpp ON @ce if `DEATH_CPU_USE_IFUNC`) --- Build
-    with runtime dispatch for CPU-dependent functionality, see @ref Death::Cpu namespace
-    - Uses code paths optimized for multiple architectures with the best-matching variant selected at runtime based on detected CPU features
+-   `DEATH_CPU_USE_RUNTIME_DISPATCH` --- Build with runtime dispatch for CPU-dependent functionality
+    -   Uses code paths optimized for multiple architectures with the best-matching variant selected at runtime based
+        on detected CPU features, see @ref Death::Cpu namespace
+    -   Enabled by default if `DEATH_CPU_USE_IFUNC` is supported
 -   `DEATH_CPU_USE_IFUNC` (default @cpp ON @ce if supported) --- Allow using
     [GNU IFUNC](https://sourceware.org/glibc/wiki/GNU_IFUNC) for runtime CPU dispatch
--   `DEATH_DEBUG_SYMBOLS` (default @cpp ON @ce on Windows) --- Create debug symbols for executable
+-   `DEATH_DEBUG` --- Enable verbose logging and additional assertions for debugging
+    -   Enabled by default for `Debug` build configuration
+-   `DEATH_DEBUG_SYMBOLS` --- Create debug symbols for executable
+    -   Separate `.pdb` file will be created on Windows and Linux, on other platforms the symbols will probably be embedded in the executable
+    -   Enabled by default on Windows platforms
 -   `DEATH_TRACE` (default @cpp ON @ce) --- Enable runtime event tracing, see @ref Asserts.h
 -   `DEATH_TRACE_ASYNC` (default @cpp ON @ce if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
 -   `DEATH_USE_RUNTIME_CAST` (default @cpp ON @ce) --- Enable @ref Death::runtime_cast() and type information optimization
