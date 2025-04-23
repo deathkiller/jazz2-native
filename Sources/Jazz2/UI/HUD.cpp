@@ -213,6 +213,18 @@ namespace Jazz2::UI
 		OnDrawActiveBoss(adjustedView);
 		OnDrawLevelText(charOffset);
 
+#if defined(DEATH_DEBUG)
+		/*if (PreferencesCache::ShowPerformanceMetrics && !_levelHandler->_assignedViewports.empty()) {
+			auto& viewport = _levelHandler->_assignedViewports[0];
+			for (const auto& actor : _levelHandler->_actors) {
+				DrawSolid(actor->GetPos() - actor->AABB.GetExtents() - viewport->_cameraPos + viewport->GetBounds().GetSize() * 0.5f, 10,
+					actor->AABB.GetExtents() * 2.0f, Colorf(0.0f, 0.0f, 0.0f, 0.3f), false);
+				DrawSolid(actor->GetPos() - actor->AABBInner.GetExtents() - viewport->_cameraPos + viewport->GetBounds().GetSize() * 0.5f, 12,
+					actor->AABBInner.GetExtents() * 2.0f, Colorf(1.0f, 1.0f, 1.0f, 0.3f), true);
+			}
+		}*/
+#endif
+
 		// Touch Controls
 		if (_touchButtonsTimer > 0.0f) {
 			for (auto& button : _touchButtons) {
@@ -459,12 +471,10 @@ namespace Jazz2::UI
 
 	void HUD::OnDrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
 	{
-		PlayerType playerType = player->_playerType;
-
 		float bottom = adjustedView.Y + adjustedView.H;
 
 		AnimState playerIcon;
-		switch (playerType) {
+		switch (player->_playerType) {
 			default:
 			case PlayerType::Jazz: playerIcon = CharacterJazz; break;
 			case PlayerType::Spaz: playerIcon = CharacterSpaz; break;
@@ -472,11 +482,14 @@ namespace Jazz2::UI
 			case PlayerType::Frog: playerIcon = CharacterFrog; break;
 		}
 
+		std::int32_t health = player->GetHealth();
+		std::int32_t lives = player->GetLives();
+
 #if defined(WITH_ANGELSCRIPT)
-		bool shouldDrawHealth = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Health));
+		bool shouldDrawHealth = (health < 32 && (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Health)));
 		bool shouldDrawLives = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::Lives));
 #else
-		constexpr bool shouldDrawHealth = true;
+		bool shouldDrawHealth = (health < 32);
 		constexpr bool shouldDrawLives = true;
 #endif
 		if (shouldDrawLives) {
@@ -489,8 +502,6 @@ namespace Jazz2::UI
 		std::int32_t charOffsetShadow = 0;
 
 		// If drawing of lives if overriden, fallback to legacy HUD
-		std::int32_t health = player->GetHealth();
-		std::int32_t lives = player->GetLives();
 		if (PreferencesCache::EnableReforgedHUD && shouldDrawLives) {
 			if (lives > 0) {
 				if (shouldDrawHealth) {

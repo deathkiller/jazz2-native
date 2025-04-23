@@ -1644,6 +1644,9 @@
     <ClInclude Include="jsoncpp\json_valueiterator.h">
       <Filter>Header Files\jsoncpp</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\MpPlayer.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2671,6 +2674,9 @@
     </ClCompile>
     <ClCompile Include="jsoncpp\writer.cpp">
       <Filter>Source Files\jsoncpp</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\MpPlayer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

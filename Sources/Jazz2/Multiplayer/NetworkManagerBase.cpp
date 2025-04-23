@@ -474,6 +474,32 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	const char* NetworkManagerBase::ReasonToString(Reason reason)
+	{
+		switch (reason) {
+			case Reason::Disconnected: return "Client disconnected by user"; break;
+			case Reason::InvalidParameter: return "Invalid parameter specified"; break;
+			case Reason::IncompatibleVersion: return "Incompatible client version"; break;
+			case Reason::AuthFailed: return "Authentication failed"; break;
+			case Reason::InvalidPassword: return "Invalid password specified"; break;
+			case Reason::InvalidPlayerName: return "Invalid player name specified"; break;
+			case Reason::NotInWhitelist: return "Client is not in server whitelist"; break;
+			case Reason::Requires3rdPartyAuthProvider: return "Server requires 3rd party authentication provider"; break;
+			case Reason::ServerIsFull: return "Server is full or busy"; break;
+			case Reason::ServerNotReady: return "Server is not ready yet"; break;
+			case Reason::ServerStopped: return "Server is stopped for unknown reason"; break;
+			case Reason::ServerStoppedForMaintenance: return "Server is stopped for maintenance"; break;
+			case Reason::ServerStoppedForReconfiguration: return "Server is stopped for reconfiguration"; break;
+			case Reason::ServerStoppedForUpdate: return "Server is stopped for update"; break;
+			case Reason::ConnectionLost: return "Connection lost"; break;
+			case Reason::ConnectionTimedOut: return "Connection timed out"; break;
+			case Reason::Kicked: return "Kicked by server"; break;
+			case Reason::Banned: return "Banned by server"; break;
+			case Reason::CheatingDetected: return "Cheating detected"; break;
+			default: return "Unknown reason"; break;
+		}
+	}
+
 	ConnectionResult NetworkManagerBase::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 	{
 		return _handler->OnPeerConnected(peer, clientData);
@@ -623,7 +649,7 @@ namespace Jazz2::Multiplayer
 
 		_this->_thread.Detach();
 
-		LOGD("[MP] Client thread exited (%u)", (std::uint32_t)reason);
+		LOGD("[MP] Client thread exited: %s (%u)", NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	}
 
 	void NetworkManagerBase::OnServerThread(void* param)

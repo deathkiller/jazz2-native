@@ -690,6 +690,7 @@ if(WITH_MULTIPLAYER)
 
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/MpPlayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotablePlayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.h
@@ -718,6 +719,7 @@ if(WITH_MULTIPLAYER)
 
 	list(APPEND SOURCES
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/MpPlayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotablePlayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.cpp

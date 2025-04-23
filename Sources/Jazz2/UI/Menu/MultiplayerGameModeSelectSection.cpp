@@ -32,6 +32,21 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(MultiplayerGameModeItem { MpGameMode::Cooperation, _("Cooperation") });
 	}
 
+	void MultiplayerGameModeSelectSection::OnShow(IMenuContainer* root)
+	{
+		ScrollableMenuSection::OnShow(root);
+
+		if (auto* underlyingSection = dynamic_cast<CreateServerOptionsSection*>(_root->GetUnderlyingSection())) {
+			auto gameMode = underlyingSection->GetGameMode();
+			for (std::size_t i = 0; i < _items.size(); i++) {
+				if (_items[i].Item.Mode == gameMode) {
+					_selectedIndex = (std::int32_t)i;
+					break;
+				}
+			}
+		}
+	}
+
 	void MultiplayerGameModeSelectSection::OnDraw(Canvas* canvas)
 	{
 		Recti contentBounds = _root->GetContentBounds();

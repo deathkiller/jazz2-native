@@ -28,8 +28,8 @@ namespace Jazz2::Multiplayer
 		bool ReforgedGameplay;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool Elimination;
-		/** @brief Initial player health, default is 5 */
-		std::uint32_t InitialPlayerHealth;
+		/** @brief Initial player health, default is unlimited for Treasure Hunt, otherwise 5 */
+		std::int32_t InitialPlayerHealth;
 		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;
 		/** @brief Duration of pre-game before starting a round */
@@ -97,7 +97,7 @@ namespace Jazz2::Multiplayer
 		    -   If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
 		    -   Game ends when only one player remains, or when the conditions of the specified game mode are met
 		    -   Elimination can be combined with any game mode
-		-   @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players (default is **5**)
+		-   @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players (default is **unlimited** for Treasure Hunt, otherwise **5**)
 		-   @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum allowed game time in seconds per level (default is **unlimited**)
 		-   @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60** seconds)
 		    -   Pre-game is skipped in Cooperation
@@ -177,8 +177,8 @@ namespace Jazz2::Multiplayer
 		bool Elimination;
 		/** @brief Total player points to win the championship */
 		std::uint32_t TotalPlayerPoints;
-		/** @brief Initial player health, default is 5 */
-		std::uint32_t InitialPlayerHealth;
+		/** @brief Initial player health, default is unlimited for Treasure Hunt, otherwise 5 */
+		std::int32_t InitialPlayerHealth;
 		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;
 		/** @brief Duration of pre-game before starting a round */

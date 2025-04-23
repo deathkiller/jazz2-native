@@ -21,6 +21,7 @@ namespace Jazz2::UI::Menu
 		void OnDrawOverlay(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
 
+		Jazz2::Multiplayer::MpGameMode GetGameMode() const;
 		void SetGameMode(Jazz2::Multiplayer::MpGameMode value);
 
 	private:

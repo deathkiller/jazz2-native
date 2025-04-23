@@ -167,7 +167,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.PlaylistIndex = -1;
 
 		serverConfig.TotalPlayerPoints = 50;
-		serverConfig.InitialPlayerHealth = 5;
+		serverConfig.InitialPlayerHealth = -1;
 		serverConfig.TotalKills = 10;
 		serverConfig.TotalLaps = 3;
 		serverConfig.TotalTreasureCollected = 100;
@@ -343,8 +343,8 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::int64_t initialPlayerHealth;
-				if (doc["InitialPlayerHealth"].get(initialPlayerHealth) == Json::SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
-					serverConfig.InitialPlayerHealth = std::uint32_t(initialPlayerHealth);
+				if (doc["InitialPlayerHealth"].get(initialPlayerHealth) == Json::SUCCESS && initialPlayerHealth >= INT32_MIN && initialPlayerHealth <= INT32_MAX) {
+					serverConfig.InitialPlayerHealth = std::int32_t(initialPlayerHealth);
 				}
 
 				std::int64_t maxGameTimeSecs;
@@ -415,8 +415,8 @@ namespace Jazz2::Multiplayer
 						}
 
 						std::int64_t initialPlayerHealth;
-						if (entry["InitialPlayerHealth"].get(initialPlayerHealth) == Json::SUCCESS && initialPlayerHealth > 0 && initialPlayerHealth <= INT32_MAX) {
-							playlistEntry.InitialPlayerHealth = std::uint32_t(initialPlayerHealth);
+						if (entry["InitialPlayerHealth"].get(initialPlayerHealth) == Json::SUCCESS && initialPlayerHealth >= INT32_MIN && initialPlayerHealth <= INT32_MAX) {
+							playlistEntry.InitialPlayerHealth = std::int32_t(initialPlayerHealth);
 						}
 
 						std::int64_t maxGameTimeSecs;

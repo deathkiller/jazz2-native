@@ -121,7 +121,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint8_t>((std::uint8_t)levelInit.LastExitType);
 			packet.WriteVariableUint32(_levelName.size());
 			packet.Write(_levelName.data(), _levelName.size());
-			packet.WriteVariableUint32(serverConfig.InitialPlayerHealth);
+			packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
 			packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
 			packet.WriteVariableUint32(serverConfig.TotalKills);
 			packet.WriteVariableUint32(serverConfig.TotalLaps);
@@ -940,6 +940,16 @@ namespace Jazz2::Multiplayer
 				mpPlayer->WarpToPosition(spawnPosition, WarpFlags::Default);
 			}
 			return;
+		} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
+			// Player has to stand on EndOfLevel event with required treasure amount
+			auto* mpPlayer = static_cast<MpPlayer*>(initiator);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+			if (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected) {
+				peerDesc->TreasureCollected++;	// The escaped player should have the most points
+				CalculatePositionInRound();
+				EndGame(mpPlayer);
+			}
+			return;
 		} else if (serverConfig.GameMode != MpGameMode::Cooperation) {
 			// Ignore end of the level in all game modes except cooperation
 			return;
@@ -1011,71 +1021,16 @@ namespace Jazz2::Multiplayer
 				return canRespawn;
 			}
 
-			peerDesc->Deaths++;
 			if (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills) {
 				peerDesc->DeathElapsedFrames = _elapsedFrames;
 			}
 
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet1(9);
-				packet1.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Deaths);
-				packet1.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet1.WriteVariableUint32(peerDesc->Deaths);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet1);
-
-				if (canRespawn) {
-					MemoryStream packet2(12);
-					packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
-					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
-					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
-				}
-			}
-
-			if (auto* attacker = GetWeaponOwner(mpPlayer->_lastAttacker.get())) {
-				auto attackerPeerDesc = attacker->GetPeerDescriptor();
-				attackerPeerDesc->Kills++;
-
-				if(attackerPeerDesc->RemotePeer) {
-					MemoryStream packet3(9);
-					packet3.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Kills);
-					packet3.WriteVariableUint32(attacker->_playerIndex);
-					packet3.WriteVariableUint32(attackerPeerDesc->Kills);
-					_networkManager->SendTo(attackerPeerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet3);
-				}
-
-				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]",
-					peerDesc->PlayerName.data(), attackerPeerDesc->PlayerName.data()));
-
-				MemoryStream packet(19 + peerDesc->PlayerName.size() + attackerPeerDesc->PlayerName.size());
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
-				packet.WriteVariableUint64((std::uint64_t)peerDesc->RemotePeer._enet);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
-				packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
-				packet.WriteVariableUint64((std::uint64_t)attackerPeerDesc->RemotePeer._enet);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)attackerPeerDesc->PlayerName.size());
-				packet.Write(attackerPeerDesc->PlayerName.data(), (std::uint32_t)attackerPeerDesc->PlayerName.size());
-
-				_networkManager->SendTo([this](const Peer& peer) {
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->IsAuthenticated);
-				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
-			} else {
-				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by environment",
-					peerDesc->PlayerName.data()));
-
-				MemoryStream packet(19 + peerDesc->PlayerName.size());
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
-				packet.WriteVariableUint64((std::uint64_t)peerDesc->RemotePeer._enet);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
-				packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
-				packet.WriteVariableUint64(0);
-				packet.WriteValue<std::uint8_t>(0);
-
-				_networkManager->SendTo([this](const Peer& peer) {
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->IsAuthenticated);
-				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
+			if (canRespawn && peerDesc->RemotePeer) {
+				MemoryStream packet2(12);
+				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
+				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
 			}
 
 			CheckGameEnds();
@@ -1192,7 +1147,7 @@ namespace Jazz2::Multiplayer
 		// TODO: Only called by PlayerOnServer
 		if (_isServer) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 			if (peerDesc->RemotePeer) {
@@ -1204,8 +1159,14 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
+				// TODO: Drop number of gems accorting to the gun strength (usually 3 times)
 				std::uint32_t treasureLost = std::min(peerDesc->TreasureCollected, 3u);
 				if (treasureLost > 0) {
+					// If the player is dead, drop half of the collected treasure instead
+					if (mpPlayer->_health <= 0 && treasureLost < peerDesc->TreasureCollected / 2) {
+						treasureLost = peerDesc->TreasureCollected / 2;
+					}
+
 					peerDesc->TreasureCollected -= treasureLost;
 
 					if (peerDesc->RemotePeer) {
@@ -1228,6 +1189,64 @@ namespace Jazz2::Multiplayer
 							AddActor(actor);
 						}
 					}
+				}
+			}
+
+			if (_levelState == LevelState::Running && player->_health <= 0) {
+				peerDesc->Deaths++;
+
+				if (peerDesc->RemotePeer) {
+					MemoryStream packet3(9);
+					packet3.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Deaths);
+					packet3.WriteVariableUint32(mpPlayer->_playerIndex);
+					packet3.WriteVariableUint32(peerDesc->Deaths);
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet3);
+				}
+
+				if (auto* attacker = GetWeaponOwner(mpPlayer->_lastAttacker.get())) {
+					auto attackerPeerDesc = attacker->GetPeerDescriptor();
+					attackerPeerDesc->Kills++;
+
+					if (attackerPeerDesc->RemotePeer) {
+						MemoryStream packet4(9);
+						packet4.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Kills);
+						packet4.WriteVariableUint32(attacker->_playerIndex);
+						packet4.WriteVariableUint32(attackerPeerDesc->Kills);
+						_networkManager->SendTo(attackerPeerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet4);
+					}
+
+					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]",
+						peerDesc->PlayerName.data(), attackerPeerDesc->PlayerName.data()));
+
+					MemoryStream packet5(19 + peerDesc->PlayerName.size() + attackerPeerDesc->PlayerName.size());
+					packet5.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
+					packet5.WriteVariableUint64((std::uint64_t)peerDesc->RemotePeer._enet);
+					packet5.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+					packet5.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+					packet5.WriteVariableUint64((std::uint64_t)attackerPeerDesc->RemotePeer._enet);
+					packet5.WriteValue<std::uint8_t>((std::uint8_t)attackerPeerDesc->PlayerName.size());
+					packet5.Write(attackerPeerDesc->PlayerName.data(), (std::uint32_t)attackerPeerDesc->PlayerName.size());
+
+					_networkManager->SendTo([this](const Peer& peer) {
+						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+						return (peerDesc && peerDesc->IsAuthenticated);
+					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet5);
+				} else {
+					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by environment",
+						peerDesc->PlayerName.data()));
+
+					MemoryStream packet6(19 + peerDesc->PlayerName.size());
+					packet6.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
+					packet6.WriteVariableUint64((std::uint64_t)peerDesc->RemotePeer._enet);
+					packet6.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+					packet6.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+					packet6.WriteVariableUint64(0);
+					packet6.WriteValue<std::uint8_t>(0);
+
+					_networkManager->SendTo([this](const Peer& peer) {
+						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+						return (peerDesc && peerDesc->IsAuthenticated);
+					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet6);
 				}
 			}
 		}
@@ -1745,7 +1764,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint8_t>(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 			packet.WriteValue<std::uint8_t>(peerDesc->Team);
-			packet.WriteVariableUint32(serverConfig.InitialPlayerHealth);
+			packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
 			packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
 			packet.WriteVariableUint32(serverConfig.TotalKills);
 			packet.WriteVariableUint32(serverConfig.TotalLaps);
@@ -2148,7 +2167,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ExitType::None);
 					packet.WriteVariableUint32(_levelName.size());
 					packet.Write(_levelName.data(), _levelName.size());
-					packet.WriteVariableUint32(serverConfig.InitialPlayerHealth);
+					packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
 					packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
 					packet.WriteVariableUint32(serverConfig.TotalKills);
 					packet.WriteVariableUint32(serverConfig.TotalLaps);
@@ -2513,7 +2532,7 @@ namespace Jazz2::Multiplayer
 							std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 							MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
 							std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
-							std::uint32_t initialPlayerHealth = packet.ReadVariableUint32();
+							std::int32_t initialPlayerHealth = packet.ReadVariableInt32();
 							std::uint32_t maxGameTimeSecs = packet.ReadVariableUint32();
 							std::uint32_t totalKills = packet.ReadVariableUint32();
 							std::uint32_t totalLaps = packet.ReadVariableUint32();
@@ -2686,13 +2705,13 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					PlayerType playerType = (PlayerType)packet.ReadValue<std::uint8_t>();
-					std::uint8_t health = packet.ReadValue<std::uint8_t>();
+					std::int32_t health = packet.ReadVariableInt32();
 					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 					std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
 					std::int32_t posX = packet.ReadVariableInt32();
 					std::int32_t posY = packet.ReadVariableInt32();
 
-					LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: %u, playerType: %u, health: %u, flags: %u, team: %u, x: %i, y: %i",
+					LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: %u, playerType: %u, health: %i, flags: %u, team: %u, x: %i, y: %i",
 						playerIndex, (std::uint32_t)playerType, health, flags, teamId, posX, posY);
 
 					_lastSpawnedActorId = playerIndex;
@@ -3440,6 +3459,10 @@ namespace Jazz2::Multiplayer
 					playerParams
 				));
 				player->_controllableExternal = _controllableExternal;
+				player->_health = (serverConfig.InitialPlayerHealth > 0
+					? serverConfig.InitialPlayerHealth
+					: (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt ? INT32_MAX : 5));
+
 				peerDesc->LapStarted = TimeStamp::now();
 
 				Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();
@@ -3467,7 +3490,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(16);
 					packet.WriteVariableUint32(playerIndex);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_playerType);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_health);
+					packet.WriteVariableInt32(player->_health);
 					packet.WriteValue<std::uint8_t>(flags);
 					packet.WriteValue<std::uint8_t>(peerDesc->Team);
 					packet.WriteVariableInt32((std::int32_t)player->_pos.X);
@@ -3707,7 +3730,9 @@ namespace Jazz2::Multiplayer
 			mpPlayer->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 			mpPlayer->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 			mpPlayer->_currentWeapon = WeaponType::Blaster;
-			mpPlayer->_health = serverConfig.InitialPlayerHealth;
+			mpPlayer->_health = (serverConfig.InitialPlayerHealth > 0
+				? serverConfig.InitialPlayerHealth
+				: (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt ? INT32_MAX : 5));
 
 			if (peerDesc->RemotePeer) {
 				MemoryStream packet1(4);
@@ -3792,7 +3817,9 @@ namespace Jazz2::Multiplayer
 		std::uint32_t prevPos = 0;
 		for (std::int32_t i = 0; i < sortedPlayers.size(); i++) {
 			std::uint32_t pos;
-			if (i > 0 && sortedPlayers[i].second() == sortedPlayers[i - 1].second()) {
+			if (sortedPlayers[i].second() == 0) {
+				pos = 0;	// Don't assign valid position if player has no points
+			} else if (i > 0 && sortedPlayers[i].second() == sortedPlayers[i - 1].second()) {
 				pos = prevPos;
 			} else {
 				pos = currentPos;
@@ -3817,7 +3844,9 @@ namespace Jazz2::Multiplayer
 
 		for (std::int32_t i = 0; i < sortedDeadPlayers.size(); i++) {
 			std::uint32_t pos;
-			if (i > 0 && sortedDeadPlayers[i].second() == sortedDeadPlayers[i - 1].second()) {
+			if (sortedDeadPlayers[i].second() == 0) {
+				pos = 0;	// Don't assign valid position if player has no points
+			} else if (i > 0 && sortedDeadPlayers[i].second() == sortedDeadPlayers[i - 1].second()) {
 				pos = prevPos;
 			} else {
 				pos = currentPos;
@@ -3903,7 +3932,8 @@ namespace Jazz2::Multiplayer
 				break;
 			}
 			
-			case MpGameMode::TreasureHunt:
+			// Player has to stand on EndOfLevel event with required treasure amount
+			/*case MpGameMode::TreasureHunt:
 			case MpGameMode::TeamTreasureHunt: {
 				for (auto* player : _players) {
 					auto* mpPlayer = static_cast<MpPlayer*>(player);
@@ -3915,7 +3945,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 				break;
-			}
+			}*/
 		}
 	}
 
