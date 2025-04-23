@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "PlayerOnServer.h"
+#include "MpPlayer.h"
 
 namespace Jazz2::Actors::Multiplayer
 {

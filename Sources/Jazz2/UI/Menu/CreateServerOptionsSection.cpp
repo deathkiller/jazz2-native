@@ -218,9 +218,11 @@ namespace Jazz2::UI::Menu
 				switch (_gameMode) {
 					case MpGameMode::Battle: gameModeString = _("Battle"); break;
 					case MpGameMode::TeamBattle: gameModeString = _("Team Battle"); break;
-					case MpGameMode::CaptureTheFlag: gameModeString = _("Capture The Flag"); break;
 					case MpGameMode::Race: gameModeString = _("Race"); break;
+					case MpGameMode::TeamRace: gameModeString = _("Team Race"); break;
 					case MpGameMode::TreasureHunt: gameModeString = _("Treasure Hunt"); break;
+					case MpGameMode::TeamTreasureHunt: gameModeString = _("Team Treasure Hunt"); break;
+					case MpGameMode::CaptureTheFlag: gameModeString = _("Capture The Flag"); break;
 					case MpGameMode::Cooperation: gameModeString = _("Cooperation"); break;
 				}
 
@@ -311,6 +313,11 @@ namespace Jazz2::UI::Menu
 				}
 			}
 		}
+	}
+
+	Jazz2::Multiplayer::MpGameMode CreateServerOptionsSection::GetGameMode() const
+	{
+		return _gameMode;
 	}
 
 	void CreateServerOptionsSection::SetGameMode(Jazz2::Multiplayer::MpGameMode value)

@@ -938,38 +938,14 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
-	const char* reasonStr;
-	switch (reason) {
-		case Reason::Disconnected: reasonStr = "Client disconnected by user"; break;
-		case Reason::InvalidParameter: reasonStr = "Invalid parameter specified"; break;
-		case Reason::IncompatibleVersion: reasonStr = "Incompatible client version"; break;
-		case Reason::AuthFailed: reasonStr = "Authentication failed"; break;
-		case Reason::InvalidPassword: reasonStr = "Invalid password specified"; break;
-		case Reason::InvalidPlayerName: reasonStr = "Invalid player name specified"; break;
-		case Reason::NotInWhitelist: reasonStr = "Client is not in server whitelist"; break;
-		case Reason::Requires3rdPartyAuthProvider: reasonStr = "Server requires 3rd party authentication provider"; break;
-		case Reason::ServerIsFull: reasonStr = "Server is full or busy"; break;
-		case Reason::ServerNotReady: reasonStr = "Server is not ready yet"; break;
-		case Reason::ServerStopped: reasonStr = "Server is stopped for unknown reason"; break;
-		case Reason::ServerStoppedForMaintenance: reasonStr = "Server is stopped for maintenance"; break;
-		case Reason::ServerStoppedForReconfiguration: reasonStr = "Server is stopped for reconfiguration"; break;
-		case Reason::ServerStoppedForUpdate: reasonStr = "Server is stopped for update"; break;
-		case Reason::ConnectionLost: reasonStr = "Connection lost"; break;
-		case Reason::ConnectionTimedOut: reasonStr = "Connection timed out"; break;
-		case Reason::Kicked: reasonStr = "Kicked by server"; break;
-		case Reason::Banned: reasonStr = "Banned by server"; break;
-		case Reason::CheatingDetected: reasonStr = "Cheating detected"; break;
-		default: reasonStr = "Unknown reason"; break;
-	}
-
 	if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 		LOGI("[MP] Peer disconnected \"%s\" (%s): %s (%u)", peerDesc->PlayerName.data(),
-			NetworkManagerBase::AddressToString(peer).data(), reasonStr, (std::uint32_t)reason);
+			NetworkManagerBase::AddressToString(peer).data(), NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	} else if (peer) {
 		LOGI("[MP] Peer disconnected \"<unknown>\" (%s): %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
-			reasonStr, (std::uint32_t)reason);
+			NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	} else {
-		LOGI("[MP] Peer disconnected: %s (%u)", reasonStr, (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected: %s (%u)", NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	}
 
 	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
@@ -1127,7 +1103,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t levelNameLength = packet.ReadVariableUint32();
 				String levelName{NoInit, levelNameLength};
 				packet.Read(levelName.data(), levelNameLength);
-				std::uint32_t initialPlayerHealth = packet.ReadVariableUint32();
+				std::int32_t initialPlayerHealth = packet.ReadVariableInt32();
 				std::uint32_t maxGameTimeSecs = packet.ReadVariableUint32();
 				std::uint32_t totalKills = packet.ReadVariableUint32();
 				std::uint32_t totalLaps = packet.ReadVariableUint32();

@@ -6,22 +6,23 @@
 #include "../../Multiplayer/MpLevelHandler.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
-using namespace Jazz2::Multiplayer;
-
 namespace Jazz2::Actors::Multiplayer
 {
-	std::shared_ptr<PeerDescriptor> MpPlayer::GetPeerDescriptor()
-	{
-		return _peerDesc;
-	}
-
-	std::shared_ptr<const PeerDescriptor> MpPlayer::GetPeerDescriptor() const
-	{
-		return _peerDesc;
-	}
-
 	PlayerOnServer::PlayerOnServer()
+		: _lastAttackerTimeout(0.0f)
 	{
+	}
+
+	void PlayerOnServer::OnUpdate(float timeMult)
+	{
+		MpPlayer::OnUpdate(timeMult);
+
+		if (_lastAttackerTimeout > 0.0f) {
+			_lastAttackerTimeout -= timeMult;
+			if (_lastAttackerTimeout <= 0.0f) {
+				_lastAttacker = nullptr;
+			}
+		}
 	}
 
 	bool PlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
@@ -29,7 +30,7 @@ namespace Jazz2::Actors::Multiplayer
 		// TODO: Check player special move here
 		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(other.get())) {
 			auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
-			if (GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team) {
+			if (_health > 0 && GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team) {
 				bool otherIsPlayer = false;
 				if (auto* anotherPlayer = runtime_cast<PlayerOnServer*>(other)) {
 					bool isAttacking = IsAttacking();
@@ -43,12 +44,13 @@ namespace Jazz2::Actors::Multiplayer
 				}
 
 				_lastAttacker = otherPlayerOnServer->shared_from_this();
+				_lastAttackerTimeout = 300.0f;
 
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 				} else {
-					TakeDamage(1, 4 * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
+					TakeDamage(1, 4.0f * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
 				}
 				if (!otherIsPlayer) {
 					other->DecreaseHealth(INT32_MAX);

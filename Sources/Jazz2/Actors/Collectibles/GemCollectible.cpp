@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Collectibles
 			_timeLeft = 5.0f * FrameTimer::FramesPerSecond;
 		}
 		if (isDelayed) {
-			_ignoreTime = 90.0f;
+			_ignoreTime = 40.0f;
 		}
 
 		async_await RequestMetadataAsync("Collectible/Gems"_s);

@@ -142,9 +142,9 @@ namespace Jazz2::UI::Multiplayer
 
 		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.TotalPlayerPoints > 0) {
 			auto pointsText = _f("Points: %u", peerDesc->Points);
-			_smallFont->DrawString(this, pointsText, charOffsetShadow, view.X + view.W - 10.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
+			_smallFont->DrawString(this, pointsText, charOffsetShadow, view.X + view.W - 14.0f, view.Y + 30.0f + 1.0f, FontShadowLayer,
 				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, pointsText, charOffset, view.X + view.W - 10.0f, view.Y + 20.0f, FontLayer,
+			_smallFont->DrawString(this, pointsText, charOffset, view.X + view.W - 14.0f, view.Y + 30.0f, FontLayer,
 				Alignment::TopRight, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 		}
 
@@ -183,9 +183,9 @@ namespace Jazz2::UI::Multiplayer
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 40.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 40.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
@@ -211,26 +211,33 @@ namespace Jazz2::UI::Multiplayer
 					Alignment::TopLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 40.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 40.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;
 			}
 			case MpGameMode::TreasureHunt:
 			case MpGameMode::TeamTreasureHunt: {
+				Colorf textColor = (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected ? Colorf(0.34f, 0.5f, 0.34f, 0.5f) : Font::DefaultColor);
+
+				AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + _gemsLastType);
+				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f + 2.5f, ShadowLayer, Alignment::TopLeft,
+					Colorf(0.0f, 0.0f, 0.0f, 0.4f), 0.8f, 0.8f);
+				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f, MainLayer, Alignment::TopLeft,
+					Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.8f, 0.8f);
 
 				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", peerDesc->TreasureCollected, serverConfig.TotalTreasureCollected);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 38.0f, view.Y + 10.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 38.0f, view.Y + 10.0f, FontLayer,
+					Alignment::TopLeft, textColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 36.0f + 1.0f, FontShadowLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 40.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 36.0f, FontLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 40.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				break;

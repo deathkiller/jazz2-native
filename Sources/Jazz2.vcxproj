@@ -319,6 +319,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\ComPtr.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\WebRequest.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\MpPlayer.h" />
     <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Input\ControlScheme.h" />
     <ClInclude Include="Jazz2\Input\RgbLights.h" />
@@ -826,6 +827,7 @@
     <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\StaticRadialLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\MpPlayer.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\PlayerOnServer.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\RemotablePlayer.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteActor.cpp" />

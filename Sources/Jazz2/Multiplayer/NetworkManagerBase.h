@@ -133,6 +133,8 @@ namespace Jazz2::Multiplayer
 		static bool IsAddressValid(StringView address);
 		/** @brief Attempts to split the specified endpoint into address and port */
 		static bool TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port);
+		/** @brief Converts the specified reason to the string representation */
+		static const char* ReasonToString(Reason reason);
 
 	protected:
 		/** @brief Called when a peer connects to the local server or the local client connects to a server */

@@ -19,6 +19,7 @@ namespace Jazz2::UI::Menu
 	public:
 		MultiplayerGameModeSelectSection();
 
+		void OnShow(IMenuContainer* root) override;
 		void OnDraw(Canvas* canvas) override;
 
 	protected:
