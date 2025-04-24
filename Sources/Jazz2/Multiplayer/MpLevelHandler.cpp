@@ -337,6 +337,7 @@ namespace Jazz2::Multiplayer
 						SetControllableToAllPlayers(true);
 						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(0);
 						SendLevelStateToAllPlayers();
+						CalculatePositionInRound(true);
 
 						for (auto* player : _players) {
 							auto* mpPlayer = static_cast<MpPlayer*>(player);
@@ -931,7 +932,7 @@ namespace Jazz2::Multiplayer
 				auto peerDesc = mpPlayer->GetPeerDescriptor();
 				peerDesc->Laps++;
 				auto now = TimeStamp::now();
-				peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).secondsSince() * FrameTimer::FramesPerSecond;
+				peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
 				peerDesc->LapStarted = now;
 
 				CheckGameEnds();
@@ -1363,7 +1364,7 @@ namespace Jazz2::Multiplayer
 			if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps && _levelState == LevelState::Running) {
 				peerDesc->Laps++;
 				auto now = TimeStamp::now();
-				peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).secondsSince() * FrameTimer::FramesPerSecond;
+				peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
 				peerDesc->LapStarted = now;
 
 				CheckGameEnds();
@@ -2077,6 +2078,9 @@ namespace Jazz2::Multiplayer
 	{
 		if (_isServer) {
 			if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
+				peerDesc->IsAuthenticated = false;
+				peerDesc->LevelState = PeerLevelState::Unknown;
+
 				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", peerDesc->PlayerName.data()));
 
 				MemoryStream packet(10 + peerDesc->PlayerName.size());
@@ -2116,6 +2120,8 @@ namespace Jazz2::Multiplayer
 						}, NCINE_CURRENT_FUNCTION);
 					}
 				}
+
+				CalculatePositionInRound();
 			}
 			return true;
 		}
@@ -2936,7 +2942,12 @@ namespace Jazz2::Multiplayer
 					LOGD("[MP] ServerPacketType::MarkRemoteActorAsPlayer - id: %u, name: %s", actorId, playerName.data());
 
 					_root->InvokeAsync([this, actorId, playerName = std::move(playerName)]() mutable {
-						_playerNames[actorId] = std::move(playerName);
+						if (actorId == _lastSpawnedActorId) {
+							auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer);
+							peerDesc->PlayerName = std::move(playerName);
+						} else {
+							_playerNames[actorId] = std::move(playerName);
+						}
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
@@ -3389,6 +3400,9 @@ namespace Jazz2::Multiplayer
 
 				LOGI("[MP] Syncing peer (0x%p)", peer._enet);
 
+				// TODO: Send positions only to the newly connected player
+				CalculatePositionInRound(true);
+
 				// Synchronize level state
 				{
 					MemoryStream packet(6);
@@ -3530,10 +3544,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
 					packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
 
-					_networkManager->SendTo([this, self = peer](const Peer& peer) {
-						if (peer == self) {
-							return false;
-						}
+					_networkManager->SendTo([this](const Peer& peer) {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 						return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet);
@@ -3782,7 +3793,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::CalculatePositionInRound()
+	void MpLevelHandler::CalculatePositionInRound(bool forceSend)
 	{
 		SmallVector<Pair<MpPlayer*, std::uint32_t>, 128> sortedPlayers;
 		SmallVector<Pair<MpPlayer*, std::uint32_t>, 128> sortedDeadPlayers;
@@ -3802,7 +3813,8 @@ namespace Jazz2::Multiplayer
 					roundPoints = peerDesc->Kills;
 					break;
 				case MpGameMode::Race:
-					roundPoints = (peerDesc->Laps > 0 ? (std::uint32_t)(peerDesc->LapsElapsedFrames / peerDesc->Laps) : 0);
+					// 1 hour penalty for every unfinished lap
+					roundPoints = (std::uint32_t)peerDesc->LapsElapsedFrames + (serverConfig.TotalLaps - peerDesc->Laps) * 3600.0f * FrameTimer::FramesPerSecond;
 					break;
 				case MpGameMode::TreasureHunt:
 					roundPoints = peerDesc->TreasureCollected;
@@ -3817,12 +3829,20 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		const auto comparator = [this](const Pair<MpPlayer*, std::uint32_t>& a, const Pair<MpPlayer*, std::uint32_t>& b) -> bool {
-			return a.second() > b.second();
-		};
-
-		nCine::sort(sortedPlayers.begin(), sortedPlayers.end(), comparator);
-		nCine::sort(sortedDeadPlayers.begin(), sortedDeadPlayers.end(), comparator);
+		bool lessWins = (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace);
+		if (lessWins) {
+			const auto comparator = [](const auto& a, const auto& b) -> bool {
+				return a.second() < b.second();
+			};
+			nCine::sort(sortedPlayers.begin(), sortedPlayers.end(), comparator);
+			nCine::sort(sortedDeadPlayers.begin(), sortedDeadPlayers.end(), comparator);
+		} else {
+			const auto comparator = [](const auto& a, const auto& b) -> bool {
+				return a.second() > b.second();
+			};
+			nCine::sort(sortedPlayers.begin(), sortedPlayers.end(), comparator);
+			nCine::sort(sortedDeadPlayers.begin(), sortedDeadPlayers.end(), comparator);
+		}
 
 		bool positionsChanged = false;
 
@@ -3884,7 +3904,7 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		if (positionsChanged) {
+		if (positionsChanged || forceSend) {
 			MemoryStream packet(4 + (sortedPlayers.size() + sortedDeadPlayers.size()) * 8);
 			packet.WriteVariableUint32(sortedPlayers.size() + sortedDeadPlayers.size());
 			for (std::int32_t i = 0; i < sortedPlayers.size(); i++) {

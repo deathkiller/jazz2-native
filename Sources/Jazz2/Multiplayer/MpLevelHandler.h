@@ -256,7 +256,7 @@ namespace Jazz2::Multiplayer
 		void ResetAllPlayerStats();
 		Vector2f GetSpawnPoint(PlayerType playerType);
 		void WarpAllPlayersToStart();
-		void CalculatePositionInRound();
+		void CalculatePositionInRound(bool forceSend = false);
 		void CheckGameEnds();
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
 		void EndGameOnTimeOut();
