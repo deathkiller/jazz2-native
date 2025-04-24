@@ -182,22 +182,17 @@ namespace Jazz2::UI::Multiplayer
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 40.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 40.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-
+				DrawPositionInRound(view, player);
 				break;
 			}
 			case MpGameMode::Race:
 			case MpGameMode::TeamRace: {
 
 				formatString(stringBuffer, sizeof(stringBuffer), "%u/%u", peerDesc->Laps + 1, serverConfig.TotalLaps);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 20.0f, view.Y + 7.0f + 1.4f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.88f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 20.0f, view.Y + 7.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 65.0f, view.Y + 7.0f + 1.4f, FontShadowLayer,
+					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.88f, 0.0f, 0.0f, 0.0f, 0.0f);
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 65.0f, view.Y + 7.0f, FontLayer,
+					Alignment::TopRight, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
 
 				float sinceLapStarted = peerDesc->LapStarted.secondsSince();
 				std::int32_t minutes = std::max(0, (std::int32_t)(sinceLapStarted / 60));
@@ -205,24 +200,19 @@ namespace Jazz2::UI::Multiplayer
 				std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
 
 				formatString(stringBuffer, sizeof(stringBuffer), "%d:%02d:%02d", minutes, seconds, milliseconds);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f + 80.0f, view.Y + 8.0f + 1.4f, FontShadowLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f + 80.0f, view.Y + 10.0f + 1.4f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f + 80.0f, view.Y + 8.0f, FontLayer,
+				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f + 80.0f, view.Y + 10.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 40.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 40.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-
+				DrawPositionInRound(view, player);
 				break;
 			}
 			case MpGameMode::TreasureHunt:
 			case MpGameMode::TeamTreasureHunt: {
-				Colorf textColor = (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected ? Colorf(0.34f, 0.5f, 0.34f, 0.5f) : Font::DefaultColor);
+				Colorf textColor = (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected ? Colorf(0.34f, 0.5f, 0.38f, 0.5f) : Font::DefaultColor);
 
-				AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + _gemsLastType);
+				AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected ? 1 : 0));
 				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f + 2.5f, ShadowLayer, Alignment::TopLeft,
 					Colorf(0.0f, 0.0f, 0.0f, 0.4f), 0.8f, 0.8f);
 				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f, MainLayer, Alignment::TopLeft,
@@ -234,12 +224,7 @@ namespace Jazz2::UI::Multiplayer
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 38.0f, view.Y + 10.0f, FontLayer,
 					Alignment::TopLeft, textColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-				formatString(stringBuffer, sizeof(stringBuffer), "Pos: %u", std::max(peerDesc->PositionInRound, 1u));
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 40.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 40.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-
+				DrawPositionInRound(view, player);
 				break;
 			}
 			case MpGameMode::CaptureTheFlag: {
@@ -272,6 +257,140 @@ namespace Jazz2::UI::Multiplayer
 				}
 				break;
 			}
+		}
+	}
+
+	void MpHUD::DrawPositionInRound(const Rectf& view, Actors::Player* player)
+	{
+		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+
+		char stringBuffer[32];
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+
+		StringView firstPlayer, secondPlayer, thirdPlayer, currentPlayer;
+		std::int32_t currentPlayerPos = 0;
+
+		if (mpLevelHandler->_isServer) {
+			auto peers = mpLevelHandler->_networkManager->GetPeers();
+			for (const auto& [peer, peerDesc] : *peers) {
+				if (peerDesc->PositionInRound == 1) {
+					firstPlayer = peerDesc->PlayerName;
+					if (!peerDesc->RemotePeer) {
+						firstPlayer = "You"_s;
+						currentPlayerPos = peerDesc->PositionInRound;
+					}
+				} else if (peerDesc->PositionInRound == 2) {
+					secondPlayer = peerDesc->PlayerName;
+					if (!peerDesc->RemotePeer) {
+						secondPlayer = "You"_s;
+						currentPlayerPos = peerDesc->PositionInRound;
+					}
+				} else if (peerDesc->PositionInRound == 3) {
+					thirdPlayer = peerDesc->PlayerName;
+					if (!peerDesc->RemotePeer) {
+						thirdPlayer = "You"_s;
+						currentPlayerPos = peerDesc->PositionInRound;
+					}
+				} else if (!peerDesc->RemotePeer) {
+					//currentPlayer = peerDesc->PlayerName;
+					currentPlayer = "You"_s;
+					currentPlayerPos = peerDesc->PositionInRound;
+				}
+			}
+		} else {
+			currentPlayer = "You"_s;
+			for (const auto& [playerIdx, pos] : mpLevelHandler->_positionsInRound) {
+				if (pos == 1) {
+					auto it = mpLevelHandler->_playerNames.find(playerIdx);
+					if (it != mpLevelHandler->_playerNames.end()) {
+						firstPlayer = it->second;
+					}
+					if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
+						firstPlayer = "You"_s;
+						currentPlayerPos = pos;
+					}
+				} else if (pos == 2) {
+					auto it = mpLevelHandler->_playerNames.find(playerIdx);
+					if (it != mpLevelHandler->_playerNames.end()) {
+						secondPlayer = it->second;
+					}
+					if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
+						secondPlayer = "You"_s;
+						currentPlayerPos = pos;
+					}
+				} else if (pos == 3) {
+					auto it = mpLevelHandler->_playerNames.find(playerIdx);
+					if (it != mpLevelHandler->_playerNames.end()) {
+						thirdPlayer = it->second;
+					}
+					if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
+						thirdPlayer = "You"_s;
+						currentPlayerPos = pos;
+					}
+				} else if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
+					//currentPlayer = peerDesc->PlayerName;
+					currentPlayerPos = pos;
+				}
+			}
+		}
+
+		float offset = 36.0f;
+		if (firstPlayer) {
+			_smallFont->DrawString(this, "1."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, "1."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
+				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			_smallFont->DrawString(this, firstPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, firstPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
+				Alignment::TopLeft, currentPlayerPos == 1 ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			offset += 16.0f;
+		}
+		if (secondPlayer) {
+			_smallFont->DrawString(this, "2."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, "2."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
+				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			_smallFont->DrawString(this, secondPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, secondPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
+				Alignment::TopLeft, currentPlayerPos == 2 ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			offset += 16.0f;
+		}
+		if (thirdPlayer) {
+			_smallFont->DrawString(this, "3."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, "3."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
+				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			_smallFont->DrawString(this, thirdPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, thirdPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
+				Alignment::TopLeft, currentPlayerPos == 3 ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			offset += 16.0f;
+		}
+		if (currentPlayer && (currentPlayerPos < 1 || currentPlayerPos > 3)) {
+			if (currentPlayerPos > 0) {
+				formatString(stringBuffer, sizeof(stringBuffer), "%i.", currentPlayerPos, currentPlayer.data());
+
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
+					Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			} else {
+				_smallFont->DrawString(this, "-."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_smallFont->DrawString(this, "-."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
+					Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
+			_smallFont->DrawString(this, currentPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, currentPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
+				Alignment::TopLeft, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f, 0.9f);
+			offset += 16.0f;
 		}
 	}
 }

@@ -2701,6 +2701,40 @@ namespace Jazz2::Multiplayer
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
+				case ServerPacketType::SyncTileMap: {
+					MemoryStream packet(data);
+
+					LOGD("[MP] ServerPacketType::SyncTileMap");
+
+					// TODO: No lock here ???
+					TileMap()->InitializeFromStream(packet);
+					return true;
+				}
+				case ServerPacketType::SetTrigger: {
+					MemoryStream packet(data);
+					std::uint8_t triggerId = packet.ReadValue<std::uint8_t>();
+					bool newState = (bool)packet.ReadValue<std::uint8_t>();
+
+					LOGD("[MP] ServerPacketType::SetTrigger - id: %u, state: %u", triggerId, newState);
+
+					_root->InvokeAsync([this, triggerId, newState]() {
+						TileMap()->SetTrigger(triggerId, newState);
+					}, NCINE_CURRENT_FUNCTION);
+					return true;
+				}
+				case ServerPacketType::AdvanceTileAnimation: {
+					MemoryStream packet(data);
+					std::int32_t tx = packet.ReadVariableInt32();
+					std::int32_t ty = packet.ReadVariableInt32();
+					std::int32_t amount = packet.ReadVariableInt32();
+
+					LOGD("[MP] ServerPacketType::AdvanceTileAnimation - tx: %i, ty: %i, amount: %i", tx, ty, amount);
+
+					_root->InvokeAsync([this, tx, ty, amount]() {
+						TileMap()->AdvanceDestructibleTileAnimation(tx, ty, amount);
+					}, NCINE_CURRENT_FUNCTION);
+					return true;
+				}
 				case ServerPacketType::CreateControllablePlayer: {
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
@@ -2906,38 +2940,15 @@ namespace Jazz2::Multiplayer
 					}, NCINE_CURRENT_FUNCTION);
 					return true;
 				}
-				case ServerPacketType::SyncTileMap: {
+				case ServerPacketType::UpdatePositionsInRound: {
 					MemoryStream packet(data);
-
-					LOGD("[MP] ServerPacketType::SyncTileMap");
-
-					// TODO: No lock here ???
-					TileMap()->InitializeFromStream(packet);
-					return true;
-				}
-				case ServerPacketType::SetTrigger: {
-					MemoryStream packet(data);
-					std::uint8_t triggerId = packet.ReadValue<std::uint8_t>();
-					bool newState = (bool)packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ServerPacketType::SetTrigger - id: %u, state: %u", triggerId, newState);
-
-					_root->InvokeAsync([this, triggerId, newState]() {
-						TileMap()->SetTrigger(triggerId, newState);
-					}, NCINE_CURRENT_FUNCTION);
-					return true;
-				}
-				case ServerPacketType::AdvanceTileAnimation: {
-					MemoryStream packet(data);
-					std::int32_t tx = packet.ReadVariableInt32();
-					std::int32_t ty = packet.ReadVariableInt32();
-					std::int32_t amount = packet.ReadVariableInt32();
-
-					LOGD("[MP] ServerPacketType::AdvanceTileAnimation - tx: %i, ty: %i, amount: %i", tx, ty, amount);
-
-					_root->InvokeAsync([this, tx, ty, amount]() {
-						TileMap()->AdvanceDestructibleTileAnimation(tx, ty, amount);
-					}, NCINE_CURRENT_FUNCTION);
+					std::uint32_t count = packet.ReadVariableUint32();
+					_positionsInRound.resize_for_overwrite(count);
+					for (std::uint32_t i = 0; i < count; i++) {
+						std::uint32_t playerIdx = packet.ReadVariableUint32();
+						std::uint32_t positionInRound = packet.ReadVariableUint32();
+						_positionsInRound[i] = { playerIdx, positionInRound };
+					}
 					return true;
 				}
 				case ServerPacketType::PlayerSetProperty: {
@@ -3038,14 +3049,14 @@ namespace Jazz2::Multiplayer
 							}
 							break;
 						}
-						case PlayerPropertyType::PositionInRound: {
+						/*case PlayerPropertyType::PositionInRound: {
 							std::uint32_t positionInRound = packet.ReadVariableUint32();
 							if (!_players.empty()) {
 								auto* player = static_cast<RemotablePlayer*>(_players[0]);
 								player->GetPeerDescriptor()->PositionInRound = positionInRound;
 							}
 							break;
-						}
+						}*/
 						case PlayerPropertyType::Deaths: {
 							std::uint32_t deaths = packet.ReadVariableUint32();
 							if (!_players.empty()) {
@@ -3813,6 +3824,8 @@ namespace Jazz2::Multiplayer
 		nCine::sort(sortedPlayers.begin(), sortedPlayers.end(), comparator);
 		nCine::sort(sortedDeadPlayers.begin(), sortedDeadPlayers.end(), comparator);
 
+		bool positionsChanged = false;
+
 		std::uint32_t currentPos = 1;
 		std::uint32_t prevPos = 0;
 		for (std::int32_t i = 0; i < sortedPlayers.size(); i++) {
@@ -3831,14 +3844,15 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = sortedPlayers[i].first()->GetPeerDescriptor();
 			if (peerDesc->PositionInRound != pos) {
 				peerDesc->PositionInRound = pos;
+				positionsChanged = true;
 
-				if (peerDesc->RemotePeer) {
+				/*if (peerDesc->RemotePeer) {
 					MemoryStream packet(9);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::PositionInRound);
 					packet.WriteVariableUint32(sortedPlayers[i].first()->_playerIndex);
 					packet.WriteVariableUint32(peerDesc->PositionInRound);
 					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-				}
+				}*/
 			}
 		}
 
@@ -3858,15 +3872,35 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = sortedDeadPlayers[i].first()->GetPeerDescriptor();
 			if (peerDesc->PositionInRound != pos) {
 				peerDesc->PositionInRound = pos;
+				positionsChanged = true;
 
-				if (peerDesc->RemotePeer) {
+				/*if (peerDesc->RemotePeer) {
 					MemoryStream packet(9);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::PositionInRound);
 					packet.WriteVariableUint32(sortedDeadPlayers[i].first()->_playerIndex);
 					packet.WriteVariableUint32(peerDesc->PositionInRound);
 					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-				}
+				}*/
 			}
+		}
+
+		if (positionsChanged) {
+			MemoryStream packet(4 + (sortedPlayers.size() + sortedDeadPlayers.size()) * 8);
+			packet.WriteVariableUint32(sortedPlayers.size() + sortedDeadPlayers.size());
+			for (std::int32_t i = 0; i < sortedPlayers.size(); i++) {
+				auto peerDesc = sortedPlayers[i].first()->GetPeerDescriptor();
+				packet.WriteVariableUint32(sortedPlayers[i].first()->_playerIndex);
+				packet.WriteVariableUint32(peerDesc->PositionInRound);
+			}
+			for (std::int32_t i = 0; i < sortedDeadPlayers.size(); i++) {
+				auto peerDesc = sortedDeadPlayers[i].first()->GetPeerDescriptor();
+				packet.WriteVariableUint32(sortedDeadPlayers[i].first()->_playerIndex);
+				packet.WriteVariableUint32(peerDesc->PositionInRound);
+			}
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::UpdatePositionsInRound, packet);
 		}
 	}
 

@@ -61,6 +61,7 @@ namespace Jazz2::Multiplayer
 		DestroyRemoteActor,
 		UpdateAllActors,
 		MarkRemoteActorAsPlayer,
+		UpdatePositionsInRound,
 
 		PlayerSetProperty = 130,
 		PlayerResetProperties,
@@ -119,7 +120,7 @@ namespace Jazz2::Multiplayer
 		Gems,
 
 		Points = 30,
-		PositionInRound,
+		PositionInRound,	// TODO: Unused
 		Deaths,
 		Kills,
 		Laps,

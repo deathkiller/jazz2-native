@@ -105,9 +105,9 @@ Alternatively, replace `assembleDebug` with `assembleRelease` to create release 
 @subsection building-windows Building on Windows
 
 On Windows, Visual Studio can be used. Using already included `.sln` is not recommended,
-because it requires manual configuration. Instead the project can be opened
-as CMake directory directly in Visual Studio, or it can be configured using
-a similar command as above:
+because it requires manual configuration and doesn't support all features and parameters.
+Instead the project can be opened as CMake directory directly in Visual Studio, or it can be
+configured using a similar command as above:
 
 @code{.bat}
 mkdir build
