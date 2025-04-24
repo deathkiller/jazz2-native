@@ -210,9 +210,10 @@ namespace Jazz2::UI::Multiplayer
 			}
 			case MpGameMode::TreasureHunt:
 			case MpGameMode::TeamTreasureHunt: {
-				Colorf textColor = (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected ? Colorf(0.34f, 0.5f, 0.38f, 0.5f) : Font::DefaultColor);
+				bool hasEnoughTreasure = (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected);
+				Colorf textColor = (hasEnoughTreasure ? Colorf(0.34f, 0.5f, 0.38f, 0.5f) : Font::DefaultColor);
 
-				AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected ? 1 : 0));
+				AnimState animState = (hasEnoughTreasure ? PickupGemGreen : PickupGemRed);
 				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f + 2.5f, ShadowLayer, Alignment::TopLeft,
 					Colorf(0.0f, 0.0f, 0.0f, 0.4f), 0.8f, 0.8f);
 				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f, MainLayer, Alignment::TopLeft,
@@ -223,6 +224,14 @@ namespace Jazz2::UI::Multiplayer
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 38.0f, view.Y + 10.0f, FontLayer,
 					Alignment::TopLeft, textColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+				if (hasEnoughTreasure) {
+					auto fintExitTest = _("Find exit!");
+					_smallFont->DrawString(this, fintExitTest, charOffsetShadow, view.X + view.W * 0.5f, view.Y + 20.0f + 2.5f, FontShadowLayer,
+						Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
+					_smallFont->DrawString(this, fintExitTest, charOffset, view.X + view.W * 0.5f, view.Y + 20.0f, FontLayer,
+						Alignment::Top, Font::DefaultColor, 1.0f, 0.72f, 0.8f, 0.8f);
+				}
 
 				DrawPositionInRound(view, player);
 				break;
@@ -260,6 +269,16 @@ namespace Jazz2::UI::Multiplayer
 		}
 	}
 
+	struct PositionInRoundItem
+	{
+		StringView PlayerName;
+		std::int32_t Position;
+		bool IsLocal;
+
+		PositionInRoundItem(StringView playerName, std::int32_t position, bool isLocal)
+			: PlayerName(playerName), Position(position), IsLocal(isLocal) {}
+	};
+
 	void MpHUD::DrawPositionInRound(const Rectf& view, Actors::Player* player)
 	{
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
@@ -267,114 +286,43 @@ namespace Jazz2::UI::Multiplayer
 		char stringBuffer[32];
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
-
-		StringView firstPlayer, secondPlayer, thirdPlayer, currentPlayer;
-		std::int32_t currentPlayerPos = 0;
+		SmallVector<PositionInRoundItem, 8> positions;
 
 		if (mpLevelHandler->_isServer) {
 			auto peers = mpLevelHandler->_networkManager->GetPeers();
 			for (const auto& [peer, peerDesc] : *peers) {
-				if (peerDesc->PositionInRound == 1) {
-					firstPlayer = peerDesc->PlayerName;
-					if (!peerDesc->RemotePeer) {
-						firstPlayer = "You"_s;
-						currentPlayerPos = peerDesc->PositionInRound;
-					}
-				} else if (peerDesc->PositionInRound == 2) {
-					secondPlayer = peerDesc->PlayerName;
-					if (!peerDesc->RemotePeer) {
-						secondPlayer = "You"_s;
-						currentPlayerPos = peerDesc->PositionInRound;
-					}
-				} else if (peerDesc->PositionInRound == 3) {
-					thirdPlayer = peerDesc->PlayerName;
-					if (!peerDesc->RemotePeer) {
-						thirdPlayer = "You"_s;
-						currentPlayerPos = peerDesc->PositionInRound;
-					}
-				} else if (!peerDesc->RemotePeer) {
-					//currentPlayer = peerDesc->PlayerName;
-					currentPlayer = "You"_s;
-					currentPlayerPos = peerDesc->PositionInRound;
+				if ((peerDesc->PositionInRound >= 1 && peerDesc->PositionInRound <= 3) || !peerDesc->RemotePeer) {
+					positions.emplace_back(peerDesc->PlayerName, peerDesc->PositionInRound, !peerDesc->RemotePeer);
 				}
 			}
 		} else {
-			currentPlayer = "You"_s;
-			for (const auto& [playerIdx, pos] : mpLevelHandler->_positionsInRound) {
-				if (pos == 1) {
-					auto it = mpLevelHandler->_playerNames.find(playerIdx);
-					if (it != mpLevelHandler->_playerNames.end()) {
-						firstPlayer = it->second;
-					}
+			for (const auto& [playerIdx, position] : mpLevelHandler->_positionsInRound) {
+				if ((position >= 1 && position <= 3) || playerIdx == mpLevelHandler->_lastSpawnedActorId) {
+					StringView playerName;
 					if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
-						firstPlayer = "You"_s;
-						currentPlayerPos = pos;
+						playerName = mpLevelHandler->_networkManager->GetPeerDescriptor(LocalPeer)->PlayerName;
+					} else {
+						auto it = mpLevelHandler->_playerNames.find(playerIdx);
+						if (it != mpLevelHandler->_playerNames.end()) {
+							playerName = it->second;
+						}
 					}
-				} else if (pos == 2) {
-					auto it = mpLevelHandler->_playerNames.find(playerIdx);
-					if (it != mpLevelHandler->_playerNames.end()) {
-						secondPlayer = it->second;
-					}
-					if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
-						secondPlayer = "You"_s;
-						currentPlayerPos = pos;
-					}
-				} else if (pos == 3) {
-					auto it = mpLevelHandler->_playerNames.find(playerIdx);
-					if (it != mpLevelHandler->_playerNames.end()) {
-						thirdPlayer = it->second;
-					}
-					if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
-						thirdPlayer = "You"_s;
-						currentPlayerPos = pos;
-					}
-				} else if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
-					//currentPlayer = peerDesc->PlayerName;
-					currentPlayerPos = pos;
+
+					positions.emplace_back(playerName, position, playerIdx == mpLevelHandler->_lastSpawnedActorId);
 				}
 			}
 		}
 
+		nCine::sort(positions.begin(), positions.end(), [](const auto& x, const auto& y) {
+			std::int32_t xPos = (x.Position > 0 ? x.Position : INT32_MAX);
+			std::int32_t yPos = (y.Position > 0 ? y.Position : INT32_MAX);
+			return xPos < yPos;
+		});
+
 		float offset = 36.0f;
-		if (firstPlayer) {
-			_smallFont->DrawString(this, "1."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
-				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			_smallFont->DrawString(this, "1."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
-				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-
-			_smallFont->DrawString(this, firstPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			_smallFont->DrawString(this, firstPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
-				Alignment::TopLeft, currentPlayerPos == 1 ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			offset += 16.0f;
-		}
-		if (secondPlayer) {
-			_smallFont->DrawString(this, "2."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
-				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			_smallFont->DrawString(this, "2."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
-				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-
-			_smallFont->DrawString(this, secondPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			_smallFont->DrawString(this, secondPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
-				Alignment::TopLeft, currentPlayerPos == 2 ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			offset += 16.0f;
-		}
-		if (thirdPlayer) {
-			_smallFont->DrawString(this, "3."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
-				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			_smallFont->DrawString(this, "3."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
-				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-
-			_smallFont->DrawString(this, thirdPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			_smallFont->DrawString(this, thirdPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
-				Alignment::TopLeft, currentPlayerPos == 3 ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			offset += 16.0f;
-		}
-		if (currentPlayer && (currentPlayerPos < 1 || currentPlayerPos > 3)) {
-			if (currentPlayerPos > 0) {
-				formatString(stringBuffer, sizeof(stringBuffer), "%i.", currentPlayerPos, currentPlayer.data());
+		for (const auto& item : positions) {
+			if (item.Position > 0) {
+				formatString(stringBuffer, sizeof(stringBuffer), "%i.", item.Position);
 
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
 					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -386,10 +334,10 @@ namespace Jazz2::UI::Multiplayer
 				_smallFont->DrawString(this, "-."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
 					Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
-			_smallFont->DrawString(this, currentPlayer, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
+			_smallFont->DrawString(this, item.PlayerName, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-			_smallFont->DrawString(this, currentPlayer, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
-				Alignment::TopLeft, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, item.PlayerName, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
+				Alignment::TopLeft, item.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.9f);
 			offset += 16.0f;
 		}
 	}
