@@ -224,6 +224,7 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
 		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
+		SmallVector<Pair<std::uint32_t, std::uint32_t>, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		SmallVector<PendingSfx, 0> _pendingSfx;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server

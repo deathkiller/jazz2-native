@@ -22,6 +22,8 @@ namespace Jazz2::UI::Multiplayer
 	protected:
 		void OnDrawScore(const Rectf& view, Actors::Player* player) override;
 
+		void DrawPositionInRound(const Rectf& view, Actors::Player* player);
+
 	private:
 		Font* _mediumFont;
 		String _countdownText;

@@ -97,7 +97,9 @@ namespace Jazz2::Multiplayer
 		    -   If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
 		    -   Game ends when only one player remains, or when the conditions of the specified game mode are met
 		    -   Elimination can be combined with any game mode
-		-   @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players (default is **unlimited** for Treasure Hunt, otherwise **5**)
+		-   @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players
+			-   If the property is not specified or is less than 1, the player's health is automatically assigned depending on the game mode
+			-   Default value for Treasure Hunt is **unlimited**, in all other game modes it's **5**
 		-   @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum allowed game time in seconds per level (default is **unlimited**)
 		-   @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60** seconds)
 		    -   Pre-game is skipped in Cooperation
