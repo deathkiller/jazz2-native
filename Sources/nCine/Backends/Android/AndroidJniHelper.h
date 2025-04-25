@@ -67,6 +67,9 @@ namespace nCine::Backends
 		inline bool IsNull() const {
 			return javaObject_ == nullptr;
 		}
+		inline jobject javaObject() const {
+			return javaObject_;
+		}
 
 		static jclass findClass(const char* name);
 		static jmethodID getStaticMethodID(jclass javaClass, const char* name, const char* signature);

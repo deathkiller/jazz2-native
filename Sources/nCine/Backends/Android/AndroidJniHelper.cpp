@@ -478,9 +478,9 @@ namespace nCine::Backends
 			for (int i = 0; i < length && i < maxSize; i++) {
 				destination[i] = int(intsDeviceIds[i]);
 			}
+			AndroidJniHelper::jniEnv->ReleaseIntArrayElements(arrDeviceIds, intsDeviceIds, 0);
 		}
 
-		AndroidJniHelper::jniEnv->ReleaseIntArrayElements(arrDeviceIds, intsDeviceIds, 0);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrDeviceIds);
 
 		return length;
