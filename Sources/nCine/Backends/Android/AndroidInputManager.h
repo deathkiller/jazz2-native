@@ -171,7 +171,7 @@ namespace nCine::Backends
 		static KeyboardEvent keyboardEvent_;
 		static TextInputEvent textInputEvent_;
 		static AndroidMouseState mouseState_;
-		static AndroidMouseEvent mouseEvent_;
+		static MouseEvent mouseEvent_;
 		static ScrollEvent scrollEvent_;
 		/// Back and forward key events triggered by the mouse are simulated as right and middle button
 		static int simulatedMouseButtonState_;

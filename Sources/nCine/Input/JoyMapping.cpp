@@ -813,7 +813,7 @@ namespace nCine
 						}
 					} else {
 						// Unknown key
-						const uint8_t* g = map.guid.data;
+						DEATH_UNUSED const uint8_t* g = map.guid.data;
 						LOGD("Unsupported mapping source \"%s\" in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[0]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 					}
 				}

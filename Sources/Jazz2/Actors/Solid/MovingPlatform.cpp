@@ -155,7 +155,7 @@ namespace Jazz2::Actors::Solid
 				aabb2.T += 40.0f;
 				aabb2.B += 20.0f;
 
-				_levelHandler->GetCollidingPlayers(aabb2, [this](Actors::ActorBase* actor) {
+				_levelHandler->GetCollidingPlayers(aabb2, [](Actors::ActorBase* actor) {
 					if (auto* player = runtime_cast<Player*>(actor)) {
 						if (player->GetSpeed().Y < 0.0f) {
 							player->TakeDamage(1, 2.0f);
@@ -165,7 +165,7 @@ namespace Jazz2::Actors::Solid
 				});
 			}
 		} else {
-			_levelHandler->GetCollidingPlayers(aabb, [this](Actors::ActorBase* actor) {
+			_levelHandler->GetCollidingPlayers(aabb, [](Actors::ActorBase* actor) {
 				if (auto* player = runtime_cast<Player*>(actor)) {
 					player->TakeDamage(1, 2.0f);
 				}

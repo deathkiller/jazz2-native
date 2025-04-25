@@ -379,8 +379,7 @@ namespace nCine
 		glGetProgramiv(glHandle_, GL_ACTIVE_ATTRIBUTES, &count);
 
 		for (std::int32_t i = 0; i < count; i++) {
-			GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
-
+			DEATH_UNUSED GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
 			LOGD("Shader program %u - attribute %d : \"%s\"", glHandle_, attribute.GetLocation(), attribute.GetName());
 		}
 		GL_LOG_ERRORS();
