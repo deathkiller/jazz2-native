@@ -83,16 +83,6 @@ namespace nCine::Backends
 		}
 	}
 
-	AndroidMouseState::AndroidMouseState()
-		: buttonStates_(0)
-	{
-	}
-
-	bool AndroidMouseState::isButtonDown(MouseButton button) const
-	{
-		return checkMouseButton(buttonStates_[currentStateIndex_], button);
-	}
-
 	AndroidJoystickState::AndroidJoystickState()
 		: deviceId_(-1), numButtons_(0), numAxes_(0), numAxesMapped_(0),
 			hasDPad_(false), hasHatAxes_(false), hatState_(HatState::Centered)
@@ -131,54 +121,14 @@ namespace nCine::Backends
 #endif
 	}
 
-	bool AndroidMouseState::isLeftButtonDown() const
+	AndroidMouseState::AndroidMouseState()
+		: buttonState_(0)
 	{
-		return (buttonState_ & AMOTION_EVENT_BUTTON_PRIMARY) != 0;
 	}
 
-	bool AndroidMouseState::isMiddleButtonDown() const
+	bool AndroidMouseState::isButtonDown(MouseButton button) const
 	{
-		return (buttonState_ & AMOTION_EVENT_BUTTON_TERTIARY) != 0;
-	}
-
-	bool AndroidMouseState::isRightButtonDown() const
-	{
-		return (buttonState_ & AMOTION_EVENT_BUTTON_SECONDARY) != 0;
-	}
-
-	bool AndroidMouseState::isFourthButtonDown() const
-	{
-		return (buttonState_ & AMOTION_EVENT_BUTTON_BACK) != 0;
-	}
-
-	bool AndroidMouseState::isFifthButtonDown() const
-	{
-		return (buttonState_ & AMOTION_EVENT_BUTTON_FORWARD) != 0;
-	}
-
-	bool AndroidMouseEvent::isLeftButton() const
-	{
-		return (button_ & AMOTION_EVENT_BUTTON_PRIMARY) != 0;
-	}
-
-	bool AndroidMouseEvent::isMiddleButton() const
-	{
-		return (button_ & AMOTION_EVENT_BUTTON_TERTIARY) != 0;
-	}
-
-	bool AndroidMouseEvent::isRightButton() const
-	{
-		return (button_ & AMOTION_EVENT_BUTTON_SECONDARY) != 0;
-	}
-
-	bool AndroidMouseEvent::isFourthButton() const
-	{
-		return (button_ & AMOTION_EVENT_BUTTON_BACK) != 0;
-	}
-
-	bool AndroidMouseEvent::isFifthButton() const
-	{
-		return (button_ & AMOTION_EVENT_BUTTON_FORWARD) != 0;
+		return checkMouseButton(buttonState_, button);
 	}
 
 	bool AndroidJoystickState::isButtonPressed(int buttonId) const

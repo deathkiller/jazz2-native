@@ -86,6 +86,11 @@ namespace nCine
 		return {};
 	}
 
+	bool IInputManager::setClipboardText(StringView text)
+	{
+		return false;
+	}
+
 	StringView IInputManager::getKeyName(Keys key) const
 	{
 		switch (key) {

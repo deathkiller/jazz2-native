@@ -24,27 +24,7 @@ namespace nCine::Backends
 	class UwpMouseState : public MouseState
 	{
 	public:
-		inline bool isLeftButtonDown() const override
-		{
-			// TODO
-			return false;
-		}
-		inline bool isMiddleButtonDown() const override
-		{
-			// TODO
-			return false;
-		}
-		inline bool isRightButtonDown() const override
-		{
-			// TODO
-			return false;
-		}
-		inline bool isFourthButtonDown() const override
-		{
-			// TODO
-			return false;
-		}
-		inline bool isFifthButtonDown() const override
+		bool isButtonDown(MouseButton button) const override
 		{
 			// TODO
 			return false;

@@ -301,6 +301,11 @@ namespace nCine::Backends
 		return result;
 	}
 
+	bool SdlInputManager::setClipboardText(StringView text)
+	{
+		return SDL_SetClipboardText(String::nullTerminatedView(text).data()) == 0;
+	}
+
 	StringView SdlInputManager::getKeyName(Keys key) const
 	{
 		// TODO

@@ -88,6 +88,8 @@ namespace nCine
 
 		/// Returns text from the clipboard if any
 		virtual String getClipboardText() const;
+		/// Sets the clipboard to the specified text
+		virtual bool setClipboardText(StringView text);
 		/// Returns display name of the specified key
 		virtual StringView getKeyName(Keys key) const;
 

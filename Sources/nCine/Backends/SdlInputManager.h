@@ -121,6 +121,7 @@ namespace nCine::Backends
 		inline const KeyboardState& keyboardState() const override { return keyboardState_; }
 
 		String getClipboardText() const override;
+		bool setClipboardText(StringView text) override;
 		StringView getKeyName(Keys key) const override;
 
 		bool isJoyPresent(int joyId) const override;

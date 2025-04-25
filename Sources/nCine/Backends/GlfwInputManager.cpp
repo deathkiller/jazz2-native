@@ -205,6 +205,12 @@ namespace nCine::Backends
 		return glfwGetClipboardString(GlfwGfxDevice::windowHandle());
 	}
 
+	bool GlfwInputManager::setClipboardText(StringView text)
+	{
+		glfwSetClipboardString(GlfwGfxDevice::windowHandle(), String::nullTerminatedView(text).data());
+		return true;
+	}
+
 	bool GlfwInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
