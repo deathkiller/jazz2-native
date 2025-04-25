@@ -104,6 +104,7 @@ namespace nCine::Backends
 		}
 
 		String getClipboardText() const override;
+		bool setClipboardText(StringView text) override;
 
 		bool isJoyPresent(int joyId) const override;
 		const char* joyName(int joyId) const override;
