@@ -923,7 +923,6 @@ namespace nCine::Backends
 			if (AndroidJniHelper::SdkVersion() >= 31) {
 				AndroidJniClass_VibratorManager vibratorManager = inputDevice.getVibratorManager();
 				// There might be more vibrators available than the maximum number supported
-				const int numVibrators = vibratorManager.getNumVibratorIds();
 				joyState.numVibrators_ = vibratorManager.getVibratorIds(joyState.vibratorsIds_, AndroidJoystickState::MaxVibrators);
 
 				if (joyState.numVibrators_ == 0) {
