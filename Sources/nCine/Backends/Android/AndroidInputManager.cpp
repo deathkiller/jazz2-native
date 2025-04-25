@@ -938,7 +938,7 @@ namespace nCine::Backends
 					}
 				}
 #if defined(DEATH_TRACE)
-				LOGI("Device (%d, %d) - Vibs%s (%d)", deviceId, joyId, deviceInfoString, numVibrators);
+				LOGI("Device (%d, %d) - Vibs%s (%d)", deviceId, joyId, deviceInfoString, joyState.numVibrators_);
 #endif
 			}
 
