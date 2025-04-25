@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Input/IInputManager.h"
+#include "AndroidJniHelper.h"
 
 #include <android_native_app_glue.h>
 #include <android/keycodes.h>
@@ -55,36 +56,12 @@ namespace nCine::Backends
 	class AndroidMouseState : public MouseState
 	{
 	public:
-		AndroidMouseState()
-			: buttonState_(0) {}
+		AndroidMouseState();
 
-		bool isLeftButtonDown() const override;
-		bool isMiddleButtonDown() const override;
-		bool isRightButtonDown() const override;
-		bool isFourthButtonDown() const override;
-		bool isFifthButtonDown() const override;
+		bool isButtonDown(MouseButton button) const override;
 
 	private:
 		int buttonState_;
-
-		friend class AndroidInputManager;
-	};
-
-	/// Information about an Android mouse event
-	class AndroidMouseEvent : public MouseEvent
-	{
-	public:
-		AndroidMouseEvent()
-			: button_(0) {}
-
-		bool isLeftButton() const override;
-		bool isMiddleButton() const override;
-		bool isRightButton() const override;
-		bool isFourthButton() const override;
-		bool isFifthButton() const override;
-
-	private:
-		int button_;
 
 		friend class AndroidInputManager;
 	};
@@ -93,6 +70,9 @@ namespace nCine::Backends
 	class AndroidJoystickState : JoystickState
 	{
 	public:
+		/// Supporting no more than a left and a right vibrator
+		static const int MaxVibrators = 2;
+
 		AndroidJoystickState();
 
 		bool isButtonPressed(int buttonId) const override;
@@ -127,6 +107,9 @@ namespace nCine::Backends
 		/// Range value for every available axis (used for -1..1 range remapping)
 		float axesRangeValues_[MaxAxes];
 		unsigned char hatState_; // no more than one hat is supported
+		int numVibrators_;
+		int vibratorsIds_[MaxVibrators];
+		AndroidJniClass_Vibrator vibrators_[MaxVibrators];
 
 		friend class AndroidInputManager;
 	};
@@ -167,7 +150,7 @@ namespace nCine::Backends
 		int joyNumHats(int joyId) const override;
 		int joyNumAxes(int joyId) const override;
 		const JoystickState& joystickState(int joyId) const override;
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override;
+		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override;
 		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
 		void setCursor(Cursor cursor) override {

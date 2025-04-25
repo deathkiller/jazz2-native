@@ -25,7 +25,7 @@ namespace nCine::Backends
 {
 	bool GlfwInputManager::windowHasFocus_ = true;
 	GlfwMouseState GlfwInputManager::mouseState_;
-	GlfwMouseEvent GlfwInputManager::mouseEvent_;
+	MouseEvent GlfwInputManager::mouseEvent_;
 	GlfwScrollEvent GlfwInputManager::scrollEvent_;
 	GlfwKeyboardState GlfwInputManager::keyboardState_;
 	KeyboardEvent GlfwInputManager::keyboardEvent_;
@@ -43,6 +43,43 @@ namespace nCine::Backends
 	int GlfwInputManager::preScalingWidth_ = 0;
 	int GlfwInputManager::preScalingHeight_ = 0;
 	unsigned long int GlfwInputManager::lastFrameWindowSizeChanged_ = 0;
+
+	namespace
+	{
+		MouseButton glfwToNcineMouseButton(int button)
+		{
+			switch (button) {
+				case GLFW_MOUSE_BUTTON_LEFT: return MouseButton::Left;
+				case GLFW_MOUSE_BUTTON_RIGHT: return MouseButton::Right;
+				case GLFW_MOUSE_BUTTON_MIDDLE: return MouseButton::Middle;
+				case GLFW_MOUSE_BUTTON_4: return MouseButton::Fourth;
+				case GLFW_MOUSE_BUTTON_5: return MouseButton::Fifth;
+				default: return MouseButton::Left;
+			}
+		}
+
+		int ncineToGlfwMouseButton(MouseButton button)
+		{
+			switch (button) {
+				case MouseButton::Left: return GLFW_MOUSE_BUTTON_LEFT;
+				case MouseButton::Right: return GLFW_MOUSE_BUTTON_RIGHT;
+				case MouseButton::Middle: return GLFW_MOUSE_BUTTON_MIDDLE;
+				case MouseButton::Fourth: return GLFW_MOUSE_BUTTON_4;
+				case MouseButton::Fifth: return GLFW_MOUSE_BUTTON_5;
+				default: return GLFW_MOUSE_BUTTON_LEFT;
+			}
+		}
+	}
+
+	GlfwMouseState::GlfwMouseState()
+	{
+	}
+
+	bool GlfwMouseState::isButtonDown(MouseButton button) const
+	{
+		const int glfwButton = ncineToGlfwMouseButton(button);
+		return glfwGetMouseButton(GlfwGfxDevice::windowHandle(), glfwButton) == GLFW_PRESS;
+	}
 
 	GlfwInputManager::GlfwInputManager()
 	{
@@ -237,7 +274,7 @@ namespace nCine::Backends
 		return (isJoyPresent(joyId) ? joystickStates_[joyId] : nullJoystickState_);
 	}
 
-	bool GlfwInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
+	bool GlfwInputManager::joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs)
 	{
 		// TODO
 		return false;
@@ -383,7 +420,7 @@ namespace nCine::Backends
 		glfwGetCursorPos(window, &xCursor, &yCursor);
 		mouseEvent_.x = static_cast<int>(xCursor);
 		mouseEvent_.y = static_cast<int>(yCursor);
-		mouseEvent_.button_ = button;
+		mouseEvent_.button = glfwToNcineMouseButton(button);
 
 		if (action == GLFW_PRESS) {
 			inputEventHandler_->OnMouseDown(mouseEvent_);

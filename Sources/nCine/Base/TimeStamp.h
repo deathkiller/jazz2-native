@@ -10,7 +10,7 @@ namespace nCine
 	public:
 		TimeStamp();
 
-		/// Returns a new time stamp initialized now
+		/// Returns a new time stamp initialized to the current clock value
 		inline static TimeStamp now() {
 			return TimeStamp(clock().now());
 		}

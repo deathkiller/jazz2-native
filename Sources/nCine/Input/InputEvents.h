@@ -123,6 +123,15 @@ namespace nCine
 		float x, y, z;
 	};
 
+	enum class MouseButton : short int
+	{
+		Left,
+		Right,
+		Middle,
+		Fourth,
+		Fifth
+	};
+
 	/// Information about mouse state
 	class MouseState
 	{
@@ -132,11 +141,11 @@ namespace nCine
 		/// Pointer position on the Y axis
 		std::int32_t y;
 
-		virtual bool isLeftButtonDown() const = 0;
-		virtual bool isMiddleButtonDown() const = 0;
-		virtual bool isRightButtonDown() const = 0;
-		virtual bool isFourthButtonDown() const = 0;
-		virtual bool isFifthButtonDown() const = 0;
+		/// Returns `true` if the specified button is down this frame
+		virtual bool isButtonDown(MouseButton button) const = 0;
+
+	protected:
+		static const unsigned int NumButtons = 5;
 	};
 
 	/// Information about a mouse event
@@ -147,12 +156,8 @@ namespace nCine
 		std::int32_t x;
 		/// Pointer position on the Y axis
 		std::int32_t y;
-
-		virtual bool isLeftButton() const = 0;
-		virtual bool isMiddleButton() const = 0;
-		virtual bool isRightButton() const = 0;
-		virtual bool isFourthButton() const = 0;
-		virtual bool isFifthButton() const = 0;
+		/// The button that has been pressed or released
+		MouseButton button;
 	};
 
 	/// Information about a scroll event (mouse wheel, touchpad gesture, etc.)

@@ -183,9 +183,11 @@ if(NCINE_WITH_AUDIO)
 	set(GRADLE_JNILIBS_DIRS "${GRADLE_JNILIBS_DIRS}, 'src/main/cpp/openal'")
 endif()
 
-set(MANIFEST_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />\n"
+string(CONCAT MANIFEST_PERMISSIONS
+	"\t<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />\n"
 	"\t<uses-permission android:name=\"android.permission.INTERNET\" />\n"
-	"\t<uses-permission android:name=\"android.permission.MANAGE_EXTERNAL_STORAGE\" />")
+	"\t<uses-permission android:name=\"android.permission.MANAGE_EXTERNAL_STORAGE\" />\n"
+	"\t<uses-permission android:name=\"android.permission.VIBRATE\" />")
 if(NCINE_WITH_TRACY)
 	string(CONCAT MANIFEST_PERMISSIONS "${MANIFEST_PERMISSIONS}\n"
 		"\t<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />")

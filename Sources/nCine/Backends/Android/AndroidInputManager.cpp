@@ -31,7 +31,7 @@ namespace nCine::Backends
 	KeyboardEvent AndroidInputManager::keyboardEvent_;
 	TextInputEvent AndroidInputManager::textInputEvent_;
 	AndroidMouseState AndroidInputManager::mouseState_;
-	AndroidMouseEvent AndroidInputManager::mouseEvent_;
+	MouseEvent AndroidInputManager::mouseEvent_;
 	ScrollEvent AndroidInputManager::scrollEvent_;
 	int AndroidInputManager::simulatedMouseButtonState_ = 0;
 
@@ -52,6 +52,47 @@ namespace nCine::Backends
 		AMOTION_EVENT_AXIS_HAT_X, AMOTION_EVENT_AXIS_HAT_Y
 	};
 
+	namespace
+	{
+		MouseButton androidToNcineMouseButton(int button)
+		{
+			if (button == AMOTION_EVENT_BUTTON_PRIMARY)
+				return MouseButton::Left;
+			else if (button == AMOTION_EVENT_BUTTON_SECONDARY)
+				return MouseButton::Right;
+			else if (button == AMOTION_EVENT_BUTTON_TERTIARY)
+				return MouseButton::Middle;
+			else if (button == AMOTION_EVENT_BUTTON_BACK)
+				return MouseButton::Fourth;
+			else if (button == AMOTION_EVENT_BUTTON_FORWARD)
+				return MouseButton::Fifth;
+			else
+				return MouseButton::Left;
+		}
+
+		bool checkMouseButton(int buttonState, MouseButton button)
+		{
+			switch (button) {
+				case MouseButton::Left: return ((buttonState & AMOTION_EVENT_BUTTON_PRIMARY) != 0);
+				case MouseButton::Right: return ((buttonState & AMOTION_EVENT_BUTTON_SECONDARY) != 0);
+				case MouseButton::Middle: return ((buttonState & AMOTION_EVENT_BUTTON_TERTIARY) != 0);
+				case MouseButton::Fourth: return ((buttonState & AMOTION_EVENT_BUTTON_BACK) != 0);
+				case MouseButton::Fifth: return ((buttonState & AMOTION_EVENT_BUTTON_FORWARD) != 0);
+				default: return false;
+			}
+		}
+	}
+
+	AndroidMouseState::AndroidMouseState()
+		: buttonStates_(0)
+	{
+	}
+
+	bool AndroidMouseState::isButtonDown(MouseButton button) const
+	{
+		return checkMouseButton(buttonStates_[currentStateIndex_], button);
+	}
+
 	AndroidJoystickState::AndroidJoystickState()
 		: deviceId_(-1), numButtons_(0), numAxes_(0), numAxesMapped_(0),
 			hasDPad_(false), hasHatAxes_(false), hatState_(HatState::Centered)
@@ -66,6 +107,9 @@ namespace nCine::Backends
 			axesMinValues_[i] = -1.0f;
 			axesRangeValues_[i] = 2.0f;
 			axesValues_[i] = 0.0f;
+		}
+		for (int i = 0; i < MaxVibrators; i++) {
+			vibratorsIds_[i] = 0;
 		}
 	}
 
@@ -279,9 +323,33 @@ namespace nCine::Backends
 		}
 	}
 	
-	bool AndroidInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
+	bool AndroidInputManager::joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs)
 	{
-		// TODO: Rumble on Android
+		if (isJoyPresent(joyId)) {
+			if (joystickStates_[joyId].numVibrators_ > 0) {
+				const unsigned char amplitude = static_cast<unsigned char>(std::clamp(lowFreqIntensity, 0.0f, 1.0f) * 255);
+
+				joystickStates_[joyId].vibrators_[0].cancel();
+				// `amplitude` must either be `DEFAULT_AMPLITUDE`, or between 1 and 255 inclusive
+				if (amplitude > 0) {
+					const AndroidJniClass_VibrationEffect vibration = AndroidJniClass_VibrationEffect::createOneShot(durationMs, amplitude);
+					joystickStates_[joyId].vibrators_[0].vibrate(vibration);
+				}
+			}
+			if (joystickStates_[joyId].numVibrators_ > 1) {
+				// Clamp intensity between 0.0f and 1.0f
+				const unsigned char amplitude = static_cast<unsigned char>(std::clamp(highFreqIntensity, 0.0f, 1.0f) * 255);
+
+				joystickStates_[joyId].vibrators_[1].cancel();
+				// `amplitude` must either be `DEFAULT_AMPLITUDE`, or between 1 and 255 inclusive
+				if (amplitude > 0) {
+					const AndroidJniClass_VibrationEffect vibration = AndroidJniClass_VibrationEffect::createOneShot(durationMs, amplitude);
+					joystickStates_[joyId].vibrators_[1].vibrate(vibration);
+				}
+			}
+			return true;
+		}
+
 		return false;
 	}
 
@@ -552,7 +620,7 @@ namespace nCine::Backends
 				buttonState &= ~maskOutButtons;
 				buttonState |= simulatedMouseButtonState_;
 
-				mouseEvent_.button_ = mouseState_.buttonState_ ^ buttonState; // pressed button mask
+				mouseEvent_.button = androidToNcineMouseButton(mouseState_.buttonState_ ^ buttonState); // pressed button mask
 				mouseState_.buttonState_ = buttonState;
 				inputEventHandler_->OnMouseDown(mouseEvent_);
 				break;
@@ -561,7 +629,7 @@ namespace nCine::Backends
 				buttonState &= ~maskOutButtons;
 				buttonState |= simulatedMouseButtonState_;
 
-				mouseEvent_.button_ = mouseState_.buttonState_ ^ buttonState; // released button mask
+				mouseEvent_.button = androidToNcineMouseButton(mouseState_.buttonState_ ^ buttonState); // released button mask
 				mouseState_.buttonState_ = buttonState;
 				inputEventHandler_->OnMouseUp(mouseEvent_);
 				break;
@@ -592,13 +660,13 @@ namespace nCine::Backends
 			if (action == AKEY_EVENT_ACTION_DOWN && oldAction == AKEY_EVENT_ACTION_UP) {
 				oldAction = action;
 				simulatedMouseButtonState_ |= simulatedButton;
-				mouseEvent_.button_ = simulatedButton;
+				mouseEvent_.button = androidToNcineMouseButton(simulatedButton);
 				mouseState_.buttonState_ |= simulatedButton;
 				inputEventHandler_->OnMouseDown(mouseEvent_);
 			} else if (action == AKEY_EVENT_ACTION_UP && oldAction == AKEY_EVENT_ACTION_DOWN) {
 				oldAction = action;
 				simulatedMouseButtonState_ &= ~simulatedButton;
-				mouseEvent_.button_ = simulatedButton;
+				mouseEvent_.button = androidToNcineMouseButton(simulatedButton);
 				mouseState_.buttonState_ &= ~simulatedButton;
 				inputEventHandler_->OnMouseUp(mouseEvent_);
 			}
@@ -702,8 +770,9 @@ namespace nCine::Backends
 			deviceInfo(deviceId, joyId);
 
 			const uint8_t* g = joystickStates_[joyId].guid_.data;
-			LOGI("Device %d \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] has been connected as gamepad %d - %d axes, %d buttons",
-				deviceId, joystickStates_[joyId].name_, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_);
+			LOGI("Device %d \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] has been connected as gamepad %d - %d axes, %d buttons, %d vibs",
+				deviceId, joystickStates_[joyId].name_, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
+				joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_, joystickStates_[joyId].numVibrators_);
 			
 			joystickStates_[joyId].deviceId_ = deviceId;
 
@@ -899,6 +968,29 @@ namespace nCine::Backends
 			joyState.numHats_ = 0;
 			if (joyState.hasDPad_ || joyState.hasHatAxes_) {
 				joyState.numHats_ = 1; // No more than one hat is supported
+			}
+
+			if (AndroidJniHelper::SdkVersion() >= 31) {
+				AndroidJniClass_VibratorManager vibratorManager = inputDevice.getVibratorManager();
+				// There might be more vibrators available than the maximum number supported
+				const int numVibrators = vibratorManager.getNumVibratorIds();
+				joyState.numVibrators_ = vibratorManager.getVibratorIds(joyState.vibratorsIds_, AndroidJoystickState::MaxVibrators);
+
+				if (joyState.numVibrators_ == 0) {
+#if defined(DEATH_TRACE)
+					sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
+#endif
+				} else {
+					for (int i = 0; i < AndroidJoystickState::MaxVibrators; i++) {
+						joyState.vibrators_[i] = vibratorManager.getVibrator(joyState.vibratorsIds_[i]);
+#if defined(DEATH_TRACE)
+						sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d", joyState.vibratorsIds_[i]);
+#endif
+					}
+				}
+#if defined(DEATH_TRACE)
+				LOGI("Device (%d, %d) - Vibs%s (%d)", deviceId, joyId, deviceInfoString, numVibrators);
+#endif
 			}
 
 			// Update the GUID with capability bits

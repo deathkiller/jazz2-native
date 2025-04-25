@@ -33,55 +33,9 @@ namespace nCine::Backends
 	class GlfwMouseState : public MouseState
 	{
 	public:
-		inline bool isLeftButtonDown() const override
-		{
-			return (glfwGetMouseButton(GlfwGfxDevice::windowHandle(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
-		}
-		inline bool isMiddleButtonDown() const override
-		{
-			return (glfwGetMouseButton(GlfwGfxDevice::windowHandle(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
-		}
-		inline bool isRightButtonDown() const override
-		{
-			return (glfwGetMouseButton(GlfwGfxDevice::windowHandle(), GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
-		}
-		inline bool isFourthButtonDown() const override
-		{
-			return (glfwGetMouseButton(GlfwGfxDevice::windowHandle(), GLFW_MOUSE_BUTTON_4) == GLFW_PRESS);
-		}
-		inline bool isFifthButtonDown() const override
-		{
-			return (glfwGetMouseButton(GlfwGfxDevice::windowHandle(), GLFW_MOUSE_BUTTON_5) == GLFW_PRESS);
-		}
-	};
+		GlfwMouseState();
 
-	/// Information about a GLFW mouse event
-	class GlfwMouseEvent : public MouseEvent
-	{
-	public:
-		GlfwMouseEvent()
-			: button_(0) {}
-
-		inline bool isLeftButton() const override {
-			return button_ == GLFW_MOUSE_BUTTON_LEFT;
-		}
-		inline bool isMiddleButton() const override {
-			return button_ == GLFW_MOUSE_BUTTON_MIDDLE;
-		}
-		inline bool isRightButton() const override {
-			return button_ == GLFW_MOUSE_BUTTON_RIGHT;
-		}
-		inline bool isFourthButton() const override {
-			return button_ == GLFW_MOUSE_BUTTON_4;
-		}
-		inline bool isFifthButton() const override {
-			return button_ == GLFW_MOUSE_BUTTON_5;
-		}
-
-	private:
-		int button_;
-
-		friend class GlfwInputManager;
+		bool isButtonDown(MouseButton button) const override;
 	};
 
 	/// Information about a GLFW scroll event
@@ -158,7 +112,7 @@ namespace nCine::Backends
 		int joyNumHats(int joyId) const override;
 		int joyNumAxes(int joyId) const override;
 		const JoystickState& joystickState(int joyId) const override;
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override;
+		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override;
 		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
 		void setCursor(Cursor cursor) override;
@@ -195,7 +149,7 @@ namespace nCine::Backends
 
 		static bool windowHasFocus_;
 		static GlfwMouseState mouseState_;
-		static GlfwMouseEvent mouseEvent_;
+		static MouseEvent mouseEvent_;
 		static GlfwScrollEvent scrollEvent_;
 		static GlfwKeyboardState keyboardState_;
 		static KeyboardEvent keyboardEvent_;

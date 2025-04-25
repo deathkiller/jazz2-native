@@ -28,7 +28,7 @@ namespace nCine::Backends
 {
 	TouchEvent SdlInputManager::touchEvent_;
 	SdlMouseState SdlInputManager::mouseState_;
-	SdlMouseEvent SdlInputManager::mouseEvent_;
+	MouseEvent SdlInputManager::mouseEvent_;
 	SdlScrollEvent SdlInputManager::scrollEvent_;
 	SdlKeyboardState SdlInputManager::keyboardState_;
 	KeyboardEvent SdlInputManager::keyboardEvent_;
@@ -42,6 +42,48 @@ namespace nCine::Backends
 	JoyConnectionEvent SdlInputManager::joyConnectionEvent_;
 
 	char SdlInputManager::joyGuidString_[33];
+
+	namespace {
+
+		MouseButton sdlToNcineMouseButton(int button)
+		{
+			if (button == SDL_BUTTON_LEFT)
+				return MouseButton::Left;
+			else if (button == SDL_BUTTON_RIGHT)
+				return MouseButton::Right;
+			else if (button == SDL_BUTTON_MIDDLE)
+				return MouseButton::Middle;
+			else if (button == SDL_BUTTON_X1)
+				return MouseButton::Fourth;
+			else if (button == SDL_BUTTON_X2)
+				return MouseButton::Fifth;
+			else
+				return MouseButton::Left;
+		}
+
+		int ncineToSdlMouseButtonMask(MouseButton button)
+		{
+			switch (button) {
+				case MouseButton::Left: return SDL_BUTTON_LMASK;
+				case MouseButton::Right: return SDL_BUTTON_RMASK;
+				case MouseButton::Middle: return SDL_BUTTON_MMASK;
+				case MouseButton::Fourth: return SDL_BUTTON_X1MASK;
+				case MouseButton::Fifth: return SDL_BUTTON_X2MASK;
+				default: return SDL_BUTTON_LMASK;
+			}
+		}
+	}
+
+	SdlMouseState::SdlMouseState()
+		: buttons_(0)
+	{
+	}
+
+	bool SdlMouseState::isButtonDown(MouseButton button) const
+	{
+		const int sdlButtonMask = ncineToSdlMouseButtonMask(button);
+		return (buttons_ & sdlButtonMask) != 0;
+	}
 
 	SdlInputManager::SdlInputManager()
 	{
@@ -146,7 +188,7 @@ namespace nCine::Backends
 			case SDL_MOUSEBUTTONUP:
 				mouseEvent_.x = event.button.x;
 				mouseEvent_.y = event.button.y;
-				mouseEvent_.button_ = event.button.button;
+				mouseEvent_.button = sdlToNcineMouseButton(event.button.button);
 				break;
 			case SDL_MOUSEMOTION:
 				if (cursor_ != Cursor::HiddenLocked) {
@@ -336,14 +378,14 @@ namespace nCine::Backends
 		return joystickStates_[joyId];
 	}
 
-	bool SdlInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
+	bool SdlInputManager::joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs)
 	{
 		if (!isJoyPresent(joyId))
 			return false;
 
 		return SDL_JoystickRumble(sdlJoysticks_[joyId],
-			(std::uint16_t)(std::clamp(lowFrequency, 0.0f, 1.0f) * UINT16_MAX),
-			(std::uint16_t)(std::clamp(highFrequency, 0.0f, 1.0f) * UINT16_MAX),
+			(std::uint16_t)(std::clamp(lowFreqIntensity, 0.0f, 1.0f) * UINT16_MAX),
+			(std::uint16_t)(std::clamp(highFreqIntensity, 0.0f, 1.0f) * UINT16_MAX),
 			durationMs) == 0;
 	}
 

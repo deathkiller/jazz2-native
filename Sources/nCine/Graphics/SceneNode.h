@@ -274,11 +274,18 @@ namespace nCine
 		/// Bit positions inside the dirty bitset
 		enum DirtyBitPositions
 		{
+			// Reset by `SceneNode::transform()`
 			TransformationBit = 0,
 			ColorBit = 1,
+			// Reset by `BaseSprite::updateRenderCommand()`
 			SizeBit = 2,
 			TextureBit = 3,
-			AabbBit = 4
+			// Reset by `DrawableNode::updateCulling()`
+			AabbBit = 4,
+			// Reset by `DrawableNode::draw()` (for non culled nodes) and by `SceneNode::update()`
+			// They are both used for OpenGL GPU uploading.
+			TransformationUploadBit = 5,
+			ColorUploadBit = 6,
 		};
 
 		/// A pointer to the parent node
