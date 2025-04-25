@@ -421,6 +421,7 @@ namespace Jazz2::UI::Menu
 				RecalcLayoutForScreenKeyboard();
 				break;
 			}
+#if defined(WITH_MULTIPLAYER)
 			case UserProfileOptionsItemType::UniquePlayerID: {
 				auto& uuid = PreferencesCache::UniquePlayerID;
 				char uniquePlayerId[128];
@@ -432,6 +433,7 @@ namespace Jazz2::UI::Menu
 				}
 				break;
 			}
+#endif
 		}
 	}
 
