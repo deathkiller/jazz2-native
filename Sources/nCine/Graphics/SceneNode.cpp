@@ -272,10 +272,13 @@ namespace nCine
 				children_[i]->OnUpdate(timeMult);
 			}
 
+			dirtyBits_.reset(DirtyBitPositions::TransformationBit);
+			dirtyBits_.reset(DirtyBitPositions::ColorBit);
+
 			// A non-drawable scenenode does not have the `updateRenderCommand()` method to reset the flags
-			if (_type == ObjectType::SceneNode) {
-				dirtyBits_.reset(DirtyBitPositions::TransformationBit);
-				dirtyBits_.reset(DirtyBitPositions::ColorBit);
+			if (_type == ObjectType::SceneNode || _type == ObjectType::ParticleSystem) {
+				dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
+				dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
 			}
 
 			lastFrameUpdated_ = theApplication().GetFrameCount();
@@ -355,6 +358,7 @@ namespace nCine
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
 			absColor_ = (parent_ != nullptr ? color_ * parent_->absColor_ : color_);
+			dirtyBits_.set(DirtyBitPositions::ColorUploadBit);
 		}
 		const bool parentHasDirtyTransformation = parent_ && parent_->dirtyBits_.test(DirtyBitPositions::TransformationBit);
 		if (parentHasDirtyTransformation) {
@@ -362,28 +366,28 @@ namespace nCine
 			dirtyBits_.set(DirtyBitPositions::AabbBit);
 		}
 
-		if (!dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
-			return;
+		if (dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
+			// Calculating world and local matrices
+			localMatrix_ = Matrix4x4f::Translation(position_.X, position_.Y, 0.0f);
+			localMatrix_.RotateZ(rotation_);
+			localMatrix_.Scale(scaleFactor_.X, scaleFactor_.Y, 1.0f);
+			localMatrix_.Translate(-anchorPoint_.X, -anchorPoint_.Y, 0.0f);
+
+			absScaleFactor_ = scaleFactor_;
+			absRotation_ = rotation_;
+
+			if (parent_ != nullptr) {
+				worldMatrix_ = parent_->worldMatrix_ * localMatrix_;
+
+				absScaleFactor_ *= parent_->absScaleFactor_;
+				absRotation_ += parent_->absRotation_;
+			} else {
+				worldMatrix_ = localMatrix_;
+			}
+			absPosition_.X = worldMatrix_[3][0];
+			absPosition_.Y = worldMatrix_[3][1];
+
+			dirtyBits_.set(DirtyBitPositions::TransformationUploadBit);
 		}
-
-		// Calculating world and local matrices
-		localMatrix_ = Matrix4x4f::Translation(position_.X, position_.Y, 0.0f);
-		localMatrix_.RotateZ(rotation_);
-		localMatrix_.Scale(scaleFactor_.X, scaleFactor_.Y, 1.0f);
-		localMatrix_.Translate(-anchorPoint_.X, -anchorPoint_.Y, 0.0f);
-
-		absScaleFactor_ = scaleFactor_;
-		absRotation_ = rotation_;
-
-		if (parent_ != nullptr) {
-			worldMatrix_ = parent_->worldMatrix_ * localMatrix_;
-
-			absScaleFactor_ *= parent_->absScaleFactor_;
-			absRotation_ += parent_->absRotation_;
-		} else {
-			worldMatrix_ = localMatrix_;
-		}
-		absPosition_.X = worldMatrix_[3][0];
-		absPosition_.Y = worldMatrix_[3][1];
 	}
 }

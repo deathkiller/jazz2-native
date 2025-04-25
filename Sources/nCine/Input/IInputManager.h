@@ -106,7 +106,7 @@ namespace nCine
 		/// Returns the state of the joystick
 		virtual const JoystickState& joystickState(int joyId) const = 0;
 		/// Starts a main rumble effect with specified duration
-		virtual bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) = 0;
+		virtual bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) = 0;
 		/// Starts a rumble effect on triggers with specified duration
 		virtual bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) = 0;
 
@@ -165,7 +165,7 @@ namespace nCine
 		int joyNumAxes(int joyId) const override { return 0; }
 
 		const JoystickState& joystickState(int joyId) const override { return joyState_; }
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override { return false; }
+		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override { return false; }
 		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override { return false; }
 
 		void setCursor(Cursor cursor) override {}
@@ -174,11 +174,7 @@ namespace nCine
 		class NullMouseState : public MouseState
 		{
 		public:
-			bool isLeftButtonDown() const override { return false; }
-			bool isMiddleButtonDown() const override { return false; }
-			bool isRightButtonDown() const override { return false; }
-			bool isFourthButtonDown() const override { return false; }
-			bool isFifthButtonDown() const override { return false; }
+			bool isButtonDown(MouseButton button) const override { return false; }
 		};
 
 		class NullKeyboardState : public KeyboardState

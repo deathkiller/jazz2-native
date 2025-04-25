@@ -112,16 +112,16 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 
-		if (dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
+		if (dirtyBits_.test(DirtyBitPositions::TransformationUploadBit)) {
 			renderCommand_.setTransformation(worldMatrix_);
-			dirtyBits_.reset(DirtyBitPositions::TransformationBit);
+			//dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
 		}
-		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
+		if (dirtyBits_.test(DirtyBitPositions::ColorUploadBit)) {
 			GLUniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
 			if (colorUniform != nullptr) {
 				colorUniform->SetFloatVector(absColor().Data());
 			}
-			dirtyBits_.reset(DirtyBitPositions::ColorBit);
+			//dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
 			GLUniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);

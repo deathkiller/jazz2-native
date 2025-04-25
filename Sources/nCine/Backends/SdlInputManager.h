@@ -37,36 +37,12 @@ namespace nCine::Backends
 	class SdlMouseState : public MouseState
 	{
 	public:
-		SdlMouseState()
-			: buttons_(0) {}
+		SdlMouseState();
 
-		inline bool isLeftButtonDown() const override { return (buttons_ & SDL_BUTTON_LMASK) != 0; }
-		inline bool isMiddleButtonDown() const override { return (buttons_ & SDL_BUTTON_MMASK) != 0; }
-		inline bool isRightButtonDown() const override { return (buttons_ & SDL_BUTTON_RMASK) != 0; }
-		inline bool isFourthButtonDown() const override { return (buttons_ & SDL_BUTTON_X1MASK) != 0; }
-		inline bool isFifthButtonDown() const override { return (buttons_ & SDL_BUTTON_X2MASK) != 0; }
+		bool isButtonDown(MouseButton button) const override;
 
 	private:
 		unsigned int buttons_;
-
-		friend class SdlInputManager;
-	};
-
-	/// Information about an SDL mouse event
-	class SdlMouseEvent : public MouseEvent
-	{
-	public:
-		SdlMouseEvent()
-			: button_(0) {}
-
-		inline bool isLeftButton() const override { return button_ == SDL_BUTTON_LEFT; }
-		inline bool isMiddleButton() const override { return button_ == SDL_BUTTON_MIDDLE; }
-		inline bool isRightButton() const override { return button_ == SDL_BUTTON_RIGHT; }
-		inline bool isFourthButton() const override { return button_ == SDL_BUTTON_X1; }
-		inline bool isFifthButton() const override { return button_ == SDL_BUTTON_X2; }
-
-	private:
-		unsigned char button_;
 
 		friend class SdlInputManager;
 	};
@@ -154,7 +130,7 @@ namespace nCine::Backends
 		int joyNumHats(int joyId) const override;
 		int joyNumAxes(int joyId) const override;
 		const JoystickState &joystickState(int joyId) const override;
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override;
+		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override;
 		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
 		void setCursor(Cursor cursor) override;
@@ -164,7 +140,7 @@ namespace nCine::Backends
 
 		static TouchEvent touchEvent_;
 		static SdlMouseState mouseState_;
-		static SdlMouseEvent mouseEvent_;
+		static MouseEvent mouseEvent_;
 		static SdlScrollEvent scrollEvent_;
 		static SdlKeyboardState keyboardState_;
 		static KeyboardEvent keyboardEvent_;

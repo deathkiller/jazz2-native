@@ -93,6 +93,7 @@ namespace nCine::Backends
 	class AndroidJniClass_MotionRange : public AndroidJniClass
 	{
 	public:
+		static void init();
 		explicit AndroidJniClass_MotionRange(jobject javaObject);
 		float getMin() const;
 		float getRange() const;
@@ -101,6 +102,58 @@ namespace nCine::Backends
 		static jclass javaClass_;
 		static jmethodID midGetMin_;
 		static jmethodID midGetRange_;
+	};
+
+	/// A class to handle JNI requests to `android.os.VibrationEffect`
+	class AndroidJniClass_VibrationEffect : public AndroidJniClass
+	{
+	public:
+		static void init();
+		explicit AndroidJniClass_VibrationEffect(jobject javaObject)
+			: AndroidJniClass(javaObject) {}
+		static AndroidJniClass_VibrationEffect createOneShot(long milliseconds, int amplitude);
+
+	private:
+		static jclass javaClass_;
+		static jmethodID midCreateOneShot_;
+	};
+
+	/// A class to handle JNI requests to `android.os.Vibrator`
+	class AndroidJniClass_Vibrator : public AndroidJniClass
+	{
+	public:
+		static void init();
+		AndroidJniClass_Vibrator()
+			: AndroidJniClass() {}
+		explicit AndroidJniClass_Vibrator(jobject javaObject)
+			: AndroidJniClass(javaObject) {}
+
+		void cancel() const;
+		void vibrate(const AndroidJniClass_VibrationEffect& vibe) const;
+
+	private:
+		static jclass javaClass_;
+		static jmethodID midCancel_;
+		static jmethodID midVibrate_;
+	};
+
+	/// A class to handle JNI requests to `android.os.VibratorManager`
+	class AndroidJniClass_VibratorManager : public AndroidJniClass
+	{
+	public:
+		static void init();
+		explicit AndroidJniClass_VibratorManager(jobject javaObject)
+			: AndroidJniClass(javaObject) {}
+
+		void cancel() const;
+		int getVibratorIds(int* destination, int maxSize) const;
+		AndroidJniClass_Vibrator getVibrator(int vibratorId) const;
+
+	private:
+		static jclass javaClass_;
+		static jmethodID midCancel_;
+		static jmethodID midGetVibratorIds_;
+		static jmethodID midGetVibrator_;
 	};
 
 	/// Handles JNI requests to `android.view.InputDevice`
@@ -119,6 +172,7 @@ namespace nCine::Backends
 		AndroidJniClass_MotionRange getMotionRange(int axis) const;
 		int getSources() const;
 		void hasKeys(const int* buttons, const int length, bool* bools) const;
+		AndroidJniClass_VibratorManager getVibratorManager() const;
 
 	private:
 		static jclass javaClass_;
@@ -131,6 +185,7 @@ namespace nCine::Backends
 		static jmethodID midGetMotionRange_;
 		static jmethodID midGetSources_;
 		static jmethodID midHasKeys_;
+		static jmethodID midGetVibratorManager_;
 	};
 
 	/// Handles JNI requests to `android.view.KeyCharacterMap`
@@ -279,7 +334,6 @@ namespace nCine::Backends
 		static void shutdown();
 
 		static AndroidJniClass_Display getDisplay(int displayId);
-		static int getNumDisplays();
 		static int getDisplays(AndroidJniClass_Display* destination, int maxSize);
 
 	private:
