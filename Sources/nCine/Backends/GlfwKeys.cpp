@@ -34,8 +34,6 @@ namespace nCine::Backends
 
 			case GLFW_KEY_LEFT_BRACKET:		return Keys::LeftBracket;
 			case GLFW_KEY_BACKSLASH:		return Keys::Backslash;
-			case GLFW_KEY_WORLD_1:			return ImGuiKey_Oem102;
-			case GLFW_KEY_WORLD_2:			return ImGuiKey_Oem102;
 			case GLFW_KEY_RIGHT_BRACKET:	return Keys::RightBracket;
 			case GLFW_KEY_GRAVE_ACCENT:		return Keys::Backquote;
 			case GLFW_KEY_WORLD_1:			return Keys::World1;
