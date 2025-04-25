@@ -145,8 +145,7 @@ namespace nCine::Backends
 	{
 	public:
 		static void init();
-		explicit AndroidJniClass_VibratorManager(jobject javaObject)
-			: AndroidJniClass(javaObject) {}
+		explicit AndroidJniClass_VibratorManager(jobject javaObject);
 
 		void cancel() const;
 		int getVibratorIds(int* destination, int maxSize) const;

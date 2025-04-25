@@ -419,6 +419,11 @@ namespace nCine::Backends
 		midGetVibrator_ = getMethodID(javaClass_, "getVibrator", "(I)Landroid/os/Vibrator;");
 	}
 
+	AndroidJniClass_VibratorManager::AndroidJniClass_VibratorManager(jobject javaObject)
+		: AndroidJniClass(javaObject)
+	{
+	}
+
 	void AndroidJniClass_VibratorManager::cancel() const
 	{
 		AndroidJniHelper::jniEnv->CallVoidMethod(javaObject_, midCancel_);
@@ -460,6 +465,7 @@ namespace nCine::Backends
 		midGetMotionRange_ = getMethodID(javaClass_, "getMotionRange", "(I)Landroid/view/InputDevice$MotionRange;");
 		midGetSources_ = getMethodID(javaClass_, "getSources", "()I");
 		midHasKeys_ = getMethodID(javaClass_, "hasKeys", "([I)[Z");
+		midGetVibratorManager_ = getMethodID(javaClass_, "getVibratorManager", "()Landroid/os/VibratorManager;");
 	}
 
 	AndroidJniClass_InputDevice AndroidJniClass_InputDevice::getDevice(int deviceId)
