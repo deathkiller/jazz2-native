@@ -335,6 +335,11 @@ namespace Jazz2
 		return 180.0f;
 	}
 
+	bool LevelHandler::CanEventDisappear(EventType eventType) const
+	{
+		return true;
+	}
+
 	ArrayView<const std::shared_ptr<Actors::ActorBase>> LevelHandler::GetActors() const
 	{
 		return _actors;

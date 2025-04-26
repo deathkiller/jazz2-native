@@ -4,8 +4,7 @@
 namespace Jazz2::Actors::Collectibles
 {
 	FoodCollectible::FoodCollectible()
-		:
-		_isDrinkable(false)
+		: _isDrinkable(false)
 	{
 	}
 

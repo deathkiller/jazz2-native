@@ -4,6 +4,7 @@
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/TNT.h"
 #include "../Enemies/TurtleShell.h"
+#include "../../ILevelHandler.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Base/Random.h"
@@ -34,7 +35,9 @@ namespace Jazz2::Actors::Collectibles
 			_untouched = false;
 			SetState(ActorState::ApplyGravitation, true);
 
-			_timeLeft = 90.0f * FrameTimer::FramesPerSecond;
+			if (_levelHandler->CanEventDisappear(details.Type)) {
+				_timeLeft = 90.0f * FrameTimer::FramesPerSecond;
+			}
 		}
 
 		if ((details.State & ActorState::Illuminated) == ActorState::Illuminated) {

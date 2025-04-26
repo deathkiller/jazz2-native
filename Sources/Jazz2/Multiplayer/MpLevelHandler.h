@@ -71,6 +71,7 @@ namespace Jazz2::Multiplayer
 		bool IsLocalSession() const override;
 		bool IsPausable() const override;
 		float GetHurtInvulnerableTime() const override;
+		bool CanEventDisappear(EventType eventType) const override;
 
 		float GetDefaultAmbientLight() const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
