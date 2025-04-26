@@ -72,9 +72,9 @@ namespace Jazz2
 		virtual bool IsPausable() const = 0;
 		/** @brief Returns `true` if Reforged Gameplay is enabled */
 		virtual bool IsReforged() const = 0;
-		/** @brief Returns `true` is sugar rush can be activated */
+		/** @brief Returns `true` if sugar rush can be activated */
 		virtual bool CanActivateSugarRush() const = 0;
-		/** @brief Returns `true` is event can be safely despawned */
+		/** @brief Returns `true` if event can be safely despawned */
 		virtual bool CanEventDisappear(EventType eventType) const = 0;
 		/** @brief Returns `true` if players can collide with each other */
 		virtual bool CanPlayersCollide() const = 0;
