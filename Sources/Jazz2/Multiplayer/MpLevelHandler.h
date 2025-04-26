@@ -268,6 +268,7 @@ namespace Jazz2::Multiplayer
 		void SetPlayerReady(PlayerType playerType);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
+		static bool PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode);
 		static void InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor);
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
