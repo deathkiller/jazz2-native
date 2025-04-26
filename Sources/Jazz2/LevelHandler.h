@@ -105,13 +105,14 @@ namespace Jazz2
 		bool IsLocalSession() const override;
 		bool IsPausable() const override;
 		bool IsReforged() const override;
+		bool CanActivateSugarRush() const override;
+		bool CanEventDisappear(EventType eventType) const override;
 		bool CanPlayersCollide() const override;
 		Recti GetLevelBounds() const override;
 		float GetElapsedFrames() const override;
 		float GetGravity() const override;
 		float GetWaterLevel() const override;
 		float GetHurtInvulnerableTime() const override;
-		bool CanEventDisappear(EventType eventType) const override;
 
 		ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const override;
 		ArrayView<Actors::Player* const> GetPlayers() const override;

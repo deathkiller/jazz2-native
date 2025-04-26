@@ -301,6 +301,16 @@ namespace Jazz2
 		return _isReforged;
 	}
 
+	bool LevelHandler::CanActivateSugarRush() const
+	{
+		return true;
+	}
+
+	bool LevelHandler::CanEventDisappear(EventType eventType) const
+	{
+		return true;
+	}
+
 	bool LevelHandler::CanPlayersCollide() const
 	{
 		// TODO
@@ -333,11 +343,6 @@ namespace Jazz2
 	float LevelHandler::GetHurtInvulnerableTime() const
 	{
 		return 180.0f;
-	}
-
-	bool LevelHandler::CanEventDisappear(EventType eventType) const
-	{
-		return true;
 	}
 
 	ArrayView<const std::shared_ptr<Actors::ActorBase>> LevelHandler::GetActors() const

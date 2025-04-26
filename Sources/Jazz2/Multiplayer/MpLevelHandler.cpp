@@ -154,11 +154,11 @@ namespace Jazz2::Multiplayer
 	{
 		return false;
 	}
-
-	float MpLevelHandler::GetHurtInvulnerableTime() const
+	
+	bool MpLevelHandler::CanActivateSugarRush() const
 	{
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
-		return (serverConfig.GameMode == MpGameMode::Cooperation ? 180.0f : 80.0f);
+		return (serverConfig.GameMode == MpGameMode::Cooperation);
 	}
 
 	bool MpLevelHandler::CanEventDisappear(EventType eventType) const
@@ -171,6 +171,12 @@ namespace Jazz2::Multiplayer
 		}
 
 		return true;
+	}
+
+	float MpLevelHandler::GetHurtInvulnerableTime() const
+	{
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		return (serverConfig.GameMode == MpGameMode::Cooperation ? 180.0f : 80.0f);
 	}
 
 	float MpLevelHandler::GetDefaultAmbientLight() const
@@ -510,8 +516,8 @@ namespace Jazz2::Multiplayer
 							if (rotation < 0.0f) rotation += fRadAngle360;
 							std::uint16_t newRotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
 							Vector2f newScale = remotingActor->_renderer.scale();
-							std::uint16_t newScaleX = (std::uint16_t)Half { newScale.X };
-							std::uint16_t newScaleY = (std::uint16_t)Half { newScale.Y };
+							std::uint16_t newScaleX = (std::uint16_t)Half{newScale.X};
+							std::uint16_t newScaleY = (std::uint16_t)Half{newScale.Y};
 							std::uint8_t newRendererType = (std::uint8_t)remotingActor->_renderer.GetRendererType();
 							bool animationChanged = (newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation ||
 								newScaleX != remotingActorInfo.LastScaleX || newScaleY != remotingActorInfo.LastScaleY || newRendererType != remotingActorInfo.LastRendererType);
@@ -3801,6 +3807,7 @@ namespace Jazz2::Multiplayer
 		// TODO: Reset ambient lighting
 		for (auto* player : _players) {
 			Vector2f spawnPosition = GetSpawnPoint(player->_playerTypeOriginal);
+			player->SetModifier(Actors::Player::Modifier::None);
 			player->WarpToPosition(spawnPosition, WarpFlags::Default);
 		}
 	}

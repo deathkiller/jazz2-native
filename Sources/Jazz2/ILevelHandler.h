@@ -72,6 +72,10 @@ namespace Jazz2
 		virtual bool IsPausable() const = 0;
 		/** @brief Returns `true` if Reforged Gameplay is enabled */
 		virtual bool IsReforged() const = 0;
+		/** @brief Returns `true` is sugar rush can be activated */
+		virtual bool CanActivateSugarRush() const = 0;
+		/** @brief Returns `true` is event can be safely despawned */
+		virtual bool CanEventDisappear(EventType eventType) const = 0;
 		/** @brief Returns `true` if players can collide with each other */
 		virtual bool CanPlayersCollide() const = 0;
 		/** @brief Returns level bounds including camera limits */
@@ -84,8 +88,6 @@ namespace Jazz2
 		virtual float GetWaterLevel() const = 0;
 		/** @brief Returns default invulnerable time when a player is hurt */
 		virtual float GetHurtInvulnerableTime() const = 0;
-		/** @brief Returns `true` is event can be safely despawned */
-		virtual bool CanEventDisappear(EventType eventType) const = 0;
 
 		/** @brief Returns list of actors (objects) */
 		virtual ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const = 0;
