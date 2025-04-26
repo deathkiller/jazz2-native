@@ -3471,7 +3471,10 @@ namespace Jazz2::Actors
 		_isFreefall |= CanFreefall();
 		SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, flags]() {
 			SetState(ActorState::IsInvulnerable, false);
+			// Don't re-enable gravity if any modifier is active
+			if (_activeModifier == Modifier::None) {
 			SetState(ActorState::ApplyGravitation, true);
+			}
 
 			if ((flags & WarpFlags::Freeze) == WarpFlags::Freeze) {
 				_renderer.AnimPaused = true;
@@ -3915,7 +3918,7 @@ namespace Jazz2::Actors
 		PlayPlayerSfx(isDrinkable ? "PickupDrink"_s : "PickupFood"_s);
 
 		_foodEaten++;
-		if (_foodEaten >= 100) {
+		if (_foodEaten >= 100 && _levelHandler->CanActivateSugarRush()) {
 			_foodEaten = _foodEaten % 100;
 			ActivateSugarRush(1300.0f);
 		}
