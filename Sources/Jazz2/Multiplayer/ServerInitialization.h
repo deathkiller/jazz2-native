@@ -28,7 +28,7 @@ namespace Jazz2::Multiplayer
 		bool ReforgedGameplay;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool Elimination;
-		/** @brief Initial player health, default is unlimited for Treasure Hunt, otherwise 5 */
+		/** @brief Initial player health, default is unlimited for Race and Treasure Hunt, otherwise 5 */
 		std::int32_t InitialPlayerHealth;
 		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;
@@ -99,7 +99,7 @@ namespace Jazz2::Multiplayer
 		    -   Elimination can be combined with any game mode
 		-   @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players
 			-   If the property is not specified or is less than 1, the player's health is automatically assigned depending on the game mode
-			-   Default value for Treasure Hunt is **unlimited**, in all other game modes it's **5**
+			-   Default value for Race and Treasure Hunt is **unlimited**, in all other game modes it's **5**
 		-   @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum allowed game time in seconds per level (default is **unlimited**)
 		-   @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60** seconds)
 		    -   Pre-game is skipped in Cooperation
@@ -179,7 +179,7 @@ namespace Jazz2::Multiplayer
 		bool Elimination;
 		/** @brief Total player points to win the championship */
 		std::uint32_t TotalPlayerPoints;
-		/** @brief Initial player health, default is unlimited for Treasure Hunt, otherwise 5 */
+		/** @brief Initial player health, default is unlimited for Race and Treasure Hunt, otherwise 5 */
 		std::int32_t InitialPlayerHealth;
 		/** @brief Maximum number of seconds for a game */
 		std::uint32_t MaxGameTimeSecs;

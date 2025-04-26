@@ -1716,6 +1716,10 @@ namespace Jazz2::Multiplayer
 				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
 				playerParams
 			));
+			player->_controllableExternal = _controllableExternal;
+			player->_health = (serverConfig.InitialPlayerHealth > 0
+				? serverConfig.InitialPlayerHealth
+				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
 			peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 			peerDesc->LapStarted = TimeStamp::now();
@@ -1892,14 +1896,17 @@ namespace Jazz2::Multiplayer
 				}
 
 				if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Laps + 1, serverConfig.TotalLaps);
+					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Laps + 1, serverConfig.TotalLaps);
 				} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u - Treasure: %u",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->TreasureCollected);
+					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u - Kills: %u - Deaths: %u - Treasure: %u",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->TreasureCollected);
 				} else {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - Points: %u - Kills: %u - Deaths: %u",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->Points, peerDesc->Kills, peerDesc->Deaths);
+					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u - Kills: %u - Deaths: %u",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths);
 				}
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}
@@ -3504,7 +3511,7 @@ namespace Jazz2::Multiplayer
 				player->_controllableExternal = _controllableExternal;
 				player->_health = (serverConfig.InitialPlayerHealth > 0
 					? serverConfig.InitialPlayerHealth
-					: (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt ? INT32_MAX : 5));
+					: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
 				peerDesc->LapStarted = TimeStamp::now();
 
@@ -3772,7 +3779,7 @@ namespace Jazz2::Multiplayer
 			mpPlayer->_currentWeapon = WeaponType::Blaster;
 			mpPlayer->_health = (serverConfig.InitialPlayerHealth > 0
 				? serverConfig.InitialPlayerHealth
-				: (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt ? INT32_MAX : 5));
+				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
 			if (peerDesc->RemotePeer) {
 				MemoryStream packet1(4);
@@ -4223,6 +4230,12 @@ namespace Jazz2::Multiplayer
 				runtime_cast<Actors::Environment::SwingingVine*>(actor) || runtime_cast<Actors::Solid::Bridge*>(actor) ||
 				runtime_cast<Actors::Solid::MovingPlatform*>(actor) || runtime_cast<Actors::Solid::PinballBumper*>(actor) ||
 				runtime_cast<Actors::Solid::PinballPaddle*>(actor) || runtime_cast<Actors::Solid::SpikeBall*>(actor));
+	}
+
+	bool MpLevelHandler::PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode)
+	{
+		return (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace ||
+				gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt);
 	}
 
 	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor)

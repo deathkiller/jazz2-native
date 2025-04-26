@@ -2646,6 +2646,7 @@ namespace Jazz2::Actors
 		_keepRunningTime = 0.0f;
 		_invulnerableTime = 0.0f;
 		_lastPoleTime = 0.0f;
+		_dizzyTime = 0.0f;
 		_isAttachedToPole = false;
 		SetModifier(Modifier::None);
 		SetShield(ShieldType::None, 0.0f);

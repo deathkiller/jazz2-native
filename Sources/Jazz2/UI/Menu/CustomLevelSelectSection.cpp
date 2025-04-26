@@ -390,7 +390,7 @@ namespace Jazz2::UI::Menu
 		if ((flags & LevelFlags::IsHidden) == LevelFlags::IsHidden && !PreferencesCache::AllowCheatsUnlock) {
 			return;
 		}
-		if ((flags & LevelFlags::IsMultiplayerLevel) == LevelFlags::IsMultiplayerLevel) {
+		if ((flags & LevelFlags::IsMultiplayerLevel) == LevelFlags::IsMultiplayerLevel && !_multiplayer) {
 			return;
 		}
 #endif
