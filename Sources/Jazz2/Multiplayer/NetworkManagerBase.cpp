@@ -436,6 +436,39 @@ namespace Jazz2::Multiplayer
 			|| (inet_pton(AF_INET, nullTerminatedAddress.data(), &(sa.sin_addr)) == 1);
 	}
 
+	bool NetworkManagerBase::IsDomainValid(StringView domain)
+	{
+		if (domain.empty() || domain.size() > 253) {
+			return false;
+		}
+
+		while (!domain.empty()) {
+			StringView end = domain.findOr('.', domain.end());
+			StringView part = domain.prefix(end.begin());
+			if (part.size() < 1 || part.size() > 63) {
+				return false;
+			}
+
+			for (char c : part) {
+				if (!isalnum(c) && c != '-') {
+					return false;
+				}
+			}
+
+			// Part can't start or end with hyphen
+			if (part[0] == '-' || part[part.size() - 1] == '-') {
+				return false;
+			}
+
+			if (end.begin() == domain.end()) {
+				break;
+			}
+			domain = domain.suffix(end.begin() + 1);
+		}
+
+		return true;
+	}
+
 	bool NetworkManagerBase::TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port)
 	{
 		if (auto portSep = input.findLast(':')) {

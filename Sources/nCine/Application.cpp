@@ -1092,7 +1092,7 @@ namespace nCine
 		}
 #endif
 
-		TimeStamp suspensionDuration = frameTimer_->Resume();
+		DEATH_UNUSED TimeStamp suspensionDuration = frameTimer_->Resume();
 		LOGD("Suspended for %.3f seconds", suspensionDuration.seconds());
 #if defined(NCINE_PROFILING)
 		profileStartTime_ += suspensionDuration;

@@ -222,7 +222,7 @@ namespace Jazz2::Multiplayer
 					if (!serverConfig.ServerAddressOverride.empty()) {
 						StringView address; std::uint16_t port;
 						if (!TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port) ||
-							!IsAddressValid(address)) {
+							(!IsAddressValid(address) && !IsDomainValid(address))) {
 							LOGW("Specified server address override \"%s\" is invalid, ignoring", serverConfig.ServerAddressOverride.data());
 							serverConfig.ServerAddressOverride = {};
 						} else {
