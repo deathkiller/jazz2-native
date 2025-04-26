@@ -76,18 +76,22 @@ namespace Jazz2::UI::Multiplayer
 		_smallFont->DrawString(this, "This is online multiplayer preview, not final release!"_s, debugCharOffset, ViewSize.X / 2, 1.0f,
 			190, Alignment::Top, Colorf(0.62f, 0.44f, 0.34f, 0.46f), 0.76f, 0.7f, 0.7f, 0.7f, 0.2f, 0.9f);
 
-#if defined(DEATH_DEBUG)
+
 		if (PreferencesCache::ShowPerformanceMetrics) {
-			char debugBuffer[64];
 			if (_levelHandler->_isServer) {
+#if defined(DEATH_DEBUG)
+				char debugBuffer[64];
 				formatString(debugBuffer, sizeof(debugBuffer), "%i b |", _levelHandler->_debugAverageUpdatePacketSize);
-			} else {
-				formatString(debugBuffer, sizeof(debugBuffer), "%u ms |", _levelHandler->_networkManager->GetRoundTripTimeMs());
-			}
-			_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
-				200, Alignment::TopRight, Font::DefaultColor, 0.8f);
-		}
+				_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
 #endif
+			} else {
+				char debugBuffer[64];
+				formatString(debugBuffer, sizeof(debugBuffer), "%u ms |", _levelHandler->_networkManager->GetRoundTripTimeMs());
+				_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
+			}
+		}
 
 		if (_isVisible) {
 			DrawSolid(Vector2f(0.0f, 0.0f), 20, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 1.0f)));

@@ -258,7 +258,11 @@ namespace Death { namespace Containers {
 		 */
 		template<class U = T
 #ifndef DOXYGEN_GENERATING_OUTPUT
-			, typename std::enable_if<std::is_const<U>::value, int>::type = 0
+			/* typename std::enable_if<std::is_const<U>::value, int>::type = 0
+			   cannot be used because GCC and Clang then have different mangling
+			   for the deinlined specialization in StringView.cpp, which means
+			   the library built with GCC cannot be used with Clang and vice versa. */
+			, class = typename std::enable_if<std::is_const<U>::value>::type
 #endif
 		> /*implicit*/ BasicStringView(const String& data) noexcept;
 
