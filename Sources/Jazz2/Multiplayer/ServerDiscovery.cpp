@@ -44,9 +44,7 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase::InitializeBackend();
 
 		_socket = TryCreateSocket("ff1e::333", _address);
-		if (_socket != ENET_SOCKET_NULL) {
-			_thread = Thread(ServerDiscovery::OnServerThread, this);
-		}
+		_thread = Thread(ServerDiscovery::OnServerThread, this);
 	}
 
 	ServerDiscovery::ServerDiscovery(IServerObserver* observer)
@@ -57,9 +55,7 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase::InitializeBackend();
 
 		_socket = TryCreateSocket("ff1e::333", _address);
-		if (_socket != ENET_SOCKET_NULL) {
-			_thread = Thread(ServerDiscovery::OnClientThread, this);
-		}
+		_thread = Thread(ServerDiscovery::OnClientThread, this);
 	}
 
 	ServerDiscovery::~ServerDiscovery()
@@ -176,6 +172,10 @@ namespace Jazz2::Multiplayer
 
 	void ServerDiscovery::TrySendLocalRequest(ENetSocket socket, const ENetAddress& address)
 	{
+		if (socket == ENET_SOCKET_NULL) {
+			return;
+		}
+
 		MemoryStream packet(9);
 		packet.WriteValue<std::uint64_t>(PacketSignature);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryRequest);
@@ -200,6 +200,8 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
+		LOGI("[MP] Downloading public server list…");
+
 		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		_onlineRequest = WebSession::GetDefault().CreateRequest(url);
 		auto result = _onlineRequest.Execute();
@@ -213,6 +215,8 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
+				LOGI("[MP] Downloaded public server list with %u entries (%u bytes)", (std::uint32_t)doc["s"].size(), (std::uint32_t)size);
+
 				for (auto serverItem : doc["s"]) {
 					std::string_view serverName, serverUuid, serverEndpoints;
 					if (serverItem["n"].get(serverName) == Json::SUCCESS && !serverName.empty() &&
@@ -234,7 +238,7 @@ namespace Jazz2::Multiplayer
 						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
 						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 
-						LOGD("[MP] Found server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+						LOGI("[MP] -   Found server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
 						_observer->OnServerFound(std::move(discoveredServer));
 					}
 				}
@@ -249,6 +253,10 @@ namespace Jazz2::Multiplayer
 
 	bool ServerDiscovery::ProcessLocalResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs)
 	{
+		if (socket == ENET_SOCKET_NULL) {
+			return false;
+		}
+
 		ENetSocketSet set;
 		ENET_SOCKETSET_EMPTY(set);
 		ENET_SOCKETSET_ADD(set, socket);
@@ -305,6 +313,10 @@ namespace Jazz2::Multiplayer
 
 	bool ServerDiscovery::ProcessLocalRequests(ENetSocket socket, std::int32_t timeoutMs)
 	{
+		if (socket == ENET_SOCKET_NULL) {
+			return false;
+		}
+
 		ENetSocketSet set;
 		ENET_SOCKETSET_EMPTY(set);
 		ENET_SOCKETSET_ADD(set, socket);

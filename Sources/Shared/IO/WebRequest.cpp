@@ -2300,7 +2300,8 @@ namespace Death { namespace IO {
 
 	WebRequest::Result WebAuthChallengeWinHTTP::DoSetCredentials(const WebCredentials& cred)
 	{
-		if (!WinHTTP::WinHttpSetCredentials(_request.GetHandle(), _target, _selectedScheme, Utf8::ToUtf16(cred.GetUser()), Utf8::ToUtf16(cred.GetPassword()), NULL)) {
+		if (!WinHTTP::WinHttpSetCredentials(_request.GetHandle(), _target, _selectedScheme,
+				Utf8::ToUtf16(cred.GetUser()), Utf8::ToUtf16(cred.GetPassword()), NULL)) {
 			return _request.FailWithLastError("Setting credentials"_s);
 		}
 
@@ -2519,7 +2520,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGD("curl_easy_setopt(%d, %lld) failed: %s", static_cast<int>(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt(%d, %lld) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2527,7 +2528,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGD("curl_easy_setopt(%d, %lx) failed: %s", static_cast<int>(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt(%d, %lx) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2535,7 +2536,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGD("curl_easy_setopt(%d, %ld) failed: %s", static_cast<int>(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt(%d, %ld) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2548,7 +2549,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGD("curl_easy_setopt(%d, %p) failed: %s", static_cast<int>(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt(%d, %p) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2562,7 +2563,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGD("curl_easy_setopt(%d, \"%s\") failed: %s", static_cast<int>(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt(%d, \"%s\") failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2580,12 +2581,12 @@ namespace Death { namespace IO {
 		CURLSetOpt(GetHandle(), CURLOPT_WRITEDATA, this);
 		CURLSetOpt(GetHandle(), CURLOPT_HEADERDATA, this);
 
-#if CURL_AT_LEAST_VERSION(7, 32, 0)
+#	if CURL_AT_LEAST_VERSION(7, 32, 0)
 		if (WebSessionCURL::CurlRuntimeAtLeastVersion(7, 32, 0)) {
 			CURLSetOpt(GetHandle(), CURLOPT_XFERINFOFUNCTION, CURLXferInfo);
 			CURLSetOpt(GetHandle(), CURLOPT_XFERINFODATA, this);
 		} else
-#endif
+#	endif
 		{
 			DEATH_IGNORE_DEPRECATED_PUSH
 			CURLSetOpt(GetHandle(), CURLOPT_PROGRESSFUNCTION, CURLProgress);
@@ -2638,15 +2639,15 @@ namespace Death { namespace IO {
 
 	std::int64_t WebResponseCURL::GetContentLength() const
 	{
-#if CURL_AT_LEAST_VERSION(7, 55, 0)
+#	if CURL_AT_LEAST_VERSION(7, 55, 0)
 		curl_off_t len = 0;
 		curl_easy_getinfo(GetHandle(), CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &len);
 		return len;
-#else
+#	else
 		double len = 0;
 		curl_easy_getinfo(GetHandle(), CURLINFO_CONTENT_LENGTH_DOWNLOAD, &len);
 		return std::int64_t(len);
-#endif
+#	endif
 	}
 
 	String WebResponseCURL::GetURL() const
@@ -2723,11 +2724,11 @@ namespace Death { namespace IO {
 		// Enable redirection handling
 		CURLSetOpt(_handle, CURLOPT_FOLLOWLOCATION, 1L);
 		// Limit redirect to HTTP
-#if CURL_AT_LEAST_VERSION(7, 85, 0)
+#	if CURL_AT_LEAST_VERSION(7, 85, 0)
 		if (WebSessionCURL::CurlRuntimeAtLeastVersion(7, 85, 0)) {
 			CURLSetOpt(_handle, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
 		} else
-#endif
+#	endif
 		{
 			DEATH_IGNORE_DEPRECATED_PUSH
 			CURLSetOpt(_handle, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
