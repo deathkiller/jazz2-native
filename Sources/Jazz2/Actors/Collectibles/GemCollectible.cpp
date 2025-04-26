@@ -1,5 +1,6 @@
 ﻿#include "GemCollectible.h"
 #include "../Player.h"
+#include "../../ILevelHandler.h"
 
 namespace Jazz2::Actors::Collectibles
 {
@@ -22,8 +23,8 @@ namespace Jazz2::Actors::Collectibles
 		bool isFlipped = (details.Params[1] & 0x02) == 0x02;
 		bool isDelayed = (details.Params[1] & 0x04) == 0x04;
 
-		if (hasLimitedLifetime) {
-			_timeLeft = 5.0f * FrameTimer::FramesPerSecond;
+		if (hasLimitedLifetime && _levelHandler->CanEventDisappear(EventType::Gem)) {
+			_timeLeft = 8.0f * FrameTimer::FramesPerSecond;
 		}
 		if (isDelayed) {
 			_ignoreTime = 40.0f;

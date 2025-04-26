@@ -63,8 +63,8 @@ namespace Jazz2::Actors::Collectibles
 		for (int i = 0; i < count; i++) {
 			float fx = Random().NextFloat(-16.0f, 16.0f);
 			float fy = Random().NextFloat(-2.0f, 2.0f);
-			std::uint8_t eventParams[2] = { 0, 1 };
-			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorState::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
+			std::uint8_t eventParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x01 };
+			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorState::None, Vector3i((std::int32_t)(_pos.X + fx * 2.0f), (std::int32_t)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
 			if (actor != nullptr) {
 				actor->AddExternalForce(fx, fy);
 				_levelHandler->AddActor(actor);

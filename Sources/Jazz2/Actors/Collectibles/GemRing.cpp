@@ -9,10 +9,7 @@
 namespace Jazz2::Actors::Collectibles
 {
 	GemRing::GemRing()
-		:
-		_phase(0.0f),
-		_collected(false),
-		_collectedPhase(0.0f)
+		: _phase(0.0f), _collected(false), _collectedPhase(0.0f)
 	{
 	}
 
@@ -87,10 +84,10 @@ namespace Jazz2::Actors::Collectibles
 	void GemRing::OnUpdateHitbox()
 	{
 		AABBInner = AABBf(
-				_pos.X - 20.0f,
-				_pos.Y - 20.0f,
-				_pos.X + 20.0f,
-				_pos.Y + 20.0f
+			_pos.X - 20.0f,
+			_pos.Y - 20.0f,
+			_pos.X + 20.0f,
+			_pos.Y + 20.0f
 		);
 	}
 

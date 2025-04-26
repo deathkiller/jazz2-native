@@ -161,6 +161,18 @@ namespace Jazz2::Multiplayer
 		return (serverConfig.GameMode == MpGameMode::Cooperation ? 180.0f : 80.0f);
 	}
 
+	bool MpLevelHandler::CanEventDisappear(EventType eventType) const
+	{
+		if (eventType == EventType::Gem) {
+			const auto& serverConfig = _networkManager->GetServerConfiguration();
+			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	float MpLevelHandler::GetDefaultAmbientLight() const
 	{
 		// TODO: Remove this override
@@ -1183,7 +1195,7 @@ namespace Jazz2::Multiplayer
 						float dir = (Random().NextBool() ? -1.0f : 1.0f);
 						float force = Random().Next(10.0f, 20.0f);
 						Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
-						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x01 | 0x04 };
+						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
 						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
 						if (actor != nullptr) {
 							actor->AddExternalForce(dir * force, force);

@@ -793,7 +793,7 @@ namespace nCine::Backends
 
 			int buttonMask = 0;
 #if defined(DEATH_TRACE)
-			std::memset(deviceInfoString, 0, MaxStringLength);
+			deviceInfoString[0] = '\0';
 #endif
 			for (int i = 0; i < maxButtons; i++) {
 				bool hasKey = false;
@@ -852,7 +852,7 @@ namespace nCine::Backends
 			}
 
 #if defined(DEATH_TRACE)
-			std::memset(deviceInfoString, 0, MaxStringLength);
+			deviceInfoString[0] = '\0';
 #endif
 			joyState.hasHatAxes_ = true;
 
@@ -921,6 +921,9 @@ namespace nCine::Backends
 			}
 
 			if (AndroidJniHelper::SdkVersion() >= 31) {
+#if defined(DEATH_TRACE)
+				deviceInfoString[0] = '\0';
+#endif
 				AndroidJniClass_VibratorManager vibratorManager = inputDevice.getVibratorManager();
 				// There might be more vibrators available than the maximum number supported
 				joyState.numVibrators_ = vibratorManager.getVibratorIds(joyState.vibratorsIds_, AndroidJoystickState::MaxVibrators);
