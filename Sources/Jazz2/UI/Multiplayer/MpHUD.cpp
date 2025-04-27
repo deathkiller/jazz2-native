@@ -89,12 +89,36 @@ namespace Jazz2::UI::Multiplayer
 
 		std::int32_t charOffset = 0;
 
+		// Debug information
+		std::int32_t debugCharOffset = 0, debugShadowCharOffset = 0;
+		_smallFont->DrawString(this, "This is online multiplayer preview, not final release!"_s, debugShadowCharOffset, ViewSize.X / 2, 1.0f + 1.0f,
+			180, Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.76f, 0.7f, 0.7f, 0.7f, 0.2f, 0.9f);
+		_smallFont->DrawString(this, "This is online multiplayer preview, not final release!"_s, debugCharOffset, ViewSize.X / 2, 1.0f,
+			190, Alignment::Top, Colorf(0.62f, 0.44f, 0.34f, 0.46f), 0.76f, 0.7f, 0.7f, 0.7f, 0.2f, 0.9f);
+
 		if (_countdownTimeLeft > 0.0f) {
 			float textScale = 2.0f - std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 1.0f);
 			Colorf textColor = Font::DefaultColor;
 			textColor.A = std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 0.5f) * 2.0f;
 			_mediumFont->DrawString(this, _countdownText, charOffset, ViewSize.X * 0.5f, ViewSize.Y * 0.5f, FontLayer + 20,
 				Alignment::Center, textColor, textScale, 0.0f, 0.0f, 0.0f);
+		}
+
+		if (PreferencesCache::ShowPerformanceMetrics) {
+			auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+			if (mpLevelHandler->_isServer) {
+#if defined(DEATH_DEBUG)
+				char debugBuffer[64];
+				formatString(debugBuffer, sizeof(debugBuffer), "%i b |", mpLevelHandler->_debugAverageUpdatePacketSize);
+				_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
+#endif
+			} else {
+				char debugBuffer[64];
+				formatString(debugBuffer, sizeof(debugBuffer), "%u ms |", mpLevelHandler->_networkManager->GetRoundTripTimeMs());
+				_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
+			}
 		}
 
 		return true;
@@ -227,10 +251,10 @@ namespace Jazz2::UI::Multiplayer
 
 				if (hasEnoughTreasure) {
 					auto fintExitTest = _("Find exit!");
-					_smallFont->DrawString(this, fintExitTest, charOffsetShadow, view.X + view.W * 0.5f, view.Y + 20.0f + 2.5f, FontShadowLayer,
-						Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
-					_smallFont->DrawString(this, fintExitTest, charOffset, view.X + view.W * 0.5f, view.Y + 20.0f, FontLayer,
-						Alignment::Top, Font::DefaultColor, 1.0f, 0.72f, 0.8f, 0.8f);
+					_smallFont->DrawString(this, fintExitTest, charOffsetShadow, view.X + view.W * 0.5f, view.Y + 36.0f + 2.5f, FontShadowLayer,
+						Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
+					_smallFont->DrawString(this, fintExitTest, charOffset, view.X + view.W * 0.5f, view.Y + 36.0f, FontLayer,
+						Alignment::Center, Font::DefaultColor, 1.0f, 0.72f, 0.8f, 0.8f);
 				}
 
 				DrawPositionInRound(view, player);

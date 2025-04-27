@@ -3703,7 +3703,7 @@ extern "C" {
 			packet->referenceCount += fragmentNumber;
 
 			while (!enet_list_empty(&fragments)) {
-				fragment = (ENetOutgoingCommand *) enet_list_remove(enet_list_begin(&fragments));
+				fragment = (ENetOutgoingCommand*)enet_list_remove(enet_list_begin(&fragments));
 				enet_peer_setup_outgoing_command(peer, fragment);
 			}
 
@@ -3768,7 +3768,7 @@ extern "C" {
 		ENetOutgoingCommand *outgoingCommand;
 
 		while (!enet_list_empty(queue)) {
-			outgoingCommand = (ENetOutgoingCommand *) enet_list_remove(enet_list_begin(queue));
+			outgoingCommand = (ENetOutgoingCommand*)enet_list_remove(enet_list_begin(queue));
 
 			if (outgoingCommand->packet != NULL) {
 				--outgoingCommand->packet->referenceCount;
@@ -3788,7 +3788,7 @@ extern "C" {
 		ENetListIterator currentCommand;
 
 		for (currentCommand = startCommand; currentCommand != endCommand;) {
-			ENetIncomingCommand *incomingCommand = (ENetIncomingCommand *) currentCommand;
+			ENetIncomingCommand *incomingCommand = (ENetIncomingCommand*)currentCommand;
 
 			currentCommand = enet_list_next(currentCommand);
 			enet_list_remove(&incomingCommand->incomingCommandList);

@@ -21,6 +21,13 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
+		if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
+			if (!inGameMenu->IsLocalSession()) {
+				// TRANSLATORS: Menu item in main menu
+				_items[(int32_t)Item::Exit].Name = _("Disconnect & Exit");
+			}
+		}
+
 		_animation = 0.0f;
 	}
 
