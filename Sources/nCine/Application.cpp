@@ -281,7 +281,8 @@ static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, Stri
 // Strip function specifiers, return type and arguments from function name, because GCC/Clang includes full function signature
 static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
 {
-	const static char LambdaSuffix[] = "::<lambda()>";
+	static const char LambdaSuffix[] = "::<lambda()>";
+	static const char OperatorPrefix[] = "operator";
 
 	std::int32_t i, parethesisCount = 0;
 	for (i = functionNameLength - 1; i >= 0; i--) {
@@ -315,18 +316,20 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 				break;
 			}
 		}
-		for (std::int32_t j = i; j > 0; j--) {
-			if (functionName[j] == ':' && functionName[j - 1] == ':') {
-				// It's probably some operator, just retry and continue
-				i = j - 2;
-				goto FindFunctionName;
-			}
+		std::int32_t j = i;
+		while (j > 0 && functionName[j - 1] == ' ') {
+			j--;
+		}
+		// Hopefully only operators can contain spaces in their name
+		if (j > sizeof(OperatorPrefix) - 1 && strncmp(&functionName[j - (sizeof(OperatorPrefix) - 1)], OperatorPrefix, sizeof(OperatorPrefix) - 1) == 0) {
+			i = j - (sizeof(OperatorPrefix) - 1);
+			goto FindFunctionName;
 		}
 		i++;
 		AppendPart(dest, length, &functionName[i], end - i);
 		AppendPart(dest, length, "()");
 
-		if (functionNameLength >= sizeof(LambdaSuffix) - 1 && strncmp(&functionName[functionNameLength - (sizeof(LambdaSuffix) - 1)], LambdaSuffix, sizeof(LambdaSuffix)) == 0) {
+		if (functionNameLength >= sizeof(LambdaSuffix) - 1 && strncmp(&functionName[functionNameLength - (sizeof(LambdaSuffix) - 1)], LambdaSuffix, sizeof(LambdaSuffix) - 1) == 0) {
 			AppendPart(dest, length, LambdaSuffix);
 		}
 	} else {

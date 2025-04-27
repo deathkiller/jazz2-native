@@ -537,7 +537,7 @@ namespace Jazz2::Multiplayer
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
 		NetworkManager* server = _this->_server;
-		std::int32_t delayCount = 0;
+		std::int32_t delayCount = 40;	// Delay for 20 seconds before starting to send discovery responses
 
 		NetworkManagerBase::InitializeBackend();
 
