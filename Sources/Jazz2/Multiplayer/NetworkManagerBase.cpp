@@ -87,9 +87,11 @@ namespace Jazz2::Multiplayer
 					std::int32_t r = enet_address_set_host(&addr, nullTerminatedAddress.data());
 					//std::int32_t r = enet_address_set_host_ip(&addr, nullTerminatedAddress.data());
 					if (r == 0) {
+#if ENET_IPV6
 						if (addr.sin6_scope_id == 0) {
 							addr.sin6_scope_id = (std::uint16_t)ifidx;
 						}
+#endif
 						addr.port = (port != 0 ? port : defaultPort);
 						_desiredEndpoints.push_back(std::move(addr));
 					} else {
@@ -98,10 +100,10 @@ namespace Jazz2::Multiplayer
 #else
 						std::int32_t error = errno;
 #endif
-						LOGW("Failed to parse specified address \"%s\" with error %i", nullTerminatedAddress.data(), error);
+						LOGW("[MP] Failed to parse specified address \"%s\" with error %i", nullTerminatedAddress.data(), error);
 					}
 				} else {
-					LOGW("Failed to parse specified endpoint \"%s\"", String::nullTerminatedView(p[0]).data());
+					LOGW("[MP] Failed to parse specified endpoint \"%s\"", String::nullTerminatedView(p[0]).data());
 				}
 			}
 
@@ -167,27 +169,30 @@ namespace Jazz2::Multiplayer
 
 			if (ioctl(_host->socket, SIOCGIFCONF, &ifc) >= 0) {
 				std::int32_t count = ifc.ifc_len / sizeof(struct ifreq);
-				LOGI("Found %d interfaces:", count);
+				LOGI("[MP] Found %d interfaces:", count);
 				for (std::int32_t i = 0; i < count; i++) {
 					if (ifr[i].ifr_addr.sa_family == AF_INET) { // IPv4
 						auto* addrPtr = &((struct sockaddr_in*)&ifr[i].ifr_addr)->sin_addr;
 						String addressString = AddressToString(*addrPtr, _host->address.port);
-						LOGI(" - %s: %s", ifr[i].ifr_name, addressString.data());
+						LOGI("[MP] -\t%s: %s", ifr[i].ifr_name, addressString.data());
 						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
-					} else if (ifr[i].ifr_addr.sa_family == AF_INET6) { // IPv6
+					}
+#	if ENET_IPV6
+					else if (ifr[i].ifr_addr.sa_family == AF_INET6) { // IPv6
 						auto* addrPtr = &((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_addr;
 						//auto scopeId = ((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_scope_id;
 						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
-						LOGI(" - %s: %s", ifr[i].ifr_name, addressString.data());
+						LOGI("[MP] -\t%s: %s", ifr[i].ifr_name, addressString.data());
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
 					}
+#	endif
 				}
 			} else {
-				LOGW("Failed to get server endpoints");
+				LOGW("[MP] Failed to get server endpoints");
 			}
 #elif defined(DEATH_TARGET_WINDOWS)
 			ULONG bufferSize = 15000;
@@ -204,20 +209,24 @@ namespace Jazz2::Multiplayer
 							if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
 								arrayAppend(result, std::move(addressString));
 							}
-						} else if (address->Address.lpSockaddr->sa_family == AF_INET6) { // IPv6
+						}
+#	if ENET_IPV6
+						else if (address->Address.lpSockaddr->sa_family == AF_INET6) { // IPv6
 							auto* addrPtr = &((struct sockaddr_in6*)address->Address.lpSockaddr)->sin6_addr;
 							//auto scopeId = ((struct sockaddr_in6*)address->Address.lpSockaddr)->sin6_scope_id;
 							String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
 							if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 								arrayAppend(result, std::move(addressString));
 							}
-						} else {
+						}
+#	endif
+						else {
 							// Unsupported address family
 						}
 					}
 				}
 			} else {
-				LOGW("Failed to get server endpoints");
+				LOGW("[MP] Failed to get server endpoints");
 			}
 #else
 			struct ifaddrs* ifAddrStruct = nullptr;
@@ -233,7 +242,9 @@ namespace Jazz2::Multiplayer
 						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
-					} else if (ifa->ifa_addr->sa_family == AF_INET6) { // IPv6
+					}
+#	if ENET_IPV6
+					else if (ifa->ifa_addr->sa_family == AF_INET6) { // IPv6
 						auto* addrPtr = &((struct sockaddr_in6*)ifa->ifa_addr)->sin6_addr;
 						//auto scopeId = ((struct sockaddr_in6*)ifa->ifa_addr)->sin6_scope_id;
 						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
@@ -241,15 +252,16 @@ namespace Jazz2::Multiplayer
 							arrayAppend(result, std::move(addressString));
 						}
 					}
+#	endif
 				}
 				freeifaddrs(ifAddrStruct);
 			} else {
-				LOGW("Failed to get server endpoints");
+				LOGW("[MP] Failed to get server endpoints");
 			}
 #endif
 		} else {
 			if (!_peers.empty()) {
-				String addressString = AddressToString(_peers[0]->address.host, _peers[0]->address.sin6_scope_id, _peers[0]->address.port);
+				String addressString = AddressToString(_peers[0]->address);
 				if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 					arrayAppend(result, std::move(addressString));
 				}
@@ -382,6 +394,7 @@ namespace Jazz2::Multiplayer
 		return String(addressString, addressLength);
 	}
 
+#if ENET_IPV6
 	String NetworkManagerBase::AddressToString(const struct in6_addr& address, std::uint16_t scopeId, std::uint16_t port)
 	{
 		char addressString[92];
@@ -417,11 +430,21 @@ namespace Jazz2::Multiplayer
 		}
 		return String(addressString, addressLength);
 	}
+#endif
+
+	String NetworkManagerBase::AddressToString(const ENetAddress& address)
+	{
+#if ENET_IPV6
+		return AddressToString(address.host, address.sin6_scope_id);
+#else
+		return AddressToString(*(const struct in_addr*)&address.host);
+#endif
+	}
 
 	String NetworkManagerBase::AddressToString(const Peer& peer)
 	{
 		if (peer._enet != nullptr) {
-			return AddressToString(peer._enet->address.host, peer._enet->address.sin6_scope_id);
+			return AddressToString(peer._enet->address);
 		}
 
 		return {};
@@ -429,11 +452,16 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManagerBase::IsAddressValid(StringView address)
 	{
+		auto nullTerminatedAddress = String::nullTerminatedView(address);
+#if ENET_IPV6
 		struct sockaddr_in sa;
 		struct sockaddr_in6 sa6;
-		auto nullTerminatedAddress = String::nullTerminatedView(address);
 		return (inet_pton(AF_INET6, nullTerminatedAddress.data(), &(sa6.sin6_addr)) == 1)
 			|| (inet_pton(AF_INET, nullTerminatedAddress.data(), &(sa.sin_addr)) == 1);
+#else
+		struct sockaddr_in sa;
+		return (inet_pton(AF_INET, nullTerminatedAddress.data(), &(sa.sin_addr)) == 1);
+#endif
 	}
 
 	bool NetworkManagerBase::IsDomainValid(StringView domain)
@@ -583,7 +611,7 @@ namespace Jazz2::Multiplayer
 		ENetEvent ev;
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()); i++) {
 			ENetAddress& addr = _this->_desiredEndpoints[i];
-			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr.host, addr.sin6_scope_id, addr.port).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
+			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
 			
 			if (host != nullptr) {
 				enet_host_destroy(host);
