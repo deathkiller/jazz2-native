@@ -141,7 +141,7 @@ namespace Jazz2::Actors
 		_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 		_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 
-		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects |
+		SetState(ActorState::PreserveOnRollback | ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects |
 			ActorState::IsSolidObject | ActorState::ExcludeSimilar, true);
 
 		_health = 5;

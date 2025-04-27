@@ -334,6 +334,7 @@ namespace Jazz2::Multiplayer
 						_gameTimeLeft = FrameTimer::FramesPerSecond;
 						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(2);
 						SendLevelStateToAllPlayers();
+						RollbackLevelState();
 					}
 					break;
 				}
@@ -1887,7 +1888,10 @@ namespace Jazz2::Multiplayer
 					continue;
 				}
 
-				if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
+				if (_levelState < LevelState::Running) {
+					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0, peerDesc->Points);
+				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
 					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Laps + 1, serverConfig.TotalLaps);
@@ -3457,7 +3461,7 @@ namespace Jazz2::Multiplayer
 				// Synchronize tilemap
 				{
 					// TODO: Use deflate compression here?
-					MemoryStream packet(20 * 1024);
+					MemoryStream packet(40 * 1024);
 					_tileMap->SerializeResumableToStream(packet);
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncTileMap, packet);
 				}
@@ -3834,6 +3838,39 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::RollbackLevelState()
+	{
+		_eventMap->RollbackToCheckpoint();
+		_tileMap->RollbackToCheckpoint();
+
+		// Synchronize tilemap
+		{
+			// TODO: Use deflate compression here?
+			MemoryStream packet(40 * 1024);
+			_tileMap->SerializeResumableToStream(packet);
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncTileMap, packet);
+		}
+
+		for (auto& actor : _actors) {
+			// Despawn all actors that were created after the last checkpoint
+			if (actor->_spawnFrames > _checkpointFrames && !actor->GetState(Actors::ActorState::PreserveOnRollback)) {
+				if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
+					Vector2i originTile = actor->_originTile;
+					if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
+						_eventMap->ResetGenerator(originTile.X, originTile.Y);
+					}
+
+					_eventMap->Deactivate(originTile.X, originTile.Y);
+				}
+
+				actor->_state |= Actors::ActorState::IsDestroyed;
+			}
+		}
+	}
+
 	void MpLevelHandler::CalculatePositionInRound(bool forceSend)
 	{
 		SmallVector<Pair<MpPlayer*, std::uint32_t>, 128> sortedPlayers;
@@ -3855,7 +3892,7 @@ namespace Jazz2::Multiplayer
 					break;
 				case MpGameMode::Race:
 					// 1 hour penalty for every unfinished lap
-					roundPoints = (std::uint32_t)peerDesc->LapsElapsedFrames + (serverConfig.TotalLaps - peerDesc->Laps) * 3600.0f * FrameTimer::FramesPerSecond;
+					roundPoints = (std::uint32_t)(peerDesc->LapsElapsedFrames + (serverConfig.TotalLaps - peerDesc->Laps) * 3600.0f * FrameTimer::FramesPerSecond);
 					break;
 				case MpGameMode::TreasureHunt:
 					roundPoints = peerDesc->TreasureCollected;

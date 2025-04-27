@@ -281,11 +281,25 @@ static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, Stri
 // Strip function specifiers, return type and arguments from function name, because GCC/Clang includes full function signature
 static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
 {
-	static const char LambdaSuffix[] = "::<lambda()>";
-	static const char OperatorPrefix[] = "operator";
+	static constexpr StringView LambdaSuffix = "::<lambda()>"_s;
+	static constexpr StringView LambdaClangSuffix = "::(anonymous class)::operator()()"_s;
+	static constexpr StringView OperatorPrefix = "operator"_s;
 
-	std::int32_t i, parethesisCount = 0;
-	for (i = functionNameLength - 1; i >= 0; i--) {
+	StringView functionNameView = StringView(functionName, functionNameLength);
+	std::int32_t i; bool isLambda = false;
+	if (auto lambdaClang = functionNameView.find(LambdaClangSuffix)) {
+		i = lambdaClang.begin() - functionName;
+		isLambda = true;
+	} else {
+		i = functionNameLength - 1;
+		if (functionNameView.hasSuffix(LambdaSuffix)) {
+			i -= LambdaSuffix.size();
+			isLambda = true;
+		}
+	}
+
+	std::int32_t parethesisCount = 0;
+	for (; i >= 0; i--) {
 		if (functionName[i] == ')') {
 			parethesisCount++;
 		} else if (functionName[i] == '(') {
@@ -305,18 +319,15 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 	}
 
 	if (i > 0) {
-		auto functionNameView = StringView(functionName, functionNameLength);
-		if (functionNameView.contains(OperatorPrefix)) {
-			AppendPart(dest, length, "||");
-			AppendPart(dest, length, functionName, functionNameLength);
-			AppendPart(dest, length, "||");
-			return;
-		}
-
 		std::int32_t end = i;
+		i--;
 	FindFunctionName:
 		for (; i >= 0; i--) {
-			if (functionName[i] == '>') {
+			if (functionName[i] == ')') {
+				parethesisCount++;
+			} else if (functionName[i] == '(') {
+				parethesisCount--;
+			} else if (functionName[i] == '>') {
 				parethesisCount++;
 			} else if (functionName[i] == '<') {
 				parethesisCount--;
@@ -329,16 +340,15 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 			j--;
 		}
 		// Hopefully only operators can contain spaces in their name
-		if (j > sizeof(OperatorPrefix) - 1 && strncmp(&functionName[j - (sizeof(OperatorPrefix) - 1)], OperatorPrefix, sizeof(OperatorPrefix) - 1) == 0) {
-			i = j - (sizeof(OperatorPrefix) - 1);
+		if (j > OperatorPrefix.size() && functionNameView.slice(j - OperatorPrefix.size(), j) == OperatorPrefix) {
+			i = j - OperatorPrefix.size();
 			goto FindFunctionName;
 		}
 		i++;
 		AppendPart(dest, length, &functionName[i], end - i);
 		AppendPart(dest, length, "()");
-
-		if (functionNameLength >= sizeof(LambdaSuffix) - 1 && strncmp(&functionName[functionNameLength - (sizeof(LambdaSuffix) - 1)], LambdaSuffix, sizeof(LambdaSuffix) - 1) == 0) {
-			AppendPart(dest, length, LambdaSuffix);
+		if (isLambda) {
+			AppendPart(dest, length, LambdaSuffix.data(), LambdaSuffix.size());
 		}
 	} else {
 		AppendPart(dest, length, functionName, functionNameLength);

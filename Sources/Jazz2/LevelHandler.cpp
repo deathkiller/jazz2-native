@@ -1222,6 +1222,7 @@ namespace Jazz2
 
 		if (IsLocalSession()) {
 			_eventMap->CreateCheckpointForRollback();
+			_tileMap->CreateCheckpointForRollback();
 		}
 	}
 
@@ -1250,6 +1251,8 @@ namespace Jazz2
 			}
 
 			_eventMap->RollbackToCheckpoint();
+			// Don't rollback the tilemap in local sessions for now
+			//_tileMap->RollbackToCheckpoint();
 			_elapsedFrames = _checkpointFrames;
 		}
 
@@ -1536,6 +1539,7 @@ namespace Jazz2
 				// Create checkpoint after first call to ActivateEvents() to avoid duplication of objects that are spawned near player spawn
 				_checkpointCreated = true;
 				_eventMap->CreateCheckpointForRollback();
+				_tileMap->CreateCheckpointForRollback();
 #if defined(WITH_ANGELSCRIPT)
 				if (_scripts != nullptr) {
 					_scripts->OnLevelBegin();

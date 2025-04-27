@@ -40,7 +40,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */
 		std::uint32_t TotalLaps;
-		/** @brief Total number of treasure collected, default is 60 (Treasure Hunt) */
+		/** @brief Total number of treasure collected, default is 80 (Treasure Hunt) */
 		std::uint32_t TotalTreasureCollected;
 	};
 
@@ -107,7 +107,7 @@ namespace Jazz2::Multiplayer
 		    -   Invulnerability is skipped in Cooperation
 		-   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
-		-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of treasures required to win (Treasure Hunt)
+		-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win (Treasure Hunt)
 		-   @cpp "Playlist" @ce : @m_span{m-label m-success m-flat} array @m_endspan List of game configurations per round, each entry may contain:
 		    -   @cpp "LevelName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the level in `<episode>/<level>` format
 		    -   @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Specific game mode for this round
@@ -118,7 +118,7 @@ namespace Jazz2::Multiplayer
 		    -   @cpp "SpawnInvulnerableSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of invulnerability after (re)spawning
 		    -   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win this round (Battle)
 		    -   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
-		    -   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total treasure required to win this round (Treasure Hunt)
+		    -   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win this round (Treasure Hunt)
 		-   @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
 		
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.
@@ -191,7 +191,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */
 		std::uint32_t TotalLaps;
-		/** @brief Total number of treasure collected, default is 60 (Treasure Hunt) */
+		/** @brief Total number of treasure collected, default is 80 (Treasure Hunt) */
 		std::uint32_t TotalTreasureCollected;
 
 		/** @brief Index of the current playlist entry */

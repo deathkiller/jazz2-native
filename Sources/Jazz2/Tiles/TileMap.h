@@ -295,6 +295,11 @@ namespace Jazz2::Tiles
 		/** @brief Sets state of a given trigger */
 		void SetTrigger(std::uint8_t triggerId, bool newState);
 
+		/** @brief Creates a checkpoint for eventual rollback */
+		void CreateCheckpointForRollback();
+		/** @brief Rolls back to the last checkpoint */
+		void RollbackToCheckpoint();
+
 		/** @brief Initializes tile map state from a stream */
 		void InitializeFromStream(Stream& src);
 		/** @brief Serializes tile map state to a stream */
@@ -348,10 +353,12 @@ namespace Jazz2::Tiles
 
 		SmallVector<TileSetPart, 2> _tileSets;
 		SmallVector<TileMapLayer, 0> _layers;
+		std::unique_ptr<LayerTile[]> _sprLayerForRollback;
 		SmallVector<AnimatedTile, 0> _animatedTiles;
 		SmallVector<Vector2i, 0> _activeCollapsingTiles;
 		float _collapsingTimer;
 		BitArray _triggerState;
+		BitArray _triggerStateForRollback;
 
 		SmallVector<DestructibleDebris, 0> _debrisList;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
