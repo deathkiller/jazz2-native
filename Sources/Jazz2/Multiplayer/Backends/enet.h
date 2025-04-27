@@ -3205,9 +3205,9 @@ extern "C" {
 					#ifdef ENET_DEBUG
 					LOGD(
 						"peer %u: %f%%+-%f%% packet loss, %u+-%u ms round trip time, %f%% throttle, %u/%u outgoing, %u/%u incoming", currentPeer->incomingPeerID,
-						currentPeer->packetLoss / (float) ENET_PEER_PACKET_LOSS_SCALE,
-						currentPeer->packetLossVariance / (float) ENET_PEER_PACKET_LOSS_SCALE, currentPeer->roundTripTime, currentPeer->roundTripTimeVariance,
-						currentPeer->packetThrottle / (float) ENET_PEER_PACKET_THROTTLE_SCALE,
+						currentPeer->packetLoss / (float)ENET_PEER_PACKET_LOSS_SCALE,
+						currentPeer->packetLossVariance / (float)ENET_PEER_PACKET_LOSS_SCALE, currentPeer->roundTripTime, currentPeer->roundTripTimeVariance,
+						currentPeer->packetThrottle / (float)ENET_PEER_PACKET_THROTTLE_SCALE,
 						enet_list_size(&currentPeer->outgoingReliableCommands),
 						enet_list_size(&currentPeer->outgoingUnreliableCommands),
 						currentPeer->channels != NULL ? enet_list_size( &currentPeer->channels->incomingReliableCommands) : 0,
@@ -5722,10 +5722,8 @@ extern "C" {
 				result = setsockopt(socket, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&value, sizeof(int));
 				break;
 #endif
-			default:
-				break;
 		}
-		return result == -1 ? -1 : 0;
+		return (result == -1 ? -1 : 0);
 	} /* enet_socket_set_option */
 
 	int enet_socket_get_option(ENetSocket socket, ENetSocketOption option, int* value) {
@@ -5737,11 +5735,8 @@ extern "C" {
 				len    = sizeof(int);
 				result = getsockopt(socket, SOL_SOCKET, SO_ERROR, value, &len);
 				break;
-
-			default:
-				break;
 		}
-		return result == -1 ? -1 : 0;
+		return (result == -1 ? -1 : 0);
 	}
 
 	int enet_socket_connect(ENetSocket socket, const ENetAddress* address) {
@@ -5757,8 +5752,13 @@ extern "C" {
 		sin.sin6_scope_id   = address->sin6_scope_id;
 
 		result = connect(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6));
-		if (result == -1 && errno == EINPROGRESS) {
-			return 0;
+		if (result == -1) {
+			if (errno == EINPROGRESS) {
+				return 0;
+			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_connect() failed with error %i", errno);
+			#endif
 		}
 
 		return result;
@@ -5773,9 +5773,15 @@ extern "C" {
 		sin.sin_addr.s_addr = address->host;
 
 		result = connect(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in));
-		if (result == -1 && errno == EINPROGRESS) {
-			return 0;
+		if (result == -1) {
+			if (errno == EINPROGRESS) {
+				return 0;
+			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_connect() failed with error %i", errno);
+			#endif
 		}
+
 		return result;
 #endif
 	}
@@ -5856,6 +5862,9 @@ extern "C" {
 			if (errno == EWOULDBLOCK) {
 				return 0;
 			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_send() failed with error %i", errno);
+			#endif
 			return -1;
 		}
 
@@ -5887,6 +5896,9 @@ extern "C" {
 			if (errno == EWOULDBLOCK) {
 				return 0;
 			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_send() failed with error %i", errno);
+			#endif
 			return -1;
 		}
 
@@ -5916,7 +5928,9 @@ extern "C" {
 			if (errno == EWOULDBLOCK) {
 				return 0;
 			}
-
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_receive() failed with error %i", errno);
+			#endif
 			return -1;
 		}
 
@@ -5955,9 +5969,11 @@ extern "C" {
 				case EINTR:
 				case EMSGSIZE:
 					return -2;
-				default:
-					return -1;
 			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_receive() failed with error %i", errno);
+			#endif
+			return -1;
 		}
 
 	#ifdef HAS_MSGHDR_FLAGS
@@ -6003,7 +6019,6 @@ extern "C" {
 		if (pollCount < 0) {
 			if (errno == EINTR && *condition & ENET_SOCKET_WAIT_INTERRUPT) {
 				*condition = ENET_SOCKET_WAIT_INTERRUPT;
-
 				return 0;
 			}
 
@@ -6334,7 +6349,7 @@ extern "C" {
 			default:
 				break;
 		}
-		return result == SOCKET_ERROR ? -1 : 0;
+		return (result == SOCKET_ERROR ? -1 : 0);
 	} /* enet_socket_set_option */
 
 	int enet_socket_get_option(ENetSocket socket, ENetSocketOption option, int* value) {
@@ -6345,11 +6360,9 @@ extern "C" {
 				len    = sizeof(int);
 				result = getsockopt(socket, SOL_SOCKET, SO_ERROR, (char*)value, &len);
 				break;
-
-			default:
-				break;
 		}
-		return result == SOCKET_ERROR ? -1 : 0;
+
+		return (result == SOCKET_ERROR ? -1 : 0);
 	}
 
 	int enet_socket_connect(ENetSocket socket, const ENetAddress* address) {
@@ -6365,8 +6378,14 @@ extern "C" {
 		sin.sin6_scope_id   = address->sin6_scope_id;
 
 		result = connect(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6));
-		if (result == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
-			return -1;
+		if (result == SOCKET_ERROR) {
+			int error = WSAGetLastError();
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_connect() failed with error %i", error);
+			#endif
+			if (error != WSAEWOULDBLOCK) {
+				return -1;
+			}
 		}
 
 		return 0;
@@ -6381,9 +6400,16 @@ extern "C" {
 		sin.sin_addr.s_addr = address->host;
 
 		result = connect(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in));
-		if (result == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
-			return -1;
+		if (result == SOCKET_ERROR) {
+			int error = WSAGetLastError();
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_connect() failed with error %i", error);
+			#endif
+			if (error != WSAEWOULDBLOCK) {
+				return -1;
+			}
 		}
+
 		return 0;
 #endif
 	}
@@ -6459,7 +6485,15 @@ extern "C" {
 			NULL,
 			NULL) == SOCKET_ERROR
 		) {
-			return (WSAGetLastError() == WSAEWOULDBLOCK) ? 0 : -1;
+			int error = WSAGetLastError();
+			switch (error) {
+				case WSAEWOULDBLOCK:
+					return 0;
+			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_send() failed with error %i", error);
+			#endif
+			return -1;
 		}
 
 		return (int)sentLength;
@@ -6483,8 +6517,17 @@ extern "C" {
 			address != NULL ? (struct sockaddr*)&sin : NULL,
 			address != NULL ? sizeof(struct sockaddr_in) : 0,
 			NULL,
-			NULL) == SOCKET_ERROR) {
-			return (WSAGetLastError() == WSAEWOULDBLOCK) ? 0 : -1;
+			NULL) == SOCKET_ERROR
+		) {
+			int error = WSAGetLastError();
+			switch (error) {
+				case WSAEWOULDBLOCK:
+					return 0;
+			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_send() failed with error %i", error);
+			#endif
+			return -1;
 		}
 
 		return (int)sentLength;
@@ -6507,12 +6550,15 @@ extern "C" {
 			NULL,
 			NULL) == SOCKET_ERROR
 		) {
-			switch (WSAGetLastError()) {
+			int error = WSAGetLastError();
+			switch (error) {
 				case WSAEWOULDBLOCK:
 				case WSAECONNRESET:
 					return 0;
 			}
-
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_receive() failed with error %i", error);
+			#endif
 			return -1;
 		}
 
@@ -6540,21 +6586,26 @@ extern "C" {
 			address != NULL ? (struct sockaddr*)&sin : NULL,
 			address != NULL ? &sinLength : NULL,
 			NULL,
-			NULL) == SOCKET_ERROR) {
-			switch (WSAGetLastError()) {
+			NULL) == SOCKET_ERROR
+		) {
+			int error = WSAGetLastError();
+			switch (error) {
 				case WSAEWOULDBLOCK:
 				case WSAECONNRESET:
 					return 0;
 				case WSAEINTR:
 				case WSAEMSGSIZE:
 					return -2;
-				default:
-					return -1;
 			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_receive() failed with error %i", error);
+			#endif
+			return -1;
 		}
 
-		if (flags & MSG_PARTIAL)
+		if (flags & MSG_PARTIAL) {
 			return -2;
+		}
 
 		if (address != NULL) {
 			address->host = (enet_uint32)sin.sin_addr.s_addr;
