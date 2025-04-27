@@ -4500,7 +4500,9 @@ extern "C" {
 		}
 
 		host = (ENetHost*)enet_malloc(sizeof(ENetHost));
-		if (host == NULL) { return NULL; }
+		if (host == NULL) {
+			return NULL;
+		}
 		memset(host, 0, sizeof(ENetHost));
 
 		host->peers = (ENetPeer*)enet_malloc(peerCount * sizeof(ENetPeer));
@@ -4512,9 +4514,11 @@ extern "C" {
 		memset(host->peers, 0, peerCount * sizeof(ENetPeer));
 
 		host->socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
+#if ENET_IPV6
 		if (host->socket != ENET_SOCKET_NULL) {
-			enet_socket_set_option (host->socket, ENET_SOCKOPT_IPV6_V6ONLY, 0);
+			enet_socket_set_option(host->socket, ENET_SOCKOPT_IPV6_V6ONLY, 0);
 		}
+#endif
 
 		if (host->socket == ENET_SOCKET_NULL || (address != NULL && enet_socket_bind(host->socket, address) < 0)) {
 			if (host->socket != ENET_SOCKET_NULL) {
@@ -4523,7 +4527,6 @@ extern "C" {
 
 			enet_free(host->peers);
 			enet_free(host);
-
 			return NULL;
 		}
 
@@ -4531,7 +4534,9 @@ extern "C" {
 		enet_socket_set_option(host->socket, ENET_SOCKOPT_BROADCAST, 1);
 		enet_socket_set_option(host->socket, ENET_SOCKOPT_RCVBUF, ENET_HOST_RECEIVE_BUFFER_SIZE);
 		enet_socket_set_option(host->socket, ENET_SOCKOPT_SNDBUF, ENET_HOST_SEND_BUFFER_SIZE);
+#if ENET_IPV6
 		enet_socket_set_option(host->socket, ENET_SOCKOPT_IPV6_V6ONLY, 0);
+#endif
 
 		if (address != NULL && enet_socket_get_address(host->socket, &host->address) < 0) {
 			host->address = *address;
@@ -4591,6 +4596,7 @@ extern "C" {
 			enet_peer_reset(currentPeer);
 		}
 
+		LOGD("enet_host_create() successfully created socket %p", host->socket);
 		return host;
 	} /* enet_host_create */
 
@@ -5617,7 +5623,13 @@ extern "C" {
 			sin.sin6_scope_id   = 0;
 		}
 
-		return bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6));
+		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6)) < 0) {
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_bind() failed with error %i", errno);
+			#endif
+			return -1;
+		}
+		return 0;
 #else
 		struct sockaddr_in sin;
 		memset(&sin, 0, sizeof(struct sockaddr_in));
@@ -5631,7 +5643,13 @@ extern "C" {
 			sin.sin_addr.s_addr = INADDR_ANY;
 		}
 
-		return bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in));
+		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in)) < 0) {
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_bind() failed with error %i", errno);
+			#endif
+			return -1;
+		}
+		return 0;
 #endif
 	}
 
@@ -6077,9 +6095,9 @@ extern "C" {
 
 	enet_uint64 enet_host_random_seed(void) {
 #ifdef DEATH_TARGET_WINDOWS_RT
-		return (enet_uint64) GetTickCount();
+		return (enet_uint64)GetTickCount();
 #else
-		return (enet_uint64) timeGetTime();
+		return (enet_uint64)timeGetTime();
 #endif
 	}
 
@@ -6125,8 +6143,9 @@ extern "C" {
 			}
 		}
 
-		if (resultList != NULL)
+		if (resultList != NULL) {
 			freeaddrinfo(resultList);
+		}
 
 		return 0;
 	}
@@ -6154,8 +6173,9 @@ extern "C" {
 				return -1;
 			return 0;
 		}
-		if (err != EAI_NONAME)
+		if (err != EAI_NONAME) {
 			return -1;
+		}
 
 		return 0;
 	}
@@ -6246,7 +6266,14 @@ extern "C" {
 			sin.sin6_scope_id   = 0;
 		}
 
-		return bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6)) == SOCKET_ERROR ? -1 : 0;
+		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6)) == SOCKET_ERROR) {
+			#ifdef ENET_DEBUG
+			int error = WSAGetLastError();
+			LOGW("enet_socket_bind() failed with error %i", error);
+			#endif
+			return -1;
+		}
+		return 0;
 #else
 		struct sockaddr_in sin;
 		memset(&sin, 0, sizeof(struct sockaddr_in));
@@ -6260,7 +6287,14 @@ extern "C" {
 			sin.sin_addr.s_addr = INADDR_ANY;
 		}
 
-		return bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in)) == SOCKET_ERROR ? -1 : 0;
+		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
+			#ifdef ENET_DEBUG
+			int error = WSAGetLastError();
+			LOGW("enet_socket_bind() failed with error %i", error);
+			#endif
+			return -1;
+		}
+		return 0;
 #endif
 
 	}
