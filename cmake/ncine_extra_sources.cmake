@@ -684,8 +684,9 @@ if(WITH_MULTIPLAYER)
 	endif()
 	
 	if(NINTENDO_SWITCH)
-        # Switch doesn't support IPv6 protocol, fallback to IPv4
-        target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
+		# Switch doesn't support IPv6 protocol, fallback to IPv4
+		target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
+		target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_DEBUG")
 	elseif(WIN32)
 		# Link to IP Helper API library and Windows Sockets 2 library
 		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi ws2_32)

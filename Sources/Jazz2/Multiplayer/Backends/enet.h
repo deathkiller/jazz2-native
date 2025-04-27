@@ -4648,7 +4648,7 @@ extern "C" {
 			return NULL;
 		}
 
-		currentPeer->channels = (ENetChannel *) enet_malloc(channelCount * sizeof(ENetChannel));
+		currentPeer->channels = (ENetChannel*)enet_malloc(channelCount * sizeof(ENetChannel));
 		if (currentPeer->channels == NULL) {
 			return NULL;
 		}

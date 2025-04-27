@@ -34,6 +34,9 @@ using namespace nCine;
 
 using namespace std::string_view_literals;
 
+/** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
+#define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
+
 namespace Jazz2::Multiplayer
 {
 	ServerDiscovery::ServerDiscovery(NetworkManager* server)
@@ -195,7 +198,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void ServerDiscovery::DownloadPublicServerList()
+	void ServerDiscovery::DownloadPublicServerList(IServerObserver* observer)
 	{
 		if (_onlineRequest.IsValid()) {
 			return;
@@ -240,7 +243,7 @@ namespace Jazz2::Multiplayer
 						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 
 						LOGI("[MP] -\tFound server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
-						_observer->OnServerFound(std::move(discoveredServer));
+						observer->OnServerFound(std::move(discoveredServer));
 					}
 				}
 			} else {
@@ -349,14 +352,14 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	void ServerDiscovery::SendLocalDiscoveryResponse(ENetSocket socket)
+	void ServerDiscovery::SendLocalDiscoveryResponse(ENetSocket socket, NetworkManager* server)
 	{
 		if (socket == ENET_SOCKET_NULL) {
 			return;
 		}
 
 		// If server name is empty, it's private and shouldn't respond to discovery messages
-		auto& serverConfig = _server->GetServerConfiguration();
+		auto& serverConfig = server->GetServerConfiguration();
 		if (!serverConfig.ServerName.empty()) {
 			MemoryStream packet(512);
 			packet.WriteValue<std::uint64_t>(PacketSignature);
@@ -364,7 +367,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint16_t>(serverConfig.ServerPort);
 			packet.Write(PreferencesCache::UniqueServerID.data(), PreferencesCache::UniqueServerID.size());
 
-			StringView serverVersion = NCINE_VERSION;
+			StringView serverVersion = NCINE_VERSION_s;
 			serverVersion = serverVersion.prefix(serverVersion.findOr('-', serverVersion.end()).begin());
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverVersion.size());
 			packet.Write(serverVersion.data(), (std::uint8_t)serverVersion.size());
@@ -382,7 +385,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableUint32(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 
-			packet.WriteVariableUint32(_server->GetPeerCount());
+			packet.WriteVariableUint32(server->GetPeerCount());
 			packet.WriteVariableUint32(serverConfig.MaxPlayerCount);
 
 			// TODO: Current level
@@ -405,7 +408,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void ServerDiscovery::PublishToPublicServerList()
+	void ServerDiscovery::PublishToPublicServerList(NetworkManager* server)
 	{
 		if (_onlineRequest.IsValid()) {
 			return;
@@ -495,6 +498,7 @@ namespace Jazz2::Multiplayer
 	void ServerDiscovery::OnClientThread(void* param)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
+		IServerObserver* observer = _this->_observer;
 
 		NetworkManagerBase::InitializeBackend();
 
@@ -509,12 +513,12 @@ namespace Jazz2::Multiplayer
 
 			if (_this->_lastOnlineRequest.secondsSince() > 60) {
 				_this->_lastOnlineRequest = TimeStamp::now();
-				_this->DownloadPublicServerList();
+				_this->DownloadPublicServerList(observer);
 			}
 
 			ServerDescription discoveredServer;
 			if (_this->ProcessLocalDiscoveryResponses(socket, discoveredServer, 0)) {
-				_this->_observer->OnServerFound(std::move(discoveredServer));
+				observer->OnServerFound(std::move(discoveredServer));
 			} else {
 				// No responses, sleep for a while
 				Thread::Sleep(500);
@@ -532,6 +536,7 @@ namespace Jazz2::Multiplayer
 	void ServerDiscovery::OnServerThread(void* param)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
+		NetworkManager* server = _this->_server;
 		std::int32_t delayCount = 0;
 
 		NetworkManagerBase::InitializeBackend();
@@ -547,13 +552,13 @@ namespace Jazz2::Multiplayer
 				while (_this->_address.port != 0 && _this->ProcessLocalDiscoveryRequests(socket, 0)) {
 					if (_this->_lastLocalRequest.secondsSince() > 15) {
 						_this->_lastLocalRequest = TimeStamp::now();
-						_this->SendLocalDiscoveryResponse(socket);
+						_this->SendLocalDiscoveryResponse(socket, server);
 					}
 				}
 
 				if (_this->_lastOnlineRequest.secondsSince() > 300) {
 					_this->_lastOnlineRequest = TimeStamp::now();
-					_this->PublishToPublicServerList();
+					_this->PublishToPublicServerList(server);
 				}
 			}
 
