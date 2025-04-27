@@ -695,8 +695,12 @@ namespace Jazz2::Compatibility
 
 			// Default Tileset
 			StringUtils::lowercaseInPlace(Tileset);
-			if (StringHasSuffixIgnoreCase(Tileset, ".j2t"_s)) {
-				Tileset = Tileset.exceptSuffix(4);
+			if (Tileset.hasSuffix(".j2t"_s)) {
+				Tileset = Tileset.exceptSuffix(".j2t"_s);
+			}
+			if (LevelName == "arace2"_s && Tileset == "hauntedh"_s) {
+				// arace2.j2l uses hauntedh.j2t, but this file doesn't exist in some distributions
+				Tileset = "hauntedh1"_s;
 			}
 			co.WriteValue<std::uint8_t>((std::uint8_t)Tileset.size());
 			co.Write(Tileset.data(), Tileset.size());
@@ -753,8 +757,8 @@ namespace Jazz2::Compatibility
 				co.WriteValue<std::uint8_t>(tilesetFlags);
 
 				StringUtils::lowercaseInPlace(tileset.Name);
-				if (StringHasSuffixIgnoreCase(tileset.Name, ".j2t"_s)) {
-					tileset.Name = tileset.Name.exceptSuffix(4);
+				if (tileset.Name.hasSuffix(".j2t"_s)) {
+					tileset.Name = tileset.Name.exceptSuffix(".j2t"_s);
 				}
 
 				co.WriteValue<std::uint8_t>((std::uint8_t)tileset.Name.size());
