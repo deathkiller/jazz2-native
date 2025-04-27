@@ -3890,7 +3890,7 @@ namespace Death { namespace Backward {
 			std::unordered_map<std::string, Implementation::PathComponents> parsedPaths;
 			std::unordered_map<std::string, Implementation::PathTrie> tries;
 
-#	if defined(BACKWARD_TARGET_WINDOWS)
+#	if defined(BACKWARD_TARGET_WINDOWS) || defined(BACKWARD_TARGET_LINUX)
 			bool failed = false;
 #	endif
 			std::vector<ResolvedTrace> resolvedTrace(st.size());
