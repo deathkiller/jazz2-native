@@ -608,7 +608,7 @@ namespace Jazz2::Multiplayer
 		_this->_host = host;
 
 		// Try to connect to each specified endpoint
-		ENetEvent ev;
+		ENetEvent ev{};
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()); i++) {
 			ENetAddress& addr = _this->_desiredEndpoints[i];
 			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
@@ -637,14 +637,15 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 
-				if (enet_host_service(host, &ev, 1000) >= 0 && ev.type == ENET_EVENT_TYPE_CONNECT) {
+				LOGD("enet_host_service() is trying to connect: %u", enet_time_get());
+				if (enet_host_service(host, &ev, 1000) > 0 && ev.type == ENET_EVENT_TYPE_CONNECT) {
 					break;
 				}
 
 				n--;
 			}
 
-			if (n > 0) {
+			if (n != 0) {
 				_this->_peers.push_back(ev.peer);
 				break;
 			}
@@ -723,7 +724,7 @@ namespace Jazz2::Multiplayer
 
 		_this->_peers.reserve(16);
 
-		ENetEvent ev;
+		ENetEvent ev{};
 		while (_this->_state != NetworkState::None) {
 			_this->_lock.lock();
 			std::int32_t result = enet_host_service(host, &ev, 0);
