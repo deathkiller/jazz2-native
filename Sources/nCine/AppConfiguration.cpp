@@ -61,7 +61,7 @@ namespace nCine
 		argv_(nullptr)
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		dataPath() = "asset:/"_s;
+		dataPath() = "assets:/"_s;
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 		dataPath() = fs::PathSeparator;
 		// Always disable mapping on Emscripten as it is not supported by WebGL 2

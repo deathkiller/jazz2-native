@@ -87,7 +87,7 @@ namespace Jazz2
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		return _contentPath;
 #elif defined(DEATH_TARGET_ANDROID)
-		return "asset:/"_s;
+		return "assets:/"_s;
 #elif defined(DEATH_TARGET_SWITCH)
 		return "romfs:/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)

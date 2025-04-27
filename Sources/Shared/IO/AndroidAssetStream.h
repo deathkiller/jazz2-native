@@ -28,7 +28,7 @@ namespace Death { namespace IO {
 		/** @{ @name Constants */
 
 		/** @brief Path prefix of Android asset files */
-		static constexpr Containers::StringView Prefix = "asset:"_s;
+		static constexpr Containers::StringView Prefix = "assets:"_s;
 
 		/** @} */
 

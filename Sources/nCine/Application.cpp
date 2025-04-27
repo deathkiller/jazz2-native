@@ -305,6 +305,14 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 	}
 
 	if (i > 0) {
+		auto functionNameView = StringView(functionName, functionNameLength);
+		if (functionNameView.contains(OperatorPrefix)) {
+			AppendPart(dest, length, "||");
+			AppendPart(dest, length, functionName, functionNameLength);
+			AppendPart(dest, length, "||");
+			return;
+		}
+
 		std::int32_t end = i;
 	FindFunctionName:
 		for (; i >= 0; i--) {

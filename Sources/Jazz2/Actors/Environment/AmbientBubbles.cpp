@@ -54,7 +54,7 @@ namespace Jazz2::Actors::Environment
 		auto tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr) {
 			auto* res = _metadata->FindAnimation(AnimState::Default); // AmbientBubbles
-			if (res != nullptr) {
+			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				Vector2i texSize = res->Base->TextureDiffuse->size();
 				Vector2i size = res->Base->FrameDimensions;
 				Vector2i frameConf = res->Base->FrameConfiguration;
