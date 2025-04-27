@@ -98,39 +98,42 @@ namespace Jazz2::Actors::Enemies
 			constexpr int DebrisSize = 2;
 
 			GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
-			Vector2i texSize = res->Base->TextureDiffuse->size();
+			Texture* texture = res->Base->TextureDiffuse.get();
+			if (texture != nullptr) {
+				Vector2i texSize = texture->size();
 
-			float x = _pos.X - res->Base->Hotspot.X;
-			float y = _pos.Y - res->Base->Hotspot.Y;
+				float x = _pos.X - res->Base->Hotspot.X;
+				float y = _pos.Y - res->Base->Hotspot.Y;
 
-			for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
-					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
+				for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+					for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+						float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
 
-					Tiles::TileMap::DestructibleDebris debris = { };
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
-					debris.Depth = _renderer.layer();
-					debris.Size = Vector2f(currentSize, currentSize);
-					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.X,
-						 ((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.Y);
-					debris.Acceleration = Vector2f::Zero;
+						Tiles::TileMap::DestructibleDebris debris = { };
+						debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+						debris.Depth = _renderer.layer();
+						debris.Size = Vector2f(currentSize, currentSize);
+						debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.X,
+							 ((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.Y);
+						debris.Acceleration = Vector2f::Zero;
 
-					debris.Scale = 1.2f;
-					debris.ScaleSpeed = -0.004f;
-					debris.Alpha = 1.0f;
-					debris.AlphaSpeed = -0.01f;
+						debris.Scale = 1.2f;
+						debris.ScaleSpeed = -0.004f;
+						debris.Alpha = 1.0f;
+						debris.AlphaSpeed = -0.01f;
 
-					debris.Time = 280.0f;
+						debris.Time = 280.0f;
 
-					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
-					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+						debris.TexScaleX = (currentSize / float(texSize.X));
+						debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+						debris.TexScaleY = (currentSize / float(texSize.Y));
+						debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
-					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
+						debris.DiffuseTexture = texture;
+						debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
 
-					tilemap->CreateDebris(debris);
+						tilemap->CreateDebris(debris);
+					}
 				}
 			}
 		}

@@ -947,16 +947,8 @@ namespace Jazz2::Multiplayer
 			if (mpPlayer->_currentTransition == nullptr ||
 				(mpPlayer->_currentTransition->State != AnimState::TransitionWarpIn && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOut &&
 					mpPlayer->_currentTransition->State != AnimState::TransitionWarpInFreefall && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
-				auto peerDesc = mpPlayer->GetPeerDescriptor();
-				peerDesc->Laps++;
-				auto now = TimeStamp::now();
-				peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
-				peerDesc->LapStarted = now;
-
-				CheckGameEnds();
-
 				Vector2f spawnPosition = GetSpawnPoint(mpPlayer->_playerTypeOriginal);
-				mpPlayer->WarpToPosition(spawnPosition, WarpFlags::Default);
+				mpPlayer->WarpToPosition(spawnPosition, WarpFlags::IncrementLaps);
 			}
 			return;
 		} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
@@ -2121,6 +2113,7 @@ namespace Jazz2::Multiplayer
 
 				if (MpPlayer* player = peerDesc->Player) {
 					std::int32_t playerIndex = player->_playerIndex;
+					Vector2f pos = player->_pos;
 
 					for (std::size_t i = 0; i < _players.size(); i++) {
 						if (_players[i] == player) {
@@ -2138,12 +2131,33 @@ namespace Jazz2::Multiplayer
 						return (peer != otherPeer);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
 
+					auto& serverConfig = _networkManager->GetServerConfiguration();
 					if (_levelState == LevelState::WaitingForMinPlayers) {
 						auto& serverConfig = _networkManager->GetServerConfiguration();
 						_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
 						_root->InvokeAsync([this]() {
 							SendLevelStateToAllPlayers();
 						}, NCINE_CURRENT_FUNCTION);
+					} else if (_levelState == LevelState::Running && (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt)) {
+						// Drop all collected treasure
+						if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
+							std::uint32_t treasureLost = peerDesc->TreasureCollected;
+							if (treasureLost > 0) {
+								peerDesc->TreasureCollected = 0;
+
+								for (std::uint32_t i = 0; i < treasureLost; i++) {
+									float dir = (Random().NextBool() ? -1.0f : 1.0f);
+									float force = Random().Next(10.0f, 20.0f);
+									Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
+									std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
+									auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
+									if (actor != nullptr) {
+										actor->AddExternalForce(dir * force, force);
+										AddActor(actor);
+									}
+								}
+							}
+						}
 					}
 				}
 

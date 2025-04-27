@@ -225,19 +225,23 @@ namespace Jazz2::Actors::Enemies
 
 		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		Texture* texture = res->Base->TextureDiffuse.get();
+		if (texture == nullptr) {
+			return;
+		}
+
 		float x = _pos.X - res->Base->Hotspot.X;
 		float y = _pos.Y - res->Base->Hotspot.Y;
 
 		if (runtime_cast<Weapons::ToasterShot*>(collider) || runtime_cast<Weapons::ShieldFireShot*>(collider)) {
-			constexpr int DebrisSize = 3;
+			constexpr std::int32_t DebrisSize = 3;
 
-			Vector2i texSize = res->Base->TextureDiffuse->size();
+			Vector2i texSize = texture->size();
 
-			for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.8f, 1.1f);
 
-					Tiles::TileMap::DestructibleDebris debris = { };
+					Tiles::TileMap::DestructibleDebris debris = {};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
@@ -266,15 +270,15 @@ namespace Jazz2::Actors::Enemies
 		}
 		
 		if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt*>(collider)) {
-			constexpr int DebrisSize = 3;
+			constexpr std::int32_t DebrisSize = 3;
 
-			Vector2i texSize = res->Base->TextureDiffuse->size();
+			Vector2i texSize = texture->size();
 
-			for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
 
-					Tiles::TileMap::DestructibleDebris debris = { };
+					Tiles::TileMap::DestructibleDebris debris = {};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
@@ -304,15 +308,15 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (_pos.Y > _levelHandler->GetWaterLevel()) {
-			constexpr int DebrisSize = 3;
+			constexpr std::int32_t DebrisSize = 3;
 
-			Vector2i texSize = res->Base->TextureDiffuse->size();
+			Vector2i texSize = texture->size();
 
-			for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
 				for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
 
-					Tiles::TileMap::DestructibleDebris debris = { };
+					Tiles::TileMap::DestructibleDebris debris = {};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
@@ -341,8 +345,8 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (_frozenTimeLeft > 0.0f) {
-			for (int i = 0; i < 20; i++) {
-				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+			for (std::int32_t i = 0; i < 20; i++) {
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 			}
 
 			_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
