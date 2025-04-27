@@ -123,8 +123,8 @@ namespace Jazz2::Events
 		ILevelHandler* _levelHandler;
 		Vector2i _layoutSize;
 		PitType _pitType;
-		SmallVector<EventTile, 0> _eventLayout;
-		SmallVector<EventTile, 0> _eventLayoutForRollback;
+		std::unique_ptr<EventTile[]> _eventLayout;
+		std::unique_ptr<EventTile[]> _eventLayoutForRollback;
 		SmallVector<GeneratorInfo, 0> _generators;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;

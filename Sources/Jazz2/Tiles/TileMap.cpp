@@ -11,7 +11,8 @@ namespace Jazz2::Tiles
 {
 	TileMap::TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
-			_triggerState(ValueInit, TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
+			_triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount), _texturedBackgroundLayer(-1),
+			_texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
@@ -1373,6 +1374,28 @@ namespace Jazz2::Tiles
 		}
 	}
 
+	void TileMap::CreateCheckpointForRollback()
+	{
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (_sprLayerForRollback == nullptr) {
+			_sprLayerForRollback = std::make_unique<LayerTile[]>(layoutSize.X * layoutSize.Y);
+		}
+
+		std::memcpy(_sprLayerForRollback.get(), _layers[_sprLayerIndex].Layout.get(), layoutSize.X * layoutSize.Y * sizeof(LayerTile));
+		std::memcpy(_triggerStateForRollback.data(), _triggerState.data(), _triggerState.sizeInBytes());
+	}
+
+	void TileMap::RollbackToCheckpoint()
+	{
+		if (_sprLayerForRollback == nullptr) {
+			return;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		std::memcpy(_layers[_sprLayerIndex].Layout.get(), _sprLayerForRollback.get(), layoutSize.X * layoutSize.Y * sizeof(LayerTile));
+		std::memcpy(_triggerState.data(), _triggerStateForRollback.data(), _triggerState.sizeInBytes());
+	}
+
 	void TileMap::InitializeFromStream(Stream& src)
 	{
 		std::int32_t layoutSize = src.ReadVariableInt32();
@@ -1412,12 +1435,17 @@ namespace Jazz2::Tiles
 
 		auto& spriteLayer = _layers[_sprLayerIndex];
 		std::int32_t layoutSize = spriteLayer.LayoutSize.X * spriteLayer.LayoutSize.Y;
+		const LayerTile* source = (_sprLayerForRollback != nullptr ? _sprLayerForRollback.get() : spriteLayer.Layout.get());
 		dest.WriteVariableInt32(layoutSize);
 		for (std::int32_t i = 0; i < layoutSize; i++) {
-			dest.WriteVariableInt32(spriteLayer.Layout[i].DestructFrameIndex);
+			dest.WriteVariableInt32(source[i].DestructFrameIndex);
 		}
 
-		dest.Write(_triggerState.data(), _triggerState.sizeInBytes());
+		if (_sprLayerForRollback != nullptr) {
+			dest.Write(_triggerStateForRollback.data(), _triggerStateForRollback.sizeInBytes());
+		} else {
+			dest.Write(_triggerState.data(), _triggerState.sizeInBytes());
+		}
 	}
 
 	void TileMap::RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y)

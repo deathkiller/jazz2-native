@@ -60,11 +60,19 @@ namespace Jazz2::Events
 
 	void EventMap::CreateCheckpointForRollback()
 	{
-		std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
+		if (_eventLayoutForRollback == nullptr) {
+			_eventLayoutForRollback = std::make_unique<EventTile[]>(_layoutSize.X * _layoutSize.Y);
+		}
+
+		std::memcpy(_eventLayoutForRollback.get(), _eventLayout.get(), _layoutSize.X * _layoutSize.Y * sizeof(EventTile));
 	}
 
 	void EventMap::RollbackToCheckpoint()
 	{
+		if (_eventLayoutForRollback == nullptr) {
+			return;
+		}
+
 		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
 				std::int32_t tileID = y * _layoutSize.X + x;
@@ -101,7 +109,7 @@ namespace Jazz2::Events
 
 		EventTile& previousEvent = _eventLayout[x + y * _layoutSize.X];
 
-		EventTile newEvent = { };
+		EventTile newEvent = {};
 		newEvent.Event = eventType,
 		newEvent.EventFlags = eventFlags,
 		newEvent.IsEventActive = (previousEvent.Event == eventType && previousEvent.IsEventActive);
@@ -124,8 +132,9 @@ namespace Jazz2::Events
 		//ContentResolver::Get().SuspendAsync();
 
 		// Preload all events
-		for (auto& tile : _eventLayout) {
+		for (std::int32_t i = 0; i < _layoutSize.X * _layoutSize.Y; i++) {
 			// TODO: Exclude also some modifiers here ?
+			auto& tile = _eventLayout[i];
 			if (tile.Event != EventType::Empty && tile.Event != EventType::Generator && tile.Event != EventType::AreaWeather) {
 				eventSpawner->PreloadEvent(tile.Event, tile.EventParams);
 			}
@@ -316,8 +325,7 @@ namespace Jazz2::Events
 
 	void EventMap::ReadEvents(Stream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
 	{
-		_eventLayout.resize(_layoutSize.X * _layoutSize.Y);
-		_eventLayoutForRollback.resize(_layoutSize.X * _layoutSize.Y);
+		_eventLayout = std::make_unique<EventTile[]>(_layoutSize.X * _layoutSize.Y);
 
 		std::uint8_t difficultyBit;
 		switch (difficulty) {
@@ -491,9 +499,10 @@ namespace Jazz2::Events
 	void EventMap::SerializeResumableToStream(Stream& dest)
 	{
 		std::int32_t layoutSize = _layoutSize.X * _layoutSize.Y;
+		const EventTile* source = (_eventLayoutForRollback != nullptr ? _eventLayoutForRollback.get() : _eventLayout.get());
 		dest.WriteVariableInt32(layoutSize);
 		for (std::int32_t i = 0; i < layoutSize; i++) {
-			EventTile& tile = _eventLayoutForRollback[i];
+			const EventTile& tile = source[i];
 			dest.WriteVariableUint32((std::uint32_t)tile.Event);
 			dest.WriteVariableUint32((std::uint32_t)tile.EventFlags);
 			dest.Write(tile.EventParams, sizeof(tile.EventParams)); // TODO: Optimize this

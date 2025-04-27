@@ -3895,14 +3895,19 @@ namespace Death { namespace Backward {
 #	endif
 			std::vector<ResolvedTrace> resolvedTrace(st.size());
 			for (std::size_t traceIdx = 0; traceIdx < st.size(); ++traceIdx) {
-				resolvedTrace[traceIdx] = _resolver.Resolve(st[traceIdx]);
+				const auto& trace = resolvedTrace[traceIdx] = _resolver.Resolve(st[traceIdx]);
 				
 				// Collect all used paths
-				AddPath(resolvedTrace[traceIdx].object_filename, parsedPaths, tries);
-				AddPath(resolvedTrace[traceIdx].source.filename, parsedPaths, tries);
+				AddPath(trace.object_filename, parsedPaths, tries);
+				AddPath(trace.source.filename, parsedPaths, tries);
 
-#	if defined(BACKWARD_TARGET_WINDOWS)
-				if (resolvedTrace[traceIdx].object_function.empty()) {
+				for (std::size_t inlinerIdx = trace.inliners.size(); inlinerIdx > 0; --inlinerIdx) {
+					const ResolvedTrace::SourceLoc& inlinerLoc = trace.inliners[inlinerIdx - 1];
+					AddPath(inlinerLoc.filename, parsedPaths, tries);
+				}
+
+#	if defined(BACKWARD_TARGET_WINDOWS) || defined(BACKWARD_TARGET_LINUX)
+				if (trace.object_function.empty()) {
 					failed = true;
 				}
 #	endif
@@ -3925,11 +3930,13 @@ namespace Death { namespace Backward {
 				PrintTrace(os, resolvedTrace[traceIdx], colorize, pathMap);
 			}
 
-#	if defined(BACKWARD_TARGET_WINDOWS)
+#	if defined(BACKWARD_TARGET_WINDOWS) || defined(BACKWARD_TARGET_LINUX)
 			if (failed) {
 				colorize.SetColor(Implementation::Color::BrightYellow);
 				os << "Make sure corresponding .pdb files are accessible to show full stack trace. ";
 			}
+#	endif
+#	if defined(BACKWARD_TARGET_WINDOWS)
 			colorize.SetColor(Implementation::Color::Yellow);
 			os << "Memory dump file has been saved to ";
 			colorize.SetColor(Implementation::Color::BrightGreen);
@@ -4008,7 +4015,13 @@ namespace Death { namespace Backward {
 				if (!trace.object_filename.empty()) {
 					os << "   Library ";
 					colorize.SetColor(Implementation::Color::BrightGreen);
-					os << "\"" << pathMap.at(trace.object_filename);
+					os << "\"";
+					auto path = pathMap.find(trace.object_filename);
+					if (path != pathMap.end()) {
+						os << path->second;
+					} else {
+						os << trace.object_filename;
+					}
 					if (trace.object_base_address != nullptr) {
 						colorize.SetColor(Implementation::Color::Green);
 						os << "!0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
@@ -4058,7 +4071,7 @@ namespace Death { namespace Backward {
 		}
 
 		void PrintSnippet(std::ostream& os, const char* indent, const ResolvedTrace::SourceLoc& sourceLoc,
-						   Implementation::Colorize& colorize, Implementation::Color colorCode, std::int32_t contextSize) {
+						  Implementation::Colorize& colorize, Implementation::Color colorCode, std::int32_t contextSize) {
 			typedef SnippetFactory::lines_t lines_t;
 
 			lines_t lines = _snippets.GetSnippet(sourceLoc.filename, sourceLoc.line, contextSize);
@@ -4076,10 +4089,16 @@ namespace Death { namespace Backward {
 		}
 
 		void PrintSourceLocation(std::ostream& os, Implementation::Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap,
-								  const char* indent, const ResolvedTrace::SourceLoc& sourceLoc, void* addr = nullptr) {
+								 const char* indent, const ResolvedTrace::SourceLoc& sourceLoc, void* addr = nullptr) {
 			os << indent << "Source ";
 			colorize.SetColor(Implementation::Color::BrightGreen);
-			os << "\"" << pathMap.at(sourceLoc.filename);
+			os << "\"";
+			auto path = pathMap.find(sourceLoc.filename);
+			if (path != pathMap.end()) {
+				os << path->second;
+			} else {
+				os << sourceLoc.filename;
+			}
 			colorize.SetColor(Implementation::Color::Green);
 			os << ":" << std::setw(0) << sourceLoc.line;
 			colorize.SetColor(Implementation::Color::BrightGreen);
