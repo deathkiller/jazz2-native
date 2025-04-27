@@ -683,7 +683,10 @@ if(WITH_MULTIPLAYER)
 		message(STATUS "Building the game with multiplayer support")
 	endif()
 	
-	if(WIN32)
+	if(NINTENDO_SWITCH)
+        # Switch doesn't support IPv6 protocol, fallback to IPv4
+        target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
+	elseif(WIN32)
 		# Link to IP Helper API library and Windows Sockets 2 library
 		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi ws2_32)
 	endif()

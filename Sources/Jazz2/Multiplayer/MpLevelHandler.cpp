@@ -1965,6 +1965,7 @@ namespace Jazz2::Multiplayer
 					} else {
 						LOGD("[MP] Level \"%s\" doesn't exist", levelInit.LevelName.data());
 					}
+					return true;
 				} else if (variableName == "welcome"_s) {
 					SetWelcomeMessage(StringUtils::replaceAll(value.trimmed(), "\\n"_s, "\n"_s));
 					SendMessage(peer, UI::MessageLevel::Info, "Lobby message changed");

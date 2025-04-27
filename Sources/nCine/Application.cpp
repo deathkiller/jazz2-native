@@ -305,6 +305,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 
 	if (i > 0) {
 		std::int32_t end = i;
+	FindFunctionName:
 		for (; i >= 0; i--) {
 			if (functionName[i] == '>') {
 				parethesisCount++;
@@ -312,6 +313,13 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 				parethesisCount--;
 			} else if (functionName[i] == ' ' && parethesisCount == 0) {
 				break;
+			}
+		}
+		for (std::int32_t j = i; j > 0; j--) {
+			if (functionName[j] == ':' && functionName[j - 1] == ':') {
+				// It's probably some operator, just retry and continue
+				i = j - 2;
+				goto FindFunctionName;
 			}
 		}
 		i++;

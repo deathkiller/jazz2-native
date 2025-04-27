@@ -901,7 +901,7 @@ namespace Jazz2
 					AABBf aabbTop = aabb;
 					aabbTop.B = aabbTop.T + 6.0f;
 					AABBf aabbBottom = aabb;
-					aabbBottom.T = aabbBottom.B - 14.0f;
+					aabbBottom.T = aabbBottom.B - std::max(14.0f, (aabb.B - aabb.T) - 10.0f);
 					if (!_tileMap->IsTileEmpty(aabbBottom, params)) {
 						return false;
 					}

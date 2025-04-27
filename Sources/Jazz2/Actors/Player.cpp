@@ -773,15 +773,15 @@ namespace Jazz2::Actors
 		if (_inWater || _activeModifier != Modifier::None) {
 			float playerMovement = _levelHandler->PlayerVerticalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
-			if (playerMovementVelocity > 0.5f) {
-				float mult;
+			if (playerMovementVelocity > 0.3f) {
+				float mult, max;
 				switch (_activeModifier) {
-					case Modifier::Airboard: mult = (playerMovement > 0 ? -1.0f : 0.2f); break;
-					case Modifier::LizardCopter: mult = (playerMovement > 0 ? -2.0f : 2.0f); break;
-					default: mult = (playerMovement > 0 ? -1.0f : 1.0f); break;
+					case Modifier::Airboard: mult = (playerMovement > 0 ? 1.0f : -0.2f); max = MaxRunningSpeed; break;
+					case Modifier::LizardCopter: mult = (playerMovement > 0 ? 2.0f : -4.0f); max = (playerMovement > 0 ? MaxRunningSpeed : 2.0f * MaxRunningSpeed); break;
+					default: mult = (playerMovement > 0 ? 1.0f : -1.0f); max = MaxRunningSpeed; break;
 				}
 
-				_speed.Y = std::clamp(_speed.Y - Acceleration * timeMult * mult, -MaxRunningSpeed * playerMovementVelocity, MaxRunningSpeed * playerMovementVelocity);
+				_speed.Y = std::clamp(_speed.Y + Acceleration * timeMult * mult, -max * playerMovementVelocity, max * playerMovementVelocity);
 			} else {
 				_speed.Y = std::max((std::abs(_speed.Y) - Deceleration * timeMult), 0.0f) * (_speed.Y < 0.0f ? -1.0f : 1.0f);
 			}
@@ -1800,14 +1800,16 @@ namespace Jazz2::Actors
 				CancelTransition();
 			}
 
-			SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
-			SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
+			if (_activeModifier == Modifier::None) {
+				SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
+				SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
+			}
 			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
 			_controllableTimeout = 2.0f;
 		} else if (std::abs(force.Y) > 0.0f) {
 			MoveInstantly(Vector2f(lerp(_pos.X, pos.X, 0.3f), _pos.Y), MoveType::Absolute);
 
-			if (_copterFramesLeft > 0.0f) {
+			if (_activeModifier == Modifier::None && _copterFramesLeft > 0.0f) {
 				_copterFramesLeft = 0.0f;
 				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
 				SetState(ActorState::ApplyGravitation, true);
@@ -1837,12 +1839,16 @@ namespace Jazz2::Actors
 
 			if (sign > 0) {
 				removeSpecialMove = false;
-				_currentSpecialMove = SpecialMoveType::Buttstomp;
-				SetAnimation(AnimState::Buttstomp);
+				if (_activeModifier == Modifier::None) {
+					_currentSpecialMove = SpecialMoveType::Buttstomp;
+					SetAnimation(AnimState::Buttstomp);
+				}
 			} else {
 				removeSpecialMove = true;
 				_isSpring = true;
-				SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
+				if (_activeModifier == Modifier::None) {
+					SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
+				}
 			}
 
 			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
@@ -2166,7 +2172,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		if (_suspendType == SuspendType::SwingingVine) {
+		if (_suspendType == SuspendType::SwingingVine || _activeModifier != Modifier::None) {
 			return;
 		}
 
@@ -3796,6 +3802,10 @@ namespace Jazz2::Actors
 
 	void Player::EndDamagingMove()
 	{
+		if (_currentSpecialMove == SpecialMoveType::None) {
+			return;
+		}
+
 		SetState(ActorState::ApplyGravitation, true);
 		SetAnimation(_currentAnimation->State & ~(AnimState::Uppercut | AnimState::Buttstomp));
 

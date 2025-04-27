@@ -204,8 +204,8 @@ namespace Jazz2::UI::Menu
 				}
 
 				if (!_items[i].Desc.Version.empty()) {
-					_root->DrawStringShadow(StringView("v"_s + _items[i].Desc.Version), charOffset, column2 - 14.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
-						Alignment::Right, _items[i].Desc.IsCompatible ? Font::DefaultColor : Colorf(0.7f, 0.44f, 0.44f, 0.5f), 0.7f);
+					_root->DrawStringShadow(StringView("v"_s + _items[i].Desc.Version), charOffset, column2 - 78.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
+						Alignment::Left, _items[i].Desc.IsCompatible ? Font::DefaultColor : Colorf(0.7f, 0.44f, 0.44f, 0.5f), 0.7f);
 				}
 
 				StringView firstEndpoint = _items[i].Desc.EndpointString;

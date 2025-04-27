@@ -111,13 +111,14 @@ namespace Jazz2::Multiplayer
 		ENetAddress _address;
 		WebRequest _onlineRequest;
 
-		static ENetSocket TryCreateSocket(const char* multicastAddress, ENetAddress& parsedAddress);
+		static ENetSocket TryCreateLocalSocket(const char* multicastAddress, ENetAddress & parsedAddress);
 
-		void TrySendLocalRequest(ENetSocket socket, const ENetAddress& address);
-		void TrySendOnlineRequest();
-		bool ProcessLocalResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs = 0);
-		bool ProcessLocalRequests(ENetSocket socket, std::int32_t timeoutMs = 0);
-		void PublishOnline();
+		void SendLocalDiscoveryRequest(ENetSocket socket, const ENetAddress& address);
+		void DownloadPublicServerList();
+		bool ProcessLocalDiscoveryResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs = 0);
+		bool ProcessLocalDiscoveryRequests(ENetSocket socket, std::int32_t timeoutMs = 0);
+		void SendLocalDiscoveryResponse(ENetSocket socket);
+		void PublishToPublicServerList();
 
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);
