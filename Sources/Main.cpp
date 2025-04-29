@@ -1085,6 +1085,11 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 					LOGI("[MP] Peer authenticated as \"%s\" (%s)%s", peerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peer).data(),
 						peerDesc->IsAdmin ? " [Admin]" : "");
+
+					MemoryStream packet(17);
+					packet.WriteValue<std::uint8_t>(0);	// Flags
+					packet.Write(PreferencesCache::UniqueServerID, sizeof(PreferencesCache::UniqueServerID));
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::AuthResponse, packet);
 				} else {
 					DEATH_ASSERT_UNREACHABLE();
 				}
@@ -1094,6 +1099,14 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 	} else {
 		switch ((ServerPacketType)packetType) {
+			case ServerPacketType::AuthResponse: {
+				MemoryStream packet(data);
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				StaticArray<16, std::uint8_t> uuid;
+				packet.Read(uuid.data(), uuid.size());
+				_networkManager->RemoteServerID = NetworkManager::UuidToString(uuid);
+				return;
+			}
 			case ServerPacketType::LoadLevel: {
 				MemoryStream packet(data);
 				std::uint32_t flags = packet.ReadVariableUint32();
@@ -1109,12 +1122,45 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t totalLaps = packet.ReadVariableUint32();
 				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
 
+				bool containsLevelAssets = (flags & 0x10) != 0;
+				if (containsLevelAssets) {
+					auto& resolver = ContentResolver::Get();
+
+					String downloadsPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s, StringUtils::replaceAll(_networkManager->RemoteServerID, ":"_s, ""_s) });
+					String levelTargetPath = fs::CombinePath({ downloadsPath, String(levelName + ".j2l"_s) });
+					fs::CreateDirectories(fs::GetDirectoryName(levelTargetPath));
+
+					std::int64_t levelFileSize = packet.ReadVariableInt64();
+					auto s = fs::Open(levelTargetPath, FileAccess::Write);
+					if (s->IsValid()) {		
+						s->Write(packet.GetCurrentPointer(levelFileSize), levelFileSize);
+					} else {
+						packet.Seek(levelFileSize, SeekOrigin::Current);
+					}
+
+					std::uint32_t tileSetCount = packet.ReadVariableUint32();
+					for (std::uint32_t i = 0; i < tileSetCount; ++i) {
+						std::uint32_t tileSetNameLength = packet.ReadVariableUint32();
+						String tileSetName{NoInit, tileSetNameLength};
+						packet.Read(tileSetName.data(), tileSetNameLength);
+						std::int64_t tileSetFileSize = packet.ReadVariableInt64();
+
+						auto s = fs::Open(fs::CombinePath({ downloadsPath, String(tileSetName + ".j2t"_s) }), FileAccess::Write);
+						if (s->IsValid()) {
+							s->Write(packet.GetCurrentPointer(tileSetFileSize), tileSetFileSize);
+						} else {
+							packet.Seek(tileSetFileSize, SeekOrigin::Current);
+						}
+					}
+				}
+
 				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: %s", flags, (std::uint32_t)gameMode, levelName.data());
 
 				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
 					bool elimination = (flags & 0x04) != 0;
+					bool containsLevelAssets = (flags & 0x10) != 0;
 
 					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
@@ -1137,24 +1183,32 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						return;
 					}
 
-					if (_networkManager != nullptr) {
-						_networkManager->Dispose();
-						_networkManager = nullptr;
-					}
-
-					InGameConsole::Clear();
-					Menu::MainMenu* mainMenu;
-					if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
-						if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
-							mainMenu->Reset();
-						}
+					if (!containsLevelAssets) {
+						// Level failed to initialize, but probably some assets are missing, try to request them from the server
+						MemoryStream packet(1);
+						packet.WriteValue<std::uint8_t>(0);	// Reserved
+						_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::RequestLevelAssets, packet);
 					} else {
-						auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
-						mainMenu = newHandler.get();
-						SetStateHandler(std::move(newHandler));
-					}
+						// Level failed to initialize, but all assets should be present, show error message
+						if (_networkManager != nullptr) {
+							_networkManager->Dispose();
+							_networkManager = nullptr;
+						}
 
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"%s\".\nPlease download the required files and try it again.", levelInit.LevelName.data()), true);
+						InGameConsole::Clear();
+						Menu::MainMenu* mainMenu;
+						if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
+							if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
+								mainMenu->Reset();
+							}
+						} else {
+							auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
+							mainMenu = newHandler.get();
+							SetStateHandler(std::move(newHandler));
+						}
+
+						mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"%s\".\nPlease download the required files and try it again.", levelInit.LevelName.data()), true);
+					}
 				}, NCINE_CURRENT_FUNCTION);
 				break;
 			}
@@ -1376,6 +1430,7 @@ RecreateCache:
 	// Delete cache from previous versions
 	String animationsPath = fs::CombinePath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
+	fs::RemoveDirectoryRecursive(fs::CombinePath(resolver.GetCachePath(), "Downloads"_s));
 
 	// Create .pak file
 	{

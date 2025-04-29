@@ -557,6 +557,7 @@ namespace Jazz2::Multiplayer
 			case Reason::Kicked: return "Kicked by server"; break;
 			case Reason::Banned: return "Banned by server"; break;
 			case Reason::CheatingDetected: return "Cheating detected"; break;
+			case Reason::DownloadsNotAllowed: return "Downloading of assets is not allowed"; break;
 			default: return "Unknown reason"; break;
 		}
 	}

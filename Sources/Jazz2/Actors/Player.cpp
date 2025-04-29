@@ -911,12 +911,13 @@ namespace Jazz2::Actors
 								case PlayerType::Spaz: {
 									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
+										_controllableTimeout = 60.0f;
 										SetAnimation(AnimState::Uppercut);
-										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
+										SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 											_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 											_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
 											SetState(ActorState::ApplyGravitation, false);
-											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Sidekick);
+											SetPlayerTransition(AnimState::TransitionUppercutB, true, false, SpecialMoveType::Sidekick);
 										});
 
 										PlayPlayerSfx("Sidekick"_s);
@@ -939,8 +940,9 @@ namespace Jazz2::Actors
 								case PlayerType::Lori: {
 									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
+										_controllableTimeout = 40.0f;
 										SetAnimation(AnimState::Uppercut);
-										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
+										SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 											_externalForce.X = 15.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 											_speed.X = 6.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 											SetState(ActorState::ApplyGravitation, false);
@@ -1779,7 +1781,6 @@ namespace Jazz2::Actors
 		if (std::abs(force.X) > 0.0f) {
 			MoveInstantly(Vector2f(_pos.X, (_pos.Y + pos.Y) * 0.5f), MoveType::Absolute);
 
-			removeSpecialMove = true;
 			_copterFramesLeft = 0.0f;
 			//speedX = force.X;
 			_speed.X = (1.0f + std::abs(force.X)) * sign;
@@ -1795,17 +1796,21 @@ namespace Jazz2::Actors
 				_externalForce.Y = 0.0f;
 			}
 
-			if (_inIdleTransition) {
-				_inIdleTransition = false;
-				CancelTransition();
+			if (_currentSpecialMove != SpecialMoveType::Sidekick) {
+				if (_inIdleTransition) {
+					_inIdleTransition = false;
+					CancelTransition();
+				}
+
+				removeSpecialMove = true;
+				_controllableTimeout = 2.0f;
+				if (_activeModifier == Modifier::None) {
+					SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup | AnimState::Buttstomp));
+					SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
+				}
 			}
 
-			if (_activeModifier == Modifier::None) {
-				SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
-				SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
-			}
 			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
-			_controllableTimeout = 2.0f;
 		} else if (std::abs(force.Y) > 0.0f) {
 			MoveInstantly(Vector2f(lerp(_pos.X, pos.X, 0.3f), _pos.Y), MoveType::Absolute);
 
@@ -2134,9 +2139,10 @@ namespace Jazz2::Actors
 		}
 
 		// Sidekick
-		if (_currentSpecialMove == SpecialMoveType::Sidekick && _currentTransition == nullptr && std::abs(_speed.X) < 0.01f) {
+		if (_currentSpecialMove == SpecialMoveType::Sidekick && _currentTransition == nullptr && (_controllable || std::abs(_speed.X) < 0.01f)) {
 			EndDamagingMove();
 			_controllable = true;
+			_controllableTimeout = 0.0f;
 			if (_suspendType == SuspendType::None) {
 				SetTransition(AnimState::TransitionUppercutEnd, false);
 			}

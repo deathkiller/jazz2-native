@@ -28,7 +28,8 @@ namespace Jazz2::Multiplayer
 		ConnectionTimedOut,						/**< Connection timed out */
 		Kicked,									/**< Kicked by server */
 		Banned,									/**< Banned by server */
-		CheatingDetected						/**< Cheating detected */
+		CheatingDetected,						/**< Cheating detected */
+		DownloadsNotAllowed						/**< Downloading of assets is not allowed */
 	};
 }
 

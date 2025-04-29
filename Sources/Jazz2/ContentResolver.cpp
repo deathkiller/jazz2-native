@@ -1121,7 +1121,7 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		return std::make_unique<Tiles::TileSet>(tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
+		return std::make_unique<Tiles::TileSet>(path, tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
 	}
 
 	bool ContentResolver::LevelExists(StringView levelName)

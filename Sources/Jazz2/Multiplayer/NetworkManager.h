@@ -23,6 +23,9 @@ namespace Jazz2::Multiplayer
 	class NetworkManager : public NetworkManagerBase
 	{
 	public:
+		/** @brief Unique server ID of the remote server */
+		String RemoteServerID;
+
 		NetworkManager();
 		~NetworkManager();
 
