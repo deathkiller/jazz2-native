@@ -408,7 +408,7 @@ namespace Jazz2::Multiplayer
 				return {};
 			}
 
-			addressLength = strnlen(addressString + 1, sizeof(addressString) - 1);
+			addressLength = strnlen(addressString, sizeof(addressString));
 		} else {
 			if (inet_ntop(AF_INET6, (void*)&address, &addressString[1], sizeof(addressString) - 3) == NULL) {
 				return {};
