@@ -2135,9 +2135,8 @@ namespace Jazz2::Multiplayer
 						return (peer != otherPeer);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
 
-					auto& serverConfig = _networkManager->GetServerConfiguration();
+					const auto& serverConfig = _networkManager->GetServerConfiguration();
 					if (_levelState == LevelState::WaitingForMinPlayers) {
-						auto& serverConfig = _networkManager->GetServerConfiguration();
 						_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
 						_root->InvokeAsync([this]() {
 							SendLevelStateToAllPlayers();
@@ -2305,6 +2304,83 @@ namespace Jazz2::Multiplayer
 					_root->InvokeAsync([this, line = std::move(prefixedMessage)]() mutable {
 						_console->WriteLine(UI::MessageLevel::Info, std::move(line));
 					}, NCINE_CURRENT_FUNCTION);
+					return true;
+				}
+				case ClientPacketType::RequestLevelAssets: {
+					const auto& serverConfig = _networkManager->GetServerConfiguration();
+					if (!serverConfig.AllowDownloads) {
+						// Server doesn't allow downloads, kick the client instead
+						_networkManager->Kick(peer, Reason::DownloadsNotAllowed);
+						return true;
+					}
+
+					std::uint32_t flags = 0x10; // ContainsLevelAssets
+					if (_isReforged) {
+						flags |= 0x01;
+					}
+					if (PreferencesCache::EnableLedgeClimb) {
+						flags |= 0x02;
+					}
+					if (serverConfig.Elimination) {
+						flags |= 0x04;
+					}
+
+					MemoryStream packet(28 + _levelName.size());
+					packet.WriteVariableUint32(flags);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ExitType::None);
+					packet.WriteVariableUint32(_levelName.size());
+					packet.Write(_levelName.data(), _levelName.size());
+					packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
+					packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
+					packet.WriteVariableUint32(serverConfig.TotalKills);
+					packet.WriteVariableUint32(serverConfig.TotalLaps);
+					packet.WriteVariableUint32(serverConfig.TotalTreasureCollected);
+
+					auto& resolver = ContentResolver::Get();
+					auto levelNameNormalized = fs::ToNativeSeparators(_levelName);
+					auto levelFullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(levelNameNormalized + ".j2l"_s) });
+					if (!fs::IsReadableFile(levelFullPath)) {
+						levelFullPath = fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, String(levelNameNormalized + ".j2l"_s) });
+					}
+					auto s = fs::Open(levelFullPath, FileAccess::Read);
+					if (!s->IsValid()) {
+						_networkManager->Kick(peer, Reason::ServerNotReady);
+						return true;
+					}
+
+					std::int64_t levelFileSize = s->GetSize();
+					packet.WriteVariableInt64(levelFileSize);
+
+					std::int64_t bytesWritten = packet.FetchFromStream(*s, levelFileSize);
+					DEATH_DEBUG_ASSERT(bytesWritten == levelFileSize);
+
+					auto usedTileSetPaths = _tileMap->GetUsedTileSetPaths();
+					packet.WriteVariableUint32((std::uint32_t)usedTileSetPaths.size());
+					for (const auto& tileSetPath : usedTileSetPaths) {
+						auto tileSetFullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(tileSetPath + ".j2t"_s) });
+						if (!fs::IsReadableFile(tileSetFullPath)) {
+							tileSetFullPath = fs::CombinePath({ resolver.GetCachePath(), "Tilesets"_s, String(tileSetPath + ".j2t"_s) });
+						}
+						auto s = fs::Open(tileSetFullPath, FileAccess::Read);
+						if (!s->IsValid()) {
+							_networkManager->Kick(peer, Reason::ServerNotReady);
+							return true;
+						}
+
+						packet.WriteVariableUint32((std::uint32_t)tileSetPath.size());
+						packet.Write(tileSetPath.data(), (std::int64_t)tileSetPath.size());
+
+						std::int64_t tileSetFileSize = s->GetSize();
+						packet.WriteVariableInt64(tileSetFileSize);
+						std::int64_t bytesWritten = packet.FetchFromStream(*s, tileSetFileSize);
+						DEATH_DEBUG_ASSERT(bytesWritten == tileSetFileSize);
+					}
+
+					LOGI("[MP] ClientPacketType::RequestLevelAssets - sending assets (%u bytes)", (std::uint32_t)packet.GetSize());
+
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
 					return true;
 				}
 				case ClientPacketType::PlayerReady: {
@@ -4262,7 +4338,7 @@ namespace Jazz2::Multiplayer
 
 		_inGameLobby->Hide();
 
-		MemoryStream packet(1);
+		MemoryStream packet(2);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)playerType);
 		// TODO: Selected team
 		packet.WriteValue<std::uint8_t>(0);

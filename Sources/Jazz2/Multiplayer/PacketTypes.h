@@ -24,7 +24,7 @@ namespace Jazz2::Multiplayer
 		Auth = 10,
 		LevelReady,
 		ChatMessage,
-		RequestLevelFiles,
+		RequestLevelAssets,
 
 		PlayerReady = 30,
 		PlayerUpdate,
@@ -39,7 +39,8 @@ namespace Jazz2::Multiplayer
 		Pong,
 		Reserved,
 
-		PeerSetProperty = 70,
+		AuthResponse = 70,
+		PeerSetProperty = 71,
 
 		LoadLevel = 80,
 		LevelSetProperty,

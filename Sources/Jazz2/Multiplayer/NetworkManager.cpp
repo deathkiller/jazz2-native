@@ -45,6 +45,7 @@ namespace Jazz2::Multiplayer
 	{
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>();
+		RemoteServerID = {};
 		NetworkManagerBase::CreateClient(handler, endpoint, defaultPort, clientData);
 	}
 
@@ -53,6 +54,7 @@ namespace Jazz2::Multiplayer
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
 		_serverConfig->StartUnixTimestamp = DateTime::Now().ToUnixMilliseconds() / 1000;
+		RemoteServerID = {};
 		bool result = NetworkManagerBase::CreateServer(handler, _serverConfig->ServerPort);
 
 		if (result && !_serverConfig->IsPrivate) {
@@ -158,6 +160,7 @@ namespace Jazz2::Multiplayer
 		HashMap<String, bool> includedFiles;
 
 		ServerConfiguration serverConfig{};
+		serverConfig.AllowDownloads = /*true*/false;
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.MinPlayerCount = 1;
@@ -266,6 +269,11 @@ namespace Jazz2::Multiplayer
 					serverConfig.IsPrivate = isPrivate;
 				}
 
+				bool allowDownloads;
+				if (doc["AllowDownloads"].get(allowDownloads) == Json::SUCCESS) {
+					serverConfig.AllowDownloads = allowDownloads;
+				}
+				
 				bool requiresDiscordAuth;
 				if (doc["RequiresDiscordAuth"].get(requiresDiscordAuth) == Json::SUCCESS) {
 					serverConfig.RequiresDiscordAuth = requiresDiscordAuth;

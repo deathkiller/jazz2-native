@@ -276,10 +276,12 @@ namespace Jazz2::Tiles
 		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask);
 
 		/** @brief Returns a caption tile */
-		StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, Color> GetCaptionTile() const
-		{
+		StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, Color> GetCaptionTile() const {
 			return _tileSets[0].Data->GetCaptionTile();
 		}
+
+		/** @brief Returns relative paths of all used tile sets */
+		Array<StringView> GetUsedTileSetPaths() const;
 		
 		/** @brief Creates a generic debris */
 		void CreateDebris(const DestructibleDebris& debris);

@@ -7,6 +7,8 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/RenderResources.h"
 
+#include <Containers/GrowableArray.h>
+
 namespace Jazz2::Tiles
 {
 	TileMap::TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
@@ -1046,6 +1048,20 @@ namespace Jazz2::Tiles
 		tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[0].TileID;
 		tile.TileParams = tileParams;
 		tile.DestructFrameIndex = 0;
+	}
+
+	Array<StringView> TileMap::GetUsedTileSetPaths() const
+	{
+		Array<StringView> result;
+		arrayReserve(result, _tileSets.size());
+
+		for (const auto& tileSetPart : _tileSets) {
+			if (tileSetPart.Data != nullptr && !tileSetPart.Data->FilePath.empty()) {
+				arrayAppend(result, tileSetPart.Data->FilePath);
+			}
+		}
+
+		return result;
 	}
 
 	void TileMap::CreateDebris(const DestructibleDebris& debris)
