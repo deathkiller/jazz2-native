@@ -70,7 +70,7 @@ namespace nCine
 		};
 
 		while (!app.ShouldQuit()) {
-			int ident, events;
+			std::int32_t ident, events;
 			struct android_poll_source* source;
 
 			while ((ident = ALooper_pollOnce(app.ShouldSuspend() ? -1 : 0, nullptr, &events, reinterpret_cast<void**>(&source))) >= 0) {
@@ -81,7 +81,7 @@ namespace nCine
 					AndroidInputManager::parseAccelerometerEvent();
 				}
 				if (state->destroyRequested) {
-					LOGI("android_app->destroyRequested not equal to zero");
+					LOGD("android_app->destroyRequested not equal to zero");
 					app.Quit();
 				}
 			}
@@ -105,7 +105,7 @@ namespace nCine
 
 		switch (cmd) {
 			case APP_CMD_INPUT_CHANGED: {
-				LOGW("APP_CMD_INPUT_CHANGED event received (not handled)");
+				LOGI("APP_CMD_INPUT_CHANGED event received");
 				break;
 			}
 			case APP_CMD_INIT_WINDOW: {
@@ -162,25 +162,25 @@ namespace nCine
 				break;
 			}
 			case APP_CMD_CONFIG_CHANGED: {
-				LOGW("APP_CMD_CONFIG_CHANGED event received (not handled)");
+				LOGI("APP_CMD_CONFIG_CHANGED event received");
 				break;
 			}
 			case APP_CMD_LOW_MEMORY: {
-				LOGW("APP_CMD_LOW_MEMORY event received (not handled)");
+				LOGW("APP_CMD_LOW_MEMORY event received");
 				break;
 			}
 			case APP_CMD_START: {
 				AndroidApplication& app = theAndroidApplication();
 				if (!app.IsInitialized()) {
 					app.PreInit();
-					LOGI("APP_CMD_START event received (first run)");
-				} else {
 					LOGI("APP_CMD_START event received");
+				} else {
+					LOGI("APP_CMD_START event received (resuming)");
 				}
 				break;
 			}
 			case APP_CMD_RESUME: {
-				LOGW("APP_CMD_RESUME event received");
+				LOGI("APP_CMD_RESUME event received");
 				AndroidApplication& app = theAndroidApplication();
 				app.isSuspended_ = false;
 				if (isSuspended && !app.ShouldSuspend()) {
@@ -190,11 +190,11 @@ namespace nCine
 				break;
 			}
 			case APP_CMD_SAVE_STATE: {
-				LOGW("APP_CMD_SAVE_STATE event received (not handled)");
+				LOGI("APP_CMD_SAVE_STATE event received");
 				break;
 			}
 			case APP_CMD_PAUSE: {
-				LOGW("APP_CMD_PAUSE event received");
+				LOGI("APP_CMD_PAUSE event received");
 				AndroidApplication& app = theAndroidApplication();
 				app.isSuspended_ = true;
 				if (!isSuspended && app.ShouldSuspend()) {
@@ -204,7 +204,7 @@ namespace nCine
 				break;
 			}
 			case APP_CMD_STOP: {
-				LOGW("APP_CMD_STOP event received (not handled)");
+				LOGI("APP_CMD_STOP event received");
 				break;
 			}
 			case APP_CMD_DESTROY: {
@@ -297,7 +297,7 @@ namespace nCine
 		inputManager_ = std::make_unique<AndroidInputManager>(state_);
 
 #if defined(NCINE_PROFILING)
-		timings_[(int)Timings::PreInit] = profileStartTime_.secondsSince();
+		timings_[(std::int32_t)Timings::PreInit] = profileStartTime_.secondsSince();
 #endif
 
 		Application::InitCommon();

@@ -171,7 +171,7 @@ namespace Death { namespace Containers {
 		/** @brief Checks whether @p elt will be invalidated by resizing the vector to @p newSize */
 		void assertSafeToReferenceAfterResize(const void* elt, std::size_t newSize) {
 			DEATH_DEBUG_ASSERT(isSafeToReferenceAfterResize(elt, newSize),
-				   "Attempting to reference an element of the vector in an operation that invalidates it", );
+				"Attempting to reference an element of the vector in an operation that invalidates it", );
 		}
 
 		/** @brief Checks whether @p elt will be invalidated by increasing the size of the vector by @p n */
@@ -428,7 +428,7 @@ namespace Death { namespace Containers {
 			// Grow manually in case one of Args is an internal reference
 			std::size_t newCapacity;
 			T* newElts = mallocForGrow(0, newCapacity);
-			::new ((void*)(newElts + this->size())) T(std::forward<ArgTypes>(args)...);
+			::new ((void*)(newElts + this->size())) T(Death::forward<ArgTypes>(args)...);
 			moveElementsForGrow(newElts);
 			takeAllocationForGrow(newElts, newCapacity);
 			this->setSize(this->size() + 1);
@@ -445,7 +445,7 @@ namespace Death { namespace Containers {
 		/** @overload */
 		void push_back(T&& elt) {
 			T* eltPtr = reserveForParamAndGetAddress(elt);
-			::new ((void*)this->end()) T(::std::move(*eltPtr));
+			::new ((void*)this->end()) T(Death::move(*eltPtr));
 			this->setSize(this->size() + 1);
 		}
 
@@ -575,7 +575,7 @@ namespace Death { namespace Containers {
 			// Use push_back with a copy in case Args has an internal reference,
 			// side-stepping reference invalidation problems without losing the realloc
 			// optimization
-			push_back(T(std::forward<ArgTypes>(args)...));
+			push_back(T(Death::forward<ArgTypes>(args)...));
 			return this->back();
 		}
 
@@ -720,7 +720,7 @@ namespace Death { namespace Containers {
 
 		/** @brief Removes the last element and returns it */
 		/*[[nodiscard]]*/ T pop_back_val() {
-			T result = ::std::move(this->back());
+			T result = Death::move(this->back());
 			this->pop_back();
 			return result;
 		}
@@ -835,7 +835,7 @@ namespace Death { namespace Containers {
 
 			iterator il = this->end() - 1;
 			if (i != il) {
-				*i = std::move(*il);
+				*i = Death::move(*il);
 			}
 			// Drop the last elt
 			this->pop_back();
@@ -852,7 +852,7 @@ namespace Death { namespace Containers {
 			static_assert(std::is_same<std::remove_const_t<std::remove_reference_t<ArgType>>, T>::value, "ArgType must be derived from T");
 
 			if (i == this->end()) {  // Important special case for empty vector
-				this->push_back(::std::forward<ArgType>(elt));
+				this->push_back(Death::forward<ArgType>(elt));
 				return this->end() - 1;
 			}
 
@@ -863,7 +863,7 @@ namespace Death { namespace Containers {
 			std::remove_reference_t<ArgType>* eltPtr = this->reserveForParamAndGetAddress(elt);
 			i = this->begin() + index;
 
-			::new ((void*)this->end()) T(::std::move(this->back()));
+			::new ((void*)this->end()) T(Death::move(this->back()));
 			// Push everything else over
 			std::move_backward(i, this->end() - 1, this->end());
 			this->setSize(this->size() + 1);
@@ -874,14 +874,14 @@ namespace Death { namespace Containers {
 			if (!TakesParamByValue && this->isReferenceToRange(eltPtr, i, this->end()))
 				++eltPtr;
 
-			*i = ::std::forward<ArgType>(*eltPtr);
+			*i = Death::forward<ArgType>(*eltPtr);
 			return i;
 		}
 
 	public:
 		/** @brief Inserts elements */
 		iterator insert(iterator i, T&& elt) {
-			return insert_one_impl(i, this->forwardValueParam(std::move(elt)));
+			return insert_one_impl(i, this->forwardValueParam(Death::move(elt)));
 		}
 		/** @overload */
 		iterator insert(iterator i, const T& elt) {
@@ -1010,9 +1010,9 @@ namespace Death { namespace Containers {
 		template<typename ...ArgTypes>
 		reference emplace_back(ArgTypes&&... args) {
 			if (this->size() >= this->capacity())
-				return this->growAndEmplaceBack(std::forward<ArgTypes>(args)...);
+				return this->growAndEmplaceBack(Death::forward<ArgTypes>(args)...);
 
-			::new ((void*)this->end()) T(std::forward<ArgTypes>(args)...);
+			::new ((void*)this->end()) T(Death::forward<ArgTypes>(args)...);
 			this->setSize(this->size() + 1);
 			return this->back();
 		}
@@ -1131,7 +1131,7 @@ namespace Death { namespace Containers {
 
 		// If the RHS isn't small, clear this vector and then steal its buffer
 		if (!other.isSmall()) {
-			this->assignRemote(std::move(other));
+			this->assignRemote(Death::move(other));
 			return *this;
 		}
 
@@ -1141,8 +1141,9 @@ namespace Death { namespace Containers {
 		if (currentSize >= otherSize) {
 			// Assign common elements
 			iterator newEnd = this->begin();
-			if (otherSize)
+			if (otherSize) {
 				newEnd = std::move(other.begin(), other.end(), newEnd);
+			}
 
 			// Destroy excess elements and trim the bounds
 			this->destroyRange(newEnd, this->end());
@@ -1167,8 +1168,7 @@ namespace Death { namespace Containers {
 		}
 
 		// Move-construct the new elements in place
-		this->uninitializedMove(other.begin() + currentSize, other.end(),
-								 this->begin() + currentSize);
+		this->uninitializedMove(other.begin() + currentSize, other.end(), this->begin() + currentSize);
 
 		this->setSize(otherSize);
 
@@ -1315,7 +1315,7 @@ namespace Death { namespace Containers {
 		 * Alias to @ref SmallVector(ValueInitT, std::size_t).
 		 */
 		explicit SmallVector(std::size_t size)
-			: SmallVector { ValueInit, size } {
+			: SmallVector{ValueInit, size} {
 		}
 
 		/** @brief Copy constructor */
@@ -1327,13 +1327,13 @@ namespace Death { namespace Containers {
 		/** @brief Move constructor */
 		SmallVector(SmallVector&& other) : SmallVectorImpl<T>(N) {
 			if (!other.empty())
-				SmallVectorImpl<T>::operator=(::std::move(other));
+				SmallVectorImpl<T>::operator=(Death::move(other));
 		}
 
 		/** @overload */
 		SmallVector(SmallVectorImpl<T>&& other) : SmallVectorImpl<T>(N) {
 			if (!other.empty())
-				SmallVectorImpl<T>::operator=(::std::move(other));
+				SmallVectorImpl<T>::operator=(Death::move(other));
 		}
 
 		/** @brief Destructor */
@@ -1357,7 +1357,7 @@ namespace Death { namespace Containers {
 		/** @brief Move assignment */
 		SmallVector& operator=(SmallVector&& other) {
 			if (N) {
-				SmallVectorImpl<T>::operator=(::std::move(other));
+				SmallVectorImpl<T>::operator=(Death::move(other));
 				return *this;
 			}
 			if (this == &other) {
@@ -1367,14 +1367,14 @@ namespace Death { namespace Containers {
 				this->destroyRange(this->begin(), this->end());
 				this->Size = 0;
 			} else {
-				this->assignRemote(std::move(other));
+				this->assignRemote(Death::move(other));
 			}
 			return *this;
 		}
 
 		/** @overload */
 		SmallVector& operator=(SmallVectorImpl<T>&& other) {
-			SmallVectorImpl<T>::operator=(::std::move(other));
+			SmallVectorImpl<T>::operator=(Death::move(other));
 			return *this;
 		}
 
