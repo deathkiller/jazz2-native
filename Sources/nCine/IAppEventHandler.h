@@ -31,6 +31,8 @@ namespace nCine
 		virtual void OnSuspend() {}
 		/** @brief Called every time the application resumes from suspension */
 		virtual void OnResume() {}
+		/** @brief Called when the `Back` gesture is invoked */
+		virtual void OnBackInvoked() {}
 	};
 
 	inline IAppEventHandler::~IAppEventHandler() {}

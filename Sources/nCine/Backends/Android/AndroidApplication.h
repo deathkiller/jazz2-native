@@ -29,6 +29,9 @@ namespace nCine
 
 		bool OpenUrl(StringView url) override;
 
+		/// Handles invocation of the Back gesture
+		void HandleBackInvoked();
+
 		/// Handles the intent sent to the application activity
 		void HandleIntent(StringView action, StringView uri);
 

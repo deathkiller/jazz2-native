@@ -15,6 +15,16 @@ import @NCINE_REVERSE_DNS@.Keep;
 
 public abstract class MainActivityBase extends NativeActivity implements DisplayManager.DisplayListener {
 
+	private final Handler mainHandler = new Handler(Looper.getMainLooper());
+		
+	private final OnBackInvokedCallback backCallback = () -> {
+		System.err.println("[JAZZ-TEST] OnBackInvokedCallback");
+		mainHandler.post(() -> {
+			System.err.println("[JAZZ-TEST] OnBackInvokedCallback INNER");
+			nativeBackInvoked();
+		});
+	};
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -46,15 +56,6 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 	protected void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
 		handleIntent(intent);
-	}
-	
-	private final OnBackInvokedCallback backCallback = () -> {
-		System.err.println("[JAZZ-TEST] OnBackInvokedCallback");
-	};
-	
-	@Override
-	public void onBackPressed() {
-		System.err.println("[JAZZ-TEST] onBackPressed");
 	}
 
 	@Override
@@ -156,6 +157,9 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		}
 	}
 
+	// Calls `AndroidApplication::HandleBackInvoked()`
+	protected native void nativeBackInvoked();
+	
 	// Calls `EglGfxDevice::updateMonitorsFromJni()`
 	protected native void nativeUpdateMonitors();
 	
