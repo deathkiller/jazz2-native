@@ -480,14 +480,6 @@ void GameEventHandler::OnBackInvoked()
 		KeyboardEvent event{};
 		event.sym = Keys::Back;
 		_currentHandler->OnKeyPressed(event);
-
-		InvokeAsync([this]() {
-			LOGW("OnBackInvoked() 2 | %u", theApplication().GetFrameCount());
-
-			KeyboardEvent event{};
-			event.sym = Keys::Back;
-			_currentHandler->OnKeyReleased(event);
-		});
 	}
 }
 
