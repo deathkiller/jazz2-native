@@ -57,7 +57,8 @@ namespace nCine
 	}
 
 	AndroidApplication::AndroidApplication()
-		: Application(), isInitialized_(false), isScreenRound_(false), state_(nullptr), createAppEventHandler_(nullptr)
+		: Application(), isInitialized_(false), isBackInvoked_(false), isScreenRound_(false), state_(nullptr),
+			createAppEventHandler_(nullptr)
 	{
 	}
 
@@ -101,6 +102,11 @@ namespace nCine
 					LOGD("android_app->destroyRequested not equal to zero");
 					app.Quit();
 				}
+			}
+
+			if (app.isBackInvoked_) {
+				app.isBackInvoked_ = false;
+				app.appEventHandler_->OnBackInvoked();
 			}
 
 			if (app.IsInitialized() && !app.ShouldSuspend()) {
@@ -239,7 +245,7 @@ namespace nCine
 
 	void AndroidApplication::HandleBackInvoked()
 	{
-		appEventHandler_->OnBackInvoked();
+		isBackInvoked_ = true;
 	}
 
 	void AndroidApplication::HandleIntent(StringView action, StringView uri)

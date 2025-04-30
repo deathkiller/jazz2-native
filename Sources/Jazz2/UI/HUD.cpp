@@ -195,10 +195,10 @@ namespace Jazz2::UI
 		Rectf adjustedView = view;
 #if defined(DEATH_TARGET_ANDROID)
 		if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
-			float newWidth = adjustedView.W * 0.7f;
+			float newWidth = adjustedView.W * 0.6f;
 			adjustedView.X += (adjustedView.W - newWidth) * 0.5f;
 			adjustedView.W = newWidth;
-			adjustedView.H *= 0.7f;
+			adjustedView.H *= 0.6f;
 		} else
 #endif
 		if (_touchButtonsTimer > 0.0f) {
