@@ -198,7 +198,7 @@ namespace Jazz2::UI
 			float newWidth = adjustedView.W * 0.6f;
 			adjustedView.X += (adjustedView.W - newWidth) * 0.5f;
 			adjustedView.W = newWidth;
-			adjustedView.H *= 0.6f;
+			adjustedView.H *= 0.5f;
 		} else
 #endif
 		if (_touchButtonsTimer > 0.0f) {
@@ -294,6 +294,12 @@ namespace Jazz2::UI
 		// FPS
 		if (PreferencesCache::ShowPerformanceMetrics) {
 			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
+#if defined(DEATH_TARGET_ANDROID)
+			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.W / 2 + 40.0f, view.Y + 6.0f, FontLayer,
+					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+			} else
+#endif
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 1.0f, FontLayer,
 				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 		}
