@@ -22,9 +22,9 @@ namespace nCine
 			return isInitialized_;
 		}
 
-		/// Returns the package name for the Android application
-		inline const char* GetPackageName() const {
-			return packageName_.data();
+		/// Returns true if the main screen is round
+		inline bool IsScreenRound() const {
+			return isScreenRound_;
 		}
 
 		bool OpenUrl(StringView url) override;
@@ -42,7 +42,7 @@ namespace nCine
 
 	private:
 		bool isInitialized_;
-		String packageName_;
+		bool isScreenRound_;
 
 		struct android_app* state_;
 		CreateAppEventHandlerDelegate createAppEventHandler_;
@@ -53,9 +53,8 @@ namespace nCine
 		/// Must be called before exiting to shut down the application
 		void Shutdown();
 
-		AndroidApplication()
-			: Application(), isInitialized_(false), state_(nullptr), createAppEventHandler_(nullptr) {}
-		~AndroidApplication() {}
+		AndroidApplication();
+		~AndroidApplication();
 
 		AndroidApplication(const AndroidApplication&) = delete;
 		AndroidApplication& operator=(const AndroidApplication&) = delete;

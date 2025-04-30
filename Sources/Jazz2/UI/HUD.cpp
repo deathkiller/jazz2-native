@@ -10,6 +10,10 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Application.h"
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../nCine/Backends/Android/AndroidApplication.h"
+#endif
+
 // Position of key in 22x6 grid
 static const std::uint8_t KeyLayout[] = {
 	0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17,
@@ -97,8 +101,17 @@ namespace Jazz2::UI
 		_touchButtons[6] = CreateTouchButton(PlayerAction::Jump, TouchJump, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
 		_touchButtons[7] = CreateTouchButton(PlayerAction::Run, TouchRun, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
 		_touchButtons[8] = CreateTouchButton(PlayerAction::ChangeWeapon, TouchChange, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
-		_touchButtons[9] = CreateTouchButton(PlayerAction::Menu, TouchPause, Alignment::TopRight | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
-		_touchButtons[10] = CreateTouchButton(PlayerAction::Console, AnimState::Default, Alignment::TopLeft | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
+
+#if defined(DEATH_TARGET_ANDROID)
+		if (theAndroidApplication().IsScreenRound()) {
+			_touchButtons[9] = CreateTouchButton(PlayerAction::Menu, TouchPause, Alignment::Top | Fixed, 0.0f, 0.02f, SmallButtonSize, SmallButtonSize);
+			_touchButtons[10] = {};
+		} else
+#endif
+		{
+			_touchButtons[9] = CreateTouchButton(PlayerAction::Menu, TouchPause, Alignment::TopRight | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
+			_touchButtons[10] = CreateTouchButton(PlayerAction::Console, AnimState::Default, Alignment::TopLeft | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
+		}
 	}
 
 	HUD::~HUD()
@@ -243,8 +256,10 @@ namespace Jazz2::UI
 				float y = button.Top;
 				if ((button.Align & Alignment::Right) == Alignment::Right) {
 					x = ViewSize.X - button.Width * 0.5f - x;
-				} else {
+				} else if((button.Align & Alignment::Left) == Alignment::Left) {
 					x = x + button.Width * 0.5f;
+				} else {
+					x = ViewSize.X / 2 - button.Width * 0.5f;
 				}
 				if ((button.Align & Alignment::Bottom) == Alignment::Bottom) {
 					y = ViewSize.Y - button.Height * 0.5f - y;
@@ -255,7 +270,7 @@ namespace Jazz2::UI
 					if ((button.Align & Alignment::Right) == Alignment::Right) {
 						x -= PreferencesCache::TouchRightPadding.X;
 						y += PreferencesCache::TouchRightPadding.Y;
-					} else {
+					} else if ((button.Align & Alignment::Left) == Alignment::Left) {
 						x += PreferencesCache::TouchLeftPadding.X;
 						y += PreferencesCache::TouchLeftPadding.Y;
 					}
@@ -1364,7 +1379,7 @@ namespace Jazz2::UI
 			if ((button.Align & Alignment::Right) == Alignment::Right) {
 				x += PreferencesCache::TouchRightPadding.X;
 				y -= PreferencesCache::TouchRightPadding.Y;
-			} else {
+			} else if ((button.Align & Alignment::Left) == Alignment::Left) {
 				x -= PreferencesCache::TouchLeftPadding.X;
 				y -= PreferencesCache::TouchLeftPadding.Y;
 			}
@@ -1372,6 +1387,7 @@ namespace Jazz2::UI
 
 		float left = button.Left;
 		if ((button.Align & Alignment::Right) == Alignment::Right) { left = ViewSize.X - button.Width - left; }
+		else if ((button.Align & Alignment::Left) != Alignment::Left) { left = ViewSize.X / 2 - button.Width * 0.5f; }
 		if (x < left) return false;
 
 		float top = button.Top;

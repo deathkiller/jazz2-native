@@ -15,6 +15,7 @@
 #include <Utf8.h>
 
 #if defined(DEATH_TARGET_ANDROID)
+#	include "../nCine/Backends/Android/AndroidApplication.h"
 #	include "../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
 
@@ -388,7 +389,10 @@ namespace Jazz2
 			auto& resolver = ContentResolver::Get();
 			fs::CreateDirectories(resolver.GetSourcePath());
 
-#	if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID)
+			// Use native Back button as default on smart watches
+			UseNativeBackButton = theAndroidApplication().IsScreenRound();
+#	elif defined(DEATH_TARGET_UNIX)
 			StringView isSteamDeck = ::getenv("SteamDeck");
 			if (isSteamDeck == "1"_s) {
 				GamepadButtonLabels = GamepadType::Steam;

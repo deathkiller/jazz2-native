@@ -15,6 +15,10 @@
 
 #include <Containers/StringConcatenable.h>
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../../nCine/Backends/Android/AndroidApplication.h"
+#endif
+
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
@@ -267,38 +271,43 @@ namespace Jazz2::UI::Menu
 		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
-		// Version
-		Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
-		bottomRight.X = ViewSize.X - 24.0f;
-		bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
+#if defined(DEATH_TARGET_ANDROID)
+		if (!theAndroidApplication().IsScreenRound())
+#endif
+		{
+			// Version
+			Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
+			bottomRight.X = ViewSize.X - 24.0f;
+			bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
 
-		auto newestVersion = _owner->_root->GetNewestVersion();
-		if (!newestVersion.empty() && newestVersion != NCINE_VERSION) {
-			String newerVersion = "v" NCINE_VERSION "  › \f[c:#9e7056]v" + newestVersion;
-			_owner->DrawStringShadow(newerVersion, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
-				Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
-		} else {
-			_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
-				Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
-		}
+			auto newestVersion = _owner->_root->GetNewestVersion();
+			if (!newestVersion.empty() && newestVersion != NCINE_VERSION) {
+				String newerVersion = "v" NCINE_VERSION "  › \f[c:#9e7056]v" + newestVersion;
+				_owner->DrawStringShadow(newerVersion, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
+					Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+			} else {
+				_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
+					Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+			}
 
-		// Copyright
-		Vector2f bottomLeft = bottomRight;
-		bottomLeft.X = 24.0f;
-		_owner->DrawStringShadow("© 2016-" NCINE_BUILD_YEAR "  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
-			Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+			// Copyright
+			Vector2f bottomLeft = bottomRight;
+			bottomLeft.X = 24.0f;
+			_owner->DrawStringShadow("© 2016-" NCINE_BUILD_YEAR "  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
+				Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		// Show active external drive indicator on Xbox
-		StringView sourcePath = ContentResolver::Get().GetSourcePath();
-		if (!sourcePath.empty() && sourcePath.hasPrefix("\\\\?\\"_s) && sourcePath.exceptPrefix(5).hasPrefix(":\\Games\\"_s)) {
-			_owner->DrawStringShadow("·"_s, charOffset, bottomLeft.X + 116.0f, bottomLeft.Y, IMenuContainer::FontLayer,
-				Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.8f, 0.46f, 0.8f);
-			_owner->DrawElement(Storage, -1, bottomLeft.X + 146.0f, bottomLeft.Y - 3.0f, IMenuContainer::FontLayer, Alignment::BottomRight, Colorf(1.0f, 1.0f, 1.0f, std::max(_owner->_logoTransition - 0.6f, 0.0f) * 2.5f));
-			_owner->DrawStringShadow(sourcePath.slice(4, 7), charOffset, bottomLeft.X + 150.0f, bottomLeft.Y, IMenuContainer::FontLayer,
-				Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
-		}
+			// Show active external drive indicator on Xbox
+			StringView sourcePath = ContentResolver::Get().GetSourcePath();
+			if (!sourcePath.empty() && sourcePath.hasPrefix("\\\\?\\"_s) && sourcePath.exceptPrefix(5).hasPrefix(":\\Games\\"_s)) {
+				_owner->DrawStringShadow("·"_s, charOffset, bottomLeft.X + 116.0f, bottomLeft.Y, IMenuContainer::FontLayer,
+					Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.8f, 0.46f, 0.8f);
+				_owner->DrawElement(Storage, -1, bottomLeft.X + 146.0f, bottomLeft.Y - 3.0f, IMenuContainer::FontLayer, Alignment::BottomRight, Colorf(1.0f, 1.0f, 1.0f, std::max(_owner->_logoTransition - 0.6f, 0.0f) * 2.5f));
+				_owner->DrawStringShadow(sourcePath.slice(4, 7), charOffset, bottomLeft.X + 150.0f, bottomLeft.Y, IMenuContainer::FontLayer,
+					Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+			}
 #endif
+		}
 
 		if (!_owner->_sections.empty()) {
 			auto& lastSection = _owner->_sections.back();

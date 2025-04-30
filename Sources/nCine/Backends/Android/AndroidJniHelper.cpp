@@ -62,6 +62,7 @@ namespace nCine::Backends
 	jobject AndroidJniWrap_Activity::activityObject_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midFinishAndRemoveTask_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midGetPreferredLanguage_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midIsScreenRound_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midHasExternalStoragePermission_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midRequestExternalStoragePermission_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midSetActivityEnabled_ = nullptr;
@@ -764,6 +765,7 @@ namespace nCine::Backends
 
 		midFinishAndRemoveTask_ = AndroidJniClass::getMethodID(nativeActivityClass, "finishAndRemoveTask", "()V");
 		midGetPreferredLanguage_ = AndroidJniClass::getMethodID(nativeActivityClass, "getPreferredLanguage", "()Ljava/lang/String;");
+		midIsScreenRound_ = AndroidJniClass::getMethodID(nativeActivityClass, "isScreenRound", "()Z");
 		midHasExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "hasExternalStoragePermission", "()Z");
 		midRequestExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "requestExternalStoragePermission", "()V");
 		midSetActivityEnabled_ = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
@@ -807,6 +809,16 @@ namespace nCine::Backends
 		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strLanguage, language);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strLanguage);
 		return result;
+	}
+
+	bool AndroidJniWrap_Activity::isScreenRound()
+	{
+		if (AndroidJniHelper::SdkVersion() >= 23) {
+			const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(activityObject_, midIsScreenRound_);
+			return (result == JNI_TRUE);
+		} else {
+			return false;
+		}
 	}
 
 	bool AndroidJniWrap_Activity::hasExternalStoragePermission()

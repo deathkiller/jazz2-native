@@ -29,6 +29,20 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		super.onNewIntent(intent);
 		handleIntent(intent);
 	}
+	
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		if (keyCode == KeyEvent.KEYCODE_BACK) {
+			System.err.println("[JAZZ-TEST] onKeyDown");
+			return true;
+		}
+		return super.onKeyDown(keyCode, event);
+	}
+	
+	@Override
+	public void onBackPressed() {
+		System.err.println("[JAZZ-TEST] onBackPressed");
+	}
 
 	@Override
 	public void onDisplayAdded(int displayId) {
@@ -54,6 +68,19 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 			return currentLocale.getLanguage() + "-" + currentLocale.getCountry();
 		} catch (Exception ignored) {
 			return null;
+		}
+	}
+	
+	@Keep
+	public boolean isScreenRound() {
+		if (android.os.Build.VERSION.SDK_INT < 23) {
+			return false;
+		}
+		
+		try {
+			return getResources().getConfiguration().isScreenRound();
+		} catch (Exception ignored) {
+			return false;
 		}
 	}
 
