@@ -193,6 +193,14 @@ namespace Jazz2::UI
 
 		Rectf view = Rectf(0.0f, 0.0f, static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
 		Rectf adjustedView = view;
+#if defined(DEATH_TARGET_ANDROID)
+		if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
+			float newWidth = adjustedView.W * 0.7f;
+			adjustedView.X += (adjustedView.W - newWidth) * 0.5f;
+			adjustedView.W = newWidth;
+			adjustedView.H *= 0.7f;
+		} else
+#endif
 		if (_touchButtonsTimer > 0.0f) {
 			adjustedView.X = 140.0f + PreferencesCache::TouchLeftPadding.X;
 			adjustedView.W = adjustedView.W - adjustedView.X - (195.0f + PreferencesCache::TouchRightPadding.X);
@@ -259,7 +267,7 @@ namespace Jazz2::UI
 				} else if((button.Align & Alignment::Left) == Alignment::Left) {
 					x = x + button.Width * 0.5f;
 				} else {
-					x = ViewSize.X / 2 - button.Width * 0.5f;
+					x = ViewSize.X / 2;
 				}
 				if ((button.Align & Alignment::Bottom) == Alignment::Bottom) {
 					y = ViewSize.Y - button.Height * 0.5f - y;
