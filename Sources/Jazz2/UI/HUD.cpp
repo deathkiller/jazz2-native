@@ -195,10 +195,10 @@ namespace Jazz2::UI
 		Rectf adjustedView = view;
 #if defined(DEATH_TARGET_ANDROID)
 		if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
-			float newWidth = adjustedView.W * 0.6f;
+			float newWidth = adjustedView.W * 0.5f;
 			adjustedView.X += (adjustedView.W - newWidth) * 0.5f;
 			adjustedView.W = newWidth;
-			adjustedView.H *= 0.5f;
+			adjustedView.H *= 0.75f;
 		} else
 #endif
 		if (_touchButtonsTimer > 0.0f) {
@@ -220,6 +220,12 @@ namespace Jazz2::UI
 			float right = std::min(adjustedScopedView.X + adjustedScopedView.W, adjustedView.X + adjustedView.W);
 			adjustedScopedView.X = left;
 			adjustedScopedView.W = right - left;
+
+#if defined(DEATH_TARGET_ANDROID)
+			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound() && _levelHandler->_assignedViewports.size() == 1) {
+				adjustedScopedView.H *= 0.75f;
+			}
+#endif
 
 			OnDrawHealth(scopedView, adjustedScopedView, player);
 			OnDrawScore(scopedView, player);
