@@ -143,6 +143,7 @@ private:
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
 #endif
+	std::int32_t _backPressLeft = 0;
 
 	void OnBeginInitialize();
 	void OnAfterInitialize();
@@ -387,6 +388,17 @@ void GameEventHandler::OnBeginFrame()
 void GameEventHandler::OnPostUpdate()
 {
 	_currentHandler->OnEndFrame();
+
+	if (_backPressLeft > 0) {
+		_backPressLeft--;
+		if (_backPressLeft <= 0) {
+			LOGW("OnBackInvoked() 3 | %u", theApplication().GetFrameCount());
+
+			KeyboardEvent event{};
+			event.sym = Keys::Back;
+			_currentHandler->OnKeyReleased(event);
+		}
+	}
 }
 
 void GameEventHandler::OnResizeWindow(std::int32_t width, std::int32_t height)
@@ -460,15 +472,19 @@ void GameEventHandler::OnResume()
 
 void GameEventHandler::OnBackInvoked()
 {
-	LOGW("OnBackInvoked()");
+	LOGW("OnBackInvoked() 1 | %u | %i", theApplication().GetFrameCount(), _backPressLeft);
 
-	if (_currentHandler != nullptr) {
-		KeyboardEvent event;
+	if (_currentHandler != nullptr && _backPressLeft <= 0) {
+		_backPressLeft = 2;
+
+		KeyboardEvent event{};
 		event.sym = Keys::Back;
 		_currentHandler->OnKeyPressed(event);
 
 		InvokeAsync([this]() {
-			KeyboardEvent event;
+			LOGW("OnBackInvoked() 2 | %u", theApplication().GetFrameCount());
+
+			KeyboardEvent event{};
 			event.sym = Keys::Back;
 			_currentHandler->OnKeyReleased(event);
 		});
