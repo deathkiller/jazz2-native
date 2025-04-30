@@ -48,6 +48,15 @@ namespace nCine
 		return instance;
 	}
 
+	AndroidApplication::AndroidApplication()
+		: Application(), isInitialized_(false), isScreenRound_(false), state_(nullptr), createAppEventHandler_(nullptr)
+	{
+	}
+
+	AndroidApplication::~AndroidApplication()
+	{
+	}
+
 	void AndroidApplication::Run(struct android_app* state, CreateAppEventHandlerDelegate createAppEventHandler)
 	{
 		ASSERT(state != nullptr);
@@ -261,6 +270,8 @@ namespace nCine
 
 		AndroidJniHelper::AttachJVM(state_);
 		AndroidAssetStream::InitializeAssetManager(state_);
+
+		isScreenRound_ = AndroidJniWrap_Activity::isScreenRound();
 		
 		PreInitCommon(createAppEventHandler_());
 
@@ -275,6 +286,10 @@ namespace nCine
 #else
 		LOGI("Running on %s %s (%s)", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
 #endif
+
+		if (isScreenRound_) {
+			LOGI("Using round screen layout");
+		}
 	}
 
 	void AndroidApplication::Init()

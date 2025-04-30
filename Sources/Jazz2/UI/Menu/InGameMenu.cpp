@@ -12,6 +12,10 @@
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/Input/JoyMapping.h"
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../../nCine/Backends/Android/AndroidApplication.h"
+#endif
+
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
@@ -176,18 +180,23 @@ namespace Jazz2::UI::Menu
 		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
-		// Version
-		Vector2f bottomRight = Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
-		bottomRight.X = ViewSize.X - 24.0f;
-		bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
-		_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
-			Alignment::BottomRight, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+#if defined(DEATH_TARGET_ANDROID)
+		if (!theAndroidApplication().IsScreenRound())
+#endif
+		{
+			// Version
+			Vector2f bottomRight = Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
+			bottomRight.X = ViewSize.X - 24.0f;
+			bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
+			_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
+				Alignment::BottomRight, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
-		// Copyright
-		Vector2f bottomLeft = bottomRight;
-		bottomLeft.X = 24.0f;
-		_owner->DrawStringShadow("© 2016-" NCINE_BUILD_YEAR "  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
-			Alignment::BottomLeft, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+			// Copyright
+			Vector2f bottomLeft = bottomRight;
+			bottomLeft.X = 24.0f;
+			_owner->DrawStringShadow("© 2016-" NCINE_BUILD_YEAR "  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
+				Alignment::BottomLeft, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		}
 
 		if (!_owner->_sections.empty()) {
 			auto& lastSection = _owner->_sections.back();
