@@ -579,11 +579,15 @@ namespace Jazz2::Actors
 		// Weapon Wheel Transitions
 		switch (_weaponWheelState) {
 			case WeaponWheelState::Opening:
-				_renderer.Initialize(ActorRendererType::Outline);
+				if (_renderer.GetRendererType() == ActorRendererType::Default) {
+					_renderer.Initialize(ActorRendererType::Outline);
+				}
 				_weaponWheelState = WeaponWheelState::Visible;
 				break;
 			case WeaponWheelState::Closing:
-				_renderer.Initialize(ActorRendererType::Default);
+				if (_renderer.GetRendererType() == ActorRendererType::Outline) {
+					_renderer.Initialize(ActorRendererType::Default);
+				}
 				_weaponWheelState = WeaponWheelState::Hidden;
 				break;
 		}

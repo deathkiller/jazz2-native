@@ -41,6 +41,7 @@ namespace Jazz2::Multiplayer
 
 		AuthResponse = 70,
 		PeerSetProperty = 71,
+		AssetChunk = 72,			// TODO
 
 		LoadLevel = 80,
 		LevelSetProperty,

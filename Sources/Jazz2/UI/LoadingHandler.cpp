@@ -52,10 +52,10 @@ namespace Jazz2::UI
 		std::int32_t w, h;
 		if (currentRatio > defaultRatio) {
 			w = std::min(DefaultWidth, width);
-			h = (std::int32_t)(w / currentRatio);
+			h = (std::int32_t)roundf(w / currentRatio);
 		} else if (currentRatio < defaultRatio) {
 			h = std::min(DefaultHeight, height);
-			w = (std::int32_t)(h * currentRatio);
+			w = (std::int32_t)roundf(h * currentRatio);
 		} else {
 			w = std::min(DefaultWidth, width);
 			h = std::min(DefaultHeight, height);
