@@ -272,7 +272,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 #if defined(DEATH_TARGET_ANDROID)
-		if (!Backends::theAndroidApplication().IsScreenRound())
+		if (!static_cast<AndroidApplication&>(theApplication()).IsScreenRound())
 #endif
 		{
 			// Version
