@@ -103,7 +103,7 @@ namespace Jazz2::UI
 		_touchButtons[8] = CreateTouchButton(PlayerAction::ChangeWeapon, TouchChange, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
 
 #if defined(DEATH_TARGET_ANDROID)
-		if (theAndroidApplication().IsScreenRound()) {
+		if (Backends::theAndroidApplication().IsScreenRound()) {
 			_touchButtons[9] = CreateTouchButton(PlayerAction::Menu, TouchPause, Alignment::Top | Fixed, 0.0f, 0.02f, SmallButtonSize, SmallButtonSize);
 			_touchButtons[10] = {};
 		} else
