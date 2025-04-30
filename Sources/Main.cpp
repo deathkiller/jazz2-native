@@ -466,6 +466,12 @@ void GameEventHandler::OnBackInvoked()
 		KeyboardEvent event;
 		event.sym = Keys::Back;
 		_currentHandler->OnKeyPressed(event);
+
+		InvokeAsync([this]() {
+			KeyboardEvent event;
+			event.sym = Keys::Back;
+			_currentHandler->OnKeyReleased(event);
+		});
 	}
 }
 

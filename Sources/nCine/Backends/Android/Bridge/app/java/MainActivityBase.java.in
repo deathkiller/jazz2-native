@@ -6,8 +6,6 @@ import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
 import android.provider.Settings;
 import android.provider.Settings;
 import android.view.KeyEvent;
@@ -17,14 +15,8 @@ import @NCINE_REVERSE_DNS@.Keep;
 
 public abstract class MainActivityBase extends NativeActivity implements DisplayManager.DisplayListener {
 
-	private final Handler mainHandler = new Handler(Looper.getMainLooper());
-		
 	private final OnBackInvokedCallback backCallback = () -> {
-		System.err.println("[JAZZ-TEST] OnBackInvokedCallback");
-		mainHandler.post(() -> {
-			System.err.println("[JAZZ-TEST] OnBackInvokedCallback INNER");
-			nativeBackInvoked();
-		});
+		nativeBackInvoked();
 	};
 
 	@Override

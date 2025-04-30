@@ -45,6 +45,7 @@ namespace nCine
 
 	private:
 		bool isInitialized_;
+		bool isBackInvoked_;
 		bool isScreenRound_;
 
 		struct android_app* state_;
