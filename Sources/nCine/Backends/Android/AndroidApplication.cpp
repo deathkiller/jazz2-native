@@ -1,5 +1,4 @@
-﻿#include "../../../Main.h"
-#include "AndroidApplication.h"
+﻿#include "AndroidApplication.h"
 #include "../../Base/Timer.h"
 #include "../../IAppEventHandler.h"
 #include "../../ServiceLocator.h"
@@ -16,6 +15,15 @@ using namespace nCine::Backends;
 extern "C"
 {
 	namespace nc = nCine;
+
+	/** @brief Called by `jnicall_functions.cpp` */
+	void nativeBackInvoked(JNIEnv* env, jclass clazz)
+	{
+		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
+		if (androidApp.IsInitialized()) {
+			androidApp.HandleBackInvoked();
+		}
+	}
 
 	/** @brief Called by `jnicall_functions.cpp` */
 	void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
@@ -227,6 +235,11 @@ namespace nCine
 	bool AndroidApplication::OpenUrl(StringView url)
 	{
 		return AndroidJniWrap_Activity::openUrl(url);
+	}
+
+	void AndroidApplication::HandleBackInvoked()
+	{
+		appEventHandler_->OnBackInvoked();
 	}
 
 	void AndroidApplication::HandleIntent(StringView action, StringView uri)

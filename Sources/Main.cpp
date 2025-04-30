@@ -96,6 +96,7 @@ public:
 	void OnShutdown() override;
 	void OnSuspend() override;
 	void OnResume() override;
+	void OnBackInvoked() override;
 
 	void OnKeyPressed(const KeyboardEvent& event) override;
 	void OnKeyReleased(const KeyboardEvent& event) override;
@@ -455,6 +456,17 @@ void GameEventHandler::OnResume()
 	PreferencesCache::ResumeOnStart = false;
 	PreferencesCache::Save();
 #endif
+}
+
+void GameEventHandler::OnBackInvoked()
+{
+	LOGW("OnBackInvoked()");
+
+	if (_currentHandler != nullptr) {
+		KeyboardEvent event;
+		event.sym = Keys::Back;
+		_currentHandler->OnKeyPressed(event);
+	}
 }
 
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -1344,7 +1356,6 @@ void GameEventHandler::RefreshCache()
 	{
 		auto s = fs::Open(cachePath, FileAccess::Read);
 		if (s->GetSize() < 16) {
-			LOGI("Cache not found %i", (std::int32_t)s->GetSize());
 			goto RecreateCache;
 		}
 
@@ -1352,7 +1363,6 @@ void GameEventHandler::RefreshCache()
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValue<std::uint16_t>();
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::CacheIndexFile || version != Compatibility::JJ2Anims::CacheVersion) {
-			LOGI("Cache not compatible %i | %i | %i", signature != 0x2095A59FF0BFBBEF, fileType != ContentResolver::CacheIndexFile, version != Compatibility::JJ2Anims::CacheVersion);
 			goto RecreateCache;
 		}
 
@@ -1371,14 +1381,12 @@ void GameEventHandler::RefreshCache()
 		std::int64_t animsCached = s->ReadValue<std::int64_t>();
 		std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
 		if (animsModified != 0 && animsCached != animsModified) {
-			LOGI("Cache anims modified %i | %i", (std::int32_t)animsCached, (std::int32_t)animsModified);
 			goto RecreateCache;
 		}
 
 		// If some events were added, recreate cache
 		std::uint16_t eventTypeCount = s->ReadValue<std::uint16_t>();
 		if (eventTypeCount != (std::uint16_t)EventType::Count) {
-			LOGI("Cache event count mismatch %i | %i", (std::int32_t)eventTypeCount, (std::int32_t)EventType::Count);
 			goto RecreateCache;
 		}
 

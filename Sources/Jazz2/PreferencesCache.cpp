@@ -391,7 +391,7 @@ namespace Jazz2
 
 #	if defined(DEATH_TARGET_ANDROID)
 			// Use native Back button as default on smart watches
-			//UseNativeBackButton = static_cast<AndroidApplication&>(theApplication()).IsScreenRound();
+			UseNativeBackButton = static_cast<AndroidApplication&>(theApplication()).IsScreenRound();
 #	elif defined(DEATH_TARGET_UNIX)
 			StringView isSteamDeck = ::getenv("SteamDeck");
 			if (isSteamDeck == "1"_s) {
