@@ -392,8 +392,6 @@ void GameEventHandler::OnPostUpdate()
 	if (_backPressLeft > 0) {
 		_backPressLeft--;
 		if (_backPressLeft <= 0) {
-			LOGW("OnBackInvoked() 3 | %u", theApplication().GetFrameCount());
-
 			KeyboardEvent event{};
 			event.sym = Keys::Back;
 			_currentHandler->OnKeyReleased(event);
@@ -472,9 +470,8 @@ void GameEventHandler::OnResume()
 
 void GameEventHandler::OnBackInvoked()
 {
-	LOGW("OnBackInvoked() 1 | %u | %i", theApplication().GetFrameCount(), _backPressLeft);
-
 	if (_currentHandler != nullptr && _backPressLeft <= 0) {
+		// The back button needs to be pressed for at least 2 frames
 		_backPressLeft = 2;
 
 		KeyboardEvent event{};
