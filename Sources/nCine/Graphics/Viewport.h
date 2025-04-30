@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderQueue.h"
 #include "../Primitives/Colorf.h"
 #include "../Primitives/Vector2.h"
 #include "../Primitives/Rect.h"
@@ -15,7 +16,6 @@ namespace nCine
 {
 	class SceneNode;
 	class Camera;
-	class RenderQueue;
 	class GLFramebuffer;
 	class Texture;
 
@@ -236,7 +236,7 @@ namespace nCine
 		Colorf clearColor_;
 
 		/// Render queue of commands for this viewport/RT
-		std::unique_ptr<RenderQueue> renderQueue_;
+		RenderQueue renderQueue_;
 
 		std::unique_ptr<GLFramebuffer> fbo_;
 

@@ -2897,7 +2897,8 @@ namespace Jazz2::Multiplayer
 						_players.push_back(ptr);
 						AddActor(player);
 						AssignViewport(ptr);
-						// TODO: Needed to initialize newly assigned viewport, because it called asynchronously, not from handler initialization
+						// TODO: Needed to drop and reinitialize newly assigned viewport, because it's called asynchronously, not from handler initialization
+						Viewport::GetChain().clear();
 						Vector2i res = theApplication().GetResolution();
 						OnInitializeViewport(res.X, res.Y);
 					}, NCINE_CURRENT_FUNCTION);
