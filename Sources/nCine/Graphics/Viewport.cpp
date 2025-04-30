@@ -59,7 +59,7 @@ namespace nCine
 	Viewport::Viewport(const char* name, Texture* texture, DepthStencilFormat depthStencilFormat)
 		: type_(Type::NoTexture), width_(0), height_(0), viewportRect_(0, 0, 0, 0), scissorRect_(0, 0, 0, 0),
 			depthStencilFormat_(DepthStencilFormat::None), lastFrameCleared_(0), clearMode_(ClearMode::EveryFrame),
-			clearColor_(Colorf::Black), renderQueue_(std::make_unique<RenderQueue>()), fbo_(nullptr), rootNode_(nullptr),
+			clearColor_(Colorf::Black), fbo_(nullptr), rootNode_(nullptr),
 			camera_(nullptr), stateBits_(0), numColorAttachments_(0)
 	{
 		for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
@@ -338,7 +338,7 @@ namespace nCine
 		if (rootNode_ != nullptr) {
 			ZoneScopedC(0x81A861);
 			std::uint32_t visitOrderIndex = 0;
-			rootNode_->OnVisit(*renderQueue_, visitOrderIndex);
+			rootNode_->OnVisit(renderQueue_, visitOrderIndex);
 		}
 
 		stateBits_.set(StateBitPositions::VisitedBit);
@@ -348,9 +348,9 @@ namespace nCine
 	{
 		RenderResources::setCurrentViewport(this);
 
-		if (!renderQueue_->empty()) {
+		if (!renderQueue_.empty()) {
 			ZoneScopedC(0x81A861);
-			renderQueue_->sortAndCommit();
+			renderQueue_.sortAndCommit();
 		}
 
 		stateBits_.set(StateBitPositions::CommittedBit);
@@ -428,7 +428,7 @@ namespace nCine
 		RenderResources::setCurrentCamera(camera_);
 		RenderResources::updateCameraUniforms();
 
-		if (!renderQueue_->empty()) {
+		if (!renderQueue_.empty()) {
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);
 			const GLViewport::State viewportState = GLViewport::GetState();
 			if (viewportRectNonZeroArea) {
@@ -441,7 +441,7 @@ namespace nCine
 				GLScissorTest::Enable(scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
 			}
 
-			renderQueue_->draw();
+			renderQueue_.draw();
 
 			if (scissorRectNonZeroArea) {
 				GLScissorTest::SetState(scissorTestState);

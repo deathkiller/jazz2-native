@@ -91,11 +91,11 @@ namespace nCine
 
 		for (std::size_t i = 0; i < chain_.size(); i++) {
 			if (chain_[i]) {
-				chain_[i]->renderQueue_->clear();
+				chain_[i]->renderQueue_.clear();
 				chain_[i]->stateBits_.reset();
 			}
 		}
-		renderQueue_->clear();
+		renderQueue_.clear();
 		stateBits_.reset();
 
 		RenderResources::buffersManager().remap();
