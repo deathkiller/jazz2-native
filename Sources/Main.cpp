@@ -137,13 +137,13 @@ private:
 	constexpr static std::uint32_t MaxPlayerNameLength = 24;
 
 	Flags _flags = Flags::None;
+	std::int32_t _backInvokedTimeLeft = 0;
 	std::unique_ptr<IStateHandler> _currentHandler;
 	SmallVector<Function<void()>> _pendingCallbacks;
 	String _newestVersion;
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
 #endif
-	std::int32_t _backPressLeft = 0;
 
 	void OnBeginInitialize();
 	void OnAfterInitialize();
@@ -389,9 +389,9 @@ void GameEventHandler::OnPostUpdate()
 {
 	_currentHandler->OnEndFrame();
 
-	if (_backPressLeft > 0) {
-		_backPressLeft--;
-		if (_backPressLeft <= 0) {
+	if (_backInvokedTimeLeft > 0) {
+		_backInvokedTimeLeft--;
+		if (_backInvokedTimeLeft <= 0) {
 			KeyboardEvent event{};
 			event.sym = Keys::Back;
 			_currentHandler->OnKeyReleased(event);
@@ -470,9 +470,9 @@ void GameEventHandler::OnResume()
 
 void GameEventHandler::OnBackInvoked()
 {
-	if (_currentHandler != nullptr && _backPressLeft <= 0) {
+	if (_currentHandler != nullptr && _backInvokedTimeLeft <= 0) {
 		// The back button needs to be pressed for at least 2 frames
-		_backPressLeft = 2;
+		_backInvokedTimeLeft = 2;
 
 		KeyboardEvent event{};
 		event.sym = Keys::Back;
