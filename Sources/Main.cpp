@@ -929,6 +929,9 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		packet.WriteVariableUint32(0);
 
 		auto playerName = PreferencesCache::GetEffectivePlayerName();
+		if (playerName.empty()) {
+			playerName = "Unknown"_s;
+		}
 		if (playerName.size() > MaxPlayerNameLength) {
 			auto [_, prevChar] = Utf8::PrevChar(playerName, MaxPlayerNameLength);
 			playerName = playerName.prefix(prevChar);
