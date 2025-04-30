@@ -61,8 +61,9 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		std::int16_t result = *(std::int16_t*)&_buffer[_offset];
-		_offset += 2;
+		std::int16_t result;
+		std::memcpy(&result, &_buffer[_offset], sizeof(result));
+		_offset += sizeof(result);
 		return result;
 	}
 
@@ -73,8 +74,9 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		std::uint16_t result = *(std::uint16_t*)&_buffer[_offset];
-		_offset += 2;
+		std::uint16_t result;
+		std::memcpy(&result, &_buffer[_offset], sizeof(result));
+		_offset += sizeof(result);
 		return result;
 	}
 
@@ -85,8 +87,9 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		std::int32_t result = (std::int32_t)(_buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24));
-		_offset += 4;
+		std::int32_t result;
+		std::memcpy(&result, &_buffer[_offset], sizeof(result));
+		_offset += sizeof(result);
 		return result;
 	}
 
@@ -97,8 +100,9 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		std::uint32_t result = _buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24);
-		_offset += 4;
+		std::uint32_t result;
+		std::memcpy(&result, &_buffer[_offset], sizeof(result));
+		_offset += sizeof(result);
 		return result;
 	}
 
@@ -132,8 +136,9 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		float result = *(float*)&_buffer[_offset];
-		_offset += 4;
+		float result;
+		std::memcpy(&result, &_buffer[_offset], sizeof(result));
+		_offset += sizeof(result);
 		return result;
 	}
 
@@ -185,7 +190,7 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		StringView result((char*)&_buffer[_offset], realLength);
+		StringView result((const char*)&_buffer[_offset], realLength);
 
 		if (endOfStream) {
 			_offset = INT32_MAX;
