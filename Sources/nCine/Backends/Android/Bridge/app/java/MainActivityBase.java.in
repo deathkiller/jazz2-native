@@ -9,6 +9,8 @@ import android.os.Environment;
 import android.provider.Settings;
 import android.provider.Settings;
 import android.view.KeyEvent;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 import @NCINE_REVERSE_DNS@.Keep;
 
 public abstract class MainActivityBase extends NativeActivity implements DisplayManager.DisplayListener {
@@ -21,7 +23,23 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		DisplayManager dm = getSystemService(DisplayManager.class);
 		dm.registerDisplayListener(this, null);
 		
+		if (android.os.Build.VERSION.SDK_INT >= 33) {
+			getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+				OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+				backCallback
+			);
+		}
+		
 		handleIntent(getIntent());
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		
+		if (android.os.Build.VERSION.SDK_INT >= 33) {
+			getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
+		}
 	}
 	
 	@Override
@@ -30,14 +48,9 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		handleIntent(intent);
 	}
 	
-	@Override
-	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			System.err.println("[JAZZ-TEST] onKeyDown");
-			return true;
-		}
-		return super.onKeyDown(keyCode, event);
-	}
+	private final OnBackInvokedCallback backCallback = () -> {
+		System.err.println("[JAZZ-TEST] OnBackInvokedCallback");
+	};
 	
 	@Override
 	public void onBackPressed() {

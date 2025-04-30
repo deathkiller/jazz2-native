@@ -1344,6 +1344,7 @@ void GameEventHandler::RefreshCache()
 	{
 		auto s = fs::Open(cachePath, FileAccess::Read);
 		if (s->GetSize() < 16) {
+			LOGI("Cache not found %i", (std::int32_t)s->GetSize());
 			goto RecreateCache;
 		}
 
@@ -1351,6 +1352,7 @@ void GameEventHandler::RefreshCache()
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValue<std::uint16_t>();
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::CacheIndexFile || version != Compatibility::JJ2Anims::CacheVersion) {
+			LOGI("Cache not compatible %i | %i | %i", signature != 0x2095A59FF0BFBBEF, fileType != ContentResolver::CacheIndexFile, version != Compatibility::JJ2Anims::CacheVersion);
 			goto RecreateCache;
 		}
 
@@ -1369,12 +1371,14 @@ void GameEventHandler::RefreshCache()
 		std::int64_t animsCached = s->ReadValue<std::int64_t>();
 		std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
 		if (animsModified != 0 && animsCached != animsModified) {
+			LOGI("Cache anims modified %i | %i", (std::int32_t)animsCached, (std::int32_t)animsModified);
 			goto RecreateCache;
 		}
 
 		// If some events were added, recreate cache
 		std::uint16_t eventTypeCount = s->ReadValue<std::uint16_t>();
 		if (eventTypeCount != (std::uint16_t)EventType::Count) {
+			LOGI("Cache event count mismatch %i | %i", (std::int32_t)eventTypeCount, (std::int32_t)EventType::Count);
 			goto RecreateCache;
 		}
 
@@ -1396,8 +1400,8 @@ void GameEventHandler::RefreshCache()
 			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 			if (!resolver.IsHeadless()) {
-			std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
-			LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
+				std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
+				LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
 			}
 		} else {
 			LOGI("Cache is already up-to-date");
@@ -1469,8 +1473,8 @@ RecreateCache:
 	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 	if (!resolver.IsHeadless()) {
-	std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
-	LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
+		std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
+		LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
 	}
 
 	resolver.RemountPaks();
