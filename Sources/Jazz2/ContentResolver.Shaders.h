@@ -4,7 +4,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr std::uint64_t Version = 6;
+	constexpr std::uint64_t Version = 7;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -187,12 +187,6 @@ void main() {
 precision mediump float;
 #endif
 
-mat4 bayerIndex = mat4(
-	vec4(0.0/16.0, 12.0/16.0, 3.0/16.0, 15.0/16.0),
-	vec4(8.0/16.0, 4.0/16.0, 11.0/16.0, 7.0/16.0),
-	vec4(2.0/16.0, 14.0/16.0, 1.0/16.0, 13.0/16.0),
-	vec4(10.0/16.0, 6.0/16.0, 9.0/16.0, 5.0/16.0));
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
@@ -243,12 +237,6 @@ void main() {
 precision mediump float;
 #endif
 
-mat4 bayerIndex = mat4(
-	vec4(0.0/16.0, 12.0/16.0, 3.0/16.0, 15.0/16.0),
-	vec4(8.0/16.0, 4.0/16.0, 11.0/16.0, 7.0/16.0),
-	vec4(2.0/16.0, 14.0/16.0, 1.0/16.0, 13.0/16.0),
-	vec4(10.0/16.0, 6.0/16.0, 9.0/16.0, 5.0/16.0));
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
@@ -289,44 +277,32 @@ float aastep(float threshold, float value) {
 	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
 }
 
-// Perlin noise
-vec4 permute(vec4 x) {
-	return mod(34.0 * (x * x) + x, 289.0);
+// Simplex Noise
+vec3 permute(vec3 x) {
+	return mod(((x*34.0)+1.0)*x, 289.0);
 }
 
-vec2 fade(vec2 t) {
-	return 6.0*(t * t * t * t * t)-15.0*(t * t * t * t)+10.0*(t * t * t);
-}
-
-float perlinNoise2D(vec2 P) {
-	vec4 Pi = floor(P.xyxy) + vec4(0.0, 0.0, 1.0, 1.0);
-	vec4 Pf = fract(P.xyxy) - vec4(0.0, 0.0, 1.0, 1.0);
-	vec4 ix = Pi.xzxz;
-	vec4 iy = Pi.yyww;
-	vec4 fx = Pf.xzxz;
-	vec4 fy = Pf.yyww;
-	vec4 i = permute(permute(ix) + iy);
-	vec4 gx = fract(i/41.0)*2.0-1.0;
-	vec4 gy = abs(gx)-0.5;
-	vec4 tx = floor(gx+0.5);
-	gx = gx-tx;
-	vec2 g00 = vec2(gx.x, gy.x);
-	vec2 g10 = vec2(gx.y, gy.y);
-	vec2 g01 = vec2(gx.z, gy.z);
-	vec2 g11 = vec2(gx.w, gy.w);
-	vec4 norm = 1.79284291400159 - 0.85373472095314 * vec4(dot(g00,g00),dot(g01,g01),dot(g10,g10),dot(g11,g11));
-	g00 *= norm.x;
-	g01 *= norm.y;
-	g10 *= norm.z;
-	g11 *= norm.w;
-	float n00 = dot(g00, vec2(fx.x,fy.x));
-	float n10 = dot(g10, vec2(fx.y,fy.y));
-	float n01 = dot(g01, vec2(fx.z,fy.z));
-	float n11 = dot(g11, vec2(fx.w,fy.w));
-	vec2 fade_xy = fade(Pf.xy);
-	vec2 n_x = mix(vec2(n00, n01), vec2(n10, n11), fade_xy.x);
-	float n_xy = mix(n_x.x, n_x.y, fade_xy.y);
-	return 2.3 * n_xy;
+float snoise(vec2 v) {
+	const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+	vec2 i = floor(v + dot(v, C.yy));
+	vec2 x0 = v - i + dot(i, C.xx);
+	vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	vec4 x12 = x0.xyxy + C.xxzz;
+	x12.xy -= i1;
+	i = mod(i, 289.0);
+	vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0 ));
+	vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw, x12.zw)), 0.0);
+	m = m * m;
+	m = m * m;
+	vec3 x = 2.0 * fract(p * C.www) - 1.0;
+	vec3 h = abs(x) - 0.5;
+	vec3 ox = floor(x + 0.5);
+	vec3 a0 = x - ox;
+	m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+	vec3 g;
+	g.x = a0.x * x0.x + h.x * x0.y;
+	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	return 130.0 * dot(m, g);
 }
 
 void main() {
@@ -354,8 +330,8 @@ void main() {
 	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
 	
 	// Rays
-	float noisePos = uvWorld.x * 8.0 + uvWorldCenter.y * 0.5 + (1.0 - uvLocal.y - uvLocal.x) * -5.0;
-	float rays = /*perlinNoise2D(vec2(noisePos, uTime * 10.0 + uvWorldCenter.y)) * 0.5 +*/ 0.4;
+	float noisePos = uvWorld.x * 4.0 + uvWorldCenter.y * 0.5 + (1.0 - uvLocal.y - uvLocal.x) * -5.0;
+	float rays = snoise(vec2(noisePos, uTime * 6.0 + uvWorldCenter.y)) * 0.45 + 0.45;
 	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
 	
 	// Waves
