@@ -348,15 +348,15 @@ void main() {
 	vec4 main = texture(uTexture, uv);
 
 	// Chromatic Aberration
-	/*float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
 	float red = texture(uTexture, vec2(uv.x - aberration, uv.y)).r;
 	float blue = texture(uTexture, vec2(uv.x + aberration, uv.y)).b;
 	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
 	
 	// Rays
 	float noisePos = uvWorld.x * 8.0 + uvWorldCenter.y * 0.5 + (1.0 - uvLocal.y - uvLocal.x) * -5.0;
-	float rays = perlinNoise2D(vec2(noisePos, uTime * 10.0 + uvWorldCenter.y)) * 0.5 + 0.4;
-	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);*/
+	float rays = /*perlinNoise2D(vec2(noisePos, uTime * 10.0 + uvWorldCenter.y)) * 0.5 +*/ 0.4;
+	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
 	
 	// Waves
 	float topDist = abs(uvLocal.y - uWaterLevel - waveHeight);
