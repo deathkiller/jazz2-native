@@ -4251,7 +4251,7 @@ namespace Death { namespace Backward {
 	private:
 		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
 
-		static const std::int32_t PosixSignals[] = {
+		static constexpr std::int32_t PosixSignals[] = {
 			// Signals for which the default action is "Core".
 			SIGABRT,	// Abort signal from abort(3)
 			SIGBUS,		// Bus error (bad memory access)
@@ -4269,7 +4269,7 @@ namespace Death { namespace Backward {
 #	endif
 		};
 
-		static const std::int32_t PosixSignalsCount = sizeof(PosixSignals) / sizeof(PosixSignals[0]);
+		static constexpr std::int32_t PosixSignalsCount = sizeof(PosixSignals) / sizeof(PosixSignals[0]);
 
 		Implementation::Handle<char*> _stackContent;
 		bool _loaded;
