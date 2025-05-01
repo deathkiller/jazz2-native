@@ -109,11 +109,13 @@ namespace Jazz2::UI
 		}
 
 	private:
+		static constexpr std::uint32_t Ellipsis = UINT32_MAX;
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct Part
 		{
-			const char* Value;
+			std::uint32_t Begin;
 			std::uint32_t Length;
 			Vector2f Location;
 			float Height;
@@ -122,7 +124,7 @@ namespace Jazz2::UI
 			float CharSpacing;
 			bool AllowVariance;
 
-			Part(const char* value, std::uint32_t length, Vector2f location, float height, Colorf color, float scale, float charSpacing, bool allowVariance) noexcept;
+			Part(std::uint32_t begin, std::uint32_t length, Vector2f location, float height, Colorf color, float scale, float charSpacing, bool allowVariance) noexcept;
 			
 			Part(const Part& other) noexcept;
 			Part(Part&& other) noexcept;

@@ -1,4 +1,5 @@
 ﻿#include "InGameConsole.h"
+#include "FormattedTextBlock.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 
@@ -14,9 +15,9 @@ namespace Jazz2::UI
 	struct LogLine {
 		MessageLevel Level;
 		float TimeLeft;
-		String Message;
+		FormattedTextBlock Message;
 
-		LogLine(MessageLevel level, String&& message);
+		LogLine(MessageLevel level, String&& message, Font* font);
 	};
 
 	static SmallVector<LogLine, 0> _logHistory;
@@ -37,6 +38,10 @@ namespace Jazz2::UI
 	{
 		auto& resolver = ContentResolver::Get();
 		_smallFont = resolver.GetFont(FontType::Small);
+
+		for (auto& line : _logHistory) {
+			line.Message.SetFont(_smallFont);
+		}
 	}
 
 	void InGameConsole::OnUpdate(float timeMult)
@@ -60,6 +65,7 @@ namespace Jazz2::UI
 
 		ViewSize = _levelHandler->GetViewSize();
 		Vector2f currentLinePos = Vector2f(46.0f, ViewSize.Y - 60.0f);
+		float width = ViewSize.X - currentLinePos.X - 24.0f;
 
 		if (_isVisible) {
 			DrawSolid(Vector2f(0.0f, 0.0f), 80, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
@@ -87,9 +93,9 @@ namespace Jazz2::UI
 
 		// History
 		Vector2f historyLinePos = currentLinePos;
-		historyLinePos.Y -= 20.0f;
+		historyLinePos.Y -= 4.0f;
 		for (std::int32_t i = _logHistory.size() - 1; i >= 0; i--) {
-			if (historyLinePos.Y < 30.0f) {
+			if (historyLinePos.Y < 46.0f) {
 				break;
 			}
 
@@ -105,29 +111,27 @@ namespace Jazz2::UI
 			Colorf color;
 			switch (line.Level) {
 				default: color = Font::DefaultColor; color.A *= alpha; break;
-
-				case MessageLevel::Echo: {
-					color = Font::DefaultColor; color.A *= alpha;
-
-					std::int32_t charOffset = 0, charOffsetShadow = 0;
-					_smallFont->DrawString(this, "›"_s, charOffsetShadow, historyLinePos.X - 13.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 100,
-								Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
-					_smallFont->DrawString(this, "›"_s, charOffset, historyLinePos.X - 13.0f, historyLinePos.Y, FontLayer + 100,
-						Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
-					break;
-				}
+				case MessageLevel::Echo: color = Font::DefaultColor; color.A *= alpha; break;
 				case MessageLevel::Debug: color = Colorf(0.36f, 0.44f, 0.35f, 0.5f * sqrtf(alpha)); break;
 				case MessageLevel::Error: color = Colorf(0.6f, 0.41f, 0.40f, 0.5f * sqrtf(alpha)); break;
 				case MessageLevel::Fatal: color = Colorf(0.48f, 0.38f, 0.34f, 0.5f * sqrtf(alpha)); break;
 			}
 
-			std::int32_t charOffset = 0, charOffsetShadow = 0;
-			_smallFont->DrawString(this, line.Message, charOffsetShadow, historyLinePos.X, historyLinePos.Y + 2.0f, FontShadowLayer + 100,
-						Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, line.Message, charOffset, historyLinePos.X, historyLinePos.Y, FontLayer + 100,
-				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
+			std::int32_t charOffset = 0;
+			line.Message.SetDefaultColor(color);
 
-			historyLinePos.Y -= 16.0f;
+			Vector2f textSize = line.Message.MeasureSize(Vector2f(width, 400.0f));
+			historyLinePos.Y -= textSize.Y;
+
+			if (line.Level == MessageLevel::Echo) {
+				std::int32_t charOffset = 0, charOffsetShadow = 0;
+				_smallFont->DrawString(this, "›"_s, charOffsetShadow, historyLinePos.X - 13.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 100,
+							Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
+				_smallFont->DrawString(this, "›"_s, charOffset, historyLinePos.X - 13.0f, historyLinePos.Y, FontLayer + 100,
+					Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
+			}
+
+			line.Message.Draw(this, Rectf(historyLinePos.X, historyLinePos.Y, width, 400.0f), FontLayer + 100, charOffset);
 		}
 
 		return true;
@@ -297,7 +301,7 @@ namespace Jazz2::UI
 			case MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, {}, "[<] %s", line.data()); break;
 		}
 #endif
-		_logHistory.emplace_back(level, std::move(line));
+		_logHistory.emplace_back(level, std::move(line), _smallFont);
 	}
 
 	void InGameConsole::ProcessCurrentLine()
@@ -361,8 +365,13 @@ namespace Jazz2::UI
 		}
 	}
 
-	LogLine::LogLine(MessageLevel level, String&& message)
-		: Level(level), TimeLeft(5.0f * FrameTimer::FramesPerSecond), Message(std::move(message))
+	LogLine::LogLine(MessageLevel level, String&& message, Font* font)
+		: Level(level), TimeLeft(5.0f * FrameTimer::FramesPerSecond)
 	{
+		Message.SetText(std::move(message));
+		Message.SetScale(0.8f);
+		Message.SetFont(font);
+		Message.SetMultiline(true);
+		Message.SetWrapping(true);
 	}
 }

@@ -113,6 +113,8 @@ namespace Jazz2
 
 	LevelHandler::~LevelHandler()
 	{
+		_players.clear();
+
 		// Remove nodes from UpscaleRenderPass
 		for (auto& viewport : _assignedViewports) {
 			viewport->_combineRenderer->setParent(nullptr);

@@ -52,7 +52,7 @@ namespace Jazz2::UI
 		static constexpr std::uint16_t FontLayer = 200;
 		static constexpr std::uint16_t FontShadowLayer = 120;
 
-		static constexpr std::int32_t MaxLineLength = 256;
+		static constexpr std::int32_t MaxLineLength = 128;
 		
 		LevelHandler* _levelHandler;
 		Font* _smallFont;
