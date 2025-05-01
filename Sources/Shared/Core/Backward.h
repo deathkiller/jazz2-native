@@ -149,7 +149,6 @@
 #	define _Unwind_Ptr _Unwind_Ptr_Custom
 #	include <link.h>
 #	undef _Unwind_Ptr
-#	include <linux/sched.h>
 #else
 #	include <link.h>
 #endif
@@ -4129,20 +4128,12 @@ namespace Death { namespace Backward {
 		/** @brief Feature flags */
 		Flags FeatureFlags;
 
-		ExceptionHandling(Flags flags = Flags::None)
-			: Destination(nullptr), FeatureFlags(flags), _prevHandlers{}, _loaded(false)
-		{
+		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags), _loaded(false) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
 				return;
 			}
 			current = this;
-
-			for (std::int32_t i = 0; i < PosixSignalsCount; ++i) {
-				if (sigaction(PosixSignals[i], nullptr, &_prevHandlers[i]) == -1) {
-					return;
-				}
-			}
 
 			bool success = true;
 
@@ -4160,26 +4151,24 @@ namespace Death { namespace Backward {
 				success = false;
 			}
 
-			if (success) {
-				for (std::int32_t i = 0; i < PosixSignalsCount; ++i) {
-					struct sigaction action;
-					std::memset(&action, 0, sizeof action);
-					action.sa_flags = static_cast<std::int32_t>(SA_SIGINFO | SA_ONSTACK | SA_NODEFER | SA_RESETHAND);
-					sigfillset(&action.sa_mask);
-					sigdelset(&action.sa_mask, PosixSignals[i]);
+			for (std::int32_t i = 0; i < PosixSignalsCount; ++i) {
+				struct sigaction action;
+				std::memset(&action, 0, sizeof action);
+				action.sa_flags = static_cast<std::int32_t>(SA_SIGINFO | SA_ONSTACK | SA_NODEFER | SA_RESETHAND);
+				sigfillset(&action.sa_mask);
+				sigdelset(&action.sa_mask, PosixSignals[i]);
 #	if defined(DEATH_TARGET_CLANG)
 #		pragma clang diagnostic push
 #		pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
 #	endif
-					action.sa_sigaction = &SignalHandler;
+				action.sa_sigaction = &SignalHandler;
 #	if defined(DEATH_TARGET_CLANG)
 #		pragma clang diagnostic pop
 #	endif
 
-					int r = sigaction(PosixSignals[i], &action, nullptr);
-					if (r < 0) {
-						success = false;
-					}
+				int r = sigaction(PosixSignals[i], &action, nullptr);
+				if (r < 0) {
+					success = false;
 				}
 			}
 
@@ -4282,7 +4271,6 @@ namespace Death { namespace Backward {
 
 		static const std::int32_t PosixSignalsCount = sizeof(PosixSignals) / sizeof(PosixSignals[0]);
 
-		struct sigaction _prevHandlers[PosixSignalsCount];
 		Implementation::Handle<char*> _stackContent;
 		bool _loaded;
 
@@ -4298,45 +4286,11 @@ namespace Death { namespace Backward {
 			auto* current = GetSingleton();
 			current->HandleSignal(sig, info, _ctx);
 
-			current->RestorePreviousHandlers();
-
 			// Try to forward the signal
-			//raise(info->si_signo);
+			raise(info->si_signo);
 
 			// Terminate the process immediately
-			//_exit(ExceptionExitCode);
-
-			if (sig == SIGABRT || info->si_code <= 0) {
-				raise(info->si_signo);
-				//if (sys_tgkill(getpid(), syscall(__NR_gettid), sig) < 0) {
-					_exit(ExceptionExitCode);
-				//}
-			} else {
-				// Synchronous signal triggered by a hard fault (e.g., SIGSEGV)
-			}
-		}
-
-		void RestorePreviousHandlers() {
-			if (!_loaded) {
-				return;
-			}
-
-			for (std::int32_t i = 0; i < PosixSignalsCount; ++i) {
-				if (sigaction(PosixSignals[i], &_prevHandlers[i], nullptr) == -1) {
-#	if defined(DEATH_TARGET_ANDROID)
-					struct kernel_sigaction sa;
-					std::memset(&sa, 0, sizeof(sa));
-					sys_sigemptyset(&sa.sa_mask);
-					sa.sa_handler_ = SIG_DFL;
-					sa.sa_flags = SA_RESTART;
-					sys_rt_sigaction(PosixSignals[i], &sa, nullptr, sizeof(kernel_sigset_t));
-#	else
-					signal(PosixSignals[i], SIG_DFL);
-#	endif
-				}
-			}
-
-			_loaded = false;
+			_exit(ExceptionExitCode);
 		}
 	};
 
