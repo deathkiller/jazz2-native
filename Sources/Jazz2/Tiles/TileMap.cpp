@@ -937,6 +937,7 @@ namespace Jazz2::Tiles
 
 			LayerTile& tile = newLayer.Layout[i];
 			tile.TileID = tileIdx;
+			tile.DestructAnimation = -1;
 
 			tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
 
@@ -1428,7 +1429,7 @@ namespace Jazz2::Tiles
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			auto& tile = spriteLayer.Layout[i];
 			tile.DestructFrameIndex = src.ReadVariableInt32();
-			if (tile.DestructFrameIndex > 0) {
+			if (tile.DestructAnimation >= 0 && tile.DestructAnimation < _animatedTiles.size()) {
 				auto& anim = _animatedTiles[tile.DestructAnimation];
 				std::int32_t max = (std::int32_t)(anim.Tiles.size() - 2);
 				if (tile.DestructFrameIndex > max) {
