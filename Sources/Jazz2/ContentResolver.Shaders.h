@@ -348,7 +348,7 @@ void main() {
 	vec4 main = texture(uTexture, uv);
 
 	// Chromatic Aberration
-	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	/*float aberration = abs(uvLocal.x - 0.5) * 0.012;
 	float red = texture(uTexture, vec2(uv.x - aberration, uv.y)).r;
 	float blue = texture(uTexture, vec2(uv.x + aberration, uv.y)).b;
 	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
@@ -367,7 +367,7 @@ void main() {
 	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
 		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + vViewSizeInv.y
 	)).rgb, vec3(topColorBlendFac));
-	main.rgb += vec3(0.2 * isVeryNearTop);
+	main.rgb += vec3(0.2 * isVeryNearTop);*/
 	
 	// Lighting
 	vec4 blur1 = texture(uTextureBlurHalf, uv);

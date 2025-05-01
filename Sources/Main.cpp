@@ -229,7 +229,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		auto& resolver = ContentResolver::Get();
-		config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
+		//config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
 #endif
 
 		if (PreferencesCache::PlayStationExtendedSupport) {
