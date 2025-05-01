@@ -361,7 +361,7 @@ namespace Jazz2::UI::Multiplayer
 			_smallFont->DrawString(this, item.PlayerName, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, item.PlayerName, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
-				Alignment::TopLeft, item.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.9f);
+				Alignment::TopLeft, item.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			offset += 16.0f;
 		}
 	}

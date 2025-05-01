@@ -234,7 +234,7 @@ void main() {
 
 	constexpr char CombineWithWaterFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
-precision mediump float;
+precision highp float;
 #endif
 
 uniform sampler2D uTexture;
@@ -283,7 +283,7 @@ vec3 permute(vec3 x) {
 }
 
 float snoise(vec2 v) {
-	/*const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+	const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
 	vec2 i = floor(v + dot(v, C.yy));
 	vec2 x0 = v - i + dot(i, C.xx);
 	vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
@@ -302,8 +302,7 @@ float snoise(vec2 v) {
 	vec3 g;
 	g.x = a0.x * x0.x + h.x * x0.y;
 	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-	return 130.0 * dot(m, g);*/
-	return 0.5;
+	return 130.0 * dot(m, g);
 }
 
 void main() {
