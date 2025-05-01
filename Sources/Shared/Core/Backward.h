@@ -4307,9 +4307,10 @@ namespace Death { namespace Backward {
 			//_exit(ExceptionExitCode);
 
 			if (sig == SIGABRT || info->si_code <= 0) {
-				if (sys_tgkill(getpid(), syscall(__NR_gettid), sig) < 0) {
+				raise(info->si_signo);
+				//if (sys_tgkill(getpid(), syscall(__NR_gettid), sig) < 0) {
 					_exit(ExceptionExitCode);
-				}
+				//}
 			} else {
 				// Synchronous signal triggered by a hard fault (e.g., SIGSEGV)
 			}

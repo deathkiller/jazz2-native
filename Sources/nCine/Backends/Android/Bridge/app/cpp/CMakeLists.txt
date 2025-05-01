@@ -26,6 +26,8 @@ int main() { return foo() - 42; }\
 	endif()
 endif()
 
+set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources/")
+
 include(ncine_imported_targets)
 
 if(NCINE_DYNAMIC_LIBRARY)
@@ -43,8 +45,6 @@ endif()
 target_link_libraries(ncine_main PRIVATE ${NCINE_APP})
 
 include(ncine_compiler_options)
-
-set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources/")
 
 include(ncine_headers)
 include(ncine_sources)
