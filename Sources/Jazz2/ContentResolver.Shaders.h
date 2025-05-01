@@ -4,7 +4,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr std::uint64_t Version = 7;
+	constexpr std::uint64_t Version = 8;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -241,7 +241,7 @@ uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
 uniform sampler2D uTextureBlurQuarter;
-uniform sampler2D uTextureDisplacement;
+uniform sampler2D uTextureNoise;
 
 uniform vec4 uAmbientColor;
 uniform float uTime;
@@ -318,7 +318,7 @@ void main() {
 
 	// Displacement
 	vec2 disPos = uvWorld * vec2(0.1) + vec2(mod(uTime * 0.4, 2.0));
-	vec2 dis = (texture(uTextureDisplacement, disPos).xy - vec2(0.5)) * vec2(0.01);
+	vec2 dis = (texture(uTextureNoise, disPos).xy - vec2(0.5)) * vec2(0.01);
 	
 	vec2 uv = clamp(uvLocal + (vec2(0.004 * sin(uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * vec2(isTexelBelow), vec2(0.0), vec2(1.0));
 	vec4 main = texture(uTexture, uv);
@@ -330,8 +330,9 @@ void main() {
 	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
 	
 	// Rays
-	float noisePos = uvWorld.x * 4.0 + uvWorldCenter.y * 0.5 + (1.0 - uvLocal.y - uvLocal.x) * -5.0;
-	float rays = snoise(vec2(noisePos, uTime * 6.0 + uvWorldCenter.y)) * 0.45 + 0.45;
+	vec2 uvNormalized = mod(uvLocal / vViewSizeInv, 720.0) / 720.0;
+	float noisePos = uvWorldCenter.x * 6.0 + uvLocal.x * 1.4 + uvWorldCenter.y * 0.5 + (1.0 - uvNormalized.x * 1.2 - uvNormalized.y) * -5.0;
+	float rays = snoise(vec2(noisePos, uTime * 5.0 + uvWorldCenter.y)) * 0.55 + 0.3;
 	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
 	
 	// Waves

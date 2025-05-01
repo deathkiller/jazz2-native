@@ -56,9 +56,9 @@ namespace Jazz2::Rendering
 			if (blurQuarterTexUniform && blurQuarterTexUniform->GetIntValue(0) != 3) {
 				blurQuarterTexUniform->SetIntValue(3); // GL_TEXTURE3
 			}
-			auto* displacementTexUniform = _renderCommandWithWater.material().uniform("uTextureDisplacement");
-			if (displacementTexUniform && displacementTexUniform->GetIntValue(0) != 4) {
-				displacementTexUniform->SetIntValue(4); // GL_TEXTURE4
+			auto* noiseTexUniform = _renderCommandWithWater.material().uniform("uTextureNoise");
+			if (noiseTexUniform && noiseTexUniform->GetIntValue(0) != 4) {
+				noiseTexUniform->SetIntValue(4); // GL_TEXTURE4
 			}
 		}
 
