@@ -242,7 +242,7 @@ namespace Jazz2::Multiplayer
 						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
 						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 
-						LOGI("[MP] -\tFound server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+						LOGD("[MP] -\tFound server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
 						observer->OnServerFound(std::move(discoveredServer));
 					}
 				}
@@ -315,7 +315,7 @@ namespace Jazz2::Multiplayer
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
 
-		LOGI("[MP] Found local server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+		LOGD("[MP] Found local server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
 		return true;
 	}
 
