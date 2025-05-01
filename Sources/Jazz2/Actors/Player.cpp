@@ -337,6 +337,10 @@ namespace Jazz2::Actors
 			TryStandardMovement(timeMult, params);
 		}
 
+		if ((GetState() & ActorState::ApplyGravitation) != ActorState::ApplyGravitation) {
+			_externalForce.Y = std::min(_externalForce.Y + 0.002f * timeMult, 0.0f);
+		}
+
 		if (params.TilesDestroyed > 0) {
 			AddScore(params.TilesDestroyed * 50);
 			_levelHandler->PlayerExecuteRumble(this, "BreakTile"_s);
@@ -3923,8 +3927,8 @@ namespace Jazz2::Actors
 		std::int32_t prevGems = _gems[gemType];
 		_gems[gemType] += count;
 		_levelHandler->HandlePlayerGems(this, gemType, prevGems, _gems[gemType]);
-		PlayPlayerSfx("PickupGem"_s, 1.0f, std::min(0.7f + _gemsPitch * 0.05f, 1.3f));
-
+		float pitch = 1.0f - fabs(2.0f * fmod(_gemsPitch * 0.05f, 1.0f) - 1.0f);
+		PlayPlayerSfx("PickupGem"_s, 1.0f, std::min(0.7f + pitch * 0.6f, 1.3f));
 		_gemsTimer = 120.0f;
 		_gemsPitch++;
 	}
