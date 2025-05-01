@@ -62,7 +62,7 @@ else()
 		option(NCINE_WITH_GLEW "Use GLEW library" ON)
 	endif()
 
-	if(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE))
+	if(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE) OR NCINE_BUILD_ANDROID)
 		option(NCINE_WITH_BACKWARD "Enable integration with Backward for exception handling" ON)
 	endif()
 endif()
