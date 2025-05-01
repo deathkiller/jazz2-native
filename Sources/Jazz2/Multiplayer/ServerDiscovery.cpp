@@ -315,7 +315,7 @@ namespace Jazz2::Multiplayer
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
 
-		LOGD("[MP] Found local server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+		LOGI("[MP] Found local server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
 		return true;
 	}
 
