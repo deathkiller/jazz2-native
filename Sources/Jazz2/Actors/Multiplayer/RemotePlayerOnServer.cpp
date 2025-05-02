@@ -204,15 +204,13 @@ namespace Jazz2::Actors::Multiplayer
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
 	{
 		std::uint16_t prevAmmo = _weaponAmmo[(std::int32_t)weaponType];
-		if (!PlayerOnServer::FireCurrentWeapon(weaponType)) {
-			return false;
-		}
+		bool success = PlayerOnServer::FireCurrentWeapon(weaponType);
 
 		if (prevAmmo != _weaponAmmo[(std::int32_t)weaponType]) {
 			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
 		}
 
-		return true;
+		return success;
 	}
 
 	void RemotePlayerOnServer::EmitWeaponFlare()

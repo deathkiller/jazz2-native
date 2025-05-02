@@ -51,7 +51,7 @@
 	"SpawnInvulnerableSecs": 4,
 	"TotalKills": 10,
 	"TotalLaps": 3,
-	"TotalTreasureCollected": 80,
+	"TotalTreasureCollected": 100,
 
 	/* Playlist can contain unlimited number of entries */
 	"Playlist":
@@ -66,7 +66,7 @@
 			"SpawnInvulnerableSecs": 4,
 			"TotalKills": 10,
 			"TotalLaps": 3,
-			"TotalTreasureCollected": 80
+			"TotalTreasureCollected": 100
 		},
 		{
 			"LevelName": "battle1",
@@ -78,7 +78,7 @@
 			"SpawnInvulnerableSecs": 4,
 			"TotalKills": 10,
 			"TotalLaps": 3,
-			"TotalTreasureCollected": 80
+			"TotalTreasureCollected": 100
 		}
 	],
 	

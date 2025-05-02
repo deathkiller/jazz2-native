@@ -1443,7 +1443,7 @@ namespace Jazz2::Tiles
 		src.Read(_triggerState.data(), _triggerState.sizeInBytes());
 	}
 
-	void TileMap::SerializeResumableToStream(Stream& dest)
+	void TileMap::SerializeResumableToStream(Stream& dest, bool fromCheckpoint)
 	{
 		if (_sprLayerIndex == -1) {
 			dest.WriteValue<std::int32_t>(-1);
@@ -1452,13 +1452,13 @@ namespace Jazz2::Tiles
 
 		auto& spriteLayer = _layers[_sprLayerIndex];
 		std::int32_t layoutSize = spriteLayer.LayoutSize.X * spriteLayer.LayoutSize.Y;
-		const LayerTile* source = (_sprLayerForRollback != nullptr ? _sprLayerForRollback.get() : spriteLayer.Layout.get());
+		const LayerTile* source = (fromCheckpoint && _sprLayerForRollback != nullptr ? _sprLayerForRollback.get() : spriteLayer.Layout.get());
 		dest.WriteVariableInt32(layoutSize);
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			dest.WriteVariableInt32(source[i].DestructFrameIndex);
 		}
 
-		if (_sprLayerForRollback != nullptr) {
+		if (fromCheckpoint && _sprLayerForRollback != nullptr) {
 			dest.Write(_triggerStateForRollback.data(), _triggerStateForRollback.sizeInBytes());
 		} else {
 			dest.Write(_triggerState.data(), _triggerState.sizeInBytes());

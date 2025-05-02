@@ -305,6 +305,7 @@ namespace nCine
 #else
 		LOGI("Running on %s %s (%s)", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
 #endif
+		LOGI("Android API version - NDK: %d, JNI: %d", __ANDROID_API__, AndroidJniHelper::SdkVersion());
 
 		if (isScreenRound_) {
 			LOGI("Using round screen layout");

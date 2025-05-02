@@ -4,12 +4,14 @@
 #include "../nCine/Input/InputEvents.h"
 #include "../nCine/Primitives/Vector2.h"
 
+#include <memory>
+
 #include <Base/TypeInfo.h>
 
 namespace Jazz2
 {
 	/** @brief Base interface of a state handler, only one handler runs at a time */
-	class IStateHandler
+	class IStateHandler : public std::enable_shared_from_this<IStateHandler>
 	{
 		DEATH_RUNTIME_OBJECT();
 

@@ -496,10 +496,10 @@ namespace Jazz2::Events
 		}
 	}
 
-	void EventMap::SerializeResumableToStream(Stream& dest)
+	void EventMap::SerializeResumableToStream(Stream& dest, bool fromCheckpoint)
 	{
 		std::int32_t layoutSize = _layoutSize.X * _layoutSize.Y;
-		const EventTile* source = (_eventLayoutForRollback != nullptr ? _eventLayoutForRollback.get() : _eventLayout.get());
+		const EventTile* source = (fromCheckpoint && _eventLayoutForRollback != nullptr ? _eventLayoutForRollback.get() : _eventLayout.get());
 		dest.WriteVariableInt32(layoutSize);
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			const EventTile& tile = source[i];
