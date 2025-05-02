@@ -264,6 +264,9 @@ namespace Jazz2
 #endif
 #endif
 
+		/** @brief Invokes the specified callback asynchronously, usually at the end of current frame */
+		void InvokeAsync(Function<void()>&& callback);
+
 		/** @brief Attaches all required level components to the handler */
 		virtual void AttachComponents(LevelDescriptor&& descriptor);
 		/** @brief Creates HUD */

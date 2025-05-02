@@ -386,6 +386,11 @@ namespace Jazz2
 		}
 	}
 
+	void LevelHandler::InvokeAsync(Function<void()>&& callback)
+	{
+		_root->InvokeAsync(weak_from_this(), std::move(callback));
+	}
+
 	void LevelHandler::AttachComponents(LevelDescriptor&& descriptor)
 	{
 		ZoneScopedC(0x4876AF);
@@ -1448,8 +1453,8 @@ namespace Jazz2
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
 		dest.WriteValue<std::uint8_t>(_weatherIntensity);
 
-		_tileMap->SerializeResumableToStream(dest);
-		_eventMap->SerializeResumableToStream(dest);
+		_tileMap->SerializeResumableToStream(dest, true);
+		_eventMap->SerializeResumableToStream(dest, true);
 
 		std::size_t playerCount = _players.size();
 		dest.WriteValue<std::uint8_t>((std::uint8_t)playerCount);

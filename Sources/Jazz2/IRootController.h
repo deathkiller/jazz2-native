@@ -40,7 +40,9 @@ namespace Jazz2
 		IRootController& operator=(const IRootController&) = delete;
 
 		/** @brief Invokes the specified callback asynchronously, usually at the end of current frame */
-		virtual void InvokeAsync(Function<void()>&& callback, const char* sourceFunc = nullptr) = 0;
+		virtual void InvokeAsync(Function<void()>&& callback) = 0;
+		/** @overload */
+		virtual void InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback) = 0;
 		/** @brief Sets current state handler to main menu */
 		virtual void GoToMainMenu(bool afterIntro) = 0;
 		/** @brief Sets current state handler to level described by @ref LevelInitialization */

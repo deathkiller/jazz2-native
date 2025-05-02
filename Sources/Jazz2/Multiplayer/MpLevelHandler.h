@@ -228,6 +228,7 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
 		SmallVector<Pair<std::uint32_t, std::uint32_t>, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
+		SmallVector<Vector2i, 0> _raceCheckpoints;
 		SmallVector<PendingSfx, 0> _pendingSfx;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
@@ -238,6 +239,7 @@ namespace Jazz2::Multiplayer
 		bool _enableLedgeClimb;
 		bool _controllableExternal;
 		Threading::Spinlock _lock;
+		float _recalcPositionInRoundTime;
 
 #if defined(DEATH_DEBUG)
 		std::int32_t _debugAverageUpdatePacketSize;
@@ -257,6 +259,7 @@ namespace Jazz2::Multiplayer
 		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();
 		Vector2f GetSpawnPoint(PlayerType playerType);
+		void ConsolidateRaceCheckpoints();
 		void WarpAllPlayersToStart();
 		void RollbackLevelState();
 		void CalculatePositionInRound(bool forceSend = false);

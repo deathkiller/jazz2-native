@@ -103,7 +103,8 @@ public:
 	void OnTextInput(const TextInputEvent& event) override;
 	void OnTouchEvent(const TouchEvent& event) override;
 
-	void InvokeAsync(Function<void()>&& callback, const char* sourceFunc = nullptr) override;
+	void InvokeAsync(Function<void()>&& callback) override;
+	void InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback) override;
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
 	bool HasResumableState() const override;
@@ -138,8 +139,8 @@ private:
 
 	Flags _flags = Flags::None;
 	std::int32_t _backInvokedTimeLeft = 0;
-	std::unique_ptr<IStateHandler> _currentHandler;
-	SmallVector<Function<void()>> _pendingCallbacks;
+	std::shared_ptr<IStateHandler> _currentHandler;
+	SmallVector<Pair<std::weak_ptr<void>, Function<void()>>> _pendingCallbacks;
 	String _newestVersion;
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
@@ -147,7 +148,7 @@ private:
 
 	void OnBeginInitialize();
 	void OnAfterInitialize();
-	void SetStateHandler(std::unique_ptr<IStateHandler>&& handler);
+	void SetStateHandler(std::shared_ptr<IStateHandler>&& handler);
 	void WaitForVerify();
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
@@ -298,7 +299,7 @@ void GameEventHandler::OnInitialize()
 			auto endpoint = config.argv(i + 1);
 			if (!endpoint.empty()) {
 				WaitForVerify();
-				SetStateHandler(std::make_unique<LoadingHandler>(this, true));
+				SetStateHandler(std::make_shared<LoadingHandler>(this, true));
 				ConnectToServer(endpoint, MultiplayerDefaultPort);
 				return;
 			}
@@ -332,7 +333,7 @@ void GameEventHandler::OnInitialize()
 #	endif
 
 #	if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
-	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) mutable {
+	SetStateHandler(std::make_shared<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
 			root->GoToMainMenu(endOfStream);
 		} else if (!endOfStream) {
@@ -341,20 +342,20 @@ void GameEventHandler::OnInitialize()
 		} else {
 			// The intro video is over, show loading screen instead
 			root->InvokeAsync([root]() {
-				static_cast<GameEventHandler*>(root)->SetStateHandler(std::make_unique<LoadingHandler>(root, false, [](IRootController* root) {
+				static_cast<GameEventHandler*>(root)->SetStateHandler(std::make_shared<LoadingHandler>(root, false, [](IRootController* root) {
 					if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
 						root->GoToMainMenu(true);
 						return true;
 					}
 					return false;
 				}));
-			}, NCINE_CURRENT_FUNCTION);
+			});
 		}
 
 		return true;
 	}));
 #	else
-	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
+	SetStateHandler(std::make_shared<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
 		root->GoToMainMenu(endOfStream);
 		return true;
 	}));
@@ -375,10 +376,18 @@ void GameEventHandler::OnBeginFrame()
 	if (!_pendingCallbacks.empty()) {
 		ZoneScopedNC("Pending callbacks", 0x888888);
 
+		std::weak_ptr<void> emptyRef;
 		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
-			_pendingCallbacks[i]();
+			auto& callback = _pendingCallbacks[i];
+			auto& callbackRef = callback.first();
+			// Invoke the callback only if it has no corresponding reference or the reference is still alive
+			if (!callbackRef.expired() || !(callbackRef.owner_before(emptyRef) || emptyRef.owner_before(callbackRef))) {
+				callback.second()();
+			} else {
+				LOGW("Deferred callback dropped due to dead reference");
+			}
 		}
-		//LOGD("%i async callbacks executed", _pendingCallbacks.size());
+
 		_pendingCallbacks.clear();
 	}
 
@@ -522,10 +531,14 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 	_currentHandler->OnTouchEvent(event);
 }
 
-void GameEventHandler::InvokeAsync(Function<void()>&& callback, const char* sourceFunc)
+void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 {
-	_pendingCallbacks.push_back(std::move(callback));
-	//LOGD("Callback queued for async execution from %s", sourceFunc);
+	_pendingCallbacks.emplace_back(std::weak_ptr<void>{}, std::move(callback));
+}
+
+void GameEventHandler::InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback)
+{
+	_pendingCallbacks.emplace_back(std::move(reference), std::move(callback));
 }
 
 void GameEventHandler::GoToMainMenu(bool afterIntro)
@@ -545,9 +558,9 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 		if (auto* mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
 			mainMenu->Reset();
 		} else {
-			SetStateHandler(std::make_unique<Menu::MainMenu>(this, afterIntro));
+			SetStateHandler(std::make_shared<Menu::MainMenu>(this, afterIntro));
 		}
-	}, NCINE_CURRENT_FUNCTION);
+	});
 }
 
 void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
@@ -558,11 +571,11 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		auto p = levelInit.LevelName.partition('/');
 		auto levelName = (!p[2].empty() ? p[2] : p[0]);
 
-		std::unique_ptr<IStateHandler> newHandler;
+		std::shared_ptr<IStateHandler> newHandler;
 		if (levelInit.LevelName.empty()) {
 			// Next level not specified, so show main menu
 			InGameConsole::Clear();
-			newHandler = std::make_unique<Menu::MainMenu>(this, false);
+			newHandler = std::make_shared<Menu::MainMenu>(this, false);
 #if defined(WITH_MULTIPLAYER)
 			// TODO: This should show some server console instead of exiting
 			if (_networkManager != nullptr) {
@@ -591,7 +604,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			if (levelName != ":end"_s) {
 				if (!SetLevelHandler(levelInit)) {
 					InGameConsole::Clear();
-					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+					auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
 #if defined(WITH_MULTIPLAYER)
@@ -620,7 +633,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			// End of game
 			SaveEpisodeEnd(levelInit);
 
-			newHandler = std::make_unique<Cinematics>(this, "ending"_s, [levelInit = std::move(levelInit)](IRootController* root, bool endOfStream) mutable {
+			newHandler = std::make_shared<Cinematics>(this, "ending"_s, [levelInit = std::move(levelInit)](IRootController* root, bool endOfStream) mutable {
 				auto* _this = static_cast<GameEventHandler*>(root);
 				_this->InvokeAsync([_this, levelInit = std::move(levelInit)]() {
 					_this->HandleEndOfGame(levelInit, false);
@@ -644,13 +657,13 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 				(p[0] == "secretf"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::TheSecretFiles) == UnlockableEpisodes::None);
 
 			if (isEpisodeLocked) {
-				newHandler = std::make_unique<Menu::MainMenu>(this, false);
+				newHandler = std::make_shared<Menu::MainMenu>(this, false);
 			} else
 #endif
 			{
 				if (!SetLevelHandler(levelInit)) {
 					InGameConsole::Clear();
-					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+					auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
 #if defined(WITH_MULTIPLAYER)
@@ -669,7 +682,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		if (newHandler != nullptr) {
 			SetStateHandler(std::move(newHandler));
 		}
-	}, NCINE_CURRENT_FUNCTION);
+	});
 }
 
 bool GameEventHandler::HasResumableState() const
@@ -702,7 +715,7 @@ void GameEventHandler::ResumeSavedState()
 			}
 
 			DeflateStream uc(*s);
-			auto levelHandler = std::make_unique<LevelHandler>(this);
+			auto levelHandler = std::make_shared<LevelHandler>(this);
 			if (levelHandler->Initialize(uc, version)) {
 				SetStateHandler(std::move(levelHandler));
 				return;
@@ -710,10 +723,10 @@ void GameEventHandler::ResumeSavedState()
 		}
 
 		InGameConsole::Clear();
-		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+		auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot resume saved state!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 		SetStateHandler(std::move(mainMenu));
-	}, NCINE_CURRENT_FUNCTION);
+	});
 }
 
 bool GameEventHandler::SaveCurrentStateIfAny()
@@ -892,18 +905,18 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	LOGI("[MP] Creating %s server \"%s\" on port %u...", serverConfig.IsPrivate ? "private" : "public", serverConfig.ServerName.data(), serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
-		auto levelHandler = std::make_unique<MpLevelHandler>(this,
+		auto levelHandler = std::make_shared<MpLevelHandler>(this,
 			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
 		levelHandler->Initialize(serverInit.InitialLevel);
 		SetStateHandler(std::move(levelHandler));
-	}, NCINE_CURRENT_FUNCTION);
+	});
 
 	return true;
 }
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 {
-	LOGI("[MP] Peer connected (%s)", NetworkManagerBase::AddressToString(peer).data());
+	LOGI("[MP] Peer connected (%s) [%08llx]", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 
 	if (_networkManager->GetState() == NetworkState::Listening) {
 		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
@@ -965,13 +978,13 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
 	if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-		LOGI("[MP] Peer disconnected \"%s\" (%s): %s (%u)", peerDesc->PlayerName.data(),
-			NetworkManagerBase::AddressToString(peer).data(), NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected \"%s\" (%s) [%08llx]: %s (%u)", peerDesc->PlayerName.data(),
+			NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	} else if (peer) {
-		LOGI("[MP] Peer disconnected \"<unknown>\" (%s): %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
-			NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected \"<unknown>\" (%s) [%08llx]: %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
+			NetworkManagerBase::ReasonToString(reason), (std::uint64_t)peer._enet, (std::uint32_t)reason);
 	} else {
-		LOGI("[MP] Peer disconnected: %s (%u)", NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected [%08llx]: %s (%u)", (std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	}
 
 	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
@@ -995,7 +1008,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				mainMenu->Reset();
 				}
 			} else {
-				auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
+				auto newHandler = std::make_shared<Menu::MainMenu>(this, false);
 				mainMenu = newHandler.get();
 				SetStateHandler(std::move(newHandler));
 			}
@@ -1020,7 +1033,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				case Reason::Banned: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nYou have been \f[c:#725040]banned\f[/c] off the server.\nContact server administrators for more information."), true); break;
 				case Reason::CheatingDetected: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nCheating detected."), true); break;
 			}
-		}, NCINE_CURRENT_FUNCTION);
+		});
 	}
 }
 
@@ -1051,8 +1064,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(uuid.data(), uuid.size());
 				String uniquePlayerId = NetworkManager::UuidToString(uuid);
 
-				LOGD("[MP] ClientPacketType::Auth - peer: 0x%p, gameID: \"%.*s\", gameVersion: 0x%llx, uuid: \"%s\"",
-					peer._enet, 4, gameID, gameVersion, uniquePlayerId.data());
+				LOGD("[MP] ClientPacketType::Auth [%08llx] - gameID: \"%.*s\", gameVersion: 0x%llx, uuid: \"%s\"",
+					(std::uint64_t)peer._enet, 4, gameID, gameVersion, uniquePlayerId.data());
 
 				std::uint32_t passwordLength = packet.ReadVariableUint32();
 				String password{NoInit, passwordLength};
@@ -1062,7 +1075,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
 				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-					LOGD("[MP] ClientPacketType::Auth - player name length out of bounds (%u)", playerNameLength);
+					LOGD("[MP] ClientPacketType::Auth [%08llx] - player name length out of bounds (%u)", (std::uint64_t)peer._enet, playerNameLength);
 					_networkManager->Kick(peer, Reason::InvalidPlayerName);
 					return;
 				}
@@ -1072,18 +1085,18 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				const auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"%s\" (%s): Banned by unique player ID", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Banned by unique player ID", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 					_networkManager->Kick(peer, Reason::Banned);
 					return;
 				}
 				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"%s\" (%s): Not in whitelist", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Not in whitelist", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 					_networkManager->Kick(peer, Reason::NotInWhitelist);
 					return;
 				}
 
 				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
-					LOGI("[MP] Peer kicked \"%s\" (%s): Invalid password", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Invalid password", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 					_networkManager->Kick(peer, Reason::InvalidPassword);
 					return;
 				}
@@ -1094,7 +1107,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				std::uint64_t playerUserId = packet.ReadVariableUint64();
 				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
-					LOGI("[MP] Peer kicked \"%s\" (%s): Discord authentication is required", playerName.data(), NetworkManagerBase::AddressToString(peer).data());
+					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Discord authentication is required", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 					_networkManager->Kick(peer, Reason::Requires3rdPartyAuthProvider);
 					return;
 				}
@@ -1109,8 +1122,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						peerDesc->IsAdmin = true;
 					}
 
-					LOGI("[MP] Peer authenticated as \"%s\" (%s)%s", peerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peer).data(),
-						peerDesc->IsAdmin ? " [Admin]" : "");
+					LOGI("[MP] Peer authenticated as \"%s\" (%s)%s [%08llx]", peerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peer).data(),
+						peerDesc->IsAdmin ? " [Admin]" : "", (std::uint64_t)peer._enet);
 
 					MemoryStream packet(17);
 					packet.WriteValue<std::uint8_t>(0);	// Flags
@@ -1202,7 +1215,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					serverConfig.TotalLaps = totalLaps;
 					serverConfig.TotalTreasureCollected = totalTreasureCollected;
 
-					auto levelHandler = std::make_unique<MpLevelHandler>(this,
+					auto levelHandler = std::make_shared<MpLevelHandler>(this,
 						_networkManager.get(), levelState, enableLedgeClimb);
 					if (levelHandler->Initialize(levelInit)) {
 						SetStateHandler(std::move(levelHandler));
@@ -1228,14 +1241,14 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 								mainMenu->Reset();
 							}
 						} else {
-							auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
+							auto newHandler = std::make_shared<Menu::MainMenu>(this, false);
 							mainMenu = newHandler.get();
 							SetStateHandler(std::move(newHandler));
 						}
 
 						mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"%s\".\nPlease download the required files and try it again.", levelInit.LevelName.data()), true);
 					}
-				}, NCINE_CURRENT_FUNCTION);
+				});
 				break;
 			}
 		}
@@ -1334,7 +1347,7 @@ void GameEventHandler::OnAfterInitialize()
 #endif
 }
 
-void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)
+void GameEventHandler::SetStateHandler(std::shared_ptr<IStateHandler>&& handler)
 {
 	_currentHandler = std::move(handler);
 
@@ -1811,7 +1824,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
 		// TODO: Set proper game mode and ledge climb
-		auto levelHandler = std::make_unique<MpLevelHandler>(this,
+		auto levelHandler = std::make_shared<MpLevelHandler>(this,
 			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
@@ -1821,7 +1834,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 	}
 #endif
 
-	auto levelHandler = std::make_unique<LevelHandler>(this);
+	auto levelHandler = std::make_shared<LevelHandler>(this);
 	if (!levelHandler->Initialize(levelInit)) {
 		return false;
 	}
@@ -1842,7 +1855,7 @@ void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, boo
 	std::size_t playerCount = levelInit.GetPlayerCount(&firstPlayer);
 
 	InGameConsole::Clear();
-	auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+	auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 	if (playerCount == 1 && levelInit.IsLocalSession) {
 		std::int32_t seriesIndex = Menu::HighscoresSection::TryGetSeriesIndex(levelInit.LastEpisodeName, playerDied);
 		if (seriesIndex >= 0) {

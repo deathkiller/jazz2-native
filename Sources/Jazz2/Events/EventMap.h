@@ -93,7 +93,7 @@ namespace Jazz2::Events
 		/** @brief Initializes event map state from a stream */
 		void InitializeFromStream(Stream& src);
 		/** @brief Serializes event map state to a stream */
-		void SerializeResumableToStream(Stream& dest);
+		void SerializeResumableToStream(Stream& dest, bool fromCheckpoint = false);
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT

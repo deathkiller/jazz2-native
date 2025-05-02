@@ -305,7 +305,7 @@ namespace Jazz2::Tiles
 		/** @brief Initializes tile map state from a stream */
 		void InitializeFromStream(Stream& src);
 		/** @brief Serializes tile map state to a stream */
-		void SerializeResumableToStream(Stream& dest);
+		void SerializeResumableToStream(Stream& dest, bool fromCheckpoint = false);
 
 		/** @brief Called when the viewport needs to be initialized (e.g., when the resolution is changed) */
 		void OnInitializeViewport();

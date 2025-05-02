@@ -144,7 +144,6 @@ namespace nCine::Backends
 
 				// Cache the value of SDK version to avoid going through JNI in the future
 				sdkVersion_ = AndroidJniClass_Version::sdkInt();
-				LOGI("Android API version - NDK: %d, JNI: %d", __ANDROID_API__, sdkVersion_);
 			}
 		}
 	}
@@ -328,7 +327,7 @@ namespace nCine::Backends
 		if (length <= 0) {
 			return {};
 		}
-		return String(buffer);
+		return String(buffer, (std::size_t)length);
 	}
 	
 	String AndroidJniClass_Version::deviceManufacturer()
@@ -338,7 +337,7 @@ namespace nCine::Backends
 		if (length <= 0) {
 			return {};
 		}
-		return String(buffer);
+		return String(buffer, (std::size_t)length);
 	}
 	
 	String AndroidJniClass_Version::deviceModel()
@@ -348,7 +347,7 @@ namespace nCine::Backends
 		if (length <= 0) {
 			return {};
 		}
-		return String(buffer);
+		return String(buffer, (std::size_t)length);
 	}
 
 	// ------------------- AndroidJniClass_MotionRange -------------------
