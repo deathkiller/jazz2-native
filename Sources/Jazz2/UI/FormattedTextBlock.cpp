@@ -165,7 +165,7 @@ namespace Jazz2::UI
 			p.X += bounds.X;
 			p.Y += bounds.Y;
 
-			String textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.begin() + it->Begin, it->Length));
+			String textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
 			_font->DrawString(canvas, textPart, charOffsetShadow, p.X, p.Y + 2.8f * _defaultScale, depth - 80, Alignment::Left,
 				Colorf(0.0f, 0.0f, 0.0f, 0.29f), it->Scale, it->AllowVariance ? angleOffset : 0.0f, varianceX, varianceY, speed, it->CharSpacing);
 
@@ -182,7 +182,7 @@ namespace Jazz2::UI
 			p.X += bounds.X;
 			p.Y += bounds.Y;
 
-			String textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.begin() + it->Begin, it->Length));
+			String textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
 			_font->DrawString(canvas, textPart, charOffset, p.X, p.Y, depth, Alignment::Left,
 				it->CurrentColor, it->Scale, it->AllowVariance ? angleOffset : 0.0f, varianceX, varianceY, speed, it->CharSpacing);
 
@@ -232,7 +232,7 @@ namespace Jazz2::UI
 		_parts.clear();
 		_background.clear();
 
-		char* unprocessedText = _text.begin();
+		char* unprocessedText = _text.data();
 		std::int32_t unprocessedLength = (std::int32_t)_text.size();
 		SmallVector<float, 1000> charFitWidths(DefaultInit, unprocessedLength + 1);
 
@@ -541,7 +541,7 @@ namespace Jazz2::UI
 				// All the characters fit
 				char* toPtr = (nextPtr[0] == L'\n' && nextPtr[-1] == L'\r' ? nextPtr - 1 : nextPtr);
 				std::int32_t partLength = (std::int32_t)(toPtr - unprocessedText);
-				Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.begin()), partLength, currentLocation,
+				Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.data()), partLength, currentLocation,
 					size.Y * lineSpacing, currentColor, scale, charSpacing,
 					styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0);
 
@@ -598,7 +598,7 @@ namespace Jazz2::UI
 						// If highlighting is active, trim it only, don't wrap it
 						if (charFit > 2) {
 							charFit -= 2;
-							Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.begin()), charFit, currentLocation,
+							Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.data()), charFit, currentLocation,
 								size.Y * lineSpacing, currentColor, scale, charSpacing,
 								styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0);
 
@@ -667,7 +667,7 @@ namespace Jazz2::UI
 
 						if (lastWhitespacePtr != nullptr) {
 							std::int32_t partLength = (std::int32_t)(lastWhitespacePtr - unprocessedText);
-							Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.begin()), partLength, currentLocation,
+							Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.data()), partLength, currentLocation,
 								size.Y * lineSpacing, currentColor, scale, charSpacing,
 								styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0);
 
@@ -708,7 +708,7 @@ namespace Jazz2::UI
 				} else {
 					if (charFit > 2) {
 						charFit -= 2;
-						Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.begin()), charFit, currentLocation,
+						Part& part = _parts.emplace_back((std::uint32_t)(unprocessedText - _text.data()), charFit, currentLocation,
 							size.Y * lineSpacing, currentColor, scale, charSpacing,
 							styleCount[(std::int32_t)StyleIndex::AllowVariance] > 0);
 

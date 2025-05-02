@@ -15,9 +15,7 @@ import @NCINE_REVERSE_DNS@.Keep;
 
 public abstract class MainActivityBase extends NativeActivity implements DisplayManager.DisplayListener {
 
-	private final OnBackInvokedCallback backCallback = () -> {
-		nativeBackInvoked();
-	};
+	private OnBackInvokedCallback backCallback;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +26,10 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		dm.registerDisplayListener(this, null);
 		
 		if (android.os.Build.VERSION.SDK_INT >= 33) {
+			backCallback = () -> {
+				nativeBackInvoked();
+			};
+
 			getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
 				OnBackInvokedDispatcher.PRIORITY_DEFAULT,
 				backCallback

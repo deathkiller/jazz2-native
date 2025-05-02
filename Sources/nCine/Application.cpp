@@ -60,6 +60,7 @@ extern "C"
 #include "tracy_opengl.h"
 
 #include <Containers/DateTime.h>
+#include <Containers/StringConcatenable.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
 
@@ -153,9 +154,13 @@ enum class ConsoleType {
 static ConsoleType __consoleType = ConsoleType::None;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 static bool __consoleDarkMode = true;
+static bool __consoleSixelSupported = false;
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	if !defined(ENABLE_VIRTUAL_TERMINAL_INPUT)
+#		define ENABLE_VIRTUAL_TERMINAL_INPUT 0x0200
+#	endif
 #	if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
 #		define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #	endif
@@ -176,11 +181,85 @@ static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
 			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
 }
+
+static void CheckConsoleCapabilities()
+{
+	HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+	HANDLE hStdIn = ::GetStdHandle(STD_INPUT_HANDLE);
+
+	DWORD stdInMode = 0;
+	::GetConsoleMode(hStdIn, &stdInMode);
+	::SetConsoleMode(hStdIn, (stdInMode & ~ENABLE_LINE_INPUT) | ENABLE_VIRTUAL_TERMINAL_INPUT);
+
+	CHAR buffer[128];
+	DWORD bytesRead, bytesWritten;
+	DWORD totalRead = 0;
+
+	static const char daRequest[] = "\x1B[c";
+	::WriteConsoleA(hStdOut, daRequest, sizeof(daRequest) - 1, &bytesWritten, nullptr);
+	::FlushConsoleInputBuffer(hStdIn);
+
+	std::uint64_t startTime = ::GetTickCount64();
+	do {
+		if (::WaitForSingleObject(hStdIn, 50) == WAIT_OBJECT_0) {
+			if (::ReadConsoleA(hStdIn, buffer + totalRead, sizeof(buffer) - totalRead, &bytesRead, nullptr)) {
+				totalRead += bytesRead;
+				StringView bufferView = StringView(buffer, totalRead);
+				if (StringView end = bufferView.find('c')) {
+					if (StringView begin = bufferView.find("\x1B[?"_s)) {
+						if (begin.end() < end.begin()) {
+							String response = ';' + bufferView.slice(begin.end(), end.begin()) + ';';
+							if (response.contains(";4;"_s)) {
+								__consoleSixelSupported = true;
+							}
+						}
+					}
+					break;
+				}
+			}
+		}
+	} while (::GetTickCount64() - startTime < 400 && totalRead < sizeof(buffer));
+
+	static const char bgColorRequest[] = "\x1B]11;?\x07";
+	::WriteConsoleA(hStdOut, bgColorRequest, sizeof(bgColorRequest) - 1, &bytesWritten, nullptr);
+	::FlushConsoleInputBuffer(hStdIn);
+	
+	totalRead = 0;
+	startTime = ::GetTickCount64();
+	do {
+		if (::WaitForSingleObject(hStdIn, 50) == WAIT_OBJECT_0) {
+			if (::ReadConsoleA(hStdIn, buffer + totalRead, sizeof(buffer) - totalRead, &bytesRead, nullptr)) {
+				totalRead += bytesRead;
+				StringView bufferView = StringView(buffer, totalRead);
+				if (StringView end = bufferView.find("\x1B\\"_s)) {
+					if (StringView begin = bufferView.find("\x1B]11;rgb:"_s)) {
+						if (begin.end() < end.begin()) {
+							auto rrggbb = bufferView.slice(begin.end(), end.begin()).split('/');
+							if (rrggbb.size() == 3) {
+								String part = rrggbb[0];
+								std::uint32_t r = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+								part = rrggbb[1];
+								std::uint32_t g = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+								part = rrggbb[2];
+								std::uint32_t b = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+								std::uint32_t luminance = ((13933 * r) + (46871 * g) + (4732 * b)) >> 16;
+								__consoleDarkMode = (luminance < 128);
+							}
+						}
+					}
+					break;
+				}
+			}
+		}
+	} while (::GetTickCount64() - startTime < 400 && totalRead < sizeof(buffer));
+
+	::SetConsoleMode(hStdIn, stdInMode);
+}
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include <termios.h>
 #	include <sys/select.h>
 
-static void CheckConsoleDarkMode()
+static void CheckConsoleCapabilities()
 {
 	// Save the terminal settings
 	termios oldt;
@@ -190,6 +269,8 @@ static void CheckConsoleDarkMode()
 	termios newt = oldt;
 	newt.c_lflag &= ~(ICANON | ECHO);
 	::tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+	char buffer[128];
 
 	// Send the escape sequence
 	::fputs("\x1b]11;?\x07", stdout);
@@ -201,26 +282,50 @@ static void CheckConsoleDarkMode()
 	FD_SET(STDIN_FILENO, &readfds);
 
 	struct timeval timeout;
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 400000; // 400 ms
 	std::int32_t result = ::select(STDIN_FILENO + 1, &readfds, nullptr, nullptr, &timeout);
 
 	if (result > 0) {
-		char buffer[64];
-		ssize_t length = ::read(STDIN_FILENO, buffer, sizeof(buffer));
-		StringView response = StringView(buffer, length);
-		if (!response.empty() && response.hasPrefix("\x1B]11;rgb:"_s)) { // e.g., "\x1B]11;rgb:1e1e/1e1e/1e1e"
-			response = response.exceptPrefix("\x1B]11;rgb:"_s);
-			auto rrggbb = response.split('/');
-			if (rrggbb.size() == 3) {
-				String part = rrggbb[0];
-				std::uint32_t r = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
-				part = rrggbb[1];
-				std::uint32_t g = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
-				part = rrggbb[2];
-				std::uint32_t b = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
-				std::uint32_t luminance = ((13933 * r) + (46871 * g) + (4732 * b)) >> 16;
-				__consoleDarkMode = (luminance < 128);
+		ssize_t totalRead = ::read(STDIN_FILENO, buffer, sizeof(buffer));
+		StringView bufferView = StringView(buffer, totalRead);
+		if (StringView end = bufferView.find('c')) {
+			if (StringView begin = bufferView.find("\x1B[?"_s)) {
+				if (begin.end() < end.begin()) {
+					String response = ';' + bufferView.slice(begin.end(), end.begin()) + ';';
+					if (response.contains(";4;"_s)) {
+						__consoleSixelSupported = true;
+					}
+				}
+			}
+		}
+	}
+
+	FD_ZERO(&readfds);
+	FD_SET(STDIN_FILENO, &readfds);
+
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 400000; // 400 ms
+	result = ::select(STDIN_FILENO + 1, &readfds, nullptr, nullptr, &timeout);
+
+	if (result > 0) {
+		ssize_t totalRead = ::read(STDIN_FILENO, buffer, sizeof(buffer));
+		StringView bufferView = StringView(buffer, totalRead);
+		if (StringView end = bufferView.find("\x1B\\"_s)) {
+			if (StringView begin = bufferView.find("\x1B]11;rgb:"_s)) {
+				if (begin.end() < end.begin()) {
+					auto rrggbb = bufferView.slice(begin.end(), end.begin()).split('/');
+					if (rrggbb.size() == 3) {
+						String part = rrggbb[0];
+						std::uint32_t r = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+						part = rrggbb[1];
+						std::uint32_t g = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+						part = rrggbb[2];
+						std::uint32_t b = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+						std::uint32_t luminance = ((13933 * r) + (46871 * g) + (4732 * b)) >> 16;
+						__consoleDarkMode = (luminance < 128);
+					}
+				}
 			}
 		}
 	}
@@ -1193,6 +1298,10 @@ namespace nCine
 					} else {
 						__consoleHandleOut = NULL;
 					}
+
+					if (hasVirtualTerminal) {
+						CheckConsoleCapabilities();
+					}
 				} else {
 					__consoleType = ConsoleType::Redirect;
 				}
@@ -1255,7 +1364,7 @@ namespace nCine
 			if (!COLORTERM.empty()) {
 				if (COLORTERM.contains("truecolor"_s) || COLORTERM.contains("24bit"_s)) {
 					__consoleType = ConsoleType::EscapeCodes24bit;
-					CheckConsoleDarkMode();
+					CheckConsoleCapabilities();
 				} else if (COLORTERM.contains("256color"_s) || COLORTERM.contains("rxvt-xpm"_s)) {
 					__consoleType = ConsoleType::EscapeCodes8bit;
 				}
@@ -1275,6 +1384,9 @@ namespace nCine
 			case FILE_TYPE_CHAR: {
 				bool hasVirtualTerminal = EnableVirtualTerminalProcessing(hStdOut);
 				__consoleType = (hasVirtualTerminal ? ConsoleType::EscapeCodes24bit : ConsoleType::WinApi);
+				if (hasVirtualTerminal) {
+					CheckConsoleCapabilities();
+				}
 				break;
 			}
 			case FILE_TYPE_UNKNOWN:
