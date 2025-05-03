@@ -143,7 +143,7 @@ if(EMSCRIPTEN)
 	endif()
 	
 	# Include all files in specified directory
-	list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:--preload-file ${NCINE_DATA_DIR}@Content/")
+	list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:--preload-file ${NCINE_CONTENT_DIR}@Content/")
 
 	target_link_options(${NCINE_APP} PUBLIC ${EMSCRIPTEN_LINKER_OPTIONS})
 	target_link_options(${NCINE_APP} PUBLIC "$<$<CONFIG:Debug>:${EMSCRIPTEN_LINKER_OPTIONS_DEBUG}>")

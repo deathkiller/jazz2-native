@@ -202,10 +202,10 @@ set(STRINGS_XML ${CMAKE_BINARY_DIR}/Android/app/src/main/res/values/strings.xml)
 configure_file(${STRINGS_XML_IN} ${STRINGS_XML} @ONLY)
 
 # Copying data to assets directory to stop requiring the external storage permission
-file(GLOB_RECURSE ANDROID_ASSETS "${NCINE_DATA_DIR}/*")
+file(GLOB_RECURSE ANDROID_ASSETS "${NCINE_CONTENT_DIR}/*")
 foreach(ASSET ${ANDROID_ASSETS})
 	# Preserving directory structure
-	file(RELATIVE_PATH ASSET_RELPATH ${NCINE_DATA_DIR} ${ASSET})
+	file(RELATIVE_PATH ASSET_RELPATH ${NCINE_CONTENT_DIR} ${ASSET})
 	# Remove the specific Android directory from the path of some assets
 	string(REGEX REPLACE "^[Aa]ndroid\/" "" ASSET_RELPATH ${ASSET_RELPATH})
 	get_filename_component(ASSET_RELPATH ${ASSET_RELPATH} DIRECTORY)
