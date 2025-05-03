@@ -132,9 +132,9 @@ namespace nCine
 	Vector3f IAudioPlayer::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)
 	{
 		if (isAs2D) {
-			// Let's do a +/- 30° panning for 2D audio
+			// Let's do a +/- 30° panning for 2D audio, locked to front
 			Vector2f panningPos = Vector2f::FromAngleLength(30.0f * fDegToRad * pos.X, 1.0f);
-			return Vector3(panningPos.X, 0.0f, -panningPos.Y);
+			return Vector3(panningPos.X, 0.0f, -std::abs(panningPos.Y));
 		}
 
 		Vector3f listenerPos;
@@ -162,6 +162,9 @@ namespace nCine
 								adjustedPos,
 								panningActive);
 		}
+
+		// Ensure the source is always at the front
+		adjustedPos.Z = -std::abs(adjustedPos.Z);
 
 		if (!isSourceRelative) {
 			adjustedPos += listenerPos;
