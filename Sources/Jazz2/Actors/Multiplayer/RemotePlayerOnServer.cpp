@@ -185,6 +185,35 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
+	void RemotePlayerOnServer::SetInvulnerability(float timeLeft, InvulnerableType type)
+	{
+		PlayerOnServer::SetInvulnerability(timeLeft, type);
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetInvulnerability(this, timeLeft, type);
+	}
+
+	bool RemotePlayerOnServer::AddHealth(std::int32_t amount)
+	{
+		if (!PlayerOnServer::AddHealth(amount)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetHealth(this, _health);
+
+		return true;
+	}
+
+	bool RemotePlayerOnServer::AddLives(std::int32_t count)
+	{
+		if (!PlayerOnServer::AddLives(count)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetLives(this, _lives);
+
+		return true;
+	}
+
 	bool RemotePlayerOnServer::AddAmmo(WeaponType weaponType, std::int16_t count)
 	{
 		if (!PlayerOnServer::AddAmmo(weaponType, count)) {
@@ -203,13 +232,35 @@ namespace Jazz2::Actors::Multiplayer
 		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerRefreshWeaponUpgrades(this, weaponType);
 	}
 
-	bool RemotePlayerOnServer::SetDizzyTime(float timeLeft)
+	bool RemotePlayerOnServer::SetDizzy(float timeLeft)
 	{
-		bool success = PlayerOnServer::SetDizzyTime(timeLeft);
+		bool success = PlayerOnServer::SetDizzy(timeLeft);
 
-		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetDizzyTime(this, timeLeft);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetDizzy(this, timeLeft);
 
 		return success;
+	}
+
+	bool RemotePlayerOnServer::SetShield(ShieldType shieldType, float timeLeft)
+	{
+		if (!PlayerOnServer::SetShield(shieldType, timeLeft)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetShield(this, shieldType, timeLeft);
+
+		return true;
+	}
+
+	bool RemotePlayerOnServer::IncreaseShieldTime(float timeLeft)
+	{
+		if (!PlayerOnServer::IncreaseShieldTime(timeLeft)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetShield(this, _activeShield, _activeShieldTime);
+
+		return true;
 	}
 
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)

@@ -47,10 +47,17 @@ namespace Jazz2::Actors::Multiplayer
 		void WarpToPosition(Vector2f pos, WarpFlags flags) override;
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor) override;
 		bool Freeze(float timeLeft) override;
+		void SetInvulnerability(float timeLeft, InvulnerableType type) override;
 
+		bool AddHealth(std::int32_t amount) override;
+		bool AddLives(std::int32_t count) override;
 		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;
 		void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade) override;
-		bool SetDizzyTime(float timeLeft) override;
+		bool SetDizzy(float timeLeft) override;
+
+		bool SetShield(ShieldType shieldType, float timeLeft) override;
+		bool IncreaseShieldTime(float timeLeft) override;
+
 		bool FireCurrentWeapon(WeaponType weaponType) override;
 		void EmitWeaponFlare() override;
 		void SetCurrentWeapon(WeaponType weaponType) override;

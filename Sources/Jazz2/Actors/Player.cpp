@@ -3793,9 +3793,9 @@ namespace Jazz2::Actors
 		return true;
 	}
 
-	void Player::SetInvulnerability(float time, InvulnerableType type)
+	void Player::SetInvulnerability(float timeLeft, InvulnerableType type)
 	{
-		if (time <= 0.0f) {
+		if (timeLeft <= 0.0f) {
 			if (_invulnerableTime > 0.0f) {
 				SetState(ActorState::IsInvulnerable, false);
 				_invulnerableTime = 0.0f;
@@ -3819,7 +3819,7 @@ namespace Jazz2::Actors
 		}
 
 		SetState(ActorState::IsInvulnerable, true);
-		_invulnerableTime = time;
+		_invulnerableTime = timeLeft;
 	}
 
 	void Player::EndDamagingMove()
@@ -4124,7 +4124,7 @@ namespace Jazz2::Actors
 		MorphTo(_playerTypeOriginal);
 	}
 
-	bool Player::SetDizzyTime(float timeLeft)
+	bool Player::SetDizzy(float timeLeft)
 	{
 		bool wasNotDizzy = (_dizzyTime <= 0.0f);
 		_dizzyTime = timeLeft;

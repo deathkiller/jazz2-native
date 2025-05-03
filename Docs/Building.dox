@@ -202,7 +202,7 @@ The following parameters can be used to customize the build:
 
 -   `DEATH_WITH_VC_LTL` (default @cpp ON @ce) --- Build with **VC-LTL** for lighter
     binaries, requires [VC-LTL](https://github.com/Chuyu-Team/VC-LTL5)
--   `NCINE_COPY_DEPENDENCIES` (default @cpp OFF @ce) --- Copy all required libraries to build target directory automatically
+-   `NCINE_COPY_DEPENDENCIES` (default @cpp ON @ce) --- Copy all required libraries to build target directory automatically
 
 @subsubsection building-config-params-uwp Platform-specific parameters for Universal Windows Platform
 

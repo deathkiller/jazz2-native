@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-04-27 13:23+0200\n"
+"POT-Creation-Date: 2025-05-03 20:39+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: enfeitizador <fedellar@enfeitizador.es>\n"
 "Language-Team: enfeitizador\n"
@@ -1371,58 +1371,58 @@ msgstr ""
 "Por favor, visita\n"
 "www.project2.com"
 
-#: Sources/Jazz2/LevelHandler.cpp:156 Sources/Jazz2/LevelHandler.cpp:211
+#: Sources/Jazz2/LevelHandler.cpp:158 Sources/Jazz2/LevelHandler.cpp:209
 #, c-format
 msgid "Level \"%s\" initialized"
 msgstr "Nivel \"%s\" inicializado"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:744
+#: Sources/Jazz2/LevelHandler.cpp:749
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:137
 msgid "For more information, visit the official website:"
 msgstr "Para máis información, visita a páxina web oficial:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2270 Sources/Jazz2/LevelHandler.cpp:2283
-#: Sources/Jazz2/LevelHandler.cpp:2294 Sources/Jazz2/LevelHandler.cpp:2309
-#: Sources/Jazz2/LevelHandler.cpp:2322 Sources/Jazz2/LevelHandler.cpp:2335
-#: Sources/Jazz2/LevelHandler.cpp:2348 Sources/Jazz2/LevelHandler.cpp:2363
-#: Sources/Jazz2/LevelHandler.cpp:2375 Sources/Jazz2/LevelHandler.cpp:2396
-#: Sources/Jazz2/LevelHandler.cpp:2410
+#: Sources/Jazz2/LevelHandler.cpp:2279 Sources/Jazz2/LevelHandler.cpp:2292
+#: Sources/Jazz2/LevelHandler.cpp:2303 Sources/Jazz2/LevelHandler.cpp:2318
+#: Sources/Jazz2/LevelHandler.cpp:2331 Sources/Jazz2/LevelHandler.cpp:2344
+#: Sources/Jazz2/LevelHandler.cpp:2357 Sources/Jazz2/LevelHandler.cpp:2372
+#: Sources/Jazz2/LevelHandler.cpp:2384 Sources/Jazz2/LevelHandler.cpp:2405
+#: Sources/Jazz2/LevelHandler.cpp:2419
 msgid "Cheats are not allowed in current context"
 msgstr "Non se permiten trucos no contexto actual"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:278
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:279
 msgid ""
 "\n"
 "\n"
 "The game will begin shortly!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1237
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2502
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1256
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2659
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1254
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2505
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1273
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2662
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] was roasted by environment"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2110
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2483
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2165
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2640
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] disconnected"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2171
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2481
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2249
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2638
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] connected"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4058
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4366
 #, c-format
 msgid ""
 "\n"
@@ -1430,7 +1430,7 @@ msgid ""
 "Winner is %s"
 msgstr ""
 
-#: Sources/Jazz2/UI/InGameConsole.cpp:321
+#: Sources/Jazz2/UI/InGameConsole.cpp:325
 msgid "Unknown command"
 msgstr "Orde descoñecida"
 
@@ -1512,7 +1512,7 @@ msgstr "Máximas puntuacións"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:90
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:44
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:38
 msgid "Options"
 msgstr "Opcións"
 
@@ -2074,17 +2074,22 @@ msgid "User Profile"
 msgstr ""
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:28
 msgid "Resume"
 msgstr "Retomar"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:17
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:33
+msgid "Spectate"
+msgstr ""
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:42
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
 msgid "Save & Exit"
 msgstr "Gardar e saír"
 
-#. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:27
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:42
 msgid "Disconnect & Exit"
 msgstr ""
 
@@ -2295,7 +2300,7 @@ msgstr[1] ""
 msgid "Find exit!"
 msgstr ""
 
-#: Sources/Main.cpp:572 Sources/Main.cpp:631
+#: Sources/Main.cpp:608 Sources/Main.cpp:667
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2309,7 +2314,7 @@ msgstr ""
 "Asegura que todo ficheiro necesario\n"
 "sexa accesíbel e proba de novo."
 
-#: Sources/Main.cpp:691
+#: Sources/Main.cpp:727
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2323,11 +2328,11 @@ msgstr ""
 "Asegura que todo ficheiro necesario\n"
 "sexa accesíbel e proba de novo."
 
-#: Sources/Main.cpp:829
+#: Sources/Main.cpp:865
 msgid "Unnamed server"
 msgstr ""
 
-#: Sources/Main.cpp:978
+#: Sources/Main.cpp:1017
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2335,7 +2340,7 @@ msgid ""
 "Invalid parameter specified."
 msgstr ""
 
-#: Sources/Main.cpp:979
+#: Sources/Main.cpp:1018
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2347,7 +2352,7 @@ msgstr ""
 "\n"
 "A túa versión do cliente non é compatíbel coa do servidor."
 
-#: Sources/Main.cpp:980
+#: Sources/Main.cpp:1019
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2356,7 +2361,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:981
+#: Sources/Main.cpp:1020
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2364,7 +2369,7 @@ msgid ""
 "Invalid password specified."
 msgstr ""
 
-#: Sources/Main.cpp:982
+#: Sources/Main.cpp:1021
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2373,7 +2378,7 @@ msgid ""
 "Please check your profile and try it again."
 msgstr ""
 
-#: Sources/Main.cpp:983
+#: Sources/Main.cpp:1022
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2382,7 +2387,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:984
+#: Sources/Main.cpp:1023
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2391,7 +2396,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:985
+#: Sources/Main.cpp:1024
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2405,7 +2410,7 @@ msgstr ""
 "O servidor está completo.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:986
+#: Sources/Main.cpp:1025
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2419,7 +2424,7 @@ msgstr ""
 "O servidor non está nun estado que poida procesar a túa solicitude.\n"
 "Proba de novo dentro dun pouco."
 
-#: Sources/Main.cpp:987
+#: Sources/Main.cpp:1026
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2433,7 +2438,7 @@ msgstr ""
 "O servidor está completo.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:988
+#: Sources/Main.cpp:1027
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2447,7 +2452,7 @@ msgstr ""
 "O servidor estase apagando para mantemento.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:989
+#: Sources/Main.cpp:1028
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2461,7 +2466,7 @@ msgstr ""
 "O servidor estase apagando para configurarse.\n"
 "Proba máis tarde."
 
-#: Sources/Main.cpp:990
+#: Sources/Main.cpp:1029
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2475,7 +2480,7 @@ msgstr ""
 "O servidor estase apagando para unha actualización.\n"
 "Comproba a túa versión de cliente e proba nun minuto."
 
-#: Sources/Main.cpp:991
+#: Sources/Main.cpp:1030
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2489,7 +2494,7 @@ msgstr ""
 "Proba de novo e se o problema continúa,\n"
 "revisa a túa conexión á rede."
 
-#: Sources/Main.cpp:992
+#: Sources/Main.cpp:1031
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2501,7 +2506,7 @@ msgstr ""
 "\n"
 "A túa versión do cliente non é compatíbel coa do servidor."
 
-#: Sources/Main.cpp:993
+#: Sources/Main.cpp:1032
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2515,7 +2520,7 @@ msgstr ""
 "Fuches \f[c:#907050]expulsado\f[/c] do servidor.\n"
 "Contacta coa administración do servidor para máis información."
 
-#: Sources/Main.cpp:994
+#: Sources/Main.cpp:1033
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2529,27 +2534,12 @@ msgstr ""
 "Fuches \f[c:#725040]baneado\f[/c] do servidor.\n"
 "Contacta coa administración do servidor para máis información."
 
-#: Sources/Main.cpp:995
+#: Sources/Main.cpp:1034
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
 "\n"
 "Cheating detected."
-msgstr ""
-
-#: Sources/Main.cpp:1157
-#, c-format
-#| msgid ""
-#| "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "Your client version is not compatible with the server."
-msgid ""
-"\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
-"\n"
-"\n"
-"Your client doesn't contain level \"%s\".\n"
-"Please download the required files and try it again."
 msgstr ""
 
 #~ msgid "Unknown"

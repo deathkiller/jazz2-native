@@ -99,6 +99,12 @@ namespace Jazz2::Events
 				}
 			}
 		}
+
+		// Reset cooldown of all generators
+		// TODO: Save also cooldown of all generators to be able to restore them
+		for (auto& generator : _generators) {
+			generator.TimeLeft = 0.0f;
+		}
 	}
 
 	void EventMap::StoreTileEvent(std::int32_t x, std::int32_t y, EventType eventType, Actors::ActorState eventFlags, std::uint8_t* tileParams)

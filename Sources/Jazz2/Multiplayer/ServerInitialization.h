@@ -57,6 +57,7 @@ namespace Jazz2::Multiplayer
 		-   @cpp "ServerName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the server
 		-   @cpp "ServerAddressOverride" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Address override allows to specify an alternate address
 		    -   The address is used only in the public list to be able to connect to the server from the outside
+			-   IPv4 address, IPv6 address or domain name can be used
 		    -   It is also possible to specify a different port if it is different from the local port
 		-   @cpp "ServerPassword" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Password to join the server
 		-   @cpp "WelcomeMessage" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Message displayed to players upon joining
@@ -64,7 +65,7 @@ namespace Jazz2::Multiplayer
 		-   @cpp "MinPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Minimum number of players required to start a round
 		-   @cpp "ServerPort" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan UDP port number on which the server runs
 		-   @cpp "IsPrivate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the server is private and hidden in the server list (default is **false**)
-		-   @cpp "AllowDownloads" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether clients are allowed to automatically download missing assets from the server (default is **true**)
+		-   @cpp "AllowDownloads" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether clients are allowed to download assets from the server (default is **true**)
 		-   @cpp "RequiresDiscordAuth" @ce : @m_span{m-label m-default m-flat} bool @m_endspan If `true`, the server requires Discord authentication (default is **false**)
 		    -   Discord authentication requires a running Discord client
 		    -   Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join

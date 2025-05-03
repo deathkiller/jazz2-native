@@ -18,6 +18,9 @@ namespace Jazz2::UI::Menu
 	private:
 		enum class Item {
 			Resume,
+#if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
+			Spectate,
+#endif
 			Options,
 			Exit,
 
@@ -27,12 +30,16 @@ namespace Jazz2::UI::Menu
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct ItemData {
+			Item Type;
 			String Name;
 			float TouchY;
+
+			ItemData(Item type, StringView name)
+				: Type(type), Name(name), TouchY(0.0f) {}
 		};
 #endif
 
-		ItemData _items[(std::int32_t)Item::Count];
+		SmallVector<ItemData, (std::int32_t)Item::Count> _items;
 		std::int32_t _selectedIndex;
 		float _animation;
 

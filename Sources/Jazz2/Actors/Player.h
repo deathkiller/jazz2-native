@@ -165,18 +165,18 @@ namespace Jazz2::Actors
 		/** @brief Freezes the player for specified time */
 		virtual bool Freeze(float timeLeft);
 		/** @brief Sets invulnerability */
-		void SetInvulnerability(float time, InvulnerableType type);
+		virtual void SetInvulnerability(float timeLeft, InvulnerableType type);
 
 		/** @brief Returns score */
 		std::int32_t GetScore() const;
 		/** @brief Adds score */
 		void AddScore(std::int32_t amount);
 		/** @brief Adds health */
-		bool AddHealth(std::int32_t amount);
+		virtual bool AddHealth(std::int32_t amount);
 		/** @brief Returns lives */
 		std::int32_t GetLives() const;
 		/** @brief Adds lives */
-		bool AddLives(std::int32_t count);
+		virtual bool AddLives(std::int32_t count);
 		/** @brief Returns coins */
 		std::int32_t GetCoins() const;
 		/** @brief Adds coins */
@@ -203,8 +203,8 @@ namespace Jazz2::Actors
 		bool MorphTo(PlayerType type);
 		/** @brief Reverts morpth to the original player type */
 		void MorphRevert();
-		/** @brief Sets dizzy time left */
-		virtual bool SetDizzyTime(float timeLeft);
+		/** @brief Sets duration of dizziness */
+		virtual bool SetDizzy(float timeLeft);
 
 		/** @brief Returns active shield */
 		ShieldType GetActiveShield() const {
@@ -212,9 +212,9 @@ namespace Jazz2::Actors
 		}
 
 		/** @brief Sets active shield */
-		bool SetShield(ShieldType shieldType, float time);
+		virtual bool SetShield(ShieldType shieldType, float timeLeft);
 		/** @brief Increases active shield time */
-		bool IncreaseShieldTime(float time);
+		virtual bool IncreaseShieldTime(float timeLeft);
 		/** @brief Spawns bird companion */
 		bool SpawnBird(uint8_t type, Vector2f pos);
 		/** @brief Disables controls for specified time */

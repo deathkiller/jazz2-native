@@ -114,8 +114,9 @@ namespace Jazz2::Multiplayer
 		Controllable,
 		Invulnerable,
 		Modifier,
-		DizzyTime,
+		Dizzy,
 		Freeze,
+		Shield,
 
 		WeaponAmmo = 30,
 		WeaponUpgrades,

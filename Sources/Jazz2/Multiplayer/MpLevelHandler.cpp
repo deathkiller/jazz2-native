@@ -366,7 +366,7 @@ namespace Jazz2::Multiplayer
 							mpPlayer->GetPeerDescriptor()->LapStarted = TimeStamp::now();
 
 							// The player is invulnerable for a short time after starting a round
-							player->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
+							player->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
 
 							if (peerDesc->RemotePeer) {
 								MemoryStream packet(13);
@@ -1028,7 +1028,7 @@ namespace Jazz2::Multiplayer
 				mpPlayer->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType);
 
 				// The player is invulnerable for a short time after respawning
-				mpPlayer->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
+				mpPlayer->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
 			}
 
 			if (_levelState != LevelState::Running) {
@@ -1171,11 +1171,63 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 			if (peerDesc->RemotePeer) {
-				MemoryStream packet2(9);
-				packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Freeze);
-				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet2.WriteVariableInt32((std::int32_t)timeLeft);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Freeze);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)timeLeft);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetInvulnerability(Actors::Player* player, float timeLeft, Actors::Player::InvulnerableType type)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(10);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Invulnerable);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)timeLeft);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)type);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetHealth(Actors::Player* player, std::int32_t count)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Health);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)count);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetLives(Actors::Player* player, std::int32_t count)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Lives);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)count);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
 	}
@@ -1308,7 +1360,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::HandlePlayerSetDizzyTime(Actors::Player* player, float timeLeft)
+	void MpLevelHandler::HandlePlayerSetDizzy(Actors::Player* player, float timeLeft)
 	{
 		// TODO: Only called by RemotePlayerOnServer
 		if (_isServer) {
@@ -1317,8 +1369,26 @@ namespace Jazz2::Multiplayer
 
 			if (peerDesc->RemotePeer) {
 				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::DizzyTime);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Dizzy);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)timeLeft);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetShield(Actors::Player* player, ShieldType shieldType, float timeLeft)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Shield);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)shieldType);
 				packet.WriteVariableInt32((std::int32_t)timeLeft);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
@@ -1478,11 +1548,11 @@ namespace Jazz2::Multiplayer
 					peerDesc->TreasureCollected += (newCount - prevCount) * weightedCount;
 
 					if (peerDesc->RemotePeer) {
-						MemoryStream packet2(9);
-						packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::TreasureCollected);
-						packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-						packet2.WriteVariableUint32(peerDesc->TreasureCollected);
-						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+						MemoryStream packet(9);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::TreasureCollected);
+						packet.WriteVariableUint32(mpPlayer->_playerIndex);
+						packet.WriteVariableUint32(peerDesc->TreasureCollected);
+						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					}
 
 					CheckGameEnds();
@@ -1779,7 +1849,7 @@ namespace Jazz2::Multiplayer
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 
 			// The player is invulnerable for a short time after spawning
-			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
+			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
 		}
 
 		ApplyGameModeToAllPlayers(serverConfig.GameMode);
@@ -2060,7 +2130,10 @@ namespace Jazz2::Multiplayer
 
 				// Refresh all affected properties
 				SetWelcomeMessage(serverConfig.WelcomeMessage);
-				if (serverConfig.GameMode != prevGameMode) {
+
+				if (serverConfig.PlaylistIndex >= 0 && serverConfig.PlaylistIndex < serverConfig.Playlist.size()) {
+					ApplyFromPlaylist();
+				} else if (serverConfig.GameMode != prevGameMode) {
 					SetGameMode(serverConfig.GameMode);
 				}
 				SendMessage(peer, UI::MessageLevel::Info, "Server configuration reloaded"_s);
@@ -3161,7 +3234,6 @@ namespace Jazz2::Multiplayer
 
 					switch (propertyType) {
 						case PlayerPropertyType::Lives: {
-							// TODO
 							std::int32_t lives = packet.ReadVariableInt32();
 							InvokeAsync([this, lives]() {
 								if (!_players.empty()) {
@@ -3171,7 +3243,6 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 						case PlayerPropertyType::Health: {
-							// TODO
 							std::int32_t health = packet.ReadVariableInt32();
 							InvokeAsync([this, health]() {
 								if (!_players.empty()) {
@@ -3190,7 +3261,13 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 						case PlayerPropertyType::Invulnerable: {
-							// TODO
+							std::int32_t timeLeft = packet.ReadVariableInt32();
+							Actors::Player::InvulnerableType type = (Actors::Player::InvulnerableType)packet.ReadValue<std::uint8_t>();
+							InvokeAsync([this, timeLeft, type]() {
+								if (!_players.empty()) {
+									_players[0]->SetInvulnerability(float(timeLeft), type);
+								}
+							});
 							break;
 						}
 						case PlayerPropertyType::Modifier: {
@@ -3205,20 +3282,30 @@ namespace Jazz2::Multiplayer
 							});
 							break;
 						}
-						case PlayerPropertyType::DizzyTime: {
-							std::int32_t dizzyTime = packet.ReadVariableInt32();
-							InvokeAsync([this, dizzyTime]() {
+						case PlayerPropertyType::Dizzy: {
+							std::int32_t timeLeft = packet.ReadVariableInt32();
+							InvokeAsync([this, timeLeft]() {
 								if (!_players.empty()) {
-									_players[0]->SetDizzyTime(float(dizzyTime));
+									_players[0]->SetDizzy(float(timeLeft));
 								}
 							});
 							break;
 						}
 						case PlayerPropertyType::Freeze: {
-							std::int32_t freezeTime = packet.ReadVariableInt32();
-							InvokeAsync([this, freezeTime]() {
+							std::int32_t timeLeft = packet.ReadVariableInt32();
+							InvokeAsync([this, timeLeft]() {
 								if (!_players.empty()) {
-									_players[0]->Freeze(float(freezeTime));
+									_players[0]->Freeze(float(timeLeft));
+								}
+							});
+							break;
+						}
+						case PlayerPropertyType::Shield: {
+							ShieldType shieldType = (ShieldType)packet.ReadValue<std::uint8_t>();
+							std::int32_t timeLeft = packet.ReadVariableInt32();
+							InvokeAsync([this, shieldType, timeLeft]() {
+								if (!_players.empty()) {
+									_players[0]->SetShield(shieldType, float(timeLeft));
 								}
 							});
 							break;
@@ -3469,6 +3556,8 @@ namespace Jazz2::Multiplayer
 
 					InvokeAsync([this, health, pushForce]() {
 						if (!_players.empty()) {
+							// Reset invulnerable state, because the server has higher priority
+							_players[0]->SetState(Actors::ActorState::IsInvulnerable, false);
 							_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce);
 						}
 					});
@@ -3716,7 +3805,7 @@ namespace Jazz2::Multiplayer
 				_suppressRemoting = false;
 
 				// The player is invulnerable for a short time after spawning
-				ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Transient);
+				ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
 
 				ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
 
@@ -3946,10 +4035,7 @@ namespace Jazz2::Multiplayer
 	{
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 
-		for (auto* player : _players) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
+		for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 			peerDesc->PositionInRound = 0;
 			peerDesc->Deaths = 0;
 			peerDesc->Kills = 0;
@@ -3957,33 +4043,36 @@ namespace Jazz2::Multiplayer
 			peerDesc->TreasureCollected = 0;
 			peerDesc->DeathElapsedFrames = FLT_MAX;
 
-			mpPlayer->_coins = 0;
-			std::memset(mpPlayer->_gems, 0, sizeof(mpPlayer->_gems));
-			std::memset(mpPlayer->_weaponAmmo, 0, sizeof(mpPlayer->_weaponAmmo));
-			std::memset(mpPlayer->_weaponAmmoCheckpoint, 0, sizeof(mpPlayer->_weaponAmmoCheckpoint));
+			if (peerDesc->Player) {
+				peerDesc->Player->_coins = 0;
+				std::memset(peerDesc->Player->_gems, 0, sizeof(peerDesc->Player->_gems));
+				std::memset(peerDesc->Player->_weaponAmmo, 0, sizeof(peerDesc->Player->_weaponAmmo));
+				std::memset(peerDesc->Player->_weaponAmmoCheckpoint, 0, sizeof(peerDesc->Player->_weaponAmmoCheckpoint));
 
-			mpPlayer->_coinsCheckpoint = 0;
-			std::memset(mpPlayer->_gemsCheckpoint, 0, sizeof(mpPlayer->_gemsCheckpoint));
-			std::memset(mpPlayer->_weaponUpgrades, 0, sizeof(mpPlayer->_weaponUpgrades));
-			std::memset(mpPlayer->_weaponUpgradesCheckpoint, 0, sizeof(mpPlayer->_weaponUpgradesCheckpoint));
+				peerDesc->Player->_coinsCheckpoint = 0;
+				std::memset(peerDesc->Player->_gemsCheckpoint, 0, sizeof(peerDesc->Player->_gemsCheckpoint));
+				std::memset(peerDesc->Player->_weaponUpgrades, 0, sizeof(peerDesc->Player->_weaponUpgrades));
+				std::memset(peerDesc->Player->_weaponUpgradesCheckpoint, 0, sizeof(peerDesc->Player->_weaponUpgradesCheckpoint));
 
-			mpPlayer->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-			mpPlayer->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-			mpPlayer->_currentWeapon = WeaponType::Blaster;
-			mpPlayer->_health = (serverConfig.InitialPlayerHealth > 0
-				? serverConfig.InitialPlayerHealth
-				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+				peerDesc->Player->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				peerDesc->Player->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				peerDesc->Player->_currentWeapon = WeaponType::Blaster;
+				peerDesc->Player->_health = (serverConfig.InitialPlayerHealth > 0
+					? serverConfig.InitialPlayerHealth
+					: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet1(4);
-				packet1.WriteVariableUint32(mpPlayer->_playerIndex);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerResetProperties, packet1);
+				if (peerDesc->RemotePeer) {
+					// TODO: Send it also to peers without assigned player
+					MemoryStream packet1(4);
+					packet1.WriteVariableUint32(peerDesc->Player->_playerIndex);
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerResetProperties, packet1);
 
-				MemoryStream packet2(9);
-				packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Health);
-				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet2.WriteVariableInt32(mpPlayer->_health);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+					MemoryStream packet2(9);
+					packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Health);
+					packet2.WriteVariableUint32(peerDesc->Player->_playerIndex);
+					packet2.WriteVariableInt32(peerDesc->Player->_health);
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+				}
 			}
 		}
 	}
@@ -4073,6 +4162,7 @@ namespace Jazz2::Multiplayer
 		for (auto* player : _players) {
 			Vector2f spawnPosition = GetSpawnPoint(player->_playerTypeOriginal);
 			player->SetModifier(Actors::Player::Modifier::None);
+			player->SetDizzy(0.0f);
 			player->WarpToPosition(spawnPosition, WarpFlags::Default);
 		}
 	}
