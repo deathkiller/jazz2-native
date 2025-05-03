@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/FreezerShot.h"
 #include "../../Multiplayer/MpLevelHandler.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
@@ -49,6 +50,8 @@ namespace Jazz2::Actors::Multiplayer
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+				} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot*>(other.get())) {
+					Freeze(3.0f * FrameTimer::FramesPerSecond);
 				} else {
 					TakeDamage(1, 4.0f * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
 				}

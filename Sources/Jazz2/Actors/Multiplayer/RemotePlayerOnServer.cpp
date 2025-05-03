@@ -174,6 +174,17 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
+	bool RemotePlayerOnServer::Freeze(float timeLeft)
+	{
+		if (!PlayerOnServer::Freeze(timeLeft)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerFreeze(this, timeLeft);
+
+		return true;
+	}
+
 	bool RemotePlayerOnServer::AddAmmo(WeaponType weaponType, std::int16_t count)
 	{
 		if (!PlayerOnServer::AddAmmo(weaponType, count)) {

@@ -44,6 +44,17 @@ namespace Jazz2::Actors::Multiplayer
 		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;
 		PlayerCarryOver PrepareLevelCarryOver() override;
 
+		void WarpToPosition(Vector2f pos, WarpFlags flags) override;
+		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor) override;
+		bool Freeze(float timeLeft) override;
+
+		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;
+		void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade) override;
+		bool SetDizzyTime(float timeLeft) override;
+		bool FireCurrentWeapon(WeaponType weaponType) override;
+		void EmitWeaponFlare() override;
+		void SetCurrentWeapon(WeaponType weaponType) override;
+
 		/** @brief Synchronizes the player with client */
 		void SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
 
@@ -66,16 +77,6 @@ namespace Jazz2::Actors::Multiplayer
 		void OnUpdate(float timeMult) override;
 
 		void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove) override;
-
-		void WarpToPosition(Vector2f pos, WarpFlags flags) override;
-		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor) override;
-
-		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;
-		void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade) override;
-		bool SetDizzyTime(float timeLeft) override;
-		bool FireCurrentWeapon(WeaponType weaponType) override;
-		void EmitWeaponFlare() override;
-		void SetCurrentWeapon(WeaponType weaponType) override;
 	};
 }
 

@@ -225,10 +225,7 @@ namespace Jazz2::Actors
 				SetState(ActorState::ApplyGravitation, true);
 				if (isFrozen) {
 					SetAnimation(AnimState::Freefall);
-					_renderer.AnimPaused = true;
-					_controllable = false;
-					_controllableTimeout = 100.0f;
-					_frozenTimeLeft = 100.0f;
+					Freeze(100.0f);
 				} else {
 					_controllable = true;
 					// UpdateAnimation() was probably skipped in this step, because _controllable was false, so call it here
@@ -3304,10 +3301,7 @@ namespace Jazz2::Actors
 			_controllableTimeout = ((exitType & ExitType::FastTransition) == ExitType::FastTransition ? 5.0f : 55.0f);
 		} else if ((exitType & ExitType::Frozen) == ExitType::Frozen) {
 			// Use instant spawning
-			_renderer.AnimPaused = true;
-			_controllable = false;
-			_controllableTimeout = 100.0f;
-			_frozenTimeLeft = 100.0f;
+			Freeze(100.0f);
 		}
 
 		// Preload all weapons
@@ -3494,14 +3488,11 @@ namespace Jazz2::Actors
 			SetState(ActorState::IsInvulnerable, false);
 			// Don't re-enable gravity if any modifier is active
 			if (_activeModifier == Modifier::None) {
-			SetState(ActorState::ApplyGravitation, true);
+				SetState(ActorState::ApplyGravitation, true);
 			}
 
 			if ((flags & WarpFlags::Freeze) == WarpFlags::Freeze) {
-				_renderer.AnimPaused = true;
-				_controllable = false;
-				_controllableTimeout = 100.0f;
-				_frozenTimeLeft = 100.0f;
+				Freeze(100.0f);
 			} else {
 				_controllable = true;
 				// UpdateAnimation() was probably skipped in this step, because _controllable was false, so call it here
@@ -3782,6 +3773,22 @@ namespace Jazz2::Actors
 
 			PlayPlayerSfx("Die"_s, 1.3f);
 		}
+
+		return true;
+	}
+
+	bool Player::Freeze(float timeLeft)
+	{
+		if (timeLeft > 0.0f) {
+			_renderer.AnimPaused = true;
+			_controllable = false;
+			_controllableTimeout = timeLeft;
+		} else if (_frozenTimeLeft > 0.0f) {
+			_controllable = true;
+			_controllableTimeout = 0.0f;
+		}
+
+		_frozenTimeLeft = timeLeft;
 
 		return true;
 	}

@@ -115,14 +115,15 @@ namespace Jazz2::Multiplayer
 		Invulnerable,
 		Modifier,
 		DizzyTime,
+		Freeze,
 
-		WeaponAmmo = 10,
+		WeaponAmmo = 30,
 		WeaponUpgrades,
 
-		Coins = 20,
+		Coins = 60,
 		Gems,
 
-		Points = 30,
+		Points = 90,
 		PositionInRound,	// TODO: Unused
 		Deaths,
 		Kills,

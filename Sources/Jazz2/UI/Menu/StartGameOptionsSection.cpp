@@ -446,7 +446,7 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		if (PreferencesCache::EnableReforgedGameplay && _levelName == "01_xmas1"_s) {
+		if (PreferencesCache::EnableReforgedGameplay && _levelName.hasSuffix("/01_xmas1"_s)) {
 			levelInit.LastExitType = ExitType::Warp | ExitType::Frozen;
 		}
 

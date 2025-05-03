@@ -1163,6 +1163,23 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::HandlePlayerFreeze(Actors::Player* player, float timeLeft)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet2(9);
+				packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Freeze);
+				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet2.WriteVariableInt32((std::int32_t)timeLeft);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+			}
+		}
+	}
+
 	void MpLevelHandler::HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce)
 	{
 		// TODO: Only called by PlayerOnServer
@@ -3192,6 +3209,15 @@ namespace Jazz2::Multiplayer
 							InvokeAsync([this, dizzyTime]() {
 								if (!_players.empty()) {
 									_players[0]->SetDizzyTime(float(dizzyTime));
+								}
+							});
+							break;
+						}
+						case PlayerPropertyType::Freeze: {
+							std::int32_t freezeTime = packet.ReadVariableInt32();
+							InvokeAsync([this, freezeTime]() {
+								if (!_players.empty()) {
+									_players[0]->Freeze(float(freezeTime));
 								}
 							});
 							break;
