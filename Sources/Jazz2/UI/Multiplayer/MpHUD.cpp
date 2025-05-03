@@ -378,16 +378,21 @@ namespace Jazz2::UI::Multiplayer
 					pointsDiff = -pointsDiff / 16;
 				}
 
-				if (std::abs(pointsDiff) < 100000) {
-					Vector2f playerNameSize = _smallFont->MeasureString(item.PlayerName, 0.8f, 0.9f);
+				Vector2f playerNameSize = _smallFont->MeasureString(item.PlayerName, 0.8f, 0.9f);
 
+				if (pointsDiff > 30000) {
+					copyStringFirst(stringBuffer, sizeof(stringBuffer), "+\u221E");
+				} else if(pointsDiff < -30000) {
+					copyStringFirst(stringBuffer, sizeof(stringBuffer), "-\u221E");
+				} else {
 					formatString(stringBuffer, sizeof(stringBuffer), "%+lli", pointsDiff);
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset + 1.0f, FontShadowLayer,
-						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-					_smallFont->DrawString(this, stringBuffer, charOffset, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset, FontLayer,
-						Alignment::TopLeft, pointsDiff > 0 ? Colorf(0.45f, 0.27f, 0.22f, 0.5f) : Colorf(0.2f, 0.45f, 0.2f, 0.5f),
-						0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 				}
+				
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset, FontLayer,
+					Alignment::TopLeft, pointsDiff > 0 ? Colorf(0.45f, 0.27f, 0.22f, 0.5f) : Colorf(0.2f, 0.45f, 0.2f, 0.5f),
+					0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
 
 			offset += 16.0f;

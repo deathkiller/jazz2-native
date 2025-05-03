@@ -166,6 +166,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags);
 		/** @brief Called when a player changed modifier */
 		void HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor);
+		/** @brief Called when a player freezes */
+		void HandlePlayerFreeze(Actors::Player* player, float timeLeft);
 		/** @brief Called when a player takes a damage */
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		/** @brief Called when a player requests to synchronize weapon ammo */
