@@ -22,6 +22,7 @@ namespace Jazz2::Actors::Environment
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void OnDetach(ActorBase* parent) override;
 
 	private:
 		enum class State {

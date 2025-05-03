@@ -47,6 +47,8 @@ namespace Jazz2::Multiplayer
 		String PlayerName;
 		/** @brief Earned points in the current session (championship) */
 		std::uint32_t Points;
+		/** @brief Game mode specific points held by the player in a round */
+		std::uint32_t PointsInRound;
 		/** @brief Position in a round */
 		std::uint32_t PositionInRound;
 

@@ -98,6 +98,16 @@ namespace Jazz2::Actors
 		return true;
 	}
 
+	void ActorBase::OnAttach(ActorBase* parent)
+	{
+		// Can be overridden
+	}
+
+	void ActorBase::OnDetach(ActorBase* parent)
+	{
+		// Can be overridden
+	}
+
 	void ActorBase::OnUpdate(float timeMult)
 	{
 		TileCollisionParams params = { TileDestructType::None, _speed.Y >= 0.0f };

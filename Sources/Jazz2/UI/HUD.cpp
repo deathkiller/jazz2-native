@@ -83,7 +83,7 @@ namespace Jazz2::UI
 	HUD::HUD(LevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _metadata(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
 			_activeBossTime(0.0f), _touchButtonsTimer(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _rgbLightsAnim(0.0f),
-			_rgbLightsTime(0.0f), _transitionState(TransitionState::None), _transitionTime(0.0f)
+			_rgbLightsTime(0.0f), _transitionState(TransitionState::WaitingForFadeIn), _transitionTime(1.0f)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -310,7 +310,7 @@ namespace Jazz2::UI
 				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 		}
 
-		if (_transitionState == TransitionState::FadeIn || _transitionState == TransitionState::FadeOut) {
+		if (_transitionState >= TransitionState::WaitingForFadeIn && _transitionState <= TransitionState::FadeOut) {
 			auto command = RentRenderCommand();
 			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->material().reserveUniformsDataMemory();
@@ -325,7 +325,7 @@ namespace Jazz2::UI
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
 
 			command->setTransformation(Matrix4x4f::Identity);
-			command->setLayer(999);
+			command->setLayer(600);
 
 			renderQueue.addCommand(command);
 		}
@@ -482,7 +482,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::BeginFadeIn()
+	void HUD::BeginFadeIn(bool skip)
 	{
 		_transitionState = TransitionState::FadeIn;
 		_transitionTime = 0.0f;

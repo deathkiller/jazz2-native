@@ -57,7 +57,7 @@ namespace Jazz2::UI
 		void ShowGems(std::uint8_t gemType, std::int32_t count);
 
 		/** @brief Begins a fullscreen fade-in transition */
-		void BeginFadeIn();
+		void BeginFadeIn(bool skip);
 		/** @brief Begins a fullscreen face-out transition */
 		void BeginFadeOut(float delay = 0.0f);
 
@@ -158,6 +158,7 @@ namespace Jazz2::UI
 	private:
 		enum class TransitionState {
 			None,
+			WaitingForFadeIn,
 			FadeIn,
 			FadeOut,
 			WaitingForFadeOut

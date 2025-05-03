@@ -70,6 +70,11 @@ namespace Jazz2::Actors::Environment
 #endif
 	}
 
+	void Copter::OnDetach(ActorBase* parent)
+	{
+		DecreaseHealth(INT32_MAX);
+	}
+
 	void Copter::Preload(const ActorActivationDetails& details)
 	{
 		PreloadMetadataAsync("Enemy/LizardFloat"_s);

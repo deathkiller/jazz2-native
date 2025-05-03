@@ -7,7 +7,7 @@
 namespace Jazz2::Actors::Multiplayer
 {
 	RemoteActor::RemoteActor()
-		: _stateBufferPos(0), _lastAnim(AnimState::Idle)
+		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false)
 	{
 	}
 
@@ -28,43 +28,55 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemoteActor::OnUpdate(float timeMult)
 	{
-		Clock& c = nCine::clock();
-		std::int64_t now = c.now() * 1000 / c.frequency();
-		std::int64_t renderTime = now - ServerDelay;
+		if (!_isAttachedLocally) {
+			Clock& c = nCine::clock();
+			std::int64_t now = c.now() * 1000 / c.frequency();
+			std::int64_t renderTime = now - ServerDelay;
 
-		std::int32_t nextIdx = _stateBufferPos - 1;
-		if (nextIdx < 0) {
-			nextIdx += std::int32_t(arraySize(_stateBuffer));
-		}
-
-		if (renderTime <= _stateBuffer[nextIdx].Time) {
-			std::int32_t prevIdx;
-			while (true) {
-				prevIdx = nextIdx - 1;
-				if (prevIdx < 0) {
-					prevIdx += std::int32_t(arraySize(_stateBuffer));
-				}
-
-				if (prevIdx == _stateBufferPos || _stateBuffer[prevIdx].Time <= renderTime) {
-					break;
-				}
-
-				nextIdx = prevIdx;
+			std::int32_t nextIdx = _stateBufferPos - 1;
+			if (nextIdx < 0) {
+				nextIdx += std::int32_t(arraySize(_stateBuffer));
 			}
 
-			Vector2f pos;
-			std::int64_t timeRange = (_stateBuffer[nextIdx].Time - _stateBuffer[prevIdx].Time);
-			if (timeRange > 0) {
-				float lerp = (float)(renderTime - _stateBuffer[prevIdx].Time) / timeRange;
-				pos = _stateBuffer[prevIdx].Pos + (_stateBuffer[nextIdx].Pos - _stateBuffer[prevIdx].Pos) * lerp;
-			} else {
-				pos = _stateBuffer[nextIdx].Pos;
-			}
+			if (renderTime <= _stateBuffer[nextIdx].Time) {
+				std::int32_t prevIdx;
+				while (true) {
+					prevIdx = nextIdx - 1;
+					if (prevIdx < 0) {
+						prevIdx += std::int32_t(arraySize(_stateBuffer));
+					}
 
-			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+					if (prevIdx == _stateBufferPos || _stateBuffer[prevIdx].Time <= renderTime) {
+						break;
+					}
+
+					nextIdx = prevIdx;
+				}
+
+				Vector2f pos;
+				std::int64_t timeRange = (_stateBuffer[nextIdx].Time - _stateBuffer[prevIdx].Time);
+				if (timeRange > 0) {
+					float lerp = (float)(renderTime - _stateBuffer[prevIdx].Time) / timeRange;
+					pos = _stateBuffer[prevIdx].Pos + (_stateBuffer[nextIdx].Pos - _stateBuffer[prevIdx].Pos) * lerp;
+				} else {
+					pos = _stateBuffer[nextIdx].Pos;
+				}
+
+				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+			}
 		}
 
 		ActorBase::OnUpdate(timeMult);
+	}
+
+	void RemoteActor::OnAttach(ActorBase* parent)
+	{
+		_isAttachedLocally = true;
+	}
+
+	void RemoteActor::OnDetach(ActorBase* parent)
+	{
+		_isAttachedLocally = false;
 	}
 
 	void RemoteActor::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType)

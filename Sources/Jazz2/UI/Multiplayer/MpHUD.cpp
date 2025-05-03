@@ -164,7 +164,7 @@ namespace Jazz2::UI::Multiplayer
 		auto* mpPlayer = static_cast<MpPlayer*>(player);
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.TotalPlayerPoints > 0) {
+		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.TotalPlayerPoints > 0 && peerDesc->Points > 0) {
 			auto pointsText = _f("Points: %u", peerDesc->Points);
 			_smallFont->DrawString(this, pointsText, charOffsetShadow, view.X + view.W - 14.0f, view.Y + 30.0f + 1.0f, FontShadowLayer,
 				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -296,57 +296,66 @@ namespace Jazz2::UI::Multiplayer
 	struct PositionInRoundItem
 	{
 		StringView PlayerName;
-		std::int32_t Position;
+		std::uint32_t PositionInRound;
+		std::uint32_t PointsInRound;
 		bool IsLocal;
 
-		PositionInRoundItem(StringView playerName, std::int32_t position, bool isLocal)
-			: PlayerName(playerName), Position(position), IsLocal(isLocal) {}
+		PositionInRoundItem(StringView playerName, std::uint32_t position, std::uint32_t points, bool isLocal)
+			: PlayerName(playerName), PositionInRound(position), PointsInRound(points), IsLocal(isLocal) {}
 	};
 
 	void MpHUD::DrawPositionInRound(const Rectf& view, Actors::Player* player)
 	{
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
 
 		char stringBuffer[32];
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 		SmallVector<PositionInRoundItem, 8> positions;
+		std::uint32_t localPoints = UINT32_MAX;
 
 		if (mpLevelHandler->_isServer) {
 			auto peers = mpLevelHandler->_networkManager->GetPeers();
 			for (const auto& [peer, peerDesc] : *peers) {
 				if ((peerDesc->PositionInRound >= 1 && peerDesc->PositionInRound <= 3) || !peerDesc->RemotePeer) {
-					positions.emplace_back(peerDesc->PlayerName, peerDesc->PositionInRound, !peerDesc->RemotePeer);
+					if (!peerDesc->RemotePeer) {
+						localPoints = peerDesc->PointsInRound;
+					}
+
+					positions.emplace_back(peerDesc->PlayerName, peerDesc->PositionInRound, peerDesc->PointsInRound, !peerDesc->RemotePeer);
 				}
 			}
 		} else {
-			for (const auto& [playerIdx, position] : mpLevelHandler->_positionsInRound) {
-				if ((position >= 1 && position <= 3) || playerIdx == mpLevelHandler->_lastSpawnedActorId) {
+			for (const auto& pos : mpLevelHandler->_positionsInRound) {
+				if ((pos.PositionInRound >= 1 && pos.PositionInRound <= 3) || pos.ActorID == mpLevelHandler->_lastSpawnedActorId) {
 					StringView playerName;
-					if (playerIdx == mpLevelHandler->_lastSpawnedActorId) {
+					if (pos.ActorID == mpLevelHandler->_lastSpawnedActorId) {
+						localPoints = pos.PointsInRound;
 						playerName = mpLevelHandler->_networkManager->GetPeerDescriptor(LocalPeer)->PlayerName;
 					} else {
-						auto it = mpLevelHandler->_playerNames.find(playerIdx);
+						auto it = mpLevelHandler->_playerNames.find(pos.ActorID);
 						if (it != mpLevelHandler->_playerNames.end()) {
 							playerName = it->second;
 						}
 					}
 
-					positions.emplace_back(playerName, position, playerIdx == mpLevelHandler->_lastSpawnedActorId);
+					positions.emplace_back(playerName, pos.PositionInRound, pos.PointsInRound, pos.ActorID == mpLevelHandler->_lastSpawnedActorId);
 				}
 			}
 		}
 
 		nCine::sort(positions.begin(), positions.end(), [](const auto& x, const auto& y) {
-			std::int32_t xPos = (x.Position > 0 ? x.Position : INT32_MAX);
-			std::int32_t yPos = (y.Position > 0 ? y.Position : INT32_MAX);
+			std::uint32_t xPos = (x.PositionInRound > 0 ? x.PositionInRound : UINT32_MAX);
+			std::uint32_t yPos = (y.PositionInRound > 0 ? y.PositionInRound : UINT32_MAX);
 			return xPos < yPos;
 		});
 
 		float offset = 36.0f;
-		for (const auto& item : positions) {
-			if (item.Position > 0) {
-				formatString(stringBuffer, sizeof(stringBuffer), "%i.", item.Position);
+		for (std::int32_t i = 0; i < (std::int32_t)positions.size(); i++) {
+			const auto& item = positions[i];
+			if (item.PositionInRound > 0) {
+				formatString(stringBuffer, sizeof(stringBuffer), "%u.", item.PositionInRound);
 
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
 					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -362,6 +371,25 @@ namespace Jazz2::UI::Multiplayer
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, item.PlayerName, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
 				Alignment::TopLeft, item.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			if (!item.IsLocal) {
+				std::int64_t pointsDiff = (std::int64_t)item.PointsInRound - (std::int64_t)localPoints;
+				if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
+					pointsDiff = -pointsDiff / 16;
+				}
+
+				if (std::abs(pointsDiff) < 100000) {
+					Vector2f playerNameSize = _smallFont->MeasureString(item.PlayerName, 0.8f, 0.9f);
+
+					formatString(stringBuffer, sizeof(stringBuffer), "%+lli", pointsDiff);
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset + 1.0f, FontShadowLayer,
+						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+					_smallFont->DrawString(this, stringBuffer, charOffset, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset, FontLayer,
+						Alignment::TopLeft, pointsDiff > 0 ? Colorf(0.45f, 0.27f, 0.22f, 0.5f) : Colorf(0.2f, 0.45f, 0.2f, 0.5f),
+						0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				}
+			}
+
 			offset += 16.0f;
 		}
 	}

@@ -3655,7 +3655,7 @@ namespace Jazz2::Actors
 		}
 
 		if (_activeModifierDecor != nullptr) {
-			_activeModifierDecor->DecreaseHealth(INT32_MAX);
+			_activeModifierDecor->OnDetach(this);
 			_activeModifierDecor = nullptr;
 		}
 
@@ -3708,6 +3708,7 @@ namespace Jazz2::Actors
 
 				_activeModifier = Modifier::LizardCopter;
 				_activeModifierDecor = decor;
+				_activeModifierDecor->OnDetach(this);
 
 				_copterFramesLeft = 3.0f * FrameTimer::FramesPerSecond;
 				break;

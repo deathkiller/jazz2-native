@@ -193,6 +193,12 @@ namespace Jazz2::Multiplayer
 			std::uint8_t LastRendererType;
 		};
 
+		struct PlayerPositionInRound {
+			std::uint32_t ActorID;
+			std::uint32_t PositionInRound;
+			std::uint32_t PointsInRound;
+		};
+
 		struct MultiplayerSpawnPoint {
 			Vector2f Pos;
 			std::uint8_t Team;
@@ -226,7 +232,7 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
 		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
-		SmallVector<Pair<std::uint32_t, std::uint32_t>, 0> _positionsInRound; // Client: Actor ID -> Position In Round
+		SmallVector<PlayerPositionInRound, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		SmallVector<Vector2i, 0> _raceCheckpoints;
 		SmallVector<PendingSfx, 0> _pendingSfx;
