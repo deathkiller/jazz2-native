@@ -66,6 +66,11 @@ using namespace Jazz2::Multiplayer;
 #include <IO/WebRequest.h>
 #include <Utf8.h>
 
+#if defined(WITH_THREADS)
+#	include <mutex>
+#	include <Threading/Spinlock.h>
+#endif
+
 /** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
 
@@ -377,7 +382,9 @@ void GameEventHandler::OnBeginFrame()
 	if (!_pendingCallbacks.empty()) {
 		ZoneScopedNC("Pending callbacks", 0x888888);
 
+#if defined(WITH_THREADS)
 		std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
+#endif
 		std::weak_ptr<void> emptyRef;
 		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
 			auto& callback = _pendingCallbacks[i];
@@ -535,13 +542,17 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 
 void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 {
+#if defined(WITH_THREADS)
 	std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
+#endif
 	_pendingCallbacks.emplace_back(std::weak_ptr<void>{}, std::move(callback));
 }
 
 void GameEventHandler::InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback)
 {
+#if defined(WITH_THREADS)
 	std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
+#endif
 	_pendingCallbacks.emplace_back(std::move(reference), std::move(callback));
 }
 
