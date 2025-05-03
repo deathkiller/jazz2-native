@@ -2235,7 +2235,7 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
-		if (_ignorePackets) {
+		if DEATH_UNLIKELY(_ignorePackets) {
 			// IRootController is probably going to load a new level in a moment, so ignore all packets now
 			return false;
 		}
@@ -2369,13 +2369,14 @@ namespace Jazz2::Multiplayer
 				}
 				case ClientPacketType::RequestLevelAssets: {
 					const auto& serverConfig = _networkManager->GetServerConfiguration();
-					if (!serverConfig.AllowDownloads) {
+					//if (!serverConfig.AllowDownloads) {
 						// Server doesn't allow downloads, kick the client instead
 						_networkManager->Kick(peer, Reason::DownloadsNotAllowed);
 						return true;
-					}
+					//}
 
-					std::uint32_t flags = 0x10; // ContainsLevelAssets
+					// TODO: Use AssetChunk packet instead
+					/*std::uint32_t flags = 0;
 					if (_isReforged) {
 						flags |= 0x01;
 					}
@@ -2442,7 +2443,7 @@ namespace Jazz2::Multiplayer
 					LOGI("[MP] ClientPacketType::RequestLevelAssets [%08llx] - sending assets (%u bytes)", (std::uint64_t)peer._enet, (std::uint32_t)packet.GetSize());
 
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
-					return true;
+					return true;*/
 				}
 				case ClientPacketType::PlayerReady: {
 					MemoryStream packet(data);
@@ -3609,7 +3610,7 @@ namespace Jazz2::Multiplayer
 	{
 		for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 			if (peerDesc->LevelState == PeerLevelState::LevelLoaded) {
-				if (peerDesc != nullptr && peerDesc->PreferredPlayerType != PlayerType::None) {
+				if DEATH_LIKELY(peerDesc != nullptr && peerDesc->PreferredPlayerType != PlayerType::None) {
 					peerDesc->LevelState = PeerLevelState::PlayerReady;
 				} else {
 					peerDesc->LevelState = PeerLevelState::LevelSynchronized;
@@ -3662,7 +3663,7 @@ namespace Jazz2::Multiplayer
 				// TODO: Does this need to be locked?
 				std::unique_lock lock(_lock);
 				for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
-					if (ActorShouldBeMirrored(remotingActor)) {
+					if DEATH_UNLIKELY(ActorShouldBeMirrored(remotingActor)) {
 						Vector2i originTile = remotingActor->_originTile;
 						const auto& eventTile = _eventMap->GetEventTile(originTile.X, originTile.Y);
 						if (eventTile.Event != EventType::Empty) {
@@ -3767,7 +3768,7 @@ namespace Jazz2::Multiplayer
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet);
 				}
 
-				if (_levelState == LevelState::WaitingForMinPlayers) {
+				if DEATH_UNLIKELY(_levelState == LevelState::WaitingForMinPlayers) {
 					_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
 					SendLevelStateToAllPlayers();
 				}
@@ -4260,7 +4261,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::CheckGameEnds()
 	{
-		if (_levelState != LevelState::Running) {
+		if DEATH_UNLIKELY(_levelState != LevelState::Running) {
 			return;
 		}
 

@@ -921,7 +921,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 	if (_networkManager->GetState() == NetworkState::Listening) {
 		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
 			// Connected client is newer than server, reject it
-			LOGI("[MP] Peer kicked \"<unknown>\" (%s): Incompatible version", NetworkManagerBase::AddressToString(peer).data());
+			LOGI("[MP] Peer kicked (%s) [%08llx]: Incompatible version", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 			return Reason::IncompatibleVersion;
 		}
 
@@ -981,8 +981,8 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 		LOGI("[MP] Peer disconnected \"%s\" (%s) [%08llx]: %s (%u)", peerDesc->PlayerName.data(),
 			NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	} else if (peer) {
-		LOGI("[MP] Peer disconnected \"<unknown>\" (%s) [%08llx]: %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
-			NetworkManagerBase::ReasonToString(reason), (std::uint64_t)peer._enet, (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected (%s) [%08llx]: %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
+			(std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	} else {
 		LOGI("[MP] Peer disconnected [%08llx]: %s (%u)", (std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	}
@@ -1161,8 +1161,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t totalLaps = packet.ReadVariableUint32();
 				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
 
-				bool containsLevelAssets = (flags & 0x10) != 0;
-				if (containsLevelAssets) {
+				// TODO: Use AssetChunk packet instead
+				/*if (containsLevelAssets) {
 					auto& resolver = ContentResolver::Get();
 
 					String downloadsPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s, StringUtils::replaceAll(_networkManager->RemoteServerID, ":"_s, ""_s) });
@@ -1191,15 +1191,14 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 							packet.Seek(tileSetFileSize, SeekOrigin::Current);
 						}
 					}
-				}
+				}*/
 
-				LOGD("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: %s", flags, (std::uint32_t)gameMode, levelName.data());
+				LOGI("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: \"%s\"", flags, (std::uint32_t)gameMode, levelName.data());
 
 				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
 					bool elimination = (flags & 0x04) != 0;
-					bool containsLevelAssets = (flags & 0x10) != 0;
 
 					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
@@ -1222,32 +1221,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						return;
 					}
 
-					if (!containsLevelAssets) {
-						// Level failed to initialize, but probably some assets are missing, try to request them from the server
-						MemoryStream packet(1);
-						packet.WriteValue<std::uint8_t>(0);	// Reserved
-						_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::RequestLevelAssets, packet);
-					} else {
-						// Level failed to initialize, but all assets should be present, show error message
-						if (_networkManager != nullptr) {
-							_networkManager->Dispose();
-							_networkManager = nullptr;
-						}
-
-						InGameConsole::Clear();
-						Menu::MainMenu* mainMenu;
-						if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
-							if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
-								mainMenu->Reset();
-							}
-						} else {
-							auto newHandler = std::make_shared<Menu::MainMenu>(this, false);
-							mainMenu = newHandler.get();
-							SetStateHandler(std::move(newHandler));
-						}
-
-						mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"%s\".\nPlease download the required files and try it again.", levelInit.LevelName.data()), true);
-					}
+					// Level failed to initialize, but probably some assets are missing, try to request them from the server
+					MemoryStream packet(1);
+					packet.WriteValue<std::uint8_t>(0);	// Reserved
+					_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::RequestLevelAssets, packet);
 				});
 				break;
 			}

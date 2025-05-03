@@ -8,6 +8,7 @@
 #include "../../nCine/Threading/Thread.h"
 
 #include <atomic>
+#include <mutex>
 
 #include <Containers/GrowableArray.h>
 #include <Containers/String.h>
@@ -292,12 +293,14 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
-		_lock.lock();
-		bool success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
-		if (success && channel == NetworkChannel::UnreliableUpdates) {
-			enet_host_flush(_host);
+		bool success;
+		{
+			std::unique_lock lock(_lock);
+			success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
+			if (success && channel == NetworkChannel::UnreliableUpdates) {
+				enet_host_flush(_host);
+			}
 		}
-		_lock.unlock();
 
 		if (!success) {
 			enet_packet_destroy(packet);
@@ -319,19 +322,20 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
-		_lock.lock();
 		bool success = false;
-		for (ENetPeer* peer : _peers) {
-			if (predicate(Peer(peer))) {
-				if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
-					success = true;
+		{
+			std::unique_lock lock(_lock);
+			for (ENetPeer* peer : _peers) {
+				if (predicate(Peer(peer))) {
+					if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
+						success = true;
+					}
 				}
 			}
+			if (success && channel == NetworkChannel::UnreliableUpdates) {
+				enet_host_flush(_host);
+			}
 		}
-		if (success && channel == NetworkChannel::UnreliableUpdates) {
-			enet_host_flush(_host);
-		}
-		_lock.unlock();
 
 		if (!success) {
 			enet_packet_destroy(packet);
@@ -353,17 +357,18 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
-		_lock.lock();
 		bool success = false;
-		for (ENetPeer* peer : _peers) {
-			if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
-				success = true;
+		{
+			std::unique_lock lock(_lock);
+			for (ENetPeer* peer : _peers) {
+				if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
+					success = true;
+				}
+			}
+			if (success && channel == NetworkChannel::UnreliableUpdates) {
+				enet_host_flush(_host);
 			}
 		}
-		if (success && channel == NetworkChannel::UnreliableUpdates) {
-			enet_host_flush(_host);
-		}
-		_lock.unlock();
 
 		if (!success) {
 			enet_packet_destroy(packet);
@@ -373,9 +378,8 @@ namespace Jazz2::Multiplayer
 	void NetworkManagerBase::Kick(const Peer& peer, Reason reason)
 	{
 		if (peer != nullptr) {
-			_lock.lock();
+			std::unique_lock lock(_lock);
 			enet_peer_disconnect_now(peer._enet, std::uint32_t(reason));
-			_lock.unlock();
 		}
 	}
 
@@ -572,14 +576,13 @@ namespace Jazz2::Multiplayer
 		_handler->OnPeerDisconnected(peer, reason);
 
 		if (peer && _state == NetworkState::Listening) {
-			_lock.lock();
+			std::unique_lock lock(_lock);
 			for (std::size_t i = 0; i < _peers.size(); i++) {
 				if (peer == _peers[i]) {
 					_peers.eraseUnordered(i);
 					break;
 				}
 			}
-			_lock.unlock();
 		}
 	}
 
@@ -662,12 +665,15 @@ namespace Jazz2::Multiplayer
 			_this->OnPeerConnected(ev.peer, ev.data);
 			reason = Reason::Unknown;
 
-			while (_this->_state != NetworkState::None) {
-				_this->_lock.lock();
-				std::int32_t result = enet_host_service(host, &ev, 0);
-				_this->_lock.unlock();
-				if (result <= 0) {
-					if (result < 0) {
+			while DEATH_LIKELY(_this->_state != NetworkState::None) {
+				std::int32_t result;
+				{
+					std::unique_lock lock(_this->_lock);
+					result = enet_host_service(host, &ev, 0);
+				}
+
+				if DEATH_UNLIKELY(result <= 0) {
+					if DEATH_UNLIKELY(result < 0) {
 						LOGE("[MP] enet_host_service() returned %i", result);
 						reason = Reason::ConnectionLost;
 						break;
@@ -726,12 +732,15 @@ namespace Jazz2::Multiplayer
 		_this->_peers.reserve(16);
 
 		ENetEvent ev{};
-		while (_this->_state != NetworkState::None) {
-			_this->_lock.lock();
-			std::int32_t result = enet_host_service(host, &ev, 0);
-			_this->_lock.unlock();
-			if (result <= 0) {
-				if (result < 0) {
+		while DEATH_LIKELY(_this->_state != NetworkState::None) {
+			std::int32_t result;
+			{
+				std::unique_lock lock(_this->_lock);
+				result = enet_host_service(host, &ev, 0);
+			}
+
+			if DEATH_UNLIKELY(result <= 0) {
+				if DEATH_UNLIKELY(result < 0) {
 					LOGE("[MP] enet_host_service() returned %i", result);
 
 					// Server failed, try to recreate it
@@ -741,11 +750,12 @@ namespace Jazz2::Multiplayer
 					_this->_peers.clear();
 
 					ENetAddress addr = host->address;
-					_this->_lock.lock();
-					enet_host_destroy(host);
-					host = enet_host_create(&addr, MaxPeerCount, std::size_t(NetworkChannel::Count), 0, 0);
-					_this->_host = host;
-					_this->_lock.unlock();
+					{
+						std::unique_lock lock(_this->_lock);
+						enet_host_destroy(host);
+						host = enet_host_create(&addr, MaxPeerCount, std::size_t(NetworkChannel::Count), 0, 0);
+						_this->_host = host;
+					}
 
 					if (host == nullptr) {
 						LOGE("[MP] Failed to recreate the server");
@@ -759,12 +769,23 @@ namespace Jazz2::Multiplayer
 			switch (ev.type) {
 				case ENET_EVENT_TYPE_CONNECT: {
 					ConnectionResult result = _this->OnPeerConnected(ev.peer, ev.data);
-					if (result.IsSuccessful()) {
-						_this->_peers.push_back(ev.peer);
+					if DEATH_LIKELY(result.IsSuccessful()) {
+						std::unique_lock lock(_this->_lock);
+						bool alreadyExists = false;
+						for (std::size_t i = 0; i < _this->_peers.size(); i++) {
+							if (ev.peer == _this->_peers[i]) {
+								alreadyExists = true;
+								break;
+							}
+						}
+						if DEATH_UNLIKELY(alreadyExists) {
+							LOGW("Peer is already connected [%08llx]", (std::uint64_t)ev.peer);
+						} else {
+							_this->_peers.push_back(ev.peer);
+						}
 					} else {
-						_this->_lock.lock();
+						std::unique_lock lock(_this->_lock);
 						enet_peer_disconnect_now(ev.peer, std::uint32_t(result.FailureReason));
-						_this->_lock.unlock();
 					}
 					break;
 				}

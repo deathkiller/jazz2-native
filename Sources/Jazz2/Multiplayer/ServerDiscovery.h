@@ -106,10 +106,10 @@ namespace Jazz2::Multiplayer
 		IServerObserver* _observer;
 		ENetSocket _socket;
 		Thread _thread;
-		TimeStamp _lastLocalRequest;
-		TimeStamp _lastOnlineRequest;
-		ENetAddress _address;
-		WebRequest _onlineRequest;
+		TimeStamp _lastLocalRequestTime;
+		TimeStamp _lastOnlineRequestTime;
+		ENetAddress _localMulticastAddress;
+		bool _onlineSuccess;
 
 		static ENetSocket TryCreateLocalSocket(const char* multicastAddress, ENetAddress & parsedAddress);
 
@@ -119,6 +119,7 @@ namespace Jazz2::Multiplayer
 		bool ProcessLocalDiscoveryRequests(ENetSocket socket, std::int32_t timeoutMs = 0);
 		void SendLocalDiscoveryResponse(ENetSocket socket, NetworkManager* server);
 		void PublishToPublicServerList(NetworkManager* server);
+		void DelistFromPublicServerList(NetworkManager* server);
 
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);

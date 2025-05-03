@@ -40,7 +40,7 @@ using namespace std::string_view_literals;
 namespace Jazz2::Multiplayer
 {
 	ServerDiscovery::ServerDiscovery(NetworkManager* server)
-		: _server(server), _observer(nullptr)
+		: _server(server), _observer(nullptr), _onlineSuccess(false)
 	{
 		DEATH_DEBUG_ASSERT(server != nullptr, "server is null", );
 
@@ -200,17 +200,13 @@ namespace Jazz2::Multiplayer
 
 	void ServerDiscovery::DownloadPublicServerList(IServerObserver* observer)
 	{
-		if (_onlineRequest.IsValid()) {
-			return;
-		}
-
 		LOGD("[MP] Downloading public server list…");
 
 		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
-		_onlineRequest = WebSession::GetDefault().CreateRequest(url);
-		auto result = _onlineRequest.Execute();
+		auto request = WebSession::GetDefault().CreateRequest(url);
+		auto result = request.Execute();
 		if (result) {
-			auto s = _onlineRequest.GetResponse().GetStream();
+			auto s = request.GetResponse().GetStream();
 			auto size = s->GetSize();
 			auto buffer = std::make_unique<char[]>(size);
 			s->Read(buffer.get(), size);
@@ -252,7 +248,6 @@ namespace Jazz2::Multiplayer
 		} else {
 			LOGE("[MP] Failed to download public server list: %s", result.error.data());
 		}
-		_onlineRequest = {};
 	}
 
 	bool ServerDiscovery::ProcessLocalDiscoveryResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs)
@@ -396,7 +391,7 @@ namespace Jazz2::Multiplayer
 			ENetBuffer sendbuf;
 			sendbuf.data = (void*)packet.GetBuffer();
 			sendbuf.dataLength = packet.GetSize();
-			std::int32_t result = enet_socket_send(socket, &_address, &sendbuf, 1);
+			std::int32_t result = enet_socket_send(socket, &_localMulticastAddress, &sendbuf, 1);
 			if (result != (std::int32_t)sendbuf.dataLength) {
 #if defined(DEATH_TARGET_WINDOWS)
 				std::int32_t error = ::WSAGetLastError();
@@ -410,9 +405,7 @@ namespace Jazz2::Multiplayer
 
 	void ServerDiscovery::PublishToPublicServerList(NetworkManager* server)
 	{
-		if (_onlineRequest.IsValid()) {
-			return;
-		}
+		_onlineSuccess = false;
 
 		auto& serverConfig = _server->GetServerConfiguration();
 		if (serverConfig.ServerName.empty()) {
@@ -466,11 +459,11 @@ namespace Jazz2::Multiplayer
 			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), _server->GetPeerCount(), serverConfig.MaxPlayerCount,
 			serverConfig.StartUnixTimestamp, serverLoad, std::uint32_t(serverConfig.GameMode));
 
-		_onlineRequest = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
-		_onlineRequest.SetMethod("POST"_s);
-		_onlineRequest.SetData(StringView(input, length), "application/json"_s);
-		if (auto result = _onlineRequest.Execute()) {
-			auto s = _onlineRequest.GetResponse().GetStream();
+		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
+		request.SetMethod("POST"_s);
+		request.SetData(StringView(input, length), "application/json"_s);
+		if (auto result = request.Execute()) {
+			auto s = request.GetResponse().GetStream();
 			auto size = s->GetSize();
 			auto buffer = std::make_unique<char[]>(size);
 			s->Read(buffer.get(), size);
@@ -482,17 +475,71 @@ namespace Jazz2::Multiplayer
 				bool success; std::string_view endpoints;
 				if (doc["r"].get(success) == Json::SUCCESS && success &&
 					doc["e"].get(endpoints) == Json::SUCCESS && !endpoints.empty()) {
+					_onlineSuccess = true;
 					LOGD("[MP] Server published with following endpoints: %s", String(endpoints).data());
 				} else {
-					LOGW("[MP] Failed to publish the server: Request rejected");
+					LOGE("[MP] Failed to publish the server: Request rejected");
 				}
 			} else {
 				LOGE("[MP] Failed to publish the server: Response cannot be parsed: %s", errors.c_str());
 			}
 		} else {
-			LOGW("[MP] Failed to publish the server: %s", result.error.data());
+			LOGE("[MP] Failed to publish the server: %s", result.error.data());
 		}
-		_onlineRequest = {};
+	}
+
+	void ServerDiscovery::DelistFromPublicServerList(NetworkManager* server)
+	{
+		if (!_onlineSuccess) {
+			return;
+		}
+
+		_onlineSuccess = false;
+
+		auto& serverConfig = _server->GetServerConfiguration();
+		if (serverConfig.ServerName.empty()) {
+			return;
+		}
+
+		String serverName = StringUtils::replaceAll(StringUtils::replaceAll(StringUtils::replaceAll(serverConfig.ServerName,
+			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
+
+		char input[2048];
+		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"", serverName.data());
+
+		auto& id = PreferencesCache::UniqueServerID;
+		length += formatString(input + length, sizeof(input) - length,
+			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+
+		length += formatString(input + length, sizeof(input) - length, "\",\"e\":null,\"d\":\"%s\"}",
+			PreferencesCache::GetDeviceID().data());
+
+		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
+		request.SetMethod("POST"_s);
+		request.SetData(StringView(input, length), "application/json"_s);
+		if (auto result = request.Execute()) {
+			auto s = request.GetResponse().GetStream();
+			auto size = s->GetSize();
+			auto buffer = std::make_unique<char[]>(size);
+			s->Read(buffer.get(), size);
+
+			Json::CharReaderBuilder builder;
+			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+			Json::Value doc; std::string errors;
+			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
+				bool success; std::string_view endpoints;
+				if (doc["r"].get(success) == Json::SUCCESS && success) {
+					LOGD("[MP] Server delisted successfully");
+				} else {
+					LOGE("[MP] Failed to delist the server: Request rejected");
+				}
+			} else {
+				LOGE("[MP] Failed to delist the server: Response cannot be parsed: %s", errors.c_str());
+			}
+		} else {
+			LOGE("[MP] Failed to delist the server: %s", result.error.data());
+		}
 	}
 
 	void ServerDiscovery::OnClientThread(void* param)
@@ -502,17 +549,17 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase::InitializeBackend();
 
-		ENetSocket socket = TryCreateLocalSocket("ff1e::333", _this->_address);
+		ENetSocket socket = TryCreateLocalSocket("ff1e::333", _this->_localMulticastAddress);
 		_this->_socket = socket;
 
 		while (_this->_observer != nullptr) {
-			if (_this->_lastLocalRequest.secondsSince() > 10) {
-				_this->_lastLocalRequest = TimeStamp::now();
-				_this->SendLocalDiscoveryRequest(socket, _this->_address);
+			if (_this->_lastLocalRequestTime.secondsSince() > 10) {
+				_this->_lastLocalRequestTime = TimeStamp::now();
+				_this->SendLocalDiscoveryRequest(socket, _this->_localMulticastAddress);
 			}
 
-			if (_this->_lastOnlineRequest.secondsSince() > 60) {
-				_this->_lastOnlineRequest = TimeStamp::now();
+			if (_this->_lastOnlineRequestTime.secondsSince() > 60) {
+				_this->_lastOnlineRequestTime = TimeStamp::now();
 				_this->DownloadPublicServerList(observer);
 			}
 
@@ -541,7 +588,7 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase::InitializeBackend();
 
-		ENetSocket socket = TryCreateLocalSocket("ff1e::333", _this->_address);
+		ENetSocket socket = TryCreateLocalSocket("ff1e::333", _this->_localMulticastAddress);
 		_this->_socket = socket;
 
 		while (_this->_server != nullptr) {
@@ -549,21 +596,23 @@ namespace Jazz2::Multiplayer
 			if (delayCount <= 0) {
 				delayCount = 10;
 
-				while (_this->_address.port != 0 && _this->ProcessLocalDiscoveryRequests(socket, 0)) {
-					if (_this->_lastLocalRequest.secondsSince() > 15) {
-						_this->_lastLocalRequest = TimeStamp::now();
+				while (_this->_localMulticastAddress.port != 0 && _this->ProcessLocalDiscoveryRequests(socket, 0)) {
+					if (_this->_lastLocalRequestTime.secondsSince() > 15) {
+						_this->_lastLocalRequestTime = TimeStamp::now();
 						_this->SendLocalDiscoveryResponse(socket, server);
 					}
 				}
 
-				if (_this->_lastOnlineRequest.secondsSince() > 300) {
-					_this->_lastOnlineRequest = TimeStamp::now();
+				if (_this->_lastOnlineRequestTime.secondsSince() > 300) {
+					_this->_lastOnlineRequestTime = TimeStamp::now();
 					_this->PublishToPublicServerList(server);
 				}
 			}
 
 			Thread::Sleep(500);
 		}
+
+		_this->DelistFromPublicServerList(server);
 
 		if (_this->_socket != ENET_SOCKET_NULL) {
 			enet_socket_destroy(_this->_socket);
