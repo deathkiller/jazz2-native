@@ -149,7 +149,7 @@ namespace Jazz2::Actors::Enemies
 	bool Caterpillar::Smoke::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto* player = runtime_cast<Player*>(other)) {
-			if (player->SetDizzyTime(180.0f)) {
+			if (player->SetDizzy(180.0f)) {
 				// TODO: Add fade-out
 				PlaySfx("Dizzy"_s);
 			}

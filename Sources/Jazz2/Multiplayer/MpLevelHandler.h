@@ -168,14 +168,22 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor);
 		/** @brief Called when a player freezes */
 		void HandlePlayerFreeze(Actors::Player* player, float timeLeft);
+		/** @brief Called when a player sets invulnerability */
+		void HandlePlayerSetInvulnerability(Actors::Player* player, float timeLeft, Actors::Player::InvulnerableType type);
+		/** @brief Called when a player sets health */
+		void HandlePlayerSetHealth(Actors::Player* player, std::int32_t count);
+		/** @brief Called when a player sets lives */
+		void HandlePlayerSetLives(Actors::Player* player, std::int32_t count);
 		/** @brief Called when a player takes a damage */
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		/** @brief Called when a player requests to synchronize weapon ammo */
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		/** @brief Called when a player requests to synchronize weapon upgrades */
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);
-		/** @brief Called when a player changed dizzy duration */
-		void HandlePlayerSetDizzyTime(Actors::Player* player, float timeLeft);
+		/** @brief Called when a player changed duration of dizziness */
+		void HandlePlayerSetDizzy(Actors::Player* player, float timeLeft);
+		/** @brief Called when a player sets a shield */
+		void HandlePlayerSetShield(Actors::Player* player, ShieldType shieldType, float timeLeft);
 		/** @brief Called when a player emits a weapon flare */
 		void HandlePlayerEmitWeaponFlare(Actors::Player* player);
 		/** @brief Called when a player changes their current weapon */

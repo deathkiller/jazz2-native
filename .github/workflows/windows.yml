@@ -85,7 +85,7 @@ jobs:
         
         rm -force ".\Content\Translations\*.po"
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_STRIP_BINARIES=ON -D NCINE_COPY_DEPENDENCIES=ON -D CMAKE_GENERATOR_TOOLSET=v142
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_STRIP_BINARIES=ON -D CMAKE_GENERATOR_TOOLSET=v142
 
     - name: 'Build'
       run: |
@@ -162,7 +162,7 @@ jobs:
         
         rm -force ".\Content\Translations\*.po"
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_COPY_DEPENDENCIES=ON -D CMAKE_GENERATOR_TOOLSET=v142 -D WITH_MULTIPLAYER=ON
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D CMAKE_GENERATOR_TOOLSET=v142 -D WITH_MULTIPLAYER=ON
 
     - name: 'Build'
       run: |
@@ -196,7 +196,7 @@ jobs:
           'ARM64' { $arch = 'ARM64EC' }
         }
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_COPY_DEPENDENCIES=ON -D CMAKE_GENERATOR_TOOLSET=v142 -D WITH_MULTIPLAYER=ON -D DEDICATED_SERVER=ON
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D CMAKE_GENERATOR_TOOLSET=v142 -D WITH_MULTIPLAYER=ON -D DEDICATED_SERVER=ON
 
     - name: 'Build (Dedicated Server)'
       run: |

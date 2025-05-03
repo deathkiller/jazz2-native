@@ -141,6 +141,7 @@ private:
 	std::int32_t _backInvokedTimeLeft = 0;
 	std::shared_ptr<IStateHandler> _currentHandler;
 	SmallVector<Pair<std::weak_ptr<void>, Function<void()>>> _pendingCallbacks;
+	Spinlock _pendingCallbacksLock;
 	String _newestVersion;
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
@@ -376,6 +377,7 @@ void GameEventHandler::OnBeginFrame()
 	if (!_pendingCallbacks.empty()) {
 		ZoneScopedNC("Pending callbacks", 0x888888);
 
+		std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
 		std::weak_ptr<void> emptyRef;
 		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
 			auto& callback = _pendingCallbacks[i];
@@ -533,11 +535,13 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 
 void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 {
+	std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
 	_pendingCallbacks.emplace_back(std::weak_ptr<void>{}, std::move(callback));
 }
 
 void GameEventHandler::InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback)
 {
+	std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
 	_pendingCallbacks.emplace_back(std::move(reference), std::move(callback));
 }
 

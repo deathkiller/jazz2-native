@@ -9,24 +9,41 @@ namespace Jazz2::UI::Menu
 	PauseSection::PauseSection()
 		: _selectedIndex(0), _animation(0.0f)
 	{
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::Resume].Name = _("Resume");
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::Options].Name = _("Options");
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::Exit].Name = _("Save & Exit");
 	}
 
 	void PauseSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
 
+#if defined(WITH_MULTIPLAYER)
+		bool isLocalSession = true;
 		if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
-			if (!inGameMenu->IsLocalSession()) {
-				// TRANSLATORS: Menu item in main menu
-				_items[(int32_t)Item::Exit].Name = _("Disconnect & Exit");
-			}
+			isLocalSession = inGameMenu->IsLocalSession();
 		}
+#endif
+
+		_items.clear();
+
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(Item::Resume, _("Resume"));
+
+#if defined(WITH_MULTIPLAYER)
+		if (!isLocalSession) {
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(Item::Spectate, _("Spectate"));
+		}
+#endif
+
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(Item::Options, _("Options"));
+
+#if defined(WITH_MULTIPLAYER)
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(Item::Exit, isLocalSession ? _("Save & Exit") : _("Disconnect & Exit"));
+#else
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(Item::Exit, _("Save & Exit"));
+#endif
 
 		_animation = 0.0f;
 	}
@@ -49,12 +66,12 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex > 0) {
 				_selectedIndex--;
 			} else {
-				_selectedIndex = (int32_t)Item::Count - 1;
+				_selectedIndex = (std::int32_t)_items.size() - 1;
 			}
 		} else if (_root->ActionHit(PlayerAction::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
-			if (_selectedIndex < (int32_t)Item::Count - 1) {
+			if (_selectedIndex < (std::int32_t)_items.size() - 1) {
 				_selectedIndex++;
 			} else {
 				_selectedIndex = 0;
@@ -65,10 +82,10 @@ namespace Jazz2::UI::Menu
 	void PauseSection::OnDraw(Canvas* canvas)
 	{
 		Recti contentBounds = _root->GetContentBounds();
-		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.3f * (1.0f - 0.048f * (int32_t)Item::Count));
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + contentBounds.H * 0.36f * (1.0f - 0.1f * (std::int32_t)_items.size()));
 		std::int32_t charOffset = 0;
 
-		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
+		for (int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
 			_items[i].TouchY = center.Y;
 
 			if (_selectedIndex == i) {
@@ -83,7 +100,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += (contentBounds.H >= 250 ? 34.0f : 26.0f) + 32.0f * (1.0f - 0.15f * (int32_t)Item::Count);
+			center.Y += (contentBounds.H >= 250 ? 34.0f : 26.0f) + 36.0f * (1.0f - 0.18f * (std::int32_t)_items.size());
 		}
 	}
 
@@ -95,7 +112,7 @@ namespace Jazz2::UI::Menu
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
-				for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
+				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
@@ -113,20 +130,26 @@ namespace Jazz2::UI::Menu
 
 	void PauseSection::ExecuteSelected()
 	{
-		_root->PlaySfx("MenuSelect"_s, 0.6f);
-
-		switch (_selectedIndex) {
-			case (std::int32_t)Item::Resume:
+		switch (_items[_selectedIndex].Type) {
+			case Item::Resume: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
 					inGameMenu->ResumeGame();
 				}
 				break;
-			case (std::int32_t)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
-			case (std::int32_t)Item::Exit:
+			}
+			case Item::Options: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->SwitchToSection<OptionsSection>();
+				break;
+			}
+			case Item::Exit: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
 					inGameMenu->GoToMainMenu();
 				}
 				break;
+			}
 		}
 	}
 }

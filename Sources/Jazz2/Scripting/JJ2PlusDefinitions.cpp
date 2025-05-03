@@ -1305,7 +1305,7 @@ namespace Jazz2::Scripting
 		}
 		std::int32_t jjPLAYER::set_stoned(std::int32_t value) {
 			noop();
-			_player->SetDizzyTime(value * FrameTimer::FramesPerSecond / 70.0f);
+			_player->SetDizzy(value * FrameTimer::FramesPerSecond / 70.0f);
 			return value;
 		}
 
