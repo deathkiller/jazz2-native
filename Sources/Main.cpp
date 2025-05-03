@@ -75,6 +75,9 @@ using namespace Jazz2::Multiplayer;
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
 
 using namespace Death::IO::Compression;
+#if defined(WITH_THREADS)
+using namespace Death::Threading;
+#endif
 using namespace nCine;
 using namespace Jazz2;
 using namespace Jazz2::UI;
