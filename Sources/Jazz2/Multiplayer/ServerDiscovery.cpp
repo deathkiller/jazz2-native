@@ -512,8 +512,8 @@ namespace Jazz2::Multiplayer
 			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
 			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
 
-		length += formatString(input + length, sizeof(input) - length, "\",\"e\":null,\"d\":\"%s\"}",
-			PreferencesCache::GetDeviceID().data());
+		length += formatString(input + length, sizeof(input) - length, "\",\"e\":null,\"v\":\"%s\",\"d\":\"%s\"}",
+			NCINE_VERSION, PreferencesCache::GetDeviceID().data());
 
 		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		request.SetMethod("POST"_s);
