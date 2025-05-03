@@ -590,10 +590,10 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	source_group("Dependencies" FILES ${UWP_DEPENDENCIES})
 	
 	# Include `Content` directory
-	file(GLOB_RECURSE PACKAGE_CONTENT_FILES "${NCINE_DATA_DIR}/*")
+	file(GLOB_RECURSE PACKAGE_CONTENT_FILES "${NCINE_CONTENT_DIR}/*")
 	foreach(CONTENT_FILE ${PACKAGE_CONTENT_FILES})
 		# Preserving directory structure
-		file(RELATIVE_PATH CONTENT_FILE_RELPATH ${NCINE_DATA_DIR} ${CONTENT_FILE})
+		file(RELATIVE_PATH CONTENT_FILE_RELPATH ${NCINE_CONTENT_DIR} ${CONTENT_FILE})
 		get_filename_component(CONTENT_FILE_RELPATH ${CONTENT_FILE_RELPATH} DIRECTORY)
 		
 		target_sources(${NCINE_APP} PRIVATE ${CONTENT_FILE})
@@ -615,7 +615,7 @@ else()
 		nx_create_nro(${NCINE_APP}
 			NACP "${NCINE_APP}.nacp"
 			ICON "${NCINE_SOURCE_DIR}/Icons/256px.png"
-			ROMFS "${NCINE_DATA_DIR}"
+			ROMFS "${NCINE_CONTENT_DIR}"
 		)
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
@@ -660,6 +660,12 @@ else()
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEPENDENCY} $<TARGET_FILE_DIR:${NCINE_APP}>
 				VERBATIM)
 		endforeach()
+	endif()
+	
+	if(NCINE_CREATE_CONTENT_SYMLINK)
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E create_symlink "${NCINE_CONTENT_DIR}" "$<TARGET_FILE_DIR:${NCINE_APP}>/Content"
+			COMMENT "Creating symbolic link to \"${NCINE_CONTENT_DIR}\"")
 	endif()
 endif()
 

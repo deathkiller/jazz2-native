@@ -149,7 +149,9 @@ private:
 	std::int32_t _backInvokedTimeLeft = 0;
 	std::shared_ptr<IStateHandler> _currentHandler;
 	SmallVector<Pair<std::weak_ptr<void>, Function<void()>>> _pendingCallbacks;
+#if defined(WITH_THREADS)
 	Spinlock _pendingCallbacksLock;
+#endif
 	String _newestVersion;
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
