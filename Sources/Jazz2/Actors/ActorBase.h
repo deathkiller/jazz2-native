@@ -165,6 +165,7 @@ namespace Jazz2::Actors
 	{
 		DEATH_RUNTIME_OBJECT();
 
+		friend class Player;
 		friend class Jazz2::LevelHandler;
 		friend class Jazz2::Rendering::LightingRenderer;
 #if defined(WITH_MULTIPLAYER)
@@ -341,6 +342,11 @@ namespace Jazz2::Actors
 		virtual Task<bool> OnActivatedAsync(const ActorActivationDetails& details);
 		/** @brief Called when corresponding tile should be deactivated */
 		virtual bool OnTileDeactivated();
+
+		/** @brief Called when the object is attached to an another object */
+		virtual void OnAttach(ActorBase* parent);
+		/** @brief Called when the object is detached from the previously attached object */
+		virtual void OnDetach(ActorBase* parent);
 
 		/** @brief Called when health of the object changed */
 		virtual void OnHealthChanged(ActorBase* collider);

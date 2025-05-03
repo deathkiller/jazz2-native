@@ -26,9 +26,9 @@ using namespace std::string_view_literals;
 namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
-		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0), PositionInRound(0),
-			Player(nullptr), LevelState(PeerLevelState::Unknown), LastUpdated(0), EnableLedgeClimb(false), Team(0),
-			Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), DeathElapsedFrames(FLT_MAX),
+		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0), PointsInRound(0),
+			PositionInRound(0), Player(nullptr), LevelState(PeerLevelState::Unknown), LastUpdated(0), EnableLedgeClimb(false),
+			Team(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), DeathElapsedFrames(FLT_MAX),
 			LapsElapsedFrames(0.0f)
 	{
 	}
@@ -186,6 +186,8 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level)
 	{
+		static constexpr std::int32_t MaxLapCount = 80;
+
 		auto configPath = fs::CombinePath(PreferencesCache::GetDirectory(), path);
 
 		// Skip already included files to avoid infinite loops
@@ -378,6 +380,9 @@ namespace Jazz2::Multiplayer
 				std::int64_t totalLaps;
 				if (doc["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
 					serverConfig.TotalLaps = std::uint32_t(totalLaps);
+					if (serverConfig.TotalLaps > MaxLapCount) {
+						serverConfig.TotalLaps = MaxLapCount;
+					}
 				}
 
 				std::int64_t totalTreasureCollected;
@@ -450,6 +455,9 @@ namespace Jazz2::Multiplayer
 						std::int64_t totalLaps;
 						if (entry["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
 							playlistEntry.TotalLaps = std::uint32_t(totalLaps);
+							if (playlistEntry.TotalLaps > MaxLapCount) {
+								playlistEntry.TotalLaps = MaxLapCount;
+							}
 						}
 
 						std::int64_t totalTreasureCollected;

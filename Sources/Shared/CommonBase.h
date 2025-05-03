@@ -78,9 +78,13 @@
 #	define DEATH_CXX_STANDARD __cplusplus
 #endif
 
-// <ciso646> is deprecated and replaced by <version> in C++20
-#if DEATH_CXX_STANDARD >= 202002L
-#	include <version>
+// <ciso646> is deprecated and replaced by <version> in C++20, but some compilers warn even in C++17
+#if DEATH_CXX_STANDARD >= 201703L && defined(__has_include)
+#	if __has_include(<version>)
+#		include <version>
+#	else
+#		include <ciso646>
+#	endif
 #else
 #	include <ciso646>
 #endif

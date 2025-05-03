@@ -163,10 +163,6 @@ namespace Jazz2
 		OnInitialized();
 		resolver.EndLoading();
 
-		if ((levelInit.LastExitType & ExitType::FastTransition) != ExitType::FastTransition) {
-			_hud->BeginFadeIn();
-		}
-
 		return true;
 	}
 
@@ -235,10 +231,11 @@ namespace Jazz2
 			AssignViewport(ptr);
 		}
 
+		_hud = CreateHUD();
+		_hud->BeginFadeIn(false);
+
 		OnInitialized();
 		resolver.EndLoading();
-
-		_hud->BeginFadeIn();
 
 		// Set it at the end, so ambient light transition is skipped
 		_elapsedFrames = _checkpointFrames;
@@ -251,8 +248,6 @@ namespace Jazz2
 		auto& resolver = ContentResolver::Get();
 		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
 		resolver.PreloadMetadataAsync("Common/Explosions"_s);
-
-		_hud = CreateHUD();
 
 		_eventMap->PreloadEventsAsync();
 
@@ -494,6 +489,9 @@ namespace Jazz2
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
+
+		_hud = CreateHUD();
+		_hud->BeginFadeIn((levelInit.LastExitType & ExitType::FastTransition) == ExitType::FastTransition);
 	}
 
 	bool LevelHandler::IsCheatingAllowed()
