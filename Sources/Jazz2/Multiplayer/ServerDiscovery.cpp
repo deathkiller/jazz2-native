@@ -407,7 +407,7 @@ namespace Jazz2::Multiplayer
 	{
 		_onlineSuccess = false;
 
-		auto& serverConfig = _server->GetServerConfiguration();
+		auto& serverConfig = server->GetServerConfiguration();
 		if (serverConfig.ServerName.empty()) {
 			return;
 		}
@@ -430,12 +430,12 @@ namespace Jazz2::Multiplayer
 			String addressEscaped = StringUtils::replaceAll(StringUtils::replaceAll(address,
 				"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
 			if (port == 0) {
-				port = _server->_host->address.port;
+				port = server->_host->address.port;
 			}
 			length += formatString(input + length, sizeof(input) - length, "%s:%u", addressEscaped.data(), port);
 		} else {
 			bool isFirst = true;
-			auto endpoints = _server->GetServerEndpoints();
+			auto endpoints = server->GetServerEndpoints();
 			for (auto& endpoint : endpoints) {
 				if (length > 1228) { // It's usually enough for all the endpoints
 					break;
@@ -456,7 +456,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u,\"s\":%llu,\"l\":%i,\"g\":%u}",
-			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), _server->GetPeerCount(), serverConfig.MaxPlayerCount,
+			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
 			serverConfig.StartUnixTimestamp, serverLoad, std::uint32_t(serverConfig.GameMode));
 
 		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
@@ -496,7 +496,7 @@ namespace Jazz2::Multiplayer
 
 		_onlineSuccess = false;
 
-		auto& serverConfig = _server->GetServerConfiguration();
+		auto& serverConfig = server->GetServerConfiguration();
 		if (serverConfig.ServerName.empty()) {
 			return;
 		}
@@ -584,7 +584,7 @@ namespace Jazz2::Multiplayer
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
 		NetworkManager* server = _this->_server;
-		std::int32_t delayCount = 40;	// Delay for 20 seconds before starting to send discovery responses
+		std::int32_t delayCount = 30;	// Delay for 15 seconds before starting to send discovery responses
 
 		NetworkManagerBase::InitializeBackend();
 
