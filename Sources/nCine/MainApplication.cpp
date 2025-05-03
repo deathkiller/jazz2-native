@@ -302,7 +302,7 @@ namespace nCine
 		if (pathLength > 0 && pathLength < DWORD(arraySize(path))) {
 			HINSTANCE hinst = ::ShellExecuteW(NULL, L"open", path,
 				nullptr, nullptr, SW_SHOWNORMAL);
-			success = ((std::int32_t)hinst > 32);
+			success = ((INT_PTR)hinst > 32);
 		}
 #	if defined(DEATH_TARGET_32BIT)
 		if (redirectSuccess) {

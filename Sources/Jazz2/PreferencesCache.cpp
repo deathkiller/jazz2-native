@@ -165,9 +165,13 @@ namespace Jazz2
 #		elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
-			if (arg == "/log:file"_s) {
+			if (arg == "/log:file"_s || arg.hasPrefix("/log:file:"_s)) {
 				fs::CreateDirectories(configDir);
-				theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+				if (arg.size() > "/log:file:"_s.size()) {
+					theApplication().AttachTraceTarget(fs::CombinePath(configDir, arg.exceptPrefix("/log:file:"_s)));
+				} else {
+					theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+				}
 			}
 #			if defined(DEATH_TARGET_WINDOWS)
 			else if (arg == "/log"_s) {

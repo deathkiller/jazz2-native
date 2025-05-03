@@ -2397,7 +2397,7 @@ namespace Jazz2::Multiplayer
 					std::int64_t levelFileSize = s->GetSize();
 					packet.WriteVariableInt64(levelFileSize);
 
-					std::int64_t bytesWritten = packet.FetchFromStream(*s, levelFileSize);
+					DEATH_UNUSED std::int64_t bytesWritten = packet.FetchFromStream(*s, levelFileSize);
 					DEATH_DEBUG_ASSERT(bytesWritten == levelFileSize);
 
 					auto usedTileSetPaths = _tileMap->GetUsedTileSetPaths();
@@ -2418,7 +2418,7 @@ namespace Jazz2::Multiplayer
 
 						std::int64_t tileSetFileSize = s->GetSize();
 						packet.WriteVariableInt64(tileSetFileSize);
-						std::int64_t bytesWritten = packet.FetchFromStream(*s, tileSetFileSize);
+						DEATH_UNUSED std::int64_t bytesWritten = packet.FetchFromStream(*s, tileSetFileSize);
 						DEATH_DEBUG_ASSERT(bytesWritten == tileSetFileSize);
 					}
 
