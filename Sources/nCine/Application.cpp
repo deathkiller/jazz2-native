@@ -272,6 +272,7 @@ static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
 	return FALSE;
 }
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#	include <signal.h>
 #	include <termios.h>
 #	include <sys/select.h>
 
