@@ -217,6 +217,7 @@ namespace Jazz2
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
 
 		String _levelName;
+		String _levelDisplayName;
 		String _defaultNextLevel;
 		String _defaultSecretLevel;
 		GameDifficulty _difficulty;

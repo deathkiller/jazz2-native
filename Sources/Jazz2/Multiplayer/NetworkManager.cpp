@@ -2,8 +2,6 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#define USE_JSONCPP
-
 #include "ServerDiscovery.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
@@ -147,6 +145,13 @@ namespace Jazz2::Multiplayer
 					continue;
 				}
 			}
+		}
+	}
+
+	void NetworkManager::SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider)
+	{
+		if (_discovery != nullptr) {
+			_discovery->SetStatusProvider(std::move(statusProvider));
 		}
 	}
 

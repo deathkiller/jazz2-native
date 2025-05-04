@@ -65,6 +65,11 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase::ReleaseBackend();
 	}
 
+	void ServerDiscovery::SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider)
+	{
+		_statusProvider = std::move(statusProvider);
+	}
+
 	ENetSocket ServerDiscovery::TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{
 #if defined(DEATH_TARGET_ANDROID)
@@ -384,10 +389,13 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableUint32(server->GetPeerCount());
 			packet.WriteVariableUint32(serverConfig.MaxPlayerCount);
 
-			// TODO: Current level
-			auto levelName = ""_s;
-			packet.WriteValue<std::uint8_t>((std::uint8_t)levelName.size());
-			packet.Write(levelName.data(), (std::uint8_t)levelName.size());
+			if (auto statusProvider = _statusProvider.lock()) {
+				auto levelDisplayName = statusProvider->GetLevelDisplayName().trimmed();
+				packet.WriteValue<std::uint8_t>((std::uint8_t)levelDisplayName.size());
+				packet.Write(levelDisplayName.data(), (std::uint8_t)levelDisplayName.size());
+			} else {
+				packet.WriteValue<std::uint8_t>(0);
+			}
 
 			ENetBuffer sendbuf;
 			sendbuf.data = (void*)packet.GetBuffer();
@@ -457,9 +465,15 @@ namespace Jazz2::Multiplayer
 			serverLoad = -1;
 		}
 
-		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u,\"s\":%llu,\"l\":%i,\"g\":%u}",
+		String levelDisplayName;
+		if (auto statusProvider = _statusProvider.lock()) {
+			levelDisplayName = StringUtils::replaceAll(StringUtils::replaceAll(StringUtils::replaceAll(statusProvider->GetLevelDisplayName().trimmed(),
+				"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
+		}
+
+		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u,\"s\":%llu,\"l\":%i,\"g\":%u,\"f\":\"%s\"}",
 			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
-			serverConfig.StartUnixTimestamp, serverLoad, std::uint32_t(serverConfig.GameMode));
+			serverConfig.StartUnixTimestamp, serverLoad, std::uint32_t(serverConfig.GameMode), levelDisplayName.data());
 
 		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		request.SetMethod("POST"_s);

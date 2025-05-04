@@ -60,6 +60,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Reloads server configuration from the source file */
 		void RefreshServerConfiguration();
 
+		/** @brief Sets status provider */
+		void SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider);
+
 		/**
 		 * @brief Creates a default server configuration from the default template file
 		 *

@@ -3,7 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../../LevelHandler.h"
-#include "../../Actors/Multiplayer/RemotePlayerOnServer.h"
+#include "../../Actors/Multiplayer/MpPlayer.h"
 
 #include "../../../nCine/Graphics/RenderQueue.h"
 
@@ -45,13 +45,21 @@ namespace Jazz2::UI::Multiplayer
 
 	void MpInGameCanvasLayer::DrawStringShadow(StringView text, float x, float y)
 	{
+		x = std::round(x);
+		y = std::round(y);
+
+		float textScale = 0.7f;
+		if (text == "\xF0\x9D\x94\x87\xF0\x9D\x94\xA2\xF0\x9D\x94\x9E\xF0\x9D\x94\xB1\xF0\x9D\x94\xA7"_s) {
+			textScale = 0.8f;
+		}
+
 		std::int32_t charOffsetShadow = 0;
 		_smallFont->DrawString(this, text, charOffsetShadow, x, y + 1.0f, FontShadowLayer, Alignment::Center,
-			Colorf(0.0f, 0.0f, 0.0f, 0.36f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+			Colorf(0.0f, 0.0f, 0.0f, 0.36f), textScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 
 		std::int32_t charOffset = 0;
 		_smallFont->DrawString(this, text, charOffset, x, y, FontLayer, Alignment::Center,
-			Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+			Font::DefaultColor, textScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 	}
 }
 

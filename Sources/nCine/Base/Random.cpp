@@ -10,6 +10,8 @@
 #	include <objbase.h>
 #endif
 
+#include <Containers/DateTime.h>
+
 namespace nCine
 {
 	namespace
@@ -45,8 +47,10 @@ namespace nCine
 	}
 
 	RandomGenerator::RandomGenerator() noexcept
-		: RandomGenerator(DefaultInitState, DefaultInitSequence)
+		: _state(0ULL), _increment(0ULL)
 	{
+		std::uint64_t now = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now()).time_since_epoch().count();
+		Initialize(DefaultInitState ^ now, DefaultInitSequence);
 	}
 
 	RandomGenerator::RandomGenerator(std::uint64_t initState, std::uint64_t initSequence) noexcept

@@ -74,6 +74,18 @@ namespace Jazz2::Multiplayer
 	};
 
 	/**
+		@brief Interface to provide current status of the server
+
+		@experimental
+	*/
+	class IServerStatusProvider
+	{
+	public:
+		/** @brief Returns display name of current level */
+		virtual StringView GetLevelDisplayName() const = 0;
+	};
+
+	/**
 		@brief Allows to monitor publicly-listed running servers for server listing
 
 		@experimental
@@ -96,6 +108,9 @@ namespace Jazz2::Multiplayer
 		ServerDiscovery(IServerObserver* observer);
 		~ServerDiscovery();
 
+		/** @brief Sets status provider */
+		void SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider);
+
 	private:
 		ServerDiscovery(const ServerDiscovery&) = delete;
 		ServerDiscovery& operator=(const ServerDiscovery&) = delete;
@@ -104,6 +119,7 @@ namespace Jazz2::Multiplayer
 
 		NetworkManager* _server;
 		IServerObserver* _observer;
+		std::weak_ptr<IServerStatusProvider> _statusProvider;
 		ENetSocket _socket;
 		Thread _thread;
 		TimeStamp _lastLocalRequestTime;
