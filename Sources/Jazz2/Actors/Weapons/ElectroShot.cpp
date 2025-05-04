@@ -85,7 +85,7 @@ namespace Jazz2::Actors::Weapons
 				auto tilemap = _levelHandler->TileMap();
 				if (tilemap != nullptr) {
 					auto* res = _metadata->FindAnimation((AnimState)1); // Particle
-					if (res != nullptr) {
+					if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 						auto& resBase = res->Base;
 						Vector2i texSize = resBase->TextureDiffuse->size();
 
@@ -100,7 +100,7 @@ namespace Jazz2::Actors::Weapons
 							float dx = dist * cosf(angle);
 							float dy = dist * sinf(angle);
 
-							Tiles::TileMap::DestructibleDebris debris = { };
+							Tiles::TileMap::DestructibleDebris debris = {};
 							debris.Pos = Vector2f(_pos.X + dx, _pos.Y + dy);
 							debris.Depth = _renderer.layer();
 							debris.Size = Vector2f(size, size);

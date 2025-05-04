@@ -4183,6 +4183,7 @@ namespace Jazz2::Multiplayer
 		for (auto* player : _players) {
 			Vector2f spawnPosition = GetSpawnPoint(player->_playerTypeOriginal);
 			player->SetModifier(Actors::Player::Modifier::None);
+			player->SetShield(ShieldType::None, 0.0f);
 			player->SetDizzy(0.0f);
 			player->WarpToPosition(spawnPosition, WarpFlags::Default);
 		}
