@@ -808,6 +808,11 @@ void GameEventHandler::ApplyActivityIcon()
 #if defined(WITH_MULTIPLAYER)
 void GameEventHandler::RunDedicatedServer(StringView configPath)
 {
+	if (PreferencesCache::FirstRun) {
+		// Save the preferences immediately if the config file doesn't exist
+		PreferencesCache::Save();
+	}
+
 	ServerInitialization serverInit;
 	if (!configPath.empty()) {
 		serverInit.Configuration = NetworkManager::LoadServerConfigurationFromFile(configPath);
@@ -1147,7 +1152,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 					MemoryStream packet(17);
 					packet.WriteValue<std::uint8_t>(0);	// Flags
-					packet.Write(PreferencesCache::UniqueServerID, sizeof(PreferencesCache::UniqueServerID));
+					packet.Write(PreferencesCache::UniqueServerID, PreferencesCache::UniqueServerID.size() - sizeof(std::uint16_t));
+					packet.WriteValue<std::uint16_t>(_networkManager->GetServerPort());	// Server port is part of Unique Server ID
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::AuthResponse, packet);
 				} else {
 					DEATH_ASSERT_UNREACHABLE();

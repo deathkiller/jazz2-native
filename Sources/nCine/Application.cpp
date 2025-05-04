@@ -255,6 +255,22 @@ static void CheckConsoleCapabilities()
 
 	::SetConsoleMode(hStdIn, stdInMode);
 }
+
+static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
+{
+	if (signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT ||
+		signal == CTRL_CLOSE_EVENT || signal == CTRL_LOGOFF_EVENT ||
+		signal == CTRL_SHUTDOWN_EVENT) {
+		auto& app = nCine::theApplication();
+		if (!app.ShouldQuit()) {
+			LOGW("Received console close event to shut down the application");
+			app.Quit();
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include <termios.h>
 #	include <sys/select.h>
@@ -332,6 +348,21 @@ static void CheckConsoleCapabilities()
 
 	// Restore the terminal settings
 	::tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
+
+static void OnHandleInterruptSignal(int sig)
+{
+	if (sig == SIGINT) {
+		auto& app = nCine::theApplication();
+		if (!app.ShouldQuit()) {
+			LOGW("Received interrupt signal to shut down the application");
+			app.Quit();
+			return;
+		}
+
+		signal(sig, SIG_DFL);
+		std::raise(sig);
+	}
 }
 #endif
 
@@ -1302,6 +1333,8 @@ namespace nCine
 					if (hasVirtualTerminal) {
 						CheckConsoleCapabilities();
 					}
+
+					::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
 				} else {
 					__consoleType = ConsoleType::Redirect;
 				}
@@ -1378,6 +1411,8 @@ namespace nCine
 				}
 			}
 		}
+
+		::signal(SIGINT, OnHandleInterruptSignal);
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
 		switch (::GetFileType(hStdOut)) {
@@ -1387,6 +1422,8 @@ namespace nCine
 				if (hasVirtualTerminal) {
 					CheckConsoleCapabilities();
 				}
+
+				::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
 				break;
 			}
 			case FILE_TYPE_UNKNOWN:

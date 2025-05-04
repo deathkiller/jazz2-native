@@ -1603,6 +1603,14 @@ namespace Jazz2::Actors
 
 	void Player::OnHitFloor(float timeMult)
 	{
+		if (_activeModifier == Modifier::None && (_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
+			_copterFramesLeft = 0.0f;
+			SetAnimation(_currentAnimation->State & ~AnimState::Copter);
+			if (!_isAttachedToPole) {
+				SetState(ActorState::ApplyGravitation, true);
+			}
+		}
+
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y + 24.0f, Direction::Up)) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {
@@ -1618,13 +1626,6 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (!_inWater && _activeModifier == Modifier::None) {
-			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-				_copterFramesLeft = 0.0f;
-				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
-				if (!_isAttachedToPole) {
-					SetState(ActorState::ApplyGravitation, true);
-				}
-			}
 			if (_hitFloorTime <= 0.0f && !CanJump()) {
 				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);
@@ -3779,6 +3780,11 @@ namespace Jazz2::Actors
 
 	bool Player::Freeze(float timeLeft)
 	{
+		if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionDeath) {
+			// Don't allow freezing during death transition
+			return false;
+		}
+
 		if (timeLeft > 0.0f) {
 			_renderer.AnimPaused = true;
 			_controllable = false;
