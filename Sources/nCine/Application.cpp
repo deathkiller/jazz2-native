@@ -361,8 +361,8 @@ static void OnHandleInterruptSignal(int sig)
 			return;
 		}
 
-		signal(sig, SIG_DFL);
-		std::raise(sig);
+		::signal(sig, SIG_DFL);
+		::raise(sig);
 	}
 }
 #endif
