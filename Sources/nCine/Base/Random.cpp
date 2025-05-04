@@ -10,8 +10,6 @@
 #	include <objbase.h>
 #endif
 
-#include <Containers/DateTime.h>
-
 namespace nCine
 {
 	namespace

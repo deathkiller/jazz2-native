@@ -68,7 +68,6 @@ using namespace Jazz2::Multiplayer;
 
 #if defined(WITH_THREADS)
 #	include <mutex>
-#	include <Threading/Spinlock.h>
 #endif
 
 /** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
@@ -150,7 +149,7 @@ private:
 	std::shared_ptr<IStateHandler> _currentHandler;
 	SmallVector<Pair<std::weak_ptr<void>, Function<void()>>> _pendingCallbacks;
 #if defined(WITH_THREADS)
-	Spinlock _pendingCallbacksLock;
+	std::mutex _pendingCallbacksLock;
 #endif
 	String _newestVersion;
 #if defined(WITH_MULTIPLAYER)
@@ -387,19 +386,27 @@ void GameEventHandler::OnBeginFrame()
 	if (!_pendingCallbacks.empty()) {
 		ZoneScopedNC("Pending callbacks", 0x888888);
 
-#if defined(WITH_THREADS)
-		std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
-#endif
 		std::weak_ptr<void> emptyRef;
+		Function<void()> callbackFunc;
+
 		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
-			auto& callback = _pendingCallbacks[i];
-			auto& callbackRef = callback.first();
-			// Invoke the callback only if it has no corresponding reference or the reference is still alive
-			if (!callbackRef.expired() || !(callbackRef.owner_before(emptyRef) || emptyRef.owner_before(callbackRef))) {
-				callback.second()();
-			} else {
-				LOGW("Deferred callback dropped due to dead reference");
+			{
+#if defined(WITH_THREADS)
+				std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
+#endif
+				auto& callback = _pendingCallbacks[i];
+				auto& callbackRef = callback.first();
+				// Invoke the callback only if it has no corresponding reference or the reference is still alive
+				if (!callbackRef.expired() || !(callbackRef.owner_before(emptyRef) || emptyRef.owner_before(callbackRef))) {
+					// Callback cannot be invoked under the lock, because it can invoke another callback and it would cause deadlock
+					callbackFunc = std::move(callback.second());
+				} else {
+					LOGW("Deferred callback dropped due to dead reference");
+					continue;
+				}
 			}
+
+			callbackFunc();
 		}
 
 		_pendingCallbacks.clear();
@@ -548,7 +555,7 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 {
 #if defined(WITH_THREADS)
-	std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
+	std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
 	_pendingCallbacks.emplace_back(std::weak_ptr<void>{}, std::move(callback));
 }
@@ -556,7 +563,7 @@ void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 void GameEventHandler::InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback)
 {
 #if defined(WITH_THREADS)
-	std::unique_lock<Spinlock> lock(_pendingCallbacksLock);
+	std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
 	_pendingCallbacks.emplace_back(std::move(reference), std::move(callback));
 }

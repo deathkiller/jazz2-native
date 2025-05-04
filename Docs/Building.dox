@@ -59,7 +59,8 @@ Alternatively, change `CMAKE_BUILD_TYPE` to `Release` to enable all performance
 optimizations and disable debugging. You can also specify build configuration
 parameters, which are described @ref building-config-params "below". In addition,
 you can use the `NCINE_CREATE_CONTENT_SYMLINK` parameter to automatically create
-a symbolic link to the @cpp "Content" @ce directory in the target directory.
+a symbolic link to the @cpp "Content" @ce directory in the target directory,
+otherwise you would have to copy it to @cpp "build" @ce directory manually.
 To start actual build of the project, use following commands:
 
 @code{.sh}
@@ -68,12 +69,7 @@ make -j $(nproc) -C build
 
 @m_class{m-noindent}
 
-Everything should be built in the @cpp "build" @ce directory. Additionally, you can create
-a symbolic link to @cpp "Content" @ce directory or copy it to @cpp "build" @ce directory manually:
-
-@code{.sh}
-ln -s "$(pwd)/Content" "$(pwd)/build/Content"
-@endcode
+Everything should be built into the @cpp "build" @ce directory and ready to go.
 
 @subsection building-android Building on Android
 
