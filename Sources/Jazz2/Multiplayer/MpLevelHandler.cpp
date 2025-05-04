@@ -143,6 +143,10 @@ namespace Jazz2::Multiplayer
 		_inGameCanvasLayer->setParent(_rootNode.get());
 		_inGameLobby = std::make_unique<UI::Multiplayer::MpInGameLobby>(this);
 
+		_networkManager->SetStatusProvider(
+			std::static_pointer_cast<IServerStatusProvider>(
+				std::static_pointer_cast<MpLevelHandler>(shared_from_this())));
+
 		return true;
 	}
 
@@ -508,6 +512,10 @@ namespace Jazz2::Multiplayer
 						packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
 						packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
 						Actors::ActorRendererType rendererType = player->_renderer.GetRendererType();
+						if (rendererType == Actors::ActorRendererType::Outline) {
+							// Outline renderer type is local-only
+							rendererType = Actors::ActorRendererType::Default;
+						}
 						packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
 					}
 
@@ -1754,6 +1762,11 @@ namespace Jazz2::Multiplayer
 				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::AdvanceTileAnimation, packet);
 		}
+	}
+
+	StringView MpLevelHandler::GetLevelDisplayName() const
+	{
+		return _levelDisplayName;
 	}
 
 	void MpLevelHandler::AttachComponents(LevelDescriptor&& descriptor)
@@ -3812,9 +3825,6 @@ namespace Jazz2::Multiplayer
 				AddActor(player);
 				_suppressRemoting = false;
 
-				// The player is invulnerable for a short time after spawning
-				ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
-
 				ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
 
 				// Spawn the player also on the remote side
@@ -3838,6 +3848,9 @@ namespace Jazz2::Multiplayer
 
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet);
 				}
+
+				// The player is invulnerable for a short time after spawning
+				ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
 
 				// Create the player also on all other clients
 				{

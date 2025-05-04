@@ -58,7 +58,7 @@ namespace Jazz2::UI
 
 			std::int32_t unicodeCharCount = asciiCount + s->ReadValue<std::int32_t>();
 			for (; i < unicodeCharCount; i++) {
-				char c[4] {};
+				char c[5] {};
 				s->Read(c, 1);
 
 				std::int32_t remainingBytes =

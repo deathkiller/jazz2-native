@@ -120,7 +120,7 @@ public:
 	bool SaveCurrentStateIfAny() override;
 
 #if defined(WITH_MULTIPLAYER)
-	void ConnectToServer(StringView endpoint, std::uint16_t defaultPort) override;
+	void ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password = {}) override;
 	bool CreateServer(ServerInitialization&& serverInit) override;
 
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
@@ -143,7 +143,7 @@ public:
 #endif
 
 private:
-	constexpr static std::uint32_t MaxPlayerNameLength = 24;
+	constexpr static std::uint32_t MaxPlayerNameLength = 32;
 
 	Flags _flags = Flags::None;
 	std::int32_t _backInvokedTimeLeft = 0;
@@ -311,7 +311,7 @@ void GameEventHandler::OnInitialize()
 			if (!endpoint.empty()) {
 				WaitForVerify();
 				SetStateHandler(std::make_shared<LoadingHandler>(this, true));
-				ConnectToServer(endpoint, MultiplayerDefaultPort);
+				ConnectToServer(endpoint, MultiplayerDefaultPort, (i + 2 < config.argc() ? config.argv(i + 2) : ""_s));
 				return;
 			}
 		}
@@ -874,12 +874,15 @@ void GameEventHandler::StartProcessingStdin()
 }
 #	endif
 
-void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort)
+void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password)
 {
 	LOGI("[MP] Preparing connection to %s...", endpoint.data());
 
 	_networkManager = std::make_unique<NetworkManager>();
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
+
+	auto& serverConfig = _networkManager->GetServerConfiguration();
+	serverConfig.ServerPassword = password;
 }
 
 bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
@@ -946,7 +949,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 	if (_networkManager->GetState() == NetworkState::Listening) {
 		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
 			// Connected client is newer than server, reject it
-			LOGI("[MP] Peer kicked (%s) [%08llx]: Incompatible version", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+			LOGI("[MP] Peer kicked (%s) [%08llx]: Incompatible protocol version", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 			return Reason::IncompatibleVersion;
 		}
 
@@ -963,8 +966,9 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 
 		packet.Write(PreferencesCache::UniquePlayerID, sizeof(PreferencesCache::UniquePlayerID));
 
-		// TODO: Password
-		packet.WriteVariableUint32(0);
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		packet.WriteVariableUint32((std::uint32_t)serverConfig.ServerPassword.size());
+		packet.Write(serverConfig.ServerPassword.data(), (std::uint32_t)serverConfig.ServerPassword.size());
 
 		auto playerName = PreferencesCache::GetEffectivePlayerName();
 		if (playerName.empty()) {
@@ -1080,7 +1084,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL; // Exclude patch from version check
 				constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
-				if (strncmp("J2R ", gameID, 4) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
+				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
+					LOGI("[MP] Peer kicked (%s) [%08llx]: Incompatible game version", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
@@ -1100,7 +1105,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
 				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-					LOGD("[MP] ClientPacketType::Auth [%08llx] - player name length out of bounds (%u)", (std::uint64_t)peer._enet, playerNameLength);
+					LOGI("[MP] Peer kicked (%s) [%08llx]: Invalid player name", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
 					_networkManager->Kick(peer, Reason::InvalidPlayerName);
 					return;
 				}

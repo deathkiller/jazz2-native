@@ -390,10 +390,12 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		LOGI("Level \"%s\" (%s.j2l) loaded", descriptor.DisplayName.data(), _levelName.data());
+		_levelDisplayName = std::move(descriptor.DisplayName);
 
-		if (!descriptor.DisplayName.empty()) {
-			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + descriptor.DisplayName));
+		LOGI("Level \"%s\" (%s.j2l) loaded", _levelDisplayName.data(), _levelName.data());
+
+		if (!_levelDisplayName.empty()) {
+			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + _levelDisplayName));
 		} else {
 			theApplication().GetGfxDevice().setWindowTitle(NCINE_APP_NAME);
 		}

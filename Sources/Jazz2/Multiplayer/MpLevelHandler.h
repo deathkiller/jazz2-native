@@ -33,7 +33,7 @@ namespace Jazz2::Multiplayer
 
 		@experimental
 	*/
-	class MpLevelHandler : public LevelHandler
+	class MpLevelHandler : public LevelHandler, public IServerStatusProvider
 	{
 		DEATH_RUNTIME_OBJECT(LevelHandler);
 
@@ -129,6 +129,8 @@ namespace Jazz2::Multiplayer
 		bool SerializeResumableToStream(Stream& dest) override;
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
+
+		StringView GetLevelDisplayName() const override;
 
 		/** @brief Returns current game mode */
 		MpGameMode GetGameMode() const;

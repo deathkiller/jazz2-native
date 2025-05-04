@@ -8,7 +8,7 @@ using namespace Death;
 
 namespace nCine
 {
-	/// Random number generator
+	/// Random number generator (PCG32)
 	class RandomGenerator
 	{
 	public:
