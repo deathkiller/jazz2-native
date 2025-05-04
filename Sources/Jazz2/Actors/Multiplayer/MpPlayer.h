@@ -24,8 +24,7 @@ namespace Jazz2::Actors::Multiplayer
 	public:
 		/** @brief Returns session peer descriptor */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor();
-
-		/** @brief Returns session peer descriptor */
+		/** @overload */
 		std::shared_ptr<const PeerDescriptor> GetPeerDescriptor() const;
 
 	protected:

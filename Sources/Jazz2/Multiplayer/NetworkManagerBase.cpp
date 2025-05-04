@@ -272,6 +272,17 @@ namespace Jazz2::Multiplayer
 		return result;
 	}
 
+	std::uint16_t NetworkManagerBase::GetServerPort() const
+	{
+		if (_state == NetworkState::Listening) {
+			return _host->address.port;
+		} else if (!_peers.empty()) {
+			return _peers[0]->address.port;
+		} else {
+			return 0;
+		}
+	}
+
 	void NetworkManagerBase::SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
 		ENetPeer* target;

@@ -113,6 +113,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t GetRoundTripTimeMs() const;
 		/** @brief Returns all IPv4 and IPv6 addresses along with ports of the server */
 		Array<String> GetServerEndpoints() const;
+		/** @brief Returns port of the server */
+		std::uint16_t GetServerPort() const;
 
 		/** @brief Sends a packet to a given peer */
 		void SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);

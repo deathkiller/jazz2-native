@@ -1469,12 +1469,18 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 			if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps && _levelState == LevelState::Running) {
-				peerDesc->Laps++;
-				auto now = TimeStamp::now();
-				peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
-				peerDesc->LapStarted = now;
+				// Don't allow laps to be quickly incremented twice in a row
+				if ((_elapsedFrames - peerDesc->LapsElapsedFrames) > 2.0f * FrameTimer::FramesPerSecond) {
+					peerDesc->Laps++;
+					auto now = TimeStamp::now();
+					//peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
+					peerDesc->LapsElapsedFrames = _elapsedFrames;
+					peerDesc->LapStarted = now;
 
-				CheckGameEnds();
+					CheckGameEnds();
+				} else {
+					LOGW("Player %i attempted to increment laps twice in a row", mpPlayer->_playerIndex);
+				}
 			}
 
 			if (peerDesc->RemotePeer) {
@@ -1838,6 +1844,7 @@ namespace Jazz2::Multiplayer
 				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
 			peerDesc->LevelState = PeerLevelState::PlayerSpawned;
+			peerDesc->LapsElapsedFrames = _elapsedFrames;
 			peerDesc->LapStarted = TimeStamp::now();
 			peerDesc->PlayerName = PreferencesCache::GetEffectivePlayerName();
 
@@ -3795,6 +3802,7 @@ namespace Jazz2::Multiplayer
 					? serverConfig.InitialPlayerHealth
 					: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
+				peerDesc->LapsElapsedFrames = _elapsedFrames;
 				peerDesc->LapStarted = TimeStamp::now();
 
 				Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();

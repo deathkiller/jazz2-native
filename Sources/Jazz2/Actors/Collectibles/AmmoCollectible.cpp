@@ -45,9 +45,9 @@ namespace Jazz2::Actors::Collectibles
 			case WeaponType::Thunderbolt: async_await RequestMetadataAsync("Collectible/AmmoThunderbolt"_s); break;
 		}
 
-		// Show upgraded ammo if player has upgraded weapon
+		// Show upgraded ammo if player has upgraded weapon, but only in local sessions
 		const auto& players = _levelHandler->GetPlayers();
-		bool upgraded = (!players.empty() && (players[0]->GetWeaponUpgrades()[(std::uint8_t)_weaponType] & 0x01) != 0);
+		bool upgraded = (_levelHandler->IsLocalSession() && !players.empty() && (players[0]->GetWeaponUpgrades()[(std::uint8_t)_weaponType] & 0x01) != 0);
 		SetAnimation((AnimState)(upgraded ? 1 : 0));
 
 		SetFacingDirection();

@@ -4181,7 +4181,7 @@ namespace Death { namespace Backward {
 		}
 
 		/** @brief Handles a given Unix signal */
-		void HandleSignal(int signo, siginfo_t* info, void* _ctx) {
+		void HandleSignal(int sig, siginfo_t* info, void* _ctx) {
 			ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
 
 			StackTrace st;

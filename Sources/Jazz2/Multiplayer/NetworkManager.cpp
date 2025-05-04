@@ -66,9 +66,9 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManager::Dispose()
 	{
-		NetworkManagerBase::Dispose();
-
 		_discovery = nullptr;
+
+		NetworkManagerBase::Dispose();
 	}
 
 	ServerConfiguration& NetworkManager::GetServerConfiguration() const

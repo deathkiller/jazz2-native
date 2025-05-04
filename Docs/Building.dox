@@ -57,7 +57,9 @@ cmake -B build -D CMAKE_BUILD_TYPE=Debug
 
 Alternatively, change `CMAKE_BUILD_TYPE` to `Release` to enable all performance
 optimizations and disable debugging. You can also specify build configuration
-parameters, which are described @ref building-config-params "below".
+parameters, which are described @ref building-config-params "below". In addition,
+you can use the `NCINE_CREATE_CONTENT_SYMLINK` parameter to automatically create
+a symbolic link to the @cpp "Content" @ce directory in the target directory.
 To start actual build of the project, use following commands:
 
 @code{.sh}
@@ -112,8 +114,7 @@ configured using a similar command as above:
 @code{.bat}
 mkdir build
 cmake -B build -D CMAKE_BUILD_TYPE=Debug -A x64 ^
-    -D CMAKE_SYSTEM_PROCESSOR=x64 ^
-    -D NCINE_COPY_DEPENDENCIES=ON
+    -D CMAKE_SYSTEM_PROCESSOR=x64
 @endcode
 
 @m_class{m-noindent}
@@ -156,6 +157,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_CONTENT_DIR` (default @cpp "./Content" @ce) --- Path to the @cpp "Content" @ce game data directory
     -   Some build targets include @cpp "Content" @ce directory directly inside the executable package (e.g., Android)
 -   `NCINE_CREATE_CONTENT_SYMLINK` (default @cpp OFF @ce) --- Create symbolic link to the @cpp "Content" @ce game data directory in target directory
+    -   Ignored on **Android**, **Emscripten**, **Nintendo Switch** and **UWP** platforms
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
 -   `NCINE_EMBED_SHADERS` (default @cpp ON @ce) --- Embed shader files in executable
 -   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Preferred backend on desktop
