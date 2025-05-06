@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 "
 "|| n%100>14) ? 1 : 2);\n"
-"X-Generator: Poedit 3.6\n"
+"X-Generator: Poedit 3.4.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1405,30 +1405,33 @@ msgid ""
 "\n"
 "The game will begin shortly!"
 msgstr ""
+"\n"
+"\n"
+"Gra rozpocznie się za niedługo!"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1256
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2659
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]"
-msgstr ""
+msgstr "\f[c:#d0705d]%s\f[/c] został sprażony przez \f[c:#d0705d]%s\f[/c]"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1273
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2662
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] was roasted by environment"
-msgstr ""
+msgstr "\f[c:#d0705d]%s\f[/c] został sprażony przez otoczenie"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2165
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2640
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] disconnected"
-msgstr ""
+msgstr "\f[c:#d0705d]%s\f[/c] rozłączył się"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2249
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2638
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] connected"
-msgstr ""
+msgstr "\f[c:#d0705d]%s\f[/c] dołączył"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4366
 #, c-format
@@ -1437,6 +1440,9 @@ msgid ""
 "\n"
 "Winner is %s"
 msgstr ""
+"\n"
+"\n"
+"%s zwyciężył!"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:325
 msgid "Unknown command"
@@ -1507,7 +1513,7 @@ msgstr "Kontynuuj"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:82
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:39
 msgid "Play Online"
-msgstr ""
+msgstr "Graj online"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:88
@@ -1537,7 +1543,7 @@ msgstr "Wyjdź"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:201
 #, c-format
 msgid "For more information, visit %s and  Discord!"
-msgstr ""
+msgstr "Po więcej informacji, odwiedź %s i  Discorda!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:214
 msgid "Access to external storage has been granted!"
@@ -1545,16 +1551,16 @@ msgstr "Dostęp do pamięci zewnętrznej został udzielony!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:216
 msgid ""
-"\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit "
-"2\f[c:#337233] files correctly."
+"\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
+"#337233] files correctly."
 msgstr ""
 "\f[c:#337233]Zresetuj grę, aby prawidłowo załadować pliki \f[c:#9e7056]Jazz "
 "Jackrabbit 2\f[c:#337233]."
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:226
 msgid ""
-"\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit "
-"2\f[c:#704a4a] files!"
+"\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:"
+"#704a4a] files!"
 msgstr ""
 "\f[c:#704a4a]Ta gra wymaga oryginalnych plików \f[c:#9e7056]Jazz Jackrabbit "
 "2\f[c:#704a4a]!"
@@ -1706,7 +1712,7 @@ msgstr "Poszukiwanie skarbów"
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:224
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Team Treasure Hunt"
-msgstr ""
+msgstr "Drużynowe poszukiwanie skarbów"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:225
@@ -1728,6 +1734,11 @@ msgid ""
 "Playlist is not properly configured.\n"
 "Please review server configuration and try it again."
 msgstr ""
+"\f[c:#704a4a]Nie można utworzyć serwera!\f[/c]\n"
+"\n"
+"\n"
+"Playlista została niepoprawnie skonfigurowana.\n"
+"Sprawdź konfigurację serwera i spróbuj ponownie."
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:410
 msgid ""
@@ -1737,6 +1748,11 @@ msgid ""
 "Please verify that no other server\n"
 "is running on that port and try it again."
 msgstr ""
+"\f[c:#704a4a]Nie można utworzyć serwera!\f[/c]\n"
+"\n"
+"\n"
+"Sprawdź, czy na tym porcie nie działa\n"
+"żaden inny serwer i spróbuj ponownie."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:154
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:485
@@ -1749,19 +1765,19 @@ msgstr "Nie znaleziono żadnych poziomów społeczności!"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:189
 msgid "Create server from playlist"
-msgstr ""
+msgstr "Utwórz serwer z playlisty"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:23
 msgid "Create Private Server"
-msgstr ""
+msgstr "Utwórz serwer prywatny"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:21
 msgid "Create Public Server"
-msgstr ""
+msgstr "Utwórz serwer publiczny"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:164
 msgid "No episode found!"
@@ -1826,8 +1842,8 @@ msgstr "Ulepszenia"
 #, c-format
 msgid ""
 "You can choose your preferred play style.\n"
-"This option can be changed at any time in \f[c:#707070]%s\f[/c] > "
-"\f[c:#707070]%s\f[/c] > \f[c:#707070]%s\f[/c].\n"
+"This option can be changed at any time in \f[c:#707070]%s\f[/c] > \f[c:"
+"#707070]%s\f[/c] > \f[c:#707070]%s\f[/c].\n"
 "For more information, visit %s and  Discord!"
 msgstr ""
 "Możesz wybrać preferowany przez siebie styl rozgrywki.\n"
@@ -2079,7 +2095,7 @@ msgstr "Dźwięki"
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:28
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:167
 msgid "User Profile"
-msgstr ""
+msgstr "Profil użytkownika"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:28
@@ -2089,7 +2105,7 @@ msgstr "Wznów"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:33
 msgid "Spectate"
-msgstr ""
+msgstr "Obserwuj"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:42
@@ -2099,7 +2115,7 @@ msgstr "Zapisz i wyjdź"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:42
 msgid "Disconnect & Exit"
-msgstr ""
+msgstr "Rozłącz się i wyjdź"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:19
@@ -2282,34 +2298,34 @@ msgstr "Integracja z platformą Discord"
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:69
 msgid "Player Name"
-msgstr ""
+msgstr "Pseudonim gracza"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:72
 msgid "Unique Player ID"
-msgstr ""
+msgstr "Unikalne ID gracza"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:168
 #, c-format
 msgid "Points: %u"
-msgstr ""
+msgstr "Punkty: %u"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:182
 #, c-format
 msgid "Game starts in %s"
-msgstr ""
+msgstr "Gra rozpocznie się za %s"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:189
 #, c-format
 msgid "Waiting for %i more player"
 msgid_plural "Waiting for %i more players"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Oczekiwanie na jeszcze jednego gracza"
+msgstr[1] "Oczekiwanie na %i graczy"
+msgstr[2] "Oczekiwanie na %i graczy"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:253
 msgid "Find exit!"
-msgstr ""
+msgstr "Znajdź wyjście!"
 
 #: Sources/Main.cpp:608 Sources/Main.cpp:667
 msgid ""
@@ -2341,7 +2357,7 @@ msgstr ""
 
 #: Sources/Main.cpp:865
 msgid "Unnamed server"
-msgstr ""
+msgstr "Nienazwany serwer"
 
 #: Sources/Main.cpp:1017
 msgid ""
@@ -2350,6 +2366,10 @@ msgid ""
 "\n"
 "Invalid parameter specified."
 msgstr ""
+"\f[c:#704a4a]Nie można połączyć się z serwerem!\f[/c]\n"
+"\n"
+"\n"
+"Podano nieprawidłowy parametr."
 
 #: Sources/Main.cpp:1018
 msgid ""
@@ -2371,6 +2391,12 @@ msgid ""
 "Authentication failed.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nie można połączyć się z serwerem!\f[/c]\n"
+"\n"
+"\n"
+"Uwierzytelnianie nie powiodło się.\n"
+"Skontaktuj się z administratorami serwera,\n"
+"aby uzyskać w tej sprawie więcej informacji."
 
 #: Sources/Main.cpp:1020
 msgid ""
@@ -2379,6 +2405,10 @@ msgid ""
 "\n"
 "Invalid password specified."
 msgstr ""
+"\f[c:#704a4a]Nie można połączyć się z serwerem!\f[/c]\n"
+"\n"
+"\n"
+"Podano nieprawidłowe hasło."
 
 #: Sources/Main.cpp:1021
 msgid ""
@@ -2388,6 +2418,11 @@ msgid ""
 "Invalid player name specified.\n"
 "Please check your profile and try it again."
 msgstr ""
+"\f[c:#704a4a]Nie można połączyć się z serwerem!\f[/c]\n"
+"\n"
+"\n"
+"Podano nieprawidłową nazwę gracza.\n"
+"Sprawdź swój profil i spróbuj ponownie."
 
 #: Sources/Main.cpp:1022
 msgid ""
@@ -2397,6 +2432,12 @@ msgid ""
 "This client is not in the server whitelist.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nie można połączyć się z serwerem!\f[/c]\n"
+"\n"
+"\n"
+"Ten klient nie znajduje się na białej liście serwera.\n"
+"Skontaktuj się z administratorami serwera,\n"
+"aby uzyskać w tej sprawie więcej informacji."
 
 #: Sources/Main.cpp:1023
 msgid ""
@@ -2406,6 +2447,12 @@ msgid ""
 "Server requires 3rd party authentication provider.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nie można połączyć się z serwerem!\f[/c]\n"
+"\n"
+"\n"
+"Serwer wymaga zewnętrznego uwierzytelnienia.\n"
+"Skontaktuj się z administratorami serwera,\n"
+"aby uzyskać w tej sprawie więcej informacji."
 
 #: Sources/Main.cpp:1024
 msgid ""
@@ -2552,6 +2599,10 @@ msgid ""
 "\n"
 "Cheating detected."
 msgstr ""
+"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\n"
+"\n"
+"Wykryto oszustwo."
 
 #~ msgid "Unknown"
 #~ msgstr "Nieznane"
