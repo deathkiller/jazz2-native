@@ -14,7 +14,7 @@ namespace Jazz2::Rendering
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
 		LevelHandler* _levelHandler;
-		Actors::Player* _targetPlayer;
+		Actors::ActorBase* _targetActor;
 
 		std::unique_ptr<LightingRenderer> _lightingRenderer;
 		std::unique_ptr<CombineRenderer> _combineRenderer;
@@ -42,14 +42,14 @@ namespace Jazz2::Rendering
 		Vector4f _ambientLight;
 #endif
 
-		PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer);
+		PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor);
 
 		bool Initialize(SceneNode* sceneNode, SceneNode* outputNode, Recti bounds, bool useHalfRes);
 		void Register();
 
 		Rectf GetBounds() const;
 		Vector2i GetViewportSize() const;
-		Actors::Player* GetTargetPlayer() const;
+		Actors::ActorBase* GetTargetActor() const;
 		void OnEndFrame();
 		void UpdateCamera(float timeMult);
 		void ShakeCameraView(float duration);

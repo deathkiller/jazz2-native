@@ -13,7 +13,7 @@
 #if defined(WITH_ANGELSCRIPT)
 namespace Jazz2::Scripting
 {
-	struct LevelScriptLoader;
+	class LevelScriptLoader;
 }
 
 namespace Jazz2::Scripting::Legacy

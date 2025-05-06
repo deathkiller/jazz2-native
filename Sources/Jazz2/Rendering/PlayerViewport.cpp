@@ -8,8 +8,8 @@
 
 namespace Jazz2::Rendering
 {
-	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::Player* targetPlayer)
-		: _levelHandler(levelHandler), _targetPlayer(targetPlayer),
+	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor)
+		: _levelHandler(levelHandler), _targetActor(targetActor),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
 			_cameraResponsiveness(ResponsivenessMax, ResponsivenessMax), _shakeDuration(0.0f)
 	{
@@ -102,9 +102,9 @@ namespace Jazz2::Rendering
 		return _viewTexture->size();
 	}
 
-	Actors::Player* PlayerViewport::GetTargetPlayer() const
+	Actors::ActorBase* PlayerViewport::GetTargetActor() const
 	{
-		return _targetPlayer;
+		return _targetActor;
 	}
 
 	void PlayerViewport::OnEndFrame()
@@ -140,7 +140,7 @@ namespace Jazz2::Rendering
 
 		// The position to focus on
 		Vector2i halfView = _view->GetSize() / 2;
-		Vector2f focusPos = _targetPlayer->GetPos();
+		Vector2f focusPos = _targetActor->GetPos();
 
 		bool overridePosX = false, overridePosY = false;
 		// TODO: Not working correctly on some platforms
@@ -160,7 +160,7 @@ namespace Jazz2::Rendering
 		}*/
 
 		// If player doesn't move but has some speed, it's probably stuck, so reset the speed
-		Vector2f focusSpeed = _targetPlayer->GetSpeed();
+		Vector2f focusSpeed = _targetActor->GetSpeed();
 		if (overridePosX || std::abs(_cameraLastPos.X - focusPos.X) < 1.0f) {
 			focusSpeed.X = 0.0f;
 		}
@@ -255,7 +255,7 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::WarpCameraToTarget(bool fast)
 	{
-		Vector2f focusPos = _targetPlayer->GetPos();
+		Vector2f focusPos = _targetActor->GetPos();
 		if (!fast) {
 			_cameraPos = focusPos;
 			_cameraLastPos = _cameraPos;
