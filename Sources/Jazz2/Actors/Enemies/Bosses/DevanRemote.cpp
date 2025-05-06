@@ -49,8 +49,8 @@ namespace Jazz2::Actors::Bosses
 
 		auto actors = _levelHandler->GetActors();
 		for (auto& actor : actors) {
-			if (auto* robot = runtime_cast<Robot*>(actor)) {
-				_robot = std::shared_ptr<Robot>(actor, robot);
+			if (auto robot = runtime_cast<Robot>(actor)) {
+				_robot = std::move(robot);
 				_robot->Activate();
 
 				// Copy health to Devan to enable HealthBar

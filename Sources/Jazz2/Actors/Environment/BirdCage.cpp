@@ -55,7 +55,7 @@ namespace Jazz2::Actors::Environment
 	bool BirdCage::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (!_activated) {
-			if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 				if (shotBase->GetStrength() > 0) {
 					auto owner = shotBase->GetOwner();
 					if (owner != nullptr && TryApplyToPlayer(owner)) {
@@ -63,19 +63,19 @@ namespace Jazz2::Actors::Environment
 						return true;
 					}
 				}
-			} else if (auto* tnt = runtime_cast<Weapons::TNT*>(other)) {
+			} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
 				auto owner = tnt->GetOwner();
 				if (owner != nullptr && TryApplyToPlayer(owner)) {
 					return true;
 				}
-			} else if (auto* player = runtime_cast<Player*>(other)) {
+			} else if (auto* player = runtime_cast<Player>(other.get())) {
 				if (player->CanBreakSolidObjects() && TryApplyToPlayer(player)) {
 					return true;
 				}
 			}
 		}
 
-		return ActorBase::OnHandleCollision(other);
+		return ActorBase::OnHandleCollision(std::move(other));
 	}
 
 	bool BirdCage::CanCauseDamage(ActorBase* collider)

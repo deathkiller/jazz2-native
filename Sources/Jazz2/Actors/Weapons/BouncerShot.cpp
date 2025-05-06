@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Weapons
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Bouncer, _strength };
 		TryStandardMovement(timeMult, params);
 		if (params.TilesDestroyed > 0) {
-			if (auto* player = runtime_cast<Player*>(_owner)) {
+			if (auto* player = runtime_cast<Player>(_owner.get())) {
 				player->AddScore(params.TilesDestroyed * 50);
 			}
 		}

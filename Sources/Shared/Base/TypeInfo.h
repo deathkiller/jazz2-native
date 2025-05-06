@@ -270,38 +270,40 @@ namespace Death {
 		
 		Safely converts pointers to classes up, down, and sideways along the inheritance
 		hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` in an optimized way.
-		Additionally, it can perform downcast at no performance cost. It also pulls the
-		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
-		taking ownership.
+		Additionally, it can perform downcast at no performance cost.
 		
 		If @cpp DEATH_SUPPRESS_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
 		and the standard @cpp dynamic_cast<T>() @ce is used to cast the pointer instead.
 	*/
 	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
-		typedef typename std::remove_pointer<T>::type Derived;
-		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u, std::is_base_of<T, U>());
+	DEATH_ALWAYS_INLINE T* runtime_cast(U* u) noexcept {
+		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u, std::is_base_of<T, U>());
 	}
 
 	/** @overload */
 	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(const U* u) noexcept {
-		typedef typename std::remove_pointer<T>::type Derived;
-		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u, std::is_base_of<T, U>());
+	DEATH_ALWAYS_INLINE const T* runtime_cast(const U* u) noexcept {
+		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u, std::is_base_of<T, U>());
 	}
 
 	/** @overload */
-	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(const std::shared_ptr<U>& u) noexcept {
-		typedef typename std::remove_pointer<T>::type Derived;
-		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u.get(), std::is_base_of<T, U>());
+	template<class T, class U>
+	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(const std::shared_ptr<U>& u) noexcept {
+		auto ptr = Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u.get(), std::is_base_of<T, U>());
+		if (ptr) {
+			return std::shared_ptr<T>(u, ptr);
+		}
+		return {};
 	}
 
 	/** @overload */
-	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
-		typedef typename std::remove_pointer<T>::type Derived;
-		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<Derived>(u.get(), std::is_base_of<T, U>());
+	template<class T, class U>
+	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(std::shared_ptr<U>&& u) noexcept {
+		auto ptr = Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u.get(), std::is_base_of<T, U>());
+		if (ptr) {
+			return std::shared_ptr<T>(std::move(u), ptr);
+		}
+		return {};
 	}
 
 }
@@ -327,26 +329,34 @@ namespace Death {
 		and the standard @cpp dynamic_cast<T>() @ce is used to cast the pointer instead.
 	*/
 	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(U* u) noexcept {
-		return dynamic_cast<T>(u);
+	DEATH_ALWAYS_INLINE T* runtime_cast(U* u) noexcept {
+		return dynamic_cast<T*>(u);
 	}
 
 	/** @overload */
 	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(const U* u) noexcept {
-		return dynamic_cast<T>(u);
+	DEATH_ALWAYS_INLINE const T* runtime_cast(const U* u) noexcept {
+		return dynamic_cast<const T*>(u);
 	}
 
 	/** @overload */
-	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(const std::shared_ptr<U>& u) noexcept {
-		return dynamic_cast<T>(u.get());
+	template<class T, class U>
+	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(const std::shared_ptr<U>& u) noexcept {
+		auto ptr = dynamic_cast<T*>(u.get());
+		if (ptr) {
+			return std::shared_ptr<T>(u, ptr);
+		}
+		return {};
 	}
 
 	/** @overload */
-	template<typename T, typename U>
-	DEATH_ALWAYS_INLINE T runtime_cast(const std::unique_ptr<U>& u) noexcept {
-		return dynamic_cast<T>(u.get());
+	template<class T, class U>
+	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(std::shared_ptr<U>&& u) noexcept {
+		auto ptr = dynamic_cast<T*>(u.get());
+		if (ptr) {
+			return std::shared_ptr<T>(std::move(u), ptr);
+		}
+		return {};
 	}
 
 }

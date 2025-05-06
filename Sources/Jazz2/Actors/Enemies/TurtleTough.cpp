@@ -71,7 +71,7 @@ namespace Jazz2::Actors::Enemies
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		if (!runtime_cast<Solid::PushableBox*>(collider)) {
+		if (!runtime_cast<Solid::PushableBox>(collider)) {
 			// Show explosion only if it was not killed by pushable box
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Large);
 		}

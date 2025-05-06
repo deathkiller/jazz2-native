@@ -17,7 +17,7 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_MULTIPLAYER)
 		bool isLocalSession = true;
-		if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
+		if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
 			isLocalSession = inGameMenu->IsLocalSession();
 		}
 #endif
@@ -57,7 +57,7 @@ namespace Jazz2::UI::Menu
 		if (_root->ActionHit(PlayerAction::Fire)) {
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerAction::Menu)) {
-			if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
+			if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
 				inGameMenu->ResumeGame();
 			}
 		} else if (_root->ActionHit(PlayerAction::Up)) {
@@ -133,7 +133,7 @@ namespace Jazz2::UI::Menu
 		switch (_items[_selectedIndex].Type) {
 			case Item::Resume: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
 					inGameMenu->ResumeGame();
 				}
 				break;
@@ -145,7 +145,7 @@ namespace Jazz2::UI::Menu
 			}
 			case Item::Exit: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				if (auto inGameMenu = runtime_cast<InGameMenu*>(_root)) {
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
 					inGameMenu->GoToMainMenu();
 				}
 				break;

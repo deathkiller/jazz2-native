@@ -609,8 +609,8 @@ namespace Jazz2
 
 						// All audio players must be updated to the nearest listener
 						for (auto& current : _playingSounds) {
-							if (auto* current2 = runtime_cast<AudioBufferPlayerForSplitscreen*>(current)) {
-								current2->updatePosition();
+							if (auto* currentForSplitscreen = runtime_cast<AudioBufferPlayerForSplitscreen>(current.get())) {
+								currentForSplitscreen->updatePosition();
 							}
 						}
 					}
@@ -942,7 +942,7 @@ namespace Jazz2
 					return true;
 				}
 
-				auto* solidObject = runtime_cast<Actors::SolidObjectBase*>(actor);
+				auto* solidObject = runtime_cast<Actors::SolidObjectBase>(actor);
 				if (solidObject == nullptr || !solidObject->IsOneWay || params.Downwards) {
 					std::shared_ptr selfShared = self->shared_from_this();
 					std::shared_ptr actorShared = actor->shared_from_this();
@@ -1041,9 +1041,8 @@ namespace Jazz2
 			case EventType::AreaActivateBoss: {
 				if (_activeBoss == nullptr) {
 					for (auto& actor : _actors) {
-						auto* bossPtr = runtime_cast<Actors::Bosses::BossBase*>(actor);
-						if (bossPtr != nullptr) {
-							_activeBoss = std::shared_ptr<Actors::Bosses::BossBase>(actor, bossPtr);
+						_activeBoss = runtime_cast<Actors::Bosses::BossBase>(actor);
+						if (_activeBoss != nullptr) {
 							break;
 						}
 					}
@@ -1473,7 +1472,7 @@ namespace Jazz2
 				return true;
 			}
 
-			auto* iceBlock = runtime_cast<Actors::Environment::IceBlock*>(actor);
+			auto* iceBlock = runtime_cast<Actors::Environment::IceBlock>(actor);
 			if (iceBlock != nullptr) {
 				iceBlock->ResetTimeLeft();
 				iceBlockFound = true;
@@ -1811,8 +1810,8 @@ namespace Jazz2
 
 #if defined(WITH_AUDIO)
 		for (auto& current : _playingSounds) {
-			if (auto* current2 = runtime_cast<AudioBufferPlayerForSplitscreen*>(current)) {
-				current2->updateViewports(_assignedViewports);
+			if (auto* currentForSplitscreen = runtime_cast<AudioBufferPlayerForSplitscreen>(current.get())) {
+				currentForSplitscreen->updateViewports(_assignedViewports);
 			}
 		}
 #endif

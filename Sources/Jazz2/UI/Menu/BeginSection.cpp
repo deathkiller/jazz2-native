@@ -46,7 +46,7 @@ namespace Jazz2::UI::Menu
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		_isEmbedded = Environment::IsEmbedded();
 #else
-		if (auto* mainMenu = runtime_cast<MainMenu*>(_root)) {
+		if (auto* mainMenu = runtime_cast<MainMenu>(_root)) {
 			_isPlayable = ((mainMenu->_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 		}
 #endif

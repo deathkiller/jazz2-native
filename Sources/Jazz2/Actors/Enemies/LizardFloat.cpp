@@ -163,11 +163,11 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
-		if (auto* player = runtime_cast<Player*>(collider)) {
+		if (auto* player = runtime_cast<Player>(collider)) {
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
-		} else if (runtime_cast<Weapons::TNT*>(collider) || runtime_cast<Solid::PushableBox*>(collider)) {
+		} else if (runtime_cast<Weapons::TNT>(collider) || runtime_cast<Solid::PushableBox>(collider)) {
 			shouldDestroy = true;
 		}
 
@@ -178,7 +178,7 @@ namespace Jazz2::Actors::Enemies
 			TryGenerateRandomDrop();
 		} else {
 			std::shared_ptr<Lizard> lizard = std::make_shared<Lizard>();
-			uint8_t lizardParams[3];
+			std::uint8_t lizardParams[3];
 			lizardParams[0] = _theme;
 			lizardParams[1] = 1;
 			lizardParams[2] = (IsFacingLeft() ? 1 : 0);

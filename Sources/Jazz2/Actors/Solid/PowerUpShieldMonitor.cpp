@@ -71,7 +71,7 @@ namespace Jazz2::Actors::Solid
 			return SolidObjectBase::OnHandleCollision(other);
 		}
 
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 			Player* owner = shotBase->GetOwner();
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (owner != nullptr && shotBase->GetStrength() > 0) {
@@ -82,20 +82,20 @@ namespace Jazz2::Actors::Solid
 				shotBase->DecreaseHealth(INT32_MAX);
 			}
 			return true;
-		} else if (auto* tnt = runtime_cast<Weapons::TNT*>(other)) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
 			Player* owner = tnt->GetOwner();
 			if (owner != nullptr) {
 				DestroyAndApplyToPlayer(owner);
 			}
 			return true;
-		} else if (auto* player = runtime_cast<Player*>(other)) {
+		} else if (auto* player = runtime_cast<Player>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
 				DestroyAndApplyToPlayer(player);
 				return true;
 			}
 		}
 
-		return SolidObjectBase::OnHandleCollision(other);
+		return SolidObjectBase::OnHandleCollision(std::move(other));
 	}
 
 	bool PowerUpShieldMonitor::CanCauseDamage(ActorBase* collider)

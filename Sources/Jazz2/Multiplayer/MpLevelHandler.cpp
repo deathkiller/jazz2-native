@@ -193,7 +193,7 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::SetAmbientLight(Actors::Player* player, float value)
 	{
 		if (_isServer) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(player)) {
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
 				// TODO: Send it to remote peer
 				return;
 			}
@@ -254,7 +254,7 @@ namespace Jazz2::Multiplayer
 
 		// Update last pressed keys only if it wasn't done this frame yet (because of PlayerKeyPress packet)
 		for (auto* player : _players) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(player)) {
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
 				if (remotePlayerOnServer->UpdatedFrame != frameCount) {
 					remotePlayerOnServer->UpdatedFrame = frameCount;
 					remotePlayerOnServer->PressedKeysLast = remotePlayerOnServer->PressedKeys;
@@ -439,7 +439,7 @@ namespace Jazz2::Multiplayer
 
 				bool isMirrored = (_isServer
 					? ActorShouldBeMirrored(actor.second.get())
-					: !runtime_cast<Actors::Multiplayer::RemoteActor*>(actor.second));
+					: !runtime_cast<Actors::Multiplayer::RemoteActor>(actor.second));
 
 				if (isMirrored) {
 					_mirroredActorsCount[_plotIndex]++;
@@ -857,13 +857,13 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			// TODO: Player weapon SFX doesn't work
 			std::uint32_t actorId; bool excludeSelf;
-			if (auto* player = runtime_cast<Actors::Player*>(self)) {
+			if (auto* player = runtime_cast<Actors::Player>(self)) {
 				actorId = player->_playerIndex;
 				excludeSelf = (!identifier.hasPrefix("EndOfLevel"_s) && !identifier.hasPrefix("Pickup"_s) && !identifier.hasPrefix("Weapon"_s));
 
 				if (sourceRelative) {
 					// Remote players don't have local viewport, so SFX cannot be relative to them
-					if (auto* remotePlayer = runtime_cast<RemotePlayerOnServer*>(self)) {
+					if (auto* remotePlayer = runtime_cast<RemotePlayerOnServer>(self)) {
 						sourceRelative = false;
 						Vector2f pos = remotePlayer->GetPos();
 						adjustedPos.X += pos.X;
@@ -1650,7 +1650,7 @@ namespace Jazz2::Multiplayer
 	bool MpLevelHandler::PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
 		if (_isServer) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(player)) {
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
 				// PlayerChangeWeaponRequest is sent from the client side everytime, suppress these actions on the server
 				if (action == PlayerAction::ChangeWeapon || (action >= PlayerAction::SwitchToBlaster && action <= PlayerAction::SwitchToThunderbolt)) {
 					return false;
@@ -1678,7 +1678,7 @@ namespace Jazz2::Multiplayer
 	bool MpLevelHandler::PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
 		if (_isServer) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(player)) {
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
 				// PlayerChangeWeaponRequest is sent from the client side everytime, suppress these actions on the server
 				if (action == PlayerAction::ChangeWeapon || (action >= PlayerAction::SwitchToBlaster && action <= PlayerAction::SwitchToThunderbolt)) {
 					return false;
@@ -1700,7 +1700,7 @@ namespace Jazz2::Multiplayer
 	float MpLevelHandler::PlayerHorizontalMovement(Actors::Player* player)
 	{
 		if (_isServer) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(player)) {
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
 				if ((remotePlayerOnServer->PressedKeys & (1ull << (std::int32_t)PlayerAction::Left)) != 0) {
 					return -1.0f;
 				} else if ((remotePlayerOnServer->PressedKeys & (1ull << (std::int32_t)PlayerAction::Right)) != 0) {
@@ -1717,7 +1717,7 @@ namespace Jazz2::Multiplayer
 	float MpLevelHandler::PlayerVerticalMovement(Actors::Player* player)
 	{
 		if (_isServer) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(player)) {
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
 				if ((remotePlayerOnServer->PressedKeys & (1ull << (std::int32_t)PlayerAction::Up)) != 0) {
 					return -1.0f;
 				} else if ((remotePlayerOnServer->PressedKeys & (1ull << (std::int32_t)PlayerAction::Down)) != 0) {
@@ -1734,7 +1734,7 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::PlayerExecuteRumble(Actors::Player* player, StringView rumbleEffect)
 	{
 		if (_isServer) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(player)) {
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
 				// Ignore remote players
 				return;
 			}
@@ -1950,11 +1950,11 @@ namespace Jazz2::Multiplayer
 
 	MpPlayer* MpLevelHandler::GetWeaponOwner(Actors::ActorBase* actor)
 	{
-		if (auto* player = runtime_cast<MpPlayer*>(actor)) {
+		if (auto* player = runtime_cast<MpPlayer>(actor)) {
 			return player;
-		} else if (auto* shotBase = runtime_cast<Actors::Weapons::ShotBase*>(actor)) {
+		} else if (auto* shotBase = runtime_cast<Actors::Weapons::ShotBase>(actor)) {
 			return static_cast<MpPlayer*>(shotBase->GetOwner());
-		} else if (auto* tnt = runtime_cast<Actors::Weapons::TNT*>(actor)) {
+		} else if (auto* tnt = runtime_cast<Actors::Weapons::TNT>(actor)) {
 			return static_cast<MpPlayer*>(tnt->GetOwner());
 		} else {
 			return nullptr;
@@ -2655,7 +2655,7 @@ namespace Jazz2::Multiplayer
 
 					peerDesc->LastUpdated = now;
 
-					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(peerDesc->Player)) {
+					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
 						remotePlayerOnServer->SyncWithServer(Vector2f(posX, posY), Vector2f(speedX, speedY),
 							(flags & RemotePlayerOnServer::PlayerFlags::IsVisible) != RemotePlayerOnServer::PlayerFlags::None,
 							(flags & RemotePlayerOnServer::PlayerFlags::IsFacingLeft) != RemotePlayerOnServer::PlayerFlags::None,
@@ -2672,7 +2672,7 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 					
-					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer*>(peerDesc->Player)) {
+					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
 						std::uint32_t frameCount = theApplication().GetFrameCount();
 						if (remotePlayerOnServer->UpdatedFrame != frameCount) {
 							remotePlayerOnServer->UpdatedFrame = frameCount;
@@ -3199,7 +3199,7 @@ namespace Jazz2::Multiplayer
 
 						auto it = _remoteActors.find(index);
 						if (it != _remoteActors.end()) {
-							if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor*>(it->second)) {
+							if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
 								if (positionChanged) {
 									remoteActor->SyncPositionWithServer(Vector2f(posX, posY));
 								}
@@ -3920,8 +3920,8 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::IsLocalPlayer(Actors::ActorBase* actor)
 	{
-		return (runtime_cast<Actors::Multiplayer::LocalPlayerOnServer*>(actor) ||
-				runtime_cast<Actors::Multiplayer::RemotablePlayer*>(actor));
+		return (runtime_cast<Actors::Multiplayer::LocalPlayerOnServer>(actor) ||
+				runtime_cast<Actors::Multiplayer::RemotablePlayer>(actor));
 	}
 
 	void MpLevelHandler::ApplyGameModeToAllPlayers(MpGameMode gameMode)
@@ -4650,10 +4650,10 @@ namespace Jazz2::Multiplayer
 		}
 
 		// List of objects that needs to be recreated on client-side instead of remoting
-		return (runtime_cast<Actors::Environment::SteamNote*>(actor) ||
-				runtime_cast<Actors::Environment::SwingingVine*>(actor) || runtime_cast<Actors::Solid::Bridge*>(actor) ||
-				runtime_cast<Actors::Solid::MovingPlatform*>(actor) || runtime_cast<Actors::Solid::PinballBumper*>(actor) ||
-				runtime_cast<Actors::Solid::PinballPaddle*>(actor) || runtime_cast<Actors::Solid::SpikeBall*>(actor));
+		return (runtime_cast<Actors::Environment::SteamNote>(actor) ||
+				runtime_cast<Actors::Environment::SwingingVine>(actor) || runtime_cast<Actors::Solid::Bridge>(actor) ||
+				runtime_cast<Actors::Solid::MovingPlatform>(actor) || runtime_cast<Actors::Solid::PinballBumper>(actor) ||
+				runtime_cast<Actors::Solid::PinballPaddle>(actor) || runtime_cast<Actors::Solid::SpikeBall>(actor));
 	}
 
 	bool MpLevelHandler::PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode)

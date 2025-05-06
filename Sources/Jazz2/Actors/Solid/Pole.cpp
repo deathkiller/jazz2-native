@@ -118,10 +118,10 @@ namespace Jazz2::Actors::Solid
 
 	bool Pole::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 			if (shotBase->GetStrength() > 0) {
 				FallDirection fallDirection;
-				if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt*>(shotBase)) {
+				if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt>(shotBase)) {
 					fallDirection = (_pos.X < shotBase->GetPos().X ? FallDirection::Left : FallDirection::Right);
 				} else {
 					fallDirection = (shotBase->GetSpeed().X < 0.0f ? FallDirection::Left : FallDirection::Right);
@@ -129,11 +129,11 @@ namespace Jazz2::Actors::Solid
 				Fall(fallDirection);
 				shotBase->DecreaseHealth(1);
 				return true;
-			} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot*>(shotBase)) {
+			} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(shotBase)) {
 				shotBase->DecreaseHealth(INT32_MAX);
 				return true;
 			}
-		} else if (auto* tnt = runtime_cast<Weapons::TNT*>(other)) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
 			Fall(tnt->GetPos().X > _pos.X ? FallDirection::Left : FallDirection::Right);
 			return true;
 		}

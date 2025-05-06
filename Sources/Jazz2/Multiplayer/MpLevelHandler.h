@@ -35,7 +35,7 @@ namespace Jazz2::Multiplayer
 	*/
 	class MpLevelHandler : public LevelHandler, public IServerStatusProvider
 	{
-		DEATH_RUNTIME_OBJECT(LevelHandler);
+		DEATH_RUNTIME_OBJECT(LevelHandler, IServerStatusProvider);
 
 		friend class ContentResolver;
 #if defined(WITH_ANGELSCRIPT)

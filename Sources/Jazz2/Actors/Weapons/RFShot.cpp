@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Weapons
 			TryMovement(timeMult / n, params);
 		}
 		if (params.TilesDestroyed > 0) {
-			if (auto* player = runtime_cast<Player*>(_owner)) {
+			if (auto* player = runtime_cast<Player>(_owner.get())) {
 				player->AddScore(params.TilesDestroyed * 50);
 			}
 		}
@@ -115,7 +115,7 @@ namespace Jazz2::Actors::Weapons
 	bool RFShot::OnPerish(ActorBase* collider)
 	{
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 36.0f, [this](ActorBase* actor) {
-			if (auto* player = runtime_cast<Player*>(actor)) {
+			if (auto* player = runtime_cast<Player>(actor)) {
 				bool pushLeft = (_pos.X > player->GetPos().X);
 				player->AddExternalForce(pushLeft ? -4.0f : 4.0f, 0.0f);
 			}

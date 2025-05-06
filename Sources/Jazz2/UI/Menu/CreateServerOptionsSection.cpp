@@ -45,7 +45,7 @@ namespace Jazz2::UI::Menu
 
 		_animation = 0.0f;
 
-		if (auto* mainMenu = runtime_cast<MainMenu*>(_root)) {
+		if (auto* mainMenu = runtime_cast<MainMenu>(_root)) {
 			auto* res = mainMenu->_metadata->FindAnimation(LoriExistsCheck);
 			_availableCharacters = (res != nullptr ? 3 : 2);
 		}

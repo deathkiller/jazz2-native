@@ -75,7 +75,7 @@ namespace Jazz2::Actors::Weapons
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Seeker, _strength };
 		TryMovement(timeMult, params);
 		if (params.TilesDestroyed > 0) {
-			if (auto* player = runtime_cast<Player*>(_owner)) {
+			if (auto* player = runtime_cast<Player>(_owner.get())) {
 				player->AddScore(params.TilesDestroyed * 50);
 			}
 		}
@@ -109,7 +109,7 @@ namespace Jazz2::Actors::Weapons
 	bool SeekerShot::OnPerish(ActorBase* collider)
 	{
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 36.0f, [this](ActorBase* actor) {
-			if (auto* player = runtime_cast<Player*>(actor)) {
+			if (auto* player = runtime_cast<Player>(actor)) {
 				bool pushLeft = (_pos.X > player->GetPos().X);
 				player->AddExternalForce(pushLeft ? -8.0f : 8.0f, 0.0f);
 			}

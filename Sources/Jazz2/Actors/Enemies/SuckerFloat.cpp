@@ -52,11 +52,11 @@ namespace Jazz2::Actors::Enemies
 	bool SuckerFloat::OnPerish(ActorBase* collider)
 	{
 		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
-		if (auto* player = runtime_cast<Player*>(collider)) {
+		if (auto* player = runtime_cast<Player>(collider)) {
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
-		} else if (runtime_cast<Weapons::TNT*>(collider) || runtime_cast<Solid::PushableBox*>(collider)) {
+		} else if (runtime_cast<Weapons::TNT>(collider) || runtime_cast<Solid::PushableBox>(collider)) {
 			shouldDestroy = true;
 		}
 
@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Enemies
 			TryGenerateRandomDrop();
 		} else {
 			std::shared_ptr<Sucker> sucker = std::make_shared<Sucker>();
-			uint8_t suckerParams[1] = { (uint8_t)_lastHitDir };
+			std::uint8_t suckerParams[1] = { (std::uint8_t)_lastHitDir };
 			sucker->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),

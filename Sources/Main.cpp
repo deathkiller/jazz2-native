@@ -579,7 +579,7 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 		}
 #endif
 		InGameConsole::Clear();
-		if (auto* mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
+		if (auto* mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
 			mainMenu->Reset();
 		} else {
 			SetStateHandler(std::make_shared<Menu::MainMenu>(this, afterIntro));
@@ -757,7 +757,7 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 {
 	ZoneScopedNC("GameEventHandler::SaveCurrentStateIfAny", 0x888888);
 
-	if (auto* levelHandler = runtime_cast<LevelHandler*>(_currentHandler)) {
+	if (auto* levelHandler = runtime_cast<LevelHandler>(_currentHandler.get())) {
 		if (levelHandler->IsLocalSession()) {
 			auto configDir = PreferencesCache::GetDirectory();
 			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
@@ -869,7 +869,7 @@ void GameEventHandler::StartProcessingStdin()
 					}
 					theApplication().Quit();
 					break;
-				} else if (auto* levelHandler = runtime_cast<MpLevelHandler*>(_this->_currentHandler)) {
+				} else if (auto levelHandler = runtime_cast<MpLevelHandler>(_this->_currentHandler)) {
 					levelHandler->ProcessCommand({}, line, true);
 				}
 			}
@@ -1020,7 +1020,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 		LOGI("[MP] Peer disconnected [%08llx]: %s (%u)", (std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
 	}
 
-	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
+	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
 		if (multiLevelHandler->OnPeerDisconnected(peer)) {
 			return;
 		}
@@ -1036,9 +1036,9 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 #endif
 			InGameConsole::Clear();
 			Menu::MainMenu* mainMenu;
-			if (mainMenu = runtime_cast<Menu::MainMenu*>(_currentHandler)) {
+			if (mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
 				if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
-				mainMenu->Reset();
+					mainMenu->Reset();
 				}
 			} else {
 				auto newHandler = std::make_shared<Menu::MainMenu>(this, false);
@@ -1266,7 +1266,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		}
 	}
 
-	if (auto* multiLevelHandler = runtime_cast<MpLevelHandler*>(_currentHandler)) {
+	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
 		if (multiLevelHandler->OnPacketReceived(peer, channelId, packetType, data)) {
 			return;
 		}
@@ -1366,6 +1366,12 @@ void GameEventHandler::SetStateHandler(std::shared_ptr<IStateHandler>&& handler)
 	Viewport::GetChain().clear();
 	Vector2i res = theApplication().GetResolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
+
+#if defined(WITH_MULTIPLAYER)
+	if (_networkManager != nullptr) {
+		_networkManager->SetStatusProvider(runtime_cast<IServerStatusProvider>(_currentHandler));
+	}
+#endif
 }
 
 void GameEventHandler::WaitForVerify()

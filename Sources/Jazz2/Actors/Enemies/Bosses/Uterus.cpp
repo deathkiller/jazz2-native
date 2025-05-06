@@ -252,7 +252,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Uterus::ShieldPart::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 			DecreaseHealth(shotBase->GetStrength(), shotBase);
 
 			FallTime = 400.0f;
@@ -260,12 +260,12 @@ namespace Jazz2::Actors::Bosses
 			SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, true);
 
 			if (GetState(ActorState::CanBeFrozen)) {
-				HandleFrozenStateChange(other.get());
+				HandleFrozenStateChange(shotBase);
 			}
 			return true;
 		}
 
-		return EnemyBase::OnHandleCollision(other);
+		return EnemyBase::OnHandleCollision(std::move(other));
 	}
 
 	bool Uterus::ShieldPart::OnPerish(ActorBase* collider)

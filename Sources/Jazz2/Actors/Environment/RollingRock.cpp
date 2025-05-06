@@ -134,7 +134,7 @@ namespace Jazz2::Actors::Environment
 
 	bool RollingRock::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* rollingRock = runtime_cast<RollingRock*>(other)) {
+		if (auto* rollingRock = runtime_cast<RollingRock>(other.get())) {
 			float dx = (rollingRock->_pos.X - _pos.X);
 			float dy = (rollingRock->_pos.Y - _pos.Y);
 			float distance = Vector2f(dx, dy).Length();
@@ -163,7 +163,7 @@ namespace Jazz2::Actors::Environment
 				SetState(ActorState::CanBeFrozen, true);
 			}
 			return true;
-		} else if (auto* player = runtime_cast<Player*>(other)) {
+		} else if (auto* player = runtime_cast<Player>(other.get())) {
 			if (_triggered) {
 				float dx = (player->GetPos().X - _pos.X);
 				float dy = (player->GetPos().Y - _pos.Y);
@@ -190,7 +190,7 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
-		return EnemyBase::OnHandleCollision(other);
+		return EnemyBase::OnHandleCollision(std::move(other));
 	}
 
 	void RollingRock::OnTriggeredEvent(EventType eventType, std::uint8_t* eventParams)

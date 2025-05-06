@@ -411,7 +411,7 @@ namespace Jazz2::Scripting
 				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
 					asITypeInfo* typeInfo = GetEngine()->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
-						if (auto* player = runtime_cast<Actors::Player*>(initiator)) {
+						if (auto* player = runtime_cast<Actors::Player>(initiator)) {
 							jjPLAYER* p = GetPlayerBackingStore(player);
 							ctx->SetArgObject(0, p);
 						} else {
@@ -524,7 +524,7 @@ namespace Jazz2::Scripting
 					asITypeInfo* typeInfo = GetEngine()->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
 						// TODO: Detect weapons properly
-						if (auto* killer = runtime_cast<Actors::Player*>(collider)) {
+						if (auto* killer = runtime_cast<Actors::Player>(collider)) {
 							jjPLAYER* p = GetPlayerBackingStore(killer);
 							ctx->SetArgObject(0, p);
 						} else {
@@ -3624,7 +3624,7 @@ namespace Jazz2::Scripting
 
 	std::shared_ptr<Actors::ActorBase> LevelScriptLoader::asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details)
 	{
-		if (auto* levelHandler = runtime_cast<LevelHandler*>(details.LevelHandler)) {
+		if (auto* levelHandler = runtime_cast<LevelHandler>(details.LevelHandler)) {
 			auto _this = levelHandler->_scripts.get();
 			// Spawn() function with custom event cannot be used in OnLevelLoad(), because _scripts is not assigned yet
 			if (_this != nullptr) {

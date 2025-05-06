@@ -49,18 +49,18 @@ namespace Jazz2::Actors::Weapons
 
 	bool TNT::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* tnt = runtime_cast<TNT*>(other)) {
+		if (auto* tnt = runtime_cast<TNT>(other.get())) {
 			if (tnt->_isExploded && _timeLeft > 35.0f) {
 				_timeLeft = 35.0f;
 			}
 		}
 
-		return ActorBase::OnHandleCollision(other);
+		return ActorBase::OnHandleCollision(std::move(other));
 	}
 
 	Player* TNT::GetOwner()
 	{
-		return runtime_cast<Player*>(_owner);
+		return runtime_cast<Player>(_owner.get());
 	}
 
 	void TNT::OnFire(const std::shared_ptr<ActorBase>& owner)
@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Weapons
 				TileCollisionParams params = { TileDestructType::Special | TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::TNT, 8 };
 				tiles->IsTileEmpty(aabb, params);
 				if (params.TilesDestroyed > 0) {
-					if (auto* player = runtime_cast<Player*>(_owner)) {
+					if (auto* player = runtime_cast<Player>(_owner.get())) {
 						player->AddScore(params.TilesDestroyed * 50);
 					}
 				}

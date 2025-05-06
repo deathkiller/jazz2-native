@@ -122,23 +122,23 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnHandleCollision(other);
 
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 			if (shotBase->GetStrength() > 0) {
-				if (runtime_cast<Weapons::FreezerShot*>(shotBase)) {
+				if (runtime_cast<Weapons::FreezerShot>(shotBase)) {
 					return false;
 				}
 
-				if (auto* toasterShot = runtime_cast<Weapons::ToasterShot*>(shotBase)) {
+				if (auto* toasterShot = runtime_cast<Weapons::ToasterShot>(shotBase)) {
 					DecreaseHealth(INT32_MAX, toasterShot);
 					return true;
 				}
-				if (auto* shieldFireShot = runtime_cast<Weapons::ShieldFireShot*>(shotBase)) {
+				if (auto* shieldFireShot = runtime_cast<Weapons::ShieldFireShot>(shotBase)) {
 					DecreaseHealth(INT32_MAX, shieldFireShot);
 					return true;
 				}
 
 				float shotSpeed;
-				if (runtime_cast<Weapons::Thunderbolt*>(shotBase)) {
+				if (runtime_cast<Weapons::Thunderbolt>(shotBase)) {
 					shotSpeed = (_pos.X < shotBase->GetPos().X ? -8.0f : 8.0f);
 				} else {
 					shotSpeed = shotBase->GetSpeed().X;
@@ -148,7 +148,7 @@ namespace Jazz2::Actors::Enemies
 
 				PlaySfx("Fly"_s);
 			}
-		} else if (auto* shell = runtime_cast<TurtleShell*>(other)) {
+		} else if (auto* shell = runtime_cast<TurtleShell>(other.get())) {
 			auto otherSpeed = shell->GetSpeed();
 			if (std::abs(otherSpeed.Y - _speed.Y) > 1.0f && otherSpeed.Y > 0.0f) {
 				DecreaseHealth(10, this);
@@ -164,7 +164,7 @@ namespace Jazz2::Actors::Enemies
 				PlaySfx("ImpactShell"_s, 0.8f);
 				return true;
 			}
-		} else if (auto* enemyBase = runtime_cast<EnemyBase*>(other)) {
+		} else if (auto* enemyBase = runtime_cast<EnemyBase>(other.get())) {
 			if (enemyBase->CanCollideWithShots) {
 				float absSpeed = std::abs(_speed.X);
 				if (absSpeed > 2.0f) {
@@ -175,21 +175,21 @@ namespace Jazz2::Actors::Enemies
 					}
 				}
 			}
-		} else if (auto* crateContainer = runtime_cast<Solid::CrateContainer*>(other)) {
+		} else if (auto* crateContainer = runtime_cast<Solid::CrateContainer>(other.get())) {
 			float absSpeed = std::abs(_speed.X);
 			if (absSpeed > 2.0f) {
 				_speed.X = std::max(absSpeed, 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 				crateContainer->DecreaseHealth(1, this);
 				return true;
 			}
-		} else if (auto* ammoCrate = runtime_cast<Solid::AmmoCrate*>(other)) {
+		} else if (auto* ammoCrate = runtime_cast<Solid::AmmoCrate>(other.get())) {
 			float absSpeed = std::abs(_speed.X);
 			if (absSpeed > 2.0f) {
 				_speed.X = std::max(absSpeed, 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 				ammoCrate->DecreaseHealth(1, this);
 				return true;
 			}
-		} else if (auto* gemCrate = runtime_cast<Solid::GemCrate*>(other)) {
+		} else if (auto* gemCrate = runtime_cast<Solid::GemCrate>(other.get())) {
 			float absSpeed = std::abs(_speed.X);
 			if (absSpeed > 2.0f) {
 				_speed.X = std::max(absSpeed, 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);

@@ -156,7 +156,7 @@ namespace Jazz2::Actors::Solid
 				aabb2.B += 20.0f;
 
 				_levelHandler->GetCollidingPlayers(aabb2, [](Actors::ActorBase* actor) {
-					if (auto* player = runtime_cast<Player*>(actor)) {
+					if (auto* player = runtime_cast<Player>(actor)) {
 						if (player->GetSpeed().Y < 0.0f) {
 							player->TakeDamage(1, 2.0f);
 						}
@@ -166,7 +166,7 @@ namespace Jazz2::Actors::Solid
 			}
 		} else {
 			_levelHandler->GetCollidingPlayers(aabb, [](Actors::ActorBase* actor) {
-				if (auto* player = runtime_cast<Player*>(actor)) {
+				if (auto* player = runtime_cast<Player>(actor)) {
 					player->TakeDamage(1, 2.0f);
 				}
 				return true;
@@ -177,7 +177,7 @@ namespace Jazz2::Actors::Solid
 	bool MovingPlatform::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_type == PlatformType::SpikeBall && _health > 0) {
-			if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 				if (shotBase->GetStrength() > 0) {
 					DecreaseHealth(shotBase->GetStrength(), shotBase);
 					shotBase->DecreaseHealth(INT32_MAX);
@@ -186,7 +186,7 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
-		return SolidObjectBase::OnHandleCollision(other);
+		return SolidObjectBase::OnHandleCollision(std::move(other));
 	}
 
 	bool MovingPlatform::OnPerish(ActorBase* collider)

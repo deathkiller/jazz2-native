@@ -90,7 +90,7 @@ namespace Jazz2::Actors::Bosses
 			case StateWaiting: {
 				// Waiting for player to enter the arena
 				_levelHandler->FindCollisionActorsByAABB(this, AABBf(_pos.X - 300, _pos.Y - 120, _pos.X + 60, _pos.Y + 120), [this](ActorBase* actor) {
-					if (auto* player = runtime_cast<Player*>(actor)) {
+					if (auto* player = runtime_cast<Player>(actor)) {
 						_state = StateIdleToScream;
 						_stateTime = 260.0f;
 						return false;
@@ -230,7 +230,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Queen::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* spring = runtime_cast<Environment::Spring*>(other)) {
+		if (auto* spring = runtime_cast<Environment::Spring>(other.get())) {
 			// Collide only with hitbox
 			if (AABBInner.Overlaps(spring->AABBInner)) {
 				Vector2f force = spring->Activate();
@@ -242,7 +242,7 @@ namespace Jazz2::Actors::Bosses
 					_speed.Y = (4.0f + std::abs(force.Y)) * sign;
 					_externalForce.Y = force.Y;
 				} else {
-					return BossBase::OnHandleCollision(other);
+					return BossBase::OnHandleCollision(std::move(other));
 				}
 				SetState(ActorState::CanJump, false);
 
@@ -259,7 +259,7 @@ namespace Jazz2::Actors::Bosses
 			}
 		}
 
-		return BossBase::OnHandleCollision(other);
+		return BossBase::OnHandleCollision(std::move(other));
 	}
 
 	Task<bool> Queen::Brick::OnActivatedAsync(const ActorActivationDetails& details)

@@ -170,7 +170,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool Witch::MagicBullet::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* player = runtime_cast<Player*>(other)) {
+		if (auto* player = runtime_cast<Player>(other.get())) {
 			DecreaseHealth(INT32_MAX);
 			_owner->OnPlayerHit();
 

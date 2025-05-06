@@ -33,7 +33,7 @@ namespace Jazz2::Actors::Multiplayer
 			auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
 			if (_health > 0 && GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team) {
 				bool otherIsPlayer = false;
-				if (auto* anotherPlayer = runtime_cast<PlayerOnServer*>(other)) {
+				if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other.get())) {
 					bool isAttacking = IsAttacking();
 					if (!isAttacking && !anotherPlayer->IsAttacking()) {
 						return true;
@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Multiplayer
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
-				} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot*>(other.get())) {
+				} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(other.get())) {
 					Freeze(3.0f * FrameTimer::FramesPerSecond);
 				} else {
 					TakeDamage(1, 4.0f * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
@@ -62,7 +62,7 @@ namespace Jazz2::Actors::Multiplayer
 			}
 		}
 
-		return Player::OnHandleCollision(other);
+		return Player::OnHandleCollision(std::move(other));
 	}
 
 	bool PlayerOnServer::CanCauseDamage(ActorBase* collider)

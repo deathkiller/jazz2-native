@@ -43,23 +43,23 @@ namespace Jazz2::Actors::Solid
 			return GenericContainer::OnHandleCollision(other);
 		}
 
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 			if (shotBase->GetStrength() > 0) {
 				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				shotBase->DecreaseHealth(1);
 				return true;
 			}
-		} else if (auto* tnt = runtime_cast<Weapons::TNT*>(other)) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
 			DecreaseHealth(INT32_MAX, tnt);
 			return true;
-		} else if (auto* player = runtime_cast<Player*>(other)) {
+		} else if (auto* player = runtime_cast<Player>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
 				DecreaseHealth(INT32_MAX, player);
 				return true;
 			}
 		}
 
-		return GenericContainer::OnHandleCollision(other);
+		return GenericContainer::OnHandleCollision(std::move(other));
 	}
 
 	bool GemCrate::OnPerish(ActorBase* collider)
