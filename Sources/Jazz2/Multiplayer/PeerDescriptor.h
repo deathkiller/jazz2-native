@@ -25,6 +25,7 @@ namespace Jazz2::Multiplayer
 		Unknown,			/**< Unknown */
 		LevelLoaded,		/**< Peer finished loading of the level */
 		LevelSynchronized,	/**< Peer finished synchronized entities in the level */
+		Spectating,			/**< Peer is spectating */
 		PlayerReady,		/**< Player is ready to spawn */
 		PlayerSpawned		/**< Player is spawned */
 	};

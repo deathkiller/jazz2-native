@@ -213,25 +213,26 @@ namespace Jazz2::UI
 		
 		for (std::size_t i = 0; i < _levelHandler->_assignedViewports.size(); i++) {
 			auto& viewport = _levelHandler->_assignedViewports[i];
-			Actors::Player* player = viewport->GetTargetPlayer();
-			Rectf scopedView = viewport->GetBounds();
-			Rectf adjustedScopedView = scopedView;
-			float left = std::max(adjustedScopedView.X, adjustedView.X);
-			float right = std::min(adjustedScopedView.X + adjustedScopedView.W, adjustedView.X + adjustedView.W);
-			adjustedScopedView.X = left;
-			adjustedScopedView.W = right - left;
+			if (auto* player = runtime_cast<Actors::Player>(viewport->GetTargetActor())) {
+				Rectf scopedView = viewport->GetBounds();
+				Rectf adjustedScopedView = scopedView;
+				float left = std::max(adjustedScopedView.X, adjustedView.X);
+				float right = std::min(adjustedScopedView.X + adjustedScopedView.W, adjustedView.X + adjustedView.W);
+				adjustedScopedView.X = left;
+				adjustedScopedView.W = right - left;
 
 #if defined(DEATH_TARGET_ANDROID)
-			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound() && _levelHandler->_assignedViewports.size() == 1) {
-				adjustedScopedView.H = roundf(adjustedScopedView.H * 0.95f);
-			}
+				if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound() && _levelHandler->_assignedViewports.size() == 1) {
+					adjustedScopedView.H = roundf(adjustedScopedView.H * 0.95f);
+				}
 #endif
 
-			OnDrawHealth(scopedView, adjustedScopedView, player);
-			OnDrawScore(scopedView, player);
-			OnDrawWeaponAmmo(adjustedScopedView, player);
+				OnDrawHealth(scopedView, adjustedScopedView, player);
+				OnDrawScore(scopedView, player);
+				OnDrawWeaponAmmo(adjustedScopedView, player);
 
-			DrawWeaponWheel(scopedView, player);
+				DrawWeaponWheel(scopedView, player);
+			}
 		}
 
 		DrawViewportSeparators();
@@ -1211,25 +1212,26 @@ namespace Jazz2::UI
 	void HUD::UpdateWeaponWheel(float timeMult)
 	{
 		for (auto& viewport : _levelHandler->_assignedViewports) {
-			Actors::Player* player = viewport->GetTargetPlayer();
-			auto& state = _weaponWheel[player->_playerIndex];
+			if (Actors::Player* player = runtime_cast<Actors::Player>(viewport->GetTargetActor())) {
+				auto& state = _weaponWheel[player->_playerIndex];
 
-			if (PrepareWeaponWheel(player, state.WeaponCount)) {
-				if (state.Anim < WeaponWheelAnimDuration) {
-					state.Anim += timeMult;
-					if (state.Anim > WeaponWheelAnimDuration) {
-						state.Anim = WeaponWheelAnimDuration;
+				if (PrepareWeaponWheel(player, state.WeaponCount)) {
+					if (state.Anim < WeaponWheelAnimDuration) {
+						state.Anim += timeMult;
+						if (state.Anim > WeaponWheelAnimDuration) {
+							state.Anim = WeaponWheelAnimDuration;
+						}
 					}
-				}
-			} else {
-				if (state.Anim > 0.0f) {
-					state.Anim -= timeMult * 2.0f;
-					if (state.Anim <= 0.0f) {
-						state.Anim = 0.0f;
-						_levelHandler->_playerInputs[player->_playerIndex].Frozen = false;
+				} else {
+					if (state.Anim > 0.0f) {
+						state.Anim -= timeMult * 2.0f;
+						if (state.Anim <= 0.0f) {
+							state.Anim = 0.0f;
+							_levelHandler->_playerInputs[player->_playerIndex].Frozen = false;
 
-						if (player->_weaponWheelState == Actors::Player::WeaponWheelState::Visible) {
-							player->_weaponWheelState = Actors::Player::WeaponWheelState::Closing;
+							if (player->_weaponWheelState == Actors::Player::WeaponWheelState::Visible) {
+								player->_weaponWheelState = Actors::Player::WeaponWheelState::Closing;
+							}
 						}
 					}
 				}
@@ -1444,10 +1446,13 @@ namespace Jazz2::UI
 		_rgbLightsAnim += 0.06f;
 		_rgbLightsTime += RgbLights::RefreshRate;
 
-		Actors::Player* player = viewport->_targetPlayer;
-		float health = std::clamp((float)player->_health / player->_maxHealth, 0.0f, 1.0f);
-
-		_rgbHealthLast = lerp(_rgbHealthLast, health, 0.2f);
+		Actors::ActorBase* actor = viewport->GetTargetActor();
+		if (Actors::Player* player = runtime_cast<Actors::Player>(actor)) {
+			float health = std::clamp((float)player->_health / player->_maxHealth, 0.0f, 1.0f);
+			_rgbHealthLast = lerp(_rgbHealthLast, health, 0.2f);
+		} else {
+			_rgbHealthLast = 0.0f;
+		}
 		_rgbAmbientLight = viewport->_ambientLight.W;
 
 		constexpr std::int32_t KeyMax2 = 14;

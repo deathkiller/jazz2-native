@@ -143,10 +143,6 @@ namespace Jazz2::Multiplayer
 		_inGameCanvasLayer->setParent(_rootNode.get());
 		_inGameLobby = std::make_unique<UI::Multiplayer::MpInGameLobby>(this);
 
-		_networkManager->SetStatusProvider(
-			std::static_pointer_cast<IServerStatusProvider>(
-				std::static_pointer_cast<MpLevelHandler>(shared_from_this())));
-
 		return true;
 	}
 

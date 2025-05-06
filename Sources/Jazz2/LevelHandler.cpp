@@ -360,7 +360,7 @@ namespace Jazz2
 	float LevelHandler::GetAmbientLight(Actors::Player* player) const
 	{
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				return viewport->_ambientLightTarget;
 			}
 		}
@@ -370,7 +370,7 @@ namespace Jazz2
 	void LevelHandler::SetAmbientLight(Actors::Player* player, float value)
 	{
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				viewport->_ambientLightTarget = value;
 
 				// Skip transition if it was changed at the beginning of level
@@ -603,7 +603,7 @@ namespace Jazz2
 					IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
 					if (_assignedViewports.size() == 1) {
 						audioDevice.updateListener(Vector3f(_assignedViewports[0]->_cameraPos, 0.0f),
-							Vector3f(_assignedViewports[0]->_targetPlayer->GetSpeed(), 0.0f));
+							Vector3f(_assignedViewports[0]->_targetActor->GetSpeed(), 0.0f));
 					} else {
 						audioDevice.updateListener(Vector3f::Zero, Vector3f::Zero);
 
@@ -891,7 +891,7 @@ namespace Jazz2
 	void LevelHandler::WarpCameraToTarget(Actors::ActorBase* actor, bool fast)
 	{
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == actor) {
+			if (viewport->_targetActor == actor) {
 				viewport->WarpCameraToTarget(fast);
 			}
 		}
@@ -1152,9 +1152,9 @@ namespace Jazz2
 			}
 
 			// Warp all other players to checkpoint without transition to avoid issues
-			for (auto& viewport : _assignedViewports) {
-				if (viewport->_targetPlayer != player) {
-					viewport->_targetPlayer->WarpToCheckpoint();
+			for (auto* otherPlayer : _players) {
+				if (otherPlayer != player) {
+					otherPlayer->WarpToCheckpoint();
 				}
 			}
 		}
@@ -1191,7 +1191,7 @@ namespace Jazz2
 
 		// Show notification only for local players (which have assigned viewport)
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				_hud->ShowCoins(newCount);
 				break;
 			}
@@ -1202,7 +1202,7 @@ namespace Jazz2
 	{
 		// Show notification only for local players (which have assigned viewport)
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				_hud->ShowGems(gemType, newCount);
 				break;
 			}
@@ -1216,7 +1216,7 @@ namespace Jazz2
 		// All players will be respawned at the checkpoint, so also set the same ambient light
 		float ambientLight = _defaultAmbientLight.W;
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				ambientLight = viewport->_ambientLightTarget;
 				break;
 			}
@@ -1819,14 +1819,14 @@ namespace Jazz2
 
 	void LevelHandler::InitializeCamera(Rendering::PlayerViewport& viewport)
 	{
-		if (viewport._targetPlayer == nullptr) {
+		if (viewport._targetActor == nullptr) {
 			return;
 		}
 
 		viewport._viewBounds = _viewBoundsTarget;
 
 		// The position to focus on
-		Vector2f focusPos = viewport._targetPlayer->_pos;
+		Vector2f focusPos = viewport._targetActor->_pos;
 		Vector2i halfView = viewport._view->GetSize() / 2;
 
 		// Clamp camera position to level bounds
@@ -1848,7 +1848,7 @@ namespace Jazz2
 	Vector2f LevelHandler::GetCameraPos(Actors::Player* player) const
 	{
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				return viewport->_cameraPos;
 			}
 		}
@@ -1878,7 +1878,7 @@ namespace Jazz2
 				if (maxViewWidth < size.X) {
 					maxViewWidth = (float)size.X;
 				}
-				if (viewport->_targetPlayer == player) {
+				if (viewport->_targetActor == player) {
 					currentViewport = viewport.get();
 				}
 			}
@@ -1901,19 +1901,21 @@ namespace Jazz2
 
 				// Warp all other distant players to this player
 				for (auto& viewport : _assignedViewports) {
-					if (viewport->_targetPlayer != player) {
+					if (viewport->_targetActor != player) {
 						float limit = viewport->_cameraPos.X - (maxViewWidth * 0.6f);
 						if (viewport->_viewBounds.X < limit) {
 							viewport->_viewBounds.W += (viewport->_viewBounds.X - limit);
 							viewport->_viewBounds.X = limit;
 						}
 
-						auto pos = viewport->_targetPlayer->_pos;
+						auto pos = viewport->_targetActor->_pos;
 						if ((pos.X < bounds.X || pos.X >= bounds.X + bounds.W) && (pos - player->_pos).Length() > 100.0f) {
-							viewport->_targetPlayer->WarpToPosition(player->_pos, WarpFlags::SkipWarpIn);
-							if (currentViewport != nullptr) {
-								viewport->_ambientLight = currentViewport->_ambientLight;
-								viewport->_ambientLightTarget = currentViewport->_ambientLightTarget;
+							if (auto* otherPlayer = runtime_cast<Actors::Player>(viewport->_targetActor)) {
+								otherPlayer->WarpToPosition(player->_pos, WarpFlags::SkipWarpIn);
+								if (currentViewport != nullptr) {
+									viewport->_ambientLight = currentViewport->_ambientLight;
+									viewport->_ambientLightTarget = currentViewport->_ambientLightTarget;
+								}
 							}
 						}
 					}
@@ -1925,7 +1927,7 @@ namespace Jazz2
 	void LevelHandler::OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft)
 	{
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				viewport->OverrideCamera(x, y, topLeft);
 			}
 		}
@@ -1934,7 +1936,7 @@ namespace Jazz2
 	void LevelHandler::ShakeCameraView(Actors::Player* player, float duration)
 	{
 		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetPlayer == player) {
+			if (viewport->_targetActor == player) {
 				viewport->ShakeCameraView(duration);
 			}
 		}
@@ -1947,10 +1949,12 @@ namespace Jazz2
 		constexpr float MaxDistance = 800.0f;
 
 		for (auto& viewport : _assignedViewports) {
-			if ((viewport->_targetPlayer->_pos - pos).Length() <= MaxDistance) {
+			if ((viewport->_targetActor->_pos - pos).Length() <= MaxDistance) {
 				viewport->ShakeCameraView(duration);
 
-				PlayerExecuteRumble(viewport->_targetPlayer, "Shake"_s);
+				if (auto* player = runtime_cast<Actors::Player>(viewport->_targetActor)) {
+					PlayerExecuteRumble(player, "Shake"_s);
+				}
 			}
 		}
 	}
