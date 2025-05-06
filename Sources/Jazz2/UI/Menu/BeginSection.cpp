@@ -174,7 +174,7 @@ namespace Jazz2::UI::Menu
 		bool canGrantPermission = false;
 		bool permissionGranted = false;
 #if defined(DEATH_TARGET_ANDROID)
-		if (auto* mainMenu = runtime_cast<MainMenu*>(_root)) {
+		if (auto* mainMenu = runtime_cast<MainMenu>(_root)) {
 			IRootController::Flags flags = mainMenu->_root->GetFlags();
 			canGrantPermission = Backends::AndroidJniHelper::SdkVersion() >= 30 && (flags & IRootController::Flags::HasExternalStoragePermission) != IRootController::Flags::HasExternalStoragePermission;
 			permissionGranted = (flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume;
