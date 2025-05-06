@@ -108,7 +108,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool Doggy::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
 			DecreaseHealth(shotBase->GetStrength(), shotBase);
 
 			if (_health <= 0.0f) {
@@ -117,7 +117,7 @@ namespace Jazz2::Actors::Enemies
 
 			HandleFrozenStateChange(shotBase);
 
-			if (!runtime_cast<Weapons::FreezerShot*>(shotBase)) {
+			if (!runtime_cast<Weapons::FreezerShot>(shotBase)) {
 				if (_attackTime <= 0.0f) {
 					PlaySfx("Attack");
 					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * _attackSpeed;

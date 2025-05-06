@@ -19,6 +19,7 @@
 // Undefine it again after include
 #undef far
 
+#include <Base/TypeInfo.h>
 #include <Containers/SmallVector.h>
 #include <Containers/StaticArray.h>
 #include <Containers/String.h>
@@ -80,6 +81,8 @@ namespace Jazz2::Multiplayer
 	*/
 	class IServerStatusProvider
 	{
+		DEATH_RUNTIME_OBJECT();
+
 	public:
 		/** @brief Returns display name of current level */
 		virtual StringView GetLevelDisplayName() const = 0;

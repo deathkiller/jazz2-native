@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Weapons
 			TryMovement(timeMult / n, params);
 		}
 		if (params.TilesDestroyed > 0) {
-			if (auto* player = runtime_cast<Player*>(_owner)) {
+			if (auto* player = runtime_cast<Player>(_owner.get())) {
 				player->AddScore(params.TilesDestroyed * 50);
 			}
 		}
@@ -152,13 +152,13 @@ namespace Jazz2::Actors::Weapons
 
 	bool ElectroShot::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(other)) {
+		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other.get())) {
 			if (enemyBase->IsInvulnerable() || !enemyBase->CanCollideWithShots) {
 				return false;
 			}
 		}
 
-		return ShotBase::OnHandleCollision(other);
+		return ShotBase::OnHandleCollision(std::move(other));
 	}
 
 	bool ElectroShot::OnPerish(ActorBase* collider)

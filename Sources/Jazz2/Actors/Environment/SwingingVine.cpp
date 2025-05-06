@@ -140,7 +140,7 @@ namespace Jazz2::Actors::Environment
 
 	bool SwingingVine::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* player = runtime_cast<Player*>(other)) {
+		if (auto* player = runtime_cast<Player>(other.get())) {
 			if (player->_springCooldown <= 0.0f) {
 				player->UpdateCarryingObject(this, SuspendType::SwingingVine);
 			}

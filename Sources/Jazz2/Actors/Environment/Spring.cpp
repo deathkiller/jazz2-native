@@ -173,13 +173,13 @@ namespace Jazz2::Actors::Environment
 	{
 		if (_state == State::Frozen) {
 			ActorBase* actorBase = other.get();
-			if (runtime_cast<Weapons::ToasterShot*>(actorBase) || runtime_cast<Weapons::Thunderbolt*>(actorBase) ||
-				runtime_cast<Weapons::ShieldFireShot*>(actorBase)) {
+			if (runtime_cast<Weapons::ToasterShot>(actorBase) || runtime_cast<Weapons::Thunderbolt>(actorBase) ||
+				runtime_cast<Weapons::ShieldFireShot>(actorBase)) {
 				_state = State::Heated;
 				SetState(ActorState::CanBeFrozen, true);
 			}
 		}
 
-		return ActorBase::OnHandleCollision(other);
+		return ActorBase::OnHandleCollision(std::move(other));
 	}
 }

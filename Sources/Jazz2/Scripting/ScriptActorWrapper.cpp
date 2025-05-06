@@ -379,7 +379,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 	bool ScriptActorWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_onHandleCollision != nullptr) {
-			if (auto* otherWrapper = runtime_cast<ScriptActorWrapper*>(other)) {
+			if (auto* otherWrapper = runtime_cast<ScriptActorWrapper>(other.get())) {
 				asIScriptEngine* engine = _obj->GetEngine();
 				asITypeInfo* typeInfo = _levelScripts->GetMainModule()->GetTypeInfoByName(AsClassName);
 				if (typeInfo != nullptr) {
@@ -405,7 +405,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 						return true;
 					}
 				}
-			} else if (auto* player = runtime_cast<Player*>(other)) {
+			} else if (auto* player = runtime_cast<Player>(other.get())) {
 				asIScriptEngine* engine = _obj->GetEngine();
 				asITypeInfo* typeInfo = engine->GetTypeInfoByName("Player");
 				if (typeInfo != nullptr) {
@@ -644,13 +644,13 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 	bool ScriptCollectibleWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* player = runtime_cast<Player*>(other)) {
+		if (auto* player = runtime_cast<Player>(other.get())) {
 			if (OnCollect(player)) {
 				return true;
 			}
 		} else {
-			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase*>(other) ||
-				runtime_cast<Weapons::TNT*>(other) || runtime_cast<Enemies::TurtleShell*>(other));
+			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase>(other.get()) ||
+				runtime_cast<Weapons::TNT*>(other.get()) || runtime_cast<Enemies::TurtleShell*>(other.get()));
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
 				_externalForce.X += speed.X / 2.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
@@ -661,7 +661,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 			}
 		}
 
-		return ScriptActorWrapper::OnHandleCollision(other);
+		return ScriptActorWrapper::OnHandleCollision(std::move(other));
 	}
 
 	bool ScriptCollectibleWrapper::OnCollect(Player* player)

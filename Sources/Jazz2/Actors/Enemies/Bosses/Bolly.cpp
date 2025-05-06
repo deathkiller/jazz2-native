@@ -365,11 +365,11 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::Rocket::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* player = runtime_cast<Player*>(other)) {
+		if (auto* player = runtime_cast<Player>(other.get())) {
 			DecreaseHealth(INT32_MAX);
 		}
 
-		return ActorBase::OnHandleCollision(other);
+		return ActorBase::OnHandleCollision(std::move(other));
 	}
 
 	bool Bolly::Rocket::OnPerish(ActorBase* collider)

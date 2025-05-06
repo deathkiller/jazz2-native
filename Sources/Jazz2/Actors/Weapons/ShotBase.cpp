@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Weapons
 
 	Player* ShotBase::GetOwner()
 	{
-		return runtime_cast<Player*>(_owner);
+		return runtime_cast<Player>(_owner.get());
 	}
 
 	WeaponType ShotBase::GetWeaponType()
@@ -66,7 +66,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool ShotBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(other)) {
+		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other.get())) {
 			if (enemyBase->CanCollideWithShots) {
 				DecreaseHealth(INT32_MAX);
 			}

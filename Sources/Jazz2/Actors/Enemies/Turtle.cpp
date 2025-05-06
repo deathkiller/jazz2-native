@@ -138,12 +138,12 @@ namespace Jazz2::Actors::Enemies
 	{
 		// Animation should be paused only if enemy is frozen
 		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
-		if (auto* player = runtime_cast<Player*>(collider)) {
+		if (auto* player = runtime_cast<Player>(collider)) {
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
-		} else if (runtime_cast<Weapons::ToasterShot*>(collider) || runtime_cast<Weapons::ShieldFireShot*>(collider) ||
-					runtime_cast<Weapons::Thunderbolt*>(collider) || runtime_cast<Solid::PushableBox*>(collider)) {
+		} else if (runtime_cast<Weapons::ToasterShot>(collider) || runtime_cast<Weapons::ShieldFireShot>(collider) ||
+				   runtime_cast<Weapons::Thunderbolt>(collider) || runtime_cast<Solid::PushableBox>(collider)) {
 			shouldDestroy = true;
 		}
 
@@ -229,7 +229,7 @@ namespace Jazz2::Actors::Enemies
 			withdrawAabb.R += Distance;
 
 			_levelHandler->FindCollisionActorsByAABB(this, withdrawAabb, [this, &shouldWithdraw](ActorBase* actor) {
-				if (auto* shot = runtime_cast<Weapons::ShotBase*>(actor)) {
+				if (auto* shot = runtime_cast<Weapons::ShotBase>(actor)) {
 					float xSpeed = shot->GetSpeed().X;
 					float x = shot->GetPos().X;
 					float xSelf = _pos.X;

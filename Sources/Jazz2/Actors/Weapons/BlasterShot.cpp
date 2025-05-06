@@ -74,7 +74,7 @@ namespace Jazz2::Actors::Weapons
 			TryMovement(timeMult / n, params);
 		}
 		if (params.TilesDestroyed > 0) {
-			if (auto* player = runtime_cast<Player*>(_owner)) {
+			if (auto* player = runtime_cast<Player>(_owner.get())) {
 				player->AddScore(params.TilesDestroyed * 50);
 			}
 		}

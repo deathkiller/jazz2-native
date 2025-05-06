@@ -35,7 +35,7 @@ namespace Jazz2::Actors::Solid
 
 		if (_cooldown <= 0.0f) {
 			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 16.0f, [this, timeMult](ActorBase* actor) {
-				if (auto* player = runtime_cast<Player*>(actor)) {
+				if (auto* player = runtime_cast<Player>(actor)) {
 					_cooldown = 16.0f;
 
 					SetTransition(_currentAnimation->State | (AnimState)0x200, true);

@@ -50,14 +50,14 @@ namespace Jazz2::Actors::Weapons
 
 		_renderer.setRotation(angle);
 
-		if (auto* player = runtime_cast<Player*>(owner)) {
+		if (auto* player = runtime_cast<Player>(owner.get())) {
 			_firedUp = player->_wasUpPressed;
 		}
 	}
 
 	void Thunderbolt::OnUpdate(float timeMult)
 	{
-		if (auto* player = runtime_cast<Player*>(_owner)) {
+		if (auto* player = runtime_cast<Player>(_owner.get())) {
 			if (_firedUp != player->_wasUpPressed || IsFacingLeft() != player->IsFacingLeft()) {
 				_hit = true;
 				_strength = 0;
@@ -96,7 +96,7 @@ namespace Jazz2::Actors::Weapons
 			TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::Thunderbolt, _strength };
 			_levelHandler->IsPositionEmpty(this, AABBInner, params);
 			if (params.TilesDestroyed > 0) {
-				if (auto* player = runtime_cast<Player*>(_owner)) {
+				if (auto* player = runtime_cast<Player>(_owner.get())) {
 					player->AddScore(params.TilesDestroyed * 50);
 				}
 			}
@@ -150,7 +150,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool Thunderbolt::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(other)) {
+		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other.get())) {
 			if (enemyBase->CanCollideWithShots) {
 				_hit = true;
 			}

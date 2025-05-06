@@ -443,7 +443,7 @@ namespace Jazz2::Actors::Bosses
 		crouchAabb.R += Distance;
 
 		_levelHandler->FindCollisionActorsByAABB(this, crouchAabb, [this, &shouldCrouch](ActorBase* actor) {
-			if (auto* shot = runtime_cast<Weapons::ShotBase*>(actor)) {
+			if (auto* shot = runtime_cast<Weapons::ShotBase>(actor)) {
 				float xSpeed = shot->GetSpeed().X;
 				float x = shot->GetPos().X;
 				float xSelf = _pos.X;

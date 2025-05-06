@@ -165,7 +165,7 @@ namespace Jazz2::UI::Menu
 		if (type == GameplayEnhancementsItemType::ReforgedGameplay && _isInGame) {
 			return true;
 		} else if (type == GameplayEnhancementsItemType::LedgeClimb && _isInGame) {
-			if (auto* inGameMenu = runtime_cast<InGameMenu*>(_root)) {
+			if (auto* inGameMenu = runtime_cast<InGameMenu>(_root)) {
 				if (!inGameMenu->IsLocalSession()) {
 					return true;
 				}
