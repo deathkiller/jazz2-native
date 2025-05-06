@@ -11,7 +11,7 @@
 #endif
 /** @brief Application version */
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "3.2.0"
+#	define NCINE_VERSION "3.3.0"
 #endif
 /** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)
