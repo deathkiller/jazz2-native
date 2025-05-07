@@ -27,7 +27,7 @@ namespace Jazz2::UI::Multiplayer
 			for (auto& [peer, peerDesc] : *_levelHandler->_networkManager->GetPeers()) {
 				if (peerDesc->RemotePeer && peerDesc->Player && peerDesc->Player->_renderer.isEnabled()) {
 					auto pos = peerDesc->Player->GetPos();
-					DrawStringShadow(peerDesc->PlayerName, pos.X - 4.0f, pos.Y - 42.0f);
+					DrawStringShadow(peerDesc->PlayerName, pos.X, pos.Y - 42.0f);
 				}
 			}
 		} else {
@@ -35,7 +35,7 @@ namespace Jazz2::UI::Multiplayer
 				auto it = _levelHandler->_remoteActors.find(actorId);
 				if (it != _levelHandler->_remoteActors.end() && it->second->_renderer.isEnabled()) {
 					auto pos = it->second->GetPos();
-					DrawStringShadow(playerName, pos.X - 4.0f, pos.Y - 42.0f);
+					DrawStringShadow(playerName, pos.X, pos.Y - 42.0f);
 				}
 			}
 		}
