@@ -145,6 +145,7 @@ namespace nCine
 					*(MutableStringView(infoLogString_).trimmed().end()) = '\0';
 					LOGW("Shader: %s", infoLogString_);
 				}
+				DEATH_ASSERT_BREAK();
 			}
 #endif
 			status_ = Status::CompilationFailed;

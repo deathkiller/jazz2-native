@@ -287,7 +287,6 @@ namespace nCine
 					LOGW("%s", infoLogString_);
 				}
 			}
-			DEATH_ASSERT_BREAK();
 #endif
 			status_ = Status::LinkingFailed;
 			return false;
