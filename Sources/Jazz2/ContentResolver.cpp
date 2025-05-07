@@ -204,9 +204,12 @@ namespace Jazz2
 #	endif
 #	if defined(NCINE_PACKAGED_CONTENT_PATH)
 		// If Content is packaged with binaries, try relative path first, then use standard XDG paths for everything else
+		LOGW("EXEC PATH: %s", fs::GetExecutablePath().data());
 		if (auto executableDir = fs::GetDirectoryName(fs::GetExecutablePath())) {
+			LOGW("EXEC DIR: %s", executableDir.data());
 			_sourcePath = fs::CombinePath(executableDir, "Source/"_s);
 			_cachePath = fs::CombinePath(executableDir, "Cache/"_s);
+			LOGW("EXEC SOURCE DIR: %s", _sourcePath.data());
 		} else {
 			_sourcePath = {};
 			_cachePath = {};
@@ -215,6 +218,7 @@ namespace Jazz2
 		if (!_sourcePath || !_cachePath ||
 			(!fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "Anims.j2a"_s)) &&
 			 !fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "AnimsSw.j2a"_s)))) {
+			LOGW("EXEC DIR FAILED | %s", fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "Anims.j2a"_s)).data());
 			auto localStorage = fs::GetLocalStorage();
 			if (!localStorage.empty()) {
 				auto appData = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE);
