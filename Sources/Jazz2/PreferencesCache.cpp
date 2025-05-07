@@ -130,15 +130,7 @@ namespace Jazz2
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 #	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
-			// If Content is packaged with binaries, try relative path first, then use standard XDG paths for everything else
-			if (auto executableDir = fs::GetDirectoryName(fs::GetExecutablePath())) {
-				_configPath = fs::CombinePath(executableDir, "Jazz2.config"_s);
-				if (!fs::FileExists(_configPath)) {
-					_configPath = fs::CombinePath(fs::GetSavePath(NCINE_LINUX_PACKAGE), "Jazz2.config"_s);
-				}
-			} else {
-				_configPath = fs::CombinePath(fs::GetSavePath(NCINE_LINUX_PACKAGE), "Jazz2.config"_s);
-			}
+			_configPath = fs::CombinePath(fs::GetSavePath(NCINE_LINUX_PACKAGE), "Jazz2.config"_s);
 #	else
 			_configPath = fs::CombinePath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
 #	endif
