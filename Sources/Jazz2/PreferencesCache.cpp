@@ -129,7 +129,7 @@ namespace Jazz2
 			// Save config file next to `Source` directory
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
-#	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH);
+#	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
 			// If Content is packaged with binaries, try relative path first, then use standard XDG paths for everything else
 			if (auto executableDir = fs::GetDirectoryName(fs::GetExecutablePath())) {
 				_configPath = fs::CombinePath(executableDir, "Jazz2.config"_s);
