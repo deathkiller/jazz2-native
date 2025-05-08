@@ -2687,8 +2687,6 @@ namespace Jazz2::Multiplayer
 
 					peerDesc->LastUpdated = now;
 
-					LOGI("POS: %f | %f | %llu", posX, posY, now);
-
 					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
 						remotePlayerOnServer->SyncWithServer(Vector2f(posX, posY), Vector2f(speedX, speedY),
 							(flags & RemotePlayerOnServer::PlayerFlags::IsVisible) != RemotePlayerOnServer::PlayerFlags::None,
@@ -4284,6 +4282,10 @@ namespace Jazz2::Multiplayer
 			player->SetShield(ShieldType::None, 0.0f);
 			player->SetDizzy(0.0f);
 			player->WarpToPosition(spawnPosition, WarpFlags::Default);
+
+			if (auto mpPlayer = runtime_cast<PlayerOnServer>(player)) {
+				mpPlayer->_canTakeDamage = true;
+			}
 		}
 	}
 
