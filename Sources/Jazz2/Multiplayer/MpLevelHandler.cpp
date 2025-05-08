@@ -4793,7 +4793,7 @@ namespace Jazz2::Multiplayer
 				if (!remoteServerId.empty()) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
 						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
-						fs::ToNativeSeparators(path + ".j2l"_s) });
+						fs::ToNativeSeparators(String(path + ".j2l"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
@@ -4811,7 +4811,7 @@ namespace Jazz2::Multiplayer
 				if (!remoteServerId.empty()) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
 						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
-						fs::ToNativeSeparators(path + ".j2t"_s) });
+						fs::ToNativeSeparators(String(path + ".j2t"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
