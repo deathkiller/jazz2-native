@@ -1602,7 +1602,7 @@ msgstr "Mode Marche/Course"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
 msgid "Gamepad Button Labels"
-msgstr "Etiquettes des boutons de la manette"
+msgstr "Étiquettes des boutons de la manette"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:34
 msgid "Gamepad Rumble"
@@ -2317,7 +2317,7 @@ msgstr "Points : %u"
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:182
 #, c-format
 msgid "Game starts in %s"
-msgstr "Le jeu commande dans %s"
+msgstr "Le jeu commence dans %s"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:189
 #, c-format
