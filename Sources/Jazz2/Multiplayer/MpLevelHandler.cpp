@@ -2484,9 +2484,9 @@ namespace Jazz2::Multiplayer
 					}
 
 					const auto& serverConfig = _networkManager->GetServerConfiguration();
-					if (!serverConfig.AllowDownloads) {
+					if (!serverConfig.AllowAssetStreaming) {
 						// Server doesn't allow downloads, kick the client instead
-						_networkManager->Kick(peer, Reason::DownloadsNotAllowed);
+						_networkManager->Kick(peer, Reason::AssetStreamingNotAllowed);
 						return true;
 					}
 					

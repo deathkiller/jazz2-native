@@ -173,7 +173,7 @@ namespace Jazz2::Multiplayer
 		HashMap<String, bool> includedFiles;
 
 		ServerConfiguration serverConfig{};
-		serverConfig.AllowDownloads = /*true*/false;
+		serverConfig.AllowAssetStreaming = true;
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.MinPlayerCount = 1;
@@ -300,9 +300,9 @@ namespace Jazz2::Multiplayer
 					serverConfig.IsPrivate = isPrivate;
 				}
 
-				bool allowDownloads;
-				if (doc["AllowDownloads"].get(allowDownloads) == Json::SUCCESS) {
-					serverConfig.AllowDownloads = allowDownloads;
+				bool allowAssetStreaming;
+				if (doc["AllowAssetStreaming"].get(allowAssetStreaming) == Json::SUCCESS) {
+					serverConfig.AllowAssetStreaming = allowAssetStreaming;
 				}
 				
 				bool requiresDiscordAuth;

@@ -65,7 +65,7 @@ namespace Jazz2::Multiplayer
 		-   @cpp "MinPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Minimum number of players required to start a round
 		-   @cpp "ServerPort" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan UDP port number on which the server runs
 		-   @cpp "IsPrivate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the server is private and hidden in the server list (default is **false**)
-		-   @cpp "AllowDownloads" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether clients are allowed to download assets from the server (default is **true**)
+		-   @cpp "AllowAssetStreaming" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether clients are allowed to download assets from the server (default is **true**)
 		-   @cpp "RequiresDiscordAuth" @ce : @m_span{m-label m-default m-flat} bool @m_endspan If `true`, the server requires Discord authentication (default is **false**)
 		    -   Discord authentication requires a running Discord client
 		    -   Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join
@@ -155,7 +155,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Whether the server is private (i.e. not visible in the server list) */
 		bool IsPrivate;
 		/** @brief Whether clients are allowed to automatically download missing assets from the server */
-		bool AllowDownloads;
+		bool AllowAssetStreaming;
 		/** @brief Whether Discord authentication is required to join the server */
 		bool RequiresDiscordAuth;
 		/** @brief Allowed player types as bitmask of @ref PlayerType */
