@@ -90,12 +90,14 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
+		InitializeRequiredAssets();
+
 		if (_isServer) {
 			// Reserve first 255 indices for players
 			_lastSpawnedActorId = UINT8_MAX;
 
 			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
-				peerDesc->LevelState = PeerLevelState::Unknown;
+				peerDesc->LevelState = PeerLevelState::ValidatingAssets;
 				peerDesc->LastUpdated = 0;
 				if (peerDesc->RemotePeer) {
 					peerDesc->Player = nullptr;
@@ -104,34 +106,12 @@ namespace Jazz2::Multiplayer
 
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
-			std::uint32_t flags = 0;
-			if (_isReforged) {
-				flags |= 0x01;
-			}
-			if (PreferencesCache::EnableLedgeClimb) {
-				flags |= 0x02;
-			}
-			if (serverConfig.Elimination) {
-				flags |= 0x04;
-			}
-
-			MemoryStream packet(28 + _levelName.size());
-			packet.WriteVariableUint32(flags);
-			packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
-			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
-			packet.WriteValue<std::uint8_t>((std::uint8_t)levelInit.LastExitType);
-			packet.WriteVariableUint32(_levelName.size());
-			packet.Write(_levelName.data(), _levelName.size());
-			packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
-			packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
-			packet.WriteVariableUint32(serverConfig.TotalKills);
-			packet.WriteVariableUint32(serverConfig.TotalLaps);
-			packet.WriteVariableUint32(serverConfig.TotalTreasureCollected);
-
+			MemoryStream packet;
+			InitializeValidateAssetsPacket(packet);
 			_networkManager->SendTo([this](const Peer& peer) {
 				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 				return (peerDesc && peerDesc->IsAuthenticated);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ValidateAssets, packet);
 		}
 
 		auto& resolver = ContentResolver::Get();
@@ -2335,6 +2315,8 @@ namespace Jazz2::Multiplayer
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 
 					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
+						peerDesc->LevelState = PeerLevelState::ValidatingAssets;
+
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", peerDesc->PlayerName.data()));
 
 						MemoryStream packet(10 + peerDesc->PlayerName.size());
@@ -2348,38 +2330,16 @@ namespace Jazz2::Multiplayer
 						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
 					}
 
-					std::uint32_t flags = 0;
-					if (_isReforged) {
-						flags |= 0x01;
-					}
-					if (PreferencesCache::EnableLedgeClimb) {
-						flags |= 0x02;
-					}
-					if (serverConfig.Elimination) {
-						flags |= 0x04;
-					}
-
-					MemoryStream packet(28 + _levelName.size());
-					packet.WriteVariableUint32(flags);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)ExitType::None);
-					packet.WriteVariableUint32(_levelName.size());
-					packet.Write(_levelName.data(), _levelName.size());
-					packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
-					packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
-					packet.WriteVariableUint32(serverConfig.TotalKills);
-					packet.WriteVariableUint32(serverConfig.TotalLaps);
-					packet.WriteVariableUint32(serverConfig.TotalTreasureCollected);
-
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
+					MemoryStream packet;
+					InitializeValidateAssetsPacket(packet);
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ValidateAssets, packet);
 					return true;
 				}
 				case ClientPacketType::LevelReady: {
 					MemoryStream packet(data);
 					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 
-					LOGD("[MP] ClientPacketType::LevelReady [%08llx] - flags: 0x%02x, ", (std::uint64_t)peer._enet, flags);
+					LOGD("[MP] ClientPacketType::LevelReady [%08llx] - flags: 0x%02x", (std::uint64_t)peer._enet, flags);
 
 					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 						bool enableLedgeClimb = (flags & 0x02) != 0;
@@ -2456,83 +2416,138 @@ namespace Jazz2::Multiplayer
 					});
 					return true;
 				}
-				case ClientPacketType::RequestLevelAssets: {
+				case ClientPacketType::ValidateAssetsResponse: {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					if (peerDesc->LevelState != PeerLevelState::ValidatingAssets) {
+						// Packet received when the peer is in different state
+						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [%08llx] - invalid state", (std::uint64_t)peer._enet);
+						return true;
+					}
+
+					peerDesc->LevelState = PeerLevelState::StreamingMissingAssets;
+
+					bool success = true;
+					SmallVector<RequiredAsset*> missingAssets;
+
+					MemoryStream packet(data);
+					std::uint32_t assetCount = packet.ReadVariableUint32();
+
+					LOGD("[MP] ClientPacketType::ValidateAssetsResponse [%08llx] - %u/%u assets", (std::uint64_t)peer._enet, assetCount, (std::uint32_t)_requiredAssets.size());
+
+					if (assetCount == _requiredAssets.size()) {
+						for (std::uint32_t i = 0; i < assetCount; i++) {
+							AssetType type = (AssetType)packet.ReadValue<std::uint8_t>();
+							std::uint32_t pathLength = packet.ReadVariableUint32();
+							String path{NoInit, pathLength};
+							packet.Read(path.data(), pathLength);
+							std::int64_t size = packet.ReadVariableInt64();
+							std::uint32_t crc32 = packet.ReadValue<std::uint32_t>();
+
+							bool found = false;
+							for (std::size_t j = 0; j < _requiredAssets.size(); j++) {
+								if (type == _requiredAssets[j].Type && path == _requiredAssets[j].Path) {
+									found = true;
+									if (size != _requiredAssets[j].Size || crc32 != _requiredAssets[j].Crc32) {
+										LOGD("[MP] ClientPacketType::ValidateAssetsResponse [%08llx] - \"%s\":%08x is missing",
+											(std::uint64_t)peer._enet, _requiredAssets[j].Path.data(), _requiredAssets[j].Crc32);
+										missingAssets.push_back(&_requiredAssets[j]);
+									}
+									break;
+								}
+							}
+
+							if (!found) {
+								// This asset wasn't requested, something went wrong
+								success = false;
+							}
+						}
+					} else {
+						// Asset count mismatch, something went wrong
+						success = false;
+					}
+
+					if (!success) {
+						// Peer response is corrupted
+						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [%08llx] - malformed packet", (std::uint64_t)peer._enet);
+						_networkManager->Kick(peer, Reason::InvalidParameter);
+						return true;
+					}
+
+					LOGI("[MP] ClientPacketType::ValidateAssetsResponse [%08llx] - %u missing assets", (std::uint64_t)peer._enet, (std::uint32_t)missingAssets.size());
+
+					if (missingAssets.empty()) {
+						// All assets are already ready
+						MemoryStream packet;
+						InitializeLoadLevelPacket(packet);
+						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
+						return true;
+					}
+
 					const auto& serverConfig = _networkManager->GetServerConfiguration();
-					//if (!serverConfig.AllowDownloads) {
+					if (!serverConfig.AllowDownloads) {
 						// Server doesn't allow downloads, kick the client instead
 						_networkManager->Kick(peer, Reason::DownloadsNotAllowed);
 						return true;
-					//}
-
-					// TODO: Use AssetChunk packet instead
-					/*std::uint32_t flags = 0;
-					if (_isReforged) {
-						flags |= 0x01;
 					}
-					if (PreferencesCache::EnableLedgeClimb) {
-						flags |= 0x02;
-					}
-					if (serverConfig.Elimination) {
-						flags |= 0x04;
-					}
+					
+					Thread streamingThread([_this = runtime_cast<MpLevelHandler>(shared_from_this()), peer, peerDesc = std::move(peerDesc), missingAssets = std::move(missingAssets)]() {
+						LOGI("Started streaming %u assets to peer [%08llx]", (std::uint32_t)missingAssets.size(), (std::uint64_t)peer._enet);
+						TimeStamp begin = TimeStamp::now();
 
-					MemoryStream packet(28 + _levelName.size());
-					packet.WriteVariableUint32(flags);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)ExitType::None);
-					packet.WriteVariableUint32(_levelName.size());
-					packet.Write(_levelName.data(), _levelName.size());
-					packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
-					packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
-					packet.WriteVariableUint32(serverConfig.TotalKills);
-					packet.WriteVariableUint32(serverConfig.TotalLaps);
-					packet.WriteVariableUint32(serverConfig.TotalTreasureCollected);
+						for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
+							if (!peerDesc->IsAuthenticated || _this->_ignorePackets) {
+								// Stop streaming if peer disconnects or handler has changed
+								break;
+							}
 
-					auto& resolver = ContentResolver::Get();
-					auto levelNameNormalized = fs::ToNativeSeparators(_levelName);
-					auto levelFullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(levelNameNormalized + ".j2l"_s) });
-					if (!fs::IsReadableFile(levelFullPath)) {
-						levelFullPath = fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, String(levelNameNormalized + ".j2l"_s) });
-					}
-					auto s = fs::Open(levelFullPath, FileAccess::Read);
-					if (!s->IsValid()) {
-						_networkManager->Kick(peer, Reason::ServerNotReady);
-						return true;
-					}
+							const RequiredAsset& asset = *missingAssets[i];
 
-					std::int64_t levelFileSize = s->GetSize();
-					packet.WriteVariableInt64(levelFileSize);
+							MemoryStream packetBegin(14 + asset.Path.size());
+							packetBegin.WriteValue<std::uint8_t>(1);	// Begin
+							packetBegin.WriteValue<std::uint8_t>((std::uint8_t)asset.Type);
+							packetBegin.WriteVariableUint32((std::uint32_t)asset.Path.size());
+							packetBegin.Write(asset.Path.data(), (std::int64_t)asset.Path.size());
+							packetBegin.WriteVariableInt64(asset.Size);
+							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetBegin);
 
-					DEATH_UNUSED std::int64_t bytesWritten = packet.FetchFromStream(*s, levelFileSize);
-					DEATH_DEBUG_ASSERT(bytesWritten == levelFileSize);
+							auto s = fs::Open(asset.FullPath, FileAccess::Read);
+							if (s->IsValid()) {
+								char buffer[8192];
+								while (true) {
+									if (!peerDesc->IsAuthenticated || _this->_ignorePackets) {
+										// Stop streaming if peer disconnects or handler has changed
+										break;
+									}
 
-					auto usedTileSetPaths = _tileMap->GetUsedTileSetPaths();
-					packet.WriteVariableUint32((std::uint32_t)usedTileSetPaths.size());
-					for (const auto& tileSetPath : usedTileSetPaths) {
-						auto tileSetFullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(tileSetPath + ".j2t"_s) });
-						if (!fs::IsReadableFile(tileSetFullPath)) {
-							tileSetFullPath = fs::CombinePath({ resolver.GetCachePath(), "Tilesets"_s, String(tileSetPath + ".j2t"_s) });
-						}
-						auto s = fs::Open(tileSetFullPath, FileAccess::Read);
-						if (!s->IsValid()) {
-							_networkManager->Kick(peer, Reason::ServerNotReady);
-							return true;
+									std::int64_t bytesRead = s->Read(buffer, sizeof(buffer));
+									if (bytesRead <= 0) {
+										break;
+									}
+
+									MemoryStream packetChunk(9 + bytesRead);
+									packetChunk.WriteValue<std::uint8_t>(2);	// Chunk
+									packetChunk.WriteVariableInt64(bytesRead);
+									packetChunk.Write(buffer, bytesRead);
+									_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetChunk);
+								}
+							}
+
+							MemoryStream packetEnd(1);
+							packetEnd.WriteValue<std::uint8_t>(3);	// End
+							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetEnd);
 						}
 
-						packet.WriteVariableUint32((std::uint32_t)tileSetPath.size());
-						packet.Write(tileSetPath.data(), (std::int64_t)tileSetPath.size());
+						LOGI("Finished streaming %u assets to peer [%08llx] - took %.1f ms",
+							(std::uint32_t)missingAssets.size(), (std::uint64_t)peer._enet, begin.millisecondsSince());
 
-						std::int64_t tileSetFileSize = s->GetSize();
-						packet.WriteVariableInt64(tileSetFileSize);
-						DEATH_UNUSED std::int64_t bytesWritten = packet.FetchFromStream(*s, tileSetFileSize);
-						DEATH_DEBUG_ASSERT(bytesWritten == tileSetFileSize);
-					}
+						if (peerDesc->IsAuthenticated && !_this->_ignorePackets) {
+							MemoryStream packet;
+							_this->InitializeLoadLevelPacket(packet);
+							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
+						}
+					});
 
-					LOGI("[MP] ClientPacketType::RequestLevelAssets [%08llx] - sending assets (%u bytes)", (std::uint64_t)peer._enet, (std::uint32_t)packet.GetSize());
-
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
-					return true;*/
+					return true;
 				}
 				case ClientPacketType::PlayerReady: {
 					MemoryStream packet(data);
@@ -3711,6 +3726,34 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::InitializeRequiredAssets()
+	{
+		_requiredAssets.clear();
+
+		auto levelFullPath = GetAssetFullPath(AssetType::Level, _levelName);
+		auto s = fs::Open(levelFullPath, FileAccess::Read);
+		if (s->IsValid()) {
+			_requiredAssets.emplace_back(AssetType::Level, _levelName, levelFullPath, s->GetSize(), nCine::crc32(*s));
+		}
+
+		auto usedTileSetPaths = _tileMap->GetUsedTileSetPaths();
+		for (const auto& tileSetPath : usedTileSetPaths) {
+			auto tileSetFullPath = GetAssetFullPath(AssetType::TileSet, tileSetPath);
+			auto s = fs::Open(tileSetFullPath, FileAccess::Read);
+			if (s->IsValid()) {
+				_requiredAssets.emplace_back(AssetType::TileSet, tileSetPath, tileSetFullPath, s->GetSize(), nCine::crc32(*s));
+			}
+		}
+
+		if (!_musicDefaultPath.empty()) {
+			auto musicFullPath = GetAssetFullPath(AssetType::Music, _musicDefaultPath);
+			auto s = fs::Open(musicFullPath, FileAccess::Read);
+			if (s->IsValid()) {
+				_requiredAssets.emplace_back(AssetType::Music, _musicDefaultPath, musicFullPath, s->GetSize(), nCine::crc32(*s));
+			}
+		}
+	}
+
 	void MpLevelHandler::SynchronizePeers()
 	{
 		for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
@@ -4658,6 +4701,48 @@ namespace Jazz2::Multiplayer
 				gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt);
 	}
 
+	void MpLevelHandler::InitializeValidateAssetsPacket(MemoryStream& packet)
+	{
+		packet.ReserveCapacity(4 + _requiredAssets.size() * 64);
+		packet.WriteVariableUint32((std::uint32_t)_requiredAssets.size());
+
+		for (std::uint32_t i = 0; i < (std::uint32_t)_requiredAssets.size(); i++) {
+			const auto& asset = _requiredAssets[i];
+			packet.WriteValue<std::uint8_t>((std::uint8_t)asset.Type);
+			packet.WriteVariableUint32((std::uint32_t)asset.Path.size());
+			packet.Write(asset.Path.data(), (std::int64_t)asset.Path.size());
+		}
+	}
+
+	void MpLevelHandler::InitializeLoadLevelPacket(MemoryStream& packet)
+	{
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		std::uint32_t flags = 0;
+		if (_isReforged) {
+			flags |= 0x01;
+		}
+		if (PreferencesCache::EnableLedgeClimb) {
+			flags |= 0x02;
+		}
+		if (serverConfig.Elimination) {
+			flags |= 0x04;
+		}
+
+		packet.ReserveCapacity(28 + _levelName.size());
+		packet.WriteVariableUint32(flags);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)/*levelInit.LastExitType*/0);	// TODO: LastExitType
+		packet.WriteVariableUint32(_levelName.size());
+		packet.Write(_levelName.data(), _levelName.size());
+		packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
+		packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
+		packet.WriteVariableUint32(serverConfig.TotalKills);
+		packet.WriteVariableUint32(serverConfig.TotalLaps);
+		packet.WriteVariableUint32(serverConfig.TotalTreasureCollected);
+	}
+
 	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor)
 	{
 		String metadataPath = fs::FromNativeSeparators(actor->_metadata->Path);
@@ -4695,6 +4780,73 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
 		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetRendererType());
+	}
+
+	String MpLevelHandler::GetAssetFullPath(AssetType type, StringView path, StringView remoteServerId, bool forWrite)
+	{
+		const auto& resolver = ContentResolver::Get();
+		auto pathNormalized = fs::ToNativeSeparators(path);
+
+		switch (type) {
+			case AssetType::Level: {
+				String fullPath;
+				if (!remoteServerId.empty()) {
+					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
+						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
+						fs::ToNativeSeparators(path + ".j2l"_s) });
+				}
+				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+					if (!fs::IsReadableFile(fullPath)) {
+						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+						if (!fs::IsReadableFile(fullPath)) {
+							fullPath = {};
+						}
+					}
+				}
+				return fullPath;
+			}
+			case AssetType::TileSet: {
+				String fullPath;
+				if (!remoteServerId.empty()) {
+					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
+						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
+						fs::ToNativeSeparators(path + ".j2t"_s) });
+				}
+				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
+					if (!fs::IsReadableFile(fullPath)) {
+						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
+						if (!fs::IsReadableFile(fullPath)) {
+							fullPath = {};
+						}
+					}
+				}
+				return fullPath;
+			}
+			case AssetType::Music: {
+				String fullPath;
+				if (!remoteServerId.empty()) {
+					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
+						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
+						fs::ToNativeSeparators(path) });
+				}
+				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });
+					if (!fs::IsReadableFile(fullPath)) {
+						// "Source" directory must be case in-sensitive
+						fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path));
+						if (!fs::IsReadableFile(fullPath)) {
+							fullPath = {};
+						}
+					}
+				}
+				return fullPath;
+			}
+			default: {
+				return {};
+			}
+		}
 	}
 
 	/*void MpLevelHandler::UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult)

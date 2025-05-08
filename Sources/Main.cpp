@@ -151,6 +151,7 @@ private:
 	String _newestVersion;
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
+	std::unique_ptr<Stream> _streamedAsset;
 #endif
 
 	void OnBeginInitialize();
@@ -457,6 +458,7 @@ void GameEventHandler::OnShutdown()
 	if (_networkManager != nullptr) {
 		_networkManager->Dispose();
 		_networkManager = nullptr;
+		_streamedAsset = nullptr;
 	}
 #endif
 
@@ -576,6 +578,7 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 		if (_networkManager != nullptr) {
 			_networkManager->Dispose();
 			_networkManager = nullptr;
+			_streamedAsset = nullptr;
 		}
 #endif
 		InGameConsole::Clear();
@@ -607,6 +610,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 				_networkManager->Dispose();
 				_networkManager = nullptr;
+				_streamedAsset = nullptr;
 			}
 #endif
 		} else if (levelName == ":end"_s) {
@@ -638,6 +642,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 						_networkManager->Dispose();
 						_networkManager = nullptr;
+						_streamedAsset = nullptr;
 					}
 #endif
 				}
@@ -650,6 +655,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 					_networkManager->Dispose();
 					_networkManager = nullptr;
+					_streamedAsset = nullptr;
 				}
 #endif
 			}
@@ -697,6 +703,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 						_networkManager->Dispose();
 						_networkManager = nullptr;
+						_streamedAsset = nullptr;
 					}
 #endif
 				}
@@ -1032,6 +1039,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			if (_networkManager != nullptr) {
 				_networkManager->Dispose();
 				_networkManager = nullptr;
+				_streamedAsset = nullptr;
 			}
 #endif
 			InGameConsole::Clear();
@@ -1181,6 +1189,86 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				_networkManager->RemoteServerID = NetworkManager::UuidToString(uuid);
 				return;
 			}
+			case ServerPacketType::ValidateAssets: {
+				MemoryStream packet(data);
+				std::uint32_t assetCount = packet.ReadVariableUint32();
+
+				LOGD("[MP] ServerPacketType::ValidateAssets (%u assets)", assetCount);
+
+				MemoryStream packetOut(8 + assetCount * 64);
+				packetOut.WriteVariableUint32(assetCount);
+				for (std::uint32_t i = 0; i < assetCount; i++) {
+					MpLevelHandler::AssetType type = (MpLevelHandler::AssetType)packet.ReadValue<std::uint8_t>();
+					std::uint32_t pathLength = packet.ReadVariableUint32();
+					String path{NoInit, pathLength};
+					packet.Read(path.data(), pathLength);
+
+					packetOut.WriteValue<std::uint8_t>((std::uint8_t)type);
+					packetOut.WriteVariableUint32((std::uint32_t)path.size());
+					packetOut.Write(path.data(), (std::int64_t)path.size());
+
+					auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->RemoteServerID);
+					if (!fullPath.empty()) {
+						auto s = fs::Open(fullPath, FileAccess::Read);
+
+						packetOut.WriteVariableInt64(s->GetSize());
+						packetOut.WriteValue<std::uint32_t>(nCine::crc32(*s));
+					} else {
+						packetOut.WriteVariableInt64(0);
+						packetOut.WriteValue<std::uint32_t>(0);
+					}
+				}
+
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::ValidateAssetsResponse, packetOut);
+				return;
+			}
+			case ServerPacketType::StreamAsset: {
+				MemoryStream packet(data);
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+
+				switch (flags & 0x0f) {
+					case 1: { // Begin
+						MpLevelHandler::AssetType type = (MpLevelHandler::AssetType)packet.ReadValue<std::uint8_t>();
+						std::uint32_t pathLength = packet.ReadVariableUint32();
+						String path{NoInit, pathLength};
+						packet.Read(path.data(), pathLength);
+						std::int64_t size = packet.ReadVariableInt64();
+
+						LOGI("[MP] Downloading asset \"%s\" (%u) with %lli bytes", path.data(), (std::uint8_t)type, size);
+
+						auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->RemoteServerID, true);
+						if (!fullPath.empty()) {
+							fs::CreateDirectories(fs::GetDirectoryName(fullPath));
+
+							_streamedAsset = fs::Open(fullPath, FileAccess::Write);
+							if (_streamedAsset->IsValid()) {
+								break;
+							}
+						}
+
+						LOGE("[MP] Failed to create asset \"%s\"", path.data());
+						break;
+					}
+					case 2: { // Chunk
+						if (_streamedAsset->IsValid()) {
+							std::int64_t size = packet.ReadVariableInt64();
+							if (const std::uint8_t* ptr = packet.GetCurrentPointer(size)) {
+								_streamedAsset->Write(ptr, size);
+							}
+						}
+						break;
+					}
+					case 3: { // End
+						_streamedAsset = nullptr;
+						break;
+					}
+					default: {
+						LOGD("[MP] ServerPacketType::StreamAsset - unsupported flags (0x%02x)", flags);
+						break;
+					}
+				}
+				return;
+			}
 			case ServerPacketType::LoadLevel: {
 				MemoryStream packet(data);
 				std::uint32_t flags = packet.ReadVariableUint32();
@@ -1195,38 +1283,6 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t totalKills = packet.ReadVariableUint32();
 				std::uint32_t totalLaps = packet.ReadVariableUint32();
 				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
-
-				// TODO: Use AssetChunk packet instead
-				/*if (containsLevelAssets) {
-					auto& resolver = ContentResolver::Get();
-
-					String downloadsPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s, StringUtils::replaceAll(_networkManager->RemoteServerID, ":"_s, ""_s) });
-					String levelTargetPath = fs::CombinePath({ downloadsPath, String(levelName + ".j2l"_s) });
-					fs::CreateDirectories(fs::GetDirectoryName(levelTargetPath));
-
-					std::int64_t levelFileSize = packet.ReadVariableInt64();
-					auto s = fs::Open(levelTargetPath, FileAccess::Write);
-					if (s->IsValid()) {		
-						s->Write(packet.GetCurrentPointer(levelFileSize), levelFileSize);
-					} else {
-						packet.Seek(levelFileSize, SeekOrigin::Current);
-					}
-
-					std::uint32_t tileSetCount = packet.ReadVariableUint32();
-					for (std::uint32_t i = 0; i < tileSetCount; ++i) {
-						std::uint32_t tileSetNameLength = packet.ReadVariableUint32();
-						String tileSetName{NoInit, tileSetNameLength};
-						packet.Read(tileSetName.data(), tileSetNameLength);
-						std::int64_t tileSetFileSize = packet.ReadVariableInt64();
-
-						auto s = fs::Open(fs::CombinePath({ downloadsPath, String(tileSetName + ".j2t"_s) }), FileAccess::Write);
-						if (s->IsValid()) {
-							s->Write(packet.GetCurrentPointer(tileSetFileSize), tileSetFileSize);
-						} else {
-							packet.Seek(tileSetFileSize, SeekOrigin::Current);
-						}
-					}
-				}*/
 
 				LOGI("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: \"%s\"", flags, (std::uint32_t)gameMode, levelName.data());
 
@@ -1256,10 +1312,24 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						return;
 					}
 
-					// Level failed to initialize, but probably some assets are missing, try to request them from the server
-					MemoryStream packet(1);
-					packet.WriteValue<std::uint8_t>(0);	// Reserved
-					_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::RequestLevelAssets, packet);
+					// Level failed to initialize
+					if (_networkManager != nullptr) {
+						_networkManager->Dispose();
+						_networkManager = nullptr;
+					}
+
+					Menu::MainMenu* mainMenu;
+					if (mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
+						if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
+							mainMenu->Reset();
+						}
+					} else {
+						auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
+						mainMenu = newHandler.get();
+						SetStateHandler(std::move(newHandler));
+					}
+
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"%s\".\nPlease download the required files and try it again.", levelInit.LevelName.data()), true);
 				});
 				break;
 			}

@@ -37,6 +37,8 @@ namespace Jazz2::Multiplayer
 
 	NetworkManager::~NetworkManager()
 	{
+		auto& resolver = ContentResolver::Get();
+		resolver.OverridePathHandler(nullptr);
 	}
 
 	void NetworkManager::CreateClient(INetworkHandler* handler, StringView endpoint, std::uint16_t defaultPort, std::uint32_t clientData)
@@ -44,6 +46,12 @@ namespace Jazz2::Multiplayer
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>();
 		RemoteServerID = {};
+
+		auto& resolver = ContentResolver::Get();
+		resolver.OverridePathHandler([this](StringView path) {
+			return OnOverrideContentPath(path);
+		});
+
 		NetworkManagerBase::CreateClient(handler, endpoint, defaultPort, clientData);
 	}
 
@@ -187,6 +195,22 @@ namespace Jazz2::Multiplayer
 		VerifyServerConfiguration(serverConfig);
 
 		return serverConfig;
+	}
+
+	String NetworkManager::OnOverrideContentPath(StringView path)
+	{
+		auto& resolver = ContentResolver::Get();
+
+		String fullPath = fs::FindPathCaseInsensitive(
+			fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
+				StringUtils::replaceAll(RemoteServerID, ":"_s, ""_s),
+				fs::ToNativeSeparators(path) }));
+		if (!fs::IsReadableFile(fullPath)) {
+			return {};
+		}
+
+		LOGW("[MP] Overriding path \"%s\" to \"%s\"", path.data(), fullPath.data());
+		return fullPath;
 	}
 
 	void NetworkManager::FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level)

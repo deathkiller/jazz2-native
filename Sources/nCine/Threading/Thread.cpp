@@ -300,11 +300,11 @@ namespace nCine
 #endif
 	}
 
-	void Thread::Run(ThreadFuncDelegate threadFunc, void* threadArg)
+	bool Thread::Run(ThreadFuncDelegate threadFunc, void* threadArg)
 	{
 		if (_sharedBlock != nullptr) {
 			LOGW("Thread %u is already running", _sharedBlock->_handle);
-			return;
+			return false;
 		}
 
 		_sharedBlock = new SharedBlock();
@@ -318,6 +318,7 @@ namespace nCine
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
 			FATAL_MSG("_beginthreadex() failed with error 0x%08x", error);
+			return false;
 		}
 #else
 		const int error = pthread_create(&_sharedBlock->_handle, nullptr, Thread::Process, _sharedBlock);
@@ -325,8 +326,11 @@ namespace nCine
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
 			FATAL_MSG("pthread_create() failed with error %i", error);
+			return false;
 		}
 #endif
+
+		return true;
 	}
 
 	bool Thread::Join()
@@ -565,7 +569,9 @@ namespace nCine
 		threadFunc(threadArg);
 
 #if defined(DEATH_TARGET_WINDOWS)
-		_endthreadex(0);
+#	if defined(DEATH_TARGET_MSVC)
+		_Cnd_do_broadcast_at_thread_exit();
+#	endif
 		return 0;
 #else
 		return nullptr;

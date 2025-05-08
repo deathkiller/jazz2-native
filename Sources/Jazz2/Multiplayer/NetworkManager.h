@@ -100,6 +100,8 @@ namespace Jazz2::Multiplayer
 		HashMap<Peer, std::shared_ptr<PeerDescriptor>> _peerDesc;
 		Spinlock _lock;
 
+		String OnOverrideContentPath(StringView path);
+
 		static void FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level);
 		static void VerifyServerConfiguration(ServerConfiguration& serverConfig);
 	};

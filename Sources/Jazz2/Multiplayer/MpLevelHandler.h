@@ -63,6 +63,15 @@ namespace Jazz2::Multiplayer
 			Ended					/**< Round ended */
 		};
 
+		/** @brief Asset type */
+		enum class AssetType {
+			Unknown,
+			Level,
+			TileSet,
+			Music,
+			Script
+		};
+
 		MpLevelHandler(IRootController* root, NetworkManager* networkManager, LevelState levelState, bool enableLedgeClimb);
 		~MpLevelHandler() override;
 
@@ -151,6 +160,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Called when a packet is received, see @ref INetworkHandler */
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 
+		/** @brief Returns full path of the specified asset */
+		static String GetAssetFullPath(AssetType type, StringView path, StringView remoteServerId = {}, bool forWrite = false);
+
 	protected:
 		void AttachComponents(LevelDescriptor&& descriptor) override;
 		std::unique_ptr<UI::HUD> CreateHUD() override;
@@ -228,6 +240,17 @@ namespace Jazz2::Multiplayer
 			PendingSfx(Actors::ActorBase* actor, String identifier, std::uint16_t gain, std::uint16_t pitch)
 				: Actor(actor), Identifier(std::move(identifier)), Gain(gain), Pitch(pitch) {}
 		};
+
+		struct RequiredAsset {
+			AssetType Type;
+			std::uint32_t Crc32;
+			String Path;
+			String FullPath;
+			std::int64_t Size;
+
+			RequiredAsset(AssetType type, StringView path, StringView fullPath, std::int64_t size, std::uint32_t crc32)
+				: Type(type), Crc32(crc32), FullPath(fullPath), Path(path), Size(size) {}
+		};
 #endif
 
 		//static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
@@ -259,6 +282,8 @@ namespace Jazz2::Multiplayer
 		Threading::Spinlock _lock;
 		float _recalcPositionInRoundTime;
 
+		SmallVector<RequiredAsset, 0> _requiredAssets;
+
 #if defined(DEATH_DEBUG)
 		std::int32_t _debugAverageUpdatePacketSize;
 #endif
@@ -266,6 +291,7 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<UI::Multiplayer::MpInGameCanvasLayer> _inGameCanvasLayer;
 		std::unique_ptr<UI::Multiplayer::MpInGameLobby> _inGameLobby;
 
+		void InitializeRequiredAssets();
 		void SynchronizePeers();
 		std::uint32_t FindFreeActorId();
 		std::uint8_t FindFreePlayerId();
@@ -291,6 +317,8 @@ namespace Jazz2::Multiplayer
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 		static bool PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode);
+		void InitializeValidateAssetsPacket(MemoryStream& packet);
+		void InitializeLoadLevelPacket(MemoryStream& packet);
 		static void InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor);
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)

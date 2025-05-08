@@ -24,7 +24,7 @@ namespace Jazz2::Multiplayer
 		Auth = 10,
 		LevelReady,
 		ChatMessage,
-		RequestLevelAssets,
+		ValidateAssetsResponse,
 
 		PlayerReady = 30,
 		PlayerUpdate,
@@ -41,8 +41,9 @@ namespace Jazz2::Multiplayer
 		Reserved,
 
 		AuthResponse = 70,
-		PeerSetProperty = 71,
-		AssetChunk = 72,			// TODO
+		PeerSetProperty,
+		ValidateAssets,
+		StreamAsset,
 
 		LoadLevel = 80,
 		LevelSetProperty,

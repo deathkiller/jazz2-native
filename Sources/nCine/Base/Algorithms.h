@@ -9,6 +9,7 @@
 #include <Containers/ArrayView.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
+#include <IO/Stream.h>
 
 using namespace Death;
 
@@ -381,4 +382,9 @@ namespace nCine
 
 		return (patch & 0xFFFFFFFFULL) | ((minor & 0xFFFFULL) << 32) | ((major & 0xFFFFULL) << 48);
 	}
+
+#if defined(WITH_ZLIB)
+	std::uint32_t crc32(Containers::ArrayView<std::uint8_t> data);
+	std::uint32_t crc32(IO::Stream& stream);
+#endif
 }
