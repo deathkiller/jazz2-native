@@ -2,6 +2,7 @@
 
 #include <CommonWindows.h>
 
+#include <functional>
 #include <memory>
 #include <tuple>
 #include <type_traits>
