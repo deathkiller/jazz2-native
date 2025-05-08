@@ -28,11 +28,6 @@ namespace Jazz2::Actors::Multiplayer
 		async_return async_await PlayerOnServer::OnActivatedAsync(details);
 	}
 
-	bool RemotePlayerOnServer::OnPerish(ActorBase* collider)
-	{
-		return PlayerOnServer::OnPerish(collider);
-	}
-
 	void RemotePlayerOnServer::OnUpdate(float timeMult)
 	{
 		Clock& c = nCine::clock();
@@ -145,6 +140,20 @@ namespace Jazz2::Actors::Multiplayer
 		// TODO: Set actual pos and speed to the newest value
 		_pos = pos;
 		_speed = speed;
+	}
+
+	void RemotePlayerOnServer::ForceResyncWithServer(Vector2f pos, Vector2f speed)
+	{
+		Clock& c = nCine::clock();
+		std::int64_t now = c.now() * 1000 / c.frequency();
+
+		_pos = pos;
+		_speed = speed;
+
+		for (std::size_t i = 0; i < arraySize(_stateBuffer); i++) {
+			_stateBuffer[i].Time = now;
+			_stateBuffer[i].Pos = pos;
+		}
 	}
 
 	void RemotePlayerOnServer::OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)

@@ -284,7 +284,6 @@ namespace Jazz2::Multiplayer
 							WarpAllPlayersToStart();
 							ResetAllPlayerStats();
 							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
-							// TODO: Respawn all events and tilemap
 						} else {
 							_levelState = LevelState::WaitingForMinPlayers;
 							_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
@@ -304,7 +303,6 @@ namespace Jazz2::Multiplayer
 							ResetAllPlayerStats();
 							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 							SendLevelStateToAllPlayers();
-							// TODO: Respawn all events and tilemap
 						}
 					}
 					break;
@@ -1017,6 +1015,9 @@ namespace Jazz2::Multiplayer
 
 			if (_levelState != LevelState::Running) {
 				if (peerDesc->RemotePeer) {
+					peerDesc->LastUpdated = UINT64_MAX;
+					mpPlayer->_canTakeDamage = false;
+
 					MemoryStream packet2(12);
 					packet2.WriteVariableUint32(mpPlayer->_playerIndex);
 					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
@@ -1031,6 +1032,9 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (canRespawn && peerDesc->RemotePeer) {
+				peerDesc->LastUpdated = UINT64_MAX;
+				mpPlayer->_canTakeDamage = false;
+
 				MemoryStream packet2(12);
 				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
@@ -1045,6 +1049,20 @@ namespace Jazz2::Multiplayer
 			auto* mpPlayer = static_cast<RemotablePlayer*>(player);
 			if (mpPlayer->RespawnPending) {
 				mpPlayer->RespawnPending = false;
+				player->_checkpointPos = mpPlayer->RespawnPos;
+
+				Clock& c = nCine::clock();
+				std::uint64_t now = c.now() * 1000 / c.frequency();
+
+				MemoryStream packetAck(24);
+				packetAck.WriteVariableUint32(_lastSpawnedActorId);
+				packetAck.WriteVariableUint64(now);
+				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.X * 512.0f));
+				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.Y * 512.0f));
+				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
+				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
+				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
+
 				return true;
 			}
 
@@ -1770,6 +1788,11 @@ namespace Jazz2::Multiplayer
 			});
 			ConsolidateRaceCheckpoints();
 		} else {
+			// Change InstantDeathPit to FallForever, because player health is managed by the server
+			if (_eventMap->GetPitType() == PitType::InstantDeathPit) {
+				_eventMap->SetPitType(PitType::FallForever);
+			}
+
 			Vector2i size = _eventMap->GetSize();
 			for (std::int32_t y = 0; y < size.Y; y++) {
 				for (std::int32_t x = 0; x < size.X; x++) {
@@ -2312,8 +2335,6 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			switch ((ClientPacketType)packetType) {
 				case ClientPacketType::Auth: {
-					auto& serverConfig = _networkManager->GetServerConfiguration();
-
 					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 						peerDesc->LevelState = PeerLevelState::ValidatingAssets;
 
@@ -2666,6 +2687,8 @@ namespace Jazz2::Multiplayer
 
 					peerDesc->LastUpdated = now;
 
+					LOGI("POS: %f | %f | %llu", posX, posY, now);
+
 					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
 						remotePlayerOnServer->SyncWithServer(Vector2f(posX, posY), Vector2f(speedX, speedY),
 							(flags & RemotePlayerOnServer::PlayerFlags::IsVisible) != RemotePlayerOnServer::PlayerFlags::None,
@@ -2720,6 +2743,30 @@ namespace Jazz2::Multiplayer
 
 					peerDesc->Player->SetCurrentWeapon((WeaponType)weaponType);
 					return true;
+				}
+				case ClientPacketType::PlayerAckWarped: {
+					MemoryStream packet(data);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					std::uint64_t seqNum = packet.ReadVariableUint64();
+					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
+					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
+
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+						LOGD("[MP] ClientPacketType::PlayerAckWarped - invalid playerIndex (%u)", playerIndex);
+						return true;
+					}
+
+					LOGD("[MP] ClientPacketType::PlayerAckWarped - playerIndex: %u, seqNum: %llu, x: %f, y: %f", playerIndex, seqNum, posX, posY);
+
+					peerDesc->LastUpdated = seqNum;
+					if (auto* mpPlayer = static_cast<RemotePlayerOnServer*>(peerDesc->Player)) {
+						mpPlayer->ForceResyncWithServer(Vector2f(posX, posY), Vector2f(speedX, speedY));
+						mpPlayer->_canTakeDamage = true;
+					}
+					break;
 				}
 			}
 		} else {
@@ -3344,7 +3391,6 @@ namespace Jazz2::Multiplayer
 						case PlayerPropertyType::WeaponAmmo: {
 							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 							std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
-							LOGW("AMMO: %u | %u", weaponType, weaponAmmo);
 							InvokeAsync([this, weaponType, weaponAmmo]() {
 								if (!_players.empty() && weaponType < arraySize(_players[0]->_weaponAmmo)) {
 									_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
@@ -3495,7 +3541,22 @@ namespace Jazz2::Multiplayer
 
 					InvokeAsync([this, posX, posY]() {
 						if (!_players.empty()) {
-							_players[0]->Respawn(Vector2f(posX, posY));
+							auto* player = _players[0];
+							if (!player->Respawn(Vector2f(posX, posY))) {
+								return;
+							}
+
+							Clock& c = nCine::clock();
+							std::uint64_t now = c.now() * 1000 / c.frequency();
+
+							MemoryStream packetAck(24);
+							packetAck.WriteVariableUint32(_lastSpawnedActorId);
+							packetAck.WriteVariableUint64(now);
+							packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
+							packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
+							packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
+							packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
+							_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
 						}
 					});
 					return true;
@@ -3587,9 +3648,7 @@ namespace Jazz2::Multiplayer
 
 					InvokeAsync([this, health, pushForce]() {
 						if (!_players.empty()) {
-							// Reset invulnerable state, because the server has higher priority
-							_players[0]->SetState(Actors::ActorState::IsInvulnerable, false);
-							_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce);
+							_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce, true);
 						}
 					});
 					return true;

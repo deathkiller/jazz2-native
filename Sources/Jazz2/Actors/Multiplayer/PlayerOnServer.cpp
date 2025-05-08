@@ -10,7 +10,7 @@
 namespace Jazz2::Actors::Multiplayer
 {
 	PlayerOnServer::PlayerOnServer()
-		: _lastAttackerTimeout(0.0f)
+		: _lastAttackerTimeout(0.0f), _canTakeDamage(true)
 	{
 	}
 
@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool PlayerOnServer::CanCauseDamage(ActorBase* collider)
 	{
-		if (_health > 0) {
+		if (_canTakeDamage && _health > 0) {
 			if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(collider)) {
 				return (static_cast<PlayerOnServer*>(weaponOwner)->GetPeerDescriptor()->Team != GetPeerDescriptor()->Team);
 			}
@@ -76,9 +76,9 @@ namespace Jazz2::Actors::Multiplayer
 		return false;
 	}
 
-	bool PlayerOnServer::TakeDamage(std::int32_t amount, float pushForce)
+	bool PlayerOnServer::TakeDamage(std::int32_t amount, float pushForce, bool ignoreInvulnerable)
 	{
-		if (!MpPlayer::TakeDamage(amount, pushForce)) {
+		if (!_canTakeDamage || !MpPlayer::TakeDamage(amount, pushForce, ignoreInvulnerable)) {
 			return false;
 		}
 

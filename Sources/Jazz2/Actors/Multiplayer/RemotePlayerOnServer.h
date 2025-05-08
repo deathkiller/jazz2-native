@@ -62,8 +62,11 @@ namespace Jazz2::Actors::Multiplayer
 		void EmitWeaponFlare() override;
 		void SetCurrentWeapon(WeaponType weaponType) override;
 
-		/** @brief Synchronizes the player with client */
+		/** @brief Synchronizes the player with server */
 		void SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
+
+		/** @brief Forcefully resynchronizes the player with server (e.g., after respawning or warping) */
+		void ForceResyncWithServer(Vector2f pos, Vector2f speed);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -80,7 +83,6 @@ namespace Jazz2::Actors::Multiplayer
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
-		bool OnPerish(ActorBase* collider) override;
 		void OnUpdate(float timeMult) override;
 
 		void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove) override;
