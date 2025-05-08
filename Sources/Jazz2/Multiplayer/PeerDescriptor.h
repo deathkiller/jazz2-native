@@ -22,12 +22,14 @@ namespace Jazz2::Multiplayer
 	/** @brief Peer state in a level  */
 	enum class PeerLevelState
 	{
-		Unknown,			/**< Unknown */
-		LevelLoaded,		/**< Peer finished loading of the level */
-		LevelSynchronized,	/**< Peer finished synchronized entities in the level */
-		Spectating,			/**< Peer is spectating */
-		PlayerReady,		/**< Player is ready to spawn */
-		PlayerSpawned		/**< Player is spawned */
+		Unknown,				/**< Unknown */
+		ValidatingAssets,		/**< Peer received list of required assets, the server is waiting for response */
+		StreamingMissingAssets,	/**< Missing assets are being streamed to peer */
+		LevelLoaded,			/**< Peer finished loading of the level */
+		LevelSynchronized,		/**< Peer finished synchronized entities in the level */
+		Spectating,				/**< Peer is spectating */
+		PlayerReady,			/**< Player is ready to spawn */
+		PlayerSpawned			/**< Player is spawned */
 	};
 
 	/** @brief Peer descriptor */

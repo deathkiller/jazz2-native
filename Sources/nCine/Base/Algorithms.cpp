@@ -10,6 +10,19 @@
 #	include <cstdio>
 #endif
 
+#if defined(WITH_ZLIB)
+#	if !defined(CMAKE_BUILD) && defined(__has_include)
+#		if __has_include("zlib/zlib.h")
+#			define __HAS_LOCAL_ZLIB
+#		endif
+#	endif
+#	ifdef __HAS_LOCAL_ZLIB
+#		include "zlib/zlib.h"
+#	else
+#		include <zlib.h>
+#	endif
+#endif
+
 namespace nCine
 {
 	std::int32_t copyStringFirst(char* dest, std::int32_t destSize, const char* source, std::int32_t count)
@@ -276,4 +289,28 @@ namespace nCine
 		const std::uint32_t m = b & 0x007FFFFF;						// Mantissa; in line below: 0x007FF000 = 0x00800000-0x00001000 = decimal indicator flag - initial rounding
 		return (b & 0x80000000) >> 16 | (e > 112) * ((((e - 112) << 10) & 0x7C00) | m >> 13) | ((e < 113) & (e > 101)) * ((((0x007FF000 + m) >> (125 - e)) + 1) >> 1) | (e > 143) * 0x7FFF; // sign : normalized : denormalized : saturate
 	}
+
+#if defined(WITH_ZLIB)
+	std::uint32_t crc32(Containers::ArrayView<std::uint8_t> data)
+	{
+		return ::crc32(0L, data.data(), static_cast<std::uint32_t>(data.size()));
+	}
+
+	std::uint32_t crc32(IO::Stream& stream)
+	{
+		if (!stream.IsValid()) {
+			return 0;
+		}
+
+		std::uint8_t buffer[8192];
+		std::uint32_t crc = ::crc32(0L, Z_NULL, 0);
+
+		std::int64_t bytesRead;
+		while ((bytesRead = stream.Read(buffer, sizeof(buffer))) > 0) {
+			crc = ::crc32(crc, buffer, bytesRead);
+		}
+
+		return crc;
+	}
+#endif
 }

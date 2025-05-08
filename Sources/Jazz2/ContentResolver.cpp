@@ -441,6 +441,11 @@ namespace Jazz2
 		_isLoading = false;
 	}
 
+	void ContentResolver::OverridePathHandler(Function<String(StringView)>&& callback)
+	{
+		_pathHandler = std::move(callback);
+	}
+
 	void ContentResolver::PreloadMetadataAsync(StringView path)
 	{
 		// TODO: Reimplement async preloading
@@ -979,9 +984,15 @@ namespace Jazz2
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		String fullPath = fs::CombinePath({ GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
-		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
+		String fullPath;
+		if (_pathHandler) {
+			fullPath = _pathHandler(String(path + ".j2t"_s));
+		}
+		if (fullPath.empty()) {
+			fullPath = fs::CombinePath({ GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
+			if (!fs::IsReadableFile(fullPath)) {
+				fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
+			}
 		}
 
 		auto s = fs::Open(fullPath, FileAccess::Read);
@@ -1136,9 +1147,14 @@ namespace Jazz2
 	{
 		// Try "Content" directory first, then "Cache" directory
 		auto pathNormalized = fs::ToNativeSeparators(path);
-		descriptor.FullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-		if (!fs::IsReadableFile(descriptor.FullPath)) {
-			descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+		if (_pathHandler) {
+			descriptor.FullPath = _pathHandler(String(pathNormalized + ".j2l"_s));
+		}
+		if (descriptor.FullPath.empty()) {
+			descriptor.FullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+			if (!fs::IsReadableFile(descriptor.FullPath)) {
+				descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+			}
 		}
 
 		auto s = fs::Open(descriptor.FullPath, FileAccess::Read);
@@ -1413,10 +1429,16 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		String fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
-		if (!fs::IsReadableFile(fullPath)) {
-			// "Source" directory must be case in-sensitive
-			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));
+		String fullPath;
+		if (_pathHandler) {
+			fullPath = _pathHandler(path);
+		}
+		if (fullPath.empty()) {
+			fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
+			if (!fs::IsReadableFile(fullPath)) {
+				// "Source" directory must be case in-sensitive
+				fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));
+			}
 		}
 		if (!fs::IsReadableFile(fullPath)) {
 			return nullptr;

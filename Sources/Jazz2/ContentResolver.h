@@ -16,6 +16,7 @@
 #include "../nCine/Graphics/Viewport.h"
 #include "../nCine/Base/HashMap.h"
 
+#include <Containers/Function.h>
 #include <Containers/Pair.h>
 #include <Containers/Reference.h>
 #include <Containers/SmallVector.h>
@@ -93,6 +94,9 @@ namespace Jazz2
 		void BeginLoading();
 		/** @brief Marks end of the loading assets */
 		void EndLoading();
+
+		/** @brief Overrides the default path handler */
+		void OverridePathHandler(Function<String(StringView)>&& callback);
 
 		/** @brief Preloads specified metadata and its linked assets to cache */
 		void PreloadMetadataAsync(StringView path);
@@ -173,6 +177,7 @@ namespace Jazz2
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		SmallVector<std::unique_ptr<PakFile>> _mountedPaks;
 #endif
+		Function<String(StringView)> _pathHandler;
 
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;

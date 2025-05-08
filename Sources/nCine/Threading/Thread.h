@@ -2,6 +2,10 @@
 
 #include <CommonWindows.h>
 
+#include <memory>
+#include <tuple>
+#include <type_traits>
+
 #if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	if defined(DEATH_TARGET_APPLE)
 #		include <mach/mach_init.h>
@@ -64,8 +68,15 @@ namespace nCine
 
 		/** @brief Default constructor */
 		Thread();
+
 		/** @brief Creates a thread around a function and runs it immediately */
-		Thread(ThreadFuncDelegate threadFunc, void* threadArg);
+		explicit Thread(ThreadFuncDelegate threadFunc, void* threadArg);
+
+		/** @overload */
+		template<class Fn, class ...Args, std::enable_if_t<!std::is_same<std::remove_cv_t<std::remove_reference_t<Fn>>, Thread>::value && !std::is_convertible<std::decay_t<Fn>, ThreadFuncDelegate>::value, int> = 0>
+		explicit Thread(Fn&& fn, Args&&... args) : _sharedBlock(nullptr) {
+			RunTemplate(std::forward<Fn>(fn), std::forward<Args>(args)...);
+		}
 
 		~Thread();
 
@@ -123,7 +134,31 @@ namespace nCine
 		SharedBlock* _sharedBlock;
 
 		/** @brief Spawns a new thread if the object hasn't one already associated */
-		void Run(ThreadFuncDelegate threadFunc, void* threadArg);
+		bool Run(ThreadFuncDelegate threadFunc, void* threadArg);
+
+		template<class Tuple, std::size_t... Indices>
+		static void Invoke(void* rawVals) noexcept {
+			const std::unique_ptr<Tuple> fnVals(static_cast<Tuple*>(rawVals));
+			Tuple& tup = *fnVals;
+			std::invoke(std::move(std::get<Indices>(tup))...);
+		}
+
+		template<class Tuple, std::size_t... Indices>
+		static constexpr auto GetInvoke(std::index_sequence<Indices...>) noexcept {
+			return &Invoke<Tuple, Indices...>;
+		}
+
+		template<class Fn, class ...Args>
+		void RunTemplate(Fn&& fn, Args&&... args) {
+			using Tuple = std::tuple<std::decay_t<Fn>, std::decay_t<Args>...>;
+			auto decayCopied = std::make_unique<Tuple>(std::forward<Fn>(fn), std::forward<Args>(args)...);
+			constexpr auto invokerProc = GetInvoke<Tuple>(std::make_index_sequence<1 + sizeof...(args)>{});
+
+			if (Run(invokerProc, decayCopied.get())) {
+				// Ownership transferred to the thread
+				decayCopied.release();
+			}
+		}
 
 #	if defined(DEATH_TARGET_WINDOWS)
 #		if defined(DEATH_TARGET_MINGW)
