@@ -126,7 +126,9 @@ namespace Jazz2::Actors::Multiplayer
 		bool success = MpPlayer::Respawn(pos);
 		if (!success) {
 			// Player didn't have enough time to die completely, respawn it when HandlePlayerDied() will be called
+			RespawnPos = pos;
 			RespawnPending = true;
+			return false;
 		}
 
 		return true;

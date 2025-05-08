@@ -20,14 +20,14 @@ namespace Jazz2::Actors::Multiplayer
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
-		bool TakeDamage(std::int32_t amount, float pushForce) override;
+		bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false) override;
 
 	protected:
-		void OnUpdate(float timeMult) override;
-
-	private:
 		std::shared_ptr<ActorBase> _lastAttacker;
 		float _lastAttackerTimeout;
+		bool _canTakeDamage;
+
+		void OnUpdate(float timeMult) override;
 
 		bool IsAttacking() const;
 	};

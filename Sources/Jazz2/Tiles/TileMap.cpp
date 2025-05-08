@@ -416,19 +416,19 @@ namespace Jazz2::Tiles
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 
 				if ((tile.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
-					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) &&
+					if (tile.DestructFrameIndex < ((std::int32_t)_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) &&
 						((tile.TileParams & (1 << (std::uint16_t)params.UsedWeaponType)) != 0 || params.UsedWeaponType == WeaponType::Freezer)) {
 						return true;
 					}
 				} else if ((tile.DestructType & TileDestructType::Special) == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
 					if ((params.DestructType & TileDestructType::VerticalMove) != TileDestructType::VerticalMove ||
 						(y + 1) * TileSet::DefaultTileSize <= (hy1 + 8) || (hy2 - 8) <= y * TileSet::DefaultTileSize) {
-						if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
+						if (tile.DestructFrameIndex < ((std::int32_t)_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
 							return true;
 						}
 					}
 				} else if ((tile.DestructType & TileDestructType::Speed) == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
-					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) && tile.TileParams <= params.Speed) {
+					if (tile.DestructFrameIndex < ((std::int32_t)_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) && tile.TileParams <= params.Speed) {
 						return true;
 					}
 				} else if ((tile.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
@@ -552,7 +552,7 @@ namespace Jazz2::Tiles
 	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName)
 	{
 		AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
-		std::int32_t max = (std::int32_t)(anim.Tiles.size() - 2);
+		std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
 		if (amount > 0 && tile.DestructFrameIndex < max) {
 			// Tile not destroyed yet, advance counter by one
 			std::int32_t current = std::min(amount, max - tile.DestructFrameIndex);
@@ -1431,10 +1431,14 @@ namespace Jazz2::Tiles
 			tile.DestructFrameIndex = src.ReadVariableInt32();
 			if (tile.DestructAnimation >= 0 && tile.DestructAnimation < _animatedTiles.size()) {
 				auto& anim = _animatedTiles[tile.DestructAnimation];
-				std::int32_t max = (std::int32_t)(anim.Tiles.size() - 2);
+				std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
 				if (tile.DestructFrameIndex > max) {
 					LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
 					tile.DestructFrameIndex = max;
+				}
+				if (tile.DestructFrameIndex < 0) {
+					LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
+					tile.DestructFrameIndex = 0;
 				}
 				tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
 			}

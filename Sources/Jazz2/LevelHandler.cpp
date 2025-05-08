@@ -420,12 +420,13 @@ namespace Jazz2
 		_weatherIntensity = descriptor.WeatherIntensity;
 		_waterLevel = descriptor.WaterLevel;
 
+		_musicCurrentPath = std::move(descriptor.MusicPath);
+		_musicDefaultPath = _musicCurrentPath;
+
 #if defined(WITH_AUDIO)
-		if (!descriptor.MusicPath.empty()) {
-			_music = ContentResolver::Get().GetMusic(descriptor.MusicPath);
+		if (!_musicCurrentPath.empty()) {
+			_music = ContentResolver::Get().GetMusic(_musicCurrentPath);
 			if (_music != nullptr) {
-				_musicCurrentPath = std::move(descriptor.MusicPath);
-				_musicDefaultPath = _musicCurrentPath;
 				_music->setLooping(true);
 				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 				_music->setSourceRelative(true);

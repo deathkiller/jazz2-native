@@ -161,7 +161,7 @@ namespace Jazz2::Actors
 		/** @brief Sets current modifier */
 		virtual bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
 		/** @brief Takes damage */
-		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
+		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false);
 		/** @brief Freezes the player for specified time */
 		virtual bool Freeze(float timeLeft);
 		/** @brief Sets invulnerability */

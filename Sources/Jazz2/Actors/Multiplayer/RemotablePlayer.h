@@ -18,6 +18,9 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Whether the player should be respawned */
 		bool RespawnPending;
 
+		/** @brief The position at which the player should respawn */
+		Vector2f RespawnPos;
+
 		RemotablePlayer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 		/** @brief Warps the player in */

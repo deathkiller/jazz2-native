@@ -2377,7 +2377,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::ModifierDeath: {
-				DecreaseHealth(INT32_MAX);
+				TakeDamage(INT32_MAX, 0.0f, true);
 				break;
 			}
 			case EventType::ModifierSetWater: {
@@ -3719,9 +3719,9 @@ namespace Jazz2::Actors
 		return true;
 	}
 
-	bool Player::TakeDamage(std::int32_t amount, float pushForce)
+	bool Player::TakeDamage(std::int32_t amount, float pushForce, bool ignoreInvulnerable)
 	{
-		if (amount <= 0 || _health <= 0 || GetState(ActorState::IsInvulnerable) || _levelExiting != LevelExitingState::None) {
+		if (amount <= 0 || _health <= 0 || (!ignoreInvulnerable && GetState(ActorState::IsInvulnerable)) || _levelExiting != LevelExitingState::None) {
 			return false;
 		}
 
