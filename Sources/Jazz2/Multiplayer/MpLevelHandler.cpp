@@ -2246,6 +2246,17 @@ namespace Jazz2::Multiplayer
 				}
 				return true;
 			}
+		} else if (line == "/kill"_s) {
+			auto peers = _networkManager->GetPeers();
+			auto it = peers->find(peer);
+			if (it != peers->end()) {
+				InvokeAsync([peer = it->second]() {
+					if (peer->Player) {
+						peer->Player->TakeDamage(INT32_MAX, 0.0f, true);
+					}
+				});
+			}
+			return true;
 		}
 
 		return false;

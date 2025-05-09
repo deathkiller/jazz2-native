@@ -734,7 +734,7 @@ namespace Jazz2::Actors
 				if (CanJump()) {
 					_wasUpPressed = _wasDownPressed = false;
 				}
-			} else {
+			} else if (_inTubeTime <= 0.0f) {
 				_speed.X = std::max((std::abs(_speed.X) - Deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
 				_isActivelyPushing = false;
 
@@ -2343,7 +2343,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		uint8_t* p;
+		std::uint8_t* p;
 		EventType tileEvent = events->GetEventByPosition(_pos.X, _pos.Y, &p);
 		switch (tileEvent) {
 			case EventType::LightAmbient: { // Intensity, Red, Green, Blue, Flicker
@@ -2400,7 +2400,11 @@ namespace Jazz2::Actors
 			}
 			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become No-clip, No-clip Only
 				// TODO: Implement other parameters
-				if (p[4] == 0 && p[5] != 0 && GetState(ActorState::CollideWithTileset)) {
+				bool becomeNoclip = (p[4] != 0);
+				bool noclipOnly = (p[5] != 0);
+				if (noclipOnly == GetState(ActorState::CollideWithTileset)) {
+					// A player in Noclip Mode cannot use a tube event with Noclip Only set to false,
+					// nor can a player not in Noclip Mode use a tube event with Noclip Only set to true
 					break;
 				}
 
@@ -2430,12 +2434,8 @@ namespace Jazz2::Actors
 					OnUpdateHitbox();
 				}
 
-				if (p[4] != 0) { // Become No-clip
-					SetState(ActorState::CollideWithTileset, false);
-					_inTubeTime = 60.0f;
-				} else {
-					_inTubeTime = 10.0f;
-				}
+				SetState(ActorState::CollideWithTileset, !becomeNoclip);
+				_inTubeTime = (becomeNoclip ? 600.0f : 10.0f);
 				break;
 			}
 			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
