@@ -103,6 +103,8 @@ namespace Jazz2::Scripting
 		std::int32_t customMode = 0;
 		std::int32_t partyMode = 0;
 
+		bool jjAutoWeaponChange = true;
+		std::uint32_t jjScriptModuleID = 0;
 		std::uint32_t gameTicksSpentWhileActive = 0;
 		std::int32_t renderFrame = 0;
 
@@ -264,6 +266,8 @@ namespace Jazz2::Scripting
 		static void jjMusicPlay();
 		static void jjMusicPause();
 		static void jjMusicResume();
+
+		static bool jjSendPacket(const jjSTREAM& packet, std::int32_t toClientID, std::uint32_t toScriptModuleID);
 
 	};
 }

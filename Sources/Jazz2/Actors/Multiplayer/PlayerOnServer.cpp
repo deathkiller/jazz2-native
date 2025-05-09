@@ -10,7 +10,7 @@
 namespace Jazz2::Actors::Multiplayer
 {
 	PlayerOnServer::PlayerOnServer()
-		: _lastAttackerTimeout(0.0f), _canTakeDamage(true)
+		: _lastAttackerTimeout(0.0f), _canTakeDamage(true), _justWarped(false)
 	{
 	}
 

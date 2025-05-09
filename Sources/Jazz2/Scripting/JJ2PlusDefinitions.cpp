@@ -3043,6 +3043,14 @@ namespace Jazz2::Scripting
 
 	// TODO
 
+
+	bool LevelScriptLoader::jjSendPacket(const jjSTREAM& packet, std::int32_t toClientID, std::uint32_t toScriptModuleID)
+	{
+		return true;
+	}
+
+	// TODO
+
 	std::uint16_t jjGetStaticTile(std::uint16_t tileID) {
 		noop();
 		return 0;

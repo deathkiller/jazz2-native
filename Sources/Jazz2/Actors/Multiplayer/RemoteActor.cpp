@@ -143,6 +143,24 @@ namespace Jazz2::Actors::Multiplayer
 		_renderer.AnimPaused = (flags & 0x08) != 0;
 		SetFacingLeft((flags & 0x10) != 0);
 		_renderer.setFlippedY((flags & 0x20) != 0);
+
+		bool justWarped = (flags & 0x40) != 0;
+		if (justWarped) {
+			Clock& c = nCine::clock();
+			std::int64_t now = c.now() * 1000 / c.frequency();
+
+			std::int32_t stateBufferPrevPos = _stateBufferPos - 1;
+			if (stateBufferPrevPos < 0) {
+				stateBufferPrevPos += std::int32_t(arraySize(_stateBuffer));
+			}
+
+			Vector2f pos = _stateBuffer[stateBufferPrevPos].Pos;
+
+			for (std::size_t i = 0; i < arraySize(_stateBuffer); i++) {
+				_stateBuffer[i].Time = now;
+				_stateBuffer[i].Pos = pos;
+			}
+		}
 	}
 }
 

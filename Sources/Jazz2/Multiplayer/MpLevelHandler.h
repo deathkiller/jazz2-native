@@ -263,6 +263,7 @@ namespace Jazz2::Multiplayer
 		float _gameTimeLeft;
 		LevelState _levelState;
 		bool _isServer;
+		bool _forceResyncPending;
 		bool _enableSpawning;
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
@@ -273,7 +274,7 @@ namespace Jazz2::Multiplayer
 		SmallVector<PendingSfx, 0> _pendingSfx;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
-		std::uint64_t _seqNum; // Client: sequence number of the last update
+		std::uint32_t _lastUpdated; // Server/Client: last update from the server
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 		bool _ignorePackets;
