@@ -743,9 +743,9 @@ namespace Jazz2::UI
 		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f);
 
 		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, FontShadowLayer + 10,
+		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, 50,
 			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
-		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, FontLayer + 10,
+		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, 60,
 			Alignment::Top, Font::DefaultColor, textScale, 0.72f, 0.8f, 0.8f);
 
 		if (_levelTextTime > TotalTime) {
