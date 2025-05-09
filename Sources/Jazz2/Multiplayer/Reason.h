@@ -29,7 +29,8 @@ namespace Jazz2::Multiplayer
 		Kicked,									/**< Kicked by server */
 		Banned,									/**< Banned by server */
 		CheatingDetected,						/**< Cheating detected */
-		AssetStreamingNotAllowed				/**< Downloading of assets is not allowed */
+		AssetStreamingNotAllowed,				/**< Downloading of assets is not allowed */
+		Idle									/**< Inactivity */
 	};
 }
 
