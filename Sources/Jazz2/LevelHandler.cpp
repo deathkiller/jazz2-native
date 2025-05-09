@@ -2279,7 +2279,7 @@ namespace Jazz2
 		if (IsCheatingAllowed() && !_players.empty()) {
 			_cheatsUsed = true;
 			for (auto* player : _players) {
-				player->TakeDamage(INT32_MAX);
+				player->TakeDamage(INT32_MAX, 0.0f, true);
 			}
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));

@@ -386,12 +386,17 @@ void GameEventHandler::OnBeginFrame()
 
 		std::weak_ptr<void> emptyRef;
 		Function<void()> callbackFunc;
+		std::size_t i = 0;
 
-		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
+		while (true) {
 			{
 #if defined(WITH_THREADS)
 				std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
+				if (i >= _pendingCallbacks.size()) {
+					break;
+				}
+
 				auto& callback = _pendingCallbacks[i];
 				auto& callbackRef = callback.first();
 				// Invoke the callback only if it has no corresponding reference or the reference is still alive
@@ -400,11 +405,13 @@ void GameEventHandler::OnBeginFrame()
 					callbackFunc = std::move(callback.second());
 				} else {
 					LOGW("Deferred callback dropped due to dead reference");
+					i++;
 					continue;
 				}
 			}
 
 			callbackFunc();
+			i++;
 		}
 
 		_pendingCallbacks.clear();
@@ -553,6 +560,8 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 
 void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 {
+	DEATH_DEBUG_ASSERT(callback, "callback cannot be empty", );
+
 #if defined(WITH_THREADS)
 	std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
@@ -561,6 +570,8 @@ void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 
 void GameEventHandler::InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback)
 {
+	DEATH_DEBUG_ASSERT(callback, "callback cannot be empty", );
+
 #if defined(WITH_THREADS)
 	std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
