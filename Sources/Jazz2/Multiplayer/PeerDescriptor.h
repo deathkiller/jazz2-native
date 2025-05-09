@@ -44,6 +44,10 @@ namespace Jazz2::Multiplayer
 		bool IsAuthenticated;
 		/** @brief Whether the peer has admin privileges */
 		bool IsAdmin;
+		/** @brief Whether ledge climbing is enabled by client */
+		bool EnableLedgeClimb;
+		/** @brief Team ID */
+		std::uint8_t Team;
 		/** @brief Preferred player type selected by the peer */
 		PlayerType PreferredPlayerType;
 		/** @brief Player display name */
@@ -54,17 +58,12 @@ namespace Jazz2::Multiplayer
 		std::uint32_t PointsInRound;
 		/** @brief Position in a round */
 		std::uint32_t PositionInRound;
-
-		/** @brief Spawned player in the current level */
-		Actors::Multiplayer::MpPlayer* Player;
 		/** @brief State of the player in the current level */
 		PeerLevelState LevelState;
+		/** @brief Spawned player in the current level */
+		Actors::Multiplayer::MpPlayer* Player;
 		/** @brief Last update of the player from client */
 		std::uint64_t LastUpdated;
-		/** @brief Whether ledge climbing is enabled by client */
-		bool EnableLedgeClimb;
-		/** @brief Team ID */
-		std::uint8_t Team;
 
 		/** @brief Deaths of the player in the current round */
 		std::uint32_t Deaths;
@@ -77,6 +76,8 @@ namespace Jazz2::Multiplayer
 		/** @brief Treasure collected of the player in the current round */
 		std::uint32_t TreasureCollected;
 
+		/** @brief Elapsed frames when the player is idle */
+		float IdleElapsedFrames;
 		/** @brief Elapsed frames when the player lost all lives */
 		float DeathElapsedFrames;
 		/** @brief Elapsed frames of all completed laps */

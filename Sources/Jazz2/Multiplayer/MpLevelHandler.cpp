@@ -218,13 +218,26 @@ namespace Jazz2::Multiplayer
 
 		float timeMult = theApplication().GetTimeMult();
 		std::uint32_t frameCount = theApplication().GetFrameCount();
+		auto& serverConfig = _networkManager->GetServerConfiguration();
 
-		// Update last pressed keys only if it wasn't done this frame yet (because of PlayerKeyPress packet)
-		for (auto* player : _players) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
-				if (remotePlayerOnServer->UpdatedFrame != frameCount) {
-					remotePlayerOnServer->UpdatedFrame = frameCount;
-					remotePlayerOnServer->PressedKeysLast = remotePlayerOnServer->PressedKeys;
+		if (_isServer) {
+			// Update last pressed keys only if it wasn't done this frame yet (because of PlayerKeyPress packet)
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
+					if (remotePlayerOnServer->UpdatedFrame != frameCount) {
+						remotePlayerOnServer->UpdatedFrame = frameCount;
+						remotePlayerOnServer->PressedKeysLast = remotePlayerOnServer->PressedKeys;
+					}
+
+					if (remotePlayerOnServer->PressedKeys == 0) {
+						peerDesc->IdleElapsedFrames += timeMult;
+						if (serverConfig.IdleKickTimeSecs > 0 && serverConfig.IdleKickTimeSecs <= (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame)) {
+							peerDesc->IdleElapsedFrames = 0.0f;
+							_networkManager->Kick(peer, Reason::Idle);
+						}
+					} else {
+						peerDesc->IdleElapsedFrames = 0.0f;
+					}
 				}
 			}
 		}
@@ -247,7 +260,6 @@ namespace Jazz2::Multiplayer
 							return (peerDesc && peerDesc->IsAuthenticated);
 						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ValidateAssets, packet);
 
-						auto& serverConfig = _networkManager->GetServerConfiguration();
 						if (serverConfig.GameMode == MpGameMode::Cooperation) {
 							// Skip pre-game and countdown in cooperation
 							_levelState = LevelState::Running;
@@ -272,7 +284,6 @@ namespace Jazz2::Multiplayer
 				}
 				case LevelState::PreGame: {
 					if (_isServer && _gameTimeLeft <= 0.0f) {
-						auto& serverConfig = _networkManager->GetServerConfiguration();
 						// TODO: Check all players are ready
 						if (_players.size() >= serverConfig.MinPlayerCount) {
 							_levelState = LevelState::Countdown3;
@@ -326,7 +337,6 @@ namespace Jazz2::Multiplayer
 				case LevelState::Countdown1: {
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						_levelState = LevelState::Running;
-						auto& serverConfig = _networkManager->GetServerConfiguration();
 						_gameTimeLeft = serverConfig.MaxGameTimeSecs * FrameTimer::FramesPerSecond;
 						_recalcPositionInRoundTime = FrameTimer::FramesPerSecond;
 
@@ -357,7 +367,6 @@ namespace Jazz2::Multiplayer
 				}
 				case LevelState::Running: {
 					if (_isServer) {
-						auto& serverConfig = _networkManager->GetServerConfiguration();
 						if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
 							_recalcPositionInRoundTime -= timeMult;
 							if (_recalcPositionInRoundTime <= 0.0f) {
@@ -373,7 +382,6 @@ namespace Jazz2::Multiplayer
 				}
 				case LevelState::Ending: {
 					if (_isServer && _gameTimeLeft <= 0.0f) {
-						auto& serverConfig = _networkManager->GetServerConfiguration();
 						if (serverConfig.Playlist.size() > 1) {
 							serverConfig.PlaylistIndex++;
 							if (serverConfig.PlaylistIndex >= serverConfig.Playlist.size()) {
@@ -2053,20 +2061,24 @@ namespace Jazz2::Multiplayer
 				}
 
 				if (_levelState < LevelState::Running) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0, peerDesc->Points);
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - I: %i s",
+						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+						peerDesc->Points, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u - Kills: %u - Deaths: %u - Laps: %u/%u",
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - K: %u - D: %u - I: %i s - Laps: %u/%u",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
-						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Laps + 1, serverConfig.TotalLaps);
+						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1, 
+						peerDesc->Laps + 1, serverConfig.TotalLaps);
 				} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u - Kills: %u - Deaths: %u - Treasure: %u",
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - K: %u - D: %u - I: %i s - Treasure: %u",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
-						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->TreasureCollected);
+						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1,
+						peerDesc->TreasureCollected);
 				} else {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u. %s - %u ms - Points: %u - Kills: %u - Deaths: %u",
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - K: %u - D: %u - I: %i s",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
-						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths);
+						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
+						peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				}
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}

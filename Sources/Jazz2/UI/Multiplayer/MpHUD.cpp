@@ -309,6 +309,10 @@ namespace Jazz2::UI::Multiplayer
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
 		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
 
+		if (mpLevelHandler->_console->IsVisible()) {
+			return;
+		}
+
 		char stringBuffer[32];
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;

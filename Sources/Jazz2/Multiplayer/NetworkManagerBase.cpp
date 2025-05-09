@@ -390,7 +390,7 @@ namespace Jazz2::Multiplayer
 	{
 		if (peer != nullptr) {
 			std::unique_lock lock(_lock);
-			enet_peer_disconnect_now(peer._enet, std::uint32_t(reason));
+			enet_peer_disconnect(peer._enet, std::uint32_t(reason));
 		}
 	}
 
@@ -573,6 +573,7 @@ namespace Jazz2::Multiplayer
 			case Reason::Banned: return "Banned by server"; break;
 			case Reason::CheatingDetected: return "Cheating detected"; break;
 			case Reason::AssetStreamingNotAllowed: return "Downloading of assets is not allowed"; break;
+			case Reason::Idle: return "Inactivity"; break;
 			default: return "Unknown reason"; break;
 		}
 	}
@@ -796,7 +797,7 @@ namespace Jazz2::Multiplayer
 						}
 					} else {
 						std::unique_lock lock(_this->_lock);
-						enet_peer_disconnect_now(ev.peer, std::uint32_t(result.FailureReason));
+						enet_peer_disconnect(ev.peer, std::uint32_t(result.FailureReason));
 					}
 					break;
 				}

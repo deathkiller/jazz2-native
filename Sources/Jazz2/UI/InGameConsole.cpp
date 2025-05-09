@@ -95,7 +95,7 @@ namespace Jazz2::UI
 		Vector2f historyLinePos = currentLinePos;
 		historyLinePos.Y -= 4.0f;
 		for (std::int32_t i = _logHistory.size() - 1; i >= 0; i--) {
-			if (historyLinePos.Y < 46.0f) {
+			if (historyLinePos.Y < 50.0f) {
 				break;
 			}
 

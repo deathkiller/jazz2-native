@@ -24,10 +24,10 @@ using namespace std::string_view_literals;
 namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
-		: IsAuthenticated(false), IsAdmin(false), PreferredPlayerType(PlayerType::None), Points(0), PointsInRound(0),
-			PositionInRound(0), Player(nullptr), LevelState(PeerLevelState::Unknown), LastUpdated(0), EnableLedgeClimb(false),
-			Team(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), DeathElapsedFrames(FLT_MAX),
-			LapsElapsedFrames(0.0f)
+		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredPlayerType(PlayerType::None),
+			Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
+			LastUpdated(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), IdleElapsedFrames(0.0f),
+			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f)
 	{
 	}
 
@@ -176,6 +176,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.AllowAssetStreaming = true;
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
+		serverConfig.IdleKickTimeSecs = -1;
 		serverConfig.MinPlayerCount = 1;
 		serverConfig.ReforgedGameplay = PreferencesCache::EnableReforgedGameplay;
 		serverConfig.PreGameSecs = 60;
