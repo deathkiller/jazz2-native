@@ -26,6 +26,8 @@ namespace Jazz2::Multiplayer
 		ChatMessage,
 		ValidateAssetsResponse,
 
+		ForceResyncActors = 20,
+
 		PlayerReady = 30,
 		PlayerUpdate,
 		PlayerKeyPress,
@@ -65,6 +67,7 @@ namespace Jazz2::Multiplayer
 		CreateMirroredActor,
 		DestroyRemoteActor,
 		UpdateAllActors,
+		ForceResyncActors,
 		MarkRemoteActorAsPlayer,
 		UpdatePositionsInRound,
 

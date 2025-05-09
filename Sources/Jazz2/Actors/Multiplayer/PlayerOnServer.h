@@ -26,6 +26,7 @@ namespace Jazz2::Actors::Multiplayer
 		std::shared_ptr<ActorBase> _lastAttacker;
 		float _lastAttackerTimeout;
 		bool _canTakeDamage;
+		bool _justWarped;
 
 		void OnUpdate(float timeMult) override;
 
