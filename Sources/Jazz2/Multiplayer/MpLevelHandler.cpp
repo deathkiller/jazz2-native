@@ -2061,21 +2061,21 @@ namespace Jazz2::Multiplayer
 				}
 
 				if (_levelState < LevelState::Running) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - I: %i s",
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ I: %i\f[w:50] s\f[/w]",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - K: %u - D: %u - I: %i s - Laps: %u/%u",
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ K: %u\t│ D: %u\t│ I: %i\f[w:50] s\f[/w]\t│ Laps: %u/%u",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1, 
 						peerDesc->Laps + 1, serverConfig.TotalLaps);
 				} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - K: %u - D: %u - I: %i s - Treasure: %u",
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ K: %u\t│ D: %u\t│ I: %i\f[w:50] s\f[/w]\t│ Treasure: %u",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1,
 						peerDesc->TreasureCollected);
 				} else {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t- %u ms\t- P: %u - K: %u - D: %u - I: %i s",
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ K: %u\t│ D: %u\t│ I: %i\f[w:50] s\f[/w]",
 						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
 						peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
@@ -3260,14 +3260,18 @@ namespace Jazz2::Multiplayer
 					std::uint64_t now = packet.ReadVariableUint32();
 					std::uint32_t actorCount = packet.ReadVariableUint32();
 
-					if DEATH_UNLIKELY((actorCount & 1) != 1 && _lastUpdated >= now) {
+					bool forceResyncInvoked = (actorCount & 1) == 1;
+					if DEATH_UNLIKELY(!forceResyncInvoked && _lastUpdated >= now) {
 						return true;
 					}
 
-					bool forceResync = (_lastUpdated + 1 < now);
-					if (forceResync) {
-						LOGD("[MP] ServerPacketType::UpdateAllActors - FORCE RESYNC (%u -> %u)", _lastUpdated, now);
+					bool forceResyncRequired = (!forceResyncInvoked && _lastUpdated + 1 < now);
+					if (forceResyncRequired) {
+						LOGD("[MP] ServerPacketType::UpdateAllActors - FORCE RESYNC REQUIRED (%u -> %u)", _lastUpdated, now);
+					} else if (forceResyncInvoked) {
+						LOGD("[MP] ServerPacketType::UpdateAllActors - FORCE RESYNC INVOKED (%u -> %u)", _lastUpdated, now);
 					}
+
 					_lastUpdated = now;
 
 					actorCount >>= 1;
@@ -3318,7 +3322,7 @@ namespace Jazz2::Multiplayer
 						}
 					}
 
-					if (forceResync) {
+					if (forceResyncRequired) {
 						_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::ForceResyncActors, {});
 					}
 					return true;
