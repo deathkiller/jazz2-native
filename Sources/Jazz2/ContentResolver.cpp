@@ -924,7 +924,7 @@ namespace Jazz2
 					run = (b1 & 0x3f);
 				}
 
-				index[QOI_COLOR_HASH(px) & 63] = px;
+				index[QOI_COLOR_HASH(px) & (64 - 1)] = px;
 			}
 
 			*(rgba_t*)(data + px_pos) = px;
