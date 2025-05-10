@@ -653,7 +653,7 @@ namespace Jazz2::Compatibility
 					run = 0;
 				}
 
-				index_pos = QOI_COLOR_HASH(px) % 64;
+				index_pos = QOI_COLOR_HASH(px) & (64 - 1);
 
 				if (index[index_pos].v == px.v) {
 					so.WriteValue<std::uint8_t>(QOI_OP_INDEX | index_pos);

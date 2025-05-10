@@ -411,6 +411,10 @@ function(ncine_apply_compiler_options target)
 
 		# Adjust incremental linking
 		#target_link_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/INCREMENTAL,/INCREMENTAL:NO>)
+		
+		if(NCINE_ADDRESS_SANITIZER)
+			target_compile_options(${target} PUBLIC "/fsanitize=address>")
+		endif()
 
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 			target_compile_options(${target} PRIVATE "-Wno-switch" "-Wno-unknown-pragmas" "-Wno-reorder-ctor" "-Wno-braced-scalar-init" "-Wno-deprecated-builtins")

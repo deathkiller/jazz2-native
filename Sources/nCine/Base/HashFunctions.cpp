@@ -27,7 +27,7 @@ namespace nCine
 		uint64_t h = seed ^ (len * m);
 		uint64_t v = 0;
 
-		while (pos <= end) {
+		while (pos != end) {
 			v = *pos++;
 			h ^= fasthash_mix(v);
 			h *= m;
