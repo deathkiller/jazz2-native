@@ -4596,7 +4596,7 @@ extern "C" {
 			enet_peer_reset(currentPeer);
 		}
 
-		LOGD("enet_host_create() successfully created socket %p", host->socket);
+		LOGD("enet_host_create() successfully created socket 0x%08llx", (std::uint64_t)host->socket);
 		return host;
 	} /* enet_host_create */
 

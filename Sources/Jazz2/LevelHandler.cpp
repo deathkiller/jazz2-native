@@ -517,7 +517,9 @@ namespace Jazz2
 			UpdatePressedActions();
 
 			if (PlayerActionHit(nullptr, PlayerAction::Menu)) {
-				if (!_console->IsVisible() && _nextLevelType == ExitType::None) {
+				if (_console->IsVisible()) {
+					_console->Hide();
+				} else if (_nextLevelType == ExitType::None) {
 					PauseGame();
 				}
 			} else if (PlayerActionHit(nullptr, PlayerAction::Console)) {

@@ -973,8 +973,6 @@ namespace Jazz2::Multiplayer
 
 		LOGD("[MP] Changing level to \"%s\" (0x%02x)", nextLevel.data(), (std::uint32_t)exitType);
 
-		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
-
 		if ((exitType & ExitType::FastTransition) != ExitType::FastTransition) {
 			float fadeOutDelay = _nextLevelTime - 40.0f;
 
@@ -986,6 +984,21 @@ namespace Jazz2::Multiplayer
 				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelLoaded);
 			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::FadeOut, packet);
 		}
+
+		if ((nextLevel == ":end"_s || nextLevel == ":credits"_s) && !serverConfig.Playlist.empty()) {
+			serverConfig.PlaylistIndex++;
+			if (serverConfig.PlaylistIndex >= serverConfig.Playlist.size()) {
+				serverConfig.PlaylistIndex = 0;
+				if (serverConfig.RandomizePlaylist) {
+					Random().Shuffle<PlaylistEntry>(serverConfig.Playlist);
+				}
+			}
+			if (ApplyFromPlaylist()) {
+				return;
+			}
+		}
+
+		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
 	}
 
 	void MpLevelHandler::HandleLevelChange(LevelInitialization&& levelInit)
@@ -2484,7 +2497,7 @@ namespace Jazz2::Multiplayer
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->LevelState != PeerLevelState::ValidatingAssets) {
 						// Packet received when the peer is in different state
-						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [%08llx] - invalid state", (std::uint64_t)peer._enet);
+						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [%08llx] - invalid state (%u)", (std::uint64_t)peer._enet, (std::uint32_t)peerDesc->LevelState);
 						return true;
 					}
 
@@ -2646,7 +2659,7 @@ namespace Jazz2::Multiplayer
 					return true;
 				}
 				case ClientPacketType::ForceResyncActors: {
-					LOGD("[MP] ClientPacketType::ForceResyncActors [%08llx]", (std::uint64_t)peer._enet);
+					LOGD("[MP] ClientPacketType::ForceResyncActors [%08llx] - update: %u", (std::uint64_t)peer._enet, _lastUpdated);
 					_forceResyncPending = true;
 					return true;
 				}
@@ -3348,7 +3361,7 @@ namespace Jazz2::Multiplayer
 					String playerName = String(NoInit, playerNameLength);
 					packet.Read(playerName.data(), playerNameLength);
 
-					LOGD("[MP] ServerPacketType::MarkRemoteActorAsPlayer - id: %u, name: %s", actorId, playerName.data());
+					LOGD("[MP] ServerPacketType::MarkRemoteActorAsPlayer - id: %u, name: \"%s\"", actorId, playerName.data());
 
 					InvokeAsync([this, actorId, playerName = std::move(playerName)]() mutable {
 						if (actorId == _lastSpawnedActorId) {
