@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Multiplayer
 		void OnWaterSplash(Vector2f pos, bool inwards) override;
 
 		bool FireCurrentWeapon(WeaponType weaponType) override;
-		void SetCurrentWeapon(WeaponType weaponType) override;
+		void SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason) override;
 
 	private:
 		bool _warpPending;

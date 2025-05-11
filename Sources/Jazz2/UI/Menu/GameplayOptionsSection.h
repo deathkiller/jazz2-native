@@ -11,6 +11,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_ANGELSCRIPT)
 		AllowUnsignedScripts,
 #endif
+		SwitchToNewWeapon,
 		AllowCheats,
 		OverwriteEpisodeEnd,
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)

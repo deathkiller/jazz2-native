@@ -291,11 +291,11 @@ namespace Jazz2::Actors::Multiplayer
 		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerEmitWeaponFlare(this);
 	}
 
-	void RemotePlayerOnServer::SetCurrentWeapon(WeaponType weaponType)
+	void RemotePlayerOnServer::SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason)
 	{
-		PlayerOnServer::SetCurrentWeapon(weaponType);
+		PlayerOnServer::SetCurrentWeapon(weaponType, reason);
 
-		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this, reason);
 	}
 }
 

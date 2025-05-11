@@ -174,6 +174,8 @@ namespace Jazz2
 		static bool EnableLedgeClimb;
 		/** @brief Current weapon wheel style */
 		static WeaponWheelStyle WeaponWheel;
+		/** @brief Whether a newly acquired weapon is automatically selected */
+		static bool SwitchToNewWeapon;
 		/** @brief Whether RGB light effects are enabled */
 		static bool EnableRgbLights;
 		/** @brief Whether unsigned scripts can be loaded */
@@ -286,6 +288,7 @@ namespace Jazz2
 			BackgroundDithering = 0x2000000,
 
 			PlayStationExtendedSupport = 0x4000000,
+			SwitchToNewWeapon = 0x8000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);

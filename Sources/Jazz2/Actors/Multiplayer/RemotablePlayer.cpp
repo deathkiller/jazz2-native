@@ -48,16 +48,16 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
-	void RemotablePlayer::SetCurrentWeapon(WeaponType weaponType)
+	void RemotablePlayer::SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason)
 	{
 		if (_currentWeapon == weaponType) {
 			return;
 		}
 
-		Player::SetCurrentWeapon(weaponType);
+		Player::SetCurrentWeapon(weaponType, reason);
 
 		if (!ChangingWeaponFromServer) {
-			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this, reason);
 		}
 	}
 
