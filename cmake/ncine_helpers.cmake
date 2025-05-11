@@ -276,8 +276,10 @@ function(ncine_apply_compiler_options target)
 	set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 	target_compile_definitions(${target} PRIVATE "CMAKE_BUILD")
 
-	if(DEATH_DEBUG)
-		target_compile_definitions(${target} PRIVATE "DEATH_DEBUG")
+	if(DEFINED DEATH_DEBUG)
+		if(DEATH_DEBUG)
+			target_compile_definitions(${target} PRIVATE "DEATH_DEBUG")
+		endif()
 	else()
 		target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:DEATH_DEBUG>)
 	endif()
@@ -364,8 +366,8 @@ function(ncine_apply_compiler_options target)
 
 		if(DEATH_DEBUG_SYMBOLS)
 			# Include PDB debug information in Release and enable hot reloading in Debug
-			if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-				# clang-cl doesn't support EditAndContinue
+			if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR NCINE_ADDRESS_SANITIZER)
+				# clang-cl doesn't support EditAndContinue, nor does AddressSanitizer
 				if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25.0")
 					set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT ProgramDatabase)
 				else()

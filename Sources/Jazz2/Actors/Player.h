@@ -253,6 +253,14 @@ namespace Jazz2::Actors
 			Visible,
 			Closing
 		};
+		
+		/** @brief Reason the current weapon was changed */
+		enum class SetCurrentWeaponReason {
+			Unknown,
+			User,
+			Rollback,
+			AddAmmo,
+		};
 
 		/** @{ @name Constants */
 
@@ -388,7 +396,7 @@ namespace Jazz2::Actors
 		/** @brief Emits weapon flare after firing */
 		virtual void EmitWeaponFlare();
 		/** @brief Sets current weapon */
-		virtual void SetCurrentWeapon(WeaponType weaponType);
+		virtual void SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason);
 
 	private:
 		static constexpr float ShieldDisabled = -1000000000000.0f;

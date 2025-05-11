@@ -196,6 +196,7 @@ namespace Jazz2::UI::Menu
 		} else if (_root->ActionHit(PlayerAction::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
+			return;
 		} else if (_root->ActionPressed(PlayerAction::Up)) {
 			if (_scrollRate < MaxScrollRate) {
 				_scrollRate += 0.16f * timeMult;

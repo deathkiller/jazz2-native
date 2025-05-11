@@ -201,7 +201,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Called when a player emits a weapon flare */
 		void HandlePlayerEmitWeaponFlare(Actors::Player* player);
 		/** @brief Called when a player changes their current weapon */
-		void HandlePlayerWeaponChanged(Actors::Player* player);
+		void HandlePlayerWeaponChanged(Actors::Player* player, Actors::Player::SetCurrentWeaponReason reason);
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT

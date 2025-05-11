@@ -2700,7 +2700,7 @@ namespace Jazz2::Actors
 
 				// Reset current weapon to Blaster if player has no ammo on checkpoint
 				if (_weaponAmmo[(std::int32_t)_currentWeapon] == 0) {
-					SetCurrentWeapon(WeaponType::Blaster);
+					SetCurrentWeapon(WeaponType::Blaster, SetCurrentWeaponReason::Rollback);
 				}
 
 				if (_sugarRushLeft > 0.0f) {
@@ -2769,7 +2769,7 @@ namespace Jazz2::Actors
 		for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count && _weaponAmmo[(std::int32_t)weaponType] == 0; i++) {
 			weaponType = (WeaponType)(((std::int32_t)weaponType + 1) % (std::int32_t)WeaponType::Count);
 		}
-		SetCurrentWeapon(weaponType);
+		SetCurrentWeapon(weaponType, SetCurrentWeaponReason::User);
 
 		_weaponCooldown = 1.0f;
 	}
@@ -2786,7 +2786,7 @@ namespace Jazz2::Actors
 			_weaponSound = nullptr;
 		}
 #endif
-		SetCurrentWeapon((WeaponType)weaponIndex);
+		SetCurrentWeapon((WeaponType)weaponIndex, SetCurrentWeaponReason::User);
 		_weaponCooldown = 1.0f;
 	}
 
@@ -3067,8 +3067,13 @@ namespace Jazz2::Actors
 		_weaponFlareTime = 6.0f;
 	}
 
-	void Player::SetCurrentWeapon(WeaponType weaponType)
+	void Player::SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason)
 	{
+		// Handle only local sessions here, online sessions are handled in derived classes
+		if (reason == SetCurrentWeaponReason::AddAmmo && !PreferencesCache::SwitchToNewWeapon && _levelHandler->IsLocalSession()) {
+			return;
+		}
+
 		_currentWeapon = weaponType;
 	}
 
@@ -3384,7 +3389,7 @@ namespace Jazz2::Actors
 
 		// Reset current weapon to Blaster if player has no ammo on checkpoint
 		if (_weaponAmmo[(std::int32_t)_currentWeapon] == 0) {
-			SetCurrentWeapon(WeaponType::Blaster);
+			SetCurrentWeapon(WeaponType::Blaster, SetCurrentWeaponReason::Rollback);
 		}
 	}
 
@@ -3989,10 +3994,10 @@ namespace Jazz2::Actors
 
 		bool switchTo = (_weaponAmmo[(std::int32_t)weaponType] == 0);
 
-		_weaponAmmo[(std::int32_t)weaponType] = (int16_t)std::min((int32_t)_weaponAmmo[(std::int32_t)weaponType] + count * Multiplier, (int32_t)AmmoLimit);
+		_weaponAmmo[(std::int32_t)weaponType] = (std::int16_t)std::min((std::int32_t)_weaponAmmo[(std::int32_t)weaponType] + count * Multiplier, (int32_t)AmmoLimit);
 
 		if (switchTo) {
-			SetCurrentWeapon(weaponType);
+			SetCurrentWeapon(weaponType, SetCurrentWeaponReason::AddAmmo);
 
 			switch (_currentWeapon) {
 				case WeaponType::Blaster: PreloadMetadataAsync("Weapon/Blaster"_s); break;

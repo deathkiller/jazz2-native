@@ -15,6 +15,8 @@ namespace Jazz2::Actors::Multiplayer
 		LocalPlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 	protected:
+		void SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason) override;
+
 		/** @brief Emits weapon flare */
 		void EmitWeaponFlare() override;
 	};

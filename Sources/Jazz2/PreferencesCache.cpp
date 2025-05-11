@@ -51,6 +51,7 @@ namespace Jazz2
 #endif
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
+	bool PreferencesCache::SwitchToNewWeapon = true;
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
 	bool PreferencesCache::EnableRgbLights = false;
 #else
@@ -269,6 +270,7 @@ namespace Jazz2
 					if (version >= 7) {
 						AllowCheats = ((boolOptions & BoolOptions::AllowCheats) == BoolOptions::AllowCheats);
 						PlayStationExtendedSupport = ((boolOptions & BoolOptions::PlayStationExtendedSupport) == BoolOptions::PlayStationExtendedSupport);
+						SwitchToNewWeapon = ((boolOptions & BoolOptions::SwitchToNewWeapon) == BoolOptions::SwitchToNewWeapon);
 						OverwriteEpisodeEnd = (EpisodeEndOverwriteMode)uc.ReadValue<std::uint8_t>();
 					}
 
@@ -501,6 +503,7 @@ namespace Jazz2
 		if (EnableReforgedMainMenu) boolOptions |= BoolOptions::EnableReforgedMainMenu;
 		if (AllowCheats) boolOptions |= BoolOptions::AllowCheats;
 		if (PlayStationExtendedSupport) boolOptions |= BoolOptions::PlayStationExtendedSupport;
+		if (SwitchToNewWeapon) boolOptions |= BoolOptions::SwitchToNewWeapon;
 		co.WriteValue<std::uint64_t>((std::uint64_t)boolOptions);
 
 		if (Language[0] != '\0') {

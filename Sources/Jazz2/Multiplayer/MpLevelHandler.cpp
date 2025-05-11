@@ -1443,16 +1443,17 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::HandlePlayerWeaponChanged(Actors::Player* player)
+	void MpLevelHandler::HandlePlayerWeaponChanged(Actors::Player* player, Actors::Player::SetCurrentWeaponReason reason)
 	{
 		if (_isServer) {
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 			if (peerDesc->RemotePeer) {
-				MemoryStream packet(5);
+				MemoryStream packet(6);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)mpPlayer->_currentWeapon);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)reason);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerChangeWeapon, packet);
 			}
 		} else {
@@ -2645,7 +2646,7 @@ namespace Jazz2::Multiplayer
 					return true;
 				}
 				case ClientPacketType::ForceResyncActors: {
-					LOGD("[MP] ClientPacketType::ForceResyncActors");
+					LOGD("[MP] ClientPacketType::ForceResyncActors [%08llx]", (std::uint64_t)peer._enet);
 					_forceResyncPending = true;
 					return true;
 				}
@@ -2655,7 +2656,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerUpdate - invalid playerIndex (%u)", playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerUpdate [%08llx] - invalid playerIndex (%u)", (std::uint64_t)peer._enet, playerIndex);
 						return true;
 					}
 
@@ -2769,24 +2770,24 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerUpdate - invalid playerIndex (%u)", playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [%08llx] - invalid playerIndex (%u)", (std::uint64_t)peer._enet, playerIndex);
 						return true;
 					}
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 
-					LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
+					LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [%08llx] - playerIndex: %u, weaponType: %u", (std::uint64_t)peer._enet, playerIndex, weaponType);
 
 					const auto& playerAmmo = peerDesc->Player->GetWeaponAmmo();
 					if (weaponType >= playerAmmo.size() || playerAmmo[weaponType] == 0) {
-						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest - playerIndex: %u, no ammo in selected weapon", playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [%08llx] - playerIndex: %u, no ammo in selected weapon", (std::uint64_t)peer._enet, playerIndex);
 
 						// Request is denied, send the current weapon back to the client
-						HandlePlayerWeaponChanged(peerDesc->Player);
+						HandlePlayerWeaponChanged(peerDesc->Player, Actors::Player::SetCurrentWeaponReason::Rollback);
 						return true;
 					}
 
-					peerDesc->Player->SetCurrentWeapon((WeaponType)weaponType);
+					peerDesc->Player->SetCurrentWeapon((WeaponType)weaponType, Actors::Player::SetCurrentWeaponReason::User);
 					return true;
 				}
 				case ClientPacketType::PlayerAckWarped: {
@@ -2800,11 +2801,12 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerAckWarped - invalid playerIndex (%u)", playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerAckWarped [%08llx] - invalid playerIndex (%u)", (std::uint64_t)peer._enet, playerIndex);
 						return true;
 					}
 
-					LOGD("[MP] ClientPacketType::PlayerAckWarped - playerIndex: %u, seqNum: %llu, x: %f, y: %f", playerIndex, seqNum, posX, posY);
+					LOGD("[MP] ClientPacketType::PlayerAckWarped [%08llx] - playerIndex: %u, seqNum: %llu, x: %f, y: %f",
+						(std::uint64_t)peer._enet, playerIndex, seqNum, posX, posY);
 
 					peerDesc->LastUpdated = seqNum;
 					if (auto* mpPlayer = static_cast<RemotePlayerOnServer*>(peerDesc->Player)) {
@@ -2829,7 +2831,8 @@ namespace Jazz2::Multiplayer
 							String playerName{NoInit, playerNameLength};
 							packet.Read(playerName.data(), playerNameLength);
 
-							LOGD("[MP] ServerPacketType::PeerSetProperty - type: %u, peer: 0x%016X, name: \"%s\"", type, peerId, playerName.data());
+							LOGD("[MP] ServerPacketType::PeerSetProperty - type: %u, peer: 0x%016X, name: \"%s\"",
+								type, peerId, playerName.data());
 
 							if (type == PeerPropertyType::Connected) {
 								_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", playerName.data()));
@@ -2879,7 +2882,7 @@ namespace Jazz2::Multiplayer
 							LevelState state = (LevelState)packet.ReadValue<std::uint8_t>();
 							std::int32_t gameTimeLeft = packet.ReadVariableInt32();
 
-							LOGD("[MP] ServerPacketType::LevelSetProperty[State] - state: %u, time: %f", (std::uint32_t)state, (float)gameTimeLeft * 0.01f);
+							LOGD("[MP] ServerPacketType::LevelSetProperty::State - state: %u, time: %f", (std::uint32_t)state, (float)gameTimeLeft * 0.01f);
 
 							InvokeAsync([this, state, gameTimeLeft]() {
 								_levelState = state;
@@ -2924,7 +2927,7 @@ namespace Jazz2::Multiplayer
 							std::uint32_t totalLaps = packet.ReadVariableUint32();
 							std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
 
-							LOGD("[MP] ServerPacketType::LevelSetProperty[GameMode] - mode: %u", (std::uint32_t)gameMode);
+							LOGD("[MP] ServerPacketType::LevelSetProperty::GameMode - mode: %u", (std::uint32_t)gameMode);
 
 							auto& serverConfig = _networkManager->GetServerConfiguration();
 							serverConfig.GameMode = gameMode;
@@ -3689,14 +3692,21 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+					WeaponType weaponType = (WeaponType)packet.ReadValue<std::uint8_t>();
+					Actors::Player::SetCurrentWeaponReason reason = (Actors::Player::SetCurrentWeaponReason)packet.ReadValue<std::uint8_t>();
 
-					LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: %u, weaponType: %u", playerIndex, weaponType);
+					LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: %u, weaponType: %u, reason: %u", playerIndex, (std::uint32_t)weaponType, (std::uint32_t)reason);
 
 					if (!_players.empty()) {
 						auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
+
+						if (reason == Actors::Player::SetCurrentWeaponReason::AddAmmo && !PreferencesCache::SwitchToNewWeapon) {
+							HandlePlayerWeaponChanged(remotablePlayer, Actors::Player::SetCurrentWeaponReason::Rollback);
+							return true;
+						}
+						
 						remotablePlayer->ChangingWeaponFromServer = true;
-						static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon((WeaponType)weaponType);
+						static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon(weaponType, reason);
 						remotablePlayer->ChangingWeaponFromServer = false;
 					}
 					return true;

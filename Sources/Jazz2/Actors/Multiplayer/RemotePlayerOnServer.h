@@ -60,7 +60,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		bool FireCurrentWeapon(WeaponType weaponType) override;
 		void EmitWeaponFlare() override;
-		void SetCurrentWeapon(WeaponType weaponType) override;
+		void SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason) override;
 
 		/** @brief Synchronizes the player with server */
 		void SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
