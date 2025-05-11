@@ -140,10 +140,6 @@ namespace Jazz2::UI
 	void InGameConsole::OnKeyPressed(const KeyboardEvent& event)
 	{
 		switch (event.sym) {
-			case Keys::Escape: {
-				Hide();
-				break;
-			}
 			case Keys::Return:
 			case Keys::NumPadEnter: {
 				ProcessCurrentLine();

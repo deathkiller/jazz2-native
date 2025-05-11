@@ -131,7 +131,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		if (workingDirLength > 0) {
-			LOGI("Using working directory: %s", Utf8::FromUtf16(workingDir, workingDirLength).data());
+			LOGI("Using working directory: \"%s\"", Utf8::FromUtf16(workingDir, workingDirLength).data());
 		}
 #endif
 

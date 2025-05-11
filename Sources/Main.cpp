@@ -1098,7 +1098,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		switch ((ClientPacketType)packetType) {
 			case ClientPacketType::Ping: {
 				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::Pong, {});
-				break;
+				return;
 			}
 			case ClientPacketType::Auth: {
 				MemoryStream packet(data);
@@ -1191,7 +1191,6 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				break;
 			}
 		}
-
 	} else {
 		switch ((ServerPacketType)packetType) {
 			case ServerPacketType::AuthResponse: {
@@ -1349,6 +1348,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		}
 	}
 
+	std::int32_t n = 0;
+Retry:
 	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
 		if (multiLevelHandler->OnPacketReceived(peer, channelId, packetType, data)) {
 			return;
@@ -1356,7 +1357,12 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 	}
 
 	if (isServer && (ClientPacketType)packetType == ClientPacketType::Auth) {
-		// Message was not processed by level handler, kick the client
+		// Message was not processed by level handler, kick the client if it fails for too long
+		if (++n < 10) {
+			Thread::Sleep(500);
+			goto Retry;
+		}
+
 		_networkManager->Kick(peer, Reason::ServerNotReady);
 	}
 }
