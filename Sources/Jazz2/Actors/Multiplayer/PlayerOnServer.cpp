@@ -87,6 +87,12 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
+	bool PlayerOnServer::AddLives(std::int32_t count)
+	{
+		// TODO: OneUpCollectible are currently blocked in multiplayer
+		return false;
+	}
+
 	bool PlayerOnServer::IsAttacking() const
 	{
 		if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {

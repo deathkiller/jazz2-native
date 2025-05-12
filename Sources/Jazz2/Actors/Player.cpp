@@ -2387,7 +2387,9 @@ namespace Jazz2::Actors
 			case EventType::ModifierLimitCameraView: { // Left, Width
 				std::uint16_t left = *(std::uint16_t*)&p[0];
 				std::uint16_t width = *(std::uint16_t*)&p[2];
-				_levelHandler->LimitCameraView(this, (left == 0 ? (std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
+				_levelHandler->LimitCameraView(this, _pos,
+					(left == 0 ? (std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize,
+					width * Tiles::TileSet::DefaultTileSize);
 				break;
 			}
 			case EventType::ModifierHPole: {

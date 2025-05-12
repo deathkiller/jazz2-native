@@ -1645,7 +1645,7 @@ namespace Jazz2::Scripting
 		bool jjPLAYER::limitXScroll(std::uint16_t left, std::uint16_t width) {
 			noop();
 
-			_levelScriptLoader->_levelHandler->LimitCameraView(_player, left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
+			_levelScriptLoader->_levelHandler->LimitCameraView(_player, _player->_pos, left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
 			return true;
 		}
 		void jjPLAYER::cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant) {

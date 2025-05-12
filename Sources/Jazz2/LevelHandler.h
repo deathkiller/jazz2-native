@@ -163,7 +163,7 @@ namespace Jazz2
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;
 		Vector2f GetCameraPos(Actors::Player* player) const override;
-		void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) override;
+		void LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width) override;
 		void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) override;
 		void ShakeCameraView(Actors::Player* player, float duration) override;
 		void ShakeCameraViewNear(Vector2f pos, float duration) override;
