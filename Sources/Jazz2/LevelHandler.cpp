@@ -288,6 +288,11 @@ namespace Jazz2
 		return true;
 	}
 
+	bool LevelHandler::IsServer() const
+	{
+		return true;
+	}
+
 	bool LevelHandler::IsPausable() const
 	{
 		return true;
@@ -1125,6 +1130,11 @@ namespace Jazz2
 		for (auto player : _players) {
 			player->OnLevelChanging(initiator, exitType);
 		}
+	}
+
+	void LevelHandler::SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data)
+	{
+		// Packet cannot be sent anywhere in local sessions
 	}
 
 	void LevelHandler::HandleLevelChange(LevelInitialization&& levelInit)

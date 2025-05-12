@@ -31,6 +31,7 @@
 #include "../Actors/Solid/MovingPlatform.h"
 #include "../Actors/Solid/PinballBumper.h"
 #include "../Actors/Solid/PinballPaddle.h"
+#include "../Actors/Solid/Pole.h"
 #include "../Actors/Solid/SpikeBall.h"
 #include "../Actors/Weapons/ElectroShot.h"
 #include "../Actors/Weapons/ShotBase.h"
@@ -120,6 +121,11 @@ namespace Jazz2::Multiplayer
 	bool MpLevelHandler::IsLocalSession() const
 	{
 		return false;
+	}
+
+	bool MpLevelHandler::IsServer() const
+	{
+		return _isServer;
 	}
 
 	bool MpLevelHandler::IsPausable() const
@@ -999,6 +1005,52 @@ namespace Jazz2::Multiplayer
 		}
 
 		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
+	}
+
+	void MpLevelHandler::SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data)
+	{
+		if DEATH_LIKELY(_isServer) {
+			std::uint32_t targetActorId = 0;
+			{
+				std::unique_lock lock(_lock);
+				auto it = _remotingActors.find(const_cast<Actors::ActorBase*>(self));
+				if (it != _remotingActors.end()) {
+					targetActorId = it->second.ActorID;
+				}
+			}
+			if (targetActorId != 0) {
+				MemoryStream packet(4 + data.size());
+				packet.WriteVariableUint32(targetActorId);
+				packet.Write(data.data(), data.size());
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelLoaded);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::Rpc, packet);
+			} else {
+				LOGW("Remote actor not found");
+			}
+		} else {
+			std::uint32_t targetActorId = 0;
+			{
+				std::unique_lock lock(_lock);
+				for (const auto& [actorId, actor] : _remoteActors) {
+					if (actor.get() == self) {
+						targetActorId = actorId;
+						break;
+					}
+				}
+			}
+			if (targetActorId != 0) {
+				MemoryStream packet(4 + data.size());
+				packet.WriteVariableUint32(targetActorId);
+				packet.Write(data.data(), data.size());
+
+				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Rpc, packet);
+			} else {
+				LOGW("Remote actor not found");
+			}
+		}
 	}
 
 	void MpLevelHandler::HandleLevelChange(LevelInitialization&& levelInit)
@@ -2390,6 +2442,23 @@ namespace Jazz2::Multiplayer
 
 		if (_isServer) {
 			switch ((ClientPacketType)packetType) {
+				case ClientPacketType::Rpc: {
+					MemoryStream packet(data);
+					std::uint32_t actorId = packet.ReadVariableUint32();
+
+					// TODO: remotingActor-> OnPacketReceived() is also locked here, which is not good
+					std::unique_lock lock(_lock);
+					for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
+						if (remotingActorInfo.ActorID == actorId) {
+							LOGD("[MP] ClientPacketType::Rpc [%08llx] - id: %u, %u bytes", (std::uint64_t)peer._enet, actorId, (std::uint32_t)(data.size() - packet.GetPosition()));
+							remotingActor->OnPacketReceived(packet);
+							return true;
+						}
+					}
+
+					LOGW("[MP] ClientPacketType::Rpc [%08llx] - id: %u, %u bytes - ACTOR NOT FOUND", (std::uint64_t)peer._enet, actorId, (std::uint32_t)(data.size() - packet.GetPosition()));
+					return true;
+				}
 				case ClientPacketType::Auth: {
 					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 						peerDesc->LevelState = PeerLevelState::ValidatingAssets;
@@ -2832,6 +2901,26 @@ namespace Jazz2::Multiplayer
 			}
 		} else {
 			switch ((ServerPacketType)packetType) {
+				case ServerPacketType::Rpc: {
+					MemoryStream packet(data);
+					std::uint32_t actorId = packet.ReadVariableUint32();
+
+					std::shared_ptr<Actors::ActorBase> actor;
+					{
+						std::unique_lock lock(_lock);
+						auto it = _remoteActors.find(actorId);
+						if (it != _remoteActors.end()) {
+							actor = it->second;
+						}
+					}
+					if (actor) {
+						LOGD("[MP] ServerPacketType::Rpc - id: %u, %u bytes", actorId, (std::uint32_t)(data.size() - packet.GetPosition()));
+						actor->OnPacketReceived(packet);
+					} else {
+						LOGW("[MP] ServerPacketType::Rpc - id: %u, %u bytes - ACTOR NOT FOUND", actorId, (std::uint32_t)(data.size() - packet.GetPosition()));
+					}
+					return true;
+				}
 				case ServerPacketType::PeerSetProperty: {
 					MemoryStream packet(data);
 					PeerPropertyType type = (PeerPropertyType)packet.ReadValue<std::uint8_t>();
@@ -2893,12 +2982,18 @@ namespace Jazz2::Multiplayer
 					switch (propertyType) {
 						case LevelPropertyType::State: {
 							LevelState state = (LevelState)packet.ReadValue<std::uint8_t>();
+							float elapsedFrames = packet.ReadVariableInt32();
 							std::int32_t gameTimeLeft = packet.ReadVariableInt32();
 
-							LOGD("[MP] ServerPacketType::LevelSetProperty::State - state: %u, time: %f", (std::uint32_t)state, (float)gameTimeLeft * 0.01f);
+							float compensation = _networkManager->GetRoundTripTimeMs() * FrameTimer::FramesPerSecond * 0.002f;
 
-							InvokeAsync([this, state, gameTimeLeft]() {
+							LOGD("[MP] ServerPacketType::LevelSetProperty::State - state: %u, elapsedFrames: %.1f±%.1f, timeLeft: %.1f", (std::uint32_t)state, elapsedFrames, compensation, (float)gameTimeLeft * 0.01f);
+
+							//elapsedFrames -= compensation;
+
+							InvokeAsync([this, state, elapsedFrames, gameTimeLeft]() {
 								_levelState = state;
+								_elapsedFrames = elapsedFrames;
 								_gameTimeLeft = (float)gameTimeLeft * 0.01f;
 
 								switch (_levelState) {
@@ -3921,9 +4016,10 @@ namespace Jazz2::Multiplayer
 
 				// Synchronize level state
 				{
-					MemoryStream packet(6);
+					MemoryStream packet(10);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::State);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
+					packet.WriteVariableInt32((std::int32_t)_elapsedFrames);
 					packet.WriteVariableInt32(_levelState == LevelState::WaitingForMinPlayers
 						? _waitingForPlayerCount : (std::int32_t)(_gameTimeLeft * 100.0f));
 
@@ -4229,9 +4325,10 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::SendLevelStateToAllPlayers()
 	{
-		MemoryStream packet(6);
+		MemoryStream packet(10);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::State);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
+		packet.WriteVariableInt32((std::int32_t)_elapsedFrames);
 		packet.WriteVariableInt32(_levelState == LevelState::WaitingForMinPlayers
 			? _waitingForPlayerCount : (std::int32_t)(_gameTimeLeft * 100.0f));
 
@@ -4843,7 +4940,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		// List of objects that needs to be recreated on client-side instead of remoting
-		return (runtime_cast<Actors::Environment::SteamNote>(actor) ||
+		return (runtime_cast<Actors::Environment::SteamNote>(actor) || runtime_cast<Actors::Solid::Pole>(actor) ||
 				runtime_cast<Actors::Environment::SwingingVine>(actor) || runtime_cast<Actors::Solid::Bridge>(actor) ||
 				runtime_cast<Actors::Solid::MovingPlatform>(actor) || runtime_cast<Actors::Solid::PinballBumper>(actor) ||
 				runtime_cast<Actors::Solid::PinballPaddle>(actor) || runtime_cast<Actors::Solid::SpikeBall>(actor));

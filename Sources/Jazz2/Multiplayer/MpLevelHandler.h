@@ -78,6 +78,7 @@ namespace Jazz2::Multiplayer
 		bool Initialize(const LevelInitialization& levelInit) override;
 
 		bool IsLocalSession() const override;
+		bool IsServer() const override;
 		bool IsPausable() const override;
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
@@ -107,6 +108,8 @@ namespace Jazz2::Multiplayer
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) override;
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) override;
+
+		void SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data) override;
 
 		void HandleLevelChange(LevelInitialization&& levelInit) override;
 		void HandleGameOver(Actors::Player* player) override;

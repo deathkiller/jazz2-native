@@ -571,6 +571,16 @@ namespace Jazz2::Actors
 		}
 	}
 
+	void ActorBase::OnPacketReceived(MemoryStream& packet)
+	{
+		LOGD("Packet wasn't handled by derived class");
+	}
+
+	void ActorBase::SendPacket(ArrayView<const std::uint8_t> data)
+	{
+		_levelHandler->SendPacket(this, data);
+	}
+
 	bool ActorBase::IsCollidingWith(ActorBase* other)
 	{
 		bool perPixel1 = (_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;

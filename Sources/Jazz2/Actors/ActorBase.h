@@ -14,6 +14,7 @@
 #include <Base/TypeInfo.h>
 #include <Containers/Function.h>
 #include <Containers/StringView.h>
+#include <IO/MemoryStream.h>
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 // If coroutines are not supported, load resources synchronously
@@ -401,6 +402,11 @@ namespace Jazz2::Actors
 		virtual void OnAnimationStarted();
 		/** @brief Called when an animation finished */
 		virtual void OnAnimationFinished();
+
+		/** @brief Called when the object receives a network packet */
+		virtual void OnPacketReceived(MemoryStream& packet);
+		/** @brief Sends a packet to the other side of a non-local session */
+		void SendPacket(ArrayView<const std::uint8_t> data);
 
 		/** @brief Preloads specified metadata and its linked assets to cache */
 		static void PreloadMetadataAsync(StringView path);
