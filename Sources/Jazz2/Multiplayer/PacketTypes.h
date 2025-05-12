@@ -106,7 +106,8 @@ namespace Jazz2::Multiplayer
 		State = 1,
 		GameMode,
 		
-		LevelText = 10,
+		LevelText = 10,		// TODO
+		Music,
 
 		Count
 	};
@@ -124,6 +125,9 @@ namespace Jazz2::Multiplayer
 		Dizzy,
 		Freeze,
 		Shield,
+		LimitCameraView,
+		OverrideCameraView,
+		ShakeCameraView,
 
 		WeaponAmmo = 30,
 		WeaponUpgrades,

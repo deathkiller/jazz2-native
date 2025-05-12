@@ -24,6 +24,7 @@
 #include "../Actors/Multiplayer/RemotePlayerOnServer.h"
 #include "../Actors/Multiplayer/RemoteActor.h"
 
+#include "../Actors/Enemies/Bosses/BossBase.h"
 #include "../Actors/Environment/AirboardGenerator.h"
 #include "../Actors/Environment/SteamNote.h"
 #include "../Actors/Environment/SwingingVine.h"
@@ -1082,6 +1083,8 @@ namespace Jazz2::Multiplayer
 			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
+			LimitCameraView(mpPlayer, mpPlayer->_pos, 0, 0);
+
 			bool canRespawn = (_enableSpawning && (_levelState != LevelState::Running || !serverConfig.Elimination || peerDesc->Deaths < serverConfig.TotalKills));
 
 			if (canRespawn && serverConfig.GameMode != MpGameMode::Cooperation) {
@@ -1089,6 +1092,22 @@ namespace Jazz2::Multiplayer
 
 				// The player is invulnerable for a short time after respawning
 				mpPlayer->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+			}
+
+			if (canRespawn && _activeBoss != nullptr) {
+				if (_activeBoss->OnPlayerDied()) {
+					_activeBoss = nullptr;
+				}
+
+				// Warp all other players to checkpoint without transition to avoid issues
+				for (auto* otherPlayer : _players) {
+					if (otherPlayer != player) {
+						otherPlayer->WarpToCheckpoint();
+					}
+				}
+
+				// TODO: Reset music even without a boss
+				BeginPlayMusic(_musicDefaultPath);
 			}
 
 			if (_levelState != LevelState::Running) {
@@ -1197,7 +1216,7 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags)
 	{
 		if (_isServer) {
-			if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
+			if ((flags & (WarpFlags::Fast | WarpFlags::SkipWarpIn)) != WarpFlags::Default) {
 				// Nothing to do, sending PlayerMoveInstantly packet is enough
 				return;
 			}
@@ -3054,6 +3073,21 @@ namespace Jazz2::Multiplayer
 							}
 							break;
 						}
+						case LevelPropertyType::Music: {
+							std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+							std::uint32_t pathLength = packet.ReadVariableUint32();
+							String path{NoInit, pathLength};
+							packet.Read(path.data(), pathLength);
+
+							LOGD("[MP] ServerPacketType::LevelSetProperty::Music - path: \"%s\", flags: %u", path.data(), flags);
+
+							InvokeAsync([this, flags, path = std::move(path)]() {
+								bool setDefault = (flags & 0x01) != 0;
+								bool forceReload = (flags & 0x02) != 0;
+								BeginPlayMusic(path, setDefault, forceReload);
+							});
+							break;
+						}
 						default: {
 							LOGD("[MP] ServerPacketType::LevelSetProperty - received unknown property %u", (std::uint32_t)propertyType);
 							break;
@@ -3560,9 +3594,51 @@ namespace Jazz2::Multiplayer
 						case PlayerPropertyType::Shield: {
 							ShieldType shieldType = (ShieldType)packet.ReadValue<std::uint8_t>();
 							std::int32_t timeLeft = packet.ReadVariableInt32();
+
+							LOGD("[MP] ServerPacketType::PlayerSetProperty::Shield - shieldType: %u, timeLeft: %i", (std::uint32_t)shieldType, timeLeft);
+
 							InvokeAsync([this, shieldType, timeLeft]() {
 								if (!_players.empty()) {
 									_players[0]->SetShield(shieldType, float(timeLeft));
+								}
+							});
+							break;
+						}
+						case PlayerPropertyType::LimitCameraView: {
+							std::int32_t left = packet.ReadVariableInt32();
+							std::int32_t width = packet.ReadVariableInt32();
+							std::int32_t playerPosX = packet.ReadVariableInt32();
+							std::int32_t playerPosY = packet.ReadVariableInt32();
+
+							LOGD("[MP] ServerPacketType::PlayerSetProperty::LimitCameraView - left: %i, width: %i, playerPos: [%i, %i]", left, width, playerPosX, playerPosY);
+
+							InvokeAsync([this, left, width, playerPosX, playerPosY]() {
+								LimitCameraView(nullptr, Vector2f(playerPosX, playerPosY), left, width);
+							});
+							break;
+						}
+						case PlayerPropertyType::OverrideCameraView: {
+							float x = packet.ReadVariableInt32() * 0.01f;
+							float y = packet.ReadVariableInt32() * 0.01f;
+							bool topLeft = packet.ReadValue<std::uint8_t>() != 0;
+
+							LOGD("[MP] ServerPacketType::PlayerSetProperty::OverrideCameraView - x: %f, y: %f, topLeft: %u", x, y, topLeft);
+
+							InvokeAsync([this, x, y, topLeft]() {
+								if (!_players.empty()) {
+									OverrideCameraView(_players[0], x, y, topLeft);
+								}
+							});
+							break;
+						}
+						case PlayerPropertyType::ShakeCameraView: {
+							float duration = packet.ReadVariableInt32() * 0.01f;
+
+							LOGD("[MP] ServerPacketType::PlayerSetProperty::ShakeCameraView - duration: %f", duration);
+
+							InvokeAsync([this, duration]() {
+								if (!_players.empty()) {
+									ShakeCameraView(_players[0], duration);
 								}
 							});
 							break;
@@ -3889,22 +3965,80 @@ namespace Jazz2::Multiplayer
 		return false;
 	}
 
-	void MpLevelHandler::LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width)
+	void MpLevelHandler::LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width)
 	{
-		// TODO: This should probably be client local
-		LevelHandler::LimitCameraView(player, left, width);
+		// TODO: Include this state in initial sync
+		auto prevBounds = _viewBoundsTarget;
+
+		LevelHandler::LimitCameraView(player, playerPos, left, width);
+
+		if (_isServer && _viewBoundsTarget != prevBounds) {
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (peerDesc->RemotePeer && peerDesc->Player) {
+					MemoryStream packet(21);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::LimitCameraView);
+					packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
+					packet.WriteVariableInt32(left);
+					packet.WriteVariableInt32(width);
+					packet.WriteVariableInt32((std::int32_t)playerPos.X);
+					packet.WriteVariableInt32((std::int32_t)playerPos.Y);
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+				}
+			}
+		}
+	}
+
+	void MpLevelHandler::OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft)
+	{
+		// TODO: Include this state in initial sync
+		LevelHandler::OverrideCameraView(player, x, y, topLeft);
+
+		if (_isServer) {
+			if (auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(player)) {
+				MemoryStream packet(14);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::OverrideCameraView);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)(x * 100.0f));
+				packet.WriteVariableInt32((std::int32_t)(y * 100.0f));
+				packet.WriteValue<std::uint8_t>(topLeft ? 1 : 0);
+				_networkManager->SendTo(mpPlayer->GetPeerDescriptor()->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
 	}
 
 	void MpLevelHandler::ShakeCameraView(Actors::Player* player, float duration)
 	{
-		// TODO: This should probably be client local
 		LevelHandler::ShakeCameraView(player, duration);
+
+		if (_isServer) {
+			if (auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(player)) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::ShakeCameraView);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)(duration * 100.0f));
+				_networkManager->SendTo(mpPlayer->GetPeerDescriptor()->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
 	}
 	
 	void MpLevelHandler::ShakeCameraViewNear(Vector2f pos, float duration)
 	{
 		// TODO: This should probably be client local
 		LevelHandler::ShakeCameraViewNear(pos, duration);
+
+		constexpr float MaxDistance = 800.0f;
+
+		if (_isServer) {
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (peerDesc->RemotePeer && peerDesc->Player && (peerDesc->Player->_pos - pos).Length() <= MaxDistance) {
+					MemoryStream packet(9);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::ShakeCameraView);
+					packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
+					packet.WriteVariableInt32((std::int32_t)(duration * 100.0f));
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+				}
+			}
+		}
 	}
 
 	void MpLevelHandler::SetTrigger(std::uint8_t triggerId, bool newState)
@@ -3931,8 +4065,27 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::BeginPlayMusic(StringView path, bool setDefault, bool forceReload)
 	{
-		// TODO: This should probably be client local
-		return LevelHandler::BeginPlayMusic(path, setDefault, forceReload);
+		// TODO: Include this state in initial sync
+		bool success = LevelHandler::BeginPlayMusic(path, setDefault, forceReload);
+
+		if (_isServer) {
+			std::uint8_t flags = 0;
+			if (setDefault) flags |= 0x01;
+			if (forceReload) flags |= 0x02;
+
+			MemoryStream packet(6 + path.size());
+			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Music);
+			packet.WriteValue<std::uint8_t>(flags);
+			packet.WriteVariableUint32((std::uint32_t)path.size());
+			packet.Write(path.data(), (std::uint32_t)path.size());
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+		}
+
+		return success;
 	}
 
 	void MpLevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)

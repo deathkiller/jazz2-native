@@ -163,7 +163,7 @@ namespace Jazz2
 		/** @brief Returns camera position of a given player */
 		virtual Vector2f GetCameraPos(Actors::Player* player) const = 0;
 		/** @brief Limits camera viewport for a given player */
-		virtual void LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width) = 0;
+		virtual void LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width) = 0;
 		/** @brief Override camera viewport for a given player */
 		virtual void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) = 0;
 		/** @brief Shake camera for a given player */

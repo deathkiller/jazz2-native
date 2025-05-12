@@ -1248,7 +1248,7 @@ namespace Jazz2
 	void LevelHandler::RollbackToCheckpoint(Actors::Player* player)
 	{
 		// Reset the camera
-		LimitCameraView(player, 0, 0);
+		LimitCameraView(player, player->_pos, 0, 0);
 
 		WarpCameraToTarget(player);
 
@@ -1868,7 +1868,7 @@ namespace Jazz2
 		return {};
 	}
 
-	void LevelHandler::LimitCameraView(Actors::Player* player, std::int32_t left, std::int32_t width)
+	void LevelHandler::LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width)
 	{
 		_levelBounds.X = left;
 		if (width > 0.0f) {
@@ -1922,9 +1922,9 @@ namespace Jazz2
 						}
 
 						auto pos = viewport->_targetActor->_pos;
-						if ((pos.X < bounds.X || pos.X >= bounds.X + bounds.W) && (pos - player->_pos).Length() > 100.0f) {
+						if ((pos.X < bounds.X || pos.X >= bounds.X + bounds.W) && (pos - playerPos).Length() > 100.0f) {
 							if (auto* otherPlayer = runtime_cast<Actors::Player>(viewport->_targetActor)) {
-								otherPlayer->WarpToPosition(player->_pos, WarpFlags::SkipWarpIn);
+								otherPlayer->WarpToPosition(playerPos, WarpFlags::SkipWarpIn);
 								if (currentViewport != nullptr) {
 									viewport->_ambientLight = currentViewport->_ambientLight;
 									viewport->_ambientLightTarget = currentViewport->_ambientLightTarget;
