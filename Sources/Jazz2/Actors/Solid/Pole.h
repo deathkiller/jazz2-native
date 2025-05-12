@@ -30,6 +30,7 @@ namespace Jazz2::Actors::Solid
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void OnPacketReceived(MemoryStream& packet) override;
 
 	private:
 		static constexpr std::int32_t BouncesMax = 3;

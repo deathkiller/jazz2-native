@@ -68,6 +68,8 @@ namespace Jazz2
 		virtual GameDifficulty GetDifficulty() const = 0;
 		/** @brief Returns `true` if the level handler is on a local session */
 		virtual bool IsLocalSession() const = 0;
+		/** @brief Returns `true` if the level handler is on a server or a local session */
+		virtual bool IsServer() const = 0;
 		/** @brief Returns `true` if the level handler is pausable */
 		virtual bool IsPausable() const = 0;
 		/** @brief Returns `true` if Reforged Gameplay is enabled */
@@ -114,8 +116,7 @@ namespace Jazz2
 		virtual bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) = 0;
 
 		/** @overload */
-		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params)
-		{
+		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params) {
 			Actors::ActorBase* collider;
 			return IsPositionEmpty(self, aabb, params, &collider);
 		}
@@ -131,6 +132,9 @@ namespace Jazz2
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) = 0;
 		/** @brief Starts transition to change current level */
 		virtual void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) = 0;
+
+		/** @brief Sends a packet to the other side of a non-local session */
+		virtual void SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data) = 0;
 
 		/** @brief Called when the level is changed */
 		virtual void HandleLevelChange(LevelInitialization&& levelInit) = 0;

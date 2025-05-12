@@ -20,6 +20,7 @@ namespace Jazz2::Multiplayer
 		Null,
 		Ping,
 		Reserved,
+		Rpc,
 
 		Auth = 10,
 		LevelReady,
@@ -42,6 +43,7 @@ namespace Jazz2::Multiplayer
 		Null,
 		Pong,
 		Reserved,
+		Rpc,
 
 		AuthResponse = 70,
 		PeerSetProperty,

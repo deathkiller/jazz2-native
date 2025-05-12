@@ -116,6 +116,12 @@ namespace Jazz2::Actors::Solid
 		}
 	}
 
+	void Pole::OnPacketReceived(MemoryStream& packet)
+	{
+		FallDirection fall = (FallDirection)packet.ReadValue<std::uint8_t>();
+		Fall(fall);
+	}
+
 	bool Pole::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
@@ -155,6 +161,8 @@ namespace Jazz2::Actors::Solid
 		_fall = dir;
 		SetState(ActorState::IsInvulnerable | ActorState::IsSolidObject, true);
 		PlaySfx("FallStart"_s, 0.6f);
+
+		SendPacket(arrayView({ (std::uint8_t)_fall }));
 	}
 
 	bool Pole::IsPositionBlocked()
