@@ -134,6 +134,10 @@ namespace Jazz2::Actors::Enemies
 		constexpr float VisionDistanceAttacking = 320.0f;
 
 		for (auto& player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			targetPos = player->GetPos();
 			float visionDistance = (_currentAnimation->State == AnimState::Idle ? VisionDistanceIdle : VisionDistanceAttacking);
 			if ((_originPos - targetPos).Length() < visionDistance) {

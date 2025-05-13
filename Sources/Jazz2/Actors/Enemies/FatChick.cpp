@@ -43,6 +43,10 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		for (auto& player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			Vector2f targetPos = player->GetPos();
 			float length = (_pos - targetPos).Length();
 			if (length > 20.0f && length < 60.0f) {

@@ -79,6 +79,10 @@ namespace Jazz2::Actors::Enemies
 			} else {
 				if (_attackTime <= 0.0f) {
 					for (auto& player : _levelHandler->GetPlayers()) {
+						if (player->GetHealth() <= 0) {
+							continue;
+						}
+
 						Vector2f newPos = player->GetPos();
 						if ((newPos - _pos).Length() <= 300.0f) {
 							_attacking = true;

@@ -288,6 +288,8 @@ namespace Jazz2::Multiplayer
 		bool _controllableExternal;
 		Threading::Spinlock _lock;
 		float _recalcPositionInRoundTime;
+		std::int32_t _limitCameraLeft;
+		std::int32_t _limitCameraWidth;
 
 		SmallVector<RequiredAsset, 0> _requiredAssets;
 

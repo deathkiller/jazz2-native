@@ -80,6 +80,10 @@ namespace Jazz2::Actors::Enemies
 		constexpr float VisionDistance = 100.0f;
 
 		for (auto& player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			targetPos = player->GetPos();
 			if ((_pos - targetPos).Length() < VisionDistance) {
 				return true;

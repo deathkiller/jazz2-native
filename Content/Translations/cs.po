@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2025-05-11 20:41+0200\n"
-"PO-Revision-Date: 2025-05-11 20:41+0200\n"
+"PO-Revision-Date: 2025-05-13 18:36+0200\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1408,7 +1408,7 @@ msgstr "\f[c:#d0705d]%s\f[/c] byl upečen hráčem \f[c:#d0705d]%s\f[/c]"
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2859
 #, c-format
 msgid "\f[c:#d0705d]%s\f[/c] was roasted by environment"
-msgstr "\f[c:#d0705d]%s\f[/c] se upekl sám"
+msgstr "\f[c:#d0705d]%s\f[/c] se upekl"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2299
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2837

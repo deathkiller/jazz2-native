@@ -103,6 +103,10 @@ namespace Jazz2::Actors::Bosses
 
 					auto players = _levelHandler->GetPlayers();
 					for (auto* player : players) {
+						if (player->GetHealth() <= 0) {
+							continue;
+						}
+
 						Vector2f newPos = player->GetPos();
 						if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
 							targetPos = newPos;
@@ -316,6 +320,10 @@ namespace Jazz2::Actors::Bosses
 
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			Vector2f newPos = player->GetPos();
 			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
 				targetPos = newPos;
@@ -341,6 +349,10 @@ namespace Jazz2::Actors::Bosses
 
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			Vector2f newPos = player->GetPos();
 			if ((_pos - newPos).Length() < (_pos - foundPos).Length()) {
 				foundPos = newPos;

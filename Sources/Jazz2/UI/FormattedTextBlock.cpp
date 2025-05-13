@@ -485,7 +485,7 @@ namespace Jazz2::UI
 
 					// This has to be adjusted for bitmap font
 					//std::int32_t tabWidth = _font->GetSizeInPixels() * 5 / 2;
-					std::int32_t tabWidth = scale * _font->GetSizeInPixels() * 7 / 4;
+					std::int32_t tabWidth = scale * _font->GetSizeInPixels() * 13 / 7;
 
 					float remainder = fmodf(currentLocation.X, tabWidth);
 					currentLocation.X += (tabWidth * tabCount) - remainder;

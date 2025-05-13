@@ -65,7 +65,7 @@ namespace Jazz2::Multiplayer
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
 			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _lastSpawnedActorId(-1), _waitingForPlayerCount(0),
 			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb),
-			_controllableExternal(true), _recalcPositionInRoundTime(0.0f)
+			_controllableExternal(true), _recalcPositionInRoundTime(0.0f), _limitCameraLeft(0), _limitCameraWidth(0)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
 #endif
@@ -1083,31 +1083,62 @@ namespace Jazz2::Multiplayer
 			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-			LimitCameraView(mpPlayer, mpPlayer->_pos, 0, 0);
-
 			bool canRespawn = (_enableSpawning && (_levelState != LevelState::Running || !serverConfig.Elimination || peerDesc->Deaths < serverConfig.TotalKills));
-
-			if (canRespawn && serverConfig.GameMode != MpGameMode::Cooperation) {
-				mpPlayer->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType);
-
-				// The player is invulnerable for a short time after respawning
-				mpPlayer->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
-			}
+			bool shouldRollback = false;
 
 			if (canRespawn && _activeBoss != nullptr) {
-				if (_activeBoss->OnPlayerDied()) {
-					_activeBoss = nullptr;
-				}
-
-				// Warp all other players to checkpoint without transition to avoid issues
-				for (auto* otherPlayer : _players) {
-					if (otherPlayer != player) {
-						otherPlayer->WarpToCheckpoint();
+				bool anyoneAlive = false;
+				for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+					if (peerDesc->Player && peerDesc->Player->_health > 0) {
+						anyoneAlive = true;
+						break;
 					}
 				}
 
-				// TODO: Reset music even without a boss
-				BeginPlayMusic(_musicDefaultPath);
+				if (anyoneAlive) {
+					// If at least one player is alive, don't rollback yet
+					canRespawn = false;
+				} else {
+					if (_activeBoss->OnPlayerDied()) {
+						_activeBoss = nullptr;
+					}
+
+					shouldRollback = true;
+				}
+			}
+
+			if (canRespawn) {
+				LimitCameraView(mpPlayer, mpPlayer->_pos, 0, 0);
+
+				if (shouldRollback) {
+					LOGI("Rolling back to checkpoint");
+					for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+						if (peerDesc->Player && peerDesc->Player != player) {
+							peerDesc->Player->Respawn(mpPlayer->_checkpointPos);
+
+							if (peerDesc->RemotePeer) {
+								peerDesc->LastUpdated = UINT64_MAX;
+								static_cast<PlayerOnServer*>(peerDesc->Player)->_canTakeDamage = false;
+
+								MemoryStream packet2(12);
+								packet2.WriteVariableUint32(peerDesc->Player->_playerIndex);
+								packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
+								packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
+								_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
+							}
+						}
+					}
+
+					RollbackLevelState();
+					BeginPlayMusic(_musicDefaultPath);
+				}
+
+				if (serverConfig.GameMode != MpGameMode::Cooperation) {
+					mpPlayer->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType);
+
+					// The player is invulnerable for a short time after respawning
+					mpPlayer->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+				}
 			}
 
 			if (_levelState != LevelState::Running) {
@@ -2191,37 +2222,39 @@ namespace Jazz2::Multiplayer
 				SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
 			}
 			return true;
-		} else if (line.hasPrefix("/kick "_s)) {
-			if (isAdmin) {
-				// TODO: Implement /kick
-			}
 		} else if (line == "/players"_s) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 			SendMessage(peer, UI::MessageLevel::Info, "List of connected players:"_s);
 
-			char infoBuffer[128];
+			char infoBuffer[128]; char playerName[64];
 			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 				if (!peerDesc->RemotePeer && !peerDesc->Player) {
 					continue;
 				}
 
+				if (peerDesc->Player) {
+					formatString(playerName, sizeof(playerName), "%s#%i", peerDesc->PlayerName.data(), peerDesc->Player->_playerIndex);
+				} else {
+					copyStringFirst(playerName, sizeof(playerName), peerDesc->PlayerName.data(), peerDesc->PlayerName.size());
+				}
+
 				if (_levelState < LevelState::Running) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ I: %i\f[w:50] s\f[/w]",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t │ %u ms\t │ P: %u\t │ I: %i\f[w:50] s\f[/w]",
+						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ K: %u\t│ D: %u\t│ I: %i\f[w:50] s\f[/w]\t│ Laps: %u/%u",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t │ %u ms\t │ P: %u\t │ K: %u\t │ D: %u\t │ I: %i\f[w:50] s\f[/w]\t│ Laps: %u/%u",
+						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1, 
 						peerDesc->Laps + 1, serverConfig.TotalLaps);
 				} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ K: %u\t│ D: %u\t│ I: %i\f[w:50] s\f[/w]\t│ Treasure: %u",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t │ %u ms\t │ P: %u\t │ K: %u\t │ D: %u\t │ I: %i\f[w:50] s\f[/w]\t│ Treasure: %u",
+						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1,
 						peerDesc->TreasureCollected);
 				} else {
-					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t│ %u ms\t│ P: %u\t│ K: %u\t│ D: %u\t│ I: %i\f[w:50] s\f[/w]",
-						peerDesc->PositionInRound, peerDesc->PlayerName.data(), peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
+					formatString(infoBuffer, sizeof(infoBuffer), "%u.\t%s\t │ %u ms\t │ P: %u\t │ K: %u\t │ D: %u\t │ I: %i\f[w:50] s\f[/w]",
+						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
 						peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				}
@@ -2332,8 +2365,8 @@ namespace Jazz2::Multiplayer
 					SetGameMode(serverConfig.GameMode);
 				}
 				SendMessage(peer, UI::MessageLevel::Info, "Server configuration reloaded"_s);
-				return true;
 			}
+			return true;
 		} else if (line == "/reset points"_s) {
 			if (isAdmin) {
 				for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
@@ -2351,22 +2384,22 @@ namespace Jazz2::Multiplayer
 					}
 				}
 				SendMessage(peer, UI::MessageLevel::Info, "All points reset"_s);
-				return true;
 			}
+			return true;
 		} else if (line.hasPrefix("/alert "_s)) {
 			if (isAdmin) {
 				StringView message = line.exceptPrefix("/alert "_s).trimmed();
 				ShowAlertToAllPlayers(message);
-				return true;
 			}
+			return true;
 		} else if (line == "/skip"_s) {
 			if (isAdmin) {
 				auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (_levelState == LevelState::PreGame && _players.size() >= serverConfig.MinPlayerCount) {
 					_gameTimeLeft = 0.0f;
 				}
-				return true;
 			}
+			return true;
 		} else if (line.hasPrefix("/playlist"_s)) {
 			if (isAdmin) {
 				auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -2389,8 +2422,44 @@ namespace Jazz2::Multiplayer
 						ApplyFromPlaylist();
 					}
 				}
-				return true;
 			}
+			return true;
+		} else if (line.hasPrefix("/ip "_s)) {
+			if (isAdmin) {
+				if (auto playerName = line.exceptPrefix("/ip "_s)) {
+					std::int32_t playerIndex = (playerName.hasPrefix('#') ? stou32(&playerName[1], playerName.size() - 1) : -1);
+
+					for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+						if (playerIndex >= 0 ? (peerDesc->Player && peerDesc->Player->_playerIndex == playerIndex) : (peerDesc->PlayerName == playerName)) {
+							char infoBuffer[128];
+							if (peerDesc->RemotePeer) {
+								formatString(infoBuffer, sizeof(infoBuffer), "%s is connected from %s", peerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peerDesc->RemotePeer).data());
+							} else {
+								formatString(infoBuffer, sizeof(infoBuffer), "%s is connected locally", peerDesc->PlayerName.data());
+							}
+							SendMessage(peer, UI::MessageLevel::Info, infoBuffer);
+							break;
+						}
+					}
+				}
+			}
+			return true;
+		} else if (line.hasPrefix("/kick "_s)) {
+			if (isAdmin) {
+				if (auto playerName = line.exceptPrefix("/kick "_s)) {
+					std::int32_t playerIndex = (playerName.hasPrefix('#') ? stou32(&playerName[1], playerName.size() - 1) : -1);
+
+					for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+						if (peerDesc->RemotePeer) {
+							if (playerIndex >= 0 ? (peerDesc->Player && peerDesc->Player->_playerIndex == playerIndex) : (peerDesc->PlayerName == playerName)) {
+								_networkManager->Kick(peerDesc->RemotePeer, Reason::Kicked);
+								break;
+							}
+						}
+					}
+				}
+			}
+			return true;
 		} else if (line == "/kill"_s) {
 			auto peers = _networkManager->GetPeers();
 			auto it = peers->find(peer);
@@ -2400,6 +2469,25 @@ namespace Jazz2::Multiplayer
 						peer->Player->TakeDamage(INT32_MAX, 0.0f, true);
 					}
 				});
+			}
+			return true;
+		} else if (line.hasPrefix("/kill "_s)) {
+			if (isAdmin) {
+				if (auto playerName = line.exceptPrefix("/kill "_s)) {
+					std::int32_t playerIndex = (playerName.hasPrefix('#') ? stou32(&playerName[1], playerName.size() - 1) : -1);
+
+					for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+						if (peerDesc->Player) {
+							if (playerIndex >= 0 ? (peerDesc->Player->_playerIndex == playerIndex) : (peerDesc->PlayerName == playerName)) {
+								// TODO: Don't count it as a death
+								std::uint32_t prevDeaths = peerDesc->Deaths;
+								peerDesc->Player->TakeDamage(INT32_MAX, 0.0f, true);
+								peerDesc->Deaths = prevDeaths;
+								break;
+							}
+						}
+					}
+				}
 			}
 			return true;
 		}
@@ -2464,6 +2552,8 @@ namespace Jazz2::Multiplayer
 						}
 					}
 
+					// Move the player out of the bounds to avoid triggering events
+					player->_pos = Vector2f(NAN, NAN);
 					player->SetState(Actors::ActorState::IsDestroyed, true);
 
 					MemoryStream packet(4);
@@ -2500,6 +2590,49 @@ namespace Jazz2::Multiplayer
 									}
 								});
 							}
+						}
+					}
+
+					if (_activeBoss != nullptr) {
+						// If a boss is active and the last player left, roll everything back
+						bool anyoneAlive = false;
+						for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+							if (peerDesc->Player && peerDesc->Player != player && peerDesc->Player->_health > 0) {
+								anyoneAlive = true;
+								break;
+							}
+						}
+
+						if (!anyoneAlive) {
+							Vector2f checkpointPos = player->_checkpointPos;
+							InvokeAsync([this, player, checkpointPos]() {
+								if (_activeBoss->OnPlayerDied()) {
+									_activeBoss = nullptr;
+								}
+
+								LimitCameraView(nullptr, checkpointPos, 0, 0);
+
+								LOGI("Rolling back to checkpoint");
+								for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+									if (peerDesc->Player && peerDesc->Player != player) {
+										peerDesc->Player->Respawn(checkpointPos);
+
+										if (peerDesc->RemotePeer) {
+											peerDesc->LastUpdated = UINT64_MAX;
+											static_cast<PlayerOnServer*>(peerDesc->Player)->_canTakeDamage = false;
+
+											MemoryStream packet2(12);
+											packet2.WriteVariableUint32(peerDesc->Player->_playerIndex);
+											packet2.WriteValue<std::int32_t>((std::int32_t)(checkpointPos.X * 512.0f));
+											packet2.WriteValue<std::int32_t>((std::int32_t)(checkpointPos.Y * 512.0f));
+											_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
+										}
+									}
+								}
+
+								RollbackLevelState();
+								BeginPlayMusic(_musicDefaultPath);
+							});
 						}
 					}
 				}
@@ -4063,12 +4196,15 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width)
 	{
-		// TODO: Include this state in initial sync
-		auto prevBounds = _viewBoundsTarget;
+		std::int32_t prevLeft = _limitCameraLeft;
+		std::int32_t prevWidth = _limitCameraWidth;
+
+		_limitCameraLeft = left;
+		_limitCameraWidth = width;
 
 		LevelHandler::LimitCameraView(player, playerPos, left, width);
 
-		if (_isServer && _viewBoundsTarget != prevBounds) {
+		if (_isServer && (prevLeft != _limitCameraLeft || prevWidth != _limitCameraWidth)) {
 			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 				if (peerDesc->RemotePeer && peerDesc->Player) {
 					MemoryStream packet(21);
@@ -4340,92 +4476,113 @@ namespace Jazz2::Multiplayer
 					}
 				}
 			} else if (peerDesc->LevelState == PeerLevelState::PlayerReady) {
-				peerDesc->LevelState = PeerLevelState::PlayerSpawned;
+				if (_enableSpawning && _activeBoss == nullptr) {
+					peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 
-				const auto& serverConfig = _networkManager->GetServerConfiguration();
-				Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType);
+					const auto& serverConfig = _networkManager->GetServerConfiguration();
+					Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType);
 
-				std::uint8_t playerIndex = FindFreePlayerId();
-				LOGI("[MP] Spawning player %u [%08llx]", playerIndex, (std::uint64_t)peer._enet);
+					std::uint8_t playerIndex = FindFreePlayerId();
+					LOGI("[MP] Spawning player %u [%08llx]", playerIndex, (std::uint64_t)peer._enet);
 
-				std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
-				std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
-				player->OnActivated(Actors::ActorActivationDetails(
-					this,
-					Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
-					playerParams
-				));
-				player->_controllableExternal = _controllableExternal;
-				player->_health = (serverConfig.InitialPlayerHealth > 0
-					? serverConfig.InitialPlayerHealth
-					: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+					std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
+					std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
+					player->OnActivated(Actors::ActorActivationDetails(
+						this,
+						Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
+						playerParams
+					));
+					player->_controllableExternal = _controllableExternal;
+					player->_health = (serverConfig.InitialPlayerHealth > 0
+						? serverConfig.InitialPlayerHealth
+						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
-				peerDesc->LapsElapsedFrames = _elapsedFrames;
-				peerDesc->LapStarted = TimeStamp::now();
+					peerDesc->LapsElapsedFrames = _elapsedFrames;
+					peerDesc->LapStarted = TimeStamp::now();
 
-				Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();
-				_players.push_back(ptr);
+					Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();
+					_players.push_back(ptr);
 
-				_suppressRemoting = true;
-				AddActor(player);
-				_suppressRemoting = false;
+					_suppressRemoting = true;
+					AddActor(player);
+					_suppressRemoting = false;
 
-				ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
+					ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
 
-				// Spawn the player also on the remote side
-				{
-					std::uint8_t flags = 0;
-					if (player->_controllable) {
-						flags |= 0x01;
-					}
-					if (player->_controllableExternal) {
-						flags |= 0x02;
-					}
-
-					MemoryStream packet(16);
-					packet.WriteVariableUint32(playerIndex);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)player->_playerType);
-					packet.WriteVariableInt32(player->_health);
-					packet.WriteValue<std::uint8_t>(flags);
-					packet.WriteValue<std::uint8_t>(peerDesc->Team);
-					packet.WriteVariableInt32((std::int32_t)player->_pos.X);
-					packet.WriteVariableInt32((std::int32_t)player->_pos.Y);
-
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet);
-				}
-
-				// The player is invulnerable for a short time after spawning
-				ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
-
-				// Create the player also on all other clients
-				{
-					MemoryStream packet;
-					InitializeCreateRemoteActorPacket(packet, playerIndex, player.get());
-
-					_networkManager->SendTo([this, self = peer](const Peer& peer) {
-						if (peer == self) {
-							return false;
+					// Spawn the player also on the remote side
+					{
+						std::uint8_t flags = 0;
+						if (player->_controllable) {
+							flags |= 0x01;
 						}
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
-				}
+						if (player->_controllableExternal) {
+							flags |= 0x02;
+						}
 
-				{
-					MemoryStream packet(5 + peerDesc->PlayerName.size());
-					packet.WriteVariableUint32(playerIndex);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
-					packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+						MemoryStream packet(16);
+						packet.WriteVariableUint32(playerIndex);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)player->_playerType);
+						packet.WriteVariableInt32(player->_health);
+						packet.WriteValue<std::uint8_t>(flags);
+						packet.WriteValue<std::uint8_t>(peerDesc->Team);
+						packet.WriteVariableInt32((std::int32_t)player->_pos.X);
+						packet.WriteVariableInt32((std::int32_t)player->_pos.Y);
 
-					_networkManager->SendTo([this](const Peer& peer) {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet);
-				}
+						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet);
+					}
 
-				if DEATH_UNLIKELY(_levelState == LevelState::WaitingForMinPlayers) {
-					_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
-					SendLevelStateToAllPlayers();
+					// The player is invulnerable for a short time after spawning
+					ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+
+					if (_limitCameraLeft != 0 || _limitCameraWidth != 0) {
+						Vector2f otherPlayerPos;
+						for (auto* otherPlayer : _players) {
+							if (otherPlayer != ptr) {
+								otherPlayerPos = otherPlayer->_pos;
+								break;
+							}
+						}
+
+						MemoryStream packet(21);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::LimitCameraView);
+						packet.WriteVariableUint32(playerIndex);
+						packet.WriteVariableInt32(_limitCameraLeft);
+						packet.WriteVariableInt32(_limitCameraWidth);
+						packet.WriteVariableInt32((std::int32_t)otherPlayerPos.X);
+						packet.WriteVariableInt32((std::int32_t)otherPlayerPos.Y);
+						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+					}
+
+					// Create the player also on all other clients
+					{
+						MemoryStream packet;
+						InitializeCreateRemoteActorPacket(packet, playerIndex, player.get());
+
+						_networkManager->SendTo([this, self = peer](const Peer& peer) {
+							if (peer == self) {
+								return false;
+							}
+							auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+							return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
+					}
+
+					{
+						MemoryStream packet(5 + peerDesc->PlayerName.size());
+						packet.WriteVariableUint32(playerIndex);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+						packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+
+						_networkManager->SendTo([this](const Peer& peer) {
+							auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+							return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet);
+					}
+
+					if DEATH_UNLIKELY(_levelState == LevelState::WaitingForMinPlayers) {
+						_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
+						SendLevelStateToAllPlayers();
+					}
 				}
 			}
 		}
