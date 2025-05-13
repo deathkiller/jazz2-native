@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Solid
 
 	bool PowerUpShieldMonitor::OnPerish(ActorBase* collider)
 	{
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 
 		return SolidObjectBase::OnPerish(collider);
 	}

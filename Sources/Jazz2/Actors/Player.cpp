@@ -4162,7 +4162,7 @@ namespace Jazz2::Actors
 		return true;
 	}
 
-	bool Player::SpawnBird(uint8_t type, Vector2f pos)
+	bool Player::SpawnBird(std::uint8_t type, Vector2f pos)
 	{
 		if (_spawnedBird != nullptr) {
 			return false;

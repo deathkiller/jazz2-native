@@ -17,20 +17,14 @@ namespace nCine
 			T X, Y, Z, W;
 
 			constexpr Quaternion() noexcept
-				: X(T(0)), Y(T(0)), Z(T(0)), W(T(1)) {
-			}
-			explicit Quaternion(NoInitT) noexcept
-			{
-			}
+				: X(T(0)), Y(T(0)), Z(T(0)), W(T(1)) {}
+			explicit Quaternion(NoInitT) noexcept {}
 			constexprQuaternion(T x, T y, T z, T w) noexcept
-				: X(x), Y(y), Z(z), W(w) {
-			}
+				: X(x), Y(y), Z(z), W(w) {}
 			explicit Quaternion(const Vector4<T>& v) noexcept
-				: X(v.X), Y(v.Y), Z(v.Z), W(v.W) {
-			}
+				: X(v.X), Y(v.Y), Z(v.Z), W(v.W) {}
 			constexpr Quaternion(const Quaternion& other) noexcept
-				: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {
-			}
+				: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
 			Quaternion& operator=(const Quaternion& other);
 
 			void Set(T x, T y, T z, T w);

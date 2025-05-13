@@ -161,6 +161,17 @@ namespace Jazz2::Actors
 		FrozenMask				/**< Apply frozen effect to the sprite */
 	};
 
+	/** @brief Effect type of @ref CreateParticleDebrisOnPerish() */
+	enum class ParticleDebrisEffect {
+		Unknown,
+		Standard,
+		StandardInWater,
+		Dissolve,
+		Frozen,
+		Fire,
+		Lightning
+	};
+
 	/** @brief Base class of an object */
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
@@ -381,8 +392,10 @@ namespace Jazz2::Actors
 		/** @brief Handles change of frozen state after collision with other object */
 		void HandleFrozenStateChange(ActorBase* shot);
 
-		/** @brief Creates a particle debris from a sprite */
-		void CreateParticleDebris();
+		/** @brief Creates a particle debris from a sprite when the object is going to perish */
+		void CreateParticleDebrisOnPerish(ActorBase* collider);
+		/** @overload */
+		void CreateParticleDebrisOnPerish(ParticleDebrisEffect effect, Vector2f speed);
 		/** @brief Creates a sprite debris */
 		void CreateSpriteDebris(AnimState state, std::int32_t count);
 		/** @brief Returns scale of ice shrapnels */

@@ -216,7 +216,7 @@ namespace Jazz2::Actors
 		/** @brief Increases active shield time */
 		virtual bool IncreaseShieldTime(float timeLeft);
 		/** @brief Spawns bird companion */
-		bool SpawnBird(uint8_t type, Vector2f pos);
+		bool SpawnBird(std::uint8_t type, Vector2f pos);
 		/** @brief Disables controls for specified time */
 		bool DisableControllable(float timeout);
 		/** @brief Sets checkpoint */

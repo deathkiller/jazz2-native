@@ -34,7 +34,6 @@ namespace Jazz2::Actors::Enemies
 		// Hide these members from documentation before refactoring
 		bool _canHurtPlayer;
 		std::uint32_t _scoreValue;
-		Direction _lastHitDir;
 #endif
 
 		void OnUpdate(float timeMult) override;
@@ -46,7 +45,6 @@ namespace Jazz2::Actors::Enemies
 		void PlaceOnGround();
 		bool CanMoveToPosition(float x, float y);
 		void TryGenerateRandomDrop();
-		void CreateDeathDebris(ActorBase* collider);
 		void StartBlinking();
 		void HandleBlinking(float timeMult);
 

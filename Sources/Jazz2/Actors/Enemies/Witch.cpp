@@ -115,7 +115,7 @@ namespace Jazz2::Actors::Enemies
 			EnemyBase::OnPerish(collider);
 		});
 
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(collider);
 
 		return false;
 	}

@@ -55,7 +55,7 @@ namespace Jazz2::Actors::Collectibles
 
 	bool GemGiant::OnPerish(ActorBase* collider)
 	{
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 
 		PlaySfx("Break"_s);
 

@@ -22,35 +22,24 @@ namespace nCine
 			T X, Y, Z, W;
 
 			constexpr Vector4() noexcept
-				: X { T(0) }, Y { T(0) }, Z { T(0) }, W { T(0) } {
-			}
-			explicit Vector4(NoInitT) noexcept
-			{
-			}
+				: X{T(0)}, Y{T(0)}, Z{T(0)}, W{T(0)} {}
+			explicit Vector4(NoInitT) noexcept {}
 			explicit constexpr Vector4(T s) noexcept
-				: X(s), Y(s), Z(s), W(s) {
-			}
+				: X(s), Y(s), Z(s), W(s) {}
 			constexpr Vector4(T x, T y, T z, T w) noexcept
-				: X(x), Y(y), Z(z), W(w) {
-			}
+				: X(x), Y(y), Z(z), W(w) {}
 			constexpr Vector4(const Vector2<T>& other, T z, T w) noexcept
-				: X(other.X), Y(other.Y), Z(z), W(w) {
-			}
+				: X(other.X), Y(other.Y), Z(z), W(w) {}
 			constexpr Vector4(Vector2<T>&& other, T z, T w) noexcept
-				: X(other.X), Y(other.Y), Z(z), W(w) {
-			}
+				: X(other.X), Y(other.Y), Z(z), W(w) {}
 			constexpr Vector4(const Vector3<T>& other, T w) noexcept
-				: X(other.X), Y(other.Y), Z(other.Z), W(w) {
-			}
+				: X(other.X), Y(other.Y), Z(other.Z), W(w) {}
 			constexpr Vector4(Vector3<T>&& other, T w) noexcept
-				: X(other.X), Y(other.Y), Z(other.Z), W(w) {
-			}
+				: X(other.X), Y(other.Y), Z(other.Z), W(w) {}
 			constexpr Vector4(const Vector4& other) noexcept
-				: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {
-			}
+				: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
 			constexpr Vector4(Vector4&& other) noexcept
-				: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {
-			}
+				: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
 			Vector4& operator=(const Vector4& other) noexcept;
 			Vector4& operator=(Vector4&& other) noexcept;
 

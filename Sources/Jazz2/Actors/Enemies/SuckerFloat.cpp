@@ -61,13 +61,27 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (shouldDestroy) {
-			CreateDeathDebris(collider);
+			CreateParticleDebrisOnPerish(collider);
 			_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 			TryGenerateRandomDrop();
 		} else {
+			Vector2f shotSpeed;
+			if (runtime_cast<Weapons::Thunderbolt>(collider)) {
+				shotSpeed = _pos - collider->GetPos();
+			} else {
+				shotSpeed = collider->GetSpeed();
+			}
+
+			Direction dir;
+			if (std::abs(shotSpeed.X) > 0.2f) {
+				dir = (shotSpeed.X > 0.0f ? Direction::Right : Direction::Left);
+			} else {
+				dir = (shotSpeed.Y > 0.0f ? Direction::Down : Direction::Up);
+			}
+
 			std::shared_ptr<Sucker> sucker = std::make_shared<Sucker>();
-			std::uint8_t suckerParams[1] = { (std::uint8_t)_lastHitDir };
+			std::uint8_t suckerParams[1] = { (std::uint8_t)dir };
 			sucker->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),

@@ -167,7 +167,7 @@ namespace Jazz2::Actors::Bosses
 
 		ForceCancelTransition();
 
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		StringView text = _levelHandler->GetLevelText(_endText);

@@ -27,20 +27,15 @@ namespace nCine
 			S B;
 
 			constexpr AABB() noexcept
-				: L(S(0)), T(S(0)), R(S(0)), B(S(0)) {
-			}
+				: L(S(0)), T(S(0)), R(S(0)), B(S(0)) {}
 
-			explicit AABB(NoInitT) noexcept
-			{
-			}
+			explicit AABB(NoInitT) noexcept {}
 
 			constexpr AABB(S l, S t, S r, S b) noexcept
-				: L(l), T(t), R(r), B(b) {
-			}
+				: L(l), T(t), R(r), B(b) {}
 
 			constexpr AABB(const Vector2<S>& min, const Vector2<S>& max) noexcept
-				: L(std::min(min.X, max.X)), T(std::min(min.Y, max.Y)), R(std::max(min.X, max.X)), B(std::max(min.Y, max.Y)) {
-			}
+				: L(std::min(min.X, max.X)), T(std::min(min.Y, max.Y)), R(std::max(min.X, max.X)), B(std::max(min.Y, max.Y)) {}
 
 			template<class U>
 			constexpr AABB<U> As() {

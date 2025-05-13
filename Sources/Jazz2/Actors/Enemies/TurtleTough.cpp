@@ -68,7 +68,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool TurtleTough::OnPerish(ActorBase* collider)
 	{
-		CreateDeathDebris(collider);
+		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		if (!runtime_cast<Solid::PushableBox>(collider)) {

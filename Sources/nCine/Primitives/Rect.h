@@ -28,19 +28,14 @@ namespace nCine
 
 			/// Default constructor, all zeros
 			constexpr Rect() noexcept
-				: X(T(0)), Y(T(0)), W(T(0)), H(T(0)) {
-			}
-			explicit Rect(NoInitT) noexcept
-			{
-			}
+				: X(T(0)), Y(T(0)), W(T(0)), H(T(0)) {}
+			explicit Rect(NoInitT) noexcept {}
 			/// Constructs a rectangle from top-left point and size
 			constexpr Rect(T x, T y, T w, T h) noexcept
-				: X(x), Y(y), W(w), H(h) {
-			}
+				: X(x), Y(y), W(w), H(h) {}
 			/// Constructs a rectangle from top-left point and size as two `Vector2`
 			constexpr Rect(const Vector2<T>& point, const Vector2<T>& size) noexcept
-				: X(point.X), Y(point.Y), W(size.X), H(size.Y) {
-			}
+				: X(point.X), Y(point.Y), W(size.X), H(size.Y) {}
 
 			/// Creates a rectangle from center and size
 			static Rect FromCenterSize(T xx, T yy, T ww, T hh);

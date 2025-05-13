@@ -123,7 +123,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Robot::OnPerish(ActorBase* collider)
 	{
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 
 		for (std::int32_t i = 0; i < 8; i++) {
 			CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);

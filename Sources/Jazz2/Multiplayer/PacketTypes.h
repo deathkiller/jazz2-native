@@ -63,6 +63,7 @@ namespace Jazz2::Multiplayer
 		SetTrigger,
 		AdvanceTileAnimation,
 		RevertTileAnimation,		// TODO
+		CreateDebris,
 
 		CreateControllablePlayer = 110,
 		CreateRemoteActor,

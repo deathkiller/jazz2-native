@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool MadderHatter::OnPerish(ActorBase* collider)
 	{
-		CreateDeathDebris(collider);
+		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		if (_frozenTimeLeft <= 0.0f) {

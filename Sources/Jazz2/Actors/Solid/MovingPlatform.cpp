@@ -191,7 +191,7 @@ namespace Jazz2::Actors::Solid
 
 	bool MovingPlatform::OnPerish(ActorBase* collider)
 	{
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 
 		return SolidObjectBase::OnPerish(collider);
 	}
