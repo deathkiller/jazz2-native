@@ -86,7 +86,7 @@ namespace Jazz2::Actors::Solid
 	{
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 
 		PlaySfx("Break"_s);
 

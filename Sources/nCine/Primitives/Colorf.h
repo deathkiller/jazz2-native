@@ -49,22 +49,14 @@ namespace nCine
 
 			/// Default constructor (transparent color)
 			constexpr Colorf() noexcept
-				: Colorf(1.0f, 1.0f, 1.0f, 1.0f)
-			{
-			}
-			explicit Colorf(NoInitT) noexcept
-			{
-			}
+				: Colorf(1.0f, 1.0f, 1.0f, 1.0f) {}
+			explicit Colorf(NoInitT) noexcept {}
 			/// Three channels constructor
 			constexpr Colorf(float red, float green, float blue) noexcept
-				: Colorf(red, green, blue, 1.0f)
-			{
-			}
+				: Colorf(red, green, blue, 1.0f) {}
 			/// Four channels constructor
 			constexpr Colorf(float red, float green, float blue, float alpha) noexcept
-				: R(red), G(green), B(blue), A(std::clamp(alpha, 0.0f, 1.0f))
-			{
-			}
+				: R(red), G(green), B(blue), A(std::clamp(alpha, 0.0f, 1.0f)) {}
 			/// Four channels constructor from an array
 			explicit Colorf(const float channels[NumChannels]) noexcept;
 			explicit Colorf(const Color& color) noexcept;

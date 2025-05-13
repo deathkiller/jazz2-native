@@ -108,7 +108,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool Demon::OnPerish(ActorBase* collider)
 	{
-		CreateDeathDebris(collider);
+		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();

@@ -110,7 +110,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool TurtleShell::OnPerish(ActorBase* collider)
 	{
-		CreateDeathDebris(collider);
+		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();

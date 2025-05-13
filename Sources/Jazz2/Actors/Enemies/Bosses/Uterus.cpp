@@ -178,7 +178,7 @@ namespace Jazz2::Actors::Bosses
 		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokePoof);
 		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::RF);
 
-		CreateDeathDebris(collider);
+		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		StringView text = _levelHandler->GetLevelText(_endText);
@@ -270,7 +270,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Uterus::ShieldPart::OnPerish(ActorBase* collider)
 	{
-		CreateDeathDebris(collider);
+		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::Tiny);

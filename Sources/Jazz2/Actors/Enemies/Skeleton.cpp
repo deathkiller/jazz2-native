@@ -73,7 +73,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		// TODO: Sound of bones
 		// TODO: Use CreateDeathDebris(collider); instead?
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		if (_frozenTimeLeft <= 0.0f) {

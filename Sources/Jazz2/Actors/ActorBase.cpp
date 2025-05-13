@@ -8,6 +8,9 @@
 
 #include "Explosion.h"
 #include "Player.h"
+#include "Solid/Pole.h"
+#include "Solid/PushableBox.h"
+#include "Weapons/ShieldFireShot.h"
 #include "Weapons/FreezerShot.h"
 #include "Weapons/ToasterShot.h"
 #include "Weapons/Thunderbolt.h"
@@ -422,17 +425,222 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void ActorBase::CreateParticleDebris()
+	void ActorBase::CreateParticleDebrisOnPerish(ActorBase* collider)
 	{
-		auto* tilemap = _levelHandler->TileMap();
-		if (tilemap != nullptr) {
-			tilemap->CreateParticleDebris(_currentTransition != nullptr ? _currentTransition : _currentAnimation,
-				Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), Vector2f::Zero, _renderer.CurrentFrame, IsFacingLeft());
+		ParticleDebrisEffect effect;
+		if (runtime_cast<Weapons::ToasterShot>(collider) || runtime_cast<Weapons::ShieldFireShot>(collider)) {
+			effect = ParticleDebrisEffect::Fire;
+		} else if (runtime_cast<Weapons::Thunderbolt>(collider)) {
+			effect = ParticleDebrisEffect::Lightning;
+		} else if (_pos.Y > _levelHandler->GetWaterLevel()) {
+			effect = ParticleDebrisEffect::StandardInWater;
+		} else if (_frozenTimeLeft > 0.0f) {
+			effect = ParticleDebrisEffect::Frozen;
+		} else {
+			effect = ParticleDebrisEffect::Standard;
 		}
+
+		Vector2f speed;
+		if (runtime_cast<Solid::Pole>(collider) || runtime_cast<Solid::PushableBox>(collider)) {
+			speed = Vector2f(0.0f, -1.0f);
+		} else if (runtime_cast<Weapons::Thunderbolt>(collider)) {
+			speed = _pos - collider->_pos;
+		} else if (collider != nullptr) {
+			speed = collider->_speed;;
+		}
+
+		CreateParticleDebrisOnPerish(effect, speed);
+	}
+
+	void ActorBase::CreateParticleDebrisOnPerish(ParticleDebrisEffect effect, Vector2f speed)
+	{
+		_levelHandler->HandleCreateParticleDebrisOnPerish(this, effect, speed);
+
+		auto tilemap = _levelHandler->TileMap();
+		if (tilemap == nullptr) {
+			return;
+		}
+
+		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
+		Texture* texture = res->Base->TextureDiffuse.get();
+		if (texture == nullptr) {
+			return;
+		}
+
+		float x = _pos.X - res->Base->Hotspot.X;
+		float y = _pos.Y - res->Base->Hotspot.Y;
+
+		if (effect == ParticleDebrisEffect::Fire) {
+			constexpr std::int32_t DebrisSize = 3;
+
+			Vector2i texSize = texture->size();
+
+			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+					float currentSize = DebrisSize * Random().FastFloat(0.8f, 1.1f);
+
+					Tiles::TileMap::DestructibleDebris debris{};
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Depth = _renderer.layer();
+					debris.Size = Vector2f(currentSize, currentSize);
+					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(0.5f, 2.0f) / res->Base->FrameDimensions.X,
+						 Random().FastFloat(0.0f, 0.2f));
+					debris.Acceleration = Vector2(0.0f, 0.06f);
+
+					debris.Scale = 1.0f;
+					debris.Alpha = 1.0f;
+					debris.AlphaSpeed = -0.001f;
+
+					debris.Time = 320.0f;
+
+					debris.TexScaleX = (currentSize / float(texSize.X));
+					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexScaleY = (currentSize / float(texSize.Y));
+					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+
+					debris.DiffuseTexture = texture;
+					debris.Flags = Tiles::TileMap::DebrisFlags::Bounce;
+
+					tilemap->CreateDebris(debris);
+				}
+			}
+			return;
+		}
+
+		if (effect == ParticleDebrisEffect::Lightning) {
+			constexpr std::int32_t DebrisSize = 3;
+
+			Vector2i texSize = texture->size();
+
+			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
+
+					Tiles::TileMap::DestructibleDebris debris{};
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Depth = _renderer.layer();
+					debris.Size = Vector2f(currentSize, currentSize);
+					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / res->Base->FrameDimensions.X,
+						 ((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / res->Base->FrameDimensions.Y);
+					debris.Acceleration = Vector2f::Zero;
+
+					debris.Scale = 1.0f;
+					debris.ScaleSpeed = -0.004f;
+					debris.Alpha = 1.0f;
+					debris.AlphaSpeed = -0.004f;
+
+					debris.Time = Random().FastFloat(10.0f, 50.0f);
+
+					debris.TexScaleX = (currentSize / float(texSize.X));
+					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexScaleY = (currentSize / float(texSize.Y));
+					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+
+					debris.DiffuseTexture = texture;
+					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
+
+					tilemap->CreateDebris(debris);
+				}
+			}
+			return;
+		}
+
+		if (effect == ParticleDebrisEffect::Dissolve) {
+			constexpr int DebrisSize = 2;
+
+			Vector2i texSize = texture->size();
+
+			float x = _pos.X - res->Base->Hotspot.X;
+			float y = _pos.Y - res->Base->Hotspot.Y;
+
+			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
+
+					Tiles::TileMap::DestructibleDebris debris = { };
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Depth = _renderer.layer();
+					debris.Size = Vector2f(currentSize, currentSize);
+					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.X,
+							((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.Y);
+					debris.Acceleration = Vector2f::Zero;
+
+					debris.Scale = 1.2f;
+					debris.ScaleSpeed = -0.004f;
+					debris.Alpha = 1.0f;
+					debris.AlphaSpeed = -0.01f;
+
+					debris.Time = 280.0f;
+
+					debris.TexScaleX = (currentSize / float(texSize.X));
+					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexScaleY = (currentSize / float(texSize.Y));
+					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+
+					debris.DiffuseTexture = texture;
+					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
+
+					tilemap->CreateDebris(debris);
+				}
+			}
+			return;
+		}
+
+		if (effect == ParticleDebrisEffect::StandardInWater) {
+			constexpr std::int32_t DebrisSize = 3;
+
+			Vector2i texSize = texture->size();
+
+			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+				for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+					float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
+
+					Tiles::TileMap::DestructibleDebris debris{};
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Depth = _renderer.layer();
+					debris.Size = Vector2f(currentSize, currentSize);
+					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / res->Base->FrameDimensions.X,
+						 ((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / res->Base->FrameDimensions.Y);
+					debris.Acceleration = Vector2f::Zero;
+
+					debris.Scale = 1.0f;
+					debris.Alpha = 1.0f;
+					debris.AlphaSpeed = -0.004f;
+
+					debris.Time = Random().FastFloat(300.0f, 340.0f);;
+
+					debris.TexScaleX = (currentSize / float(texSize.X));
+					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexScaleY = (currentSize / float(texSize.Y));
+					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+
+					debris.DiffuseTexture = texture;
+					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
+
+					tilemap->CreateDebris(debris);
+				}
+			}
+			return;
+		}
+
+		if (effect == ParticleDebrisEffect::Frozen) {
+			for (std::int32_t i = 0; i < 20; i++) {
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+			}
+
+			_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+			return;
+		}
+
+		float length = speed.Length();
+		Vector2f force = (length > 0.0f ? (speed / length * 1.4f) : Vector2f::Zero);
+		tilemap->CreateParticleDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), force, _renderer.CurrentFrame, IsFacingLeft());
 	}
 
 	void ActorBase::CreateSpriteDebris(AnimState state, std::int32_t count)
 	{
+		_levelHandler->HandleCreateSpriteDebris(this, state, count);
+
 		auto* tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr && _metadata != nullptr) {
 			auto* res = _metadata->FindAnimation(state);

@@ -1307,6 +1307,16 @@ namespace Jazz2
 #endif
 	}
 
+	void LevelHandler::HandleCreateParticleDebrisOnPerish(const Actors::ActorBase* self, Actors::ParticleDebrisEffect effect, Vector2f speed)
+	{
+		// Used only in derived classes
+	}
+
+	void LevelHandler::HandleCreateSpriteDebris(const Actors::ActorBase* self, AnimState state, std::int32_t count)
+	{
+		// Used only in derived classes
+	}
+
 	void LevelHandler::ShowLevelText(StringView text, Actors::ActorBase* initiator)
 	{
 		_hud->ShowLevelText(text);

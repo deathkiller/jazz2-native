@@ -154,6 +154,10 @@ namespace Jazz2
 		virtual void RollbackToCheckpoint(Actors::Player* player) = 0;
 		/** @brief Called when a player activates sugar rush */
 		virtual void HandleActivateSugarRush(Actors::Player* player) = 0;
+		/** @brief Called when an object creates a particle debris on perish */
+		virtual void HandleCreateParticleDebrisOnPerish(const Actors::ActorBase* self, Actors::ParticleDebrisEffect effect, Vector2f speed) = 0;
+		/** @brief Called when an object creates a sprite debris */
+		virtual void HandleCreateSpriteDebris(const Actors::ActorBase* self, AnimState state, std::int32_t count) = 0;
 		/** @brief Shows a text notification */
 		virtual void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) = 0;
 		/** @brief Returns a level text */

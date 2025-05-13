@@ -20,23 +20,16 @@ namespace nCine
 			T X, Y;
 
 			constexpr Vector2() noexcept
-				: X { T(0) }, Y { T(0) } {
-			}
-			explicit Vector2(NoInitT) noexcept
-			{
-			}
+				: X{T(0)}, Y{T(0)} {}
+			explicit Vector2(NoInitT) noexcept{}
 			explicit constexpr Vector2(T s) noexcept
-				: X(s), Y(s) {
-			}
+				: X(s), Y(s) {}
 			constexpr Vector2(T x, T y) noexcept
-				: X(x), Y(y) {
-			}
+				: X(x), Y(y) {}
 			constexpr Vector2(const Vector2& other) noexcept
-				: X(other.X), Y(other.Y) {
-			}
+				: X(other.X), Y(other.Y) {}
 			constexpr Vector2(Vector2&& other) noexcept
-				: X(other.X), Y(other.Y) {
-			}
+				: X(other.X), Y(other.Y) {}
 			Vector2& operator=(const Vector2& other) noexcept;
 			Vector2& operator=(Vector2&& other) noexcept;
 

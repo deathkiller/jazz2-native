@@ -1714,6 +1714,66 @@ namespace Jazz2::Multiplayer
 		LevelHandler::HandleActivateSugarRush(player);
 	}
 
+	void MpLevelHandler::HandleCreateParticleDebrisOnPerish(const Actors::ActorBase* self, Actors::ParticleDebrisEffect effect, Vector2f speed)
+	{
+		LevelHandler::HandleCreateParticleDebrisOnPerish(self, effect, speed);
+
+		if (_isServer) {
+			std::uint32_t targetActorId = 0;
+			{
+				std::unique_lock lock(_lock);
+				auto it = _remotingActors.find(const_cast<Actors::ActorBase*>(self));
+				if (it != _remotingActors.end()) {
+					targetActorId = it->second.ActorID;
+				}
+			}
+			if (targetActorId != 0) {
+				MemoryStream packet(13);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)effect);
+				packet.WriteVariableUint32(targetActorId);
+				packet.WriteVariableInt32((std::int32_t)(speed.X * 100.0f));
+				packet.WriteVariableInt32((std::int32_t)(speed.Y * 100.0f));
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateDebris, packet);
+			} else {
+				LOGW("Remote actor not found");
+			}
+		}
+	}
+
+	void MpLevelHandler::HandleCreateSpriteDebris(const Actors::ActorBase* self, AnimState state, std::int32_t count)
+	{
+		LevelHandler::HandleCreateSpriteDebris(self, state, count);
+
+		if (_isServer) {
+			std::uint32_t targetActorId = 0;
+			{
+				std::unique_lock lock(_lock);
+				auto it = _remotingActors.find(const_cast<Actors::ActorBase*>(self));
+				if (it != _remotingActors.end()) {
+					targetActorId = it->second.ActorID;
+				}
+			}
+			if (targetActorId != 0) {
+				MemoryStream packet(13);
+				packet.WriteValue<std::uint8_t>(UINT8_MAX); // Effect
+				packet.WriteVariableUint32(targetActorId);
+				packet.WriteVariableUint32((std::uint32_t)state);
+				packet.WriteVariableInt32(count);
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateDebris, packet);
+			} else {
+				LOGW("Remote actor not found");
+			}
+		}
+	}
+
 	void MpLevelHandler::ShowLevelText(StringView text, Actors::ActorBase* initiator)
 	{
 		if (initiator == nullptr || IsLocalPlayer(initiator)) {
@@ -3266,6 +3326,42 @@ namespace Jazz2::Multiplayer
 					});
 					return true;
 				}
+				case ServerPacketType::CreateDebris: {
+					MemoryStream packet(data);
+					std::uint8_t effect = packet.ReadValue<std::uint8_t>();
+					std::uint32_t actorId = packet.ReadVariableUint32();
+
+					LOGD("[MP] ServerPacketType::CreateDebris - effect: %u, actorId: %u", effect, actorId);
+
+					if (effect == UINT8_MAX) {
+						AnimState state = (AnimState)packet.ReadVariableUint32();
+						std::int32_t count = packet.ReadVariableInt32();
+
+						InvokeAsync([this, actorId, state, count]() {
+							std::unique_lock lock(_lock);
+							auto it = _remoteActors.find(actorId);
+							if (it != _remoteActors.end()) {
+								it->second->CreateSpriteDebris(state, count);
+							} else {
+								LOGW("[MP] ServerPacketType::CreateDebris - NOT FOUND - actorId: %u", actorId);
+							}
+						});
+					} else {
+						float x = packet.ReadVariableInt32() * 0.01f;
+						float y = packet.ReadVariableInt32() * 0.01f;
+
+						InvokeAsync([this, actorId, effect, x, y]() {
+							std::unique_lock lock(_lock);
+							auto it = _remoteActors.find(actorId);
+							if (it != _remoteActors.end()) {
+								it->second->CreateParticleDebrisOnPerish((Actors::ParticleDebrisEffect)effect, Vector2f(x, y));
+							} else {
+								LOGW("[MP] ServerPacketType::CreateDebris - NOT FOUND - actorId: %u", actorId);
+							}
+						});
+					}
+					return true;
+				}
 				case ServerPacketType::CreateControllablePlayer: {
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
@@ -4185,6 +4281,17 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(40 * 1024);
 					_tileMap->SerializeResumableToStream(packet);
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncTileMap, packet);
+				}
+
+				// Synchronize music
+				if (_musicCurrentPath != _musicDefaultPath) {
+					MemoryStream packet(6 + _musicCurrentPath.size());
+					packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Music);
+					packet.WriteValue<std::uint8_t>(0);
+					packet.WriteVariableUint32((std::uint32_t)_musicCurrentPath.size());
+					packet.Write(_musicCurrentPath.data(), (std::uint32_t)_musicCurrentPath.size());
+
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 				}
 
 				// Synchronize actors

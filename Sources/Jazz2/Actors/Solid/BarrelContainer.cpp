@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Solid
 	{
 		PlaySfx("Break"_s);
 
-		CreateParticleDebris();
+		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 
 		CreateSpriteDebris((AnimState)1, 3);
 		CreateSpriteDebris((AnimState)2, 3);

@@ -291,7 +291,7 @@ namespace Jazz2::Actors::Bosses
 	bool Queen::Brick::OnPerish(ActorBase* collider)
 	{
 		if (collider != nullptr) {
-			CreateDeathDebris(collider);
+			CreateParticleDebrisOnPerish(collider);
 		}
 
 		return EnemyBase::OnPerish(collider);

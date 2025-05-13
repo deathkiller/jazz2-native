@@ -46,24 +46,16 @@ namespace nCine
 
 			/// Default constructor (transparent color)
 			constexpr Color() noexcept
-				: Color(0, 0, 0, 0)
-			{
-			}
+				: Color(0, 0, 0, 0) {}
 
-			explicit Color(NoInitT) noexcept
-			{
-			}
+			explicit Color(NoInitT) noexcept {}
 
 			/// Three channels constructor
 			constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue) noexcept
-				: Color(red, green, blue, 255)
-			{
-			}
+				: Color(red, green, blue, 255) {}
 			/// Four channels constructor
 			constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue, std::uint32_t alpha) noexcept
-				: R(red), G(green), B(blue), A(alpha)
-			{
-			}
+				: R(red), G(green), B(blue), A(alpha) {}
 			/// Three channels constructor from a hexadecimal code
 			explicit Color(std::uint32_t hex);
 			/// Four channels constructor from an array

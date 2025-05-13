@@ -21,29 +21,20 @@ namespace nCine
 			T X, Y, Z;
 
 			constexpr Vector3() noexcept
-				: X { T(0) }, Y { T(0) }, Z { T(0) } {
-			}
-			explicit Vector3(NoInitT) noexcept
-			{
-			}
+				: X{T(0)}, Y{T(0)}, Z{T(0)} {}
+			explicit Vector3(NoInitT) noexcept {}
 			explicit constexpr Vector3(T s) noexcept
-				: X(s), Y(s), Z(s) {
-			}
+				: X(s), Y(s), Z(s) {}
 			constexpr Vector3(T x, T y, T z) noexcept
-				: X(x), Y(y), Z(z) {
-			}
+				: X(x), Y(y), Z(z) {}
 			constexpr Vector3(const Vector2<T>& other, T z) noexcept
-				: X(other.X), Y(other.Y), Z(z) {
-			}
+				: X(other.X), Y(other.Y), Z(z) {}
 			constexpr Vector3(Vector2<T>&& other, T z) noexcept
-				: X(other.X), Y(other.Y), Z(z) {
-			}
+				: X(other.X), Y(other.Y), Z(z) {}
 			constexpr Vector3(const Vector3& other) noexcept
-				: X(other.X), Y(other.Y), Z(other.Z) {
-			}
+				: X(other.X), Y(other.Y), Z(other.Z) {}
 			constexpr Vector3(Vector3&& other) noexcept
-				: X(other.X), Y(other.Y), Z(other.Z) {
-			}
+				: X(other.X), Y(other.Y), Z(other.Z) {}
 			Vector3& operator=(const Vector3& other) noexcept;
 			Vector3& operator=(Vector3&& other) noexcept;
 

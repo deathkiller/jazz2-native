@@ -50,17 +50,13 @@ namespace nCine
 		{
 		public:
 			/** @brief Default constructor */
-			constexpr /*implicit*/ Half() noexcept : _data {} {
-			}
-
+			constexpr /*implicit*/ Half() noexcept : _data{} {}
 
 			/** @brief Construct a half value from underlying 16-bit representation */
-			constexpr explicit Half(std::uint16_t data) noexcept : _data { data } {
-			}
+			constexpr explicit Half(std::uint16_t data) noexcept : _data{data} {}
 
 			/** @brief Construct a half value from a 32-bit float representation */
-			explicit Half(float value) noexcept : _data { PackHalf(value) } {
-			}
+			explicit Half(float value) noexcept : _data{PackHalf(value)} {}
 
 			/**
 			 * @brief Construct a half value from a 64-bit float representation
@@ -68,12 +64,10 @@ namespace nCine
 			 * Present only to aid generic code, so e.g. @cpp T(1.0) @ce works
 			 * without being ambigous.
 			 */
-			explicit Half(double value) noexcept : _data { PackHalf(float(value)) } {
-			}
+			explicit Half(double value) noexcept : _data{PackHalf(float(value))} {}
 
 			/** @brief Construct without initializing the contents */
-			explicit Half(NoInitT) noexcept {
-			}
+			explicit Half(NoInitT) noexcept {}
 
 			/**
 			 * @brief Equality comparison
@@ -109,7 +103,7 @@ namespace nCine
 
 			/** @brief Negation */
 			constexpr Half operator-() const {
-				return Half { std::uint16_t(_data ^ (1 << 15)) };
+				return Half{std::uint16_t(_data ^ (1 << 15))};
 			}
 
 			/** @brief Conversion to underlying representation */
@@ -172,9 +166,9 @@ namespace nCine
 
 				See @ref Half for more information.
 			*/
-						inline Half operator"" _h(long double value) {
-							return Half(float(value));
-						}
+			inline Half operator"" _h(long double value) {
+				return Half(float(value));
+			}
 
 			#if defined(DEATH_TARGET_CLANG) && __clang_major__ >= 17
 			#	pragma clang diagnostic pop
