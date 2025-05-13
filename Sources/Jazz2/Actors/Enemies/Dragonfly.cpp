@@ -59,6 +59,10 @@ namespace Jazz2::Actors::Enemies
 			Vector2f targetPos;
 			auto players = _levelHandler->GetPlayers();
 			for (auto* player : players) {
+				if (player->GetHealth() <= 0) {
+					continue;
+				}
+
 				targetPos = player->GetPos();
 				_direction.X = targetPos.X - _pos.X;
 				_direction.Y = targetPos.Y - _pos.Y;

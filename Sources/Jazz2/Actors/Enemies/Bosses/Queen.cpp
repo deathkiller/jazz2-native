@@ -218,6 +218,10 @@ namespace Jazz2::Actors::Bosses
 			case StateScreaming: {
 				auto players = _levelHandler->GetPlayers();
 				for (auto* player : players) {
+					if (player->GetHealth() <= 0) {
+						continue;
+					}
+
 					//player->AddExternalForce(-1.5f * timeMult, 0.0f);
 					player->MoveInstantly(Vector2f(-1.5f * timeMult, 0.0f), MoveType::Relative);
 				}

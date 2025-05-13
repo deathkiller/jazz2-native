@@ -46,24 +46,26 @@ namespace Jazz2::Actors::Enemies
 		Vector2f targetPos;
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
-			if (!player->IsInvulnerable()) {
-				targetPos = player->GetPos();
-				Vector2f direction = (targetPos - _pos);
-				float length = direction.Length();
-				if (length < 180.0f && targetPos.Y < _levelHandler->GetWaterLevel()) {
-					if (length > 100.0f) {
-						direction.Normalize();
-						float maxSpeed = DefaultSpeed;
-						switch (_levelHandler->GetDifficulty()) {
-							case GameDifficulty::Normal: maxSpeed += 1.0f;
-							case GameDifficulty::Hard: maxSpeed += 2.0f;
-						}
-						_speed.X = lerpByTime(_speed.X, direction.X * maxSpeed, 0.04f, timeMult);
-						_speed.Y = lerpByTime(_speed.Y, direction.Y * maxSpeed, 0.04f, timeMult);
-						SetFacingLeft(_speed.X >= 0.0f);
+			if (player->GetHealth() <= 0 || player->IsInvulnerable()) {
+				continue;
+			}
+
+			targetPos = player->GetPos();
+			Vector2f direction = (targetPos - _pos);
+			float length = direction.Length();
+			if (length < 180.0f && targetPos.Y < _levelHandler->GetWaterLevel()) {
+				if (length > 100.0f) {
+					direction.Normalize();
+					float maxSpeed = DefaultSpeed;
+					switch (_levelHandler->GetDifficulty()) {
+						case GameDifficulty::Normal: maxSpeed += 1.0f;
+						case GameDifficulty::Hard: maxSpeed += 2.0f;
 					}
-					return;
+					_speed.X = lerpByTime(_speed.X, direction.X * maxSpeed, 0.04f, timeMult);
+					_speed.Y = lerpByTime(_speed.Y, direction.Y * maxSpeed, 0.04f, timeMult);
+					SetFacingLeft(_speed.X >= 0.0f);
 				}
+				return;
 			}
 		}
 		

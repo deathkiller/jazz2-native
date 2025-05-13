@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Enemies
 			TileCollisionParams params = { TileDestructType::None, false };
 			if (_levelHandler->TileMap()->IsTileEmpty(aabb, params)) {
 				_levelHandler->GetCollidingPlayers(aabb + Vector2f(_speed.X * 32, 0), [this](ActorBase* player) -> bool {
-					if (!player->IsInvulnerable()) {
+					if (player->GetHealth() > 0 && !player->IsInvulnerable()) {
 						Attack();
 						return false;
 					}

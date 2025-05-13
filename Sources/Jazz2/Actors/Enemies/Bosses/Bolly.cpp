@@ -49,7 +49,7 @@ namespace Jazz2::Actors::Bosses
 		SetAnimation(AnimState::Idle);
 
 		_bottom = std::make_shared<BollyPart>();
-		uint8_t bottomParams[1] = { 1 };
+		std::uint8_t bottomParams[1] = { 1 };
 		_bottom->OnActivated(ActorActivationDetails(
 			_levelHandler,
 			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2),
@@ -66,10 +66,10 @@ namespace Jazz2::Actors::Bosses
 		});
 		_levelHandler->AddActor(_turret);*/
 
-		int32_t chainLength = (_levelHandler->GetDifficulty() < GameDifficulty::Hard ? NormalChainLength : HardChainLength);
-		for (int32_t i = 0; i < chainLength; i++) {
+		std::int32_t chainLength = (_levelHandler->GetDifficulty() < GameDifficulty::Hard ? NormalChainLength : HardChainLength);
+		for (std::int32_t i = 0; i < chainLength; i++) {
 			_chain[i] = std::make_shared<BollyPart>();
-			uint8_t chainParams[1] = { (uint8_t)((i % 3) == 2 ? 3 : 4) };
+			std::uint8_t chainParams[1] = { (std::uint8_t)((i % 3) == 2 ? 3 : 4) };
 			_chain[i]->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - ((i % 3) == 2 ? 2 : 4)),
@@ -228,6 +228,10 @@ namespace Jazz2::Actors::Bosses
 
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			Vector2f newPos = player->GetPos();
 			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
 				targetPos = newPos;
@@ -257,6 +261,10 @@ namespace Jazz2::Actors::Bosses
 
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			Vector2f newPos = player->GetPos();
 			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
 				targetPos = newPos;
