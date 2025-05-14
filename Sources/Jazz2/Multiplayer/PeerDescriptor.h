@@ -40,7 +40,7 @@ namespace Jazz2::Multiplayer
 		Peer RemotePeer;
 
 		/** @brief Unique Player ID if the peer is connected remotely */
-		Uuid Uuid;
+		Uuid UniquePlayerID;
 		/** @brief Whether the peer is already successfully authenticated */
 		bool IsAuthenticated;
 		/** @brief Whether the peer has admin privileges */

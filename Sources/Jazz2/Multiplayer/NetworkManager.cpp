@@ -149,7 +149,7 @@ namespace Jazz2::Multiplayer
 					continue;
 				}
 
-				auto uniquePlayerId = UuidToString(pair.second->Uuid);
+				auto uniquePlayerId = UuidToString(pair.second->UniquePlayerID);
 				if (_serverConfig->BannedUniquePlayerIDs.contains(uniquePlayerId)) {
 					LOGI("[MP] Peer kicked \"%s\" (%s): Banned by unique player ID", pair.second->PlayerName.data(), address.data());
 					Kick(pair.second->RemotePeer, Reason::Banned);
