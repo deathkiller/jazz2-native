@@ -3,7 +3,8 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "MpGameMode.h"
-#include "../../Main.h"
+#include "../PreferencesCache.h"
+
 #include "../../nCine/Base/TimeStamp.h"
 #include "../../nCine/Threading/Thread.h"
 
@@ -40,7 +41,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Server endpoint in text format */
 		String EndpointString;
 		/** @brief Server unique identifier */
-		StaticArray<16, std::uint8_t> UniqueIdentifier;
+		Uuid UniqueServerID;
 		/** @brief Server version */
 		String Version;
 		/** @brief Server name */
@@ -130,7 +131,7 @@ namespace Jazz2::Multiplayer
 		ENetAddress _localMulticastAddress;
 		bool _onlineSuccess;
 
-		static ENetSocket TryCreateLocalSocket(const char* multicastAddress, ENetAddress & parsedAddress);
+		static ENetSocket TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress);
 
 		void SendLocalDiscoveryRequest(ENetSocket socket, const ENetAddress& address);
 		void DownloadPublicServerList(IServerObserver* observer);

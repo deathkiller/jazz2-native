@@ -1115,7 +1115,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					return;
 				}
 
-				StaticArray<16, std::uint8_t> uuid;
+				Uuid uuid;
 				packet.Read(uuid.data(), uuid.size());
 				String uniquePlayerId = NetworkManager::UuidToString(uuid);
 
@@ -1196,9 +1196,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 			case ServerPacketType::AuthResponse: {
 				MemoryStream packet(data);
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-				StaticArray<16, std::uint8_t> uuid;
+				auto& uuid = _networkManager->GetServerConfiguration().UniqueServerID;
 				packet.Read(uuid.data(), uuid.size());
-				_networkManager->RemoteServerID = NetworkManager::UuidToString(uuid);
 				return;
 			}
 			case ServerPacketType::ValidateAssets: {
@@ -1219,7 +1218,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					packetOut.WriteVariableUint32((std::uint32_t)path.size());
 					packetOut.Write(path.data(), (std::int64_t)path.size());
 
-					auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->RemoteServerID);
+					auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->GetServerConfiguration().UniqueServerID);
 					if (!fullPath.empty()) {
 						auto s = fs::Open(fullPath, FileAccess::Read);
 
@@ -1248,7 +1247,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 						LOGI("[MP] Downloading asset \"%s\" (%u) with %lli bytes", path.data(), (std::uint8_t)type, size);
 
-						auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->RemoteServerID, true);
+						auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->GetServerConfiguration().UniqueServerID, true);
 						if (!fullPath.empty()) {
 							fs::CreateDirectories(fs::GetDirectoryName(fullPath));
 

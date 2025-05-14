@@ -1400,7 +1400,7 @@ namespace Jazz2::Multiplayer
 					Vector2f pos = mpPlayer->_pos;
 					for (std::uint32_t i = 0; i < treasureLost; i++) {
 						float dir = (Random().NextBool() ? -1.0f : 1.0f);
-						float force = Random().Next(10.0f, 20.0f);
+						float force = Random().NextFloat(10.0f, 20.0f);
 						Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
 						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
 						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
@@ -5450,18 +5450,23 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetRendererType());
 	}
 
-	String MpLevelHandler::GetAssetFullPath(AssetType type, StringView path, StringView remoteServerId, bool forWrite)
+	String MpLevelHandler::GetAssetFullPath(AssetType type, StringView path, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId, bool forWrite)
 	{
 		const auto& resolver = ContentResolver::Get();
 		auto pathNormalized = fs::ToNativeSeparators(path);
 
+		char uuidStr[33]; std::int32_t uuidStrLength;
+		if (remoteServerId) {
+			uuidStrLength = formatString(uuidStr, sizeof(uuidStr), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+				remoteServerId[0], remoteServerId[1], remoteServerId[2], remoteServerId[3], remoteServerId[4], remoteServerId[5], remoteServerId[6], remoteServerId[7], remoteServerId[8], remoteServerId[9], remoteServerId[10], remoteServerId[11], remoteServerId[12], remoteServerId[13], remoteServerId[14], remoteServerId[15]);
+		}
+
 		switch (type) {
 			case AssetType::Level: {
 				String fullPath;
-				if (!remoteServerId.empty()) {
+				if (remoteServerId) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
-						fs::ToNativeSeparators(String(path + ".j2l"_s)) });
+						StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(String(path + ".j2l"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
@@ -5476,10 +5481,9 @@ namespace Jazz2::Multiplayer
 			}
 			case AssetType::TileSet: {
 				String fullPath;
-				if (!remoteServerId.empty()) {
+				if (remoteServerId) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
-						fs::ToNativeSeparators(String(path + ".j2t"_s)) });
+						StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(String(path + ".j2t"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
@@ -5494,10 +5498,9 @@ namespace Jazz2::Multiplayer
 			}
 			case AssetType::Music: {
 				String fullPath;
-				if (!remoteServerId.empty()) {
+				if (remoteServerId) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						StringUtils::replaceAll(remoteServerId, ":"_s, ""_s),
-						fs::ToNativeSeparators(path) });
+						StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(path) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });

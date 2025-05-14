@@ -296,7 +296,7 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		packet.Read(discoveredServer.UniqueIdentifier, sizeof(discoveredServer.UniqueIdentifier));
+		packet.Read(discoveredServer.UniqueServerID, sizeof(discoveredServer.UniqueServerID));
 
 		std::uint8_t versionLength = packet.ReadValue<std::uint8_t>();
 		discoveredServer.Version = String(NoInit, versionLength);
@@ -361,12 +361,13 @@ namespace Jazz2::Multiplayer
 		// If server name is empty, it's private and shouldn't respond to discovery messages
 		auto& serverConfig = server->GetServerConfiguration();
 		if (!serverConfig.ServerName.empty()) {
+			const auto& id = serverConfig.UniqueServerID;
+
 			MemoryStream packet(512);
 			packet.WriteValue<std::uint64_t>(PacketSignature);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
 			packet.WriteValue<std::uint16_t>(server->GetServerPort());
-			packet.Write(PreferencesCache::UniqueServerID.data(), PreferencesCache::UniqueServerID.size() - sizeof(std::uint16_t));
-			packet.WriteValue<std::uint16_t>(server->GetServerPort());	// Server port is part of Unique Server ID
+			packet.Write(id.data(), id.size());
 
 			StringView serverVersion = NCINE_VERSION_s;
 			serverVersion = serverVersion.prefix(serverVersion.findOr('-', serverVersion.end()).begin());
@@ -427,11 +428,10 @@ namespace Jazz2::Multiplayer
 		char input[2048];
 		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"", serverName.data());
 
-		auto& id = PreferencesCache::UniqueServerID;
-		std::uint16_t serverPort = server->GetServerPort();	// Server port is part of Unique Server ID
+		const auto& id = serverConfig.UniqueServerID;
 		length += formatString(input + length, sizeof(input) - length,
 			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
-			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], /*id[14]*/serverPort & 0xff, /*id[15]*/(serverPort >> 8) & 0xff);
+			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
 
 		length += formatString(input + length, sizeof(input) - length, "\",\"e\":\"");
 
@@ -523,11 +523,10 @@ namespace Jazz2::Multiplayer
 		char input[2048];
 		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"", serverName.data());
 
-		auto& id = PreferencesCache::UniqueServerID;
-		std::uint16_t serverPort = server->GetServerPort();	// Server port is part of Unique Server ID
+		const auto& id = serverConfig.UniqueServerID;
 		length += formatString(input + length, sizeof(input) - length,
 			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
-			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], /*id[14]*/serverPort & 0xff, /*id[15]*/(serverPort >> 8) & 0xff);
+			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
 
 		length += formatString(input + length, sizeof(input) - length, "\",\"e\":null,\"v\":\"%s\",\"d\":\"%s\"}",
 			NCINE_VERSION, PreferencesCache::GetDeviceID().data());

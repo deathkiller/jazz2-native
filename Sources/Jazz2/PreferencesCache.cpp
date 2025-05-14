@@ -81,8 +81,8 @@ namespace Jazz2
 	bool PreferencesCache::UseNativeBackButton = false;
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
-	StaticArray<16, std::uint8_t> PreferencesCache::UniquePlayerID;
-	StaticArray<16, std::uint8_t> PreferencesCache::UniqueServerID;
+	Uuid PreferencesCache::UniquePlayerID;
+	Uuid PreferencesCache::UniqueServerID;
 	String PreferencesCache::PlayerName;
 	bool PreferencesCache::EnableDiscordIntegration = true;
 

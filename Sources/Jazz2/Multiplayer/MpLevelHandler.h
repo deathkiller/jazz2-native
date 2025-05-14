@@ -167,7 +167,7 @@ namespace Jazz2::Multiplayer
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 
 		/** @brief Returns full path of the specified asset */
-		static String GetAssetFullPath(AssetType type, StringView path, StringView remoteServerId = {}, bool forWrite = false);
+		static String GetAssetFullPath(AssetType type, StringView path, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId = {}, bool forWrite = false);
 
 	protected:
 		void AttachComponents(LevelDescriptor&& descriptor) override;

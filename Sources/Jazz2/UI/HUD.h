@@ -28,7 +28,7 @@ namespace Jazz2::UI
 	class HUD : public Canvas
 	{
 #if defined(WITH_ANGELSCRIPT)
-		friend struct Scripting::LevelScriptLoader;
+		friend class Scripting::LevelScriptLoader;
 		friend struct Scripting::Legacy::jjCANVAS;
 #endif
 

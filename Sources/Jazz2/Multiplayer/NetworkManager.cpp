@@ -45,7 +45,6 @@ namespace Jazz2::Multiplayer
 	{
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>();
-		RemoteServerID = {};
 
 		auto& resolver = ContentResolver::Get();
 		resolver.OverridePathHandler([this](StringView path) {
@@ -59,9 +58,13 @@ namespace Jazz2::Multiplayer
 	{
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
+
+		std::uint16_t serverPort = _serverConfig->ServerPort; // Server port is part of Unique Server ID
+		std::memcpy(&_serverConfig->UniqueServerID[0], &PreferencesCache::UniqueServerID[0], arraySize(_serverConfig->UniqueServerID) - sizeof(std::uint16_t));
+		std::memcpy(&_serverConfig->UniqueServerID[_serverConfig->UniqueServerID.size() - sizeof(std::uint16_t)], &serverPort, sizeof(std::uint16_t));
+
 		_serverConfig->StartUnixTimestamp = DateTime::Now().ToUnixMilliseconds() / 1000;
-		RemoteServerID = {};
-		bool result = NetworkManagerBase::CreateServer(handler, _serverConfig->ServerPort);
+		bool result = NetworkManagerBase::CreateServer(handler, serverPort);
 
 		if (result && !_serverConfig->IsPrivate) {
 			_discovery = std::make_unique<ServerDiscovery>(this);
@@ -202,10 +205,15 @@ namespace Jazz2::Multiplayer
 	{
 		auto& resolver = ContentResolver::Get();
 
+		const auto& remoteServerId = _serverConfig->UniqueServerID;
+
+		char uuidStr[33];
+		std::int32_t uuidStrLength = formatString(uuidStr, sizeof(uuidStr), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+			remoteServerId[0], remoteServerId[1], remoteServerId[2], remoteServerId[3], remoteServerId[4], remoteServerId[5], remoteServerId[6], remoteServerId[7], remoteServerId[8], remoteServerId[9], remoteServerId[10], remoteServerId[11], remoteServerId[12], remoteServerId[13], remoteServerId[14], remoteServerId[15]);
+
 		String fullPath = fs::FindPathCaseInsensitive(
 			fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-				StringUtils::replaceAll(RemoteServerID, ":"_s, ""_s),
-				fs::ToNativeSeparators(path) }));
+				StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(path) }));
 		if (!fs::IsReadableFile(fullPath)) {
 			return {};
 		}
@@ -587,7 +595,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	String NetworkManager::UuidToString(StaticArrayView<16, std::uint8_t> uuid)
+	String NetworkManager::UuidToString(StaticArrayView<Uuid::Size, Uuid::Type> uuid)
 	{
 		String uuidStr{NoInit, 39};
 		DEATH_UNUSED std::int32_t uuidStrLength = formatString(uuidStr.data(), uuidStr.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",

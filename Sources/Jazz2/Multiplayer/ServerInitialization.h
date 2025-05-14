@@ -4,6 +4,7 @@
 
 #include "MpGameMode.h"
 #include "../LevelInitialization.h"
+#include "../PreferencesCache.h"
 
 #include "../../nCine/Base/HashMap.h"
 
@@ -209,6 +210,9 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Path to the configuration file */
 		String FilePath;
+
+		/** @brief Server unique identifier */
+		Uuid UniqueServerID;
 
 		/** @brief Start time of the server as Unix timestamp */
 		std::uint64_t StartUnixTimestamp;
