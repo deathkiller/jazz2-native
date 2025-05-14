@@ -1169,7 +1169,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist)
 
 				if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-					peerDesc->Uuid = std::move(uuid);
+					peerDesc->UniquePlayerID = std::move(uuid);
 					peerDesc->PlayerName = std::move(playerName);
 					peerDesc->IsAuthenticated = true;
 
