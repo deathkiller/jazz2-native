@@ -12,6 +12,9 @@ using namespace nCine;
 
 namespace Jazz2
 {
+	/** @brief Universally unique identifier (16 bytes) */
+	using Uuid = StaticArray<16, std::uint8_t>;
+
 	/** @brief Rescale mode */
 	enum class RescaleMode {
 		None,						/**< None/Pixel-perfect */
@@ -227,9 +230,9 @@ namespace Jazz2
 
 		// User Profile
 		/** @brief Unique player ID */
-		static StaticArray<16, std::uint8_t> UniquePlayerID;
+		static Uuid UniquePlayerID;
 		/** @brief Unique server ID */
-		static StaticArray<16, std::uint8_t> UniqueServerID;
+		static Uuid UniqueServerID;
 		/** @brief Player display name */
 		static String PlayerName;
 		/** @brief Whether Discord integration is enabled */

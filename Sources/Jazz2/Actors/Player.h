@@ -256,10 +256,10 @@ namespace Jazz2::Actors
 		
 		/** @brief Reason the current weapon was changed */
 		enum class SetCurrentWeaponReason {
-			Unknown,
-			User,
-			Rollback,
-			AddAmmo,
+			Unknown,			/**< Unspecified */
+			User,				/**< Set by the user */
+			Rollback,			/**< Set due to rollback */
+			AddAmmo,			/**< Set because an ammo for a new weapon was collected */
 		};
 
 		/** @{ @name Constants */

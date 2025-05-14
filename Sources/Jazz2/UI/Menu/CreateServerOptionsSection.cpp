@@ -360,7 +360,7 @@ namespace Jazz2::UI::Menu
 		if (_levelName == FromPlaylist) {
 			if (serverInit.Configuration.PlaylistIndex < 0 || serverInit.Configuration.PlaylistIndex >= serverInit.Configuration.Playlist.size()) {
 				if (serverInit.Configuration.RandomizePlaylist) {
-					serverInit.Configuration.PlaylistIndex = Random().Next(0, serverInit.Configuration.Playlist.size());
+					serverInit.Configuration.PlaylistIndex = Random().Next(0, (std::uint32_t)serverInit.Configuration.Playlist.size());
 				} else {
 					serverInit.Configuration.PlaylistIndex = 0;
 				}

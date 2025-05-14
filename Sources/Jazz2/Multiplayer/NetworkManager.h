@@ -23,9 +23,6 @@ namespace Jazz2::Multiplayer
 	class NetworkManager : public NetworkManagerBase
 	{
 	public:
-		/** @brief Unique server ID of the remote server */
-		String RemoteServerID;
-
 		NetworkManager();
 		~NetworkManager();
 
@@ -84,7 +81,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Converts the non-localized string representation back to @ref MpGameMode */
 		static MpGameMode StringToGameMode(StringView value);
 		/** @brief Converts UUID to the string representation */
-		static String UuidToString(StaticArrayView<16, std::uint8_t> uuid);
+		static String UuidToString(StaticArrayView<Uuid::Size, Uuid::Type> uuid);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT

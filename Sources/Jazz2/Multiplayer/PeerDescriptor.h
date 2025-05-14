@@ -4,6 +4,7 @@
 
 #include "Peer.h"
 #include "../PlayerType.h"
+#include "../PreferencesCache.h"
 #include "../../nCine/Base/TimeStamp.h"
 
 #include <Containers/StaticArray.h>
@@ -39,7 +40,7 @@ namespace Jazz2::Multiplayer
 		Peer RemotePeer;
 
 		/** @brief Unique Player ID if the peer is connected remotely */
-		StaticArray<16, std::uint8_t> Uuid;
+		Uuid Uuid;
 		/** @brief Whether the peer is already successfully authenticated */
 		bool IsAuthenticated;
 		/** @brief Whether the peer has admin privileges */

@@ -161,15 +161,15 @@ namespace Jazz2::Actors
 		FrozenMask				/**< Apply frozen effect to the sprite */
 	};
 
-	/** @brief Effect type of @ref CreateParticleDebrisOnPerish() */
+	/** @brief Effect type of @ref ActorBase::CreateParticleDebrisOnPerish() */
 	enum class ParticleDebrisEffect {
-		Unknown,
-		Standard,
-		StandardInWater,
-		Dissolve,
-		Frozen,
-		Fire,
-		Lightning
+		Unknown,				/**< Unspecified */
+		Standard,				/**< Standard */
+		StandardInWater,		/**< Standard (in water) */
+		Dissolve,				/**< Dissolve (for ghosts) */
+		Frozen,					/**< Frozen (for breaking the ice) */
+		Fire,					/**< Fire (for toasting) */
+		Lightning				/**< Lightning (for electrocuting) */
 	};
 
 	/** @brief Base class of an object */
