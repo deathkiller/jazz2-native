@@ -24,6 +24,12 @@ struct ipv6_mreq {
 	struct in6_addr ipv6mr_multiaddr; /* IPv6 multicast address */
 	unsigned int    ipv6mr_interface; /* Interface index */
 };
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#	include <ifaddrs.h>
+#	include <net/if.h>
+#elif defined(DEATH_TARGET_WINDOWS)
+#	include <iphlpapi.h>
+#	include <Utf8.h>
 #endif
 
 #include "../../jsoncpp/json.h"
@@ -39,6 +45,56 @@ using namespace std::string_view_literals;
 
 namespace Jazz2::Multiplayer
 {
+
+	static std::int32_t GetDefaultIPv6MulticastIfIndex()
+	{
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+		std::int32_t ifidx = 0;
+		struct ifaddrs* ifaddr;
+		struct ifaddrs* ifa;
+		if (getifaddrs(&ifaddr) == 0) {
+			for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+				// Prefer first adapter that is up, not loopback, supports multicast
+				if (ifa->ifa_addr != nullptr && (ifa->ifa_addr->sa_family == AF_INET || ifa->ifa_addr->sa_family == AF_INET6) &&
+					(ifa->ifa_flags & IFF_UP) && !(ifa->ifa_flags & IFF_LOOPBACK) && (ifa->ifa_flags & IFF_MULTICAST)) {
+					ifidx = if_nametoindex(ifa->ifa_name);
+					if (ifidx > 0) {
+						LOGI("[MP] Using %s interface \"%s\" (%i) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
+							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
+						break;
+					}
+				}
+			}
+			freeifaddrs(ifaddr);
+		}
+		if (ifidx == 0) {
+			LOGI("[MP] No suitable interface found for local discovery");
+			ifidx = if_nametoindex("wlan0");
+		}
+		return ifidx;
+#elif defined(DEATH_TARGET_WINDOWS)
+		ULONG bufferSize = 0;
+		::GetAdaptersAddresses(AF_INET6, GAA_FLAG_INCLUDE_PREFIX, nullptr, nullptr, &bufferSize);
+		std::unique_ptr<std::uint8_t[]> buffer = std::make_unique<std::uint8_t[]>(bufferSize);
+		PIP_ADAPTER_ADDRESSES adapterAddresses = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.get());
+
+		if (::GetAdaptersAddresses(AF_INET6, GAA_FLAG_INCLUDE_PREFIX, nullptr, adapterAddresses, &bufferSize) == NO_ERROR) {
+			for (auto* adapter = adapterAddresses; adapter != nullptr; adapter = adapter->Next) {
+				// Prefer first adapter that is up, not loopback, supports multicast
+				if (adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK &&
+					!(adapter->Flags & IP_ADAPTER_NO_MULTICAST)) {
+					LOGI("[MP] Using IPv6 interface \"%s\" (%s:%i) for local discovery", Utf8::FromUtf16(adapter->FriendlyName).data(), adapter->AdapterName, (std::int32_t)adapter->Ipv6IfIndex);
+					return (std::int32_t)adapter->Ipv6IfIndex;
+				}
+			}
+		}
+		LOGI("[MP] No suitable interface found for local discovery");
+		return 0;
+#else
+		return 0;
+#endif
+	}
+
 	ServerDiscovery::ServerDiscovery(NetworkManager* server)
 		: _server(server), _observer(nullptr), _onlineSuccess(false)
 	{
@@ -72,30 +128,7 @@ namespace Jazz2::Multiplayer
 
 	ENetSocket ServerDiscovery::TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{
-#if defined(DEATH_TARGET_ANDROID)
-		std::int32_t ifidx = 0;
-		struct ifaddrs* ifaddr;
-		struct ifaddrs* ifa;
-		if (getifaddrs(&ifaddr) == 0) {
-			for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
-				if (ifa->ifa_addr != nullptr && (ifa->ifa_addr->sa_family == AF_INET || ifa->ifa_addr->sa_family == AF_INET6)) {
-					ifidx = if_nametoindex(ifa->ifa_name);
-					if (ifidx > 0) {
-						LOGI("[MP] Using %s interface %s (%i) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
-							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
-						break;
-					}
-				}
-			}
-			freeifaddrs(ifaddr);
-		}
-		if (ifidx == 0) {
-			LOGI("[MP] No suitable interface found for local discovery");
-			ifidx = if_nametoindex("wlan0");
-		}
-#else
-		std::int32_t ifidx = 0;
-#endif
+		std::int32_t ifidx = GetDefaultIPv6MulticastIfIndex();
 
 		ENetSocket socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
 		if (socket == ENET_SOCKET_NULL) {
@@ -285,13 +318,10 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		std::uint16_t port = packet.ReadValue<std::uint16_t>();
+		// Override the port, because it points to the discovery service, not the actual server
+		endpoint.port = packet.ReadValue<std::uint16_t>();
 
-#if ENET_IPV6
-		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(endpoint.host, endpoint.sin6_scope_id, port);
-#else
-		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(*(const struct in_addr*)&endpoint.host, port);
-#endif
+		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(endpoint, true);
 		if (discoveredServer.EndpointString.empty()) {
 			return false;
 		}
@@ -565,7 +595,7 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase::InitializeBackend();
 
-		ENetSocket socket = TryCreateLocalSocket("ff1e::333", _this->_localMulticastAddress);
+		ENetSocket socket = TryCreateLocalSocket("ff02::1", _this->_localMulticastAddress);
 		_this->_socket = socket;
 
 		while (_this->_observer != nullptr) {
@@ -604,7 +634,7 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase::InitializeBackend();
 
-		ENetSocket socket = TryCreateLocalSocket("ff1e::333", _this->_localMulticastAddress);
+		ENetSocket socket = TryCreateLocalSocket("ff02::1", _this->_localMulticastAddress);
 		_this->_socket = socket;
 
 		while (_this->_server != nullptr) {

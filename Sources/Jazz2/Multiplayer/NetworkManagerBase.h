@@ -132,7 +132,7 @@ namespace Jazz2::Multiplayer
 		static String AddressToString(const struct in6_addr& address, std::uint16_t scopeId, std::uint16_t port = 0);
 #endif
 		/** @brief Converts the specified ENet address to the string representation */
-		static String AddressToString(const ENetAddress& address);
+		static String AddressToString(const ENetAddress& address, bool includePort = false);
 		/** @brief Converts the endpoint of the specified peer to the string representation */
 		static String AddressToString(const Peer& peer);
 		/** @brief Returns `true` if the specified string representation of the address is valid */
