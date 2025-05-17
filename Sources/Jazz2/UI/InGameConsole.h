@@ -60,11 +60,14 @@ namespace Jazz2::UI
 		std::size_t _textCursor;
 		float _carretAnim;
 		std::int32_t _historyIndex;
+		std::int32_t _scrollPos;
 		bool _isVisible;
 
 		void ProcessCurrentLine();
 		void PruneLogHistory();
 		void GetPreviousCommandFromHistory();
 		void GetNextCommandFromHistory();
+		void ScrollUp(std::int32_t amount);
+		void ScrollDown(std::int32_t amount);
 	};
 }

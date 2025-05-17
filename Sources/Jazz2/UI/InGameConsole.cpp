@@ -24,7 +24,7 @@ namespace Jazz2::UI
 	static SmallVector<String, 0> _commandHistory;
 
 	InGameConsole::InGameConsole(LevelHandler* levelHandler)
-		: _levelHandler(levelHandler), _currentLine{}, _textCursor(0), _carretAnim(0.0f), _isVisible(false)
+		: _levelHandler(levelHandler), _currentLine{}, _textCursor(0), _carretAnim(0.0f), _scrollPos(0), _isVisible(false)
 	{
 		PruneLogHistory();
 		_historyIndex = _commandHistory.size();
@@ -92,9 +92,13 @@ namespace Jazz2::UI
 		}
 
 		// History
+		if (_scrollPos > (std::int32_t)_logHistory.size() - 1) {
+			_scrollPos = 0;
+		}
+
 		Vector2f historyLinePos = currentLinePos;
 		historyLinePos.Y -= 4.0f;
-		for (std::int32_t i = _logHistory.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = _logHistory.size() - 1 - _scrollPos; i >= 0; i--) {
 			if (historyLinePos.Y < 50.0f) {
 				break;
 			}
@@ -195,11 +199,27 @@ namespace Jazz2::UI
 				break;
 			}
 			case Keys::Up: {
-				GetPreviousCommandFromHistory();
+				if (event.mod & KeyMod::Ctrl) {
+					ScrollUp(1);
+				} else {
+					GetPreviousCommandFromHistory();
+				}
 				break;
 			}
 			case Keys::Down: {
-				GetNextCommandFromHistory();
+				if (event.mod & KeyMod::Ctrl) {
+					ScrollDown(1);
+				} else {
+					GetNextCommandFromHistory();
+				}
+				break;
+			}
+			case Keys::PageUp: {
+				ScrollUp(3);
+				break;
+			}
+			case Keys::PageDown: {
+				ScrollDown(3);
 				break;
 			}
 			case Keys::K: { // Clear line
@@ -298,6 +318,7 @@ namespace Jazz2::UI
 		}
 #endif
 		_logHistory.emplace_back(level, std::move(line), _smallFont);
+		_scrollPos = 0;
 	}
 
 	void InGameConsole::ProcessCurrentLine()
@@ -329,7 +350,7 @@ namespace Jazz2::UI
 
 	void InGameConsole::PruneLogHistory()
 	{
-		constexpr std::int32_t MaxHistoryLines = 16;
+		constexpr std::int32_t MaxHistoryLines = 64;
 
 		if (_logHistory.size() > MaxHistoryLines) {
 			_logHistory.erase(&_logHistory[0], &_logHistory[_logHistory.size() - MaxHistoryLines]);
@@ -358,6 +379,24 @@ namespace Jazz2::UI
 				_textCursor = _commandHistory[_historyIndex].size();
 			}
 			_carretAnim = 0.0f;
+		}
+	}
+
+	void InGameConsole::ScrollUp(std::int32_t amount)
+	{
+		_scrollPos += amount;
+
+		if (_scrollPos > (std::int32_t)_logHistory.size() - 1) {
+			_scrollPos = (std::int32_t)_logHistory.size() - 1;
+		}
+	}
+
+	void InGameConsole::ScrollDown(std::int32_t amount)
+	{
+		_scrollPos -= amount;
+
+		if (_scrollPos < 0) {
+			_scrollPos = 0;
 		}
 	}
 

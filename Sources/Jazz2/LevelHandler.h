@@ -150,6 +150,7 @@ namespace Jazz2
 
 		void SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data) override;
 
+		void HandleBossActivated(Actors::Bosses::BossBase* boss, Actors::ActorBase* initiator = nullptr) override;
 		void HandleLevelChange(LevelInitialization&& levelInit) override;
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;

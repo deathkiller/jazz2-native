@@ -32,10 +32,14 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		_type = details.Params[0];
+
 		std::uint8_t playerIndex = details.Params[1];
 		auto players = _levelHandler->GetPlayers();
-		if (playerIndex < players.size()) {
-			_owner = players[playerIndex];
+		for (auto* player : _levelHandler->GetPlayers()) {
+			if (player->GetPlayerIndex() == playerIndex) {
+				_owner = player;
+				break;
+			}
 		}
 
 		switch (_type) {

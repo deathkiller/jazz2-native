@@ -1054,6 +1054,24 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::HandleBossActivated(Actors::Bosses::BossBase* boss, Actors::ActorBase* initiator)
+	{
+		if (initiator == nullptr) {
+			return;
+		}
+
+		Vector2f pos = initiator->_pos;
+		for (auto* player : _players) {
+			if (player == initiator) {
+				continue;
+			}
+
+			player->WarpToPosition(pos, WarpFlags::Default);
+
+			// TODO: Deactivate sugar rush
+		}
+	}
+
 	void MpLevelHandler::HandleLevelChange(LevelInitialization&& levelInit)
 	{
 		levelInit.IsLocalSession = false;
@@ -2433,7 +2451,8 @@ namespace Jazz2::Multiplayer
 						if (playerIndex >= 0 ? (peerDesc->Player && peerDesc->Player->_playerIndex == playerIndex) : (peerDesc->PlayerName == playerName)) {
 							char infoBuffer[128];
 							if (peerDesc->RemotePeer) {
-								formatString(infoBuffer, sizeof(infoBuffer), "%s is connected from %s", peerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peerDesc->RemotePeer).data());
+								formatString(infoBuffer, sizeof(infoBuffer), "%s (%s) is connected from %s", peerDesc->PlayerName.data(),
+									NetworkManager::UuidToString(peerDesc->UniquePlayerID).data(), NetworkManagerBase::AddressToString(peerDesc->RemotePeer).data());
 							} else {
 								formatString(infoBuffer, sizeof(infoBuffer), "%s is connected locally", peerDesc->PlayerName.data());
 							}
