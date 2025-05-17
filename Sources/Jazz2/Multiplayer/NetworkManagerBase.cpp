@@ -59,10 +59,11 @@ namespace Jazz2::Multiplayer
 		struct ifaddrs* ifa;
 		if (getifaddrs(&ifaddr) == 0) {
 			for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
-				if (ifa->ifa_addr != nullptr && (ifa->ifa_addr->sa_family == AF_INET || ifa->ifa_addr->sa_family == AF_INET6)) {
+				if (ifa->ifa_addr != nullptr && (ifa->ifa_addr->sa_family == AF_INET || ifa->ifa_addr->sa_family == AF_INET6) &&
+					(ifa->ifa_flags & IFF_UP)) {
 					ifidx = if_nametoindex(ifa->ifa_name);
 					if (ifidx > 0) {
-						LOGI("[MP] Using %s interface %s (%i)", ifa->ifa_addr->sa_family == AF_INET6
+						LOGI("[MP] Using %s interface \"%s\" (%i)", ifa->ifa_addr->sa_family == AF_INET6
 							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
 						break;
 					}
@@ -262,7 +263,7 @@ namespace Jazz2::Multiplayer
 #endif
 		} else {
 			if (!_peers.empty()) {
-				String addressString = AddressToString(_peers[0]->address);
+				String addressString = AddressToString(_peers[0]->address, true);
 				if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 					arrayAppend(result, std::move(addressString));
 				}
@@ -447,12 +448,12 @@ namespace Jazz2::Multiplayer
 	}
 #endif
 
-	String NetworkManagerBase::AddressToString(const ENetAddress& address)
+	String NetworkManagerBase::AddressToString(const ENetAddress& address, bool includePort)
 	{
 #if ENET_IPV6
-		return AddressToString(address.host, address.sin6_scope_id);
+		return AddressToString(address.host, address.sin6_scope_id, includePort ? address.port : 0);
 #else
-		return AddressToString(*(const struct in_addr*)&address.host);
+		return AddressToString(*(const struct in_addr*)&address.host, includePort ? address.port : 0);
 #endif
 	}
 
@@ -625,9 +626,9 @@ namespace Jazz2::Multiplayer
 
 		// Try to connect to each specified endpoint
 		ENetEvent ev{};
-		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()) && _this->_state != NetworkState::None; i++) {
 			ENetAddress& addr = _this->_desiredEndpoints[i];
-			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
+			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr, true).data(), addr.port, i + 1, std::int32_t(_this->_desiredEndpoints.size()));
 			
 			if (host != nullptr) {
 				enet_host_destroy(host);

@@ -12,9 +12,9 @@
 #define far
 
 #define ENET_FEATURE_ADDRESS_MAPPING
-#if defined(DEATH_DEBUG)
+//#if defined(DEATH_DEBUG)
 #	define ENET_DEBUG
-#endif
+//#endif
 #include "Backends/enet.h"
 
 // Undefine it again after include
