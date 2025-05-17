@@ -197,13 +197,14 @@ namespace Jazz2::Multiplayer
 				LOGW("[MP] Failed to get server endpoints");
 			}
 #elif defined(DEATH_TARGET_WINDOWS)
-			ULONG bufferSize = 15000;
+			ULONG bufferSize = 0;
+			::GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, NULL, &bufferSize);
 			std::unique_ptr<std::uint8_t[]> buffer = std::make_unique<std::uint8_t[]>(bufferSize);
-			PIP_ADAPTER_ADDRESSES adapterAddresses = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.get());
+			auto* adapterAddresses = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.get());
 
 			if (::GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, adapterAddresses, &bufferSize) == NO_ERROR) {
-				for (PIP_ADAPTER_ADDRESSES adapter = adapterAddresses; adapter != NULL; adapter = adapter->Next) {
-					for (PIP_ADAPTER_UNICAST_ADDRESS address = adapter->FirstUnicastAddress; address != NULL; address = address->Next) {
+				for (auto* adapter = adapterAddresses; adapter != NULL; adapter = adapter->Next) {
+					for (auto* address = adapter->FirstUnicastAddress; address != NULL; address = address->Next) {
 						String addressString;
 						if (address->Address.lpSockaddr->sa_family == AF_INET) { // IPv4
 							auto* addrPtr = &((struct sockaddr_in*)address->Address.lpSockaddr)->sin_addr;

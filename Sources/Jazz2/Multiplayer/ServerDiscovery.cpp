@@ -19,7 +19,7 @@
 #if defined(DEATH_TARGET_ANDROID)
 #	include "Backends/ifaddrs-android.h"
 #elif defined(DEATH_TARGET_SWITCH) && ENET_IPV6
-// `ipv6_mreq` is not defined in Switch SDK
+// `ipv6_mreq` is not defined in Switch SDK, but it doesn't work well anyway
 struct ipv6_mreq {
 	struct in6_addr ipv6mr_multiaddr; /* IPv6 multicast address */
 	unsigned int    ipv6mr_interface; /* Interface index */
@@ -45,10 +45,10 @@ using namespace std::string_view_literals;
 
 namespace Jazz2::Multiplayer
 {
-
+#if ENET_IPV6
 	static std::int32_t GetDefaultIPv6MulticastIfIndex()
 	{
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 		std::int32_t ifidx = 0;
 		struct ifaddrs* ifaddr;
 		struct ifaddrs* ifa;
@@ -72,13 +72,13 @@ namespace Jazz2::Multiplayer
 			ifidx = if_nametoindex("wlan0");
 		}
 		return ifidx;
-#elif defined(DEATH_TARGET_WINDOWS)
+#	elif defined(DEATH_TARGET_WINDOWS)
 		ULONG bufferSize = 0;
-		::GetAdaptersAddresses(AF_INET6, GAA_FLAG_INCLUDE_PREFIX, nullptr, nullptr, &bufferSize);
+		::GetAdaptersAddresses(AF_INET6, GAA_FLAG_INCLUDE_PREFIX, NULL, NULL, &bufferSize);
 		std::unique_ptr<std::uint8_t[]> buffer = std::make_unique<std::uint8_t[]>(bufferSize);
-		PIP_ADAPTER_ADDRESSES adapterAddresses = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.get());
+		auto* adapterAddresses = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.get());
 
-		if (::GetAdaptersAddresses(AF_INET6, GAA_FLAG_INCLUDE_PREFIX, nullptr, adapterAddresses, &bufferSize) == NO_ERROR) {
+		if (::GetAdaptersAddresses(AF_INET6, GAA_FLAG_INCLUDE_PREFIX, NULL, adapterAddresses, &bufferSize) == NO_ERROR) {
 			for (auto* adapter = adapterAddresses; adapter != nullptr; adapter = adapter->Next) {
 				// Prefer first adapter that is up, not loopback, supports multicast
 				if (adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK &&
@@ -91,10 +91,11 @@ namespace Jazz2::Multiplayer
 		}
 		LOGI("[MP] No suitable interface found for local discovery");
 		return 0;
-#else
+#	else
 		return 0;
-#endif
+#	endif
 	}
+#endif
 
 	ServerDiscovery::ServerDiscovery(NetworkManager* server)
 		: _server(server), _observer(nullptr), _onlineSuccess(false)
@@ -129,20 +130,20 @@ namespace Jazz2::Multiplayer
 
 	ENetSocket ServerDiscovery::TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{
+#if ENET_IPV6
 		std::int32_t ifidx = GetDefaultIPv6MulticastIfIndex();
 
 		ENetSocket socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
 		if (socket == ENET_SOCKET_NULL) {
-#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
-#else
+#	else
 			std::int32_t error = errno;
-#endif
+#	endif
 			LOGE("[MP] Failed to create socket for local server discovery (error: %i)", error);
 			return ENET_SOCKET_NULL;
 		}
 
-#if ENET_IPV6
 		std::int32_t on = 1, hops = 3;
 		if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_IF, (const char*)&ifidx, sizeof(ifidx)) != 0 ||
@@ -207,8 +208,7 @@ namespace Jazz2::Multiplayer
 #else
 		// TODO: Use broadcast on IPv4
 		LOGW("[MP] Local server discovery is not supported on IPv4");
-		enet_socket_destroy(socket);
-		socket = ENET_SOCKET_NULL;
+		ENetSocket socket = ENET_SOCKET_NULL;
 #endif
 
 		return socket;
