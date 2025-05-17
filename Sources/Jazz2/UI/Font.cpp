@@ -563,4 +563,30 @@ namespace Jazz2::UI
 		} while (idx < textLength);
 		charOffset++;
 	}
+
+	String Font::StripFormatting(StringView text)
+	{
+		if (text.empty()) {
+			return {};
+		}
+
+		SmallVector<char, 4000> tempBuffer;
+
+		for (std::size_t i = 0; i < text.size(); i++) {
+			while (i + 1 < text.size() && text[i] == '\f' && text[i + 1] == '[') {
+				i += 2;
+
+				while (text[i] != L']' && text[i] != L'\0') {
+					i++;
+				}
+				i++;
+			}
+
+			if (text[i] != L'\0') {
+				tempBuffer.push_back(text[i]);
+			}
+		}
+
+		return String(tempBuffer.data(), tempBuffer.size());
+	}
 }

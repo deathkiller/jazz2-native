@@ -161,6 +161,8 @@ namespace Jazz2::Multiplayer
 		bool ProcessCommand(const Peer& peer, StringView line, bool isAdmin);
 		/** @brief Sends the message to the specified peer */
 		void SendMessage(const Peer& peer, UI::MessageLevel level, StringView message);
+		/** @brief Sends the message as a server user to all peers */
+		void SendServerMessageToAll(StringView message);
 
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
@@ -291,6 +293,8 @@ namespace Jazz2::Multiplayer
 		float _recalcPositionInRoundTime;
 		std::int32_t _limitCameraLeft;
 		std::int32_t _limitCameraWidth;
+		Vector2f _lastCheckpointPos;
+		float _lastCheckpointLight;
 
 		SmallVector<RequiredAsset, 0> _requiredAssets;
 

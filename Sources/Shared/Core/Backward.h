@@ -23,6 +23,7 @@
 #define BACKWARD_INCLUDED
 
 #include "../CommonBase.h"
+#include "../Containers/DateTime.h"
 #include "../IO/Stream.h"
 
 #if DEATH_CXX_STANDARD >= 201703L
@@ -3805,6 +3806,17 @@ namespace Death { namespace Backward {
 			PrintStacktrace(st, os, exceptionCode, colorize);
 		}
 
+		/** @brief Prints standard prologue of the text log file */
+		void PrintFilePrologue(IO::Stream* s) {
+			auto p = Containers::DateTime::Now().Partitioned();
+
+			char buffer[64];
+			std::int32_t length = snprintf(buffer, sizeof(buffer), "%02u:%02u:%02u.%03u [F] ", p.Hour, p.Minute, p.Second, p.Millisecond);
+			if (length > 0) {
+				s->Write(buffer, length);
+			}
+		}
+
 		/** @brief Returns stack trace resolver */
 		TraceResolver const& GetResolver() const {
 			return _resolver;
@@ -4243,6 +4255,7 @@ namespace Death { namespace Backward {
 
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
+				printer.PrintFilePrologue(dest);
 				printer.Print(st, dest, std::uint32_t(info->si_signo));
 				dest->Flush();
 			}
@@ -4590,6 +4603,7 @@ namespace Death { namespace Backward {
 
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
+				printer.PrintFilePrologue(dest);
 				printer.Print(st, dest, GetContext()->ExceptionRecord.ExceptionCode);
 				dest->Flush();
 			}
