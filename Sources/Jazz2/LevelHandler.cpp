@@ -1063,6 +1063,8 @@ namespace Jazz2
 					}
 
 					if (_activeBoss->OnActivatedBoss()) {
+						HandleBossActivated(_activeBoss.get(), initiator);
+
 						if (eventParams != nullptr) {
 							size_t musicPathLength = strnlen((const char*)eventParams, 16);
 							StringView musicPath((const char*)eventParams, musicPathLength);
@@ -1135,6 +1137,11 @@ namespace Jazz2
 	void LevelHandler::SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data)
 	{
 		// Packet cannot be sent anywhere in local sessions
+	}
+
+	void LevelHandler::HandleBossActivated(Actors::Bosses::BossBase* boss, Actors::ActorBase* initiator)
+	{
+		// Used only in derived classes
 	}
 
 	void LevelHandler::HandleLevelChange(LevelInitialization&& levelInit)

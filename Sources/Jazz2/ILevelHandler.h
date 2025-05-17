@@ -1,10 +1,11 @@
 ﻿#pragma once
 
-#include "Actors/ActorBase.h"
 #include "LevelInitialization.h"
 #include "PlayerAction.h"
 #include "WarpFlags.h"
 #include "WeatherType.h"
+#include "Actors/ActorBase.h"
+#include "Actors/Enemies/Bosses/BossBase.h"
 
 #include "../nCine/Audio/AudioBufferPlayer.h"
 
@@ -136,6 +137,8 @@ namespace Jazz2
 		/** @brief Sends a packet to the other side of a non-local session */
 		virtual void SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data) = 0;
 
+		/** @brief Called when a boss is activated */
+		virtual void HandleBossActivated(Actors::Bosses::BossBase* boss, Actors::ActorBase* initiator = nullptr) = 0;
 		/** @brief Called when the level is changed */
 		virtual void HandleLevelChange(LevelInitialization&& levelInit) = 0;
 		/** @brief Called when the game is over */
