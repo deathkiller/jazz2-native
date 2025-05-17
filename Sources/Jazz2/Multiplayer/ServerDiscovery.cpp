@@ -83,7 +83,8 @@ namespace Jazz2::Multiplayer
 				// Prefer first adapter that is up, not loopback, supports multicast
 				if (adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK &&
 					!(adapter->Flags & IP_ADAPTER_NO_MULTICAST)) {
-					LOGI("[MP] Using IPv6 interface \"%s\" (%s:%i) for local discovery", Utf8::FromUtf16(adapter->FriendlyName).data(), adapter->AdapterName, (std::int32_t)adapter->Ipv6IfIndex);
+					LOGI("[MP] Using IPv6 interface \"%s\" (%s:%i) for local discovery", Utf8::FromUtf16(adapter->FriendlyName).data(),
+						adapter->AdapterName, (std::int32_t)adapter->Ipv6IfIndex);
 					return (std::int32_t)adapter->Ipv6IfIndex;
 				}
 			}
@@ -186,6 +187,7 @@ namespace Jazz2::Multiplayer
 			return ENET_SOCKET_NULL;
 		}
 
+		parsedAddress.sin6_scope_id = ifidx;
 		parsedAddress.port = DiscoveryPort;
 
 		struct ipv6_mreq mreq;

@@ -628,7 +628,7 @@ namespace Jazz2::Multiplayer
 		ENetEvent ev{};
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()) && _this->_state != NetworkState::None; i++) {
 			ENetAddress& addr = _this->_desiredEndpoints[i];
-			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr, true).data(), addr.port, i + 1, std::int32_t(_this->_desiredEndpoints.size()));
+			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr, true).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
 			
 			if (host != nullptr) {
 				enet_host_destroy(host);
