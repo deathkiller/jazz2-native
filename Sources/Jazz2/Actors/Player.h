@@ -170,7 +170,7 @@ namespace Jazz2::Actors
 		/** @brief Returns score */
 		std::int32_t GetScore() const;
 		/** @brief Adds score */
-		void AddScore(std::int32_t amount);
+		virtual void AddScore(std::int32_t amount);
 		/** @brief Adds health */
 		virtual bool AddHealth(std::int32_t amount);
 		/** @brief Returns lives */
@@ -200,9 +200,9 @@ namespace Jazz2::Actors
 		/** @brief Adds fast fire */
 		bool AddFastFire(std::int32_t count);
 		/** @brief Morphs to a given player type */
-		bool MorphTo(PlayerType type);
+		virtual bool MorphTo(PlayerType type);
 		/** @brief Reverts morpth to the original player type */
-		void MorphRevert();
+		virtual void MorphRevert();
 		/** @brief Sets duration of dizziness */
 		virtual bool SetDizzy(float timeLeft);
 

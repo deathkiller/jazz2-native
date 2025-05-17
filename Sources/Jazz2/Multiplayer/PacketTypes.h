@@ -129,12 +129,14 @@ namespace Jazz2::Multiplayer
 		LimitCameraView,
 		OverrideCameraView,
 		ShakeCameraView,
+		PlayerType,			// TODO
 
 		WeaponAmmo = 30,
 		WeaponUpgrades,
 
 		Coins = 60,
 		Gems,
+		Score,				// TODO
 
 		Points = 90,
 		PositionInRound,	// TODO: Unused

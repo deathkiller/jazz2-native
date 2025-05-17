@@ -5877,7 +5877,7 @@ extern "C" {
 		sentLength = sendmsg(socket, &msgHdr, MSG_NOSIGNAL);
 
 		if (sentLength == -1) {
-			if (errno == EWOULDBLOCK) {
+			if (errno == EWOULDBLOCK || errno == ENOBUFS) {
 				return 0;
 			}
 			#ifdef ENET_DEBUG
@@ -5911,7 +5911,7 @@ extern "C" {
 		sentLength = sendmsg(socket, &msgHdr, MSG_NOSIGNAL);
 
 		if (sentLength == -1) {
-			if (errno == EWOULDBLOCK) {
+			if (errno == EWOULDBLOCK || errno == ENOBUFS) {
 				return 0;
 			}
 			#ifdef ENET_DEBUG
@@ -6522,6 +6522,7 @@ extern "C" {
 			int error = WSAGetLastError();
 			switch (error) {
 				case WSAEWOULDBLOCK:
+				case WSAENOBUFS:
 					return 0;
 			}
 			#ifdef ENET_DEBUG
@@ -6556,6 +6557,7 @@ extern "C" {
 			int error = WSAGetLastError();
 			switch (error) {
 				case WSAEWOULDBLOCK:
+				case WSAENOBUFS:
 					return 0;
 			}
 			#ifdef ENET_DEBUG
