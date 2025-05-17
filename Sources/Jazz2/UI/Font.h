@@ -59,6 +59,9 @@ namespace Jazz2::UI
 		/** @brief Draws a string */
 		void DrawString(Canvas* canvas, StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, Colorf color, float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f, float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f);
 
+		/** @brief Strips formatting from the specified text */
+		static String StripFormatting(StringView text);
+
 	private:
 		static constexpr Colorf RandomColors[] = {
 			Colorf(0.4f, 0.55f, 0.85f, 0.5f),

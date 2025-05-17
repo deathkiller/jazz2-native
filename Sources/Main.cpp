@@ -869,12 +869,27 @@ void GameEventHandler::StartProcessingStdin()
 		auto _this = static_cast<GameEventHandler*>(arg);
 		ASSERT(_this != nullptr);
 
+#		if defined(DEATH_TARGET_WINDOWS)
+		wchar_t bufferW[4096];
+		HANDLE hStdIn = ::GetStdHandle(STD_INPUT_HANDLE);
+#		else
 		char buffer[4096];
+#		endif
+
 		while (true) {
+#		if defined(DEATH_TARGET_WINDOWS)
+			DWORD charsRead;
+			if (!::ReadConsoleW(hStdIn, bufferW, DWORD(arraySize(bufferW)), &charsRead, nullptr)) {
+				LOGW("Failed to read from stdin");
+				break;
+			}
+			String buffer = Utf8::FromUtf16(arrayView(bufferW, charsRead));
+#		else
 			if (!::fgets(buffer, sizeof(buffer), stdin)) {
 				LOGW("Failed to read from stdin");
 				break;
 			}
+#		endif
 
 			StringView line = buffer;
 			line = line.trimmed();
@@ -888,7 +903,9 @@ void GameEventHandler::StartProcessingStdin()
 					theApplication().Quit();
 					break;
 				} else if (auto levelHandler = runtime_cast<MpLevelHandler>(_this->_currentHandler)) {
-					levelHandler->ProcessCommand({}, line, true);
+					if (!levelHandler->ProcessCommand({}, line, true)) {
+						levelHandler->SendServerMessageToAll(line);
+					}
 				}
 			}
 		}

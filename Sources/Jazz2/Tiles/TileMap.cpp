@@ -494,7 +494,7 @@ namespace Jazz2::Tiles
 	{
 		constexpr std::int32_t Tolerance = 4;
 
-		if (x < 0 || y < 0 || _sprLayerIndex == -1) {
+		if (_sprLayerIndex == -1) {
 			return SuspendType::None;
 		}
 
@@ -502,7 +502,7 @@ namespace Jazz2::Tiles
 		std::int32_t ty = (std::int32_t)y / TileSet::DefaultTileSize;
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		if (tx >= layoutSize.X || ty >= layoutSize.Y) {
+		if (tx < 0 || ty < 0 || tx >= layoutSize.X || ty >= layoutSize.Y) {
 			return SuspendType::None;
 		}
 

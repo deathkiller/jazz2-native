@@ -15,6 +15,8 @@ namespace Jazz2::UI
 		Echo,			/**< Echo of the input */
 		Debug,			/**< Debug */
 		Info,			/**< Info */
+		Chat,			/**< Chat */
+		Confirm,		/**< Confirmation */
 		Important,		/**< Important */
 		Warning,		/**< Warning */
 		Error,			/**< Error */

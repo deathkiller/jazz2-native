@@ -68,10 +68,10 @@ include(ncine_imported_targets)
 include(ncine_imgui)
 include(ncine_tracy)
 
-if(NOT IS_DIRECTORY ${NCINE_DATA_DIR})
-	message(WARNING "Content directory not found at: ${NCINE_DATA_DIR}")
+if(NOT IS_DIRECTORY ${NCINE_CONTENT_DIR})
+	message(WARNING "Content directory not found at: ${NCINE_CONTENT_DIR}")
 else()
-	message(STATUS "Content directory: ${NCINE_DATA_DIR}")
+	message(STATUS "Content directory: ${NCINE_CONTENT_DIR}")
 endif()
 	
 if(NCINE_BUILD_ANDROID)

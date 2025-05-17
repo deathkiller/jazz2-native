@@ -756,7 +756,7 @@ namespace Jazz2
 	{
 		if (line == "/help"_s) {
 			_console->WriteLine(UI::MessageLevel::Echo, line);
-			_console->WriteLine(UI::MessageLevel::Info, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
+			_console->WriteLine(UI::MessageLevel::Confirm, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
 			return true;
 		} else if (line == "jjk"_s || line == "jjkill"_s) {
 			_console->WriteLine(UI::MessageLevel::Echo, line);
