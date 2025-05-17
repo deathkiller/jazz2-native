@@ -216,6 +216,10 @@ namespace Jazz2::UI::Menu
 					firstEndpointShort = "<"_s + firstEndpoint.slice(firstEndpoint.size() - 23, firstEndpoint.size());
 					firstEndpoint = firstEndpointShort;
 				}
+				if (_items[i].Desc.Flags & 0x80000000u /*Local*/) {
+					firstEndpointShort = firstEndpoint + " ^"_s;
+					firstEndpoint = firstEndpointShort;
+				}
 
 				_root->DrawStringShadow(firstEndpoint, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
 					Alignment::Left, Font::DefaultColor, 0.7f);
@@ -314,7 +318,7 @@ namespace Jazz2::UI::Menu
 				float halfW = viewSize.X * 0.5f;
 				std::size_t itemsCount = _items.size();
 				for (std::int32_t i = 0; i < itemsCount; i++) {
-					if (std::abs(_touchLast.X - halfW) < 150.0f && std::abs(_touchLast.Y - _items[i].Y) < 22.0f) {
+					if (std::abs(_touchLast.X - halfW) < 200.0f && std::abs(_touchLast.Y - _items[i].Y) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
 						} else {
@@ -338,7 +342,9 @@ namespace Jazz2::UI::Menu
 
 		for (auto& item : _items) {
 			if (item.Desc.EndpointString == desc.EndpointString) {
+				std:uint32_t prevFlags = (item.Desc.Flags & 0x80000000u /*Local*/);
 				item.Desc = std::move(desc);
+				item.Desc.Flags |= prevFlags;
 				return;
 			}
 		}
