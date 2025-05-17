@@ -338,7 +338,7 @@ namespace Jazz2::Multiplayer
 		discoveredServer.Name = String(NoInit, nameLength);
 		packet.Read(discoveredServer.Name.data(), nameLength);
 
-		discoveredServer.Flags = packet.ReadVariableUint32();
+		discoveredServer.Flags = packet.ReadVariableUint32() | 0x80000000u /*Local*/;
 		discoveredServer.GameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
 		discoveredServer.CurrentPlayerCount = packet.ReadVariableUint32();
 		discoveredServer.MaxPlayerCount = packet.ReadVariableUint32();
