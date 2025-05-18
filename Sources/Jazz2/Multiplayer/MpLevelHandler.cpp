@@ -758,7 +758,7 @@ namespace Jazz2::Multiplayer
 			// Chat message
 			MemoryStream packet(9 + prefixedMessage.size());
 			packet.WriteVariableUint32(0); // TODO: Player index
-			packet.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Info);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Chat);
 			packet.WriteVariableUint32((std::uint32_t)prefixedMessage.size());
 			packet.Write(prefixedMessage.data(), (std::uint32_t)prefixedMessage.size());
 
@@ -2580,12 +2580,12 @@ namespace Jazz2::Multiplayer
 		if (!peer.IsValid()) {
 			if (ContentResolver::Get().IsHeadless()) {
 				switch (level) {
-					default: DEATH_TRACE(TraceLevel::Info, {}, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, {}, "[>] %s", message.data()); break;
-					case UI::MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, {}, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, {}, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Assert: DEATH_TRACE(TraceLevel::Assert, {}, "[<] %s", message.data()); break;
-					case UI::MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, {}, "[<] %s", message.data()); break;
+					default: DEATH_TRACE(TraceLevel::Info, {}, "< │ %s", message.data()); break;
+					case UI::MessageLevel::Echo: DEATH_TRACE(TraceLevel::Info, {}, "> │ %s", message.data()); break;
+					case UI::MessageLevel::Warning: DEATH_TRACE(TraceLevel::Warning, {}, "< │ %s", message.data()); break;
+					case UI::MessageLevel::Error: DEATH_TRACE(TraceLevel::Error, {}, "< │ %s", message.data()); break;
+					case UI::MessageLevel::Assert: DEATH_TRACE(TraceLevel::Assert, {}, "< │ %s", message.data()); break;
+					case UI::MessageLevel::Fatal: DEATH_TRACE(TraceLevel::Fatal, {}, "< │ %s", message.data()); break;
 				}
 			} else {
 				_console->WriteLine(UI::MessageLevel::Info, message);
@@ -2858,7 +2858,7 @@ namespace Jazz2::Multiplayer
 
 					MemoryStream packetOut(9 + prefixedMessage.size());
 					packetOut.WriteVariableUint32(playerIndex);
-					packetOut.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Info);
+					packetOut.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Chat);
 					packetOut.WriteVariableUint32((std::uint32_t)prefixedMessage.size());
 					packetOut.Write(prefixedMessage.data(), (std::uint32_t)prefixedMessage.size());
 
@@ -3508,7 +3508,7 @@ namespace Jazz2::Multiplayer
 					String message{NoInit, messageLength};
 					packet.Read(message.data(), messageLength);
 
-					if (level == UI::MessageLevel::Info && playerIndex == _lastSpawnedActorId) {
+					if (level == UI::MessageLevel::Chat && playerIndex == _lastSpawnedActorId) {
 						level = UI::MessageLevel::Echo;
 					}
 
