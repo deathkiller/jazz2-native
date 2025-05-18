@@ -84,7 +84,7 @@ namespace Jazz2::Actors::Multiplayer
 		LevelExitingState lastState = _levelExiting;
 		bool success = PlayerOnServer::OnLevelChanging(initiator, exitType);
 
-		if (lastState == LevelExitingState::None) {
+		if (lastState == LevelExitingState::None && _health > 0) {
 			// Level changing just started, send the request to the player as WarpIn packet
 			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerLevelChanging(this, exitType);
 		}
