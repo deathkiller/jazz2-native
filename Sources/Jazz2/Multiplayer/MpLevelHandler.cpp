@@ -955,6 +955,10 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
+		if (nextLevel.empty()) {
+			nextLevel = _defaultNextLevel;
+		}
+
 		LOGD("[MP] Changing level to \"%s\" (0x%02x)", nextLevel.data(), (std::uint32_t)exitType);
 
 		if ((nextLevel == ":end"_s || nextLevel == ":credits"_s) && !serverConfig.Playlist.empty()) {
@@ -1522,7 +1526,7 @@ namespace Jazz2::Multiplayer
 			packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
 			_networkManager->SendTo([otherPeer = peerDesc->RemotePeer](const Peer& peer) {
 				return (peer != otherPeer);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChangeRemoteActorMetadata, packet);
 
 			if (peerDesc->RemotePeer) {
 				MemoryStream packet2(6);

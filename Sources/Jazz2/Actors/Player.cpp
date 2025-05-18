@@ -3230,6 +3230,12 @@ namespace Jazz2::Actors
 				return true;
 		}
 
+		if (_health <= 0) {
+			// Player is dead, just skip the transition
+			_levelExiting = LevelExitingState::Ready;
+			return true;
+		}
+
 		if (_suspendType != SuspendType::None) {
 			MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
 			_suspendType = SuspendType::None;
