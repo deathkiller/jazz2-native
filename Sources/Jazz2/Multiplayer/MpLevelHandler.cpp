@@ -251,44 +251,7 @@ namespace Jazz2::Multiplayer
 			if (_activePoll != VoteType::None) {
 				_activePollTimeLeft -= timeMult;
 				if (_activePollTimeLeft <= 0.0f) {
-					std::int32_t total, votedYes = 0;
-					{
-						auto peers = _networkManager->GetPeers();
-						total = (std::int32_t)peers->size();
-						votedYes = 0;
-						for (auto& [playerPeer, peerDesc] : *peers) {
-							if (peerDesc->VotedYes) {
-								votedYes++;
-							}
-						}
-					}
-
-					if (votedYes >= total * 2 / 3 && total >= 3) {
-						SendMessageToAll("Poll accepted, the majority of players voted yes");
-
-						switch (_activePoll) {
-							case VoteType::Restart: {
-								RestartPlaylist();
-								break;
-							}
-							case VoteType::ResetPoints: {
-								ResetPeerPoints();
-								break;
-							}
-							case VoteType::Skip: {
-								SkipInPlaylist();
-								break;
-							}
-							case VoteType::Kick: {
-								// TODO
-								break;
-							}
-						}
-					} else {
-						SendMessageToAll("Not enough votes to pass the poll");
-					}
-
-					_activePoll = VoteType::None;
+					EndActivePoll();
 				}
 			}
 		}
@@ -823,16 +786,6 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	void MpLevelHandler::OnKeyPressed(const KeyboardEvent& event)
-	{
-		LevelHandler::OnKeyPressed(event);
-	}
-
-	void MpLevelHandler::OnKeyReleased(const KeyboardEvent& event)
-	{
-		LevelHandler::OnKeyReleased(event);
-	}
-
 	void MpLevelHandler::OnTouchEvent(const TouchEvent& event)
 	{
 		LevelHandler::OnTouchEvent(event);
@@ -894,7 +847,6 @@ namespace Jazz2::Multiplayer
 		Vector3f adjustedPos = pos;
 
 		if (_isServer) {
-			// TODO: Player weapon SFX doesn't work
 			std::uint32_t actorId; bool excludeSelf;
 			if (auto* player = runtime_cast<Actors::Player>(self)) {
 				actorId = player->_playerIndex;
@@ -964,26 +916,6 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::WarpCameraToTarget(Actors::ActorBase* actor, bool fast)
 	{
 		LevelHandler::WarpCameraToTarget(actor, fast);
-	}
-
-	bool MpLevelHandler::IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider)
-	{
-		return LevelHandler::IsPositionEmpty(self, aabb, params, collider);
-	}
-
-	void MpLevelHandler::FindCollisionActorsByAABB(const Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
-	{
-		LevelHandler::FindCollisionActorsByAABB(self, aabb, std::move(callback));
-	}
-
-	void MpLevelHandler::FindCollisionActorsByRadius(float x, float y, float radius, Function<bool(Actors::ActorBase*)>&& callback)
-	{
-		LevelHandler::FindCollisionActorsByRadius(x, y, radius, std::move(callback));
-	}
-
-	void MpLevelHandler::GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback)
-	{
-		LevelHandler::GetCollidingPlayers(aabb, std::move(callback));
 	}
 
 	void MpLevelHandler::BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams)
@@ -1860,11 +1792,13 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::RollbackToCheckpoint(Actors::Player* player)
 	{
+		// TODO: Remove this override
 		LevelHandler::RollbackToCheckpoint(player);
 	}
 
 	void MpLevelHandler::HandleActivateSugarRush(Actors::Player* player)
 	{
+		// TODO: Remove this override
 		LevelHandler::HandleActivateSugarRush(player);
 	}
 
@@ -1961,12 +1895,6 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool MpLevelHandler::PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads)
-	{
-		// TODO: Remove this override
-		return LevelHandler::PlayerActionPressed(player, action, includeGamepads);
-	}
-
 	bool MpLevelHandler::PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
 		if (_isServer) {
@@ -1987,12 +1915,6 @@ namespace Jazz2::Multiplayer
 		}
 
 		return LevelHandler::PlayerActionPressed(player, action, includeGamepads, isGamepad);
-	}
-
-	bool MpLevelHandler::PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads)
-	{
-		// TODO: Remove this override
-		return LevelHandler::PlayerActionHit(player, action, includeGamepads);
 	}
 
 	bool MpLevelHandler::PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad)
@@ -3853,7 +3775,7 @@ namespace Jazz2::Multiplayer
 					std::unique_lock lock(_lock);
 
 					_lastUpdated = now;
-					_elapsedFrames = lerp(_elapsedFrames, elapsedFrames + _networkManager->GetRoundTripTimeMs() * FrameTimer::FramesPerSecond * 0.002f, 0.33f);
+					_elapsedFrames = lerp(_elapsedFrames, elapsedFrames + _networkManager->GetRoundTripTimeMs() * FrameTimer::FramesPerSecond * 0.002f, 0.05f);
 
 					actorCount >>= 1;
 
@@ -5631,6 +5553,48 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint8_t>(0);
 
 		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerReady, packet);
+	}
+
+	void MpLevelHandler::EndActivePoll()
+	{
+		std::int32_t total, votedYes = 0;
+		{
+			auto peers = _networkManager->GetPeers();
+			total = (std::int32_t)peers->size();
+			votedYes = 0;
+			for (auto& [playerPeer, peerDesc] : *peers) {
+				if (peerDesc->VotedYes) {
+					votedYes++;
+				}
+			}
+		}
+
+		if (votedYes >= total * 2 / 3 && total >= 3) {
+			SendMessageToAll("Poll accepted, the majority of players voted yes");
+
+			switch (_activePoll) {
+				case VoteType::Restart: {
+					RestartPlaylist();
+					break;
+				}
+				case VoteType::ResetPoints: {
+					ResetPeerPoints();
+					break;
+				}
+				case VoteType::Skip: {
+					SkipInPlaylist();
+					break;
+				}
+				case VoteType::Kick: {
+					// TODO
+					break;
+				}
+			}
+		} else {
+			SendMessageToAll("Not enough votes to pass the poll");
+		}
+
+		_activePoll = VoteType::None;
 	}
 
 	bool MpLevelHandler::ActorShouldBeMirrored(Actors::ActorBase* actor)

@@ -30,6 +30,8 @@ namespace Jazz2::Actors::Environment
 
 		SetAnimation(AnimState::Default);
 
+		_phase = _originTile.X + _originTile.Y * 0.5f;
+
 		_renderer.AnimPaused = true;
 
 		auto& resolver = ContentResolver::Get();
@@ -60,8 +62,9 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
+		float currentPhase = _phase + 0.04f * _levelHandler->GetElapsedFrames();
 		for (std::int32_t i = 0; i < ChunkCount; i++) {
-			_angle = sinf(_phase - i * (0.64f / ChunkCount)) * 1.2f + fPiOver2;
+			_angle = sinf(currentPhase - i * (0.64f / ChunkCount)) * 1.2f + fPiOver2;
 
 			float distance = ChunkSize * powf(i, 0.95f);
 			_chunkPos[i].X = _pos.X + cosf(_angle) * distance;
@@ -74,7 +77,7 @@ namespace Jazz2::Actors::Environment
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
 			if (player->GetCarryingObject() == this) {
-				float chunkAngle = sinf(_phase - ChunkCount * 0.08f) * 0.6f;
+				float chunkAngle = sinf(currentPhase - ChunkCount * 0.08f) * 0.6f;
 				Vector2f prevPos = player->GetPos();
 				Vector2 newPos = lastChunk + Vector2(chunkAngle * -22.0f, 20.0f + std::abs(chunkAngle) * -10.0f);
 				player->MoveInstantly(newPos, MoveType::Absolute);
@@ -99,8 +102,6 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
-		_phase += timeMult * 0.04f;
-
 		SetState(ActorState::IsDirty, true);
 	}
 
@@ -113,12 +114,13 @@ namespace Jazz2::Actors::Environment
 		if (_currentAnimation != nullptr) {
 			auto& resBase = _currentAnimation->Base;
 			Vector2i texSize = resBase->TextureDiffuse->size();
+			float currentPhase = _phase + 0.04f * _levelHandler->GetElapsedFrames();
 
 			for (std::int32_t i = 0; i < ChunkCount; i++) {
 				auto command = _chunks[i].get();
 
 				float chunkTexSize = ChunkSize / texSize.Y;
-				float chunkAngle = sinf(_phase - i * 0.08f) * 1.2f;
+				float chunkAngle = sinf(currentPhase - i * 0.08f) * 1.2f;
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);

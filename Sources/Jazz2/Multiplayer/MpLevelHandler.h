@@ -92,8 +92,6 @@ namespace Jazz2::Multiplayer
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 		bool OnConsoleCommand(StringView line) override;
 
-		void OnKeyPressed(const KeyboardEvent& event) override;
-		void OnKeyReleased(const KeyboardEvent& event) override;
 		void OnTouchEvent(const TouchEvent& event) override;
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
@@ -101,10 +99,6 @@ namespace Jazz2::Multiplayer
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) override;
-		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider) override;
-		void FindCollisionActorsByAABB(const Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) override;
-		void FindCollisionActorsByRadius(float x, float y, float radius, Function<bool(Actors::ActorBase*)>&& callback) override;
-		void GetCollidingPlayers(const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) override;
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) override;
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) override;
@@ -134,9 +128,7 @@ namespace Jazz2::Multiplayer
 		void SetWeather(WeatherType type, std::uint8_t intensity) override;
 		bool BeginPlayMusic(StringView path, bool setDefault = false, bool forceReload = false) override;
 
-		bool PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads = true) override;
 		bool PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
-		bool PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads = true) override;
 		bool PlayerActionHit(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad) override;
 		float PlayerHorizontalMovement(Actors::Player* player) override;
 		float PlayerVerticalMovement(Actors::Player* player) override;
@@ -161,7 +153,7 @@ namespace Jazz2::Multiplayer
 		bool ProcessCommand(const Peer& peer, StringView line, bool isAdmin);
 		/** @brief Sends the message to the specified peer */
 		void SendMessage(const Peer& peer, UI::MessageLevel level, StringView message);
-		/** @brief Sends the message as a server user to all peers */
+		/** @brief Sends the message to all authenticated peers */
 		void SendMessageToAll(StringView message, bool asChatFromServer = false);
 
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
@@ -345,6 +337,8 @@ namespace Jazz2::Multiplayer
 		void ResetPeerPoints();
 		void SetWelcomeMessage(StringView message);
 		void SetPlayerReady(PlayerType playerType);
+
+		void EndActivePoll();
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 		static bool PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode);
