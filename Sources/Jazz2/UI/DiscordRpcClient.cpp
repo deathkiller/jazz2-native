@@ -198,7 +198,7 @@ namespace Jazz2::UI
 		pid_t processId = ::getpid();
 #endif
 		char buffer[1024];
-		std::int32_t bufferOffset = formatString(buffer, sizeof(buffer), "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
+		std::int32_t bufferOffset = formatString(buffer, "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
 
 		if (!richPresence.State.empty()) {
 			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"state\":\"%s\",", richPresence.State.data());
@@ -307,7 +307,7 @@ namespace Jazz2::UI
 
 		// Handshake
 		char buffer[2048];
-		std::int32_t bufferSize = formatString(buffer, sizeof(buffer), "{\"v\":1,\"client_id\":\"%s\"}", _this->_clientId.data());
+		std::int32_t bufferSize = formatString(buffer, "{\"v\":1,\"client_id\":\"%s\"}", _this->_clientId.data());
 		_this->WriteFrame(Opcodes::Handshake, buffer, bufferSize);
 
 #if defined(DEATH_TARGET_WINDOWS)

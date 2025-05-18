@@ -790,7 +790,7 @@ namespace nCine
 			for (std::uint32_t i = 0; i < numPlayers; i++) {
 				const IAudioPlayer* player = theServiceLocator().GetAudioDevice().player(i);
 				char widgetName[32];
-				formatString(widgetName, sizeof(widgetName), "Player %d", i);
+				formatString(widgetName, "Player %d", i);
 				if (ImGui::TreeNode(widgetName)) {
 					ImGui::Text("Source Id: %u", player->sourceId());
 					ImGui::Text("Buffer Id: %u", player->bufferId());
@@ -861,7 +861,7 @@ namespace nCine
 			}
 			if (numConnectedJoysticks > 0) {
 				char widgetName[32];
-				formatString(widgetName, sizeof(widgetName), "%d Joystick(s)", numConnectedJoysticks);
+				formatString(widgetName, "%d Joystick(s)", numConnectedJoysticks);
 				if (ImGui::TreeNode(widgetName)) {
 					ImGui::Text("Joystick mappings: %u", input.numJoyMappings());
 
@@ -869,7 +869,7 @@ namespace nCine
 						if (input.isJoyPresent(joyId) == false)
 							continue;
 
-						formatString(widgetName, sizeof(widgetName), "Joystick %d", joyId);
+						formatString(widgetName, "Joystick %d", joyId);
 						if (ImGui::TreeNode(widgetName)) {
 							ImGui::Text("Name: %s", input.joyName(joyId));
 							ImGui::Text("GUID: %s", input.joyGuid(joyId));
@@ -1123,7 +1123,7 @@ namespace nCine
 	void ImGuiDebugOverlay::guiViewports(Viewport* viewport, std::uint32_t viewportId)
 	{
 		char widgetName[64];
-		formatString(widgetName, sizeof(widgetName), "#%u Viewport", viewportId);
+		formatString(widgetName, "#%u Viewport", viewportId);
 		/*if (viewport->type() != Viewport::Type::NoTexture)
 			widgetName_.formatAppend(" - size: %d x %d", viewport->width(), viewport->height());*/
 		/*const Recti viewportRect = viewport->viewportRect();

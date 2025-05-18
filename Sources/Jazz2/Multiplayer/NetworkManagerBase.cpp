@@ -310,9 +310,6 @@ namespace Jazz2::Multiplayer
 		{
 			std::unique_lock lock(_lock);
 			success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
-			//if (success && channel == NetworkChannel::UnreliableUpdates) {
-			//	enet_host_flush(_host);
-			//}
 		}
 
 		if (!success) {
@@ -345,9 +342,6 @@ namespace Jazz2::Multiplayer
 					}
 				}
 			}
-			//if (success && channel == NetworkChannel::UnreliableUpdates) {
-			//	enet_host_flush(_host);
-			//}
 		}
 
 		if (!success) {
@@ -378,9 +372,6 @@ namespace Jazz2::Multiplayer
 					success = true;
 				}
 			}
-			//if (success && channel == NetworkChannel::UnreliableUpdates) {
-			//	enet_host_flush(_host);
-			//}
 		}
 
 		if (!success) {

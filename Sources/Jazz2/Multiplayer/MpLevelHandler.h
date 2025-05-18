@@ -162,7 +162,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Sends the message to the specified peer */
 		void SendMessage(const Peer& peer, UI::MessageLevel level, StringView message);
 		/** @brief Sends the message as a server user to all peers */
-		void SendServerMessageToAll(StringView message);
+		void SendMessageToAll(StringView message, bool asChatFromServer = false);
 
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
@@ -264,6 +264,14 @@ namespace Jazz2::Multiplayer
 			RequiredAsset(AssetType type, StringView path, StringView fullPath, std::int64_t size, std::uint32_t crc32)
 				: Type(type), Crc32(crc32), FullPath(fullPath), Path(path), Size(size) {}
 		};
+
+		enum class VoteType : std::uint8_t {
+			None,
+			Restart,
+			ResetPoints,
+			Skip,
+			Kick
+		};
 #endif
 
 		//static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
@@ -289,11 +297,13 @@ namespace Jazz2::Multiplayer
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
 		std::uint32_t _lastUpdated; // Server/Client: last update from the server
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
+		Threading::Spinlock _lock;
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 		bool _ignorePackets;
 		bool _enableLedgeClimb;
 		bool _controllableExternal;
-		Threading::Spinlock _lock;
+		VoteType _activePoll;
+		float _activePollTimeLeft;
 		float _recalcPositionInRoundTime;
 		std::int32_t _limitCameraLeft;
 		std::int32_t _limitCameraWidth;
@@ -330,6 +340,9 @@ namespace Jazz2::Multiplayer
 		void EndGameOnTimeOut();
 
 		bool ApplyFromPlaylist();
+		void RestartPlaylist();
+		void SkipInPlaylist();
+		void ResetPeerPoints();
 		void SetWelcomeMessage(StringView message);
 		void SetPlayerReady(PlayerType playerType);
 

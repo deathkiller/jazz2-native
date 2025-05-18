@@ -458,7 +458,7 @@ namespace Jazz2::Multiplayer
 			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
 
 		char input[2048];
-		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"", serverName.data());
+		std::int32_t length = formatString(input, "{\"n\":\"%s\",\"u\":\"", serverName.data());
 
 		const auto& id = serverConfig.UniqueServerID;
 		length += formatString(input + length, sizeof(input) - length,
@@ -553,7 +553,7 @@ namespace Jazz2::Multiplayer
 			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
 
 		char input[2048];
-		std::int32_t length = formatString(input, sizeof(input), "{\"n\":\"%s\",\"u\":\"", serverName.data());
+		std::int32_t length = formatString(input, "{\"n\":\"%s\",\"u\":\"", serverName.data());
 
 		const auto& id = serverConfig.UniqueServerID;
 		length += formatString(input + length, sizeof(input) - length,

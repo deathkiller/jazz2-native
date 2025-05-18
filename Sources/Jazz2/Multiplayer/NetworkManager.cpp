@@ -208,7 +208,7 @@ namespace Jazz2::Multiplayer
 		const auto& remoteServerId = _serverConfig->UniqueServerID;
 
 		char uuidStr[33];
-		std::int32_t uuidStrLength = formatString(uuidStr, sizeof(uuidStr), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		std::int32_t uuidStrLength = formatString(uuidStr, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 			remoteServerId[0], remoteServerId[1], remoteServerId[2], remoteServerId[3], remoteServerId[4], remoteServerId[5], remoteServerId[6], remoteServerId[7], remoteServerId[8], remoteServerId[9], remoteServerId[10], remoteServerId[11], remoteServerId[12], remoteServerId[13], remoteServerId[14], remoteServerId[15]);
 
 		String fullPath = fs::FindPathCaseInsensitive(

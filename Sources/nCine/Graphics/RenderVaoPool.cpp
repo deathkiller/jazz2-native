@@ -77,7 +77,7 @@ namespace nCine
 				}
 
 #if defined(DEATH_DEBUG)
-				formatString(debugString, sizeof(debugString), "Reuse and define VAO 0x%lx (%u)", std::uintptr_t(vaoPool_[index].object.get()), index);
+				formatString(debugString, "Reuse and define VAO 0x%lx (%u)", std::uintptr_t(vaoPool_[index].object.get()), index);
 				GLDebug::MessageInsert(debugString);
 #endif
 #if defined(NCINE_PROFILING)
@@ -106,7 +106,7 @@ namespace nCine
 	void RenderVaoPool::insertGLDebugMessage(const VaoBinding& binding)
 	{
 #if defined(DEATH_DEBUG)
-		formatString(debugString, sizeof(debugString), "Bind VAO 0x%lx (", std::uintptr_t(binding.object.get()));
+		formatString(debugString, "Bind VAO 0x%lx (", std::uintptr_t(binding.object.get()));
 
 		// TODO: GLDebug
 		/*bool firstVbo = true;

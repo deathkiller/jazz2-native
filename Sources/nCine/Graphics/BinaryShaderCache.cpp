@@ -58,7 +58,7 @@ namespace nCine
 		platformHash_ += CityHash64(infoStrings.glVersion, strlen(infoStrings.glVersion));
 
 		char platformHashString[24];
-		std::int32_t platformHashLength = formatString(platformHashString, sizeof(platformHashString), "%016llx", platformHash_);
+		std::int32_t platformHashLength = formatString(platformHashString, "%016llx", platformHash_);
 		path_ = fs::CombinePath(path, { platformHashString, (std::size_t)platformHashLength });
 		fs::CreateDirectories(path_);
 
@@ -78,7 +78,7 @@ namespace nCine
 		std::uint64_t shaderNameHash = CityHash64(shaderName, strlen(shaderName));
 
 		char filename[32];
-		std::int32_t filenameLength = formatString(filename, sizeof(filename), "%016llx.shader", shaderNameHash);
+		std::int32_t filenameLength = formatString(filename, "%016llx.shader", shaderNameHash);
 		return fs::CombinePath(path_, { filename, (std::size_t)filenameLength });
 	}
 
