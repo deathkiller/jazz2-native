@@ -286,7 +286,12 @@ namespace nCine
 		return copyStringFirst(dest, size, source.data(), (std::int32_t)source.size());
 	}
 
-	int formatString(char* buffer, std::size_t maxLen, const char* format, ...);
+	std::int32_t formatString(char* buffer, std::size_t maxLen, const char* format, ...);
+
+	template<std::size_t size, class ...TArg>
+	inline std::int32_t formatString(char(&dest)[size], const char* format, const TArg& ...args) {
+		return formatString(dest, size, format, args...);
+	}
 
 	void u32tos(std::uint32_t value, char* buffer);
 	void i32tos(std::int32_t value, char* buffer);

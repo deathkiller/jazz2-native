@@ -107,7 +107,7 @@ namespace Jazz2::UI::Menu
 		std::int32_t numHats = input.joyNumHats(_selectedIndex);
 
 		char buffer[128];
-		formatString(buffer, sizeof(buffer), "%s (%i axes, %i buttons, %i hats)", joyName, numAxes, numButtons, numHats);
+		formatString(buffer, "%s (%i axes, %i buttons, %i hats)", joyName, numAxes, numButtons, numHats);
 
 		std::size_t joyNameStringLength = Utf8::GetLength(buffer);
 		float xMultiplier = joyNameStringLength * 0.5f;
@@ -122,14 +122,14 @@ namespace Jazz2::UI::Menu
 
 		JoystickGuid joyGuid = input.joyGuid(_selectedIndex);
 		if (joyGuid == JoystickGuidType::Default) {
-			formatString(buffer, sizeof(buffer), "GUID: default");
+			copyStringFirst(buffer, "GUID: default");
 		} else if (joyGuid == JoystickGuidType::Hidapi) {
-			formatString(buffer, sizeof(buffer), "GUID: hidapi");
+			copyStringFirst(buffer, "GUID: hidapi");
 		} else if (joyGuid == JoystickGuidType::Xinput) {
-			formatString(buffer, sizeof(buffer), "GUID: xinput");
+			copyStringFirst(buffer, "GUID: xinput");
 		} else {
 			const std::uint8_t* g = joyGuid.data;
-			formatString(buffer, sizeof(buffer), "GUID: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%s",
+			formatString(buffer, "GUID: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%s",
 				g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7],
 				g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
 				input.hasMappingByGuid(joyGuid) ? "" : (input.hasMappingByName(joyName) ? " (similar mapping)" : " (no mapping)"));
@@ -181,7 +181,7 @@ namespace Jazz2::UI::Menu
 
 		float sx = 0, sy = 0;
 		for (std::int32_t i = 0; i < numAxes; i++) {
-			formatString(buffer, sizeof(buffer), "a%i", i);
+			formatString(buffer, "a%i", i);
 			PrintAxisValue(buffer, rawState.axisValue(i), center.X * 0.4f + sx, topLine + 140.0f + sy);
 			sx += 110.0f;
 			if (sx >= 340.0f) {
@@ -196,7 +196,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		for (std::int32_t i = 0; i < numButtons; i++) {
-			formatString(buffer, sizeof(buffer), "b%i: %i", i, rawState.isButtonPressed(i) ? 1 : 0);
+			formatString(buffer, "b%i: %i", i, rawState.isButtonPressed(i) ? 1 : 0);
 			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
@@ -212,7 +212,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		for (std::int32_t i = 0; i < numHats; i++) {
-			formatString(buffer, sizeof(buffer), "h%i: %i", i, rawState.hatState(i));
+			formatString(buffer, "h%i: %i", i, rawState.hatState(i));
 			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
@@ -302,7 +302,7 @@ namespace Jazz2::UI::Menu
 	void InputDiagnosticsSection::PrintAxisValue(const char* name, float value, float x, float y)
 	{
 		char text[64];
-		formatString(text, sizeof(text), "%s: %0.2f", name, value);
+		formatString(text, "%s: %0.2f", name, value);
 
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(text, charOffset, x, y, IMenuContainer::FontLayer,

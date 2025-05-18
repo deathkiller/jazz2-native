@@ -904,7 +904,7 @@ void GameEventHandler::StartProcessingStdin()
 					break;
 				} else if (auto levelHandler = runtime_cast<MpLevelHandler>(_this->_currentHandler)) {
 					if (!levelHandler->ProcessCommand({}, line, true) && !line.hasPrefix('/')) {
-						levelHandler->SendServerMessageToAll(line);
+						levelHandler->SendMessageToAll(line, true);
 					}
 				}
 			}

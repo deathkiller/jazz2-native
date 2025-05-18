@@ -47,6 +47,8 @@ namespace Jazz2::Multiplayer
 		bool IsAdmin;
 		/** @brief Whether ledge climbing is enabled by client */
 		bool EnableLedgeClimb;
+		/** @brief Whether the peer voted "yes" in the active poll */
+		bool VotedYes;
 		/** @brief Team ID */
 		std::uint8_t Team;
 		/** @brief Preferred player type selected by the peer */

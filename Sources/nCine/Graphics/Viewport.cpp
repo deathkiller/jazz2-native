@@ -369,11 +369,11 @@ namespace nCine
 #if defined(DEATH_DEBUG)
 		// TODO: GLDebug
 		/*if (type_ == Type::SCREEN)
-			formatString(debugString, sizeof(debugString), "Draw screen viewport (0x%lx)", uintptr_t(this));
+			formatString(debugString, "Draw screen viewport (0x%lx)", uintptr_t(this));
 		else if (type_ == Type::WITH_TEXTURE && textures_[0]->name() != nullptr)
-			formatString(debugString, sizeof(debugString), "Draw viewport \"%s\" (0x%lx)", textures_[0]->name(), uintptr_t(this));
+			formatString(debugString, "Draw viewport \"%s\" (0x%lx)", textures_[0]->name(), uintptr_t(this));
 		else
-			formatString(debugString, sizeof(debugString), "Draw viewport (0x%lx)", uintptr_t(this));
+			formatString(debugString, "Draw viewport (0x%lx)", uintptr_t(this));
 		GLDebug::ScopedGroup scoped(debugString);*/
 #endif
 

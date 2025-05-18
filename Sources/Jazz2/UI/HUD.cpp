@@ -632,13 +632,13 @@ namespace Jazz2::UI
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
-			formatString(stringBuffer, sizeof(stringBuffer), "%08i", player->GetScore());
+			formatString(stringBuffer, "%08i", player->GetScore());
 			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 		} else {
-			formatString(stringBuffer, sizeof(stringBuffer), "%08i", player->GetScore());
+			formatString(stringBuffer, "%08i", player->GetScore());
 			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
@@ -785,7 +785,7 @@ namespace Jazz2::UI
 			Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
-		formatString(stringBuffer, sizeof(stringBuffer), "x%i", _coins);
+		formatString(stringBuffer, "x%i", _coins);
 
 		std::int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
@@ -833,7 +833,7 @@ namespace Jazz2::UI
 			Colorf(1.0f, 1.0f, 1.0f, 0.8f * alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
-		formatString(stringBuffer, sizeof(stringBuffer), "x%i", _gems);
+		formatString(stringBuffer, "x%i", _gems);
 
 		std::int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
