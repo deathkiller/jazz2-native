@@ -201,6 +201,13 @@ namespace Jazz2::Actors::Multiplayer
 		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetInvulnerability(this, timeLeft, type);
 	}
 
+	void RemotePlayerOnServer::AddScore(std::int32_t amount)
+	{
+		PlayerOnServer::AddScore(amount);
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetScore(this, _score);
+	}
+
 	bool RemotePlayerOnServer::AddHealth(std::int32_t amount)
 	{
 		if (!PlayerOnServer::AddHealth(amount)) {

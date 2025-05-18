@@ -93,6 +93,17 @@ namespace Jazz2::Actors::Multiplayer
 		return false;
 	}
 
+	bool PlayerOnServer::MorphTo(PlayerType type)
+	{
+		if (!MpPlayer::MorphTo(type)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerMorphTo(this, type);
+	
+		return true;
+	}
+
 	bool PlayerOnServer::IsAttacking() const
 	{
 		if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
