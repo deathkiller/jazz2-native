@@ -202,7 +202,7 @@ namespace Jazz2::Actors
 		/** @brief Morphs to a given player type */
 		virtual bool MorphTo(PlayerType type);
 		/** @brief Reverts morpth to the original player type */
-		virtual void MorphRevert();
+		void MorphRevert();
 		/** @brief Sets duration of dizziness */
 		virtual bool SetDizzy(float timeLeft);
 

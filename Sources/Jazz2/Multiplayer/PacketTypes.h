@@ -70,7 +70,7 @@ namespace Jazz2::Multiplayer
 		CreateMirroredActor,
 		DestroyRemoteActor,
 		UpdateAllActors,
-		ForceResyncActors,
+		ChangeRemoteActorMetadata,
 		MarkRemoteActorAsPlayer,
 		UpdatePositionsInRound,
 
@@ -118,7 +118,8 @@ namespace Jazz2::Multiplayer
 	{
 		Unknown,
 
-		Lives = 1,
+		PlayerType = 1,
+		Lives,
 		Health,
 		Controllable,
 		Invulnerable,
@@ -129,14 +130,13 @@ namespace Jazz2::Multiplayer
 		LimitCameraView,
 		OverrideCameraView,
 		ShakeCameraView,
-		PlayerType,			// TODO
 
 		WeaponAmmo = 30,
 		WeaponUpgrades,
 
 		Coins = 60,
 		Gems,
-		Score,				// TODO
+		Score,
 
 		Points = 90,
 		PositionInRound,	// TODO: Unused

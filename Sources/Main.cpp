@@ -903,7 +903,7 @@ void GameEventHandler::StartProcessingStdin()
 					theApplication().Quit();
 					break;
 				} else if (auto levelHandler = runtime_cast<MpLevelHandler>(_this->_currentHandler)) {
-					if (!levelHandler->ProcessCommand({}, line, true)) {
+					if (!levelHandler->ProcessCommand({}, line, true) && !line.hasPrefix('/')) {
 						levelHandler->SendServerMessageToAll(line);
 					}
 				}

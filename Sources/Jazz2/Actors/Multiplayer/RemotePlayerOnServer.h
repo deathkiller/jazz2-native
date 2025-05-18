@@ -49,6 +49,7 @@ namespace Jazz2::Actors::Multiplayer
 		bool Freeze(float timeLeft) override;
 		void SetInvulnerability(float timeLeft, InvulnerableType type) override;
 
+		void AddScore(std::int32_t amount) override;
 		bool AddHealth(std::int32_t amount) override;
 		bool AddLives(std::int32_t count) override;
 		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;

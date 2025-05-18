@@ -22,6 +22,7 @@ namespace Jazz2::Actors::Multiplayer
 		bool CanCauseDamage(ActorBase* collider) override;
 		bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false) override;
 		bool AddLives(std::int32_t count) override;
+		bool MorphTo(PlayerType type) override;
 
 	protected:
 		std::shared_ptr<ActorBase> _lastAttacker;

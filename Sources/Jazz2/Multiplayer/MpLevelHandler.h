@@ -193,6 +193,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerFreeze(Actors::Player* player, float timeLeft);
 		/** @brief Called when a player sets invulnerability */
 		void HandlePlayerSetInvulnerability(Actors::Player* player, float timeLeft, Actors::Player::InvulnerableType type);
+		/** @brief Called when a player sets score */
+		void HandlePlayerSetScore(Actors::Player* player, std::int32_t value);
 		/** @brief Called when a player sets health */
 		void HandlePlayerSetHealth(Actors::Player* player, std::int32_t count);
 		/** @brief Called when a player sets lives */
@@ -203,6 +205,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		/** @brief Called when a player requests to synchronize weapon upgrades */
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);
+		/** @brief Called when a player requests to morph to another type */
+		void HandlePlayerMorphTo(Actors::Player* player, PlayerType type);
 		/** @brief Called when a player changed duration of dizziness */
 		void HandlePlayerSetDizzy(Actors::Player* player, float timeLeft);
 		/** @brief Called when a player sets a shield */
