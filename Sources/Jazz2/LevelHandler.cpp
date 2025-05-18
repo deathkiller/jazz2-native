@@ -397,7 +397,7 @@ namespace Jazz2
 
 		_levelDisplayName = std::move(descriptor.DisplayName);
 
-		LOGI("Level \"%s\" (%s.j2l) loaded", _levelDisplayName.data(), _levelName.data());
+		LOGI("Level \"%s\" (\"%s.j2l\") loaded", _levelDisplayName.data(), _levelName.data());
 
 		if (!_levelDisplayName.empty()) {
 			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + _levelDisplayName));
@@ -1047,7 +1047,7 @@ namespace Jazz2
 	{
 		switch (eventType) {
 			case EventType::AreaActivateBoss: {
-				if (_activeBoss == nullptr) {
+				if (_activeBoss == nullptr && _nextLevelType == ExitType::None) {
 					for (auto& actor : _actors) {
 						_activeBoss = runtime_cast<Actors::Bosses::BossBase>(actor);
 						if (_activeBoss != nullptr) {
