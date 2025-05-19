@@ -32,10 +32,6 @@ namespace nCine
 #endif
 	}
 
-#if defined(DEATH_TRACE)
-	char GLShader::infoLogString_[MaxInfoLogLength];
-#endif
-
 	GLShader::GLShader(GLenum type)
 		: glHandle_(0), status_(Status::NotCompiled)
 	{
@@ -140,10 +136,11 @@ namespace nCine
 				GLint length = 0;
 				glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
 				if (length > 0) {
-					glGetShaderInfoLog(glHandle_, MaxInfoLogLength, &length, infoLogString_);
+					static char buffer[2048];
+					glGetShaderInfoLog(glHandle_, sizeof(buffer), &length, buffer);
 					// Trim whitespace - driver messages usually contain newline(s) at the end
-					*(MutableStringView(infoLogString_).trimmed().end()) = '\0';
-					LOGW("Shader: %s", infoLogString_);
+					*(MutableStringView(buffer).trimmed().end()) = '\0';
+					LOGW("Shader: %s", buffer);
 				}
 				DEATH_ASSERT_BREAK();
 			}

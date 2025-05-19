@@ -149,11 +149,6 @@ namespace nCine
 		static constexpr std::int32_t UniformBlocksInitialSize = 4;
 		static constexpr std::int32_t AttributesInitialSize = 4;
 
-#if defined(DEATH_TRACE)
-		static constexpr std::uint32_t MaxInfoLogLength = 512;
-		static char infoLogString_[MaxInfoLogLength];
-#endif
-
 		static GLuint boundProgram_;
 
 		GLuint glHandle_;

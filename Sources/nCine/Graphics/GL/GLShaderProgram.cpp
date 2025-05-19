@@ -14,9 +14,6 @@
 namespace nCine
 {
 	GLuint GLShaderProgram::boundProgram_ = 0;
-#if defined(DEATH_TRACE)
-	char GLShaderProgram::infoLogString_[MaxInfoLogLength];
-#endif
 
 	GLShaderProgram::GLShaderProgram()
 		: GLShaderProgram(QueryPhase::Immediate)
@@ -283,8 +280,9 @@ namespace nCine
 				GLint length = 0;
 				glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
 				if (length > 0) {
-					glGetProgramInfoLog(glHandle_, MaxInfoLogLength, &length, infoLogString_);
-					LOGW("%s", infoLogString_);
+					static char buffer[2048];
+					glGetProgramInfoLog(glHandle_, sizeof(buffer), &length, buffer);
+					LOGW("%s", buffer);
 				}
 			}
 #endif

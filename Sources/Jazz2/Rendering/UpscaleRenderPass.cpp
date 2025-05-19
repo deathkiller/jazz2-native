@@ -107,6 +107,8 @@ namespace Jazz2::Rendering
 			case RescaleMode::CrtShadowMask: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtShadowMask); break;
 			case RescaleMode::CrtApertureGrille: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtApertureGrille); break;
 			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeMonochrome); break;
+			case RescaleMode::Sabr: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeSabr); break;
+			case RescaleMode::CleanEdge: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCleanEdge); break;
 			default: _resizeShader = nullptr; break;
 		}
 

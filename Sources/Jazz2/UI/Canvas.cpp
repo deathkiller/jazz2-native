@@ -15,7 +15,7 @@ namespace Jazz2::UI
 	{
 		SceneNode::OnUpdate(timeMult);
 
-		AnimTime += timeMult * 0.014f;
+		AnimTime += timeMult * AnimTimeMultiplier;
 	}
 
 	bool Canvas::OnDraw(RenderQueue& renderQueue)

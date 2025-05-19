@@ -63,10 +63,6 @@ namespace nCine
 
 	private:
 		static constexpr std::uint32_t MaxShaderSourceLength = 32 * 1024;
-#if defined(DEATH_TRACE)
-		static constexpr std::uint32_t MaxInfoLogLength = 512;
-		static char infoLogString_[MaxInfoLogLength];
-#endif
 
 		GLuint glHandle_;
 		Status status_;

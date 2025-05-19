@@ -521,15 +521,18 @@ namespace Jazz2
 		if (_pauseMenu == nullptr) {
 			UpdatePressedActions();
 
+			bool isGamepad;
 			if (PlayerActionHit(nullptr, PlayerAction::Menu)) {
 				if (_console->IsVisible()) {
 					_console->Hide();
 				} else if (_nextLevelType == ExitType::None) {
 					PauseGame();
 				}
-			} else if (PlayerActionHit(nullptr, PlayerAction::Console)) {
+			} else if (PlayerActionHit(nullptr, PlayerAction::Console, true, isGamepad)) {
 				if (_console->IsVisible()) {
-					_console->Hide();
+					if (isGamepad) {
+						_console->Hide();
+					}
 				} else {
 					_console->Show();
 				}

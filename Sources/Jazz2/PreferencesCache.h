@@ -24,6 +24,10 @@ namespace Jazz2
 		CrtShadowMask,				/**< CRT Shadow Mask */
 		CrtApertureGrille,			/**< CRT Aperture Grille */
 		Monochrome,					/**< Monochrome */
+		Sabr,						/**< SABR */
+		CleanEdge,					/**< CleanEdge */
+
+		Count,						/**< Count of rescale modes */
 
 		TypeMask = 0x0f,
 		UseAntialiasing = 0x80
