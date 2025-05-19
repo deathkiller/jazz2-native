@@ -92,6 +92,8 @@ namespace Jazz2::Input
 		static ArrayView<ControlSchemeMapping> GetMappings(std::int32_t playerIdx);
 		/** @brief Returns a gamepad index for a given player index */
 		static std::int32_t GetGamepadForPlayer(std::int32_t playerIdx);
+		/** @brief Returns `true` if the action of any player is bound the specified target */
+		static bool ContainsTarget(PlayerAction action, MappingTarget target);
 
 		/** @brief Creates mapping target for a given key */
 		static MappingTarget CreateTarget(Keys key);

@@ -212,7 +212,8 @@ namespace Jazz2::Resources
 		ResizeCrtShadowMask,
 		ResizeCrtApertureGrille,
 		ResizeMonochrome,
-		ResizeScanlines,
+		ResizeSabr,
+		ResizeCleanEdge,
 #endif
 		Antialiasing,
 		Transition,

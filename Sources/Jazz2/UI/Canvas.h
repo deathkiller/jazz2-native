@@ -37,6 +37,10 @@ namespace Jazz2::UI
 		/** @brief Draws a raw render command */
 		void DrawRenderCommand(RenderCommand* command);
 
+	protected:
+		/** @brief Multiplier of game time for canvas rendering */
+		static constexpr float AnimTimeMultiplier = 0.014f;
+
 	private:
 		std::int32_t _renderCommandsCount;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;

@@ -1381,6 +1381,560 @@ void main() {
 }
 )";
 
+	constexpr char ResizeSabrVs[] = "#line " DEATH_LINE_STRING "\n" R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec2 vTexSize;
+out vec2 tc;
+out vec4 xyp_1_2_3;
+out vec4 xyp_5_10_15;
+out vec4 xyp_6_7_8;
+out vec4 xyp_9_14_9;
+out vec4 xyp_11_12_13;
+out vec4 xyp_16_17_18;
+out vec4 xyp_21_22_23;
+
+void main() {
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+
+	vTexSize = texRect.xy;
+	tc = aPosition * vec2(1.0004, 1.0);
+
+	float x = 1.0 / vTexSize.x;
+	float y = 1.0 / vTexSize.y;
+
+	xyp_1_2_3    = tc.xxxy + vec4(      -x, 0.0,   x, -2.0 * y);
+	xyp_6_7_8    = tc.xxxy + vec4(      -x, 0.0,   x,       -y);
+	xyp_11_12_13 = tc.xxxy + vec4(      -x, 0.0,   x,      0.0);
+	xyp_16_17_18 = tc.xxxy + vec4(      -x, 0.0,   x,        y);
+	xyp_21_22_23 = tc.xxxy + vec4(      -x, 0.0,   x,  2.0 * y);
+	xyp_5_10_15  = tc.xyyy + vec4(-2.0 * x,  -y, 0.0,        y);
+	xyp_9_14_9   = tc.xyyy + vec4( 2.0 * x,  -y, 0.0,        y);
+}
+)";
+
+	constexpr char ResizeSabrFs[] = "#line " DEATH_LINE_STRING "\n" R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+
+in vec2 vTexSize;
+in vec2 tc;
+in vec4 xyp_1_2_3;
+in vec4 xyp_5_10_15;
+in vec4 xyp_6_7_8;
+in vec4 xyp_9_14_9;
+in vec4 xyp_11_12_13;
+in vec4 xyp_16_17_18;
+in vec4 xyp_21_22_23;
+out vec4 fragColor;
+
+const vec4 Ai  = vec4( 1.0, -1.0, -1.0,  1.0);
+const vec4 B45 = vec4( 1.0,  1.0, -1.0, -1.0);
+const vec4 C45 = vec4( 1.5,  0.5, -0.5,  0.5);
+const vec4 B30 = vec4( 0.5,  2.0, -0.5, -2.0);
+const vec4 C30 = vec4( 1.0,  1.0, -0.5,  0.0);
+const vec4 B60 = vec4( 2.0,  0.5, -2.0, -0.5);
+const vec4 C60 = vec4( 2.0,  0.0, -1.0,  0.5);
+
+const vec4 M45 = vec4(0.4, 0.4, 0.4, 0.4);
+const vec4 M30 = vec4(0.2, 0.4, 0.2, 0.4);
+const vec4 M60 = M30.yxwz;
+const vec4 Mshift = vec4(0.2);
+
+const float coef = 2.0;
+const vec4 threshold = vec4(0.32);
+const vec3 lum = vec3(0.21, 0.72, 0.07);
+
+bvec4 _and_(bvec4 A, bvec4 B) {
+	return bvec4(A.x && B.x, A.y && B.y, A.z && B.z, A.w && B.w);
+}
+
+bvec4 _or_(bvec4 A, bvec4 B) {
+	return bvec4(A.x || B.x, A.y || B.y, A.z || B.z, A.w || B.w);
+}
+
+vec4 lum_to(vec3 v0, vec3 v1, vec3 v2, vec3 v3) {
+	return vec4(dot(lum, v0), dot(lum, v1), dot(lum, v2), dot(lum, v3));
+}
+
+vec4 lum_df(vec4 A, vec4 B) {
+	return abs(A - B);
+}
+
+bvec4 lum_eq(vec4 A, vec4 B) {
+	return lessThan(lum_df(A, B), threshold);
+}
+
+vec4 lum_wd(vec4 a, vec4 b, vec4 c, vec4 d, vec4 e, vec4 f, vec4 g, vec4 h) {
+	return lum_df(a, b) + lum_df(a, c) + lum_df(d, e) + lum_df(d, f) + 4.0 * lum_df(g, h);
+}
+
+float c_df(vec3 c1, vec3 c2) {
+	vec3 df = abs(c1 - c2);
+	return df.r + df.g + df.b;
+}
+
+void main() {
+	// Get mask values by performing texture lookup with the uniform sampler
+	vec3 P1  = texture(uTexture, xyp_1_2_3.xw   ).rgb;
+	vec3 P2  = texture(uTexture, xyp_1_2_3.yw   ).rgb;
+	vec3 P3  = texture(uTexture, xyp_1_2_3.zw   ).rgb;
+	
+	vec3 P6  = texture(uTexture, xyp_6_7_8.xw   ).rgb;
+	vec3 P7  = texture(uTexture, xyp_6_7_8.yw   ).rgb;
+	vec3 P8  = texture(uTexture, xyp_6_7_8.zw   ).rgb;
+	
+	vec3 P11 = texture(uTexture, xyp_11_12_13.xw).rgb;
+	vec3 P12 = texture(uTexture, xyp_11_12_13.yw).rgb;
+	vec3 P13 = texture(uTexture, xyp_11_12_13.zw).rgb;
+	
+	vec3 P16 = texture(uTexture, xyp_16_17_18.xw).rgb;
+	vec3 P17 = texture(uTexture, xyp_16_17_18.yw).rgb;
+	vec3 P18 = texture(uTexture, xyp_16_17_18.zw).rgb;
+	
+	vec3 P21 = texture(uTexture, xyp_21_22_23.xw).rgb;
+	vec3 P22 = texture(uTexture, xyp_21_22_23.yw).rgb;
+	vec3 P23 = texture(uTexture, xyp_21_22_23.zw).rgb;
+	
+	vec3 P5  = texture(uTexture, xyp_5_10_15.xy ).rgb;
+	vec3 P10 = texture(uTexture, xyp_5_10_15.xz ).rgb;
+	vec3 P15 = texture(uTexture, xyp_5_10_15.xw ).rgb;
+	
+	vec3 P9  = texture(uTexture, xyp_9_14_9.xy  ).rgb;
+	vec3 P14 = texture(uTexture, xyp_9_14_9.xz  ).rgb;
+	vec3 P19 = texture(uTexture, xyp_9_14_9.xw  ).rgb;
+	
+	// Store luminance values of each point in groups of 4
+	// so that we may operate on all four corners at once
+	vec4 p7  = lum_to(P7,  P11, P17, P13);
+	vec4 p8  = lum_to(P8,  P6,  P16, P18);
+	vec4 p11 = p7.yzwx;                      // P11, P17, P13, P7
+	vec4 p12 = lum_to(P12, P12, P12, P12);
+	vec4 p13 = p7.wxyz;                      // P13, P7,  P11, P17
+	vec4 p14 = lum_to(P14, P2,  P10, P22);
+	vec4 p16 = p8.zwxy;                      // P16, P18, P8,  P6
+	vec4 p17 = p7.zwxy;                      // P17, P13, P7,  P11
+	vec4 p18 = p8.wxyz;                      // P18, P8,  P6,  P16
+	vec4 p19 = lum_to(P19, P3,  P5,  P21);
+	vec4 p22 = p14.wxyz;                     // P22, P14, P2,  P10
+	vec4 p23 = lum_to(P23, P9,  P1,  P15);
+	
+	// Scale current texel coordinate to [0..1]
+	vec2 fp = fract(tc * vTexSize);
+	
+	// Determine amount of "smoothing" or mixing that could be done on texel corners
+	vec4 ma45 = smoothstep(C45 - M45, C45 + M45, Ai * fp.y + B45 * fp.x);
+	vec4 ma30 = smoothstep(C30 - M30, C30 + M30, Ai * fp.y + B30 * fp.x);
+	vec4 ma60 = smoothstep(C60 - M60, C60 + M60, Ai * fp.y + B60 * fp.x);
+	vec4 marn = smoothstep(C45 - M45 + Mshift, C45 + M45 + Mshift, Ai * fp.y + B45 * fp.x);
+	
+	// Perform edge weight calculations
+	vec4 e45   = lum_wd(p12, p8, p16, p18, p22, p14, p17, p13);
+	vec4 econt = lum_wd(p17, p11, p23, p13, p7, p19, p12, p18);
+	vec4 e30   = lum_df(p13, p16);
+	vec4 e60   = lum_df(p8, p17);
+	
+	// Calculate rule results for interpolation
+	bvec4 r45_1   = _and_(notEqual(p12, p13), notEqual(p12, p17));
+	bvec4 r45_2   = _and_(not(lum_eq(p13, p7)), not(lum_eq(p13, p8)));
+	bvec4 r45_3   = _and_(not(lum_eq(p17, p11)), not(lum_eq(p17, p16)));
+	bvec4 r45_4_1 = _and_(not(lum_eq(p13, p14)), not(lum_eq(p13, p19)));
+	bvec4 r45_4_2 = _and_(not(lum_eq(p17, p22)), not(lum_eq(p17, p23)));
+	bvec4 r45_4   = _and_(lum_eq(p12, p18), _or_(r45_4_1, r45_4_2));
+	bvec4 r45_5   = _or_(lum_eq(p12, p16), lum_eq(p12, p8));
+	bvec4 r45     = _and_(r45_1, _or_(_or_(_or_(r45_2, r45_3), r45_4), r45_5));
+	bvec4 r30 = _and_(notEqual(p12, p16), notEqual(p11, p16));
+	bvec4 r60 = _and_(notEqual(p12, p8), notEqual(p7, p8));
+	
+	// Combine rules with edge weights
+	bvec4 edr45 = _and_(lessThan(e45, econt), r45);
+	bvec4 edrrn = lessThanEqual(e45, econt);
+	bvec4 edr30 = _and_(lessThanEqual(coef * e30, e60), r30);
+	bvec4 edr60 = _and_(lessThanEqual(coef * e60, e30), r60);
+	
+	// Finalize interpolation rules and cast to float (0.0 for false, 1.0 for true)
+	vec4 final45 = vec4(_and_(_and_(not(edr30), not(edr60)), edr45));
+	vec4 final30 = vec4(_and_(_and_(edr45, not(edr60)), edr30));
+	vec4 final60 = vec4(_and_(_and_(edr45, not(edr30)), edr60));
+	vec4 final36 = vec4(_and_(_and_(edr60, edr30), edr45));
+	vec4 finalrn = vec4(_and_(not(edr45), edrrn));
+	
+	// Determine the color to mix with for each corner
+	vec4 px = step(lum_df(p12, p17), lum_df(p12, p13));
+	
+	// Determine the mix amounts by combining the final rule result and corresponding
+	// mix amount for the rule in each corner
+	vec4 mac = final36 * max(ma30, ma60) + final30 * ma30 + final60 * ma60 + final45 * ma45 + finalrn * marn;
+
+	vec3 res1 = P12;
+	res1 = mix(res1, mix(P13, P17, px.x), mac.x);
+	res1 = mix(res1, mix(P7, P13, px.y), mac.y);
+	res1 = mix(res1, mix(P11, P7, px.z), mac.z);
+	res1 = mix(res1, mix(P17, P11, px.w), mac.w);
+	
+	vec3 res2 = P12;
+	res2 = mix(res2, mix(P17, P11, px.w), mac.w);
+	res2 = mix(res2, mix(P11, P7, px.z), mac.z);
+	res2 = mix(res2, mix(P7, P13, px.y), mac.y);
+	res2 = mix(res2, mix(P13, P17, px.x), mac.x);
+	
+	fragColor = vec4(mix(res1, res2, step(c_df(P12, res1), c_df(P12, res2))), 1.0);
+}
+)";
+
+	constexpr char ResizeCleanEdgeVs[] = "#line " DEATH_LINE_STRING "\n" R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec2 v_px;
+out vec2 size;
+
+void main() {
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+
+	size = texRect.xy + 0.0001;
+	v_px = aPosition.xy * size;
+}
+)";
+
+	constexpr char ResizeCleanEdgeFs[] = "#line " DEATH_LINE_STRING "\n" R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+
+in vec2 v_px;
+in vec2 size;
+out vec4 fragColor;
+
+#define SLOPE 
+#define CLEANUP
+
+vec3 highestColor = vec3(1.,1.,1.);
+float similarThreshold = 0.0;
+float lineWidth = 1.0;
+
+const float scale = 4.0;
+const mat3 yuv_matrix = mat3(vec3(0.299, 0.587, 0.114), vec3(-0.169, -0.331, 0.5), vec3(0.5, -0.419, -0.081));
+
+vec3 yuv(vec3 col){
+	mat3 yuv = transpose(yuv_matrix);
+	return yuv * col;
+}
+
+bool similar(vec4 col1, vec4 col2){
+	return (col1.a == 0. && col2.a == 0.) || distance(col1, col2) <= similarThreshold;
+}
+
+bool similar3(vec4 col1, vec4 col2, vec4 col3){
+	return similar(col1, col2) && similar(col2, col3);
+}
+
+bool similar4(vec4 col1, vec4 col2, vec4 col3, vec4 col4){
+	return similar(col1, col2) && similar(col2, col3) && similar(col3, col4);
+}
+
+bool similar5(vec4 col1, vec4 col2, vec4 col3, vec4 col4, vec4 col5){
+	return similar(col1, col2) && similar(col2, col3) && similar(col3, col4) && similar(col4, col5);
+}
+
+bool higher(vec4 thisCol, vec4 otherCol){
+	if(similar(thisCol, otherCol)) return false;
+	if(thisCol.a == otherCol.a){
+//		return yuv(thisCol.rgb).x > yuv(otherCol.rgb).x;
+//		return distance(yuv(thisCol.rgb), yuv(highestColor)) < distance(yuv(otherCol.rgb), yuv(highestColor));
+		return distance(thisCol.rgb, highestColor) < distance(otherCol.rgb, highestColor);
+	} else {
+		return thisCol.a > otherCol.a;
+	}
+}
+
+vec4 higherCol(vec4 thisCol, vec4 otherCol){
+	return higher(thisCol, otherCol) ? thisCol : otherCol;
+}
+
+float cd(vec4 col1, vec4 col2){
+	return distance(col1.rgba, col2.rgba);
+}
+
+float distToLine(vec2 testPt, vec2 pt1, vec2 pt2, vec2 dir){
+  vec2 lineDir = pt2 - pt1;
+  vec2 perpDir = vec2(lineDir.y, -lineDir.x);
+  vec2 dirToPt1 = pt1 - testPt;
+  return (dot(perpDir, dir) > 0.0 ? 1.0 : -1.0) * (dot(normalize(perpDir), dirToPt1));
+}
+
+vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf, vec4 uff, vec4 b, vec4 c, vec4 f, vec4 ff, vec4 db, vec4 d, vec4 df, vec4 dff, vec4 ddb, vec4 dd, vec4 ddf){
+	//clamped range prevents inacccurate identity (no change) result, feel free to disable if necessary
+	#ifdef SLOPE
+	float minWidth = 0.45;
+	float maxWidth = 1.142;
+	#else
+	float minWidth = 0.0;
+	float maxWidth = 1.4;
+	#endif
+	float _lineWidth = max(minWidth, min(maxWidth, lineWidth));
+	point = mainDir * (point - 0.5) + 0.5; //flip point
+	
+	//edge detection
+	float distAgainst = 4.0*cd(f,d) + cd(uf,c) + cd(c,db) + cd(ff,df) + cd(df,dd);
+	float distTowards = 4.0*cd(c,df) + cd(u,f) + cd(f,dff) + cd(b,d) + cd(d,ddf);
+	bool shouldSlice = 
+	  (distAgainst < distTowards)
+	  || (distAgainst < distTowards + 0.001) && !higher(c, f); //equivalent edges edge case
+	if(similar4(f, d, b, u) && similar4(uf, df, db, ub) && !similar(c, f)){ //checkerboard edge case
+		shouldSlice = false;
+	}
+	if(!shouldSlice) return vec4(-1.0);
+	
+	//only applicable for very large lineWidth (>1.3)
+//	if(similar3(c, f, df)){ //don't make slice for same color
+//		return vec4(-1.0);
+//	}
+	float dist = 1.0;
+	bool flip = false;
+	vec2 center = vec2(0.5,0.5);
+	
+	#ifdef SLOPE
+	if(similar3(f, d, db) && !similar3(f, d, b) && !similar(uf, db)){ //lower shallow 2:1 slant
+		if(similar(c, df) && higher(c, f)){ //single pixel wide diagonal, dont flip
+			
+		} else {
+			//priority edge cases
+			if(higher(c, f)){
+				flip = true; 
+			}
+			if(similar(u, f) && !similar(c, df) && !higher(c, u)){
+				flip = true; 
+			}
+		}
+		
+		if(flip){
+			dist = _lineWidth-distToLine(point, center+vec2(1.5, -1.0)*pointDir, center+vec2(-0.5, 0.0)*pointDir, -pointDir); //midpoints of neighbor two-pixel groupings
+		} else {
+			dist = distToLine(point, center+vec2(1.5, 0.0)*pointDir, center+vec2(-0.5, 1.0)*pointDir, pointDir); //midpoints of neighbor two-pixel groupings
+		}
+		
+		//cleanup slant transitions
+		#ifdef CLEANUP
+		if(!flip && similar(c, uf) && !(similar3(c, uf, uff) && !similar3(c, uf, ff) && !similar(d, uff))){ //shallow
+			float dist2 = distToLine(point, center+vec2(2.0, -1.0)*pointDir, center+vec2(-0.0, 1.0)*pointDir, pointDir); 
+			dist = min(dist, dist2);
+		}
+		#endif
+		
+		dist -= (_lineWidth/2.0);
+		return dist <= 0.0 ? ((cd(c,f) <= cd(c,d)) ? f : d) : vec4(-1.0);
+	} else if(similar3(uf, f, d) && !similar3(u, f, d) && !similar(uf, db)){ //forward steep 2:1 slant
+		if(similar(c, df) && higher(c, d)){ //single pixel wide diagonal, dont flip
+			
+		} else {
+			//priority edge cases
+			if(higher(c, d)){ 
+				flip = true; 
+			}
+			if(similar(b, d) && !similar(c, df) && !higher(c, d)){
+				flip = true; 
+			}
+		}
+		
+		if(flip){
+			dist = _lineWidth-distToLine(point, center+vec2(0.0, -0.5)*pointDir, center+vec2(-1.0, 1.5)*pointDir, -pointDir); //midpoints of neighbor two-pixel groupings
+		} else {
+			dist = distToLine(point, center+vec2(1.0, -0.5)*pointDir, center+vec2(0.0, 1.5)*pointDir, pointDir); //midpoints of neighbor two-pixel groupings
+		}
+		
+		//cleanup slant transitions
+		#ifdef CLEANUP
+		if(!flip && similar(c, db) && !(similar3(c, db, ddb) && !similar3(c, db, dd) && !similar(f, ddb))){ //steep
+			float dist2 = distToLine(point, center+vec2(1.0, 0.0)*pointDir, center+vec2(-1.0, 2.0)*pointDir, pointDir); 
+			dist = min(dist, dist2);
+		}
+		#endif
+		
+		dist -= (_lineWidth/2.0);
+		return dist <= 0.0 ? ((cd(c,f) <= cd(c,d)) ? f : d) : vec4(-1.0);
+	} else 
+	#endif
+	if(similar(f, d)) { //45 diagonal
+		if(similar(c, df) && higher(c, f)){ //single pixel diagonal along neighbors, dont flip
+			if(!similar(c, dd) && !similar(c, ff)){ //line against triple color stripe edge case
+				flip = true; 
+			}
+		} else {
+			//priority edge cases
+			if(higher(c, f)){
+				flip = true; 
+			}
+			if(!similar(c, b) && similar4(b, f, d, u)){
+				flip = true;
+			}
+		}
+		//single pixel 2:1 slope, dont flip
+		if((( (similar(f, db) && similar3(u, f, df)) || (similar(uf, d) && similar3(b, d, df)) ) && !similar(c, df))){
+			flip = true;
+		} 
+		
+		if(flip){
+			dist = _lineWidth-distToLine(point, center+vec2(1.0, -1.0)*pointDir, center+vec2(-1.0, 1.0)*pointDir, -pointDir); //midpoints of own diagonal pixels
+		} else {
+			dist = distToLine(point, center+vec2(1.0, 0.0)*pointDir, center+vec2(0.0, 1.0)*pointDir, pointDir); //midpoints of corner neighbor pixels
+		}
+		
+		//cleanup slant transitions
+		#ifdef SLOPE
+		#ifdef CLEANUP
+		if(!flip && similar3(c, uf, uff) && !similar3(c, uf, ff) && !similar(d, uff)){ //shallow
+			float dist2 = distToLine(point, center+vec2(1.5, 0.0)*pointDir, center+vec2(-0.5, 1.0)*pointDir, pointDir); 
+			dist = max(dist, dist2);
+		} 
+		
+		if(!flip && similar3(ddb, db, c) && !similar3(dd, db, c) && !similar(ddb, f)){ //steep
+			float dist2 = distToLine(point, center+vec2(1.0, -0.5)*pointDir, center+vec2(0.0, 1.5)*pointDir, pointDir); 
+			dist = max(dist, dist2);
+		}
+		#endif
+		#endif
+		
+		dist -= (_lineWidth/2.0);
+		return dist <= 0.0 ? ((cd(c,f) <= cd(c,d)) ? f : d) : vec4(-1.0);
+	} 
+	#ifdef SLOPE
+	else if(similar3(ff, df, d) && !similar3(ff, df, c) && !similar(uff, d)){ //far corner of shallow slant 
+		
+		if(similar(f, dff) && higher(f, ff)){ //single pixel wide diagonal, dont flip
+			
+		} else {
+			//priority edge cases
+			if(higher(f, ff)){ 
+				flip = true; 
+			}
+			if(similar(uf, ff) && !similar(f, dff) && !higher(f, uf)){
+				flip = true; 
+			}
+		}
+		if(flip){
+			dist = _lineWidth-distToLine(point, center+vec2(1.5+1.0, -1.0)*pointDir, center+vec2(-0.5+1.0, 0.0)*pointDir, -pointDir); //midpoints of neighbor two-pixel groupings
+		} else {
+			dist = distToLine(point, center+vec2(1.5+1.0, 0.0)*pointDir, center+vec2(-0.5+1.0, 1.0)*pointDir, pointDir); //midpoints of neighbor two-pixel groupings
+		}
+		
+		dist -= (_lineWidth/2.0);
+		return dist <= 0.0 ? ((cd(f,ff) <= cd(f,df)) ? ff : df) : vec4(-1.0);
+	} else if(similar3(f, df, dd) && !similar3(c, df, dd) && !similar(f, ddb)){ //far corner of steep slant
+		if(similar(d, ddf) && higher(d, dd)){ //single pixel wide diagonal, dont flip
+			
+		} else {
+			//priority edge cases
+			if(higher(d, dd)){ 
+				flip = true; 
+			}
+			if(similar(db, dd) && !similar(d, ddf) && !higher(d, dd)){
+				flip = true; 
+			}
+//			if(!higher(d, dd)){
+//				return vec4(1.0);
+//				flip = true; 
+//			}
+		}
+		
+		if(flip){
+			dist = _lineWidth-distToLine(point, center+vec2(0.0, -0.5+1.0)*pointDir, center+vec2(-1.0, 1.5+1.0)*pointDir, -pointDir); //midpoints of neighbor two-pixel groupings
+		} else {
+			dist = distToLine(point, center+vec2(1.0, -0.5+1.0)*pointDir, center+vec2(0.0, 1.5+1.0)*pointDir, pointDir); //midpoints of neighbor two-pixel groupings
+		}
+		dist -= (_lineWidth/2.0);
+		return dist <= 0.0 ? ((cd(d,df) <= cd(d,dd)) ? df : dd) : vec4(-1.0);
+	}
+	#endif
+	return vec4(-1.0);
+}
+
+void main() {
+	vec2 local = fract(v_px);
+	vec2 px = ceil(v_px);
+	
+	vec2 pointDir = round(local)*2.0-1.0;
+	
+	//neighbor pixels
+	//Up, Down, Forward, and Back
+	//relative to quadrant of current location within pixel
+	
+	vec4 uub = texture(uTexture, (px+vec2(-1.0,-2.0)*pointDir)/size);
+	vec4 uu  = texture(uTexture, (px+vec2( 0.0,-2.0)*pointDir)/size);
+	vec4 uuf = texture(uTexture, (px+vec2( 1.0,-2.0)*pointDir)/size);
+	
+	vec4 ubb = texture(uTexture, (px+vec2(-2.0,-2.0)*pointDir)/size);
+	vec4 ub  = texture(uTexture, (px+vec2(-1.0,-1.0)*pointDir)/size);
+	vec4 u   = texture(uTexture, (px+vec2( 0.0,-1.0)*pointDir)/size);
+	vec4 uf  = texture(uTexture, (px+vec2( 1.0,-1.0)*pointDir)/size);
+	vec4 uff = texture(uTexture, (px+vec2( 2.0,-1.0)*pointDir)/size);
+	
+	vec4 bb  = texture(uTexture, (px+vec2(-2.0, 0.0)*pointDir)/size);
+	vec4 b   = texture(uTexture, (px+vec2(-1.0, 0.0)*pointDir)/size);
+	vec4 c   = texture(uTexture, (px+vec2( 0.0, 0.0)*pointDir)/size);
+	vec4 f   = texture(uTexture, (px+vec2( 1.0, 0.0)*pointDir)/size);
+	vec4 ff  = texture(uTexture, (px+vec2( 2.0, 0.0)*pointDir)/size);
+	
+	vec4 dbb = texture(uTexture, (px+vec2(-2.0, 1.0)*pointDir)/size);
+	vec4 db  = texture(uTexture, (px+vec2(-1.0, 1.0)*pointDir)/size);
+	vec4 d   = texture(uTexture, (px+vec2( 0.0, 1.0)*pointDir)/size);
+	vec4 df  = texture(uTexture, (px+vec2( 1.0, 1.0)*pointDir)/size);
+	vec4 dff = texture(uTexture, (px+vec2( 2.0, 1.0)*pointDir)/size);
+	
+	vec4 ddb = texture(uTexture, (px+vec2(-1.0, 2.0)*pointDir)/size);
+	vec4 dd  = texture(uTexture, (px+vec2( 0.0, 2.0)*pointDir)/size);
+	vec4 ddf = texture(uTexture, (px+vec2( 1.0, 2.0)*pointDir)/size);
+	
+	vec4 col = c;
+	
+	//c_orner, b_ack, and u_p slices
+	// (slices from neighbor pixels will only ever reach these 3 quadrants
+	vec4 c_col = sliceDist(local, vec2( 1.0, 1.0), pointDir, ub, u, uf, uff, b, c, f, ff, db, d, df, dff, ddb, dd, ddf);
+	vec4 b_col = sliceDist(local, vec2(-1.0, 1.0), pointDir, uf, u, ub, ubb, f, c, b, bb, df, d, db, dbb, ddf, dd, ddb);
+	vec4 u_col = sliceDist(local, vec2( 1.0,-1.0), pointDir, db, d, df, dff, b, c, f, ff, ub, u, uf, uff, uub, uu, uuf);
+	
+	if(c_col.r >= 0.0){
+		col = c_col;
+	}
+	if(b_col.r >= 0.0){
+		col = b_col;
+	}
+	if(u_col.r >= 0.0){
+		col = u_col;
+	}
+	
+	fragColor = col;
+}
+)";
+
 	constexpr char ResizeCrtScanlinesVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;

@@ -149,6 +149,13 @@ namespace Jazz2::UI
 				ProcessCurrentLine();
 				break;
 			}
+			case Keys::Tab: {
+				// If the console is bound to Tab key, allow to toggle it off
+				if (ControlScheme::ContainsTarget(PlayerAction::Console, ControlScheme::CreateTarget(Keys::Tab))) {
+					Hide();
+				}
+				break;
+			}
 			case Keys::Backspace: {
 				if (_textCursor > 0) {
 					std::size_t lengthAfter = std::strlen(&_currentLine[_textCursor]);
@@ -290,6 +297,11 @@ namespace Jazz2::UI
 
 	void InGameConsole::Show()
 	{
+		// Don't allow to show the console if it was hidden in the last frame (mainly to fix toggling with Tab key)
+		if (AnimTime <= AnimTimeMultiplier) {
+			return;
+		}
+
 		_isVisible = true;
 
 		_currentLine[0] = '\0';
@@ -302,6 +314,8 @@ namespace Jazz2::UI
 	void InGameConsole::Hide()
 	{
 		_isVisible = false;
+
+		AnimTime = 0.0f;
 	}
 
 	void InGameConsole::WriteLine(MessageLevel level, String line)

@@ -9,30 +9,30 @@ namespace Jazz2::UI::Menu
 {
 	RescaleModeSection::RescaleModeSection()
 	{
-		std::int32_t currentMode = (std::int32_t)(PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
-		for (std::int32_t i = 0; i <= (std::int32_t)RescaleMode::Monochrome; i++) {
-			if (currentMode == _items.size()) {
-				_selectedIndex = currentMode;
-			}
+		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+		_items.emplace_back(RescaleModeItem { RescaleMode::None, _("None / Pixel-perfect") });
 
-			auto& item = _items.emplace_back();
-			item.Item.Mode = (RescaleMode)i;
-			switch (item.Item.Mode) {
-				// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
-				case RescaleMode::None: item.Item.DisplayName = _("None / Pixel-perfect"); break;
-				// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
-				case RescaleMode::HQ2x: item.Item.DisplayName = "HQ2×"_s; break;
-				// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
-				case RescaleMode::_3xBrz: item.Item.DisplayName = "3×BRZ"_s; break;
+		_items.emplace_back(RescaleModeItem { RescaleMode::CleanEdge, "CleanEdge"_s });
+		_items.emplace_back(RescaleModeItem { RescaleMode::HQ2x, "HQ2×"_s });
+		_items.emplace_back(RescaleModeItem { RescaleMode::_3xBrz, "3×BRZ"_s });
+		_items.emplace_back(RescaleModeItem { RescaleMode::Sabr, "SABR"_s });
 
-				// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
-				case RescaleMode::CrtScanlines: item.Item.DisplayName = _("CRT Scanlines"); break;
-				// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
-				case RescaleMode::CrtShadowMask: item.Item.DisplayName = _("CRT Shadow Mask"); break;
-				// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
-				case RescaleMode::CrtApertureGrille: item.Item.DisplayName = _("CRT Aperture Grille"); break;
-				// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
-				case RescaleMode::Monochrome: item.Item.DisplayName = _("Monochrome"); break;
+		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+		_items.emplace_back(RescaleModeItem { RescaleMode::CrtScanlines, _("CRT Scanlines") });
+		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+		_items.emplace_back(RescaleModeItem { RescaleMode::CrtShadowMask, _("CRT Shadow Mask") });
+		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+		_items.emplace_back(RescaleModeItem { RescaleMode::CrtApertureGrille, _("CRT Aperture Grille") });
+
+		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+		_items.emplace_back(RescaleModeItem { RescaleMode::Monochrome, _("Monochrome") });
+
+		RescaleMode currentMode = (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
+
+		for (std::size_t i = 0; i < _items.size(); i++) {
+			if (_items[i].Item.Mode == currentMode) {
+				_selectedIndex = static_cast<std::int32_t>(i);
+				break;
 			}
 		}
 	}

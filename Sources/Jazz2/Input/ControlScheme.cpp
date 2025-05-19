@@ -46,6 +46,7 @@ namespace Jazz2::Input
 		first[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(Keys::Escape));
 		first[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(0, ButtonName::Start));
 		first[(std::int32_t)PlayerAction::Console].Targets.push_back(CreateTarget(Keys::Backquote));
+		first[(std::int32_t)PlayerAction::Console].Targets.push_back(CreateTarget(Keys::T));
 
 		first[(std::int32_t)PlayerAction::SwitchToBlaster].Targets.push_back(CreateTarget(Keys::D1));
 		first[(std::int32_t)PlayerAction::SwitchToBouncer].Targets.push_back(CreateTarget(Keys::D2));
@@ -313,6 +314,23 @@ namespace Jazz2::Input
 			}
 		}
 		return -1;
+	}
+
+	bool ControlScheme::ContainsTarget(PlayerAction action, MappingTarget target)
+	{
+		std::int32_t index = (std::int32_t)action;
+		if (index < (std::int32_t)PlayerAction::Count) {
+			for (std::int32_t j = 0; j < MaxSupportedPlayers; j++) {
+				const auto& mappings = _mappings[j * (std::int32_t)PlayerAction::Count + index];
+				for (const auto& t : mappings.Targets) {
+					if (t.Data == target.Data) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	MappingTarget ControlScheme::CreateTarget(Keys key)
