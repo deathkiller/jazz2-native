@@ -143,6 +143,8 @@ namespace Jazz2::UI
 		virtual void OnDrawCoins(const Rectf& view, std::int32_t& charOffset);
 		/** @brief Called when a notification about gems of the player needs to be drawn */
 		virtual void OnDrawGems(const Rectf& view, std::int32_t& charOffset);
+		/** @brief Called when touch buttons need to be drawn */
+		void OnDrawTouchButtons(Actors::Player* player);
 
 		/** @brief Draws carrotized health bar (Reforged) */
 		void DrawHealthCarrots(float x, float y, std::int32_t health);

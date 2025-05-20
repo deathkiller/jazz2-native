@@ -211,6 +211,10 @@
 		"TouchPause": {
 			"Path": "UI/touch_pause.aura",
 			"States": [ 105 ]
+		},
+		"TouchClose": {
+			"Path": "UI/touch_close.aura",
+			"States": [ 106 ]
 		}
 	},
 
