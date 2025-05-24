@@ -790,6 +790,15 @@ namespace Jazz2::Actors
 			} else {
 				_speed.Y = std::max((std::abs(_speed.Y) - Deceleration * timeMult), 0.0f) * (_speed.Y < 0.0f ? -1.0f : 1.0f);
 			}
+
+			if (_activeModifier == Modifier::LizardCopter && _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
+				// Allow to jump off the copter
+				// TODO: Copter shouldn't diappear immediately
+				SetModifier(Modifier::None);
+				// Don't trigger buttstomp or copter ears when pressing down
+				_wasDownPressed = true;
+				_wasJumpPressed = true;
+			}
 		} else {
 			// Look-up
 			if (_levelHandler->PlayerActionPressed(this, PlayerAction::Up)) {
@@ -948,8 +957,8 @@ namespace Jazz2::Actors
 										_controllableTimeout = 40.0f;
 										SetAnimation(AnimState::Uppercut);
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
-											_externalForce.X = 15.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-											_speed.X = 6.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+											_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+											_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
 											SetState(ActorState::ApplyGravitation, false);
 										});
 									} else {
@@ -4248,6 +4257,8 @@ namespace Jazz2::Actors
 		}
 
 		_carryingObject = actor;
+
+		_canDoubleJump = true;
 
 		if (suspendType == SuspendType::SwingingVine) {
 			_suspendType = suspendType;

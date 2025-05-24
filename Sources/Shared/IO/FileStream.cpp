@@ -166,7 +166,7 @@ namespace Death { namespace IO {
 
 	std::int64_t FileStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		if (bytesToRead <= 0) {
+		if DEATH_UNLIKELY(bytesToRead <= 0) {
 			return 0;
 		}
 
@@ -239,7 +239,7 @@ namespace Death { namespace IO {
 
 	std::int64_t FileStream::Write(const void* source, std::int64_t bytesToWrite)
 	{
-		if (bytesToWrite <= 0) {
+		if DEATH_UNLIKELY(bytesToWrite <= 0) {
 			return 0;
 		}
 
@@ -397,10 +397,17 @@ namespace Death { namespace IO {
 
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		CREATEFILE2_EXTENDED_PARAMETERS params = { sizeof(CREATEFILE2_EXTENDED_PARAMETERS), FILE_ATTRIBUTE_NORMAL };
+		if ((mode & FileAccess::Sequential) == FileAccess::Sequential) {
+			params.dwFileFlags = FILE_FLAG_SEQUENTIAL_SCAN;
+		}
 		params.lpSecurityAttributes = &securityAttribs;
 		_fileHandle = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, &params);
 #	else
-		_fileHandle = ::CreateFile(Utf8::ToUtf16(_path), desireAccess, shareMode, &securityAttribs, creationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+		DWORD fileFlags = FILE_ATTRIBUTE_NORMAL;
+		if ((mode & FileAccess::Sequential) == FileAccess::Sequential) {
+			fileFlags |= FILE_FLAG_SEQUENTIAL_SCAN;
+		}
+		_fileHandle = ::CreateFile(Utf8::ToUtf16(_path), desireAccess, shareMode, &securityAttribs, creationDisposition, fileFlags, NULL);
 #	endif
 		if (_fileHandle == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
@@ -445,10 +452,16 @@ namespace Death { namespace IO {
 			return;
 		}
 
-		std::int64_t size = ::lseek(_fileDescriptor, 0, SEEK_END);
-		if (size >= 0) {
-			_size = size;
-			::lseek(_fileDescriptor, 0, SEEK_SET);
+#	if defined(POSIX_FADV_SEQUENTIAL) && (!defined(__ANDROID__) || __ANDROID_API__ >= 21) && !defined(DEATH_TARGET_SWITCH)
+		if ((mode & FileAccess::Sequential) == FileAccess::Sequential) {
+			// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
+			::posix_fadvise(_fileDescriptor, 0, 0, POSIX_FADV_SEQUENTIAL);
+		}
+#	endif
+
+		struct stat sb;
+		if (::fstat(_fileDescriptor, &sb) == 0 && S_ISREG(sb.st_mode)) {
+			_size = std::int64_t(sb.st_size);
 		}
 #endif
 
@@ -498,14 +511,13 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD bytesRead;
 		if (!::ReadFile(_fileHandle, destination, bytesToRead, &bytesRead, NULL)) {
-			bytesRead = 0;
-
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Cannot read from file \"%s\" with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
+			return -1;
 		}
 
 		_filePos += static_cast<std::int32_t>(bytesRead);
@@ -516,7 +528,7 @@ namespace Death { namespace IO {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Cannot read from file \"%s\" with error %i%s", _path.data(), errno, __GetUnixErrorSuffix(errno));
 #	endif
-			return 0;
+			return -1;
 		}
 		_filePos += bytesRead;
 		return bytesRead;
@@ -528,14 +540,13 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD bytesWritten;
 		if (!::WriteFile(_fileHandle, source, bytesToWrite, &bytesWritten, NULL)) {
-			bytesWritten = 0;
-
 			DWORD error = ::GetLastError();
 			if (error != ERROR_NO_DATA) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Cannot write to file \"%s\" with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
+			return -1;
 		}
 
 		_filePos += static_cast<std::int32_t>(bytesWritten);
@@ -546,7 +557,7 @@ namespace Death { namespace IO {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Cannot write to file \"%s\" with error %i%s", _path.data(), errno, __GetUnixErrorSuffix(errno));
 #	endif
-			return 0;
+			return -1;
 		}
 		_filePos += bytesWritten;
 		return bytesWritten;

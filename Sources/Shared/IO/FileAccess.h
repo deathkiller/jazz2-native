@@ -21,7 +21,9 @@ namespace Death { namespace IO {
 		/** @brief Access to the file should be exclusive (not shared) */
 		Exclusive = 0x10,
 		/** @brief A child process can inherit this handle */
-		InheritHandle = 0x20
+		InheritHandle = 0x20,
+		/** @brief Indicates that the file is to be accessed sequentially from beginning to end */
+		Sequential = 0x40
 	};
 
 	DEATH_ENUM_FLAGS(FileAccess);
