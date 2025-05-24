@@ -1205,7 +1205,7 @@ namespace Death { namespace IO {
 		// the /proc/self/exe symlink is not a real symlink and so stat::st_size returns 0.
 		static const char self[] = "/proc/self/exe";
 		Array<char> path;
-		arrayResize(path, NoInit, 4);
+		arrayResize(path, NoInit, 16);
 		ssize_t size;
 		while ((size = ::readlink(self, path, path.size())) == ssize_t(path.size())) {
 			arrayResize(path, NoInit, path.size() * 2);

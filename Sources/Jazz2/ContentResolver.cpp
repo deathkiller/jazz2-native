@@ -1018,7 +1018,7 @@ namespace Jazz2
 		DeflateStream uc(*s, compressedSize);
 
 		// Palette
-		if (applyPalette) {
+		if (applyPalette && !_isHeadless) {
 			std::uint32_t newPalette[ColorsPerPalette];
 			uc.Read(newPalette, ColorsPerPalette * sizeof(std::uint32_t));
 
@@ -1220,7 +1220,7 @@ namespace Jazz2
 			std::uint32_t newPalette[ColorsPerPalette];
 			uc.Read(newPalette, ColorsPerPalette * sizeof(std::uint32_t));
 
-			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
+			if (!_isHeadless && std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 				if (_isLoading) {
 					_cachedMetadata.clear();
@@ -1331,7 +1331,7 @@ namespace Jazz2
 	{
 		static_assert(sizeof(SpritePalette) == ColorsPerPalette * sizeof(std::uint32_t));
 
-		if (std::memcmp(_palettes, SpritePalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
+		if (!_isHeadless && std::memcmp(_palettes, SpritePalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
 			// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 			if (_isLoading) {
 				_cachedMetadata.clear();
