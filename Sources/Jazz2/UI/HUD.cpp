@@ -1041,7 +1041,6 @@ namespace Jazz2::UI
 	AnimState HUD::GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset)
 	{
 		if (weapon == WeaponType::Toaster && player->_inWater) {
-			offset.X += 1;
 			offset.Y += 2;
 			return WeaponToasterDisabled;
 		} else if (weapon == WeaponType::Seeker) {

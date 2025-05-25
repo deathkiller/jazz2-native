@@ -73,7 +73,7 @@ namespace Jazz2::Events
 		/** @brief Returns `true` if specified tile position contains an event */
 		bool HasEventByPosition(std::int32_t x, std::int32_t y) const;
 		/** @brief Calls specified callback function for each event found by type */
-		void ForEachEvent(EventType eventType, Function<bool(const EventTile&, std::int32_t, std::int32_t)>&& forEachCallback) const;
+		void ForEachEvent(EventType eventType, Function<bool(EventTile&, std::int32_t, std::int32_t)>&& forEachCallback) const;
 		/** @brief Returns `true` if specified position contains hurt event */
 		bool IsHurting(float x, float y, Direction dir);
 		/** @overload */

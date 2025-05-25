@@ -208,11 +208,11 @@ namespace Death { namespace IO { namespace Compression {
 		_strm.next_out = static_cast<unsigned char*>(ptr);
 		_strm.avail_out = size;
 
-		std::int32_t res = inflate(&_strm, Z_SYNC_FLUSH);
+		std::int32_t res = inflate(&_strm, Z_NO_FLUSH);
 
 		// If input buffer is empty, fill it and try it again
 		if (res == Z_BUF_ERROR && _strm.avail_in == 0 && FillInputBuffer()) {
-			res = inflate(&_strm, Z_SYNC_FLUSH);
+			res = inflate(&_strm, Z_NO_FLUSH);
 		}
 
 		if (res != Z_OK && res != Z_STREAM_END) {

@@ -1212,24 +1212,12 @@ namespace Jazz2
 			}
 		}
 
-		// Show notification only for local players (which have assigned viewport)
-		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetActor == player) {
-				_hud->ShowCoins(newCount);
-				break;
-			}
-		}
+		_hud->ShowCoins(newCount);
 	}
 
 	void LevelHandler::HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount)
 	{
-		// Show notification only for local players (which have assigned viewport)
-		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetActor == player) {
-				_hud->ShowGems(gemType, newCount);
-				break;
-			}
-		}
+		_hud->ShowGems(gemType, newCount);
 	}
 
 	void LevelHandler::SetCheckpoint(Actors::Player* player, Vector2f pos)
