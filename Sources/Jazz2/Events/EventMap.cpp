@@ -270,7 +270,7 @@ namespace Jazz2::Events
 			_eventLayout[x + y * _layoutSize.X].Event != EventType::Empty);
 	}
 
-	void EventMap::ForEachEvent(EventType eventType, Function<bool(const EventTile&, std::int32_t, std::int32_t)>&& forEachCallback) const
+	void EventMap::ForEachEvent(EventType eventType, Function<bool(EventTile&, std::int32_t, std::int32_t)>&& forEachCallback) const
 	{
 		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < _layoutSize.X; x++) {

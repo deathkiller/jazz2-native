@@ -1701,18 +1701,51 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
 	{
-		LevelHandler::HandlePlayerCoins(player, prevCount, newCount);
+		//LevelHandler::HandlePlayerCoins(player, prevCount, newCount);
 
 		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
+			// Coins are shared in cooperation, add it also to all other local players
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			if (serverConfig.GameMode == MpGameMode::Cooperation) {
+				if (prevCount < newCount) {
+					std::int32_t increment = (newCount - prevCount);
+					for (auto current : _players) {
+						if (current != player) {
+							current->AddCoinsInternal(increment);
+						}
+					}
+				}
 
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Coins);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32(newCount);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+				for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+					if (peerDesc->RemotePeer && peerDesc->Player) {
+						MemoryStream packet(9);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Coins);
+						packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
+						packet.WriteVariableInt32(peerDesc->Player->_coins);
+						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+					}
+				}
+
+				_hud->ShowCoins(newCount);
+			} else {
+				auto* mpPlayer = static_cast<MpPlayer*>(player);
+				auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+				if (peerDesc->RemotePeer) {
+					MemoryStream packet(9);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Coins);
+					packet.WriteVariableUint32(mpPlayer->_playerIndex);
+					packet.WriteVariableInt32(newCount);
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+				}
+
+				// Show notification only for local players (which have assigned viewport)
+				for (auto& viewport : _assignedViewports) {
+					if (viewport->_targetActor == player) {
+						_hud->ShowCoins(newCount);
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -1758,8 +1791,6 @@ namespace Jazz2::Multiplayer
 				}
 			} else {
 				// Show standard gems notification
-				LevelHandler::HandlePlayerGems(player, gemType, prevCount, newCount);
-
 				if (peerDesc->RemotePeer) {
 					MemoryStream packet(10);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Gems);
@@ -1773,6 +1804,14 @@ namespace Jazz2::Multiplayer
 					packet2.WriteVariableUint32(mpPlayer->_playerIndex);
 					packet2.WriteVariableUint32(peerDesc->TreasureCollected);
 					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+				}
+
+				// Show notification only for local players (which have assigned viewport)
+				for (auto& viewport : _assignedViewports) {
+					if (viewport->_targetActor == player) {
+						_hud->ShowGems(gemType, newCount);
+						break;
+					}
 				}
 			}
 		}
@@ -2022,23 +2061,42 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			// Cache all possible multiplayer spawn points (if it's not coop level) and race checkpoints
 			_multiplayerSpawnPoints.clear();
-			_eventMap->ForEachEvent(EventType::LevelStartMultiplayer, [this](const Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
+			_eventMap->ForEachEvent(EventType::LevelStartMultiplayer, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
 				_multiplayerSpawnPoints.emplace_back(Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), event.EventParams[0]);
 				return true;
 			});
 
 			_raceCheckpoints.clear();
-			_eventMap->ForEachEvent(EventType::WarpOrigin, [this](const Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
+			_eventMap->ForEachEvent(EventType::WarpOrigin, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
 				if (event.EventParams[2] != 0) {
 					_raceCheckpoints.emplace_back(Vector2i(x, y));
 				}
 				return true;
 			});
-			_eventMap->ForEachEvent(EventType::AreaEndOfLevel, [this](const Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
+			_eventMap->ForEachEvent(EventType::AreaEndOfLevel, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
 				_raceCheckpoints.emplace_back(Vector2i(x, y));
 				return true;
 			});
 			ConsolidateRaceCheckpoints();
+
+			const auto& serverConfig = _networkManager->GetServerConfiguration();
+			if (serverConfig.GameMode == MpGameMode::Cooperation) {
+				// Replace all 1ups with max carrots
+				// TODO: Reset it back to 1ups when starting a different mode with limited lives
+				_eventMap->ForEachEvent(EventType::OneUp, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
+					event.Event = EventType::Carrot;
+					event.EventParams[0] = 1;
+					return true;
+				});
+				// Shorten delay time of all airboard generators
+				// TODO: Reset it back when starting a different mode
+				_eventMap->ForEachEvent(EventType::AirboardGenerator, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
+					if (event.EventParams[0] > 4) {
+						event.EventParams[0] = 4;
+					}
+					return true;
+				});
+			}
 		} else {
 			// Change InstantDeathPit to FallForever, because player health is managed by the server
 			if (_eventMap->GetPitType() == PitType::InstantDeathPit) {
