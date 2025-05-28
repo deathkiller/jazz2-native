@@ -11,7 +11,7 @@ namespace nCine
 
 		using Death::Containers::NoInitT;
 
-		/// Four-channels color with 8-bits integer per component
+		/// Four-channel color with 8-bit integers per component
 		class Color
 		{
 		public:

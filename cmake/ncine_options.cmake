@@ -1,5 +1,18 @@
 include(CMakeDependentOption)
 
+if(NOT CMAKE_CONFIGURATION_TYPES)
+	get_property(_haveMultiConfigGenerator GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+	if(_haveMultiConfigGenerator)
+		set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
+	endif()
+endif()
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+	set(_defaultBuildtype "Debug")
+	message(STATUS "Setting build configuration to \"${_defaultBuildtype}\" as none was specified")
+	set(CMAKE_BUILD_TYPE "${_defaultBuildtype}" CACHE STRING "Build configuration" FORCE)
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
+endif()
+
 # nCine options
 cmake_dependent_option(NCINE_BUILD_ANDROID "Build Android version of the game" OFF "NOT EMSCRIPTEN;NOT NINTENDO_SWITCH" OFF)
 option(NCINE_PROFILING "Enable runtime profiling" OFF)

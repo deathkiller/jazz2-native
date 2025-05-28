@@ -30,7 +30,7 @@ namespace Jazz2::Compatibility
 		_name = headerBlock.ReadString(32, true);
 
 		std::uint16_t versionNum = headerBlock.ReadUInt16();
-		_version = (versionNum <= 512 ? JJ2Version::BaseGame : JJ2Version::TSF);
+		_version = (versionNum == 0x300 ? JJ2Version::PlusExtension : (versionNum <= 0x200 ? JJ2Version::BaseGame : JJ2Version::TSF));
 
 		std::int32_t recordedSize = headerBlock.ReadInt32();
 		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
@@ -108,26 +108,38 @@ namespace Jazz2::Compatibility
 
 	void JJ2Tileset::LoadImageData(JJ2Block& imageBlock, JJ2Block& alphaBlock)
 	{
-		std::uint8_t imageBuffer[BlockSize * BlockSize];
+		std::uint8_t imageBuffer[BlockSize * BlockSize * 4];
 		std::uint8_t maskBuffer[BlockSize * BlockSize / 8];
 
 		std::int32_t maxTiles = GetMaxSupportedTiles();
 		for (std::int32_t i = 0; i < maxTiles; i++) {
 			auto& tile = _tiles[i];
 
-			imageBlock.SeekTo(tile.ImageDataOffset);
-			imageBlock.ReadRawBytes(imageBuffer, sizeof(imageBuffer));
+			imageBlock.SeekTo(tile.ImageDataOffset & ~Is32bitTile);
+
+			if (tile.ImageDataOffset & Is32bitTile) {
+				// 32-bit image
+				imageBlock.ReadRawBytes(imageBuffer, BlockSize * BlockSize * 4);
+			} else {
+				// 8-bit palette image
+				imageBlock.ReadRawBytes(imageBuffer, BlockSize * BlockSize);
+			}
+
 			alphaBlock.SeekTo(tile.AlphaDataOffset);
 			alphaBlock.ReadRawBytes(maskBuffer, sizeof(maskBuffer));
 
-			for (std::int32_t j = 0; j < (BlockSize * BlockSize); j++) {
-				std::uint8_t idx = imageBuffer[j];
-				if (((maskBuffer[j / 8] >> (j % 8)) & 0x01) == 0x00) {
-					// Empty mask
-					idx = 0;
-				}
+			if (tile.ImageDataOffset & Is32bitTile) {
+				std::memcpy(tile.Image, imageBuffer, BlockSize * BlockSize * 4);
+			} else {
+				for (std::int32_t j = 0; j < (BlockSize * BlockSize); j++) {
+					std::uint8_t idx = imageBuffer[j];
+					if (((maskBuffer[j / 8] >> (j % 8)) & 0x01) == 0x00) {
+						// Empty mask
+						idx = 0;
+					}
 
-				tile.Image[j] = idx;
+					tile.Image[j] = idx;
+				}
 			}
 		}
 	}
@@ -195,8 +207,9 @@ namespace Jazz2::Compatibility
 		// Rearrange tiles from '10 tiles per row' to '30 tiles per row'
 		constexpr std::int32_t TilesPerRow = 30;
 
+		std::int32_t tileCount = _tileCount;
 		std::int32_t width = TilesPerRow * BlockSize;
-		std::int32_t height = ((_tileCount - 1) / TilesPerRow + 1) * BlockSize;
+		std::int32_t height = ((tileCount - 1) / TilesPerRow + 1) * BlockSize;
 
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
@@ -210,7 +223,7 @@ namespace Jazz2::Compatibility
 		so->WriteValue<std::uint8_t>(4);
 		so->WriteValue<std::uint32_t>(width);
 		so->WriteValue<std::uint32_t>(height);
-		so->WriteValue<std::uint16_t>(_tileCount);
+		so->WriteValue<std::uint16_t>(tileCount);
 
 		MemoryStream ms(1024 * 1024);
 		{
@@ -238,10 +251,23 @@ namespace Jazz2::Compatibility
 
 			co.Write(palette, sizeof(palette));
 
+			// Mark individual tiles as 32-bit or 8-bit
+			for (std::int32_t i = 0; i < (tileCount + 7) / 8; i++) {
+				std::uint32_t is32bitAggregated = 0;
+				std::int32_t tilesPerByte = std::min(8, tileCount - i * 8);
+				for (std::int32_t j = 0; j < tilesPerByte; j++) {
+					const auto& tile = _tiles[i * 8 + j];
+					if (tile.ImageDataOffset & Is32bitTile) {
+						is32bitAggregated |= (1 << j);
+					}
+				}
+				co.WriteValue<std::uint8_t>(is32bitAggregated);
+			}
+
 			// Mask
-			co.WriteValue<std::uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
-			for (std::int32_t i = 0; i < _tileCount; i++) {
-				auto& tile = _tiles[i];
+			co.WriteValue<std::uint32_t>(tileCount * sizeof(_tiles[0].Mask));
+			for (std::int32_t i = 0; i < tileCount; i++) {
+				const auto& tile = _tiles[i];
 				co.Write(tile.Mask, sizeof(tile.Mask));
 			}
 		}
@@ -252,24 +278,39 @@ namespace Jazz2::Compatibility
 		// Diffuse
 		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
 
-		for (std::int32_t i = 0; i < _tileCount; i++) {
-			auto& tile = _tiles[i];
+		for (std::int32_t i = 0; i < tileCount; i++) {
+			const auto& tile = _tiles[i];
 
 			std::int32_t ox = (i % TilesPerRow) * BlockSize;
 			std::int32_t oy = (i / TilesPerRow) * BlockSize;
-			for (std::int32_t y = 0; y < BlockSize; y++) {
-				for (std::int32_t x = 0; x < BlockSize; x++) {
-					auto& src = tile.Image[y * BlockSize + x];
+			if (tile.ImageDataOffset & Is32bitTile) {
+				for (std::int32_t y = 0; y < BlockSize; y++) {
+					for (std::int32_t x = 0; x < BlockSize; x++) {
+						const auto* src = &tile.Image[(y * BlockSize + x) * 4];
 
-					pixels[(width * (oy + y) + ox + x) * 4] = src;
-					pixels[(width * (oy + y) + ox + x) * 4 + 1] = src;
-					pixels[(width * (oy + y) + ox + x) * 4 + 2] = src;
-					pixels[(width * (oy + y) + ox + x) * 4 + 3] = (src == 0 ? 0 : 255);
+						std::int32_t pixelIdx = (width * (oy + y) + ox + x) * 4;
+						pixels[pixelIdx] = src[0];
+						pixels[pixelIdx + 1] = src[1];
+						pixels[pixelIdx + 2] = src[2];
+						pixels[pixelIdx + 3] = src[3];
+					}
+				}
+			} else {
+				for (std::int32_t y = 0; y < BlockSize; y++) {
+					for (std::int32_t x = 0; x < BlockSize; x++) {
+						const auto& src = tile.Image[y * BlockSize + x];
+
+						std::int32_t pixelIdx = (width * (oy + y) + ox + x) * 4;
+						pixels[pixelIdx] = src;
+						pixels[pixelIdx + 1] = src;
+						pixels[pixelIdx + 2] = src;
+						pixels[pixelIdx + 3] = (src == 0 ? 0 : 255);
+					}
 				}
 			}
 		}
 
-		// TODO: Use single channel instead
+		// TODO: Use single channel for 8-bit palette tiles instead
 		JJ2Anims::WriteImageContent(*so, pixels.get(), width, height, 4);
 	}
 }

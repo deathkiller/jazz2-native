@@ -88,7 +88,6 @@ namespace Jazz2::Tiles
 
 		FlipX = 0x01,			/**< Flipped horizontally */
 		FlipY = 0x02,			/**< Flipped vertically */
-		Animated = 0x04,		/**< Animated tile */
 
 		OneWay = 0x10			/**< One-way collision */
 	};
@@ -359,6 +358,7 @@ namespace Jazz2::Tiles
 		SmallVector<AnimatedTile, 0> _animatedTiles;
 		SmallVector<Vector2i, 0> _activeCollapsingTiles;
 		float _collapsingTimer;
+		std::uint32_t _animatedTilesOffset;
 		BitArray _triggerState;
 		BitArray _triggerStateForRollback;
 
@@ -376,6 +376,7 @@ namespace Jazz2::Tiles
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);
 		void SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, std::uint16_t tileParams);
+		std::int32_t GetTileDestructibleFrameCount(const LayerTile& tile);
 
 		void UpdateDebris(float timeMult);
 		void DrawDebris(RenderQueue& renderQueue);

@@ -315,17 +315,13 @@ namespace Death { namespace Containers {
 		template<class U, typename std::enable_if<std::is_pointer<U>::value && std::is_convertible<const U&, T*>::value, int>::type = 0> /*implicit*/ BasicStringView(U data, StringViewFlags extraFlags = {}) noexcept : BasicStringView{data, extraFlags, nullptr} {}
 #endif
 
-		/**
-		 * @brief Construct a view on an external type / from an external representation
-		 */
+		/** @brief Construct a view on an external type / from an external representation */
 		/* There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
 		   `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
 		   there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that. */
 		template<class U, class = decltype(Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ BasicStringView(U&& other) noexcept : BasicStringView{Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(Death::forward<U>(other))} {}
 
-		/**
-		* @brief Convert the view to external representation
-		*/
+		/** @brief Convert the view to external representation */
 		/* To simplify the implementation, there's no const-adding conversion. Instead, the implementer is supposed to add an StringViewConverter variant for that. */
 		template<class U, class = decltype(Implementation::StringViewConverter<T, U>::to(std::declval<BasicStringView<T>>()))> constexpr /*implicit*/ operator U() const {
 			return Implementation::StringViewConverter<T, U>::to(*this);

@@ -42,7 +42,7 @@ namespace Jazz2::Compatibility
 		DisplayName = headerBlock.ReadString(32, true);
 
 		std::uint16_t version = headerBlock.ReadUInt16();
-		_version = (version <= 514 ? JJ2Version::BaseGame : JJ2Version::TSF);
+		_version = (version <= 0x202 ? JJ2Version::BaseGame : JJ2Version::TSF);
 
 		_darknessColor = 0;
 		_weatherType = WeatherType::None;
@@ -388,13 +388,15 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Additional palettes for SPRITE::MAPPING
+		// Additional palettes for SPRITE::MAPPING and 24-bit tile sets
 		if (version >= 0x106) {
 			std::uint8_t extraPaletteCount = block.ReadByte();
 			while (extraPaletteCount-- != 0) {
+				auto& palette = AlternatePalettes.emplace_back();
 				std::int32_t nameLength = block.ReadUint7bitEncoded();
-				block.DiscardBytes(nameLength);
-				block.DiscardBytes(256 * 3);
+				palette.Name = String(NoInit, nameLength);
+				block.ReadRawBytes((std::uint8_t*)palette.Name.data(), nameLength);
+				block.ReadRawBytes(palette.Colors, sizeof(palette.Colors));
 			}
 		}
 
@@ -417,9 +419,18 @@ namespace Jazz2::Compatibility
 
 			tileset.Offset = block.ReadUInt16();
 			tileset.Count = block.ReadUInt16();
-			tileset.HasPaletteRemapping = block.ReadBool();
-			if (tileset.HasPaletteRemapping) {
-				block.ReadRawBytes(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
+			tileset.ColorMode = (TilesetColorMode)block.ReadByte();
+			switch (tileset.ColorMode) {
+				case TilesetColorMode::Original8bit:
+				case TilesetColorMode::Original24bit:
+					// No additional parameters
+					break;
+				case TilesetColorMode::Remapped8bit:
+					block.ReadRawBytes(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
+					break;
+				case TilesetColorMode::AlternatePalette24bit:
+					tileset.AlternatePaletteMappingID24Bit = block.ReadByte();
+					break;
 			}
 		}
 
@@ -737,7 +748,7 @@ namespace Jazz2::Compatibility
 			}
 			co.WriteValue<std::uint16_t>(captionTileId);
 
-			// Custom palette
+			// Custom palettes
 			if (_useLevelPalette) {
 				for (std::int32_t i = 0; i < sizeof(_levelPalette); i += 3) {
 					// Expand JJ2+ RGB palette to RGBA
@@ -747,12 +758,30 @@ namespace Jazz2::Compatibility
 				}
 			}
 
+			std::uint8_t additionalPaletteCount = (std::uint8_t)AlternatePalettes.size();
+			co.WriteValue<std::uint8_t>(additionalPaletteCount);
+			for (std::int32_t i = 0; i < additionalPaletteCount; i++) {
+				const auto& palette = AlternatePalettes[i];
+				co.WriteValue<std::uint8_t>((std::uint8_t)palette.Name.size());
+				co.Write(palette.Name.data(), palette.Name.size());
+
+				for (std::int32_t i = 0; i < sizeof(palette.Colors); i += 3) {
+					// Expand JJ2+ RGB palette to RGBA
+					// The first palette entry is fixed to transparent black
+					std::uint32_t color = (i != 0 ? ((std::uint32_t)palette.Colors[i] | ((std::uint32_t)palette.Colors[i + 1] << 8) | ((std::uint32_t)palette.Colors[i + 2] << 16) | 0xff000000) : 0x00000000);
+					co.WriteValue<std::uint32_t>(color);
+				}
+			}
+
 			// Extra Tilesets
 			co.WriteValue<std::uint8_t>((std::uint8_t)ExtraTilesets.size());
 			for (auto& tileset : ExtraTilesets) {
 				std::uint8_t tilesetFlags = 0;
-				if (tileset.HasPaletteRemapping) {
-					tilesetFlags |= 0x01;
+				if (tileset.ColorMode == TilesetColorMode::Remapped8bit || tileset.ColorMode == TilesetColorMode::AlternatePalette24bit) {
+					tilesetFlags |= 0x01;	// Remapped
+				}
+				if (tileset.ColorMode == TilesetColorMode::Original24bit || tileset.ColorMode == TilesetColorMode::AlternatePalette24bit) {
+					tilesetFlags |= 0x02;	// 24-bit
 				}
 				co.WriteValue<std::uint8_t>(tilesetFlags);
 
@@ -767,8 +796,10 @@ namespace Jazz2::Compatibility
 				co.WriteValue<std::uint16_t>(tileset.Offset);
 				co.WriteValue<std::uint16_t>(tileset.Count);
 
-				if (tileset.HasPaletteRemapping) {
+				if (tileset.ColorMode == TilesetColorMode::Remapped8bit) {
 					co.Write(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
+				} else if (tileset.ColorMode == TilesetColorMode::AlternatePalette24bit) {
+					co.WriteValue<std::uint8_t>(tileset.AlternatePaletteMappingID24Bit);
 				}
 			}
 
@@ -823,9 +854,10 @@ namespace Jazz2::Compatibility
 			}
 
 			std::uint16_t lastTilesetTileIndex = (std::uint16_t)(maxTiles - _animCount);
+			co.WriteValue<std::uint16_t>(lastTilesetTileIndex);
 
 			// Animated Tiles
-			co.WriteValue<uint16_t>(_animCount);
+			co.WriteValue<std::uint16_t>(_animCount);
 			for (std::int32_t i = 0; i < _animCount; i++) {
 				auto& tile = _animatedTiles[i];
 				co.WriteValue<std::uint8_t>(tile.FrameCount);
@@ -1004,15 +1036,9 @@ namespace Jazz2::Compatibility
 								tileIdx -= maxTiles;
 							}
 
-							bool animated = false;
-							if (tileIdx >= lastTilesetTileIndex) {
-								animated = true;
-								tileIdx -= lastTilesetTileIndex;
-							}
-
 							bool legacyTranslucent = false;
 							bool invisible = false;
-							if (!animated && tileIdx < lastTilesetTileIndex) {
+							if (tileIdx < lastTilesetTileIndex) {
 								legacyTranslucent = (_staticTiles[tileIdx].Type == 1);
 								invisible = (_staticTiles[tileIdx].Type == 3);
 							}
@@ -1023,9 +1049,6 @@ namespace Jazz2::Compatibility
 							}
 							if (flipY) {
 								tileFlags |= 0x02;
-							}
-							if (animated) {
-								tileFlags |= 0x04;
 							}
 
 							if (legacyTranslucent) {
