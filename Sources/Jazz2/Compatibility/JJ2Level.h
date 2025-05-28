@@ -34,6 +34,22 @@ namespace Jazz2::Compatibility
 			String Level;
 		};
 
+		/** @brief Alternate palette */
+		struct AlternatePalette {
+			/** @brief Palette name */
+			String Name;
+			/** @brief Colors (24-bit) */
+			std::uint8_t Colors[256 * 3];
+		};
+
+		/** @brief Color mode of tile set */
+		enum class TilesetColorMode : std::uint8_t {
+			Original8bit,					/**< Original 8-bit palette is used */
+			Remapped8bit,					/**< 8-bit palette is remapped according to @ref PaletteRemapping */
+			Original24bit,					/**< Original 24-bit palette is used */
+			AlternatePalette24bit			/**< Alternate 24-bit palette is used */
+		};
+
 		/** @brief Extra tileset used in the level */
 		struct ExtraTilesetEntry {
 			/** @brief Tile set name */
@@ -42,10 +58,15 @@ namespace Jazz2::Compatibility
 			std::uint16_t Offset;
 			/** @brief Number of tiles */
 			std::uint16_t Count;
-			/** @brief Whether palette remapping is used */
-			bool HasPaletteRemapping;
-			/** @brief Palette remapping */
-			std::uint8_t PaletteRemapping[256];
+			/** @brief Color mode */
+			TilesetColorMode ColorMode;
+
+			union {
+				/** @brief Palette remapping */
+				std::uint8_t PaletteRemapping[256];
+				/** @brief Alternate palette mapping ID for 24-bit */
+				std::uint8_t AlternatePaletteMappingID24Bit;
+			};
 		};
 
 		/** @brief Number of layers in the original game */
@@ -56,6 +77,7 @@ namespace Jazz2::Compatibility
 		String LevelName;
 		String DisplayName;
 		String Tileset;
+		SmallVector<AlternatePalette, 0> AlternatePalettes;
 		SmallVector<ExtraTilesetEntry, 0> ExtraTilesets;
 		String Music;
 		String NextLevel;

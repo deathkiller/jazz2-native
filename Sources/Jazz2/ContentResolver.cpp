@@ -1043,6 +1043,15 @@ namespace Jazz2
 			uc.Seek(ColorsPerPalette * sizeof(std::uint32_t), SeekOrigin::Current);
 		}
 
+		// Mark individual tiles as 32-bit or 8-bit
+		std::unique_ptr<uint8_t[]> is32bitTile;
+		if (!_isHeadless) {
+			is32bitTile = std::make_unique<std::uint8_t[]>((tileCount + 7) / 8);
+			uc.Read(is32bitTile.get(), (tileCount + 7) / 8);
+		} else {
+			uc.Seek((tileCount + 7) / 8, SeekOrigin::Current);
+		}
+
 		// Mask
 		std::uint32_t maskSize = uc.ReadValue<std::uint32_t>();
 		std::unique_ptr<uint8_t[]> mask = std::make_unique<std::uint8_t[]>(maskSize * 8);
@@ -1078,7 +1087,19 @@ namespace Jazz2
 					std::uint32_t xt = j * (TileSet::DefaultTileSize + 2);
 					std::uint32_t* pixelsOffset = &pixelsWithPadding[yt * widthWithPadding + xt];
 
-					if (paletteRemapping != nullptr) {
+					std::int32_t tileIdx = (i * tilesPerRow) + j;
+					if ((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0) {
+						// 32-bit tile
+						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+								std::uint32_t from = yf * width + xf + y * width + x;
+								std::uint32_t to = (y + 1) * widthWithPadding + (x + 1);
+
+								pixelsOffset[to] = pixels[from];
+							}
+						}
+					} else if (paletteRemapping != nullptr) {
+						// Remapped 8-bit tile
 						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 								std::uint32_t from = yf * width + xf + y * width + x;
@@ -1089,6 +1110,7 @@ namespace Jazz2
 							}
 						}
 					} else {
+						// Plain 8-bit tile
 						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 								std::uint32_t from = yf * width + xf + y * width + x;
@@ -1236,6 +1258,17 @@ namespace Jazz2
 			}
 		}
 
+		std::uint8_t additionalPaletteCount = uc.ReadValue<std::uint8_t>();
+		for (std::int32_t i = 0; i < additionalPaletteCount; i++) {
+			std::uint8_t nameLength = uc.ReadValue<std::uint8_t>();
+			String name(NoInit, nameLength);
+			uc.Read(name.data(), nameLength);
+			std::uint32_t palette[ColorsPerPalette];
+			uc.Read(palette, ColorsPerPalette * sizeof(std::uint32_t));
+
+			// TODO: Store and use the palette (if not headless)
+		}
+
 		descriptor.TileMap = std::make_unique<Tiles::TileMap>(defaultTileset, captionTileId, !hasCustomPalette);
 		descriptor.TileMap->SetPitType(pitType);
 
@@ -1252,12 +1285,18 @@ namespace Jazz2
 			std::uint16_t count = uc.ReadValue<std::uint16_t>();
 
 			std::uint8_t paletteRemapping[ColorsPerPalette];
-			bool hasPaletteRemapping = ((tilesetFlags & 0x01) == 0x01);
-			if (hasPaletteRemapping) {
-				uc.Read(paletteRemapping, sizeof(paletteRemapping));
+			bool isRemapped = ((tilesetFlags & 0x01) == 0x01);
+			bool is24bit = ((tilesetFlags & 0x02) == 0x02);
+			if (isRemapped) {
+				if (is24bit) {
+					// Alternate palette index
+					paletteRemapping[0] = uc.ReadValue<std::uint8_t>();
+				} else {
+					uc.Read(paletteRemapping, sizeof(paletteRemapping));
+				}
 			}
 
-			descriptor.TileMap->AddTileSet(extraTileset, offset, count, hasPaletteRemapping ? paletteRemapping : nullptr);
+			descriptor.TileMap->AddTileSet(extraTileset, offset, count, isRemapped ? paletteRemapping : nullptr);
 		}
 
 		if (!descriptor.TileMap->IsValid()) {

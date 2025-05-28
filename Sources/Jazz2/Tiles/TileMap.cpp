@@ -13,8 +13,8 @@ namespace Jazz2::Tiles
 {
 	TileMap::TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
-			_triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount), _texturedBackgroundLayer(-1),
-			_texturedBackgroundPass(this)
+			_animatedTilesOffset(0), _triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount),
+			_texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
@@ -298,7 +298,7 @@ namespace Jazz2::Tiles
 								goto RecheckTile;
 							}
 						}
-					} else if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
+					} else if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < GetTileDestructibleFrameCount(tile)) {
 						std::int32_t tx = x * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
 						std::int32_t ty = y * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
 						_owner->OnTileFrozen(tx, ty);
@@ -416,19 +416,19 @@ namespace Jazz2::Tiles
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 
 				if ((tile.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
-					if (tile.DestructFrameIndex < ((std::int32_t)_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) &&
+					if (tile.DestructFrameIndex < GetTileDestructibleFrameCount(tile) &&
 						((tile.TileParams & (1 << (std::uint16_t)params.UsedWeaponType)) != 0 || params.UsedWeaponType == WeaponType::Freezer)) {
 						return true;
 					}
 				} else if ((tile.DestructType & TileDestructType::Special) == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
 					if ((params.DestructType & TileDestructType::VerticalMove) != TileDestructType::VerticalMove ||
 						(y + 1) * TileSet::DefaultTileSize <= (hy1 + 8) || (hy2 - 8) <= y * TileSet::DefaultTileSize) {
-						if (tile.DestructFrameIndex < ((std::int32_t)_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
+						if (tile.DestructFrameIndex < GetTileDestructibleFrameCount(tile)) {
 							return true;
 						}
 					}
 				} else if ((tile.DestructType & TileDestructType::Speed) == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
-					if (tile.DestructFrameIndex < ((std::int32_t)_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) && tile.TileParams <= params.Speed) {
+					if (tile.DestructFrameIndex < GetTileDestructibleFrameCount(tile) && tile.TileParams <= params.Speed) {
 						return true;
 					}
 				} else if ((tile.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
@@ -551,27 +551,50 @@ namespace Jazz2::Tiles
 
 	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName)
 	{
-		AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
-		std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
-		if (amount > 0 && tile.DestructFrameIndex < max) {
-			// Tile not destroyed yet, advance counter by one
-			std::int32_t current = std::min(amount, max - tile.DestructFrameIndex);
+		if (amount <= 0) {
+			return false;
+		}
 
-			tile.DestructFrameIndex += current;
-			tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
-			if (tile.DestructFrameIndex >= max) {
+		if (tile.DestructAnimation >= _animatedTilesOffset) {
+			AnimatedTile& anim = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset];
+			std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
+			if (tile.DestructFrameIndex < max) {
+				// Tile not destroyed yet, advance counter by one
+				std::int32_t frameCount = std::min(amount, max - tile.DestructFrameIndex);
+
+				tile.DestructFrameIndex += frameCount;
+				tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
+				if (tile.DestructFrameIndex >= max) {
+					if (!soundName.empty()) {
+						_owner->PlayCommonSfx(soundName, Vector3f(tx * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2),
+							ty * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f), 1.0f, Random().FastFloat(0.9f, 1.1f));
+					}
+					CreateTileDebris(anim.Tiles[anim.Tiles.size() - 1].TileID, tx, ty);
+				}
+
+				amount -= frameCount;
+
+				_owner->OnAdvanceDestructibleTileAnimation(tx, ty, frameCount);
+				return true;
+			}
+		} else {
+			if (tile.DestructFrameIndex == 0) {
+				std::int32_t frameCount = 1;
+				tile.DestructFrameIndex += frameCount;
+				tile.TileID = 0; // Set to empty tile
+
 				if (!soundName.empty()) {
 					_owner->PlayCommonSfx(soundName, Vector3f(tx * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2),
 						ty * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f), 1.0f, Random().FastFloat(0.9f, 1.1f));
 				}
-				CreateTileDebris(anim.Tiles[anim.Tiles.size() - 1].TileID, tx, ty);
+				CreateTileDebris(tile.DestructAnimation, tx, ty);
+
+				amount -= frameCount;
+				_owner->OnAdvanceDestructibleTileAnimation(tx, ty, frameCount);
+				return true;
 			}
-
-			amount -= current;
-
-			_owner->OnAdvanceDestructibleTileAnimation(tx, ty, current);
-			return true;
 		}
+		
 		return false;
 	}
 
@@ -953,7 +976,9 @@ namespace Jazz2::Tiles
 
 	void TileMap::ReadAnimatedTiles(Stream& s)
 	{
-		std::int16_t count = s.ReadValue<std::int16_t>();
+		_animatedTilesOffset = s.ReadValue<std::uint16_t>();
+
+		std::int32_t count = s.ReadValue<std::uint16_t>();
 
 		_animatedTiles.reserve(count);
 
@@ -1039,16 +1064,21 @@ namespace Jazz2::Tiles
 
 	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, std::uint16_t tileParams)
 	{
-		if ((tile.Flags & LayerTileFlags::Animated) != LayerTileFlags::Animated) {
-			return;
-		}
-
 		tile.DestructType = type;
-		tile.Flags &= ~LayerTileFlags::Animated;
 		tile.DestructAnimation = tile.TileID;
-		tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[0].TileID;
+		if (tile.TileID >= _animatedTilesOffset) {
+			tile.TileID = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles[0].TileID;
+		}
 		tile.TileParams = tileParams;
 		tile.DestructFrameIndex = 0;
+	}
+
+	std::int32_t TileMap::GetTileDestructibleFrameCount(const LayerTile& tile)
+	{
+		if (tile.DestructAnimation >= _animatedTilesOffset) {
+			return (std::int32_t)_animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles.size() - 2;
+		}
+		return 1;
 	}
 
 	Array<StringView> TileMap::GetUsedTileSetPaths() const
@@ -1383,9 +1413,14 @@ namespace Jazz2::Tiles
 		for (std::int32_t i = 0; i < n; i++) {
 			LayerTile& tile = _layers[_sprLayerIndex].Layout[i];
 			if (tile.DestructType == TileDestructType::Trigger && tile.TileParams == triggerId) {
-				if (_animatedTiles[tile.DestructAnimation].Tiles.size() > 1) {
+				if (tile.DestructAnimation >= _animatedTilesOffset) {
+					if (_animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles.size() > 1) {
+						tile.TileID = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles[tile.DestructFrameIndex].TileID;
+						tile.DestructFrameIndex = (newState ? 1 : 0);
+					}
+				} else {
+					tile.TileID = (newState ? 0 /*Empty*/ : tile.DestructAnimation);
 					tile.DestructFrameIndex = (newState ? 1 : 0);
-					tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[tile.DestructFrameIndex].TileID;
 				}
 			}
 		}
@@ -1429,18 +1464,29 @@ namespace Jazz2::Tiles
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			auto& tile = spriteLayer.Layout[i];
 			tile.DestructFrameIndex = src.ReadVariableInt32();
-			if (tile.DestructAnimation >= 0 && tile.DestructAnimation < _animatedTiles.size()) {
-				auto& anim = _animatedTiles[tile.DestructAnimation];
-				std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
-				if (tile.DestructFrameIndex > max) {
-					LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
-					tile.DestructFrameIndex = max;
+			if (tile.DestructAnimation >= 0) {
+				if (tile.DestructAnimation >= _animatedTilesOffset) {
+					if (tile.DestructAnimation - _animatedTilesOffset < (std::int32_t)_animatedTiles.size()) {
+						auto& anim = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset];
+						std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
+						if (tile.DestructFrameIndex > max) {
+							LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
+							tile.DestructFrameIndex = max;
+						}
+						if (tile.DestructFrameIndex < 0) {
+							LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
+							tile.DestructFrameIndex = 0;
+						}
+						tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
+					} else {
+						LOGW("Invalid animated tile ID %i", tile.DestructAnimation);
+					}
+				} else {
+					if (tile.DestructFrameIndex >= 1) {
+						tile.DestructFrameIndex = 1;
+						tile.TileID = 0; // Empty tile
+					}
 				}
-				if (tile.DestructFrameIndex < 0) {
-					LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
-					tile.DestructFrameIndex = 0;
-				}
-				tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
 			}
 		}
 
@@ -1519,7 +1565,8 @@ namespace Jazz2::Tiles
 	std::int32_t TileMap::ResolveTileID(LayerTile& tile)
 	{
 		std::int32_t tileId = tile.TileID;
-		if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
+		if (tileId >= _animatedTilesOffset) {
+			tileId -= _animatedTilesOffset;
 			if (tileId >= (std::int32_t)_animatedTiles.size()) {
 				return 0;
 			}

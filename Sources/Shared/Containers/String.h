@@ -458,9 +458,7 @@ namespace Death { namespace Containers {
 		 */
 		explicit String(DirectInitT, std::size_t size, char c);
 
-		/**
-		 * @brief Construct from an external representation
-		 */
+		/** @brief Construct from an external representation */
 		/* There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
 		   `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
 		   there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that. */
@@ -530,9 +528,7 @@ namespace Death { namespace Containers {
 		 */
 		/*implicit*/ operator Array<char>() &&;
 
-		/**
-		 * @brief Convert the string to external representation
-		 */
+		/** @brief Convert the string to external representation */
 		/* To simplify the implementation, there's no const-adding conversion. Instead, the implementer is supposed to add an StringViewConverter variant for that. */
 		template<class T, class = decltype(Implementation::StringConverter<T>::to(std::declval<String>()))> /*implicit*/ operator T() const {
 			return Implementation::StringConverter<T>::to(*this);

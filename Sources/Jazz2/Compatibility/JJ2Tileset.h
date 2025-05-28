@@ -44,13 +44,13 @@ namespace Jazz2::Compatibility
 			std::uint32_t AlphaDataOffset;
 			std::uint32_t MaskDataOffset;
 
-			std::uint8_t Image[BlockSize * BlockSize];
-			//std::uint8_t Mask[BlockSize * BlockSize];
+			std::uint8_t Image[BlockSize * BlockSize * 4];
 			std::uint8_t Mask[BlockSize * BlockSize / 8];
 		};
 #endif
 
 		static constexpr std::int32_t PaletteSize = 256;
+		static constexpr std::uint32_t Is32bitTile = 0x80000000u;
 
 		String _name;
 		JJ2Version _version;
