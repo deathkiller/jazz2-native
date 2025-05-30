@@ -180,7 +180,7 @@ namespace Jazz2::UI::Menu
 			permissionGranted = (flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume;
 		}
 #endif
-		_skipSecondItem = canGrantPermission && !permissionGranted;
+		_skipSecondItem = !_isPlayable && canGrantPermission && !permissionGranted;
 
 		std::int32_t itemCount = (std::int32_t)_items.size();
 		float baseReduction = (canvas->ViewSize.Y >= 300 ? 10.0f : 24.0f);
