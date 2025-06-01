@@ -322,6 +322,10 @@ namespace Jazz2::UI::Menu
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
 				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
+					if (_skipSecondItem && i == 1) {
+						continue;
+					}
+
 					float itemHeight = (!_isPlayable && i == 0 ? 60.0f : 22.0f);
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < itemHeight) {
 						if (_selectedIndex == i) {

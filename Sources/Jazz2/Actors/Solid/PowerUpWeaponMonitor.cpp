@@ -54,7 +54,7 @@ namespace Jazz2::Actors::Solid
 
 		if (_weaponType == WeaponType::Blaster) {
 			auto players = _levelHandler->GetPlayers();
-			PlayerType playerType = (!players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
+			PlayerType playerType = (_levelHandler->IsLocalSession() && !players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
 			switch (playerType) {
 				case PlayerType::Jazz: 
 				case PlayerType::Spaz:
