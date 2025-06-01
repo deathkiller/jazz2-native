@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Collectibles
 		_scoreValue = 200;
 
 		auto players = _levelHandler->GetPlayers();
-		PlayerType playerType = (!players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
+		PlayerType playerType = (_levelHandler->IsLocalSession() && !players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
 		switch (playerType) {
 			default:
 			case PlayerType::Jazz: async_await RequestMetadataAsync("Collectible/FastFireJazz"_s); break;
