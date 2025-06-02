@@ -63,32 +63,37 @@ namespace Jazz2::Input
 		if (MaxSupportedPlayers >= 2) {
 			auto second = GetMappings(1);
 			second[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::A));
-			second[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(1, ButtonName::Left));
-			second[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(1, AxisName::LeftX, true));
 			second[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(Keys::D));
-			second[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(1, ButtonName::Right));
-			second[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(1, AxisName::LeftX));
 			second[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(Keys::W));
-			second[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(1, ButtonName::Up));
-			second[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(1, AxisName::LeftY, true));
 			second[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(Keys::S));
-			second[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(1, ButtonName::Down));
-			second[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(1, AxisName::LeftY));
 			second[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(Keys::S));
-			second[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(1, ButtonName::Down));
-			second[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(1, AxisName::LeftY));
 
 			second[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(Keys::R));
-			second[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(1, ButtonName::X));
-			second[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(1, AxisName::RightTrigger));
 			second[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::F));
-			second[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(1, ButtonName::A));
 			second[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::G));
-			second[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(1, ButtonName::B));
-			second[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(1, AxisName::LeftTrigger));
 			second[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::Q));
-			second[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(1, ButtonName::Y));
-			second[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(1, ButtonName::Start));
+
+			for (std::int32_t i = 1; i < MaxSupportedPlayers; i++) {
+				auto current = GetMappings(i);
+				current[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(i, ButtonName::Left));
+				current[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(i, AxisName::LeftX, true));
+				current[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(i, ButtonName::Right));
+				current[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(i, AxisName::LeftX));
+				current[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(i, ButtonName::Up));
+				current[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(i, AxisName::LeftY, true));
+				current[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(i, ButtonName::Down));
+				current[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(i, AxisName::LeftY));
+				current[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(i, ButtonName::Down));
+				current[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(i, AxisName::LeftY));
+				
+				current[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(i, ButtonName::X));
+				current[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(i, AxisName::RightTrigger));
+				current[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(i, ButtonName::A));
+				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, ButtonName::B));
+				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, AxisName::LeftTrigger));
+				current[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(i, ButtonName::Y));
+				current[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(i, ButtonName::Start));
+			}
 		}
 	}
 

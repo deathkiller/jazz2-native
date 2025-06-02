@@ -161,6 +161,23 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::initGraphics(bool enableWindowScaling)
 	{
+/*#if defined(DEATH_DEBUG) && defined(DEATH_TRACE)
+		SDL_LogSetOutputFunction([](void* userdata, int category, SDL_LogPriority priority, const char* message) {
+			TraceLevel level;
+			switch (priority) {
+				default:
+				case SDL_LOG_PRIORITY_VERBOSE:
+				case SDL_LOG_PRIORITY_DEBUG: level = TraceLevel::Debug; break;
+				case SDL_LOG_PRIORITY_INFO: level = TraceLevel::Info; break;
+				case SDL_LOG_PRIORITY_WARN: level = TraceLevel::Warning; break;
+				case SDL_LOG_PRIORITY_ERROR: level = TraceLevel::Error; break;
+				case SDL_LOG_PRIORITY_CRITICAL: level = TraceLevel::Fatal; break;
+			}
+			DEATH_TRACE(level, nullptr, "%s", message);
+		}, nullptr);
+		SDL_SetHint(SDL_HINT_EVENT_LOGGING, "1");
+#endif*/
+
 #if defined(SDL_HINT_APP_NAME)
 		SDL_SetHint(SDL_HINT_APP_NAME, NCINE_APP_NAME);
 #endif
