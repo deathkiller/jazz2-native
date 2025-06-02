@@ -109,7 +109,8 @@ namespace Jazz2::Actors::Multiplayer
 		std::int64_t now = c.now() * 1000 / c.frequency();
 
 		bool wasVisible = _renderer.isDrawEnabled();
-		_renderer.setDrawEnabled(isVisible);
+		// Visibility is not synced from the client, becuase it should be already almost in sync on the server
+		//_renderer.setDrawEnabled(isVisible);
 		SetFacingLeft(isFacingLeft);
 		_isActivelyPushing = isActivelyPushing;
 

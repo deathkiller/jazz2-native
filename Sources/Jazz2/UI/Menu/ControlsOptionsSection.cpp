@@ -192,8 +192,14 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 #endif
-			case ControlsOptionsItemType::InputDiagnostics: _root->SwitchToSection<InputDiagnosticsSection>(); break;
-			case ControlsOptionsItemType::ResetToDefault: ControlScheme::Reset(); break;
+			case ControlsOptionsItemType::InputDiagnostics:
+				_root->SwitchToSection<InputDiagnosticsSection>();
+				break;
+			case ControlsOptionsItemType::ResetToDefault:
+				ControlScheme::Reset();
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
 		}
 	}
 }
