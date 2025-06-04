@@ -17,6 +17,8 @@
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../nCine/Backends/Android/AndroidApplication.h"
 #	include "../nCine/Backends/Android/AndroidJniHelper.h"
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#	include <unistd.h>
 #endif
 
 using namespace Death::Containers::Literals;
