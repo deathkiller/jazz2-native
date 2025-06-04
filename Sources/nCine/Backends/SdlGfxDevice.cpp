@@ -173,7 +173,7 @@ namespace nCine::Backends
 				case SDL_LOG_PRIORITY_ERROR: level = TraceLevel::Error; break;
 				case SDL_LOG_PRIORITY_CRITICAL: level = TraceLevel::Fatal; break;
 			}
-			DEATH_TRACE(level, nullptr, "%s", message);
+			DEATH_TRACE(level, "SDL2!", "%s", message);
 		}, nullptr);
 		SDL_SetHint(SDL_HINT_EVENT_LOGGING, "1");
 #endif*/

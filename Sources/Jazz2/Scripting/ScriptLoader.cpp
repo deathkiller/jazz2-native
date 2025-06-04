@@ -824,7 +824,7 @@ namespace Jazz2::Scripting
 
 	String ScriptLoader::MakeRelativePath(StringView path, StringView relativeToFile)
 	{
-		if (path.empty() || path.size() > fs::MaxPathLength) return { };
+		if (path.empty() || path.size() > fs::MaxPathLength) return {};
 
 		char result[fs::MaxPathLength + 1];
 		std::size_t length = 0;
@@ -867,7 +867,7 @@ namespace Jazz2::Scripting
 							dstLast = dst;
 
 							if ((dst - result) + (sizeof(fs::PathSeparator) - 1) + (src - srcLast) >= fs::MaxPathLength) {
-								return { };
+								return {};
 							}
 
 							if (dst != result) {
@@ -889,7 +889,7 @@ namespace Jazz2::Scripting
 		} else {
 			// Relative path to script file
 			String dirPath = fs::GetDirectoryName(relativeToFile);
-			if (dirPath.empty()) return { };
+			if (dirPath.empty()) return {};
 
 			const char* src = &path[0];
 			const char* srcLast = src;
@@ -935,7 +935,7 @@ namespace Jazz2::Scripting
 							dstLast = dst;
 
 							if ((dst - result) + (sizeof(fs::PathSeparator) - 1) + (src - srcLast) >= fs::MaxPathLength) {
-								return { };
+								return {};
 							}
 
 							if (dst != result) {
@@ -993,9 +993,9 @@ namespace Jazz2::Scripting
 		}
 
 		if (msg.section != nullptr && msg.section[0] != '\0') {
-			DEATH_TRACE(level, {}, "%s:%i(%i): %s", msg.section, msg.row, msg.col, msg.message);
+			DEATH_TRACE(level, "AS!", "%s:%i(%i): %s", msg.section, msg.row, msg.col, msg.message);
 		} else {
-			DEATH_TRACE(level, {}, "%s", msg.message);
+			DEATH_TRACE(level, "AS!", "%s", msg.message);
 		}
 	}
 }
