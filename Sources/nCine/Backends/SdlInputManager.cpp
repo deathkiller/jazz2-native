@@ -134,6 +134,8 @@ namespace nCine::Backends
 				sdlJoysticks_[i] = nullptr;
 			}
 		}
+		
+		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	}
 
 	bool SdlJoystickState::isButtonPressed(int buttonId) const

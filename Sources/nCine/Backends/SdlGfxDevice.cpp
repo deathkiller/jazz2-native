@@ -30,6 +30,8 @@ namespace nCine::Backends
 		glContextHandle_ = nullptr;
 		SDL_DestroyWindow(windowHandle_);
 		windowHandle_ = nullptr;
+		
+		SDL_QuitSubSystem(SDL_INIT_VIDEO);
 		SDL_Quit();
 	}
 
@@ -146,12 +148,12 @@ namespace nCine::Backends
 
 	bool SdlGfxDevice::setVideoMode(unsigned int modeIndex)
 	{
-		int displayIndex = SDL_GetWindowDisplayIndex(windowHandle_);
-		if (displayIndex < 0 || displayIndex >= numMonitors_) {
+		std::int32_t displayIndex = SDL_GetWindowDisplayIndex(windowHandle_);
+		if (displayIndex < 0 || displayIndex >= (std::int32_t)numMonitors_) {
 			displayIndex = 0;
 		}
 
-		if (modeIndex < monitors_[displayIndex].numVideoModes) {
+		if ((std::int32_t)modeIndex < monitors_[displayIndex].numVideoModes) {
 			SDL_DisplayMode mode;
 			SDL_GetDisplayMode(displayIndex, modeIndex, &mode);
 			return SDL_SetWindowDisplayMode(windowHandle_, &mode);
@@ -188,8 +190,8 @@ namespace nCine::Backends
 			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 		}
 #endif
-		const int err = SDL_Init(SDL_INIT_VIDEO);
-		FATAL_ASSERT_MSG(!err, "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
+		const int err = SDL_InitSubSystem(SDL_INIT_VIDEO);
+		FATAL_ASSERT_MSG(!err, "SDL_InitSubSystem(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
 	}
 
 	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
@@ -292,7 +294,7 @@ namespace nCine::Backends
 			monitors_[i].numVideoModes = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
 
 			SDL_DisplayMode mode;
-			for (unsigned int j = 0; j < monitors_[i].numVideoModes; j++) {
+			for (std::int32_t j = 0; j < monitors_[i].numVideoModes; j++) {
 				SDL_GetDisplayMode(i, j, &mode);
 				convertVideoModeInfo(mode, monitors_[i].videoModes[j]);
 			}
