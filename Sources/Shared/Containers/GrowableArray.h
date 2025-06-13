@@ -77,17 +77,6 @@ namespace Death { namespace Containers {
 		};
 
 		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0>
-		inline void arrayConstruct(DefaultInitT, T*, T*) {
-			// Nothing to do
-		}
-
-		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0>
-		inline void arrayConstruct(DefaultInitT, T* begin, T* const end) {
-			// Needs to be < because sometimes begin > end. No {}, we want trivial types non-initialized
-			for (; begin < end; ++begin) new(begin) T;
-		}
-
-		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0>
 		inline void arrayConstruct(ValueInitT, T* const begin, T* const end) {
 			if (begin < end) std::memset(begin, 0, (end - begin) * sizeof(T));
 		}
@@ -526,44 +515,21 @@ namespace Death { namespace Containers {
 	}
 
 	/**
-		@brief Resize an array to given size, default-initializing new elements
+		@brief Resize an array to given size, value-initializing new elements
 
 		If the array is growable and capacity is large enough, calls a destructor on
 		elements that get cut off the end (if any, and if @p T is not trivially
 		destructible, in which case nothing is done) and returns. Otherwise, the memory
 		is reallocated to desired @p size. After that, new elements at the end of the
-		array are default-initialized using placement-new (and nothing done for trivial
-		types). Note that in case the array is non-growable of exactly the requested
-		size, it's kept as such, without being reallocated to a growable version.
+		array are value-initialized (i.e., zero-initialized for trivial types and using
+		placement new otherwise). Note that in case the array is non-growable of
+		exactly the requested size, it's kept as such, without being reallocated to a
+		growable version.
 
 		Complexity is at most @f$ \mathcal{O}(n) @f$ in the size of the new container,
 		@f$ \mathcal{O}(1) @f$ if current container size is already exactly of given
 		size. On top of what the @p Allocator (or the default @ref ArrayAllocator)
 		itself needs, @p T is required to be nothrow move-constructible and
-		default-constructible.
-	*/
-	template<class T, class Allocator = ArrayAllocator<T>> void arrayResize(Array<T>& array, DefaultInitT, std::size_t size);
-
-	/**
-		@overload
-
-		Convenience overload allowing to specify just the allocator template, with
-		array type being inferred.
-	*/
-	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, DefaultInitT, std::size_t size) {
-		arrayResize<T, Allocator<T>>(array, DefaultInit, size);
-	}
-
-	/**
-		@brief Resize an array to given size, value-initializing new elements
-
-		Similar to @ref arrayResize(Array<T>&, DefaultInitT, std::size_t) except that
-		the new elements at the end are not default-initialized, but value-initialized
-		(i.e., trivial types zero-initialized and default constructor called
-		otherwise).
-
-		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
-		needs, @p T is required to be nothrow move-constructible and
 		default-constructible.
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayResize(Array<T>& array, ValueInitT, std::size_t size);
@@ -603,8 +569,8 @@ namespace Death { namespace Containers {
 	/**
 		@brief Resize an array to given size, keeping new elements uninitialized
 
-		Similar to @ref arrayResize(Array<T>&, DefaultInitT, std::size_t) except that
-		the new elements at the end are not default-initialized, but left in an
+		Similar to @ref arrayResize(Array<T>&, ValueInitT, std::size_t) except that
+		the new elements at the end are not value-initialized, but left in an
 		uninitialized state instead. I.e., placement-new is meant to be used on *all*
 		newly added elements with a non-trivially-copyable @p T.
 
@@ -1157,35 +1123,47 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayShrink(Array<T>& array, NoInitT = NoInit);
 
-	/**
-		@brief Convert an array back to non-growable using a default initialization
-
-		Allocates a @ref DefaultInit array that's exactly large enough to fit
-		@ref Array::size() elements, move-assigns the elements there and frees the old
-		memory using @ref Array::deleter(). If the array is not growable using
-		given @p Allocator, it's assumed to be already as small as possible, and
-		nothing is done.
-
-		Complexity is at most @f$ \mathcal{O}(n) @f$ in the size of the container,
-		@f$ \mathcal{O}(1) @f$ if the array is already non-growable. No constraints on
-		@p T from @p Allocator (or the default @ref ArrayAllocator) apply here but @p T
-		is required to be default-constructible and nothrow move-assignable.
-
-		Compared to @ref arrayShrink(Array<T>&, NoInitT), the resulting array instance
-		always has a default (@cpp nullptr @ce) deleter. This is useful when it's not
-		possible to use custom deleters, such as in plugin implementations.
-	*/
-	template<class T, class Allocator = ArrayAllocator<T>> void arrayShrink(Array<T>& array, DefaultInitT);
-
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
 		Convenience overload allowing to specify just the allocator template, with
 		array type being inferred.
 	*/
-	template<template<class> class Allocator, class T> inline void arrayShrink(Array<T>& array) {
-		arrayShrink<T, Allocator<T>>(array);
+	template<template<class> class Allocator, class T> inline void arrayShrink(Array<T>& array, NoInitT = NoInit) {
+		arrayShrink<T, Allocator<T>>(array, NoInit);
 	}
+#endif
+
+	/**
+		@brief Convert an array back to non-growable using a value initialization
+
+		Allocates a @ref ValueInit array that's exactly large enough
+		to fit @ref Array::size() elements, move-assigns the elements there and frees
+		the old memory using @ref Array::deleter(). If the array is not growable using
+		given @p Allocator, it's assumed to be already as small as possible, and
+		nothing is done.
+		Complexity is at most @f$ \mathcal{O}(n) @f$ in the size of the container,
+		@f$ \mathcal{O}(1) @f$ if the array is already non-growable. No constraints on
+		@p T from @p Allocator (or the default @ref ArrayAllocator) apply here but @p T
+		is required to be default-constructible and nothrow move-assignable.
+		Compared to @ref arrayShrink(Array<T>&, NoInitT), the resulting array instance
+		always has a default (@cpp nullptr @ce) deleter. This is useful when it's not
+		possible to use custom deleters, such as in plugin implementations.
+	*/
+	template<class T, class Allocator = ArrayAllocator<T>> void arrayShrink(Array<T>& array, ValueInitT);
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+	   @overload
+
+	   Convenience overload allowing to specify just the allocator template, with
+	   array type being inferred.
+	*/
+	template<template<class> class Allocator, class T> inline void arrayShrink(Array<T>& array, ValueInitT) {
+		arrayShrink<T, Allocator<T>>(array, ValueInit);
+	}
+#endif
 
 	namespace Implementation
 	{
@@ -1399,12 +1377,6 @@ namespace Death { namespace Containers {
 #endif
 			arrayGuts.size = size;
 		}
-	}
-
-	template<class T, class Allocator> void arrayResize(Array<T>& array, DefaultInitT, const std::size_t size) {
-		const std::size_t prevSize = array.size();
-		arrayResize<T, Allocator>(array, NoInit, size);
-		Implementation::arrayConstruct(DefaultInit, array + prevSize, array.end());
 	}
 
 	template<class T, class Allocator> void arrayResize(Array<T>& array, ValueInitT, const std::size_t size) {
@@ -1880,7 +1852,7 @@ namespace Death { namespace Containers {
 #endif
 	}
 
-	template<class T, class Allocator> void arrayShrink(Array<T>& array, DefaultInitT) {
+	template<class T, class Allocator> void arrayShrink(Array<T>& array, ValueInitT) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
 
@@ -1889,7 +1861,7 @@ namespace Death { namespace Containers {
 			return;
 
 		// Even if we don't need to shrink, reallocating to an usual array with common deleters to avoid surprises
-		Array<T> newArray{DefaultInit, arrayGuts.size};
+		Array<T> newArray{ValueInit, arrayGuts.size};
 		Implementation::arrayMoveAssign<T>(arrayGuts.data, newArray, arrayGuts.size);
 		array = Death::move(newArray);
 

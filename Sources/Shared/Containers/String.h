@@ -146,9 +146,6 @@ namespace Death { namespace Containers {
 			for the null terminator. Equivalent to @cpp new char[size + 1] @ce followed
 			by @cpp string[size] = '\0' @ce.
 
-		Unlike an @ref Array, there's no @ref DefaultInitT constructor, as the same
-		behavior is already provided by @ref String(NoInitT, std::size_t).
-
 		@subsection Containers-String-usage-wrapping Wrapping externally allocated strings
 
 		Similarly to @ref Array, by default the class makes all allocations using

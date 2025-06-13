@@ -57,20 +57,6 @@ namespace Death { namespace Containers {
 		typedef S SecondType;	/**< @brief Second type */
 
 		/**
-		 * @brief Construct a default-initialized pair
-		 *
-		 * Trivial types are not initialized, default constructor called
-		 * otherwise. Because of the differing behavior for trivial types it's
-		 * better to explicitly use either the @ref Pair(ValueInitT) or the
-		 * @ref Pair(NoInitT) variant instead.
-		 */
-#if !defined(DEATH_MSVC2015_COMPATIBILITY)
-		/* Not constexpr for this joke of a compiler because I don't explicitly initialize _first and _second, which wouldn't be a default initialization if I did that. */
-		constexpr
-#endif
-		explicit Pair(DefaultInitT) noexcept(std::is_nothrow_constructible<F>::value && std::is_nothrow_constructible<S>::value) {}
-
-		/**
 		 * @brief Construct a value-initialized pair
 		 *
 		 * Trivial types are zero-initialized, default constructor called
@@ -88,15 +74,15 @@ namespace Death { namespace Containers {
 		 * to initialize in a way that's not expressible via any other
 		 * @ref Pair constructor.
 		 *
-		 * For trivial types is equivalent to @ref Pair(DefaultInitT).
+		 * For trivial types is equivalent to constructing the elements as
+		 * @cpp T element @ce (as opposed to @cpp T element{} @ce).
 		 */
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value && std::is_nothrow_constructible<S, NoInitT>::value);
 #else
-		template<class F_ = F, typename std::enable_if<std::is_standard_layout<F_>::value && std::is_trivial<F_>::value && std::is_standard_layout<S>::value && std::is_trivial<S>::value, int>::type = 0> explicit Pair(NoInitT) noexcept {}
-		template<class F_ = F, typename std::enable_if<std::is_standard_layout<F_>::value && std::is_trivial<F_>::value && std::is_constructible<S, NoInitT>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<S, NoInitT>::value) : _second{NoInit} {}
-		template<class F_ = F, typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_standard_layout<S>::value && std::is_trivial<S>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value) : _first{NoInit} {}
-		/** @overload */
+		template<class F_ = F, typename std::enable_if<std::is_standard_layout<F_>::value && std::is_trivially_constructible<F_>::value && std::is_standard_layout<S>::value && std::is_trivially_constructible<S>::value, int>::type = 0> explicit Pair(NoInitT) noexcept {}
+		template<class F_ = F, typename std::enable_if<std::is_standard_layout<F_>::value && std::is_trivially_constructible<F_>::value && std::is_constructible<S, NoInitT>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<S, NoInitT>::value) : _second{NoInit} {}
+		template<class F_ = F, typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_standard_layout<S>::value && std::is_trivially_constructible<S>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value) : _first{NoInit} {}
 		template<class F_ = F, typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_constructible<S, NoInitT>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value && std::is_nothrow_constructible<S, NoInitT>::value) : _first{NoInit}, _second{NoInit} {}
 #endif
 
