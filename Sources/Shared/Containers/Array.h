@@ -60,17 +60,17 @@ namespace Death { namespace Containers {
 			}
 		};
 
-		template<class T, typename std::enable_if<std::is_trivial<T>::value, int>::type = 0> T* noInitAllocate(std::size_t size) {
+		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0> T* noInitAllocate(std::size_t size) {
 			return new T[size];
 		}
-		template<class T, typename std::enable_if<!std::is_trivial<T>::value, int>::type = 0> T* noInitAllocate(std::size_t size) {
+		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0> T* noInitAllocate(std::size_t size) {
 			return reinterpret_cast<T*>(new char[size * sizeof(T)]);
 		}
 
-		template<class T, typename std::enable_if<std::is_trivial<T>::value, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
+		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
 			return nullptr; // Using the default deleter for T
 		}
-		template<class T, typename std::enable_if<!std::is_trivial<T>::value, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
+		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
 			return [](T* data, std::size_t size) {
 				if (data) for (T* it = data, *end = data + size; it != end; ++it)
 					it->~T();
@@ -106,11 +106,6 @@ namespace Death { namespace Containers {
 		are zero-initialized and the default constructor is called on other types. It
 		is possible to initialize the array in a different way using so-called *tags*:
 
-		-   @ref Array(DefaultInitT, std::size_t) leaves trivial types uninitialized
-			and calls the default constructor elsewhere. In other words,
-			@cpp new T[size] @ce. Because of the differing behavior for trivial types
-			it's better to explicitly use either the @ref ValueInit or @ref NoInit
-			variants instead.
 		-   @ref Array(ValueInitT, std::size_t) is equivalent to the default case,
 			zero-initializing trivial types and calling the default constructor
 			elsewhere. Useful when you want to make the choice appear explicit. In
@@ -280,18 +275,6 @@ namespace Death { namespace Containers {
 #endif
 
 		/**
-		 * @brief Construct a default-initialized array
-		 *
-		 * Creates an array of given size, the contents are default-initialized
-		 * (i.e. trivial types are not initialized, default constructor called
-		 * otherwise). If the size is zero, no allocation is done. Because of
-		 * the differing behavior for trivial types it's better to explicitly
-		 * use either the @ref Array(ValueInitT, std::size_t) or the
-		 * @ref Array(NoInitT, std::size_t) variant instead.
-		 */
-		explicit Array(DefaultInitT, std::size_t size) : _data{size ? new T[size] : nullptr}, _size{size}, _deleter{nullptr} {}
-
-		/**
 		 * @brief Construct a value-initialized array
 		 *
 		 * Creates an array of given size, the contents are value-initialized
@@ -310,15 +293,15 @@ namespace Death { namespace Containers {
 		 * constructors in a way that's not expressible via any other
 		 * @ref Array constructor.
 		 *
-		 * For trivial types is equivalent to @ref Array(DefaultInitT, std::size_t),
-		 * with @ref deleter() being the default (@cpp nullptr @ce) as well.
-		 * For non-trivial types, the data are allocated as a @cpp char @ce
-		 * array. Destruction is done using a custom deleter that explicitly
-		 * calls the destructor on *all elements* and then deallocates the data
-		 * as a @cpp char @ce array again --- which means that for non-trivial
-		 * types you're expected to construct all elements using placement new
-		 * (or for example @ref std::uninitialized_copy()) in order to avoid
-		 * calling destructors on uninitialized memory.
+		 * For trivial types is equivalent to @cpp new T[size] @ce (as opposed
+		 * to @cpp new T[size]{} @ce), with @ref deleter() being the default
+		 * (@cpp nullptr @ce). For non-trivial types, the data are allocated as
+		 * a @cpp char @ce array and destruction is done using a custom deleter
+		 * that explicitly calls the destructor on *all elements* and then
+		 * deallocates the data as a @cpp char @ce array again --- which means
+		 * that for non-trivial types you're expected to construct all elements
+		 * using placement new (or for example @ref std::uninitialized_copy())
+		 * in order to avoid calling destructors on uninitialized memory.
 		 */
 		explicit Array(NoInitT, std::size_t size) : _data{size ? Implementation::noInitAllocate<T>(size) : nullptr}, _size{size}, _deleter{Implementation::noInitDeleter<T>()} {}
 

@@ -38,18 +38,6 @@ namespace Death { namespace Containers {
 			template<class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value, int>::type = 0> explicit StaticArrayData(NoInitT) : StaticArrayData{NoInit, typename GenerateSequence<size_>::Type{}} {}
 			template<std::size_t ...sequence, class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value, int>::type = 0> explicit StaticArrayData(NoInitT noInit, Sequence<sequence...>) : _data{T{(&noInit)[0 * sequence]}...} {}
 
-			// Compared to StaticArrayData<size_, T, false> it does the right thing by default. MSVC 2015, 2019 and 2022
-			// (but not 2017, _MSC_VER=191x) complains that the constexpr constructor doesn't initialize all members
-			// when used with a non-trivially-constructible type, so there has to be a non-constexpr variant that
-			// doesn't initialize trivially constructible types (and MSVC 2015 would complain if it would be constexpr),
-			// and a constexpr variant that initializes types with a constructor. Not fixable with /permissive- either.
-#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG) || (_MSC_VER >= 1910 && _MSC_VER < 1920)
-			constexpr explicit StaticArrayData(DefaultInitT) {}
-#else
-			template<class U = T, typename std::enable_if<std::is_trivially_constructible<U>::value, int>::type = 0> explicit StaticArrayData(DefaultInitT) {}
-			template<class U = T, typename std::enable_if<!std::is_trivially_constructible<U>::value, int>::type = 0> constexpr explicit StaticArrayData(DefaultInitT) : _data{} {}
-#endif
-
 			// Same as in StaticArrayData<size_, T, false>. The () instead of {} works around a featurebug in C++
 			// where new T{} doesn't work for an explicit defaulted constructor.
 			constexpr explicit StaticArrayData(ValueInitT) : _data() {}
@@ -71,21 +59,7 @@ namespace Death { namespace Containers {
 
 			// Compared to StaticArrayData<size_, T, true> a default constructor has to be called on the union members.
 			// If the default constructor is trivial, the StaticArrayData<size_, T, true> base was picked instead.
-			explicit StaticArrayData(DefaultInitT)
-				// GCC 5.3 is not able to initialize non-movable types inside constructor initializer list. Reported here,
-				// fixed on 10.3: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70395
-				// In both cases, the () instead of {} works around a featurebug in C++ where new T{} doesn't work
-				// for an explicit defaulted constructor.
-#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__*100 + __GNUC_MINOR__ >= 10003
-				: _data() {}
-#else
-			{
-				for (T& i : _data) new(&i) T();
-			}
-#endif
-
-			// Same as in StaticArrayData<size_, T, true>. The () instead of {} works around a featurebug in C++
-			// where new T{} doesn't work for an explicit defaulted constructor.
+			// The () instead of {} works around a featurebug in C++ where new T{} doesn't work for an explicit defaulted constructor.
 			explicit StaticArrayData(ValueInitT) : _data() {}
 
 			// Same as in StaticArrayData<size_, T, true>
@@ -145,11 +119,6 @@ namespace Death { namespace Containers {
 		are zero-initialized and the default constructor is called on other types. It
 		is possible to initialize the array in a different way using so-called *tags*:
 
-		-   @ref StaticArray(DefaultInitT) leaves trivial types uninitialized
-			and calls the default constructor elsewhere. In other words,
-			@cpp T array[size] @ce. Because of the differing behavior for trivial types
-			it's better to explicitly use either the @ref ValueInit or @ref NoInit
-			variants instead.
 		-   @ref StaticArray(ValueInitT) is equivalent to the implicit parameterless
 			constructor, zero-initializing trivial types and calling the default
 			constructor elsewhere. Useful when you want to make the choice appear
@@ -172,7 +141,8 @@ namespace Death { namespace Containers {
 			types when you'll be overwriting the contents anyway, for non-trivial types
 			this is the dangerous option and you need to call the constructor on all
 			elements manually using placement new, @ref std::uninitialized_copy() or
-			similar.
+			similar. In other words, @cpp char array[size*sizeof(T)] @ce for non-trivial
+			types to circumvent default construction and @cpp T array[size] @ce for trivial types.
 
 		@subsection Containers-StaticArray-constexpr Usage in constexpr contexts
 
@@ -212,17 +182,6 @@ namespace Death { namespace Containers {
 		};
 
 		/**
-		 * @brief Construct a default-initialized array
-		 *
-		 * Creates array of given size, the contents are default-initialized
-		 * (i.e., trivial types are not initialized). Because of the differing
-		 * behavior for trivial types it's better to explicitly use either the
-		 * @ref StaticArray(ValueInitT) or the @ref StaticArray(NoInitT)
-		 * variant instead.
-		 */
-		constexpr explicit StaticArray(DefaultInitT) : Implementation::StaticArrayDataFor<size_, T>{DefaultInit} {}
-
-		/**
 		 * @brief Construct a value-initialized array
 		 *
 		 * Creates array of given size, the contents are value-initialized
@@ -232,20 +191,21 @@ namespace Death { namespace Containers {
 		constexpr explicit StaticArray(ValueInitT) : Implementation::StaticArrayDataFor<size_, T>{ValueInit} {}
 
 		/**
-		* @brief Construct an array without initializing its contents
-		*
-		* Creates array of given size, the contents are *not* initialized.
-		* Useful if you will be overwriting all elements later anyway or if
-		* you need to call custom constructors in a way that's not expressible
-		* via any other @ref StaticArray constructor.
-		*
-		* For trivial types is equivalent to @ref StaticArray(DefaultInitT).
-		* For non-trivial types, the class will explicitly call the destructor
-		* on *all elements* --- which means that for non-trivial types you're
-		* expected to construct all elements using placement new (or for
-		* example @ref std::uninitialized_copy()) in order to avoid calling
-		* destructors on uninitialized memory.
-		*/
+		 * @brief Construct an array without initializing its contents
+		 *
+		 * Creates array of given size, the contents are *not* initialized.
+		 * Useful if you will be overwriting all elements later anyway or if
+		 * you need to call custom constructors in a way that's not expressible
+		 * via any other @ref StaticArray constructor.
+		 *
+		 * For trivial types is equivalent to @cpp T array[size] @ce (as
+		 * opposed to @cpp T array[size]{} @ce). For non-trivial types, class
+		 * destruction will explicitly call the destructor on *all elements*
+		 * --- which means that for non-trivial types you're expected to
+		 * construct all elements using placement new (or for example
+		 * @ref std::uninitialized_copy()) in order to avoid calling
+		 * destructors on uninitialized memory.
+		 */
 		explicit StaticArray(NoInitT) : Implementation::StaticArrayDataFor<size_, T>{NoInit} {}
 
 		/**

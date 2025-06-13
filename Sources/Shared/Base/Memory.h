@@ -50,10 +50,6 @@ namespace Death {
 			initialization is performed separately from the allocation itself with either a
 			loop or a call to @ref std::memset().
 
-			-   @ref AllocateAligned(Containers::DefaultInitT, std::size_t) leaves trivial types
-				uninitialized and calls the default constructor elsewhere. Because of the
-				differing behavior for trivial types it's better to explicitly use either
-				the @ref Containers::ValueInit or @ref Containers::NoInit variants instead.
 			-   @ref AllocateAligned(Containers::ValueInitT, std::size_t) is equivalent to the default
 				case, zero-initializing trivial types and calling the default constructor
 				elsewhere. Useful when you want to make the choice appear explicit.
@@ -64,21 +60,6 @@ namespace Death {
 				@ref std::uninitialized_copy() or similar.
 		*/
 		template<class T, std::size_t alignment = alignof(T)> inline static Containers::Array<T> AllocateAligned(std::size_t size);
-
-		/**
-			@brief Allocate aligned memory and default-initialize it
-
-			Compared to @ref AllocateAligned(std::size_t), trivial types are not
-			initialized and default constructor is called otherwise. Because of the
-			differing behavior for trivial types it's better to explicitly use either the
-			@ref AllocateAligned(Containers::ValueInitT, std::size_t) or the
-			@ref AllocateAligned(Containers::NoInitT, std::size_t) variant instead.
-
-			Implemented via @ref AllocateAligned(Containers::NoInitT, std::size_t) with a
-			loop calling the constructors on the returned allocation in case of non-trivial
-			types.
-		*/
-		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> AllocateAligned(Containers::DefaultInitT, std::size_t size);
 
 		/**
 			@brief Allocate aligned memory and value-initialize it
@@ -94,13 +75,11 @@ namespace Death {
 			@brief Allocate aligned memory and leave it uninitialized
 
 			Compared to @ref AllocateAligned(std::size_t), the memory is left in an
-			unitialized state. For trivial types is equivalent to
-			@ref AllocateAligned(Containers::DefaultInitT, std::size_t). For non-trivial
-			types, destruction is always done using a custom deleter that explicitly calls
-			the destructor on *all elements* --- which means that for non-trivial types
-			you're expected to construct all elements using placement new (or for example
-			@ref std::uninitialized_copy()) in order to avoid calling destructors on
-			uninitialized memory.
+			unitialized state. For non-trivial types, destruction is always done using a
+			custom deleter that explicitly calls the destructor on *all elements* --- which
+			means that for non-trivial types you're expected to construct all elements
+			using placement new (or for example @ref std::uninitialized_copy()) in order to
+			avoid calling destructors on uninitialized memory.
 		*/
 		template<class T, std::size_t alignment = alignof(T)> static Containers::Array<T> AllocateAligned(Containers::NoInitT, std::size_t size);
 
@@ -223,12 +202,6 @@ namespace Death {
 		}
 		return Containers::Array<T>{reinterpret_cast<T*>(pointer + offset), size, deleter};
 #endif
-	}
-
-	template<class T, std::size_t alignment> Containers::Array<T> Memory::AllocateAligned(Containers::DefaultInitT, const std::size_t size) {
-		Containers::Array<T> out = AllocateAligned<T, alignment>(Containers::NoInit, size);
-		Containers::Implementation::arrayConstruct(Containers::DefaultInit, out.begin(), out.end());
-		return out;
 	}
 
 	template<class T, std::size_t alignment> Containers::Array<T> Memory::AllocateAligned(Containers::ValueInitT, const std::size_t size) {
