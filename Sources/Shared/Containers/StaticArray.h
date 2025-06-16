@@ -83,8 +83,13 @@ namespace Death { namespace Containers {
 		};
 
 		template<std::size_t size_, class T> using StaticArrayDataFor = StaticArrayData<size_, T,
-#if defined(DEATH_TARGET_LIBSTDCXX) && __GNUC__ < 5 && _GLIBCXX_RELEASE < 7
-			std::integral_constant<bool, __has_trivial_constructor(T)>::value
+			/* std::is_trivially_constructible fails for (template) types where default
+			   constructor isn't usable in libstdc++ before version 8, OTOH
+			   std::is_trivial is deprecated in C++26 so can't use that one either.
+			   Furthermore, libstdc++ before 6.1 doesn't have _GLIBCXX_RELEASE, so
+			   there comparison will ealuate to 0 < 8 and pass as well. */
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_trivial<T>::value
 #else
 			std::is_trivially_constructible<T>::value
 #endif

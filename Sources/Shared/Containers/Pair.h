@@ -80,9 +80,34 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value && std::is_nothrow_constructible<S, NoInitT>::value);
 #else
-		template<class F_ = F, typename std::enable_if<std::is_standard_layout<F_>::value && std::is_trivially_constructible<F_>::value && std::is_standard_layout<S>::value && std::is_trivially_constructible<S>::value, int>::type = 0> explicit Pair(NoInitT) noexcept {}
-		template<class F_ = F, typename std::enable_if<std::is_standard_layout<F_>::value && std::is_trivially_constructible<F_>::value && std::is_constructible<S, NoInitT>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<S, NoInitT>::value) : _second{NoInit} {}
-		template<class F_ = F, typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_standard_layout<S>::value && std::is_trivially_constructible<S>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value) : _first{NoInit} {}
+		template<class F_ = F, typename std::enable_if<
+			/* std::is_trivially_constructible fails for (template) types where
+			   default constructor isn't usable in libstdc++ before version 8,
+			   OTOH std::is_trivial is deprecated in C++26 so can't use that
+			   one either. Furthermore, libstdc++ before 6.1 doesn't have
+			   _GLIBCXX_RELEASE, so there comparison will ealuate to 0 < 8 and
+			   pass as well. Repro case in
+			   PairTest::constructNoInitNoDefaultConstructor(). */
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_standard_layout<F_>::value && std::is_trivial<F_>::value && std::is_standard_layout<S>::value && std::is_trivial<S>::value
+#else
+			std::is_standard_layout<F_>::value && std::is_trivially_constructible<F_>::value && std::is_standard_layout<S>::value && std::is_trivially_constructible<S>::value
+#endif
+		, int>::type = 0> explicit Pair(NoInitT) noexcept {}
+		template<class F_ = F, typename std::enable_if<
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_standard_layout<F_>::value && std::is_trivial<F_>::value && std::is_constructible<S, NoInitT>::value
+#else
+			std::is_standard_layout<F_>::value && std::is_trivially_constructible<F_>::value && std::is_constructible<S, NoInitT>::value
+#endif
+		, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<S, NoInitT>::value) : _second{NoInit} {}
+		template<class F_ = F, typename std::enable_if<
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_constructible<F_, NoInitT>::value && std::is_standard_layout<S>::value && std::is_trivial<S>::value
+#else
+			std::is_constructible<F_, NoInitT>::value && std::is_standard_layout<S>::value && std::is_trivially_constructible<S>::value
+#endif
+		, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value) : _first{NoInit} {}
 		template<class F_ = F, typename std::enable_if<std::is_constructible<F_, NoInitT>::value && std::is_constructible<S, NoInitT>::value, int>::type = 0> explicit Pair(NoInitT) noexcept(std::is_nothrow_constructible<F, NoInitT>::value && std::is_nothrow_constructible<S, NoInitT>::value) : _first{NoInit}, _second{NoInit} {}
 #endif
 
