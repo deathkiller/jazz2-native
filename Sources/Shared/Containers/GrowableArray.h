@@ -76,14 +76,28 @@ namespace Death { namespace Containers {
 #endif
 		};
 
-		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0>
+		template<class T, typename std::enable_if<
+			/* Unlike with Array, where is_trivial is used instead of
+			   is_trivially_constructible to work around issues on libstdc++ before
+			   version 8, here such a case wouldn't compile anyway because it'd pick
+			   the below overload which *needs* the default constructor to work anyway,
+			   so it's less of a problem */
+			std::is_trivially_constructible<T>::value
+		, int>::type = 0>
 		inline void arrayConstruct(ValueInitT, T* const begin, T* const end) {
 			if (begin < end) std::memset(begin, 0, (end - begin) * sizeof(T));
 		}
 
-		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0>
+		template<class T, typename std::enable_if<!
+			/* Unlike with Array, where is_trivial is used instead of
+			   is_trivially_constructible to work around issues on libstdc++ before
+			   version 8, here such a case wouldn't compile anyway because it *needs*
+			   the default constructor to work anyway, so it's less of a problem */
+			std::is_trivially_constructible<T>::value
+		, int>::type = 0>
 		inline void arrayConstruct(ValueInitT, T* begin, T* const end) {
-			// Needs to be < because sometimes begin > end
+			/* Needs to be < because sometimes begin > end. The () instead of {} works
+			   around a featurebug in C++ where new T{} doesn't work for an explicit defaulted constructor. */
 			for (; begin < end; ++begin) new(begin) T{};
 		}
 
@@ -785,14 +799,38 @@ namespace Death { namespace Containers {
 	}
 
 	/**
+		@brief Append given count of value-initialized values to an array
+		@return View on the newly appended items
+
+		A variant of @ref arrayAppend(Array<T>&, typename std::common_type<ArrayView<const T>>::type)
+		where the new values are value-initialized (i.e., trivial types
+		zero-initialized and default constructor called otherwise), instead of being
+		copied from a pre-existing location.
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible and
+		default-constructible.
+	*/
+	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayAppend(Array<T>& array, ValueInitT, std::size_t count);
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
+	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, ValueInitT, std::size_t count) {
+		return arrayAppend<T, Allocator<T>>(array, ValueInit, count);
+	}
+#endif
+
+	/**
 		@brief Append given count of uninitialized values to an array
 		@return View on the newly appended items
 
-		A lower-level variant of @ref arrayAppend(Array<T>&, typename std::common_type<ArrayView<const T>>::type)
-		where the new values are meant to be initialized in-place after, instead of
-		being copied from a pre-existing location. The new values are always
-		uninitialized --- i.e., placement-new is meant to be used on *all* inserted
-		elements with a non-trivially-copyable @p T.
+		A variant of @ref arrayAppend(Array<T>&, ValueInitT, std::size_t) where the new
+		values are left uninitialized --- i.e., placement-new is meant to be used on
+		* *all* appended elements with a non-trivially-copyable @p T.
 
 		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
 		needs, @p T is required to be nothrow move-constructible.
@@ -808,6 +846,33 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, NoInitT, std::size_t count) {
 		return arrayAppend<T, Allocator<T>>(array, NoInit, count);
 	}
+
+	/**
+		@brief Append given count of values to an array, constructing each using provided arguments
+		@return View on the newly appended items
+
+		Similar to @ref arrayAppend(Array<T>&, ValueInitT, std::size_t) except that
+		the elements are constructed using placement-new with provided @p args.
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible and constructible from
+		provided @p args.
+	*/
+	template<class T, class ...Args> ArrayView<T> arrayAppend(Array<T>& array, DirectInitT, std::size_t count, Args&&... args);
+
+	/** @overload */
+	template<class T, class Allocator, class ...Args> ArrayView<T> arrayAppend(Array<T>& array, DirectInitT, std::size_t count, Args&&... args);
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+	   @overload
+
+	   Convenience overload allowing to specify just the allocator template, with
+	   array type being inferred.
+	*/
+	template<template<class> class Allocator, class T, class ...Args> inline ArrayView<T> arrayAppend(Array<T>& array, DirectInitT, std::size_t count, Args&&... args) {
+		return arrayAppend<T, Allocator<T>>(array, DirectInit, count, Death::forward<Args>(args)...);
+	}
+#endif
 
 	/**
 		@brief Copy-insert an item into an array
@@ -962,12 +1027,39 @@ namespace Death { namespace Containers {
 	}
 
 	/**
-		@brief Insert given count of uninitialized values into an array
-		@return View on the newly appended items
+		@brief Insert given count of value-initialized values into an array
+		@return View on the newly inserted items
 
-		A lower-level variant of @ref arrayInsert(Array<T>&, std::size_t, typename std::common_type<ArrayView<const T>>::type)
-		where the new values are meant to be initialized in-place after, instead of
-		being copied from a pre-existing location. Independently of whether the array
+		A variant of @ref arrayInsert(Array<T>&, std::size_t, typename std::common_type<ArrayView<const T>>::type)
+		where the new values are value-initialized (i.e., trivial types
+		zero-initialized and default constructor called otherwise), instead of being
+		copied from a pre-existing location.
+		Amortized complexity is @f$ \mathcal{O}(m + n) @f$, where @f$ m @f$ is the
+		number of items being inserted and @f$ n @f$ is the existing array size. On top
+		of what the @p Allocator (or the default @ref ArrayAllocator) itself needs,
+		@p T is required to be nothrow move-constructible, nothrow move-assignable and
+		default-constructible.
+	*/
+	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, ValueInitT, std::size_t count);
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+	   @overload
+
+	   Convenience overload allowing to specify just the allocator template, with
+	   array type being inferred.
+	*/
+	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, ValueInitT, std::size_t count) {
+		return arrayInsert<T, Allocator<T>>(array, index, ValueInit, count);
+	}
+#endif
+
+	/**
+		@brief Insert given count of uninitialized values into an array
+		@return View on the newly inserted items
+
+		A variant of @ref arrayInsert(Array<T>&, std::size_t, ValueInitT, std::size_t)
+		where the new values are left uninitialized. Independently of whether the array
 		was reallocated to fit the new items or the items were just shifted around
 		because the capacity was large enough, the new values are always uninitialized
 		--- i.e., placement-new is meant to be used on *all* inserted elements with a
@@ -989,6 +1081,34 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, NoInitT, std::size_t count) {
 		return arrayInsert<T, Allocator<T>>(array, index, NoInit, count);
 	}
+
+	/**
+		@brief Insert given count of values into an array, constructing each using provided arguments
+		@return View on the newly inserted items
+
+		Similar to @ref arrayInsert(Array<T>&, std::size_t, ValueInitT, std::size_t)
+		except that the elements are constructed using placement-new with provided
+		@p args.
+		On top of what the @p Allocator (or the default @ref ArrayAllocator)
+		itself needs, @p T is required to be nothrow move-constructible, nothrow
+		move-assignable and constructible from provided @p args.
+	*/
+	template<class T, class ...Args> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, DirectInitT, std::size_t count, Args&&... args);
+
+	/** @overload */
+	template<class T, class Allocator, class ...Args> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, DirectInitT, std::size_t count, Args&&... args);
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+	   @overload
+
+	   Convenience overload allowing to specify just the allocator template, with
+	   array type being inferred.
+	*/
+	template<template<class> class Allocator, class T, class ...Args> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, DirectInitT, std::size_t count, Args&&... args) {
+		return arrayInsert<T, Allocator<T>>(array, index, DirectInit, count, Death::forward<Args>(args)...);
+	}
+#endif
 
 	/**
 		@brief Remove an element from an array
@@ -1395,7 +1515,7 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T, class ...Args> inline void arrayResize(Array<T>& array, DirectInitT, const std::size_t size, Args&&... args) {
-		arrayResize<T, ArrayAllocator<T>, Args...>(array, DirectInit, size, Death::forward<Args>(args)...);
+		arrayResize<T, ArrayAllocator<T>>(array, DirectInit, size, Death::forward<Args>(args)...);
 	}
 
 	namespace Implementation
@@ -1502,6 +1622,27 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> ArrayView<T> arrayAppend(Array<T>& array, NoInitT, const std::size_t count) {
 		T* const it = Implementation::arrayGrowBy<T, Allocator>(array, count);
 		return { it, count };
+	}
+
+	template<class T, class Allocator> ArrayView<T> arrayAppend(Array<T>& array, ValueInitT, const std::size_t count) {
+		const ArrayView<T> out = arrayAppend<T, Allocator>(array, NoInit, count);
+		Implementation::arrayConstruct(ValueInit, out.begin(), out.end());
+		return out;
+	}
+
+	template<class T, class Allocator, class ...Args> ArrayView<T> arrayAppend(Array<T>& array, DirectInitT, const std::size_t count, Args&&... args) {
+		const ArrayView<T> out = arrayAppend<T, Allocator>(array, NoInit, count);
+
+		// In-place construct the new elements. No helper function for this as
+		// there's no way we could memcpy such a thing.
+		for (T* it = out.begin(); it < out.end(); ++it)
+			Implementation::construct(*it, Death::forward<Args>(args)...);
+
+		return out;
+	}
+
+	template<class T, class ...Args> ArrayView<T> arrayAppend(Array<T>& array, DirectInitT, const std::size_t count, Args&&... args) {
+		return arrayAppend<T, ArrayAllocator<T>>(array, DirectInit, count, Death::forward<Args>(args)...);
 	}
 
 	namespace Implementation
@@ -1666,6 +1807,27 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> ArrayView<T> arrayInsert(Array<T>& array, const std::size_t index, NoInitT, const std::size_t count) {
 		T* const it = Implementation::arrayGrowAtBy<T, Allocator>(array, index, count);
 		return { it, count };
+	}
+
+	template<class T, class Allocator> ArrayView<T> arrayInsert(Array<T>& array, const std::size_t index, ValueInitT, const std::size_t count) {
+		const ArrayView<T> out = arrayInsert<T, Allocator>(array, index, NoInit, count);
+		Implementation::arrayConstruct(ValueInit, out.begin(), out.end());
+		return out;
+	}
+
+	template<class T, class Allocator, class ...Args> ArrayView<T> arrayInsert(Array<T>& array, const std::size_t index, DirectInitT, const std::size_t count, Args&&... args) {
+		const ArrayView<T> out = arrayInsert<T, Allocator>(array, index, NoInit, count);
+
+		// In-place construct the new elements. No helper function for this as
+		// there's no way we could memcpy such a thing.
+		for (T* it = out.begin(); it < out.end(); ++it)
+			Implementation::construct(*it, Death::forward<Args>(args)...);
+
+		return out;
+	}
+
+	template<class T, class ...Args> ArrayView<T> arrayInsert(Array<T>& array, const std::size_t index, DirectInitT, const std::size_t count, Args&&... args) {
+		return arrayInsert<T, ArrayAllocator<T>>(array, index, DirectInit, count, Death::forward<Args>(args)...);
 	}
 
 	namespace Implementation

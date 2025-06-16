@@ -60,17 +60,47 @@ namespace Death { namespace Containers {
 			}
 		};
 
-		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0> T* noInitAllocate(std::size_t size) {
+		template<class T, typename std::enable_if<
+			/* std::is_trivially_constructible fails for (template) types where
+			   default constructor isn't usable in libstdc++ before version 8, OTOH
+			   std::is_trivial is deprecated in C++26 so can't use that one either.
+			   Furthermore, libstdc++ before 6.1 doesn't have _GLIBCXX_RELEASE, so
+			   there comparison will ealuate to 0 < 8 and pass as well. Repro case
+			   in ArrayTest::constructNoInitNoDefaultConstructor(). */
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_trivial<T>::value
+#else
+			std::is_trivially_constructible<T>::value
+#endif
+			, int>::type = 0> T* noInitAllocate(std::size_t size) {
 			return new T[size];
 		}
-		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0> T* noInitAllocate(std::size_t size) {
+		template<class T, typename std::enable_if<!
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_trivial<T>::value
+#else
+		std::is_trivially_constructible<T>::value
+#endif
+			, int>::type = 0> T* noInitAllocate(std::size_t size) {
 			return reinterpret_cast<T*>(new char[size * sizeof(T)]);
 		}
 
-		template<class T, typename std::enable_if<std::is_trivially_constructible<T>::value, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
+		template<class T, typename std::enable_if<
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_trivial<T>::value
+#else
+			std::is_trivially_constructible<T>::value
+#endif
+			, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
 			return nullptr; // Using the default deleter for T
 		}
-		template<class T, typename std::enable_if<!std::is_trivially_constructible<T>::value, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
+		template<class T, typename std::enable_if<!
+#if defined(DEATH_TARGET_LIBSTDCXX) && _GLIBCXX_RELEASE < 8
+			std::is_trivial<T>::value
+#else
+			std::is_trivially_constructible<T>::value
+#endif
+			, int>::type = 0> auto noInitDeleter() -> void(*)(T*, std::size_t) {
 			return [](T* data, std::size_t size) {
 				if (data) for (T* it = data, *end = data + size; it != end; ++it)
 					it->~T();
