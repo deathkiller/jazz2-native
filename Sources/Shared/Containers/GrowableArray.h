@@ -466,6 +466,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> bool arrayIsGrowable(Array<T>& array);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -475,6 +476,7 @@ namespace Death { namespace Containers {
 	template<template<class T> class Allocator, class T> inline bool arrayIsGrowable(Array<T>& array) {
 		return arrayIsGrowable<T, Allocator<T>>(array);
 	}
+#endif
 
 	/**
 		@brief Array capacity
@@ -487,6 +489,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> std::size_t arrayCapacity(Array<T>& array);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -496,6 +499,7 @@ namespace Death { namespace Containers {
 	template<template<class T> class Allocator, class T> inline std::size_t arrayCapacity(Array<T>& array) {
 		return arrayCapacity<T, Allocator<T>>(array);
 	}
+#endif
 
 	/**
 		@brief Reserve given capacity in an array
@@ -518,6 +522,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> std::size_t arrayReserve(Array<T>& array, std::size_t capacity);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -527,6 +532,7 @@ namespace Death { namespace Containers {
 	template<template<class T> class Allocator, class T> inline std::size_t arrayReserve(Array<T>& array, std::size_t capacity) {
 		return arrayReserve<T, Allocator<T>>(array, capacity);
 	}
+#endif
 
 	/**
 		@brief Resize an array to given size, value-initializing new elements
@@ -548,6 +554,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayResize(Array<T>& array, ValueInitT, std::size_t size);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -557,6 +564,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, ValueInitT, std::size_t size) {
 		arrayResize<T, Allocator<T>>(array, ValueInit, size);
 	}
+#endif
 
 	/**
 		@brief Resize an array to given size, value-initializing new elements
@@ -570,6 +578,7 @@ namespace Death { namespace Containers {
 		return arrayResize<T, Allocator>(array, ValueInit, size);
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -579,6 +588,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, std::size_t size) {
 		arrayResize<T, Allocator<T>>(array, size);
 	}
+#endif
 
 	/**
 		@brief Resize an array to given size, keeping new elements uninitialized
@@ -593,6 +603,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayResize(Array<T>& array, NoInitT, std::size_t size);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -602,6 +613,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, NoInitT, std::size_t size) {
 		arrayResize<T, Allocator<T>>(array, NoInit, size);
 	}
+#endif
 
 	/**
 		@brief Resize an array to given size, constructing new elements using provided arguments
@@ -619,6 +631,7 @@ namespace Death { namespace Containers {
 	/** @overload */
 	template<class T, class Allocator, class ...Args> void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -628,6 +641,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T, class ...Args> inline void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args) {
 		arrayResize<T, Allocator<T>>(array, DirectInit, size, Death::forward<Args>(args)...);
 	}
+#endif
 
 	/**
 		@brief Resize an array to given size, copy-constructing new elements using the provided value
@@ -642,6 +656,7 @@ namespace Death { namespace Containers {
 		arrayResize<T, Allocator>(array, DirectInit, size, value);
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -651,6 +666,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, std::size_t size, const typename std::common_type<T>::type& value) {
 		arrayResize<T, Allocator<T>>(array, size, value);
 	}
+#endif
 
 	/**
 		@brief Copy-append an item to an array
@@ -678,6 +694,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> T& arrayAppend(Array<T>& array, const typename std::common_type<T>::type& value);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -687,6 +704,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline T& arrayAppend(Array<T>& array, const typename std::common_type<T>::type& value) {
 		return arrayAppend<T, Allocator<T>>(array, value);
 	}
+#endif
 
 	/**
 		@brief In-place append an item to an array
@@ -718,6 +736,7 @@ namespace Death { namespace Containers {
 	/** @overload */
 	template<class T, class Allocator, class ...Args> T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -727,6 +746,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T, class ...Args> inline T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args) {
 		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, Death::forward<Args>(args)...);
 	}
+#endif
 
 	/**
 		@brief Move-append an item to an array
@@ -745,6 +765,7 @@ namespace Death { namespace Containers {
 		return arrayAppend<T, Allocator>(array, InPlaceInit, Death::move(value));
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -754,6 +775,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline T& arrayAppend(Array<T>& array, typename std::common_type<T>::type&& value) {
 		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, Death::move(value));
 	}
+#endif
 
 	/**
 		@brief Copy-append a list of items to an array
@@ -773,6 +795,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayAppend(Array<T>& array, typename std::common_type<ArrayView<const T>>::type values);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -782,12 +805,14 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, typename std::common_type<ArrayView<const T>>::type values) {
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
+#endif
 
 	/** @overload */
 	template<class T, class Allocator = ArrayAllocator<T>> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayAppend<T, Allocator>(array, arrayView(values));
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -797,6 +822,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
+#endif
 
 	/**
 		@brief Append given count of value-initialized values to an array
@@ -837,6 +863,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayAppend(Array<T>& array, NoInitT, std::size_t count);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -846,6 +873,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, NoInitT, std::size_t count) {
 		return arrayAppend<T, Allocator<T>>(array, NoInit, count);
 	}
+#endif
 
 	/**
 		@brief Append given count of values to an array, constructing each using provided arguments
@@ -900,6 +928,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> T& arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<T>::type& value);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -909,6 +938,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> T& arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<T>::type& value) {
 		return arrayInsert<T, Allocator<T>>(array, index, value);
 	}
+#endif
 
 	/**
 		@brief In-place insert an item into an array
@@ -940,6 +970,7 @@ namespace Death { namespace Containers {
 	/** @overload */
 	template<class T, class Allocator, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -949,6 +980,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args) {
 		return arrayInsert<T, Allocator<T>>(array, index, Death::forward<Args>(args)...);
 	}
+#endif
 
 	/**
 		@brief Move-insert an item into an array
@@ -968,6 +1000,7 @@ namespace Death { namespace Containers {
 		return arrayInsert<T, Allocator>(array, index, InPlaceInit, Death::move(value));
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -977,6 +1010,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline T& arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<T>::type&& value) {
 		return arrayInsert<T, Allocator<T>>(array, index, InPlaceInit, Death::move(value));
 	}
+#endif
 
 	/**
 		@brief Copy-insert a list of items into an array
@@ -1001,6 +1035,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<ArrayView<const T>>::type values);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -1010,12 +1045,14 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<ArrayView<const T>>::type values) {
 		return arrayInsert<T, Allocator<T>>(array, index, values);
 	}
+#endif
 
 	/** @overload */
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T>  arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayInsert<T, Allocator>(array, index, arrayView(values));
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -1025,6 +1062,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T>  arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayInsert<T, Allocator<T>>(array, index, values);
 	}
+#endif
 
 	/**
 		@brief Insert given count of value-initialized values into an array
@@ -1072,6 +1110,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, NoInitT, std::size_t count);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -1081,6 +1120,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, NoInitT, std::size_t count) {
 		return arrayInsert<T, Allocator<T>>(array, index, NoInit, count);
 	}
+#endif
 
 	/**
 		@brief Insert given count of values into an array, constructing each using provided arguments
@@ -1129,6 +1169,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayRemove(Array<T>& array, std::size_t index, std::size_t count = 1);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -1138,6 +1179,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline void arrayRemove(Array<T>& array, std::size_t index, std::size_t count = 1) {
 		arrayRemove<T, Allocator<T>>(array, index, count);
 	}
+#endif
 
 	/**
 		@brief Remove an element from an unordered array
@@ -1157,6 +1199,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayRemoveUnordered(Array<T>& array, std::size_t index, std::size_t count = 1);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -1166,6 +1209,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline void arrayRemoveUnordered(Array<T>& array, std::size_t index, std::size_t count = 1) {
 		arrayRemoveUnordered<T, Allocator<T>>(array, index, count);
 	}
+#endif
 
 	/**
 		@brief Remove a suffix from an array
@@ -1185,6 +1229,7 @@ namespace Death { namespace Containers {
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayRemoveSuffix(Array<T>& array, std::size_t count = 1);
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/**
 		@overload
 
@@ -1194,6 +1239,7 @@ namespace Death { namespace Containers {
 	template<template<class> class Allocator, class T> inline void arrayRemoveSuffix(Array<T>& array, std::size_t count = 1) {
 		arrayRemoveSuffix<T, Allocator<T>>(array, count);
 	}
+#endif
 
 	/**
 		@brief Clear an array
