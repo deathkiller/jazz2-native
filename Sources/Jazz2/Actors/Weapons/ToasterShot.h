@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Toaster (shot) */
 	class ToasterShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

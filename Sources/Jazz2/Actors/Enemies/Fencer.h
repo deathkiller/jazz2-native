@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Fencer */
 	class Fencer : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

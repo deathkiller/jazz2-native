@@ -5,6 +5,7 @@
 
 namespace Jazz2::Actors::Bosses
 {
+	/** @brief Devan with remote control (boss) */
 	class DevanRemote : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);

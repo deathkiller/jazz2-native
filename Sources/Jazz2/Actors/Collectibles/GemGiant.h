@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief Giant gem */
 	class GemGiant : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

@@ -5,6 +5,7 @@
 
 namespace Jazz2::Actors::Bosses
 {
+	/** @brief Uterus (boss) */
 	class Uterus : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);

@@ -106,10 +106,15 @@ namespace Jazz2::UI
 
 		/** @{ @name Constants */
 
+		/** @brief Main layer */
 		static constexpr std::uint16_t MainLayer = 100;
+		/** @brief Shadow for main layer */
 		static constexpr std::uint16_t ShadowLayer = 80;
+		/** @brief Font layer */
 		static constexpr std::uint16_t FontLayer = 200;
+		/** @brief Shadow for font layer */
 		static constexpr std::uint16_t FontShadowLayer = 120;
+		/** @brief Touch buttons layer */
 		static constexpr std::uint16_t TouchButtonsLayer = 400;
 
 		/** @} */

@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Seeker (shot) */
 	class SeekerShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

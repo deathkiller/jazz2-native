@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Bridge */
 	class Bridge : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

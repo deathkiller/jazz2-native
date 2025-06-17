@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Witch */
 	class Witch : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

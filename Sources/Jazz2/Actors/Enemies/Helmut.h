@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Helmut */
 	class Helmut : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

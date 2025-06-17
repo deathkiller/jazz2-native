@@ -963,16 +963,22 @@ namespace Death { namespace Containers {
 	*/
 	typedef BasicStringView<char> MutableStringView;
 
+	/** @brief String view equality comparison */
 	bool operator==(StringView a, StringView b);
 
+	/** @brief String view non-equality comparison */
 	bool operator!=(StringView a, StringView b);
 
+	/** @brief String view less-than comparison */
 	bool operator<(StringView a, StringView b);
 
+	/** @brief String view less-than-or-equal comparison */
 	bool operator<=(StringView a, StringView b);
 
+	/** @brief String view greater-than-or-equal comparison */
 	bool operator>=(StringView a, StringView b);
 
+	/** @brief String view greater-than comparison */
 	bool operator>(StringView a, StringView b);
 
 	/**

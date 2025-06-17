@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Bomb */
 	class Bomb : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

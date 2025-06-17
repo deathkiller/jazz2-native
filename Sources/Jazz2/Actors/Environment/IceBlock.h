@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Ice block */
 	class IceBlock : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

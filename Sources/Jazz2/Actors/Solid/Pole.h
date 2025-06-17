@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Pole */
 	class Pole : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

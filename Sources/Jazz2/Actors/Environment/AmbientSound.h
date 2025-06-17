@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Ambient sound */
 	class AmbientSound : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

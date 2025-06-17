@@ -51,6 +51,8 @@ namespace Jazz2
 		/** @brief Invalid value */
 		static constexpr std::int32_t InvalidValue = INT_MAX;
 
+		/** @} */
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint8_t LevelFile = 1;
 		static constexpr std::uint8_t EpisodeFile = 2;
@@ -60,8 +62,6 @@ namespace Jazz2
 		static constexpr std::uint8_t SfxListFile = 6;
 		static constexpr std::uint8_t HighscoresFile = 7;
 #endif
-
-		/** @} */
 
 		/** @brief Returns static instance of main content resolver */
 		static ContentResolver& Get();
@@ -129,8 +129,8 @@ namespace Jazz2
 		/** @brief Returns a noise texture with random pixels */
 		std::unique_ptr<Texture> GetNoiseTexture();
 
-		/** @brief Returns currently loaded palette */
-		const std::uint32_t* GetPalettes() const {
+		/** @brief Returns currently loaded set of palettes */
+		StaticArrayView<PaletteCount * ColorsPerPalette, const std::uint32_t> GetPalettes() const {
 			return _palettes;
 		}
 

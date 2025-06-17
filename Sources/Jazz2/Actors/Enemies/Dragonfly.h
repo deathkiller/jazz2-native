@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Dragonfly */
 	class Dragonfly : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

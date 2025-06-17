@@ -218,6 +218,7 @@ namespace Death { namespace Containers {
 		};
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<typename A, typename B,
 		typename = std::void_t<typename Implementation::StringConcatenableEx<A>::type, typename Implementation::StringConcatenableEx<B>::type>>
 		auto operator+(A&& a, B&& b)
@@ -259,5 +260,6 @@ namespace Death { namespace Containers {
 		a = move(result);
 		return a;
 	}
+#endif
 
 }}

@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Spring */
 	class Spring : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

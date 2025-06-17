@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Gem crate */
 	class GemCrate : public GenericContainer
 	{
 		DEATH_RUNTIME_OBJECT(GenericContainer);

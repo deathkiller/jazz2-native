@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Floating sucker */
 	class SuckerFloat : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

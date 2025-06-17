@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief Gem ring */
 	class GemRing : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

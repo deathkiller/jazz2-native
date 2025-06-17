@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Checkpoint */
 	class Checkpoint : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

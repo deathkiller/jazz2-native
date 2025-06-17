@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Pepper (shot) */
 	class PepperShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

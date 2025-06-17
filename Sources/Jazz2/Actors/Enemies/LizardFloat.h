@@ -9,6 +9,7 @@ namespace Jazz2::Actors::Environment
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Floating lizard */
 	class LizardFloat : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

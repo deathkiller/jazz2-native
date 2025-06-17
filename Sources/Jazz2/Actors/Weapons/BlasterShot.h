@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Blaster (shot) */
 	class BlasterShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
