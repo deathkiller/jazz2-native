@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief Food type */
 	enum class FoodType
 	{
 		Apple = 1,
@@ -44,6 +45,7 @@ namespace Jazz2::Actors::Collectibles
 		Cheese = 36,
 	};
 
+	/** @brief Food collectible */
 	class FoodCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

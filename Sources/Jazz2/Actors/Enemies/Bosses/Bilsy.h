@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Bosses
 {
+	/** @brief Bilsy (boss) */
 	class Bilsy : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);

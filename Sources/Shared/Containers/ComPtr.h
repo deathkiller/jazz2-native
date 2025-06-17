@@ -218,6 +218,7 @@ namespace Death { namespace Containers {
 		T* _pointer;
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// Comparison with another ComPtr<T> instances
 	template<typename TLeft, typename TRight>
 	bool operator==(const ComPtr<TLeft>& left, const ComPtr<TRight>& right) noexcept
@@ -227,7 +228,6 @@ namespace Death { namespace Containers {
 		return (left.get() == right.get());
 	}
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<typename TLeft>
 	bool operator==(const ComPtr<TLeft>& left, std::nullptr_t) noexcept
 	{

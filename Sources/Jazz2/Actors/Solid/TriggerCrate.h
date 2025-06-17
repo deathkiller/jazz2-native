@@ -4,12 +4,14 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief State of @ref TriggerCrate */
 	enum class TriggerCrateState {
 		Off,
 		On,
 		Toggle
 	};
 
+	/** @brief Trigger crate */
 	class TriggerCrate : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

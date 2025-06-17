@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Bosses
 {
+	/** @brief Devan (boss) */
 	class Devan : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);

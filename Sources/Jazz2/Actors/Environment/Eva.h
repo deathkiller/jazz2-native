@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Eva */
 	class Eva : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

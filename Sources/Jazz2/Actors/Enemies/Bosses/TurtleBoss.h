@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Bosses
 {
+	/** @brief Turtle (boss) */
 	class TurtleBoss : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);

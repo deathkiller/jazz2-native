@@ -213,8 +213,7 @@ namespace Jazz2::UI::Menu
 		void RenderTexturedBackground(RenderQueue& renderQueue);
 		bool RenderLegacyBackground(RenderQueue& renderQueue);
 
-		inline Canvas* GetActiveCanvas()
-		{
+		inline Canvas* GetActiveCanvas() {
 			switch (_activeCanvas) {
 				default:
 				case ActiveCanvas::Background: return _canvasBackground.get();

@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief Carrot collectible */
 	class CarrotCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

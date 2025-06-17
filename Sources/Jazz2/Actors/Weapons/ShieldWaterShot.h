@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Water shield (shot) */
 	class ShieldWaterShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

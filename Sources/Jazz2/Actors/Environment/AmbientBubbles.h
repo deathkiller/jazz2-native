@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Ambient bubbles */
 	class AmbientBubbles : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

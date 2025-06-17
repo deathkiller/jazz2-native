@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Caterpillar */
 	class Caterpillar : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

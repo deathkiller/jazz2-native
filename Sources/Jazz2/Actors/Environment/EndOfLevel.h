@@ -5,6 +5,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief End of level sign */
 	class EndOfLevel : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

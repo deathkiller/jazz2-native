@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief 1up collectible */
 	class OneUpCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

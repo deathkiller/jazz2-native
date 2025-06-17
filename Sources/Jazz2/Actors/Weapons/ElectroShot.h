@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Electro (shot) */
 	class ElectroShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

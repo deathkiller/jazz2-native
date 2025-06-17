@@ -5,6 +5,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief Ammo collectible */
 	class AmmoCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

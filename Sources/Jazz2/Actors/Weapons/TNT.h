@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief TNT */
 	class TNT : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

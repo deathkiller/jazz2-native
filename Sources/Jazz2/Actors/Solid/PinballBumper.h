@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Pinball bumper */
 	class PinballBumper : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

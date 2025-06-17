@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Pushable box */
 	class PushableBox : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

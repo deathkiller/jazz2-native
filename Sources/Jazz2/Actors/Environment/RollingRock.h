@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Rolling rock */
 	class RollingRock : public Enemies::EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(Enemies::EnemyBase);

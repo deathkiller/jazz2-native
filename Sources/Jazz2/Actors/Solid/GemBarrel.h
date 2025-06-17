@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Gem barrel */
 	class GemBarrel : public GenericContainer
 	{
 		DEATH_RUNTIME_OBJECT(GenericContainer);

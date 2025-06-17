@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Swinging vine */
 	class SwingingVine : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

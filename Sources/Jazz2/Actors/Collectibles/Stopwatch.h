@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	/** @brief Stopwatch */
 	class Stopwatch : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

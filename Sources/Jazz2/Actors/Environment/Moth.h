@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Moth */
 	class Moth : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

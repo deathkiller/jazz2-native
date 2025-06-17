@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Fire shield (shot) */
 	class ShieldFireShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

@@ -5,6 +5,7 @@
 
 namespace Jazz2::Actors::Environment
 {
+	/** @brief Bonus warp */
 	class BonusWarp : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

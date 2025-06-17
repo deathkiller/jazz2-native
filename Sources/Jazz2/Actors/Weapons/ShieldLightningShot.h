@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Lightning shield (shot) */
 	class ShieldLightningShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

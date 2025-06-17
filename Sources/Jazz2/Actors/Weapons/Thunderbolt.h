@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Thunderbolt (shot) */
 	class Thunderbolt : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

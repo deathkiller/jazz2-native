@@ -5,6 +5,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Power-up shield monitor */
 	class PowerUpShieldMonitor : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

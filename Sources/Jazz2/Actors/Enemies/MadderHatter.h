@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Madder hatter */
 	class MadderHatter : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

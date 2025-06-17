@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	/** @brief Tube turtle  */
 	class TurtleTube : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

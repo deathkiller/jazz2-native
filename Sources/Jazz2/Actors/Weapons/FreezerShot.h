@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Freezer (shot) */
 	class FreezerShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Solid
 {
+	/** @brief Crate container */
 	class CrateContainer : public GenericContainer
 	{
 		DEATH_RUNTIME_OBJECT(GenericContainer);

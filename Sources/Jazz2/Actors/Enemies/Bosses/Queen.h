@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Bosses
 {
+	/** @brief Queen (boss) */
 	class Queen : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);

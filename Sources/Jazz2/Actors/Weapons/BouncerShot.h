@@ -4,6 +4,7 @@
 
 namespace Jazz2::Actors::Weapons
 {
+	/** @brief Bouncer (shot) */
 	class BouncerShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
