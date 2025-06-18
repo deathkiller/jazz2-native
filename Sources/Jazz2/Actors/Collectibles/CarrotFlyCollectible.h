@@ -4,7 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	/** @brief Fly carrot collectible */
+	/** @brief Fly carrot (collectible) */
 	class CarrotFlyCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

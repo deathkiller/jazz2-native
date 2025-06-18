@@ -51,8 +51,6 @@ namespace Jazz2
 		/** @brief Invalid value */
 		static constexpr std::int32_t InvalidValue = INT_MAX;
 
-		/** @} */
-
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint8_t LevelFile = 1;
 		static constexpr std::uint8_t EpisodeFile = 2;
@@ -62,6 +60,8 @@ namespace Jazz2
 		static constexpr std::uint8_t SfxListFile = 6;
 		static constexpr std::uint8_t HighscoresFile = 7;
 #endif
+
+		/** @} */
 
 		/** @brief Returns static instance of main content resolver */
 		static ContentResolver& Get();
