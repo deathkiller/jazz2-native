@@ -244,7 +244,7 @@ namespace Jazz2
 
 
 		/** @brief Initializes preferences cache from a given application configuration */
-		static void Initialize(const AppConfiguration& config);
+		static void Initialize(AppConfiguration& config);
 		/** @brief Serializes current preferences to file */
 		static void Save();
 		/** @brief Returns directory path of the preferences file */
