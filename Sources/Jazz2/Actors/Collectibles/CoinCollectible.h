@@ -4,7 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	/** @brief Coin collectible */
+	/** @brief Coin (collectible) */
 	class CoinCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

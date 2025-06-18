@@ -4,7 +4,7 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	/** @brief Fast fire collectible */
+	/** @brief Fast fire (collectible) */
 	class FastFireCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);
