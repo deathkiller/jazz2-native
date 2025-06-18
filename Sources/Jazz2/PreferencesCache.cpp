@@ -92,7 +92,7 @@ namespace Jazz2
 	HashMap<String, EpisodeContinuationState> PreferencesCache::_episodeEnd;
 	HashMap<String, EpisodeContinuationStateWithLevel> PreferencesCache::_episodeContinue;
 
-	void PreferencesCache::Initialize(const AppConfiguration& config)
+	void PreferencesCache::Initialize(AppConfiguration& config)
 	{
 		bool resetConfig = false;
 
@@ -415,7 +415,7 @@ namespace Jazz2
 #endif
 		}
 
-#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 		// Override some settings by command-line arguments
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
@@ -443,7 +443,16 @@ namespace Jazz2
 				if (paramValue > 0) {
 					MaxFps = std::max(paramValue, 30ul);
 				}
-			} else if (arg == "/no-rgb"_s) {
+			}
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+			else if (arg == "/gpu-workaround"_s) {
+				if (i + 1 < config.argc() && config.argv(i + 1) == "fixed-batch-size"_s) {
+					config.fixedBatchSize = 10;
+					LOGW("Using fixed batch size: %u", config.fixedBatchSize);
+				}
+			}
+#	endif
+			else if (arg == "/no-rgb"_s) {
 				EnableRgbLights = false;
 			} else if (arg == "/no-rescale"_s) {
 				ActiveRescaleMode = RescaleMode::None;
