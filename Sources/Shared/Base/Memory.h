@@ -163,7 +163,7 @@ namespace Death {
 		DEATH_DEBUG_ASSERT(result == 0);
 		return Containers::Array<T>{static_cast<T*>(data), size, Implementation::AlignedDeleter<T>};
 #elif defined(DEATH_TARGET_WINDOWS)
-		// Windows
+		// Windows platforms
 		// Zero size is not allowed: https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/aligned-malloc
 		if (!size) return {};
 
