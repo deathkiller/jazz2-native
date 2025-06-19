@@ -170,7 +170,7 @@ namespace Death { namespace Containers {
 
 		/** @brief Returns the address of the internal pointer if the pointer is not initialized yet to be populated by external call */
 		DEATH_CONSTEXPR14 T** operator&() {
-			DEATH_DEBUG_ASSERT(_pointer == nullptr, "Cannot get direct access to initialized pointer", nullptr);
+			DEATH_DEBUG_CONSTEXPR_ASSERT(_pointer == nullptr, "Cannot get direct access to initialized pointer", nullptr);
 			return &_pointer;
 		}
 

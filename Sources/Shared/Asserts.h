@@ -90,15 +90,7 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ..
 #			endif
 #		endif
 #		if !defined(DEATH_ASSERT_BREAK)
-#			if defined(DEATH_TARGET_GCC) && (defined(__i386__) || defined(__x86_64__))
-#				define DEATH_ASSERT_BREAK() __asm__ volatile("int3;nop")
-#			elif defined(DEATH_TARGET_GCC) && defined(__thumb__)
-#				define DEATH_ASSERT_BREAK() __asm__ volatile(".inst 0xde01")
-#			elif defined(DEATH_TARGET_GCC) && defined(__arm__) && !defined(__thumb__)
-#				define DEATH_ASSERT_BREAK() __asm__ volatile(".inst 0xe7f001f0")
-#			else
-#				define DEATH_ASSERT_BREAK() ::abort()
-#			endif
+#			define DEATH_ASSERT_BREAK() ::abort()
 #		endif
 #	endif
 #endif
