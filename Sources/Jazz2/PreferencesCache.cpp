@@ -448,7 +448,6 @@ namespace Jazz2
 			else if (arg == "/gpu-workaround"_s) {
 				if (i + 1 < config.argc() && config.argv(i + 1) == "fixed-batch-size"_s) {
 					config.fixedBatchSize = 10;
-					LOGW("Using fixed batch size: %u", config.fixedBatchSize);
 				}
 			}
 #	endif

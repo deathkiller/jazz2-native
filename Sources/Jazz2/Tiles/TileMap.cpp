@@ -1415,12 +1415,12 @@ namespace Jazz2::Tiles
 			if (tile.DestructType == TileDestructType::Trigger && tile.TileParams == triggerId) {
 				if (tile.DestructAnimation >= _animatedTilesOffset) {
 					if (_animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles.size() > 1) {
-						tile.TileID = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles[tile.DestructFrameIndex].TileID;
 						tile.DestructFrameIndex = (newState ? 1 : 0);
+						tile.TileID = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles[tile.DestructFrameIndex].TileID;
 					}
 				} else {
-					tile.TileID = (newState ? 0 /*Empty*/ : tile.DestructAnimation);
 					tile.DestructFrameIndex = (newState ? 1 : 0);
+					tile.TileID = (newState ? 0 /*Empty*/ : tile.DestructAnimation);
 				}
 			}
 		}

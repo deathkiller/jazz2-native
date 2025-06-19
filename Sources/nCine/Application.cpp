@@ -691,21 +691,25 @@ namespace nCine
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
 			GLDebug::Init(gfxCapabilities);
 
-#if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
-			LOGI("Using fixed batch size: %u", appCfg_.fixedBatchSize);
-#elif defined(DEATH_TARGET_ANDROID)
-			const StringView vendor = gfxCapabilities.GetGLInfoStrings().vendor;
-			const StringView renderer = gfxCapabilities.GetGLInfoStrings().renderer;
-			// Some GPUs doesn't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
-			if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
-				(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
-				const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
-				if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
-					LOGW("Detected %s: Using fixed batch size", renderer.data());
-				} else {
-					LOGW("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
+#if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
+			if (appCfg_.fixedBatchSize > 0) {
+				LOGI("Using fixed batch size: %u", appCfg_.fixedBatchSize);
+			} else {
+#	if defined(DEATH_TARGET_ANDROID)
+				const StringView vendor = gfxCapabilities.GetGLInfoStrings().vendor;
+				const StringView renderer = gfxCapabilities.GetGLInfoStrings().renderer;
+				// Some GPUs doesn't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
+				if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
+					(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
+					const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
+					if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
+						LOGW("Detected %s: Using fixed batch size", renderer.data());
+					} else {
+						LOGW("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
+					}
+					appCfg_.fixedBatchSize = 10;
 				}
-				appCfg_.fixedBatchSize = 10;
+#	endif
 			}
 #endif
 
