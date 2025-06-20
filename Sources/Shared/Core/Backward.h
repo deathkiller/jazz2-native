@@ -535,10 +535,15 @@ namespace Death { namespace Backward {
 	/** @brief Resolved trace item */
 	struct ResolvedTrace : public Trace {
 
+		/** @brief Source location description */
 		struct SourceLoc {
+			/** @brief Function name */
 			std::string function;
+			/** @brief File name */
 			std::string filename;
+			/** @brief Line */
 			std::int32_t line;
+			/** @brief Column */
 			std::int32_t col;
 
 			SourceLoc() : line(0), col(0) {}

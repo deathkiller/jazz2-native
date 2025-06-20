@@ -280,11 +280,13 @@ namespace Death {
 		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u, std::is_base_of<T, U>());
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/** @overload */
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE const T* runtime_cast(const U* u) noexcept {
 		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u, std::is_base_of<T, U>());
 	}
+#endif
 
 	/** @overload */
 	template<class T, class U>
@@ -321,9 +323,7 @@ namespace Death {
 		
 		Safely converts pointers to classes up, down, and sideways along the inheritance
 		hierarchy of classes annotated by `DEATH_RUNTIME_OBJECT()` in an optimized way.
-		Additionally, it can perform downcast at no performance cost. It also pulls the
-		actual pointer from @ref std::shared_ptr and @ref std::unique_ptr without
-		taking ownership.
+		Additionally, it can perform downcast at no performance cost.
 		
 		If @cpp DEATH_SUPPRESS_RUNTIME_CAST @ce is defined, the optimized implementation is suppressed
 		and the standard @cpp dynamic_cast<T>() @ce is used to cast the pointer instead.
@@ -333,11 +333,13 @@ namespace Death {
 		return dynamic_cast<T*>(u);
 	}
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	/** @overload */
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE const T* runtime_cast(const U* u) noexcept {
 		return dynamic_cast<const T*>(u);
 	}
+#endif
 
 	/** @overload */
 	template<class T, class U>

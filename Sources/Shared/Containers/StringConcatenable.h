@@ -24,6 +24,7 @@ namespace Death { namespace Containers {
 	struct StringBuilderBase
 	{
 	protected:
+		/** @brief Returns the resulting string */
 		T resolved() const {
 			return *static_cast<const Builder*>(this);
 		}
@@ -65,11 +66,14 @@ namespace Death { namespace Containers {
 			return convertTo<ConvertTo>();
 		}
 
+		/** @brief Returns total length in characters */
 		std::size_t size() const {
 			return Concatenable::size(*this);
 		}
 
+		/** @brief First part */
 		A a;
+		/** @brief Second part */
 		B b;
 
 	private:
