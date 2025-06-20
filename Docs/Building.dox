@@ -165,8 +165,8 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_OPENGLES` (default @cpp OFF @ce) --- Use **OpenGL|ES** library instead of **OpenGL**
 -   `NCINE_WITH_ANGLE` (default @cpp OFF @ce except on UWP) --- Enable Google **ANGLE** library support
 -   `NCINE_WITH_GLEW` (default @cpp ON @ce) --- Use **GLEW** library
--   `NCINE_WITH_BACKWARD` (default @cpp ON @ce) --- Enable better exception handling
--   `NCINE_WITH_WEBP` (default @cpp OFF @ce) --- Enable `.webp` image file support, requires **libwebp** library
+-   `NCINE_WITH_BACKWARD` (default @cpp ON @ce except on Android, Emscripten and UWP) --- Enable better exception handling
+-   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
 -   `NCINE_WITH_OPENMPT` (default @cpp ON @ce) --- Enable module music audio file support, requires **libopenmpt** library
@@ -253,7 +253,7 @@ The following parameters can be used to customize the build:
 -   `DISABLE_RESCALE_SHADERS` (default @cpp OFF @ce) --- Disable rescale shaders and use only nearest neighbor
 -   `SHAREWARE_DEMO_ONLY` (default @cpp OFF @ce) --- Shareware Demo only, usually used on **Emscripten** platform
 -   `WITH_MULTIPLAYER` (default @cpp OFF @ce) --- Enable experimental online multiplayer support
--   `DEDICATED_SERVER` (default @cpp OFF @ce) --- Build only dedicated server, `WITH_MULTIPLAYER` must be enabled
+-   `DEDICATED_SERVER` (default @cpp OFF @ce) --- Build the application as dedicated server only, `WITH_MULTIPLAYER` must be enabled
 
 */
 

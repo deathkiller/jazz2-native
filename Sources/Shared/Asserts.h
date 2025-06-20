@@ -19,7 +19,7 @@
 #		define DEATH_TRACE __WriteTrace
 #	endif
 
-/** @brief Trace level */
+/** @brief Trace severity level */
 enum class TraceLevel {
 	Unknown,		/**< Unspecified */
 	Debug,			/**< Debug */
