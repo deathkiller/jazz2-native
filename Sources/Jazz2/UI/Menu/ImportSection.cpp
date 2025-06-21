@@ -5,6 +5,7 @@
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
 
+#include "../../../nCine/I18n.h"
 #include "../../../nCine/Base/Algorithms.h"
 
 using namespace Jazz2::UI::Menu::Resources;
