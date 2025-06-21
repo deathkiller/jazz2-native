@@ -243,17 +243,16 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 
 	using TypeHandle = const void*;
 
+	template<class T>
+	struct TypeName {
+		static constexpr auto value = __ti<T>::n();
+	};
+
 	struct Helpers
 	{
 		template<class T>
-		static constexpr inline Containers::StringView GetTypeName() noexcept {
-			static constexpr auto name = __ti<T>::n();
-			return name;
-		}
-
-		template<class T>
 		static constexpr TypeHandle GetTypeHandle(const T*) noexcept {
-			return GetTypeName<T>().data();
+			return TypeName<T>::value.data();
 		}
 
 		template<class T, class U>
@@ -271,7 +270,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			if (u == nullptr)
 				return nullptr;
 			return const_cast<T*>(static_cast<const T*>(
-				u->__FindInstance(GetTypeName<T>().data())
+				u->__FindInstance(TypeName<T>::value.data())
 			));
 		}
 
@@ -279,7 +278,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		static const T* RuntimeCast(const U* u, std::integral_constant<bool, false>) noexcept {
 			if (u == nullptr)
 				return nullptr;
-			return static_cast<const T*>(u->__FindInstance(GetTypeName<T>().data()));
+			return static_cast<const T*>(u->__FindInstance(TypeName<T>::value.data()));
 		}
 
 		template<class Self>
