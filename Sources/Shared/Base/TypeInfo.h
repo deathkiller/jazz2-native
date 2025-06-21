@@ -152,34 +152,45 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		return false;
 	}
 #endif
-
+	
 	template<class ForwardIterator1, class ForwardIterator2>
-	static constexpr inline ForwardIterator1 constexpr_search(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2, ForwardIterator2 last2) noexcept {
-		if (first2 == last2) {
-			return first1;  // Specified in C++11
+	static constexpr ForwardIterator1 constexpr_search(ForwardIterator1 begin1, std::size_t length1, ForwardIterator2 begin2, std::size_t length2) noexcept {
+		if (length2 == 0) {
+			return begin1;  // Specified in C++11
 		}
 
-		while (first1 != last1) {
-			ForwardIterator1 it1 = first1;
-			ForwardIterator2 it2 = first2;
-			while (*it1 == *it2) {
-				++it1; ++it2;
-				if (it2 == last2) return first1;
-				if (it1 == last1) return last1;
+		for (std::size_t i = 0; i <= length1 - length2; ++i) {
+			ForwardIterator1 it1 = begin1;
+			ForwardIterator2 it2 = begin2;
+			std::size_t matched = 0;
+
+			while (matched < length2 && *it1 == *it2) {
+				++it1;
+				++it2;
+				++matched;
 			}
-			++first1;
+
+			if (matched == length2) {
+				return begin1;
+			}
+
+			begin1++;
 		}
-		return last1;
+
+		for (std::size_t i = 0; i < length1; i++) {
+			begin1++;
+		}
+		return begin1;
 	}
 
-	static constexpr inline std::int32_t constexpr_strcmp_loop(const char* v1, const char* v2) noexcept {
+	static constexpr std::int32_t constexpr_strcmp_loop(const char* v1, const char* v2) noexcept {
 		while (*v1 != '\0' && *v1 == *v2) {
 			++v1; ++v2;
 		}
 		return static_cast<std::int32_t>(*v1) - *v2;
 	}
 
-	static constexpr inline std::int32_t constexpr_strcmp(const char* v1, const char* v2) noexcept {
+	static constexpr std::int32_t constexpr_strcmp(const char* v1, const char* v2) noexcept {
 #if DEATH_CXX_STANDARD >= 201402 && defined(__DEATH_HAS_BUILTIN_CONSTANT) && defined(__DEATH_HAS_BUILTIN_STRCMP)
 		if (IsConstantString(v1) && IsConstantString(v2)) {
 			return constexpr_strcmp_loop(v1, v2);
@@ -193,20 +204,19 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}
 
 	template<std::size_t N>
-	static constexpr inline const char* SkipGarbageRuntime(const char* begin) noexcept {
+	static constexpr const char* ExtractTypeNameInRuntime(const char* begin) noexcept {
 		const char* const it = constexpr_search(
-			begin, begin + N,
-			skip().UntilRuntime, skip().UntilRuntime + skip().UntilRuntimeLength);
+			begin, N,
+			skip().UntilRuntime, skip().UntilRuntimeLength);
 		return (it == begin + N ? begin : it + skip().UntilRuntimeLength);
-		
 	}
 
 	template<std::size_t N>
-	static constexpr inline Containers::StringView SkipGarbage(const char* begin) noexcept {
+	static constexpr Containers::StringView ExtractTypeName(const char* begin) noexcept {
 		static_assert(N > skip().SizeAtBegin + skip().SizeAtEnd, "runtime_cast<T>() is misconfigured for your compiler");
 
 		const char* const offset = (skip().UntilRuntimeLength
-			? SkipGarbageRuntime<N - skip().SizeAtBegin>(begin + skip().SizeAtBegin)
+			? ExtractTypeNameInRuntime<N - skip().SizeAtBegin>(begin + skip().SizeAtBegin)
 			: begin + skip().SizeAtBegin);
 		// It's used in constexpr context, so it should be always global
 		return { offset, N - 1 - (offset - begin) - skip().SizeAtEnd, Containers::StringViewFlags::Global };
@@ -221,16 +231,16 @@ struct __ti
 	static constexpr auto n() noexcept {
 		using namespace Death::TypeInfo::Implementation;
 #if defined(__FUNCSIG__)
-		constexpr auto view = SkipGarbage<sizeof(__FUNCSIG__)>(__FUNCSIG__);
-		return StaticStringBuffer<view.size()>{view.data()};
+		constexpr auto name = ExtractTypeName<sizeof(__FUNCSIG__)>(__FUNCSIG__);
+		return StaticStringBuffer<name.size()>{name.data()};
 #elif defined(__PRETTY_FUNCTION__) \
 		|| defined(DEATH_TARGET_GCC) \
 		|| defined(DEATH_TARGET_CLANG) \
 		|| (defined(__ICC) && (__ICC >= 600)) \
 		|| (defined(__MWERKS__) && (__MWERKS__ >= 0x3000)) \
 		|| (defined(__SUNPRO_CC) && (__SUNPRO_CC >= 0x5130))
-		constexpr auto view = SkipGarbage<sizeof(__PRETTY_FUNCTION__)>(__PRETTY_FUNCTION__);
-		return StaticStringBuffer<view.size()>{view.data()};
+		constexpr auto name = ExtractTypeName<sizeof(__PRETTY_FUNCTION__)>(__PRETTY_FUNCTION__);
+		return StaticStringBuffer<name.size()>{name.data()};
 #else
 		static_assert(sizeof(T) && false, "runtime_cast<T>() could not detect your compiler");
 		return StaticStringBuffer<0>{};
