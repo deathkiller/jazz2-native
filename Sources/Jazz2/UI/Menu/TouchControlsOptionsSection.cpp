@@ -1,8 +1,10 @@
 ﻿#include "TouchControlsOptionsSection.h"
 #include "MenuResources.h"
-#include "../../PreferencesCache.h"
 #include "../HUD.h"
+#include "../../PreferencesCache.h"
 #include "../../LevelHandler.h"
+
+#include "../../../nCine/I18n.h"
 
 using namespace Jazz2::UI::Menu::Resources;
 

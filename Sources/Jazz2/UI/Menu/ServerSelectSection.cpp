@@ -7,6 +7,8 @@
 #include "MenuResources.h"
 #include "SimpleMessageSection.h"
 #include "../../PreferencesCache.h"
+
+#include "../../../nCine/I18n.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
 #include <Containers/StringConcatenable.h>

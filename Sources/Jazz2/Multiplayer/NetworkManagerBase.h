@@ -6,7 +6,6 @@
 #include "Peer.h"
 #include "Reason.h"
 #include "ServerDiscovery.h"
-#include "../../Main.h"
 #include "../../nCine/Threading/Thread.h"
 #include "../../nCine/Threading/ThreadSync.h"
 

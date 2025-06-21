@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Common.h"
+#include "../Containers/StringView.h"
 
 #include <memory>
 
@@ -49,6 +49,60 @@
 namespace Death { namespace TypeInfo { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	template<std::uint16_t N>
+	class StaticStringBuffer {
+	public:
+		constexpr explicit StaticStringBuffer(const char* str) noexcept
+			: StaticStringBuffer{str, std::make_integer_sequence<std::uint16_t, N>{}} {}
+
+		constexpr explicit StaticStringBuffer(Containers::StringView str) noexcept
+			: StaticStringBuffer{str.data(), std::make_integer_sequence<std::uint16_t, N>{}} {
+			DEATH_DEBUG_ASSERT(str.size() == N);
+		}
+
+		constexpr const char* data() const noexcept {
+			return _chars;
+		}
+
+		constexpr std::uint16_t size() const noexcept {
+			return N;
+		}
+
+		constexpr operator Containers::StringView() const noexcept {
+			// It's used in constexpr context, so it should be always global
+			return { data(), size(), Containers::StringViewFlags::Global | Containers::StringViewFlags::NullTerminated };
+		}
+
+	private:
+		template<std::uint16_t... I>
+		constexpr StaticStringBuffer(const char* str, std::integer_sequence<std::uint16_t, I...>) noexcept : _chars{static_cast<char>(str[I])..., static_cast<char>('\0')} {}
+
+		template<std::uint16_t... I>
+		constexpr StaticStringBuffer(Containers::StringView str, std::integer_sequence<std::uint16_t, I...>) noexcept : _chars{str[I]..., static_cast<char>('\0')} {}
+
+		char _chars[static_cast<std::size_t>(N) + 1];
+	};
+
+	template<>
+	class StaticStringBuffer<0> {
+	public:
+		constexpr explicit StaticStringBuffer() = default;
+		constexpr explicit StaticStringBuffer(const char* str) noexcept {}
+		constexpr explicit StaticStringBuffer(Containers::StringView) noexcept {}
+
+		constexpr const char* data() const noexcept {
+			return nullptr;
+		}
+
+		constexpr std::uint16_t size() const noexcept {
+			return 0;
+		}
+
+		constexpr operator Containers::StringView() const noexcept {
+			return {};
+		}
+	};
+
 	struct TypeInfoSkip {
 		std::size_t SizeAtBegin;
 		std::size_t SizeAtEnd;
@@ -67,24 +121,19 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	}
 
 #if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
-	// const char *__cdecl __ti<A>::n(void) noexcept
+	// auto __cdecl __ti<class A>::n(void) noexcept
 	static constexpr TypeInfoSkip skip() noexcept {
-		return CreateTypeInfoSkip(25, 19, "");
+		return CreateTypeInfoSkip(24, 19, "");
 	}
 #elif defined(DEATH_TARGET_CLANG)
-	// static const char *__ti<A>::n() [T = A]
+	// static auto __ti<A>::n() [T = A]
 	static constexpr TypeInfoSkip skip() noexcept {
-		return CreateTypeInfoSkip(24, 1, "T = ");
-	}
-#elif defined(DEATH_TARGET_GCC) && DEATH_CXX_STANDARD >= 201402
-	// static constexpr const char* __ti<T>::n() [with T = A]
-	static constexpr TypeInfoSkip skip() noexcept {
-		return CreateTypeInfoSkip(52, 1, "");
+		return CreateTypeInfoSkip(17, 1, "T = ");
 	}
 #elif defined(DEATH_TARGET_GCC)
-	// static const char* __ti<T>::n() [with T = A]
+	// static constexpr auto __ti<T>::n() [with T = A]
 	static constexpr TypeInfoSkip skip() noexcept {
-		return CreateTypeInfoSkip(42, 1, "");
+		return CreateTypeInfoSkip(45, 1, "");
 	}
 #else
 	static constexpr TypeInfoSkip skip() noexcept {
@@ -93,7 +142,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 #endif
 
 #if defined(__DEATH_HAS_BUILTIN_CONSTANT)
-	static DEATH_CONSTEXPR14 DEATH_ALWAYS_INLINE bool IsConstantString(const char* str) noexcept {
+	static constexpr DEATH_ALWAYS_INLINE bool IsConstantString(const char* str) noexcept {
 		while (__DEATH_HAS_BUILTIN_CONSTANT(*str)) {
 			if (*str == '\0') {
 				return true;
@@ -105,7 +154,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 #endif
 
 	template<class ForwardIterator1, class ForwardIterator2>
-	static DEATH_CONSTEXPR14 inline ForwardIterator1 constexpr_search(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2, ForwardIterator2 last2) noexcept {
+	static constexpr inline ForwardIterator1 constexpr_search(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2, ForwardIterator2 last2) noexcept {
 		if (first2 == last2) {
 			return first1;  // Specified in C++11
 		}
@@ -123,14 +172,14 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		return last1;
 	}
 
-	static DEATH_CONSTEXPR14 inline std::int32_t constexpr_strcmp_loop(const char* v1, const char* v2) noexcept {
+	static constexpr inline std::int32_t constexpr_strcmp_loop(const char* v1, const char* v2) noexcept {
 		while (*v1 != '\0' && *v1 == *v2) {
 			++v1; ++v2;
 		}
 		return static_cast<std::int32_t>(*v1) - *v2;
 	}
 
-	static DEATH_CONSTEXPR14 inline std::int32_t constexpr_strcmp(const char* v1, const char* v2) noexcept {
+	static constexpr inline std::int32_t constexpr_strcmp(const char* v1, const char* v2) noexcept {
 #if DEATH_CXX_STANDARD >= 201402 && defined(__DEATH_HAS_BUILTIN_CONSTANT) && defined(__DEATH_HAS_BUILTIN_STRCMP)
 		if (IsConstantString(v1) && IsConstantString(v2)) {
 			return constexpr_strcmp_loop(v1, v2);
@@ -143,21 +192,24 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 #endif
 	}
 
-	template<std::size_t ArrayLength>
-	static DEATH_CONSTEXPR14 inline const char* SkipBeginningRuntime(const char* begin) noexcept {
+	template<std::size_t N>
+	static constexpr inline const char* SkipGarbageRuntime(const char* begin) noexcept {
 		const char* const it = constexpr_search(
-			begin, begin + ArrayLength,
+			begin, begin + N,
 			skip().UntilRuntime, skip().UntilRuntime + skip().UntilRuntimeLength);
-		return (it == begin + ArrayLength ? begin : it + skip().UntilRuntimeLength);
+		return (it == begin + N ? begin : it + skip().UntilRuntimeLength);
+		
 	}
 
-	template<std::size_t ArrayLength>
-	static DEATH_CONSTEXPR14 inline const char* SkipBeginning(const char* begin) noexcept {
-		static_assert(ArrayLength > skip().SizeAtBegin + skip().SizeAtEnd, "runtime_cast<T>() is misconfigured for your compiler");
+	template<std::size_t N>
+	static constexpr inline Containers::StringView SkipGarbage(const char* begin) noexcept {
+		static_assert(N > skip().SizeAtBegin + skip().SizeAtEnd, "runtime_cast<T>() is misconfigured for your compiler");
 
-		return (skip().UntilRuntimeLength
-			? SkipBeginningRuntime<ArrayLength - skip().SizeAtBegin>(begin + skip().SizeAtBegin)
+		const char* const offset = (skip().UntilRuntimeLength
+			? SkipGarbageRuntime<N - skip().SizeAtBegin>(begin + skip().SizeAtBegin)
 			: begin + skip().SizeAtBegin);
+		// It's used in constexpr context, so it should be always global
+		return { offset, N - 1 - (offset - begin) - skip().SizeAtEnd, Containers::StringViewFlags::Global };
 	}
 
 }}}
@@ -166,19 +218,22 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 template<class T>
 struct __ti
 {
-	static DEATH_CONSTEXPR14 const char* n() noexcept {
+	static constexpr auto n() noexcept {
+		using namespace Death::TypeInfo::Implementation;
 #if defined(__FUNCSIG__)
-		return Death::TypeInfo::Implementation::SkipBeginning<sizeof(__FUNCSIG__)>(__FUNCSIG__);
+		constexpr auto view = SkipGarbage<sizeof(__FUNCSIG__)>(__FUNCSIG__);
+		return StaticStringBuffer<view.size()>{view.data()};
 #elif defined(__PRETTY_FUNCTION__) \
 		|| defined(DEATH_TARGET_GCC) \
 		|| defined(DEATH_TARGET_CLANG) \
 		|| (defined(__ICC) && (__ICC >= 600)) \
 		|| (defined(__MWERKS__) && (__MWERKS__ >= 0x3000)) \
 		|| (defined(__SUNPRO_CC) && (__SUNPRO_CC >= 0x5130))
-		return Death::TypeInfo::Implementation::SkipBeginning<sizeof(__PRETTY_FUNCTION__)>(__PRETTY_FUNCTION__);
+		constexpr auto view = SkipGarbage<sizeof(__PRETTY_FUNCTION__)>(__PRETTY_FUNCTION__);
+		return StaticStringBuffer<view.size()>{view.data()};
 #else
 		static_assert(sizeof(T) && false, "runtime_cast<T>() could not detect your compiler");
-		return "";
+		return StaticStringBuffer<0>{};
 #endif
 	}
 };
@@ -191,22 +246,15 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	struct Helpers
 	{
 		template<class T>
-		static DEATH_CONSTEXPR14 inline TypeHandle ConstructTypeHandle() noexcept {
-			return __ti<T>::n();
+		static constexpr inline Containers::StringView GetTypeName() noexcept {
+			static constexpr auto name = __ti<T>::n();
+			return name;
 		}
 
 		template<class T>
 		static constexpr TypeHandle GetTypeHandle(const T*) noexcept {
-			return ConstructTypeHandle<T>();
+			return GetTypeName<T>().data();
 		}
-
-		/*template<class T>
-		static Containers::Pair<const char*, std::size_t> GetTypeName() noexcept {
-			constexpr const char* name = __ti<T>::n();
-			std::size_t length = std::strlen(name + skip().SizeAtEnd);
-			while (name[length - 1] == ' ') length--; // MSVC sometimes adds trailing whitespaces
-			return { name, length };
-		}*/
 
 		template<class T, class U>
 		static T* RuntimeCast(U* u, std::integral_constant<bool, true>) noexcept {
@@ -223,7 +271,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			if (u == nullptr)
 				return nullptr;
 			return const_cast<T*>(static_cast<const T*>(
-				u->__FindInstance(ConstructTypeHandle<T>())
+				u->__FindInstance(GetTypeName<T>().data())
 			));
 		}
 
@@ -231,7 +279,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		static const T* RuntimeCast(const U* u, std::integral_constant<bool, false>) noexcept {
 			if (u == nullptr)
 				return nullptr;
-			return static_cast<const T*>(u->__FindInstance(ConstructTypeHandle<T>()));
+			return static_cast<const T*>(u->__FindInstance(GetTypeName<T>().data()));
 		}
 
 		template<class Self>

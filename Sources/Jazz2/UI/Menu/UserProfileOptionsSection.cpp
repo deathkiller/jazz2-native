@@ -5,14 +5,15 @@
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
-
-#include <Utf8.h>
-#include <Containers/StringConcatenable.h>
+#include "../../../nCine/I18n.h"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
 #	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
+
+#include <Utf8.h>
+#include <Containers/StringConcatenable.h>
 
 using namespace Jazz2::UI::Menu::Resources;
 

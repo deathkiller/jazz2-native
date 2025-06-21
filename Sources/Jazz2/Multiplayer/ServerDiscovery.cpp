@@ -15,6 +15,7 @@
 #include <Containers/StringStlView.h>
 #include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
+#include <IO/WebRequest.h>
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "Backends/ifaddrs-android.h"

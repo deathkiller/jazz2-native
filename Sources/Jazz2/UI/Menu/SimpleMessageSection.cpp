@@ -1,6 +1,8 @@
 ﻿#include "SimpleMessageSection.h"
 #include "MenuResources.h"
 
+#include "../../../nCine/I18n.h"
+
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu

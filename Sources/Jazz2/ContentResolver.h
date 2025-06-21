@@ -1,19 +1,14 @@
 ﻿#pragma once
 
 #include "../Main.h"
-#include "AnimState.h"
 #include "GameDifficulty.h"
 #include "LevelDescriptor.h"
 #include "Resources.h"
-#include "WeaponType.h"
 #include "UI/Font.h"
 
 #include "../nCine/Audio/AudioBuffer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
-#include "../nCine/Graphics/Camera.h"
-#include "../nCine/Graphics/Sprite.h"
 #include "../nCine/Graphics/Texture.h"
-#include "../nCine/Graphics/Viewport.h"
 #include "../nCine/Base/HashMap.h"
 
 #include <Containers/Function.h>
@@ -21,7 +16,6 @@
 #include <Containers/Reference.h>
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
-#include <IO/FileSystem.h>
 #include <IO/PakFile.h>
 #include <IO/Stream.h>
 

@@ -3,7 +3,9 @@
 #include "MenuResources.h"
 #include "../../LevelFlags.h"
 #include "../../PreferencesCache.h"
+
 #include "../../../nCine/Base/FrameTimer.h"
+#include "../../../nCine/I18n.h"
 
 #if defined(WITH_MULTIPLAYER)
 #	include "CreateServerOptionsSection.h"

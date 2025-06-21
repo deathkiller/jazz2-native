@@ -8,6 +8,7 @@
 #include "../Menu/MenuResources.h"
 
 #include "../../../nCine/Application.h"
+#include "../../../nCine/I18n.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
 #include "../../../nCine/Input/JoyMapping.h"
 

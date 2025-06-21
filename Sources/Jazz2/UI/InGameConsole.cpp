@@ -1,11 +1,13 @@
 ﻿#include "InGameConsole.h"
 #include "FormattedTextBlock.h"
+#include "../ContentResolver.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 
 #include "../../nCine/Application.h"
+#include "../../nCine/I18n.h"
 #include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/Base/Random.h"
+#include "../../nCine/Input/IInputManager.h"
 
 #include <Containers/StringConcatenable.h>
 #include <Utf8.h>

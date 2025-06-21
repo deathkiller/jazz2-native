@@ -2,8 +2,9 @@
 #include "MenuResources.h"
 #include "RescaleModeSection.h"
 #include "../../PreferencesCache.h"
-#include "../../LevelHandler.h"
+
 #include "../../../nCine/Application.h"
+#include "../../../nCine/I18n.h"
 
 #include <Environment.h>
 #include <Utf8.h>

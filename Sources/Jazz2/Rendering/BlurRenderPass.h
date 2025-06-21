@@ -1,6 +1,15 @@
 ﻿#pragma once
 
-#include "../LevelHandler.h"
+#include "../../Main.h"
+
+#include "../../nCine/Graphics/Camera.h"
+#include "../../nCine/Graphics/SceneNode.h"
+#include "../../nCine/Graphics/Texture.h"
+#include "../../nCine/Graphics/Viewport.h"
+
+#include <memory>
+
+using namespace nCine;
 
 namespace Jazz2::Rendering
 {

@@ -7,7 +7,6 @@
 #include "../PreferencesCache.h"
 #include "../../nCine/Base/TimeStamp.h"
 
-#include <Containers/StaticArray.h>
 #include <Containers/String.h>
 
 using namespace Death::Containers;

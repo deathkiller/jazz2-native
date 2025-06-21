@@ -10,8 +10,6 @@
 #	include "../../Multiplayer/ServerInitialization.h"
 #endif
 
-#include "../../../nCine/I18n.h"
-
 namespace Jazz2::UI::Menu
 {
 	class MenuSection;

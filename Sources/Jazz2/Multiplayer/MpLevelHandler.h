@@ -37,7 +37,6 @@ namespace Jazz2::Multiplayer
 	{
 		DEATH_RUNTIME_OBJECT(LevelHandler, IServerStatusProvider);
 
-		friend class ContentResolver;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif

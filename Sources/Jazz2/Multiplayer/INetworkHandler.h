@@ -5,7 +5,6 @@
 #include "ConnectionResult.h"
 #include "Peer.h"
 #include "Reason.h"
-#include "../../Main.h"
 
 #include <Containers/StringView.h>
 

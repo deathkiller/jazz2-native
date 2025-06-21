@@ -11,10 +11,6 @@
 #	include "PlayMultiplayerSection.h"
 #endif
 
-#include <Containers/StringConcatenable.h>
-#include <Environment.h>
-#include <Utf8.h>
-
 #if defined(SHAREWARE_DEMO_ONLY)
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 #		include "ImportSection.h"
@@ -23,11 +19,16 @@
 #endif
 
 #include "../../../nCine/Application.h"
+#include "../../../nCine/I18n.h"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
 #	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
+
+#include <Containers/StringConcatenable.h>
+#include <Environment.h>
+#include <Utf8.h>
 
 using namespace Jazz2::UI::Menu::Resources;
 

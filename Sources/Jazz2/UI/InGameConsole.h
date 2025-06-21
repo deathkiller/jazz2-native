@@ -2,7 +2,7 @@
 
 #include "Canvas.h"
 #include "Font.h"
-#include "../ILevelHandler.h"
+#include "../LevelHandler.h"
 
 #include "../../nCine/Input/InputEvents.h"
 

@@ -21,14 +21,10 @@
 #undef far
 
 #include <Base/TypeInfo.h>
-#include <Containers/SmallVector.h>
-#include <Containers/StaticArray.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
-#include <IO/WebRequest.h>
 
 using namespace Death::Containers;
-using namespace Death::IO;
 using namespace nCine;
 
 namespace Jazz2::Multiplayer

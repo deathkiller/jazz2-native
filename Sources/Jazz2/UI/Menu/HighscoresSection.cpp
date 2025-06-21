@@ -3,16 +3,17 @@
 #include "../DiscordRpcClient.h"
 
 #include "../../../nCine/Application.h"
-
-#include <Containers/DateTime.h>
-#include <Containers/StringConcatenable.h>
-#include <IO/Compression/DeflateStream.h>
-#include <Utf8.h>
+#include "../../../nCine/I18n.h"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
 #	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
+
+#include <Containers/DateTime.h>
+#include <Containers/StringConcatenable.h>
+#include <IO/Compression/DeflateStream.h>
+#include <Utf8.h>
 
 using namespace Death::IO::Compression;
 using namespace Jazz2::UI::Menu::Resources;

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../ContentResolver.h"
+#include "../../Main.h"
 
 #include "../../nCine/Graphics/RenderCommand.h"
 #include "../../nCine/Graphics/SceneNode.h"
