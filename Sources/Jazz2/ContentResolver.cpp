@@ -31,6 +31,7 @@
 #include "../jsoncpp/json.h"
 
 using namespace Death::IO::Compression;
+using namespace Jazz2::Tiles;
 
 static Vector2i GetVector2iFromJson(const Json::Value& value, Vector2i defaultValue = Vector2i::Zero)
 {

@@ -6,8 +6,6 @@
 #include "../Rendering/UpscaleRenderPass.h"
 
 #include "../../nCine/Base/BitArray.h"
-#include "../../nCine/Graphics/Camera.h"
-#include "../../nCine/Graphics/Shader.h"
 #include "../../nCine/Audio/AudioBufferPlayer.h"
 #include "../../nCine/Audio/AudioStreamPlayer.h"
 #include "../../nCine/Input/InputEvents.h"

@@ -14,7 +14,6 @@
 #include "Input/RumbleProcessor.h"
 #include "Input/ControlScheme.h"
 #include "Rendering/UpscaleRenderPass.h"
-#include "UI/Menu/InGameMenu.h"
 
 #include "../nCine/Graphics/Shader.h"
 #include "../nCine/Audio/AudioBufferPlayer.h"

@@ -12,6 +12,7 @@
 #include "ScriptActorWrapper.h"
 #include "ScriptPlayerWrapper.h"
 
+#include "../ContentResolver.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 #include "../Actors/ActorBase.h"

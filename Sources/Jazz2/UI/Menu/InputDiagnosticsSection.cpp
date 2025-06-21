@@ -1,9 +1,9 @@
 ﻿#include "InputDiagnosticsSection.h"
 #include "MenuResources.h"
-#include "../../PreferencesCache.h"
 #include "../../Input/ControlScheme.h"
 
 #include "../../../nCine/Application.h"
+#include "../../../nCine/I18n.h"
 #include "../../../nCine/Input/JoyMapping.h"
 
 #include <Utf8.h>

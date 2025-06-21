@@ -3,18 +3,19 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "PacketTypes.h"
+#include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../UI/InGameConsole.h"
 #include "../UI/Multiplayer/MpHUD.h"
 #include "../UI/Multiplayer/MpInGameCanvasLayer.h"
 #include "../UI/Multiplayer/MpInGameLobby.h"
-#include "../../Main.h"
 
 #if defined(WITH_ANGELSCRIPT)
 #	include "../Scripting/LevelScriptLoader.h"
 #endif
 
 #include "../../nCine/Application.h"
+#include "../../nCine/I18n.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Primitives/Half.h"
 

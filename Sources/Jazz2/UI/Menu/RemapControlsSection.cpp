@@ -3,6 +3,7 @@
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
+#include "../../../nCine/I18n.h"
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Input/JoyMapping.h"
 

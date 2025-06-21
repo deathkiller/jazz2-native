@@ -1,7 +1,18 @@
 ﻿#pragma once
 
-#include "../ILevelHandler.h"
+#include "../../Main.h"
+
 #include "../../nCine/Base/BitArray.h"
+#include "../../nCine/Graphics/Texture.h"
+
+#include <memory>
+
+#include <Containers/ArrayView.h>
+#include <Containers/String.h>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+using namespace nCine;
 
 namespace Jazz2::Tiles
 {

@@ -1,6 +1,8 @@
 ﻿#include "AboutSection.h"
 #include "MenuResources.h"
+
 #include "../../../nCine/Application.h"
+#include "../../../nCine/I18n.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	define _i1 "\nWebGL"

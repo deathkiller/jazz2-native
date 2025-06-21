@@ -2,6 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 
+#include "../../ContentResolver.h"
 #include "../../LevelHandler.h"
 #include "../../Actors/Multiplayer/MpPlayer.h"
 

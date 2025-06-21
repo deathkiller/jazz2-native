@@ -4,9 +4,10 @@
 #include "GameplayEnhancementsSection.h"
 #include "LanguageSelectSection.h"
 #include "RefreshCacheSection.h"
-#include "../DiscordRpcClient.h"
 #include "../../Input/RgbLights.h"
 #include "../../PreferencesCache.h"
+
+#include "../../../nCine/I18n.h"
 
 #include <Utf8.h>
 

@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include "../Actors/ActorBase.h"
 #include "../ILevelHandler.h"
+#include "../Actors/ActorBase.h"
 
 #include "../../nCine/Base/HashMap.h"
 

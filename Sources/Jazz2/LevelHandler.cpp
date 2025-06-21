@@ -1,15 +1,18 @@
 ﻿#include "LevelHandler.h"
+#include "ContentResolver.h"
 #include "PreferencesCache.h"
 #include "Rendering/PlayerViewport.h"
 #include "UI/DiscordRpcClient.h"
 #include "UI/HUD.h"
 #include "UI/InGameConsole.h"
+#include "UI/Menu/InGameMenu.h"
 #include "../Main.h"
 
 #if defined(WITH_ANGELSCRIPT)
 #	include "Scripting/LevelScriptLoader.h"
 #endif
 
+#include "../nCine/I18n.h"
 #include "../nCine/MainApplication.h"
 #include "../nCine/ServiceLocator.h"
 #include "../nCine/tracy.h"
@@ -31,6 +34,7 @@
 #include <Utf8.h>
 
 using namespace nCine;
+using namespace Jazz2::Tiles;
 
 namespace Jazz2
 {

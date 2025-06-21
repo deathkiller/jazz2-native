@@ -6,6 +6,7 @@
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
+#include "../../../nCine/I18n.h"
 
 #include <Utf8.h>
 

@@ -18,6 +18,8 @@
 #include <Containers/DateTime.h>
 #include <Containers/StringStl.h>
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Scripting
 {
 	static void Unimplemented(const char* sourceName) {

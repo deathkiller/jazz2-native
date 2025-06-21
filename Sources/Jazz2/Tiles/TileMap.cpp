@@ -1,4 +1,5 @@
 ﻿#include "TileMap.h"
+#include "../ContentResolver.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 

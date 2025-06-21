@@ -3,9 +3,10 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "MenuResources.h"
-#include "CustomLevelSelectSection.h"
 #include "EpisodeSelectSection.h"
 #include "ServerSelectSection.h"
+
+#include "../../../nCine/I18n.h"
 
 #include <Utf8.h>
 

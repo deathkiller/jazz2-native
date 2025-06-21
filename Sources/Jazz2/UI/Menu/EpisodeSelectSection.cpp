@@ -1,10 +1,10 @@
 ﻿#include "EpisodeSelectSection.h"
 #include "CustomLevelSelectSection.h"
 #include "StartGameOptionsSection.h"
-#include "MainMenu.h"
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
-#include "../../../nCine/Base/FrameTimer.h"
+
+#include "../../../nCine/I18n.h"
 
 #if defined(WITH_MULTIPLAYER)
 #	include "CreateServerOptionsSection.h"

@@ -1,4 +1,5 @@
 ﻿#include "UpscaleRenderPass.h"
+#include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 
 #include "../../nCine/Application.h"

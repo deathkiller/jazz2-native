@@ -4,7 +4,10 @@
 
 #include "../../Actors/Multiplayer/PlayerOnServer.h"
 #include "../../Multiplayer/MpLevelHandler.h"
+#include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
+
+#include "../../../nCine/I18n.h"
 
 using namespace Jazz2::Multiplayer;
 using namespace Jazz2::Actors::Multiplayer;

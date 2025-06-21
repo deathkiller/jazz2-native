@@ -2,6 +2,8 @@
 #include "OptionsSection.h"
 #include "InGameMenu.h"
 
+#include "../../../nCine/I18n.h"
+
 #include <Utf8.h>
 
 namespace Jazz2::UI::Menu

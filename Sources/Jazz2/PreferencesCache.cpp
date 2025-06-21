@@ -3,7 +3,9 @@
 #include "LevelHandler.h"
 #include "Input/ControlScheme.h"
 #include "UI/DiscordRpcClient.h"
+
 #include "../nCine/Application.h"
+#include "../nCine/I18n.h"
 #include "../nCine/Base/Random.h"
 
 #include <Containers/StringConcatenable.h>

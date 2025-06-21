@@ -12,6 +12,7 @@
 #	endif
 #endif
 
+#include "nCine/I18n.h"
 #include "nCine/IAppEventHandler.h"
 #include "nCine/tracy.h"
 #include "nCine/Base/Random.h"

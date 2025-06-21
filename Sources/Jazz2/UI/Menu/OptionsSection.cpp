@@ -6,6 +6,8 @@
 #include "ControlsOptionsSection.h"
 #include "UserProfileOptionsSection.h"
 
+#include "../../../nCine/I18n.h"
+
 #include <Utf8.h>
 
 using namespace Jazz2::UI::Menu::Resources;

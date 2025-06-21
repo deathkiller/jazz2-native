@@ -2,6 +2,8 @@
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
 
+#include "../../../nCine/I18n.h"
+
 #include <Utf8.h>
 
 using namespace Jazz2::UI::Menu::Resources;

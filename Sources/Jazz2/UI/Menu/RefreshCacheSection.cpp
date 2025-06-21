@@ -4,9 +4,8 @@
 
 #include "MenuResources.h"
 #include "MainMenu.h"
-#include "../../PreferencesCache.h"
 
-#include "../../../nCine/Base/Algorithms.h"
+#include "../../../nCine/I18n.h"
 #include "../../../nCine/Graphics/BinaryShaderCache.h"
 #include "../../../nCine/Graphics/RenderResources.h"
 

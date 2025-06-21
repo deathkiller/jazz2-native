@@ -9,6 +9,7 @@
 #include "../../PreferencesCache.h"
 #include "../../Multiplayer/NetworkManager.h"
 
+#include "../../../nCine/I18n.h"
 #include "../../../nCine/Base/Random.h"
 
 #include <Utf8.h>

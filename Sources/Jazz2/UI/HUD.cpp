@@ -1,5 +1,7 @@
 ﻿#include "HUD.h"
 #include "InGameConsole.h"
+#include "Menu/IMenuContainer.h"
+#include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../Actors/Enemies/Bosses/BossBase.h"
 
@@ -8,7 +10,6 @@
 #endif
 
 #include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/Base/Random.h"
 #include "../../nCine/Application.h"
 
 #if defined(DEATH_TARGET_ANDROID)
