@@ -92,7 +92,7 @@ namespace Death { namespace IO {
 		if (_fileHandle != INVALID_HANDLE_VALUE) {
 			if (::CloseHandle(_fileHandle)) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGI("File \"%s\" closed", _path.data());
+				LOGB("File \"%s\" closed", _path.data());
 #	endif
 				_fileHandle = INVALID_HANDLE_VALUE;
 			} else {
@@ -106,7 +106,7 @@ namespace Death { namespace IO {
 			const std::int32_t retValue = ::close(_fileDescriptor);
 			if (retValue >= 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGI("File \"%s\" closed", _path.data());
+				LOGB("File \"%s\" closed", _path.data());
 #	endif
 				_fileDescriptor = -1;
 			} else {
@@ -467,9 +467,9 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TRACE_VERBOSE_IO)
 		switch (mode & FileAccess::ReadWrite) {
-			default: LOGI("File \"%s\" opened", _path.data()); break;
-			case FileAccess::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
-			case FileAccess::ReadWrite: LOGI("File \"%s\" opened for read+write", _path.data()); break;
+			default: LOGB("File \"%s\" opened", _path.data()); break;
+			case FileAccess::Write: LOGB("File \"%s\" opened for write", _path.data()); break;
+			case FileAccess::ReadWrite: LOGB("File \"%s\" opened for read+write", _path.data()); break;
 		}
 #endif
 	}

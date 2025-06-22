@@ -661,10 +661,7 @@ namespace Death { namespace Trace {
 			}
 		} else if DEATH_UNLIKELY(transitEvent.Level == TraceLevel::Deferred) {
 			if (_backtraceStorage) {
-				TransitEvent transitEventCopy;
-				transitEvent.CopyTo(transitEventCopy);
-
-				_backtraceStorage->Store(Death::move(transitEventCopy), threadContext.GetThreadId());
+				_backtraceStorage->Store(Death::move(transitEvent), threadContext.GetThreadId());
 			} else {
 				// If the backtrace storage is not initialized, we dispatch the event directly to the sinks
 				DispatchTransitEventToSinks(transitEvent, threadContext.GetThreadId());
@@ -930,7 +927,8 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		while (!EnqueueEntry(InitializeBacktraceRequested, 0, reinterpret_cast<const void*>(maxCapacity), {}, 0)) {
+		while (!EnqueueEntry(InitializeBacktraceRequested, 0,
+					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), {}, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 

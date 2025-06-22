@@ -787,14 +787,6 @@ namespace Death { namespace Trace {
 
 			return *this;
 		}
-
-		void CopyTo(TransitEvent& other) const
-		{
-			other.Timestamp = Timestamp;
-			other.FunctionName = FunctionName;
-			other.Message = Message;
-			other.Level = Level;
-		}
 	};
 
 #if defined(DEATH_TRACE_ASYNC)
