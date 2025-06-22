@@ -10,9 +10,13 @@
 #if defined(DEATH_TRACE)
 
 #include "../CommonWindows.h"
+#include "../Containers/Array.h"
+#include "../Containers/Function.h"
 #include "../Containers/SmallVector.h"
+#include "../Containers/String.h"
 
 #include <chrono>
+#include <string>
 
 #if defined(DEATH_TARGET_ANDROID) || defined(__linux__)
 #	include <sys/syscall.h>
@@ -40,7 +44,6 @@
 #	include <atomic>
 #	include <memory>
 #	include <mutex>
-#	include <string>
 #	include <thread>
 #	include <limits>
 
@@ -129,7 +132,7 @@ namespace Death { namespace Trace {
 		static constexpr std::uint32_t BlockingQueueRetryIntervalNanoseconds = 800;
 
 		/** @brief Enables huge pages to be used for storage of underlying queue to reduce TBL misses, available only on Linux */
-		static constexpr bool HugePagesEnabled = false;
+		static constexpr bool HugePagesEnabled = true;
 
 		/** @brief Initial item capacity of transit event bufferper thread context, must be power of 2 */
 		static constexpr std::uint32_t TransitEventBufferInitialCapacity = 128;
@@ -157,25 +160,26 @@ namespace Death { namespace Trace {
 		static constexpr std::chrono::microseconds LogTimestampOrderingGracePeriod{250};
 
 		/** @brief Special value for level to force immediate flushing of all buffers */
-		static constexpr TraceLevel FlushRequired = (TraceLevel)UINT8_MAX;
+		static constexpr TraceLevel FlushRequested = TraceLevel(UINT8_MAX);
+		/** @brief Special value for level to initialize backtrace storage */
+		static constexpr TraceLevel InitializeBacktraceRequested = TraceLevel(UINT8_MAX - 1);
+		/** @brief Special value for level to force immediate flushing of backtrace storage */
+		static constexpr TraceLevel FlushBacktraceRequested = TraceLevel(UINT8_MAX - 2);
 
 		static constexpr std::size_t CacheLineSize = 64u;
 		static constexpr std::size_t CacheLineAligned = 2 * CacheLineSize;
 
-		constexpr bool IsPowerOfTwo(std::uint64_t number) noexcept
-		{
+		constexpr bool IsPowerOfTwo(std::uint64_t number) noexcept {
 			return (number != 0) && ((number & (number - 1)) == 0);
 		}
 
 		template<typename T>
-		constexpr T MaxPowerOfTwo() noexcept
-		{
+		constexpr T MaxPowerOfTwo() noexcept {
 			return (std::numeric_limits<T>::max() >> 1) + 1;
 		}
 
 		template<typename T>
-		T NextPowerOfTwo(T n)
-		{
+		T NextPowerOfTwo(T n) {
 			constexpr T maxPowerOf2 = MaxPowerOfTwo<T>();
 
 			if (n >= maxPowerOf2) {
@@ -198,8 +202,7 @@ namespace Death { namespace Trace {
 
 		/** @brief Returns value of timestamp counter on current thread (if supported) */
 #	if defined(__aarch64__)
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept
-		{
+		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 			// System timer of ARMv8 runs at a different frequency than the CPU's.
 			// The frequency is fixed, typically in the range 1-50MHz.  It can be
 			// read at CNTFRQ special register.  We assume the OS has set up the virtual timer properly.
@@ -208,8 +211,7 @@ namespace Death { namespace Trace {
 			return static_cast<uint64_t>(virtualTimerValue);
 		}
 #	elif (defined(__ARM_ARCH) && !defined(DEATH_TARGET_MSVC))
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept
-		{
+		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 #		if (__ARM_ARCH >= 6)
 			// V6 is the earliest arch that has a standard cyclecount
 			std::uint32_t pmccntr;
@@ -228,9 +230,26 @@ namespace Death { namespace Trace {
 
 			return static_cast<std::uint64_t>(std::chrono::system_clock::now().time_since_epoch().count());
 		}
+#	elif defined(__riscv)
+		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
+			std::uint64_t tsc;
+			__asm__ volatile("rdtime %0" : "=r"(tsc));
+			return tsc;
+		}
+#	elif defined(__loongarch64)
+		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
+			std::uint64_t tsc;
+			__asm__ volatile("rdtime.d %0,$r0" : "=r" (tsc));
+			return tsc;
+		}
+#	elif defined(__s390x__)
+		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
+			std::uint64_t tsc;
+			__asm__ volatile("stck %0" : "=Q" (tsc) : : "cc");
+			return tsc;
+		}
 #	elif (defined(_M_ARM) || defined(_M_ARM64) || defined(__PPC64__))
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept
-		{
+		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 			return static_cast<std::uint64_t>(std::chrono::system_clock::now().time_since_epoch().count());
 		}
 #	else
@@ -491,6 +510,14 @@ namespace Death { namespace Trace {
 #		endif
 
 				void* mem = ::mmap(nullptr, totalSize, PROT_READ | PROT_WRITE, flags, -1, 0);
+
+#		if defined(__linux__)
+				if (mem == MAP_FAILED && hugesPagesEnabled) {
+					flags &= ~MAP_HUGETLB;
+					mem = ::mmap(nullptr, totalSize, PROT_READ | PROT_WRITE, flags, -1, 0);
+				}
+#		endif
+
 				DEATH_DEBUG_ASSERT(mem != MAP_FAILED, ("mmap() failed with error %i (%s)", errno, strerror(errno)), nullptr);
 
 				// Calculate the aligned address after the metadata
@@ -721,6 +748,7 @@ namespace Death { namespace Trace {
 			}
 		};
 	}
+#endif
 
 	struct TransitEvent
 	{
@@ -728,6 +756,7 @@ namespace Death { namespace Trace {
 		union {
 			const char* FunctionName;
 			std::atomic<bool>* FlushFlag;
+			std::uint32_t Capacity;
 		};
 		std::string Message;
 		TraceLevel Level;
@@ -758,8 +787,17 @@ namespace Death { namespace Trace {
 
 			return *this;
 		}
+
+		void CopyTo(TransitEvent& other) const
+		{
+			other.Timestamp = Timestamp;
+			other.FunctionName = FunctionName;
+			other.Message = Message;
+			other.Level = Level;
+		}
 	};
 
+#if defined(DEATH_TRACE_ASYNC)
 	class TransitEventBuffer
 	{
 	public:
@@ -1071,6 +1109,32 @@ namespace Death { namespace Trace {
 	};
 #endif
 
+	namespace Implementation
+	{
+		class BacktraceStorage
+		{
+		public:
+			BacktraceStorage();
+
+			void Store(TransitEvent transitEvent, Containers::StringView threadId);
+			void Process(Containers::Function<void(TransitEvent const&, Containers::StringView threadId)>&& callback);
+			void SetCapacity(std::uint32_t capacity);
+
+		private:
+			struct StoredTransitEvent
+			{
+				StoredTransitEvent(Containers::String threadId, TransitEvent transitEvent);
+
+				Containers::String ThreadId;
+				TransitEvent Event;
+			};
+
+			std::uint32_t _capacity;
+			std::uint32_t _index;
+			Containers::Array<StoredTransitEvent> _storedEvents;
+		};
+	}
+
 	/**
 		@brief Logger backend processes trace items in the background
 		
@@ -1079,17 +1143,8 @@ namespace Death { namespace Trace {
 	class LoggerBackend
 	{
 	public:
-		LoggerBackend()
-#if defined(DEATH_TRACE_ASYNC)
-			: _rdtscClock(Implementation::RdtscResyncInterval), _lastRdtscResyncTime(std::chrono::system_clock::now()), _workerThreadAlive(false)
-#endif
-		{
-		}
-
-		~LoggerBackend()
-		{
-			Dispose();
-		}
+		LoggerBackend();
+		~LoggerBackend();
 
 		LoggerBackend(LoggerBackend const&) = delete;
 		LoggerBackend& operator=(LoggerBackend const&) = delete;
@@ -1107,13 +1162,26 @@ namespace Death { namespace Trace {
 		bool IsAlive() const noexcept;
 #else
 		/** @brief Dispatches the specified entry to all sinks */
-		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength);
+		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength, Containers::StringView threadId);
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void FlushActiveSinks();
+
+		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
+		void InitializeBacktrace(std::uint32_t maxCapacity);
+		/** @brief Writes any stored deferred entries to all sinks */
+		void FlushBacktrace();
+		/** @brief Enqueues the specified entry to backtrace storage */
+		void EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength);
 #endif
+
+		/** @brief Returns minimum trace level to trigger automatic flushing of deferred entries */
+		TraceLevel GetBacktraceFlushLevel() const;
+		/** @brief Sets minimum trace level to trigger automatic flushing of deferred entries */
+		void SetBacktraceFlushLevel(TraceLevel flushLevel);
 
 	private:
 		Containers::SmallVector<ITraceSink*, 1> _sinks;
+		std::shared_ptr<Implementation::BacktraceStorage> _backtraceStorage;
 
 		void Initialize();
 		void Dispose();
@@ -1121,10 +1189,11 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		std::thread _workerThread;
 		Death::Threading::AutoResetEvent _wakeUpEvent;
+		std::atomic<TraceLevel> _backtraceFlushLevel;
+		std::atomic<bool> _workerThreadAlive;
 		Implementation::RdtscClock _rdtscClock;
 		Containers::SmallVector<ThreadContext*, 0> _activeThreadContextsCache;
 		std::chrono::system_clock::time_point _lastRdtscResyncTime;
-		std::atomic<bool> _workerThreadAlive;
 
 		void CleanUpBeforeExit();
 		void UpdateActiveThreadContextsCache();
@@ -1196,6 +1265,8 @@ namespace Death { namespace Trace {
 		void ProcessTransitEvent(ThreadContext const& threadContext, TransitEvent& transitEvent, std::atomic<bool>*& flushFlag);
 		bool ProcessLowestTimestampTransitEvent();
 		void ProcessEvents();
+#else
+		TraceLevel _backtraceFlushLevel;
 #endif
 	};
 
@@ -1222,6 +1293,11 @@ namespace Death { namespace Trace {
 		bool Write(TraceLevel level, const char* functionName, const char* fmt, va_list args);
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void Flush(std::uint32_t sleepDurationNs = 100);
+
+		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
+		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
+		/** @brief Writes any stored deferred entries to all sinks */
+		void FlushBacktrace();
 
 	private:
 		LoggerBackend _backend;

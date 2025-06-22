@@ -23,6 +23,7 @@
 enum class TraceLevel {
 	Unknown,		/**< Unspecified */
 	Debug,			/**< Debug */
+	Deferred,		/**< Deferred (not written immediately) */
 	Info,			/**< Info */
 	Warning,		/**< Warning */
 	Error,			/**< Error */
@@ -54,6 +55,8 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ..
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
+/** @brief Print a deferred formatted message with @ref TraceLevel::Deferred to the event log */
+#	define LOGB(fmt, ...) DEATH_TRACE(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
 #	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
@@ -65,6 +68,8 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ..
 #else
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	define LOGD(fmt, ...) do {} while (false)
+/** @brief Print a deferred formatted message with @ref TraceLevel::Deferred to the event log */
+#	define LOGB(fmt, ...) do {} while (false)
 /** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
 #	define LOGI(fmt, ...) do {} while (false)
 /** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
