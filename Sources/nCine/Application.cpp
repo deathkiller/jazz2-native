@@ -414,10 +414,11 @@ static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, Stri
 	dest[length++] = ' ';
 }
 
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-// Strip function specifiers, return type and arguments from function name, because GCC/Clang includes full function signature
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || defined(DEATH_TARGET_MSVC)
 static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
 {
+#	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+	// Strip function specifiers, return type and arguments from function name, because GCC/Clang includes full function signature
 	static constexpr StringView LambdaSuffix = "::<lambda()>"_s;
 	static constexpr StringView LambdaClangSuffix = "::(anonymous class)::operator()()"_s;
 	static constexpr StringView OperatorPrefix = "operator"_s;
@@ -485,18 +486,36 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 		AppendPart(dest, length, &functionName[i], end - i);
 		AppendPart(dest, length, "()");
 		if (isLambda) {
-			AppendPart(dest, length, LambdaSuffix.data(), LambdaSuffix.size());
+			AppendPart(dest, length, LambdaSuffix.data(), (std::int32_t)LambdaSuffix.size());
 		}
 	} else {
 		AppendPart(dest, length, functionName, functionNameLength);
 	}
+#	else
+	// Try to shorten lambda function names, for example "FunctionName::<lambda_fdcd1e49ba268f6f79b01fbdc7d2a72f>::operator ()()"
+	static constexpr StringView LambdaSuffix = "()::<lambda()>"_s;
+	static constexpr StringView LambdaPrefixMsvc = "::<lambda_"_s;
+	static constexpr StringView LambdaSuffixMsvc = ">::operator ()()"_s;
+
+	StringView functionNameView = StringView(functionName, functionNameLength);
+	if (auto lambdaPrefix = functionNameView.find(LambdaPrefixMsvc)) {
+		if (functionNameView.suffix(lambdaPrefix.end()).hasSuffix(LambdaSuffixMsvc)) {
+			auto functionNamePrefix = functionNameView.prefix(lambdaPrefix.begin());
+			AppendPart(dest, length, functionNamePrefix.data(), (std::int32_t)functionNamePrefix.size());
+			AppendPart(dest, length, LambdaSuffix.data(), (std::int32_t)LambdaSuffix.size());
+			return;
+		}
+	}
+
+	AppendPart(dest, length, functionName, functionNameLength);
+#	endif
 }
 #endif
 
 static void AppendFunctionName(char* dest, std::int32_t& length, StringView functionName)
 {
 	if (!functionName.empty()) {
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || defined(DEATH_TARGET_MSVC)
 		AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
 #else
 		AppendPart(dest, length, functionName.data(), (std::int32_t)functionName.size());
@@ -524,13 +543,14 @@ static void AppendMessagePrefixIfAny(char* dest, std::int32_t& length, TraceLeve
 					break;
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 				case TraceLevel::Debug:
+				case TraceLevel::Deferred:
 					AppendPart(dest, length, ColorDarkGray);
 					break;
 #endif
 			}
 		}
 
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || defined(DEATH_TARGET_MSVC)
 		AppendShortenedFunctionName(dest, length, functionName.data(), (std::int32_t)functionName.size());
 #else
 		AppendPart(dest, length, functionName.data(), (std::int32_t)functionName.size());
@@ -566,6 +586,7 @@ static void AppendMessageColor(char* dest, std::int32_t& length, TraceLevel leve
 			AppendPart(dest, length, ColorBrightYellow);
 			break;
 		case TraceLevel::Debug:
+		case TraceLevel::Deferred:
 			AppendPart(dest, length, ColorDarkGray);
 			break;
 #endif
@@ -1069,11 +1090,11 @@ namespace nCine
 
 			if (__consoleType >= ConsoleType::EscapeCodes) {
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
-				bool shouldResetBefore = (level != TraceLevel::Warning && level != TraceLevel::Debug);
+				bool shouldResetBefore = (level != TraceLevel::Warning && level != TraceLevel::Debug && level != TraceLevel::Deferred);
 #	else
 				bool shouldResetBefore = true;
 #	endif
-				bool shouldResetAfter = (level == TraceLevel::Debug || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal);
+				bool shouldResetAfter = (level == TraceLevel::Debug || level == TraceLevel::Deferred || level == TraceLevel::Warning || level == TraceLevel::Error || level == TraceLevel::Assert || level == TraceLevel::Fatal);
 
 				if (level < TraceLevel::Error && __consoleType >= ConsoleType::EscapeCodes24bit) {
 					std::int32_t prevState = 0;
@@ -1098,7 +1119,7 @@ namespace nCine
 						}
 
 						if (prevState != 2) {
-							if (level == TraceLevel::Debug) {
+							if (level == TraceLevel::Debug || level == TraceLevel::Deferred) {
 								AppendPart(logEntryWithColors, length2, ColorDimString);
 							} else if (__consoleDarkMode) {
 								AppendPart(logEntryWithColors, length2, ColorDarkString);
@@ -1425,7 +1446,7 @@ namespace nCine
 				bool hasVirtualTerminal = EnableVirtualTerminalProcessing(hStdOut);
 				__consoleType = (hasVirtualTerminal ? ConsoleType::EscapeCodes24bit : ConsoleType::WinApi);
 				if (hasVirtualTerminal) {
-					CheckConsoleCapabilities();
+					CheckConsoleCapabilities();	
 				}
 
 				::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
@@ -1447,6 +1468,9 @@ namespace nCine
 #	endif
 
 		Trace::AttachSink(this);
+#	if !defined(DEATH_DEBUG)
+		Trace::InitializeBacktrace(8, TraceLevel::Warning);
+#	endif
 	}
 
 	void Application::ShutdownTrace()

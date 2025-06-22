@@ -42,20 +42,20 @@ namespace Death
 
 	namespace Trace
 	{
-		/**
-			@brief Registers the sink and initializes the event logger if no sink was attached before
-		*/
+		/** @brief Registers the sink and initializes the event logger if no sink was attached before */
 		void AttachSink(ITraceSink* sink);
 
-		/**
-			@brief Unregisters the sink and uninitializes the event logger if no sink left
-		*/
+		/** @brief Unregisters the sink and uninitializes the event logger if no sink left */
 		void DetachSink(ITraceSink* sink);
 
-		/**
-			@brief Flushes and waits until all prior entries are written to all sinks
-		*/
+		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void Flush();
+
+		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
+		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
+
+		/** @brief Writes any stored deferred entries to all sinks */
+		void FlushBacktrace();
 	}
 }
 
