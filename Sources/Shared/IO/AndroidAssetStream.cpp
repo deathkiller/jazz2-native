@@ -40,7 +40,7 @@ namespace Death { namespace IO {
 			const std::int32_t retValue = ::close(_fileDescriptor);
 			if (retValue >= 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGI("File \"%s/%s\" closed", Prefix.data(), _path.data());
+				LOGB("File \"%s/%s\" closed", Prefix.data(), _path.data());
 #	endif
 				_fileDescriptor = -1;
 			} else {
@@ -54,7 +54,7 @@ namespace Death { namespace IO {
 			AAsset_close(_asset);
 			_asset = nullptr;
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGI("File \"%s/%s\" closed", Prefix.data(), _path.data());
+			LOGB("File \"%s/%s\" closed", Prefix.data(), _path.data());
 #	endif
 		}
 #endif
@@ -312,7 +312,7 @@ namespace Death { namespace IO {
 		}
 
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-		LOGI("File \"%s/%s\" opened", Prefix.data(), _path.data());
+		LOGB("File \"%s/%s\" opened", Prefix.data(), _path.data());
 #	endif
 #else
 		// An asset file can only be read
@@ -325,7 +325,7 @@ namespace Death { namespace IO {
 		}
 
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-		LOGI("File \"%s/%s\" opened", Prefix.data(), _path.data());
+		LOGB("File \"%s/%s\" opened", Prefix.data(), _path.data());
 #	endif
 
 		// Calculating file size

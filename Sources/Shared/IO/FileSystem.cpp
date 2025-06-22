@@ -1805,7 +1805,7 @@ namespace Death { namespace IO {
 						DWORD error = ::GetLastError();
 						if (error != ERROR_ALREADY_EXISTS) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-							LOGW("Cannot create directory \"%S\" with error 0x%08x%s", fullPath.data(), error, __GetWin32ErrorSuffix(error));
+							LOGW("Cannot create directory \"%s\" with error 0x%08x%s", Utf8::FromUtf16(fullPath).data(), error, __GetWin32ErrorSuffix(error));
 #	endif
 							return false;
 						}
@@ -1827,7 +1827,7 @@ namespace Death { namespace IO {
 				DWORD error = ::GetLastError();
 				if (error != ERROR_ALREADY_EXISTS) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-					LOGW("Cannot create directory \"%S\" with error 0x%08x%s", fullPath.data(), error, __GetWin32ErrorSuffix(error));
+					LOGW("Cannot create directory \"%s\" with error 0x%08x%s", Utf8::FromUtf16(fullPath).data(), error, __GetWin32ErrorSuffix(error));
 #	endif
 					return false;
 				}
