@@ -182,76 +182,121 @@ static bool EnableVirtualTerminalProcessing(HANDLE consoleHandleOut)
 			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
 }
 
+template<typename TCallback>
+static bool FillBufferWithTimeout(HANDLE handle, OVERLAPPED& ov, char* buffer, std::uint32_t bufferSize, TCallback callback)
+{
+	constexpr std::uint64_t TimeoutMs = 100;
+
+	std::uint32_t bytesRead = 0;
+	std::uint64_t startTime = ::GetTickCount64();
+	std::uint64_t now = startTime;
+
+	while (true) {
+		if (!::ReadFile(handle, buffer + bytesRead, bufferSize - bytesRead, NULL, &ov)) {
+			DWORD err = GetLastError();
+			if (err == ERROR_IO_PENDING) {
+				DWORD waitResult = ::WaitForSingleObject(ov.hEvent, (DWORD)(TimeoutMs - (now - startTime)));
+				if (waitResult == WAIT_TIMEOUT) {
+					::CancelIo(handle);
+					break;
+				} else if (waitResult != WAIT_OBJECT_0) {
+					break;
+				}
+			} else {
+				break;
+			}
+		}
+
+		DWORD partialBytesRead = 0;
+		if (!::GetOverlappedResult(handle, &ov, &partialBytesRead, FALSE)) {
+			break;
+		}
+
+		bytesRead += partialBytesRead;
+		if (callback(StringView(buffer, bytesRead))) {
+			return true;
+		}
+
+		now = ::GetTickCount64();
+		if (now - startTime >= TimeoutMs || bytesRead >= bufferSize) {
+			break;
+		}
+	}
+
+	return false;
+}
+
 static void CheckConsoleCapabilities()
 {
+	HANDLE hStdIn = ::CreateFile(L"CONIN$", GENERIC_READ | GENERIC_WRITE,
+		FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, nullptr);
+	if (hStdIn == INVALID_HANDLE_VALUE) {
+		LOGD("Failed to open async \"CONIN$\" handle with error 0x%08x", ::GetLastError());
+		return;
+	}
+
+	OVERLAPPED ov{};
+	ov.hEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+	if (ov.hEvent == NULL) {
+		::CloseHandle(hStdIn);
+		return;
+	}
+
 	HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-	HANDLE hStdIn = ::GetStdHandle(STD_INPUT_HANDLE);
 
 	DWORD stdInMode = 0;
 	::GetConsoleMode(hStdIn, &stdInMode);
 	::SetConsoleMode(hStdIn, (stdInMode & ~ENABLE_LINE_INPUT) | ENABLE_VIRTUAL_TERMINAL_INPUT);
 
 	CHAR buffer[128];
-	DWORD bytesRead, bytesWritten;
-	DWORD totalRead = 0;
+	DWORD bytesWritten;
 
 	static const char daRequest[] = "\x1B[c";
 	::WriteConsoleA(hStdOut, daRequest, sizeof(daRequest) - 1, &bytesWritten, nullptr);
 	::FlushConsoleInputBuffer(hStdIn);
 
-	std::uint64_t startTime = ::GetTickCount64();
-	do {
-		if (::WaitForSingleObject(hStdIn, 50) == WAIT_OBJECT_0) {
-			if (::ReadConsoleA(hStdIn, buffer + totalRead, sizeof(buffer) - totalRead, &bytesRead, nullptr)) {
-				totalRead += bytesRead;
-				StringView bufferView = StringView(buffer, totalRead);
-				if (StringView end = bufferView.find('c')) {
-					if (StringView begin = bufferView.find("\x1B[?"_s)) {
-						if (begin.end() < end.begin()) {
-							String response = ';' + bufferView.slice(begin.end(), end.begin()) + ';';
-							if (response.contains(";4;"_s)) {
-								__consoleSixelSupported = true;
-							}
-						}
+	FillBufferWithTimeout(hStdIn, ov, buffer, sizeof(buffer), [](StringView bufferView) {
+		if (StringView end = bufferView.find('c')) {
+			if (StringView begin = bufferView.find("\x1B[?"_s)) {
+				if (begin.end() < end.begin()) {
+					String response = ';' + bufferView.slice(begin.end(), end.begin()) + ';';
+					if (response.contains(";4;"_s)) {
+						__consoleSixelSupported = true;
 					}
-					break;
 				}
 			}
+			return true;
 		}
-	} while (::GetTickCount64() - startTime < 400 && totalRead < sizeof(buffer));
+		return false;
+	});
 
 	static const char bgColorRequest[] = "\x1B]11;?\x07";
 	::WriteConsoleA(hStdOut, bgColorRequest, sizeof(bgColorRequest) - 1, &bytesWritten, nullptr);
 	::FlushConsoleInputBuffer(hStdIn);
 	
-	totalRead = 0;
-	startTime = ::GetTickCount64();
-	do {
-		if (::WaitForSingleObject(hStdIn, 50) == WAIT_OBJECT_0) {
-			if (::ReadConsoleA(hStdIn, buffer + totalRead, sizeof(buffer) - totalRead, &bytesRead, nullptr)) {
-				totalRead += bytesRead;
-				StringView bufferView = StringView(buffer, totalRead);
-				if (StringView end = bufferView.find("\x1B\\"_s)) {
-					if (StringView begin = bufferView.find("\x1B]11;rgb:"_s)) {
-						if (begin.end() < end.begin()) {
-							auto rrggbb = bufferView.slice(begin.end(), end.begin()).split('/');
-							if (rrggbb.size() == 3) {
-								String part = rrggbb[0];
-								std::uint32_t r = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
-								part = rrggbb[1];
-								std::uint32_t g = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
-								part = rrggbb[2];
-								std::uint32_t b = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
-								std::uint32_t luminance = ((13933 * r) + (46871 * g) + (4732 * b)) >> 16;
-								__consoleDarkMode = (luminance < 128);
-							}
-						}
+	FillBufferWithTimeout(hStdIn, ov, buffer, sizeof(buffer), [](StringView bufferView) {
+		if (StringView end = bufferView.find("\x1B\\"_s)) {
+			if (StringView begin = bufferView.find("\x1B]11;rgb:"_s)) {
+				if (begin.end() < end.begin()) {
+					auto rrggbb = bufferView.slice(begin.end(), end.begin()).split('/');
+					if (rrggbb.size() == 3) {
+						String part = rrggbb[0];
+						std::uint32_t r = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+						part = rrggbb[1];
+						std::uint32_t g = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+						part = rrggbb[2];
+						std::uint32_t b = (strtoul(part.data(), nullptr, 16) >> 8) & 0xFF;
+						std::uint32_t luminance = ((13933 * r) + (46871 * g) + (4732 * b)) >> 16;
+						__consoleDarkMode = (luminance < 128);
 					}
-					break;
 				}
 			}
+			return true;
 		}
-	} while (::GetTickCount64() - startTime < 400 && totalRead < sizeof(buffer));
+		return false;
+	});
+
 
 	::SetConsoleMode(hStdIn, stdInMode);
 }

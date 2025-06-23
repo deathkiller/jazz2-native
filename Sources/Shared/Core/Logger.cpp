@@ -810,7 +810,7 @@ namespace Death { namespace Trace {
 		_backtraceStorage->SetCapacity(maxCapacity);
 	}
 
-	void LoggerBackend::FlushBacktrace()
+	void LoggerBackend::FlushBacktraceAsync()
 	{
 		if (_backtraceStorage) {
 			_backtraceStorage->Process(
@@ -940,7 +940,7 @@ namespace Death { namespace Trace {
 #endif
 	}
 
-	void Logger::FlushBacktrace()
+	void Logger::FlushBacktraceAsync()
 	{
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
@@ -951,7 +951,7 @@ namespace Death { namespace Trace {
 
 		_backend.Notify();
 #else
-		_backend.FlushBacktrace();
+		_backend.FlushBacktraceAsync();
 #endif
 	}
 
@@ -1051,7 +1051,7 @@ namespace Death { namespace Trace {
 
 		TraceLevel backtraceFlushLevel = _backend.GetBacktraceFlushLevel();
 		if DEATH_UNLIKELY(backtraceFlushLevel != TraceLevel::Unknown && level >= backtraceFlushLevel) {
-			_backend.FlushBacktrace();
+			_backend.FlushBacktraceAsync();
 		}
 
 		_backend.DispatchEntryToSinks(level, timestamp, functionName, content, contentLength, {});
@@ -1081,9 +1081,9 @@ namespace Death { namespace Trace {
 		_internalLogger.InitializeBacktrace(maxCapacity, flushLevel);
 	}
 
-	void FlushBacktrace()
+	void FlushBacktraceAsync()
 	{
-		_internalLogger.FlushBacktrace();
+		_internalLogger.FlushBacktraceAsync();
 	}
 
 }}

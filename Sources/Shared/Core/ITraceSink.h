@@ -18,7 +18,7 @@ namespace Death
 		@brief Interface for sink to be used by logger writing to it
 		
 		The sink needs to be registered using @ref Trace::AttachSink() and unregistered using @ref Trace::DetachSink().
-		Then all registered sinks are automatically used by `LOGD`/`LOGI`/`LOGW`/`LOGE` calls and asserts.
+		Then all registered sinks are automatically used by `LOGD`/`LOGB`/`LOGI`/`LOGW`/`LOGE` calls and asserts.
 		See also @ref Asserts.h for more details.
 	*/
 	class ITraceSink
@@ -54,8 +54,8 @@ namespace Death
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
 		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
 
-		/** @brief Writes any stored deferred entries to all sinks */
-		void FlushBacktrace();
+		/** @brief Writes any stored deferred entries to all sinks asynchronously */
+		void FlushBacktraceAsync();
 	}
 }
 
