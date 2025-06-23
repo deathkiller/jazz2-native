@@ -132,7 +132,7 @@ namespace Death { namespace Trace {
 		static constexpr std::uint32_t BlockingQueueRetryIntervalNanoseconds = 800;
 
 		/** @brief Enables huge pages to be used for storage of underlying queue to reduce TBL misses, available only on Linux */
-		static constexpr bool HugePagesEnabled = true;
+		static constexpr bool HugePagesEnabled = false;
 
 		/** @brief Initial item capacity of transit event bufferper thread context, must be power of 2 */
 		static constexpr std::uint32_t TransitEventBufferInitialCapacity = 128;
@@ -750,6 +750,11 @@ namespace Death { namespace Trace {
 	}
 #endif
 
+	/**
+		@brief Transit event stores required information to be dispatched to sinks
+		
+		This class should not usually be used directly.
+	*/
 	struct TransitEvent
 	{
 		std::uint64_t Timestamp;
@@ -1160,8 +1165,8 @@ namespace Death { namespace Trace {
 
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
 		void InitializeBacktrace(std::uint32_t maxCapacity);
-		/** @brief Writes any stored deferred entries to all sinks */
-		void FlushBacktrace();
+		/** @brief Writes any stored deferred entries to all sinks asynchronously */
+		void FlushBacktraceAsync();
 		/** @brief Enqueues the specified entry to backtrace storage */
 		void EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength);
 #endif
@@ -1288,8 +1293,8 @@ namespace Death { namespace Trace {
 
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
 		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
-		/** @brief Writes any stored deferred entries to all sinks */
-		void FlushBacktrace();
+		/** @brief Writes any stored deferred entries to all sinks asynchronously */
+		void FlushBacktraceAsync();
 
 	private:
 		LoggerBackend _backend;
