@@ -45,7 +45,7 @@ template<class ...Args>
 void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* format, const Args&... args)
 {
 	char formattedMessage[8192];
-	std::size_t length = Death::formatIntoInternal(formattedMessage, sizeof(formattedMessage), format, args...);
+	std::size_t length = Death::formatInto(formattedMessage, format, args...);
 	DEATH_TRACE(level, functionName, formattedMessage, std::uint32_t(length));
 }
 

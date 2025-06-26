@@ -4,9 +4,12 @@
 #include "../Containers/StringView.h"
 
 #include <cstring>
-#include <intrin.h>
 #include <limits>
 #include <type_traits>
+
+#if defined(DEATH_TARGET_MSVC)
+#	include <intrin.h>
+#endif
 
 namespace Death { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
