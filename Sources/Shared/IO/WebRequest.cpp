@@ -2549,7 +2549,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), std::size_t(value), curl_easy_strerror(res));
 			}
 		}
 

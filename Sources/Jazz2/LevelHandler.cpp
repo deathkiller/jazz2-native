@@ -210,7 +210,7 @@ namespace Jazz2
 			return false;
 		}
 
-		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName));
+		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName.data()));
 
 		AttachComponents(std::move(descriptor));
 
