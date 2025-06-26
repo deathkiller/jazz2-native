@@ -745,7 +745,7 @@ namespace Jazz2
 		deviceName[deviceNameLength] = '\0';
 
 		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, deviceName, arch);
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "{}|Android {}|{}|2|{}", androidId, sdkVersion, deviceName, arch);
 #elif defined(DEATH_TARGET_APPLE)
 		char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
 		if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
@@ -755,14 +755,15 @@ namespace Jazz2
 			DeviceDescLength = 0;
 		}
 		String appleVersion = Environment::GetAppleVersion();
-		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|macOS %s||5|%i", appleVersion.data(), arch);
+		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
+			"|macOS {}||5|{}", appleVersion, arch);
 #elif defined(DEATH_TARGET_SWITCH)
 		std::uint32_t switchVersion = Environment::GetSwitchVersion();
 		bool isAtmosphere = Environment::HasSwitchAtmosphere();
 
 		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "|Nintendo Switch %u.%u.%u%s||9|%i",
-			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)" : "", arch);
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo Switch {}.{}.{}{}||9|{}",
+			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)"_s : ""_s, arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;
@@ -776,8 +777,8 @@ namespace Jazz2
 			DeviceDescLength = 0;
 		}
 		String unixFlavor = Environment::GetUnixFlavor();
-		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
-			unixFlavor.empty() ? "Unix" : unixFlavor.data(), arch);
+		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength }, "|{}||4|{}",
+			unixFlavor.empty() ? "Unix"_s : unixFlavor, arch);
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;
@@ -801,13 +802,13 @@ namespace Jazz2
 			case DeviceType::Xbox: deviceType = "Xbox"; break;
 			default: deviceType = "Unknown"; break;
 		}
-		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
+		DeviceDescLength += formatInto(MutableStringView(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength), "|Windows {}.{}.{} ({})||7|{}",
 			(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), deviceType, arch);
 #	else
 		HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 		bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
-		DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength,
-			isWine ? "|Windows %i.%i.%i (Wine)||3|%i" : "|Windows %i.%i.%i||3|%i",
+		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
+			isWine ? "|Windows {}.{}.{} (Wine)||3|{}" : "|Windows {}.{}.{}||3|{}",
 			(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), arch);
 #	endif
 #else

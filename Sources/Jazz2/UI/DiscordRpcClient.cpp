@@ -116,7 +116,8 @@ namespace Jazz2::UI
 		bool isConnected = false;
 		for (std::int32_t j = 0; j < std::int32_t(arraySize(RpcPaths)); j++) {
 			for (std::int32_t i = 0; i < 10; i++) {
-				formatString(addr.sun_path, sizeof(addr.sun_path), RpcPaths[j].data(), tempPath.data(), i);
+				std::size_t length = formatInto({ addr.sun_path, sizeof(addr.sun_path) - 1 }, RpcPaths[j].data(), tempPath.data(), i);
+				addr.sun_path[length] = '\0';
 				if (::connect(_sockFd, (struct sockaddr*)&addr, sizeof(addr)) >= 0) {
 					isConnected = true;
 					break;
@@ -198,21 +199,21 @@ namespace Jazz2::UI
 		pid_t processId = ::getpid();
 #endif
 		char buffer[1024];
-		std::int32_t bufferOffset = formatString(buffer, "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
+		std::int32_t bufferOffset = formatInto(buffer, "{{\"cmd\":\"SET_ACTIVITY\",\"nonce\":{},\"args\":{{\"pid\":{},\"activity\":{{", ++_nonce, processId);
 
 		if (!richPresence.State.empty()) {
-			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"state\":\"%s\",", richPresence.State.data());
+			bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "\"state\":\"{}\",", richPresence.State);
 		}
 		if (!richPresence.Details.empty()) {
-			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"details\":\"%s\",", richPresence.Details.data());
+			bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "\"details\":\"{}\",", richPresence.Details);
 		}
 
-		bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"assets\":{");
+		bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "\"assets\":{{");
 
 		bool isFirst = true;
 		if (!richPresence.LargeImage.empty()) {
 			isFirst = false;
-			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"large_image\":\"%s\"", richPresence.LargeImage.data());
+			bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "\"large_image\":\"{}\"", richPresence.LargeImage);
 		}
 
 		if (!richPresence.LargeImageTooltip.empty()) {
@@ -220,7 +221,7 @@ namespace Jazz2::UI
 				buffer[bufferOffset++] = ',';
 			}
 			isFirst = false;
-			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"large_text\":\"%s\"", richPresence.LargeImageTooltip.data());
+			bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "\"large_text\":\"{}\"", richPresence.LargeImageTooltip);
 		}
 
 		if (!richPresence.SmallImage.empty()) {
@@ -228,7 +229,7 @@ namespace Jazz2::UI
 				buffer[bufferOffset++] = ',';
 			}
 			isFirst = false;
-			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"small_image\":\"%s\"", richPresence.SmallImage.data());
+			bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "\"small_image\":\"{}\"", richPresence.SmallImage);
 		}
 
 		if (!richPresence.SmallImageTooltip.empty()) {
@@ -236,10 +237,10 @@ namespace Jazz2::UI
 				buffer[bufferOffset++] = ',';
 			}
 			isFirst = false;
-			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"small_text\":\"%s\"", richPresence.SmallImageTooltip.data());
+			bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "\"small_text\":\"{}\"", richPresence.SmallImageTooltip);
 		}
 
-		bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "}}}}");
+		bufferOffset += formatInto({ buffer + bufferOffset, sizeof(buffer) - bufferOffset }, "}}}}}}}}");
 		
 #if defined(DEATH_TARGET_WINDOWS)
 		_pendingFrame = String(buffer, bufferOffset);
@@ -307,7 +308,7 @@ namespace Jazz2::UI
 
 		// Handshake
 		char buffer[2048];
-		std::int32_t bufferSize = formatString(buffer, "{\"v\":1,\"client_id\":\"%s\"}", _this->_clientId.data());
+		std::size_t bufferSize = formatInto(buffer, "{{\"v\":1,\"client_id\":\"{}\"}}", _this->_clientId);
 		_this->WriteFrame(Opcodes::Handshake, buffer, bufferSize);
 
 #if defined(DEATH_TARGET_WINDOWS)

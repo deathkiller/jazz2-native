@@ -112,14 +112,14 @@ namespace Jazz2::UI::Multiplayer
 			if (mpLevelHandler->_isServer) {
 #if defined(DEATH_DEBUG)
 				char debugBuffer[64];
-				formatString(debugBuffer, "%i b |", mpLevelHandler->_debugAverageUpdatePacketSize);
-				_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+				std::size_t length = formatInto(debugBuffer, "{} b |", mpLevelHandler->_debugAverageUpdatePacketSize);
+				_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
 					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
 #endif
 			} else {
 				char debugBuffer[64];
-				formatString(debugBuffer, "%u ms |", mpLevelHandler->_networkManager->GetRoundTripTimeMs());
-				_smallFont->DrawString(this, debugBuffer, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+				std::size_t length = formatInto(debugBuffer, "{} ms |", mpLevelHandler->_networkManager->GetRoundTripTimeMs());
+				_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
 					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
 			}
 		}
@@ -168,7 +168,7 @@ namespace Jazz2::UI::Multiplayer
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.TotalPlayerPoints > 0 && peerDesc->Points > 0) {
-			auto pointsText = _f("Points: %u", peerDesc->Points);
+			auto pointsText = _f("Points: {}", peerDesc->Points);
 			_smallFont->DrawString(this, pointsText, charOffsetShadow, view.X + view.W - 14.0f, view.Y + 30.0f + 1.0f, FontShadowLayer,
 				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 			_smallFont->DrawString(this, pointsText, charOffset, view.X + view.W - 14.0f, view.Y + 30.0f, FontLayer,
@@ -182,14 +182,14 @@ namespace Jazz2::UI::Multiplayer
 			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(timeLeftSecs, 1) * 100));
 
 			formatString(stringBuffer, "%d:%02d:%02d", minutes, seconds, milliseconds);
-			auto gameStartsInText = _f("Game starts in %s", stringBuffer);
+			auto gameStartsInText = _f("Game starts in {}", stringBuffer);
 			_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			return;
 		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::WaitingForMinPlayers) {
-			auto waitingText = _fn("Waiting for %i more player", "Waiting for %i more players", mpLevelHandler->_waitingForPlayerCount, mpLevelHandler->_waitingForPlayerCount);
+			auto waitingText = _fn("Waiting for {} more player", "Waiting for {} more players", mpLevelHandler->_waitingForPlayerCount, mpLevelHandler->_waitingForPlayerCount);
 			_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,

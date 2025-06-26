@@ -222,7 +222,7 @@ namespace Jazz2::Compatibility
 					} else {
 						std::uint32_t spacing = text[i] - '0';
 						std::uint32_t converted = 100 - (spacing * 10);
-						j += formatString(&buffer[j], 16, "[w:%i]", converted);
+						j += formatInto({ &buffer[j], 16 }, "[w:{}]", converted);
 						if (colorRandom && !colorFrozen) {
 							colorIndex++;
 						}
@@ -267,7 +267,7 @@ namespace Jazz2::Compatibility
 						buffer[j++] = 'c';
 						buffer[j++] = ']';
 					} else {
-						j += formatString(&buffer[j], 16, "[c:#%08x]", DefaultFontColors[colorIndex2 - 1]);
+						j += formatInto({ &buffer[j], 16 }, "[c:#{:.8x}]", DefaultFontColors[colorIndex2 - 1]);
 					}
 				}
 

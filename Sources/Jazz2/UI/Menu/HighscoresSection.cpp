@@ -136,7 +136,7 @@ namespace Jazz2::UI::Menu
 				default: episodeName = "Unknown"; break;
 			}
 
-			_root->DrawStringShadow(_f("Highscores for \f[c:#d0705d]%s\f[/c]", episodeName), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_f("Highscores for \f[c:#d0705d]{}\f[/c]", episodeName), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		}
 
@@ -299,8 +299,8 @@ namespace Jazz2::UI::Menu
 			pos--;
 		}
 		if (!isNotValid && pos <= MaxItems) {
-			formatString(stringBuffer, "%i.", pos);
-			_root->DrawStringShadow(stringBuffer, charOffset, nameX - 16.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+			std::size_t length = formatInto(stringBuffer, "{}.", pos);
+			_root->DrawStringShadow({ stringBuffer, length }, charOffset, nameX - 16.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
 				(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 		}
 
@@ -328,8 +328,8 @@ namespace Jazz2::UI::Menu
 
 		_root->DrawElement(PickupGemRed, -1, centerX * 1.18f - 6.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
 
-		formatString(stringBuffer, "%i · %i · %i · %i", item.Item->Gems[0], item.Item->Gems[1], item.Item->Gems[2], item.Item->Gems[3]);
-		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.18f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
+		std::size_t length = formatInto(stringBuffer, "{} · {} · {} · {}", item.Item->Gems[0], item.Item->Gems[1], item.Item->Gems[2], item.Item->Gems[3]);
+		_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX * 1.18f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
 			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f,0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 
 		std::int64_t elapsedSeconds = (item.Item->ElapsedMilliseconds / 1000);
@@ -340,8 +340,8 @@ namespace Jazz2::UI::Menu
 			std::int32_t elapsedMinutes = (elapsedSeconds / 60);
 			elapsedSeconds -= (elapsedMinutes * 60);
 			elapsedMinutes -= (elapsedHours * 60);
-			formatString(stringBuffer, "%i:%02i:%02i", elapsedHours, elapsedMinutes, elapsedSeconds);
-			_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.72f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+			std::size_t length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", elapsedHours, elapsedMinutes, elapsedSeconds);
+			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX * 1.72f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
 				(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
 

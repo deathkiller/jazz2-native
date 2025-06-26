@@ -230,7 +230,7 @@ namespace Jazz2::UI::Menu
 
 				if (prevEpisodeIndex != -1) {
 					// TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-					_root->DrawStringShadow(_f("You must complete \"%s\" first!", _items[prevEpisodeIndex].Item.Description.DisplayName.data()), charOffset, centerX, item.Y, IMenuContainer::FontLayer + 20,
+					_root->DrawStringShadow(_f("You must complete \"{}\" first!", _items[prevEpisodeIndex].Item.Description.DisplayName), charOffset, centerX, item.Y, IMenuContainer::FontLayer + 20,
 						Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
 					// TRANSLATORS: Information in Play Story section that episode is locked

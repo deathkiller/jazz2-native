@@ -20,7 +20,7 @@ namespace Jazz2::UI::Menu
 		if (ControlScheme::MaxSupportedPlayers > 1) {
 			for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
 				// TRANSLATORS: Menu item in Options > Controls section
-				_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _f("Remap Controls for Player %i", i + 1), false, i });
+				_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _f("Remap Controls for Player {}", i + 1), false, i });
 			}
 		} else {
 			// TRANSLATORS: Menu item in Options > Controls section

@@ -208,12 +208,12 @@ namespace Jazz2::Multiplayer
 		const auto& remoteServerId = _serverConfig->UniqueServerID;
 
 		char uuidStr[33];
-		std::int32_t uuidStrLength = formatString(uuidStr, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		std::size_t uuidStrLength = formatInto(uuidStr, "{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}",
 			remoteServerId[0], remoteServerId[1], remoteServerId[2], remoteServerId[3], remoteServerId[4], remoteServerId[5], remoteServerId[6], remoteServerId[7], remoteServerId[8], remoteServerId[9], remoteServerId[10], remoteServerId[11], remoteServerId[12], remoteServerId[13], remoteServerId[14], remoteServerId[15]);
 
 		String fullPath = fs::FindPathCaseInsensitive(
 			fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-				StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(path) }));
+				{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(path) }));
 		if (!fs::IsReadableFile(fullPath)) {
 			return {};
 		}
@@ -598,7 +598,7 @@ namespace Jazz2::Multiplayer
 	String NetworkManager::UuidToString(StaticArrayView<Uuid::Size, Uuid::Type> uuid)
 	{
 		String uuidStr{NoInit, 39};
-		DEATH_UNUSED std::int32_t uuidStrLength = formatString(uuidStr.data(), uuidStr.size() + 1, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+		DEATH_UNUSED std::size_t uuidStrLength = formatInto(MutableStringView(uuidStr), "{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}",
 			uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 		DEATH_DEBUG_ASSERT(uuidStr.size() == uuidStrLength);
 		return uuidStr;

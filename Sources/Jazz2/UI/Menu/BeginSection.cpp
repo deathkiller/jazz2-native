@@ -199,7 +199,7 @@ namespace Jazz2::UI::Menu
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		if (_isEmbedded) {
 			// Show additional label under the logo if the game is embedded in an <iframe> element
-			_root->DrawStringShadow(_f("For more information, visit %s and \uE000 Discord!", "\f[c:#707070]https://deat.tk/jazz2/\f[/c]"), charOffset, center.X, center.Y - 30.0f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_f("For more information, visit {} and \uE000 Discord!", "\f[c:#707070]https://deat.tk/jazz2/\f[/c]"_s), charOffset, center.X, center.Y - 30.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 			itemCount++;
 			center.Y += (0.4f * (float)canvas->ViewSize.Y / itemCount);

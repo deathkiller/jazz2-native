@@ -1358,7 +1358,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						SetStateHandler(std::move(newHandler));
 					}
 
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"%s\".\nPlease download the required files and try it again.", levelInit.LevelName.data()), true);
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"{}\".\nPlease download the required files and try it again.", levelInit.LevelName), true);
 				});
 				break;
 			}

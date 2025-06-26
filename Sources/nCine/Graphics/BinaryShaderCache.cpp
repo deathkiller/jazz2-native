@@ -58,8 +58,8 @@ namespace nCine
 		platformHash_ += CityHash64(infoStrings.glVersion, strlen(infoStrings.glVersion));
 
 		char platformHashString[24];
-		std::int32_t platformHashLength = formatString(platformHashString, "%016llx", platformHash_);
-		path_ = fs::CombinePath(path, { platformHashString, (std::size_t)platformHashLength });
+		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", platformHash_);
+		path_ = fs::CombinePath(path, { platformHashString, platformHashLength });
 		fs::CreateDirectories(path_);
 
 		bufferSize = 64 * 1024;
@@ -78,8 +78,8 @@ namespace nCine
 		std::uint64_t shaderNameHash = CityHash64(shaderName, strlen(shaderName));
 
 		char filename[32];
-		std::int32_t filenameLength = formatString(filename, "%016llx.shader", shaderNameHash);
-		return fs::CombinePath(path_, { filename, (std::size_t)filenameLength });
+		std::size_t filenameLength = formatInto(filename, "{:.16x}.shader", shaderNameHash);
+		return fs::CombinePath(path_, { filename, filenameLength });
 	}
 
 	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection)
