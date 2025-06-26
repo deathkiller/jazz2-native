@@ -5404,7 +5404,7 @@ namespace Jazz2::Multiplayer
 
 		if (winner) {
 			auto peerDesc = winner->GetPeerDescriptor();
-			ShowAlertToAllPlayers(_f("\n\nWinner is {}", peerDesc->PlayerName));
+			ShowAlertToAllPlayers(_f("\n\nWinner is %s", peerDesc->PlayerName.data()));
 		}
 
 		for (auto* player : _players) {
