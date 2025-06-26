@@ -778,7 +778,7 @@ namespace Jazz2
 		}
 		String unixFlavor = Environment::GetUnixFlavor();
 		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength }, "|{}||4|{}",
-			unixFlavor.empty() ? "Unix"_s : unixFlavor, arch);
+			unixFlavor.empty() ? "Unix"_s : StringView(unixFlavor), arch);
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;
