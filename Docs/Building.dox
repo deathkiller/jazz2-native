@@ -29,7 +29,7 @@ In addition, these libraries are required for an optimal experience:
 -   **OpenAL** library --- audio support
 -   **libopenmpt** library --- module music playback
 -   **libogg** / **libvorbis** library --- `.ogg` file support @m_span{m-text m-dim} (not needed for the original assets) @m_endspan
--   **libwebp** library --- `.webp` file support @m_span{m-text m-dim} (not needed for the original assets) @m_endspan
+-   **libwebp** library --- `.webp` file support @m_span{m-text m-dim} (currently not supported, not needed for the original assets) @m_endspan
 -   **AngelScript** library --- [AngelScript](https://www.angelcode.com/angelscript/) scripting support
 -   **liblua** library --- [Lua](https://www.lua.org/) scripting support @m_span{m-text m-dim} (currently not supported) @m_endspan
 

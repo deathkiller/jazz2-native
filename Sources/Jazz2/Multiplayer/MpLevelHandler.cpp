@@ -1456,8 +1456,8 @@ namespace Jazz2::Multiplayer
 						_networkManager->SendTo(attackerPeerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet4);
 					}
 
-					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]",
-						peerDesc->PlayerName.data(), attackerPeerDesc->PlayerName.data()));
+					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
+						peerDesc->PlayerName, attackerPeerDesc->PlayerName));
 
 					MemoryStream packet5(19 + peerDesc->PlayerName.size() + attackerPeerDesc->PlayerName.size());
 					packet5.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
@@ -1473,8 +1473,8 @@ namespace Jazz2::Multiplayer
 						return (peerDesc && peerDesc->IsAuthenticated);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet5);
 				} else {
-					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by environment",
-						peerDesc->PlayerName.data()));
+					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
+						peerDesc->PlayerName));
 
 					MemoryStream packet6(19 + peerDesc->PlayerName.size());
 					packet6.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
@@ -2287,86 +2287,89 @@ namespace Jazz2::Multiplayer
 					if (port == 0) {
 						port = serverConfig.ServerPort;
 					}
-					formatString(infoBuffer, "%s:%u (Override)", String::nullTerminatedView(address).data(), port);
-					SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+					std::size_t length = formatInto(infoBuffer, "{}:{} (Override)", address, port);
+					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 				}
 				return true;
 			}
 		} else if (line == "/info"_s) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 
-			formatString(infoBuffer, "Server: %s%s", serverConfig.ServerName.data(), serverConfig.IsPrivate ? " (Private)" : "");
-			SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
-			formatString(infoBuffer, "Current level: \"%s\" (%s%s%s)",
-				_levelName.data(), NetworkManager::GameModeToString(serverConfig.GameMode).data(),
+			std::size_t length = formatInto(infoBuffer, "Server: {}{}", serverConfig.ServerName, serverConfig.IsPrivate ? " (Private)" : "");
+			SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
+			length = formatInto(infoBuffer, "Current level: \"{}\" ({}{}{})",
+				_levelName, NetworkManager::GameModeToString(serverConfig.GameMode),
 				serverConfig.Elimination ? "/Elimination" : "", _isReforged ? "/Reforged" : "");
-			SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
-			formatString(infoBuffer, "Players: %u/%u",
+			SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
+			length = formatInto(infoBuffer, "Players: {}/{}",
 				(std::uint32_t)_networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
-			SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+			SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 			if (!_players.empty()) {
-				formatString(infoBuffer, "Server load: %.1f ms (%.1f)",
+				length = formatInto(infoBuffer, "Server load: {:.1f} ms ({:.1f})",
 					(theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f), theApplication().GetFrameTimer().GetAverageFps());
 			} else {
-				formatString(infoBuffer, "Server load: - ms");
+				length = formatInto(infoBuffer, "Server load: - ms");
 			}
-			SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+			SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 
 			auto uptimeSecs = (DateTime::Now().ToUnixMilliseconds() / 1000) - (std::int64_t)serverConfig.StartUnixTimestamp;
 			auto hours = (std::int32_t)(uptimeSecs / 3600);
 			auto minutes = (std::int32_t)(uptimeSecs % 3600) / 60;
 			auto seconds = (std::int32_t)(uptimeSecs % 60);
-			formatString(infoBuffer, "Uptime: %d:%02d:%02d", hours, minutes, seconds);
-			SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+			length = formatInto(infoBuffer, "Uptime: {}:{:.2}:{:.2}", hours, minutes, seconds);
+			SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 
 			if (isAdmin) {
-				formatString(infoBuffer, "Config Path: \"%s\"", serverConfig.FilePath.data());
-				SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+				length = formatInto(infoBuffer, "Config Path: \"{}\"", serverConfig.FilePath);
+				SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 			}
 
 			if (!serverConfig.Playlist.empty()) {
-				formatString(infoBuffer, "Playlist: %u/%u%s",
+				length = formatInto(infoBuffer, "Playlist: {}/{}{}",
 					(std::uint32_t)(serverConfig.PlaylistIndex + 1), (std::uint32_t)serverConfig.Playlist.size(), serverConfig.RandomizePlaylist ? " (Random)" : "");
-				SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+				SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 			}
 			return true;
 		} else if (line == "/players"_s) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 			SendMessage(peer, UI::MessageLevel::Confirm, "List of connected players:"_s);
 
-			char playerName[64];
+			StringView playerName;
+			char playerNameBuffer[64];
 			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 				if (!peerDesc->RemotePeer && !peerDesc->Player) {
 					continue;
 				}
 
 				if (peerDesc->Player) {
-					formatString(playerName, "%s#%i", peerDesc->PlayerName.data(), peerDesc->Player->_playerIndex);
+					std::size_t length = formatInto(playerNameBuffer, "{}#{}", peerDesc->PlayerName, peerDesc->Player->_playerIndex);
+					playerName = { playerNameBuffer, length };
 				} else {
-					copyStringFirst(playerName, peerDesc->PlayerName.data(), peerDesc->PlayerName.size());
+					playerName = peerDesc->PlayerName;
 				}
 
+				std::size_t length;
 				if (_levelState < LevelState::Running) {
-					formatString(infoBuffer, "%u.\t%s\t │ %u ms\t │ P: %u\t │ I: %i\f[w:50] s\f[/w]",
+					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ I: {}\f[w:50] s\f[/w]",
 						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
-					formatString(infoBuffer, "%u.\t%s\t │ %u ms\t │ P: %u\t │ K: %u\t │ D: %u\t │ I: %i\f[w:50] s\f[/w]\t│ Laps: %u/%u",
+					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ K: {}\t │ D: {}\t │ I: {}\f[w:50] s\f[/w]\t│ Laps: {}/{}",
 						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1, 
 						peerDesc->Laps + 1, serverConfig.TotalLaps);
 				} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-					formatString(infoBuffer, "%u.\t%s\t │ %u ms\t │ P: %u\t │ K: %u\t │ D: %u\t │ I: %i\f[w:50] s\f[/w]\t│ Treasure: %u",
+					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ K: {}\t │ D: {}\t │ I: {}\f[w:50] s\f[/w]\t│ Treasure: {}",
 						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1,
 						peerDesc->TreasureCollected);
 				} else {
-					formatString(infoBuffer, "%u.\t%s\t │ %u ms\t │ P: %u\t │ K: %u\t │ D: %u\t │ I: %i\f[w:50] s\f[/w]",
+					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ K: {}\t │ D: {}\t │ I: {}\f[w:50] s\f[/w]",
 						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer._enet->roundTripTime : 0,
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
 						peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				}
-				SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+				SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 			}
 			return true;
 		} else if (line.hasPrefix("/set "_s)) {
@@ -2397,9 +2400,9 @@ namespace Jazz2::Multiplayer
 					}
 
 					if (SetGameMode(gameMode)) {
-						formatString(infoBuffer, "Game mode set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]",
-							NetworkManager::GameModeToString(gameMode).data());
-						SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+						std::size_t length = formatInto(infoBuffer, "Game mode set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]",
+							NetworkManager::GameModeToString(gameMode));
+						SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 						return true;
 					}
 				} else if (variableName == "level"_s) {
@@ -2432,12 +2435,13 @@ namespace Jazz2::Multiplayer
 
 					serverConfig.ServerName = value.trimmed();
 
+					std::size_t length;
 					if (!serverConfig.ServerName.empty()) {
-						formatString(infoBuffer, "Server name set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", serverConfig.ServerName.data());
+						length = formatInto(infoBuffer, "Server name set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", serverConfig.ServerName);
 					} else if (!serverConfig.IsPrivate) {
-						formatString(infoBuffer, "Server visibility to \f[w:80]\f[c:#707070]hidden\f[/c]\f[/w]");
+						length = formatInto(infoBuffer, "Server visibility to \f[w:80]\f[c:#707070]hidden\f[/c]\f[/w]");
 					}
-					SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 					return true;
 				} else if (variableName == "spawning"_s) {
 					auto boolValue = StringUtils::lowercase(value.trimmed());
@@ -2449,8 +2453,8 @@ namespace Jazz2::Multiplayer
 						return false;
 					}
 
-					formatString(infoBuffer, "Spawning set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", _enableSpawning ? "Enabled" : "Disabled");
-					SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+					std::size_t length = formatInto(infoBuffer, "Spawning set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", _enableSpawning ? "Enabled"_s : "Disabled"_s);
+					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 					return true;
 				}
 			}
@@ -2514,13 +2518,14 @@ namespace Jazz2::Multiplayer
 
 					for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 						if (playerIndex >= 0 ? (peerDesc->Player && peerDesc->Player->_playerIndex == playerIndex) : (peerDesc->PlayerName == playerName)) {
+							std::size_t length;
 							if (peerDesc->RemotePeer) {
-								formatString(infoBuffer, "%s (%s) is connected from %s", peerDesc->PlayerName.data(),
-									NetworkManager::UuidToString(peerDesc->UniquePlayerID).data(), NetworkManagerBase::AddressToString(peerDesc->RemotePeer).data());
+								length = formatInto(infoBuffer, "{} ({}) is connected from {}", peerDesc->PlayerName,
+									NetworkManager::UuidToString(peerDesc->UniquePlayerID), NetworkManagerBase::AddressToString(peerDesc->RemotePeer));
 							} else {
-								formatString(infoBuffer, "%s is connected locally", peerDesc->PlayerName.data());
+								length = formatInto(infoBuffer, "{} is connected locally", peerDesc->PlayerName);
 							}
-							SendMessage(peer, UI::MessageLevel::Confirm, infoBuffer);
+							SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 							break;
 						}
 					}
@@ -2580,8 +2585,8 @@ namespace Jazz2::Multiplayer
 					SendMessageToAll("Active poll has been cancelled");
 					return true;
 				} else {
-					formatString(infoBuffer, "Another poll is already active, please wait %i seconds", (std::int32_t)(_activePollTimeLeft* FrameTimer::SecondsPerFrame));
-					SendMessage(peer, UI::MessageLevel::Error, infoBuffer);
+					std::size_t length = formatInto(infoBuffer, "Another poll is already active, please wait {} seconds", (std::int32_t)(_activePollTimeLeft * FrameTimer::SecondsPerFrame));
+					SendMessage(peer, UI::MessageLevel::Error, { infoBuffer, length });
 					return true;
 				}
 			}
@@ -2591,17 +2596,14 @@ namespace Jazz2::Multiplayer
 				if (typeStr == "restart"_s) {
 					// TODO: Support also non-playlist mode
 					type = VoteType::Restart;
-					formatString(infoBuffer, "Poll started to \f[c:#777777]restart playlist\f[/c], type \f[c:#587050]/yes\f[/c] to vote", typeStr.data());
-					SendMessageToAll(infoBuffer);
+					SendMessageToAll("Poll started to \f[c:#777777]restart playlist\f[/c], type \f[c:#587050]/yes\f[/c] to vote"_s);
 				} else if (typeStr == "reset points"_s) {
 					type = VoteType::ResetPoints;
-					formatString(infoBuffer, "Poll started to \f[c:#777777]reset points\f[/c], type \f[c:#587050]/yes\f[/c] to vote", typeStr.data());
-					SendMessageToAll(infoBuffer);
+					SendMessageToAll("Poll started to \f[c:#777777]reset points\f[/c], type \f[c:#587050]/yes\f[/c] to vote"_s);
 				} else if (typeStr == "skip"_s) {
 					// TODO: Support also non-playlist mode
 					type = VoteType::Skip;
-					formatString(infoBuffer, "Poll started to \f[c:#777777]skip current level\f[/c], type \f[c:#587050]/yes\f[/c] to vote", typeStr.data());
-					SendMessageToAll(infoBuffer);
+					SendMessageToAll("Poll started to \f[c:#777777]skip current level\f[/c], type \f[c:#587050]/yes\f[/c] to vote"_s);
 				} else if (typeStr == "kick"_s) {
 					// TODO: Allow to vote kick for a specific player
 					//type = VoteType::Kick;
@@ -2609,8 +2611,8 @@ namespace Jazz2::Multiplayer
 					//SendServerMessageToAll(infoBuffer);
 					return true;
 				} else {
-					formatString(infoBuffer, "Unsupported poll type \"%s\"", typeStr.data());
-					SendMessage(peer, UI::MessageLevel::Error, infoBuffer);
+					std::size_t length = formatInto(infoBuffer, "Unsupported poll type \"{}\"", typeStr);
+					SendMessage(peer, UI::MessageLevel::Error, { infoBuffer, length });
 					return true;
 				}
 
@@ -2707,7 +2709,7 @@ namespace Jazz2::Multiplayer
 				peerDesc->LevelState = PeerLevelState::Unknown;
 
 				InvokeAsync([this, peerDesc]() mutable {
-					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", peerDesc->PlayerName.data()));
+					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", peerDesc->PlayerName));
 				});
 
 				MemoryStream packet(10 + peerDesc->PlayerName.size());
@@ -2855,7 +2857,7 @@ namespace Jazz2::Multiplayer
 						peerDesc->LevelState = PeerLevelState::ValidatingAssets;
 
 						InvokeAsync([this, peerDesc]() mutable {
-							_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", peerDesc->PlayerName.data()));
+							_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", peerDesc->PlayerName));
 						});
 
 						MemoryStream packet(10 + peerDesc->PlayerName.size());
@@ -3331,9 +3333,9 @@ namespace Jazz2::Multiplayer
 
 							InvokeAsync([this, type, playerName = std::move(playerName)]() mutable {
 								if (type == PeerPropertyType::Connected) {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] connected", playerName.data()));
+									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", playerName));
 								} else {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] disconnected", playerName.data()));
+									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", playerName));
 								}
 							});
 							break;
@@ -3354,11 +3356,11 @@ namespace Jazz2::Multiplayer
 
 							InvokeAsync([this, victimName = std::move(victimName), attackerName = std::move(attackerName)]() mutable {
 								if (!attackerName.empty()) {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by \f[c:#d0705d]%s\f[/c]",
-										victimName.data(), attackerName.data()));
+									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
+										victimName, attackerName));
 								} else {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]%s\f[/c] was roasted by environment",
-										victimName.data()));
+									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
+										victimName));
 								}
 							});
 							break;
@@ -5404,7 +5406,7 @@ namespace Jazz2::Multiplayer
 
 		if (winner) {
 			auto peerDesc = winner->GetPeerDescriptor();
-			ShowAlertToAllPlayers(_f("\n\nWinner is %s", peerDesc->PlayerName.data()));
+			ShowAlertToAllPlayers(_f("\n\nWinner is {}", peerDesc->PlayerName));
 		}
 
 		for (auto* player : _players) {
@@ -5766,9 +5768,9 @@ namespace Jazz2::Multiplayer
 		const auto& resolver = ContentResolver::Get();
 		auto pathNormalized = fs::ToNativeSeparators(path);
 
-		char uuidStr[33]; std::int32_t uuidStrLength;
+		char uuidStr[33]; std::size_t uuidStrLength;
 		if (remoteServerId) {
-			uuidStrLength = formatString(uuidStr, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+			uuidStrLength = formatInto(uuidStr, "{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}",
 				remoteServerId[0], remoteServerId[1], remoteServerId[2], remoteServerId[3], remoteServerId[4], remoteServerId[5], remoteServerId[6], remoteServerId[7], remoteServerId[8], remoteServerId[9], remoteServerId[10], remoteServerId[11], remoteServerId[12], remoteServerId[13], remoteServerId[14], remoteServerId[15]);
 		}
 
@@ -5777,7 +5779,7 @@ namespace Jazz2::Multiplayer
 				String fullPath;
 				if (remoteServerId) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(String(path + ".j2l"_s)) });
+						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2l"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
@@ -5794,7 +5796,7 @@ namespace Jazz2::Multiplayer
 				String fullPath;
 				if (remoteServerId) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(String(path + ".j2t"_s)) });
+						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2t"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
@@ -5811,7 +5813,7 @@ namespace Jazz2::Multiplayer
 				String fullPath;
 				if (remoteServerId) {
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						StringView(uuidStr, uuidStrLength), fs::ToNativeSeparators(path) });
+						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(path) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });

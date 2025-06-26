@@ -596,16 +596,16 @@ namespace Jazz2::UI
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
-			formatString(stringBuffer, "%08i", player->GetScore());
-			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+			std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 		} else {
-			formatString(stringBuffer, "%08i", player->GetScore());
-			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
+			std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 		}
 	}
@@ -749,15 +749,15 @@ namespace Jazz2::UI
 			Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
-		formatString(stringBuffer, "x%i", _coins);
+		std::size_t length = formatInto(stringBuffer, "x{}", _coins);
 
 		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
+		_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
 		Colorf fontColor = Font::DefaultColor;
 		fontColor.SetAlpha(alpha2);
-		_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
+		_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
 			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
 
 		if (_coinsTime > TotalTime) {
@@ -797,15 +797,15 @@ namespace Jazz2::UI
 			Colorf(1.0f, 1.0f, 1.0f, 0.8f * alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
-		formatString(stringBuffer, "x%i", _gems);
+		std::size_t length = formatInto(stringBuffer, "x{}", _gems);
 
 		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
+		_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
 		Colorf fontColor = Font::DefaultColor;
 		fontColor.SetAlpha(alpha2);
-		_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
+		_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, FontLayer,
 			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
 
 		if (_gemsTime > TotalTime) {

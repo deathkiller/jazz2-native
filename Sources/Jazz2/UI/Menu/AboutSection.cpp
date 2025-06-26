@@ -152,14 +152,14 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Footer text in About section
 		auto footerText = _("This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and following libraries:");
 
-		std::int32_t headerLength = formatString(textPtr, textSize, 
-			"%s\n%s\n\f[w:80]\f[c:#707070]https://deat.tk/jazz2/\f[/c]\f[/w]\n\n\n"
-			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#d0705d]Dan R.\f[/c]\n\n\n"
-			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n\f[c:#707070]\f[w:80]JJ\f[h:86]2\f[/h]\f[/w]⁺\f[w:50] \f[/w]Team\f[/c]\n\f[c:#707070]arkamar\f[/c]  \f[h:86](Gentoo maintainer)\f[/h]\n\f[c:#707070]Bioxxdevil\f[/c]\n\f[c:#707070]Chewi\f[/c]  \f[h:86](Gentoo maintainer)\f[/h]\n\f[c:#707070]JWP\f[/c]  \f[h:86](xtradeb maintainer)\f[/h]\n\f[c:#707070]Kreeblah\f[/c]  \f[h:86](Homebrew maintainer)\f[/h]\n\f[c:#707070]nat\f[/c]  \f[h:86](NixOS maintainer)\f[/h]\n\f[c:#707070]roox\f[/c]  \f[h:86](OpenSUSE maintainer)\f[/h]\n\f[c:#707070]tunip3\f[/c]\n\f[c:#707070]x_Dub_CZ\f[/c]\n\f[c:#707070]Xandu\f[/c]\n\n\n"
-			"\f[h:125]\f[j]%s\f[/j]\f[/h]\n",
-			headerText.data(), websiteText.data(), developersText.data(), contributorsText.data(), translatorsText.data());
-		textPtr += headerLength;
-		textSize -= headerLength;
+		std::size_t length = formatInto({ textPtr, textSize },
+			"{}\n{}\n\f[w:80]\f[c:#707070]https://deat.tk/jazz2/\f[/c]\f[/w]\n\n\n"
+			"\f[h:125]\f[j]{}\f[/j]\f[/h]\n\f[c:#d0705d]Dan R.\f[/c]\n\n\n"
+			"\f[h:125]\f[j]{}\f[/j]\f[/h]\n\f[c:#707070]\f[w:80]JJ\f[h:86]2\f[/h]\f[/w]⁺\f[w:50] \f[/w]Team\f[/c]\n\f[c:#707070]arkamar\f[/c]  \f[h:86](Gentoo maintainer)\f[/h]\n\f[c:#707070]Bioxxdevil\f[/c]\n\f[c:#707070]Chewi\f[/c]  \f[h:86](Gentoo maintainer)\f[/h]\n\f[c:#707070]JWP\f[/c]  \f[h:86](xtradeb maintainer)\f[/h]\n\f[c:#707070]Kreeblah\f[/c]  \f[h:86](Homebrew maintainer)\f[/h]\n\f[c:#707070]nat\f[/c]  \f[h:86](NixOS maintainer)\f[/h]\n\f[c:#707070]roox\f[/c]  \f[h:86](OpenSUSE maintainer)\f[/h]\n\f[c:#707070]tunip3\f[/c]\n\f[c:#707070]x_Dub_CZ\f[/c]\n\f[c:#707070]Xandu\f[/c]\n\n\n"
+			"\f[h:125]\f[j]{}\f[/j]\f[/h]\n",
+			headerText, websiteText, developersText, contributorsText, translatorsText);
+		textPtr += length;
+		textSize -= length;
 
 		// Search both "Content/Translations/" and "Cache/Translations/" for translators
 		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
@@ -170,14 +170,16 @@ namespace Jazz2::UI::Menu
 			AddTranslator(item, textPtr, textSize);
 		}
 
-		formatString(textPtr, textSize, "\n\n%s%s", footerText.data(), ADDITIONAL_INFO);
+		length = formatInto({ textPtr, textSize }, "\n\n{}{}", footerText, ADDITIONAL_INFO);
+		textPtr += length;
+		textSize -= length;
 
 		_textBlock.SetAlignment(Alignment::Center);
 		_textBlock.SetScale(0.8f);
 		_textBlock.SetMultiline(true);
 		_textBlock.SetWrapping(true);
 		_textBlock.SetFont(resolver.GetFont(FontType::Small));
-		_textBlock.SetText(StringView{text});
+		_textBlock.SetText(StringView{text, std::size_t(textPtr - text)});
 
 		_textBlockHeaderOnly.SetAlignment(Alignment::Center);
 		_textBlockHeaderOnly.SetScale(0.8f);
@@ -387,9 +389,9 @@ namespace Jazz2::UI::Menu
 
 		std::int32_t lineLength;
 		if (langName) {
-			lineLength = formatString(result, resultLength, "\f[c:#707070]%s\f[/c]  \f[h:86](%s)\f[/h]\n", desc.data(), langName.data());
+			lineLength = formatInto({ result, resultLength }, "\f[c:#707070]{}\f[/c]  \f[h:86]({})\f[/h]\n", desc, langName);
 		} else {
-			lineLength = formatString(result, resultLength, "\f[c:#707070]%s\f[/c]\n", desc.data());
+			lineLength = formatInto({ result, resultLength }, "\f[c:#707070]{}\f[/c]\n", desc);
 		}
 		result += lineLength;
 		resultLength -= lineLength;

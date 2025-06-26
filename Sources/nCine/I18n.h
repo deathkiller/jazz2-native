@@ -121,10 +121,28 @@ namespace nCine
 	/** @relates I18n
 		@brief Translates formatted text in singular form using primary translation catalog
 	*/
-	String _f(const char* text, ...);
+	template<class ...Args>
+	String _f(const char* text, const Args&... args)
+	{
+		I18n& i18n = I18n::Get();
+		StringView translated = i18n.LookupTranslation(text);
+		return format(translated ? translated.data() : text, args...);
+	}
 
 	/** @relates I18n
 		@brief Translates formatted text in singular or plural form using primary translation catalog
 	*/
-	String _fn(const char* singular, const char* plural, std::int32_t n, ...);
+	template<class ...Args>
+	String _fn(const char* textSingular, const char* textPlural, std::int32_t n, const Args&... args)
+	{
+		I18n& i18n = I18n::Get();
+		StringView translated = i18n.LookupTranslation(textSingular);
+		const char* fmt;
+		if (translated != nullptr) {
+			fmt = i18n.LookupPlural(n, translated).data();
+		} else {
+			fmt = (n == 1 ? textSingular : textPlural);
+		}
+		return format(fmt, args...);
+	}
 }

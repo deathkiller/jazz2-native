@@ -200,8 +200,8 @@ namespace Jazz2::UI::Menu
 
 				if (_items[i].Desc.MaxPlayerCount > 0) {
 					char playerCount[32];
-					formatString(playerCount, "%u/%u", _items[i].Desc.CurrentPlayerCount, _items[i].Desc.MaxPlayerCount);
-					_root->DrawStringShadow(playerCount, charOffset, column2 - 90.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
+					std::size_t length = formatInto(playerCount, "{}/{}", _items[i].Desc.CurrentPlayerCount, _items[i].Desc.MaxPlayerCount);
+					_root->DrawStringShadow({ playerCount, length }, charOffset, column2 - 90.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
 						Alignment::Right, Font::DefaultColor, 0.7f);
 				}
 

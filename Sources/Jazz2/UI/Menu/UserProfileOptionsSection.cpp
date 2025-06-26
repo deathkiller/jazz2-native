@@ -350,10 +350,10 @@ namespace Jazz2::UI::Menu
 		if (item.Item.Type == UserProfileOptionsItemType::UniquePlayerID) {
 			auto& uuid = PreferencesCache::UniquePlayerID;
 			char uniquePlayerId[128];
-			formatString(uniquePlayerId, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+			std::size_t length = formatInto(uniquePlayerId, "{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}",
 				uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 
-			_root->DrawStringShadow(uniquePlayerId, charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+			_root->DrawStringShadow({ uniquePlayerId, length }, charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 
 #	if defined(DEATH_TARGET_ANDROID)
@@ -363,9 +363,8 @@ namespace Jazz2::UI::Menu
 			if (DiscordRpcClient::Get().IsSupported()) {
 				std::uint64_t userId = DiscordRpcClient::Get().GetUserId();
 				if (userId != 0) {
-					formatString(uniquePlayerId, "DC:%016llu", userId);
-
-					_root->DrawStringShadow(uniquePlayerId, charOffset, centerX, item.Y + 22.0f + 16.0f, IMenuContainer::FontLayer - 10,
+					std::size_t length = formatInto(uniquePlayerId, "DC:{:.16}", userId);
+					_root->DrawStringShadow({ uniquePlayerId, length }, charOffset, centerX, item.Y + 22.0f + 16.0f, IMenuContainer::FontLayer - 10,
 						Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 				}
 			}
@@ -426,10 +425,10 @@ namespace Jazz2::UI::Menu
 			case UserProfileOptionsItemType::UniquePlayerID: {
 				auto& uuid = PreferencesCache::UniquePlayerID;
 				char uniquePlayerId[128];
-				formatString(uniquePlayerId, "%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+				std:size_t length = formatInto(uniquePlayerId, "{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}",
 					uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 
-				if (theApplication().GetInputManager().setClipboardText(uniquePlayerId)) {
+				if (theApplication().GetInputManager().setClipboardText({ uniquePlayerId, length })) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 				}
 				break;

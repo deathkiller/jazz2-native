@@ -159,7 +159,7 @@ namespace Jazz2
 			return false;
 		}
 
-		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"%s\" initialized", descriptor.DisplayName.data()));
+		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName));
 
 		AttachComponents(std::move(descriptor));
 		SpawnPlayers(levelInit);		
@@ -210,7 +210,7 @@ namespace Jazz2
 			return false;
 		}
 
-		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName.data()));
+		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName));
 
 		AttachComponents(std::move(descriptor));
 
@@ -786,6 +786,9 @@ namespace Jazz2
 		} else if (line == "jjbird"_s) {
 			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatBird();
+		} else if (line == "jjlife"_s) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
+			return CheatLife();
 		} else if (line == "jjpower"_s) {
 			_console->WriteLine(UI::MessageLevel::Echo, line);
 			return CheatPower();
@@ -2382,6 +2385,19 @@ namespace Jazz2
 			_cheatsUsed = true;
 			for (auto* player : _players) {
 				player->SpawnBird(0, player->GetPos());
+			}
+		} else {
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		}
+		return true;
+	}
+
+	bool LevelHandler::CheatLife()
+	{
+		if (IsCheatingAllowed() && !_players.empty()) {
+			_cheatsUsed = true;
+			for (auto* player : _players) {
+				player->AddLives(5);
 			}
 		} else {
 			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));

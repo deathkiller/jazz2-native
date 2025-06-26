@@ -73,6 +73,34 @@ namespace Jazz2::Input
 			second[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::G));
 			second[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::Q));
 
+			if (MaxSupportedPlayers >= 3) {
+				auto third = GetMappings(2);
+				third[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::NumPad4));
+				third[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(Keys::NumPad6));
+				third[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(Keys::NumPad8));
+				third[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(Keys::NumPad5));
+				third[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(Keys::NumPad5));
+
+				third[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(Keys::NumPadEnter));
+				third[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::NumPadPlus));
+				third[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::NumPadMinus));
+				third[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::NumPad7));
+
+				if (MaxSupportedPlayers >= 4) {
+					auto fourth = GetMappings(3);
+					fourth[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::H));
+					fourth[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(Keys::K));
+					fourth[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(Keys::U));
+					fourth[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(Keys::J));
+					fourth[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(Keys::J));
+
+					fourth[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(Keys::O));
+					fourth[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::L));
+					fourth[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::Semicolon));
+					fourth[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::Y));
+				}
+			}
+
 			for (std::int32_t i = 1; i < MaxSupportedPlayers; i++) {
 				auto current = GetMappings(i);
 				current[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(i, ButtonName::Left));

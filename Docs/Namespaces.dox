@@ -531,6 +531,9 @@ See also @ref third-party for the licenses of the libraries used.
 /** @dir Shared/Base
 	@brief Basic utilities for memory management and type information
 */
+/** @file Shared/Base/Format.h
+	@brief Function @ref Death::format(), @ref Death::formatInto()
+*/
 /** @file Shared/Base/IDisposable.h
 	@brief Interface @ref Death::IDisposable
 */

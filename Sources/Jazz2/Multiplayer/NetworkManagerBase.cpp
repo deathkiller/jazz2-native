@@ -397,7 +397,7 @@ namespace Jazz2::Multiplayer
 
 		std::size_t addressLength = strnlen(addressString, sizeof(addressString));
 		if (port != 0) {
-			addressLength = addressLength + formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
+			addressLength = addressLength + formatInto({ &addressString[addressLength], sizeof(addressString) - addressLength }, ":{}", port);
 		}
 		return String(addressString, addressLength);
 	}
@@ -426,7 +426,7 @@ namespace Jazz2::Multiplayer
 			addressLength = strnlen(addressString, sizeof(addressString));
 
 			if (scopeId != 0) {
-				addressLength += formatString(&addressString[addressLength], sizeof(addressString) - addressLength, "%%%u", scopeId);
+				addressLength += formatInto({ &addressString[addressLength], sizeof(addressString) - addressLength }, "%{}", scopeId);
 			}
 
 			addressString[addressLength] = ']';
@@ -434,7 +434,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (port != 0) {
-			addressLength += formatString(&addressString[addressLength], sizeof(addressString) - addressLength, ":%u", port);
+			addressLength += formatInto({ &addressString[addressLength], sizeof(addressString) - addressLength }, ":{}", port);
 		}
 		return String(addressString, addressLength);
 	}

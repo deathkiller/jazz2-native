@@ -115,8 +115,8 @@ namespace Jazz2::UI::Menu
 		if (item.Item.Type == GraphicsOptionsItemType::Resolution) {
 			Vector2i res = theApplication().GetGfxDevice().drawableResolution();
 			char customText[64];
-			formatString(customText, "%ix%i", res.X, res.Y);
-			_root->DrawStringShadow(customText, charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+			std::size_t length = formatInto(customText, "{}x{}", res.X, res.Y);
+			_root->DrawStringShadow({ customText, length }, charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 		} else if (item.Item.HasBooleanValue) {
 			StringView customText;

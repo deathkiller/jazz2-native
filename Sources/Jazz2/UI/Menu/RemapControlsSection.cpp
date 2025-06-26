@@ -40,7 +40,7 @@ namespace Jazz2::UI::Menu
 
 		for (std::int32_t i = 0; i <= (std::int32_t)PlayerAction::SwitchToThunderbolt - (std::int32_t)PlayerAction::SwitchToBlaster; i++) {
 			// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-			_items.emplace_back(RemapControlsItem { (PlayerAction)((std::int32_t)PlayerAction::SwitchToBlaster + i), _f("Weapon %i", i + 1) });
+			_items.emplace_back(RemapControlsItem { (PlayerAction)((std::int32_t)PlayerAction::SwitchToBlaster + i), _f("Weapon {}", i + 1) });
 		}
 	}
 
@@ -162,7 +162,7 @@ namespace Jazz2::UI::Menu
 
 		std::int32_t charOffset = 0;
 		if (ControlScheme::MaxSupportedPlayers > 1) {
-			_root->DrawStringShadow(_f("Remap Controls for Player %i", _playerIndex + 1), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_f("Remap Controls for Player {}", _playerIndex + 1), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		} else {
 			_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
@@ -179,9 +179,9 @@ namespace Jazz2::UI::Menu
 			auto& mapping = ControlScheme::GetMappings(_playerIndex)[_selectedIndex];
 			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (std::int32_t)PlayerAction::Menu && _selectedColumn == 0)) {
 				char stringBuffer[64];
-				formatString(stringBuffer, "\f[c:#d0705d]%s\f[/c] │", _("Change Weapon").data());
+				std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
 
-				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 15.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f + 2.0f,

@@ -75,7 +75,7 @@ namespace Jazz2::UI::Menu
 		switch (_state) {
 			case State::Loading:
 				if (_fileCount > 0) {
-					_root->DrawStringShadow(_fn("Processing of %i file...", "Processing of %i files...", _fileCount, _fileCount), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_fn("Processing of {} file...", "Processing of {} files...", _fileCount, _fileCount), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
 					_root->DrawStringShadow(_("Waiting for files..."), charOffset, center.X, center.Y, IMenuContainer::FontLayer,

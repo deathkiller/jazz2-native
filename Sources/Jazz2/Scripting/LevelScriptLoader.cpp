@@ -398,7 +398,9 @@ namespace Jazz2::Scripting
 		}
 
 		char funcName[32];
-		formatString(funcName, "onFunction%i", callbackId);
+		std::size_t length = formatInto(funcName, "onFunction{}", callbackId);
+		funcName[length] = '\0';
+
 		asIScriptFunction* func = GetMainModule()->GetFunctionByName(funcName);
 		if (func != nullptr) {
 			OnBeforeScriptCall();

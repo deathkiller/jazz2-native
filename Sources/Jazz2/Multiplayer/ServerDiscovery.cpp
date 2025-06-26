@@ -460,14 +460,14 @@ namespace Jazz2::Multiplayer
 			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
 
 		char input[2048];
-		std::int32_t length = formatString(input, "{\"n\":\"%s\",\"u\":\"", serverName.data());
+		std::size_t length = formatInto(input, "{{\"n\":\"{}\",\"u\":\"", serverName);
 
 		const auto& id = serverConfig.UniqueServerID;
-		length += formatString(input + length, sizeof(input) - length,
-			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+		length += formatInto({ input + length, sizeof(input) - length },
+			"{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}",
 			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
 
-		length += formatString(input + length, sizeof(input) - length, "\",\"e\":\"");
+		length += formatInto({ input + length, sizeof(input) - length }, "\",\"e\":\"");
 
 		StringView address; std::uint16_t port;
 		if (NetworkManagerBase::TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port)) {
@@ -476,7 +476,7 @@ namespace Jazz2::Multiplayer
 			if (port == 0) {
 				port = server->_host->address.port;
 			}
-			length += formatString(input + length, sizeof(input) - length, "%s:%u", addressEscaped.data(), port);
+			length += formatInto({ input + length, sizeof(input) - length }, "{}:{}", addressEscaped, port);
 		} else {
 			bool isFirst = true;
 			auto endpoints = server->GetServerEndpoints();
@@ -487,10 +487,10 @@ namespace Jazz2::Multiplayer
 				if (isFirst) {
 					isFirst = false;
 				} else {
-					length += formatString(input + length, sizeof(input) - length, "|");
+					length += formatInto({ input + length, sizeof(input) - length }, "|");
 				}
 
-				length += formatString(input + length, sizeof(input) - length, "%s", endpoint.data());
+				length += formatInto({ input + length, sizeof(input) - length }, "{}", endpoint);
 			}
 		}
 
@@ -505,9 +505,10 @@ namespace Jazz2::Multiplayer
 				"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
 		}
 
-		length += formatString(input + length, sizeof(input) - length, "\",\"v\":\"%s\",\"d\":\"%s\",\"p\":%u,\"m\":%u,\"s\":%llu,\"l\":%i,\"g\":%u,\"f\":\"%s\"}",
-			NCINE_VERSION, PreferencesCache::GetDeviceID().data(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
-			serverConfig.StartUnixTimestamp, serverLoad, std::uint32_t(serverConfig.GameMode), levelDisplayName.data());
+		length += formatInto({ input + length, sizeof(input) - length },
+			"\",\"v\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"f\":\"{}\"}}",
+			NCINE_VERSION, PreferencesCache::GetDeviceID(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
+			serverConfig.StartUnixTimestamp, serverLoad, serverConfig.GameMode, levelDisplayName);
 
 		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		request.SetMethod("POST"_s);
@@ -555,15 +556,15 @@ namespace Jazz2::Multiplayer
 			"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
 
 		char input[2048];
-		std::int32_t length = formatString(input, "{\"n\":\"%s\",\"u\":\"", serverName.data());
+		std::size_t length = formatInto(input, "{{\"n\":\"{}\",\"u\":\"", serverName);
 
 		const auto& id = serverConfig.UniqueServerID;
-		length += formatString(input + length, sizeof(input) - length,
-			"%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+		length += formatInto({ input + length, sizeof(input) - length },
+			"{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}",
 			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
 
-		length += formatString(input + length, sizeof(input) - length, "\",\"e\":null,\"v\":\"%s\",\"d\":\"%s\"}",
-			NCINE_VERSION, PreferencesCache::GetDeviceID().data());
+		length += formatInto({ input + length, sizeof(input) - length }, "\",\"e\":null,\"v\":\"{}\",\"d\":\"{}\"}}",
+			NCINE_VERSION_s, PreferencesCache::GetDeviceID());
 
 		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		request.SetMethod("POST"_s);

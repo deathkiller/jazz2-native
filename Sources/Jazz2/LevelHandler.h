@@ -329,6 +329,7 @@ namespace Jazz2
 		bool CheatRush();
 		bool CheatGems();
 		bool CheatBird();
+		bool CheatLife();
 		bool CheatPower();
 		bool CheatCoins();
 		bool CheatMorph();
