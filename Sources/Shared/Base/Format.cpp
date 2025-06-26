@@ -3,6 +3,7 @@
 #include "../Containers/ArrayView.h"
 #include "../Containers/StringView.h"
 
+#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <type_traits>
@@ -528,7 +529,7 @@ namespace Death { namespace Implementation {
 
 	std::size_t formatFormatters(char* buffer, std::size_t bufferSize, const char* const format, BufferFormatter* const formatters, std::size_t formatterCount) {
 		std::size_t bufferOffset = 0;
-		formatWith([buffer, bufferSize, &bufferOffset](Containers::StringView data) {
+		formatWith([buffer, &bufferOffset](Containers::StringView data) {
 			if (buffer != nullptr) {
 				std::memcpy(buffer + bufferOffset, data.data(), data.size());
 			}
