@@ -158,13 +158,9 @@ namespace Death {
 		};
 		template<> struct Formatter<unsigned short> : Formatter<unsigned int> {};
 
-		/* The char is signed or unsigned depending on platform (ARM has it unsigned by
-		   default for example, because it maps better to the instruction set), and
-		   thus std::int8_t is usually a typedef to `signed char`. Be sure to support
-		   that as well, `signed short` and such OTOH isn't so important. Also, while I
-		   could delegate `char` to `std::conditional<std::is_signed<char>::value, int,
-		   unsigned int>::type`, it doesn't matter because the two variants currently
-		   don't behave any different and `int` will cover the whole range easily. */
+		// The char is signed or unsigned depending on platform (ARM has it unsigned by default for example,
+		// because it maps better to the instruction set), and thus std::int8_t is usually a typedef to `signed char`.
+		// Be sure to support that as well, `signed short` and such OTOH isn't so important.
 		template<> struct Formatter<char> : Formatter<int> {};
 		template<> struct Formatter<signed char> : Formatter<int> {};
 		template<> struct Formatter<unsigned char> : Formatter<unsigned int> {};
@@ -201,7 +197,7 @@ namespace Death {
 		template<> struct Formatter<Containers::MutableStringView> : Formatter<Containers::StringView> {};
 		template<> struct Formatter<Containers::String> : Formatter<Containers::StringView> {};
 
-		/* If the type is an enum, use its underlying type, assuming the enum is convertible to it */
+		// If the type is an enum, use its underlying type, assuming the enum is convertible to it
 		template<class T> struct Formatter<T, typename std::enable_if<std::is_enum<T>::value>::type> {
 			static std::size_t format(const Containers::MutableStringView& buffer, T value, FormatContext& context) {
 				return Formatter<typename std::underlying_type<T>::type>::format(buffer, static_cast<typename std::underlying_type<T>::type>(value), context);

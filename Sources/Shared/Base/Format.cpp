@@ -268,7 +268,7 @@ namespace Death { namespace Implementation {
 				std::int32_t digitCount = countDigits<3>(absValue);
 				std::int32_t size = (digitCount < precision ? precision : digitCount + 1);
 
-				if (buffer.data() && size <= buffer.size()) {
+				if (size <= buffer.size()) {
 					char* begin = buffer.data();
 					if (digitCount < precision) {
 						for (std::int32_t i = 0; i < precision - digitCount; i++) {
@@ -289,7 +289,7 @@ namespace Death { namespace Implementation {
 				std::int32_t digitCount = countDigits<4>(absValue);
 				std::int32_t size = (digitCount < precision ? precision : digitCount);
 
-				if (buffer.data() && size <= buffer.size()) {
+				if (size <= buffer.size()) {
 					char* begin = buffer.data();
 					if (digitCount < precision) {
 						for (std::int32_t i = 0; i < precision - digitCount; i++) {
@@ -379,19 +379,21 @@ namespace Death { namespace Implementation {
 		return std::snprintf(buffer.data(), buffer.size(), format, precision, value);
 	}
 
+	std::size_t Formatter<bool>::format(const Containers::MutableStringView& buffer, bool value, FormatContext& context) {
+		using namespace Death::Containers::Literals;
+		DEATH_ASSERT(context.Type == FormatType::Unspecified, "Type specifier cannot be used for a bool value", {});
+		return Formatter<Containers::StringView>::format(buffer, value ? "true"_s : "false"_s, context);
+	}
+
 	std::size_t Formatter<Containers::StringView>::format(const Containers::MutableStringView& buffer, Containers::StringView value, FormatContext& context) {
 		std::size_t size = value.size();
 		std::int32_t precision = context.Precision;
 		if(std::size_t(precision) < size) size = precision;
 		DEATH_ASSERT(context.Type == FormatType::Unspecified, "Type specifier cannot be used for a string value", {});
-		if (buffer.data() && size) std::memcpy(buffer.data(), value.data(), size);
+		std::size_t bytesToCopy = buffer.size();
+		if (size < bytesToCopy) bytesToCopy = size;
+		if (bytesToCopy > 0) std::memcpy(buffer.data(), value.data(), bytesToCopy);
 		return size;
-	}
-
-	std::size_t Formatter<bool>::format(const Containers::MutableStringView& buffer, bool value, FormatContext& context) {
-		using namespace Death::Containers::Literals;
-		DEATH_ASSERT(context.Type == FormatType::Unspecified, "Type specifier cannot be used for a bool value", {});
-		return Formatter<Containers::StringView>::format(buffer, value ? "true"_s : "false"_s, context);
 	}
 
 	std::size_t Formatter<const char*>::format(const Containers::MutableStringView& buffer, const char* value, FormatContext& context) {
@@ -416,7 +418,7 @@ namespace Death { namespace Implementation {
 			bool inPlaceholder = false;
 			std::size_t placeholderOffset = 0;
 			std::size_t formatterToGo = 0;
-			int placeholderIndex = -1;
+			std::int32_t placeholderIndex = -1;
 			FormatContext context{-1, FormatType::Unspecified};
 			for (std::size_t formatOffset = 0; formatOffset != format.size(); ) {
 				// Placeholder begin (or escaped {)
@@ -529,15 +531,19 @@ namespace Death { namespace Implementation {
 
 	std::size_t formatFormatters(char* buffer, std::size_t bufferSize, const char* const format, BufferFormatter* const formatters, std::size_t formatterCount) {
 		std::size_t bufferOffset = 0;
-		formatWith([buffer, &bufferOffset](Containers::StringView data) {
+		formatWith([buffer, bufferSize, &bufferOffset](Containers::StringView data) {
 			if (buffer != nullptr) {
-				std::memcpy(buffer + bufferOffset, data.data(), data.size());
+				std::size_t bufferLeft = (bufferSize >= bufferOffset ? bufferSize - bufferOffset : 0);
+				std::size_t size = data.size();
+				std::memcpy(buffer + bufferOffset, data.data(), size > bufferLeft ? bufferLeft : size);
+				DEATH_DEBUG_ASSERT(size <= bufferLeft, ("Buffer too small, expected at least {} but got {}", bufferOffset + size, bufferSize), );
 			}
 			bufferOffset += data.size();
 		}, [buffer, bufferSize, &bufferOffset](BufferFormatter& formatter, FormatContext& context) {
 			std::size_t size;
 			if (buffer != nullptr) {
-				size = formatter(Containers::MutableStringView{buffer + bufferOffset, bufferSize - bufferOffset}, context);
+				std::size_t bufferLeft = (bufferSize >= bufferOffset ? bufferSize - bufferOffset : 0);
+				size = formatter({ buffer + bufferOffset, bufferLeft }, context);
 				DEATH_DEBUG_ASSERT(bufferOffset + size <= bufferSize, ("Buffer too small, expected at least {} but got {}", bufferOffset + size, bufferSize), );
 			} else {
 				size = formatter(nullptr, context);

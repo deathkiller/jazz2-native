@@ -181,8 +181,8 @@ namespace Jazz2::UI::Multiplayer
 			std::int32_t seconds = std::max(0, (std::int32_t)fmod(timeLeftSecs, 60));
 			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(timeLeftSecs, 1) * 100));
 
-			formatString(stringBuffer, "%d:%02d:%02d", minutes, seconds, milliseconds);
-			auto gameStartsInText = _f("Game starts in {}", stringBuffer);
+			std::size_t length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, milliseconds);
+			auto gameStartsInText = _f("Game starts in {}", StringView{stringBuffer, length});
 			_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
@@ -202,11 +202,10 @@ namespace Jazz2::UI::Multiplayer
 		switch (serverConfig.GameMode) {
 			case MpGameMode::Battle:
 			case MpGameMode::TeamBattle: {
-
-				formatString(stringBuffer, "K: %u  D: %u  /%u", peerDesc->Kills, peerDesc->Deaths, serverConfig.TotalKills);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+				std::size_t length = formatInto(stringBuffer, "K: {}  D: {}  /{}", peerDesc->Kills, peerDesc->Deaths, serverConfig.TotalKills);
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				DrawPositionInRound(view, player);
@@ -214,11 +213,10 @@ namespace Jazz2::UI::Multiplayer
 			}
 			case MpGameMode::Race:
 			case MpGameMode::TeamRace: {
-
-				formatString(stringBuffer, "%u/%u", peerDesc->Laps + 1, serverConfig.TotalLaps);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 65.0f, view.Y + 7.0f + 1.4f, FontShadowLayer,
+				std::size_t length = formatInto(stringBuffer, "{}/{}", peerDesc->Laps + 1, serverConfig.TotalLaps);
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 65.0f, view.Y + 7.0f + 1.4f, FontShadowLayer,
 					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.88f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 65.0f, view.Y + 7.0f, FontLayer,
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 65.0f, view.Y + 7.0f, FontLayer,
 					Alignment::TopRight, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
 
 				float sinceLapStarted = peerDesc->LapStarted.secondsSince();
@@ -226,10 +224,10 @@ namespace Jazz2::UI::Multiplayer
 				std::int32_t seconds = std::max(0, (std::int32_t)fmod(sinceLapStarted, 60));
 				std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
 
-				formatString(stringBuffer, "%d:%02d:%02d", minutes, seconds, milliseconds);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f + 80.0f, view.Y + 10.0f + 1.4f, FontShadowLayer,
+				length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, milliseconds);
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f + 80.0f, view.Y + 10.0f + 1.4f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f + 80.0f, view.Y + 10.0f, FontLayer,
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f + 80.0f, view.Y + 10.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				DrawPositionInRound(view, player);
@@ -246,10 +244,10 @@ namespace Jazz2::UI::Multiplayer
 				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f, MainLayer, Alignment::TopLeft,
 					Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.8f, 0.8f);
 
-				formatString(stringBuffer, "%u/%u", peerDesc->TreasureCollected, serverConfig.TotalTreasureCollected);
-				_mediumFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 38.0f, view.Y + 10.0f + 1.0f, FontShadowLayer,
+				std::size_t length = formatInto(stringBuffer, "{}/{}", peerDesc->TreasureCollected, serverConfig.TotalTreasureCollected);
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 38.0f, view.Y + 10.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, stringBuffer, charOffset, view.X + 38.0f, view.Y + 10.0f, FontLayer,
+				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 38.0f, view.Y + 10.0f, FontLayer,
 					Alignment::TopLeft, textColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 				if (hasEnoughTreasure) {
@@ -279,16 +277,16 @@ namespace Jazz2::UI::Multiplayer
 					DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 					DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
-					formatString(stringBuffer, "%08i", player->GetScore());
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
+					_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-					_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+					_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 						Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 				} else {
-					formatString(stringBuffer, "%08i", player->GetScore());
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
+					std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
+					_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
 						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-					_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
+					_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
 						Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 				}
 				break;
@@ -362,11 +360,10 @@ namespace Jazz2::UI::Multiplayer
 		for (std::int32_t i = 0; i < (std::int32_t)positions.size(); i++) {
 			const auto& item = positions[i];
 			if (item.PositionInRound > 0) {
-				formatString(stringBuffer, "%u.", item.PositionInRound);
-
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+				std::size_t length = formatInto(stringBuffer, "{}.", item.PositionInRound);
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
 					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
 					Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			} else {
 				_smallFont->DrawString(this, "-."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
@@ -387,17 +384,17 @@ namespace Jazz2::UI::Multiplayer
 
 				Vector2f playerNameSize = _smallFont->MeasureString(item.PlayerName, 0.8f, 0.9f);
 
-				if (pointsDiff > 30000) {
-					copyStringFirst(stringBuffer, "+\u221E");
-				} else if(pointsDiff < -30000) {
-					copyStringFirst(stringBuffer, "-\u221E");
+				std::size_t length = 0;
+				stringBuffer[length++] = (pointsDiff < 0 ? '-' : '+');
+				if (std::abs(pointsDiff) > 30000) {
+					length += copyStringFirst(&stringBuffer[length], sizeof(stringBuffer) - length, "\u221E");
 				} else {
-					formatString(stringBuffer, "%+lli", pointsDiff);
+					length += formatInto({ &stringBuffer[length], sizeof(stringBuffer) - length }, "{}", std::abs(pointsDiff));
 				}
 				
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset + 1.0f, FontShadowLayer,
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset, FontLayer,
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset, FontLayer,
 					Alignment::TopLeft, pointsDiff > 0 ? Colorf(0.45f, 0.27f, 0.22f, 0.5f) : Colorf(0.2f, 0.45f, 0.2f, 0.5f),
 					0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
