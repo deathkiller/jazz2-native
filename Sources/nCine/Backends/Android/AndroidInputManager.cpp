@@ -424,7 +424,7 @@ namespace nCine::Backends
 				}
 			}
 		} else {
-			LOGW("No available joystick ID for device %d, dropping button event", deviceId);
+			LOGW("No available joystick ID for device {}, dropping button event", deviceId);
 		}
 
 		return true;
@@ -656,7 +656,7 @@ namespace nCine::Backends
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
 			const int deviceId = joystickStates_[i].deviceId_;
 			if (deviceId > -1 && !isDeviceConnected(deviceId)) {
-				LOGI("Gamepad %d \"%s\" (device %d) has been disconnected", i, joystickStates_[i].name_, deviceId);
+				LOGI("Gamepad {} \"{}\" (device {}) has been disconnected", i, joystickStates_[i].name_, deviceId);
 				joystickStates_[i].deviceId_ = -1;
 
 				if (inputEventHandler_ != nullptr && joystickStates_[i].guid_.isValid()) {
@@ -720,7 +720,7 @@ namespace nCine::Backends
 			deviceInfo(deviceId, joyId);
 
 			const uint8_t* g = joystickStates_[joyId].guid_.data;
-			LOGI("Device %d \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] has been connected as gamepad %d - %d axes, %d buttons, %d vibs",
+			LOGI("Device {} \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] has been connected as gamepad {} - {} axes, {} buttons, {} vibs",
 				deviceId, joystickStates_[joyId].name_, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
 				joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_, joystickStates_[joyId].numVibrators_);
 			
@@ -821,7 +821,7 @@ namespace nCine::Backends
 			if (numFoundButtons == 0) {
 				sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
 			}
-			LOGI("Device (%d, %d) - Buttons%s", deviceId, joyId, deviceInfoString);
+			LOGI("Device ({}, {}) - Buttons{}", deviceId, joyId, deviceInfoString);
 #endif
 
 			joyState.hasDPad_ = true;
@@ -836,7 +836,7 @@ namespace nCine::Backends
 				for (int i = 0; i < arraySize(buttonsToCheck); i++) {
 					if (!checkedButtons[i]) {
 						joyState.hasDPad_ = false;
-						LOGI("Device (%d, %d) - D-Pad not detected", deviceId, joyId);
+						LOGI("Device ({}, {}) - D-Pad not detected", deviceId, joyId);
 						break;
 					}
 				}
@@ -845,7 +845,7 @@ namespace nCine::Backends
 					const bool hasKey = AndroidJniClass_KeyCharacterMap::deviceHasKey(button);
 					if (!hasKey) {
 						joyState.hasDPad_ = false;
-						LOGI("Device (%d, %d) - D-Pad not detected", deviceId, joyId);
+						LOGI("Device ({}, {}) - D-Pad not detected", deviceId, joyId);
 						break;
 					}
 				}
@@ -887,7 +887,7 @@ namespace nCine::Backends
 				} else {
 					if ((axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) && joyState.hasHatAxes_) {
 						joyState.hasHatAxes_ = false;
-						LOGI("Device (%d, %d) - Axis hats not detected", deviceId, joyId);
+						LOGI("Device ({}, {}) - Axis hats not detected", deviceId, joyId);
 					}
 				}
 			}
@@ -895,7 +895,7 @@ namespace nCine::Backends
 			if (numAxes == 0) {
 				sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
 			}
-			LOGI("Device (%d, %d) - Axes%s", deviceId, joyId, deviceInfoString);
+			LOGI("Device ({}, {}) - Axes{}", deviceId, joyId, deviceInfoString);
 #endif
 			if (numAxes >= 4) {
 				// Android sometimes returns strange range for the first two axes, all other axes are fine
@@ -903,8 +903,8 @@ namespace nCine::Backends
 					std::abs(joyState.axesMinValues_[1]) < 0.01f && joyState.axesRangeValues_[1] > 128.0f &&
 					joyState.axesMinValues_[2] == -1.0f && joyState.axesRangeValues_[2] == 2.0f &&
 					joyState.axesMinValues_[3] == -1.0f && joyState.axesRangeValues_[3] == 2.0f) {
-					LOGW("Device (%d, %d) - Axis %d:%d reported strange range %.2f, using %.2f to %.2f instead", deviceId, joyId, 0, joyState.axesMapping_[0], joyState.axesRangeValues_[0], -1.0f, 1.0f);
-					LOGW("Device (%d, %d) - Axis %d:%d reported strange range %.2f, using %.2f to %.2f instead", deviceId, joyId, 1, joyState.axesMapping_[1], joyState.axesRangeValues_[1], -1.0f, 1.0f);
+					LOGW("Device ({}, {}) - Axis {}:{} reported strange range {:.2f}, using {:.2f} to {:.2f} instead", deviceId, joyId, 0, joyState.axesMapping_[0], joyState.axesRangeValues_[0], -1.0f, 1.0f);
+					LOGW("Device ({}, {}) - Axis {}:{} reported strange range {:.2f}, using {:.2f} to {:.2f} instead", deviceId, joyId, 1, joyState.axesMapping_[1], joyState.axesRangeValues_[1], -1.0f, 1.0f);
 					joyState.axesMinValues_[0] = -1.0f;
 					joyState.axesRangeValues_[0] = 2.0f;
 					joyState.axesMinValues_[1] = -1.0f;
@@ -941,7 +941,7 @@ namespace nCine::Backends
 					}
 				}
 #if defined(DEATH_TRACE)
-				LOGI("Device (%d, %d) - Vibs%s (%d)", deviceId, joyId, deviceInfoString, joyState.numVibrators_);
+				LOGI("Device ({}, {}) - Vibs{} ({})", deviceId, joyId, deviceInfoString, joyState.numVibrators_);
 #endif
 			}
 

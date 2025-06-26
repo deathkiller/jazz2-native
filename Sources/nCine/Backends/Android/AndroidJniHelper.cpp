@@ -99,7 +99,7 @@ namespace nCine::Backends
 				jniEnv->ExceptionClear();
 				String message = ExceptionToString(jniEnv, exception);
 				if (!message.empty()) {
-					LOGE("%s", message.data());
+					LOGE("{}", message);
 				}
 				jniEnv->DeleteLocalRef(exception);
 			} else {
@@ -251,7 +251,7 @@ namespace nCine::Backends
 		ASSERT(name != nullptr);
 		jclass javaClass = AndroidJniHelper::jniEnv->FindClass(name);
 		if (AndroidJniHelper::CheckAndClearExceptions() || javaClass == nullptr) {
-			LOGE("Cannot find Java class \"%s\"", name);
+			LOGE("Cannot find Java class \"{}\"", name);
 			return nullptr;
 		}
 		return javaClass;
@@ -265,7 +265,7 @@ namespace nCine::Backends
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetStaticMethodID(javaClass, name, signature);
 			if (AndroidJniHelper::CheckAndClearExceptions() || mid == nullptr) {
-				LOGE("Cannot get static method \"%s()\" with signature \"%s\"", name, signature);
+				LOGE("Cannot get static method \"{}()\" with signature \"{}\"", name, signature);
 				return nullptr;
 			}
 		} else {
@@ -282,7 +282,7 @@ namespace nCine::Backends
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetMethodID(javaClass, name, signature);
 			if (AndroidJniHelper::CheckAndClearExceptions() || mid == nullptr) {
-				LOGE("Cannot get method \"%s()\" with signature \"%s\"", name, signature);
+				LOGE("Cannot get method \"{}()\" with signature \"{}\"", name, signature);
 				return nullptr;
 			}
 		} else {
@@ -299,7 +299,7 @@ namespace nCine::Backends
 		if (javaClass != nullptr) {
 			fid = AndroidJniHelper::jniEnv->GetStaticFieldID(javaClass, name, signature);
 			if (AndroidJniHelper::CheckAndClearExceptions() || fid == nullptr) {
-				LOGE("Cannot get static field \"%s\" with signature \"%s\"", name, signature);
+				LOGE("Cannot get static field \"{}\" with signature \"{}\"", name, signature);
 				return nullptr;
 			}
 		} else {

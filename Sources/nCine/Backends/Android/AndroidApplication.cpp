@@ -38,7 +38,7 @@ extern "C"
 		if (androidApp.IsInitialized()) {
 			androidApp.HandleIntent(actionStr, uriStr);
 		} else {
-			LOGE("Received intent %s with \"%s\", but AndroidApplication is not initialized yet", actionStr, uriStr);
+			LOGE("Received intent {} with \"{}\", but AndroidApplication is not initialized yet", actionStr, uriStr);
 		}
 
 		env->ReleaseStringUTFChars(action, actionStr);
@@ -250,12 +250,12 @@ namespace nCine
 
 	void AndroidApplication::HandleIntent(StringView action, StringView uri)
 	{
-		LOGI("Received intent %s with \"%s\"", action.data(), uri.data());
+		LOGI("Received intent {} with \"{}\"", action, uri);
 	}
 
 	void AndroidApplication::HandleContentBoundsChanged(Recti bounds)
 	{
-		LOGI("Received new content bounds: {X: %i, Y: %i, W: %i, H: %i}", bounds.X, bounds.Y, bounds.W, bounds.H);
+		LOGI("Received new content bounds: {{X: {}, Y: {}, W: {}, H: {}}}", bounds.X, bounds.Y, bounds.W, bounds.H);
 	}
 	
 	bool AndroidApplication::CanShowScreenKeyboard()
@@ -296,16 +296,16 @@ namespace nCine
 
 #if defined(DEATH_TARGET_ARM)
 #	if defined(DEATH_TARGET_32BIT)
-		LOGI("Running on %s %s (%s) as armeabi-v7a application", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+		LOGI("Running on {} {} ({}) as armeabi-v7a application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
 #	else
-		LOGI("Running on %s %s (%s) as arm64-v8a application", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+		LOGI("Running on {} {} ({}) as arm64-v8a application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
 #	endif
 #elif defined(DEATH_TARGET_X86)
-		LOGI("Running on %s %s (%s) as x86 application", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+		LOGI("Running on {} {} ({}) as x86 application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
 #else
-		LOGI("Running on %s %s (%s)", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+		LOGI("Running on {} {} ({})", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
 #endif
-		LOGI("Android API version - NDK: %d, JNI: %d", __ANDROID_API__, AndroidJniHelper::SdkVersion());
+		LOGI("Android API version - NDK: {}, JNI: {}", __ANDROID_API__, AndroidJniHelper::SdkVersion());
 
 		if (isScreenRound_) {
 			LOGI("Using round screen layout");

@@ -62,6 +62,7 @@ namespace Death {
 		| @cpp float @ce <b></b>    | Written as a float with 6 significant digits by default
 		| @cpp double @ce <b></b>   | Written as a float with 15 significant digits by default
 		| @cpp long double @ce <b></b> | Written as a float, by default with 18 significant digits on platforms \n with 80-bit @cpp long double @ce and 15 digits on platforms @ref CORRADE_LONG_DOUBLE_SAME_AS_DOUBLE "where it is 64-bit"
+		| @cpp bool @ce <b></b> | Written as @cpp true @ce / @cpp false @ce
 		| @cpp char* @ce <b></b> | Written as a sequence of characters until @cpp '\0' @ce (which is not written)
 		| @ref Containers::StringView, \n @ref Containers::MutableStringView "MutableStringView", @ref Containers::String "String" | Written as a sequence of @ref Containers::StringView::size() characters
 
@@ -110,7 +111,7 @@ namespace Death {
 		# Performance
 
 		This function always does exactly one allocation for the output array. See
-		@ref formatInto(const Containers::MutableStringView&, const char*, const Args&... args)
+		@ref formatInto(Containers::MutableStringView, const char*, const Args&... args)
 		for a completely zero-allocation alternative.
 	*/
 #ifdef DOXYGEN_GENERATING_OUTPUT

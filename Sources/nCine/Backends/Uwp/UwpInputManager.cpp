@@ -266,7 +266,7 @@ namespace nCine::Backends
 			args.Handled(true);
 
 			std::uint32_t keyCode = args.KeyCode();
-			DEATH_ASSERT(keyCode <= UINT16_MAX, ("Received character %u has invalid value", keyCode), );
+			DEATH_ASSERT(keyCode <= UINT16_MAX, ("Received character {} has invalid value", keyCode), );
 			wchar_t utf16character = static_cast<wchar_t>(keyCode);
 			textInputEvent_.length = Utf8::FromUtf16(textInputEvent_.text, &utf16character, 1);
 			if (textInputEvent_.length > 0) {
