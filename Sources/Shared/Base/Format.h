@@ -71,7 +71,7 @@ namespace Death {
 		Advanced formatting such as precision or presentation type is possible by
 		putting extra options after a semicolon, following the optional placeholder
 		number, such as `{:x}` to print an integer value in hexadecimal. In general,
-		the syntax similar to the @ref std::printf()-style formatting, with the
+		the syntax similar to the @ref std::printf() -style formatting, with the
 		addition of `{}` and `:` used instead of `%` --- for example, @cpp "%.2x" @ce
 		can be translated to @cpp "{:.2x}" @ce.
 
@@ -241,7 +241,6 @@ namespace Death {
 		Implementation::formatArgs(string.data(), size + 1, format, args...);
 		return string;
 	}
-#endif
 
 	template<class ...Args, class MutableStringView> std::size_t formatInto(MutableStringView buffer, const char* format, const Args&... args) {
 		return Implementation::formatArgs(buffer.data(), buffer.size(), format, args...);
@@ -250,5 +249,6 @@ namespace Death {
 	template<class ...Args, std::size_t size> std::size_t formatInto(char(&buffer)[size], const char* format, const Args&... args) {
 		return Implementation::formatArgs(buffer, size, format, args...);
 	}
+#endif
 
 }

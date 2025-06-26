@@ -18,7 +18,7 @@ namespace nCine
 	{
 	public:
 		/// The minimum value for `GL_MAX_VERTEX_ATTRIBS`
-		static const std::uint32_t MaxAttributes = 16;
+		static constexpr std::uint32_t MaxAttributes = 16;
 
 		/// Vertex format attribute
 		class Attribute
